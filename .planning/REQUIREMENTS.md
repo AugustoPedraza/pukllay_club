@@ -9,7 +9,7 @@ Requirements for this milestone (Phases 0-4, per PROJECT.md's fixed roadmap). Ea
 
 ### Deploy
 
-- [ ] **DEPLOY-01**: App is deployed to production at pukllay.club over HTTPS with a placeholder page and `/up` health endpoint
+- [x] **DEPLOY-01**: App is deployed to production at pukllay.club over HTTPS with a placeholder page and `/up` health endpoint
 - [ ] **DEPLOY-02**: CI runs `mix quality` (format --check-formatted, credo --strict, sobelow, test --warnings-as-errors) on every PR via GitHub Actions, with a Postgres service and dependency/build caching
 - [ ] **DEPLOY-03**: `kamal deploy` ships a change to the CAX31 with zero downtime and runs Ecto migrations as part of the deploy
 - [ ] **DEPLOY-04**: A nightly `pg_dump` backup runs automatically and lands in Cloudflare R2
@@ -90,7 +90,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEPLOY-01 | Phase 0 | Pending |
+| DEPLOY-01 | Phase 0 | Complete |
 | DEPLOY-02 | Phase 0 | Pending |
 | DEPLOY-03 | Phase 0 | Pending |
 | DEPLOY-04 | Phase 0 | Pending |
@@ -120,6 +120,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLUBOPS-04 | Phase 4 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 28 total
 - Mapped to phases: 28
 - Unmapped: 0 ✓

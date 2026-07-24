@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 0
-current_phase_name: Walking Skeleton to Production
+current_phase: 00
+current_phase_name: walking-skeleton-to-production
 status: executing
-stopped_at: Phase 0 context revised after full discussion
-last_updated: "2026-07-24T22:51:29.317Z"
+stopped_at: Completed 00-01-PLAN.md
+last_updated: "2026-07-24T23:14:48.013Z"
 last_activity: 2026-07-24
-last_activity_desc: ROADMAP.md created; 28/28 v1 requirements mapped to the fixed 5-phase
+last_activity_desc: Phase 00 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -24,17 +24,17 @@ See: .planning/PROJECT.md (updated 2026-07-24)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 0 — Walking Skeleton to Production
+**Current focus:** Phase 00 — walking-skeleton-to-production
 
 ## Current Position
 
-Phase: 0 of 5 (Walking Skeleton to Production)
-Plan: 0 of TBD in current phase
+Phase: 00 (walking-skeleton-to-production) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-24 — ROADMAP.md created; 28/28 v1 requirements mapped to the fixed 5-phase
+Last activity: 2026-07-24 — Phase 00 execution started
 structure (0-4)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
@@ -56,6 +56,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 00 P01 | 35min | 3 tasks | 60 files |
 
 ## Accumulated Context
 
@@ -73,6 +78,10 @@ Recent decisions affecting current work:
 
 - Project init: Local CPU embeddings (Bumblebee/EXLA) + remote free-tier LLM (Gemini via
   InstructorLite), split so no LLM call ever sits on the request hot path
+
+- [Phase ?]: mise.toml pins elixir 1.19.5-otp-28 / erlang 28.5, matching phx.gen.release's own builder image tag (D-16)
+- [Phase ?]: Credo Design.AliasUsage exit_status set to 0 for phx.new-generated boilerplate under --strict; Sobelow Config.CSP explicitly ignored with reviewed rationale (deferred to Phase 1) rather than disabling exit codes wholesale
+- [Phase ?]: Sentry.LoggerHandler attached manually via :logger.add_handler/3 with enable_logs: true (not the config-only auto-attach path), keeping the call site explicit in application.ex
 
 ### Pending Todos
 
@@ -101,7 +110,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-24T22:09:39.365Z
-Stopped at: Phase 0 context revised after full discussion
+Last session: 2026-07-24T23:14:48.004Z
+Stopped at: Completed 00-01-PLAN.md
 verified against the roadmap (no edits needed)
-Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/00-walking-skeleton-to-production/00-CONTEXT.md
+Resume file: None
