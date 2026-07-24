@@ -7,6 +7,15 @@ defmodule PukllayClub.Application do
 
   @impl true
   def start(_type, _args) do
+    # Sentry crash reporting: additive to the default Logger -> stdout backend
+    # (D-18), never a replacement for it. Attached manually (rather than via
+    # `config :sentry, enable_logs: true` auto-attach) so the handler and its
+    # options are explicit here. Reports crashes as Sentry error events and
+    # forwards log entries to Sentry's structured Logs UI (`enable_logs: true`).
+    :logger.add_handler(:pukllay_club_sentry_handler, Sentry.LoggerHandler, %{
+      config: %{metadata: [:file, :line], enable_logs: true}
+    })
+
     children = [
       PukllayClubWeb.Telemetry,
       PukllayClub.Repo,

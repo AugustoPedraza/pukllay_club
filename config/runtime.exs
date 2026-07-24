@@ -23,6 +23,12 @@ end
 config :pukllay_club, PukllayClubWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Sentry DSN comes from the runtime env only — never a literal value in git.
+# Unset (dev/test) leaves dsn nil, which disables reporting entirely.
+config :sentry,
+  dsn: System.get_env("SENTRY_DSN"),
+  environment_name: config_env()
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :pukllay_club, PukllayClubWeb.Endpoint,

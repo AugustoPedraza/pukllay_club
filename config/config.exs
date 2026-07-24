@@ -66,6 +66,15 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Configure Sentry crash reporting. The DSN itself is sourced from the
+# SENTRY_DSN runtime env var (config/runtime.exs) — never a literal value
+# here or in git. When SENTRY_DSN is unset (local dev/test), Sentry's `dsn`
+# stays nil and no events are ever sent.
+config :sentry,
+  environment_name: config_env(),
+  enable_source_code_context: true,
+  root_source_code_paths: [File.cwd!()]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
