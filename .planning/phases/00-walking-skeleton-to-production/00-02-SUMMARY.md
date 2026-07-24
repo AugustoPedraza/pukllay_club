@@ -106,3 +106,10 @@ None - no external service configuration required.
 ---
 *Phase: 00-walking-skeleton-to-production*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+- FOUND: AGENTS.md
+- FOUND: .planning/phases/00-walking-skeleton-to-production/00-02-SUMMARY.md
+- FOUND: commit 1fd73f1 (Task 1)
+- FOUND: commit 916e36a (docs: add plan summary)

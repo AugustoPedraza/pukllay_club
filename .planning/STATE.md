@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 00
 current_phase_name: walking-skeleton-to-production
 status: executing
-stopped_at: Completed 00-01-PLAN.md
-last_updated: "2026-07-24T23:14:48.013Z"
+stopped_at: Completed 00-02-PLAN.md
+last_updated: "2026-07-24T23:17:50.703Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 00 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -29,12 +29,12 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 00 (walking-skeleton-to-production) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-24 — Phase 00 execution started
 structure (0-4)
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██░░░░░░░░] 17%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 00 P01 | 35min | 3 tasks | 60 files |
+| Phase 00 P02 | 5min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,7 @@ Recent decisions affecting current work:
 - [Phase ?]: mise.toml pins elixir 1.19.5-otp-28 / erlang 28.5, matching phx.gen.release's own builder image tag (D-16)
 - [Phase ?]: Credo Design.AliasUsage exit_status set to 0 for phx.new-generated boilerplate under --strict; Sobelow Config.CSP explicitly ignored with reviewed rationale (deferred to Phase 1) rather than disabling exit codes wholesale
 - [Phase ?]: Sentry.LoggerHandler attached manually via :logger.add_handler/3 with enable_logs: true (not the config-only auto-attach path), keeping the call site explicit in application.ex
+- [Phase ?]: AGENTS.md conventions (DEPLOY-05): appended TDD loop, mix quality order, manual-merge-gate rule, and Phase 0 non-goals into the phx.new-generated AGENTS.md rather than overwrite it
 
 ### Pending Todos
 
@@ -110,7 +112,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-24T23:14:48.004Z
-Stopped at: Completed 00-01-PLAN.md
+Last session: 2026-07-24T23:17:50.694Z
+Stopped at: Completed 00-02-PLAN.md
 verified against the roadmap (no edits needed)
 Resume file: None

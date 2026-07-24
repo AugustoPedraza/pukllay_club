@@ -48,11 +48,11 @@ be pulled forward without breaking that dependency chain.
   4. A nightly `pg_dump` backup job runs automatically and lands a dump in Cloudflare R2
   5. AGENTS.md documents the TDD loop, the `mix quality` alias, the manual-merge-gate rule, and the project's non-goals
 
-**Plans**: 1/6 plans executed
+**Plans**: 2/6 plans executed
 **Wave 1**
 
 - [x] 00-01-PLAN.md — Phoenix scaffold, `/up` health route, mise toolchain pins, `mix quality` alias, Sentry (DEPLOY-01)
-- [ ] 00-02-PLAN.md — AGENTS.md: TDD loop, quality alias, merge-gate rule, non-goals (DEPLOY-05)
+- [x] 00-02-PLAN.md — AGENTS.md: TDD loop, quality alias, merge-gate rule, non-goals (DEPLOY-05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -142,7 +142,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Walking Skeleton to Production | 1/6 | In Progress|  |
+| 0. Walking Skeleton to Production | 2/6 | In Progress|  |
 | 1. Catalog v1 | 0/TBD | Not started | - |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
