@@ -17,85 +17,106 @@ out of scope until Phase 1+.
 <decisions>
 ## Implementation Decisions
 
-**Discussion was skipped by explicit user choice** ("none" — proceed with defaults). The three
-decisions PROJECT.md flagged as "deferred to Phase 0 planning" (Dockerfile strategy, migration
-safety, secrets management) are locked below using the project's own pre-existing research
-(`.planning/research/STACK.md`, `.planning/research/PITFALLS.md`, `.planning/research/ARCHITECTURE.md`,
-and the Technology Stack section of `.claude/CLAUDE.md`) rather than left ambiguous — that research
-is deep, specific, and was already treated as authoritative going into this discussion.
+**Note on process:** This CONTEXT.md was discussed twice. The first pass (same session) was
+skipped by explicit user request ("none") and used research defaults. The user then re-ran
+`/gsd-discuss-phase 0`, chose "Update it," and actually discussed all four proposed areas plus two
+follow-ups (local toolchain pinning, observability). **This version supersedes the first pass** —
+several decisions below (build location, deploy trigger, secrets delivery) are the *opposite* of
+the original research-only defaults, because choosing CI-driven deploy early in the discussion
+changed what made sense for secrets later. Downstream agents should treat only this version as
+current.
 
 ### Build & Deploy Strategy
-- **D-01:** `mix phx.gen.release --docker` generates the Dockerfile. Runner stage is
-  `debian:trixie-slim` (glibc), not Alpine — avoids musl DNS resolution issues and keeps the door
-  open for EXLA/Bumblebee in Phase 2 without a base-image swap. — **Reversibility:** reversible —
-  swapping base images later is a Dockerfile edit, not a design change.
-- **D-02:** The arm64 image is built natively — either on the Hetzner CAX31 host itself via Kamal's
-  default `builder: { arch: arm64 }` (no `remote:` override), or on a native `ubuntu-24.04-arm`
-  GitHub Actions runner if CI-driven builds are wanted later. Default for Phase 0: **build on the
-  Hetzner host** — zero extra CI runner setup, matches solo-dev/near-zero-ops budget. QEMU-emulated
-  cross-builds are explicitly rejected (PITFALLS.md: slow, occasionally flaky NIF cross-compiles).
-  — **Reversibility:** reversible — changing the builder target is a `deploy.yml` config change.
-- **D-03:** `kamal deploy` is triggered manually from the developer's machine for Phase 0, not
-  CI-driven. GitHub Actions CI's job is limited to running `mix quality` gates on PRs — it does not
-  deploy. — **Reversibility:** reversible.
+- **D-01:** The arm64 Docker image is built on a native GitHub Actions `ubuntu-24.04-arm` runner —
+  not on the Hetzner host. No QEMU cross-build (rejected per PITFALLS.md: slow, occasionally flaky
+  NIF cross-compiles). — **Reversibility:** reversible — a `deploy.yml`/workflow change.
+- **D-02:** `kamal deploy` is **CI-driven**: GitHub Actions runs it automatically on every merge to
+  `main`, immediately after a successful build+push. There is no manual "click deploy" step and no
+  required-reviewer gate in front of it (the user explicitly chose plain repo secrets over GitHub
+  Environments with required reviewers in D-08). — **Reversibility:** reversible, but see D-08 —
+  this choice is *why* the secrets mechanism had to change from the original plan.
+- **D-03:** Container registry: **GitHub Container Registry (ghcr.io)**, not Docker Hub — keeps
+  auth inside GitHub (see D-10).
+- **D-04:** Single CI pipeline, not split workflows: PRs run `mix quality` (format/credo/sobelow/
+  test) as the merge gate; merging to `main` re-runs `mix quality`, then builds, pushes, and
+  deploys. A broken merge to `main` never reaches production — the quality gate is not bypassed
+  for the deploy path.
 
 ### Migration Safety on Deploy
-- **D-04:** Entrypoint-gated migrations — a custom Docker `ENTRYPOINT` that runs the
-  `phx.gen.release`-generated `bin/migrate` (wrapping `Ecto.Migrator` directly, no `Mix` dependency)
-  to completion *before* `exec bin/server` starts. Kamal's health check (`GET /up`) then only passes
-  once migrations succeeded, so Kamal's zero-downtime cutover naturally gates traffic on migration
-  success — a failed migration leaves the old container serving traffic instead of promoting a
-  broken one. — **Reversibility:** reversible.
-- **D-05:** Acceptance for this decision requires proving it, not just wiring it: before Phase 0 is
-  considered done, deploy an actual schema change through the full Kamal pipeline and confirm the
-  new container only goes live after migrations succeed (per PITFALLS.md Pitfall 2). This should be
-  an explicit task/verification step in the plan, not assumed to work from code review alone.
+- **D-05:** Entrypoint-gated migrations — a custom Docker `ENTRYPOINT` runs the
+  `phx.gen.release`-generated `bin/migrate` (wraps `Ecto.Migrator` directly, no `Mix` dependency) to
+  completion before `exec bin/server`. Kamal's `GET /up` health check only passes once migrations
+  succeed, so zero-downtime cutover naturally gates traffic on migration success.
+- **D-06:** **Acceptance requires a live proof, not just code review**: before Phase 0 is
+  considered done, ship an actual trivial schema-change migration through the full
+  CI → build → Kamal pipeline and confirm the new container only goes live after migrations
+  succeed. This must be an explicit task in the plan (per PITFALLS.md Pitfall 2).
+- **D-07:** Failure mode is intentionally minimal for Phase 0: if a migration fails, the new
+  container never becomes healthy, the old container keeps serving, and the developer finds out via
+  the failed GitHub Actions run / `kamal deploy` output. No separate alerting service (Slack/email/
+  webhook) is added in Phase 0 — the CI run failing is considered sufficient signal at this stage.
 
 ### Secrets Management
-- **D-06:** Plain `.kamal/secrets` (gitignored, dotenv-format), values entered directly on the
-  developer's machine — no 1Password/Bitwarden/Doppler integration. This is safe specifically
-  *because* deploys are manual/local (D-03) — the file never needs to exist in CI, so there's no
-  risk of it leaking through CI logs or repo secrets. If deploys later move to CI-driven (see D-02
-  reversibility), secrets must switch to env-var substitution sourced from CI-injected values at
-  that point, per PITFALLS.md Pitfall 3 — not before.
-- **D-07:** Clear vs. secret split: `PHX_HOST` (and other non-sensitive config) as `clear` vars in
-  `deploy.yml`; `SECRET_KEY_BASE`, `DATABASE_URL`, `KAMAL_REGISTRY_PASSWORD`, and the Cloudflare R2
-  access key/secret (for the nightly backup job) as `secret` vars resolved from `.kamal/secrets`.
-  Explicitly declare required secrets per role/accessory rather than assuming global availability
-  (PITFALLS.md Pitfall 3 — missing per-role declarations silently produce blank env vars).
-  — **Reversibility:** reversible.
-- **D-08:** The secrets mechanism must generalize to "one more secret" (a Gemini API key arrives in
-  Phase 2) without a redesign — confirmed by D-06/D-07's shape (any new secret is just another line
-  in `.kamal/secrets` + a `secret:` declaration), so no special handling needed now.
+*(Supersedes the original "plain local `.kamal/secrets`" default — that only made sense for manual,
+local-machine deploys. Since deploy is now CI-driven (D-02), secrets must be available to GitHub
+Actions.)*
+- **D-08:** Real secret values live as **GitHub Actions repo secrets**. `.kamal/secrets` (gitignored,
+  never containing literal values) reads them via `$VAR`/command substitution at deploy time inside
+  the CI job — never literal values in the file or in git history (PITFALLS.md Pitfall 3). Secrets
+  covered: `SECRET_KEY_BASE`, `DATABASE_URL`, `KAMAL_REGISTRY_PASSWORD`, Cloudflare R2 access
+  key/secret (nightly backup job), and the Sentry DSN (see D-17). `PHX_HOST` and other non-sensitive
+  config stay `clear` in `deploy.yml`.
+- **D-09:** `SECRET_KEY_BASE` (via `mix phx.gen.secret`) and the Postgres password behind
+  `DATABASE_URL` are generated once locally and pasted into GitHub repo secrets manually. No
+  rotation runbook is written in Phase 0 — rotate manually if/when ever needed.
+- **D-10:** ghcr.io auth in CI uses the **built-in `GITHUB_TOKEN`** (already scoped for
+  `packages:write` on the same repo) — no separate Personal Access Token. Valid for the lifetime of
+  the CI job, which covers both the build/push step and the `kamal deploy` step that pulls the image
+  onto the host, since both happen inside the same job run.
+- **D-11:** Explicitly declare which secrets each Kamal role/accessory needs in `deploy.yml` rather
+  than assuming global availability — an undeclared secret silently produces a blank env var
+  (PITFALLS.md Pitfall 3).
 
 ### Infrastructure Readiness & Scope
-- **D-09:** Provisioning the Hetzner CAX31 and pointing `pukllay.club` DNS at it are in scope for
-  Phase 0, but are manual one-time operator steps (creating a Hetzner server, configuring DNS) that
-  Claude cannot perform on the user's behalf. The plan must document these as explicit prerequisite
-  steps with clear instructions, not silently assume infra already exists.
-- **D-10:** Bind the Postgres accessory to `127.0.0.1` only on the Hetzner host — never expose it on
-  `0.0.0.0` and never rely on UFW alone (Docker's iptables rules bypass UFW), per PITFALLS.md.
-- **D-11:** Use the `pgvector/pgvector:pg17` image for the Postgres accessory even though Phase 0
-  never installs the `vector` extension — avoids a database engine swap when Phase 2 needs it.
-  Verify once during Phase 0 setup that `CREATE EXTENSION vector` *would* succeed (a one-line check,
-  not new work), per ARCHITECTURE.md's Build-Order Implications.
-- **D-12:** The OTP release boots with its full default supervision tree (not a stripped-down "no
-  background jobs" config) — so adding Oban's supervisor and an `Nx.Serving` child in Phase 2 is an
-  additive `application.ex` change, not a restructuring of how the release boots.
+- **D-12:** The Hetzner CAX31 **does not exist yet**. Phase 0's plan must include explicit
+  provisioning steps as prerequisite tasks: create the server, install Docker, add the deploy SSH
+  key (used by the CI job to reach the host), configure the firewall (see D-15 below re: binding
+  Postgres to `127.0.0.1`).
+- **D-13:** `pukllay.club` is **already registered with a DNS provider the user controls**. Phase 0
+  only needs to add/point an A/AAAA record at the new server's IP once it's provisioned — no domain
+  registration or DNS-provider setup is in scope.
+- **D-14:** Placeholder page = **stock Phoenix welcome page, unmodified**. No branding tweak, no
+  custom copy — matches "no gold-plating."
+- **D-15 (carried forward, unchanged):** Bind the Postgres accessory to `127.0.0.1` only — never
+  `0.0.0.0`, and don't rely on UFW alone since Docker's iptables rules bypass it. Use the
+  `pgvector/pgvector:pg17` image even though the `vector` extension isn't installed yet, to avoid a
+  database engine swap in Phase 2. The OTP release boots with its full default supervision tree
+  (not a stripped "no background jobs" config), so adding Oban's supervisor later is additive.
+
+### Local Dev Toolchain
+- **D-16:** Add Elixir + Erlang/OTP pins to the existing `mise.toml` (currently only pins `node`,
+  for GSD's own tooling) — matching whatever `mix phx.new` scaffolds (Elixir 1.19.x / OTP 28.x per
+  project research). Keeps local dev, CI, and the Docker builder image on the same versions,
+  avoiding "works on my machine" drift.
+
+### Observability
+- **D-17:** Add **Sentry free tier** (`sentry-elixir`) in Phase 0, even though there's no product
+  code yet — catches boot-time and deploy-time crashes early rather than waiting for Phase 1+. The
+  Sentry DSN is supplied as a GitHub repo secret, wired through `.kamal/secrets` the same way as the
+  other secrets (D-08 pattern) — no separate mechanism.
+- **D-18:** Sentry is additive, not a replacement for logging — default Phoenix `Logger` output to
+  stdout (captured by Docker/journald, viewable via `kamal app logs`) stays as-is. No log
+  aggregation/dashboarding service is added in Phase 0.
 
 ### Claude's Discretion
-- Placeholder page content: use Phoenix's stock generated LiveView welcome page, no custom design —
-  matches Phase 0's "no gold-plating" goal. A "Pukllay Club" branded tweak is fine if trivial, but
-  not required.
-- Nightly `pg_dump` → R2 mechanism: a cron/systemd timer on the Hetzner host (or a scheduled GitHub
-  Actions workflow that SSHes in) invoking a shell script that dumps and uploads via an S3-compatible
-  client (rclone or aws-cli) — not Oban (out of scope for Phase 0). Exact choice between host-cron
-  vs. GitHub Actions schedule is left to research/planning.
-- Backup retention policy and restore-testing cadence: not specified by the user. Keep simple for
-  Phase 0 (e.g., keep last N dumps); PITFALLS.md flags "upload succeeded ≠ backup is good" — a
-  periodic manual restore-test is good practice but doesn't need full automation in Phase 0.
-- GitHub Actions CI caching key: `mix.lock` hash (not `mix.exs`), per project research — standard,
-  no discussion needed.
+- Nightly `pg_dump` → R2 mechanism (host cron/systemd timer vs. a scheduled GitHub Actions
+  workflow that SSHes in) — raised as an option during discussion but not selected for deep-dive;
+  left open for research/planning. Given D-01/D-02's CI-centric pattern, a scheduled GitHub Actions
+  workflow is a reasonable default to consider, but not mandated.
+- Backup retention policy and restore-testing cadence — not decided. Keep simple for Phase 0 (e.g.
+  keep last N dumps in R2); PITFALLS.md flags "upload succeeded ≠ backup is good," so a periodic
+  manual restore-test is good practice but isn't required to be automated in Phase 0.
+- CI caching key: `mix.lock` hash (not `mix.exs`) — standard, no discussion needed.
 - CI Postgres service image: plain `postgres:17` for Phase 0 (not `pgvector/pgvector`) since no
   vector columns are tested yet — switch when Phase 2 lands.
 
@@ -107,58 +128,61 @@ is deep, specific, and was already treated as authoritative going into this disc
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Project scope & requirements
-- `.planning/PROJECT.md` — Phase 0 scope statement and the three decisions this discussion locks
-  (§"Open decisions deferred to Phase 0 planning")
+- `.planning/PROJECT.md` — Phase 0 scope statement and the three decisions originally flagged as
+  "deferred to Phase 0 planning" (§"Open decisions deferred to Phase 0 planning") — now resolved
+  above, with the build/secrets decisions revised from the doc's original assumption
 - `.planning/REQUIREMENTS.md` §Deploy (DEPLOY-01..05) — the five requirements this phase must satisfy
 - `.planning/ROADMAP.md` §Phase 0 — goal, success criteria, requirement mapping
 
-### Stack & implementation research (authoritative — this discussion's decisions derive from these)
+### Stack & implementation research (backs most decisions above)
 - `.claude/CLAUDE.md` §"Technology Stack" — full stack table, Dockerfile/Kamal/secrets rationale,
   `mix quality` alias pattern, GitHub Actions CI pattern, version compatibility table
 - `.planning/research/STACK.md` — underlying stack research
 - `.planning/research/PITFALLS.md` — Pitfalls 1-4 are Phase-0-specific (ARM Docker build, migration
-  safety, secrets, Kamal health checks) and directly back D-01 through D-11 above
+  safety, secrets, Kamal health checks) and directly back D-05 through D-11 above
 - `.planning/research/ARCHITECTURE.md` §"Build-Order Implications for Phase 0's Skeleton" — what
-  Phase 0 must leave room for (Postgres image choice, release supervision tree, secrets shape) without
-  building it
+  Phase 0 must leave room for (Postgres image choice, release supervision tree, secrets shape)
+  without building it
 
 ### Not yet created
 - No AGENTS.md exists yet — DEPLOY-05 requires creating it in this phase (TDD loop, `mix quality`
-  alias, manual-merge-gate rule, project non-goals). No existing template to follow; this is new
-  content for this phase.
+  alias, manual-merge-gate rule, project non-goals). No existing template to follow.
 
 </canonical_refs>
 
 <code_context>
 ## Existing Code Insights
 
-Repo is empty of application code — no `mix phx.new` has been run yet. No `mise.toml` pin for
-Elixir/Erlang exists yet (only `node` is pinned, for GSD tooling itself). No GitHub remote is
-configured yet. This phase starts from a bare git repo with only `.planning/` and `.claude/`
-content — there is no existing codebase to scout for reusable assets or patterns.
+Repo is empty of application code — no `mix phx.new` has been run yet. No GitHub remote is
+configured yet (needed before any CI/Actions work — provisioning that remote is an implicit
+prerequisite, not called out as its own decision above since it's a one-command `git remote add` /
+`gh repo create` step, not a gray area). An existing `mise.toml` pins only `node` (for GSD's own
+tooling) — D-16 adds Elixir/Erlang to it. No other existing codebase to scout for reusable assets
+or patterns.
 
 </code_context>
 
 <specifics>
 ## Specific Ideas
 
-No specific UI/content requirements from the user beyond what's captured in Claude's Discretion
-above (stock Phoenix placeholder page). No particular tools, services, or examples were named
-beyond what's already fixed in PROJECT.md's constraints (Kamal, kamal-proxy, Hetzner CAX31,
-Cloudflare R2, GitHub Actions).
+- Deploy pipeline should be fully CI-driven end to end: PR → quality gate → merge to `main` →
+  quality gate again → build (native arm64 GH Actions runner) → push to ghcr.io → `kamal deploy`,
+  all inside GitHub Actions, no manual steps once a PR is merged.
+- Even a zero-product-code Phase 0 should have Sentry wired up from day one, so crash visibility
+  exists before Phase 1 adds real product surface area.
 
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-None — discussion stayed within phase scope. User declined to discuss any of the four proposed
-gray areas (build strategy, migration safety, secrets, infra readiness) and asked Claude to decide
-using existing research, which is captured above.
+None — discussion stayed within phase scope. The two follow-up areas (local toolchain pinning,
+observability) are adjacent operational concerns for a "proven deploy pipeline," not new product
+capabilities, so they were folded into this phase's decisions rather than deferred.
 
 </deferred>
 
 ---
 
 *Phase: 0-Walking Skeleton to Production*
-*Context gathered: 2026-07-24*
+*Context gathered: 2026-07-24 (revised after full discussion)*
