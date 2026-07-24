@@ -216,3 +216,10 @@ None - no external service configuration required. (`SENTRY_DSN` wiring for an a
 ---
 *Phase: 00-walking-skeleton-to-production*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+All 10 claimed artifacts verified present on disk (`health_controller.ex`, `health_controller_test.exs`,
+`mise.toml`, `mix.exs`, `Dockerfile`, `rel/overlays/bin/migrate`, `release.ex`, `.credo.exs`,
+`.sobelow-conf`, this SUMMARY). All 5 claimed commit hashes (`857c1e7`, `f432d98`, `d89f08e`,
+`6a91c1d`, `a2b4881`) verified present in `git log --oneline --all`.
