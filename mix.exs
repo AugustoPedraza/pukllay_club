@@ -27,7 +27,7 @@ defmodule PukllayClub.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [precommit: :test, quality: :test]
     ]
   end
 
@@ -72,7 +72,9 @@ defmodule PukllayClub.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -95,7 +97,13 @@ defmodule PukllayClub.MixProject do
         "esbuild pukllay_club --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"],
+      quality: [
+        "format --check-formatted",
+        "credo --strict",
+        "sobelow --config",
+        "test --warnings-as-errors"
+      ]
     ]
   end
 end

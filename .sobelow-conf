@@ -1,0 +1,21 @@
+[
+  exit: true,
+  format: "txt",
+  ignore_files: [],
+  # Reviewed exceptions only — add here after manually confirming a finding is a
+  # false positive or an intentionally deferred item, never preemptively.
+  #
+  # Config.CSP: Phoenix's put_secure_browser_headers does not set a
+  # Content-Security-Policy by default (it is app-specific). This phase ships
+  # zero product code (stock welcome page + /up only, D-14) — a CSP is
+  # deferred until Phase 1 introduces real page content to scope the policy
+  # against. Reviewed 2026-07-24, tracked for Phase 1.
+  ignore: ["Config.CSP"],
+  out: nil,
+  private: false,
+  router: nil,
+  skip: false,
+  threshold: :low,
+  verbose: false,
+  version: false
+]
