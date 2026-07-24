@@ -46,11 +46,11 @@ reconcile against the actual `*-PLAN.md` files once written.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | DEPLOY-01 | — | `/up` returns 200 with no auth required | unit/controller | `mix test test/pukllay_club_web/controllers/health_controller_test.exs` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEPLOY-02 | — | CI blocks merge on any `mix quality` failure | integration (CI) | `.github/workflows/ci.yml` against a `postgres:17` service | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEPLOY-03 | T-0-05 | New container only serves traffic after migrations succeed | manual-only (live proof, D-06) | see Manual-Only Verifications below | N/A | ⬜ pending |
-| TBD | TBD | TBD | DEPLOY-04 | T-0-01 / T-0-04 | Nightly dump lands in R2 without leaking credentials to host disk | smoke (manual trigger) | `gh workflow run backup.yml` then verify R2 bucket contents | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEPLOY-05 | — | AGENTS.md documents TDD loop, `mix quality`, merge-gate rule, non-goals | smoke (file + grep) | `test -f AGENTS.md && grep -q "TDD" AGENTS.md` | ❌ W0 | ⬜ pending |
+| 00-01 T1 | 00-01 | 1 | DEPLOY-01 | T-0-01 | `/up` returns 200 with no auth required | unit/controller | `mix test test/pukllay_club_web/controllers/health_controller_test.exs` | ❌ W0 | ⬜ pending |
+| 00-03 T2/T3 | 00-03 | 2 | DEPLOY-02 | T-0-03 / T-0-05 | CI blocks merge on any `mix quality` failure | integration (CI) | `.github/workflows/ci.yml` against a `postgres:17` service | ❌ W0 | ⬜ pending |
+| 00-05 T3 | 00-05 | 4 | DEPLOY-03 | T-0-05 / T-0-02 | New container only serves traffic after migrations succeed | manual-only (live proof, D-06) | see Manual-Only Verifications below | N/A | ⬜ pending |
+| 00-06 T1/T2 | 00-06 | 5 | DEPLOY-04 | T-0-01 / T-0-04 / T-0-BK | Nightly dump lands in R2 without leaking credentials to host disk | smoke (manual trigger) | `gh workflow run backup.yml` then verify R2 bucket contents | ❌ W0 | ⬜ pending |
+| 00-02 T1 | 00-02 | 1 | DEPLOY-05 | T-0-05 | AGENTS.md documents TDD loop, `mix quality`, merge-gate rule, non-goals | smoke (file + grep) | `test -f AGENTS.md && grep -q "TDD" AGENTS.md` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
