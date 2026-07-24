@@ -5,6 +5,45 @@ This is a web application written using the Phoenix web framework.
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
 
+## TDD Loop
+
+1. Derive/write a test from the acceptance criterion being implemented.
+2. Run it — confirm it fails (red).
+3. Write the minimum code to make it pass (green).
+4. Refactor with the test green as a safety net.
+5. Run `mix quality` before committing.
+
+## `mix quality` Alias
+
+Order: `format --check-formatted` -> `credo --strict` -> `sobelow --config` -> `test --warnings-as-errors`.
+
+Cheapest/fastest checks run first — a formatting typo fails in seconds, not after a full test-suite
+run. Run `mix quality` locally before every commit; it is also what CI runs on every PR and again
+on every merge to `main` (see Manual Merge Gate below).
+
+## Manual Merge Gate
+
+Every PR must pass CI (`mix quality`, run against a Postgres service) before merge. No merge bypasses
+this gate — not for "trivial" changes, not via admin/force-merge. Merging to `main` re-runs
+`mix quality` a second time as a build/deploy gate, so a broken merge never reaches production (D-04).
+Treat a failing or hanging health check (Kamal's `/up` probe) the same way: fix the underlying
+readiness issue, never disable or loosen the check to force a deploy through.
+
+## Non-Goals (Phase 0)
+
+Phase 0 is the deploy pipeline only — a proven walking skeleton, not gold-plating:
+
+- No product features: no catalog, no auth, no AI/embeddings, no Oban, no BGG import.
+- No log-aggregation dashboard beyond Sentry (crash capture) + stdout (`kamal app logs`).
+- No alerting service beyond CI failure signals and `kamal deploy` failure output (D-07).
+- No automated backup restore-test — restores are manual and periodic, not scripted.
+- No secrets-manager integration beyond GitHub Actions repo secrets + `.kamal/secrets` (D-08).
+
+**Known limitation:** GitHub's scheduled-workflow cron trigger (used for the nightly backup) is
+best-effort timing and can lag under platform load. This private repo is not subject to GitHub's
+60-day public-repo scheduled-workflow auto-disable, so the only real tradeoff is timing precision,
+which is acceptable for a nightly, non-time-critical job.
+
 ### Phoenix v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content
