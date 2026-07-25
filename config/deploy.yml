@@ -7,7 +7,10 @@
 
 service: pukllay_club
 
-image: ghcr.io/augustopedraza/pukllay_club
+# NOT prefixed with "ghcr.io/" — Kamal's own `repository` helper joins
+# `registry.server` + `image` itself (`ghcr.io/augustopedraza/pukllay_club`
+# was a double-prefix bug: `ghcr.io/ghcr.io/augustopedraza/pukllay_club`).
+image: augustopedraza/pukllay_club
 
 registry:
   server: ghcr.io

@@ -111,7 +111,14 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          # Kamal's own `validate_image` check (run before every deploy)
+          # requires a `service` label matching config/deploy.yml's
+          # `service:` value — normally added automatically by `kamal
+          # build`, but we build externally here (D-01/D-10), so it must
+          # be added explicitly alongside metadata-action's OCI labels.
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            service=pukllay_club
           # No cross-build override — the runner itself is x86_64, matching
           # the GCP e2-micro production target, so this is a native build,
           # not a QEMU-emulated cross-build (D-20 supersedes D-01).
