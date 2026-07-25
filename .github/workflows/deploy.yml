@@ -138,6 +138,22 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
+      - name: Write .kamal/secrets
+        # .kamal/secrets is intentionally gitignored (D-08, defense in
+        # depth against ever pasting a literal secret value into it) so a
+        # fresh checkout never has it — write it fresh on the runner every
+        # run. Only $VAR-style references go in the file itself; the
+        # literal values stay in the job's env, resolved by Kamal's own
+        # $VAR substitution at deploy time (D-11, Pitfall 3).
+        run: |
+          cat > .kamal/secrets <<'EOF'
+          KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
+          SECRET_KEY_BASE=$SECRET_KEY_BASE
+          DATABASE_URL=$DATABASE_URL
+          SENTRY_DSN=$SENTRY_DSN
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          EOF
+
       - name: Deploy with Kamal
         env:
           # Every secret declared in config/deploy.yml's env.secret /
