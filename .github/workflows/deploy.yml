@@ -146,6 +146,7 @@ jobs:
         # literal values stay in the job's env, resolved by Kamal's own
         # $VAR substitution at deploy time (D-11, Pitfall 3).
         run: |
+          mkdir -p .kamal
           cat > .kamal/secrets <<'EOF'
           KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
           SECRET_KEY_BASE=$SECRET_KEY_BASE
