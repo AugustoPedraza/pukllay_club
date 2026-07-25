@@ -119,7 +119,7 @@ jobs:
         run: gem install kamal --version "2.12.0"
 
       - name: Load deploy SSH key
-        uses: webfactory/ssh-agent@v0.9
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
