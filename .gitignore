@@ -36,6 +36,8 @@ npm-debug.log
 /assets/node_modules/
 
 # Kamal deploy secrets — never committed; values are $VAR-substituted at
-# deploy time from GitHub Actions repo secrets (D-08).
+# deploy time from GitHub Actions repo secrets (D-08). The CI deploy job
+# writes this file fresh on the runner (see .github/workflows/deploy.yml)
+# since a fresh checkout never has it.
 /.kamal/secrets
 
