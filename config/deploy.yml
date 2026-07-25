@@ -1,0 +1,54 @@
+# Kamal 2 deploy configuration.
+#
+# NOTE: this file is authored in plan 00-04 but not yet used for a live deploy —
+# the Hetzner CAX31 host does not exist yet (D-12). The `servers.web` entry below
+# is a clearly-marked placeholder to be filled in during plan 00-05's host
+# provisioning. Everything else (image, registry, proxy, accessories, env) is
+# real, final configuration.
+
+service: pukllay_club
+
+image: ghcr.io/augustopedraza/pukllay_club
+
+registry:
+  server: ghcr.io
+  username: augustopedraza
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+servers:
+  web:
+    # PLACEHOLDER — replaced with the real Hetzner CAX31 IP/hostname during
+    # plan 00-05's host provisioning (D-12). Do not deploy against this value.
+    - <hetzner-host-placeholder>
+
+proxy:
+  ssl: true
+  host: pukllay.club
+  healthcheck:
+    path: /up
+
+# Every role/accessory below explicitly declares which secrets it needs (D-11) —
+# nothing relies on global availability.
+env:
+  clear:
+    PHX_HOST: pukllay.club
+    PHX_SERVER: "true"
+  secret:
+    - SECRET_KEY_BASE
+    - DATABASE_URL
+    - SENTRY_DSN
+
+accessories:
+  db:
+    image: pgvector/pgvector:pg17
+    host: <hetzner-host-placeholder>
+    # Bind to localhost only — never 0.0.0.0 (D-15). Docker's own iptables
+    # rules bypass UFW, so this bind is the real access control, not the
+    # host firewall.
+    port: "127.0.0.1:5432:5432"
+    env:
+      secret:
+        - POSTGRES_PASSWORD
+    volumes:
+      - "pg_data:/var/lib/postgresql/data"
