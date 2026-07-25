@@ -35,3 +35,7 @@ pukllay_club-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Kamal deploy secrets — never committed; values are $VAR-substituted at
+# deploy time from GitHub Actions repo secrets (D-08).
+/.kamal/secrets
+
