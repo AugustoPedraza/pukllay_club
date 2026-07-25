@@ -55,6 +55,14 @@ env:
 
 accessories:
   db:
+    # Without this, Kamal names/labels the container
+    # "pukllay_club-db" (default: "<service>-<accessory>") and Docker's
+    # embedded DNS only resolves containers on the "kamal" network by
+    # their container name — but DATABASE_URL (the GitHub secret) targets
+    # hostname "db" to match Kamal's docs convention. Setting `service:
+    # db` makes the container name (and therefore the resolvable
+    # hostname) literally "db", matching DATABASE_URL.
+    service: db
     image: pgvector/pgvector:pg17
     host: 34.41.63.138
     # Bind to localhost only — never 0.0.0.0 (D-15). Docker's own iptables
