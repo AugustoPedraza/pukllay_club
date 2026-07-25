@@ -21,9 +21,13 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
   case), one PostgreSQL database for everything, Tailwind + daisyUI (phx.new defaults) — fixed;
   flag before deviating
 
-- **Deploy**: Docker via Kamal to a single Hetzner CAX31 (ARM/aarch64, 8 vCPU / 16 GB, no GPU),
-  kamal-proxy for reverse-proxy + automatic TLS, real domain (pukllay.club) — do not layer Caddy on
-  top of Kamal
+- **Deploy**: Docker via Kamal to a single GCP e2-micro (x86_64, 2 vCPU shared / 1 GB RAM + 2GB
+  swap, Always Free tier + ~$3.60/mo reserved external IP), kamal-proxy for reverse-proxy +
+  automatic TLS, real domain (pukllay.club) — do not layer Caddy on top of Kamal. *(Originally
+  planned as Hetzner CAX31 ARM/aarch64; switched during Phase 0 execution due to a 2026 industry-
+  wide DRAM/NVMe capacity shortage affecting Hetzner's CAX/CX tiers and Oracle Cloud's free ARM
+  tier alike — see 00-CONTEXT.md D-20 for full rationale and downstream implications, including a
+  flagged Phase 2 sizing risk for local embedding inference.)*
 
 - **Budget**: solo dev, ~€15/mo total — every infra choice optimizes for a live URL fast and
   near-zero ops
