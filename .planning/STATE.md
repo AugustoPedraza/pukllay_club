@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 00
 current_phase_name: walking-skeleton-to-production
 status: executing
-stopped_at: Completed 00-03-PLAN.md
-last_updated: "2026-07-25T00:49:33.518Z"
+stopped_at: Completed 00-04-PLAN.md
+last_updated: "2026-07-25T04:36:09.658Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 00 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -29,12 +29,12 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 00 (walking-skeleton-to-production) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-07-24 — Phase 00 execution started
 structure (0-4)
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [█████░░░░░] 50%
 | Phase 00 P01 | 35min | 3 tasks | 60 files |
 | Phase 00 P02 | 5min | 1 tasks | 2 files |
 | Phase 00 P03 | 90min | 3 tasks | 3 files |
+| Phase 00 P04 | 197min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,7 @@ Recent decisions affecting current work:
 - [Phase ?]: AGENTS.md conventions (DEPLOY-05): appended TDD loop, mix quality order, manual-merge-gate rule, and Phase 0 non-goals into the phx.new-generated AGENTS.md rather than overwrite it
 - [Phase ?]: D-19: repo flipped private->public during 00-03 execution (explicit user decision) — GitHub Free doesn't support branch protection/rulesets on private repos; verified no secrets in git history or ci.yml before flipping
 - [Phase ?]: Branch protection on main requires the 'quality' status check (strict, enforce_admins=true, no bypass) — future plans must land main commits via PR, not direct push, since a required check now blocks bare git push to main
+- [Phase ?]: 00-04: Kamal deploy.yml/servers.web and the db accessory host use a placeholder pending 00-05 host provisioning (D-12); webfactory/ssh-agent pinned to v0.9.0 (v0.9 is not a resolvable tag)
 
 ### Pending Todos
 
@@ -118,7 +120,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-25T00:49:33.507Z
-Stopped at: Completed 00-03-PLAN.md
+Last session: 2026-07-25T04:36:09.646Z
+Stopped at: Completed 00-04-PLAN.md
 verified against the roadmap (no edits needed)
 Resume file: None
