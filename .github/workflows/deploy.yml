@@ -61,10 +61,13 @@ jobs:
 
   build-and-push:
     needs: quality
-    # Native arm64 build — no QEMU cross-build override. This project targets
-    # a single arm64 host, so a native ARM-hosted runner is both faster and
-    # avoids the QEMU/BEAM-JIT interaction issues cross-builds can hit (D-01).
-    runs-on: ubuntu-24.04-arm
+    # Native x86_64 build on a plain runner (D-20 supersedes D-01's native
+    # arm64 assumption: production moved from a Hetzner CAX31 (arm64) to a
+    # GCP e2-micro (x86_64) due to a 2026 capacity shortage). ubuntu-latest
+    # runners are x86_64, so this is a native build for our target, not a
+    # cross-build — no buildx platform override needed since
+    # docker/build-push-action defaults to the runner's native platform.
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -98,8 +101,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # No cross-build override — the runner itself is arm64, so this is
-          # a native build, not a QEMU-emulated cross-build (D-01).
+          # No cross-build override — the runner itself is x86_64, matching
+          # the GCP e2-micro production target, so this is a native build,
+          # not a QEMU-emulated cross-build (D-20 supersedes D-01).
 
   deploy:
     needs: build-and-push
@@ -136,4 +140,11 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        run: kamal deploy
+        # First-time bootstrap (plan 00-05, D-20 host): `kamal setup` boots
+        # kamal-proxy + the db accessory + the app release on a server that
+        # has never been deployed to, obtaining the Let's Encrypt cert along
+        # the way. This is intentionally `setup`, not `deploy`, ONLY for
+        # this initial bring-up commit — a follow-up commit switches this
+        # back to `kamal deploy` (D-02's steady-state CI-driven command)
+        # once the first release is confirmed healthy.
+        run: kamal setup
