@@ -15,6 +15,14 @@ registry:
   password:
     - KAMAL_REGISTRY_PASSWORD
 
+# Required by Kamal even though CI builds+pushes the image directly via
+# `docker/build-push-action` (D-01/D-10) and the deploy job only pulls it
+# (`--skip-push`, see deploy.yml) — Kamal's config validator rejects a
+# missing `arch` unconditionally. Single arch, matching the GCP e2-micro
+# host (D-20: x86_64, not the original arm64 assumption).
+builder:
+  arch: amd64
+
 # GCP's metadata-based SSH key provisioning creates a non-root sudo-capable
 # user ("deploy"), not direct root access (D-20). Without this, Kamal
 # defaults to root and cannot connect.

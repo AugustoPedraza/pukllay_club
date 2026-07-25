@@ -93,6 +93,17 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          # Kamal computes its own image version as the full (40-char) git
+          # SHA of the checked-out commit and expects to find that exact
+          # tag in the registry when the deploy job runs `kamal ... --skip-push`
+          # (it never builds — the build already happened in this job).
+          # `type=sha,format=long,prefix=` produces that plain 40-char tag
+          # with no "sha-" prefix, so the two jobs agree on one tag with
+          # zero extra coordination. `latest` is kept only for human/manual
+          # `docker pull` convenience — Kamal never uses it.
+          tags: |
+            type=sha,format=long,prefix=
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -147,4 +158,8 @@ jobs:
         # this initial bring-up commit — a follow-up commit switches this
         # back to `kamal deploy` (D-02's steady-state CI-driven command)
         # once the first release is confirmed healthy.
-        run: kamal setup
+        # --skip-push: the image was already built and pushed by the
+        # build-and-push job above (D-01/D-10) — Kamal only needs to pull
+        # the tag matching its computed version (the full git SHA of this
+        # commit, which the previous job tagged via metadata-action).
+        run: kamal setup --skip-push
