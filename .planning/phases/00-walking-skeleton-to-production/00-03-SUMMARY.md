@@ -146,3 +146,14 @@ None beyond what the coordinator already confirmed (repo visibility decision, Gi
 ---
 *Phase: 00-walking-skeleton-to-production*
 *Completed: 2026-07-25*
+
+## Self-Check: PASSED
+
+- FOUND: `.github/workflows/ci.yml`
+- FOUND: `.planning/phases/00-walking-skeleton-to-production/00-03-SUMMARY.md`
+- FOUND: commit `19e209c` (feat: ci.yml)
+- FOUND: commit `abf635c` (docs: branch protection + visibility deviation)
+- FOUND: commit `1a6fbd2` (merge PR #1)
+- FOUND: commit `2b44ef6` (docs: plan summary)
+- Remote `origin` → `git@github.com:AugustoPedraza/pukllay_club.git`, visibility `PUBLIC`
+- Branch protection on `main`: `required_status_checks.checks` = `[{context: "quality"}]`, `enforce_admins.enabled` = `true`
