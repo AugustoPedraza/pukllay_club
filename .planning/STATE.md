@@ -100,9 +100,15 @@ None yet.
   discuss-phase/plan-phase rather than assumed now — Dockerfile strategy for aarch64, safe Ecto
   migrations via Kamal, and minimal secrets management approach (see PROJECT.md "Open decisions")
 
-- Phase 2: ARM embedding runtime throughput/latency for local CPU embeddings is a genuine open
+- Phase 2: Embedding runtime throughput/latency for local CPU embeddings is a genuine open
   unknown (research/SUMMARY.md) — must be resolved via an explicit spike before committing to
-  Bumblebee vs. an alternative runtime or a specific model; do not skip or shortcut this spike
+  Bumblebee vs. an alternative runtime or a specific model; do not skip or shortcut this spike.
+  **Compounded by 00-CONTEXT.md D-20:** production moved from the originally-planned Hetzner CAX31
+  (ARM, 8 vCPU/16GB) to a GCP e2-micro (x86_64, 2 vCPU shared/1GB RAM) due to a capacity shortage —
+  1GB RAM is very likely inadequate for local embedding inference even for a small model. The
+  spike must verify against this box's actual constraints, not the original sizing; be ready to
+  fall back to the documented remote-embedding-API Plan B (CLAUDE.md "Alternatives Considered")
+  rather than assume local CPU embeddings will fit.
 
 - Phase 2: Gemini free-tier model name and RPM/RPD limits need re-verification at implementation
   time (documentation churns faster than research can track)

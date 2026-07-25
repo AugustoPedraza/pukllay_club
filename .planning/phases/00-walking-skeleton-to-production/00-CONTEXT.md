@@ -124,6 +124,69 @@ Actions.)*
     branch-protection-on-`main` gate re-established here (Task 3) unless GitHub Pro is purchased
     first.
 
+### Compute Provider & Architecture (revised during 00-05 execution)
+- **D-20 (supersedes CLAUDE.md's "Hetzner CAX31 (ARM/aarch64)" deploy constraint and D-12/D-13's
+  Hetzner-specific provisioning framing):** The production host is **Google Cloud e2-micro**
+  (x86_64), not a Hetzner CAX31 (ARM/aarch64), provisioned in `us-central1-a`.
+  - **Why:** A 2026 industry-wide DRAM/NVMe hardware shortage left Hetzner's CAX (ARM) line, its
+    entire Cost-Optimized (CX, x86) tier, *and* Oracle Cloud's Always Free ARM tier (in the user's
+    home region, Vinhedo/Brazil) all out of capacity at time of provisioning — not a pricing issue,
+    a stock issue, confirmed via direct account attempts on all three. The only immediately
+    purchasable Hetzner option (Regular Performance/CPX tier) quoted ~$14/mo for just 1 vCPU/2GB —
+    poor value given the project's real traffic profile.
+  - **Rationale for GCP e2-micro specifically:** (1) genuinely the cheapest viable option found —
+    Compute is Always-Free-tier ($0/mo); only cost is GCP's mandatory external-IPv4 charge
+    (~$0.005/hr, ~$3.60/mo, in effect since Feb 2024, applies to ephemeral *and* static IPs equally
+    and is not covered by Always Free) — well under the original ~€15/mo total budget line; (2)
+    e2-micro is old, commodity hardware Google has provisioned since 2017 and was not observed to be
+    affected by the 2026 shortage that hit newer/premium instance types; (3) actual expected load
+    (~50 users on a weekend, per the user's own estimate) is comfortably served by 2 shared vCPU /
+    1GB RAM for a lean Phoenix/LiveView app + Postgres — the original CAX31 sizing (8 vCPU/16GB) had
+    headroom for later phases, not a Phase 0 requirement.
+  - **Downstream changes this forces:**
+    - **Architecture:** x86_64, not ARM/aarch64. `Dockerfile`'s builder platform and the CI/deploy
+      workflow's build target (00-04's `deploy.yml` GitHub Actions workflow assumed a native arm64
+      build via a `ubuntu-24.04-arm` runner per D-01) must switch to plain `ubuntu-latest` (x86) —
+      this is a simplification, not just a change: no more native-arm64-runner or cross-build
+      concern. It also *de-risks* Phase 2 (EXLA/XLA precompiled binaries are more broadly available
+      for x86_64 than the arm64-specific verification CLAUDE.md's stack research had to do).
+    - **CLAUDE.md's "Deploy" constraint** must be updated to reflect GCP e2-micro (x86_64) in place
+      of Hetzner CAX31 (ARM/aarch64) — flagged per CLAUDE.md's own "fixed; flag before deviating"
+      rule, not silently changed.
+    - **SSH access model:** GCP's metadata-based SSH key provisioning creates a non-root sudo-capable
+      user (`deploy`), not direct root access (the Hetzner/Oracle assumption). `config/deploy.yml`
+      needs `ssh: { user: "deploy" }`, and Kamal's Docker operations on the host run via sudo.
+    - **Memory mitigation:** a 2GB swap file (`/swapfile`, `fstab`-persisted) was added on the host —
+      not part of the original plan — specifically because Kamal's zero-downtime deploy briefly runs
+      two app containers simultaneously during cutover, which a bare 1GB physical RAM box would risk
+      OOM-killing. Swap converts that risk into "briefly slower," not "deploy fails" — and per D-05,
+      a failed/unhealthy new container never gets cut over regardless (old container keeps serving).
+    - **IP:** a GCP **static reserved** external IP (`pukllay-club-ip`) was chosen over ephemeral —
+      unlike Hetzner/Oracle, GCP charges the *same* (~$3.60/mo) for ephemeral vs. static, so static
+      was picked purely for DNS stability across stop/start at no cost premium (the same "ephemeral
+      IP changes on restart, breaks DNS" risk flagged for Oracle applies equally to GCP's ephemeral
+      option, but the usual free-vs-paid tradeoff that made Oracle's static IP a clear win doesn't
+      apply here — it's just strictly better on GCP).
+    - **`DATABASE_URL` is unaffected** by the provider change — Kamal's accessory networking (the app
+      reaches the Postgres accessory via its declared name, `db`, as a Docker network alias) is
+      provider-agnostic. Already set as a GitHub secret:
+      `ecto://postgres:{password}@db:5432/pukllay_club_prod`.
+  - **Accepted tradeoffs, flagged forward:**
+    - Latency: `us-central1-a` (Iowa, USA) instead of an EU/Hetzner location — worse for
+      Argentina-based users than the originally-planned EU host, but still far better than the
+      Singapore alternative considered for Oracle. Accepted given no other viable option existed at
+      provisioning time.
+    - **Phase 2 sizing risk (important):** 2 vCPU (shared) / 1GB RAM is very likely inadequate for
+      local Bumblebee/EXLA embedding inference, even for `intfloat/multilingual-e5-small`. This
+      compounds the Phase 2 spike CLAUDE.md already flags as a genuine open risk — resolving it may
+      now require either a host resize/re-provision (once capacity conditions improve) *or* falling
+      back to the documented Plan B (a remote embedding API called async via Oban), rather than
+      treating local CPU embeddings as the default assumption. Do not skip or shortcut Phase 2's
+      spike on the assumption that "it'll fit" — verify against this box's real constraints.
+  - **Reversibility:** reversible in principle (re-provision on Hetzner/another ARM host once
+    capacity frees up, or upsize within GCP), but not a trivial single-setting flip like D-19 — it
+    means redoing host provisioning, `deploy.yml` wiring, DNS, and secrets again.
+
 ### Local Dev Toolchain
 - **D-16:** Add Elixir + Erlang/OTP pins to the existing `mise.toml` (currently only pins `node`,
   for GSD's own tooling) — matching whatever `mix phx.new` scaffolds (Elixir 1.19.x / OTP 28.x per
