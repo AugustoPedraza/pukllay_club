@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 00
 current_phase_name: walking-skeleton-to-production
 status: executing
-stopped_at: Completed 00-02-PLAN.md
-last_updated: "2026-07-24T23:17:50.703Z"
+stopped_at: Completed 00-03-PLAN.md
+last_updated: "2026-07-25T00:49:33.518Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 00 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -29,12 +29,12 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 00 (walking-skeleton-to-production) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-07-24 — Phase 00 execution started
 structure (0-4)
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [███░░░░░░░] 33%
 |------|----------|-------|-------|
 | Phase 00 P01 | 35min | 3 tasks | 60 files |
 | Phase 00 P02 | 5min | 1 tasks | 2 files |
+| Phase 00 P03 | 90min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Credo Design.AliasUsage exit_status set to 0 for phx.new-generated boilerplate under --strict; Sobelow Config.CSP explicitly ignored with reviewed rationale (deferred to Phase 1) rather than disabling exit codes wholesale
 - [Phase ?]: Sentry.LoggerHandler attached manually via :logger.add_handler/3 with enable_logs: true (not the config-only auto-attach path), keeping the call site explicit in application.ex
 - [Phase ?]: AGENTS.md conventions (DEPLOY-05): appended TDD loop, mix quality order, manual-merge-gate rule, and Phase 0 non-goals into the phx.new-generated AGENTS.md rather than overwrite it
+- [Phase ?]: D-19: repo flipped private->public during 00-03 execution (explicit user decision) — GitHub Free doesn't support branch protection/rulesets on private repos; verified no secrets in git history or ci.yml before flipping
+- [Phase ?]: Branch protection on main requires the 'quality' status check (strict, enforce_admins=true, no bypass) — future plans must land main commits via PR, not direct push, since a required check now blocks bare git push to main
 
 ### Pending Todos
 
@@ -102,6 +105,9 @@ None yet.
 - Phase 2: Gemini free-tier model name and RPM/RPD limits need re-verification at implementation
   time (documentation churns faster than research can track)
 
+- Phase 0 (plans 00-04 onward): main is now branch-protected requiring the 'quality' CI check — direct 'git push origin main' is rejected once a required status check exists. Future plan executors must land commits via a short branch + PR (gh pr create -> wait for CI -> gh pr merge), not a bare push, even though .planning/config.json still has git.branching_strategy:
+- Plan 00-06 (nightly backup): repo is now public (00-03 D-19), so GitHub's 60-day scheduled-workflow auto-disable applies to the nightly pg_dump->R2 cron workflow. Must accept this risk explicitly or add a keepalive mechanism when planning/executing 00-06.
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
@@ -112,7 +118,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-24T23:17:50.694Z
-Stopped at: Completed 00-02-PLAN.md
+Last session: 2026-07-25T00:49:33.507Z
+Stopped at: Completed 00-03-PLAN.md
 verified against the roadmap (no edits needed)
 Resume file: None
