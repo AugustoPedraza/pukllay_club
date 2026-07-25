@@ -30,10 +30,12 @@ can run; this must be a workflow step, not an assumption.
 
 Third: the CONTEXT.md-mandated backup-mechanism discretion is resolved here in favor of a
 **scheduled GitHub Actions workflow that SSHes into the host**, not a host systemd timer — this is
-the option most consistent with D-08's already-locked "R2 keys live as GitHub repo secrets" pattern,
-keeps R2 credentials off the host's disk entirely (they're injected transiently into the SSH session
-each night), and GitHub's public-repo "60-day inactivity auto-disable" quirk does not apply to
-private repos (confirmed against GitHub's own docs) — so its main real downside is moot here.
+the option most consistent with D-08's already-locked "R2 keys live as GitHub repo secrets" pattern
+and keeps R2 credentials off the host's disk entirely (they're injected transiently into the SSH
+session each night). **UPDATE (00-03 execution, see 00-CONTEXT.md D-19): the repo was flipped from
+private to public during 00-03 to unlock GitHub Free branch protection, so the "60-day inactivity
+auto-disable does not apply to private repos" reasoning below no longer holds** — plan 00-06 must
+account for the auto-disable applying now (see the updated Pitfall 3 note further down).
 
 **Primary recommendation:** Build the pipeline in the order Kamal needs it wired — provision the
 host and DNS first, then a bare `mix phx.new` skeleton with a hand-added `/up` route, then CI
@@ -533,11 +535,17 @@ under platform load, and (for **public** repos only — confirmed not applicable
 auto-disables after 60 days of no repository commit activity.
 **Why it happens:** GitHub throttles scheduled workloads more aggressively than push-triggered ones,
 and there's no built-in alert when a scheduled run silently doesn't fire.
-**How to avoid:** For this project (private repo), the 60-day auto-disable does not apply. The
-"best-effort timing" characteristic is an acceptable tradeoff for a nightly (not time-critical) job,
-but if the repo is ever made public, re-evaluate (a monthly "keepalive" trivial-commit workflow is
-the documented community workaround). Not a Phase 0 blocker, but worth a one-line note in
-AGENTS.md's non-goals/known-limitations for future-self.
+**How to avoid:** **UPDATE (00-03 execution, see 00-CONTEXT.md D-19): the repo was flipped from
+private to public during 00-03** (GitHub Free requires a public repo — or a paid Pro plan — to use
+branch protection / rulesets, which Task 3 of plan 00-03 required). The "does not apply to private
+repos" framing below no longer holds for this project — **the 60-day auto-disable now DOES apply**.
+Accepted as a minor, mitigable tradeoff (a repo under active multi-phase development is unlikely to
+go 60 days without a commit), but plan 00-06 (nightly `pg_dump` -> R2 backup) MUST explicitly
+account for this: either accept the risk in that plan's context, or add a trivial monthly
+"keepalive" commit/workflow (the documented community workaround) alongside the nightly backup
+workflow. Not a Phase 0 blocker on its own, but worth a one-line note in AGENTS.md's non-goals/
+known-limitations for future-self, and an explicit line in 00-06's plan context so it isn't
+rediscovered from scratch.
 **Warning signs:** No new dumps appearing in the R2 bucket for more than 24-48h; check the
 "Actions" tab's scheduled-workflow run history, not just the R2 bucket contents.
 

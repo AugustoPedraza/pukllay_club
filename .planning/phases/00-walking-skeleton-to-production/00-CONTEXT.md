@@ -93,6 +93,37 @@ Actions.)*
   database engine swap in Phase 2. The OTP release boots with its full default supervision tree
   (not a stripped "no background jobs" config), so adding Oban's supervisor later is additive.
 
+### Repository Visibility (revised during 00-03 execution)
+- **D-19 (supersedes the original private-repo assumption in plan 00-03's Task 1 and this phase's
+  earlier "private repo" framing):** The `pukllay_club` GitHub repository was flipped from
+  **private to public** during 00-03 execution, on explicit, informed user confirmation, after
+  the plan's Task 3 (branch protection requiring the CI `quality` check on `main`) failed on a
+  private repo with `403 Upgrade to GitHub Pro or make this repository public to enable this
+  feature.` GitHub Free (personal accounts) only supports branch protection / rulesets on public
+  repositories.
+  - **Rationale:** (1) the project is also intended as part of the user's professional portfolio —
+    public visibility is a feature, not just a workaround for the branch-protection limitation;
+    (2) verified before flipping: no secrets exist anywhere in git history or tracked files;
+    `.github/workflows/ci.yml` references zero repository secrets and uses the safe
+    `on: pull_request` trigger (not `pull_request_target`), so public visibility introduces no
+    secret-exposure risk for the CI workflow as authored; (3) GitHub Actions repository secrets
+    (Settings -> Secrets and variables -> Actions) are visibility-agnostic — encrypted, write-only,
+    usable only by accounts with write access (just the user) — so future secrets (D-08's
+    `SECRET_KEY_BASE`, `DATABASE_URL`, `KAMAL_REGISTRY_PASSWORD`, R2 keys, Sentry DSN) remain safe
+    under public visibility.
+  - **Accepted tradeoff, flagged forward to plan 00-06 (nightly backup):** GitHub's "60-day
+    scheduled-workflow auto-disable" quirk (previously assumed moot per 00-RESEARCH.md's private-
+    repo framing) **does apply to public repos**. Accepted as a minor, mitigable risk — a repo
+    under active multi-phase development is unlikely to go 60 days without a commit, and a trivial
+    monthly keepalive workflow (or any commit cadence) is the documented fallback if the nightly
+    backup workflow (`schedule:` cron) ever silently disables. **Plan 00-06 must account for this
+    when authoring the nightly `pg_dump` -> R2 workflow** — either accept the risk explicitly in
+    that plan's context or add a lightweight keepalive step.
+  - **Reversibility:** reversible (repo visibility can be flipped back to private at any time via
+    `gh repo edit --visibility private`), but flipping back would immediately break the
+    branch-protection-on-`main` gate re-established here (Task 3) unless GitHub Pro is purchased
+    first.
+
 ### Local Dev Toolchain
 - **D-16:** Add Elixir + Erlang/OTP pins to the existing `mise.toml` (currently only pins `node`,
   for GSD's own tooling) — matching whatever `mix phx.new` scaffolds (Elixir 1.19.x / OTP 28.x per
