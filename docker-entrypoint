@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "/app/bin/server" ]; then
+  /app/bin/migrate
+fi
+
+exec "$@"

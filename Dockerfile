@@ -97,11 +97,15 @@ ENV MIX_ENV="prod"
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/pukllay_club ./
 
+# Custom entrypoint: runs bin/migrate to completion before exec'ing bin/server,
+# gated on the command being bin/server (so e.g. a remote console doesn't also
+# run migrations). This makes Kamal's /up health check on the new container
+# naturally gated on migration success (D-05).
+COPY docker-entrypoint /app/bin/docker-entrypoint
+RUN chmod +x /app/bin/docker-entrypoint
+
 USER nobody
 
-# If using an environment that doesn't automatically reap zombie processes, it is
-# advised to add an init process such as tini via `apt-get install`
-# above and adding an entrypoint. See https://github.com/krallin/tini for details
-# ENTRYPOINT ["/tini", "--"]
+ENTRYPOINT ["/app/bin/docker-entrypoint"]
 
 CMD ["/app/bin/server"]
