@@ -1,10 +1,9 @@
 # Kamal 2 deploy configuration.
 #
-# NOTE: this file is authored in plan 00-04 but not yet used for a live deploy —
-# the Hetzner CAX31 host does not exist yet (D-12). The `servers.web` entry below
-# is a clearly-marked placeholder to be filled in during plan 00-05's host
-# provisioning. Everything else (image, registry, proxy, accessories, env) is
-# real, final configuration.
+# Wired to the real production host during plan 00-05 (D-20: GCP e2-micro,
+# x86_64, us-central1-a — supersedes the original Hetzner CAX31/arm64
+# assumption from plan 00-04 due to a 2026 capacity shortage across
+# Hetzner/Oracle at provisioning time; see 00-CONTEXT.md D-20).
 
 service: pukllay_club
 
@@ -16,11 +15,15 @@ registry:
   password:
     - KAMAL_REGISTRY_PASSWORD
 
+# GCP's metadata-based SSH key provisioning creates a non-root sudo-capable
+# user ("deploy"), not direct root access (D-20). Without this, Kamal
+# defaults to root and cannot connect.
+ssh:
+  user: deploy
+
 servers:
   web:
-    # PLACEHOLDER — replaced with the real Hetzner CAX31 IP/hostname during
-    # plan 00-05's host provisioning (D-12). Do not deploy against this value.
-    - <hetzner-host-placeholder>
+    - 34.41.63.138
 
 proxy:
   ssl: true
@@ -42,7 +45,7 @@ env:
 accessories:
   db:
     image: pgvector/pgvector:pg17
-    host: <hetzner-host-placeholder>
+    host: 34.41.63.138
     # Bind to localhost only — never 0.0.0.0 (D-15). Docker's own iptables
     # rules bypass UFW, so this bind is the real access control, not the
     # host firewall.
