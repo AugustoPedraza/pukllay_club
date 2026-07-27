@@ -1,0 +1,65 @@
+name: Nightly Backup
+
+# DEPLOY-04: a nightly pg_dump of the production Postgres accessory, uploaded
+# to Cloudflare R2. Runs over SSH from GitHub Actions rather than a host-side
+# cron/systemd timer (00-06-PLAN.md assumption_delta_decision) so R2
+# credentials stay in GitHub secrets (D-08 consistency) instead of living on
+# host disk.
+#
+# ACCEPTED RISK (00-CONTEXT.md D-19 / 00-RESEARCH.md Pitfall 3): the repo is
+# public, so GitHub auto-disables `schedule:`-triggered workflows after 60
+# days without a repository commit. No keepalive mechanism is added — the
+# project has several more phases of active planned development, so a
+# 60-day commit gap is considered unlikely. See 00-06-SUMMARY.md for the
+# explicit acceptance record.
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # nightly, 08:00 UTC
+  workflow_dispatch: {} # manual trigger, used to verify the pipeline end-to-end
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Load deploy SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      # aws-cli ships preinstalled on GitHub-hosted ubuntu-latest runners, but
+      # the plan flags this as unconfirmed (00-RESEARCH.md Open Question 2) —
+      # verify explicitly and install on demand rather than assume.
+      - name: Ensure aws-cli is available
+        run: |
+          if ! command -v aws &> /dev/null; then
+            echo "aws-cli not found — installing"
+            curl -sS "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip -q awscliv2.zip
+            sudo ./aws/install
+          fi
+          aws --version
+
+      - name: Dump production database over SSH
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new "deploy@${{ secrets.DEPLOY_HOST }}" \
+            "sudo docker exec -e PGPASSWORD='$POSTGRES_PASSWORD' db pg_dump -U postgres pukllay_club_prod | gzip" \
+            > "backup-$(date +%F).sql.gz"
+
+      - name: Upload dump to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        run: |
+          set -euo pipefail
+          aws s3 cp "backup-$(date +%F).sql.gz" \
+            s3://pukllay-backups/ \
+            --endpoint-url "$R2_ENDPOINT"
