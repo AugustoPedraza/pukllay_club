@@ -39,6 +39,10 @@ servers:
 proxy:
   ssl: true
   host: pukllay.club
+  # kamal-proxy defaults to proxying to container port 80; Phoenix's
+  # Endpoint listens on 4000 by default (config/runtime.exs reads the
+  # PORT env var, defaulting to "4000", and nothing here sets PORT=80).
+  app_port: 4000
   healthcheck:
     path: /up
 
