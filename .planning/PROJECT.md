@@ -19,12 +19,12 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] A trivial but real Phoenix app is deployed to production at pukllay.club over HTTPS, with CI,
+      zero-downtime deploys, migrations-on-deploy, and nightly backups (Validated in Phase 0 —
+      walking skeleton; live-verified against production, not just code review)
 
 ### Active
 
-- [ ] A trivial but real Phoenix app is deployed to production at pukllay.club over HTTPS, with CI,
-      zero-downtime deploys, migrations-on-deploy, and nightly backups (Phase 0 — walking skeleton)
 - [ ] Members can browse and filter a catalog of ~400 games with carousels/cards/streams, own
       resized images, complexity-teaching UX (visual weight, plain-language mechanic/theme chips),
       hard filters, and keyword search — fully public, no auth (Phase 1)
@@ -39,7 +39,7 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
 ### Out of Scope
 
 - Multi-tenancy — single club, single tenant, no need
-- Microservices / Kubernetes — solo dev, single Hetzner node, unnecessary ops burden
+- Microservices / Kubernetes — solo dev, single production node, unnecessary ops burden
 - Message broker — Oban (Postgres-backed) covers async work at this scale
 - Separate vector DB, search service, or auth provider — pgvector + Postgres text search +
   phx.gen.auth keep everything in one database and one deploy
@@ -108,13 +108,13 @@ assuming the visitor already speaks the hobby's vocabulary.
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Elixir/Phoenix LiveView + single Postgres DB, no umbrella | Solo dev, near-zero ops, one deploy target | — Pending |
-| Docker + Kamal to a single Hetzner CAX31 (ARM) | ~€15/mo budget, zero-downtime deploys without k8s | — Pending |
-| Local CPU embeddings + remote free-tier LLM, never on request hot path | Keeps latency and cost predictable on a GPU-less single node | — Pending |
+| Elixir/Phoenix LiveView + single Postgres DB, no umbrella | Solo dev, near-zero ops, one deploy target | ✓ Good — live in Phase 0 |
+| Docker + Kamal to a single production host | ~€15/mo budget, zero-downtime deploys without k8s | ✓ Good, provider changed — planned Hetzner CAX31 (ARM), but a 2026 industry-wide capacity shortage forced a pivot to GCP e2-micro (x86_64) during Phase 0 execution; see 00-CONTEXT.md D-20. Live and verified at ~$3.60/mo, well under budget |
+| Local CPU embeddings + remote free-tier LLM, never on request hot path | Keeps latency and cost predictable on a GPU-less single node | — Pending (Phase 2). Flagged risk: the GCP e2-micro host (1GB RAM) is smaller than originally planned — Phase 2's spike must verify against this box's real constraints |
 | text[] + GIN for multi-valued tags instead of join tables | Avoids premature normalization until a tag needs its own metadata | — Pending |
-| Cloudflare R2 for nightly backup storage | S3-compatible, no egress fees, fits budget | — Pending |
+| Cloudflare R2 for nightly backup storage | S3-compatible, no egress fees, fits budget | ✓ Good — live in Phase 0, manually verified |
 | Business Context section omitted | Internal club tool — no payments, no revenue model | ✓ Good |
-| Dockerfile strategy, migration safety, secrets management | Deferred to Phase 0 discuss/plan rather than decided at project init | — Pending |
+| Dockerfile strategy, migration safety, secrets management | Deferred to Phase 0 discuss/plan rather than decided at project init | ✓ Resolved in Phase 0 — entrypoint-gated migrations (D-05), GitHub Actions repo secrets (D-08), live-proven via a real migration shipped through the pipeline (D-06) |
 
 ## Evolution
 
@@ -134,4 +134,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-24 after initialization*
+*Last updated: 2026-07-27 after Phase 0 completion*
