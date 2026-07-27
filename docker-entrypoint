@@ -2,6 +2,7 @@
 set -e
 
 if [ "$1" = "/app/bin/server" ]; then
+  /app/bin/createdb
   /app/bin/migrate
 fi
 
