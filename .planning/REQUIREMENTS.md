@@ -11,7 +11,7 @@ Requirements for this milestone (Phases 0-4, per PROJECT.md's fixed roadmap). Ea
 
 - [x] **DEPLOY-01**: App is deployed to production at pukllay.club over HTTPS with a placeholder page and `/up` health endpoint
 - [x] **DEPLOY-02**: CI runs `mix quality` (format --check-formatted, credo --strict, sobelow, test --warnings-as-errors) on every PR via GitHub Actions, with a Postgres service and dependency/build caching
-- [x] **DEPLOY-03**: `kamal deploy` ships a change to the CAX31 with zero downtime and runs Ecto migrations as part of the deploy
+- [x] **DEPLOY-03**: `kamal deploy` ships a change to the production host with zero downtime and runs Ecto migrations as part of the deploy
 - [x] **DEPLOY-04**: A nightly `pg_dump` backup runs automatically and lands in Cloudflare R2
 - [x] **DEPLOY-05**: AGENTS.md documents the TDD loop (test from acceptance criteria -> red -> green -> refactor), the `mix quality` alias, the manual-merge-gate rule, and the project's non-goals
 
