@@ -50,8 +50,14 @@ jobs:
         run: |
           set -euo pipefail
           ssh -o StrictHostKeyChecking=accept-new "deploy@${{ secrets.DEPLOY_HOST }}" \
-            "sudo docker exec -e PGPASSWORD='$POSTGRES_PASSWORD' db pg_dump -U postgres pukllay_club_prod | gzip" \
+            "sudo docker exec -e PGPASSWORD='$POSTGRES_PASSWORD' db bash -c 'set -o pipefail; pg_dump -U postgres pukllay_club_prod | gzip'" \
             > "backup-$(date +%F).sql.gz"
+
+          # Fail loudly instead of uploading a silently-broken/empty dump
+          # (a remote-side pg_dump failure otherwise only surfaces as gzip
+          # exiting 0 on empty/closed stdin — see CR-02).
+          gzip -t "backup-$(date +%F).sql.gz"
+          test -s "backup-$(date +%F).sql.gz"
 
       - name: Upload dump to Cloudflare R2
         env:
