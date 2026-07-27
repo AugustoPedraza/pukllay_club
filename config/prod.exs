@@ -11,11 +11,16 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
 # Force using SSL in production. This also sets the "strict-security-transport" header,
 # known as HSTS. If you have a health check endpoint, you may want to exclude it below.
 # Note `:force_ssl` is required to be set at compile-time.
+#
+# `/up` is excluded: kamal-proxy's own container health check hits the app
+# directly over plain HTTP inside the Docker network (it does not set
+# x_forwarded_proto), so without this exclusion force_ssl 301-redirects the
+# health check itself and the container never becomes "healthy" (D-05/D-06).
 config :pukllay_club, PukllayClubWeb.Endpoint,
   force_ssl: [
     rewrite_on: [:x_forwarded_proto],
     exclude: [
-      # paths: ["/health"],
+      paths: ["/up"],
       hosts: ["localhost", "127.0.0.1"]
     ]
   ]
