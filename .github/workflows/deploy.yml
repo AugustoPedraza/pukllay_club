@@ -175,15 +175,13 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        # First-time bootstrap (plan 00-05, D-20 host): `kamal setup` boots
-        # kamal-proxy + the db accessory + the app release on a server that
-        # has never been deployed to, obtaining the Let's Encrypt cert along
-        # the way. This is intentionally `setup`, not `deploy`, ONLY for
-        # this initial bring-up commit — a follow-up commit switches this
-        # back to `kamal deploy` (D-02's steady-state CI-driven command)
-        # once the first release is confirmed healthy.
+        # Steady-state CI-driven deploy (D-02). `kamal setup` (which also
+        # boots kamal-proxy + the db accessory + obtains the Let's Encrypt
+        # cert) was used only for plan 00-05's one-time first bring-up on
+        # the GCP host; that bootstrap is confirmed healthy and live, so
+        # every deploy from here on uses the leaner `kamal deploy`.
         # --skip-push: the image was already built and pushed by the
         # build-and-push job above (D-01/D-10) — Kamal only needs to pull
         # the tag matching its computed version (the full git SHA of this
         # commit, which the previous job tagged via metadata-action).
-        run: kamal setup --skip-push
+        run: kamal deploy --skip-push
