@@ -57,6 +57,15 @@ if config_env() == :prod do
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
   config :pukllay_club, PukllayClub.Repo,
+    # ACCEPTED RISK (WR-04, 00-REVIEW.md): TLS is intentionally disabled here.
+    # App <-> db traffic (including DATABASE_URL's embedded credentials)
+    # crosses the unencrypted Docker bridge network between the app and `db`
+    # accessory containers on the single-tenant deploy host — the accessory's
+    # host port is bound to 127.0.0.1 in config/deploy.yml, but that only
+    # governs host-level exposure, not this inter-container path. Accepted
+    # as low-risk for a single-tenant host today; revisit (ssl: true with a
+    # self-signed accessory cert) if the deploy topology ever becomes
+    # multi-tenant or the host is shared.
     # ssl: true,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
