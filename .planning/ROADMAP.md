@@ -26,7 +26,7 @@ be pulled forward without breaking that dependency chain.
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED), appear between surrounding
   integers in numeric order
 
-- [ ] **Phase 0: Walking Skeleton to Production** - Deploy pipeline only (CI, Kamal, migrations, backups) — no product features
+- [x] **Phase 0: Walking Skeleton to Production** - Deploy pipeline only (CI, Kamal, migrations, backups) — no product features (completed 2026-07-27)
 - [ ] **Phase 1: Catalog v1** - Public browse/filter/search catalog with complexity-teaching UX, no auth, no AI
 - [ ] **Phase 2: Natural-Language Spanish Search + Auth** - Hero feature: NL search via hybrid ranking, plus magic-link auth and favorites
 - [ ] **Phase 3: RAG Rules Oracle** - Per-game rules Q&A grounded in official rulebooks with citations
@@ -44,7 +44,7 @@ be pulled forward without breaking that dependency chain.
 
   1. The production domain (pukllay.club) responds over HTTPS with a placeholder response and a working `/up` health endpoint
   2. Every PR runs CI (`mix quality`: format --check-formatted, credo --strict, sobelow, test --warnings-as-errors) against a Postgres service, and must pass before merge
-  3. `kamal deploy` ships a change to the Hetzner CAX31 with zero downtime and runs Ecto migrations as part of the deploy
+  3. `kamal deploy` ships a change to the production host with zero downtime and runs Ecto migrations as part of the deploy (see 00-CONTEXT.md D-20: host is GCP e2-micro, not the originally-planned Hetzner CAX31)
   4. A nightly `pg_dump` backup job runs automatically and lands a dump in Cloudflare R2
   5. AGENTS.md documents the TDD loop, the `mix quality` alias, the manual-merge-gate rule, and the project's non-goals
 
@@ -142,7 +142,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Walking Skeleton to Production | 6/6 | In Progress|  |
+| 0. Walking Skeleton to Production | 6/6 | Complete    | 2026-07-27 |
 | 1. Catalog v1 | 0/TBD | Not started | - |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
