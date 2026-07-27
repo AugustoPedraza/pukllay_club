@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 00
 current_phase_name: walking-skeleton-to-production
-status: executing
-stopped_at: Completed 00-05-PLAN.md
-last_updated: "2026-07-27T16:57:23.985Z"
+status: verifying
+stopped_at: Completed 00-06-PLAN.md
+last_updated: "2026-07-27T17:56:30.967Z"
 last_activity: 2026-07-24
 last_activity_desc: Phase 00 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -30,11 +30,11 @@ even without already knowing board-game vocabulary.
 
 Phase: 00 (walking-skeleton-to-production) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-24 — Phase 00 execution started
 structure (0-4)
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [████████░░] 83%
 | Phase 00 P03 | 90min | 3 tasks | 3 files |
 | Phase 00 P04 | 197min | 3 tasks | 6 files |
 | Phase 00 P05 | 50min | 3 tasks | 8 files |
+| Phase 00 P06 | 20min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 00-05: kamal setup used once for first-time GCP bootstrap, then switched to kamal deploy --skip-push (D-02 steady state) once confirmed healthy; CI builds+pushes the image directly (docker/build-push-action) and Kamal only pulls the matching git-SHA tag
 - [Phase ?]: 00-05: PukllayClub.Release.createdb/0 added as a permanent, idempotent database-bootstrap step (not a one-off manual CREATE DATABASE) since this project has already had to re-provision its production host once this phase
 - [Phase ?]: 00-05: DEPLOY-01 and DEPLOY-03 proven live via two checkpoint:human-verify gates — HTTPS+/up+localhost-Postgres, and a real migration shipped through CI->build->Kamal proven to gate zero-downtime cutover (D-06)
+- [Phase ?]: 00-06: Nightly backup mechanism = scheduled GitHub Actions over SSH (not host cron/systemd), keeping R2 credentials in GitHub secrets (D-08 pattern); 60-day scheduled-workflow auto-disable risk (D-19) explicitly accepted, no keepalive added
 
 ### Pending Todos
 
@@ -131,7 +133,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-27T16:57:23.971Z
-Stopped at: Completed 00-05-PLAN.md
+Last session: 2026-07-27T17:56:30.956Z
+Stopped at: Completed 00-06-PLAN.md
 verified against the roadmap (no edits needed)
 Resume file: None
