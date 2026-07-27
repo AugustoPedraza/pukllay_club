@@ -5,6 +5,14 @@ defmodule PukllayClub.Release do
   """
   @app :pukllay_club
 
+  def createdb do
+    load_app()
+
+    for repo <- repos() do
+      :ok = ensure_repo_created(repo)
+    end
+  end
+
   def migrate do
     load_app()
 
@@ -26,5 +34,13 @@ defmodule PukllayClub.Release do
     # Many platforms require SSL when connecting to the database
     Application.ensure_all_started(:ssl)
     Application.ensure_loaded(@app)
+  end
+
+  defp ensure_repo_created(repo) do
+    case repo.__adapter__().storage_up(repo.config()) do
+      :ok -> :ok
+      {:error, :already_up} -> :ok
+      {:error, term} -> {:error, term}
+    end
   end
 end
