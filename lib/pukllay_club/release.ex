@@ -9,7 +9,10 @@ defmodule PukllayClub.Release do
     load_app()
 
     for repo <- repos() do
-      :ok = ensure_repo_created(repo)
+      case ensure_repo_created(repo) do
+        :ok -> :ok
+        {:error, term} -> raise "failed to create storage for #{inspect(repo)}: #{inspect(term)}"
+      end
     end
   end
 
