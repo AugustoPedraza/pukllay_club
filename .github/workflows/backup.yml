@@ -49,15 +49,29 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
           set -euo pipefail
-          ssh -o StrictHostKeyChecking=accept-new "deploy@${{ secrets.DEPLOY_HOST }}" \
-            "sudo docker exec -e PGPASSWORD='$POSTGRES_PASSWORD' db bash -c 'set -o pipefail; pg_dump -U postgres pukllay_club_prod | gzip'" \
-            > "backup-$(date +%F).sql.gz"
+          BACKUP_FILE="backup-$(date +%F).sql.gz"
+
+          # WR-01: the password is sent over ssh's stdin (here-string below)
+          # instead of being interpolated into the remote command string, so
+          # it never appears as a `docker exec -e ...` argument in the
+          # remote host's process list — the remote script only ever
+          # references it via --env-file, read from a 0600 temp file that a
+          # trap removes on exit.
+          ssh -o StrictHostKeyChecking=accept-new "deploy@${{ secrets.DEPLOY_HOST }}" '
+            set -euo pipefail
+            ENV_FILE=$(mktemp)
+            chmod 600 "$ENV_FILE"
+            trap "rm -f \"$ENV_FILE\"" EXIT
+            cat > "$ENV_FILE"
+            sudo docker exec --env-file "$ENV_FILE" db bash -c "set -o pipefail; pg_dump -U postgres pukllay_club_prod | gzip"
+          ' <<< "PGPASSWORD=$POSTGRES_PASSWORD" \
+            > "$BACKUP_FILE"
 
           # Fail loudly instead of uploading a silently-broken/empty dump
           # (a remote-side pg_dump failure otherwise only surfaces as gzip
           # exiting 0 on empty/closed stdin — see CR-02).
-          gzip -t "backup-$(date +%F).sql.gz"
-          test -s "backup-$(date +%F).sql.gz"
+          gzip -t "$BACKUP_FILE"
+          test -s "$BACKUP_FILE"
 
       - name: Upload dump to Cloudflare R2
         env:
