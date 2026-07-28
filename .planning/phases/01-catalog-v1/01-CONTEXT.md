@@ -106,7 +106,9 @@ tracking (Phase 4).
 
 ### Real Data Findings (`LUDOTECA.csv`, confirmed 2026-07-28)
 
-The club's CSV export arrived during Phase 1 planning: `/home/apedraza/Downloads/LUDOTECA.csv`,
+The club's CSV export arrived during Phase 1 planning and is committed at
+`priv/repo/seed_data/ludoteca.csv` (the canonical path the seed mix task should read from — not
+the original `~/Downloads/LUDOTECA.csv` handoff location, which won't exist outside this machine).
 434 real game rows (28 raw columns incl. 7 empty trailing `Columna N` artifacts — proper CSV
 parsing must respect quoted multi-line fields; a naive line-count gives 2817, not 434). These
 findings correct/confirm assumptions in the decisions above and must inform the seed task (D-01/
