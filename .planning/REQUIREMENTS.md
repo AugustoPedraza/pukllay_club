@@ -17,7 +17,7 @@ Requirements for this milestone (Phases 0-4, per PROJECT.md's fixed roadmap). Ea
 
 ### Catalog
 
-- [ ] **CATALOG-01**: Member can browse the full catalog (~400 games) with cover images, presented as carousels/cards in LiveView streams
+- [x] **CATALOG-01**: Member can browse the full catalog (~400 games) with cover images, presented as carousels/cards in LiveView streams
 - [ ] **CATALOG-02**: Member can filter by player count, playtime, category/mechanic/theme (text[] + GIN), and minimum age
 - [ ] **CATALOG-03**: Member can search the catalog by keyword (title, designer, publisher) via tsvector
 - [ ] **CATALOG-04**: Member can sort results by playtime, complexity, or other scalar fields
@@ -95,7 +95,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEPLOY-03 | Phase 0 | Complete |
 | DEPLOY-04 | Phase 0 | Complete |
 | DEPLOY-05 | Phase 0 | Complete |
-| CATALOG-01 | Phase 1 | Pending |
+| CATALOG-01 | Phase 1 | Complete |
 | CATALOG-02 | Phase 1 | Pending |
 | CATALOG-03 | Phase 1 | Pending |
 | CATALOG-04 | Phase 1 | Pending |

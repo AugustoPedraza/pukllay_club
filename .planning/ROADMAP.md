@@ -84,13 +84,13 @@ be pulled forward without breaking that dependency chain.
   4. Each game displays a plain-Spanish weight-band descriptor and plain-Spanish mechanic/theme chips instead of a bare 1-5 number or raw hobbyist jargon
   5. Each game shows the club's own resized cover image and any editorial "club favorite"/"beginner-friendly" tag carried over from the existing Excel catalog
 
-**Plans**: 6 plans
+**Plans**: 1/6 plans executed
 **UI hint**: yes
 
 **Wave 1**
 
 - [ ] 01-01-PLAN.md — BGG application token + R2 catalog bucket + seed dependencies (blocking human checkpoint) (CATALOG-09)
-- [ ] 01-02-PLAN.md — Brand identity: daisyUI theme tokens, self-hosted Bebas Neue/Inter, header lockup (CATALOG-01)
+- [x] 01-02-PLAN.md — Brand identity: daisyUI theme tokens, self-hosted Bebas Neue/Inter, header lockup (CATALOG-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -164,7 +164,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Walking Skeleton to Production | 6/6 | Complete    | 2026-07-27 |
-| 1. Catalog v1 | 0/6 | Not started | - |
+| 1. Catalog v1 | 1/6 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |

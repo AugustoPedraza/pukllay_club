@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-current_phase_name: Catalog v1
+current_phase: 01
+current_phase_name: catalog-v1
 status: executing
-stopped_at: Phase 01 UI-SPEC approved
-last_updated: "2026-07-28T11:37:59.106Z"
-last_activity: 2026-07-27
-last_activity_desc: Phase 00 complete, transitioned to Phase 1
+stopped_at: "Completed 01-02-PLAN.md (brand identity: theme tokens, self-hosted type, header lockup)"
+last_updated: "2026-07-28T12:09:11.380Z"
+last_activity: 2026-07-28
+last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -24,17 +24,17 @@ See: .planning/PROJECT.md (updated 2026-07-24)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 00 — walking-skeleton-to-production
+**Current focus:** Phase 01 — catalog-v1
 
 ## Current Position
 
-Phase: 1 — Catalog v1
-Plan: Not started
+Phase: 01 (catalog-v1) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-27 — Phase 00 complete, transitioned to Phase 1
+Last activity: 2026-07-28 — Phase 01 execution started
 structure (0-4)
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 58%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 00 P04 | 197min | 3 tasks | 6 files |
 | Phase 00 P05 | 50min | 3 tasks | 8 files |
 | Phase 00 P06 | 20min | 2 tasks | 1 files |
+| Phase 01 P02 | 30min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 00-05: PukllayClub.Release.createdb/0 added as a permanent, idempotent database-bootstrap step (not a one-off manual CREATE DATABASE) since this project has already had to re-provision its production host once this phase
 - [Phase ?]: 00-05: DEPLOY-01 and DEPLOY-03 proven live via two checkpoint:human-verify gates — HTTPS+/up+localhost-Postgres, and a real migration shipped through CI->build->Kamal proven to gate zero-downtime cutover (D-06)
 - [Phase ?]: 00-06: Nightly backup mechanism = scheduled GitHub Actions over SSH (not host cron/systemd), keeping R2 credentials in GitHub secrets (D-08 pattern); 60-day scheduled-workflow auto-disable risk (D-19) explicitly accepted, no keepalive added
+- [Phase ?]: 01-02: daisyUI theme values kept as hex (not oklch) per 01-UI-SPEC.md, preserving traceability to the brand manual
+- [Phase ?]: 01-02: info/success/warning -content colors (unspecified by UI-SPEC's 17-var table) converted to brand hex to eliminate all remaining stock oklch values
+- [Phase ?]: 01-02: fixed pre-existing invalid 'E' regex modifier in config/runtime.exs live_reload patterns that blocked mix test in every environment (Rule 3 blocking fix)
 
 ### Pending Todos
 
@@ -133,7 +137,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-28T01:34:22.028Z
-Stopped at: Phase 01 UI-SPEC approved
+Last session: 2026-07-28T12:09:11.366Z
+Stopped at: Completed 01-02-PLAN.md (brand identity: theme tokens, self-hosted type, header lockup)
 verified against the roadmap (no edits needed)
-Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/01-catalog-v1/01-UI-SPEC.md
+Resume file: None
