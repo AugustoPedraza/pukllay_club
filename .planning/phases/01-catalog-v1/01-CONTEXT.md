@@ -104,6 +104,47 @@ tracking (Phase 4).
 - Image resize dimensions/format specifics for the two variants (D-03) — pick reasonable defaults;
   can be revisited once the Stitch UI design (D-11) shows actual card/detail sizing needs.
 
+### Real Data Findings (`LUDOTECA.csv`, confirmed 2026-07-28)
+
+The club's CSV export arrived during Phase 1 planning: `/home/apedraza/Downloads/LUDOTECA.csv`,
+434 real game rows (28 raw columns incl. 7 empty trailing `Columna N` artifacts — proper CSV
+parsing must respect quoted multi-line fields; a naive line-count gives 2817, not 434). These
+findings correct/confirm assumptions in the decisions above and must inform the seed task (D-01/
+D-02) and glossary work (D-07):
+
+- **D-16:** The CSV has **10 hashtag columns, not 6** — beyond D-05/D-06's confirmed set it also
+  has `#InicioRápido` (101/434 games), `#GestionaTusRecursos` (147/434), `#DominaElTablero`
+  (111/434), `#ArteEnLaMesa` (135/434). **Confirmed: ignore these 4 columns for Phase 1** — not
+  seeded, not displayed. They're a candidate input for a future admin-configurable hashtag/
+  carousel system (ties to D-10, Phase 4 territory), not Phase 1 scope. No UI-SPEC change needed —
+  the hardcoded 6-hashtag-row carousel design (D-09) stands as-is.
+- **D-17:** The CSV also has pre-existing `Peso_BGG`, `Mecanicas`, `Categorias`, `Rating_BGG`,
+  `Tiempo_Juego`, `Min_Jugadores`, `Max_Jugadores` columns — incidental/possibly-stale data from
+  a prior export, **not the canonical source**. `Categorias` is populated on only 1/434 rows
+  (unusable); `Mecanicas` on 394/434; `Peso_BGG`/`Rating_BGG`/`Tiempo_Juego`/`Min_Jugadores` on
+  ~407-408/434. **Confirmed: per D-01, live BGG XML API (`/xmlapi2/thing`, keyed by `BGG_ID`,
+  `stats=1`) stays the canonical source for weight, mechanics, categories, min age, and images —
+  in one call per game (batched, multiple IDs per request) since all of these come back together.
+  Persist the fuller fetched payload (not just what Phase 1's UI displays)** so a later phase
+  doesn't need to re-run the one-time enrichment pipeline (D-02) just to backfill one more field.
+  These CSV columns are reference/ignorable, not merged into the canonical record.
+- **D-18:** **41/434 games (~9%) have no `BGG_ID` at all** — no BGG enrichment possible (no
+  images, no min age, no API-sourced mechanics/categories/weight for these). **Confirmed: still
+  list them in the v1 catalog with degraded data** (omit the missing chip/badge/gallery, per the
+  UI-SPEC's existing "partial" state design for missing optional fields) — do not exclude them
+  from the catalog.
+- **D-19:** 1 duplicate `BGG_ID` (`163412`) shared by two CSV rows. Seed task flags this for
+  manual review rather than silently deduping or dropping either row.
+- **D-20:** Hashtag column values are inconsistently entered — `si`/`Sí`/`sí` (case/accent
+  variants) all mean true; stray values (`n`, `s`, `di`, `su`, `ai`) are observed data-entry slips.
+  Seed task treats any `si`/`sí` case-insensitive match as true, everything else as false, and
+  **logs any non-empty value that isn't a recognized si/no variant** for manual review (don't
+  silently coerce typos). Separately: 11 games have **2 of the 3 weight-band hashtags marked true
+  simultaneously** (conflict) — derive the band from `Peso_BGG` when available as a tie-break,
+  otherwise flag for manual review (don't pick arbitrarily). 46 games have **zero weight-band
+  hashtags set** — 20 of those have `Peso_BGG` to derive a band from instead; the remaining 26
+  have neither and show no weight badge (same "omit missing chip" pattern as D-18).
+
 </decisions>
 
 <canonical_refs>
