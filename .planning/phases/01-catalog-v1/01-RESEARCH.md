@@ -8,6 +8,11 @@ authentication finding is MEDIUM/cross-checked web sources; exact per-field BGG 
 is LOW/training-knowledge since BGG's own docs pages returned bot-challenge 403s during this
 research session and could not be fetched directly)
 
+**Note:** The real `LUDOTECA.csv` data export landed mid-session (2026-07-28, recorded as D-16..D-20
+in 01-CONTEXT.md) after initial research was drafted. This document has been updated in place to
+incorporate those confirmed findings (already-CSV format, 10-vs-6 hashtag columns, BGG_ID
+missing/duplicate rows, weight-hashtag conflicts) — see Locked Decisions and Common Pitfalls #3/#3b.
+
 <user_constraints>
 ## User Constraints (from CONTEXT.md)
 
@@ -60,6 +65,41 @@ research session and could not be fetched directly)
   selecting multiple tags within the facet uses **OR logic** (matches ANY selected tag).
 - **D-15:** Keyword search (title/designer/publisher via tsvector) is **combined with filtering** in
   the same experience — one search box narrows results while respecting active filters.
+
+### Real Data Findings (`LUDOTECA.csv`, confirmed 2026-07-28 — landed mid-research, supersedes any "Excel file"/xlsx-conversion framing elsewhere in this document)
+
+The club's real data export arrived as `/home/apedraza/Downloads/LUDOTECA.csv` — **already a CSV**,
+not an `.xlsx` file — 434 real game rows (28 raw columns incl. 7 empty trailing `Columna N`
+artifacts; proper quoted-multi-line-aware CSV parsing is required, a naive line-count gives 2817,
+not 434). These are locked, confirmed findings that must inform the seed task:
+
+- **D-16:** The CSV has **10 hashtag columns, not 6** — 4 extra (`#InicioRápido`,
+  `#GestionaTusRecursos`, `#DominaElTablero`, `#ArteEnLaMesa`) beyond D-05/D-06's confirmed set.
+  **Confirmed: ignore these 4 for Phase 1** — not seeded, not displayed; candidate input for a
+  future admin-configurable system (D-10, Phase 4 territory). No UI-SPEC change needed.
+- **D-17:** The CSV also carries pre-existing `Peso_BGG`, `Mecanicas`, `Categorias`, `Rating_BGG`,
+  `Tiempo_Juego`, `Min_Jugadores`, `Max_Jugadores` columns from a prior export — **incidental,
+  not canonical**. `Categorias` populated on only 1/434 rows (unusable); `Mecanicas` on 394/434;
+  the rest on ~407-408/434. **Confirmed: live BGG XML API stays the canonical source** for weight,
+  mechanics, categories, min age, and images, keyed by `BGG_ID`, one batched `stats=1` call per
+  game since all these fields return together. **Persist the fuller fetched payload, not just what
+  Phase 1's UI displays**, so a later phase doesn't need to re-run the one-time pipeline to backfill
+  a field. The CSV's own `Peso_BGG` etc. columns are reference/ignorable for merging, but see D-20
+  for a specific tie-break use.
+- **D-18:** **41/434 games (~9%) have no `BGG_ID` at all** — no BGG enrichment possible. **Confirmed:
+  still list them in the v1 catalog with degraded data** (omit missing chip/badge/gallery per
+  UI-SPEC's existing "partial" state design) — do not exclude them.
+- **D-19:** 1 duplicate `BGG_ID` (`163412`) shared by two CSV rows. Seed task flags for manual
+  review rather than silently deduping or dropping either row.
+- **D-20:** Hashtag values are inconsistently entered — `si`/`Sí`/`sí` (case/accent variants) all
+  mean true; stray values (`n`, `s`, `di`, `su`, `ai`) are data-entry slips. Seed task treats any
+  case-insensitive `si`/`sí` match as true, everything else false, and **logs any non-empty value
+  that isn't a recognized si/no variant** for manual review (don't silently coerce typos).
+  Separately: 11 games have **2 of the 3 weight-band hashtags marked true simultaneously**
+  (conflict) — derive the band from `Peso_BGG` when available as a tie-break, otherwise flag for
+  manual review. 46 games have **zero weight-band hashtags set** — 20 of those have `Peso_BGG` to
+  derive a band from instead; the remaining 26 have neither and show no weight badge (same
+  "omit missing chip" pattern as D-18).
 
 ### Claude's Discretion
 
@@ -119,13 +159,17 @@ access, which is no longer true. The user (or Claude, if delegated) must registe
 this is a blocking prerequisite the plan must surface as an explicit early checkpoint, not an
 implementation detail to discover mid-build.
 
-**Primary recommendation:** Convert the Excel file to CSV once (manual step, zero new dependency)
-and parse with the already-transitively-available `NimbleCSV`; use `sweet_xml` for BGG XML parsing
-(ergonomic XPath sigils, and BGG's per-game responses are small — its memory overhead vs. `saxy`
-only matters on multi-MB documents, not here); use the `image` package (high-level Vix wrapper) for
-the two resize variants; use `ex_aws`+`ex_aws_s3` configured against R2's S3-compatible endpoint for
-upload; register a BGG application and obtain an API token as the first concrete Phase 1 task, before
-writing any enrichment code.
+**Primary recommendation:** The club's real data export (`LUDOTECA.csv`, 434 rows, confirmed
+2026-07-28 — see Locked Decisions D-16..D-20) is already a CSV, so no Excel-to-CSV conversion step
+or `.xlsx`-parsing library is needed at all — parse it directly with `NimbleCSV` (must be
+quoted-multi-line-safe; a naive line-count undercounts rows 6.5x). Use `sweet_xml` for BGG XML
+parsing (ergonomic XPath sigils, and BGG's per-game responses are small — its memory overhead vs.
+`saxy` only matters on multi-MB documents, not here); use the `image` package (high-level Vix
+wrapper) for the two resize variants; use `ex_aws`+`ex_aws_s3` configured against R2's S3-compatible
+endpoint for upload; register a BGG application and obtain an API token as the first concrete Phase 1
+task, before writing any enrichment code; and build the CSV data-cleaning rules from D-20 (si/sí
+normalization, weight-band conflict tie-break via `Peso_BGG`, BGG_ID dedup/missing flagging) directly
+into the seed task rather than assuming clean input.
 
 ## Architectural Responsibility Map
 
@@ -176,7 +220,7 @@ architecture decision, not new to this phase).
 | `sweet_xml` | `saxy` | Choose `saxy` only if BGG response sizes turn out much larger than expected (e.g. if `stats=1` + full history bloats responses) or if streaming becomes necessary; for ~400 small per-game XML docs this is unlikely to matter |
 | `image`/`vix` | `Mogrify` (ImageMagick CLI wrapper) | Mogrify is simpler to read for one-off scripts but requires ImageMagick installed on whatever machine runs the seed task and is measurably slower (community-reported ~4-5x for comparable resize operations); acceptable only if Vix's precompiled binaries fail to install in a given CI/dev environment |
 | `ex_aws`+`ex_aws_s3` | Raw `req`-based multipart PUT with manual AWS SigV4 signing (`aws_signature` package) | Only needed if going the *presigned-URL-from-browser* upload route (relevant to future direct-upload features, not this phase); the seed task uploads server-side, so `ex_aws_s3`'s built-in signing is simpler and battle-tested |
-| CSV import via `NimbleCSV` | `umya_spreadsheet_ex` (read `.xlsx` directly, no manual conversion) | Avoids one manual "export to CSV" step, but see Package Legitimacy Audit — this package has very low adoption (few downloads, single release as of this research) that doesn't yet meet the bar for an unattended dependency in a data-import path; only use if the user is unwilling to do a one-time CSV export |
+| CSV import via `NimbleCSV` | `umya_spreadsheet_ex`/`xlsxir` (read `.xlsx` directly) | **Moot as of the real `LUDOTECA.csv` data landing (2026-07-28) — the club's actual export is already a CSV, not `.xlsx`.** No `.xlsx`-parsing library is needed for Phase 1 at all; kept in the Package Legitimacy Audit below only as a documented rejected alternative in case a future re-export arrives as `.xlsx` instead |
 
 **Installation:**
 ```bash
@@ -212,13 +256,13 @@ maintenance.
 | `ex_aws_s3` | hex.pm | ~8.5 yrs (since 2017-11) | 58.5M | github.com/ex-aws/ex_aws_s3 | OK | Approved |
 | `nimble_csv` | hex.pm | ~10 yrs (since 2016-07) | 18.2M | dashbitco (José Valim's org) | OK | Approved |
 | `aws_signature` | hex.pm | ~4.5 yrs (since 2021-08) | 3.2M | github.com/aws-beam/aws_signature | OK | Not needed this phase (only for presigned-URL flow) — noted, not installed |
-| `umya_spreadsheet_ex` | hex.pm | ~1 yr (since 2025-06) | 1,807 (all-time) | github.com/alexiob/umya_spreadsheet_ex | SUS | Flagged — only use if user declines the manual CSV-export step; planner must add a `checkpoint:human-verify` before installing if chosen |
-| `xlsxir` | hex.pm | ~10 yrs, but **last published 2019-03** (7 years stale) | not queried (deprioritized) | github.com/jsonkenl/xlsxir | SUS (unmaintained) | Rejected — do not use; superseded in practice by the CSV-conversion approach or `umya_spreadsheet_ex` |
+| `umya_spreadsheet_ex` | hex.pm | ~1 yr (since 2025-06) | 1,807 (all-time) | github.com/alexiob/umya_spreadsheet_ex | SUS | Not needed — real data file (`LUDOTECA.csv`) is already CSV, not `.xlsx`; kept only as a rejected-alternative reference |
+| `xlsxir` | hex.pm | ~10 yrs, but **last published 2019-03** (7 years stale) | not queried (deprioritized) | github.com/jsonkenl/xlsxir | SUS (unmaintained) | Rejected — do not use regardless; also moot per the above |
 
 **Packages removed due to `[SLOP]` verdict:** none.
-**Packages flagged as suspicious `[SUS]`:** `umya_spreadsheet_ex` (low adoption/single release — gate
-behind `checkpoint:human-verify` if chosen instead of manual CSV export), `xlsxir` (unmaintained
-since 2019 — do not use regardless).
+**Packages flagged as suspicious `[SUS]`:** `umya_spreadsheet_ex` and `xlsxir` were evaluated as
+candidate `.xlsx` parsers before the real `LUDOTECA.csv` (already CSV) landed mid-research — neither
+is needed for Phase 1; retained in this table only as documented rejected alternatives.
 
 *All package names above were discovered via WebSearch/hex.pm lookup this session, not prior
 training-data recall of a specific version — but hex.pm registry confirmation plus an actively
@@ -485,20 +529,53 @@ on `429`/`5xx` responses.
 **Phase to address:** Phase 1 — build batching and backoff into `bgg_client.ex` from the start
 rather than retrofitting after a failed seed run.
 
-### Pitfall 3: Re-deriving weight bands instead of reading the Excel hashtag
+### Pitfall 3: Re-deriving weight bands instead of reading the CSV hashtag (with a confirmed tie-break exception)
 
 **What goes wrong:** It's tempting to compute the 3 weight bands from BGG's `averageweight` float
-(e.g. `< 2.0 → beginner`) since that data is readily available and numeric. D-05 is explicit this is
-wrong — the bands come from the club's own already-applied Excel hashtags, which may not align
-perfectly with any cutoff Claude would invent from BGG's raw scale.
-**Why it happens:** BGG's `averageweight` is the more "complete" numeric-looking data source, so it's
-an easy trap to reach for it as ground truth instead of the (less structured-looking) hashtag column.
-**How to avoid:** Ingest `weight_band` directly from the Excel hashtag column; treat BGG's
-`averageweight` as supplementary/informational only (if surfaced at all), not authoritative for
-band assignment.
-**Warning signs:** A `weight_band` migration/derivation function that references `averageweight`
-thresholds instead of reading an Excel column.
-**Phase to address:** Phase 1 seed task design.
+(e.g. `< 2.0 → beginner`) since that data is readily available and numeric. D-05 is explicit the
+primary source is the club's own already-applied CSV hashtags, not a Claude-invented cutoff on BGG's
+raw scale — **but** real-data auditing (D-20) found the hashtag column itself is imperfect: 11/434
+games have 2 of the 3 weight hashtags marked true simultaneously (conflict), and 46/434 have none
+set at all. D-20's confirmed resolution is a **narrow, explicit exception**: use `Peso_BGG` (the
+CSV's own stale-but-present BGG weight column, D-17) strictly as a **tie-break for these
+conflict/missing cases only** — never as the primary source when a single unambiguous hashtag is
+present.
+**Why it happens:** BGG's weight data is the more "complete" numeric-looking source, so it's an easy
+trap to reach for it as ground truth generally, rather than the narrow tie-break role D-20 actually
+assigns it.
+**How to avoid:** Implement band assignment as: (1) if exactly one weight hashtag is true, use it;
+(2) if 0 or 2+ are true, fall back to `Peso_BGG` when present to derive a band; (3) if neither a
+single hashtag nor `Peso_BGG` resolves it, leave `weight_band` unset and omit the chip (same
+"omit missing chip" pattern as D-18), flagged for manual review rather than guessed.
+**Warning signs:** A `weight_band` derivation function that reads `Peso_BGG`/`averageweight` first
+and only falls back to the hashtag, or one that silently picks a hashtag at random on conflict.
+**Phase to address:** Phase 1 seed task design — this exact three-branch logic should appear in
+`excel_import.ex`/the seed pipeline's band-assignment function, with the 11 conflict + 26
+truly-unresolvable games logged for manual review, not silently resolved.
+
+### Pitfall 3b: CSV data-quality issues found in the real 434-row export must be handled explicitly, not assumed clean
+
+**What goes wrong:** Treating `LUDOTECA.csv` as clean, well-formed input — assuming every row has a
+usable `BGG_ID`, every hashtag cell is a clean boolean, and every `BGG_ID` is unique — will silently
+corrupt the seed (crashes on non-boolean hashtag values, duplicate-key upsert overwrites, or missing
+enrichment treated as a bug rather than expected data).
+**Why it happens:** Spreadsheet-sourced data entered by hand over time accumulates exactly these
+issues (typos, copy-paste duplication, incomplete rows) — invisible until you actually audit row
+counts and column fill-rates rather than assuming shape from the column headers alone.
+**How to avoid:** Per D-16..D-20 (confirmed against the real file this session): (1) parse with a
+quoted-multi-line-safe CSV parser (`NimbleCSV`) — a naive per-line split undercounts 434 rows as
+2817; (2) ignore the 4 extra hashtag columns and the stale `Peso_BGG`/`Mecanicas`/`Categorias`/etc.
+columns for merging (D-16/D-17), except `Peso_BGG` as the narrow Pitfall-3 tie-break; (3) normalize
+hashtag cells case/accent-insensitively (`si`/`Sí`/`sí` → true) and log any non-empty, unrecognized
+value for manual review rather than coercing it; (4) treat a missing `BGG_ID` (41/434 games) as an
+expected, degraded-but-listed case, not an error; (5) flag the one duplicate `BGG_ID` (`163412`) for
+manual review rather than silently deduping.
+**Warning signs:** Seed task raises on an unexpected hashtag string; seed task silently
+overwrites/drops one of the two `163412` rows; row count assertions in a seed-task test expect 434
+but a naive parse yields a different number.
+**Phase to address:** Phase 1 seed task implementation — build a small data-cleaning/normalization
+module and unit-test it directly against these known real quirks (see Code Examples), rather than
+discovering them via a failed production seed run.
 
 ### Pitfall 4: Spanish full-text search without accent-folding
 
@@ -634,6 +711,51 @@ session (BGG's own wiki page and a direct API call both returned bot-challenge/a
 during this research pass — see Assumptions Log). Verify against a real authenticated response
 during Phase 1 execution, once a token is registered, before finalizing the parser.]
 
+### CSV hashtag normalization + weight-band tie-break (per D-20/Pitfall 3/3b)
+```elixir
+# Source: derived directly from this project's confirmed real-data audit (D-16..D-20), not an
+# external reference — the specific si/sí variants and conflict/missing counts are this project's
+# own data, not a generic library pattern.
+defmodule PukllayClub.Catalog.Seed.HashtagNormalizer do
+  @weight_hashtags ~w(DescubreElHobby IngenioEstratega NivelExperto)
+
+  def truthy?(nil), do: false
+  def truthy?(""), do: false
+  def truthy?(value) do
+    case value |> String.trim() |> String.downcase() do
+      v when v in ["si", "sí"] -> true
+      "" -> false
+      other ->
+        # log for manual review — don't silently coerce "n", "s", "di", "su", "ai", etc.
+        Logger.warning("Unrecognized hashtag cell value #{inspect(other)} — treating as false, flagging for review")
+        false
+    end
+  end
+
+  def resolve_weight_band(row) do
+    true_bands = for tag <- @weight_hashtags, truthy?(row[tag]), do: tag
+
+    case true_bands do
+      [single] -> {:ok, single}
+      [] -> tie_break(row, :missing)
+      _multiple -> tie_break(row, :conflict)
+    end
+  end
+
+  defp tie_break(row, reason) do
+    case row["Peso_BGG"] do
+      nil -> {:needs_review, reason}
+      "" -> {:needs_review, reason}
+      weight_str ->
+        {:ok, band_from_peso_bgg(String.to_float(weight_str))}
+        # NOTE: band cutoffs from Peso_BGG are a Phase-1-planning judgment call, not yet locked —
+        # confirm exact thresholds with the user before finalizing, since D-05 didn't specify them
+        # for this fallback path (only the primary hashtag-based assignment was specified).
+    end
+  end
+end
+```
+
 ### R2 upload via `ex_aws_s3`
 ```elixir
 # Source: composed from ex_aws_s3 hexdocs usage pattern + community-confirmed R2 config overrides
@@ -676,23 +798,34 @@ about it was written, given how recent the auth requirement is.
 | A3 | GIN index build-before-vs-after-seed is a performance-only concern for `text[]`/`tsvector` (unlike IVFFlat's correctness bug) | Architecture Patterns Pattern 1 | Low risk — if wrong, worst case is a slower-than-necessary seed run, not incorrect search results; not a blocking assumption |
 | A4 | `websearch_to_tsquery('spanish', ...)` is the right query-construction function (vs. `plainto_tsquery`/`to_tsquery`) for a public search box | Architecture Patterns Pattern 3 | If wrong, malformed user input (stray quotes, operators) could raise a Postgres error instead of degrading gracefully — verify with adversarial input during Phase 1 implementation |
 | A5 | Postgres `unaccent` + custom search-config layering is worth the added migration complexity for this catalog's search quality | Common Pitfalls #4 | If the club's game titles/designer names rarely have accent-sensitive collisions in practice, this could be deferred without much UX cost — confirm with the user or defer to a fast-follow if it doesn't come up in review |
-| A6 | `umya_spreadsheet_ex`/`xlsxir` package assessment (low adoption / staleness) reflects real risk, not just unfamiliarity | Package Legitimacy Audit | Low risk either way, since the recommended primary path (manual CSV export + `NimbleCSV`) avoids needing either package |
+| A6 | `umya_spreadsheet_ex`/`xlsxir` package assessment (low adoption / staleness) reflects real risk, not just unfamiliarity | Package Legitimacy Audit | Low risk — moot regardless, since the real data file is already CSV and neither package is needed |
+| A7 | No locked numeric `Peso_BGG` thresholds exist yet for the D-20 weight-band tie-break path (conflicting/missing hashtags) | Open Questions #2, Common Pitfalls #3 | If the planner invents thresholds unilaterally rather than confirming with the user or empirically fitting them against the clean-hashtag subset, the 11 conflict + 20 missing-hashtag games could get a band that doesn't match the club's actual judgment |
 
 **If this table is empty:** N/A — see rows above.
 
 ## Open Questions
 
-1. **Does the club's Excel file need a manual one-time CSV conversion, or should the seed task read `.xlsx` directly?**
-   - What we know: `NimbleCSV` is a well-established, zero-friction dependency; both `.xlsx`-reading
-     candidates (`umya_spreadsheet_ex`, `xlsxir`) carry adoption/staleness concerns (see Package
-     Legitimacy Audit).
-   - What's unclear: Whether the user considers a manual "export to CSV" step acceptable friction
-     given D-02 already frames the whole pipeline as a manual one-time task.
-   - Recommendation: Default to CSV conversion + `NimbleCSV` in the plan; only reach for
-     `umya_spreadsheet_ex` (behind a `checkpoint:human-verify`) if the user explicitly prefers not to
-     convert the file.
+1. **RESOLVED during this research session:** the earlier open question ("does the club's Excel
+   file need conversion to CSV, or should the seed task read `.xlsx` directly?") is moot — the real
+   data export (`LUDOTECA.csv`, D-16..D-20) arrived already as a CSV. Parse directly with
+   `NimbleCSV`; no `.xlsx`-reading library needed.
 
-2. **Exact BGG registration turnaround time and any per-application rate-limit tier.**
+2. **What `Peso_BGG` numeric thresholds map to which of the 3 weight bands, for the D-20 tie-break
+   path (conflicting or missing hashtags)?**
+   - What we know: D-20 confirms `Peso_BGG` (a stale-but-present BGG weight float already in the
+     CSV) is the designated tie-break source for the 11 conflict + 20-of-46 missing-hashtag games;
+     D-05 specifies the *primary* hashtag-to-band mapping but not numeric cutoffs for this fallback
+     path.
+   - What's unclear: The exact float thresholds (e.g. is a `Peso_BGG` of 2.4 "IngenioEstratega" or
+     borderline "DescubreElHobby"?) — this wasn't part of the original D-05 hashtag-band scope since
+     it assumed clean hashtag data.
+   - Recommendation: Planner should either (a) derive reasonable cutoffs from the distribution of
+     `Peso_BGG` values among the games that *do* have a clean single hashtag (fit the boundary
+     empirically against the confirmed-good 388-ish rows), or (b) surface this as a quick user
+     confirmation during planning rather than inventing thresholds unilaterally — this is exactly
+     the kind of numeric-band judgment call D-05 already flagged as sensitive.
+
+3. **Exact BGG registration turnaround time and any per-application rate-limit tier.**
    - What we know: Registration is required and is done via `boardgamegeek.com/applications/create`;
      community reports confirm the requirement is live and enforced.
    - What's unclear: Whether approval is instant/automatic or requires manual BGG review, and whether
