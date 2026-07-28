@@ -1,7 +1,7 @@
 ---
 phase: 1
 slug: catalog-v1
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-27
@@ -36,6 +36,32 @@ not treated as authoritative.
 - Minimum size: never render the logo lockup below ~20% of its reference/original size (brand manual's reduction-test floor) — treat as a "don't shrink past legibility" rule, not a literal CSS token.
 - Prohibited: do not flatten/squash, stretch, mirror, or recolor the logo to an off-brand hue (the manual's own example of "wrong" is rendering it in orange — notably the exact hue the stock daisyUI theme currently uses, reinforcing why that theme must be overridden).
 - Optional decorative texture: the manual includes a monochrome-purple abstract doodle/line-art pattern used on marketing/merch assets. Usable as a subtle background texture on a marketing/hero section if one exists, but do **not** apply it inside the catalog grid/card UI itself, and do not block Phase 1 on recreating it — no source asset file exists, only the PDF rendering, so treat as out of scope unless a marketing/landing surface is added later.
+
+---
+
+## Visual Hierarchy
+
+Top-to-bottom priority on the browse screen (per D-08/D-09/D-15):
+
+1. **Header** — horizontal logo lockup (isologo + wordmark + tagline), minimal chrome.
+2. **Search bar** — one search box at the top of the browse content, above the carousels. Primary
+   entry point for keyword search (title/designer/publisher); narrows whatever is below it,
+   including the carousels' underlying data, without leaving the page (D-15).
+3. **Curated carousel rows** — Club Favorite / Beginner-Friendly first (highest editorial trust
+   signal for a new/casual player), then the 6 editorial-hashtag rows, then Recently Added. These
+   are the primary visual anchor and first full-bleed image-forward content a member sees —
+   image-forward cards, not the grid, carry the initial visual weight (D-08/D-09).
+4. **Filter-drawer trigger** — a persistent but secondary button (not a sidebar) that opens the
+   slide-over filter panel on demand; kept visually lighter than the search bar and carousels so it
+   doesn't compete with them for attention (D-13).
+5. **Full grid** — below the carousels, the exhaustive ~400-game grid. Lowest visual priority of
+   the primary elements (users reach it after search/carousels/filters have already narrowed
+   intent), but still the functional backbone of the browse experience.
+
+Accent color (`#3D096D` / dark-mode `#A97FD1`) reinforces this order: reserved for the search
+focus ring, the filter-drawer trigger, and primary CTAs — never used decoratively on the grid
+itself, so it doesn't compete with the carousels' images for the eye's first pass (see Color
+section for the full reservation list).
 
 ---
 
@@ -241,11 +267,14 @@ registry concept; no third-party UI registry blocks are used in this phase.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (initial FLAG — missing Visual Hierarchy declaration — resolved by
+      adding the Visual Hierarchy section above, sourced from D-08/D-09/D-13/D-15; the checker's
+      finding referenced the superseded Google Stitch export (D-11), which the brand identity PDF
+      has already replaced as the visual source of truth)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved
