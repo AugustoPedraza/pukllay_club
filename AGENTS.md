@@ -15,11 +15,21 @@ This is a web application written using the Phoenix web framework.
 
 ## `mix quality` Alias
 
-Order: `format --check-formatted` -> `credo --strict` -> `sobelow --config` -> `test --warnings-as-errors`.
+Order: `hex.audit` -> `deps.audit` -> `deps.unlock --check-unused` -> `format --check-formatted` ->
+`credo --strict` -> `sobelow --config` -> `test --warnings-as-errors`.
 
-Cheapest/fastest checks run first — a formatting typo fails in seconds, not after a full test-suite
-run. Run `mix quality` locally before every commit; it is also what CI runs on every PR and again
-on every merge to `main` (see Manual Merge Gate below).
+Cheapest/fastest checks run first — `hex.audit`/`deps.audit`/`deps.unlock --check-unused` are
+metadata-only checks against mix.lock/mix.exs with no compilation step, so they run ahead of
+`format`; a formatting typo then fails in seconds, not after a full test-suite run. Run `mix
+quality` locally before every commit; it is also what CI runs on every PR and again on every merge
+to `main` (see Manual Merge Gate below).
+
+`format --check-formatted` also runs **Styler** (`adobe/elixir-styler`), wired as a `mix format`
+plugin via `.formatter.exs`'s `plugins` list — it auto-fixes non-idiomatic Elixir on every `mix
+format` run, guarding against AI-generated code drift. Styler's own README warns it "can change the
+behaviour of your program" (e.g. `case`->`if` rewrites can alter semantics). **Always review `git
+diff` for every Styler-produced rewrite before committing** — first-run or future, do not accept
+rewrites on trust.
 
 ## Manual Merge Gate
 
