@@ -1,5 +1,33 @@
 import Config
 
+# Print only warnings and errors during test
+config :logger, level: :warning
+
+# Initialize plugs at runtime for faster test compilation
+config :phoenix, :plug_init_mode, :runtime
+
+# Sort query params output of verified routes for robust url comparisons
+config :phoenix,
+  sort_verified_routes_query_params: true
+
+# Enable helpful, but potentially expensive runtime checks
+config :phoenix_live_view,
+  enable_expensive_runtime_checks: true
+
+# Obviously-fake credentials for the D-02 catalog seed pipeline so its unit
+# tests run in CI without real BGG/R2 access, with a stable URL host to
+# assert against.
+config :pukllay_club, PukllayClub.Catalog.Seed,
+  bgg_api_token: "test-token",
+  r2_account_id: "test-account-id",
+  r2_access_key_id: "test-access-key-id",
+  r2_secret_access_key: "test-secret-access-key",
+  r2_catalog_bucket: "test-catalog-bucket",
+  r2_public_base_url: "https://images.test.invalid"
+
+# In test we don't send emails
+config :pukllay_club, PukllayClub.Mailer, adapter: Swoosh.Adapters.Test
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used
@@ -20,33 +48,5 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
   secret_key_base: "/jp505oA2jS6YW9vBIneYjeMB1F8YEMt9hqm0T6qNg99pzFDKECOfjQy+2LhvJJi",
   server: false
 
-# In test we don't send emails
-config :pukllay_club, PukllayClub.Mailer, adapter: Swoosh.Adapters.Test
-
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
-
-# Print only warnings and errors during test
-config :logger, level: :warning
-
-# Initialize plugs at runtime for faster test compilation
-config :phoenix, :plug_init_mode, :runtime
-
-# Enable helpful, but potentially expensive runtime checks
-config :phoenix_live_view,
-  enable_expensive_runtime_checks: true
-
-# Sort query params output of verified routes for robust url comparisons
-config :phoenix,
-  sort_verified_routes_query_params: true
-
-# Obviously-fake credentials for the D-02 catalog seed pipeline so its unit
-# tests run in CI without real BGG/R2 access, with a stable URL host to
-# assert against.
-config :pukllay_club, PukllayClub.Catalog.Seed,
-  bgg_api_token: "test-token",
-  r2_account_id: "test-account-id",
-  r2_access_key_id: "test-access-key-id",
-  r2_secret_access_key: "test-secret-access-key",
-  r2_catalog_bucket: "test-catalog-bucket",
-  r2_public_base_url: "https://images.test.invalid"

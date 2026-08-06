@@ -7,20 +7,23 @@
 # General application configuration
 import Config
 
-config :pukllay_club,
-  ecto_repos: [PukllayClub.Repo],
-  generators: [timestamp_type: :utc_datetime]
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.25.4",
+  pukllay_club: [
+    args:
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
+  ]
 
-# Configure the endpoint
-config :pukllay_club, PukllayClubWeb.Endpoint,
-  url: [host: "localhost"],
-  adapter: Bandit.PhoenixAdapter,
-  render_errors: [
-    formats: [html: PukllayClubWeb.ErrorHTML, json: PukllayClubWeb.ErrorJSON],
-    layout: false
-  ],
-  pubsub_server: PukllayClub.PubSub,
-  live_view: [signing_salt: "dmrfmHVT"]
+# Configure Elixir's Logger
+config :logger, :default_formatter,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
+# Use Jason for JSON parsing in Phoenix
+config :phoenix, :json_library, Jason
 
 # Configure LiveView
 config :phoenix_live_view,
@@ -36,15 +39,29 @@ config :phoenix_live_view,
 # at the `config/runtime.exs`.
 config :pukllay_club, PukllayClub.Mailer, adapter: Swoosh.Adapters.Local
 
-# Configure esbuild (the version is required)
-config :esbuild,
-  version: "0.25.4",
-  pukllay_club: [
-    args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
-  ]
+# Configure the endpoint
+config :pukllay_club, PukllayClubWeb.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [html: PukllayClubWeb.ErrorHTML, json: PukllayClubWeb.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: PukllayClub.PubSub,
+  live_view: [signing_salt: "dmrfmHVT"]
+
+config :pukllay_club,
+  ecto_repos: [PukllayClub.Repo],
+  generators: [timestamp_type: :utc_datetime]
+
+# Configure Sentry crash reporting. The DSN itself is sourced from the
+# SENTRY_DSN runtime env var (config/runtime.exs) — never a literal value
+# here or in git. When SENTRY_DSN is unset (local dev/test), Sentry's `dsn`
+# stays nil and no events are ever sent.
+config :sentry,
+  environment_name: config_env(),
+  enable_source_code_context: true,
+  root_source_code_paths: [File.cwd!()]
 
 # Configure tailwind (the version is required)
 config :tailwind,
@@ -57,23 +74,6 @@ config :tailwind,
     cd: Path.expand("..", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
-
-# Configure Elixir's Logger
-config :logger, :default_formatter,
-  format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
-
-# Use Jason for JSON parsing in Phoenix
-config :phoenix, :json_library, Jason
-
-# Configure Sentry crash reporting. The DSN itself is sourced from the
-# SENTRY_DSN runtime env var (config/runtime.exs) — never a literal value
-# here or in git. When SENTRY_DSN is unset (local dev/test), Sentry's `dsn`
-# stays nil and no events are ever sent.
-config :sentry,
-  environment_name: config_env(),
-  enable_source_code_context: true,
-  root_source_code_paths: [File.cwd!()]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

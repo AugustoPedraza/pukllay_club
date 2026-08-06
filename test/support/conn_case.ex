@@ -19,15 +19,16 @@ defmodule PukllayClubWeb.ConnCase do
 
   using do
     quote do
-      # The default endpoint for testing
-      @endpoint PukllayClubWeb.Endpoint
-
       use PukllayClubWeb, :verified_routes
+
+      import Phoenix.ConnTest
 
       # Import conveniences for testing with connections
       import Plug.Conn
-      import Phoenix.ConnTest
       import PukllayClubWeb.ConnCase
+
+      # The default endpoint for testing
+      @endpoint PukllayClubWeb.Endpoint
     end
   end
 

@@ -1,5 +1,28 @@
 import Config
 
+# Dev-machine secrets (BGG token + R2 credentials) for the one-time D-02
+# catalog seed pipeline. Gitignored; a fresh clone and CI both still compile
+# without it. Copy config/dev.secret.exs.example to create it locally.
+secret_config_path = Path.expand("dev.secret.exs", __DIR__)
+
+# Do not include metadata nor timestamps in development logs
+config :logger, :default_formatter, format: "[$level] $message\n"
+
+# Initialize plugs at runtime for faster development compilation
+config :phoenix, :plug_init_mode, :runtime
+
+# Set a higher stacktrace during development. Avoid configuring such
+# in production as building large stacktraces may be expensive.
+config :phoenix, :stacktrace_depth, 20
+
+config :phoenix_live_view,
+  # Include debug annotations and locations in rendered markup.
+  # Changing this configuration will require mix clean and a full recompile.
+  debug_heex_annotations: true,
+  debug_attributes: true,
+  # Enable helpful, but potentially expensive runtime checks
+  enable_expensive_runtime_checks: true
+
 # Configure your database
 config :pukllay_club, PukllayClub.Repo,
   username: "postgres",
@@ -55,31 +78,8 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :pukllay_club, dev_routes: true
 
-# Do not include metadata nor timestamps in development logs
-config :logger, :default_formatter, format: "[$level] $message\n"
-
-# Set a higher stacktrace during development. Avoid configuring such
-# in production as building large stacktraces may be expensive.
-config :phoenix, :stacktrace_depth, 20
-
-# Initialize plugs at runtime for faster development compilation
-config :phoenix, :plug_init_mode, :runtime
-
-config :phoenix_live_view,
-  # Include debug annotations and locations in rendered markup.
-  # Changing this configuration will require mix clean and a full recompile.
-  debug_heex_annotations: true,
-  debug_attributes: true,
-  # Enable helpful, but potentially expensive runtime checks
-  enable_expensive_runtime_checks: true
-
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
-
-# Dev-machine secrets (BGG token + R2 credentials) for the one-time D-02
-# catalog seed pipeline. Gitignored; a fresh clone and CI both still compile
-# without it. Copy config/dev.secret.exs.example to create it locally.
-secret_config_path = Path.expand("dev.secret.exs", __DIR__)
 
 if File.exists?(secret_config_path) do
   import_config "dev.secret.exs"

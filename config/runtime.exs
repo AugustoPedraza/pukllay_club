@@ -20,8 +20,7 @@ if System.get_env("PHX_SERVER") do
   config :pukllay_club, PukllayClubWeb.Endpoint, server: true
 end
 
-config :pukllay_club, PukllayClubWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+config :pukllay_club, PukllayClubWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 # Sentry DSN comes from the runtime env only — never a literal value in git.
 # Unset (dev/test) leaves dsn nil, which disables reporting entirely.
@@ -56,6 +55,20 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
+  # The secret key base is used to sign/encrypt cookies and other secrets.
+  # A default value is used in config/dev.exs and config/test.exs but you
+  # want to use a different value for prod and you most likely don't want
+  # to check this value into version control, so we use an environment
+  # variable instead.
+  secret_key_base =
+    System.get_env("SECRET_KEY_BASE") ||
+      raise """
+      environment variable SECRET_KEY_BASE is missing.
+      You can generate one by calling: mix phx.gen.secret
+      """
+
+  host = System.get_env("PHX_HOST") || "example.com"
+
   config :pukllay_club, PukllayClub.Repo,
     # ACCEPTED RISK (WR-04, 00-REVIEW.md): TLS is intentionally disabled here.
     # App <-> db traffic (including DATABASE_URL's embedded credentials)
@@ -73,22 +86,6 @@ if config_env() == :prod do
     # pool_count: 4,
     socket_options: maybe_ipv6
 
-  # The secret key base is used to sign/encrypt cookies and other secrets.
-  # A default value is used in config/dev.exs and config/test.exs but you
-  # want to use a different value for prod and you most likely don't want
-  # to check this value into version control, so we use an environment
-  # variable instead.
-  secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
-      raise """
-      environment variable SECRET_KEY_BASE is missing.
-      You can generate one by calling: mix phx.gen.secret
-      """
-
-  host = System.get_env("PHX_HOST") || "example.com"
-
-  config :pukllay_club, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
-
   config :pukllay_club, PukllayClubWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
@@ -99,6 +96,8 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
     secret_key_base: secret_key_base
+
+  config :pukllay_club, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   # ## SSL Support
   #
