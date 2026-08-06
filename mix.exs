@@ -75,7 +75,12 @@ defmodule PukllayClub.MixProject do
       {:bandit, "~> 1.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
-      {:sentry, "~> 13.0"}
+      {:sentry, "~> 13.0"},
+      {:sweet_xml, "~> 0.7.5"},
+      {:image, "~> 0.72.0"},
+      {:ex_aws, "~> 2.7"},
+      {:ex_aws_s3, "~> 2.5"},
+      {:nimble_csv, "~> 1.3"}
     ]
   end
 

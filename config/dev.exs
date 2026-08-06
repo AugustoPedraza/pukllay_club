@@ -75,3 +75,12 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Dev-machine secrets (BGG token + R2 credentials) for the one-time D-02
+# catalog seed pipeline. Gitignored; a fresh clone and CI both still compile
+# without it. Copy config/dev.secret.exs.example to create it locally.
+secret_config_path = Path.expand("dev.secret.exs", __DIR__)
+
+if File.exists?(secret_config_path) do
+  import_config "dev.secret.exs"
+end

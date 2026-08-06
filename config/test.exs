@@ -39,3 +39,14 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Obviously-fake credentials for the D-02 catalog seed pipeline so its unit
+# tests run in CI without real BGG/R2 access, with a stable URL host to
+# assert against.
+config :pukllay_club, PukllayClub.Catalog.Seed,
+  bgg_api_token: "test-token",
+  r2_account_id: "test-account-id",
+  r2_access_key_id: "test-access-key-id",
+  r2_secret_access_key: "test-secret-access-key",
+  r2_catalog_bucket: "test-catalog-bucket",
+  r2_public_base_url: "https://images.test.invalid"
