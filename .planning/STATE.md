@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: catalog-v1
 status: executing
-stopped_at: "Completed 01-02-PLAN.md (brand identity: theme tokens, self-hosted type, header lockup)"
-last_updated: "2026-07-28T12:09:11.380Z"
-last_activity: 2026-07-28
+stopped_at: Completed 01-01-PLAN.md (BGG/R2 prerequisites, seed deps, Credentials resolver)
+last_updated: "2026-08-06T22:53:34.119Z"
+last_activity: 2026-08-06
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -31,10 +31,10 @@ even without already knowing board-game vocabulary.
 Phase: 01 (catalog-v1) — EXECUTING
 Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-28 — Phase 01 execution started
+Last activity: 2026-08-06 — Phase 01 execution started
 structure (0-4)
 
-Progress: [██████░░░░] 58%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████░░░░] 58%
 | Phase 00 P05 | 50min | 3 tasks | 8 files |
 | Phase 00 P06 | 20min | 2 tasks | 1 files |
 | Phase 01 P02 | 30min | 3 tasks | 11 files |
+| Phase 01 P01 | 63min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-02: daisyUI theme values kept as hex (not oklch) per 01-UI-SPEC.md, preserving traceability to the brand manual
 - [Phase ?]: 01-02: info/success/warning -content colors (unspecified by UI-SPEC's 17-var table) converted to brand hex to eliminate all remaining stock oklch values
 - [Phase ?]: 01-02: fixed pre-existing invalid 'E' regex modifier in config/runtime.exs live_reload patterns that blocked mix test in every environment (Rule 3 blocking fix)
+- [Phase ?]: 01-01: Config key for BGG/R2 seed credentials is PukllayClub.Catalog.Seed (not .Credentials), shared across dev.exs/test.exs/dev.secret.exs.example so future seed modules reuse one config block
+- [Phase ?]: 01-01: config/dev.secret.exs routed as dev-machine-only gitignored secret, deliberately not through Kamal, since the seed pipeline never runs on the production host
 
 ### Pending Todos
 
@@ -137,7 +140,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-28T12:09:11.366Z
-Stopped at: Completed 01-02-PLAN.md (brand identity: theme tokens, self-hosted type, header lockup)
+Last session: 2026-08-06T22:53:34.099Z
+Stopped at: Completed 01-01-PLAN.md (BGG/R2 prerequisites, seed deps, Credentials resolver)
 verified against the roadmap (no edits needed)
 Resume file: None
