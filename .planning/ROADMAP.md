@@ -84,7 +84,7 @@ be pulled forward without breaking that dependency chain.
   4. Each game displays a plain-Spanish weight-band descriptor and plain-Spanish mechanic/theme chips instead of a bare 1-5 number or raw hobbyist jargon
   5. Each game shows the club's own resized cover image and any editorial "club favorite"/"beginner-friendly" tag carried over from the existing Excel catalog
 
-**Plans**: 2/6 plans executed
+**Plans**: 3/6 plans executed
 **UI hint**: yes
 
 **Wave 1**
@@ -94,7 +94,7 @@ be pulled forward without breaking that dependency chain.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-03-PLAN.md — TRACER: one real game from CSV row through BGG, resize, R2, DB, to a public browse LiveView (CATALOG-01, CATALOG-08, CATALOG-09)
+- [x] 01-03-PLAN.md — TRACER: one real game from CSV row through BGG, resize, R2, DB, to a public browse LiveView (CATALOG-01, CATALOG-08, CATALOG-09)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -164,7 +164,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Walking Skeleton to Production | 6/6 | Complete    | 2026-07-27 |
-| 1. Catalog v1 | 2/6 | In Progress|  |
+| 1. Catalog v1 | 3/6 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |

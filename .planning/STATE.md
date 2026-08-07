@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: catalog-v1
 status: executing
-stopped_at: Completed quick task 260806-rq8 (Styler + mix_audit quality gates)
-last_updated: "2026-08-06T23:37:51.990Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-08-07T00:34:47.089Z"
 last_activity: 2026-08-06
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -34,7 +34,7 @@ Status: Ready to execute
 Last activity: 2026-08-06 — Phase 01 execution started
 structure (0-4)
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [███████░░░] 67%
 | Phase 00 P06 | 20min | 2 tasks | 1 files |
 | Phase 01 P02 | 30min | 3 tasks | 11 files |
 | Phase 01 P01 | 63min | 2 tasks | 8 files |
+| Phase 01 P03 | 85min | 2 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,10 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-01: Config key for BGG/R2 seed credentials is PukllayClub.Catalog.Seed (not .Credentials), shared across dev.exs/test.exs/dev.secret.exs.example so future seed modules reuse one config block
 - [Phase ?]: 01-01: config/dev.secret.exs routed as dev-machine-only gitignored secret, deliberately not through Kamal, since the seed pipeline never runs on the production host
 - [Phase ?]: Quick task 260806-rq8: Wired Styler (adobe/elixir-styler, mix format plugin) + mix_audit into mix quality (7-step: hex.audit, deps.audit, deps.unlock --check-unused, format, credo, sobelow, test); first-run rewrite manually reviewed per hunk, one misplaced comment corrected
+- [Phase ?]: 01-03: games.csv_row (not bgg_id) is the upsert conflict target — re-runnable one-time seed task (D-02) and preserves both duplicate-BGG_ID 163412 rows (D-19)
+- [Phase ?]: 01-03: ImagePipeline enforces its 15MB download cap via a hand-rolled Req into: accumulator (pinned req has no max_length option) — same T-01-10 mitigation, different mechanism
+- [Phase ?]: 01-03: seed modules (R2Storage/BggClient) never read secrets from Application env directly — every call takes an explicit Credentials.t() struct built once by the mix task (T-01-11)
+- [Phase ?]: 01-03: GameCard's Ver detalles CTA renders as an inert button, not a link to a not-yet-existing /games/:id route — game detail page is explicit 01-06 scope
 
 ### Pending Todos
 
@@ -147,7 +152,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-06T23:37:51.955Z
-Stopped at: Completed quick task 260806-rq8 (Styler + mix_audit quality gates)
+Last session: 2026-08-07T00:34:09.682Z
+Stopped at: Completed 01-03-PLAN.md
 verified against the roadmap (no edits needed)
 Resume file: None
