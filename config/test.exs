@@ -48,5 +48,11 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
   secret_key_base: "/jp505oA2jS6YW9vBIneYjeMB1F8YEMt9hqm0T6qNg99pzFDKECOfjQy+2LhvJJi",
   server: false
 
+# Routes the seed pipeline's outbound HTTP through Req.Test stubs so its
+# unit tests never touch the network (see BggClient.req_options/0 and
+# ImagePipeline.req_options/0).
+config :pukllay_club, :bgg_req_options, plug: {Req.Test, PukllayClub.Catalog.Seed.BggClient}
+config :pukllay_club, :image_download_req_options, plug: {Req.Test, PukllayClub.Catalog.Seed.ImagePipeline}
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
