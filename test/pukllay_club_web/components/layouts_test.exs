@@ -50,8 +50,7 @@ defmodule PukllayClubWeb.LayoutsTest do
 
   describe "root layout" do
     test "declares Spanish as the document language", %{conn: conn} do
-      conn = get(conn, ~p"/")
-      html = html_response(conn, 200)
+      {:ok, _view, html} = live(conn, ~p"/")
 
       assert html =~ ~s(lang="es")
     end

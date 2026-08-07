@@ -21,7 +21,7 @@ defmodule PukllayClubWeb.Router do
   scope "/", PukllayClubWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", CatalogLive.Index, :index
   end
 
   scope "/", PukllayClubWeb do
