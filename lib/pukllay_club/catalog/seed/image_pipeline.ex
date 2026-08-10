@@ -16,6 +16,8 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   @max_download_bytes 15 * 1024 * 1024
   @thumb_width 300
   @large_width 800
+  @max_gallery_images 3
+  @spanish_language_link "Spanish"
 
   @doc """
   Downloads `source_url`, resizes it to a #{@thumb_width}px-wide thumbnail
@@ -34,6 +36,79 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
          {:ok, cover_url} <-
            resize_and_upload(vimage, @large_width, "#{key_prefix}/cover-large.webp", credentials) do
       {:ok, %{thumbnail_url: thumb_url, cover_url: cover_url}}
+    end
+  end
+
+  @doc """
+  Picks the cover source image from a parsed BGG `thing` item (D-04):
+  Spanish-language edition preferred, falling back to the item's own
+  primary `image` when no version lists `Spanish` among its language links
+  (or the item has no `versions` at all). Returns `{:error, :no_image}`
+  when neither exists.
+  """
+  @spec select_cover(map()) :: {:ok, String.t(), :spanish_edition | :primary} | {:error, :no_image}
+  def select_cover(item) do
+    item
+    |> Map.get(:versions, [])
+    |> Enum.find(&spanish_version?/1)
+    |> case do
+      %{image: image} -> {:ok, image, :spanish_edition}
+      nil -> select_primary_cover(item)
+    end
+  end
+
+  @doc """
+  Builds up to #{@max_gallery_images} additional club-hosted images from
+  distinct BGG version images (excluding whichever one `select_cover/1`
+  already chose), reusing this module's own host allowlist, size cap, and
+  `head_object` skip (T-01-14) — no second, unguarded download path. A game
+  with no extra version images returns `{:ok, []}` rather than a padded
+  placeholder list.
+  """
+  @spec process_gallery(map(), String.t(), Credentials.t()) :: {:ok, [String.t()]}
+  def process_gallery(item, key_prefix, %Credentials{} = credentials) do
+    cover_source_url =
+      case select_cover(item) do
+        {:ok, url, _source} -> url
+        {:error, :no_image} -> nil
+      end
+
+    item
+    |> Map.get(:versions, [])
+    |> Enum.map(&Map.get(&1, :image))
+    |> Enum.filter(&usable_image?/1)
+    |> Enum.uniq()
+    |> Enum.reject(&(&1 == cover_source_url))
+    |> Enum.take(@max_gallery_images)
+    |> Enum.with_index(1)
+    |> Enum.reduce([], fn {source_url, index}, acc ->
+      case upload_gallery_image(source_url, key_prefix, index, credentials) do
+        {:ok, gallery_url} -> [gallery_url | acc]
+        {:error, _reason} -> acc
+      end
+    end)
+    |> then(&{:ok, Enum.reverse(&1)})
+  end
+
+  defp spanish_version?(%{languages: languages, image: image}) do
+    @spanish_language_link in languages and usable_image?(image)
+  end
+
+  defp select_primary_cover(%{image: image}) when is_binary(image) and image != "" do
+    {:ok, image, :primary}
+  end
+
+  defp select_primary_cover(_item), do: {:error, :no_image}
+
+  defp usable_image?(image), do: is_binary(image) and image != ""
+
+  defp upload_gallery_image(source_url, key_prefix, index, credentials) do
+    with :ok <- validate_url(source_url),
+         {:ok, image_bytes} <- download(source_url),
+         {:ok, vimage} <- Image.open(image_bytes),
+         {:ok, _thumb_url} <-
+           resize_and_upload(vimage, @thumb_width, "#{key_prefix}/gallery-#{index}-thumb.webp", credentials) do
+      resize_and_upload(vimage, @large_width, "#{key_prefix}/gallery-#{index}-large.webp", credentials)
     end
   end
 

@@ -5,15 +5,14 @@ defmodule PukllayClub.Catalog.Seed.ReportTest do
 
   describe "render/1" do
     test "states the analyzed row count" do
-      report = Report.new() |> Report.set_rows_analyzed(434)
+      report = Report.set_rows_analyzed(Report.new(), 434)
 
       assert Report.render(report) =~ "**Analyzed rows:** 434"
     end
 
     test "renders the unrecognized hashtag cells section with row, column, and value" do
       report =
-        Report.new()
-        |> Report.add(:unrecognized_hashtags, %{row: 12, name: "Foo", column: "#NivelExperto", value: "di"})
+        Report.add(Report.new(), :unrecognized_hashtags, %{row: 12, name: "Foo", column: "#NivelExperto", value: "di"})
 
       rendered = Report.render(report)
 
@@ -34,8 +33,7 @@ defmodule PukllayClub.Catalog.Seed.ReportTest do
 
     test "renders every row of a duplicate BGG_ID group" do
       report =
-        Report.new()
-        |> Report.add(:duplicate_bgg_id, %{
+        Report.add(Report.new(), :duplicate_bgg_id, %{
           bgg_id: 163_412,
           rows: [%{row: 88, name: "Game A"}, %{row: 201, name: "Game B"}]
         })
@@ -71,8 +69,8 @@ defmodule PukllayClub.Catalog.Seed.ReportTest do
 
       assert rendered =~ "## Uncovered mechanic terms"
       refute rendered =~ "Set Collection"
-      legacy_index = :binary.match(rendered, "Legacy Game") |> elem(0)
-      storytelling_index = :binary.match(rendered, "Storytelling") |> elem(0)
+      legacy_index = rendered |> :binary.match("Legacy Game") |> elem(0)
+      storytelling_index = rendered |> :binary.match("Storytelling") |> elem(0)
       assert legacy_index < storytelling_index
     end
   end
@@ -82,7 +80,7 @@ defmodule PukllayClub.Catalog.Seed.ReportTest do
       path = Path.join(System.tmp_dir!(), "catalog_seed_report_test_#{System.unique_integer([:positive])}.md")
       on_exit(fn -> File.rm(path) end)
 
-      report = Report.new() |> Report.set_rows_analyzed(3)
+      report = Report.set_rows_analyzed(Report.new(), 3)
       Report.write!(report, path)
 
       assert File.read!(path) =~ "**Analyzed rows:** 3"

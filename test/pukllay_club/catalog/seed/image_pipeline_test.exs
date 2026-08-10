@@ -93,4 +93,67 @@ defmodule PukllayClub.Catalog.Seed.ImagePipelineTest do
                )
     end
   end
+
+  describe "select_cover/1" do
+    test "prefers a version whose language link is Spanish, even when it isn't the first version" do
+      item = %{
+        image: "https://cf.geekdo-images.com/primary.jpg",
+        versions: [
+          %{image: "https://cf.geekdo-images.com/english.jpg", languages: ["English"]},
+          %{image: "https://cf.geekdo-images.com/spanish.jpg", languages: ["Spanish"]}
+        ]
+      }
+
+      assert {:ok, "https://cf.geekdo-images.com/spanish.jpg", :spanish_edition} = ImagePipeline.select_cover(item)
+    end
+
+    test "falls back to the item's primary image and reports :primary when no Spanish version exists" do
+      item = %{
+        image: "https://cf.geekdo-images.com/primary.jpg",
+        versions: [%{image: "https://cf.geekdo-images.com/english.jpg", languages: ["English"]}]
+      }
+
+      assert {:ok, "https://cf.geekdo-images.com/primary.jpg", :primary} = ImagePipeline.select_cover(item)
+    end
+
+    test "returns {:error, :no_image} when neither a Spanish version nor a primary image exists" do
+      assert {:error, :no_image} = ImagePipeline.select_cover(%{image: "", versions: []})
+    end
+  end
+
+  describe "process_gallery/3" do
+    test "uploads up to 3 distinct version images, excluding whichever one is the chosen cover", %{
+      credentials: credentials
+    } do
+      Req.Test.stub(ImagePipeline, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("image/png")
+        |> Plug.Conn.send_resp(200, @tiny_png)
+      end)
+
+      item = %{
+        image: "https://cf.geekdo-images.com/primary.jpg",
+        versions: [
+          %{image: "https://cf.geekdo-images.com/primary.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v2.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v3.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v4.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v4.jpg", languages: []}
+        ]
+      }
+
+      assert {:ok, gallery_urls} = ImagePipeline.process_gallery(item, "games/1", credentials)
+      assert length(gallery_urls) == 3
+      assert Enum.uniq(gallery_urls) == gallery_urls
+      assert Enum.all?(gallery_urls, &String.starts_with?(&1, "https://images.test.invalid/games/1/gallery-"))
+    end
+
+    test "returns an empty gallery (not padded placeholders) when there are no extra version images", %{
+      credentials: credentials
+    } do
+      item = %{image: "https://cf.geekdo-images.com/primary.jpg", versions: []}
+
+      assert {:ok, []} = ImagePipeline.process_gallery(item, "games/1", credentials)
+    end
+  end
 end

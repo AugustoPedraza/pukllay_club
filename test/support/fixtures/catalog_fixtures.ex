@@ -24,8 +24,9 @@ defmodule PukllayClub.CatalogFixtures do
       max_playtime: 90,
       min_age: 10,
       year_published: 1995,
-      weight_band: "IngenioEstratega",
+      weight_band: "ingenio_estratega",
       bgg_weight: 2.3,
+      tags: ["#CreaConexiones"],
       mechanics: ["Comercio", "Colocación de dados"],
       themes: ["Estrategia"],
       designers: ["Klaus Teuber"],
@@ -33,6 +34,7 @@ defmodule PukllayClub.CatalogFixtures do
       description: "Compite por colonizar la isla de Catán.",
       thumbnail_url: "https://images.test.invalid/games/13/cover-thumb.webp",
       cover_url: "https://images.test.invalid/games/13/cover-large.webp",
+      gallery_urls: [],
       enrichment_status: "enriched"
     }
 

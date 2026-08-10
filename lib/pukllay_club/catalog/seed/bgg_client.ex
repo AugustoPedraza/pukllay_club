@@ -49,7 +49,7 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
     request_opts =
       Keyword.merge(
         [
-          params: [id: ids, type: "boardgame", stats: 1],
+          params: [id: ids, type: "boardgame", stats: 1, versions: 1],
           headers: [{"authorization", "Bearer #{credentials.bgg_api_token}"}]
         ],
         req_options()
@@ -114,7 +114,14 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
       designers: ~x".//link[@type='boardgamedesigner']/@value"sl,
       publishers: ~x".//link[@type='boardgamepublisher']/@value"sl,
       families: ~x".//link[@type='boardgamefamily']/@value"sl,
-      artists: ~x".//link[@type='boardgameartist']/@value"sl
+      artists: ~x".//link[@type='boardgameartist']/@value"sl,
+      versions: [
+        ~x".//versions/item[@type='boardgameversion']"l,
+        name: ~x"./name[@type='primary']/@value"so,
+        image: ~x"./image/text()"so,
+        thumbnail: ~x"./thumbnail/text()"so,
+        languages: ~x"./link[@type='language']/@value"sl
+      ]
     )
   end
 end

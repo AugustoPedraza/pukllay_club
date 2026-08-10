@@ -36,6 +36,16 @@ defmodule PukllayClub.Catalog.Seed.HashtagNormalizer do
   def ignored_columns, do: @ignored_columns
 
   @doc """
+  The verbatim club weight-hashtag column names mapped to their DB
+  `weight_band` value — exposed (mirroring `ignored_columns/0`) so callers
+  (the seed report) can classify a `:peso_tie_break` resolution as a
+  conflict (2+ true) vs. a zero-hashtag row (0 true) without re-deriving
+  the column list.
+  """
+  @spec weight_columns() :: %{String.t() => String.t()}
+  def weight_columns, do: @weight_columns
+
+  @doc """
   Trims and downcases `value`, treating `"si"`/`"sí"` as `true` and
   `nil`/`""`/`"no"` as `false`. Anything else (the observed typo cells `"n"`,
   `"s"`, `"di"`, etc.) also resolves as `false` but is returned as
