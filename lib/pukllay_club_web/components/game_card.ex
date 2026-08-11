@@ -11,6 +11,10 @@ defmodule PukllayClubWeb.GameCard do
   exist yet, or a bare `#` href that looks like a real dead link) keeps the
   UI-SPEC Copywriting Contract's CTA visible without claiming navigation
   this plan does not implement.
+
+  Accepts an optional `:class` so a caller (the grid vs. a horizontally
+  -scrolling `CarouselRow` rail, 01-05) can control the card's width/shrink
+  behavior without this component needing to know which context it's in.
   """
   use Phoenix.Component
 
@@ -18,10 +22,11 @@ defmodule PukllayClubWeb.GameCard do
 
   attr :id, :string, required: true
   attr :game, PukllayClub.Catalog.Game, required: true
+  attr :class, :any, default: nil
 
   def game_card(assigns) do
     ~H"""
-    <div id={@id} class="card bg-base-200 shadow-sm">
+    <div id={@id} class={["card bg-base-200 shadow-sm", @class]}>
       <figure class="aspect-square overflow-hidden bg-base-300">
         <img
           :if={@game.thumbnail_url}
