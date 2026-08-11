@@ -266,6 +266,76 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "curated carousel rows and loading skeletons (D-08, D-09)" do
+    test "the unfiltered browse page renders the 8 fixed carousel rows in D-09 order", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Crea Game", tags: ["#CreaConexiones"]})
+      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
+      game_fixture(%{name: "Duelos Game", tags: ["#DuelosMemorables"]})
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Estratega Game", weight_band: "ingenio_estratega"})
+      game_fixture(%{name: "Experto Game", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      titles = [
+        "Destacados del club",
+        "Crea conexiones",
+        "Equipo ganador",
+        "Duelos memorables",
+        "Descubre el hobby",
+        "Ingenio estratega",
+        "Nivel experto",
+        "Recientemente añadidos"
+      ]
+
+      Enum.each(titles, fn title -> assert html =~ title end)
+
+      positions = Enum.map(titles, &position(html, &1))
+      assert positions == Enum.sort(positions)
+    end
+
+    test "a carousel row backed by zero games renders neither its title nor an empty rail", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Only Recent Game", tags: []})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      refute html =~ "Equipo ganador"
+      refute html =~ "Duelos memorables"
+    end
+
+    test "after applying a filter, the carousel section is absent from the rendered page", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Filtered Game", mechanics: ["Dice Rolling"]})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      assert html =~ "Destacados del club"
+
+      html2 =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Filtered"})
+
+      refute html2 =~ "Destacados del club"
+      refute html2 =~ "Recientemente añadidos"
+    end
+
+    test "the initial disconnected render shows skeleton card placeholders, not an empty grid", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Some Game"})
+
+      conn = get(conn, ~p"/")
+      html = html_response(conn, 200)
+
+      assert html =~ "skeleton"
+    end
+  end
+
   defp position(html, text) do
     case :binary.match(html, text) do
       {pos, _} -> pos
