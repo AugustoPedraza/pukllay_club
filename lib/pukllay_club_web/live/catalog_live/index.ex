@@ -17,17 +17,28 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   Catalog reads are wrapped in `apply_filters/1`'s `rescue` so a query
   failure (e.g. a crafted scalar value Postgres rejects) renders the
   UI-SPEC error banner instead of crashing the LiveView (T-01-24).
+
+  `:loading` is true only for the very first, *disconnected* static render
+  (`connected?(socket) == false`) — the standard LiveView two-phase mount
+  trick: the disconnected render paints instantly with skeleton
+  placeholders (no DB round-trip on that pass), then the connected
+  websocket mount replaces it with real carousel/grid data. It is set once
+  in `mount/3` and never toggled again by any `handle_event`.
   """
   use PukllayClubWeb, :live_view
 
   alias PukllayClub.Catalog
+  alias PukllayClubWeb.CarouselRow
   alias PukllayClubWeb.FilterDrawer
   alias PukllayClubWeb.GameCard
 
   @page_size 24
+  @skeleton_carousel_rows 8
 
   @impl true
   def mount(_params, _session, socket) do
+    loading? = not connected?(socket)
+
     socket =
       socket
       |> assign(:page_title, "Catálogo")
@@ -40,11 +51,27 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:max_playtime, nil)
       |> assign(:min_age, nil)
       |> assign(:sort, :name_asc)
-      |> assign(:facet_options, Catalog.facet_options())
-      |> apply_filters()
+      |> assign(:loading, loading?)
+      |> assign(:page_size, @page_size)
+      |> assign(:skeleton_carousel_rows, @skeleton_carousel_rows)
+      |> assign(:facet_options, if(loading?, do: empty_facet_options(), else: Catalog.facet_options()))
+      |> assign(:carousel_rows, if(loading?, do: [], else: Catalog.list_carousel_rows()))
+
+    socket =
+      if loading? do
+        socket
+        |> assign(:offset, 0)
+        |> assign(:total, 0)
+        |> assign(:load_error, false)
+        |> stream(:games, [])
+      else
+        apply_filters(socket)
+      end
 
     {:ok, socket}
   end
+
+  defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
 
   @impl true
   def handle_event("search", %{"q" => q}, socket) do
@@ -178,6 +205,20 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp result_count_text(1), do: "1 juego encontrado"
   defp result_count_text(n), do: "#{n} juegos encontrados"
 
+  # A filtered view shows one authoritative result set — the curated
+  # carousel rows step aside rather than competing with it (Task 3 action
+  # text).
+  defp filters_active?(assigns) do
+    assigns.q not in [nil, ""] or
+      assigns.mechanics != [] or
+      assigns.themes != [] or
+      assigns.weight_bands != [] or
+      assigns.tags != [] or
+      not is_nil(assigns.players) or
+      not is_nil(assigns.max_playtime) or
+      not is_nil(assigns.min_age)
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -226,6 +267,22 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           </div>
         </div>
 
+        <div :if={not filters_active?(assigns)} id="carousel-rows" class="space-y-8">
+          <%= if @loading do %>
+            <CarouselRow.skeleton_row
+              :for={n <- 1..@skeleton_carousel_rows}
+              id={"carousel-skeleton-#{n}"}
+            />
+          <% else %>
+            <CarouselRow.carousel_row
+              :for={row <- @carousel_rows}
+              id={"carousel-#{row.key}"}
+              title={row.title}
+              games={row.games}
+            />
+          <% end %>
+        </div>
+
         <div :if={@load_error} class="alert alert-error">
           No pudimos cargar el catálogo en este momento. Intenta recargar la página en unos segundos.
         </div>
@@ -245,7 +302,12 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           </button>
         </div>
 
+        <div :if={@loading} class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <CarouselRow.skeleton_card :for={n <- 1..@page_size} id={"grid-skeleton-#{n}"} />
+        </div>
+
         <div
+          :if={not @loading}
           id="games"
           phx-update="stream"
           class={[

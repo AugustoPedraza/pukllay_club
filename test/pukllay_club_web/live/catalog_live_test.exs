@@ -167,14 +167,14 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, view, html} = live(conn, ~p"/")
 
-      assert position(html, "Alfa Corto") < position(html, "Zeta Largo")
+      assert position(grid_html(html), "Alfa Corto") < position(grid_html(html), "Zeta Largo")
 
       html2 =
         view
         |> element("select[name=sort]")
         |> render_change(%{sort: "playtime_desc"})
 
-      assert position(html2, "Zeta Largo") < position(html2, "Alfa Corto")
+      assert position(grid_html(html2), "Zeta Largo") < position(grid_html(html2), "Alfa Corto")
     end
 
     test "pressing Cargar más appends the next page and leaves already-rendered cards in place", %{
@@ -292,7 +292,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       Enum.each(titles, fn title -> assert html =~ title end)
 
-      positions = Enum.map(titles, &position(html, &1))
+      carousel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      positions = Enum.map(titles, &position(carousel_html, &1))
       assert positions == Enum.sort(positions)
     end
 
@@ -343,8 +349,19 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  # Scopes assertions to the #games grid only — carousel rows (Task 3) also
+  # render GameCard/skeleton_card markup on the same page, so a whole-page
+  # substring search would double-count.
+  defp grid_html(html) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("#games")
+    |> LazyHTML.to_html()
+  end
+
   defp card_count(html) do
     html
+    |> grid_html()
     |> String.split("card bg-base-200")
     |> length()
     |> Kernel.-(1)
