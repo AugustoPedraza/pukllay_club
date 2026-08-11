@@ -37,6 +37,19 @@ topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
+// Cover-image fallback (01-06, 01-REVIEW.md CR-01): a network/404 failure on
+// a `.js-cover-fallback` <img> hides the broken image and reveals its hidden
+// sibling brand-placeholder element. Delegated via a capture-phase listener
+// (the `error` event does not bubble) instead of an inline `onerror`
+// attribute, which `script-src` blocks under this app's CSP.
+document.addEventListener("error", (e) => {
+  const target = e.target
+  if (target?.matches?.(".js-cover-fallback")) {
+    target.style.display = "none"
+    target.nextElementSibling?.classList.remove("hidden")
+  }
+}, true)
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

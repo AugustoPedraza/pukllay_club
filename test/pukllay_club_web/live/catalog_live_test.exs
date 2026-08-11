@@ -97,7 +97,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert html =~ "+1"
     end
 
-    test "the cover image carries an onerror fallback handler, a hidden placeholder sibling, and title alt text",
+    test "the cover image carries the js-cover-fallback class, a hidden placeholder sibling, and title alt text",
          %{conn: conn} do
       game_fixture(%{
         name: "Juego Con Portada",
@@ -106,7 +106,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      assert html =~ "onerror="
+      assert html =~ "js-cover-fallback"
       assert html =~ ~s(alt="Juego Con Portada")
       assert html =~ "hero-puzzle-piece"
     end

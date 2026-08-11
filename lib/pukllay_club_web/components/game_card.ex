@@ -12,12 +12,16 @@ defmodule PukllayClubWeb.GameCard do
   row. The `Ver detalles` CTA links to `PukllayClubWeb.CatalogLive.Show`
   (01-03's inert placeholder button is now a real route).
 
-  The cover `<img>` carries a runtime `onerror` fallback: a network/404
-  failure hides the broken image and reveals a hidden sibling brand
-  -placeholder element, degrading to the same placeholder the nil-cover
-  case already uses (01-UI-SPEC.md's "cover/gallery image load failure"
-  row) — distinct from the nil-URL case, which renders the placeholder
-  directly with no `<img>` at all.
+  The cover `<img>` carries a `js-cover-fallback` class, not an inline
+  `onerror` attribute — inline event-handler attributes are governed by
+  `script-src` and are silently refused under this app's
+  `PukllayClubWeb.CSP` (01-REVIEW.md CR-01). `assets/js/app.js` delegates a
+  capture-phase `error` listener for `.js-cover-fallback` instead: a
+  network/404 failure hides the broken image and reveals a hidden sibling
+  brand-placeholder element, degrading to the same placeholder the
+  nil-cover case already uses (01-UI-SPEC.md's "cover/gallery image load
+  failure" row) — distinct from the nil-URL case, which renders the
+  placeholder directly with no `<img>` at all.
 
   Accepts an optional `:class` so a caller (the grid vs. a horizontally
   -scrolling `CarouselRow` rail, 01-05) can control the card's width/shrink
@@ -43,8 +47,7 @@ defmodule PukllayClubWeb.GameCard do
           src={@game.thumbnail_url}
           alt={@game.name}
           loading="lazy"
-          class="h-full w-full object-cover"
-          onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')"
+          class="h-full w-full object-cover js-cover-fallback"
         />
         <div
           :if={@game.thumbnail_url}
