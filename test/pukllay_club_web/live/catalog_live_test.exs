@@ -399,6 +399,38 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "Content-Security-Policy (T-01-28, closes Phase 0's deferred Sobelow Config.CSP finding)" do
+    test "the response carries a content-security-policy header scoped to the configured image origin",
+         %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      assert policy =~ "img-src"
+      assert policy =~ "'self'"
+      assert policy =~ "https://images.test.invalid"
+    end
+
+    test "the policy locks down framing and never allows unsafe-eval scripts", %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      assert policy =~ "frame-ancestors 'none'"
+      refute policy =~ "unsafe-eval"
+    end
+
+    test "the policy's img-src never allows a BGG-hosted origin (CATALOG-09 enforced at the browser level)",
+         %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      refute policy =~ "geekdo"
+      refute policy =~ "boardgamegeek"
+    end
+  end
+
   defp position(html, text) do
     case :binary.match(html, text) do
       {pos, _} -> pos

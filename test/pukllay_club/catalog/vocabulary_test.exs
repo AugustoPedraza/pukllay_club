@@ -90,12 +90,12 @@ defmodule PukllayClub.Catalog.VocabularyTest do
   end
 
   describe "vocabulary surface size (must match 01-VOCABULARY.md exactly)" do
-    test "exposes exactly 25 mechanic options" do
-      assert length(Vocabulary.mechanic_options()) == 25
+    test "exposes exactly 35 mechanic options" do
+      assert length(Vocabulary.mechanic_options()) == 35
     end
 
-    test "exposes exactly 22 theme options" do
-      assert length(Vocabulary.theme_options()) == 22
+    test "exposes exactly 32 theme options" do
+      assert length(Vocabulary.theme_options()) == 32
     end
 
     test "mechanic_options/0 returns sorted distinct Spanish labels" do

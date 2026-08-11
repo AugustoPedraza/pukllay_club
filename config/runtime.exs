@@ -69,6 +69,33 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
+  # The CSP img-src origin (01-06/T-01-28) — scheme+host only, derived from
+  # the same R2_PUBLIC_BASE_URL the D-02 seed pipeline's Credentials module
+  # mints every stored image URL from, so the policy can never drift from
+  # where the club's images actually live. Required at boot (like
+  # DATABASE_URL/SECRET_KEY_BASE above) rather than defaulted, because a
+  # silently-missing origin would just quietly block every cover/gallery
+  # image in the browser instead of failing loudly at deploy time.
+  r2_public_base_url =
+    System.get_env("R2_PUBLIC_BASE_URL") ||
+      raise """
+      environment variable R2_PUBLIC_BASE_URL is missing.
+      Required to scope the Content-Security-Policy img-src directive to the
+      club's actual R2 image host (see PukllayClubWeb.CSP). This is a public
+      URL, not a secret — add it to config/deploy.yml's env.clear block and
+      .kamal/secrets (or set it as a literal, non-secret value) before the
+      next deploy.
+      """
+
+  image_origin =
+    case URI.parse(r2_public_base_url) do
+      %URI{scheme: scheme, host: host, port: port} when port in [nil, 80, 443] ->
+        "#{scheme}://#{host}"
+
+      %URI{scheme: scheme, host: host, port: port} ->
+        "#{scheme}://#{host}:#{port}"
+    end
+
   config :pukllay_club, PukllayClub.Repo,
     # ACCEPTED RISK (WR-04, 00-REVIEW.md): TLS is intentionally disabled here.
     # App <-> db traffic (including DATABASE_URL's embedded credentials)
@@ -98,6 +125,7 @@ if config_env() == :prod do
     secret_key_base: secret_key_base
 
   config :pukllay_club, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :pukllay_club, :image_origin, image_origin
 
   # ## SSL Support
   #

@@ -49,7 +49,13 @@ defmodule PukllayClub.Catalog.Vocabulary do
     %{tag: "#DuelosMemorables", meaning: "Solo 2 jugadores"}
   ]
 
-  # -- Mechanic glossary (25 terms, 01-VOCABULARY.md section 3a) --------------
+  # -- Mechanic glossary (35 terms, 01-VOCABULARY.md section 3a) --------------
+  #
+  # The last 10 entries (Area Movement .. Trading) were added during 01-06's
+  # reconciliation pass against priv/repo/seed_data/catalog_seed_report.md's
+  # real "uncovered mechanic terms" list — every uncovered term occurring on
+  # 8+ seeded games was either added here or recorded in 01-VOCABULARY.md's
+  # "Consciously uncovered" subsection, never silently dropped.
 
   @mechanics %{
     "Set Collection" => "Colecciona sets",
@@ -76,10 +82,24 @@ defmodule PukllayClub.Catalog.Vocabulary do
     "Auction / Bidding" => "Subastas",
     "Memory" => "Memoria",
     "Real-Time" => "Contrarreloj",
-    "Deduction" => "Deducción"
+    "Deduction" => "Deducción",
+    "Area Movement" => "Movimiento por áreas",
+    "Voting" => "Votación",
+    "Action Drafting" => "Selecciona acciones",
+    "Player Elimination" => "Eliminación de jugadores",
+    "Role Playing" => "Interpretación de rol",
+    "Hidden Roles" => "Roles ocultos",
+    "Pick-up and Deliver" => "Recoge y entrega",
+    "Storytelling" => "Narra historias",
+    "Simulation" => "Simulación",
+    "Trading" => "Comercia"
   }
 
-  # -- Theme/category glossary (22 terms, 01-VOCABULARY.md section 3b) -------
+  # -- Theme/category glossary (32 terms, 01-VOCABULARY.md section 3b) -------
+  #
+  # The last 10 entries (Exploration .. Travel) were added during the same
+  # 01-06 reconciliation pass, from the seed report's "uncovered category
+  # terms" list.
 
   @themes %{
     "Card Game" => "Juego de cartas",
@@ -103,7 +123,17 @@ defmodule PukllayClub.Catalog.Vocabulary do
     "Trains" => "Trenes",
     "Wargame" => "Bélico",
     "Word Game" => "Juego de palabras",
-    "Children's Game" => "Para peques"
+    "Children's Game" => "Para peques",
+    "Exploration" => "Exploración",
+    "Bluffing" => "Farol",
+    "Civilization" => "Civilización",
+    "Negotiation" => "Negociación",
+    "Pirates" => "Piratas",
+    "Fighting" => "Combate",
+    "Abstract Strategy" => "Estrategia abstracta",
+    "Humor" => "Humor",
+    "Mythology" => "Mitología",
+    "Travel" => "Viajes"
   }
 
   @doc "Returns the three weight bands, ascending, each with `:value`, `:label`, `:descriptor`."

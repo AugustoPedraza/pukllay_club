@@ -5,6 +5,23 @@ import Config
 # without it. Copy config/dev.secret.exs.example to create it locally.
 secret_config_path = Path.expand("dev.secret.exs", __DIR__)
 
+# The CSP img-src origin (01-06/T-01-28) — derived from R2_PUBLIC_BASE_URL,
+# the same env var PukllayClub.Catalog.Seed.Credentials checks first (env
+# var, then dev.secret.exs's Application config — read this env var
+# directly if you also want real R2 images unblocked by the CSP locally).
+# Falls back to the same placeholder host config/test.exs uses so a fresh
+# clone still boots with no secrets configured.
+dev_image_origin =
+  case System.get_env("R2_PUBLIC_BASE_URL") do
+    nil ->
+      "https://images.test.invalid"
+
+    url ->
+      uri = URI.parse(url)
+      port_suffix = if uri.port in [nil, 80, 443], do: "", else: ":#{uri.port}"
+      "#{uri.scheme}://#{uri.host}#{port_suffix}"
+  end
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 
@@ -51,6 +68,8 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
     esbuild: {Esbuild, :install_and_run, [:pukllay_club, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:pukllay_club, ~w(--watch)]}
   ]
+
+config :pukllay_club, :image_origin, dev_image_origin
 
 # ## SSL Support
 #

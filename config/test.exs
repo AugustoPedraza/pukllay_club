@@ -54,5 +54,10 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
 config :pukllay_club, :bgg_req_options, plug: {Req.Test, PukllayClub.Catalog.Seed.BggClient}
 config :pukllay_club, :image_download_req_options, plug: {Req.Test, PukllayClub.Catalog.Seed.ImagePipeline}
 
+# The CSP img-src origin (01-06/T-01-28) — same host as the Seed
+# r2_public_base_url above, so tests exercise the exact origin the policy
+# would scope to in a real environment.
+config :pukllay_club, :image_origin, "https://images.test.invalid"
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
