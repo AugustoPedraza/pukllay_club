@@ -34,7 +34,13 @@ defmodule PukllayClub.Catalog do
     %Game{}
     |> Game.seed_changeset(attrs)
     |> Repo.insert!(
-      on_conflict: {:replace_all_except, [:id, :inserted_at]},
+      # `:search_vector` (01-04) is a Postgres GENERATED ALWAYS column —
+      # it can only ever be set to DEFAULT, so it must be excluded here too,
+      # not just `:id`/`:inserted_at`, or a re-run's `ON CONFLICT DO UPDATE`
+      # tries `SET search_vector = EXCLUDED.search_vector` and Postgres
+      # raises `(generated_always) column "search_vector" can only be
+      # updated to DEFAULT`.
+      on_conflict: {:replace_all_except, [:id, :inserted_at, :search_vector]},
       conflict_target: :csv_row
     )
   end

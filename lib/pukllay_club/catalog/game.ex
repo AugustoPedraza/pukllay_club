@@ -38,6 +38,16 @@ defmodule PukllayClub.Catalog.Game do
     field :gallery_urls, {:array, :string}, default: []
     field :bgg_payload, :map
     field :enrichment_status, :string, default: "pending"
+    # Postgres-generated `tsvector` column (01-04 migration) — Ecto never
+    # writes it (never cast in `seed_changeset/2`) and never loads it back
+    # (`load_in_query: false` excludes it from normal SELECTs). Deliberately
+    # *not* `read_after_writes: true`: Postgrex decodes `tsvector` as a list
+    # of `Postgrex.Lexeme` structs, which `Ecto.Type.load/2` cannot coerce
+    # into `:string` — requesting it via a post-insert `RETURNING` clause
+    # raised `cannot load ... as type :string`. Nothing in the app reads
+    # this field; it exists purely so Ecto's schema/changeset machinery is
+    # aware of the column without ever touching its value.
+    field :search_vector, :string, load_in_query: false
 
     timestamps()
   end

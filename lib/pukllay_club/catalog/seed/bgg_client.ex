@@ -95,7 +95,12 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
     xml
     |> parse(dtd: :none)
     |> xpath(
-      ~x"//item"l,
+      # Direct children of the document root's `<items>`, not `//item` —
+      # since `versions=1` was added, the response also carries nested
+      # `<item type="boardgameversion">` elements inside each top-level
+      # item's `<versions>`, which an unscoped `//item` search would
+      # wrongly match as additional top-level games.
+      ~x"/items/item"l,
       bgg_id: ~x"./@id"i,
       name: ~x".//name[@type='primary']/@value"so,
       year_published: ~x"./yearpublished/@value"io,
