@@ -5,26 +5,36 @@ defmodule PukllayClubWeb.GameCard do
   `Phoenix.LiveComponent` — filter state and stream updates live in the
   parent `PukllayClubWeb.CatalogLive.Index`, per 01-PATTERNS.md.
 
-  The `Ver detalles` CTA is not yet a working link: the game detail page
-  (CATALOG-02) is built in phase plan 01-06, after this tracer. Rendering it
-  as an inert button (rather than a route to `/games/<id>` that does not
-  exist yet, or a bare `#` href that looks like a real dead link) keeps the
-  UI-SPEC Copywriting Contract's CTA visible without claiming navigation
-  this plan does not implement.
+  Teaches complexity in plain Spanish (CATALOG-05/06/07, 01-06): a
+  `GameChips.weight_band_badge/1` (label only — the descriptor line is a
+  detail-page/hover affordance, kept off the card so a 434-card grid stays
+  scannable), the club's editorial hashtags, and a capped mechanic chip
+  row. The `Ver detalles` CTA links to `PukllayClubWeb.CatalogLive.Show`
+  (01-03's inert placeholder button is now a real route).
+
+  The cover `<img>` carries a runtime `onerror` fallback: a network/404
+  failure hides the broken image and reveals a hidden sibling brand
+  -placeholder element, degrading to the same placeholder the nil-cover
+  case already uses (01-UI-SPEC.md's "cover/gallery image load failure"
+  row) — distinct from the nil-URL case, which renders the placeholder
+  directly with no `<img>` at all.
 
   Accepts an optional `:class` so a caller (the grid vs. a horizontally
   -scrolling `CarouselRow` rail, 01-05) can control the card's width/shrink
   behavior without this component needing to know which context it's in.
   """
-  use Phoenix.Component
+  use PukllayClubWeb, :html
 
-  import PukllayClubWeb.CoreComponents
+  alias PukllayClub.Catalog.Vocabulary
+  alias PukllayClubWeb.GameChips
 
   attr :id, :string, required: true
   attr :game, PukllayClub.Catalog.Game, required: true
   attr :class, :any, default: nil
 
   def game_card(assigns) do
+    assigns = assign(assigns, :mechanic_labels, Vocabulary.covered_mechanics(assigns.game.mechanics))
+
     ~H"""
     <div id={@id} class={["card bg-base-200 shadow-sm", @class]}>
       <figure class="aspect-square overflow-hidden bg-base-300">
@@ -34,7 +44,15 @@ defmodule PukllayClubWeb.GameCard do
           alt={@game.name}
           loading="lazy"
           class="h-full w-full object-cover"
+          onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')"
         />
+        <div
+          :if={@game.thumbnail_url}
+          class="hidden h-full w-full items-center justify-center bg-base-300 text-primary"
+        >
+          <.icon name="hero-puzzle-piece" class="size-12" />
+          <span class="sr-only">{@game.name}</span>
+        </div>
         <div
           :if={!@game.thumbnail_url}
           class="flex h-full w-full items-center justify-center bg-base-300 text-primary"
@@ -43,10 +61,15 @@ defmodule PukllayClubWeb.GameCard do
           <span class="sr-only">{@game.name}</span>
         </div>
       </figure>
-      <div class="card-body p-4">
+      <div class="card-body space-y-2 p-4">
         <h3 class="line-clamp-2 text-base font-semibold leading-tight">{@game.name}</h3>
+        <GameChips.weight_band_badge game={@game} show_descriptor={false} />
+        <GameChips.editorial_tags tags={@game.tags} />
+        <GameChips.chip_row terms={@mechanic_labels} limit={4} />
         <div class="card-actions mt-2">
-          <button type="button" class="btn btn-primary btn-sm">Ver detalles</button>
+          <.link navigate={~p"/juegos/#{@game}"} class="btn btn-primary btn-sm">
+            Ver detalles
+          </.link>
         </div>
       </div>
     </div>
