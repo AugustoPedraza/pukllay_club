@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: catalog-v1
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-08-10T17:05:12.659Z"
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-08-11T15:53:26.306Z"
 last_activity: 2026-08-10
 last_activity_desc: Phase 01 execution resumed (wave continue)
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 11
 ---
 
 # Project State
@@ -29,12 +29,12 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01 (catalog-v1) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 01
+Plan: 2 of 6
+Status: Ready to execute
 Last activity: 2026-08-10 — Phase 01 execution resumed (wave continue)
 structure (0-4)
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [████████░░] 75%
 | Phase 01 P02 | 30min | 3 tasks | 11 files |
 | Phase 01 P01 | 63min | 2 tasks | 8 files |
 | Phase 01 P03 | 85min | 2 tasks | 24 files |
+| Phase 01 P05 | 26min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-03: ImagePipeline enforces its 15MB download cap via a hand-rolled Req into: accumulator (pinned req has no max_length option) — same T-01-10 mitigation, different mechanism
 - [Phase ?]: 01-03: seed modules (R2Storage/BggClient) never read secrets from Application env directly — every call takes an explicit Credentials.t() struct built once by the mix task (T-01-11)
 - [Phase ?]: 01-03: GameCard's Ver detalles CTA renders as an inert button, not a link to a not-yet-existing /games/:id route — game detail page is explicit 01-06 scope
+- [Phase ?]: 01-05: The 8 D-09 carousel rows include 3 weight-band rows in addition to Destacados/3 editorial hashtags/Recientemente añadidos, resolving an under-specified plan prose against the plan's own artifact list and row-count
+- [Phase ?]: 01-05: filter_games/1 composes search+OR-within-facet+AND-across-facets+scalar filters+sort+pagination into one Ecto maybe_* pipeline; sort/facet keys parsed via literal string clauses, never String.to_atom/1
+- [Phase ?]: 01-05: loading skeletons use LiveView's disconnected/connected two-phase mount (:loading = not connected?(socket)) rather than simulated async latency, since Catalog reads are synchronous and fast at this row count
 
 ### Pending Todos
 
@@ -152,7 +156,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-07T00:34:09.682Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-08-11T15:53:26.241Z
+Stopped at: Completed 01-05-PLAN.md
 verified against the roadmap (no edits needed)
 Resume file: None

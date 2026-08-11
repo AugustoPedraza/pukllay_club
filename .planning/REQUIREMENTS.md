@@ -18,9 +18,9 @@ Requirements for this milestone (Phases 0-4, per PROJECT.md's fixed roadmap). Ea
 ### Catalog
 
 - [x] **CATALOG-01**: Member can browse the full catalog (~400 games) with cover images, presented as carousels/cards in LiveView streams
-- [ ] **CATALOG-02**: Member can filter by player count, playtime, category/mechanic/theme (text[] + GIN), and minimum age
-- [ ] **CATALOG-03**: Member can search the catalog by keyword (title, designer, publisher) via tsvector
-- [ ] **CATALOG-04**: Member can sort results by playtime, complexity, or other scalar fields
+- [x] **CATALOG-02**: Member can filter by player count, playtime, category/mechanic/theme (text[] + GIN), and minimum age
+- [x] **CATALOG-03**: Member can search the catalog by keyword (title, designer, publisher) via tsvector
+- [x] **CATALOG-04**: Member can sort results by playtime, complexity, or other scalar fields
 - [ ] **CATALOG-05**: Each game shows a plain-Spanish weight-band + one-line complexity descriptor instead of a bare 1-5 number
 - [ ] **CATALOG-06**: Each game shows plain-Spanish mechanic/theme chips translated from a curated vocabulary, not raw hobbyist jargon
 - [ ] **CATALOG-07**: Each game carries the club's existing editorial curation/custom tags (from the Excel catalog) as a lightweight "club favorite"/"beginner-friendly" signal
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEPLOY-04 | Phase 0 | Complete |
 | DEPLOY-05 | Phase 0 | Complete |
 | CATALOG-01 | Phase 1 | Complete |
-| CATALOG-02 | Phase 1 | Pending |
-| CATALOG-03 | Phase 1 | Pending |
-| CATALOG-04 | Phase 1 | Pending |
+| CATALOG-02 | Phase 1 | Complete |
+| CATALOG-03 | Phase 1 | Complete |
+| CATALOG-04 | Phase 1 | Complete |
 | CATALOG-05 | Phase 1 | Pending |
 | CATALOG-06 | Phase 1 | Pending |
 | CATALOG-07 | Phase 1 | Pending |
