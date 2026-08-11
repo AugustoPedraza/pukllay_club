@@ -65,6 +65,59 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       assert html =~ "line-clamp-2"
     end
+
+    test "renders the card's weight-band label but not its descriptor (CATALOG-05)", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Juego Banded", weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "Ingenio estratega"
+      refute html =~ "Reglas de 15-20 minutos"
+    end
+
+    test "renders the club's editorial hashtag and a capped mechanic chip row with a +N overflow chip",
+         %{conn: conn} do
+      game_fixture(%{
+        name: "Juego Con Chips",
+        tags: ["#CreaConexiones"],
+        mechanics: [
+          "Dice Rolling",
+          "Hand Management",
+          "Worker Placement",
+          "Tile Placement",
+          "Race"
+        ]
+      })
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "#CreaConexiones"
+      assert html =~ "+1"
+    end
+
+    test "the cover image carries an onerror fallback handler, a hidden placeholder sibling, and title alt text",
+         %{conn: conn} do
+      game_fixture(%{
+        name: "Juego Con Portada",
+        thumbnail_url: "https://images.test.invalid/games/1/cover-thumb.webp"
+      })
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "onerror="
+      assert html =~ ~s(alt="Juego Con Portada")
+      assert html =~ "hero-puzzle-piece"
+    end
+
+    test "the Ver detalles CTA links to the game's detail page", %{conn: conn} do
+      game = game_fixture(%{name: "Juego Detalle"})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ ~s(href="/juegos/#{game.id}")
+    end
   end
 
   describe "live filtering, search, sort, and pagination (D-12, D-14, D-15, CATALOG-02/03/04)" do
@@ -292,14 +345,18 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       Enum.each(titles, fn title -> assert html =~ title end)
 
-      carousel_html =
+      # Scoped to the row `<h2>` headings, not a whole-row substring search —
+      # 01-06's weight-band badges render label text (e.g. "Ingenio
+      # estratega") identical to a row heading string *inside a card*, which
+      # can appear in an earlier row (e.g. Destacados) whenever that game
+      # also carries an editorial tag, breaking a naive position/2 search.
+      heading_texts =
         html
         |> LazyHTML.from_document()
-        |> LazyHTML.query("#carousel-rows")
-        |> LazyHTML.to_html()
+        |> LazyHTML.query("#carousel-rows h2")
+        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
-      positions = Enum.map(titles, &position(carousel_html, &1))
-      assert positions == Enum.sort(positions)
+      assert heading_texts == titles
     end
 
     test "a carousel row backed by zero games renders neither its title nor an empty rail", %{
