@@ -22,6 +22,7 @@ defmodule PukllayClubWeb.Router do
     pipe_through :browser
 
     live "/", CatalogLive.Index, :index
+    live "/juegos/:id", CatalogLive.Show, :show
   end
 
   scope "/", PukllayClubWeb do

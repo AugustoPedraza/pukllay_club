@@ -100,6 +100,14 @@ defmodule PukllayClub.Catalog do
   end
 
   @doc """
+  Fetches a single game by id, raising `Ecto.NoResultsError` for an unknown
+  id. `Ecto.NoResultsError` implements `Plug.Exception` with a 404 status,
+  so `CatalogLive.Show` renders the generated 404 page rather than a crash
+  or a 500 (T-01-30).
+  """
+  def get_game!(id), do: Repo.get!(Game, id)
+
+  @doc """
   Pill options for the filter drawer: mechanic/theme Spanish labels, weight
   bands, and editorial tags — every value the vocabulary exposes as a
   filterable facet.
