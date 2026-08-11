@@ -27,8 +27,11 @@ defmodule PukllayClub.CatalogFixtures do
       weight_band: "ingenio_estratega",
       bgg_weight: 2.3,
       tags: ["#CreaConexiones"],
-      mechanics: ["Comercio", "Colocación de dados"],
-      themes: ["Estrategia"],
+      # Raw BGG mechanic/category values (Vocabulary-covered where possible)
+      # rather than pre-translated Spanish, so 01-05's facet/glossary tests
+      # exercise the same translation path production data goes through.
+      mechanics: ["Dice Rolling", "Hand Management"],
+      themes: ["Economic"],
       designers: ["Klaus Teuber"],
       publishers: ["Devir"],
       description: "Compite por colonizar la isla de Catán.",

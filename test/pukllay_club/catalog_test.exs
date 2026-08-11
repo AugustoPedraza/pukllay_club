@@ -13,7 +13,7 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "Zeta"})
       game_fixture(%{name: "Alfa"})
 
-      assert Catalog.filter_games() |> Enum.map(& &1.name) == ["Alfa", "Zeta"]
+      assert Enum.map(Catalog.filter_games(), & &1.name) == ["Alfa", "Zeta"]
     end
   end
 
@@ -25,7 +25,8 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "Neither", mechanics: ["Auction / Bidding"]})
 
       results =
-        Catalog.filter_games(mechanics: ["Tira dados", "Coloca trabajadores"])
+        [mechanics: ["Tira dados", "Coloca trabajadores"]]
+        |> Catalog.filter_games()
         |> Enum.map(& &1.name)
 
       assert Enum.sort(results) == ["Both", "Only Dice", "Only Worker"]
@@ -39,15 +40,12 @@ defmodule PukllayClub.CatalogTest do
       or_count = length(Catalog.filter_games(mechanics: ["Tira dados", "Coloca trabajadores"]))
 
       and_count =
-        from(g in Game,
-          where:
-            fragment(
-              "? @> ?",
-              g.mechanics,
-              type(^["Dice Rolling", "Worker Placement"], {:array, :string})
-            )
+        Repo.aggregate(
+          from(g in Game,
+            where: fragment("? @> ?", g.mechanics, type(^["Dice Rolling", "Worker Placement"], {:array, :string}))
+          ),
+          :count
         )
-        |> Repo.aggregate(:count)
 
       assert and_count == 1
       assert or_count > and_count
@@ -59,7 +57,8 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "Theme Only", mechanics: ["Auction / Bidding"], themes: ["Economic"]})
 
       results =
-        Catalog.filter_games(mechanics: ["Tira dados"], themes: ["Economía"])
+        [mechanics: ["Tira dados"], themes: ["Economía"]]
+        |> Catalog.filter_games()
         |> Enum.map(& &1.name)
 
       assert results == ["Match Both"]
@@ -72,14 +71,14 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "TooFew", min_players: 5, max_players: 6})
       game_fixture(%{name: "TooMany", min_players: 1, max_players: 3})
 
-      assert Catalog.filter_games(players: 4) |> Enum.map(& &1.name) == ["Fits4"]
+      assert [players: 4] |> Catalog.filter_games() |> Enum.map(& &1.name) == ["Fits4"]
     end
 
     test "max_playtime: 60 excludes a 120-minute game" do
       game_fixture(%{name: "Quick", playing_time: 45})
       game_fixture(%{name: "Long", playing_time: 120})
 
-      names = Catalog.filter_games(max_playtime: 60) |> Enum.map(& &1.name)
+      names = [max_playtime: 60] |> Catalog.filter_games() |> Enum.map(& &1.name)
 
       assert "Quick" in names
       refute "Long" in names
@@ -89,7 +88,7 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "NoPlayingTime", playing_time: nil, max_playtime: 30})
       game_fixture(%{name: "TooLongNoPlayingTime", playing_time: nil, max_playtime: 180})
 
-      names = Catalog.filter_games(max_playtime: 60) |> Enum.map(& &1.name)
+      names = [max_playtime: 60] |> Catalog.filter_games() |> Enum.map(& &1.name)
 
       assert "NoPlayingTime" in names
       refute "TooLongNoPlayingTime" in names
@@ -99,7 +98,7 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "ForKids", min_age: 6})
       game_fixture(%{name: "ForTeens", min_age: 12})
 
-      names = Catalog.filter_games(min_age: 8) |> Enum.map(& &1.name)
+      names = [min_age: 8] |> Catalog.filter_games() |> Enum.map(& &1.name)
 
       assert "ForKids" in names
       refute "ForTeens" in names
@@ -116,15 +115,16 @@ defmodule PukllayClub.CatalogTest do
 
       game_fixture(%{name: "Otro Juego", designers: ["Otro Autor"], publishers: ["Otra Editorial"]})
 
-      assert Catalog.filter_games(q: "Terra") |> Enum.any?(&(&1.name == "Terra Mystica"))
-      assert Catalog.filter_games(q: "Drögemüller") |> Enum.any?(&(&1.name == "Terra Mystica"))
-      assert Catalog.filter_games(q: "Devir") |> Enum.any?(&(&1.name == "Terra Mystica"))
+      assert [q: "Terra"] |> Catalog.filter_games() |> Enum.any?(&(&1.name == "Terra Mystica"))
+      assert [q: "Drögemüller"] |> Catalog.filter_games() |> Enum.any?(&(&1.name == "Terra Mystica"))
+      assert [q: "Devir"] |> Catalog.filter_games() |> Enum.any?(&(&1.name == "Terra Mystica"))
     end
 
     test "an accent-free spelling of an accented title still matches it" do
       game_fixture(%{name: "Descifra el código"})
 
-      assert Catalog.filter_games(q: "codigo")
+      assert [q: "codigo"]
+             |> Catalog.filter_games()
              |> Enum.any?(&(&1.name == "Descifra el código"))
     end
 
@@ -133,7 +133,7 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "Catán Card Game", mechanics: ["Auction / Bidding"]})
       game_fixture(%{name: "Otro Juego", mechanics: ["Dice Rolling"]})
 
-      results = Catalog.filter_games(q: "Catán", mechanics: ["Tira dados"]) |> Enum.map(& &1.name)
+      results = [q: "Catán", mechanics: ["Tira dados"]] |> Catalog.filter_games() |> Enum.map(& &1.name)
 
       assert results == ["Catán Junior"]
     end
@@ -163,12 +163,12 @@ defmodule PukllayClub.CatalogTest do
         bgg_weight: 4.5
       })
 
-      assert Catalog.filter_games(sort: :playtime_asc) |> Enum.map(& &1.name) == [
+      assert [sort: :playtime_asc] |> Catalog.filter_games() |> Enum.map(& &1.name) == [
                "Short Simple",
                "Long Complex"
              ]
 
-      assert Catalog.filter_games(sort: :complexity_desc) |> Enum.map(& &1.name) == [
+      assert [sort: :complexity_desc] |> Catalog.filter_games() |> Enum.map(& &1.name) == [
                "Long Complex",
                "Short Simple"
              ]
@@ -180,7 +180,7 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "C Expert", weight_band: "nivel_experto", bgg_weight: 4.1})
       game_fixture(%{name: "D Unranked", weight_band: nil, bgg_weight: nil})
 
-      assert Catalog.filter_games(sort: :complexity_asc) |> Enum.map(& &1.name) == [
+      assert [sort: :complexity_asc] |> Catalog.filter_games() |> Enum.map(& &1.name) == [
                "A Beginner",
                "B Moderate",
                "C Expert",
@@ -192,7 +192,7 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "Zeta"})
       game_fixture(%{name: "Alfa"})
 
-      assert Catalog.filter_games(sort: :not_a_real_sort) |> Enum.map(& &1.name) == [
+      assert [sort: :not_a_real_sort] |> Catalog.filter_games() |> Enum.map(& &1.name) == [
                "Alfa",
                "Zeta"
              ]
