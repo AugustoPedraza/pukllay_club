@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: catalog-v1
-status: executing
-stopped_at: "Completed 01-09-PLAN.md (gap closure: G-01-5)"
-last_updated: "2026-08-18T22:30:05.573Z"
+status: verifying
+stopped_at: "Completed 01-08-PLAN.md (gap closure: G-01-3, G-01-4)"
+last_updated: "2026-08-18T22:39:48.481Z"
 last_activity: 2026-08-18
 last_activity_desc: "Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -30,11 +30,11 @@ even without already knowing board-game vocabulary.
 
 Phase: 01 (catalog-v1) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-18 — Phase 01 execution started
 structure (0-4)
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [█████████░] 93%
 | Phase 01 P05 | 26min | 3 tasks | 10 files |
 | Phase 01 P07 | 35min | 3 tasks | 7 files |
 | Phase 01 P09 | 35min | 3 tasks | 7 files |
+| Phase 01 P08 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-07: G-01-7 double focus ring fixed via focus:outline-hidden focus-within:outline-hidden on select/textarea/catch-all input branches + raw sort select, suppressing only daisyUI's outer offset outline; outline-hidden compiled successfully, no outline-none fallback needed
 - [Phase ?]: 01-09: ExpansionClassifier marker list ((expa, expansi, promo) + reviewed csv_row override list 414/415/417/421) is a documented mirror of the add_games_is_expansion migration's SQL backfill — both must change together (G-01-5)
 - [Phase ?]: 01-09: recent_query/0 filters is_expansion == false; exclusion deliberately scoped to only that carousel row (filter_games/1, count_games/1, other 7 rows untouched) so club-owned expansions remain searchable
+- [Phase ?]: 01-08: CarouselRow gains variant/subtitle (hero colour ranking, no fourth type size) + main-grid section header (G-01-4); 6/8 row subtitles reuse Vocabulary D-05/D-06 copy, 2 newly authored and flagged for review
+- [Phase ?]: 01-08: .CarouselScroll colocated hook adds persistent, self-hiding prev/next rail controls (ResizeObserver + scrollWidth/clientWidth), zero app.js/config.exs edits; @carousel_limit stays at 20 per ux-patterns B9's content-rail flip case (G-01-3)
 
 ### Pending Todos
 
@@ -188,7 +191,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T22:30:05.540Z
-Stopped at: Completed 01-09-PLAN.md (gap closure: G-01-5)
+Last session: 2026-08-18T22:39:48.445Z
+Stopped at: Completed 01-08-PLAN.md (gap closure: G-01-3, G-01-4)
 verified against the roadmap (no edits needed)
 Resume file: None
