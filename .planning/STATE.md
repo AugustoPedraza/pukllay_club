@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: catalog-v1
 status: executing
-stopped_at: "Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias"
-last_updated: "2026-08-18T19:57:24.472Z"
+stopped_at: "Completed 01-07-PLAN.md (gap closure: G-01-2, G-01-6, G-01-7)"
+last_updated: "2026-08-18T22:22:33.958Z"
 last_activity: 2026-08-18
 last_activity_desc: "Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias"
 progress:
   total_phases: 2
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
+  completed_phases: 1
+  total_plans: 15
+  completed_plans: 13
 ---
 
 # Project State
@@ -29,12 +29,12 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01 (catalog-v1) — EXECUTING
-Plan: 2 of 6
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-08-18 - Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias
+Last activity: 2026-08-18 — Phase 01 execution started
 structure (0-4)
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 92%
 | Phase 01 P01 | 63min | 2 tasks | 8 files |
 | Phase 01 P03 | 85min | 2 tasks | 24 files |
 | Phase 01 P05 | 26min | 3 tasks | 10 files |
+| Phase 01 P07 | 35min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Quick task 260818-jpm: extended docs/ux-patterns.md with B28-B32 (Linear/GOV.UK/Shopify-unreachable/Microsoft/NN.g reference points) and section F (LiveView fit, device target ambiguous, not a PWA); WebFetch tool unavailable to executor, substituted curl+HTML-strip for all 12 live fetches, same fetch-then-cite discipline
 - [Phase ?]: Quick task 260818-mhl: added usage_rules ~> 1.1 (1.2.7) + igniter ~> 0.6 (0.8.3) as dev-only deps; AGENTS.md is a usage_rules-managed file (mix phx.new-seeded markers) — configured link-mode sync (`file: "AGENTS.md"`, no `skills:` key) so dependency-authored rules (phoenix, igniter) resolve via `deps/<pkg>/usage-rules*.md` links instead of inlining; only usage_rules' own + elixir/otp builtin rules stay inlined; `mix rules.sync` alias added; AGENTS.md shrank 25,492 -> 12,336 bytes (marker-block-only change, hand-written preamble lines 1-95 byte-identical, sha256-verified)
 - [Phase ?]: Quick task 260818-n4l: Added excoveralls (0.18.5) + dialyxir (1.4.7) tooling deps; test_coverage/dialyzer config wired via cli/0 preferred_envs (not deprecated project/0 preferred_cli_env); dialyxir only:[:dev,:test] (not [:dev]) so quality.full resolves; PLT deliberately not built; precommit alias converted to check-only flags (deps.unlock --check-unused, format --check-formatted) closing an unattended-executor silent-mutation hole; new quality.full = quality + dialyzer alias added
+- [Phase ?]: 01-07: weight_band_badge/1 uses badge-lg h-auto whitespace-normal (releases daisyUI's height pin, the direct G-01-2 cause) + badge-lg size step establishes it as the card's primary tier (G-01-6)
+- [Phase ?]: 01-07: editorial_tags/1 gained an optional limit (nil=uncapped) mirroring chip_row/1's take/overflow pattern; card-level cap set to limit={2} since only 3 editorial hashtags exist in the live Vocabulary module
+- [Phase ?]: 01-07: G-01-7 double focus ring fixed via focus:outline-hidden focus-within:outline-hidden on select/textarea/catch-all input branches + raw sort select, suppressing only daisyUI's outer offset outline; outline-hidden compiled successfully, no outline-none fallback needed
 
 ### Pending Todos
 
@@ -169,6 +173,7 @@ item in `01-VERIFICATION.md`. Full audit: https://claude.ai/code/artifact/f067cf
 | 8 | Add a .mcp.json file at the repo root that configures the Tidewave MCP server as an HTTP (streamable) server pointing at http://localhost:4000/tidewave/mcp, matching the standard Tidewave README setup. | 2026-08-18 | 808e34a | — | — |
 | 260818-n4l | Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias | 2026-08-18 | c11b257 | Verified | [260818-n4l-add-dialyxir-and-excoveralls-and-make-th](./quick/260818-n4l-add-dialyxir-and-excoveralls-and-make-th/) |
 | 9 | Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias | 2026-08-18 | c11b257 | — | — |
+| 11 | Add mix precommit/quality workflow rules to .planning/codebase/CONVENTIONS.md | 2026-08-18 | 4811893 | — | — |
 
 ## Deferred Items
 
@@ -180,7 +185,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T19:57:17.810Z
-Stopped at: Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias
+Last session: 2026-08-18T22:22:33.935Z
+Stopped at: Completed 01-07-PLAN.md (gap closure: G-01-2, G-01-6, G-01-7)
 verified against the roadmap (no edits needed)
 Resume file: None
