@@ -31,7 +31,7 @@ even without already knowing board-game vocabulary.
 Phase: 01 (catalog-v1) — EXECUTING
 Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-08-18 - Completed quick task 260818-h9p: Build UX pattern reference doc at docs/ux-patterns.md from research
+Last activity: 2026-08-18 - Completed quick task 260818-lg2: Split ux-patterns.md into ux-patterns + ux-responsive skills, merged hierarchy/affordance into ui-design-system
 structure (0-4)
 
 Progress: [█████████░] 92%
@@ -147,6 +147,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 260806-rq8 | Add Styler + mix_audit quality gates (superseded credence) to mix quality | 2026-08-06 | 9477e7f | [260806-rq8-add-credence-semantic-ast-elixir-linter-](./quick/260806-rq8-add-credence-semantic-ast-elixir-linter-/) |
 | 260818-fro | Integrate Tidewave (dev-only) MCP plug into Phoenix endpoint | 2026-08-18 | d3761dd | [260818-fro-integrate-tidewave-dev-only-into-phoenix](./quick/260818-fro-integrate-tidewave-dev-only-into-phoenix/) |
+| 260818-lg2 | Convert docs/ux-patterns.md into ux-patterns + ux-responsive skills, merge hierarchy/affordance into ui-design-system | 2026-08-18 | 3a4380e | [260818-lg2-convert-docs-ux-patterns-md-into-three-s](./quick/260818-lg2-convert-docs-ux-patterns-md-into-three-s/) |
 | 260818-gdb | Fix the max-w-2xl container bug in Layouts.app | 2026-08-18 | b44d927 | [260818-gdb-fix-the-max-w-2xl-container-bug-in-lib-p](./quick/260818-gdb-fix-the-max-w-2xl-container-bug-in-lib-p/) |
 | 260818-h9p | Build UX pattern reference doc at docs/ux-patterns.md from research | 2026-08-18 | 703a919 | [260818-h9p-build-ux-pattern-reference-doc-at-docs-u](./quick/260818-h9p-build-ux-pattern-reference-doc-at-docs-u/) |
 | 260818-jpm | Add Linear/GOV.UK/Shopify/Microsoft/NN.g reference points (B28-B32) and LiveView-fit/device-target/PWA-scope answers (F33-F35) to docs/ux-patterns.md | 2026-08-18 | 58a2b6c | [260818-jpm-add-linear-gov-uk-shopify-master-detail-](./quick/260818-jpm-add-linear-gov-uk-shopify-master-detail-/) |
