@@ -8,6 +8,12 @@ defmodule PukllayClubWeb.CarouselRow do
   by 01-RESEARCH.md Pitfall 5 (unchanged from v4). A row backed by zero
   games renders nothing at all — an empty titled rail would read as
   breakage, not as "nothing here yet".
+
+  `variant`/`subtitle` (G-01-4) exist so the caller can differentiate the
+  8 D-09 rows from one another: `variant: :hero` ranks a row above the
+  rest by colour (never by a fourth type size — see ui-design-system), and
+  `subtitle` is a one-line plain-Spanish explanation of what that shelf is.
+  The caller owns the copy; this component only renders it.
   """
   use Phoenix.Component
 
@@ -16,11 +22,16 @@ defmodule PukllayClubWeb.CarouselRow do
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :games, :list, required: true
+  attr :variant, :atom, default: :standard, values: [:standard, :hero]
+  attr :subtitle, :string, default: nil
 
   def carousel_row(assigns) do
     ~H"""
     <section :if={@games != []} id={@id} class="space-y-3">
-      <h2 class="font-display text-2xl">{@title}</h2>
+      <div class="space-y-1">
+        <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>{@title}</h2>
+        <p :if={@subtitle} class="text-neutral text-sm">{@subtitle}</p>
+      </div>
       <div class="carousel carousel-center gap-4 rounded-box">
         <div :for={game <- @games} class="carousel-item">
           <GameCard.game_card id={"#{@id}-#{game.id}"} game={game} class="w-40 shrink-0 sm:w-48" />
@@ -40,7 +51,10 @@ defmodule PukllayClubWeb.CarouselRow do
   def skeleton_row(assigns) do
     ~H"""
     <section id={@id} class="space-y-3">
-      <div class="skeleton h-7 w-48"></div>
+      <div class="space-y-1">
+        <div class="skeleton h-7 w-48"></div>
+        <div class="skeleton h-4 w-32"></div>
+      </div>
       <div class="carousel carousel-center gap-4 rounded-box">
         <div :for={n <- 1..@count} class="carousel-item">
           <.skeleton_card id={"#{@id}-#{n}"} class="w-40 shrink-0 sm:w-48" />
