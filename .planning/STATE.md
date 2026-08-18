@@ -31,7 +31,7 @@ even without already knowing board-game vocabulary.
 Phase: 01 (catalog-v1) — EXECUTING
 Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-08-10 — Phase 01 execution resumed (wave continue)
+Last activity: 2026-08-18 - Completed quick task 260818-fro: Integrate Tidewave (dev-only) MCP plug into Phoenix endpoint
 structure (0-4)
 
 Progress: [█████████░] 92%
@@ -145,6 +145,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260806-rq8 | Add Styler + mix_audit quality gates (superseded credence) to mix quality | 2026-08-06 | 9477e7f | [260806-rq8-add-credence-semantic-ast-elixir-linter-](./quick/260806-rq8-add-credence-semantic-ast-elixir-linter-/) |
+| 260818-fro | Integrate Tidewave (dev-only) MCP plug into Phoenix endpoint | 2026-08-18 | d3761dd | [260818-fro-integrate-tidewave-dev-only-into-phoenix](./quick/260818-fro-integrate-tidewave-dev-only-into-phoenix/) |
 
 ## Deferred Items
 
