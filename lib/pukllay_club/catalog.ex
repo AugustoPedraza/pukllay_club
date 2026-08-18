@@ -190,6 +190,7 @@ defmodule PukllayClub.Catalog do
 
   defp recent_query do
     from g in Game,
+      where: g.is_expansion == false,
       order_by: [desc: g.inserted_at, desc: g.csv_row],
       limit: ^@carousel_limit
   end
