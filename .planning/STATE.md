@@ -117,7 +117,19 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+7 pending (area: ui) — retroactive UI audit of `CatalogLive.Index` against
+`ui-design-system`/`ux-patterns`/`ux-responsive`, tied to the still-open touch-target human-verification
+item in `01-VERIFICATION.md`. Full audit: https://claude.ai/code/artifact/f067cf3b-84ec-41d5-970c-71e035bc7f90
+
+| Severity | Todo |
+|----------|------|
+| blocker | Sort dropdown overlaps and steals clicks from Filtros button |
+| major | Ver detalles card CTA touch target (28px vs 44px, ×183) |
+| major | Theme toggle: no accessible names + undersized (32px) |
+| minor | 10 font combos on catalog screen vs cap of 3 |
+| minor | 184 elements share `.btn-primary` weight — no secondary button tier |
+| cosmetic | Brand tagline: banned `text-[10px]` / `text-base-content/70` |
+| cosmetic | Brand logo link: 42px vs 44px minimum |
 
 ### Blockers/Concerns
 
