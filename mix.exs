@@ -35,7 +35,8 @@ defmodule PukllayClub.MixProject do
         quality: :test,
         coveralls: :test,
         "coveralls.detail": :test,
-        "coveralls.html": :test
+        "coveralls.html": :test,
+        "quality.full": :test
       ]
     ]
   end
@@ -126,7 +127,12 @@ defmodule PukllayClub.MixProject do
         "esbuild pukllay_club --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"],
+      precommit: [
+        "compile --warnings-as-errors",
+        "deps.unlock --check-unused",
+        "format --check-formatted",
+        "test"
+      ],
       "rules.sync": ["usage_rules.sync"],
       quality: [
         "hex.audit",
@@ -136,7 +142,8 @@ defmodule PukllayClub.MixProject do
         "credo --strict",
         "sobelow --config",
         "test --warnings-as-errors"
-      ]
+      ],
+      "quality.full": ["quality", "dialyzer"]
     ]
   end
 end
