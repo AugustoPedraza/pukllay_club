@@ -26,6 +26,9 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 - Microsoft Learn singular `list-detail` URL: `https://learn.microsoft.com/en-us/windows/apps/design/controls/list-detail` — HTTP 404.
 - Gmail reading-pane support page: `https://support.google.com/mail/answer/187605` — HTTP 404 (redirects to an unrelated topic page).
 - Pages that returned a title with no rendered body (client-rendered, JavaScript required, nothing to quote):
+  `https://developer.apple.com/design/human-interface-guidelines/split-views`,
+  `https://developer.apple.com/design/human-interface-guidelines/sidebars`, and
+  `https://m3.material.io/components/navigation-bar/guidelines`.
 
 ## A. Information hierarchy
 
@@ -497,6 +500,10 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
   pointing-devices, buttons pages), Carbon (typography, pagination, data-table, action-labels
   pages), and GOV.UK (question-pages, table, complete-multiple-tasks pages); none covers PWA
   install/offline/standalone-mode concerns.
+- **Scope:** out of scope for this repo until a web app manifest and a service worker actually
+  exist — see F35. The two sources added in this pass (Linear docs, Microsoft Learn) likewise
+  carry no PWA install, offline, or standalone-mode guidance, so E27's original finding is
+  unchanged.
 
 ## Named reference points (B28-B32 extend section B)
 
@@ -595,3 +602,72 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 - **Why:** below about five destinations, discoverability and interaction cost both favor keeping
   the options visible over hiding them behind a menu the user has to remember to open.
 - **Source:** [NN/g — Basic Patterns for Mobile Navigation: A Primer](https://www.nngroup.com/articles/mobile-navigation-patterns/)
+
+## F. Answers — LiveView fit, device target, PWA scope
+
+### F33. Which patterns translate cleanly to LiveView, and which need a JS hook
+
+- **Answer:** most of the interaction patterns in this doc translate to plain LiveView with a
+  server round-trip per interaction. Two do not: rapid keyboard row navigation, and anything that
+  advances on a clock.
+- **Evidence — translates cleanly:**
+  - The view-to-edit toggle shape behind B28 and B10 is `phx-click` plus assign-driven conditional
+    rendering; no client state is needed. Already proven in this repo:
+    `CatalogLive.Show.handle_event("select-image", ...)` swaps `@selected_image` on a server
+    round-trip per click (`lib/pukllay_club_web/live/catalog_live/show.ex`), and `FilterDrawer`'s
+    facet pills do the same via `phx-click` with `phx-value-facet` / `phx-value-value`
+    (`lib/pukllay_club_web/components/filter_drawer.ex`).
+  - Drawer and master/detail panel open-close (B31) needs neither LiveView nor JS: `FilterDrawer`
+    holds its open state in a bare checkbox input driven by daisyUI's drawer classes
+    (`lib/pukllay_club_web/components/filter_drawer.ex`), so the transition is pure CSS.
+  - Mobile nav open-close (B32) is the same mechanism as that drawer — no hook.
+  - Debounced search-as-you-type (B14) already works without a hook: the catalog search input
+    carries `phx-debounce="300"` (`lib/pukllay_club_web/live/catalog_live/index.ex`).
+- **Evidence — needs a client-side JS hook:**
+  - B28's arrow-key / `J` / `K` row navigation is the latency-sensitive case. A server round-trip
+    per keypress would feel laggy during rapid navigation, so the highlighted-row state has to be
+    held client-side in a hook, contacting the server only on an actual selection or edit commit —
+    not on every key.
+  - Carousel auto-advance and pacing (B9), and any timed animation, need a hook because LiveView
+    has no client-side timer primitive of its own.
+- **Implication:** the split falls on whether the user is already waiting. An interaction whose
+  result the user waits for anyway (a click that changes content) tolerates a round-trip; an
+  interaction the user expects to be instantaneous and repeats rapidly (held or repeated
+  keypresses, clock-driven motion) does not.
+
+### F34. Device target — ambiguous, leaning mobile-considered rather than desktop-primary
+
+- **Answer:** ambiguous, and not committed either way yet. State this plainly; do not force a pick.
+- **Evidence for mobile-considered:** the catalog card grid is mobile-first — a two-column grid is
+  the base, scaling up at the `sm` and `lg` breakpoints, rather than a desktop base scaled down
+  (`lib/pukllay_club_web/live/catalog_live/index.ex`). Touch targets are explicitly sized to a
+  44px minimum — matching the Apple HIG figure recorded in C20 — on both the filter-drawer trigger
+  button and every facet pill (`lib/pukllay_club_web/components/filter_drawer.ex`). The detail
+  page's thumbnail strip is a horizontally scrolling swipe strip rather than a wrapping grid
+  (`lib/pukllay_club_web/live/catalog_live/show.ex`).
+- **Evidence it is not committed:** there is no dedicated mobile navigation at all — no bottom bar
+  and no hamburger. `Layouts.app`'s header is a single navbar whose only breakpoint-dependent
+  change is horizontal padding (`lib/pukllay_club_web/components/layouts.ex`), so the nav shape
+  never swaps, which is exactly what B8 and B32 describe doing. And no desktop split-pane layout
+  exists: the detail page is a single centred column at every viewport
+  (`lib/pukllay_club_web/live/catalog_live/show.ex`), so the two-pane branch of B6 and B31 has
+  never been built.
+- **Implication:** do not resolve this by assumption. B6/B31 (master/detail) and B8/B32 (nav
+  shape) both need a device-target answer before either can be implemented, and that answer is not
+  in the code yet.
+
+### F35. PWA scope — no, and section E is scoped to responsive web only
+
+- **Answer:** no. This is not a PWA and nothing in the repo is building toward one.
+- **Evidence (verified against the working tree this pass):** no `manifest.json` and no
+  `.webmanifest` file exists anywhere in the repository — searched by filename across the whole
+  tree excluding `deps`, `_build`, and `node_modules`, zero hits. No service worker is registered:
+  `assets/js/` contains no occurrence of `serviceWorker`, zero hits. And the document head in
+  `lib/pukllay_club_web/components/layouts/root.html.heex` contains only a charset meta, a
+  viewport meta, a CSRF-token meta, the live title, one stylesheet link, and two script tags — it
+  carries no manifest link element and no theme-colour meta tag.
+- **Implication:** scope section E to responsive web only for now. E24 (breakpoints), E25 (touch
+  versus pointer) and E26 (safe areas) remain valid general responsive-web guidance and apply
+  today. E27 (PWA offline state, install prompt, splash, standalone-mode differences) is out of
+  scope until a manifest and a service worker actually exist here — do not build UI against it
+  prematurely.
