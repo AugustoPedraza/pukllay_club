@@ -29,7 +29,9 @@ defmodule PukllayClubWeb.GameChips do
 
     ~H"""
     <div :if={@band} class="space-y-1">
-      <span class="badge badge-secondary">{@band.label}</span>
+      <span class="badge badge-secondary badge-lg h-auto whitespace-normal py-1 text-center leading-tight">
+        {@band.label}
+      </span>
       <p :if={@show_descriptor} class="text-neutral text-sm">{@band.descriptor}</p>
     </div>
     """
@@ -64,15 +66,31 @@ defmodule PukllayClubWeb.GameChips do
 
   @doc """
   Renders each of the game's club editorial hashtags verbatim (leading `#`
-  included), using the single uniform chip treatment 01-UI-SPEC.md's Color
-  section locks for all 6 club hashtags — never a per-hashtag color.
+  included), using the single uniform small accent-chip treatment
+  01-UI-SPEC.md's Color section locks for all 6 club hashtags — never a
+  per-hashtag color.
+
+  Accepts an optional `limit`. `nil` (the default) renders every tag — the
+  detail page's uncapped behaviour. When `limit` is an integer and there
+  are more tags than the limit, renders the visible tags followed by one
+  `+N` overflow chip, mirroring `chip_row/1`'s cap pattern.
   """
   attr :tags, :list, required: true
+  attr :limit, :integer, default: nil
 
   def editorial_tags(assigns) do
+    visible = if assigns.limit, do: Enum.take(assigns.tags, assigns.limit), else: assigns.tags
+    overflow = length(assigns.tags) - length(visible)
+
+    assigns =
+      assigns
+      |> assign(:visible, visible)
+      |> assign(:overflow, overflow)
+
     ~H"""
     <div :if={@tags != []} class="flex flex-wrap gap-1">
-      <span :for={tag <- @tags} class="badge bg-accent text-accent-content">{tag}</span>
+      <span :for={tag <- @visible} class="badge badge-sm badge-accent">{tag}</span>
+      <span :if={@overflow > 0} class="badge badge-sm badge-accent">+{@overflow}</span>
     </div>
     """
   end

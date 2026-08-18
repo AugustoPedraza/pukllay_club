@@ -32,6 +32,15 @@ defmodule PukllayClubWeb.GameChipsTest do
 
       refute html =~ "2.3"
     end
+
+    test "renders the large, auto-height badge treatment that grows to fit a wrapped label" do
+      game = %Game{weight_band: "descubre_el_hobby", bgg_weight: 1.0}
+
+      html = render_component(&GameChips.weight_band_badge/1, game: game)
+
+      assert html =~ "badge-lg"
+      assert html =~ "h-auto"
+    end
   end
 
   describe "chip_row/1" do
@@ -78,11 +87,30 @@ defmodule PukllayClubWeb.GameChipsTest do
 
       occurrences =
         html
-        |> String.split("badge bg-accent text-accent-content")
+        |> String.split("badge badge-sm badge-accent")
         |> length()
         |> Kernel.-(1)
 
       assert occurrences == 6
+    end
+
+    test "with no limit renders every tag uncapped (detail-page behaviour)" do
+      tags = for n <- 1..6, do: "#Tag#{n}"
+
+      html = render_component(&GameChips.editorial_tags/1, tags: tags)
+
+      for n <- 1..6, do: assert(html =~ "#Tag#{n}")
+      refute html =~ "+"
+    end
+
+    test "with a limit caps visible tags and renders a +N overflow chip" do
+      tags = for n <- 1..5, do: "#Tag#{n}"
+
+      html = render_component(&GameChips.editorial_tags/1, tags: tags, limit: 2)
+
+      for n <- 1..2, do: assert(html =~ "#Tag#{n}")
+      for n <- 3..5, do: refute(html =~ "#Tag#{n}")
+      assert html =~ "+3"
     end
   end
 
