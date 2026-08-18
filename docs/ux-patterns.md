@@ -1,6 +1,6 @@
 # UX pattern reference
 
-This is a vendor-neutral reference for common UX questions, built by reading eight public
+This is a vendor-neutral reference for common UX questions, built by reading ten public
 design-system and usability sources. Every claim below is sourced from a page listed in the
 source ledger and actually fetched during this research pass — nothing here is filled in from
 memory. This doc does not override `.claude/skills/ui-design-system/SKILL.md` where the two
@@ -18,6 +18,7 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 | 6 | Material 3 | https://m3.material.io/styles/typography/type-scale-tokens <br> https://m3.material.io/foundations/interaction/states/state-layers <br> https://m3.material.io/foundations/layout/breakpoints <br> https://m3.material.io/foundations/layout/canonical-examples | read |
 | 7 | Apple HIG | https://developer.apple.com/design/human-interface-guidelines/layout <br> https://developer.apple.com/design/human-interface-guidelines/pointing-devices <br> https://developer.apple.com/design/human-interface-guidelines/buttons | read |
 | 8 | NN/g web usability | https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/ <br> https://www.nngroup.com/articles/designing-effective-carousels/ <br> https://www.nngroup.com/articles/skeleton-screens/ | read |
+| 9 | Linear docs | https://linear.app/docs <br> https://linear.app/docs/select-issues | read |
 
 ## A. Information hierarchy
 
@@ -489,3 +490,32 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
   pointing-devices, buttons pages), Carbon (typography, pagination, data-table, action-labels
   pages), and GOV.UK (question-pages, table, complete-multiple-tasks pages); none covers PWA
   install/offline/standalone-mode concerns.
+
+## Named reference points (B28-B32 extend section B)
+
+### B28. Dense list rows — Linear's issue list navigation, selection, and property editing
+
+- **Default:** keyboard-first navigation and selection over a dense list, with property changes
+  routed through a command bar rather than a modal or a click-to-edit field. Linear's docs:
+  highlighting uses "↑ / ↓ or J / K to navigate the page to the issue"; once highlighted, "press
+  X" to select; hold "Shift and click your mouse on the issue" to select with the pointer; "hover
+  near the left edge of an issue to reveal its checkbox"; to extend a range, "hold down Shift
+  after selecting the first issue, then use the ↑ / ↓ keys to increase the selected range one
+  issue at a time"; "Cmd/Ctrl A to select all issues on a board or list"; "press Esc to clear the
+  selected issues"; and once one or more issues are selected, "use Cmd/Ctrl K to open the command
+  bar and select the preferred action or right-click anywhere on the selected issue(s) to open the
+  contextual menu."
+- **Flips when:** the user is a pointer user who does not know the shortcuts — the same selection
+  model stays reachable via the checkbox revealed on hover near the row's left edge. Note that
+  this is a hover-revealed affordance, which C16 already flags as undiscoverable on touch devices.
+- **Why:** a dense list is scanned far more often than it is clicked, so binding navigation and
+  selection to keys keeps the hand off the pointer for the common case; routing actions through a
+  command bar also means the row itself does not have to carry a visible control per action
+  (see C19 and D22 on per-row and per-toolbar action caps).
+- **Source:** [Linear — Select issues](https://linear.app/docs/select-issues)
+- **Disagreement:** B10 records Atlassian's inline edit as a component that "switches between
+  reading and editing on the same page." Linear's documented path for changing a property on a
+  selected row — "select them with shortcuts or the mouse and then update the issue field like you
+  would any issue" via the command bar or contextual menu — is list -> transient overlay ->
+  committed change, not an in-place field swap. The fetched page documents no click-to-edit-in-
+  place behavior, so none is described here.
