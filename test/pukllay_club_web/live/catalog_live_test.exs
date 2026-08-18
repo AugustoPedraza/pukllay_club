@@ -97,6 +97,33 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert html =~ "+1"
     end
 
+    test "a card's editorial tags are capped at 2 with a +N overflow chip (G-01-6)", %{
+      conn: conn
+    } do
+      game_fixture(%{
+        name: "Juego Con Tres Tags",
+        tags: ["#CreaConexiones", "#EquipoGanador", "#DuelosMemorables"]
+      })
+
+      {:ok, _view, html} = live(conn, ~p"/")
+      card_html = grid_html(html)
+
+      assert card_html =~ "#CreaConexiones"
+      assert card_html =~ "#EquipoGanador"
+      refute card_html =~ "#DuelosMemorables"
+      assert card_html =~ "+1"
+    end
+
+    test "the card's weight-band badge renders at the large, overflow-safe size (G-01-2/G-01-6)",
+         %{conn: conn} do
+      game_fixture(%{name: "Juego Con Banda", weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert grid_html(html) =~ "badge-lg"
+      assert grid_html(html) =~ "h-auto"
+    end
+
     test "the cover image carries the js-cover-fallback class, a hidden placeholder sibling, and title alt text",
          %{conn: conn} do
       game_fixture(%{
