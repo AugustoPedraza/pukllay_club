@@ -1,294 +1,202 @@
 ---
 phase: 01-catalog-v1
-reviewed: 2026-08-11T00:00:00Z
+reviewed: 2026-08-18T00:00:00Z
 depth: standard
-files_reviewed: 30
+files_reviewed: 14
 files_reviewed_list:
-  - config/dev.exs
-  - config/dev.secret.exs.example
-  - config/prod.exs
-  - config/runtime.exs
-  - config/test.exs
   - lib/mix/tasks/catalog.seed.ex
   - lib/pukllay_club/catalog.ex
   - lib/pukllay_club/catalog/game.ex
-  - lib/pukllay_club/catalog/seed/bgg_client.ex
-  - lib/pukllay_club/catalog/seed/credentials.ex
-  - lib/pukllay_club/catalog/seed/csv_import.ex
-  - lib/pukllay_club/catalog/seed/hashtag_normalizer.ex
-  - lib/pukllay_club/catalog/seed/image_pipeline.ex
-  - lib/pukllay_club/catalog/seed/r2_storage.ex
-  - lib/pukllay_club/catalog/seed/report.ex
-  - lib/pukllay_club/catalog/seed/storage.ex
-  - lib/pukllay_club/catalog/vocabulary.ex
+  - lib/pukllay_club/catalog/seed/expansion_classifier.ex
   - lib/pukllay_club_web/components/carousel_row.ex
   - lib/pukllay_club_web/components/core_components.ex
-  - lib/pukllay_club_web/components/filter_drawer.ex
   - lib/pukllay_club_web/components/game_card.ex
   - lib/pukllay_club_web/components/game_chips.ex
-  - lib/pukllay_club_web/components/layouts.ex
-  - lib/pukllay_club_web/components/layouts/root.html.heex
-  - lib/pukllay_club_web/csp.ex
   - lib/pukllay_club_web/live/catalog_live/index.ex
-  - lib/pukllay_club_web/live/catalog_live/show.ex
-  - lib/pukllay_club_web/router.ex
-  - priv/repo/migrations/20260806234228_create_games.exs
-  - priv/repo/migrations/20260810172415_add_games_search_and_indexes.exs
-  - .sobelow-conf
+  - priv/repo/migrations/20260818222551_add_games_is_expansion.exs
+  - test/pukllay_club/catalog/seed/expansion_classifier_test.exs
+  - test/pukllay_club/catalog_test.exs
+  - test/pukllay_club_web/components/game_chips_test.exs
+  - test/pukllay_club_web/live/catalog_live_test.exs
 findings:
-  critical: 1
-  warning: 4
+  critical: 0
+  warning: 2
   info: 2
-  total: 7
+  total: 4
 status: issues_found
 ---
 
 # Phase 01: Code Review Report
 
-**Reviewed:** 2026-08-11
+**Reviewed:** 2026-08-18T00:00:00Z
 **Depth:** standard
-**Files Reviewed:** 30
+**Files Reviewed:** 14
 **Status:** issues_found
 
 ## Summary
 
-Phase 1 (catalog-v1) is a large, well-documented body of work: a credential-resolution seam, a
-BGG-enrichment/image/R2 seed pipeline, a Postgres `tsvector` search+GIN index setup, and a full
-LiveView browse/filter/detail experience. The Ecto query layer is consistently disciplined about
-parameterization (`^` pins throughout, no string-built SQL), the seed pipeline's SSRF/XSS/DoS
-mitigations (host allowlist, download-size cap, `dtd: :none`, `redacted/1`) are real and correctly
-wired, and the data-quality handling (D-18/D-19/D-20) is unusually thorough for a one-time script.
+This review is scoped to the changes introduced by phase 01's three gap-closure plans (01-07:
+three-tier `GameChips` hierarchy / overflow-safe weight badge / double-focus-ring fix; 01-08:
+carousel row `variant`/`subtitle` + persistent scroll controls + titled main grid; 01-09:
+`ExpansionClassifier` + `games.is_expansion` + `recent_query/0` exclusion), not the full phase.
+I read every listed file in full, then diffed each against `27c0edb` (the commit immediately
+preceding this batch of work) to isolate exactly what these three plans changed, and traced the
+changed logic against its callers (`CatalogLive.Show`'s continued use of `GameChips`,
+`CatalogFixtures.game_fixture/1`'s `is_expansion` cast path, the migration's SQL mirror of
+`ExpansionClassifier`'s marker/override lists).
 
-The one blocking issue found is a genuine, high-confidence functional regression: the
-Content-Security-Policy shipped in this phase (`lib/pukllay_club_web/csp.ex`) sets
-`script-src 'self'` with no `'unsafe-inline'`/nonce/hash, which silently disables both the
-pre-existing theme-toggle inline `<script>` in `root.html.heex` and the phase's own new
-`onerror` broken-image fallback in `GameCard` — neither can execute in a CSP-enforcing browser.
-Unit tests only assert the header's string value, so this was never caught by any automated check.
-The remaining findings are robustness/observability gaps in the seed task and the browse LiveView's
-blanket exception-swallowing, plus two minor code-quality notes.
+To verify claims rather than eyeball them, I additionally: ran the four listed test files (73
+tests, 0 failures), ran `mix compile --warnings-as-errors --force` (clean), ran
+`mix format --check-formatted` on the changed files (clean), ran `mix credo --strict` on the
+changed files (one pre-existing, out-of-diff suggestion only), and — because one finding below
+hinges on Tailwind's CSS cascade order rather than something readable from source — actually ran
+`mix tailwind pukllay_club` (both normal and `--minify`) and diffed byte offsets of the generated
+`.hidden`/`.flex` utility rules to confirm the real runtime behavior instead of guessing.
 
-## Critical Issues
-
-### CR-01: Content-Security-Policy blocks the app's own inline script and onerror handler
-
-**File:** `lib/pukllay_club_web/csp.ex:19-34` (interacts with `lib/pukllay_club_web/components/layouts/root.html.heex:11-38` and `lib/pukllay_club_web/components/game_card.ex:47`)
-
-**Issue:** `CSP.policy/0` emits `"script-src 'self'"` with no `'unsafe-inline'`, nonce, or hash
-source. Two pieces of markup in this codebase depend on inline JavaScript executing:
-
-1. `root.html.heex`'s `<head>` contains an inline `<script>` block (not `src=`-loaded) that reads
-   `localStorage`, sets `data-theme`, and installs the `phx:set-theme` listener the theme-toggle
-   buttons in `Layouts.theme_toggle/1` dispatch via `JS.dispatch("phx:set-theme")`. `assets/js/app.js`
-   has no equivalent logic (verified: no `theme`/`set-theme` reference in `app.js`), so this inline
-   block is the *only* implementation.
-2. `GameCard.game_card/1`'s cover `<img>` carries an inline `onerror="this.style.display='none'; ..."`
-   attribute — the moduledoc explicitly frames this as this phase's mechanism for degrading a failed
-   image load to the brand placeholder.
-
-Per the CSP spec (true since CSP Level 1), both classic inline `<script>` blocks and inline event
-handler attributes (`onerror`, `onclick`, etc.) are governed by `script-src`, and are blocked by any
-browser enforcing this header unless `'unsafe-inline'` (or a matching nonce/hash) is present. Since
-`style-src` explicitly carries `'unsafe-inline'` in this same policy but `script-src` does not, this
-reads as an oversight rather than an intentional hardening choice — the policy is internally
-inconsistent with the markup it ships alongside.
-
-**Effect once enforced by a real browser:** the theme toggle silently stops working entirely (no
-console-visible app error, only a CSP violation report), and the broken-cover-image fallback this
-same phase (01-06) added never fires — a failed image load leaves a broken `<img>` icon on screen
-instead of degrading to the brand placeholder the design explicitly calls for. Neither regression is
-caught by the existing test suite, because ExUnit/LazyHTML assertions on rendered markup cannot
-detect that a browser would refuse to execute inline script.
-
-**Fix:** Either move both scripts to an external `src=`-loaded file under `script-src 'self'` (cleanest —
-matches how `app.js` is already loaded), or add a per-request nonce and apply it to both the `<script>`
-tag and the `onerror` attribute (CSP3 also requires `'unsafe-hashes'` or a nonce for inline *event
-handler* attributes specifically — moving the onerror to a small `assets/js/app.js` hook/event listener
-avoids that extra complexity). Example external-script fix for the theme toggle:
-
-```js
-// assets/js/theme.js (loaded via <script defer src={~p"/assets/js/theme.js"}>)
-(() => { /* existing IIFE body, unchanged */ })();
-```
-
-```heex
-<img
-  :if={@game.thumbnail_url}
-  src={@game.thumbnail_url}
-  alt={@game.name}
-  loading="lazy"
-  class="h-full w-full object-cover js-cover-fallback"
-/>
-```
-```js
-// assets/js/app.js
-document.addEventListener("error", (e) => {
-  if (e.target.matches?.(".js-cover-fallback")) {
-    e.target.style.display = "none";
-    e.target.nextElementSibling?.classList.remove("hidden");
-  }
-}, true);
-```
-
-Whichever approach is taken, add a real browser-level regression check (e.g. Wallaby/Playwright, or
-at minimum a manual verification step in the phase checkpoint) — a header-value assertion alone
-cannot catch this class of bug.
+Overall this is a small, well-tested, tightly-scoped diff (each plan's commits show
+tests-before-implementation), and I did not find a correctness, security, or data-integrity
+blocker in the reviewed files. The two warnings below are both about relying on implicit,
+untested-by-the-suite mechanisms (CSS cascade order; a CSS pseudo-class with no functional effect
+in its current markup context) rather than about anything the shipped feature currently gets
+wrong.
 
 ## Warnings
 
-### WR-01: `Mix.Tasks.Catalog.Seed.classify_weight/4`'s case is not exhaustive over its own two independently-computed inputs
+### WR-01: Scroll-control visibility depends on unstated Tailwind cascade order, not an explicit state
 
-**File:** `lib/mix/tasks/catalog.seed.ex:114-136` (see also `lib/pukllay_club/catalog/seed/hashtag_normalizer.ex:78-88,116-124`)
+**File:** `lib/pukllay_club_web/components/carousel_row.ex:78` (paired with the JS at line 57)
 
-**Issue:** `classify_weight/4` branches on `{true_count, resolution}` where `true_count` comes from
-the mix task's own `weight_hashtag_true_count/1` and `resolution` comes from
-`HashtagNormalizer.resolve_weight_band/1` — two separately-implemented traversals of the same three
-weight-hashtag columns that happen to agree today only because both apply the same `truthy?/1`
-predicate over the same column list. The `case` only covers `{1, {:ok, _, :hashtag}}`,
-`{count>=2, {:ok, _, :peso_tie_break}}`, `{0, {:ok, _, :peso_tie_break}}`,
-`{count>=2, {:unresolved, :conflict}}`, and `{0, {:unresolved, :missing}}`. There is no clause for
-`{1, {:ok, _, :peso_tie_break}}`, `{1, {:unresolved, _}}`, or any other combination that would arise
-if the two computations ever diverge (e.g. a future edit to one without the other, or a code path
-that reorders/filters `@weight_columns` differently). Every other malformed-data scenario in this
-same module degrades to a `Report` entry for manual review; this one would instead raise
-`CaseClauseError` inside `Enum.map_reduce/3` and abort the entire 434-row run with no report written
-for any row processed so far in that batch.
+**Issue:** The persistent prev/next control wrapper is given two simultaneously-present,
+display-contradicting static classes:
 
-**Fix:** Either compute `true_count` from the same `true_bands` list `resolve_weight_band/1` already
-derives (return it alongside the resolution, or expose a single function that returns both), or add a
-catch-all clause that reports the row as unresolved instead of letting the case fail:
-
-```elixir
-{_count, resolution} ->
-  finding = %{row: row_number, name: name, resolution: "unexpected combination: #{inspect(resolution)}"}
-  {nil, Report.add(report, :weight_conflicts, finding)}
+```heex
+<div data-controls class="hidden flex items-center gap-2">
 ```
 
-### WR-02: `parse_int/1` in the seed task crashes the whole run on a non-numeric, non-blank cell
+and the colocated hook only ever toggles the `hidden` class:
 
-**File:** `lib/mix/tasks/catalog.seed.ex:171-177`
-
-**Issue:** `BGG_ID` and `Unidades` values are parsed with:
-
-```elixir
-defp parse_int(nil), do: nil
-
-defp parse_int(value) do
-  case String.trim(value) do
-    "" -> nil
-    trimmed -> String.to_integer(trimmed)
-  end
-end
+```js
+this.controls.classList.toggle("hidden", !overflows)
 ```
 
-Unlike every other real-data quirk this module handles (hashtag typos, weight conflicts, missing
-BGG ids, duplicate BGG ids — all logged to `Report` rather than raised), a stray non-numeric,
-non-blank value in either column (e.g. a data-entry artifact like `"12,5"` or `"N/A"`) makes
-`String.to_integer/1` raise `ArgumentError`, aborting the entire `mix catalog.seed` run rather than
-being surfaced in `catalog_seed_report.md` for review like every other cell-level anomaly.
+This "works" only because Tailwind v4 happens to emit `.hidden{display:none}` *after*
+`.flex{display:flex}` in the generated stylesheet (alphabetical ordering within `@layer
+utilities` — I confirmed this by building `priv/static/assets/css/app.css` and diffing byte
+offsets: `.flex` at offset 61003, `.hidden` at offset 61041, in both the normal and `--minify`
+builds). Because both classes have identical specificity, the later rule wins, so the element is
+`display:none` by default until JS removes `hidden`, leaving `flex` to take over — which happens
+to be the intended "hidden until JS proves the rail overflows" behavior.
 
-**Fix:** Mirror the tolerant pattern already used for `Peso_BGG` parsing elsewhere in this codebase
-(`HashtagNormalizer.parse_peso/1`'s `Float.parse` + `:error` fallback):
+Nothing in the source documents that this depends on utility declaration order, and nothing in
+the test suite can catch a regression here: `catalog_live_test.exs`'s G-01-3 test only asserts
+the *markup* (`data-controls`, `data-scroll`, aria-labels) is present, never the actual computed
+`display` value. If a future Tailwind bump changes core-utility ordering, or a purge/minify step
+reorders rules differently, the controls would render permanently visible (or permanently hidden)
+with zero CI signal.
 
-```elixir
-defp parse_int(value) do
-  case value |> String.trim() |> Integer.parse() do
-    {int, ""} -> int
-    _ -> nil
-  end
-end
+**Fix:** Don't co-declare contradictory display classes. Start with only `hidden` in the
+template and have the hook explicitly add/remove `flex` alongside `hidden`, e.g.:
+
+```js
+this.sync = () => {
+  const overflows = this.rail.scrollWidth > this.rail.clientWidth
+  this.controls.classList.toggle("hidden", !overflows)
+  this.controls.classList.toggle("flex", overflows)
+}
 ```
-and, ideally, add a `Report` entry when the fallback fires so an unparseable cell is visible in the
-manual-review output rather than silently becoming `nil`.
 
-### WR-03: `CatalogLive.Index.safe_filter_games/1` swallows every exception with no logging
+```heex
+<div data-controls class="hidden items-center gap-2">
+```
 
-**File:** `lib/pukllay_club_web/live/catalog_live/index.ex:199-203`
+This makes the visible/hidden state explicit and order-independent instead of depending on
+Tailwind's internal utility ordering.
+
+### WR-02: `chip_row`/`editorial_tags` cap values are unnamed magic numbers repeated across call sites
+
+**File:** `lib/pukllay_club_web/components/game_card.ex:85-86`
 
 **Issue:**
 
-```elixir
-defp safe_filter_games(opts) do
-  {:ok, Catalog.filter_games(opts)}
-rescue
-  _error -> :error
-end
+```heex
+<GameChips.editorial_tags tags={@game.tags} limit={2} />
+<GameChips.chip_row terms={@mechanic_labels} limit={4} />
 ```
 
-This is used by both `apply_filters/1` (every filter-changing event) and the `"load-more"` handler.
-The intent (T-01-24: degrade to the UI-SPEC error banner instead of crashing on a crafted/oversized
-scalar) is sound, but the exception term is discarded entirely — nothing is logged. A genuine
-application bug (e.g. a future filter option that produces an invalid query, an Ecto/Postgrex
-regression, a real outage) degrades to the same generic "no pudimos cargar el catálogo" banner as a
-malicious request, with zero telemetry to distinguish the two in production. This directly
-contradicts the ability to diagnose the very failure mode this code exists to handle gracefully.
+`2` and `4` are the browse-card's overflow caps (G-01-6's fix), but they're bare literals with no
+named constant, no doc reference back to the design rule that fixes them at 2/4, and nothing
+guards them from drifting out of sync with `CarouselRow`'s reuse of `GameCard.game_card/1` at a
+narrower `w-40 shrink-0` width (the carousel rail renders the exact same card at a *smaller*
+footprint than the grid, via `class="w-40 shrink-0 sm:w-48"` in `carousel_row.ex:99`, yet gets the
+same `limit={2}`/`limit={4}` caps tuned for the grid's wider card). This isn't a functional bug
+today (both existing tests pass at both widths), but a future width change to either grid or
+carousel card sizing has no single source of truth to check.
 
-**Fix:**
-
-```elixir
-defp safe_filter_games(opts) do
-  {:ok, Catalog.filter_games(opts)}
-rescue
-  error ->
-    Logger.warning("Catalog.filter_games/1 failed", opts: inspect(opts), error: Exception.format(:error, error, __STACKTRACE__))
-    :error
-end
-```
-(requires `require Logger` at the top of the module).
-
-### WR-04: CSP `connect-src` uses bare `ws:`/`wss:` scheme sources, which match any origin
-
-**File:** `lib/pukllay_club_web/csp.ex:27`
-
-**Issue:** `"connect-src 'self' ws: wss:"` — a bare-scheme CSP source expression (`ws:`, `wss:` with
-no host) matches a WebSocket connection to **any** host using that scheme, not just the app's own
-origin. Per the CSP3 "self" source matching algorithm, `'self'` already covers same-origin
-`ws:`/`wss:` upgrades from `http:`/`https:` for `connect-src`, so the extra bare-scheme entries are
-almost certainly unnecessary and meaningfully widen the policy: if an XSS vector is ever introduced
-elsewhere in the app, this directive would let injected script open a WebSocket to an
-attacker-controlled host for data exfiltration — exactly the class of attack a CSP is meant to
-constrain.
-
-**Fix:** Drop the bare schemes and rely on `'self'`, verifying the LiveView websocket still connects:
+**Fix:** Lift these into module attributes with a comment tying them to G-01-6, e.g.:
 
 ```elixir
-"connect-src 'self'",
+# G-01-6: browse-card overflow caps — tuned for the grid card's width;
+# CarouselRow reuses this same card at a narrower w-40/sm:w-48 footprint.
+@tag_limit 2
+@mechanic_limit 4
 ```
-If `'self'` genuinely proves insufficient in some deployment topology (e.g. a separate WS host),
-scope the source explicitly to that host/scheme rather than to the bare scheme.
+
+and reference `@tag_limit`/`@mechanic_limit` in the template instead of the bare literals.
 
 ## Info
 
-### IN-01: `select_cover/1` is computed twice per enriched row
+### IN-01: `focus-within:outline-hidden` has no effect on the leaf form controls it's applied to
 
-**File:** `lib/mix/tasks/catalog.seed.ex:282-294`, `lib/pukllay_club/catalog/seed/image_pipeline.ex:69-91`
+**File:** `lib/pukllay_club_web/components/core_components.ex:249, 273, 296`
 
-**Issue:** `image_urls/4` calls `ImagePipeline.select_cover(item)` once to get the cover URL, then
-calls `ImagePipeline.process_gallery(item, key_prefix, credentials)`, which internally calls
-`select_cover(item)` again to determine which version image to exclude from the gallery. The
-function is pure/deterministic so this isn't a correctness bug, just redundant work and a minor
-readability cost (a reader has to confirm both calls really do agree).
+**Issue:** The 01-07 fix ("collapse double focus ring on plain input/select/textarea") adds
+`focus-within:outline-hidden` alongside `focus:outline-hidden` on the bare `<select>`,
+`<textarea>`, and `<input>` elements themselves:
 
-**Fix:** Have `image_urls/4` pass the already-resolved `cover_source_url` into `process_gallery/4`
-(new arity) instead of recomputing it.
+```heex
+class={[
+  @class || "w-full select focus:outline-hidden focus-within:outline-hidden",
+  ...
+]}
+```
 
-### IN-02: `HashtagNormalizer.truthy?/1`'s name invites misuse as a boolean in `if`
+`:focus-within` matches an element if *the element itself or any descendant* is focused. These
+three elements are leaves with no focusable descendants in this codebase's markup (no compound
+`<label class="input">…</label>` wrapper pattern is used here — `input/1`'s wrapping `<label>`
+contains the input as a sibling-of-nothing child, and the class is applied to the input itself,
+not the label). So `:focus-within` on the input/select/textarea reduces to exactly `:focus`, and
+`focus-within:outline-hidden` adds nothing beyond the already-present `focus:outline-hidden`. It's
+harmless (dead CSS, not a bug), but it also doesn't verifiably fix anything on its own — if the
+"double ring" the commit fixed was coming from a `:focus-within` rule elsewhere (e.g. a daisyUI
+compound-input style), this is the right selector to counter but the wrong element to put it on.
 
-**File:** `lib/pukllay_club/catalog/seed/hashtag_normalizer.ex:55-65`
+**Fix:** No action required if the fix has been visually verified (the commit message suggests
+it was). If not yet visually verified in a browser, confirm the double-ring is actually gone;
+otherwise this line can be safely deleted with no behavior change.
 
-**Issue:** `truthy?/1` returns `true | false | {false, {:unrecognized, value}}`. Every current call
-site correctly guards with `== true`, but in Elixir only `nil` and `false` are falsy — a 2-tuple like
-`{false, {:unrecognized, "di"}}` is truthy. A future caller who writes `if HashtagNormalizer.truthy?(v)`
-(reasonable given the `?`-suffixed, boolean-sounding name) would silently treat an unrecognized cell
-as `true`. Not exploitable today — every existing call site is correct — but it's a footgun baked
-into the public API shape.
+### IN-02: `ExpansionClassifier`'s substring markers can false-positive on base-game titles
 
-**Fix:** Rename to something that signals the three-way return (e.g. `classify_cell/1`), or split
-into a strict `truthy?/1 :: boolean()` plus a separate `unrecognized_value/1 :: String.t() | nil`
-so the boolean-sounding name only ever returns a boolean.
+**File:** `lib/pukllay_club/catalog/seed/expansion_classifier.ex:55`
+
+**Issue:** The `"expansi"` marker matches any name containing that literal substring anywhere,
+case-insensitively — not just a trailing "(Expansión)"/"Expansion" suffix. A hypothetical base
+game titled e.g. "La Expansión del Universo" (a real base-game title pattern, not a BGG
+expansion) would be misclassified as an expansion/promo. This is explicitly a documented,
+deliberate trade-off in the moduledoc (substring matching chosen over regex specifically so the
+Elixir rule and the migration's raw-SQL `ILIKE` mirror can never diverge), and the regression test
+(`streaming ludoteca.csv yields exactly the 26 confirmed expansion/promo rows`) confirms it
+produces zero false positives against the *current* 434-row club export. Flagging only because the
+risk is real for any *future* CSV row added to the club's collection, not because the current
+implementation is wrong for the data it was built and tested against.
+
+**Fix:** No change needed now. If a future `mix catalog.seed` run against an updated CSV export
+produces a classification the club didn't expect, the `catalog_seed_report.md`
+observed-terms/duplicate-style reporting mechanism this task already has could be extended with an
+`is_expansion`-flagged-row listing so a human reviews new marker hits before they go live — but
+that's a Phase-4-scale enhancement, not a fix to land now.
 
 ---
 
-_Reviewed: 2026-08-11_
+_Reviewed: 2026-08-18T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
