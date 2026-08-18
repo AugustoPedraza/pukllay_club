@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: catalog-v1
 status: executing
-stopped_at: "Completed 01-07-PLAN.md (gap closure: G-01-2, G-01-6, G-01-7)"
-last_updated: "2026-08-18T22:22:33.958Z"
+stopped_at: "Completed 01-09-PLAN.md (gap closure: G-01-5)"
+last_updated: "2026-08-18T22:30:05.573Z"
 last_activity: 2026-08-18
 last_activity_desc: "Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -29,12 +29,12 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01 (catalog-v1) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-18 — Phase 01 execution started
 structure (0-4)
 
-Progress: [█████████░] 87%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [█████████░] 87%
 | Phase 01 P03 | 85min | 2 tasks | 24 files |
 | Phase 01 P05 | 26min | 3 tasks | 10 files |
 | Phase 01 P07 | 35min | 3 tasks | 7 files |
+| Phase 01 P09 | 35min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-07: weight_band_badge/1 uses badge-lg h-auto whitespace-normal (releases daisyUI's height pin, the direct G-01-2 cause) + badge-lg size step establishes it as the card's primary tier (G-01-6)
 - [Phase ?]: 01-07: editorial_tags/1 gained an optional limit (nil=uncapped) mirroring chip_row/1's take/overflow pattern; card-level cap set to limit={2} since only 3 editorial hashtags exist in the live Vocabulary module
 - [Phase ?]: 01-07: G-01-7 double focus ring fixed via focus:outline-hidden focus-within:outline-hidden on select/textarea/catch-all input branches + raw sort select, suppressing only daisyUI's outer offset outline; outline-hidden compiled successfully, no outline-none fallback needed
+- [Phase ?]: 01-09: ExpansionClassifier marker list ((expa, expansi, promo) + reviewed csv_row override list 414/415/417/421) is a documented mirror of the add_games_is_expansion migration's SQL backfill — both must change together (G-01-5)
+- [Phase ?]: 01-09: recent_query/0 filters is_expansion == false; exclusion deliberately scoped to only that carousel row (filter_games/1, count_games/1, other 7 rows untouched) so club-owned expansions remain searchable
 
 ### Pending Todos
 
@@ -185,7 +188,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T22:22:33.935Z
-Stopped at: Completed 01-07-PLAN.md (gap closure: G-01-2, G-01-6, G-01-7)
+Last session: 2026-08-18T22:30:05.540Z
+Stopped at: Completed 01-09-PLAN.md (gap closure: G-01-5)
 verified against the roadmap (no edits needed)
 Resume file: None

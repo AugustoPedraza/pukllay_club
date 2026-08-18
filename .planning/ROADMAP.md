@@ -84,7 +84,7 @@ be pulled forward without breaking that dependency chain.
   4. Each game displays a plain-Spanish weight-band descriptor and plain-Spanish mechanic/theme chips instead of a bare 1-5 number or raw hobbyist jargon
   5. Each game shows the club's own resized cover image and any editorial "club favorite"/"beginner-friendly" tag carried over from the existing Excel catalog
 
-**Plans**: 7/9 plans executed (6/6 original executed, 3 gap-closure plans pending from UAT)
+**Plans**: 8/9 plans executed (6/6 original executed, 3 gap-closure plans pending from UAT)
 **UI hint**: yes
 
 **Wave 1**
@@ -111,7 +111,7 @@ be pulled forward without breaking that dependency chain.
 **Gap closure — Wave 1** *(from 01-UAT.md, run via `/gsd-execute-phase 1 --gaps-only`)*
 
 - [x] 01-07-PLAN.md — Card chip hierarchy, weight-band badge overflow, app-wide focus ring (G-01-2, G-01-6, G-01-7)
-- [ ] 01-09-PLAN.md — `is_expansion` column, seed classifier + migration backfill, expansion-free recency row (G-01-5)
+- [x] 01-09-PLAN.md — `is_expansion` column, seed classifier + migration backfill, expansion-free recency row (G-01-5)
 
 **Gap closure — Wave 2** *(blocked on 01-07: shared `catalog_live/index.ex`)*
 
@@ -173,7 +173,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Walking Skeleton to Production | 6/6 | Complete    | 2026-07-27 |
-| 1. Catalog v1 | 7/9 | In Progress|  |
+| 1. Catalog v1 | 8/9 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
