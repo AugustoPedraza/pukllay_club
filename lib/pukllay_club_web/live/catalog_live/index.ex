@@ -223,11 +223,9 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp row_subtitle(:ingenio_estratega), do: weight_band_descriptor("ingenio_estratega")
   defp row_subtitle(:nivel_experto), do: weight_band_descriptor("nivel_experto")
 
-  defp row_subtitle(:destacados_del_club),
-    do: "La selección del club — los juegos que más recomendamos ahora mismo."
+  defp row_subtitle(:destacados_del_club), do: "La selección del club — los juegos que más recomendamos ahora mismo."
 
-  defp row_subtitle(:recientemente_anadidos),
-    do: "Las incorporaciones más nuevas a la ludoteca."
+  defp row_subtitle(:recientemente_anadidos), do: "Las incorporaciones más nuevas a la ludoteca."
 
   defp row_subtitle(_unrecognized), do: nil
 

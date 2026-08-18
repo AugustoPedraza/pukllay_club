@@ -442,6 +442,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
 
       {:ok, _view, html} = live(conn, ~p"/")
+
       carousel_html =
         html
         |> LazyHTML.from_document()
