@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: catalog-v1
 status: executing
-stopped_at: "Completed quick task 260818-mhl: Add igniter and usage_rules as dev-only dependencies and wire up dependency usage-rules syncing into AGENTS.md"
-last_updated: "2026-08-18T19:26:00.000Z"
+stopped_at: "Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias"
+last_updated: "2026-08-18T19:57:24.472Z"
 last_activity: 2026-08-18
-last_activity_desc: "Completed quick task 260818-mhl: Add igniter and usage_rules as dev-only dependencies and wire up dependency usage-rules syncing into AGENTS.md"
+last_activity_desc: "Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -31,7 +31,7 @@ even without already knowing board-game vocabulary.
 Phase: 01 (catalog-v1) — EXECUTING
 Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-08-18 - Completed quick task 260818-mhl: Add igniter and usage_rules as dev-only dependencies and wire up dependency usage-rules syncing into AGENTS.md
+Last activity: 2026-08-18 - Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias
 structure (0-4)
 
 Progress: [█████████░] 92%
@@ -115,6 +115,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-05: loading skeletons use LiveView's disconnected/connected two-phase mount (:loading = not connected?(socket)) rather than simulated async latency, since Catalog reads are synchronous and fast at this row count
 - [Phase ?]: Quick task 260818-jpm: extended docs/ux-patterns.md with B28-B32 (Linear/GOV.UK/Shopify-unreachable/Microsoft/NN.g reference points) and section F (LiveView fit, device target ambiguous, not a PWA); WebFetch tool unavailable to executor, substituted curl+HTML-strip for all 12 live fetches, same fetch-then-cite discipline
 - [Phase ?]: Quick task 260818-mhl: added usage_rules ~> 1.1 (1.2.7) + igniter ~> 0.6 (0.8.3) as dev-only deps; AGENTS.md is a usage_rules-managed file (mix phx.new-seeded markers) — configured link-mode sync (`file: "AGENTS.md"`, no `skills:` key) so dependency-authored rules (phoenix, igniter) resolve via `deps/<pkg>/usage-rules*.md` links instead of inlining; only usage_rules' own + elixir/otp builtin rules stay inlined; `mix rules.sync` alias added; AGENTS.md shrank 25,492 -> 12,336 bytes (marker-block-only change, hand-written preamble lines 1-95 byte-identical, sha256-verified)
+- [Phase ?]: Quick task 260818-n4l: Added excoveralls (0.18.5) + dialyxir (1.4.7) tooling deps; test_coverage/dialyzer config wired via cli/0 preferred_envs (not deprecated project/0 preferred_cli_env); dialyxir only:[:dev,:test] (not [:dev]) so quality.full resolves; PLT deliberately not built; precommit alias converted to check-only flags (deps.unlock --check-unused, format --check-formatted) closing an unattended-executor silent-mutation hole; new quality.full = quality + dialyzer alias added
 
 ### Pending Todos
 
@@ -165,6 +166,9 @@ item in `01-VERIFICATION.md`. Full audit: https://claude.ai/code/artifact/f067cf
 | 260818-h9p | Build UX pattern reference doc at docs/ux-patterns.md from research | 2026-08-18 | 703a919 | | [260818-h9p-build-ux-pattern-reference-doc-at-docs-u](./quick/260818-h9p-build-ux-pattern-reference-doc-at-docs-u/) |
 | 260818-jpm | Add Linear/GOV.UK/Shopify/Microsoft/NN.g reference points (B28-B32) and LiveView-fit/device-target/PWA-scope answers (F33-F35) to docs/ux-patterns.md | 2026-08-18 | 58a2b6c | | [260818-jpm-add-linear-gov-uk-shopify-master-detail-](./quick/260818-jpm-add-linear-gov-uk-shopify-master-detail-/) |
 | 260818-mhl | Add igniter and usage_rules as dev-only dependencies and wire up dependency usage-rules syncing into AGENTS.md | 2026-08-18 | e775f45 | Verified | [260818-mhl-add-igniter-and-usage-rules-as-dev-only-](./quick/260818-mhl-add-igniter-and-usage-rules-as-dev-only-/) |
+| 8 | Add a .mcp.json file at the repo root that configures the Tidewave MCP server as an HTTP (streamable) server pointing at http://localhost:4000/tidewave/mcp, matching the standard Tidewave README setup. | 2026-08-18 | 808e34a | — | — |
+| 260818-n4l | Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias | 2026-08-18 | c11b257 | Verified | [260818-n4l-add-dialyxir-and-excoveralls-and-make-th](./quick/260818-n4l-add-dialyxir-and-excoveralls-and-make-th/) |
+| 9 | Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias | 2026-08-18 | c11b257 | — | — |
 
 ## Deferred Items
 
@@ -176,7 +180,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T18:21:17.668Z
-Stopped at: Completed quick task 260818-jpm: Add Linear/GOV.UK/Shopify/Microsoft/NN.g reference points (B28-B32) and section F (LiveView fit, device target, PWA scope) to docs/ux-patterns.md
+Last session: 2026-08-18T19:57:17.810Z
+Stopped at: Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias
 verified against the roadmap (no edits needed)
 Resume file: None
