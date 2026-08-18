@@ -13,11 +13,11 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 | 1 | Shopify Polaris | https://polaris.shopify.com <br> https://polaris.shopify.com/components/data-table <br> https://polaris.shopify.com/patterns/creating-and-editing | unreachable |
 | 2 | Base Web | https://baseweb.design <br> https://baseweb.design/components/form-control/ <br> https://baseweb.design/components/spinner/ <br> https://baseweb.design/components/skeleton/ | unreachable |
 | 3 | Atlassian Design System | https://atlassian.design <br> https://atlassian.design/foundations/content <br> https://atlassian.design/foundations/content/designing-messages <br> https://atlassian.design/foundations/content/designing-messages/error-messages <br> https://atlassian.design/components/inline-edit/examples | read |
-| 4 | GOV.UK Design System | | |
+| 4 | GOV.UK Design System | https://design-system.service.gov.uk (sitemap) <br> https://design-system.service.gov.uk/patterns/question-pages/ <br> https://design-system.service.gov.uk/components/table/ <br> https://design-system.service.gov.uk/patterns/complete-multiple-tasks/ <br> https://design-system.service.gov.uk/patterns/validation/ <br> https://design-system.service.gov.uk/components/pagination/ <br> https://design-system.service.gov.uk/components/button/ <br> https://design-system.service.gov.uk/patterns/check-answers/ | read |
 | 5 | Carbon Design System | https://carbondesignsystem.com/elements/typography/overview/ <br> https://carbondesignsystem.com/components/pagination/usage/ <br> https://carbondesignsystem.com/components/data-table/usage/ <br> https://carbondesignsystem.com/guidelines/content/action-labels/ | read |
 | 6 | Material 3 | https://m3.material.io/styles/typography/type-scale-tokens <br> https://m3.material.io/foundations/interaction/states/state-layers <br> https://m3.material.io/foundations/layout/breakpoints <br> https://m3.material.io/foundations/layout/canonical-examples | read |
-| 7 | Apple HIG | | |
-| 8 | NN/g web usability | | |
+| 7 | Apple HIG | https://developer.apple.com/design/human-interface-guidelines/layout <br> https://developer.apple.com/design/human-interface-guidelines/pointing-devices <br> https://developer.apple.com/design/human-interface-guidelines/buttons | read |
+| 8 | NN/g web usability | https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/ <br> https://www.nngroup.com/articles/designing-effective-carousels/ <br> https://www.nngroup.com/articles/skeleton-screens/ | read |
 
 ## A. Information hierarchy
 
@@ -50,21 +50,32 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 
 ### A3. Ordering data in a record view — what belongs above the fold
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** Put the most important information first and format it to stand out, because
+  eyetracking shows users default to scanning, not reading — NN/g's F-pattern research: "in the
+  absence of any signals to guide the eye, they will choose the path of minimum effort and will
+  spend most of their fixations close to where they start reading," concentrated at the top and
+  left. Their stated antidotes: "include the most important points in the first two paragraphs,"
+  use headings that front-load the information-bearing words, and bold/visually group the content
+  that matters most.
+- **Flips when:** The page has "strong cues to attract the eyes towards meaningful information" —
+  NN/g is explicit that "the F-pattern is the default pattern when there are no strong cues," and
+  that good formatting (headings, bold, visual grouping) is what breaks the default and lets users
+  actually find content positioned lower on the page.
+- **Why:** Users optimize their own cost/benefit ratio across the whole web, not just one page —
+  they scan to get the gist fast rather than read every word, so whatever isn't visually prioritized
+  in the natural top-left scan path risks being missed entirely, not just read later.
+- **Source:** [NN/g — The F-Shaped Pattern of Reading on the Web](https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/)
 
 ### A4. Table column priority and what to drop first when space runs out
 
-- **Default:** Don't drop the column — wrap and truncate instead: Carbon's stated rule is "in cases
-  where a column title is too long, wrap the text to two lines and then truncate the rest of the
-  text. The full text should be shown in a tooltip on hover." Column titles should also be kept to
-  one or two words in the first place.
-- **Flips when:** The table itself, not just a header label, is competing for horizontal space with
-  other page content — Carbon's placement guidance is to give the data table the most width on the
-  page and avoid nesting it in smaller containers, i.e. resolve the space problem at the page-layout
-  level before resorting to column truncation.
+- **Default:** Don't drop the column — wrap and truncate instead: Carbon's stated rule is "in
+  cases where a column title is too long, wrap the text to two lines and then truncate the rest
+  of the text. The full text should be shown in a tooltip on hover." Column titles should also be
+  kept to one or two words in the first place.
+- **Flips when:** The table itself, not just a header label, is competing for horizontal space
+  with other page content — Carbon's placement guidance is to give the data table the most width
+  on the page and avoid nesting it in smaller containers, i.e. resolve the space problem at the
+  page-layout level before resorting to column truncation.
 - **Why:** Truncating with a hover tooltip keeps every column present and scannable while still
   fitting tight widths; dropping columns silently removes information the user may have been
   relying on without any indication it's missing.
@@ -72,10 +83,19 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 
 ### A5. Numeric and tabular data presentation — alignment, units, precision
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** Right-align numbers in table cells — GOV.UK: "when comparing columns of numbers,
+  align the numbers to the right in table cells" (its `govuk-table__cell--numeric` modifier).
+  Currency examples in the same component keep the unit symbol attached to the figure and a
+  consistent decimal precision within a column (e.g. "£109.80 per week" / "£4,282.20"), rather
+  than a separate units column.
+- **Flips when:** The column is text-like even though it contains digits (a reference number, a
+  date, a phone number) rather than a value meant to be compared/summed — GOV.UK's own components
+  list treats those (National Insurance numbers, phone numbers) as ordinary text fields, not as the
+  numeric-aligned table format.
+- **Why:** Right-alignment lets the decimal points and digit counts line up vertically, which is
+  what makes a column of numbers scannable and comparable at a glance; left-aligned numbers don't
+  visually stack by magnitude.
+- **Source:** [GOV.UK — Table](https://design-system.service.gov.uk/components/table/)
 
 ## B. Component interaction
 
@@ -106,8 +126,11 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
   reasonably use a different navigation shape than a data table can.
 - **Why:** Pagination gives users a stable, bookmarkable position and predictable load cost per
   page, at the expense of an extra click; unlimited scrolling optimizes for skimming a feed at the
-  cost of losing a fixed position.
-- **Source:** [Carbon — Pagination usage](https://carbondesignsystem.com/components/pagination/usage/)
+  cost of losing a fixed position. GOV.UK adds a concrete accessibility reason to avoid infinite
+  scroll specifically: "avoid using the 'infinite scroll' technique to automatically load content
+  when the user approaches the bottom of the page. This causes problems for keyboard users."
+- **Source:** [Carbon — Pagination usage](https://carbondesignsystem.com/components/pagination/usage/),
+  [GOV.UK — Pagination](https://design-system.service.gov.uk/components/pagination/)
 
 ### B8. Navigation — sidebar vs top nav vs bottom bar; depth limits; where "back" goes
 
@@ -128,10 +151,23 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 
 ### B9. Carousels — when they're justified at all, and what they must have if used
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** Avoid them where a static hero or content directly in the page UI would work —
+  NN/g's core finding: "people often immediately scroll past these large images and miss all of
+  the content within them, or at least the content that's in any frame other than the first," and
+  a static hero "may be less likely to distract users than a rotating element." If a carousel is
+  used anyway, NN/g's specific requirements are: 5 or fewer frames ("it's unlikely users will
+  engage with more than that"), visible/discoverable navigation controls placed inside the
+  carousel (not below it or cut off by a fold), and — if auto-forwarding — a pace slow enough
+  that people can actually read each frame's content before it changes.
+- **Flips when:** Multiple pieces of content genuinely need to share one piece of prime real
+  estate and each frame individually gives an accurate impression on its own — NN/g's caution here
+  is that a designer sees "a collection of images" but "a user often considers just the one image
+  he sees," so this only holds if any single frame alone would still represent the message
+  correctly.
+- **Why:** Carousels create a false sense of security that every frame will be seen, which leads
+  teams to bury important content in later frames that most users will never scroll to; important
+  information shown in a carousel should also live somewhere else in the UI as a backup.
+- **Source:** [NN/g — Designing Effective Carousels](https://www.nngroup.com/articles/designing-effective-carousels/)
 
 ### B10. Create/edit — inline vs modal vs full page
 
@@ -148,7 +184,14 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
   change; a modal borrows a layer above the page for a bounded task without a full navigation; a
   full page is needed once the task is too large to reasonably float above existing content.
 - **Source:** [Atlassian — Inline edit](https://atlassian.design/components/inline-edit/examples),
-  [Atlassian — Designing messages](https://atlassian.design/foundations/content/designing-messages)
+  [Atlassian — Designing messages](https://atlassian.design/foundations/content/designing-messages),
+  [GOV.UK — Check answers](https://design-system.service.gov.uk/patterns/check-answers/)
+- **Disagreement:** GOV.UK avoids inline edit even for a single answer: its check-answers pattern
+  uses a "Change" link that takes the user to the original full question page to edit, then returns
+  them via the page's own "Continue" button — "you should provide a 'Change' link next to each
+  section on your check answers page so that users can add or change the information." Rather than
+  editing in place, GOV.UK routes every edit, however small, back through its one-question-per-page
+  flow (B15).
 
 ### B11. Destructive actions — confirmation vs undo toast
 
@@ -184,16 +227,37 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 
 ### B13. Async feedback — spinner vs skeleton vs optimistic
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** For waits under roughly 10 seconds, use a spinner for a single module (a card, a
+  video) and a skeleton screen when the whole page is loading — NN/g: "spinners are typically best
+  used on a single module... skeleton screens... are better when the full screen is loading because
+  the wireframe gives users a sense of what the page will look like." Under 1 second, skip both —
+  "they likely won't make a difference to the users' experience" and a flashing skeleton can
+  actually feel worse than nothing.
+- **Flips when:** The wait crosses roughly 10 seconds, or the process isn't a full-page load at all
+  — "progress bars are strongly recommended for any page that takes longer than 10 seconds,"
+  because unlike a spinner or skeleton they communicate how much longer is left. And skeleton
+  screens are specifically for full-page loads: "whenever some other process (e.g., download,
+  upload, convert a file) is involved, it does not make sense... to show a skeleton screen" —
+  use a progress bar or step-based wizard instead.
+- **Why:** A skeleton screen reduces cognitive load by letting the user build a mental model of the
+  page structure before content arrives, and creates "the illusion of a shorter wait time" — but
+  only if it mimics real layout; a frame-only skeleton with no content wireframe is "essentially
+  equivalent to a spinner" and should be avoided since it gives no structural information.
+- **Source:** [NN/g — Skeleton Screens 101](https://www.nngroup.com/articles/skeleton-screens/),
+  [Carbon — Data table usage](https://carbondesignsystem.com/components/data-table/usage/)
+- **Disagreement:** NN/g scopes spinners to single modules ("a video or a card which is on a
+  dashboard") and reserves skeletons for full-screen loads, but Carbon recommends skeleton over
+  spinner even at the sub-page, single-component level: "if extra load time is expected to display
+  information, use skeleton states instead of spinners" for its data table component specifically.
+  Both agree skeleton beats spinner when there's real structure to preview; they disagree on
+  whether module-level loading is still spinner territory or already skeleton territory.
 
 ### B14. Filter and search on a list
 
 - **Default:** Put search and filtering in a dedicated toolbar above the list/table, collapsed
-  behind a search icon by default — Carbon: "a search field can be triggered through an icon button
-  in the data table toolbar... the search is closed by default, and placed below the table title."
+  behind a search icon by default — Carbon: "a search field can be triggered through an icon
+  button in the data table toolbar... the search is closed by default, and placed below the
+  table title."
   Reserve the toolbar for global actions (search, complex filters, exporting) and cap it at five
   visible actions before moving the rest into an overflow menu.
 - **Flips when:** Search is a primary, frequently-used entry point for that view rather than an
@@ -205,10 +269,20 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 
 ### B15. Multi-step flows — wizard vs single long form
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** Split the flow into one question per page rather than one long form — GOV.UK:
+  "asking just one question per question page helps users understand what you're asking them to
+  do, and focus on the specific question and its answer." Each step still needs a back link, a page
+  heading, and a continue button, and a progress indicator only "if research shows it's helpful."
+  Never ask for the same piece of information twice in one journey — pre-populate or offer the
+  carried-forward answer instead.
+- **Flips when:** The fields are tightly related enough that splitting them would break the user's
+  mental model of a single answer — GOV.UK's own date-of-birth example keeps day/month/year as one
+  fieldset on one page rather than three separate pages, because those three inputs together
+  represent one question, not three.
+- **Why:** One question at a time reduces the chance of a user skimming past or misreading a field
+  buried in a long form, and it lets validation happen per-step instead of surfacing every error at
+  once at the end.
+- **Source:** [GOV.UK — Question pages](https://design-system.service.gov.uk/patterns/question-pages/)
 
 ## C. Affordance
 
@@ -239,7 +313,14 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
   exists," which matches a mode that will end shortly (exiting batch mode); hiding is reserved for
   controls that are never applicable in this context, where showing a permanently-disabled control
   would just be clutter.
-- **Source:** [Carbon — Data table usage](https://carbondesignsystem.com/components/data-table/usage/)
+- **Source:** [Carbon — Data table usage](https://carbondesignsystem.com/components/data-table/usage/),
+  [GOV.UK — Button](https://design-system.service.gov.uk/components/button/)
+- **Disagreement:** Carbon treats disabling as the normal, expected way to represent a temporarily
+  unavailable action; GOV.UK is far more reluctant: "disabled buttons have poor contrast and can
+  confuse some users, so avoid them if possible. Only use disabled buttons if research shows it
+  makes the user interface easier to understand." GOV.UK's default leans toward leaving the control
+  enabled and handling the invalid case as a validation error after the attempt, rather than
+  disabling it beforehand.
 
 ### C18. Signaling that a click will navigate away, open a modal, or mutate data
 
@@ -281,6 +362,12 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
   padding the invisible hit area out to a consistent minimum fixes that without changing the
   control's visual size.
 - **Source:** [Material 3 — States](https://m3.material.io/foundations/interaction/states/state-layers)
+- **Disagreement:** Material 3 (48dp) and Apple HIG disagree on the exact minimum: HIG states "a
+  button needs a hit region of at least 44x44 pt — in visionOS, 60x60 pt — to ensure that people
+  can select it easily, whether they use a fingertip, a pointer, their eyes, or a remote." Both
+  agree on the underlying principle (pad the invisible hit region past the visible control), they
+  just standardize on different numbers (44pt HIG vs 48dp Material) — pt and dp are comparable
+  density-independent units, so this is a genuine ~9% numeric disagreement, not a units mismatch.
 
 ## D. Density
 
@@ -314,10 +401,19 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 
 ### D23. When a dashboard should be split into multiple pages
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** Split into a hub-and-task overview once the work spans multiple sessions or multiple
+  distinct groups of activity — GOV.UK's stated trigger: "only use a complete multiple tasks page
+  for longer transactions involving multiple tasks that users may need to complete over a number of
+  sessions," showing it "at the start of the transaction" and "at the start of each returning
+  session," with each task's completion status visible on the hub.
+- **Flips when:** The work is simple enough to reduce to fewer tasks — GOV.UK explicitly says to
+  "try to simplify the transaction before you use a complete multiple tasks page... you might not
+  need one," i.e. splitting is the fallback, not the default, when the underlying task count can be
+  cut down instead.
+- **Why:** A single dashboard trying to hold every group of activity at once becomes unscannable
+  once there's enough of it to span multiple sessions; a hub page that shows task-level status lets
+  the user pick up where they left off without re-parsing everything each time.
+- **Source:** [GOV.UK — Complete multiple tasks](https://design-system.service.gov.uk/patterns/complete-multiple-tasks/)
 
 ## E. Responsive / mobile / PWA
 
@@ -340,21 +436,56 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 
 ### E25. Touch vs pointer — what breaks when hover doesn't exist
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** Never make hover the only way to reveal something the user needs, and design the
+  primary interaction so it fully works by touch/tap alone — Apple HIG frames pointer support on
+  iPad explicitly as additive, not a replacement: "the iPadOS pointing system gives people an
+  additional way to interact with apps and content — it doesn't replace touch," and recommends you
+  "distinguish between pointer and finger input only if it provides value" rather than by default.
+- **Flips when:** The distinction genuinely adds a capability touch can't offer, not just a visual
+  nicety — HIG's own example is a video scrubber: "people can drag the playhead using either the
+  pointer or touch, but they can use the pointer to click a precise seek destination," a case where
+  the pointer's higher precision does something touch structurally cannot.
+- **Why:** Hover is a state that only pointer/mouse input can produce — a touchscreen has no
+  equivalent continuous "nearby but not yet pressed" signal, so any control that depends on hover
+  to be discovered or operated is invisible or broken on a touch-only device.
+- **Source:** [Apple HIG — Pointing devices](https://developer.apple.com/design/human-interface-guidelines/pointing-devices)
 
 ### E26. Safe areas, notches, on-screen keyboard displacing viewport
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** Lay content out relative to the platform's safe area, not the raw screen bounds —
+  Apple HIG: "a safe area defines the area within a view that isn't covered by a toolbar, tab bar,
+  or other views a window might provide. Safe areas are essential for avoiding a device's
+  interactive and display features, like Dynamic Island on iPhone." Use the system-provided safe
+  area/margin guides to reposition content dynamically "when sizes change," rather than hardcoding
+  offsets for one device's notch/camera-housing geometry.
+- **Flips when:** The layout deliberately wants edge-to-edge visual elements (a background image or
+  full-bleed color) rather than interactive content — HIG's own full-width-button guidance shows
+  the line: "avoid full-width buttons... if you need to include a full-width button, make sure it
+  harmonizes with the curvature of the hardware and aligns with adjacent safe areas," i.e. decor can
+  bleed to the edge, but interactive/legible content should still respect the safe inset.
+  On tvOS specifically, HIG gives a concrete number for this trade-off: inset primary content 60pt
+  from top/bottom and 80pt from the sides of the screen.
+- **Why:** A device's own display/system features (notches, camera housings, home indicators,
+  toolbars) physically occlude or crowd fixed regions of the screen; anchoring layout to the safe
+  area instead of absolute screen coordinates keeps content from being cropped or obscured as those
+  regions vary across devices and orientations.
+- **Source:** [Apple HIG — Layout](https://developer.apple.com/design/human-interface-guidelines/layout)
 
 ### E27. PWA: offline state, install prompt, splash/theme color, standalone-mode differences from browser tab
 
-- **Default:** TBD
-- **Flips when:** TBD
-- **Why:** TBD
-- **Source:** TBD
+- **Default:** None of the eight sources read in this pass addresses installable-web-app-specific
+  concerns (offline state UI, install prompts, splash/theme color, or standalone-vs-browser-tab
+  chrome differences) — Material 3, Apple HIG, Carbon, and GOV.UK all cover native or
+  responsive-web layout, but not the PWA manifest/service-worker layer specifically. The closest
+  adjacent guidance actually fetched is Apple HIG's safe-area and adaptive-layout material (E24,
+  E26), which addresses cross-device layout robustness but not offline/installability.
+- **Flips when:** This stays unresolved regardless of context — it isn't that the recommendation
+  changes under some condition, it's that no fetched source made a PWA-specific recommendation at
+  all within this pass's fetch budget.
+- **Why:** All eight allowed sources are native-app or general responsive-web design systems; PWA
+  installability (manifest, service worker, offline UI) is a distinct, narrower topic none of them
+  document, so answering it here would require citing outside the eight-source allowlist.
+- **Source:** _none read_ — checked Material 3 (layout/breakpoints pages), Apple HIG (layout,
+  pointing-devices, buttons pages), Carbon (typography, pagination, data-table, action-labels
+  pages), and GOV.UK (question-pages, table, complete-multiple-tasks pages); none covers PWA
+  install/offline/standalone-mode concerns.
