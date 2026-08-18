@@ -47,3 +47,9 @@ npm-debug.log
 # Pitfall 6). Copy config/dev.secret.exs.example to create this file locally.
 /config/dev.secret.exs
 
+# Dialyzer PLTs are locally built (can take several minutes to regenerate)
+# and embed absolute local paths + full compiled-module analysis — never
+# commit them, especially since this repo is public (D-19).
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
+

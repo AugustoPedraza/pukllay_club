@@ -13,7 +13,8 @@ defmodule PukllayClub.MixProject do
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
       usage_rules: usage_rules(),
-      test_coverage: [tool: ExCoveralls]
+      test_coverage: [tool: ExCoveralls],
+      dialyzer: [plt_file: {:no_warn, "priv/plts/dialyzer.plt"}, plt_add_apps: [:mix, :ex_unit]]
     ]
   end
 
@@ -93,6 +94,7 @@ defmodule PukllayClub.MixProject do
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:tidewave, "~> 0.8", only: :dev},
       {:usage_rules, "~> 1.1", only: [:dev]},
       {:igniter, "~> 0.6", only: [:dev]},
