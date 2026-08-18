@@ -53,12 +53,15 @@ Task 2's verification was completed directly by the orchestrator instead (comman
 above) rather than re-spawning another executor for what was, at that point, read-only
 verification of already-committed code.
 
+## Human-check result
+
+Confirmed by user: `curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4000/tidewave/mcp`
+against a running `mix phx.server` returned `405` (Method Not Allowed), not `404` — the plug is
+mounted and handling requests. `405` is expected for a bare `GET` against the MCP
+streamable-HTTP endpoint, which expects `POST`.
+
 ## Outstanding — human action required
 
-- **Not yet done:** the plan's human-check step — run `mix phx.server`, then
-  `curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4000/tidewave/mcp` and confirm a
-  non-404 status, and confirm the catalog pages still load. Requires a running dev server and was
-  not performed as part of this automated task.
 - **Not fixed (out of scope):** `config/runtime.exs` formatting drift blocking `mix quality` —
   pre-existing, unrelated to Tidewave, left for whatever work already has that file open.
 - **MCP client config:** connect your editor/agent's MCP client (type "http"/streamable) to
