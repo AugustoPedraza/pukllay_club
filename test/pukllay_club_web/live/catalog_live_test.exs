@@ -478,6 +478,26 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "persistent, discoverable carousel scroll controls (G-01-3)" do
+    test "the landing render includes the rail marker and both scroll controls with Spanish aria-labels, and no inline script tag",
+         %{conn: conn} do
+      game_fixture(%{name: "Rail Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "data-rail"
+      assert html =~ ~s(data-scroll="prev")
+      assert html =~ ~s(data-scroll="next")
+      assert html =~ "Desplazar hacia la izquierda"
+      assert html =~ "Desplazar hacia la derecha"
+      # Proves the colocated hook was extracted at compile time rather than
+      # rendered inline (this app's CSP script-src would refuse an inline
+      # <script> body) — the page's own two <script src="..."> tags for
+      # app.js/theme.js are expected and unaffected by this check.
+      refute html =~ "export default"
+    end
+  end
+
   describe "Content-Security-Policy (T-01-28, closes Phase 0's deferred Sobelow Config.CSP finding)" do
     test "the response carries a content-security-policy header scoped to the configured image origin",
          %{conn: conn} do

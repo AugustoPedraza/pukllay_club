@@ -14,9 +14,19 @@ defmodule PukllayClubWeb.CarouselRow do
   rest by colour (never by a fourth type size — see ui-design-system), and
   `subtitle` is a one-line plain-Spanish explanation of what that shelf is.
   The caller owns the copy; this component only renders it.
+
+  G-01-3: the rail's horizontal scroll is intentional (daisyUI `.carousel`
+  is `overflow-x` scroll with no wrap, capped at the Catalog context's
+  `@carousel_limit`) — it is NOT the responsive `#games` grid, and it was
+  originally misread as an unresponsive grid precisely because daisyUI's
+  `.carousel` also sets `scrollbar-width: none`, leaving no visible cue
+  that the rail scrolls at all. The persistent prev/next controls below
+  are the fix: a `.CarouselScroll` colocated hook scrolls the rail and
+  hides the controls whenever the rail has nothing to scroll to.
   """
   use Phoenix.Component
 
+  alias PukllayClubWeb.CoreComponents
   alias PukllayClubWeb.GameCard
 
   attr :id, :string, required: true
@@ -27,12 +37,64 @@ defmodule PukllayClubWeb.CarouselRow do
 
   def carousel_row(assigns) do
     ~H"""
-    <section :if={@games != []} id={@id} class="space-y-3">
-      <div class="space-y-1">
-        <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>{@title}</h2>
-        <p :if={@subtitle} class="text-neutral text-sm">{@subtitle}</p>
+    <section :if={@games != []} id={@id} class="space-y-3" phx-hook=".CarouselScroll">
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".CarouselScroll">
+        export default {
+          mounted() {
+            this.rail = this.el.querySelector("[data-rail]")
+            this.controls = this.el.querySelector("[data-controls]")
+
+            this.onClick = (e) => {
+              const button = e.target.closest("[data-scroll]")
+              if (!button || !this.el.contains(button)) return
+              const direction = button.dataset.scroll === "prev" ? -1 : 1
+              this.rail.scrollBy({left: direction * this.rail.clientWidth * 0.9, behavior: "smooth"})
+            }
+            this.el.addEventListener("click", this.onClick)
+
+            this.sync = () => {
+              const overflows = this.rail.scrollWidth > this.rail.clientWidth
+              this.controls.classList.toggle("hidden", !overflows)
+            }
+            this.sync()
+
+            this.resizeObserver = new ResizeObserver(() => this.sync())
+            this.resizeObserver.observe(this.rail)
+          },
+          updated() {
+            this.sync()
+          },
+          destroyed() {
+            this.el.removeEventListener("click", this.onClick)
+            this.resizeObserver?.disconnect()
+          }
+        }
+      </script>
+      <div class="flex items-end justify-between gap-4">
+        <div class="space-y-1">
+          <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>{@title}</h2>
+          <p :if={@subtitle} class="text-neutral text-sm">{@subtitle}</p>
+        </div>
+        <div data-controls class="hidden flex items-center gap-2">
+          <button
+            type="button"
+            data-scroll="prev"
+            aria-label="Desplazar hacia la izquierda"
+            class="btn btn-circle size-11"
+          >
+            <CoreComponents.icon name="hero-chevron-left" class="size-5" />
+          </button>
+          <button
+            type="button"
+            data-scroll="next"
+            aria-label="Desplazar hacia la derecha"
+            class="btn btn-circle size-11"
+          >
+            <CoreComponents.icon name="hero-chevron-right" class="size-5" />
+          </button>
+        </div>
       </div>
-      <div class="carousel carousel-center gap-4 rounded-box">
+      <div data-rail class="carousel carousel-center gap-4 rounded-box">
         <div :for={game <- @games} class="carousel-item">
           <GameCard.game_card id={"#{@id}-#{game.id}"} game={game} class="w-40 shrink-0 sm:w-48" />
         </div>
