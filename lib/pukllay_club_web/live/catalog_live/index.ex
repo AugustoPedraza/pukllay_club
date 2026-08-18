@@ -28,6 +28,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   use PukllayClubWeb, :live_view
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.CarouselRow
   alias PukllayClubWeb.FilterDrawer
   alias PukllayClubWeb.GameCard
@@ -205,6 +206,54 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp result_count_text(1), do: "1 juego encontrado"
   defp result_count_text(n), do: "#{n} juegos encontrados"
 
+  # Ranks the curated row above the other 7 by colour (G-01-4) — never by a
+  # fourth type size, per ui-design-system's 3-level cap.
+  defp row_variant(:destacados_del_club), do: :hero
+  defp row_variant(_key), do: :standard
+
+  # One plain-Spanish line per D-09 row so all 8 shelves read as 8 distinct
+  # things (G-01-4). Six of the eight reuse already-user-reviewed D-05/D-06
+  # copy from Vocabulary; :destacados_del_club and :recientemente_anadidos
+  # are newly authored here and flagged in the SUMMARY for review. Any
+  # unmatched key degrades to a bare heading rather than crashing.
+  defp row_subtitle(:crea_conexiones), do: editorial_tag_meaning("#CreaConexiones")
+  defp row_subtitle(:equipo_ganador), do: editorial_tag_meaning("#EquipoGanador")
+  defp row_subtitle(:duelos_memorables), do: editorial_tag_meaning("#DuelosMemorables")
+  defp row_subtitle(:descubre_el_hobby), do: weight_band_descriptor("descubre_el_hobby")
+  defp row_subtitle(:ingenio_estratega), do: weight_band_descriptor("ingenio_estratega")
+  defp row_subtitle(:nivel_experto), do: weight_band_descriptor("nivel_experto")
+
+  defp row_subtitle(:destacados_del_club),
+    do: "La selección del club — los juegos que más recomendamos ahora mismo."
+
+  defp row_subtitle(:recientemente_anadidos),
+    do: "Las incorporaciones más nuevas a la ludoteca."
+
+  defp row_subtitle(_unrecognized), do: nil
+
+  defp editorial_tag_meaning(tag) do
+    Vocabulary.editorial_tags()
+    |> Enum.find(&(&1.tag == tag))
+    |> case do
+      %{meaning: meaning} -> meaning
+      nil -> nil
+    end
+  end
+
+  defp weight_band_descriptor(value) do
+    case Vocabulary.weight_band(value) do
+      %{descriptor: descriptor} -> descriptor
+      nil -> nil
+    end
+  end
+
+  # "El catálogo completo" is a false claim once filters narrow the result
+  # set — the heading text depends on whether a filter is active, but the
+  # header itself always renders (even on a zero-result view).
+  defp main_grid_heading(assigns) do
+    if filters_active?(assigns), do: "Resultados", else: "El catálogo completo"
+  end
+
   # A filtered view shows one authoritative result set — the curated
   # carousel rows step aside rather than competing with it (Task 3 action
   # text).
@@ -283,6 +332,8 @@ defmodule PukllayClubWeb.CatalogLive.Index do
               id={"carousel-#{row.key}"}
               title={row.title}
               games={row.games}
+              variant={row_variant(row.key)}
+              subtitle={row_subtitle(row.key)}
             />
           <% end %>
         </div>
@@ -291,7 +342,10 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           No pudimos cargar el catálogo en este momento. Intenta recargar la página en unos segundos.
         </div>
 
-        <p class="text-neutral text-sm">{result_count_text(@total)}</p>
+        <div class="space-y-1">
+          <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
+          <p class="text-neutral text-sm">{result_count_text(@total)}</p>
+        </div>
 
         <div
           :if={@total == 0 and not @load_error}

@@ -73,8 +73,8 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      assert html =~ "Ingenio estratega"
-      refute html =~ "Reglas de 15-20 minutos"
+      assert grid_html(html) =~ "Ingenio estratega"
+      refute grid_html(html) =~ "Reglas de 15-20 minutos"
     end
 
     test "renders the club's editorial hashtag and a capped mechanic chip row with a +N overflow chip",
@@ -432,6 +432,49 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       html = html_response(conn, 200)
 
       assert html =~ "skeleton"
+    end
+  end
+
+  describe "differentiated row headers and titled main grid (G-01-4)" do
+    test "the hero row renders in the primary colour and a weight-band row renders its Vocabulary descriptor as a subtitle",
+         %{conn: conn} do
+      game_fixture(%{name: "Destacado Game", tags: ["#CreaConexiones"]})
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+      carousel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      assert carousel_html =~ "text-primary"
+      assert carousel_html =~ "Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez."
+    end
+
+    test "the unfiltered landing render contains the main-grid section heading", %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "El catálogo completo"
+    end
+
+    test "a filtered render shows the results-wording heading and hides the carousel block", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Filtered Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Filtered"})
+
+      assert html =~ "Resultados"
+      refute html =~ "El catálogo completo"
+      refute html =~ "id=\"carousel-rows\""
     end
   end
 
