@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: catalog-v1
 status: executing
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-08-11T15:53:26.306Z"
-last_activity: 2026-08-10
-last_activity_desc: Phase 01 execution resumed (wave continue)
+stopped_at: "Completed quick task 260818-jpm: Add Linear/GOV.UK/Shopify/Microsoft/NN.g reference points (B28-B32) and section F (LiveView fit, device target, PWA scope) to docs/ux-patterns.md"
+last_updated: "2026-08-18T18:21:52.805Z"
+last_activity: 2026-08-18
+last_activity_desc: "Completed quick task 260818-jpm: Add Linear/GOV.UK/Shopify/Microsoft/NN.g reference points (B28-B32) and section F (LiveView fit, device target, PWA scope) to docs/ux-patterns.md"
 progress:
   total_phases: 2
   completed_phases: 1
@@ -113,6 +113,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-05: The 8 D-09 carousel rows include 3 weight-band rows in addition to Destacados/3 editorial hashtags/Recientemente añadidos, resolving an under-specified plan prose against the plan's own artifact list and row-count
 - [Phase ?]: 01-05: filter_games/1 composes search+OR-within-facet+AND-across-facets+scalar filters+sort+pagination into one Ecto maybe_* pipeline; sort/facet keys parsed via literal string clauses, never String.to_atom/1
 - [Phase ?]: 01-05: loading skeletons use LiveView's disconnected/connected two-phase mount (:loading = not connected?(socket)) rather than simulated async latency, since Catalog reads are synchronous and fast at this row count
+- [Phase ?]: Quick task 260818-jpm: extended docs/ux-patterns.md with B28-B32 (Linear/GOV.UK/Shopify-unreachable/Microsoft/NN.g reference points) and section F (LiveView fit, device target ambiguous, not a PWA); WebFetch tool unavailable to executor, substituted curl+HTML-strip for all 12 live fetches, same fetch-then-cite discipline
 
 ### Pending Todos
 
@@ -148,6 +149,7 @@ None yet.
 | 260818-fro | Integrate Tidewave (dev-only) MCP plug into Phoenix endpoint | 2026-08-18 | d3761dd | [260818-fro-integrate-tidewave-dev-only-into-phoenix](./quick/260818-fro-integrate-tidewave-dev-only-into-phoenix/) |
 | 260818-gdb | Fix the max-w-2xl container bug in Layouts.app | 2026-08-18 | b44d927 | [260818-gdb-fix-the-max-w-2xl-container-bug-in-lib-p](./quick/260818-gdb-fix-the-max-w-2xl-container-bug-in-lib-p/) |
 | 260818-h9p | Build UX pattern reference doc at docs/ux-patterns.md from research | 2026-08-18 | 703a919 | [260818-h9p-build-ux-pattern-reference-doc-at-docs-u](./quick/260818-h9p-build-ux-pattern-reference-doc-at-docs-u/) |
+| 260818-jpm | Add Linear/GOV.UK/Shopify/Microsoft/NN.g reference points (B28-B32) and LiveView-fit/device-target/PWA-scope answers (F33-F35) to docs/ux-patterns.md | 2026-08-18 | 58a2b6c | [260818-jpm-add-linear-gov-uk-shopify-master-detail-](./quick/260818-jpm-add-linear-gov-uk-shopify-master-detail-/) |
 
 ## Deferred Items
 
@@ -159,7 +161,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-11T15:53:26.241Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-08-18T18:21:17.668Z
+Stopped at: Completed quick task 260818-jpm: Add Linear/GOV.UK/Shopify/Microsoft/NN.g reference points (B28-B32) and section F (LiveView fit, device target, PWA scope) to docs/ux-patterns.md
 verified against the roadmap (no edits needed)
 Resume file: None
