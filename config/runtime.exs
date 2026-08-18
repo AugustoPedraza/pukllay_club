@@ -29,6 +29,17 @@ config :sentry,
   environment_name: config_env()
 
 if config_env() == :dev do
+  # Mirror Credentials' R2_PUBLIC_BASE_URL fallback chain (env var, then
+  # dev.secret.exs's Application config) here rather than in config/dev.exs,
+  # because compile-time config (including dev.secret.exs, imported at the
+  # bottom of dev.exs) isn't merged into Application env until after
+  # dev.exs finishes evaluating — dev.exs can only ever see the env var.
+  # By runtime.exs, dev.secret.exs's config IS visible, so this is the only
+  # point that can resolve the same R2 host the seed pipeline actually used.
+  dev_r2_public_base_url =
+    System.get_env("R2_PUBLIC_BASE_URL") ||
+      Application.get_env(:pukllay_club, PukllayClub.Catalog.Seed, [])[:r2_public_base_url]
+
   # Reload browser tabs when matching files change.
   config :pukllay_club, PukllayClubWeb.Endpoint,
     live_reload: [
@@ -43,6 +54,12 @@ if config_env() == :dev do
         ~r"lib/pukllay_club_web/(controllers|live|components)/.*\.(ex|heex)$"
       ]
     ]
+
+  if dev_r2_public_base_url do
+    uri = URI.parse(dev_r2_public_base_url)
+    port_suffix = if uri.port in [nil, 80, 443], do: "", else: ":#{uri.port}"
+    config :pukllay_club, :image_origin, "#{uri.scheme}://#{uri.host}#{port_suffix}"
+  end
 end
 
 if config_env() == :prod do
