@@ -12,7 +12,8 @@ defmodule PukllayClub.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      usage_rules: usage_rules()
+      usage_rules: usage_rules(),
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -28,7 +29,13 @@ defmodule PukllayClub.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test, quality: :test]
+      preferred_envs: [
+        precommit: :test,
+        quality: :test,
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -85,6 +92,7 @@ defmodule PukllayClub.MixProject do
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
       {:tidewave, "~> 0.8", only: :dev},
       {:usage_rules, "~> 1.1", only: [:dev]},
       {:igniter, "~> 0.6", only: [:dev]},
