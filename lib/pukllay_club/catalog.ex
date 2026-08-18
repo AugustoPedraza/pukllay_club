@@ -132,6 +132,18 @@ defmodule PukllayClub.Catalog do
   reverse-CSV order (`inserted_at` desc, `csv_row` desc tie-break) — a real
   acquisition date is Phase 4 admin territory (D-10).
 
+  **G-01-5:** that same reverse-CSV ordering is exactly why this row used
+  to surface almost exclusively expansions/promos — the club's source
+  export happens to cluster every expansion/promo entry as one contiguous
+  block at the tail of the sheet. `recent_query/0` now filters on
+  `is_expansion == false`; see `PukllayClub.Catalog.Seed.ExpansionClassifier`
+  for how that flag is derived. The `is_expansion` column now exists on
+  every game and could be filtered elsewhere too, but Phase 1 deliberately
+  scopes the exclusion to this one carousel row — `filter_games/1`,
+  `count_games/1`, and every other carousel row are untouched, so an
+  expansion the club physically owns remains searchable and present in the
+  main grid.
+
   The row set is intentionally hardcoded — no configuration table, no
   admin form, no dynamic registry. D-10 defers that to Phase 4.
   """

@@ -233,5 +233,50 @@ defmodule PukllayClub.CatalogTest do
       destacados = Enum.find(rows, &(&1.key == :destacados_del_club))
       assert destacados.title == "Destacados del club"
     end
+
+    test "the recientemente_anadidos row excludes expansions but includes base games (G-01-5)" do
+      base = game_fixture(%{name: "Base Game", is_expansion: false})
+      game_fixture(%{name: "Some Expansion(expa)", is_expansion: true})
+
+      rows = Catalog.list_carousel_rows()
+      recent = Enum.find(rows, &(&1.key == :recientemente_anadidos))
+      recent_ids = Enum.map(recent.games, & &1.id)
+
+      assert base.id in recent_ids
+      assert Enum.all?(recent.games, &(&1.is_expansion == false))
+    end
+
+    test "the other seven carousel rows are unaffected by is_expansion" do
+      game_fixture(%{
+        name: "Expansion Tag Game(expa)",
+        is_expansion: true,
+        tags: ["#CreaConexiones"]
+      })
+
+      game_fixture(%{
+        name: "Expansion Band Game(expa)",
+        is_expansion: true,
+        weight_band: "nivel_experto"
+      })
+
+      rows = Catalog.list_carousel_rows()
+
+      tag_row = Enum.find(rows, &(&1.key == :crea_conexiones))
+      assert Enum.any?(tag_row.games, &(&1.name == "Expansion Tag Game(expa)"))
+
+      band_row = Enum.find(rows, &(&1.key == :nivel_experto))
+      assert Enum.any?(band_row.games, &(&1.name == "Expansion Band Game(expa)"))
+    end
+  end
+
+  describe "filter_games/1 and count_games/1 — expansions remain searchable (G-01-5)" do
+    test "an expansion-flagged game is still findable by search and still counted" do
+      game_fixture(%{name: "Wingspan Europa(expa)", is_expansion: true})
+
+      names = [q: "Wingspan Europa"] |> Catalog.filter_games() |> Enum.map(& &1.name)
+
+      assert "Wingspan Europa(expa)" in names
+      assert Catalog.count_games(q: "Wingspan Europa") == 1
+    end
   end
 end
