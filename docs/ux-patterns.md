@@ -10,15 +10,22 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
 
 | # | Source | Pages read | Status |
 |---|--------|------------|--------|
-| 1 | Shopify Polaris | https://polaris.shopify.com <br> https://polaris.shopify.com/components/data-table <br> https://polaris.shopify.com/patterns/creating-and-editing | unreachable |
+| 1 | Shopify Polaris | https://polaris.shopify.com <br> https://polaris.shopify.com/components/data-table <br> https://polaris.shopify.com/patterns/creating-and-editing <br> https://polaris.shopify.com/patterns (retried this pass, HTTP 301 -> https://shopify.dev/docs/api/polaris) <br> https://polaris.shopify.com/components/layout-and-structure/empty-state (retried this pass, HTTP 301 -> https://shopify.dev/docs/api/polaris) | unreachable |
 | 2 | Base Web | https://baseweb.design <br> https://baseweb.design/components/form-control/ <br> https://baseweb.design/components/spinner/ <br> https://baseweb.design/components/skeleton/ | unreachable |
 | 3 | Atlassian Design System | https://atlassian.design <br> https://atlassian.design/foundations/content <br> https://atlassian.design/foundations/content/designing-messages <br> https://atlassian.design/foundations/content/designing-messages/error-messages <br> https://atlassian.design/components/inline-edit/examples | read |
 | 4 | GOV.UK Design System | https://design-system.service.gov.uk (sitemap) <br> https://design-system.service.gov.uk/patterns/question-pages/ <br> https://design-system.service.gov.uk/components/table/ <br> https://design-system.service.gov.uk/patterns/complete-multiple-tasks/ <br> https://design-system.service.gov.uk/patterns/validation/ <br> https://design-system.service.gov.uk/components/pagination/ <br> https://design-system.service.gov.uk/components/button/ <br> https://design-system.service.gov.uk/patterns/check-answers/ | read |
 | 5 | Carbon Design System | https://carbondesignsystem.com/elements/typography/overview/ <br> https://carbondesignsystem.com/components/pagination/usage/ <br> https://carbondesignsystem.com/components/data-table/usage/ <br> https://carbondesignsystem.com/guidelines/content/action-labels/ | read |
 | 6 | Material 3 | https://m3.material.io/styles/typography/type-scale-tokens <br> https://m3.material.io/foundations/interaction/states/state-layers <br> https://m3.material.io/foundations/layout/breakpoints <br> https://m3.material.io/foundations/layout/canonical-examples | read |
 | 7 | Apple HIG | https://developer.apple.com/design/human-interface-guidelines/layout <br> https://developer.apple.com/design/human-interface-guidelines/pointing-devices <br> https://developer.apple.com/design/human-interface-guidelines/buttons | read |
-| 8 | NN/g web usability | https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/ <br> https://www.nngroup.com/articles/designing-effective-carousels/ <br> https://www.nngroup.com/articles/skeleton-screens/ | read |
+| 8 | NN/g web usability | https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/ <br> https://www.nngroup.com/articles/designing-effective-carousels/ <br> https://www.nngroup.com/articles/skeleton-screens/ <br> https://www.nngroup.com/articles/mobile-navigation-patterns/ | read |
 | 9 | Linear docs | https://linear.app/docs <br> https://linear.app/docs/select-issues | read |
+| 10 | Microsoft Learn | https://learn.microsoft.com/en-us/windows/apps/design/controls/list-details | read |
+
+**Attempted this pass and not usable:**
+- Linear keyboard-shortcuts page: `https://linear.app/docs/keyboard-shortcuts` — HTTP 404.
+- Microsoft Learn singular `list-detail` URL: `https://learn.microsoft.com/en-us/windows/apps/design/controls/list-detail` — HTTP 404.
+- Gmail reading-pane support page: `https://support.google.com/mail/answer/187605` — HTTP 404 (redirects to an unrelated topic page).
+- Pages that returned a title with no rendered body (client-rendered, JavaScript required, nothing to quote):
 
 ## A. Information hierarchy
 
@@ -519,3 +526,72 @@ conflict; that skill's daisyUI-specific rules win for PukllayClub's own UI work.
   would any issue" via the command bar or contextual menu — is list -> transient overlay ->
   committed change, not an in-place field swap. The fetched page documents no click-to-edit-in-
   place behavior, so none is described here.
+
+### B29. Forms — GOV.UK is this doc's reference point
+
+- **Default:** GOV.UK is this doc's forms reference point. For validation timing and wording, see
+  **B12** (validate after the action has been taken, 1-2 sentences giving the reason and the next
+  step). For multi-field flows, see **B15** (one question per page, with a back link, a page
+  heading, and a continue button).
+- **Flips when:** this does not apply — B29 is an index entry, not a new recommendation. Where
+  GOV.UK conflicts with another system, the conflict is already written up on the entry itself:
+  the Disagreement bullets on B10 and C17 are both GOV.UK-vs-other-system.
+- **Why:** an index entry keeps the doc's cross-reference convention (rule 3: cross-reference, do
+  not repeat) intact for the forms topic without restating B12/B15's content here.
+- **Source:** _no new page fetched_ — see ledger row 4 for the pages behind B12 and B15.
+
+### B30. Empty states and onboarding — Shopify Polaris (unreachable)
+
+- **Default:** unresolved. No default is recorded because no source could be fetched this pass.
+- **Flips when:** unresolved for the same reason — no fetched source to key a condition off of.
+- **Why:** unresolved for the same reason — no fetched source to explain a rationale.
+- **Source:** `unreachable`. `https://polaris.shopify.com/patterns` returned HTTP 301 to
+  `https://shopify.dev/docs/api/polaris`, retried live this pass.
+  `https://polaris.shopify.com/components/layout-and-structure/empty-state` returned the same
+  HTTP 301 to the same target, also retried live this pass. The redirect target renders
+  successfully (HTTP 200) but documents only app surfaces — App Home (iframe/UI extension), Admin,
+  Checkout, Customer accounts, and POS UI extensions — with no empty-state pattern or onboarding
+  guidance anywhere on the page. Nothing about empty states is recorded here from memory.
+
+### B31. Master/detail in practice — Microsoft's list/details pattern
+
+- **Default:** "when an item in the list is selected, the details pane is updated," in both of
+  Microsoft's two styles. In the side-by-side style, "the list in the list pane has a selection
+  visual to indicate the currently selected item" and "selecting a new item in the list updates
+  the details pane." In the stacked style, "only one pane is visible at a time: the list or the
+  details. The user starts at the list pane and 'drills down' to the details pane by selecting an
+  item in the list. To the user, it appears as though the list and details views exist on two
+  separate pages," with back-navigation handled by real page-level navigation history between the
+  two pages.
+- **Flips when:** available window width crosses Microsoft's stated threshold: "320 epx-640 epx"
+  recommends the stacked style, "641 epx or wider" recommends side-by-side.
+- **Why:** the side-by-side form exists so that repeated selection does not cost a page-level
+  navigation each time; Microsoft names the fit explicitly — "build an email app, address book, or
+  any app that is based on a list-details layout" and support "working back-and-forth between
+  contexts."
+- **Source:** [Microsoft Learn — List/details pattern](https://learn.microsoft.com/en-us/windows/apps/design/controls/list-details)
+- **Disagreement:** against **B6** — both agree the rule is keyed to width and that narrow means
+  drill-down while wide means two panes, but B6 records Material 3 holding a single pane through
+  compact and medium and only recommending two panes at 840dp+, whereas Microsoft switches at
+  641 epx — roughly 200 units earlier. B6's general breakpoint rule is not re-derived here.
+
+### B32. Mobile navigation — visible tab bar over hamburger/drawer, and when that flips
+
+- **Default:** pick the visible tab bar over a hidden hamburger/drawer menu. NN/g: a navigation
+  menu (hamburger) "makes the navigation options least discoverable"; opening one costs a decision
+  because "users will have to make a decision to open it and check whether the individual
+  navigation options are relevant." By contrast a tab bar is "persistent, that is, they are always
+  visible on the screen, whether the user scrolls down the page or not," whereas ordinary
+  navigation bars "usually start out being present at the top of the page but disappear once the
+  user has scrolled one or more screens down." Tab bars and navigation bars are "well suited for
+  sites with relatively few navigation options. If your site has more than 5 options, it's hard to
+  fit them in a tab or navigation bar," while a hidden menu "can contain a fairly large number of
+  navigation options in a tiny space and can also easily support submenus."
+- **Flips when:** the destination count exceeds what a bar can hold (NN/g's stated line is above
+  5 options), or the persistence argument that justified the pick is itself lost — a navigation
+  bar that scrolls away with the page no longer offers the always-visible property a tab bar has.
+  Cross-reference **B8** for the breakpoint-keyed swap between a bottom bar and a rail; this entry
+  only picks the mobile shape, it does not re-derive when to swap it.
+- **Why:** below about five destinations, discoverability and interaction cost both favor keeping
+  the options visible over hiding them behind a menu the user has to remember to open.
+- **Source:** [NN/g — Basic Patterns for Mobile Navigation: A Primer](https://www.nngroup.com/articles/mobile-navigation-patterns/)
