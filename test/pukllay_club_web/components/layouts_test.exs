@@ -48,6 +48,18 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  # Guards against reintroducing the 672px page cap described by the
+  # design-system's page-container rule — page width belongs to each
+  # LiveView's own container, not to Layouts.app's wrapper.
+  describe "app/1 content wrapper" do
+    test "imposes no 672px page-width cap, and still centers slot content" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      refute html =~ "max-w-2xl"
+      assert html =~ "mx-auto"
+    end
+  end
+
   describe "root layout" do
     test "declares Spanish as the document language", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/")
