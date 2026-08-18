@@ -84,7 +84,7 @@ be pulled forward without breaking that dependency chain.
   4. Each game displays a plain-Spanish weight-band descriptor and plain-Spanish mechanic/theme chips instead of a bare 1-5 number or raw hobbyist jargon
   5. Each game shows the club's own resized cover image and any editorial "club favorite"/"beginner-friendly" tag carried over from the existing Excel catalog
 
-**Plans**: 6/6 plans executed
+**Plans**: 9 plans (6/6 original executed, 3 gap-closure plans pending from UAT)
 **UI hint**: yes
 
 **Wave 1**
@@ -107,6 +107,15 @@ be pulled forward without breaking that dependency chain.
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 01-06-PLAN.md — Complexity-teaching UX: weight bands, plain-Spanish chips, game detail page, CSP (CATALOG-05, CATALOG-06, CATALOG-07)
+
+**Gap closure — Wave 1** *(from 01-UAT.md, run via `/gsd-execute-phase 1 --gaps-only`)*
+
+- [ ] 01-07-PLAN.md — Card chip hierarchy, weight-band badge overflow, app-wide focus ring (G-01-2, G-01-6, G-01-7)
+- [ ] 01-09-PLAN.md — `is_expansion` column, seed classifier + migration backfill, expansion-free recency row (G-01-5)
+
+**Gap closure — Wave 2** *(blocked on 01-07: shared `catalog_live/index.ex`)*
+
+- [ ] 01-08-PLAN.md — Section heading differentiation and persistent carousel scroll controls (G-01-3, G-01-4)
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
