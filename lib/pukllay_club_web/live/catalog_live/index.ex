@@ -248,7 +248,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
               min_age={@min_age}
             />
 
-            <select name="sort" phx-change="sort" class="select select-bordered">
+            <select
+              name="sort"
+              phx-change="sort"
+              class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
+            >
               <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
               <option value="playtime_asc" selected={@sort == :playtime_asc}>
                 Duración: menor a mayor
