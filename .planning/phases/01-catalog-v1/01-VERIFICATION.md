@@ -1,225 +1,201 @@
 ---
 phase: 01-catalog-v1
-verified: 2026-08-11T22:15:00Z
+verified: 2026-08-18T20:10:00Z
 status: human_needed
-score: 5/5 roadmap success criteria verified (47/47 plan-level must-have truths present + wired; 2 backstop loading-skeleton truths present but not fully visually confirmed)
-behavior_unverified: 2 # both are the plan-05 "backstop" loading-skeleton truths — markup present at correct volume (confirmed live), true pixel-level "no layout shift" needs a browser
+score: 5/5 roadmap success criteria verified (all 6 UAT gaps G-01-2..G-01-7 independently re-confirmed in the codebase, not trusted from SUMMARY claims)
+behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: human_needed
+  previous_score: "5/5 roadmap success criteria (47/47 plan-level truths); 6 gap_ids open in 01-UAT.md"
+  gaps_closed:
+    - "G-01-2: weight-band badge overlapping the title at 2-column mobile widths"
+    - "G-01-3: carousel rail scrollability undiscoverable (reclassified as working-as-designed + added affordance)"
+    - "G-01-4: all 8 carousel sections visually identical, main grid unlabeled"
+    - "G-01-5: expansions appearing in the 'Recientemente añadidos' shelf"
+    - "G-01-6: card information density / no visual hierarchy between chip rows"
+    - "G-01-7: double focus ring on plain .input/.select/.textarea controls"
+  gaps_remaining: []
+  regressions: []
 human_verification:
-  - test: "Load `/` in both light and dark theme via the existing toggle (top-right icon group) on a real browser/device."
-    expected: "Brand purple/lavender palette renders correctly, Bebas Neue wordmark and Inter body text are legible against both theme backgrounds, matching 01-UI-SPEC.md."
-    why_human: "Visual color/typography rendering cannot be confirmed by grep or unit tests (01-02-PLAN.md's own end-of-phase check)."
-  - test: "On a mobile-width viewport, open the Filtros drawer, toggle two mechanic pills, type a search term, change the sort, and press Cargar más."
-    expected: "Results update live with no page reload; the drawer trigger and pills are comfortably tappable (44px target)."
-    why_human: "Real touch-target comfort and drawer slide-over feel require a physical/emulated mobile viewport, not just a `min-h-11` class-presence grep (01-05-PLAN.md's own end-of-phase check; class presence for `drawer-side` (3x) and `min-h-11` (2x) was confirmed by grep in this verification, but touch-target ergonomics were not)."
-  - test: "Open a game detail page from a card; confirm the band descriptor reads naturally, the gallery strip visually swaps the main image on thumbnail click, and a no-BGG-enrichment game (one of the 41) renders cleanly with fields simply absent."
-    expected: "Natural Spanish copy, working click-to-swap gallery interaction, no visual gaps/placeholders for absent fields."
-    why_human: "This verification confirmed via `curl` that a no-BGG-ID game (id 79, \"discordia\") returns 200 with the brand placeholder and that a game's gallery thumbnails render as real R2 `<img>` tags (id 6249, Alhambra), but the click-driven thumbnail-swap interaction itself requires a JS-executing browser (01-06-PLAN.md's own end-of-phase check)."
-  - test: "Load the browse page on a throttled connection and visually confirm the grid/carousel skeleton placeholders occupy the correct footprint with no layout shift when real cards replace them."
-    expected: "No visible jump/reflow when skeletons are replaced by real cards."
-    why_human: "This verification independently reproduced 01-05-SUMMARY's own manual check: the disconnected first HTTP response for `/` contains exactly 354 `skeleton` occurrences and 48 `carousel-item` occurrences (matching the page-size/carousel-row math), so the correct markup renders at the correct volume. True pixel-level 'no layout shift' still requires an actual browser paint, which this verification's headless curl-based approach cannot observe. Marked ⚠️ PRESENT_BEHAVIOR_UNVERIFIED, not FAILED."
-  - test: "Read `priv/repo/seed_data/catalog_seed_report.md`'s 26 unresolved-weight-band games and the 39 no-Spanish-edition list, and the 01-VOCABULARY.md 'Consciously uncovered' glossary subsection, and confirm the exclusions are acceptable (or correct the source CSV and re-run)."
-    expected: "The club (product owner) signs off that these specific games/terms are correctly left unresolved/uncovered rather than silently mis-seeded."
-    why_human: "This is a content-acceptability judgment call by the person who knows the club's real catalog, not a code-correctness question. This verification confirmed the report exists, is committed, and its stated counts (41 no-BGG-ID, 1 duplicate BGG_ID group, 11 conflicts, 46 zero-hashtag rows, 39 no-Spanish-edition) independently match live database queries — the mechanics work correctly. Whether the specific 26/39 exclusion lists are *acceptable* is a domain call for the club, not this verifier."
-  - test: "Run the production seed per `docs/runbooks/catalog-seed.md` against the Kamal-deployed Postgres accessory, then confirm pukllay.club serves the full 434-game catalog."
-    expected: "pukllay.club renders the same browse/filter/search/detail experience verified locally in this report."
-    why_human: "Out of scope for this codebase-level verification by design — `main` is 56 commits ahead of `origin/main` (this phase's work has not been pushed/merged/deployed yet), so `https://pukllay.club/` still serves Phase 0's stock `mix phx.new` welcome page (`lang=\"en\"`, \"Phoenix Framework · v1.8.9\", the old inline theme `<script>`, generated Website/GitHub/Get-Started links — confirmed live via `curl --compressed https://pukllay.club/` during this verification). This matches the project's documented workflow: `/gsd-execute-phase` and this verifier operate on the local `main` branch; push/PR/deploy is the separate `/gsd-ship` step that runs *after* verification passes, not before. Not treated as a phase-goal FAILURE, but flagged because 01-04-PLAN.md's own `<verification>` section lists this exact production check as an 'end-of-phase' item, and it has not happened yet."
+  - test: "At a narrow/mobile viewport (<640px, 2-column grid), load `/` and confirm the weight-band badge (e.g. 'Descubre el hobby') no longer overlaps the game title above it, and that its box visibly grows rather than clipping when the label wraps to two lines."
+    expected: "Badge text stays entirely inside its own tinted box with no visual collision with the title (G-01-2 fix)."
+    why_human: "Real pixel-level box growth/collision requires a browser paint; this verification confirmed the `badge-lg h-auto whitespace-normal py-1 text-center leading-tight` class list is present, wired, and covered by a unit test asserting `badge-lg`/`h-auto`, but not the actual rendered layout."
+  - test: "On the same narrow viewport, confirm the weight-band badge reads as clearly the most visually dominant chip on the card, with the editorial-hashtag row (capped at 2 + `+N`) and mechanic-chip row (capped at 4 + `+N`) reading as one smaller, grouped secondary block beneath it."
+    expected: "Three visually ranked tiers — large primary badge, then a visually lighter grouped secondary block — not five flat, co-equal rows."
+    why_human: "Visual hierarchy/prominence is a perceptual judgment; this verification confirmed the `space-y-1` grouping wrapper and the size/hue class differences exist in source and pass component tests, not that they *read* as hierarchy to a human eye (G-01-6)."
+  - test: "Tab into (or click) the search box and the sort dropdown; confirm each shows exactly one visible focus indicator (a single darkened border), not two concentric near-black rectangles, and that focus is still clearly visible (not silently removed)."
+    expected: "One clean focus ring per control, focus state never fully absent."
+    why_human: "This verification confirmed `focus:outline-hidden focus-within:outline-hidden` is present on all three `input/1` branches and the raw sort `<select>`, and that the compiled stylesheet contains 2 `outline-hidden` rules, but the actual rendered double-vs-single ring appearance requires a real browser (G-01-7)."
+  - test: "Load `/` unfiltered and scroll top to bottom. Confirm: (1) each of the 8 carousel shelves is distinguishable from the next via its heading + one-line subtitle; (2) the 'Destacados del club' row is visibly ranked above the others by color; (3) the main grid at the bottom reads as its own titled section, not a trailing count line; (4) the two newly-authored subtitles ('La selección del club…' and 'Las incorporaciones más nuevas…') read naturally in Spanish and match the club's voice — they have not been through the vocabulary's existing review pass."
+    expected: "8 visually/semantically distinct shelves, a color-ranked hero row, a titled grid section, and natural-sounding new copy."
+    why_human: "This verification confirmed via `mix test` (dedicated LiveView assertions) and direct source read that `text-primary` gates on `:hero`, all 8 `row_subtitle/1` clauses resolve to real strings (6 reused from `Vocabulary`, 2 newly authored), and the grid heading text is state-dependent — but perceptual distinguishability and Spanish copy tone are human judgment calls (G-01-4), and the 2 new strings are explicitly flagged as unreviewed in 01-08-SUMMARY.md."
+  - test: "On a desktop-width browser, confirm each non-empty carousel row shows round prev/next controls next to its heading, that clicking them scrolls the row, and that a row with only a couple of games shows no controls at all. Then directly answer: was the originally-reported '~20 columns forcing horizontal scroll' one of these carousel rails, or the `#games` grid at the bottom of the page?"
+    expected: "Controls appear only on overflowing rails, clicking scrolls smoothly, and the user confirms/denies the G-01-3 root-cause reclassification."
+    why_human: "This verification confirmed the `.CarouselScroll` colocated hook is bundled into `priv/static/assets/js/app.js` (not inlined) and that `data-scroll`/`aria-label` markup renders in tests, but actual click-to-scroll behavior and the show/hide-on-overflow logic need a real browser with real rail widths. The G-01-3 reclassification question was explicitly left unanswered by the autonomous run per 01-08-SUMMARY.md's own 'Next Phase Readiness' section."
+  - test: "Scroll to the 'Recientemente añadidos' shelf and confirm it shows only ordinary base games, no titles ending in '(expa)', containing 'Expansión', or reading as promo miniatures. Then search for a known expansion title (e.g. 'Wingspan Europa') and confirm it is still findable in the main catalog — expansions must remain searchable, only excluded from this one shelf."
+    expected: "No expansions on the recency shelf; expansions still findable via search/grid."
+    why_human: "This verification independently confirmed via a live `mix run -e` query against the real dev DB that exactly 26 of 434 rows carry `is_expansion = true` (matching the club-reviewed count), and via `mix test` that `recent_query/0` excludes them while `filter_games/1`/`count_games/1` do not — but a final visual scan of the live shelf is the UAT plan's own explicit end-of-phase check (G-01-5)."
+  - test: "Re-run UAT Test 3 (game detail page gallery swap, no-BGG-enrichment game rendering) and Test 4 (loading-skeleton layout stability), both of which were skipped in the prior UAT session because the CSP img-src bug (G-01-1) blocked all images at the time."
+    expected: "Both tests can now run to completion since G-01-1 was resolved in a prior session; no new regressions."
+    why_human: "These are pre-existing UAT items from 01-UAT.md that were never actually executed (marked `skipped`, not `pass`) — this verification did not re-run them since they fall outside this session's 3 gap-closure plans' scope, but they remain open UAT debt that should be closed before the phase is considered fully human-verified."
+gaps: []
 ---
 
-# Phase 1: Catalog v1 Verification Report
+# Phase 1: Catalog v1 Verification Report (Gap-Closure Re-Verification)
 
-**Phase Goal:** Members can browse, filter, sort, and search a public catalog of ~400 games, with UX
-that teaches complexity instead of assuming hobbyist vocabulary.
+**Phase Goal:** A member can browse the club's curated ~400-game catalog on a working, deployed
+catalog LiveView — every game shown with the visual and vocabulary cues (weight bands, plain-Spanish
+editorial tags, mechanics) that teach board-game complexity to a new/casual player, per PROJECT.md's
+core value statement.
 
-**Verified:** 2026-08-11
+**Verified:** 2026-08-18
 **Status:** human_needed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — this run closes three gap-closure plans (01-07, 01-08, 01-09) executed on
+top of the already-verified 01-01..01-06 base, addressing 01-UAT.md's `gap_id`s G-01-2 through G-01-7
+(G-01-1 was already resolved and confirmed in the prior UAT session).
 
 ## Goal Achievement
 
-All five ROADMAP.md success criteria are implemented, wired, and independently confirmed against a
-live local server backed by the real 434-game seeded database — not just unit-test assertions and
-not just SUMMARY.md claims. Every truth below was re-derived from the actual codebase and, where
-possible, from a running `mix phx.server` instance and direct `psql`/`mix run` queries against the
-real dev database (434 rows, seeded from the club's real `ludoteca.csv`).
+The 5 ROADMAP.md success criteria verified in the prior 01-VERIFICATION.md (2026-08-11) remain intact
+— this session re-confirmed the base catalog (browse/filter/search/sort/complexity-teaching/editorial
+tags/own-hosted images) is unaffected by 01-07/08/09's changes (full `mix test` suite: 163 tests, 0
+failures, up from the prior 140). This report focuses on independently re-verifying the 6 gap-closure
+claims against the actual codebase, not trusting 01-07/08/09-SUMMARY.md's claims.
 
-### Observable Truths (ROADMAP.md Success Criteria)
+### Gap-Closure Verification (G-01-2 through G-01-7)
 
-| # | Truth | Status | Evidence |
-|---|-------|--------|----------|
-| 1 | Member can browse the full ~400-game catalog as image-forward carousels/cards, no account required | ✓ VERIFIED | `psql`/`mix run`: `games` table has 434 rows. Live `curl http://localhost:4000/` (unauthenticated, no login) returns 200 with 72 `card bg-base-200` elements in the disconnected render and the 8 fixed carousel-row titles wired via `Catalog.list_carousel_rows/0`. `CatalogLive.Index` mounts on the `:browser` pipeline with no auth plug (`grep -c 'PageController' router.ex` = 0; `live "/", CatalogLive.Index`). |
-| 2 | Member can filter by player count, playtime, category/mechanic/theme, and minimum age, and sort by playtime or complexity | ✓ VERIFIED | `Catalog.filter_games/1` (`lib/pukllay_club/catalog.ex`) composes `:players`, `:max_playtime`, `:min_age`, `:mechanics`, `:themes`, `:weight_bands`, `:sort` into one Ecto pipeline. `mix test test/pukllay_club/catalog_test.exs` (34 tests) passes, including explicit OR-within-facet vs AND-across-facets assertions and `sort: :playtime_asc`/`:complexity_desc` ordering tests with nulls-last. Live HTML confirms the `Filtros` trigger, drawer (`drawer-side` present 3x), and sort control render on the page. |
-| 3 | Member can search the catalog by keyword (title, designer, publisher) | ✓ VERIFIED | `filter_games/1` uses `fragment("? @@ websearch_to_tsquery('spanish_unaccent', ?)", g.search_vector, ^term)`. Live `mix run` query against the real DB: `websearch_to_tsquery('spanish_unaccent','codigo')` (no accent) matches **both** `"Descifra el código"` and `"Código Seceto Duo"` — accent-insensitive search proven against real seeded data, not a fixture. Search box with placeholder `Busca por título, autor o editorial…` renders on the live page. |
-| 4 | Each game displays a plain-Spanish weight-band descriptor and plain-Spanish mechanic/theme chips instead of a bare number or raw jargon | ✓ VERIFIED | Live detail page for game id 208 (Alhambra) renders `badge badge-secondary">Descubre el hobby` plus the descriptor `"Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez."` and Spanish mechanic chips (`Domina zonas`, `Gestión de mano`, `Elige y pasa`, `Colecciona sets`, `Coloca losetas`, `Construye ciudades`) — no raw BGG English term. `grep -rc 'bgg_weight' lib/pukllay_club_web/` shows the only occurrence is a moduledoc comment in `game_chips.ex` explaining the rule, not a template render. `Vocabulary.mechanic_options()` = 35, `theme_options()` = 22 confirmed live via `mix run`. |
-| 5 | Each game shows the club's own resized cover image and any editorial "club favorite"/"beginner-friendly" tag from the Excel catalog | ✓ VERIFIED | Live detail page for game id 6249 renders `<img src="https://pub-8f053d9e82db4d8eb43b5666a37546c4.r2.dev/games/6249/cover-large.webp">` (confirmed fetchable: `curl` returns `200 image/webp`) and 3 gallery images, all on the club's own R2 host. `grep` across both live pages found **zero** `geekdo-images`/`boardgamegeek.com` references. Live detail page for game id 219 ("Sky Team") renders all three of `#CreaConexiones`, `#EquipoGanador`, `#DuelosMemorables` verbatim, matching its DB row. |
+| Gap | Claim (SUMMARY) | Independent Verification | Status |
+|-----|------------------|---------------------------|--------|
+| G-01-2 | Weight-band badge box grows for a wrapped label instead of bleeding into the title | `lib/pukllay_club_web/components/game_chips.ex:32` renders exactly `badge badge-secondary badge-lg h-auto whitespace-normal py-1 text-center leading-tight`. `test/pukllay_club_web/components/game_chips_test.exs` asserts `badge-lg`/`h-auto` present (passes). Live `curl http://localhost:4000/juegos/208` (detail page, no skeleton) confirms this exact class string renders server-side against the real seeded DB. | ✓ VERIFIED (present + wired + tested); pixel-level non-overlap needs a browser — routed to human verification |
+| G-01-3 | Carousel rails get persistent, self-hiding prev/next scroll controls; root cause reclassified as by-design, not a grid bug | `carousel_row.ex` renders `data-scroll="prev"`/`"next"` buttons plus a `.CarouselScroll` `Phoenix.LiveView.ColocatedHook`. `mix assets.build` confirms the hook is bundled into `priv/static/assets/js/app.js` (1 occurrence), not inlined — `git diff --stat assets/js/app.js config/config.exs` empty, matching the plan's own constraint. `mix test test/pukllay_club_web/live/catalog_live_test.exs` asserts the rail marker + both `data-scroll` controls + no inline `<script>` (passes). `@carousel_limit` unchanged at 20 (confirmed in `catalog.ex`). | ✓ VERIFIED (present + wired + tested); click-to-scroll interaction and the reclassification question itself require a human — routed to human verification |
+| G-01-4 | All 8 carousel rows get a distinct subtitle; hero row ranked by color; main grid gets its own titled section | `carousel_row.ex` renders `<h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>` plus a conditional `<p class="text-neutral text-sm">{@subtitle}</p>`. `catalog_live/index.ex` defines `row_variant/1` (only `:destacados_del_club` → `:hero`) and `row_subtitle/1` with a real clause for all 8 row keys (6 reused from `Vocabulary.editorial_tags/0`/`weight_band/1`, 2 newly authored, both explicitly flagged as unreviewed in 01-08-SUMMARY.md). Main grid header block (`El catálogo completo` / `Resultados`, state-dependent via `filters_active?/1`) confirmed at `index.ex:344`. `mix test` covers hero-color assertion, weight-band-subtitle assertion, and both grid-heading states (passes). | ✓ VERIFIED (present + wired + tested); perceptual "reads as distinct sections" and Spanish copy-tone judgment are human calls — routed to human verification |
+| G-01-5 | `games.is_expansion` column added, seed-time-derived + migration-backfilled, `recent_query/0` excludes it | `priv/repo/migrations/20260818222551_add_games_is_expansion.exs` adds the column and backfills via literal-value SQL (`ILIKE '%(expa%'`, `'%expansi%'`, `'%promo%'`, plus `csv_row = ANY(ARRAY[414,415,417,421])`) mirroring `PukllayClub.Catalog.Seed.ExpansionClassifier.expansion?/2`. Live `mix run -e` query against the real dev DB (434 rows, same DB the prior verification used): `is_expansion = true` count = **26**, matching the club-reviewed count in `catalog_seed_report.md` and 01-UAT.md Test 5 exactly. `catalog.ex`'s `recent_query/0` now has `where: g.is_expansion == false`; `filter_games/1`/`count_games/1` confirmed unchanged (no `is_expansion` filter). `mix test test/pukllay_club/catalog/seed/expansion_classifier_test.exs test/pukllay_club/catalog_test.exs` (regression asserting the recency row excludes expansions, the other 7 rows are unaffected, and expansions remain searchable) all pass. | ✓ VERIFIED (present + wired + tested + live-DB-confirmed) |
+| G-01-6 | Three visually ranked chip tiers (large primary badge > accent secondary chips > neutral tertiary chips), grouped under one wrapper, editorial row capped | `game_card.ex`'s `card-body` renders title → `GameChips.weight_band_badge` (`badge-lg`) → a `<div class="space-y-1">` wrapping `GameChips.editorial_tags tags={@game.tags} limit={2}` and `GameChips.chip_row terms={@mechanic_labels} limit={4}` → card-actions, exactly as claimed. `editorial_tags/1` implements the `limit`/`+N` overflow pattern identically to `chip_row/1`'s existing pattern (confirmed by direct source read). `01-UI-SPEC.md:244` carries the new "Editorial hashtag chips on card" overflow row. `mix test` (`game_chips_test.exs`, `catalog_live_test.exs`) covers capped/uncapped editorial rendering and the `badge-lg` grid assertion (passes). | ✓ VERIFIED (present + wired + tested); visual "reads as hierarchy" is a human perceptual call — routed to human verification |
+| G-01-7 | Single focus ring on every plain `.input`/`.select`/`.textarea` app-wide | `grep -n 'outline-hidden' lib/pukllay_club_web/components/core_components.ex` confirms `focus:outline-hidden focus-within:outline-hidden` on all 3 branches (`select`, `textarea`, catch-all `input`) at lines 249/273/296; the raw sort `<select>` in `catalog_live/index.ex` carries the same tokens. `mix assets.build` confirms 2 `outline-hidden` occurrences compiled into `priv/static/assets/css/app.css`. Border-color/box-shadow ring left untouched (no `border-color`/`box-shadow`/`ring-*` override added — confirmed by diff-reading the 3 branches). Full `mix test` suite green (163/163). Code review (01-REVIEW.md, IN-01) notes `focus-within:outline-hidden` is dead-but-harmless on these leaf elements (no focusable descendants), not a functional defect. | ✓ VERIFIED (present + wired); actual single-vs-double-ring appearance needs a browser — routed to human verification |
 
-**Score:** 5/5 roadmap success criteria verified.
+**Score:** 6/6 gap-closure claims independently confirmed present, substantive, wired, and covered by
+passing automated tests. None marked FAILED. All 6 nonetheless carry a genuine visual/perceptual
+component that only a real browser can confirm — consistent with how the prior 01-VERIFICATION.md
+(2026-08-11) treated equivalent visual claims, and consistent with each plan's own explicit
+`<human-check>` blocks (per `human_verify_mode: end-of-phase`).
 
-### Plan-Level Must-Haves — Aggregate Verification
-
-Each plan's frontmatter `must_haves.truths` was checked against the codebase in addition to the 5
-roadmap criteria above (per the merge rule, plan truths add detail, never reduce roadmap scope).
-
-| Plan | Truths | Status | Key independent evidence (this verification, not SUMMARY claims) |
-|------|--------|--------|--------------------------------------------------------------------|
-| 01-01 (prerequisites) | 3/3 | ✓ VERIFIED | `mix compile --warnings-as-errors` exits 0 with 5 new deps resolved; `git ls-files config/dev.secret.exs` empty, `git check-ignore` succeeds; `Credentials` module exists with `fetch!/0`/`redacted/1`/`r2_object_url/2`. |
-| 01-02 (brand identity) | 5/5 | ✓ VERIFIED | `grep -c 'oklch(' assets/css/app.css` = 0; `#3D096D`/`#A97FD1` present; `mix assets.build` succeeds; `lang="es"` in `root.html.heex`; 6 self-hosted woff2 fonts on disk, zero `fonts.googleapis.com`/`fonts.gstatic.com` refs in `assets/`/`lib/`. Visual legibility of both themes deferred to human check (see below). |
-| 01-03 (tracer) | 5/5 | ✓ VERIFIED | Live DB: 434 rows now present (tracer's 1-row proof was superseded and re-verified by 01-04's full load); `games.csv_row` has a unique index, `games.bgg_id` does not (`\d games` equivalent confirmed via schema/migration read); no BGG-hosted `cover_url` in DB (`select count(*) from games where cover_url like '%geekdo%' or cover_url like '%boardgamegeek%'` — proven 0 via 01-04's own acceptance criteria, re-confirmed live via rendered-page grep in this verification). |
-| 01-04 (full seed + search) | 8/8 | ✓ VERIFIED | Live `mix run` query: `count(*) from games` = 434; `count(*) where bgg_id = 163412` = 2 (D-19 duplicate survives); `count(*) where weight_band is not null` = 408 (matches plan's 377+31 math exactly); accent-insensitive search proven live (see SC #3 above); `catalog_seed_report.md` committed with 41/1/11/46(20+26)/8/39 counts, independently cross-checked against the live DB counts above. |
-| 01-05 (browse/filter/search/sort) | 13/15 fully verified; 2/15 present-but-visually-unconfirmed | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED (2 backstop truths) | 13 truths (filtering, OR/AND facet logic, search+filter composition, sort, carousel order/absence-when-filtered, empty/error states, drawer 44px classes) verified via `mix test` (140/140 passing) plus live HTML inspection. The 2 `verification: backstop` truths (grid/carousel loading skeletons) have markup present at the correct volume (354/48 occurrences on a live disconnected render, matching 01-05-SUMMARY's own count) but true "no layout shift" needs a real browser paint — routed to human verification, not marked FAILED. |
-| 01-06 (complexity UX, detail page, CSP) | 11/11 | ✓ VERIFIED | Live evidence for weight bands, chips, editorial tags, gallery, and 404 handling (see SC #4/#5 above and the CSP section below). `mix test` includes dedicated CSP header assertions. |
-
-### Required Artifacts
-
-All artifacts listed across all 6 plans' `must_haves.artifacts` exist on disk and are substantive
-(not stubs — verified by line count and direct content inspection, not just existence):
+### Required Artifacts (this session's plans)
 
 | Artifact | Status | Details |
 |----------|--------|---------|
-| `lib/pukllay_club/catalog/seed/credentials.ex` | ✓ VERIFIED | 131 lines; `fetch!/0`, `redacted/1`, `r2_object_url/2` all present and tested |
-| `lib/pukllay_club/catalog.ex` | ✓ VERIFIED | 305 lines; `list_games/1`, `upsert_game!/1`, `filter_games/1`, `count_games/1`, `list_carousel_rows/0`, `get_game!/1` |
-| `lib/pukllay_club/catalog/game.ex` | ✓ VERIFIED | 92 lines; full schema matching the 25-column migration |
-| `lib/pukllay_club/catalog/seed/csv_import.ex`, `bgg_client.ex`, `image_pipeline.ex`, `r2_storage.ex` | ✓ VERIFIED | 56/132/182/79 lines; each with dedicated passing unit test files |
-| `lib/mix/tasks/catalog.seed.ex` | ✓ VERIFIED | 312 lines; `--limit`, `--dry-run`, `--report-only` flags all present |
-| `lib/pukllay_club_web/live/catalog_live/index.ex`, `show.ex` | ✓ VERIFIED | 328/141 lines; both mount unauthenticated, both live-tested |
-| `lib/pukllay_club_web/components/game_card.ex`, `game_chips.ex`, `filter_drawer.ex`, `carousel_row.ex` | ✓ VERIFIED | 81/79/139/72 lines; all composed correctly per live-page inspection |
-| `lib/pukllay_club/catalog/vocabulary.ex` | ✓ VERIFIED | 188 lines; 35 mechanics, 32 themes, 3 weight bands, 3 editorial tags — confirmed live via `mix run` |
-| `lib/pukllay_club/catalog/seed/hashtag_normalizer.ex`, `report.ex` | ✓ VERIFIED | 148/292 lines; three-branch resolution and markdown report generation both tested |
-| `lib/pukllay_club_web/csp.ex` | ✓ VERIFIED | 46 lines; `policy/0` derives `img-src` from `:image_origin` config, confirmed live via response header |
-| `priv/repo/seed_data/catalog_seed_report.md` | ✓ VERIFIED | 422 lines; real run output, counts cross-checked against live DB |
-| `docs/runbooks/catalog-seed.md` | ✓ VERIFIED | 101 lines; documents the SSH-tunnel production run procedure |
+| `lib/pukllay_club_web/components/game_chips.ex` | ✓ VERIFIED | 97 lines; three-tier badge treatment (`badge-lg h-auto` primary, `badge-sm badge-accent` capped editorial, unchanged `chip_row/1` tertiary) confirmed by direct read, not just diff |
+| `lib/pukllay_club_web/components/game_card.ex` | ✓ VERIFIED | 97 lines; title / primary badge / grouped secondary block (`space-y-1`) / actions — 4 regions confirmed |
+| `lib/pukllay_club_web/components/core_components.ex` | ✓ VERIFIED | `focus:outline-hidden focus-within:outline-hidden` present on select/textarea/catch-all `input/1` branches (3 occurrences, grepped directly) |
+| `.planning/phases/01-catalog-v1/01-UI-SPEC.md` | ✓ VERIFIED | New "Editorial hashtag chips on card" overflow row present at line 244 |
+| `lib/pukllay_club_web/components/carousel_row.ex` | ✓ VERIFIED | 148 lines; `variant`/`subtitle` attrs, matching skeleton footprint (2 skeleton bars added), colocated `.CarouselScroll` hook with no `innerHTML`/`eval` |
+| `lib/pukllay_club_web/live/catalog_live/index.ex` | ✓ VERIFIED | `row_variant/1`, `row_subtitle/1` (8 clauses + fallback), `main_grid_heading/1`, `alias PukllayClub.Catalog.Vocabulary` all present |
+| `lib/pukllay_club/catalog/seed/expansion_classifier.ex` | ✓ VERIFIED | 75 lines; `expansion?/2` with 3-marker list + 4-row reviewed-override list, handles `nil` name without raising |
+| `priv/repo/migrations/20260818222551_add_games_is_expansion.exs` | ✓ VERIFIED | Adds column + literal-SQL backfill mirroring the classifier; reversible `execute/2` |
+| `lib/pukllay_club/catalog/game.ex` | ✓ VERIFIED | `field :is_expansion, :boolean, default: false` cast in `seed_changeset/2` |
+| `lib/mix/tasks/catalog.seed.ex` | ✓ VERIFIED | `ExpansionClassifier` wired into both `build_rows_and_report/1`'s row map and `base_attrs/2` |
+| `lib/pukllay_club/catalog.ex` | ✓ VERIFIED | `recent_query/0` filters `is_expansion == false`; `filter_games/1`/`count_games/1`/other 6 carousel rows unchanged |
+| `test/pukllay_club/catalog/seed/expansion_classifier_test.exs` | ✓ VERIFIED | Real-CSV regression asserting exactly 26 rows in the 410..435 range |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|----|--------|---------|
-| `Credentials.r2_object_url/2` | every stored image URL | single mint point | ✓ WIRED | Live-rendered pages contain zero `geekdo`/`boardgamegeek` image references; all cover/gallery URLs observed start with the R2 host |
-| `games.csv_row` unique index | seed idempotency | upsert conflict target | ✓ WIRED | `bgg_id = 163412` has 2 surviving rows in the live DB (D-19); re-seed behavior documented and tested in 01-04 |
-| `Vocabulary` module | `GameChips`/`FilterDrawer` chip & facet rendering | single translation point | ✓ WIRED | Live detail-page chips are 100% Spanish; `grep -rc 'bgg_weight' lib/pukllay_club_web/` shows only a doc comment, never a template render |
-| `PukllayClubWeb.CSP.policy/0` | `:image_origin` config | shared config key, not hardcoded host | ✓ WIRED | Live response header: `content-security-policy: ... img-src 'self' data: https://images.test.invalid ...` — origin traces to the same config key `Credentials`/seed pipeline use |
-| `assets/js/theme.js` + `assets/js/app.js` (external, post-CR-01-fix) | `script-src 'self'` (no `unsafe-inline`) | esbuild dual entry point | ✓ WIRED | `mix assets.build` output shows both `priv/static/assets/js/app.js` (302.9kb) and `.../theme.js` (1.2kb) built; `root.html.heex` contains zero inline `<script>` blocks; `game_card.ex`'s cover `<img>` uses `class="... js-cover-fallback"` (no `onerror=` attribute), with `app.js` installing a capture-phase delegated `error` listener — confirmed by reading both files directly, not just the diff |
-| Router `:browser` pipeline | `CatalogLive.Index`, `CatalogLive.Show` | shared pipeline, no auth plug | ✓ WIRED | `grep -c 'PageController' router.ex` = 0; both `live "/"` and `live "/juegos/:id"` routes confirmed in the same `scope "/", PukllayClubWeb do pipe_through :browser end` block |
-
-### CR-01 Fix Verification (Critical Issue from 01-REVIEW.md)
-
-01-REVIEW.md flagged that `PukllayClubWeb.CSP.policy/0` sets `script-src 'self'` with **no**
-`'unsafe-inline'`, which would silently break both the inline theme-toggle `<script>` and the
-`GameCard` inline `onerror` handler in a real CSP-enforcing browser. Commit `d646fba`
-("fix(01-06): externalize theme script and cover onerror to satisfy strict CSP") claims to fix this.
-Independently re-verified in this session (not re-trusting the commit message):
-
-- `lib/pukllay_club_web/components/layouts/root.html.heex` contains **zero** inline `<script>` blocks
-  — both `app.js` and `theme.js` are loaded via external `src=` attributes.
-- `assets/js/theme.js` exists (34 lines) and is a faithful move of the original inline IIFE (same
-  `data-theme`/`localStorage`/`phx:set-theme` logic), loaded non-deferred so no flash-of-wrong-theme
-  regression.
-- `config/config.exs`'s esbuild args list **both** `js/app.js js/theme.js` as entry points.
-- `mix assets.build` was run live in this session and produced both
-  `priv/static/assets/js/app.js` (302.9kb) and `priv/static/assets/js/theme.js` (1.2kb) — the build
-  actually works, not just the source diff.
-- `game_card.ex`'s cover `<img>` no longer has an `onerror=` attribute; it carries
-  `class="... js-cover-fallback"` instead, and `assets/js/app.js` installs a capture-phase delegated
-  `error` listener matching the original fallback behavior (hide broken image, reveal placeholder
-  sibling).
-- `script-src` in `lib/pukllay_club_web/csp.ex` remains strictly `'self'` — the fix closes the gap by
-  moving script out of inline position, not by weakening the policy. Confirmed live: the response
-  header from a running `mix phx.server` shows `script-src 'self'` with no `unsafe-inline`/nonce.
-- `test/pukllay_club_web/live/catalog_live_test.exs` was updated to assert `js-cover-fallback`
-  instead of `onerror=` and passes.
-
-**Verdict: CR-01 fix holds.** Not re-flagged as a gap.
-
-### Remaining 01-REVIEW.md Findings (Advisory, Non-Blocking Per Task Instructions)
-
-These 4 warnings + 2 info findings remain unaddressed in the codebase. Confirmed still present, not
-re-verified as fixed, and — per this verification's explicit instructions — **not treated as
-phase-blocking** on their own:
-
-| ID | Finding | Confirmed still present? |
-|----|---------|---------------------------|
-| WR-01 | `classify_weight/4`'s case isn't exhaustive over its two independently-computed inputs (could `CaseClauseError` on a future divergence) | Not re-checked line-by-line; no new tests added since review — presumed still present |
-| WR-02 | `parse_int/1` in the seed task raises on a non-numeric, non-blank cell instead of reporting it | Not re-checked; presumed still present (seed task is one-time/dev-only, low production risk) |
-| WR-03 | `CatalogLive.Index.safe_filter_games/1` swallows exceptions with no logging | `lib/pukllay_club_web/live/catalog_live/index.ex` still shows a bare `rescue _error -> :error` pattern consistent with the review's citation |
-| WR-04 | CSP `connect-src 'self' ws: wss:` bare-scheme sources widen the policy unnecessarily | Confirmed still present: live response header shows `connect-src 'self' ws: wss:` unchanged |
-| IN-01 | `select_cover/1` computed twice per row (redundant, not incorrect) | Not re-checked; cosmetic |
-| IN-02 | `HashtagNormalizer.truthy?/1`'s name invites boolean misuse | Not re-checked; cosmetic |
-
-None of these affect the 5 roadmap success criteria or any plan's must-have truths. Recorded here for
-traceability, not as gaps.
-
-### Requirements Coverage
-
-| Requirement | Source Plan(s) | Description | Status | Evidence |
-|-------------|-----------------|--------------|--------|----------|
-| CATALOG-01 | 01-02, 01-03, 01-04, 01-05 | Browse full catalog, cover images, carousels/cards, LiveView streams | ✓ SATISFIED | `stream/3` used in `CatalogLive.Index`; 434 games live; carousel rows render |
-| CATALOG-02 | 01-05 | Filter by player count, playtime, category/mechanic/theme, min age (text[]+GIN) | ✓ SATISFIED | `filter_games/1` composed pipeline; GIN indexes on `mechanics`/`themes`/`tags` confirmed in migration |
-| CATALOG-03 | 01-04, 01-05 | Search by keyword via tsvector | ✓ SATISFIED | Live accent-insensitive search proven against real seeded titles |
-| CATALOG-04 | 01-05 | Sort by playtime, complexity, other scalar fields | ✓ SATISFIED | 6 sort keys implemented, nulls-last tested |
-| CATALOG-05 | 01-04, 01-06 | Plain-Spanish weight-band + descriptor, not a bare number | ✓ SATISFIED | Live detail page renders label + descriptor; `bgg_weight` never templated |
-| CATALOG-06 | 01-04, 01-05, 01-06 | Plain-Spanish mechanic/theme chips, curated vocabulary | ✓ SATISFIED | Live chips are 100% Spanish; 35/32-term glossary reconciled against real seed data |
-| CATALOG-07 | 01-04, 01-06 | Club editorial tags as "club favorite"/"beginner-friendly" signal | ✓ SATISFIED | All 6 hashtags render verbatim, uniform chip treatment, live-confirmed on a real game |
-| CATALOG-08 | 01-03 | Fully public, no account required | ✓ SATISFIED | No auth plug on either catalog route; live unauthenticated `curl` returns 200 |
-| CATALOG-09 | 01-01, 01-03, 01-04, 01-06 | Club's own resized images, never hotlinked | ✓ SATISFIED | Zero BGG-hosted image references anywhere rendered; CSP `img-src` also scoped away from BGG hosts |
-
-**No orphaned requirements** — every CATALOG-0N id declared across the 6 plans' frontmatter matches
-REQUIREMENTS.md's Phase 1 traceability table exactly (CATALOG-01 through CATALOG-09).
-
-**Documentation-sync note (not a functional gap):** `.planning/REQUIREMENTS.md`'s checkboxes and
-Traceability table still show CATALOG-05/06/07 as `[ ]` / "Pending" even though this verification
-confirms all three are implemented, tested, and live-demonstrated. This is a stale-tracking-doc issue
-(the phase-completion doc-sync step has not run yet), not evidence the features are missing —
-recommend updating those 3 rows to `[x]` / "Complete" as part of closing this phase.
-
-### Anti-Patterns Found
-
-No new blocker-level anti-patterns found. Debt-marker scan (`TBD`/`FIXME`/`XXX`) across all
-phase-modified files returned none referencing unresolved work without a tracked follow-up. The
-0 `TODO`/`HACK`/`PLACEHOLDER` scan across the same files was likewise clean of unreferenced markers.
-The 4 warnings + 2 info items from 01-REVIEW.md (table above) are style/robustness debt, not
-placeholders or stubs, and are explicitly scoped as non-blocking per this verification's task
-instructions.
+| `GameCard.game_card/1` | `GameChips.editorial_tags/1` | `limit={2}` attr | ✓ WIRED | Confirmed at `game_card.ex:85`; `CatalogLive.Show` (detail page) still calls `editorial_tags` with no `limit`, confirmed unchanged and `catalog_show_test.exs` (11 tests) still passes uncapped |
+| `CoreComponents.input/1` catch-all branch | search field at `catalog_live/index.ex` | inherits default class | ✓ WIRED | Search field passes no `:class`, confirmed by direct read of the call site |
+| `CarouselRow.carousel_row/1` `phx-hook=".CarouselScroll"` | `assets/js/app.js`'s colocated-hooks import | zero `app.js` edits | ✓ WIRED | `git diff --stat assets/js/app.js config/config.exs` empty (confirmed); hook appears once in the built `app.js` bundle |
+| `CatalogLive.Index.row_subtitle/1` | `PukllayClub.Catalog.Vocabulary` | `editorial_tags/0`/`weight_band/1` lookups | ✓ WIRED | 6 of 8 clauses call into `Vocabulary`, confirmed by direct source read; the 2 non-Vocabulary clauses are page-level authored strings, explicitly documented as such |
+| `ExpansionClassifier` marker list | `add_games_is_expansion` migration's `ILIKE` backfill | identical literal rules | ✓ WIRED | Migration's SQL (`'%(expa%'`, `'%expansi%'`, `'%promo%'`, override array `[414,415,417,421]`) matches the classifier's `@markers`/`@reviewed_overrides` attributes exactly, confirmed by side-by-side read |
+| `Catalog.recent_query/0` | `CatalogLive.Index`'s `:recientemente_anadidos` row | `list_carousel_rows/0` | ✓ WIRED | Live DB query confirms 26/434 rows flagged; carousel row test confirms the flagged fixture is excluded while the base-game fixture is included |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full test suite passes | `MIX_ENV=test mix test` | 140 tests, 0 failures | ✓ PASS |
-| `mix quality` gate (format/credo/sobelow/hex.audit/deps.audit) | `mix format --check-formatted && mix credo --strict && mix sobelow --config && mix hex.audit && mix deps.audit` | All exit 0; Credo: 1 low-severity style suggestion (pre-existing, unrelated to this phase); Sobelow: 4 low-confidence `Traversal.FileModule` findings on dev-only seed scripts (pre-existing, not new); no `Config.CSP` finding surfaces (exemption + real header coexist correctly) | ✓ PASS |
-| Asset build produces both `app.js` and `theme.js` (CR-01 fix) | `mix assets.build` | `app.js` 302.9kb, `theme.js` 1.2kb both built | ✓ PASS |
-| Live server: home page unauthenticated | `curl -sI http://localhost:4000/` | `200 OK` | ✓ PASS |
-| Live server: CSP header present and scoped | `curl -sI http://localhost:4000/` | `content-security-policy: default-src 'self'; img-src 'self' data: https://images.test.invalid; ... script-src 'self'; ...` | ✓ PASS |
-| Live server: detail page for a real enriched game | `curl http://localhost:4000/juegos/208` (Alhambra) | Weight band "Descubre el hobby" + descriptor + Spanish mechanic chips render | ✓ PASS |
-| Live server: detail page for a game with editorial tags | `curl http://localhost:4000/juegos/219` (Sky Team) | All 3 club hashtags render verbatim | ✓ PASS |
-| Live server: detail page for a no-BGG-ID game (D-18) | `curl http://localhost:4000/juegos/79` (discordia) | 200, brand placeholder, no crash | ✓ PASS |
-| Live server: 404 for nonexistent game id | `curl -o /dev/null -w '%{http_code}' http://localhost:4000/juegos/999999999` | `404` | ✓ PASS |
-| R2-hosted image actually fetchable | `curl -I https://pub-8f05...r2.dev/games/6249/cover-large.webp` | `200 image/webp` | ✓ PASS |
-| Accent-insensitive Spanish search against real data | `mix run -e` querying `websearch_to_tsquery('spanish_unaccent','codigo')` | Matches `"Descifra el código"` and `"Código Seceto Duo"` | ✓ PASS |
-| Duplicate BGG_ID 163412 both rows survive (D-19) | `mix run -e` DB count | 2 | ✓ PASS |
-| Weight-band coverage matches plan math (D-05/D-20) | `mix run -e` DB count | 408 (= 377 hashtag + 31 tie-break, per 01-04-PLAN.md) | ✓ PASS |
-| Production deploy state | `curl --compressed https://pukllay.club/` | Still Phase 0's stock `mix phx.new` welcome page (`lang="en"`, old inline theme script, generated marketing links) | ℹ️ NOT YET SHIPPED (see Human Verification) |
+| Full test suite (up from 140 to 163 tests since prior verification) | `mix test --warnings-as-errors` | 163 tests, 0 failures | ✓ PASS |
+| `mix quality` gate components | `mix format --check-formatted`, `mix credo --strict`, `mix sobelow --config` | All exit 0; Credo: same 1 pre-existing low-severity suggestion as prior verification; Sobelow: same 4 pre-existing low-confidence `Traversal.FileModule` findings on dev-only seed scripts, no new findings | ✓ PASS |
+| Migrations up to date | `mix ecto.migrate` | "Migrations already up" (already applied) | ✓ PASS |
+| `is_expansion` backfill count matches club-reviewed set | `mix run -e` live DB query | `flagged=26`, `total=434` | ✓ PASS |
+| Asset build produces the focus-ring CSS and the bundled scroll hook | `mix assets.build` | `outline-hidden` × 2 in `app.css`; `CarouselScroll` × 1 in `app.js` (304.2kb) | ✓ PASS |
+| Detail page live-renders the updated badge class (real seeded DB) | `curl http://localhost:4000/juegos/208` | `badge badge-secondary badge-lg h-auto whitespace-normal py-1 text-center leading-tight` present | ✓ PASS |
+| Detail page unaffected by the tag cap (still uncapped) | `mix test test/pukllay_club_web/live/catalog_show_test.exs` | 11 tests, 0 failures | ✓ PASS |
+| No debt markers in this session's modified files | `grep -nE 'TBD\|FIXME\|XXX\|TODO\|HACK\|PLACEHOLDER'` across 9 modified/created files | 0 matches | ✓ PASS |
 
 ### Probe Execution
 
-No `scripts/*/tests/probe-*.sh` convention exists in this project and none is declared in any Phase 1
-plan or SUMMARY — SKIPPED (no runnable probe entry points in this stack; verification instead used
-direct `mix test`, `mix run -e`, and live `curl` checks against a real `mix phx.server` instance,
-which is the load-bearing evidence throughout this report).
+No `scripts/*/tests/probe-*.sh` convention exists in this project — SKIPPED, consistent with the prior
+verification (verification instead used `mix test`, `mix run -e`, and live `curl` against a real
+`mix phx.server` instance).
+
+### Code Review Findings (01-REVIEW.md, this session's diff only)
+
+`gsd-code-reviewer` found 0 critical, 2 warning, 2 info findings across the 14 files these 3 plans
+touched. Independently spot-checked, both hold:
+
+- **WR-01** (non-blocking): `carousel_row.ex`'s scroll-controls wrapper statically carries both
+  `hidden` and `flex` classes simultaneously; the correct show/hide behavior depends on Tailwind v4's
+  alphabetical utility ordering (`.hidden` compiled after `.flex`) rather than the hook explicitly
+  toggling both classes. Confirmed present in the current CSS build. Functionally correct today, but
+  fragile to a future Tailwind internal-ordering change with no test coverage for the regression.
+- **WR-02** (non-blocking): the `limit={2}`/`limit={4}` caps in `game_card.ex` are bare literals, not
+  named module attributes, and the same card is reused at a narrower width by `CarouselRow`.
+  Cosmetic/maintainability, not a correctness defect.
+- **IN-01/IN-02**: both explicitly non-actionable per the review's own disposition (dead-but-harmless
+  CSS selector; a documented, tested trade-off in the expansion classifier's substring matching).
+
+None of these rise to a blocker — no data-integrity, security, or correctness defect was found, and
+all 4 are consistent with the "advisory, non-blocking" pattern the prior 01-VERIFICATION.md established
+for equivalent findings (WR-01..04/IN-01..02 from the original 01-REVIEW.md).
+
+### Requirements Coverage
+
+| Requirement | Source Plan(s) (this session) | Status | Evidence |
+|-------------|-------------------------------|--------|----------|
+| CATALOG-01 | 01-07, 01-08, 01-09 | ✓ SATISFIED | Browse/carousel/grid functionality unaffected and re-tested; `is_expansion` exclusion improves the recency shelf without breaking the base grid |
+| CATALOG-03 | 01-07 | ✓ SATISFIED | Search unaffected; expansions remain searchable (explicit regression test) |
+| CATALOG-05 | 01-07, 01-08 | ✓ SATISFIED | Weight-band badge overflow fix + weight-band descriptors now also surface as carousel-row subtitles |
+| CATALOG-06 | 01-07 | ✓ SATISFIED | Mechanic chip tier (`chip_row/1`) explicitly left byte-identical; unaffected |
+| CATALOG-07 | 01-07, 01-08 | ✓ SATISFIED | Editorial tag chips now capped + semantically styled; editorial-tag carousel rows unaffected in count/content |
+
+No orphaned requirements — all 5 IDs declared across 01-07/08/09's frontmatter (CATALOG-01, 03, 05, 06,
+07) are pre-existing Phase 1 requirements already covered by the base phase's requirements table; no
+new requirement IDs were introduced.
+
+**Documentation-sync note (pre-existing, not a new gap):** `.planning/REQUIREMENTS.md` still shows
+CATALOG-05/06/07 checkboxes as `[ ]`/pending in the source markdown table even though the traceability
+table at the bottom of the same file already marks them Complete — a stale-checkbox issue flagged by
+the prior verification, unrelated to this session's work.
+
+### Anti-Patterns Found
+
+No blocker-level anti-patterns in this session's 9 modified/created files. Debt-marker scan
+(`TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER`) returned zero matches. The `01-VOCABULARY.md` and
+`config/dev.exs` working-tree modifications visible in `git status` are **leftover uncommitted fixes
+from the prior interactive UAT session** (Test 5's transcription-artifact correction and G-01-1's
+already-resolved CSP fix comment update) — not part of this session's 3 gap-closure plans, already
+described in 01-UAT.md, and not a code defect. Flagged here only as repo hygiene: these should be
+committed (or reverted if intentionally scratch) before shipping, since an uncommitted change is not
+part of what a `git log`-based audit trail would show as "done."
 
 ## Gaps Summary
 
-No gaps found. All 5 ROADMAP.md success criteria and all 6 plans' must-have truths are implemented,
-wired, and independently re-confirmed against the actual codebase and a live local server — not
-trusted from SUMMARY.md claims alone. The one genuinely critical issue from code review (CR-01, CSP
-blocking inline script) was independently re-verified as fixed, holding under a real
-`mix assets.build` and a live response header check.
+No gaps found. All 6 UAT gap_ids this session claims to close (G-01-2 through G-01-7) are independently
+confirmed present in the codebase, substantively implemented (not stubs), correctly wired to their
+callers, and covered by passing automated tests — re-derived from source reads, live `mix run -e`
+database queries against the real 434-row dev DB, a live `curl` against a real `mix phx.server`
+instance, and a full `mix test` run (163/163 passing, up from 140), not trusted from 01-07/08/09-
+SUMMARY.md's claims alone.
 
-Status is `human_needed` rather than `passed` solely because of the 6 items in the frontmatter
-`human_verification` list above — all either genuinely require human eyes on a real browser
-(visual/interaction confirmation), are domain-acceptability judgment calls for the club (not code
-correctness), or are the not-yet-executed production deploy step (which this project's own workflow
-treats as a separate, later `/gsd-ship` action, not part of phase-goal codebase verification).
+Status is `human_needed` rather than `passed` because every one of these 6 gaps was originally reported
+via visual/perceptual browser observation (overlap, hierarchy, double focus ring, section
+distinguishability, scroll discoverability), and each plan's own `<human-check>` blocks (deliberately
+deferred to end-of-phase per `human_verify_mode: end-of-phase`) have not yet been executed against a
+real browser. Additionally, two items from the *original* 01-UAT.md session (Test 3: gallery
+swap/no-BGG-enrichment rendering; Test 4: loading-skeleton layout stability) were never actually run —
+they were marked `skipped` due to the now-resolved G-01-1 CSP bug, not `pass` — and remain open UAT
+debt independent of this session's 3 plans.
 
 ---
 
-_Verified: 2026-08-11_
+_Verified: 2026-08-18_
 _Verifier: Claude (gsd-verifier)_
