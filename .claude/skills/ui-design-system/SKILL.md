@@ -56,6 +56,33 @@ not leave a heading on the plain sans default.
   `CatalogLive.Show` relies on it (it declares no padding of its own) — stripping `<main>`'s
   padding is a separate, breaking change, not a cleanup.
 
+## Type hierarchy
+
+- Type scale: `font-display` for headings (h1/h2/h3, section labels), `font-sans` for body,
+  `text-sm` for muted/secondary — see Theme tokens above. Cap a single screen at 3 distinct
+  size/weight levels (heading, body, muted); reach for a 4th only with a specific reason.
+- Weight and color, not a new size, are the emphasis lever — reserve a size bump for a genuinely
+  larger content unit, since a large enough size gap still outranks weight alone.
+- Put the most important content top-left; users scan, they don't read top-to-bottom by default.
+- An over-wide `CoreComponents.table/1` column wraps and truncates — it is never dropped.
+- Numeric table columns right-align with consistent precision; identifier-like digit strings
+  (IDs, phone numbers) stay left-aligned as text, not treated as numeric data.
+
+## Affordance
+
+- Disabled vs hidden: disable a control only for a temporary mode active on the same screen;
+  hide a control that's permanently inapplicable. Prefer leaving it enabled and validating after
+  the attempt over disabling it beforehand.
+- Icon-only buttons are fine for fewer than 3 inline row actions; at 3 or more switch to a
+  labelled menu. `CoreComponents.icon/1` (`hero-*` names) and `button/1` are the components to
+  use for either case.
+- Hit-target minimum is `min-h-11` (see Spacing/typography scale above) — don't introduce a
+  second number here.
+- Hover is never the sole affordance for a control; touch devices have no hover state, so
+  anything revealed on hover needs a persistent fallback.
+- Action labels use a precise verb (e.g. `Eliminar`, not a generic `Aceptar`) so the
+  consequence — navigate, dismiss, or mutate — is predictable before the click.
+
 ## Component inventory — use these before writing new markup
 
 | Module | Function | Required attrs |
