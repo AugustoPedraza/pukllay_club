@@ -29,6 +29,7 @@ defmodule Mix.Tasks.Catalog.Seed do
   alias PukllayClub.Catalog.Seed.BggClient
   alias PukllayClub.Catalog.Seed.Credentials
   alias PukllayClub.Catalog.Seed.CsvImport
+  alias PukllayClub.Catalog.Seed.ExpansionClassifier
   alias PukllayClub.Catalog.Seed.HashtagNormalizer
   alias PukllayClub.Catalog.Seed.ImagePipeline
   alias PukllayClub.Catalog.Seed.Report
@@ -104,7 +105,8 @@ defmodule Mix.Tasks.Catalog.Seed do
         bgg_id: bgg_id,
         units: units,
         weight_band: weight_band,
-        tags: HashtagNormalizer.editorial_tags(fields)
+        tags: HashtagNormalizer.editorial_tags(fields),
+        is_expansion: ExpansionClassifier.expansion?(name, row_number)
       }
 
       {row, report}
@@ -248,7 +250,8 @@ defmodule Mix.Tasks.Catalog.Seed do
       units: row.units,
       enrichment_status: status,
       weight_band: row.weight_band,
-      tags: row.tags
+      tags: row.tags,
+      is_expansion: row.is_expansion
     }
   end
 

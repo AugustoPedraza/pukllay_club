@@ -38,6 +38,11 @@ defmodule PukllayClub.Catalog.Game do
     field :gallery_urls, {:array, :string}, default: []
     field :bgg_payload, :map
     field :enrichment_status, :string, default: "pending"
+    # Real, queryable expansion/promo flag (G-01-5) — derived at seed time
+    # by `PukllayClub.Catalog.Seed.ExpansionClassifier` and backfilled for
+    # pre-existing rows by the `add_games_is_expansion` migration. See that
+    # module's moduledoc for the marker + reviewed-override rules.
+    field :is_expansion, :boolean, default: false
     # Postgres-generated `tsvector` column (01-04 migration) — Ecto never
     # writes it (never cast in `seed_changeset/2`) and never loads it back
     # (`load_in_query: false` excludes it from normal SELECTs). Deliberately
@@ -83,7 +88,8 @@ defmodule PukllayClub.Catalog.Game do
       :cover_url,
       :gallery_urls,
       :bgg_payload,
-      :enrichment_status
+      :enrichment_status,
+      :is_expansion
     ])
     |> validate_required([:name, :csv_row])
     |> validate_inclusion(:enrichment_status, @enrichment_statuses)
