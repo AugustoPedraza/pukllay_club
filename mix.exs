@@ -11,7 +11,8 @@ defmodule PukllayClub.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      usage_rules: usage_rules()
     ]
   end
 
@@ -34,6 +35,23 @@ defmodule PukllayClub.MixProject do
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  # Config-driven usage_rules sync target (`mix rules.sync`): writes into the
+  # EXISTING hand-written AGENTS.md, never CLAUDE.md (usage_rules' own default).
+  # Only usage_rules' own rules (main + its elixir/otp builtin sub-rules) are
+  # inlined; every other dependency's usage rules are linked (not inlined) via
+  # the catch-all regex, which also picks up future deps automatically. The
+  # regex excludes `usage_rules` itself so it isn't resolved (and duplicated)
+  # a second time in link mode.
+  defp usage_rules do
+    [
+      file: "AGENTS.md",
+      usage_rules: [
+        {:usage_rules, sub_rules: ["elixir", "otp"]},
+        {~r/^(?!usage_rules$).+/, link: :markdown}
+      ]
+    ]
+  end
 
   # Specifies your project dependencies.
   #
@@ -68,6 +86,8 @@ defmodule PukllayClub.MixProject do
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:tidewave, "~> 0.8", only: :dev},
+      {:usage_rules, "~> 1.1", only: [:dev]},
+      {:igniter, "~> 0.6", only: [:dev]},
       {:sentry, "~> 13.0"},
       {:sweet_xml, "~> 0.7.5"},
       {:image, "~> 0.72.0"},
@@ -97,6 +117,7 @@ defmodule PukllayClub.MixProject do
         "phx.digest"
       ],
       precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"],
+      "rules.sync": ["usage_rules.sync"],
       quality: [
         "hex.audit",
         "deps.audit",
