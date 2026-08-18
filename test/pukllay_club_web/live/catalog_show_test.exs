@@ -166,5 +166,14 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         live(conn, ~p"/juegos/999999999")
       end
     end
+
+    test "renders inside its own max-w-4xl container, with no 672px ancestor cap", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "max-w-4xl"
+      refute html =~ "max-w-2xl"
+    end
   end
 end

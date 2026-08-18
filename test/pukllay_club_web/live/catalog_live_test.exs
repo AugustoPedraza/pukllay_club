@@ -118,6 +118,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       assert html =~ ~s(href="/juegos/#{game.id}")
     end
+
+    test "renders inside its own max-w-7xl container, with no 672px ancestor cap", %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "max-w-7xl"
+      refute html =~ "max-w-2xl"
+    end
   end
 
   describe "live filtering, search, sort, and pagination (D-12, D-14, D-15, CATALOG-02/03/04)" do
