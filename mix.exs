@@ -67,6 +67,7 @@ defmodule PukllayClub.MixProject do
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      {:tidewave, "~> 0.8", only: :dev},
       {:sentry, "~> 13.0"},
       {:sweet_xml, "~> 0.7.5"},
       {:image, "~> 0.72.0"},
