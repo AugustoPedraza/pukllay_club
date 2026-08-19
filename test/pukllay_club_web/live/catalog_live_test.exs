@@ -518,6 +518,75 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "Ver todo tile wired to real filter state (01-11)" do
+    test "clicking the tile on the tag-backed shelf renders only the tagged game and hides the shelves",
+         %{conn: conn} do
+      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
+      game_fixture(%{name: "Untagged Game", tags: []})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> element("button[phx-value-row=equipo_ganador]")
+        |> render_click()
+
+      grid = grid_html(html)
+      assert grid =~ "Equipo Game"
+      refute grid =~ "Untagged Game"
+      refute html =~ ~s(id="carousel-rows")
+    end
+
+    test "clicking the tile on the band-backed shelf renders only games in that band", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Experto Game", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> element("button[phx-value-row=nivel_experto]")
+        |> render_click()
+
+      grid = grid_html(html)
+      assert grid =~ "Experto Game"
+      refute grid =~ "Hobby Game"
+    end
+
+    test "clicking the tile on the recency shelf reorders the grid newest-first and leaves the shelves rendered",
+         %{conn: conn} do
+      game_fixture(%{name: "Old Game", tags: ["#CreaConexiones"], year_published: 1995})
+      game_fixture(%{name: "New Game", tags: ["#CreaConexiones"], year_published: 2023})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> element("button[phx-value-row=recientemente_anadidos]")
+        |> render_click()
+
+      grid = grid_html(html)
+      assert position(grid, "New Game") < position(grid, "Old Game")
+      assert html =~ ~s(id="carousel-rows")
+    end
+
+    test "an unrecognised row value leaves the result set unchanged rather than raising", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Untouched Game"})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before_count = card_count(html)
+
+      html2 = render_click(view, "see-all", %{"row" => "not-a-real-row"})
+
+      assert card_count(html2) == before_count
+      assert html2 =~ "Untouched Game"
+    end
+  end
+
   describe "Content-Security-Policy (T-01-28, closes Phase 0's deferred Sobelow Config.CSP finding)" do
     test "the response carries a content-security-policy header scoped to the configured image origin",
          %{conn: conn} do

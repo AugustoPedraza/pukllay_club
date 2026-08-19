@@ -247,6 +247,33 @@
   width: 240px;
 }
 
+/* .pk-see-all reuses .pk-poster-card for width — no second width rule
+   here — so the tile automatically tracks the hero and narrow-viewport
+   width steps declared on that one class. Only the fields that differ
+   from a card are styled here. */
+.pk-see-all {
+  border: 1px dashed var(--color-base-300);
+  background: var(--color-base-200);
+  border-radius: var(--radius-box);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.pk-see-all:hover {
+  background: var(--color-accent);
+  border-color: var(--color-primary);
+  border-style: solid;
+}
+
 .pk-facts-row {
   display: flex;
   align-items: center;
