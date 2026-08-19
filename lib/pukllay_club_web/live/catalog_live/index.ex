@@ -37,6 +37,17 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @page_size 24
   @skeleton_carousel_rows 8
 
+  # Label / row-key pairs for the sticky nav's shelf anchors (01-12), in
+  # the sketch's own order. Filtered against @carousel_rows at render time
+  # so an anchor can never point at a section carousel_row/1 declined to
+  # render (a shelf backed by zero games renders nothing at all).
+  @nav_link_targets [
+    {"Catálogo", :destacados_del_club},
+    {"Para empezar", :descubre_el_hobby},
+    {"Nivel experto", :nivel_experto},
+    {"Recién llegados", :recientemente_anadidos}
+  ]
+
   @impl true
   def mount(_params, _session, socket) do
     loading? = not connected?(socket)
@@ -314,57 +325,73 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       not is_nil(assigns.min_age)
   end
 
+  # The sticky nav's shelf anchors, filtered to rows that actually render
+  # (non-empty game list) so a link can never point at a section that
+  # doesn't exist in the document.
+  defp nav_link_entries(carousel_rows) do
+    populated =
+      carousel_rows
+      |> Enum.filter(&(&1.games != []))
+      |> MapSet.new(& &1.key)
+
+    Enum.filter(@nav_link_targets, fn {_label, key} -> key in populated end)
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} fullbleed>
+    <Layouts.app flash={@flash} fullbleed sticky>
+      <:nav_links :if={not filters_active?(assigns)}>
+        <a :for={{label, key} <- nav_link_entries(@carousel_rows)} href={"#carousel-#{key}"}>
+          {label}
+        </a>
+      </:nav_links>
+      <:nav_search>
+        <form phx-change="search" id="catalog-search-form">
+          <.input
+            type="text"
+            name="q"
+            value={@q}
+            placeholder="Busca por título, autor o editorial…"
+            phx-debounce="300"
+          />
+        </form>
+      </:nav_search>
       <div class="pk-page space-y-6">
         <div class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <form phx-change="search" id="catalog-search-form" class="flex-1">
-              <.input
-                type="text"
-                name="q"
-                value={@q}
-                placeholder="Busca por título, autor o editorial…"
-                phx-debounce="300"
-              />
-            </form>
+          <div class="flex items-center justify-end gap-4">
+            <FilterDrawer.filter_drawer
+              id="filter-drawer"
+              facet_options={@facet_options}
+              mechanics={@mechanics}
+              themes={@themes}
+              weight_bands={@weight_bands}
+              tags={@tags}
+              players={@players}
+              max_playtime={@max_playtime}
+              min_age={@min_age}
+            />
 
-            <div class="flex items-center gap-4">
-              <FilterDrawer.filter_drawer
-                id="filter-drawer"
-                facet_options={@facet_options}
-                mechanics={@mechanics}
-                themes={@themes}
-                weight_bands={@weight_bands}
-                tags={@tags}
-                players={@players}
-                max_playtime={@max_playtime}
-                min_age={@min_age}
-              />
-
-              <select
-                name="sort"
-                phx-change="sort"
-                class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
-              >
-                <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
-                <option value="playtime_asc" selected={@sort == :playtime_asc}>
-                  Duración: menor a mayor
-                </option>
-                <option value="playtime_desc" selected={@sort == :playtime_desc}>
-                  Duración: mayor a menor
-                </option>
-                <option value="complexity_asc" selected={@sort == :complexity_asc}>
-                  Complejidad: menor a mayor
-                </option>
-                <option value="complexity_desc" selected={@sort == :complexity_desc}>
-                  Complejidad: mayor a menor
-                </option>
-                <option value="year_desc" selected={@sort == :year_desc}>Más recientes</option>
-              </select>
-            </div>
+            <select
+              name="sort"
+              phx-change="sort"
+              class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
+            >
+              <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
+              <option value="playtime_asc" selected={@sort == :playtime_asc}>
+                Duración: menor a mayor
+              </option>
+              <option value="playtime_desc" selected={@sort == :playtime_desc}>
+                Duración: mayor a menor
+              </option>
+              <option value="complexity_asc" selected={@sort == :complexity_asc}>
+                Complejidad: menor a mayor
+              </option>
+              <option value="complexity_desc" selected={@sort == :complexity_desc}>
+                Complejidad: mayor a menor
+              </option>
+              <option value="year_desc" selected={@sort == :year_desc}>Más recientes</option>
+            </select>
           </div>
         </div>
 

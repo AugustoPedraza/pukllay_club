@@ -282,54 +282,6 @@
   border-style: solid;
 }
 
-/* Narrow-viewport density (sketch 001, variant D): every number below is
-   part of one calculation — at 96px cards, 10px gaps and a 0.875rem
-   gutter, a 390px viewport shows three full cards plus roughly half of a
-   fourth, and an edge-fade wider than that sliver would swallow the very
-   peek it exists to create. They therefore all flip together in this one
-   block, keyed off a single --pk-gutter token consumed by a single
-   .pk-gutter rule, so no surface can keep the wide value while its
-   neighbour drops to the narrow one (the specificity trap the sketch
-   source hit, where the hero row's rail-wrap silently kept the desktop
-   padding while its row-header dropped to the narrow one). This raw
-   breakpoint (not the repo's sm: 640px) is deliberate: the number set is
-   only correct below roughly 480px and visibly under-fills a 600px
-   viewport. */
-@media (max-width: 480px) {
-  :root {
-    --pk-gutter: 0.875rem;
-  }
-
-  .pk-rail {
-    gap: 10px;
-  }
-
-  .pk-poster-card {
-    width: 96px;
-  }
-
-  .pk-poster-card.is-hero {
-    width: 118px;
-  }
-
-  .pk-rail-wrap::before,
-  .pk-rail-wrap::after {
-    width: 16px;
-  }
-
-  .pk-shelf {
-    margin-bottom: 2rem;
-  }
-
-  .pk-card-caption {
-    padding: 8px 4px 4px;
-  }
-
-  .pk-card-caption h3 {
-    font-size: 0.75rem;
-  }
-}
-
 .pk-facts-row {
   display: flex;
   align-items: center;
@@ -517,6 +469,164 @@
 
 body.pk-sheet-open {
   overflow: hidden;
+}
+
+/* Sketch 001 (shelf-structure, variant D): sticky nav, padding-aligned to
+   the row content below it via the same .pk-gutter rule 01-11 created —
+   never a second, independently-chosen padding value for the nav. Flat
+   translucent tint on scroll, deliberately no backdrop blur (the sketch
+   tested blur and rejected it in favour of the flat tint's clarity). */
+.pk-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.pk-nav {
+  background: var(--color-base-100);
+  border-bottom: 1px solid transparent;
+  transition: background 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pk-nav.is-scrolled {
+  background: color-mix(in srgb, var(--color-base-100) 94%, transparent);
+  border-bottom-color: var(--color-base-300);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-base-content) 8%, transparent);
+}
+
+.pk-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.pk-nav-links a {
+  color: var(--color-base-content);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.pk-nav-links a:hover,
+.pk-nav-links a:focus-visible {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.pk-nav-search {
+  min-width: 220px;
+}
+
+/* Mobile category chip row: a second navigation dimension replacing the
+   nav links below the narrow-viewport breakpoint. No horizontal padding
+   of its own — spacer flex items reserve the end margins instead, since
+   iOS Safari drops the TRAILING padding of a horizontally-scrolling
+   element once scrolled to its end. Hidden by default; the narrow-
+   viewport media block (below) is what reveals it. */
+.pk-chip-nav {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pk-chip-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.pk-chip-spacer {
+  flex: 0 0 var(--pk-gutter);
+}
+
+.pk-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-base-300);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  font-weight: 600;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  text-decoration: none;
+  border-radius: 9999px;
+}
+
+.pk-chip.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  border-color: var(--color-primary);
+}
+
+/* Narrow-viewport density and navigation switch (sketch 001, variant D):
+   every number and every display toggle below is part of one
+   calculation/decision and must flip together, in this one block, placed
+   last so it wins the cascade against every base rule above it it
+   overrides (a same-specificity override earlier in the file would lose
+   to a later plain rule regardless of the media query, which is exactly
+   the class of bug this single-block, single-position discipline exists
+   to prevent). At 96px cards, 10px gaps and a 0.875rem gutter, a 390px
+   viewport shows three full cards plus roughly half of a fourth, and an
+   edge-fade wider than that sliver would swallow the very peek it exists
+   to create. Nav links stop fitting below this breakpoint; the mobile
+   chip row becomes the second navigation dimension — both sides of that
+   swap live here too, so no viewport width ends up with neither. This
+   raw breakpoint (not the repo's sm: 640px) is deliberate: the number
+   set is only correct below roughly 480px and visibly under-fills a
+   600px viewport. */
+@media (max-width: 480px) {
+  :root {
+    --pk-gutter: 0.875rem;
+  }
+
+  .pk-rail {
+    gap: 10px;
+  }
+
+  .pk-poster-card {
+    width: 96px;
+  }
+
+  .pk-poster-card.is-hero {
+    width: 118px;
+  }
+
+  .pk-rail-wrap::before,
+  .pk-rail-wrap::after {
+    width: 16px;
+  }
+
+  .pk-shelf {
+    margin-bottom: 2rem;
+  }
+
+  .pk-card-caption {
+    padding: 8px 4px 4px;
+  }
+
+  .pk-card-caption h3 {
+    font-size: 0.75rem;
+  }
+
+  .pk-nav-links {
+    display: none;
+  }
+
+  .pk-chip-nav {
+    display: flex;
+  }
+
+  .pk-nav-search {
+    min-width: 0;
+    flex: 1;
+  }
 }
 
 /* PK CATALOG SURFACES END */

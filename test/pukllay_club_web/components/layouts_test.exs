@@ -60,6 +60,21 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ "pk-gutter"
       refute html =~ "px-4 sm:px-6 lg:px-8"
     end
+
+    test "emits no nav-hook attribute value when sticky is not passed (01-12)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      refute html =~ "phx-hook"
+      refute html =~ "CatalogNav"
+    end
+
+    test "emits the sticky wrapper and the nav-hook attribute when sticky is true (01-12)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], sticky: true})
+
+      assert html =~ "pk-header-sticky"
+      assert html =~ "phx-hook"
+      assert html =~ "CatalogNav"
+    end
   end
 
   # Guards against reintroducing the 672px page cap described by the

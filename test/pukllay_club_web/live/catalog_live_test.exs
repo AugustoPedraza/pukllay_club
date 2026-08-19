@@ -551,6 +551,42 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "sticky, gutter-aligned nav (01-12)" do
+    test "the search form renders inside the sticky header element", %{conn: conn} do
+      game_fixture(%{name: "Nav Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ ~s(id="catalog-search-form")
+    end
+
+    test "every shelf anchor href resolves to an element id present in the document", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Nav Target Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      hrefs =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-nav-links a")
+        |> LazyHTML.attribute("href")
+
+      assert hrefs != []
+
+      Enum.each(hrefs, fn "#" <> id ->
+        assert html =~ ~s(id="#{id}")
+      end)
+    end
+  end
+
   describe "Ver todo tile wired to real filter state (01-11)" do
     test "clicking the tile on the tag-backed shelf renders only the tagged game and hides the shelves",
          %{conn: conn} do

@@ -68,13 +68,82 @@ defmodule PukllayClubWeb.Layouts do
         "edge (full-bleed carousel shelves) can opt out of the layout's gutter without " <>
         "stripping padding from pages that rely on it"
 
+  attr :sticky, :boolean,
+    default: false,
+    doc:
+      "when true, wraps the header in a position: sticky shell that tints flat-translucent past " <>
+        "a 40px scroll threshold (the .CatalogNav hook), and enables the nav_links/nav_search/" <>
+        "subnav slots. false renders no hook attribute at all — the non-sticky path is byte-" <>
+        "compatible with pages that don't opt in."
+
+  slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
+  slot :nav_search, doc: "the search form, rendered inside the header aligned with row content"
+
+  slot :subnav,
+    doc: "content rendered below the header row, inside the sticky wrapper (e.g. mobile chips)"
+
   slot :inner_block, required: true
 
   def app(assigns) do
     ~H"""
-    <header class={["navbar", if(@fullbleed, do: "pk-gutter", else: "px-4 sm:px-6 lg:px-8")]}>
+    <%!--
+    Two separate wrapper elements, not one with a dynamic phx-hook expression:
+    Phoenix only qualifies a colocated hook's leading-dot name (".CatalogNav"
+    -> "PukllayClubWeb.Layouts.CatalogNav") when phx-hook is a static string
+    literal in the template. A dynamic expression like `@sticky && ".CatalogNav"`
+    is never rewritten, so the browser receives the bare, unqualified
+    ".CatalogNav" and fails with "unknown hook found for ..." at runtime.
+    --%>
+    <div :if={@sticky} id="app-header" class="pk-header pk-header-sticky" phx-hook=".CatalogNav">
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".CatalogNav">
+        export default {
+          mounted() {
+            this.nav = this.el.querySelector(".pk-nav")
+
+            this.onScroll = () => {
+              this.nav.classList.toggle("is-scrolled", window.scrollY > 40)
+            }
+            window.addEventListener("scroll", this.onScroll, {passive: true})
+            this.onScroll()
+          },
+          destroyed() {
+            window.removeEventListener("scroll", this.onScroll)
+          }
+        }
+      </script>
+      <.header_inner fullbleed={@fullbleed} nav_links={@nav_links} nav_search={@nav_search} />
+      {render_slot(@subnav)}
+    </div>
+    <div :if={!@sticky} id="app-header" class="pk-header">
+      <.header_inner fullbleed={@fullbleed} nav_links={@nav_links} nav_search={@nav_search} />
+      {render_slot(@subnav)}
+    </div>
+
+    <main class={["py-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
+      <div class="mx-auto space-y-4">
+        {render_slot(@inner_block)}
+      </div>
+    </main>
+
+    <.flash_group flash={@flash} />
+    """
+  end
+
+  attr :fullbleed, :boolean, required: true
+  attr :nav_links, :list, required: true
+  attr :nav_search, :list, required: true
+
+  defp header_inner(assigns) do
+    ~H"""
+    <header class={["navbar pk-nav", if(@fullbleed, do: "pk-gutter", else: "px-4 sm:px-6 lg:px-8")]}>
       <div class="flex-1">
         <.brand_logo />
+      </div>
+      <div :if={@nav_links != []} class="pk-nav-links">
+        {render_slot(@nav_links)}
+      </div>
+      <div :if={@nav_search != []} class="pk-nav-search">
+        {render_slot(@nav_search)}
       </div>
       <div class="flex-none">
         <ul class="flex flex-column px-1 space-x-4 items-center">
@@ -84,14 +153,6 @@ defmodule PukllayClubWeb.Layouts do
         </ul>
       </div>
     </header>
-
-    <main class={["py-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
-      <div class="mx-auto space-y-4">
-        {render_slot(@inner_block)}
-      </div>
-    </main>
-
-    <.flash_group flash={@flash} />
     """
   end
 
