@@ -24,15 +24,15 @@ External services integrated this phase:
 | `id=` batched multi-id lookup (comma-separated, ≤20 per request) | **INTEGRATE** | The whole enrichment path is id-keyed off the CSV's `BGG_ID` column (D-01/D-17). Batching is also the primary rate-limit lever (Pitfall 2). |
 | `type=boardgame` filter | **INTEGRATE** | Guards against an id resolving to a `boardgameexpansion`/`videogame` object. |
 | `stats=1` → `averageweight`, `average`, `usersrated`, `bayesaverage`, `ranks` | **INTEGRATE** | `averageweight` is persisted in the raw payload (D-17 "persist the fuller fetched payload"). Weight-band assignment itself is CSV-hashtag-driven (D-05/Pitfall 3), not derived from this field. |
-| Core `thing` scalars: `minplayers`, `maxplayers`, `minplaytime`, `maxplaytime`, `playingtime`, `minage`, `yearpublished` | **INTEGRATE** | Directly power CATALOG-02 (player count / playtime / min age filters) and CATALOG-04 (sort). |
+| Core `thing` scalars (minplayers, maxplayers, playtime, minage, yearpublished) | **INTEGRATE** | Directly power CATALOG-02 (player count / playtime / min age filters) and CATALOG-04 (sort). |
 | `link[@type='boardgamemechanic']` | **INTEGRATE** | Canonical source for `mechanics` (CATALOG-02 facet, CATALOG-06 chips). |
 | `link[@type='boardgamecategory']` | **INTEGRATE** | Canonical source for `themes` (CATALOG-02 facet, CATALOG-06 chips). The CSV `Categorias` column is unusable at 1/434 fill (D-17). |
 | `link[@type='boardgamedesigner']` | **INTEGRATE** | Required by CATALOG-03 (keyword search over designer). |
 | `link[@type='boardgamepublisher']` | **INTEGRATE** | Required by CATALOG-03 (keyword search over publisher). |
-| `link[@type='boardgamefamily']`, `boardgameartist`, `boardgameimplementation`, `boardgameexpansion` | **INTEGRATE** | Zero marginal cost — they arrive in the same response. Persisted into `bgg_payload` (jsonb) per D-17 so a later phase never re-runs the one-time pipeline to backfill. Not surfaced in Phase 1 UI. |
+| `boardgamefamily`/`artist`/`implementation`/`expansion` links | **INTEGRATE** | Zero marginal cost — they arrive in the same response. Persisted into `bgg_payload` (jsonb) per D-17 so a later phase never re-runs the one-time pipeline to backfill. Not surfaced in Phase 1 UI. |
 | `description` (long HTML-ish blurb) | **INTEGRATE** | Same response, zero extra call. Persisted; Phase 1 renders it on the detail page only. |
 | `image` / `thumbnail` elements | **INTEGRATE** | Source of the cover art that gets downloaded, resized to two variants, and re-hosted on R2 (D-03, CATALOG-09). |
-| `versions=1` → per-edition `<item type="boardgameversion">` with its own `image`/`thumbnail` and `link[@type='language']` | **INTEGRATE** | The **only** documented XMLAPI2 surface exposing language-specific box art. Serves D-04's "cover art must match the owned language edition, Spanish preferred" AND supplies the small gallery. See the Constraint note below. |
+| `versions=1` per-edition images + `link[@type='language']` | **INTEGRATE** | The only documented XMLAPI2 surface exposing language-specific box art. Serves D-04's language-matched cover art requirement and supplies the small gallery. See the Constraint note below. |
 | `videos=1` | **OPT-OUT** | Phase 1 renders no video; catalog is image-forward per D-08/UI-SPEC. |
 | `comments=1` / `ratingcomments=1` | **OPT-OUT** | REQUIREMENTS.md "Out of Scope": BGG-style public ratings/comments are explicitly excluded — they reintroduce the numeric-rating-without-context problem this product exists to avoid. |
 | `marketplace=1` | **OPT-OUT** | No commerce surface in any roadmap phase (REQUIREMENTS.md excludes payments). |
@@ -77,14 +77,14 @@ using an undocumented endpoint and should be raised before Phase 2.
 | `put_object` | **INTEGRATE** | Core of D-03: upload both resized variants (and gallery variants) for every game. |
 | `head_object` | **INTEGRATE** | Makes the one-time seed task (D-02) safely re-runnable — an already-uploaded key is skipped instead of re-downloaded/re-resized/re-uploaded. |
 | `list_objects_v2` | **INTEGRATE** | Powers the seed task's `--verify` reconciliation pass (object count vs. seeded row count) and the manual-review report. |
-| `get_object` | **OPT-OUT** | The browser fetches R2 URLs directly; the Phoenix app never proxies image bytes (D-03, and 01-RESEARCH.md's Architectural Responsibility Map puts image serving on the CDN tier). No server-side read path exists. |
+| `get_object` | **OPT-OUT** | The browser fetches R2 URLs directly; the Phoenix app never proxies image bytes (D-03; 01-RESEARCH.md puts image serving on the CDN tier). No server-side read path exists. |
 | `delete_object` | **OPT-OUT** | Phase 1 has no destructive actions at all (UI-SPEC Copywriting Contract records "Destructive: not applicable"). Image lifecycle/cleanup belongs to Phase 4's admin catalog management (CLUBOPS-03). |
-| Presigned URLs (`presigned_url`) | **OPT-OUT** | Images are public, world-readable catalog covers served from a public R2 base URL. Presigning would add per-request signing cost and URL churn for content that has no access-control requirement (CATALOG-08 — the catalog is fully public). |
-| Multipart upload (`initiate_multipart_upload` / `upload_part` / `complete_multipart_upload`) | **OPT-OUT** | Both variants are capped well under 5 MB (thumbnail ≤300 px, detail ≤800 px, WebP). Multipart is only required above 5 GB and only beneficial above ~100 MB. |
+| Presigned URLs (`presigned_url`) | **OPT-OUT** | Images are public, world-readable catalog covers from a public R2 base URL. Presigning adds signing cost/URL churn for content with no access-control requirement (CATALOG-08: catalog is fully public). |
+| Multipart upload (`initiate/upload_part/complete_multipart_upload`) | **OPT-OUT** | Both variants are capped well under 5 MB (thumbnail ≤300 px, detail ≤800 px, WebP). Multipart is only required above 5 GB and only beneficial above ~100 MB. |
 | `put_object_acl` / object-level ACLs | **OPT-OUT** | R2 does not implement per-object ACLs; public read is granted at the bucket level (r2.dev subdomain or custom domain), configured once by hand — see `user_setup` in `01-01-PLAN.md`. |
 | Bucket CORS config (`put_bucket_cors`) | **OPT-OUT** | `<img src>` fetches are not CORS-gated. No canvas/`fetch()` reads of image bytes exist in Phase 1. |
-| Bucket lifecycle / versioning config | **OPT-OUT** | One-time seed writes immutable, content-addressed-by-`bgg_id` keys. No expiry or version-history requirement; nightly `pg_dump` → R2 (DEPLOY-04) already covers the durability story for the data that references these keys. |
-| Bucket creation | **OPT-OUT (human)** | Performed once in the Cloudflare dashboard by the developer as part of the `01-01-PLAN.md` `checkpoint:human-action`, together with enabling public read access. Not automated — it is a one-time account-level action with billing implications. |
+| Bucket lifecycle / versioning config | **OPT-OUT** | One-time seed writes immutable, content-addressed-by-`bgg_id` keys. No expiry/version-history need; nightly `pg_dump` → R2 (DEPLOY-04) covers durability for this data. |
+| Bucket creation | **OPT-OUT** | Performed once, by hand, in the Cloudflare dashboard as part of the `01-01-PLAN.md` checkpoint:human-action — not automated; one-time account-level action with billing implications. |
 
 ---
 
