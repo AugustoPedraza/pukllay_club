@@ -60,11 +60,19 @@ defmodule PukllayClubWeb.Layouts do
     default: nil,
     doc: "the current [scope](https://phoenix.hexdocs.pm/scopes.html)"
 
+  attr :fullbleed, :boolean,
+    default: false,
+    doc:
+      "when true, the header uses the shared pk-gutter token instead of its own padding and " <>
+        "<main> drops its horizontal padding, so a page whose content must reach the viewport " <>
+        "edge (full-bleed carousel shelves) can opt out of the layout's gutter without " <>
+        "stripping padding from pages that rely on it"
+
   slot :inner_block, required: true
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
+    <header class={["navbar", if(@fullbleed, do: "pk-gutter", else: "px-4 sm:px-6 lg:px-8")]}>
       <div class="flex-1">
         <.brand_logo />
       </div>
@@ -77,7 +85,7 @@ defmodule PukllayClubWeb.Layouts do
       </div>
     </header>
 
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
+    <main class={["py-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
       <div class="mx-auto space-y-4">
         {render_slot(@inner_block)}
       </div>

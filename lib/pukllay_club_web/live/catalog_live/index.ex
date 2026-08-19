@@ -270,52 +270,54 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
-      <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <form phx-change="search" id="catalog-search-form" class="flex-1">
-            <.input
-              type="text"
-              name="q"
-              value={@q}
-              placeholder="Busca por título, autor o editorial…"
-              phx-debounce="300"
-            />
-          </form>
+    <Layouts.app flash={@flash} fullbleed>
+      <div class="pk-page space-y-6">
+        <div class="mx-auto w-full max-w-7xl pk-gutter">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <form phx-change="search" id="catalog-search-form" class="flex-1">
+              <.input
+                type="text"
+                name="q"
+                value={@q}
+                placeholder="Busca por título, autor o editorial…"
+                phx-debounce="300"
+              />
+            </form>
 
-          <div class="flex items-center gap-4">
-            <FilterDrawer.filter_drawer
-              id="filter-drawer"
-              facet_options={@facet_options}
-              mechanics={@mechanics}
-              themes={@themes}
-              weight_bands={@weight_bands}
-              tags={@tags}
-              players={@players}
-              max_playtime={@max_playtime}
-              min_age={@min_age}
-            />
+            <div class="flex items-center gap-4">
+              <FilterDrawer.filter_drawer
+                id="filter-drawer"
+                facet_options={@facet_options}
+                mechanics={@mechanics}
+                themes={@themes}
+                weight_bands={@weight_bands}
+                tags={@tags}
+                players={@players}
+                max_playtime={@max_playtime}
+                min_age={@min_age}
+              />
 
-            <select
-              name="sort"
-              phx-change="sort"
-              class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
-            >
-              <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
-              <option value="playtime_asc" selected={@sort == :playtime_asc}>
-                Duración: menor a mayor
-              </option>
-              <option value="playtime_desc" selected={@sort == :playtime_desc}>
-                Duración: mayor a menor
-              </option>
-              <option value="complexity_asc" selected={@sort == :complexity_asc}>
-                Complejidad: menor a mayor
-              </option>
-              <option value="complexity_desc" selected={@sort == :complexity_desc}>
-                Complejidad: mayor a menor
-              </option>
-              <option value="year_desc" selected={@sort == :year_desc}>Más recientes</option>
-            </select>
+              <select
+                name="sort"
+                phx-change="sort"
+                class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
+              >
+                <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
+                <option value="playtime_asc" selected={@sort == :playtime_asc}>
+                  Duración: menor a mayor
+                </option>
+                <option value="playtime_desc" selected={@sort == :playtime_desc}>
+                  Duración: mayor a menor
+                </option>
+                <option value="complexity_asc" selected={@sort == :complexity_asc}>
+                  Complejidad: menor a mayor
+                </option>
+                <option value="complexity_desc" selected={@sort == :complexity_desc}>
+                  Complejidad: mayor a menor
+                </option>
+                <option value="year_desc" selected={@sort == :year_desc}>Más recientes</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -337,46 +339,52 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           <% end %>
         </div>
 
-        <div :if={@load_error} class="alert alert-error">
-          No pudimos cargar el catálogo en este momento. Intenta recargar la página en unos segundos.
+        <div :if={@load_error} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div class="alert alert-error">
+            No pudimos cargar el catálogo en este momento. Intenta recargar la página en unos segundos.
+          </div>
         </div>
 
-        <div class="space-y-1">
+        <div class="mx-auto w-full max-w-7xl pk-gutter space-y-1">
           <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
           <p class="text-neutral text-sm">{result_count_text(@total)}</p>
         </div>
 
-        <div
-          :if={@total == 0 and not @load_error}
-          class="bg-base-200 space-y-4 rounded-box p-8 text-center"
-        >
-          <h2 class="font-display text-2xl">No encontramos juegos con esos filtros</h2>
-          <p>
-            Prueba a quitar algún filtro o ajustar tu búsqueda — seguro hay algo en nuestra colección que te va a gustar.
-          </p>
-          <button type="button" phx-click="clear-filters" class="btn btn-primary">
-            Limpiar filtros
-          </button>
+        <div :if={@total == 0 and not @load_error} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div class="bg-base-200 space-y-4 rounded-box p-8 text-center">
+            <h2 class="font-display text-2xl">No encontramos juegos con esos filtros</h2>
+            <p>
+              Prueba a quitar algún filtro o ajustar tu búsqueda — seguro hay algo en nuestra colección que te va a gustar.
+            </p>
+            <button type="button" phx-click="clear-filters" class="btn btn-primary">
+              Limpiar filtros
+            </button>
+          </div>
         </div>
 
-        <div :if={@loading} class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <CarouselRow.skeleton_card :for={n <- 1..@page_size} id={"grid-skeleton-#{n}"} />
+        <div :if={@loading} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <CarouselRow.skeleton_card :for={n <- 1..@page_size} id={"grid-skeleton-#{n}"} />
+          </div>
         </div>
 
-        <div
-          :if={not @loading}
-          id="games"
-          phx-update="stream"
-          class={[
-            "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4",
-            @total == 0 && "hidden"
-          ]}
-        >
-          <GameCard.game_card :for={{id, game} <- @streams.games} id={id} game={game} />
+        <div :if={not @loading} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div
+            id="games"
+            phx-update="stream"
+            class={[
+              "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4",
+              @total == 0 && "hidden"
+            ]}
+          >
+            <GameCard.game_card :for={{id, game} <- @streams.games} id={id} game={game} />
+          </div>
         </div>
 
-        <div :if={@total > 0 and @offset < @total} class="flex justify-center">
-          <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
+        <div :if={@total > 0 and @offset < @total} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div class="flex justify-center">
+            <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
+          </div>
         </div>
 
         <GamePreview.preview_host />

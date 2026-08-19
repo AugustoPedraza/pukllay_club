@@ -1,13 +1,16 @@
 defmodule PukllayClubWeb.CarouselRow do
   @moduledoc """
-  Stateless horizontally-scrolling rail of `GameCard`s, plus the matching
-  `skeleton_card/1` loading placeholder. Renders one of the 8 fixed D-09
-  carousel rows above the browse grid.
+  Full-bleed, edge-fade horizontally-scrolling rail of `GameCard`s (sketch
+  001, variant D), plus the matching `skeleton_card/1` loading placeholder.
+  Renders one of the 8 fixed D-09 carousel rows above the browse grid.
 
-  daisyUI's `carousel`/`carousel-item` class names are confirmed v5-safe
-  by 01-RESEARCH.md Pitfall 5 (unchanged from v4). A row backed by zero
-  games renders nothing at all — an empty titled rail would read as
-  breakage, not as "nothing here yet".
+  Not daisyUI's `.carousel` component (used pre-01-11): that component
+  hides the scrollbar with no replacement cue, which is precisely why the
+  rail read as an unresponsive grid before this plan. The edge-fade width,
+  the rail gap, the card width and the side gutter are a co-dependent set
+  of numbers that only work when declared together in one CSS location —
+  which is also why the card width now lives in `assets/css/app.css`'s
+  `.pk-poster-card` rather than in Tailwind width utilities passed here.
 
   `variant`/`subtitle` (G-01-4) exist so the caller can differentiate the
   8 D-09 rows from one another: `variant: :hero` ranks a row above the
@@ -15,14 +18,12 @@ defmodule PukllayClubWeb.CarouselRow do
   `subtitle` is a one-line plain-Spanish explanation of what that shelf is.
   The caller owns the copy; this component only renders it.
 
-  G-01-3: the rail's horizontal scroll is intentional (daisyUI `.carousel`
-  is `overflow-x` scroll with no wrap, capped at the Catalog context's
-  `@carousel_limit`) — it is NOT the responsive `#games` grid, and it was
-  originally misread as an unresponsive grid precisely because daisyUI's
-  `.carousel` also sets `scrollbar-width: none`, leaving no visible cue
-  that the rail scrolls at all. The persistent prev/next controls below
-  are the fix: a `.CarouselScroll` colocated hook scrolls the rail and
-  hides the controls whenever the rail has nothing to scroll to.
+  G-01-3: the rail's horizontal scroll is intentional — it is NOT the
+  responsive `#games` grid. The always-visible `.pk-rail-wrap` edge-fade
+  is now the primary passive scroll cue (01-11); the persistent prev/next
+  controls below stay as a secondary, pointer-device cue: a
+  `.CarouselScroll` colocated hook scrolls the rail and hides the controls
+  whenever the rail has nothing to scroll to.
   """
   use Phoenix.Component
 
@@ -37,7 +38,7 @@ defmodule PukllayClubWeb.CarouselRow do
 
   def carousel_row(assigns) do
     ~H"""
-    <section :if={@games != []} id={@id} class="space-y-3" phx-hook=".CarouselScroll">
+    <section :if={@games != []} id={@id} class="pk-shelf space-y-3" phx-hook=".CarouselScroll">
       <script :type={Phoenix.LiveView.ColocatedHook} name=".CarouselScroll">
         export default {
           mounted() {
@@ -70,7 +71,7 @@ defmodule PukllayClubWeb.CarouselRow do
           }
         }
       </script>
-      <div class="flex items-end justify-between gap-4">
+      <div class="pk-row-header pk-gutter flex items-end justify-between gap-4">
         <div class="space-y-1">
           <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>{@title}</h2>
           <p :if={@subtitle} class="text-neutral text-sm">{@subtitle}</p>
@@ -94,9 +95,14 @@ defmodule PukllayClubWeb.CarouselRow do
           </button>
         </div>
       </div>
-      <div data-rail class="carousel carousel-center gap-4 rounded-box">
-        <div :for={game <- @games} class="carousel-item">
-          <GameCard.game_card id={"#{@id}-#{game.id}"} game={game} class="w-40 shrink-0 sm:w-48" />
+      <div class="pk-rail-wrap pk-gutter">
+        <div data-rail class="pk-rail">
+          <GameCard.game_card
+            :for={game <- @games}
+            id={"#{@id}-#{game.id}"}
+            game={game}
+            class={["pk-poster-card", @variant == :hero && "is-hero"]}
+          />
         </div>
       </div>
     </section>
@@ -112,14 +118,14 @@ defmodule PukllayClubWeb.CarouselRow do
 
   def skeleton_row(assigns) do
     ~H"""
-    <section id={@id} class="space-y-3">
-      <div class="space-y-1">
+    <section id={@id} class="pk-shelf space-y-3">
+      <div class="pk-row-header pk-gutter space-y-1">
         <div class="skeleton h-7 w-48"></div>
         <div class="skeleton h-4 w-32"></div>
       </div>
-      <div class="carousel carousel-center gap-4 rounded-box">
-        <div :for={n <- 1..@count} class="carousel-item">
-          <.skeleton_card id={"#{@id}-#{n}"} class="w-40 shrink-0 sm:w-48" />
+      <div class="pk-rail-wrap pk-gutter">
+        <div class="pk-rail">
+          <.skeleton_card :for={n <- 1..@count} id={"#{@id}-#{n}"} class="pk-poster-card" />
         </div>
       </div>
     </section>
@@ -128,19 +134,18 @@ defmodule PukllayClubWeb.CarouselRow do
 
   @doc """
   A single skeleton card, matching `GameCard.game_card/1`'s footprint (a
-  square figure over a `card-body`) so the layout does not jump once real
-  content replaces it.
+  `.pk-card-poster`-proportioned figure over a caption block) so the
+  layout does not jump once real content replaces it.
   """
   attr :id, :string, required: true
   attr :class, :any, default: nil
 
   def skeleton_card(assigns) do
     ~H"""
-    <div id={@id} class={["card bg-base-200 shadow-sm", @class]}>
-      <div class="skeleton aspect-square w-full rounded-b-none"></div>
-      <div class="card-body space-y-2 p-4">
+    <div id={@id} class={["pk-card overflow-hidden rounded-box bg-base-200 shadow-sm", @class]}>
+      <div class="pk-card-poster skeleton w-full rounded-b-none"></div>
+      <div class="pk-card-caption space-y-1">
         <div class="skeleton h-4 w-3/4"></div>
-        <div class="skeleton h-8 w-24"></div>
       </div>
     </div>
     """

@@ -46,6 +46,20 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ ~s(data-phx-theme="dark")
       assert html =~ ~s(data-phx-theme="system")
     end
+
+    test "still emits the px-4 sm:px-6 lg:px-8 header classes when fullbleed is not passed (01-11)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ "px-4 sm:px-6 lg:px-8"
+      refute html =~ "pk-gutter"
+    end
+
+    test "swaps to the shared pk-gutter class and drops its own horizontal padding when fullbleed is true (01-11)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], fullbleed: true})
+
+      assert html =~ "pk-gutter"
+      refute html =~ "px-4 sm:px-6 lg:px-8"
+    end
   end
 
   # Guards against reintroducing the 672px page cap described by the

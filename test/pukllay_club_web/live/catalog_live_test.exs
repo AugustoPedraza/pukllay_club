@@ -493,6 +493,31 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "full-bleed edge-fade shelves, gutter-aligned (01-11)" do
+    test "a shelf's row-header and rail-wrap both carry the shared gutter class", %{conn: conn} do
+      game_fixture(%{name: "Shelf Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      carousel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      assert carousel_html =~ "pk-row-header pk-gutter"
+      assert carousel_html =~ "pk-rail-wrap pk-gutter"
+    end
+
+    test "the page renders the pk-page shell", %{conn: conn} do
+      game_fixture(%{name: "Shell Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "pk-page"
+    end
+  end
+
   describe "Content-Security-Policy (T-01-28, closes Phase 0's deferred Sobelow Config.CSP finding)" do
     test "the response carries a content-security-policy header scoped to the configured image origin",
          %{conn: conn} do

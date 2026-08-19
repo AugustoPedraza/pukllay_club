@@ -180,6 +180,73 @@
    the daisyUI theme variables already declared above, so both the light
    and dark themes work. */
 
+/* Sketch 001 (shelf-structure, variant D): the single gutter token every
+   aligned surface (header, row headers, rail wraps, capped page sections)
+   shares. .pk-gutter below is the ONLY rule that reads this token — no
+   other selector in this stylesheet may set a horizontal padding on an
+   aligned surface, which is what guarantees the nav and row content can
+   never drift to two different spacing values again. */
+:root {
+  --pk-gutter: 2rem;
+}
+
+.pk-gutter {
+  padding-left: var(--pk-gutter);
+  padding-right: var(--pk-gutter);
+}
+
+.pk-shelf {
+  margin-bottom: 3rem;
+  scroll-margin-top: 6rem;
+}
+
+.pk-rail-wrap {
+  position: relative;
+}
+
+.pk-rail-wrap::before,
+.pk-rail-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.pk-rail-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-base-100), transparent);
+}
+
+.pk-rail-wrap::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--color-base-100), transparent);
+}
+
+.pk-rail {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding: 8px 0;
+}
+
+.pk-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.pk-poster-card {
+  flex: 0 0 auto;
+  width: 160px;
+}
+
+.pk-poster-card.is-hero {
+  width: 240px;
+}
+
 .pk-facts-row {
   display: flex;
   align-items: center;
