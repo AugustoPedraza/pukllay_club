@@ -22,5 +22,5 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
 | # | Name | Design Question | Winner | Tags |
 |---|------|----------------|--------|------|
 | 001 | shelf-structure | Does the page read as distinct Netflix-style shelves with a real nav bar, or one continuous scroll? | D (Edge-Fade, refined) | layout, navigation, carousel |
-| 002 | card-hierarchy | What belongs on the card at rest vs. behind an expand, given the real schema fields (players, playtime, age, weight, tags, mechanics)? | TBD | card, information-architecture, interaction |
+| 002 | card-hierarchy | What belongs on the card at rest vs. behind an expand, given the real schema fields (players, playtime, age, weight, tags, mechanics)? | D (hybrid, pop-forward preview) | card, information-architecture, interaction |
 | 003 | motion-system | Is a dedicated motion system worth it, and what should hover-expand / row-scroll / focus transitions feel like? | TBD | motion, interaction |
