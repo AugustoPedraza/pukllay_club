@@ -198,7 +198,7 @@ would not, and translating them wouldn't reduce the cognitive load CATALOG-06 ex
 Income, Action Points, Hexagon Grid, Turn Order: Progressive, Point to Point Movement, Events,
 Multi-Use Cards, Tags, Victory Points as a Resource, Communication Limits, Grid Coverage,
 Team-Based Game, Network and Route Building, Square Grid, Track Movement, Turn Order: Claim Action,
-Tech Trees / Tech Tracks, Worker Placement, Different Worker Types, Layering, Rondel,
+Tech Trees / Tech Tracks, "Worker Placement, Different Worker Types", Layering, Rondel,
 Scenario / Mission / Campaign Game, Score-and-Reset Game, Closed Drafting, Action Queue,
 Movement Points, Market, Once-Per-Game Abilities, Resource to Move, Turn Order: Stat-Based,
 Map Addition, Ownership, Hidden Victory Points, Die Icon Resolution, Enclosure,

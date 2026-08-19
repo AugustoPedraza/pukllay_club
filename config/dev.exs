@@ -5,12 +5,12 @@ import Config
 # without it. Copy config/dev.secret.exs.example to create it locally.
 secret_config_path = Path.expand("dev.secret.exs", __DIR__)
 
-# The CSP img-src origin (01-06/T-01-28) — derived from R2_PUBLIC_BASE_URL,
-# the same env var PukllayClub.Catalog.Seed.Credentials checks first (env
-# var, then dev.secret.exs's Application config — read this env var
-# directly if you also want real R2 images unblocked by the CSP locally).
-# Falls back to the same placeholder host config/test.exs uses so a fresh
-# clone still boots with no secrets configured.
+# The CSP img-src origin (01-06/T-01-28) — falls back to the same
+# placeholder host config/test.exs uses so a fresh clone still boots with
+# no secrets configured. config/runtime.exs's dev block overrides this with
+# the real R2_PUBLIC_BASE_URL (env var, then dev.secret.exs's Application
+# config) once that compile-time config has actually been merged in — see
+# the comment there for why this file alone can't do that resolution.
 dev_image_origin =
   case System.get_env("R2_PUBLIC_BASE_URL") do
     nil ->
