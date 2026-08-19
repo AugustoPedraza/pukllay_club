@@ -56,75 +56,54 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert html =~ "Juego Sin BGG"
     end
 
-    test "clamps a long game title instead of pushing the card layout", %{conn: conn} do
+    test "clamps a long game title with the single-line caption treatment instead of pushing the card layout",
+         %{conn: conn} do
       game_fixture(%{
         name: "Un título extraordinariamente largo que debería ocupar más de dos líneas de texto"
       })
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      assert html =~ "line-clamp-2"
+      assert grid_html(html) =~ "pk-card-caption"
     end
 
-    test "renders the card's weight-band label but not its descriptor (CATALOG-05)", %{
-      conn: conn
-    } do
+    test "a resting grid card renders neither a weight-band label nor its descriptor (sketch 002)",
+         %{conn: conn} do
       game_fixture(%{name: "Juego Banded", weight_band: "ingenio_estratega"})
 
       {:ok, _view, html} = live(conn, ~p"/")
+      card_html = html |> grid_html() |> strip_preview_templates()
 
-      assert grid_html(html) =~ "Ingenio estratega"
-      refute grid_html(html) =~ "Reglas de 15-20 minutos"
+      refute card_html =~ "Ingenio estratega"
+      refute card_html =~ "Reglas de 15-20 minutos"
     end
 
-    test "renders the club's editorial hashtag and a capped mechanic chip row with a +N overflow chip",
+    test "a resting grid card carries no chip, badge, or button markup for a game with tags and mechanics (sketch 002)",
          %{conn: conn} do
       game_fixture(%{
         name: "Juego Con Chips",
-        tags: ["#CreaConexiones"],
+        tags: ["#CreaConexiones", "#EquipoGanador", "#DuelosMemorables"],
         mechanics: [
           "Dice Rolling",
           "Hand Management",
           "Worker Placement",
           "Tile Placement",
           "Race"
-        ]
+        ],
+        weight_band: "descubre_el_hobby"
       })
 
       {:ok, _view, html} = live(conn, ~p"/")
+      card_html = html |> grid_html() |> strip_preview_templates()
 
-      assert html =~ "#CreaConexiones"
-      assert html =~ "+1"
-    end
-
-    test "a card's editorial tags are capped at 2 with a +N overflow chip (G-01-6)", %{
-      conn: conn
-    } do
-      game_fixture(%{
-        name: "Juego Con Tres Tags",
-        tags: ["#CreaConexiones", "#EquipoGanador", "#DuelosMemorables"]
-      })
-
-      {:ok, _view, html} = live(conn, ~p"/")
-      card_html = grid_html(html)
-
-      assert card_html =~ "#CreaConexiones"
-      assert card_html =~ "#EquipoGanador"
+      refute card_html =~ "badge"
+      refute card_html =~ "#CreaConexiones"
+      refute card_html =~ "#EquipoGanador"
       refute card_html =~ "#DuelosMemorables"
-      assert card_html =~ "+1"
+      refute card_html =~ "btn btn-primary btn-sm"
     end
 
-    test "the card's weight-band badge renders at the large, overflow-safe size (G-01-2/G-01-6)",
-         %{conn: conn} do
-      game_fixture(%{name: "Juego Con Banda", weight_band: "descubre_el_hobby"})
-
-      {:ok, _view, html} = live(conn, ~p"/")
-
-      assert grid_html(html) =~ "badge-lg"
-      assert grid_html(html) =~ "h-auto"
-    end
-
-    test "the cover image carries the js-cover-fallback class, a hidden placeholder sibling, and title alt text",
+    test "the cover image carries the js-cover-fallback class and a hidden placeholder sibling",
          %{conn: conn} do
       game_fixture(%{
         name: "Juego Con Portada",
@@ -134,8 +113,23 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       assert html =~ "js-cover-fallback"
-      assert html =~ ~s(alt="Juego Con Portada")
       assert html =~ "hero-puzzle-piece"
+    end
+
+    test "a card's inert preview template carries that game's description and weight-band label, proving the metadata moved rather than disappeared",
+         %{conn: conn} do
+      game_fixture(%{
+        name: "Juego Con Metadata",
+        description: "Una descripción única de este juego.",
+        weight_band: "nivel_experto"
+      })
+
+      {:ok, _view, html} = live(conn, ~p"/")
+      card_html = grid_html(html)
+
+      assert card_html =~ "data-game-preview"
+      assert card_html =~ "Una descripción única de este juego."
+      assert card_html =~ "Nivel experto"
     end
 
     test "the Ver detalles CTA links to the game's detail page", %{conn: conn} do
@@ -551,8 +545,17 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
   defp card_count(html) do
     html
     |> grid_html()
-    |> String.split("card bg-base-200")
+    |> String.split("data-game-card")
     |> length()
     |> Kernel.-(1)
+  end
+
+  # A resting card's inert <template data-game-preview> carries the shared
+  # preview body verbatim (Task 1), which legitimately contains chip/badge
+  # markup (the sheet-only editorial tag) for cloning on interaction — that
+  # is not part of the visible resting card. Strip it before asserting on
+  # what actually renders at rest.
+  defp strip_preview_templates(html) do
+    Regex.replace(~r/<template[^>]*>.*?<\/template>/s, html, "")
   end
 end
