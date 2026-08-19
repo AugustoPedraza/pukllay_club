@@ -105,9 +105,40 @@ defmodule PukllayClubWeb.Layouts do
             }
             window.addEventListener("scroll", this.onScroll, {passive: true})
             this.onScroll()
+
+            // Chip scroll-spy: highlights the chip whose shelf is currently
+            // under the header. Guarded on there being at least one chip and
+            // one resolvable target section so the detail page and filtered
+            // views (which render no chip row) are unaffected.
+            this.chips = Array.from(this.el.querySelectorAll(".pk-chip"))
+            this.chipsByTarget = new Map()
+            this.chips.forEach((chip) => {
+              const section = chip.dataset.chipTarget && document.getElementById(chip.dataset.chipTarget)
+              if (section) this.chipsByTarget.set(section, chip)
+            })
+
+            if (this.chips.length > 0 && this.chipsByTarget.size > 0) {
+              this.observer = new IntersectionObserver(
+                (entries) => {
+                  const topmost = entries
+                    .filter((entry) => entry.isIntersecting)
+                    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+                  if (!topmost) return
+
+                  const activeChip = this.chipsByTarget.get(topmost.target)
+                  if (!activeChip) return
+
+                  this.chips.forEach((chip) => chip.classList.remove("is-active"))
+                  activeChip.classList.add("is-active")
+                },
+                {rootMargin: "-20% 0px -70% 0px"}
+              )
+              this.chipsByTarget.forEach((_chip, section) => this.observer.observe(section))
+            }
           },
           destroyed() {
             window.removeEventListener("scroll", this.onScroll)
+            this.observer?.disconnect()
           }
         }
       </script>

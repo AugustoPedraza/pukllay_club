@@ -585,6 +585,67 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         assert html =~ ~s(id="#{id}")
       end)
     end
+
+    test "the unfiltered landing render emits one chip per populated shelf, each targeting a real section id, bracketed by spacers",
+         %{conn: conn} do
+      game_fixture(%{name: "Chip Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+
+      shelf_count = doc |> LazyHTML.query("#carousel-rows section") |> Enum.count()
+
+      chip_targets =
+        doc
+        |> LazyHTML.query(".pk-chip-nav a.pk-chip")
+        |> LazyHTML.attribute("data-chip-target")
+
+      assert chip_targets != []
+      assert length(chip_targets) == shelf_count
+
+      Enum.each(chip_targets, fn id -> assert html =~ ~s(id="#{id}") end)
+
+      chip_nav_html =
+        doc
+        |> LazyHTML.query(".pk-chip-nav")
+        |> LazyHTML.to_html()
+        |> String.trim()
+
+      # First and last children are spacers: the innermost content right
+      # after the opening <nav ...> tag, and right before </nav>, is each
+      # a pk-chip-spacer span — never a chip.
+      assert Regex.match?(~r/^<nav[^>]*>\s*<span[^>]*class="pk-chip-spacer"/, chip_nav_html)
+      assert Regex.match?(~r/<span[^>]*class="pk-chip-spacer"[^>]*><\/span>\s*<\/nav>$/, chip_nav_html)
+    end
+
+    test "a shelf backed by zero games produces no chip for it", %{conn: conn} do
+      game_fixture(%{name: "Only Crea Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      chip_nav_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-chip-nav")
+        |> LazyHTML.to_html()
+
+      refute chip_nav_html =~ "carousel-equipo_ganador"
+      refute chip_nav_html =~ "carousel-duelos_memorables"
+    end
+
+    test "a filtered render emits no chip row", %{conn: conn} do
+      game_fixture(%{name: "Filtered Chip Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Filtered"})
+
+      refute html =~ "pk-chip-nav"
+    end
   end
 
   describe "Ver todo tile wired to real filter state (01-11)" do
