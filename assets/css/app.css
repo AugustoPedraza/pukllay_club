@@ -408,9 +408,14 @@
   transform: translateY(0);
 }
 
-.pk-sheet-body {
-  padding: 24px;
-}
+/* .pk-sheet-body deliberately carries no padding of its own — the cloned
+   content is the same preview_body markup the portal clones (poster
+   figure + .pk-preview-body), and .pk-preview-body already owns its own
+   24px inset. A second padding layer here would inset the text content
+   further than the poster above it (double padding on one field, single
+   on the other, the two-surfaces-diverge bug the shared-class rule
+   exists to prevent) — the portal has zero padding of its own for the
+   same reason, so the poster stays full-bleed in both surfaces. */
 
 .pk-sheet-handle {
   width: 40px;
