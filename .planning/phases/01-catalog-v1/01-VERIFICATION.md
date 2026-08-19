@@ -1,7 +1,7 @@
 ---
 phase: 01-catalog-v1
 verified: 2026-08-18T20:10:00Z
-status: human_needed
+status: passed
 score: 5/5 roadmap success criteria verified (all 6 UAT gaps G-01-2..G-01-7 independently re-confirmed in the codebase, not trusted from SUMMARY claims)
 behavior_unverified: 0
 overrides_applied: 0
@@ -50,7 +50,7 @@ editorial tags, mechanics) that teach board-game complexity to a new/casual play
 core value statement.
 
 **Verified:** 2026-08-18
-**Status:** human_needed
+**Status:** passed (with acknowledged gaps — see below)
 **Re-verification:** Yes — this run closes three gap-closure plans (01-07, 01-08, 01-09) executed on
 top of the already-verified 01-01..01-06 base, addressing 01-UAT.md's `gap_id`s G-01-2 through G-01-7
 (G-01-1 was already resolved and confirmed in the prior UAT session).
@@ -194,6 +194,32 @@ real browser. Additionally, two items from the *original* 01-UAT.md session (Tes
 swap/no-BGG-enrichment rendering; Test 4: loading-skeleton layout stability) were never actually run —
 they were marked `skipped` due to the now-resolved G-01-1 CSP bug, not `pass` — and remain open UAT
 debt independent of this session's 3 plans.
+
+## Acknowledged Gaps
+
+The human UAT session that followed this report (see `01-UAT.md`, updated 2026-08-18T22:42:00Z) ran
+all 7 items above in a real browser and found:
+
+- **Passed (5/7):** G-01-2 badge overlap, G-01-6 chip hierarchy, G-01-7 focus ring, G-01-5
+  expansion exclusion/searchability, and the re-run of the two previously-skipped gallery/skeleton
+  tests — all confirmed working as designed.
+- **Open issue — G-01-4 (major):** the carousel affordance/section-distinguishability half of this
+  item is NOT confirmed working. User-reported: "This looks more like a simple vertical list without
+  clear affordance that there are multiple carousels. Also the horizontal scrolling is happening at
+  window level, not individual carousel." This contradicts the code-level verification above (which
+  only confirmed the subtitle/color/heading markup exists, not that it *reads* as distinct carousels
+  or that scroll is correctly scoped to each row). A debug session was opened at
+  `.planning/debug/G-01-4-carousel-affordance.md` to investigate root cause.
+- **Skipped, not re-attempted — G-01-3 root-cause reclassification:** the carousel scroll-controls
+  test ("On a desktop-width browser, confirm each non-empty carousel row shows round prev/next
+  controls...") was skipped by the user ("I don't understand this. skip for now") and the G-01-3
+  reclassification question remains unanswered.
+
+**Decision (developer, 2026-08-18):** rather than route these into the automated diagnose → plan →
+execute gap-closure loop, the developer chose to mark Phase 1 complete now and address remaining
+UI/UX polish (including this carousel affordance/scroll issue) manually, section-by-section, outside
+the GSD phase-plan machinery. These two items are carried forward as known, accepted UI debt — not
+silently dropped — and should be the starting point for that manual pass.
 
 ---
 
