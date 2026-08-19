@@ -20,6 +20,7 @@ defmodule PukllayClubWeb.GamePreview do
   """
   use PukllayClubWeb, :html
 
+  alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Vocabulary
 
   @doc """
@@ -44,7 +45,7 @@ defmodule PukllayClubWeb.GamePreview do
   independently when its underlying data is absent — see the field-level
   rules in the moduledoc-referenced sketch findings.
   """
-  attr :game, PukllayClub.Catalog.Game, required: true
+  attr :game, Game, required: true
 
   def facts_row(assigns) do
     assigns =
@@ -76,7 +77,7 @@ defmodule PukllayClubWeb.GamePreview do
   `Ver detalles` CTA — a lower-commitment action than the interaction that
   revealed it, so it is never the filled primary button.
   """
-  attr :game, PukllayClub.Catalog.Game, required: true
+  attr :game, Game, required: true
 
   def preview_body(assigns) do
     assigns = assign(assigns, :cover, assigns.game.cover_url || assigns.game.thumbnail_url)
@@ -123,7 +124,7 @@ defmodule PukllayClubWeb.GamePreview do
   so browsers never fetch each card's cover image at page load; the hook
   clones this content on demand when a card is hovered or tapped.
   """
-  attr :game, PukllayClub.Catalog.Game, required: true
+  attr :game, Game, required: true
 
   def preview_template(assigns) do
     ~H"""
@@ -154,6 +155,10 @@ defmodule PukllayClubWeb.GamePreview do
         export default {
           mounted() {
             this.portal = this.el.querySelector("#game-preview-portal")
+            this.backdrop = this.el.querySelector("#game-preview-backdrop")
+            this.sheet = this.el.querySelector("#game-preview-sheet")
+            this.sheetBody = this.el.querySelector("#game-preview-sheet-body")
+            this.sheetCloseBtn = this.el.querySelector(".pk-sheet-close")
             this.hoverDelay = parseInt(this.el.dataset.hoverDelay, 10)
             this.hideDelay = parseInt(this.el.dataset.hideDelay, 10)
             this.portalWidth = parseInt(this.el.dataset.portalWidth, 10)
@@ -162,6 +167,7 @@ defmodule PukllayClubWeb.GamePreview do
             this.finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches
             this.showTimer = null
             this.hideTimer = null
+            this.triggerCard = null
 
             this.onMouseOver = (event) => {
               if (!this.finePointer) return
@@ -195,9 +201,50 @@ defmodule PukllayClubWeb.GamePreview do
             window.addEventListener("scroll", this.onScroll, {capture: true, passive: true})
 
             this.onKeydown = (event) => {
-              if (event.key === "Escape") this.hidePortal()
+              if (event.key === "Escape") {
+                this.hidePortal()
+                this.closeSheet()
+              }
             }
             document.addEventListener("keydown", this.onKeydown)
+
+            // Touch tap: opens the sheet instead of navigating. On a fine
+            // pointer the click falls through and the card link navigates —
+            // desktop already has the hover preview. Registered in the
+            // capture phase so this runs (and can preventDefault) before
+            // LiveView's own bubble-phase navigation click handler.
+            this.onClick = (event) => {
+              const closeTarget = event.target.closest("[data-sheet-close]")
+              if (closeTarget && this.el.contains(closeTarget)) {
+                this.closeSheet()
+                return
+              }
+              if (this.finePointer) return
+              const card = event.target.closest("[data-game-card]")
+              if (!card) return
+              event.preventDefault()
+              event.stopPropagation()
+              this.openSheet(card)
+            }
+            document.addEventListener("click", this.onClick, {capture: true})
+
+            this.onSheetKeydown = (event) => {
+              if (event.key !== "Tab") return
+              const focusable = this.sheet.querySelectorAll(
+                'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+              )
+              if (focusable.length === 0) return
+              const first = focusable[0]
+              const last = focusable[focusable.length - 1]
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault()
+                last.focus()
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault()
+                first.focus()
+              }
+            }
+            this.sheet.addEventListener("keydown", this.onSheetKeydown)
           },
 
           showPortal(card) {
@@ -223,6 +270,33 @@ defmodule PukllayClubWeb.GamePreview do
             this.portal.classList.remove("is-visible")
           },
 
+          openSheet(card) {
+            const template = card.querySelector("template[data-game-preview]")
+            if (!template) return
+            this.triggerCard = card
+
+            const content = template.content.cloneNode(true)
+            const title = content.querySelector(".pk-preview-title")
+            if (title) title.id = "game-preview-sheet-title"
+            this.sheetBody.replaceChildren(content)
+
+            this.sheet.setAttribute("aria-hidden", "false")
+            this.sheet.classList.add("is-open")
+            this.backdrop.classList.add("is-visible")
+            document.body.classList.add("pk-sheet-open")
+            this.sheetCloseBtn.focus()
+          },
+
+          closeSheet() {
+            if (!this.sheet.classList.contains("is-open")) return
+            this.sheet.setAttribute("aria-hidden", "true")
+            this.sheet.classList.remove("is-open")
+            this.backdrop.classList.remove("is-visible")
+            document.body.classList.remove("pk-sheet-open")
+            this.triggerCard?.focus()
+            this.triggerCard = null
+          },
+
           destroyed() {
             clearTimeout(this.showTimer)
             clearTimeout(this.hideTimer)
@@ -230,26 +304,47 @@ defmodule PukllayClubWeb.GamePreview do
             document.removeEventListener("mouseout", this.onMouseOut)
             window.removeEventListener("scroll", this.onScroll, {capture: true})
             document.removeEventListener("keydown", this.onKeydown)
+            document.removeEventListener("click", this.onClick, {capture: true})
+            this.sheet.removeEventListener("keydown", this.onSheetKeydown)
+            document.body.classList.remove("pk-sheet-open")
           }
         }
       </script>
       <div id="game-preview-portal" class="pk-portal" phx-update="ignore" aria-hidden="true"></div>
+      <div id="game-preview-backdrop" class="pk-sheet-backdrop" data-sheet-close></div>
+      <div
+        id="game-preview-sheet"
+        class="pk-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-hidden="true"
+        aria-labelledby="game-preview-sheet-title"
+      >
+        <div class="pk-sheet-handle"></div>
+        <button
+          type="button"
+          data-sheet-close
+          aria-label="Cerrar"
+          class="pk-sheet-close btn btn-circle btn-sm min-h-11"
+        >
+          <.icon name="hero-x-mark" />
+        </button>
+        <div id="game-preview-sheet-body" class="pk-sheet-body" phx-update="ignore"></div>
+      </div>
     </div>
     """
   end
 
   defp players_text(%{min_players: nil}), do: nil
 
-  defp players_text(%{min_players: min, max_players: max}) when is_nil(max) or min == max,
-    do: "#{min}"
+  defp players_text(%{min_players: min, max_players: max}) when is_nil(max) or min == max, do: "#{min}"
 
   defp players_text(%{min_players: min, max_players: max}), do: "#{min}-#{max}"
 
   defp tiempo_text(%{min_playtime: nil, max_playtime: nil, playing_time: nil}), do: nil
   defp tiempo_text(%{min_playtime: nil, max_playtime: nil, playing_time: pt}), do: "#{pt} min"
 
-  defp tiempo_text(%{min_playtime: min, max_playtime: max}) when is_nil(max) or min == max,
-    do: "#{min} min"
+  defp tiempo_text(%{min_playtime: min, max_playtime: max}) when is_nil(max) or min == max, do: "#{min} min"
 
   defp tiempo_text(%{min_playtime: min, max_playtime: max}), do: "#{min}-#{max} min"
 end

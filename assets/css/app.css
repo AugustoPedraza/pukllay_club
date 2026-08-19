@@ -302,6 +302,68 @@
   display: none;
 }
 
+/* Mobile: tap opens a full-screen sheet, not an inline expand — the same
+   fixed-to-viewport reasoning as the portal, since a coarse pointer has
+   no hover to trigger the desktop surface. No sheet-scoped override of
+   .pk-preview-title/.pk-preview-text/.pk-preview-poster/.pk-facts-row
+   exists here — the sheet reuses Task 1's single declaration of each. */
+.pk-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-base-content) 55%, transparent);
+  z-index: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pk-sheet-backdrop.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pk-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 601;
+  background: var(--color-base-100);
+  border-radius: var(--radius-box) var(--radius-box) 0 0;
+  box-shadow: 0 -8px 24px rgba(20, 8, 34, 0.25);
+  max-height: 82vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pk-sheet.is-open {
+  transform: translateY(0);
+}
+
+.pk-sheet-body {
+  padding: 24px;
+}
+
+.pk-sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--color-base-300);
+  border-radius: 9999px;
+  margin: 8px auto 0;
+}
+
+.pk-sheet-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+body.pk-sheet-open {
+  overflow: hidden;
+}
+
 /* PK CATALOG SURFACES END */
 
 /* This file is for your main application CSS */
