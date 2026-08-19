@@ -6,12 +6,19 @@ description: Design-system rules for PukllayClub's Phoenix/LiveView UI — daisy
 ## Core rule
 
 daisyUI is the primary system. Prefer its semantic classes (`btn-primary`, `badge-secondary`,
-`select`, `input`, `card`, `drawer`, `carousel`, `rounded-box`) over raw Tailwind utilities for
-anything daisyUI already names. Raw Tailwind is for layout only (flex, grid, gap, spacing,
-max-width) — never for color, radius, or component shape daisyUI already covers.
+`select`, `input`, `card`, `drawer`, `rounded-box`) over raw Tailwind utilities for anything
+daisyUI already names. Raw Tailwind is for layout only (flex, grid, gap, spacing, max-width) —
+never for color, radius, or component shape daisyUI already covers.
 
 **Before writing custom markup, check `core_components.ex` and daisyUI's component list first.**
 State explicitly which one you checked and why it doesn't fit before hand-rolling markup.
+
+**Exception: the catalogue's horizontally-scrolling rails (`CarouselRow.carousel_row/1`) do not
+use daisyUI's `carousel` component.** That component hides its scrollbar with no replacement
+scroll cue, which is precisely why the rail read as an unresponsive grid before 01-11. The rail
+is hand-rolled (`.pk-rail`/`.pk-rail-wrap`) instead — see the catalogue surface layer below. This
+is the one deliberate exception to "prefer daisyUI"; it is not a precedent for hand-rolling other
+daisyUI-covered components.
 
 ## Banned — never write these
 
@@ -55,6 +62,13 @@ not leave a heading on the plain sans default.
   Caution: `Layouts.app`'s `<main>` still owns `px-4 py-20 sm:px-6 lg:px-8`, and
   `CatalogLive.Show` relies on it (it declares no padding of its own) — stripping `<main>`'s
   padding is a separate, breaking change, not a cleanup.
+  **Deliberate exception: `CatalogLive.Index` (01-11/01-12).** The catalogue page runs
+  `fullbleed`/`sticky` on `Layouts.app` and its own carousel shelves reach the viewport edge with
+  no page-container padding at all — that full-bleed reach is the entire point of the Netflix-
+  style edge-fade shelf pattern. Its capped inner sections (toolbar, main grid, load-more) each
+  still get `mx-auto w-full max-w-7xl pk-gutter`, individually wrapped. This is the one page in
+  the app that intentionally has no single page-container div; don't "fix" it to match the rule
+  above, and don't copy the full-bleed pattern onto a page that has no edge-to-edge content.
 
 ## Type hierarchy
 
@@ -83,6 +97,49 @@ not leave a heading on the plain sans default.
 - Action labels use a precise verb (e.g. `Eliminar`, not a generic `Aceptar`) so the
   consequence — navigate, dismiss, or mutate — is predictable before the click.
 
+## Catalogue surface layer (`pk-*`, phase 01, plans 01-10/01-11/01-12)
+
+The catalogue browse page (sketches 001/002, variant D) needed CSS daisyUI/Tailwind utilities
+don't reach — full-bleed edge-fade shelves, a shared preview surface cloned into two different
+places, a sticky nav tinting on scroll. That CSS lives in **one delimited block** in
+`assets/css/app.css`, between the `PK CATALOG SURFACES START` and `PK CATALOG SURFACES END`
+comment markers. **This is the only sanctioned custom-CSS layer in the app** — new custom CSS
+that daisyUI/Tailwind utilities genuinely can't express belongs inside this block, extending the
+existing groups below, not scattered into a new `<style>` block or a second delimited region.
+
+Rules that apply to everything in the block:
+
+- Every class resolves colour through the daisyUI theme CSS variables (`--color-base-100`,
+  `--color-primary`, etc.) and radius through `--radius-box`/`--radius-field` — never a literal
+  hex/rgb color — so both the light and dark theme render every surface correctly.
+- **A field that must look identical on two different surfaces is declared in exactly one CSS
+  class, shared verbatim by both** — never two independently-declared rules for the same visual
+  property, even if the values start out matching. This is the single most load-bearing rule in
+  this layer: every surface-drift bug found during sketching (title font-size, description
+  line-clamp, poster aspect-ratio, the sheet's double-padding bug found live during 01-11) came
+  from violating it. See `GamePreview`'s moduledoc for the concrete example.
+- **`--pk-gutter` is the single horizontal-alignment token, consumed by exactly one rule
+  (`.pk-gutter`).** No other selector in the block may set a horizontal padding on an aligned
+  surface (the header, a row header, a rail wrap, a capped page section). This is what makes the
+  nav and the row content below it provably share an edge instead of drifting to two
+  independently-chosen spacing values.
+- The narrow-viewport (`max-width: 480px`) density and navigation-switch values are declared in
+  **one** `@media` block, positioned **last** in the file — after every base rule it overrides.
+  A same-specificity override placed earlier in the file loses to a later plain rule regardless
+  of the media query matching; this bit twice during 01-12 (the nav-links/chip-nav display swap
+  silently lost to the base rule until the whole block was moved to the end). Don't split this
+  block or move it earlier — add to it in place.
+
+Class inventory by group:
+
+| Group | Classes |
+|---|---|
+| Page and shelf layout | `--pk-gutter`, `.pk-gutter`, `.pk-page`, `.pk-shelf` |
+| Rail and edge-fade | `.pk-rail-wrap` (+`::before`/`::after`), `.pk-rail` (+`::-webkit-scrollbar`), `.pk-poster-card` (+`.is-hero`), `.pk-see-all` |
+| Card (resting state) | `.pk-card`, `.pk-card-poster`, `.pk-card-caption` |
+| Preview surfaces (hover portal + mobile sheet) | `.pk-facts-row`, `.pk-fact`, `.pk-difficulty`, `.pk-difficulty-dot` (+`.is-filled`), `.pk-preview-poster`, `.pk-preview-body`, `.pk-preview-title`, `.pk-preview-text`, `.pk-preview-cta`, `.pk-portal` (+`.is-visible`), `.pk-sheet-backdrop` (+`.is-visible`), `.pk-sheet` (+`.is-open`), `.pk-sheet-body`, `.pk-sheet-handle`, `.pk-sheet-close`, `body.pk-sheet-open` |
+| Nav and chips | `.pk-header`, `.pk-header-sticky`, `.pk-nav` (+`.is-scrolled`), `.pk-nav-links`, `.pk-nav-search`, `.pk-chip-nav` (+`::-webkit-scrollbar`), `.pk-chip` (+`.is-active`), `.pk-chip-spacer` |
+
 ## Component inventory — use these before writing new markup
 
 | Module | Function | Required attrs |
@@ -93,12 +150,17 @@ not leave a heading on the plain sans default.
 | `CoreComponents` | `table/1` | `id`, `rows`, `:col` slot |
 | `CoreComponents` | `list/1` | `:item` slot (with `title`) |
 | `CoreComponents` | `icon/1` | `name` (`hero-*`) |
-| `Layouts` | `app/1` | `flash`, inner_block |
+| `Layouts` | `app/1` | `flash`, inner_block. Optional: `fullbleed` (bool, default `false`), `sticky` (bool, default `false`), `:nav_links`/`:nav_search`/`:subnav` slots |
 | `Layouts` | `brand_logo/1` | — |
 | `GameCard` | `game_card/1` | `id`, `game` |
 | `FilterDrawer` | `filter_drawer/1` | `id`, `facet_options` |
-| `CarouselRow` | `carousel_row/1` | `id`, `title`, `games` |
+| `CarouselRow` | `carousel_row/1` | `id`, `title`, `games`. Optional: `variant` (`:standard`/`:hero`), `subtitle`, `see_all_row` |
 | `CarouselRow` | `skeleton_card/1` | `id` |
+| `GamePreview` | `preview_body/1` | `game` — the shared body cloned by both the portal and the sheet |
+| `GamePreview` | `preview_template/1` | `game` — wraps `preview_body/1` in an inert `<template>` |
+| `GamePreview` | `preview_host/1` | — renders the portal + sheet once, outside every rail |
+| `GamePreview` | `facts_row/1` | `game` — players/tiempo/dificultad pills |
+| `GamePreview` | `difficulty_indicator/1` | `level` (1..3) |
 | `GameChips` | `weight_band_badge/1` | `game` |
 | `GameChips` | `chip_row/1` | `terms` |
 | `GameChips` | `editorial_tags/1` | `tags` |

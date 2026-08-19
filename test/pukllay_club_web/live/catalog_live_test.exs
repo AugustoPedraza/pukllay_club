@@ -749,6 +749,55 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "composite: shelf structure, card, preview surfaces and nav compose together (01-12)" do
+    test "the unfiltered landing page renders the whole assembled contract in one pass", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Composite Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      # Sticky header wrapper + search form inside it
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ "pk-header-sticky"
+      assert header_html =~ ~s(id="catalog-search-form")
+
+      # Nav links block + chip row
+      assert header_html =~ "pk-nav-links"
+      assert header_html =~ "pk-chip-nav"
+
+      # A gutter-shared row header and rail wrap, rail marker, scroll controls
+      carousel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      assert carousel_html =~ "pk-row-header pk-gutter"
+      assert carousel_html =~ "pk-rail-wrap pk-gutter"
+      assert carousel_html =~ "data-rail"
+      assert carousel_html =~ ~s(data-scroll="prev")
+      assert carousel_html =~ ~s(data-scroll="next")
+
+      # A Ver todo tile
+      assert carousel_html =~ "pk-see-all"
+
+      # A card carrying the card marker and its preview template
+      assert carousel_html =~ "data-game-card"
+      assert carousel_html =~ "data-game-preview"
+
+      # Preview host with portal and sheet containers
+      assert html =~ ~s(id="game-preview-portal")
+      assert html =~ ~s(id="game-preview-backdrop")
+      assert html =~ ~s(id="game-preview-sheet")
+    end
+  end
+
   defp position(html, text) do
     case :binary.match(html, text) do
       {pos, _} -> pos
