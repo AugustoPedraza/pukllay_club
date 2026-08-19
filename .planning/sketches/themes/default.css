@@ -1,0 +1,86 @@
+/* PukllayClub sketch theme — mirrors the approved 01-UI-SPEC.md brand tokens
+   (assets/css/app.css daisyUI overrides) so sketches feel true to the real app,
+   not a generic mockup. Light values only; sketches default to light mode. */
+
+:root {
+  /* Colors — from 01-UI-SPEC.md daisyUI theme overrides (light) */
+  --color-bg: #FFFFFF;
+  --color-surface: #F3ECFA;
+  --color-surface-2: #E3D3F0;
+  --color-text: #241238;
+  --color-text-muted: #6B5B7B;
+  --color-primary: #3D096D;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #7E4CA5;
+  --color-accent-bg: #EDE1F7;
+  --color-accent-text: #3D096D;
+  --color-border: #E3D3F0;
+  --color-danger: #B23A5C;
+  --color-success: #3F8F6B;
+
+  /* Typography — Bebas Neue (display) + Inter (body/UI), per 01-UI-SPEC.md */
+  --font-display: "Bebas Neue", ui-sans-serif, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-display: 1.75rem;
+
+  /* Spacing — 4px-multiple scale, per 01-UI-SPEC.md */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-12: 64px;
+
+  /* Shapes */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(36, 18, 56, 0.06);
+  --shadow-md: 0 4px 12px rgba(36, 18, 56, 0.12);
+  --shadow-lg: 0 12px 32px rgba(36, 18, 56, 0.24);
+
+  /* Motion — shared easing vocabulary for sketch 003 and any hover/expand
+     interactions built into 001/002 */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 220ms;
+  --duration-slow: 360ms;
+}
+
+@font-face {
+  font-family: "Bebas Neue";
+  src: local("Bebas Neue");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: local("Inter");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
