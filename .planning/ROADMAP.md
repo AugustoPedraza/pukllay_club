@@ -84,7 +84,7 @@ be pulled forward without breaking that dependency chain.
   4. Each game displays a plain-Spanish weight-band descriptor and plain-Spanish mechanic/theme chips instead of a bare 1-5 number or raw hobbyist jargon
   5. Each game shows the club's own resized cover image and any editorial "club favorite"/"beginner-friendly" tag carried over from the existing Excel catalog
 
-**Plans**: 10/12 plans executed (6 original + 3 gap-closure executed; 3 sketch-implementation plans pending)
+**Plans**: 11/12 plans executed (6 original + 3 gap-closure executed; 3 sketch-implementation plans pending)
 **UI hint**: yes
 
 **Wave 1**
@@ -123,7 +123,7 @@ be pulled forward without breaking that dependency chain.
 
 **Sketch implementation — Wave 2** *(blocked on 01-10: shared `app.css` block and `game_card.ex`)*
 
-- [ ] 01-11-PLAN.md — Full-bleed edge-fade shelves, shared gutter token, `Ver todo` tile, narrow-viewport rail density (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
+- [x] 01-11-PLAN.md — Full-bleed edge-fade shelves, shared gutter token, `Ver todo` tile, narrow-viewport rail density (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
 
 **Sketch implementation — Wave 3** *(blocked on 01-11: shared `app.css` block, `layouts.ex` and `catalog_live/index.ex`)*
 
@@ -185,7 +185,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Walking Skeleton to Production | 6/6 | Complete    | 2026-07-27 |
-| 1. Catalog v1 | 10/12 | In Progress|  |
+| 1. Catalog v1 | 11/12 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
