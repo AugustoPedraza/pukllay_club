@@ -28,7 +28,42 @@ not "2-2"). Weight band labels are pulled verbatim from 01-VOCABULARY.md.
 open .planning/sketches/002-card-hierarchy/index.html
 
 ## Current design (variant D)
-Resting card: poster + title (gradient-scrim overlay) + a slim always-visible players/tiempo strip.
+Resting card matches sketch 001 variant D's card exactly, including content — same class names
+(`.poster-art`, `.cap`), same values: poster art, then a plain caption block below with just the
+title in dark text on a `--color-surface` background, clamped to 2 lines. Nothing else.
+
+Players/tiempo/dificultad are **preview-only** — they never appear on the resting card, only inside
+the desktop hover-portal and the mobile sheet. An earlier round added a players/tiempo strip to the
+resting card's caption block; that's been removed. (Even earlier than that, the title itself was
+overlaid on the poster with a gradient scrim instead of sitting in a plain caption block below it —
+also fixed, in a prior round.)
+
+The caption's title is anchored toward the top (tight padding right under the poster, more room
+trailing below) rather than vertically centered — centering made it read as a floating label
+disconnected from the image above it; anchoring it to the poster edge is what makes a caption read
+as "belonging to" its image in most card UIs.
+
+**Title is single-line only, always** (settled after comparing 3 options — see below). Reserving
+room for a possible 2nd line was the actual source of the "weird empty space" complaint: a short
+title like "Catán" left a visible gap below it even when top-anchored. Dropping the 2-line
+allowance entirely removes the whole class of problem — every caption is naturally the same tight
+height, no reserved-space or row-alignment trick needed. Long titles (Terraforming Mars: Ares
+Expedition) now truncate harder with an ellipsis instead of wrapping.
+
+Options considered:
+- **1-line only, always (chosen)** — simplest, no empty-space edge case possible.
+- Natural height, no forced minimum — zero wasted space, but reintroduces uneven row bottoms when a
+  2-line title sits next to 1-line ones (the original row-misalignment complaint).
+- Keep 2-line reservation, re-centered — still leaves visible empty space for short titles, just
+  repositioned rather than removed.
+
+**Considered and rejected: dropping the caption entirely** (Netflix's own pattern — title baked into
+the poster art, no separate text). Not a good fit here: Netflix's posters are professionally
+designed with the title as part of the key art, and its audience often recognizes titles by poster
+alone. This catalog's ~400 games are real box-cover photography of wildly inconsistent legibility
+across publishers, for an audience that explicitly does *not* already recognize games by sight (the
+project's whole premise). A guaranteed-legible UI caption is the safer choice for this catalog, even
+at the cost of Netflix's cleaner poster-wall look.
 
 **Desktop:** hovering a card (after a 300ms hover-intent delay, so sweeping across a row doesn't
 fire a preview per card) pops a preview forward — 1.65× the card's size, centered on it, strong
@@ -46,7 +81,21 @@ the game's theme/flavor description (clamped to 3 lines) and its editorial tag, 
 **Difficulty, not age.** Every metadata surface (strip, portal, sheet) replaced a raw `min_age`
 number with a difficulty cue derived from `weight_band`: 3 dots (filled = weightLevel 1-3) paired
 with the same official band label used elsewhere in the app (row headings, chips) — dots alone
-tested as ambiguous, so they carry real vocabulary rather than inventing a second one.
+tested as ambiguous, so they carry real vocabulary rather than inventing a second one. It renders as
+a third item inside the same players/tiempo facts row (not a separate colored pill — a standalone
+badge tested as louder than a metadata detail should be), so all three facts share identical
+size/color/weight, and the row is styled once and shared verbatim by the portal and the sheet —
+no per-surface overrides, so the two can't quietly drift out of sync with each other again.
+
+**Theme text is on both surfaces now, and genuinely identical.** The desktop preview and the mobile
+sheet both show the game's theme/flavor description via one shared `.theme-text` rule — same
+font-size, same 3-line clamp, so the same game reads the same description either way. An earlier
+round gave the portal a different clamp (2 lines) and a smaller font than the sheet, which read as
+literally different text for the same game — that divergence is gone.
+
+**Facts row: players left, tiempo center, dificultad right.** `justify-content: space-between`
+across the row's 3 fixed items, applied once in the shared `.facts-row` rule so it can't diverge
+between the portal and the sheet again.
 
 CTA ("Ver detalles") is secondary (outlined, not filled) everywhere on this card — it's a
 lower-commitment action than whatever interaction got the user here.
@@ -67,6 +116,44 @@ even in the compact preview, that's worth flagging back rather than assuming thi
 - **Missing title text on the resting card (round 4):** `.poster-title` styling had only ever been
   written for variants A/C, never D — so D's title rendered completely unstyled, squished into the
   flex-centered poster next to the icon instead of the intended gradient-scrim overlay.
+
+## Metadata treatment (settled)
+Players/tiempo/dificultad now render as three small pills on their own row, right-aligned, directly
+above the title — not stacked below it, not sharing the title's row. One shared function
+(`pillsRowHTML`) used identically by the portal and the sheet.
+
+An earlier attempt put the pills beside the title on the same row (title left, pills right,
+vertically centered). That hit a real CSS bug: a `-webkit-line-clamp`-truncated title's intrinsic
+width for flex-shrink purposes isn't reliably based on its clamped size across browsers, so the
+"truncated" title didn't actually shrink and visually bled into the pills. Giving the pills their
+own row sidesteps the bug entirely — the title is full-width with nothing to share space with, so
+its normal truncation works correctly again.
+
+Pills start left (flush with the title) and use `justify-content: space-between` across the row, so
+the last pill lands flush with the row's right edge — starts aligned with the title, ends aligned
+with the content's right edge, rather than either bunching left or floating fully right.
+
+**Title is now one shared `.card-title` style for the portal and the sheet** — same font-size
+(text-display, 28px), same 2-line clamp (was 1 line). The portal previously used a smaller size
+(text-xl, 20px) than the sheet — same class of mistake as the theme-text divergence fixed earlier:
+two different sizes for the same field read as literally different content. The 2-line allowance
+also resolves the truncation trade-off from the 1-line version — a long title (Terraforming Mars:
+Ares Expedition) now has room to wrap once instead of cutting off after a handful of characters.
+
+## Portal sized as a fixed modal, not a scaled-up card
+The portal's size was `rect.width * 1.65` — a multiple of the tiny 190px resting card. Since the
+title/theme text share exact font sizes with the mobile sheet, a size derived from the narrow card
+made that shared text feel oversized/cramped relative to its box (same px, less room than the
+sheet has). Switched to a fixed `PORTAL_WIDTH = 360px`, independent of the card's own width — a
+proportion closer to the mobile sheet's, so the identical fonts get comparable breathing room on
+both surfaces instead of just identical pixel values in differently-proportioned boxes.
+
+## Poster aspect-ratio unified
+Found a real divergence between the two surfaces, not a deliberate one: the portal's poster used
+`aspect-ratio: 1/0.8` (near-square) while the sheet's used `16/9` (widescreen) — the same poster
+image rendering at two different crops/proportions depending on which surface opened it. The
+sheet's `16/9` was already correct; the portal now matches it (an earlier pass mistakenly changed
+both to the resting card's ratio instead — corrected).
 
 ## Follow-up / Open Question
 The desktop hover-portal is a real fix, not a sketch-only trick — it's how sophisticated
