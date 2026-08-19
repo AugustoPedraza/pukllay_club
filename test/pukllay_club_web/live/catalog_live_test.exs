@@ -516,6 +516,39 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       assert html =~ "pk-page"
     end
+
+    test "every shelf heading is plain Spanish prose, never a raw hashtag string", %{conn: conn} do
+      game_fixture(%{name: "Crea Game", tags: ["#CreaConexiones"]})
+      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
+      game_fixture(%{name: "Duelos Game", tags: ["#DuelosMemorables"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      heading_texts =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows h2")
+        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+
+      assert heading_texts != []
+      refute Enum.any?(heading_texts, &String.starts_with?(&1, "#"))
+    end
+
+    test "a rendered shelf carries the pk-shelf class that owns the anchor scroll offset", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Anchor Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      carousel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      assert carousel_html =~ "pk-shelf"
+    end
   end
 
   describe "Ver todo tile wired to real filter state (01-11)" do

@@ -232,6 +232,14 @@
   scroll-behavior: smooth;
   scrollbar-width: none;
   padding: 8px 0;
+  /* A horizontal overscroll cannot chain out to the page or trigger the
+     browser's back gesture; a tap opens the mobile sheet without waiting
+     out the double-tap-zoom delay. Both pan axes stay available — a
+     single-axis pan-x would intersect with the page's own panning and
+     stop a vertical swipe that starts on a card from scrolling the page,
+     trading a minor swipe ambiguity for a much worse regression. */
+  overscroll-behavior-x: contain;
+  touch-action: manipulation;
 }
 
 .pk-rail::-webkit-scrollbar {
@@ -272,6 +280,54 @@
   background: var(--color-accent);
   border-color: var(--color-primary);
   border-style: solid;
+}
+
+/* Narrow-viewport density (sketch 001, variant D): every number below is
+   part of one calculation — at 96px cards, 10px gaps and a 0.875rem
+   gutter, a 390px viewport shows three full cards plus roughly half of a
+   fourth, and an edge-fade wider than that sliver would swallow the very
+   peek it exists to create. They therefore all flip together in this one
+   block, keyed off a single --pk-gutter token consumed by a single
+   .pk-gutter rule, so no surface can keep the wide value while its
+   neighbour drops to the narrow one (the specificity trap the sketch
+   source hit, where the hero row's rail-wrap silently kept the desktop
+   padding while its row-header dropped to the narrow one). This raw
+   breakpoint (not the repo's sm: 640px) is deliberate: the number set is
+   only correct below roughly 480px and visibly under-fills a 600px
+   viewport. */
+@media (max-width: 480px) {
+  :root {
+    --pk-gutter: 0.875rem;
+  }
+
+  .pk-rail {
+    gap: 10px;
+  }
+
+  .pk-poster-card {
+    width: 96px;
+  }
+
+  .pk-poster-card.is-hero {
+    width: 118px;
+  }
+
+  .pk-rail-wrap::before,
+  .pk-rail-wrap::after {
+    width: 16px;
+  }
+
+  .pk-shelf {
+    margin-bottom: 2rem;
+  }
+
+  .pk-card-caption {
+    padding: 8px 4px 4px;
+  }
+
+  .pk-card-caption h3 {
+    font-size: 0.75rem;
+  }
 }
 
 .pk-facts-row {
