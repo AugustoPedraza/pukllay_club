@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: catalog-v1
-status: verifying
-stopped_at: "Completed 01-08-PLAN.md (gap closure: G-01-3, G-01-4)"
-last_updated: "2026-08-18T22:39:48.481Z"
+current_phase: 2
+current_phase_name: Natural-Language Spanish Search + Auth
+status: planning
+stopped_at: "Phase 01 UAT complete (5/7 pass); marked complete with 2 acknowledged gaps for manual UI/UX follow-up"
+last_updated: "2026-08-19T00:26:56.530Z"
 last_activity: 2026-08-18
 last_activity_desc: "Completed quick task 260818-n4l: Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias"
 progress:
@@ -28,10 +28,10 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01 (catalog-v1) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-08-18 — Phase 01 execution started
+Phase: 2 — Natural-Language Spanish Search + Auth
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-18 — Phase 01 complete, transitioned to Phase 2
 structure (0-4)
 
 Progress: [██████████] 100%
@@ -40,7 +40,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 6
+- Total plans completed: 15
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -49,6 +49,7 @@ Progress: [██████████] 100%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 00 | 6 | - | - |
+| 01 | 9 | - | - |
 
 **Recent Trend:**
 
@@ -165,6 +166,11 @@ item in `01-VERIFICATION.md`. Full audit: https://claude.ai/code/artifact/f067cf
 - Phase 0 (plans 00-04 onward): main is now branch-protected requiring the 'quality' CI check — direct 'git push origin main' is rejected once a required status check exists. Future plan executors must land commits via a short branch + PR (gh pr create -> wait for CI -> gh pr merge), not a bare push, even though .planning/config.json still has git.branching_strategy:
 - Plan 00-06 (nightly backup): repo is now public (00-03 D-19), so GitHub's 60-day scheduled-workflow auto-disable applies to the nightly pg_dump->R2 cron workflow. Must accept this risk explicitly or add a keepalive mechanism when planning/executing 00-06.
 
+- [Phase 01, acknowledged 2026-08-18] Two UI/UX items from Phase 1's final human UAT were left open on purpose (developer chose to close the phase and fix these manually, section-by-section, rather than route through automated gap-closure — see `01-VERIFICATION.md` "Acknowledged Gaps"):
+  - **G-01-4 (major):** Carousel shelves on `/` read as a single vertical list with no visible affordance that there are multiple carousels, and horizontal scroll happens at the window level instead of being scoped to each carousel row. A diagnosis was opened at `.planning/debug/G-01-4-carousel-affordance.md`.
+  - **G-01-3 (unresolved):** The carousel prev/next scroll-controls test was skipped by the user ("I don't understand this") — whether the originally-reported "~20 columns forcing horizontal scroll" was a carousel rail or the `#games` grid is still an open question.
+  - These two, plus the pre-existing 7-item UI audit already logged under "Pending Todos" above, are the natural starting point for the next manual UI/UX pass.
+
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Status | Directory |
@@ -191,7 +197,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-18T22:39:48.445Z
-Stopped at: Completed 01-08-PLAN.md (gap closure: G-01-3, G-01-4)
-verified against the roadmap (no edits needed)
+Last session: 2026-08-18T22:42:00Z
+Stopped at: Phase 01 complete (5/7 UAT pass, 2 acknowledged gaps carried forward — see Blockers/Concerns). Developer is pausing GSD-phase work to iterate on UI/UX manually, section by section, before planning Phase 2.
 Resume file: None
