@@ -29,6 +29,19 @@ defmodule PukllayClub.Catalog.VocabularyTest do
     end
   end
 
+  describe "weight_band_level/1" do
+    test "returns the 1-based index of each band in ascending order" do
+      assert Vocabulary.weight_band_level("descubre_el_hobby") == 1
+      assert Vocabulary.weight_band_level("ingenio_estratega") == 2
+      assert Vocabulary.weight_band_level("nivel_experto") == 3
+    end
+
+    test "returns nil for an unknown or nil value" do
+      assert Vocabulary.weight_band_level("no_existe") == nil
+      assert Vocabulary.weight_band_level(nil) == nil
+    end
+  end
+
   describe "editorial_tags/0" do
     test "returns the 3 club hashtags verbatim, in order" do
       tags = Enum.map(Vocabulary.editorial_tags(), & &1.tag)

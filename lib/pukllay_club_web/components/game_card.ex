@@ -45,6 +45,7 @@ defmodule PukllayClubWeb.GameCard do
 
   alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.GameChips
+  alias PukllayClubWeb.GamePreview
 
   attr :id, :string, required: true
   attr :game, PukllayClub.Catalog.Game, required: true
@@ -54,7 +55,7 @@ defmodule PukllayClubWeb.GameCard do
     assigns = assign(assigns, :mechanic_labels, Vocabulary.covered_mechanics(assigns.game.mechanics))
 
     ~H"""
-    <div id={@id} class={["card bg-base-200 shadow-sm", @class]}>
+    <div id={@id} data-game-card class={["card bg-base-200 shadow-sm", @class]}>
       <figure class="aspect-square overflow-hidden bg-base-300">
         <img
           :if={@game.thumbnail_url}
@@ -91,6 +92,7 @@ defmodule PukllayClubWeb.GameCard do
           </.link>
         </div>
       </div>
+      <GamePreview.preview_template game={@game} />
     </div>
     """
   end

@@ -142,6 +142,21 @@ defmodule PukllayClub.Catalog.Vocabulary do
   @doc "Returns the band map for a DB `weight_band` value, or `nil` if unknown."
   def weight_band(value), do: Enum.find(@weight_bands, &(&1.value == value))
 
+  @doc """
+  Returns the 1-based difficulty level (1..3) for a DB `weight_band` value, or
+  `nil` for an unknown/nil value. This is the only difficulty source in the
+  app — derived from `@weight_bands`' own order via `Enum.find_index/2` so it
+  can never disagree with `weight_bands/0` or the `array_position` sort
+  fragment in `PukllayClub.Catalog`. Not a second Fácil/Moderado/Difícil
+  scale — it reuses the club's existing three-band vocabulary.
+  """
+  def weight_band_level(value) do
+    case Enum.find_index(@weight_bands, &(&1.value == value)) do
+      nil -> nil
+      index -> index + 1
+    end
+  end
+
   @doc "Returns the 3 editorial hashtags, each with `:tag` (verbatim) and `:meaning`."
   def editorial_tags, do: @editorial_tags
 

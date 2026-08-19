@@ -32,6 +32,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   alias PukllayClubWeb.CarouselRow
   alias PukllayClubWeb.FilterDrawer
   alias PukllayClubWeb.GameCard
+  alias PukllayClubWeb.GamePreview
 
   @page_size 24
   @skeleton_carousel_rows 8
@@ -377,6 +378,8 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         <div :if={@total > 0 and @offset < @total} class="flex justify-center">
           <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
         </div>
+
+        <GamePreview.preview_host />
       </div>
     </Layouts.app>
     """
