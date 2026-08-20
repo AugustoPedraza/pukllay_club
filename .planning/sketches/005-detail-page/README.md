@@ -859,6 +859,54 @@ previously-separate `IIFE`s (CTA hide/show, title-bar fade, and this) got merged
 closure with a `footerReached` flag, since the title bar's visibility now legitimately depends on two
 independent conditions (past `#game-identity` AND not at the footer) instead of one.
 
+## Round 35 — "Juegos similares" shelf: the home page's carousel, reused as the exit hook
+Confirmed this makes sense: a "more like this" row between the last real content and the footer is
+exactly the standard pattern (Netflix, Amazon, Airbnb all do it) — it gives a reader who's finished
+evaluating this one game somewhere to go next instead of a dead end, and reusing an already-validated
+shelf pattern here is lower-risk than inventing a new one for this one page.
+
+Not invented fresh — this is the real, already-shipped home page pattern (`PukllayClubWeb.CarouselRow`
++ `GameCard`, `lib/pukllay_club_web/components/`, styled via `assets/css/app.css`'s
+`.pk-shelf`/`.pk-rail`/`.pk-card*`), pulled in and translated 1:1 from daisyUI tokens into this
+sketch's own `--color-*` vocabulary (`base-100→bg`, `base-200→surface`, `base-300→border`,
+`neutral→text-muted`, `accent→accent-bg`) — the same mapping every other component in this file
+already uses, so the "similares" shelf isn't a fourth visual language on this page. Cards match the
+real `GameCard`'s own resting state too: poster + one line of title, nothing else — the real
+component's doc comment is explicit that every secondary fact (players, weight, tags) lives behind
+hover/tap, not on the resting card, so this row matches that restraint rather than reintroducing
+pills here.
+
+Two deliberate departures from the home page's version:
+- **No `.pk-see-all` trailing tile.** Every home-page shelf is backed by a real filter a "ver todo"
+  can point at (a tag, a weight band); a detail page's "more like this" row has no equivalent — there's
+  no "see all games similar to this one" destination — so it's dropped rather than wired to nowhere.
+- **Activated the `subtitle` prop.** The real `CarouselRow` component already accepts one
+  (`attr :subtitle`) but no caller on the home page passes it today — first real use is here
+  ("Mecánicas y complejidad parecidas a este juego"), explaining *why* these specific games are being
+  surfaced, which matters more on a single-game detail page than in a browse grid where the row title
+  alone usually carries that context.
+
+Placement: inside `<main>`, after the ficha técnica/BGG link, before `<footer>` — `.pk-shelf`'s own
+top margin plus the footer's existing top margin give ~88px above / ~48px below at mobile width
+(measured directly via `getBoundingClientRect`, not eyeballed), which reads as genuine rest space
+without a dedicated spacer element. Confirmed the new section doesn't disturb Round 34's footer-park
+behavior — it's still watching the real `footer.pk-footer` element directly, so the trigger point just
+moved down to account for the shelf's own height, no code changes needed there.
+
+Interaction matches the real component's own hook: prev/next buttons scroll the rail ~90% of its
+width, and hide themselves via `ResizeObserver` once the rail has nothing left to scroll to. Verified
+the underlying scroll mechanics are correct — `scrollWidth` (934px) exceeds `clientWidth` (256px) at
+this width, and a direct `scrollLeft` write moves the rail immediately once `.pk-rail`'s own
+`scroll-behavior: smooth` is bypassed. The smooth-animated version (the real, shipped behavior)
+didn't visibly progress in this session's own test tab specifically because the tab was backgrounded
+(`document.visibilityState: 'hidden'`) — the same root cause behind Round 32's and 33's animation
+test flakes, not a new issue.
+
+Data is a plausible fixture (8 real, recognizable engine-building/strategy titles — Res Arcana,
+Wingspan, Everdell, Viticulture, Scythe, Gaia Project, Brass: Birmingham, Great Western Trail), and
+cards are `href="#"` stubs — an actual "similar" query (shared mechanics/weight band) is real
+application logic, not something this sketch attempts.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
@@ -888,6 +936,12 @@ independent conditions (past `#game-identity` AND not at the footer) instead of 
 - **Round 33:** on the bottom CTA bar, does the lavender bar / white share-button contrast actually
   read as two distinct surfaces now, or does it need to go further (a visible border on the bar
   itself, a stronger tint)? Does the softer slide+fade hide/show feel meaningfully different from
-  before, or was the original harder-edged version fine? And the original open question from Round
-  32 stands unconfirmed: on your real device/DevTools, does the CTA bar actually stay visible on
-  first load without needing to scroll first?
+  before, or was the original harder-edged version fine? (Round 32's original open question —
+  whether the CTA bar stays visible on first load without scrolling — is confirmed resolved on real
+  device.)
+- **Round 35:** scroll to the very end — does "Juegos similares" read as a natural continuation of
+  the detail content, or does it feel bolted on? Is the fixture data (Res Arcana, Wingspan, etc.)
+  believable as "similar" to Terraforming Mars, or does the specific selection matter enough to flag?
+  Try the prev/next arrows and the horizontal drag/swipe. Should this row also appear on mobile, or
+  is a "keep reading" hook less needed once you've already scrolled a whole detail page there (vs.
+  desktop, where it's easy to miss the bottom entirely)?
