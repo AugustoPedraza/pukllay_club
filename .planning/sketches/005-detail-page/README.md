@@ -907,6 +907,21 @@ Wingspan, Everdell, Viticulture, Scythe, Gaia Project, Brass: Birmingham, Great 
 cards are `href="#"` stubs — an actual "similar" query (shared mechanics/weight band) is real
 application logic, not something this sketch attempts.
 
+## Round 36 — confirmed: the shelf stays on mobile too; fixed a real header-wrap it exposed
+Answered Round 35's open question: yes, mobile keeps "Juegos similares" too — dropping it there would
+break the rhythm this sketch has been building toward everywhere else (the pattern showing up
+consistently at every width, not just desktop).
+
+Verifying that at real mobile width surfaced a genuine layout bug, not just a "should this exist"
+question: `.pk-row-header`'s title+subtitle block and its prev/next controls share one flex row
+(`align-items: flex-end`) — at 335-390px, "Juegos similares" plus its subtitle wrapped to 5 lines
+total while squeezed beside the controls, which left the ‹/› buttons stranded near the bottom of that
+tall block instead of aligned with the title. Fixed (≤480px only): `.pk-row-header` stacks instead of
+sharing a row — title/subtitle get the full width to wrap on their own terms, controls drop to their
+own right-aligned row underneath rather than fighting them for horizontal space. Desktop's side-by-side
+layout is untouched. Verified with a fresh reload at 390px: title now holds one line, subtitle wraps
+cleanly on its own, controls sit right-aligned below rather than mid-block.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
@@ -939,9 +954,9 @@ application logic, not something this sketch attempts.
   before, or was the original harder-edged version fine? (Round 32's original open question —
   whether the CTA bar stays visible on first load without scrolling — is confirmed resolved on real
   device.)
-- **Round 35:** scroll to the very end — does "Juegos similares" read as a natural continuation of
+- **Round 35/36:** scroll to the very end — does "Juegos similares" read as a natural continuation of
   the detail content, or does it feel bolted on? Is the fixture data (Res Arcana, Wingspan, etc.)
   believable as "similar" to Terraforming Mars, or does the specific selection matter enough to flag?
-  Try the prev/next arrows and the horizontal drag/swipe. Should this row also appear on mobile, or
-  is a "keep reading" hook less needed once you've already scrolled a whole detail page there (vs.
-  desktop, where it's easy to miss the bottom entirely)?
+  Try the prev/next arrows and the horizontal drag/swipe. (Round 35's open question — whether this
+  should appear on mobile at all — is confirmed yes, for rhythm consistency; Round 36 then fixed a
+  real header-wrap that only showed up once actually checked at mobile width.)
