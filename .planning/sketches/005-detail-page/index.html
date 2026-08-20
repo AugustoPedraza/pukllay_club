@@ -239,6 +239,42 @@
   .lightbox-arrow.next { right: -58px; }
   @media (max-width: 720px) { .lightbox-arrow.prev { left: 4px; } .lightbox-arrow.next { right: 4px; } .lightbox-close { top: 10px; right: 10px; } }
 
+  /* ---- mobile sticky action bar (Amazon/Booking.com/Airbnb mobile
+     pattern) — replaces the inline cta-row on mobile so the primary
+     action stays reachable at the bottom of the viewport regardless of
+     scroll position, without ever sitting mid-paragraph in the reading
+     flow. Hidden by default; shown only in the mobile media query.
+     Round 25: stacked (primary on top, full-width share below) instead
+     of side by side — matching the same buy-box shape Round 15 already
+     settled on for desktop, and giving share its label back instead of
+     an icon-only circle. Stacking makes the bar taller, which is exactly
+     why it also now hides on scroll-down / reappears on scroll-up
+     (`.is-hidden`, driven by the scroll listener below) — reclaims that
+     space while reading, still reachable the moment you scroll back up.
+     Round 26: this whole block MUST come before the
+     `@media (max-width: 768px)` block below — both declare
+     `.mobile-cta-bar { display }` at equal specificity, and the later
+     declaration in source order wins the cascade regardless of which
+     media query actually matches. This rule used to sit after that media
+     query (closer to `.cta-icon`, where it read naturally next to the
+     other CTA styles), which meant this `display: none` silently beat
+     the media query's `display: flex` at every viewport width — the bar
+     has never actually been visible until this reorder. Real bug, not a
+     rendering/browser quirk: verified by literal source-line order, not
+     by guessing from a screenshot. */
+  .mobile-cta-bar {
+    display: none; flex-direction: column; gap: var(--space-2);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: var(--color-bg); border-top: 1px solid var(--color-border);
+    padding: var(--space-3) var(--pk-gutter);
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(20,8,34,0.08);
+    transition: transform var(--duration-base) var(--ease-standard);
+  }
+  .mobile-cta-bar.is-hidden { transform: translateY(100%); }
+  .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
+  .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; }
+
   @media (max-width: 768px) {
     /* image goes full-bleed edge-to-edge; the breakout targets
        .carousel-wrap specifically (not the whole poster-col), since the
@@ -306,31 +342,6 @@
   }
   .cta-icon:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
   .cta-icon .icon-label { font-weight: 700; }
-
-  /* ---- mobile sticky action bar (Amazon/Booking.com/Airbnb mobile
-     pattern) — replaces the inline cta-row on mobile so the primary
-     action stays reachable at the bottom of the viewport regardless of
-     scroll position, without ever sitting mid-paragraph in the reading
-     flow. Hidden by default; shown only in the mobile media query.
-     Round 25: stacked (primary on top, full-width share below) instead
-     of side by side — matching the same buy-box shape Round 15 already
-     settled on for desktop, and giving share its label back instead of
-     an icon-only circle. Stacking makes the bar taller, which is exactly
-     why it also now hides on scroll-down / reappears on scroll-up
-     (`.is-hidden`, driven by the scroll listener below) — reclaims that
-     space while reading, still reachable the moment you scroll back up. */
-  .mobile-cta-bar {
-    display: none; flex-direction: column; gap: var(--space-2);
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-    background: var(--color-bg); border-top: 1px solid var(--color-border);
-    padding: var(--space-3) var(--pk-gutter);
-    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
-    box-shadow: 0 -4px 16px rgba(20,8,34,0.08);
-    transition: transform var(--duration-base) var(--ease-standard);
-  }
-  .mobile-cta-bar.is-hidden { transform: translateY(100%); }
-  .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
-  .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; }
   .share-popover {
     position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-4px);
     background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);

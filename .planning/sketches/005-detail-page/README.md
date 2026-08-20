@@ -572,6 +572,24 @@ Four mobile questions, addressed together since they're all about the same block
   scroll-up away, and it's always visible near the top of the page regardless of direction). `body`'s
   reserved bottom padding grew from 76px to 148px to match the taller stacked bar.
 
+## Round 26 — real bug: the mobile CTA bar has never actually been visible
+You reported not being able to see the stacked sticky CTA at all on mobile — and that's not a
+viewport/testing issue, it's a genuine CSS cascade bug that's been in this file since the bar was
+first built in Round 11.
+
+`.mobile-cta-bar { display: none; ... }` (the base rule) and `.mobile-cta-bar { display: flex; }`
+(inside `@media (max-width: 768px)`) have identical specificity. CSS resolves equal-specificity
+conflicts by **source order** — last declaration wins — regardless of which media query actually
+matches. The base `display: none` rule sat *after* the media query in the file (it lived next to
+`.cta-icon`, further down, since that's where it read naturally alongside the other CTA styles), so
+it silently won at every viewport width, mobile included. The bar has been in the DOM and styled
+correctly this whole time — it was just always `display: none`, no matter the screen size.
+
+Fixed by moving the entire `.mobile-cta-bar` block (base rule, `.is-hidden`, and the
+`.cta-primary`/`.cta-icon` width overrides) to before the `@media (max-width: 768px)` block, so the
+mobile override now correctly wins. Nothing else about the bar changed — Round 25's stacked layout
+and scroll-based hide/show were already correct, they just never had a chance to render.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
