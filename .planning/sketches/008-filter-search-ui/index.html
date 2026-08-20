@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 008 — Filter / Search UI (winner: Search-First Overlay)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 44px; }
+  #sketch-note { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1a1a; border-bottom: 1px solid #333; padding: 10px 16px; display: flex; gap: 8px; align-items: center; font-family: var(--font-sans); font-size: 13px; color: #ddd; }
+  #sketch-note strong { color: #fff; }
+
+  .app-nav { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-6); border-bottom: 1px solid var(--color-border); position: relative; }
+  .app-nav .brand strong { font-family: var(--font-display); font-size: 1.3rem; color: var(--color-primary); }
+
+  main { max-width: 1200px; margin: 0 auto; padding: var(--space-6) var(--space-6) var(--space-12); }
+  .results-meta { font-size: var(--text-sm); color: var(--color-text-muted); margin: var(--space-4) 0 var(--space-3); }
+
+  .p1{background:linear-gradient(135deg,#3D096D,#7E4CA5)}.p2{background:linear-gradient(135deg,#7E4CA5,#A97FD1)}
+  .p3{background:linear-gradient(135deg,#22103A,#3D096D)}.p4{background:linear-gradient(135deg,#B23A5C,#7E4CA5)}
+  .p5{background:linear-gradient(135deg,#3F8F6B,#3D096D)}.p6{background:linear-gradient(135deg,#B8862F,#7E4CA5)}
+  .g-card { border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); transition: transform 0.2s ease, opacity 0.2s ease; }
+  .g-card .art { aspect-ratio: 1/1.05; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; color: rgba(255,255,255,0.85); }
+  .g-card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .g-card .cap h4 { margin: 0 0 4px; font-size: var(--text-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .g-card .fact { font-size: 11px; color: var(--color-text-muted); }
+  .empty-msg { padding: var(--space-8) 0; text-align: center; color: var(--color-text-muted); }
+
+  .pill-btn {
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--color-border); background: var(--color-bg);
+    color: var(--color-text); font-size: var(--text-sm); font-weight: 600; padding: 8px 14px; border-radius: var(--radius-full);
+    cursor: pointer; transition: all 0.15s ease; white-space: nowrap;
+  }
+  .pill-btn:hover { border-color: var(--color-primary); }
+  .pill-btn.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  .pill-btn .count { opacity: 0.7; font-size: 11px; }
+  .pill-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pill-btn:disabled:hover { border-color: var(--color-border); }
+
+  /* ============ search-first hero ============ */
+  .c-search-hero { padding: var(--space-6) var(--space-6) var(--space-4); text-align: center; position: relative; }
+  .c-search-box { max-width: 560px; margin: 0 auto; position: relative; }
+  .c-search-input { width: 100%; box-sizing: border-box; padding: 14px 18px; border-radius: var(--radius-full); border: 2px solid var(--color-border); font-size: var(--text-base); font-family: var(--font-sans); outline: none; transition: border-color 0.15s ease; }
+  .c-search-input:focus { border-color: var(--color-primary); }
+  .c-suggest-row { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; margin-top: var(--space-3); }
+  .c-more-filters { text-align: center; margin-top: var(--space-3); position: relative; display: inline-block; }
+  .filters-trigger { background: none; border: none; color: var(--color-primary); font-size: var(--text-sm); font-weight: 600; cursor: pointer; padding: 4px 8px; }
+
+  /* ============ filters panel: desktop = anchored popover, mobile = bottom
+     sheet. Reuses two patterns already validated elsewhere in this sketch
+     set (a popover-style panel, and the card's mobile-sheet slide-up) rather
+     than inventing a third interaction for "more filters". ============ */
+  .filters-panel {
+    position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(0.96);
+    width: 320px; max-width: 90vw; background: var(--color-bg); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-4);
+    z-index: 50; opacity: 0; pointer-events: none; text-align: left;
+    transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+  }
+  .filters-panel.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
+  .filters-panel-header { position: relative; display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); }
+  .filters-panel-header strong { font-family: var(--font-display); font-size: var(--text-lg); }
+  .filter-group { margin-bottom: var(--space-4); }
+  .filter-group h5 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
+  .filter-group label { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); padding: 4px 0; cursor: pointer; }
+  .filters-clear-row { margin-top: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+  .filters-clear-row .pill-btn { width: 100%; justify-content: center; }
+  .filters-backdrop { position: fixed; inset: 0; background: rgba(20,8,34,0.5); z-index: 45; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); }
+
+  /* results rail — real edge-fade mechanics VERBATIM from 001-D (via 007's
+     composition), reused here instead of a wrapping grid so filtered results
+     read as the same Netflix-shelf language as the home page, not a
+     different UI mode. */
+  .rail-wrap { position: relative; padding: 0 var(--space-6); }
+  .rail-wrap::before, .rail-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 48px; z-index: 4; pointer-events: none; }
+  .rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  .rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  .rail { display: flex; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; gap: var(--space-4); padding: var(--space-2) 0 var(--space-3); }
+  .rail::-webkit-scrollbar { display: none; }
+  .s-card { flex: 0 0 auto; width: 190px; }
+
+  @media (max-width: 640px) {
+    .c-search-hero { padding: var(--space-4) var(--space-4) var(--space-3); }
+    .c-search-input { padding: 12px 16px; font-size: var(--text-sm); }
+    .c-search-input::placeholder { font-size: var(--text-xs); }
+    .c-suggest-row { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin: var(--space-3) calc(-1 * var(--space-4)) 0; padding: 0 var(--space-4); }
+    .c-suggest-row::-webkit-scrollbar { display: none; }
+    .c-suggest-row .pill-btn { white-space: nowrap; }
+    .rail-wrap, main { padding-left: var(--space-4); padding-right: var(--space-4); }
+    .rail-wrap::before, .rail-wrap::after { width: 20px; }
+    .s-card { width: 128px; }
+
+    /* filters panel becomes a bottom-sheet drawer on mobile — same slide-up
+       + backdrop language as the card's mobile-sheet pattern (002-D/007),
+       not the desktop popover's anchored-scale animation. */
+    .filters-panel {
+      position: fixed; top: auto; left: 0; right: 0; bottom: 0; transform: translateY(100%);
+      width: auto; max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      max-height: 78vh; overflow-y: auto; padding: var(--space-4) var(--space-4) var(--space-6);
+      transition: transform var(--duration-slow) var(--ease-out-soft);
+    }
+    .filters-panel.open { transform: translateY(0); }
+    .filters-backdrop.open { opacity: 1; pointer-events: auto; }
+    .filters-panel-header::before { content: ""; display: block; width: 40px; height: 4px; background: var(--color-border); border-radius: var(--radius-full); position: absolute; top: var(--space-2); left: 50%; transform: translateX(-50%); }
+  }
+
+  #sketch-tools { position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;display:flex;gap:8px;align-items:center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="sketch-note">
+  <strong>Sketch 008 — Filter/Search UI</strong>&nbsp;·&nbsp;winner: Search-First Overlay (shelf results + real mobile treatment + filters panel)
+</div>
+
+<div class="app-nav">
+  <span class="brand"><strong>PUKLLAY CLUB</strong></span>
+</div>
+
+<div class="c-search-hero">
+  <div class="c-search-box">
+    <input class="c-search-input" id="c-search" placeholder="¿Qué querés jugar hoy? Ej: algo de negociación para 4…" oninput="onSearchInput(this.value)">
+  </div>
+  <div class="c-suggest-row" id="c-suggest"></div>
+  <div class="c-more-filters">
+    <button class="filters-trigger" onclick="toggleFiltersPanel()">Más filtros <span class="count" id="active-count"></span> ▾</button>
+    <div class="filters-panel" id="filters-panel">
+      <div class="filters-panel-header">
+        <strong>Filtros</strong>
+        <button class="pill-btn" onclick="toggleFiltersPanel()">✕</button>
+      </div>
+      <div id="filters-panel-body"></div>
+    </div>
+  </div>
+</div>
+
+<div class="filters-backdrop" id="filters-backdrop" onclick="toggleFiltersPanel()"></div>
+
+<main style="padding-top:0;">
+  <div class="results-meta" id="meta"></div>
+  <div class="rail-wrap"><div class="rail" id="grid"></div></div>
+</main>
+
+<div id="sketch-tools">
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default theme</option>
+    <option value="dark-purple">Dark purple</option>
+  </select>
+</div>
+
+<script>
+// ---- real CatalogLive.Index filter dimensions: mechanics, weight_bands,
+// themes, tags, players, max_playtime, min_age. This demo exercises
+// weight_bands + mechanics + players + max_playtime + free-text search. ----
+const GAMES = [
+  { title:'Catán', pal:'p1', icon:'🎲', players:[3,4], playtime:[60,90], band:'Ingenio estratega', mechanics:['Comercio','Construcción'] },
+  { title:'Wingspan', pal:'p5', icon:'🦙', players:[1,5], playtime:[40,70], band:'Ingenio estratega', mechanics:['Construcción de motor'] },
+  { title:'Hanabi', pal:'p2', icon:'🎆', players:[2,5], playtime:[25,25], band:'Descubre el hobby', mechanics:['Cooperativo'] },
+  { title:'Terraforming Mars', pal:'p3', icon:'🌵', players:[1,5], playtime:[120,180], band:'Nivel experto', mechanics:['Construcción de motor'] },
+  { title:'7 Wonders Duel', pal:'p4', icon:'⚔️', players:[2,2], playtime:[30,30], band:'Ingenio estratega', mechanics:['Draft'] },
+  { title:'El Resistencia', pal:'p6', icon:'🕵️', players:[5,10], playtime:[30,30], band:'Descubre el hobby', mechanics:['Deducción social'] },
+  { title:'Azul', pal:'p2', icon:'🔷', players:[2,4], playtime:[30,45], band:'Descubre el hobby', mechanics:['Draft','Abstracto'] },
+  { title:'Brass: Birmingham', pal:'p3', icon:'🏭', players:[2,4], playtime:[90,120], band:'Nivel experto', mechanics:['Construcción de motor','Comercio'] },
+  { title:'Codenames', pal:'p1', icon:'🕶️', players:[4,8], playtime:[15,15], band:'Descubre el hobby', mechanics:['Equipo'] },
+  { title:'Pandemic', pal:'p5', icon:'🦠', players:[2,4], playtime:[45,60], band:'Ingenio estratega', mechanics:['Cooperativo'] },
+  { title:'Splendor', pal:'p4', icon:'💎', players:[2,4], playtime:[30,30], band:'Descubre el hobby', mechanics:['Motor económico'] },
+  { title:'Ticket to Ride', pal:'p6', icon:'🚂', players:[2,5], playtime:[30,60], band:'Descubre el hobby', mechanics:['Construcción','Set collection'] },
+];
+const MECHANICS = [...new Set(GAMES.flatMap(g => g.mechanics))];
+const BANDS = ['Descubre el hobby','Ingenio estratega','Nivel experto'];
+
+function playersText(g){ return g.players[0]===g.players[1] ? g.players[0] : g.players[0]+'-'+g.players[1]; }
+function timeText(g){ return g.playtime[0]===g.playtime[1] ? g.playtime[0]+' min' : g.playtime[0]+'-'+g.playtime[1]+' min'; }
+
+const state = { q:'', band:null, mechanic:null, maxPlaytime:null };
+
+function filterGames() {
+  return GAMES.filter(g =>
+    (!state.q || g.title.toLowerCase().includes(state.q.toLowerCase())) &&
+    (!state.band || g.band === state.band) &&
+    (!state.mechanic || g.mechanics.includes(state.mechanic)) &&
+    (!state.maxPlaytime || g.playtime[0] <= state.maxPlaytime)
+  );
+}
+
+function cardHTML(g) {
+  return `<div class="s-card g-card"><div class="art ${g.pal}">${g.icon}</div><div class="cap"><h4>${g.title}</h4><div class="fact">👥 ${playersText(g)} · ⏱ ${timeText(g)}</div></div></div>`;
+}
+
+function renderGrid() {
+  const items = filterGames();
+  const grid = document.getElementById('grid');
+  const meta = document.getElementById('meta');
+  const railWrap = grid.closest('.rail-wrap');
+  meta.textContent = items.length + ' juego' + (items.length === 1 ? '' : 's') + ' encontrado' + (items.length === 1 ? '' : 's');
+  grid.innerHTML = items.length ? items.map(cardHTML).join('') : '';
+  railWrap.parentElement.querySelector('.empty-msg')?.remove();
+  railWrap.style.display = items.length ? '' : 'none';
+  if (!items.length) {
+    const msg = document.createElement('div');
+    msg.className = 'empty-msg';
+    msg.textContent = 'Ningún juego coincide con esos filtros. Probá sacar alguno.';
+    railWrap.after(msg);
+  }
+}
+
+function onSearchInput(val) {
+  state.q = val;
+  renderGrid();
+  const box = document.getElementById('c-suggest');
+  if (!val) { box.innerHTML = ''; return; }
+  box.innerHTML = MECHANICS.slice(0,5).map(m => `<button class="pill-btn ${state.mechanic===m?'active':''}" onclick="quickFilter('mechanic','${m}')">${m}</button>`).join('');
+}
+
+function quickFilter(key, val) {
+  state[key] = state[key] === val ? null : val;
+  renderGrid();
+  renderFiltersPanel();
+  onSearchInput(state.q);
+}
+
+function filtersPanelHTML() {
+  const s = state;
+  const anyActive = s.band || s.mechanic || s.maxPlaytime;
+  return `
+    <div class="filter-group"><h5>Dificultad</h5>${BANDS.map(b => `<label><input type="radio" name="f-band" ${s.band===b?'checked':''} onchange="quickFilter('band','${b}')"> ${b}</label>`).join('')}</div>
+    <div class="filter-group"><h5>Mecánica</h5>${MECHANICS.map(m => `<label><input type="radio" name="f-mech" ${s.mechanic===m?'checked':''} onchange="quickFilter('mechanic','${m}')"> ${m}</label>`).join('')}</div>
+    <div class="filter-group"><h5>Duración</h5>${[30,60,90].map(t => `<label><input type="radio" name="f-time" ${s.maxPlaytime===t?'checked':''} onchange="quickFilter('maxPlaytime',${t})"> Hasta ${t} min</label>`).join('')}</div>
+    <div class="filters-clear-row"><button class="pill-btn" onclick="clearFilters()" ${anyActive ? '' : 'disabled'}>✕ Limpiar filtros</button></div>
+  `;
+}
+function renderFiltersPanel() {
+  document.getElementById('filters-panel-body').innerHTML = filtersPanelHTML();
+  const n = [state.band, state.mechanic, state.maxPlaytime].filter(Boolean).length;
+  document.getElementById('active-count').textContent = n ? `(${n})` : '';
+}
+function toggleFiltersPanel() {
+  document.getElementById('filters-panel').classList.toggle('open');
+  document.getElementById('filters-backdrop').classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.filters-panel') && !e.target.closest('.c-more-filters')) {
+    document.getElementById('filters-panel')?.classList.remove('open');
+    document.getElementById('filters-backdrop')?.classList.remove('open');
+  }
+});
+
+function clearFilters() {
+  state.band = null; state.mechanic = null; state.maxPlaytime = null;
+  renderGrid();
+  renderFiltersPanel();
+  onSearchInput(state.q);
+}
+
+renderFiltersPanel();
+renderGrid();
+</script>
+
+</body>
+</html>
