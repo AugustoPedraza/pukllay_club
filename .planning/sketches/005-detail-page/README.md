@@ -649,6 +649,28 @@ reasoning for the wide-window case rests on standard, well-documented `@containe
 than an end-to-end screenshot. Worth a real confirm in an actual wide browser window when you get a
 chance.
 
+## Round 30 — reverted Round 29: container queries broke `position: fixed`
+Your screenshot was genuine Chrome DevTools device emulation (390×844, "iPhone 12 Pro") — a real
+viewport resize, not the in-page toolbar's simulation. In that mode `window.innerWidth` is genuinely
+390, so plain `@media (max-width: 768px)` queries already work correctly on their own, no help
+needed. Round 29's `@container` fix targeted a different, narrower scenario (the in-page 📱/📟/🖥
+buttons on an actually-wide browser window) — and in solving that, it broke the one that matters
+more: **`container-type: inline-size` implicitly applies CSS containment, and a contained element
+becomes a new containing block for `position: fixed` descendants — the same effect `transform` has.**
+`#mobile-cta-bar` lives inside `.viewport-frame` (the element Round 29 made a container), so its
+`bottom: 0` stopped anchoring to the real viewport and started anchoring to `.viewport-frame`'s own
+box instead — which is as tall as the entire page, not just the visible screen. The bar was still
+being laid out correctly, just positioned far below the fold, invisible without scrolling to the
+literal end of the document. Confirmed by scrolling to `y: 1250` in a real emulated 390×844 viewport
+and checking the bar's `getBoundingClientRect()` — before the revert it drifted down with the page;
+after, it stayed pinned to the visible viewport regardless of scroll position (screenshot-verified).
+
+Reverted `@container`/`container-type` back to plain `@media` queries. Net assessment: the toolbar's
+📱/📟/🖥 buttons remain a rough visual approximation, not a true breakpoint simulator — but the actual
+correct way to preview mobile layout (resizing the real browser window, or DevTools' device toolbar,
+exactly what this screenshot used) already works fine with plain `@media`, and doesn't carry this
+containment risk.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
