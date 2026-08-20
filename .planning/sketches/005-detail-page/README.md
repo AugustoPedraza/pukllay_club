@@ -671,6 +671,33 @@ correct way to preview mobile layout (resizing the real browser window, or DevTo
 exactly what this screenshot used) already works fine with plain `@media`, and doesn't carry this
 containment risk.
 
+## Round 31 — real bug: the title column was overflowing its own track, not the CTA underflowing
+The CTA bar wasn't too narrow — the title column was rendering ~12px *wider* than its actual grid
+track, and the CTA (sized independently off the true viewport width) was the one correctly matching
+the gutter the whole time. Traced with `getBoundingClientRect()`: `<h1>` measured `width: 267.89px`
+against a `256px` track, right edge bleeding to `x: 299.89` instead of `288` — exactly the ~12px gap
+you spotted between the title and the buttons below it.
+
+Root cause: grid/flex items default to `min-width: auto`, meaning a column won't shrink below its
+own content's minimum size. The facts pill row (`.pk-pill-row`, `flex-wrap: nowrap`) needs ~268px to
+fit "👥 1-4", "⏱ 90-120 min", and "●●● Nivel experto" on one line — wider than the actual ~256px
+mobile track — so the *whole column*, title included, was forced wider to accommodate it, overflowing
+into the masthead's right padding.
+
+Fixed with the standard two-part fix for this exact CSS Grid gotcha: `.text-col { min-width: 0; }`
+lets the column actually shrink to its real track width, and `.pk-pill-row { flex-wrap: wrap; }`
+(mobile only) lets the third pill drop to a second line instead of forcing overflow now that the
+column can't stretch to fit it anymore. Verified directly — `<h1>` and the CTA buttons now measure
+identical `left: 32, right: 288, width: 256` — and confirmed visually with a screenshot (pill row
+now wraps to two lines; title and buttons share the same edges).
+
+**On testing in a real wide window:** I wasn't able to — this session's sandboxed browser tool
+can't actually resize past ~335px regardless of what width is requested (`resize_window(1440, 960)`
+still reported `window.innerWidth: 335` on inspection). The revert in Round 30 removed the only
+mechanism (`container-type`) that behaved differently at different real widths, so there's no
+known reason left for this to behave differently in a genuinely wide window — but that's reasoning
+from the code, not a screenshot, and it's worth an actual confirm on your end when convenient.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

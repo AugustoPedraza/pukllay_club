@@ -105,6 +105,18 @@
      click-to-lightbox. */
   .detail-b .masthead-band { background: linear-gradient(180deg, var(--color-surface), var(--color-bg)); }
   .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter) var(--space-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }
+  /* Round 31: grid/flex items default to `min-width: auto`, which means
+     "never shrink below your content's own minimum size" — and the facts
+     pill row's `flex-wrap: nowrap` (below) gives this column unshrinkable
+     content wider than the actual `1fr` track on mobile (3 pills need
+     ~268px, the mobile track is only ~256px). Without this override the
+     column — and everything in it, including the title — rendered ~12px
+     wider than its real track, overflowing into the masthead's right
+     padding. That's the real cause of "the CTA is narrower than the
+     title": the CTA bar (positioned independently of this grid, sized
+     directly off the true viewport width) was correctly matching the
+     gutter the whole time — the title column was the one rendering wrong. */
+  .detail-b .text-col { min-width: 0; }
   /* "buy box" column — image and the primary action grouped as one
      self-contained decision panel (see the markup comment above the
      masthead for the pattern this follows). Round 12: the facts pills
@@ -295,6 +307,12 @@
     .detail-b .detail-carousel { border-radius: 0; aspect-ratio: 4/3; }
     .detail-b h1 { font-size: 1.75rem; }
     .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
+    /* companion to `.text-col { min-width: 0 }` above: now that the
+       column can actually shrink to its real ~256px track, the 3
+       nowrap facts pills (~268px unwrapped) no longer have room to force
+       it wider — they wrap to a second line instead, rather than
+       clipping or re-introducing the overflow this was meant to fix. */
+    .pk-pill-row { flex-wrap: wrap; }
     /* inline cta-row is desktop-only now — the fixed mobile-cta-bar below
        takes over as the reachable action on mobile, so this would just be
        a redundant second copy of the same buttons sitting mid-page. */
@@ -568,7 +586,7 @@
               </div>
             </div>
           </div>
-          <div>
+          <div class="text-col">
             <!-- filterable facts pills, at the top of the title block —
                  jugadores/tiempo are real params on CatalogLive.Index;
                  dificultad links via weight_bands. See README for the
