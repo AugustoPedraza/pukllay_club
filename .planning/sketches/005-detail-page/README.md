@@ -778,6 +778,57 @@ same "just under the header" real estate. Pushed it further down (`top: 168px`) 
 mobile media query only — matching Round 26's own lesson about `#sketch-tools` rules needing to come
 *after* the base rule in source order at equal specificity. Desktop's `top: 76px` is untouched.
 
+## Round 33 — real header bug found via a genuine device screenshot; CTA bar color/motion polish; sticky bar simplified
+You reported (with real Chrome DevTools "iPhone 12 Pro" screenshots, not this session's own capped
+browser tool) that the CTA bar wasn't visible at all on load, only appearing after scrolling twice.
+Investigating that surfaced a real, unrelated bug your screenshot also showed: at true 390px width,
+`.pk-nav-crumb`'s `flex: 1 0 auto` refused to shrink, squeezing `.pk-brand` below its content's
+natural width and wrapping "Pukllay Club" across multiple lines — blowing `.pk-header` well past its
+assumed 64px. Fixed (mobile only, ≤480px): `.pk-brand` no longer shrinks, and the breadcrumb — which
+doesn't survive being force-shrunk anyway, since it's three separate flex boxes, not one text run, so
+`text-overflow: ellipsis` just chopped it mid-word with no gap ("CLUBCat") — collapsed to a plain
+"‹ Catálogo" back-link, the standard mobile substitute for a full breadcrumb trail. Header now holds
+a real, verified 64px at every width tested.
+
+**On the CTA bar itself:** checked directly via computed styles rather than guessing — `position:
+fixed`, `bottom: 0px`, correctly geometrically at the viewport bottom at `scrollY: 0`, no scroll
+needed, in every environment this session can reach. Best working theory is that this was a Chrome
+DevTools **"Capture full size screenshot"** artifact (that capture mode stitches multiple scrolled
+segments together, and fixed-position elements typically only paint into whichever segment the
+browser was scrolled to at capture time) rather than an actual rendering bug — flagged back to you to
+confirm via live scrolling rather than the capture button. No code changed for this specifically
+pending that confirmation.
+
+**Then, new feedback in the same round, addressed directly:**
+- **CTA bar color:** `.mobile-cta-bar`'s background was `--color-bg` (`#FFFFFF`) — the *exact* same
+  white as `.cta-icon`'s own background, separated only by a 1px near-white `--color-border`. Every
+  control at the bottom of the screen was visually fusing into one white mass ("color overlapping").
+  Switched the bar to `--color-surface` (`#F3ECFA`, the app's existing soft-lavender surface tone —
+  already used for the footer/cards) and kept `.cta-icon` explicitly white, so the outlined share
+  button now sits on a visibly different plane. Verified via computed `backgroundColor`:
+  `rgb(243,236,250)` (bar) vs. `rgb(255,255,255)` (icon) — genuinely two tones, not eyeballed.
+- **CTA bar animation:** was a single `transform` slide on the standard easing curve — one property,
+  mechanical. Now transitions `transform` (a much smaller `translateY(12%)` nudge, not a full
+  off-screen slide) together with `opacity`, on `--ease-out-soft` — this file's existing convention
+  for entrances (share popover, modal) — so it settles rather than snapping on a rail. Added
+  `pointer-events: none` while hidden, which the original was missing (a real, if minor, gap — the
+  bar was briefly tappable through its ~200ms hidden window).
+- **Sticky mini-header, "too overloaded":** dropped the pills and tag row entirely — feedback was
+  that repeating the *full* facts block here duplicated the real masthead just above it. The bar's
+  only job now is the title (`<h2>`, `text-overflow: ellipsis` for long names), which also let it
+  collapse from a 3-row block down to one compact row.
+- **New: bouncing scroll-to-top arrow**, added in the freed-up space next to the title —
+  `window.scrollTo({top:0, behavior:'smooth'})` on click, with a continuous (not one-shot)
+  `translateY` bounce so it keeps reading as "there's more above" for as long as the bar itself is
+  visible. Verified the click handler and the underlying `scrollTo` call are both correct (`scrollY`
+  jumped 400→0 immediately with `behavior:'auto'`); `behavior:'smooth'`'s animation itself didn't
+  progress in this session's test tab specifically because the tab was backgrounded
+  (`document.visibilityState: 'hidden'`) — Chrome throttles rAF-driven smooth-scroll entirely for
+  non-visible tabs, the same root cause behind Round 32's IntersectionObserver test flake. Real,
+  foregrounded use isn't affected — worth a live confirm on your end regardless.
+- `#sketch-tools`' mobile offset came back down from `168px` to `130px` now that the sticky bar is a
+  single row instead of three.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
@@ -800,8 +851,13 @@ mobile media query only — matching Round 26's own lesson about `#sketch-tools`
   threshold, now that it sits alone in a column without a CTA immediately following it?
 - Is the icon-only share button (both in the desktop buy-box and the mobile bar) legible enough
   now, relying on the `title` tooltip + adjacency to the primary CTA instead of a permanent label?
-- **New (Round 32), mobile only:** scroll past the title — does the condensed sticky bar (pills +
-  title + tags, pinned under the header) feel like a helpful "what game is this" reminder, or too
-  much permanent chrome stacked on top of the site header + bottom CTA bar? Does the fade-in/out
-  timing feel right, and is the truncated single-line title still legible at that size? Should it
-  drop the tag row entirely to save vertical space, keeping just pills + title?
+- **Round 32/33, mobile only:** scroll past the title — does the sticky title bar (now title-only,
+  after Round 33 dropped the pills/tags) feel like a helpful "what game is this" reminder, or still
+  too much permanent chrome on top of the site header + bottom CTA bar? Tap the bouncing "↑" — does
+  the bounce read as "scroll up for more" without being distracting while it's sitting there?
+- **Round 33:** on the bottom CTA bar, does the lavender bar / white share-button contrast actually
+  read as two distinct surfaces now, or does it need to go further (a visible border on the bar
+  itself, a stronger tint)? Does the softer slide+fade hide/show feel meaningfully different from
+  before, or was the original harder-edged version fine? And the original open question from Round
+  32 stands unconfirmed: on your real device/DevTools, does the CTA bar actually stay visible on
+  first load without needing to scroll first?

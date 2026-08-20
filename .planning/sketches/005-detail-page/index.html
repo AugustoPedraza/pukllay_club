@@ -25,35 +25,89 @@
   .pk-theme-toggle { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 4px; }
   .pk-theme-toggle button { width: 24px; height: 24px; border: none; background: none; border-radius: 50%; cursor: pointer; opacity: 0.6; }
 
-  /* ---- mobile sticky game-identity bar (Round 32) ----
+  /* Round 32: real bug, found via a genuine device-width screenshot (this
+     session's own browser tool caps at ~335px and never reproduced it —
+     see the sketch-tools comment above for that limitation). At true
+     narrow-mobile widths (~390px and below) `.pk-nav-crumb`'s
+     `flex: 1 0 auto` refuses to shrink below its own text's natural
+     width, and `.pk-theme-toggle` doesn't shrink either — between the two
+     of them they force `.pk-brand` (the only flexible item left) below
+     its content's natural width, wrapping "Pukllay Club" and its tagline
+     across multiple lines and blowing `.pk-nav`'s `height: 64px` out
+     (children overflow a fixed-height flex row rather than being clipped
+     by it). This matters beyond cosmetics: `.game-sticky-bar` assumes a
+     real 64px header via `top: 64px` — a taller, wrapped header would
+     sit underneath/behind it. Mobile fix: let the crumb actually shrink
+     and ellipsis instead of refusing to, and drop the tagline (redundant
+     under the game-sticky-bar) to keep the row to one line at 64px. */
+  @media (max-width: 480px) {
+    .pk-brand { flex-shrink: 0; }
+    .pk-brand-text .tag { display: none; }
+    /* `text-overflow: ellipsis` doesn't work here — .pk-nav-crumb is a flex
+       container of three separate boxes (link/separator/current-page span),
+       not one text run, so clipping it just chopped mid-word with no
+       ellipsis and no gap ("CLUBCat"). A full breadcrumb (site root + "/" +
+       current page name) is desktop-appropriate information density; on
+       mobile it's redundant anyway once the title is right there in the
+       masthead below (and, once scrolled, in .game-sticky-bar) — collapsed
+       to a plain "‹ Catálogo" back-link instead, the standard mobile
+       pattern in place of a breadcrumb trail. */
+    .pk-nav-crumb { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+    .pk-nav-crumb .sep, .pk-nav-crumb .current { display: none; }
+    .pk-nav-crumb a { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .pk-nav-crumb a::before { content: '‹ '; }
+  }
+
+  /* ---- mobile sticky game-identity bar (Round 32, simplified Round 33) ----
      Mirrors the mobile-cta-bar pattern below, but for identity instead of
      action: pinned under the site header, hidden until #game-identity (the
      real pills+title+tags in the masthead) scrolls out of view, then fades
      in so the reader always knows what game they're reading about. Hidden
      by default/on desktop; only switched on inside the mobile media query,
-     same convention as .mobile-cta-bar. */
+     same convention as .mobile-cta-bar.
+     Round 33: dropped pills + tags — feedback was that repeating the full
+     facts block here reads as overloaded; those already have a "full"
+     home in the real masthead the bar is standing in for, so the sticky
+     bar's only job is answering "what game is this," via the title alone.
+     That freed it up to become a single compact row (title left, a
+     scroll-to-top affordance right) instead of a 3-line block. */
   .game-sticky-bar {
     display: none;
+    align-items: center; gap: var(--space-3);
     position: fixed; top: 64px; left: 0; right: 0; z-index: 39;
     background: rgba(255,255,255,0.97); border-bottom: 1px solid var(--color-border);
-    box-shadow: var(--shadow-sm); padding: 8px var(--pk-gutter);
+    box-shadow: var(--shadow-sm); padding: 10px var(--pk-gutter);
     transform: translateY(-100%); opacity: 0; pointer-events: none;
     transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
   }
   .game-sticky-bar.is-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
-  /* condensed versions of .pk-pill-row/h1/.tag-row — same visual family,
-     smaller and single-line so three rows of context still fit in a strip
-     shorter than the header itself sits above it. */
-  .game-sticky-bar .pk-pill-row { flex-wrap: nowrap; overflow-x: auto; gap: 4px; margin-bottom: 3px; scrollbar-width: none; }
-  .game-sticky-bar .pk-pill-row::-webkit-scrollbar { display: none; }
-  .game-sticky-bar .pk-pill { font-size: 10px; padding: 2px 8px; white-space: nowrap; }
   .game-sticky-bar h2 {
-    font-family: var(--font-display); font-size: var(--text-sm); font-weight: 700; margin: 0 0 3px;
+    flex: 1 1 auto; min-width: 0;
+    font-family: var(--font-display); font-size: var(--text-base); font-weight: 700; margin: 0;
     color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .game-sticky-bar .tag-row { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; scrollbar-width: none; }
-  .game-sticky-bar .tag-row::-webkit-scrollbar { display: none; }
-  .game-sticky-bar .chip.tag { font-size: 10px; padding: 3px 9px; white-space: nowrap; }
+  /* Round 33: "the header could have a bouncing arrow to scroll up to top
+     automatically" — a small round affordance riding along the sticky
+     bar's own hide/show cycle (it only exists once you've scrolled far
+     enough for the bar to appear at all, so it's never competing with the
+     masthead's own real scroll position at the top of the page). The
+     bounce is a continuous, gentle nudge (not a one-shot on-appear
+     animation) so it keeps reading as "there's more above, tap me"
+     for as long as the bar itself is visible, not just at the moment it
+     fades in. Kept small in amplitude/slow in period — a beacon, not a
+     distraction sitting next to the game's own title. */
+  .scroll-top-btn {
+    flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;
+    animation: scroll-top-bounce 2.2s ease-in-out infinite;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+  }
+  .scroll-top-btn:hover { background: var(--color-accent-bg); border-color: var(--color-primary); }
+  @keyframes scroll-top-bounce {
+    0%, 20%, 100% { transform: translateY(0); }
+    10% { transform: translateY(-4px); }
+  }
 
   /* ---- footer: winner C from sketch 003 ---- */
   footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-8); }
@@ -305,18 +359,35 @@
      has never actually been visible until this reorder. Real bug, not a
      rendering/browser quirk: verified by literal source-line order, not
      by guessing from a screenshot. */
+  /* Round 33: two fixes in one, both from "needs subtle animation and
+     better balance of color overlapping":
+     1. Background was `--color-bg` (#FFFFFF) — the exact same white as
+        `.cta-icon`'s own background (see the shared `.cta-icon` rule
+        below). With only a 1px, near-white `--color-border` between them,
+        the outlined share button barely read as a separate control from
+        the bar it sits on — everything at the bottom of the screen
+        visually fused into one white mass. Switched the bar to
+        `--color-surface` (the app's soft-lavender surface tone, already
+        used for the footer/cards) so the white share button now sits on a
+        visibly different plane instead of blending into it.
+     2. Hide/show was a plain `transform` slide with the standard (not
+        "soft") easing curve — mechanical, one property doing all the
+        work. Added a paired opacity fade and switched to
+        `--ease-out-soft` (already this file's convention for entrances —
+        share popover, modal) so the bar settles in/out instead of
+        snapping on a rail. */
   .mobile-cta-bar {
     display: none; flex-direction: column; gap: var(--space-2);
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-    background: var(--color-bg); border-top: 1px solid var(--color-border);
+    background: var(--color-surface); border-top: 1px solid var(--color-border);
     padding: var(--space-3) var(--pk-gutter);
     padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -4px 16px rgba(20,8,34,0.08);
-    transition: transform var(--duration-base) var(--ease-standard);
+    transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
   }
-  .mobile-cta-bar.is-hidden { transform: translateY(100%); }
+  .mobile-cta-bar.is-hidden { transform: translateY(12%); opacity: 0; pointer-events: none; }
   .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
-  .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; }
+  .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; background: var(--color-bg); }
 
   /* Round 30 reverted Round 29's @container back to plain @media — see
      the .viewport-frame comment above for why. */
@@ -348,7 +419,7 @@
        a redundant second copy of the same buttons sitting mid-page. */
     .detail-b .cta-row { display: none; }
     .mobile-cta-bar { display: flex; }
-    .game-sticky-bar { display: block; }
+    .game-sticky-bar { display: flex; }
     /* keeps the sticky bar from covering the footer's last content —
        taller now that the bar stacks two full-width buttons (Round 25)
        instead of one row, so the reserved space grew alongside it. */
@@ -539,12 +610,13 @@
   #sketch-tools { position: fixed; top: 76px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; }
   #sketch-tools:hover { opacity: 1; }
   /* Round 32: mobile now has a second sticky element below the header
-     (.game-sticky-bar, up to ~3 lines once it fades in), so 76px isn't
-     always clear of real design chrome anymore on small widths — pushed
-     further down, review-tooling only, matching this rule's own Round 26
-     lesson: must come after the base rule above since both hit
-     `#sketch-tools { top }` at equal specificity. */
-  @media (max-width: 768px) { #sketch-tools { top: 168px; } }
+     (.game-sticky-bar), so 76px isn't always clear of real design chrome
+     anymore on small widths — pushed further down, review-tooling only,
+     matching this rule's own Round 26 lesson: must come after the base
+     rule above since both hit `#sketch-tools { top }` at equal
+     specificity. Round 33: bar shrank to a single title row once
+     pills/tags were dropped, so this came back down from 168px. */
+  @media (max-width: 768px) { #sketch-tools { top: 130px; } }
   /* Round 29 tried making this a CSS container-query container
      (`container-type: inline-size`) so the layout's mobile/desktop
      breakpoints could respond to the toolbar's 📱375/📟768/🖥1280 buttons
@@ -582,25 +654,22 @@
       </div>
     </div>
 
-    <!-- Round 32, mobile-only: condensed copy of #game-identity (pills +
-         title + tags — the same content you get on first render), pinned
+    <!-- Round 32, mobile-only: title-only echo of #game-identity, pinned
          just below the site header. Fades in only once the real
          #game-identity block has scrolled out of view (IntersectionObserver
          below), so "what game is this" survives scrolling this long a page
          without duplicating the identity block while it's still visible.
          Desktop doesn't need this — Round 12's poster-col sidebar keeps the
-         title/facts in view for free via its own sticky behavior. -->
+         title/facts in view for free via its own sticky behavior.
+         Round 33: dropped the pills+tags this used to repeat — feedback was
+         that duplicating the full facts block here felt overloaded; the
+         "full" version already lives in the real masthead just above,
+         this one's only job is the title. Paired with a scroll-to-top
+         button since it's otherwise a lot of empty horizontal space next
+         to a single line of text. -->
     <div class="game-sticky-bar" id="game-sticky-bar">
-      <div class="pk-pill-row">
-        <span class="pk-pill">👥 1-4</span>
-        <span class="pk-pill">⏱ 90-120 min</span>
-        <span class="pk-pill"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto</span>
-      </div>
       <h2>Terraforming Mars: Ares Expedition</h2>
-      <div class="tag-row">
-        <span class="chip tag">Duelos Memorables</span>
-        <span class="chip tag">Equipo Ganador</span>
-      </div>
+      <button class="scroll-top-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Volver arriba" title="Volver arriba">↑</button>
     </div>
 
     <main class="detail detail-b">
