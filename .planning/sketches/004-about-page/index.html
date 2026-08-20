@@ -61,8 +61,13 @@
   .about-b .hero-band h1 { font-family: var(--font-display); font-size: 3rem; margin: 0 0 var(--space-3); text-transform: uppercase; color: var(--color-primary); }
   .about-b .hero-band p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 60ch; margin: 0 auto; line-height: 1.6; }
   .about-b .band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; padding: var(--space-8) var(--pk-gutter); max-width: 1100px; margin: 0 auto; }
-  .about-b .band.tint { background: var(--color-surface); max-width: none; }
-  .about-b .band.tint > .band-inner { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; max-width: 1100px; margin: 0 auto; }
+  /* .band.tint goes full-bleed for its background wash, but must not add a
+     second layer of horizontal padding on top of .band-inner's own gutter —
+     that double-padding was pushing this band's content ~2rem wider than
+     the non-tint bands above/below it on desktop (invisible on mobile,
+     where the viewport is already narrower than the 1100px max-width). */
+  .about-b .band.tint { background: var(--color-surface); max-width: none; padding: var(--space-8) 0; }
+  .about-b .band.tint > .band-inner { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 var(--pk-gutter); }
   .about-b .band.reverse .band-text { order: 2; }
   .about-b .band.reverse .band-visual { order: 1; }
   .about-b .band-text h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; }

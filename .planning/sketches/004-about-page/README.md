@@ -41,6 +41,14 @@ section will eventually have several photos (meetups, game shelf, people playing
 image per section. Structurally this is a real `<img>` carousel once photography exists; the
 sketch's slides are gradient-tinted placeholders standing in for photos.
 
+**Fixed a real desktop alignment bug:** the tinted "Cómo funciona" band applied the `--pk-gutter`
+horizontal padding twice — once on its full-bleed wrapper, again implicitly via its inner
+`max-width: 1100px` box — so its content sat ~2rem wider than the flanking non-tint bands on
+desktop. Invisible on mobile, since the viewport is already narrower than 1100px there, so the
+double-padding never has room to manifest. Fixed by moving the wrapper to vertical-only padding
+and letting `.band-inner` carry the horizontal gutter itself, matching the non-tint bands' box
+math exactly.
+
 **Real content (copy, final photos, FAQ answers) is deliberately deferred** — the layout is built
 to hold roughly-real copy lengths and a multi-image carousel now, so it won't need structural
 rework once real content lands; writing the actual mission statement / club photos / FAQ answers
