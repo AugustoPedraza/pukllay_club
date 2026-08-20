@@ -340,18 +340,70 @@ a raised, pressable control. Now `shadow-md` is the resting state, `:hover` goes
 so a tap/click gives a visible "pressed" response. Applies everywhere `.cta-primary` is used
 (desktop buy box and the mobile sticky bar both share the class, so both get the fix for free).
 
+## Round 14 — desktop: sticky buy box + inline "más información" (accordion retired on desktop)
+You asked whether a modal made sense for "más información" (mechanics/themes/ficha técnica) on
+desktop. Recommended against it — a modal repeats the same "interrupts the page for low-stakes
+browsing content" problem Round 11 solved for the CTA — and instead you proposed a named pattern of
+your own: keep the buy box (image, CTA) fixed/sticky in the left column while the reading column
+(title, pills, description, and now también the details) scrolls underneath it.
+
+**This is a real, well-established pattern** — Airbnb's listing page (sticky booking widget beside
+scrolling description/amenities/reviews) and Stripe's API reference (sticky code samples beside
+scrolling docs) are both variants of it. Implemented as plain CSS `position: sticky` on
+`.poster-col`, no JavaScript — the standard, simplest form of the pattern. `.masthead`'s existing
+`align-items: start` is what makes a sticky grid child work at all; without it the item stretches to
+the row's height and can never "detach" to stick.
+
+**Deliberately not an independently-scrolling inner pane** (a fixed-height box with its own
+`overflow-y: auto` and separate scrollbar) — that's a different, riskier variant of this same family
+of pattern (nested/double scrollbars are a well-documented usability antipattern: users don't expect
+a scroll gesture inside a sub-region of the page to move something other than the whole page). Plain
+`position: sticky` gets the same visual effect — pinned buy box, scrolling reading column — using
+the browser's one normal page scrollbar, so there's nothing new to learn or discover.
+
+**"Más información" moved out of its own full-width section and into the description column**,
+since keeping it sticky-adjacent only works if it's part of the same scrolling column as the
+description — it can't stay in a separate full-width row below the masthead. On desktop this also
+means the accordion mechanism itself is retired: the trigger is hidden and the panel is forced open
+via CSS (`max-height: none`), since the reason it was collapsed in the first place (limited mobile
+screen space) doesn't apply once it's just more of an already-scrolling desktop column. **Mobile is
+unaffected** — same accordion, same collapsed-by-default trigger, same single-column stack; only the
+`@media (min-width: 769px)` desktop query changes behavior.
+
+**Scroll affordance:** with the accordion trigger gone on desktop, the explicit "there's more here,
+click to see it" cue went with it. Added a small "↓ Mecánicas, temas y ficha técnica más abajo" hint
+with a bouncing chevron, directly under the description — dismissed (faded, not removed, so nothing
+jumps) the first time the user actually scrolls. This is the piece that's actually new work here;
+the sticky positioning itself needed none.
+
+**Clean formatting:** the mechanics/themes/ficha-técnica block is no longer visually foreign to the
+description above it — same column, same `max-width: 62ch` reading measure (matching
+`.desc-collapse`), separated from the description by one hairline top border (matching the divider
+language `.spec-row` already uses), rather than the accordion's previous bespoke chevron/trigger
+treatment.
+
+**Flagged, not resolved:** the sticky buy box will end up shorter than the now much-taller scrolling
+column once mechanics/themes/ficha técnica are inline — meaning there's real empty space below the
+pinned image+CTA for most of the scroll. That's expected/normal for this pattern (Airbnb's own
+booking widget has the same gap), not a bug, but worth confirming it doesn't look broken once real
+content lengths are in play.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
 - Compare desktop vs. mobile (📱 375): on desktop, image + CTA form the buy-box unit in the left
   column; the right column leads with the facts pills directly above the title, then
-  tags/description as pure prose with no button interrupting it. On mobile, does the sticky bottom
-  bar feel like the right tradeoff (always reachable, but permanently covering ~76px of viewport)
-  vs. an inline CTA you'd have to scroll back up for?
+  tags/description/mecánicas/temas/ficha técnica flowing as one scrolling reading column. On mobile,
+  does the sticky bottom bar feel like the right tradeoff (always reachable, but permanently covering
+  ~76px of viewport) vs. an inline CTA you'd have to scroll back up for?
 - Scroll the mobile view — confirm the sticky bar stays fixed and never overlaps the footer's last
   content.
-- Open "Más información" — does the ficha técnica's row-list style feel consistent with the
-  chips/pills used elsewhere?
+- **Desktop only:** scroll down past the description — confirm the buy box (image + CTA) stays
+  pinned in view while mecánicas/temas/ficha técnica scroll past it, and that it un-sticks cleanly
+  once you reach the footer. Does the "↓ más abajo" scroll hint register before you start scrolling,
+  and does it fade out cleanly on first scroll rather than jumping the layout?
+- Does the ficha técnica's row-list style feel consistent with the chips/pills used elsewhere, now
+  that it's inline in the same column as the description instead of behind an accordion?
 - Click a mechanic/theme chip or a pill — given the flagged URL-persistence gap, treat this as
   reviewing the *link targets and labels*, not a working filter yet.
 - Description: on desktop, does a 4-line clamp feel like the right "before it needs collapsing"
