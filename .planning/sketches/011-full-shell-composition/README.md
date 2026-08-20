@@ -315,3 +315,62 @@ correctly end to end.
   thin divided bottom bar), not a heavy colored band over a thin bar?
 - Scroll on Catálogo or Acerca de — does the mobile sticky game-title bar stay hidden (it no longer
   should ever appear outside Detalle)?
+
+## Round 5: Real Desktop Feedback — Content-Width Alignment, Footer Trim, Real Icons (2026-08-20)
+
+Round 4's desktop claims were verified via forced computed-style measurements, because this session's
+own browser tooling could not reach a real wide viewport (documented limitation, carried since Round
+3). The user then supplied real desktop screenshots (a genuinely wide monitor) and found three things
+that measurement-only verification had missed:
+
+1. **Header/footer content width was capped at 1280px (Round 4), but nothing else was — so the catalog
+   rail visibly overflowed past both.** `main.catalog-main`/`.row-header`/`.rail-wrap` (catalog shelves)
+   and `.pk-row-header`/`#similar-games` (detail's "Juegos similares") had only `padding: 0 var(--space-6)`,
+   no `max-width` — full-bleed on any viewport, however wide. Once Round 4 capped the header/footer to
+   1280px, the previously-consistent "everything is full-bleed" page broke: header/footer edges now sat
+   well inside the catalog rail's edges on a wide monitor, which is exactly what the screenshots showed
+   (the card rail extending well past the header's hexagon logo and past the footer's brand mark).
+   Fixed by giving `.row-header`, `.rail-wrap`, and `.pk-row-header` the same `max-width:1280px;
+   margin:0 auto` recipe as `.app-nav-inner`/`.footer-grid` — confirmed via `getBoundingClientRect()`
+   this time (not just computed max-width) that all five now share the exact same `0→1280` box.
+   Also found and fixed a second, smaller version of the same bug: `#similar-games`'s own inline
+   `padding:0 var(--space-6)` was stacking on top of `.rail-wrap`'s *own* identical padding (64px total
+   gutter instead of 32px) — removed the redundant inline style now that `.pk-row-header`/`.rail-wrap`
+   carry it correctly themselves.
+   A second, more subtle version of the same class of bug turned up in the footer itself: `.footer-d`
+   had its own horizontal padding *outside* `.footer-grid`'s max-width box, double-insetting the footer
+   content 32px further in than the header/catalog's flush `0→1280` edge — invisible until measured
+   with real rects, not just `getComputedStyle` on `max-width`. Fixed by moving the horizontal padding
+   onto `.footer-grid`/`.footer-bottom` themselves (same "padding lives inside the max-width box, not
+   on a wrapper around it" rule now applied everywhere).
+2. **Footer text was redundant with the header.** The "Explorar" footer column
+   (Catálogo/Acerca de/Para empezar/Nivel experto) was a straight duplicate of the header's own nav
+   links, and the brand paragraph repeated the hero/header's own pitch in full-sentence form. Cut
+   entirely: the footer now carries only what the header *doesn't* — a one-line tagline, social links,
+   and a "Club" column (FAQ/Contacto/Juntadas, none of which exist in the header nav). Dropping a whole
+   column while keeping the outer box at the same 1280px width would have recreated the Round 4 header
+   bug (content hugging one side, big gap to the other) if left as a `grid-template-columns: 1.4fr 1fr
+   1fr` stretch — switched `.footer-grid` from a full-width grid to natural-width flex items
+   (`.footer-brand { flex: 0 1 320px }`, `.footer-col { flex: 0 0 auto }`) so the now-lighter content
+   sits close together on the left with open space to the right, rather than being force-stretched
+   across the full capped width.
+3. **Social icons were "IG"/"WA"/"DC" text-letter badges, not real icons.** Replaced with minimal
+   stroke/line SVG glyphs (Instagram, WhatsApp, Discord) in the same 32px circle chrome, using
+   `currentColor` so the existing hover-recolor (muted → primary background, white icon) keeps working
+   without any extra CSS.
+
+Verified live at a genuinely wide viewport this time (1920px — this session's browser tooling reached
+one for the first time; earlier rounds' "can't get a real wide viewport" limitation did not reproduce
+here) — screenshotted the catalog, detail, and about pages and confirmed by eye that the header logo,
+catalog rail cards, and footer brand mark all sit at the same left edge scrolling down the page, the
+footer's two content clusters sit close together with no dead gap, and the new social icons render as
+distinct minimal glyphs, not blank/broken.
+
+## What to Look For (Round 5)
+- At a wide desktop width, scroll down Catálogo — do the header logo, the shelf cards, and the footer
+  brand mark all line up on the same left edge?
+- Does the footer read as noticeably lighter/shorter than before, with no text that just repeats the
+  header's own nav links?
+- Do the three footer social icons look like real minimal icons (camera-square, speech-bubble,
+  rounded-rect-with-dots), not text initials?
+- On Detalle, does "Juegos similares" also align to the same left edge as the header/catalog above it?

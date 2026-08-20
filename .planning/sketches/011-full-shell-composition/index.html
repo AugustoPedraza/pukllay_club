@@ -216,7 +216,15 @@
   .row-heading { font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0; color: var(--color-text); }
   .row-heading.hero { color: var(--color-primary); }
   .row-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); margin: 2px 0 0; }
-  .row-header { padding: 0 var(--space-6); }
+  /* Round 5: capped + centered to the SAME 1280px the header/footer use
+     (.app-nav-inner / .footer-grid / .footer-bottom) — before this, shelves
+     had padding only (no max-width), so on any viewport wider than
+     ~1280+64px the rail content bled edge-to-edge while the header/footer
+     content stayed capped, and their left/right edges no longer lined up
+     vertically down the page. Real user-reported bug, confirmed via
+     screenshots at a real wide desktop width this session's browser tooling
+     still can't reach itself (see Round 3/4 notes on that limitation). */
+  .row-header { padding: 0 var(--space-6); max-width: 1280px; margin: 0 auto; }
   section.shelf { margin-bottom: var(--space-6); scroll-margin-top: 120px; }
   section.shelf.hero { padding: var(--space-6) 0 var(--space-4); margin-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
 
@@ -224,7 +232,7 @@
      shelves AND the detail page's "Juegos similares" shelf (see README
      finding #3 — 005 originally had its own independently-declared
      .pk-poster-card/.pk-rail that had already drifted from this one). ============ */
-  .rail-wrap { position: relative; padding: 0 var(--space-6); }
+  .rail-wrap { position: relative; padding: 0 var(--space-6); max-width: 1280px; margin: 0 auto; }
   .rail-wrap::before, .rail-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 48px; z-index: 4; pointer-events: none; }
   .rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
   .rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
@@ -335,34 +343,57 @@
      compliance-required BGG badge + copyright, same role the old
      utility-bar's meta side played. ============ */
   footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-8); }
-  .footer-d { padding: var(--space-8) var(--space-6) var(--space-4); }
-  .footer-d .footer-grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: var(--space-8); padding-bottom: var(--space-6); }
+  /* Round 5: horizontal padding lives on .footer-grid/.footer-bottom
+     themselves (below), not here — .footer-d used to carry it too, which
+     double-inset the footer content 32px further than the header/catalog's
+     0→1280 box (their own padding lives INSIDE their max-width:1280 box,
+     not on an outer wrapper around it). Same recipe as .app-nav-inner/
+     .row-header/.rail-wrap now, for real edge alignment. */
+  .footer-d { padding: var(--space-8) 0 var(--space-4); }
+  /* Round 5: was a 3-col grid stretched across the full 1280px box — once
+     the "Explorar" column (a straight duplicate of the header's own nav
+     links) and the long mission paragraph (redundant with the hero/header's
+     own messaging) were cut, forcing what's left to still span 1280px via
+     fr columns just left the two remaining pieces oddly far apart with dead
+     space between them (the same "flex-grow stretches, content doesn't"
+     shape as the header bug fixed in Round 4). Natural-width flex instead,
+     left-aligned, letting the lighter content sit close together — the
+     outer .footer-grid is still capped/centered at the SAME 1280px as the
+     header/catalog for edge alignment, it just no longer force-fills it. */
+  .footer-d .footer-grid { max-width: 1280px; margin: 0 auto; padding: 0 var(--space-6); display: flex; flex-wrap: wrap; gap: var(--space-12) var(--space-8); padding-bottom: var(--space-6); }
+  .footer-d .footer-brand { flex: 0 1 320px; }
+  .footer-d .footer-col { flex: 0 0 auto; }
   .footer-d .footer-brand-mark { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; margin-bottom: var(--space-3); }
   .footer-d .footer-brand-mark strong { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.03em; color: var(--color-primary); }
-  .footer-d .footer-brand p { color: var(--color-text-muted); line-height: 1.6; margin: 0 0 var(--space-4); max-width: 42ch; }
+  .footer-d .footer-tagline { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); }
   .footer-d .footer-col h4 { font-family: var(--font-sans); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin: 0 0 var(--space-3); }
   .footer-links { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-4); flex-wrap: wrap; }
   .footer-links.vertical { flex-direction: column; gap: var(--space-2); }
   .footer-links a { color: var(--color-text-muted); text-decoration: none; font-size: var(--text-sm); }
   .footer-links a:hover { color: var(--color-primary); }
   .footer-social { display: flex; gap: var(--space-2); }
-  .footer-social a { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); text-decoration: none; font-size: 13px; transition: all var(--duration-fast) var(--ease-standard); }
+  /* Round 5: real minimal line-icons (Instagram/WhatsApp/Discord), not the
+     "IG"/"WA"/"DC" text-letter badges — same 32px circle chrome, same
+     currentColor-driven hover recolor. */
+  .footer-social a { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); text-decoration: none; transition: all var(--duration-fast) var(--ease-standard); }
   .footer-social a:hover { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
   .bgg-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); font-size: var(--text-xs); color: var(--color-text-muted); text-decoration: none; }
   .bgg-badge .mark { width: 16px; height: 16px; border-radius: 3px; background: #ff5100; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
   .bgg-badge:hover { border-color: var(--color-primary); color: var(--color-primary); }
   .footer-copyright { font-size: var(--text-xs); color: var(--color-text-muted); }
-  .footer-d .footer-bottom { max-width: 1280px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding-top: var(--space-4); border-top: 1px solid var(--color-border); gap: var(--space-3); flex-wrap: wrap; }
+  .footer-d .footer-bottom { max-width: 1280px; margin: 0 auto; padding: var(--space-4) var(--space-6) 0; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--color-border); gap: var(--space-3); flex-wrap: wrap; }
 
   /* mobile footer: one column, one alignment (centered) throughout — the
      grid collapses to a single stack instead of the old two-tier's
      mismatched centered-band-over-ragged-bar problem, since there's only
      ever one tier now. */
   @media (max-width: 480px) {
-    .footer-d { padding: var(--space-6) var(--space-4) var(--space-4); text-align: center; }
-    .footer-d .footer-grid { grid-template-columns: 1fr; gap: var(--space-6); padding-bottom: var(--space-4); }
+    .footer-d { padding: var(--space-6) 0 var(--space-4); text-align: center; }
+    .footer-d .footer-grid { flex-direction: column; align-items: center; gap: var(--space-6); padding: 0 var(--space-4) var(--space-4); }
+    .footer-d .footer-bottom { padding-left: var(--space-4); padding-right: var(--space-4); }
+    .footer-d .footer-brand { flex-basis: auto; }
     .footer-d .footer-brand-mark { justify-content: center; }
-    .footer-d .footer-brand p { margin-left: auto; margin-right: auto; }
+    .footer-d .footer-tagline { margin-left: auto; margin-right: auto; }
     .footer-d .footer-brand .footer-social { justify-content: center; }
     .footer-links { justify-content: center; }
     .footer-links.vertical { flex-direction: row; justify-content: center; gap: var(--space-4) var(--space-3); }
@@ -401,7 +432,12 @@
      at all — see README finding #3). Only the section wrapper/heading
      markup is 005's own. */
   .pk-shelf { margin: var(--space-8) 0 0; scroll-margin-top: 6rem; }
-  .pk-row-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); }
+  /* Round 5: same 1280px cap as .row-header/.rail-wrap above — the section's
+     own padding used to double up with .rail-wrap's identical padding
+     (64px total instead of 32px) and, like the catalog rows, had no
+     max-width at all, so it bled past the header/footer's capped edge on
+     wide viewports. */
+  .pk-row-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); padding: 0 var(--space-6); max-width: 1280px; margin-left: auto; margin-right: auto; }
   .pk-row-header h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; text-transform: uppercase; letter-spacing: 0.02em; }
   .pk-row-header p { font-size: var(--text-sm); color: var(--color-text-muted); margin: 4px 0 0; }
   @media (max-width: 480px) { .pk-row-header { flex-direction: column; align-items: stretch; gap: var(--space-2); } }
@@ -928,7 +964,7 @@
 
   <!-- "Juegos similares" — real .card/hover-portal/mobile-sheet, wired via
        renderSimilarShelf() below (README finding #3). -->
-  <section class="pk-shelf" style="padding:0 var(--space-6)" id="similar-games">
+  <section class="pk-shelf" id="similar-games">
     <div class="pk-row-header">
       <div>
         <h2>Juegos similares</h2>
@@ -1023,14 +1059,12 @@
         <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
         <strong>PUKLLAY CLUB</strong>
       </a>
-      <p>Un catálogo curado de juegos de mesa modernos para gente nueva en el hobby — sin jerga,
-        sin presión de ya "saber" de juegos. Describís lo que buscás, en tu propio idioma, y te
-        ayudamos a encontrarlo.</p>
-      <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
-    </div>
-    <div class="footer-col">
-      <h4>Explorar</h4>
-      <ul class="footer-links vertical"><li><a href="#">Catálogo</a></li><li><a href="#" onclick="showPage('about'); return false;">Acerca de</a></li><li><a href="#">Para empezar</a></li><li><a href="#">Nivel experto</a></li></ul>
+      <p class="footer-tagline">Juegos de mesa modernos, sin jerga.</p>
+      <div class="footer-social">
+        <a href="#" aria-label="Instagram" title="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none"/></svg></a>
+        <a href="#" aria-label="WhatsApp" title="WhatsApp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.4-4.2A8.5 8.5 0 1 1 8 19.6L3 21z"/><path d="M8.5 9.5c0 3.5 2.5 6 6 6 .5 0 1-.4 1-1v-1.2l-2-1-1 1a5 5 0 0 1-3-3l1-1-1-2H8.5c-.5 0-1 .5-1 1z"/></svg></a>
+        <a href="#" aria-label="Discord" title="Discord"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="5"/><circle cx="9" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+      </div>
     </div>
     <div class="footer-col">
       <h4>Club</h4>
