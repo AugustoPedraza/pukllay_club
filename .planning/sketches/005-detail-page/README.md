@@ -225,6 +225,22 @@ again exactly like this.
   the carousel carries a `title="Ampliar imagen"` tooltip as a fallback cue, since a lone corner
   glyph at rest can read as decoration rather than an affordance.
 
+## Round 8 — toggle actually inline in the text; CTA shape differentiated from pills
+- **"Leer más" moved inside the `<p>` itself**, as the paragraph's own trailing inline content —
+  not a sibling element positioned near it. Round 7's right-alignment fix addressed weight/color
+  but the toggle was still a structurally separate element below the text, which is why it kept
+  reading as "isolated" even after that pass. Now it's literally part of the same text run: same
+  font-size/family as the body copy, only a muted color + underline signal it's interactive.
+  **Mobile clamp bumped 2 → 3 lines** as a consequence — with the toggle now trailing inside the
+  clamped box rather than below it, a 2-line clamp risked cutting the toggle text off entirely
+  (no visible way to expand) if the description filled both lines first.
+- **CTA/share button shape now differs from pills/tags.** Round 7 gave the share button the same
+  fully-rounded capsule shape as the primary CTA, but that's also the exact shape already used for
+  every fact pill and tag chip — so both buttons read as "bigger, stronger versions of the same
+  pill component" rather than a distinct control type. Switched both to `radius-lg` (a rounded
+  rectangle), keeping capsule/`radius-full` exclusively for pills and tags. One consistent rule
+  going forward: **pills and tags are capsules; buttons are rounded rectangles.**
+
 ## Future considerations (flagged, not built)
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a

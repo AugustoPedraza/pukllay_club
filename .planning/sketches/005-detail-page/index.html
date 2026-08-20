@@ -80,11 +80,15 @@
   .detail-b .desc-collapse { margin-bottom: var(--space-5); max-width: 62ch; }
   .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
   .detail-b .desc.is-collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  /* lighter weight + right-aligned so it reads as a small trailing control
-     on the paragraph it belongs to, not a competing bold CTA of its own */
+  /* lives INSIDE the <p> now, as the paragraph's own trailing inline
+     content — not a separate element below it — so it's literally part of
+     the text it collapses/expands, not an isolated component next to it.
+     Same font-size/family as the body copy it continues; only the
+     underline + muted color signal it's interactive. */
   .detail-b .desc-toggle {
-    display: block; margin-left: auto; background: none; border: none; color: var(--color-text-muted);
-    font-weight: 600; font-size: var(--text-xs); cursor: pointer; padding: 6px 0 0;
+    display: inline; background: none; border: none; padding: 0; margin-left: 4px;
+    color: var(--color-text-muted); font-weight: 600; font-size: inherit; font-family: inherit;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
     transition: color var(--duration-fast) var(--ease-standard);
   }
   .detail-b .desc-toggle:hover { color: var(--color-primary); }
@@ -170,17 +174,27 @@
     .detail-b .detail-carousel { border-radius: 0; }
     .detail-b .pk-pill-row { margin-top: var(--space-3); }
     .detail-b h1 { font-size: 1.75rem; }
-    .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
+    /* 3, not 2 — now that "Leer más" is trailing inline content inside
+       the paragraph itself, a 2-line clamp risks clipping the toggle text
+       out of view entirely (no visible way to expand) if the description
+       fills both lines before the button gets rendered. */
+    .detail-b .desc.is-collapsed { -webkit-line-clamp: 3; }
     .detail-b .cta-row { flex-direction: column; align-items: stretch; }
     .detail-b .cta-primary { width: 100%; justify-content: center; }
     .detail-b .cta-icon { width: 100%; justify-content: center; }
   }
 
   /* ---- primary reservation CTA ---- */
-  /* subtle elevation + hover lift so this reads unambiguously as the
-     page's primary clickable action, not flat colored text */
+  /* Round 8: fully-rounded (radius-full) capsule shape is already the
+     established visual vocabulary for pills/chips (facts pills, tag
+     chips) — using the same capsule shape here just made the CTA read as
+     "a bigger, stronger pill," not a distinct button type. Switched to
+     radius-lg (a rounded rectangle, not a full capsule) specifically to
+     break that shape association — pills/tags stay capsules, buttons are
+     rounded rectangles, one consistent rule going forward. Kept the
+     elevation + hover lift from the previous round. */
   .cta-primary {
-    display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: var(--radius-full);
+    display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px; border-radius: var(--radius-lg);
     border: none; background: var(--color-primary); color: var(--color-primary-content); font-weight: 700;
     font-size: var(--text-sm); cursor: pointer; box-shadow: var(--shadow-sm);
     transition: all var(--duration-fast) var(--ease-standard);
@@ -190,11 +204,12 @@
   /* ---- share button + popover ---- */
   /* was an icon-only circle with just a bare "↗" glyph — not a recognized
      share icon, and easy to misread as decoration or an external-link
-     marker. Now an always-labeled outlined pill (same height/shape family
-     as the primary CTA, secondary treatment) so the action is legible on
-     its own, not just on hover/mobile. */
+     marker. Now an always-labeled button (same height/shape family as the
+     primary CTA — rounded rectangle, not a capsule — but secondary,
+     outlined instead of filled) so the action is legible on its own, not
+     just on hover/mobile. */
   .cta-icon {
-    display: inline-flex; align-items: center; gap: 6px; height: 46px; padding: 0 18px; border-radius: var(--radius-full);
+    display: inline-flex; align-items: center; gap: 6px; height: 48px; padding: 0 20px; border-radius: var(--radius-lg);
     border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
     cursor: pointer; font-size: var(--text-sm); font-weight: 700; position: relative;
     transition: all var(--duration-fast) var(--ease-standard);
@@ -371,8 +386,7 @@
                 construís tu propio motor de producción de recursos. Esta edición standalone
                 simplifica las reglas del original sin perder profundidad estratégica — ideal para
                 quienes quieren probar el sistema de Terraforming Mars sin la carga completa del
-                juego base.</p>
-              <button class="desc-toggle" onclick="toggleDescCollapse(this)">Leer más ▾</button>
+                juego base. <button class="desc-toggle" onclick="toggleDescCollapse(this)">Leer más</button></p>
             </div>
             <div class="cta-row">
               <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
@@ -557,11 +571,13 @@
     btn.closest('.info-accordion').classList.toggle('is-open');
   }
 
-  // ---- collapsible description (long descriptions truncate to 2 lines by default) ----
+  // ---- collapsible description — toggle lives inside the <p> itself now,
+  // as its own trailing inline content, so target the paragraph via
+  // closest() rather than assuming it's a preceding sibling. ----
   function toggleDescCollapse(btn) {
-    const text = btn.previousElementSibling;
+    const text = btn.closest('.desc');
     const collapsed = text.classList.toggle('is-collapsed');
-    btn.textContent = collapsed ? 'Leer más ▾' : 'Leer menos ▴';
+    btn.textContent = collapsed ? 'Leer más' : 'Leer menos';
   }
 
   // ---- share ----
