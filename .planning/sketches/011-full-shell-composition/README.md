@@ -465,3 +465,49 @@ round) shows just Inicio/Acerca de; and the tab-reset fix was confirmed with a s
   the crumb also work?
 - Back on Inicio after using either of those, is "Destacados del club" the active shelf tab (not
   whatever tab was last clicked before you navigated away)?
+
+## Round 8: Drop the Shelf-Jump Bar, About Gets Nav-Links Not a Crumb (2026-08-20)
+
+Two more pieces of direct feedback on Round 7's work, both scoped and applied without new variants:
+
+1. **`.catalog-index` removed entirely.** It was a second sticky bar pinned directly under the
+   already-sticky `.app-nav` — real chrome overload, and unnecessary against this project's own stated
+   reference point: Netflix's row-first catalog doesn't have a persistent "jump to row" bar either,
+   people just scroll. Removed the HTML block, its CSS (`.catalog-index`/`.catalog-index-item`), the
+   `jumpToShelf()` function, and the active-tab-reset logic `showPage()` gained in Round 7 to support
+   it. Para empezar/Novedades/Clásicos have no replacement now — same as every other shelf, they're
+   reachable by scrolling.
+2. **Acerca de's header is now a real `.links` row, not a crumb.** The insight: Detalle's crumb
+   ("Inicio / {game}") is a genuine drill-down — catalog → one specific item — but About isn't nested
+   under Inicio at all, it's a sibling top-level page. "Inicio / Acerca de" implied a parent/child
+   relationship that doesn't exist, which is exactly why it read as disharmonious. Added a second
+   `.links[data-about-only]` block (Inicio + Acerca de, with Acerca de marked `.active` instead) and
+   removed the `.crumb[data-about-only]` block outright — crumbs stay reserved for Detalle, the one page
+   that's actually a drill-down.
+3. **Found and fixed a header-balance regression this change would have introduced:** `.links` has no
+   flex-grow (Round 4's fix for the opposite problem — the old links element eating space it didn't
+   visually use), and About no longer has a crumb (`flex:1`) or search (`flex-grow` to 360px) to consume
+   the row's leftover space before the theme toggle — without a fix, the toggle would sit right after
+   "Acerca de" with a large dead zone to its right instead of at the row's edge, i.e. a new instance of
+   the exact bug Round 4 fixed on Catálogo, this time on Acerca de. Fixed with
+   `.app-nav-inner .theme-toggle { margin-left: auto }`, scoped to the real header (not the drawer's
+   reused `.theme-toggle` close button, which is already right-aligned by its own
+   `justify-content:space-between`) — a no-op on Catálogo/Detalle where search/crumb already consume
+   that space, but load-bearing on Acerca de.
+
+**About's actual content** (mission/how-it-works/club/FAQ) is explicitly out of scope for this pass —
+flagged by the user as its own future session to redo as a proper landing page, not touched here. This
+round only changed how the *shell* (header) treats the About page, not what's on it.
+
+Verified live at a real 1920px viewport: the shelf-jump bar no longer renders on Inicio; Acerca de shows
+"Inicio / Acerca de" as two plain nav links (Acerca de underlined-active, not a "/"-separated crumb);
+Detalle's crumb is untouched; and `getBoundingClientRect()` confirmed the theme toggle sits flush at the
+header's right edge (1525→1561 inside a 313→1593 box) on all three pages, not bunched left on Acerca de.
+
+## What to Look For (Round 8)
+- On Inicio, is there only one sticky bar (the header) — no second bar pinned below it?
+- On Acerca de, does the header read "Inicio  Acerca de" as two plain nav links (Acerca de underlined),
+  not "Inicio / Acerca de" with a separator implying hierarchy?
+- On Acerca de at a wide desktop width, does the theme toggle sit at the header's right edge, or is
+  there a large gap between "Acerca de" and the toggle?
+- On Detalle, is the crumb ("Inicio / {game title}") still exactly as before?
