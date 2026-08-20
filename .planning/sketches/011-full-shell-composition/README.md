@@ -374,3 +374,43 @@ distinct minimal glyphs, not blank/broken.
 - Do the three footer social icons look like real minimal icons (camera-square, speech-bubble,
   rounded-rect-with-dots), not text initials?
 - On Detalle, does "Juegos similares" also align to the same left edge as the header/catalog above it?
+
+## Round 6: Header Nav Rename, Single-Row Minimal Footer (2026-08-20)
+
+Two more rounds of direct user feedback, both scoped and applied without new variants (the direction
+was explicit, not exploratory):
+
+1. **Header nav labels renamed.** The four `.links`/`.nav-drawer-links` items went from
+   Catálogo/Para empezar/Nivel experto/Recién llegados to **Inicio/Para empezar/Novedades/Clásicos**.
+   For consistency with this rename, the crumb back-links (`.crumb[data-detail-only]`,
+   `.crumb[data-about-only]`, which read "Catálogo / {page}" and collapse to "‹ Catálogo" on mobile)
+   were updated to "Inicio" too — same destination the nav's first item now names, so both had to agree
+   or the shell would drift from itself again (exactly the class of bug this sketch exists to catch).
+   Left untouched on purpose: the sketch-only page-switcher control button (dev tooling, not real
+   product nav) and the `weightLabel:'Nivel experto'` data field used throughout the real game dataset/
+   filters — a coincidental name collision with the old nav label, not the same thing being renamed.
+2. **Footer collapsed to one single row, no divider.** Round 5's footer still had two visual pieces (a
+   flex row of brand+links, then a separately bordered `.footer-bottom` bar for copyright+BGG). Direct
+   feedback: no divider, "Club" links horizontal (they were vertically stacked before), and the BGG
+   attribution should read as small print, not a bordered badge competing for attention — while still
+   staying legible per the compliance requirement. Rebuilt as one `.footer-row`: brand mark + FAQ/
+   Contacto/Juntadas (now inline, not stacked) on the left, social icons + "© 2026 Pukllay Club · datos
+   de BoardGameGeek" (plain muted text, underlined link, no box/background/border) on the right — same
+   two-cluster `justify-content:space-between` shape that worked for the header in Round 4, avoiding the
+   dead-gap trap of stretching a full-width grid across lightweight content (the exact mistake Round 5
+   had to fix once already). Padding dropped from `space-8/space-4` to a flat `space-4`, and the
+   brand-mark/wordmark shrunk slightly — the whole footer is now roughly a third of Round 5's height.
+   Also dropped the tagline paragraph entirely (kept in Round 5, cut here per "simplify it even more").
+
+Verified live at a real 1920px viewport (reached for the first time this session — see Round 5) for the
+desktop row, and via a forced-mobile style override (this session's `resize_window` still does not
+change the actual viewport — same limitation noted every round since Round 3) for the stacked mobile
+layout and the drawer's renamed links.
+
+## What to Look For (Round 6)
+- Does the header's first nav item read "Inicio", and does the "‹ Catálogo"/"Catálogo / …" crumb now
+  say "Inicio" too, everywhere it appears?
+- Does the footer read as one single block with no border/line splitting it into two pieces?
+- Are FAQ/Contacto/Juntadas laid out horizontally, not stacked?
+- Does "datos de BoardGameGeek" read as quiet small print next to the copyright, not a bordered badge?
+- Is the footer noticeably shorter/less tall than before?
