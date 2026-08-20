@@ -490,10 +490,10 @@
 
 <!-- Shared "¡Quiero Jugarlo!" reservation modal — one instance, reused by
      whichever variant/CTA opened it. Real implementation: name -> WhatsApp
-     Business deep link (wa.me) with a pre-filled reservation message. The
-     club's real WhatsApp Business number isn't wired up in a static sketch
-     (that's a config/env value in the real app) — it's a labeled
-     placeholder here, same treatment as the BGG badge in sketch 003. -->
+     Business deep link (wa.me) with a pre-filled reservation message, using
+     the club's real WhatsApp Business number. In the real app this number
+     belongs in runtime env config, not hardcoded in a template — it's
+     hardcoded here only because a static sketch has no config layer. -->
 <div class="modal-backdrop" id="reserve-modal" onclick="if(event.target===this) closeReserveModal()">
   <div class="modal-box">
     <button class="modal-close" onclick="closeReserveModal()" aria-label="Cerrar">✕</button>
@@ -515,9 +515,6 @@
       <p class="modal-sub" style="text-align:center">Le mandamos este mensaje al club por vos — confirmalo abriendo WhatsApp:</p>
       <div class="wa-preview" id="wa-message-preview"></div>
       <a href="#" target="_blank" class="wa-open-link" id="wa-open-link">💬 Abrir WhatsApp</a>
-      <p style="font-size:11px;color:var(--color-text-muted);text-align:center;margin-top:8px">
-        Número real del club pendiente de configurar — este es un placeholder de sketch.
-      </p>
     </div>
   </div>
 </div>
@@ -596,7 +593,12 @@
   }
 
   // ---- "¡Quiero Jugarlo!" reservation modal -> WhatsApp handoff ----
-  const WA_CLUB_NUMBER_PLACEHOLDER = '5490000000000'; // TBD: real club WhatsApp Business number
+  // Real club WhatsApp Business number (+54 9 3884 10-3255), in wa.me's
+  // required format: country code + subscriber number, digits only, no
+  // "+", spaces, or dashes. In the real app this belongs in runtime env
+  // config (like the club's other secrets), not hardcoded in a template —
+  // this sketch hardcodes it only because it has no config layer.
+  const WA_CLUB_NUMBER = '5493884103255';
   let currentReserveGame = 'Terraforming Mars: Ares Expedition';
 
   function openReserveModal(gameName) {
@@ -621,7 +623,7 @@
     }
     const message = `¡Hola Pukllay Club! Quiero reservar "${currentReserveGame}" para jugar. Mi nombre es ${name}.`;
     document.getElementById('wa-message-preview').textContent = message;
-    document.getElementById('wa-open-link').href = `https://wa.me/${WA_CLUB_NUMBER_PLACEHOLDER}?text=${encodeURIComponent(message)}`;
+    document.getElementById('wa-open-link').href = `https://wa.me/${WA_CLUB_NUMBER}?text=${encodeURIComponent(message)}`;
     document.getElementById('reserve-step-form').style.display = 'none';
     document.getElementById('reserve-step-success').style.display = '';
   }

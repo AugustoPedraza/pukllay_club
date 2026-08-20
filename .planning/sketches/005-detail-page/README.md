@@ -106,10 +106,11 @@ here, since sketch 002 is a separate, already-finalized sketch.
 Replaces the previous plain "Ver en BGG" as the primary action. Flow: click → modal asks for name
 → submit (client-side required-field validation) → constructs a pre-filled reservation message
 (`¡Hola Pukllay Club! Quiero reservar "{game}" para jugar. Mi nombre es {name}.`) → shows the
-message preview plus a real `wa.me/{number}?text=...` link the user can actually open. **The
-club's real WhatsApp Business number isn't wired up** — that's a runtime config value in the real
-app, not something a static sketch should hardcode; the sketch uses a clearly labeled placeholder
-number so the interaction loop is provable without pointing at a fake real number silently.
+message preview plus a real, working `wa.me/{number}?text=...` link — wired to the club's actual
+WhatsApp Business number (+54 9 3884 10-3255), so clicking "Abrir WhatsApp" in this sketch genuinely
+opens a chat with the pre-filled reservation message. In the real Phoenix app, this number belongs
+in runtime env config alongside the app's other secrets, not hardcoded in a template — it's
+hardcoded in this sketch only because a static HTML mockup has no config layer to put it in.
 
 ## What to Look For
 - Open the "Más información" accordion — does collapsing mechanics/themes/ficha técnica by default
