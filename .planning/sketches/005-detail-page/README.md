@@ -454,6 +454,16 @@ Three fixes, all in the now-inline "más información" block:
   micro-typography left in the block. `dt`'s fixed width shrank alongside it (148px → 112px on
   desktop) since the smaller uppercase text needs less room.
 
+## Round 19 — spec rows: label stacked above value, not side by side
+Round 18 kept label and value side by side within each row (just paired two rows per grid line).
+That's not what you meant — each field should be its own small stacked card (uppercase label on
+top, value below), *then* two of those per row on desktop. Changed `.spec-row` from a horizontal
+flex row to a vertical one: `dt` (uppercase, matching `.section-heading`) sits above `dd`, no fixed
+label width needed anymore since there's no side-by-side column to keep aligned. Same stacked shape
+on mobile and desktop — only how many sit per grid row changes (one on mobile, two on desktop, same
+as Round 18). The `:has(dd.missing)` full-width span for the two explanatory rows carries over
+unchanged.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

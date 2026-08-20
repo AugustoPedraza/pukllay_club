@@ -371,33 +371,31 @@
      what was actually meant by inconsistent "spacing between label and
      value": it wasn't a gap-size bug, it was a lack of a shared column. */
   .spec-list { display: flex; flex-direction: column; }
-  .spec-row { display: flex; align-items: baseline; gap: var(--space-3); padding: 7px 0; font-size: var(--text-sm); }
-  /* uppercase/letter-spacing now byte-matches .section-heading's rhythm
-     (Mecánicas/Temas above it use the same treatment) — was plain-case
-     600-weight before, visually inconsistent with the rest of the block's
-     micro-label language. */
+  /* Round 19: label stacked above value (not side by side) — a small
+     property card per field, uppercase label byte-matching
+     .section-heading's rhythm on top, the value in normal reading weight
+     below it. Same shape on mobile and desktop; only how many of these
+     sit per row changes (see the grid below). */
+  .spec-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; font-size: var(--text-sm); }
   .spec-row dt {
-    margin: 0; color: var(--color-text-muted); font-weight: 700; flex: 0 0 128px;
+    margin: 0; color: var(--color-text-muted); font-weight: 700;
     font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em;
   }
-  .spec-row dd { margin: 0; color: var(--color-text); text-align: left; flex: 1 1 auto; }
+  .spec-row dd { margin: 0; color: var(--color-text); }
   .spec-row dd.missing { color: var(--color-text-muted); font-style: italic; font-size: var(--text-xs); }
   .spec-row dd a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
   .spec-row dd a:hover { text-decoration: underline; }
-  /* Round 18: two columns on desktop, where the column is wide enough
-     (62ch ≈ 700px) to fit two label/value pairs side by side without
-     forcing the value into an awkward wrap — 7 rows as one long single
-     column was using the available width poorly. `dt`'s fixed width
-     shrinks a little in this narrower per-column context (148px → 112px)
-     since the uppercase label text needs less room. Mobile keeps the
-     original single column — there's no spare width to split there. */
+  /* two columns of these stacked label/value cards on desktop, where the
+     column is wide enough (62ch ≈ 700px) to fit two side by side without
+     cramping either — 7 rows as one long single column was using the
+     available width poorly. Mobile keeps the original single column —
+     there's no spare width to split there. */
   @media (min-width: 769px) {
     .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-6); row-gap: 0; }
-    .spec-row dt { flex-basis: 112px; }
     /* the two "dato no disponible / de ejemplo" explanatory rows carry a
-       full sentence, not a short value — cramped into half a column
-       they'd wrap 2-3 lines; span both columns instead, using the
-       existing .missing marker rather than adding a new class. */
+       full sentence, not a short value — span both columns instead of
+       sitting cramped in half of one, using the existing .missing marker
+       rather than adding a new class. */
     .spec-row:has(dd.missing) { grid-column: 1 / -1; }
   }
   .bgg-link-row { font-size: var(--text-sm); padding-top: var(--space-2); }
