@@ -829,6 +829,36 @@ pending that confirmation.
 - `#sketch-tools`' mobile offset came back down from `168px` to `130px` now that the sticky bar is a
   single row instead of three.
 
+## Round 34 — sticky mobile chrome parks once you reach the footer
+Confirmed this is the right call: yes, a sticky bottom action bar retracting once you reach the
+footer/end-of-content is standard mobile pattern (Amazon, Airbnb, Booking.com all do this) — without
+it, the CTA bar either permanently floats over the footer or the page needs dead reserved space
+(exactly what `body { padding-bottom: 148px }` was, since Round 25) that never gets used once you're
+actually looking at the footer.
+
+Desktop's sticky poster-col already gets this for free — `position: sticky` naturally un-sticks once
+its containing block's bottom edge scrolls into view, no JS required (Round 12). Mobile's CTA bar
+uses `position: fixed` instead (needed for the independent hide-while-scrolling behavior — a `sticky`
+element can't detach from document flow the way `.mobile-cta-bar` needs to), and `fixed` has no
+native concept of a boundary to stop at — so this fakes the same effect with an
+`IntersectionObserver` watching `footer.pk-footer` directly: the instant any part of the real footer
+is on screen, both sticky bars retract (`.mobile-cta-bar.is-parked`, full off-screen slide — deliberately
+distinct from `.is-hidden`'s smaller nudge, since "parked" needs to persist for as long as the footer
+is in view, not clear itself after 200ms like the scroll-debounce state does) and `body`'s reserved
+148px collapses to 0 (`body.is-cta-parked`, transitioned on `--ease-out-soft` alongside the bar's own
+motion so the footer doesn't jump). Reverses cleanly scrolling back up — verified with real scroll
+gestures both directions: parked state confirmed via computed styles (`padding-bottom: 0px`,
+`transform: translateY(131px)` — off-screen), then scrolling back to the top showed the CTA bar and
+its lavender/white contrast reappear correctly.
+
+Extended to the top sticky title bar too, on the same trigger — the "must be stacked together" framing
+from the request — even though it doesn't spatially overlap the footer (it lives right under the
+header), retracting it alongside the CTA bar reads as "you've reached the end, chrome's put away" as a
+coherent pair rather than leaving one sticky element on-screen when the other's gone. The three
+previously-separate `IIFE`s (CTA hide/show, title-bar fade, and this) got merged into one shared
+closure with a `footerReached` flag, since the title bar's visibility now legitimately depends on two
+independent conditions (past `#game-identity` AND not at the footer) instead of one.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

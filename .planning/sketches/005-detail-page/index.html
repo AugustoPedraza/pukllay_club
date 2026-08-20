@@ -386,6 +386,15 @@
     transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
   }
   .mobile-cta-bar.is-hidden { transform: translateY(12%); opacity: 0; pointer-events: none; }
+  /* Round 34: distinct from `.is-hidden` on purpose — `.is-hidden` is a
+     transient ~200ms state driven by the scroll-active debounce (Round
+     27) and clears itself on a timer regardless of where you are on the
+     page. `.is-parked` means "the footer is on screen, there's nothing
+     left to reach for" — it has to stay hidden for as long as that's
+     true, not clear itself after 200ms of stillness. Full off-screen
+     slide (not the smaller `.is-hidden` nudge) since this one's meant to
+     read as "gone," not "paused." */
+  .mobile-cta-bar.is-parked { transform: translateY(100%); opacity: 0; pointer-events: none; }
   .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
   .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; background: var(--color-bg); }
 
@@ -422,8 +431,19 @@
     .game-sticky-bar { display: flex; }
     /* keeps the sticky bar from covering the footer's last content —
        taller now that the bar stacks two full-width buttons (Round 25)
-       instead of one row, so the reserved space grew alongside it. */
-    body { padding-bottom: 148px; }
+       instead of one row, so the reserved space grew alongside it.
+       Round 34: this reserved space is only needed while the CTA bar is
+       actually floating over content. Once the footer itself scrolls into
+       view (`.is-cta-parked`, set by the IntersectionObserver below), the
+       bar retracts and this collapses to 0 — same "unstick at the natural
+       end of content" behavior desktop's sticky poster-col already gets
+       for free (Round 12), just done in JS here since `position: fixed`
+       (unlike `position: sticky`) has no native concept of a boundary to
+       stop at. Higher specificity than the bare `body` rule above (a
+       class beats an element selector), so it wins regardless of source
+       order — no Round 26-style cascade trap here. */
+    body { padding-bottom: 148px; transition: padding-bottom var(--duration-base) var(--ease-out-soft); }
+    body.is-cta-parked { padding-bottom: 0; }
   }
 
   /* ---- primary reservation CTA ---- */
@@ -930,42 +950,72 @@
   }
   function lightboxStep(dir) { carouselShow(carouselIndex + dir); }
 
-  // ---- mobile sticky CTA bar: visible at rest (including on first
-  // render), hides for the duration of an active scroll gesture, reveals
-  // again once scrolling actually stops. Round 27 replaced the earlier
-  // direction-based hide/show (down hides, up reveals) with this — the
-  // ask was specifically "hidden while scrolling, shown again when stop
-  // scrolling," not direction-dependent. Debounced: each scroll event
-  // hides the bar and resets a timer; the bar only reappears once no
-  // further scroll event has fired for 200ms (i.e. the gesture ended). ----
+  // ---- mobile sticky chrome: CTA bar (bottom) + game-identity bar (top),
+  // coordinated through one shared `footerReached` flag (Round 34). ----
   (function () {
-    const bar = document.getElementById('mobile-cta-bar');
-    if (!bar) return;
-    let scrollEndTimer;
-    window.addEventListener('scroll', () => {
-      bar.classList.add('is-hidden');
-      clearTimeout(scrollEndTimer);
-      scrollEndTimer = setTimeout(() => bar.classList.remove('is-hidden'), 200);
-    });
-  })();
-
-  // ---- mobile sticky game-identity bar (Round 32): fades in once
-  // #game-identity (the real pills+title+tags up in the masthead) has
-  // scrolled fully out of view above the viewport, fades out again once
-  // it's back in view. IntersectionObserver instead of a scroll-position
-  // threshold so this stays correct regardless of how tall the masthead
-  // ends up being — it's watching the actual element, not a guessed pixel
-  // offset. rootMargin's top offset accounts for the 64px site header so
-  // "out of view" means "scrolled under the header," not just past y=0. ----
-  (function () {
+    const ctaBar = document.getElementById('mobile-cta-bar');
     const identity = document.getElementById('game-identity');
     const stickyBar = document.getElementById('game-sticky-bar');
-    if (!identity || !stickyBar) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      const scrolledPast = !entry.isIntersecting && entry.boundingClientRect.top < 0;
-      stickyBar.classList.toggle('is-visible', scrolledPast);
-    }, { rootMargin: '-64px 0px 0px 0px', threshold: 0 });
-    observer.observe(identity);
+    const footer = document.querySelector('.pk-footer');
+    let footerReached = false;
+    let scrolledPastIdentity = false;
+
+    function refreshStickyBar() {
+      if (!stickyBar) return;
+      stickyBar.classList.toggle('is-visible', scrolledPastIdentity && !footerReached);
+    }
+
+    // Visible at rest (including on first render), hides for the duration
+    // of an active scroll gesture, reveals again once scrolling actually
+    // stops. Round 27 replaced the earlier direction-based hide/show (down
+    // hides, up reveals) with this — the ask was specifically "hidden
+    // while scrolling, shown again when stop scrolling," not
+    // direction-dependent. Debounced: each scroll event hides the bar and
+    // resets a timer; the bar only reappears once no further scroll event
+    // has fired for 200ms (i.e. the gesture ended) — unless the footer is
+    // parked, in which case it stays hidden regardless (see below).
+    let scrollEndTimer;
+    if (ctaBar) {
+      window.addEventListener('scroll', () => {
+        if (footerReached) return;
+        ctaBar.classList.add('is-hidden');
+        clearTimeout(scrollEndTimer);
+        scrollEndTimer = setTimeout(() => ctaBar.classList.remove('is-hidden'), 200);
+      });
+    }
+
+    // Fades in once #game-identity (the real pills+title+tags up in the
+    // masthead) has scrolled fully out of view above the viewport, fades
+    // out again once it's back in view. IntersectionObserver instead of a
+    // scroll-position threshold so this stays correct regardless of how
+    // tall the masthead ends up being — it's watching the actual element,
+    // not a guessed pixel offset. rootMargin's top offset accounts for the
+    // 64px site header so "out of view" means "scrolled under the
+    // header," not just past y=0.
+    if (identity && stickyBar) {
+      new IntersectionObserver(([entry]) => {
+        scrolledPastIdentity = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+        refreshStickyBar();
+      }, { rootMargin: '-64px 0px 0px 0px', threshold: 0 }).observe(identity);
+    }
+
+    // Round 34: "once you reach the footer, the sticky chrome should park
+    // so the footer displays normally" — `position: fixed` (unlike
+    // `position: sticky`) has no native concept of a boundary to stop at,
+    // so this fakes it with an IntersectionObserver on the footer itself.
+    // The instant any part of the footer is on screen, both sticky bars
+    // retract and the CTA bar's reserved `body` padding collapses to 0 —
+    // matching the same "un-stick at the natural end of content" behavior
+    // desktop's sticky poster-col already gets for free via real
+    // `position: sticky` (Round 12). Reverses cleanly scrolling back up.
+    if (footer) {
+      new IntersectionObserver(([entry]) => {
+        footerReached = entry.isIntersecting;
+        document.body.classList.toggle('is-cta-parked', footerReached);
+        if (ctaBar) ctaBar.classList.toggle('is-parked', footerReached);
+        refreshStickyBar();
+      }, { threshold: 0 }).observe(footer);
+    }
   })();
 
   // ---- collapsible description — toggle lives inside the <p> itself now,
