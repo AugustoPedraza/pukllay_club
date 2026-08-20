@@ -174,6 +174,18 @@ none are real filter dimensions today.
   are illustrative, chosen for length/flavor, not verified against `01-VOCABULARY.md`'s actual
   editorial tag list (same caveat as the "Nivel experto" weight-band label in Round 3).
 
+## Round 5 — pills grouped with the title, not the image
+Round 3/4 put the pill row inside the poster column, directly under the carousel — grouped with
+the *image*. That's not what sketch 002 actually settled: there, pills sit "directly above the
+title" as part of the same text block as the title, regardless of where the poster sits (the
+hover-portal and mobile sheet both keep pills+title glued together, with the poster as a separate
+element). Moved the pill row out of `.poster-col` and into the title column, directly above `<h1>`.
+On mobile this is a no-op visually (DOM order still stacks image → pills → title, since the poster
+column still renders first) — the fix only changes desktop, where pills now sit beside the image in
+the title column rather than below the image in the poster column. Also removed now-dead CSS
+(mobile gutter-padding compensation for pills, which was only needed while they lived inside the
+full-bleed poster column).
+
 ## Future considerations (flagged, not built)
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a
