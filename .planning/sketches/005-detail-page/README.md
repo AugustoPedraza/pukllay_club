@@ -440,6 +440,20 @@ Three fixes, all in the now-inline "más información" block:
 - **BGG link text shortened**: "Ver ficha completa en BoardGameGeek ↗" → "Ver en BoardGameGeek ↗" —
   tighter, reads as a simple outbound link rather than a formal call to action.
 
+## Round 18 — ficha técnica: two columns on desktop, uppercase labels
+- **Two-column grid on desktop.** With "más información" now inline in the ~62ch/700px reading
+  column (Round 14), one long single-column list of 7 label/value rows was leaving a lot of that
+  width unused. `.spec-list` becomes a 2-column CSS grid at `min-width: 769px` (mobile keeps the
+  original single column — no spare width to split there). The two "dato no disponible/de ejemplo"
+  explanatory rows (the ones using the existing `.missing` marker) span both columns via
+  `:has(dd.missing)` instead of participating in the 2-up layout — they carry a full sentence, not a
+  short value, and would wrap awkwardly at half-column width.
+- **Labels now uppercase**, byte-matching `.section-heading`'s rhythm (`text-xs`/700-weight/
+  `letter-spacing: 0.08em`/muted) — "Mecánicas" and "Temas" above already use that treatment, so the
+  spec-list's own labels (Diseñadores, Editorial, etc.) were the one inconsistent piece of
+  micro-typography left in the block. `dt`'s fixed width shrank alongside it (148px → 112px on
+  desktop) since the smaller uppercase text needs less room.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
