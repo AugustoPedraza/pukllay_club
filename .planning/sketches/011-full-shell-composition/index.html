@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 011 — Full Shell Composition (Catálogo + Detalle + Acerca de)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 0; }
+
+  /* ============ header — VERBATIM from 007 (itself VERBATIM from 001-D's
+     .app-nav), extended with 003-C's quiet states grafted onto the SAME
+     element. Both 005's .pk-header and 004's .pk-header are DISCARDED
+     entirely here — see README finding #1: they were a second, independent
+     header implementation that would have stacked two headers instead of
+     one adapting component. ============ */
+  .app-nav {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; gap: var(--space-6);
+    padding: var(--space-3) var(--space-6);
+    background: var(--color-bg);
+    border-bottom: 1px solid transparent;
+    transition: background var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard);
+  }
+  .app-nav .brand { display: flex; flex-direction: column; line-height: 1; margin-right: var(--space-4); text-decoration: none; flex: 0 0 auto; }
+  .app-nav .brand strong { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.03em; color: var(--color-primary); }
+  .app-nav .brand span { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+  .app-nav .links { display: flex; gap: var(--space-4); flex: 1; }
+  .app-nav .links a {
+    color: var(--color-text); text-decoration: none; font-size: var(--text-sm); font-weight: 600;
+    padding: var(--space-1) 0; border-bottom: 2px solid transparent;
+    transition: border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+  }
+  .app-nav .links a:hover, .app-nav .links a.active { border-color: var(--color-primary); color: var(--color-primary); }
+  .app-nav .search {
+    display: flex; align-items: center; gap: var(--space-2);
+    background: var(--color-surface); border-radius: var(--radius-full);
+    padding: var(--space-2) var(--space-3); min-width: 220px;
+  }
+  .app-nav .search input { border: none; background: transparent; outline: none; font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-text); flex: 1; }
+  .app-nav .search svg { flex-shrink: 0; opacity: 0.6; }
+  .app-nav.scrolled { background: color-mix(in srgb, var(--color-bg) 94%, transparent); box-shadow: var(--shadow-sm); border-color: var(--color-border); }
+
+  /* real light/dark toggle (frontier 010) — sets/persists
+     documentElement[data-theme], not a theme-FILE swap. See themes/default.css
+     for the actual light/@media(dark)/[data-theme] cascade this drives.
+     Proved first on 007, reused verbatim here. */
+  .theme-toggle {
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+    cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .theme-toggle:hover { border-color: var(--color-primary); background: var(--color-accent-bg); }
+
+  .app-nav .crumb { flex: 1; display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--color-text-muted); }
+  .app-nav .crumb a { color: var(--color-text-muted); text-decoration: none; }
+  .app-nav .crumb a:hover { color: var(--color-primary); }
+  .app-nav .crumb .sep { opacity: 0.5; }
+  .app-nav .crumb .current { color: var(--color-text); font-weight: 600; }
+  .app-nav .quiet-label { flex: 1; font-size: var(--text-sm); font-weight: 600; color: var(--color-text); }
+
+  .mobile-chip-nav { display: none; }
+  @media (max-width: 480px) {
+    .app-nav { padding-left: var(--space-3); padding-right: var(--space-3); gap: var(--space-3); }
+    .app-nav .links, .app-nav .search { display: none; }
+    .mobile-chip-nav[data-catalog-only] { display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; padding: var(--space-3) 0 var(--space-4); }
+    .mobile-chip-nav::-webkit-scrollbar { display: none; }
+  }
+  .chip-edge-spacer { flex: 0 0 var(--space-6); }
+  @media (max-width: 480px) { .chip-edge-spacer { flex: 0 0 14px; } }
+  /* .chip = mobile category-filter chip (nav-level). NOT the same widget as
+     the detail page's mechanic/theme tags below — those are renamed
+     .info-chip precisely to avoid colliding with this rule. See README
+     finding #4 for the real bug this prevents. */
+  .chip {
+    flex: 0 0 auto; border: 1px solid var(--color-border); background: var(--color-bg);
+    color: var(--color-text); font-size: var(--text-xs); font-weight: 600;
+    padding: 6px 14px; border-radius: var(--radius-full); white-space: nowrap; cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .chip.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  .page-switcher {
+    display: flex; gap: var(--space-2); justify-content: center; align-items: center;
+    padding: var(--space-2) 0; background: var(--color-accent-bg);
+    border-bottom: 1px dashed var(--color-border); font-family: var(--font-sans);
+  }
+  .page-switcher .label { font-size: var(--text-xs); color: var(--color-text-muted); margin-right: var(--space-2); }
+  .page-switcher button {
+    font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-primary);
+    background: transparent; color: var(--color-primary); cursor: pointer;
+  }
+  .page-switcher button.is-active { background: var(--color-primary); color: var(--color-primary-content); }
+
+  .page { display: none; }
+  .page.is-active { display: block; }
+
+  main.catalog-main { max-width: 100%; padding: var(--space-6) 0 var(--space-12); }
+  .row-heading { font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0; color: var(--color-text); }
+  .row-heading.hero { color: var(--color-primary); }
+  .row-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); margin: 2px 0 0; }
+  .row-header { padding: 0 var(--space-6); }
+  section.shelf { margin-bottom: var(--space-6); scroll-margin-top: 120px; }
+  section.shelf.hero { padding: var(--space-6) 0 var(--space-4); margin-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
+
+  /* ============ rail — real edge-fade mechanics, shared by the catalog
+     shelves AND the detail page's "Juegos similares" shelf (see README
+     finding #3 — 005 originally had its own independently-declared
+     .pk-poster-card/.pk-rail that had already drifted from this one). ============ */
+  .rail-wrap { position: relative; padding: 0 var(--space-6); }
+  .rail-wrap::before, .rail-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 48px; z-index: 4; pointer-events: none; }
+  .rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  .rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  section.shelf.hero .rail-wrap::before, section.shelf.hero .rail-wrap::after { display: none; }
+  .rail { display: flex; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; padding: var(--space-2) 0 var(--space-3); gap: var(--space-4); }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail-btn {
+    position: absolute; top: 0; bottom: 0; width: 44px; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; z-index: 5;
+    background: transparent; color: var(--color-text); opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+  .rail-wrap:hover .rail-btn { opacity: 1; }
+  .rail-btn.prev { left: 0; } .rail-btn.next { right: 0; }
+  .rail-btn svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); }
+
+  .see-all-tile {
+    flex: 0 0 auto; width: 110px; cursor: pointer; border-radius: var(--radius-md);
+    border: 1px dashed var(--color-border); background: var(--color-surface);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1);
+    color: var(--color-primary); font-size: var(--text-xs); font-weight: 600; text-align: center; padding: var(--space-2);
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .see-all-tile:hover { background: var(--color-accent-bg); border-color: var(--color-primary); border-style: solid; }
+  .see-all-tile.hero-card { width: 150px; }
+
+  .p1 { background: linear-gradient(135deg,#3D096D,#7E4CA5); }
+  .p2 { background: linear-gradient(135deg,#7E4CA5,#A97FD1); }
+  .p3 { background: linear-gradient(135deg,#22103A,#3D096D); }
+  .p4 { background: linear-gradient(135deg,#B23A5C,#7E4CA5); }
+  .p5 { background: linear-gradient(135deg,#3F8F6B,#3D096D); }
+  .p6 { background: linear-gradient(135deg,#B8862F,#7E4CA5); }
+  .icon { flex-shrink: 0; opacity: 0.85; }
+
+  .card {
+    flex: 0 0 auto; width: 190px; cursor: pointer;
+    border-radius: var(--radius-md); overflow: hidden;
+    background: var(--color-surface);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
+  .card:hover { transform: translateY(-4px); }
+  .card.hero-card { width: 240px; }
+  .poster-art { aspect-ratio: 1 / 1.05; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: rgba(255,255,255,0.85); }
+  .card.hero-card .poster-art { font-size: 3rem; }
+  .card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .card .cap h4 { margin: 0; font-size: var(--text-sm); font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .hover-portal {
+    position: fixed; z-index: 500; pointer-events: none; opacity: 0;
+    border-radius: var(--radius-lg); overflow: hidden;
+    background: var(--color-bg);
+    box-shadow: 0 28px 56px rgba(20,8,34,0.38), 0 10px 24px rgba(20,8,34,0.24);
+    transform: scale(0.9); transform-origin: center;
+    transition: opacity var(--duration-base) var(--ease-out-soft), transform var(--duration-base) var(--ease-out-soft);
+  }
+  .hover-portal.visible { opacity: 1; pointer-events: auto; transform: scale(1); }
+  .hover-portal .portal-poster { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; color: rgba(255,255,255,0.85); }
+  .hover-portal .portal-body { padding: var(--space-4); }
+
+  .sheet-backdrop { position: fixed; inset: 0; background: rgba(20, 8, 34, 0.55); z-index: 600; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); }
+  .sheet-backdrop.visible { opacity: 1; pointer-events: auto; }
+  .mobile-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 601;
+    background: var(--color-bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-lg); max-height: 82vh; overflow-y: auto;
+    transform: translateY(100%); transition: transform var(--duration-slow) var(--ease-out-soft);
+    padding-bottom: var(--space-6);
+  }
+  .mobile-sheet.open { transform: translateY(0); }
+  .sheet-close { position: absolute; top: var(--space-3); right: var(--space-3); z-index: 2; width: 32px; height: 32px; border-radius: var(--radius-full); border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .sheet-poster { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: rgba(255,255,255,0.85); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .sheet-body { padding: var(--space-4); }
+  .sheet-drag-handle { width: 40px; height: 4px; background: var(--color-border); border-radius: var(--radius-full); margin: var(--space-2) auto 0; }
+
+  .pills-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: var(--space-2); }
+  .pill { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); }
+  .difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .difficulty .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
+  .difficulty .dot.filled { background: var(--color-text-muted); }
+  .expand-tag { display: inline-block; font-size: 11px; font-weight: 600; background: var(--color-accent-bg); color: var(--color-accent-text); padding: 3px 8px; border-radius: var(--radius-full); }
+  .expand-cta { display: block; width: 100%; text-align: center; cursor: pointer; background: transparent; color: var(--color-primary); border: 2px solid var(--color-primary); border-radius: var(--radius-sm); padding: var(--space-2); font-size: var(--text-sm); font-weight: 600; transition: background var(--duration-fast) var(--ease-standard); }
+  .expand-cta:hover { background: var(--color-accent-bg); }
+  .card-title { font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0 0 var(--space-2); line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .theme-text { font-size: var(--text-base); line-height: 1.5; color: var(--color-text); margin: 0 0 var(--space-3); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .sheet-body .expand-tag { margin-bottom: var(--space-3); display: inline-block; }
+  .sheet-body .expand-cta { padding: var(--space-3); font-size: var(--text-base); }
+
+  @media (max-width: 480px) {
+    .row-header, .rail-wrap { padding: 0 14px; }
+    .rail-wrap::before, .rail-wrap::after { width: 16px; }
+    section.shelf { margin-bottom: var(--space-6); }
+    .rail { gap: 10px; padding: var(--space-2) 0 var(--space-3); }
+    .card, .see-all-tile { width: 96px; }
+    .card.hero-card, .see-all-tile.hero-card { width: 118px; }
+    .card .cap { padding: var(--space-2) var(--space-1) var(--space-1); }
+    .card .cap h4 { font-size: var(--text-xs); -webkit-line-clamp: 1; line-height: 1.4; }
+  }
+
+  /* ============ footer — VERBATIM from 003-C, one shared instance for all
+     three pages. 005 and 004 each redeclared this same footer a second and
+     third time, using var(--pk-gutter) instead of var(--space-6) for the
+     exact same gutter — see README finding #2. Only one copy survives here. ============ */
+  footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-8); }
+  .footer-links { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-4); flex-wrap: wrap; }
+  .footer-links a { color: var(--color-text-muted); text-decoration: none; font-size: var(--text-sm); }
+  .footer-links a:hover { color: var(--color-primary); }
+  .footer-social { display: flex; gap: var(--space-2); }
+  .footer-social a { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); text-decoration: none; font-size: 13px; transition: all var(--duration-fast) var(--ease-standard); }
+  .footer-social a:hover { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  .bgg-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); font-size: var(--text-xs); color: var(--color-text-muted); text-decoration: none; }
+  .bgg-badge .mark { width: 16px; height: 16px; border-radius: 3px; background: #ff5100; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .bgg-badge:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .footer-copyright { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .footer-c .mission-band { background: var(--color-primary); color: var(--color-primary-content); padding: var(--space-8) var(--space-6); text-align: center; }
+  .footer-c .mission-band h3 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-2); text-transform: uppercase; }
+  .footer-c .mission-band p { max-width: 52ch; margin: 0 auto var(--space-4); opacity: 0.9; line-height: 1.6; }
+  .footer-c .mission-band .footer-social a { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.85); }
+  .footer-c .mission-band .footer-social a:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .footer-c .mission-band .footer-social { justify-content: center; }
+  .footer-c .utility-bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-6); flex-wrap: wrap; gap: var(--space-2); }
+  .footer-brand .word { font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-primary); text-transform: uppercase; text-decoration: none; }
+
+  /* ================================================================
+     DETAIL PAGE — real content from 005 variant B. --pk-gutter/.pk-gutter
+     replaced with var(--space-6) throughout (see README finding #2);
+     .pk-header/.pk-nav/.pk-brand*/.pk-nav-crumb/.pk-theme-toggle removed
+     (finding #1); .chip renamed to .info-chip (finding #4). ================ */
+  main.detail { padding-bottom: var(--space-4); }
+
+  .pk-difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .pk-difficulty-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
+  .pk-difficulty-dot.is-filled { background: var(--color-text-muted); }
+
+  .reading-measure { max-width: 100%; }
+  .info-chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .info-chip {
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted);
+    text-decoration: none; display: inline-flex; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .info-chip.tag { border-color: var(--color-secondary); color: var(--color-secondary); background: var(--color-surface); font-size: var(--text-xs); padding: 5px 12px; }
+  a.info-chip:hover { border-color: var(--color-primary); background: var(--color-accent-bg); color: var(--color-primary); }
+
+  .section-heading { font-family: var(--font-sans); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
+
+  /* "Juegos similares" — REBUILT on the real .rail-wrap/.rail/.card/
+     hover-portal/mobile-sheet from the catalog above, instead of 005's
+     original .pk-poster-card/.pk-rail (which had drifted: 160px vs the
+     real card's 190px, radius-lg vs radius-md, -2px vs -4px hover-lift,
+     108px vs 96px mobile width, and no hover-portal/tap-sheet interaction
+     at all — see README finding #3). Only the section wrapper/heading
+     markup is 005's own. */
+  .pk-shelf { margin: var(--space-8) 0 0; scroll-margin-top: 6rem; }
+  .pk-row-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); }
+  .pk-row-header h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; text-transform: uppercase; letter-spacing: 0.02em; }
+  .pk-row-header p { font-size: var(--text-sm); color: var(--color-text-muted); margin: 4px 0 0; }
+  @media (max-width: 480px) { .pk-row-header { flex-direction: column; align-items: stretch; gap: var(--space-2); } }
+
+  /* ============================= masthead / buy-box ============================= */
+  .detail-b .masthead-band { background: linear-gradient(180deg, var(--color-surface), var(--color-bg)); }
+  .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }
+  .detail-b .text-col { min-width: 0; }
+  .detail-b .poster-col { width: 100%; display: flex; flex-direction: column; gap: var(--space-3); position: sticky; top: calc(70px + var(--space-4)); }
+  .detail-b h1 { font-family: var(--font-display); font-size: 2.25rem; letter-spacing: 0.01em; margin: 0 0 var(--space-2); line-height: 1.1; }
+  .detail-b .tag-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+  .detail-b .desc-collapse { margin-bottom: var(--space-4); }
+  .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
+  .detail-b .desc.is-collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .detail-b .desc-toggle {
+    display: block; background: none; border: none; padding: 2px 0 0; margin: 0;
+    color: var(--color-text-muted); font-weight: 600; font-size: var(--text-base); font-family: inherit;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .detail-b .desc-toggle:hover { color: var(--color-primary); }
+  .detail-b .cta-row { display: flex; flex-direction: column; gap: var(--space-2); }
+  .detail-b .cta-row .cta-primary { width: 100%; justify-content: center; }
+  .detail-b .cta-row .cta-icon { width: 100%; justify-content: center; }
+
+  .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0 0 var(--space-2); }
+  .pk-pill {
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted);
+    font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full);
+    text-decoration: none; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  a.pk-pill:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .pk-pill .pk-difficulty-dot { width: 5px; height: 5px; }
+
+  .detail-carousel { position: relative; aspect-ratio: 3/4; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg); cursor: zoom-in; }
+  .detail-carousel .slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 64px; color: rgba(255,255,255,0.5); opacity: 0; transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+  .detail-carousel .slide.is-active { opacity: 1; }
+  .detail-carousel .cs-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.35); color: #fff; border: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 15px; z-index: 2; transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .detail-carousel .cs-arrow:hover { background: rgba(0,0,0,0.55); }
+  .detail-carousel .cs-arrow.prev { left: 10px; }
+  .detail-carousel .cs-arrow.next { right: 10px; }
+  .detail-carousel .cs-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+  .detail-carousel .cs-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none; cursor: pointer; padding: 0; }
+  .detail-carousel .cs-dot.is-active { background: #fff; }
+  .detail-carousel .zoom-hint {
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; z-index: 2; pointer-events: none; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .detail-carousel:hover .zoom-hint { background: rgba(0,0,0,0.6); transform: scale(1.1); }
+
+  .lightbox-backdrop {
+    position: fixed; inset: 0; background: rgba(20,10,30,0.92); z-index: 150; display: flex; align-items: center;
+    justify-content: center; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+    padding: var(--space-6);
+  }
+  .lightbox-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .lightbox-stage { position: relative; width: min(640px, 100%); aspect-ratio: 3/4; max-height: 82vh; }
+  .lightbox-slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 120px;
+    color: rgba(255,255,255,0.55); border-radius: var(--radius-md); opacity: 0; transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .lightbox-slide.is-active { opacity: 1; }
+  .lightbox-close { position: absolute; top: -44px; right: 0; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; cursor: pointer; font-size: 15px; }
+  .lightbox-close:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; cursor: pointer; font-size: 20px; z-index: 2; }
+  .lightbox-arrow:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-arrow.prev { left: -58px; }
+  .lightbox-arrow.next { right: -58px; }
+  @media (max-width: 720px) { .lightbox-arrow.prev { left: 4px; } .lightbox-arrow.next { right: 4px; } .lightbox-close { top: 10px; right: 10px; } }
+
+  /* ---- mobile sticky game-identity bar ---- */
+  .game-sticky-bar {
+    display: none;
+    align-items: center; gap: var(--space-3);
+    position: fixed; top: 64px; left: 0; right: 0; z-index: 39;
+    background: rgba(255,255,255,0.97); border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm); padding: 10px var(--space-6);
+    transform: translateY(-100%); opacity: 0; pointer-events: none;
+    transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+  }
+  .game-sticky-bar.is-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .game-sticky-bar h2 {
+    flex: 1 1 auto; min-width: 0;
+    font-family: var(--font-display); font-size: var(--text-base); font-weight: 700; margin: 0;
+    color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .scroll-top-btn {
+    flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;
+    animation: scroll-top-bounce 2.2s ease-in-out infinite;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+  }
+  .scroll-top-btn:hover { background: var(--color-accent-bg); border-color: var(--color-primary); }
+  @keyframes scroll-top-bounce { 0%, 20%, 100% { transform: translateY(0); } 10% { transform: translateY(-4px); } }
+
+  .mobile-cta-bar {
+    display: none; flex-direction: column; gap: var(--space-2);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: var(--color-surface); border-top: 1px solid var(--color-border);
+    padding: var(--space-3) var(--space-6);
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(20,8,34,0.08);
+    transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
+  }
+  .mobile-cta-bar.is-hidden { transform: translateY(12%); opacity: 0; pointer-events: none; }
+  .mobile-cta-bar.is-parked { transform: translateY(100%); opacity: 0; pointer-events: none; }
+  .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
+  .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; background: var(--color-bg); }
+
+  @media (max-width: 768px) {
+    .detail-b .masthead { grid-template-columns: 1fr; padding-top: 0; }
+    .detail-b .poster-col { position: static; }
+    .detail-b .carousel-wrap { margin-left: calc(-1 * var(--space-6)); margin-right: calc(-1 * var(--space-6)); }
+    .detail-b .detail-carousel { border-radius: 0; aspect-ratio: 4/3; }
+    .detail-b h1 { font-size: 1.75rem; }
+    .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
+    .pk-pill-row { flex-wrap: wrap; }
+    .detail-b .cta-row { display: none; }
+    .mobile-cta-bar { display: flex; }
+    .game-sticky-bar { display: flex; }
+    body { padding-bottom: 148px; transition: padding-bottom var(--duration-base) var(--ease-out-soft); }
+    body.is-cta-parked { padding-bottom: 0; }
+  }
+
+  .cta-primary {
+    display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px; border-radius: var(--radius-lg);
+    border: none; background: var(--color-primary); color: var(--color-primary-content); font-weight: 700;
+    font-size: var(--text-sm); cursor: pointer; box-shadow: var(--shadow-md);
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .cta-primary:hover { background: var(--color-secondary); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .cta-primary:active { box-shadow: var(--shadow-sm); transform: translateY(0); }
+
+  .cta-icon {
+    display: inline-flex; align-items: center; gap: 6px; height: 48px; padding: 0 20px; border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
+    cursor: pointer; font-size: var(--text-sm); font-weight: 700; position: relative;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .cta-icon:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .cta-icon .icon-label { font-weight: 700; }
+  .share-popover {
+    position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-4px);
+    background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg); padding: var(--space-2); display: flex; gap: 6px; opacity: 0; pointer-events: none;
+    transition: all var(--duration-fast) var(--ease-out-soft); z-index: 30; white-space: nowrap;
+  }
+  .share-popover.is-open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+  .share-popover button { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--color-surface); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .share-popover button:hover { background: var(--color-accent-bg); }
+  .share-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); z-index: 200;
+    background: var(--color-text); color: #fff; padding: 10px 18px; border-radius: var(--radius-full);
+    font-size: var(--text-sm); opacity: 0; pointer-events: none; transition: all var(--duration-base) var(--ease-out-soft);
+  }
+  .share-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .more-info { padding-top: var(--space-4); margin-top: var(--space-2); border-top: 1px solid var(--color-border); }
+  .more-info-inner { padding-bottom: var(--space-4); padding-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-4); }
+
+  .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-3); row-gap: 0; }
+  .spec-row--wide { grid-column: 1 / -1; }
+  @media (min-width: 769px) { .spec-list { column-gap: var(--space-6); } }
+  .spec-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; font-size: var(--text-sm); }
+  .spec-row dt { margin: 0; color: var(--color-text-muted); font-weight: 700; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em; }
+  .spec-row dd { margin: 0; color: var(--color-text); }
+  .spec-row dd.missing { color: var(--color-text-muted); font-style: italic; font-size: var(--text-xs); }
+  .spec-row dd a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+  .spec-row dd a:hover { text-decoration: underline; }
+  .bgg-link-row { font-size: var(--text-sm); padding-top: var(--space-2); }
+  .bgg-link-row a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+  .bgg-link-row a:hover { text-decoration: underline; }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(36,18,56,0.55); backdrop-filter: blur(2px); z-index: 100;
+    display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-standard); padding: var(--space-4);
+  }
+  .modal-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    position: relative; background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    width: min(420px, 100%); padding: var(--space-6); transform: scale(0.96) translateY(8px);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
+  .modal-backdrop.is-open .modal-box { transform: scale(1) translateY(0); }
+  .modal-game-preview { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-4); margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .modal-game-thumb {
+    flex: 0 0 48px; width: 48px; height: 48px; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+    display: flex; align-items: center; justify-content: center; font-size: 20px; color: rgba(255,255,255,0.6);
+  }
+  .modal-game-name { font-family: var(--font-sans); font-weight: 700; font-size: var(--text-sm); margin: 0; color: var(--color-text); }
+  .modal-game-sub { font-size: var(--text-xs); color: var(--color-text-muted); margin: 2px 0 0; }
+  .modal-box h3 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-1); text-transform: uppercase; }
+  .modal-box .modal-sub { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); line-height: 1.5; }
+  .modal-box label { display: block; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); margin-bottom: 6px; }
+  .modal-box input[type=text] {
+    width: 100%; padding: 12px 14px; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    font-size: var(--text-base); font-family: var(--font-sans); margin-bottom: var(--space-2);
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .modal-box input[type=text]:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-accent-bg); }
+  .modal-actions { margin-top: var(--space-2); }
+  .modal-close {
+    position: absolute; top: var(--space-4); right: var(--space-4); width: 30px; height: 30px; border-radius: 50%;
+    border: none; background: var(--color-surface); color: var(--color-text-muted); cursor: pointer; font-size: 13px;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .modal-close:hover { background: var(--color-accent-bg); color: var(--color-primary); }
+  .wa-preview {
+    background: var(--color-surface); border-left: 3px solid var(--color-primary); border-radius: var(--radius-sm);
+    padding: var(--space-3); font-size: var(--text-sm); color: var(--color-text); line-height: 1.5;
+    margin: 0 0 var(--space-4); white-space: pre-wrap;
+  }
+  .wa-success .icon {
+    width: 56px; height: 56px; margin: 0 auto var(--space-3); border-radius: 50%; background: var(--color-accent-bg);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .wa-success h3 { text-align: center; }
+  .wa-success .modal-sub { text-align: center; }
+  .wa-open-link {
+    display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: #fff;
+    padding: 13px; border-radius: var(--radius-full); font-weight: 700; text-decoration: none;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+  .wa-open-link:hover { opacity: 0.88; }
+  .field-error { color: var(--color-danger); font-size: var(--text-xs); margin: -4px 0 10px; display: none; }
+  .field-error.is-visible { display: block; }
+
+  /* ================================================================
+     ABOUT PAGE — real content from 004 variant B ("Alternating Bands").
+     --pk-gutter replaced with var(--space-6); header/footer discarded
+     (same fixes as detail page). ================ */
+  main.about { padding-bottom: var(--space-4); }
+  .about-b .hero-band { text-align: center; padding: var(--space-12) var(--space-6) var(--space-8); }
+  .about-b .hero-band h1 { font-family: var(--font-display); font-size: 3rem; margin: 0 0 var(--space-3); text-transform: uppercase; color: var(--color-primary); }
+  .about-b .hero-band p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 60ch; margin: 0 auto; line-height: 1.6; }
+  .about-b .band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; padding: var(--space-8) var(--space-6); max-width: 1100px; margin: 0 auto; }
+  .about-b .band.tint { background: var(--color-surface); max-width: none; padding: var(--space-8) 0; }
+  .about-b .band.tint > .band-inner { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6); }
+  .about-b .band.reverse .band-text { order: 2; }
+  .about-b .band.reverse .band-visual { order: 1; }
+  .about-b .band-text h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; }
+  .about-b .band-text p { color: var(--color-text); line-height: 1.7; margin: 0; }
+  .about-b .faq-band { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--space-6); }
+
+  .band-carousel { position: relative; aspect-ratio: 4/3; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); }
+  .band-carousel .slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 48px; color: rgba(255,255,255,0.55); opacity: 0; pointer-events: none;
+    transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+  .band-carousel .slide.is-active { opacity: 1; pointer-events: auto; }
+  .band-carousel .cs-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 30px; height: 30px;
+    border-radius: 50%; background: rgba(0,0,0,0.35); color: #fff; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 2;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .band-carousel .cs-arrow:hover { background: rgba(0,0,0,0.55); }
+  .band-carousel .cs-arrow.prev { left: 10px; }
+  .band-carousel .cs-arrow.next { right: 10px; }
+  .band-carousel .cs-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+  .band-carousel .cs-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none; cursor: pointer; padding: 0; }
+  .band-carousel .cs-dot.is-active { background: #fff; }
+  .about-b .faq-band h2 { font-family: var(--font-display); font-size: var(--text-2xl); text-align: center; margin: 0 0 var(--space-4); text-transform: uppercase; }
+  @media (max-width: 768px) {
+    .about-b .band, .about-b .band.tint > .band-inner { grid-template-columns: 1fr; }
+    .about-b .band.reverse .band-text, .about-b .band.reverse .band-visual { order: unset; }
+  }
+
+  #sketch-tools { position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;display:flex;gap:8px;align-items:center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="app-nav" id="app-nav" data-scroll-nav>
+  <a href="#" class="brand"><strong>PUKLLAY CLUB</strong><span>Juegos de mesa modernos</span></a>
+  <div class="links" data-catalog-only>
+    <a href="#" class="active">Catálogo</a>
+    <a href="#">Para empezar</a>
+    <a href="#">Nivel experto</a>
+    <a href="#">Recién llegados</a>
+  </div>
+  <div class="crumb" data-detail-only style="display:none">
+    <a href="#" onclick="showPage('catalog'); return false;">Catálogo</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span>
+  </div>
+  <div class="quiet-label" data-about-only style="display:none">Acerca de</div>
+  <div class="search" data-catalog-only>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" placeholder="Busca por título, autor o editorial…">
+  </div>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar a tema oscuro" title="Cambiar tema"></button>
+</div>
+<div class="mobile-chip-nav" id="chips-nav" data-catalog-only></div>
+
+<div class="page-switcher">
+  <span class="label">Sketch control — ver la página:</span>
+  <button class="is-active" onclick="showPage('catalog',event)">Catálogo</button>
+  <button onclick="showPage('detail',event)">Detalle</button>
+  <button onclick="showPage('about',event)">Acerca de</button>
+</div>
+
+<main class="page is-active catalog-main" id="page-catalog">
+  <div id="rows"></div>
+</main>
+
+<!-- ============================= DETAIL PAGE ============================= -->
+<main class="page detail detail-b" id="page-detail">
+  <div class="masthead-band">
+    <div class="masthead">
+      <div class="poster-col">
+        <div class="carousel-wrap">
+          <div class="detail-carousel" data-carousel onclick="openLightbox()" title="Ampliar imagen">
+            <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
+            <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
+            <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
+            <div class="slide" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
+            <button class="cs-arrow prev" onclick="event.stopPropagation(); detailCarouselStep(-1)" aria-label="Anterior">‹</button>
+            <button class="cs-arrow next" onclick="event.stopPropagation(); detailCarouselStep(1)" aria-label="Siguiente">›</button>
+            <div class="cs-dots"></div>
+            <div class="zoom-hint">⤢</div>
+          </div>
+        </div>
+        <div class="cta-row" id="masthead-cta-row">
+          <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
+          <div style="position:relative">
+            <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
+              <span>↗</span><span class="icon-label">Compartir</span>
+            </button>
+            <div class="share-popover">
+              <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
+              <button onclick="shareVia('x')" title="X / Twitter">X</button>
+              <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="text-col">
+        <div class="game-identity" id="game-identity">
+          <div class="pk-pill-row">
+            <a class="pk-pill" href="/?players=4" title="Filtrar por cantidad de jugadores">👥 1-4</a>
+            <a class="pk-pill" href="/?max_playtime=120" title="Filtrar por duración">⏱ 90-120 min</a>
+            <a class="pk-pill" href="/?weight_bands=Nivel+experto" title="Filtrar por dificultad">
+              <span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto
+            </a>
+          </div>
+          <h1>Terraforming Mars: Ares Expedition</h1>
+          <div class="tag-row">
+            <a class="info-chip tag" href="/?tags=Duelos+Memorables" title="Filtrar por etiqueta">Duelos Memorables</a>
+            <a class="info-chip tag" href="/?tags=Equipo+Ganador" title="Filtrar por etiqueta">Equipo Ganador</a>
+          </div>
+        </div>
+        <div class="desc-collapse reading-measure">
+          <p class="desc is-collapsed" id="detail-desc-b">Terraformá Marte compitiendo con otras
+            corporaciones: subí la temperatura, el oxígeno y el agua del planeta mientras
+            construís tu propio motor de producción de recursos. Esta edición standalone
+            simplifica las reglas del original sin perder profundidad estratégica — ideal para
+            quienes quieren probar el sistema de Terraforming Mars sin la carga completa del
+            juego base.</p>
+          <button class="desc-toggle" onclick="toggleDescCollapse(this)">… Leer más</button>
+        </div>
+
+        <div class="more-info">
+          <div class="more-info-inner reading-measure">
+            <div>
+              <p class="section-heading">Mecánicas</p>
+              <div class="info-chip-row">
+                <a class="info-chip" href="/?mechanics=Construcción+de+motor">Construcción de motor</a>
+                <a class="info-chip" href="/?mechanics=Gestión+de+mano">Gestión de mano</a>
+                <a class="info-chip" href="/?mechanics=Colocación+de+losetas">Colocación de losetas</a>
+                <a class="info-chip" href="/?mechanics=Puntuación+variable">Puntuación variable</a>
+              </div>
+            </div>
+            <div>
+              <p class="section-heading">Temas</p>
+              <div class="info-chip-row">
+                <a class="info-chip" href="/?themes=Ciencia+ficción">Ciencia ficción</a>
+                <a class="info-chip" href="/?themes=Exploración+espacial">Exploración espacial</a>
+              </div>
+            </div>
+            <div>
+              <dl class="spec-list">
+                <div class="spec-row spec-row--wide"><dt>Diseñadores</dt><dd><a href="/?q=Jacob+Fryxelius" title="Buscar juegos de este diseñador">Jacob Fryxelius</a>, <a href="/?q=Isaac+Fryxelius" title="Buscar juegos de este diseñador">Isaac Fryxelius</a></dd></div>
+                <div class="spec-row spec-row--wide"><dt>Ilustrador</dt><dd class="missing">No disponible — campo no existe en el catálogo hoy</dd></div>
+                <div class="spec-row"><dt>Editorial</dt><dd><a href="/?q=FryxGames" title="Buscar juegos de esta editorial">FryxGames</a></dd></div>
+                <div class="spec-row"><dt>Edad mínima</dt><dd><a href="/?min_age=12">12+</a></dd></div>
+                <div class="spec-row"><dt>Año</dt><dd>2021</dd></div>
+                <div class="spec-row"><dt>Peso BGG</dt><dd>3.8 / 5</dd></div>
+                <div class="spec-row spec-row--wide"><dt>Ranking BGG</dt><dd class="missing">#142 (dato de ejemplo, no confirmado)</dd></div>
+                <div class="spec-row spec-row--wide"><dt>Calificación BGG</dt><dd class="missing">8.1 / 10 (dato de ejemplo, no confirmado)</dd></div>
+              </dl>
+              <div class="bgg-link-row"><a href="#">Ver en BoardGameGeek ↗</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-cta-bar" id="mobile-cta-bar">
+        <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
+        <div style="position:relative">
+          <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
+            <span>↗</span><span class="icon-label">Compartir</span>
+          </button>
+          <div class="share-popover">
+            <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
+            <button onclick="shareVia('x')" title="X / Twitter">X</button>
+            <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- "Juegos similares" — real .card/hover-portal/mobile-sheet, wired via
+       renderSimilarShelf() below (README finding #3). -->
+  <section class="pk-shelf" style="padding:0 var(--space-6)" id="similar-games">
+    <div class="pk-row-header">
+      <div>
+        <h2>Juegos similares</h2>
+        <p>Mecánicas y complejidad parecidas a este juego</p>
+      </div>
+    </div>
+    <div class="rail-wrap">
+      <button class="rail-btn prev" aria-label="Anterior" onclick="scrollRail(this,-1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="rail" id="similar-rail"></div>
+      <button class="rail-btn next" aria-label="Siguiente" onclick="scrollRail(this,1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
+  </section>
+</main>
+
+<!-- ============================= ABOUT PAGE ============================= -->
+<main class="page about about-b" id="page-about">
+  <div class="hero-band">
+    <h1>Encontrá el juego justo para tu mesa</h1>
+    <p>Un catálogo curado de juegos de mesa modernos, pensado para gente nueva en el hobby —
+      sin jerga, sin necesitar ya "saber" de juegos.</p>
+  </div>
+
+  <div class="band">
+    <div class="band-text">
+      <h2>Nuestra misión</h2>
+      <p>Creemos que cualquiera puede encontrar el juego justo si se lo explicás en su propio
+        idioma. Nuestro trabajo es enseñar la complejidad de los juegos — peso, mecánicas,
+        temas — no darla por sentada.</p>
+    </div>
+    <div class="band-carousel" data-carousel>
+      <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🎯</div>
+      <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">📖</div>
+      <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">💬</div>
+      <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
+      <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
+      <div class="cs-dots"></div>
+    </div>
+  </div>
+
+  <div class="band tint">
+    <div class="band-inner reverse">
+      <div class="band-text">
+        <h2>Cómo funciona</h2>
+        <p>Explorá el catálogo o describí lo que buscás en tus propias palabras. Te mostramos
+          juegos que matchean, explicados simple: duración, jugadores, complejidad. Después,
+          vení a probarlo en una juntada o pedilo prestado.</p>
+      </div>
+      <div class="band-carousel" data-carousel>
+        <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🧩</div>
+        <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🔍</div>
+        <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">✅</div>
+        <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
+        <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
+        <div class="cs-dots"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="band">
+    <div class="band-text">
+      <h2>El club</h2>
+      <p>Somos un grupo de jugadores que se junta regularmente en persona. Este catálogo es la
+        puerta de entrada a esas juntadas — un lugar para descubrir qué jugar antes de venir.</p>
+    </div>
+    <div class="band-carousel" data-carousel>
+      <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🎲</div>
+      <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">📸</div>
+      <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🙌</div>
+      <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
+      <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
+      <div class="cs-dots"></div>
+    </div>
+  </div>
+
+  <div class="faq-band">
+    <h2>Preguntas frecuentes</h2>
+    <dl>
+      <div class="faq-item" style="padding:var(--space-2) 0"><dt style="font-weight:600">¿Qué significa el "peso" de un juego?</dt><dd style="margin:0;color:var(--color-text-muted)">Qué tan complejas son sus reglas y decisiones, de "ligero" a "experto".</dd></div>
+      <div class="faq-item" style="padding:var(--space-2) 0"><dt style="font-weight:600">¿Necesito saber jugar de antemano?</dt><dd style="margin:0;color:var(--color-text-muted)">No — está pensado justamente para quienes están empezando.</dd></div>
+    </dl>
+  </div>
+</main>
+
+<footer class="pk-footer footer-c">
+  <div class="mission-band">
+    <h3>Encontrá el juego justo para tu mesa</h3>
+    <p>Pukllay Club es un catálogo curado de juegos de mesa modernos para gente nueva en el hobby —
+      sin jerga, sin presión de ya "saber" de juegos. Describís lo que buscás, en tu propio idioma,
+      y te ayudamos a encontrarlo.</p>
+    <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
+  </div>
+  <div class="utility-bar">
+    <ul class="footer-links"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">FAQ</a></li><li><a href="#">Contacto</a></li></ul>
+    <div style="display:flex; align-items:center; gap:var(--space-3)">
+      <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
+      <span class="footer-copyright">© 2026 Pukllay Club</span>
+    </div>
+  </div>
+</footer>
+
+<!-- Mobile-only sticky game-identity echo bar (detail page only) -->
+<div class="game-sticky-bar" id="game-sticky-bar">
+  <h2>Terraforming Mars: Ares Expedition</h2>
+  <button class="scroll-top-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Volver arriba" title="Volver arriba">↑</button>
+</div>
+
+<div class="hover-portal" id="hover-portal"></div>
+<div class="sheet-backdrop" id="sheet-backdrop" onclick="closeSheet()"></div>
+<div class="mobile-sheet" id="mobile-sheet">
+  <div class="sheet-drag-handle"></div>
+  <button class="sheet-close" onclick="closeSheet()" aria-label="Cerrar">✕</button>
+  <div class="sheet-poster" id="sheet-poster"></div>
+  <div class="sheet-body" id="sheet-body"></div>
+</div>
+
+<div class="lightbox-backdrop" id="lightbox" onclick="if(event.target===this) closeLightbox()">
+  <div class="lightbox-stage">
+    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Cerrar">✕</button>
+    <button class="lightbox-arrow prev" onclick="lightboxStep(-1)" aria-label="Anterior">‹</button>
+    <button class="lightbox-arrow next" onclick="lightboxStep(1)" aria-label="Siguiente">›</button>
+    <div class="lightbox-slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="reserve-modal" onclick="if(event.target===this) closeReserveModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeReserveModal()" aria-label="Cerrar">✕</button>
+    <div id="reserve-step-form">
+      <div class="modal-game-preview">
+        <div class="modal-game-thumb" id="reserve-game-thumb">🚀</div>
+        <div>
+          <p class="modal-game-name" id="reserve-game-name">Terraforming Mars: Ares Expedition</p>
+          <p class="modal-game-sub">Reserva para la próxima juntada del club</p>
+        </div>
+      </div>
+      <h3>¡Quiero Jugarlo!</h3>
+      <p class="modal-sub">Dejanos tu nombre y le mandamos el pedido al club por WhatsApp.</p>
+      <label for="reserve-name">Tu nombre</label>
+      <input type="text" id="reserve-name" placeholder="Ej: Augusto Pedraza" />
+      <p class="field-error" id="reserve-error">Ingresá tu nombre para continuar.</p>
+      <div class="modal-actions">
+        <button class="cta-primary" style="width:100%; justify-content:center" onclick="submitReserve()">💬 Reservar por WhatsApp</button>
+      </div>
+    </div>
+    <div id="reserve-step-success" style="display:none" class="wa-success">
+      <div class="icon">✅</div>
+      <h3>¡Listo!</h3>
+      <p class="modal-sub">Le mandamos este mensaje al club por vos — confirmalo abriendo WhatsApp:</p>
+      <div class="wa-preview" id="wa-message-preview"></div>
+      <a href="#" target="_blank" class="wa-open-link" id="wa-open-link">💬 Abrir WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<div class="share-toast" id="share-toast">¡Enlace copiado!</div>
+
+<div id="sketch-tools">
+  <span>Sketch 011 — Full composition · use the ☀/🌙 button in the nav for the real theme toggle</span>
+</div>
+
+<script>
+// ==================== THEME TOGGLE (frontier 010, proved first on 007) ====================
+function currentResolvedTheme() {
+  const explicit = document.documentElement.dataset.theme;
+  if (explicit) return explicit;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function applyThemeToggleIcon() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const resolved = currentResolvedTheme();
+  btn.textContent = resolved === 'dark' ? '☀' : '🌙';
+  btn.setAttribute('aria-label', resolved === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+}
+function toggleTheme() {
+  const next = currentResolvedTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('pk-theme', next);
+  applyThemeToggleIcon();
+}
+(function initTheme() {
+  const saved = localStorage.getItem('pk-theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+})();
+document.addEventListener('DOMContentLoaded', applyThemeToggleIcon);
+
+// ==================== CATALOG (verbatim from 007) ====================
+const ICON_USERS = `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+const ICON_CLOCK = `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+
+const GAMES = [
+  { title:'Catán', pal:'p1', icon:'🎲', minP:3, maxP:4, minT:60, maxT:90, weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Acabas de desembarcar en una isla sin explorar. Reparte los recursos, negocia con tus rivales y sé el primero en construir un imperio de carreteras y poblados por todo el territorio.', tag:'#CreaConexiones' },
+  { title:'Wingspan', pal:'p5', icon:'🦙', minP:1, maxP:5, minT:40, maxT:70, weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Eres una persona apasionada por la ornitología, construyendo la reserva natural de tus sueños. Atrae aves a tu santuario y encadena sus habilidades para crear la red de hábitats más próspera.', tag:null },
+  { title:'Hanabi', pal:'p2', icon:'🎆', minP:2, maxP:5, minT:25, maxT:25, weightLabel:'Descubre el hobby', weightLevel:1,
+    theme:'Un equipo de pirotécnicos distraídos mezcló su colección de fuegos artificiales. Sin ver tus propias cartas, ayuda a tus compañeros a reconstruir el espectáculo antes de que se acabe la pólvora.', tag:'#EquipoGanador' },
+  { title:'Terraforming Mars: Ares Expedition', pal:'p3', icon:'🌵', minP:1, maxP:5, minT:120, maxT:180, weightLabel:'Nivel experto', weightLevel:3,
+    theme:'Corporaciones rivales compiten por transformar Marte en un planeta habitable. Sube la temperatura, el oxígeno y los océanos mientras desarrollas la infraestructura que definirá la nueva frontera humana.', tag:null },
+  { title:'7 Wonders Duel', pal:'p4', icon:'⚔️', minP:2, maxP:2, minT:30, maxT:30, weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Dos civilizaciones antiguas compiten por la supremacía a través de la ciencia, el comercio, el ejército y las grandes maravillas del mundo, cara a cara en un duelo directo de dos jugadores.', tag:'#DuelosMemorables' },
+  { title:'El Resistencia', pal:'p6', icon:'🕵️', minP:5, maxP:10, minT:30, maxT:30, weightLabel:'Descubre el hobby', weightLevel:1,
+    theme:'Una red de espías se ha infiltrado en la Resistencia. Sin saber en quién confiar, cada misión es una oportunidad para sabotear en secreto — o para demostrar tu lealtad frente a las sospechas del grupo.', tag:'#EquipoGanador' },
+];
+
+const SHELVES = [
+  { id:'shelf-destacados', title:'Destacados del club', subtitle:'La selección del club — los juegos que más recomendamos ahora mismo.', hero:true },
+  { id:'shelf-hobby', title:'Descubre el hobby', subtitle:'Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez.' },
+  { id:'shelf-estratega', title:'Ingenio estratega', subtitle:'Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante.' },
+  { id:'shelf-nuevos', title:'Recientemente añadidos', subtitle:'Las incorporaciones más nuevas a la ludoteca.' },
+];
+
+const SIMILAR_GAMES = [
+  { title:'Res Arcana', pal:'p2', icon:'🔮', minP:2, maxP:4, minT:30, maxT:40, weightLabel:'Ingenio estratega', weightLevel:2, theme:'Dos magos rivales compiten por dominar fuentes de maná y artefactos arcanos en duelos rápidos y tácticos.', tag:null },
+  { title:'Wingspan', pal:'p5', icon:'🦙', minP:1, maxP:5, minT:40, maxT:70, weightLabel:'Ingenio estratega', weightLevel:2, theme:'Construí la reserva de aves de tus sueños encadenando sus habilidades en una red de hábitats próspera.', tag:null },
+  { title:'Everdell', pal:'p3', icon:'🌳', minP:1, maxP:4, minT:40, maxT:80, weightLabel:'Ingenio estratega', weightLevel:2, theme:'Construí una ciudad de criaturas del bosque a lo largo de las cuatro estaciones del año.', tag:'#MundoEncantado' },
+  { title:'Viticulture', pal:'p4', icon:'🍇', minP:1, maxP:6, minT:45, maxT:90, weightLabel:'Ingenio estratega', weightLevel:2, theme:'Gestioná tu propio viñedo en la Toscana: plantá, cosechá y llená órdenes de vino.', tag:null },
+  { title:'Scythe', pal:'p1', icon:'⚙️', minP:1, maxP:5, minT:90, maxT:115, weightLabel:'Nivel experto', weightLevel:3, theme:'Potencias rivales de una Europa alternativa expanden su territorio con mechs a vapor tras la Primera Guerra Mundial.', tag:null },
+  { title:'Gaia Project', pal:'p6', icon:'🌌', minP:1, maxP:4, minT:60, maxT:150, weightLabel:'Nivel experto', weightLevel:3, theme:'Catorce facciones alienígenas compiten por colonizar y terraformar un sistema planetario compartido.', tag:null },
+  { title:'Brass: Birmingham', pal:'p3', icon:'🏭', minP:2, maxP:4, minT:90, maxT:120, weightLabel:'Nivel experto', weightLevel:3, theme:'Construí redes de canales y ferrocarriles compitiendo por industrializar Birmingham.', tag:null },
+  { title:'Great Western Trail', pal:'p5', icon:'🐄', minP:2, maxP:4, minT:90, maxT:150, weightLabel:'Nivel experto', weightLevel:3, theme:'Arreá tu ganado desde Texas hasta Kansas City, mejorando tu manada y tu mazo en el camino.', tag:null },
+];
+
+function playersText(g) { return g.minP === g.maxP ? `${g.minP}` : `${g.minP}-${g.maxP}`; }
+function timeText(g) { return g.minT === g.maxT ? `${g.minT} min` : `${g.minT}-${g.maxT} min`; }
+function difficultyDotsHTML(level) { return `<span class="difficulty">${[1,2,3].map(n => `<span class="dot${n<=level?' filled':''}"></span>`).join('')}</span>`; }
+function pillsRowHTML(g) { return `<div class="pills-row"><span class="pill">${ICON_USERS} ${playersText(g)}</span><span class="pill">${ICON_CLOCK} ${timeText(g)}</span><span class="pill">${difficultyDotsHTML(g.weightLevel)} ${g.weightLabel}</span></div>`; }
+function titleAndFactsHTML(g, tag, cls) { return `${pillsRowHTML(g)}<${tag} class="${cls}">${g.title}</${tag}>`; }
+
+let cardCounter = 0;
+function cardHTML(g, hero) {
+  const id = cardCounter++;
+  window.__cardGames = window.__cardGames || {};
+  window.__cardGames[id] = g;
+  return `<div class="card${hero ? ' hero-card' : ''}" id="card-${id}"
+       onmouseenter="handleCardEnter(this, ${id})" onmouseleave="handleCardLeave()" onclick="handleCardTap(${id})">
+    <div class="poster-art ${g.pal}">${g.icon}</div>
+    <div class="cap"><h4>${g.title}</h4></div>
+  </div>`;
+}
+
+function renderShelves() {
+  const el = document.getElementById('rows');
+  el.innerHTML = SHELVES.map((s, si) => {
+    const items = GAMES.slice(si % GAMES.length).concat(GAMES.slice(0, si % GAMES.length));
+    return `
+    <section class="shelf${s.hero ? ' hero' : ''}" id="${s.id}">
+      <div class="row-header">
+        <h2 class="row-heading${s.hero ? ' hero' : ''}">${s.title}</h2>
+        <p class="row-subtitle">${s.subtitle}</p>
+      </div>
+      <div class="rail-wrap">
+        <button class="rail-btn prev" aria-label="Anterior" onclick="scrollRail(this,-1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div class="rail">
+          ${items.map(g => cardHTML(g, s.hero)).join('')}
+          <div class="see-all-tile${s.hero ? ' hero-card' : ''}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>Ver todo</span></div>
+        </div>
+        <button class="rail-btn next" aria-label="Siguiente" onclick="scrollRail(this,1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+    </section>`;
+  }).join('');
+}
+
+// "Juegos similares" — same real cardHTML()/rail markup as the catalog
+// shelves above, wired to the same hover-portal/tap-sheet (finding #3).
+function renderSimilarShelf() {
+  const el = document.getElementById('similar-rail');
+  if (!el) return;
+  el.innerHTML = SIMILAR_GAMES.map(g => cardHTML(g, false)).join('');
+}
+
+function renderMobileChips() {
+  const el = document.getElementById('chips-nav');
+  const chips = SHELVES.map((s, i) => `<button class="chip${i===0?' active':''}" onclick="jumpToChip(this,'${s.id}')">${s.title}</button>`).join('');
+  el.innerHTML = `<div class="chip-edge-spacer"></div>${chips}<div class="chip-edge-spacer"></div>`;
+}
+
+function jumpToChip(btn, targetId) {
+  btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function scrollRail(btn, dir) {
+  const rail = btn.closest('.rail-wrap').querySelector('.rail');
+  rail.scrollBy({ left: dir * rail.clientWidth * 0.9, behavior: 'smooth' });
+}
+
+const IS_TOUCH = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+let portalHideTimer = null, portalShowTimer = null;
+const portalEl = document.getElementById('hover-portal');
+const HOVER_INTENT_DELAY = 300;
+const PORTAL_WIDTH = 360;
+
+function handleCardEnter(cardEl, id) {
+  if (IS_TOUCH) return;
+  clearTimeout(portalHideTimer); clearTimeout(portalShowTimer);
+  portalShowTimer = setTimeout(() => showPortal(cardEl, id), HOVER_INTENT_DELAY);
+}
+
+function showPortal(cardEl, id) {
+  const rect = cardEl.getBoundingClientRect();
+  const w = PORTAL_WIDTH, grow = w - rect.width;
+  const left = Math.max(8, Math.min(rect.left - grow / 2, window.innerWidth - w - 8));
+  const top = Math.max(16, rect.top - grow / 2);
+  portalEl.style.width = w + 'px'; portalEl.style.left = left + 'px'; portalEl.style.top = top + 'px';
+  const g = window.__cardGames[id];
+  portalEl.innerHTML = `<div class="portal-poster ${g.pal}">${g.icon}</div><div class="portal-body">${titleAndFactsHTML(g,'p','card-title')}<p class="theme-text">${g.theme}</p><button class="expand-cta" onclick="event.stopPropagation(); portalEl.classList.remove('visible'); showPage('detail')">Ver detalles</button></div>`;
+  portalEl.classList.add('visible');
+  portalEl.onmouseenter = () => clearTimeout(portalHideTimer);
+  portalEl.onmouseleave = handleCardLeave;
+}
+
+function handleCardLeave() {
+  if (IS_TOUCH) return;
+  clearTimeout(portalShowTimer);
+  portalHideTimer = setTimeout(() => portalEl.classList.remove('visible'), 120);
+}
+
+function handleCardTap(id) { if (!IS_TOUCH) return; openSheet(id); }
+
+function openSheet(id) {
+  const g = window.__cardGames[id];
+  const posterEl = document.getElementById('sheet-poster');
+  posterEl.className = 'sheet-poster ' + g.pal; posterEl.textContent = g.icon;
+  document.getElementById('sheet-body').innerHTML = `${titleAndFactsHTML(g,'h2','card-title')}<p class="theme-text">${g.theme}</p>${g.tag ? `<span class="expand-tag">${g.tag}</span>` : ''}<button class="expand-cta" onclick="closeSheet(); showPage('detail')">Ver detalles</button>`;
+  document.getElementById('sheet-backdrop').classList.add('visible');
+  document.getElementById('mobile-sheet').classList.add('open');
+}
+function closeSheet() { document.getElementById('sheet-backdrop').classList.remove('visible'); document.getElementById('mobile-sheet').classList.remove('open'); }
+
+function showPage(page, evt) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('is-active'));
+  document.getElementById('page-' + page).classList.add('is-active');
+  if (evt && evt.target) {
+    evt.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
+    evt.target.classList.add('is-active');
+  } else {
+    document.querySelectorAll('.page-switcher button').forEach(b => b.classList.toggle('is-active', b.textContent.trim() === (page === 'detail' ? 'Detalle' : page === 'about' ? 'Acerca de' : 'Catálogo')));
+  }
+  const nav = document.getElementById('app-nav');
+  nav.querySelectorAll('[data-catalog-only]').forEach(el => el.style.display = page === 'catalog' ? '' : 'none');
+  nav.querySelectorAll('[data-detail-only]').forEach(el => el.style.display = page === 'detail' ? 'flex' : 'none');
+  nav.querySelectorAll('[data-about-only]').forEach(el => el.style.display = page === 'about' ? 'block' : 'none');
+  document.getElementById('chips-nav').style.display = page === 'catalog' ? '' : 'none';
+  document.getElementById('mobile-cta-bar').style.display = page === 'detail' ? '' : 'none';
+  // Finding #5 fix: the detail page's own scroll listeners/observers keep
+  // running even while #page-detail is display:none (the page-switcher
+  // hides pages, it never unmounts them). Force a known-good "just arrived
+  // at the top of the page" state on every switch INTO detail instead of
+  // trusting whatever the IntersectionObservers last computed while hidden.
+  if (page === 'detail' && window.resetDetailStickyChrome) window.resetDetailStickyChrome();
+  window.scrollTo(0, 0);
+}
+
+renderShelves();
+renderSimilarShelf();
+renderMobileChips();
+
+window.addEventListener('scroll', () => {
+  document.getElementById('app-nav').classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
+
+// ==================== DETAIL PAGE (from 005, namespaced) ====================
+// Finding #5: 005's own carousel functions were carouselShow(index)/
+// carouselStep(btn,dir)/carouselGoTo(i)/setupCarouselDots() — SAME NAMES as
+// 004's about-page carousel functions below, but with a DIFFERENT signature
+// (005's took no element argument, closing over one module-level
+// `carouselEl`). Composed on one page, whichever <script> block ran last
+// would silently overwrite the other's global function, breaking one
+// carousel's arrow/dot clicks (calling the wrong carousel, or throwing on a
+// null element). Renamed 005's masthead-carousel functions to a
+// detailCarousel* prefix; 004's about-page functions below keep their
+// original generic, already-element-scoped names untouched.
+const detailCarouselEl = document.querySelector('.detail-carousel[data-carousel]');
+let detailCarouselIndex = 0;
+
+function setupDetailCarouselDots() {
+  const slides = Array.from(detailCarouselEl.querySelectorAll('.slide'));
+  const dotsWrap = detailCarouselEl.querySelector('.cs-dots');
+  dotsWrap.innerHTML = slides.map((_, i) => `<button class="cs-dot${i === 0 ? ' is-active' : ''}" onclick="event.stopPropagation(); detailCarouselGoTo(${i})"></button>`).join('');
+}
+function detailCarouselShow(index) {
+  const slides = Array.from(detailCarouselEl.querySelectorAll('.slide'));
+  const dots = Array.from(detailCarouselEl.querySelectorAll('.cs-dot'));
+  detailCarouselIndex = (index + slides.length) % slides.length;
+  slides.forEach((s, i) => s.classList.toggle('is-active', i === detailCarouselIndex));
+  dots.forEach((d, i) => d.classList.toggle('is-active', i === detailCarouselIndex));
+  lightboxShow(detailCarouselIndex);
+}
+function detailCarouselStep(dir) { detailCarouselShow(detailCarouselIndex + dir); }
+function detailCarouselGoTo(i) { detailCarouselShow(i); }
+setupDetailCarouselDots();
+
+function openLightbox() {
+  lightboxShow(detailCarouselIndex);
+  document.getElementById('lightbox').classList.add('is-open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('is-open');
+}
+function lightboxShow(index) {
+  const slides = document.querySelectorAll('.lightbox-slide');
+  slides.forEach((s, i) => s.classList.toggle('is-active', i === index));
+}
+function lightboxStep(dir) { detailCarouselShow(detailCarouselIndex + dir); }
+
+(function () {
+  const ctaBar = document.getElementById('mobile-cta-bar');
+  const identity = document.getElementById('game-identity');
+  const stickyBar = document.getElementById('game-sticky-bar');
+  const footer = document.querySelector('.pk-footer');
+  let footerReached = false;
+  let scrolledPastIdentity = false;
+
+  function refreshStickyBar() {
+    if (!stickyBar) return;
+    stickyBar.classList.toggle('is-visible', scrolledPastIdentity && !footerReached);
+  }
+
+  let scrollEndTimer;
+  if (ctaBar) {
+    window.addEventListener('scroll', () => {
+      if (footerReached) return;
+      ctaBar.classList.add('is-hidden');
+      clearTimeout(scrollEndTimer);
+      scrollEndTimer = setTimeout(() => ctaBar.classList.remove('is-hidden'), 200);
+    });
+  }
+
+  if (identity && stickyBar) {
+    new IntersectionObserver(([entry]) => {
+      scrolledPastIdentity = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+      refreshStickyBar();
+    }, { rootMargin: '-64px 0px 0px 0px', threshold: 0 }).observe(identity);
+  }
+
+  if (footer) {
+    new IntersectionObserver(([entry]) => {
+      footerReached = entry.isIntersecting;
+      document.body.classList.toggle('is-cta-parked', footerReached);
+      if (ctaBar) ctaBar.classList.toggle('is-parked', footerReached);
+      refreshStickyBar();
+    }, { threshold: 0 }).observe(footer);
+  }
+
+  // Finding #5 fix (see showPage() above): reset to a known "just landed at
+  // top of page" state whenever the page-switcher activates the detail page.
+  window.resetDetailStickyChrome = function () {
+    scrolledPastIdentity = false;
+    footerReached = false;
+    document.body.classList.remove('is-cta-parked');
+    if (ctaBar) { ctaBar.classList.remove('is-parked', 'is-hidden'); }
+    refreshStickyBar();
+  };
+})();
+
+function toggleDescCollapse(btn) {
+  const text = btn.previousElementSibling;
+  const collapsed = text.classList.toggle('is-collapsed');
+  btn.textContent = collapsed ? '… Leer más' : 'Leer menos';
+}
+
+function shareData() {
+  const gameName = 'Terraforming Mars: Ares Expedition';
+  return { title: gameName, text: `Mirá "${gameName}" en Pukllay Club`, url: 'https://pukllay.club/juegos/terraforming-mars-ares-expedition' };
+}
+function toggleShare(btn, evt) {
+  evt.stopPropagation();
+  if (navigator.share) {
+    navigator.share(shareData()).catch(() => {});
+    return;
+  }
+  const popover = btn.nextElementSibling;
+  const wasOpen = popover.classList.contains('is-open');
+  document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open'));
+  if (!wasOpen) popover.classList.add('is-open');
+}
+document.addEventListener('click', () => document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open')));
+
+function shareVia(channel) {
+  const data = shareData();
+  if (channel === 'whatsapp') {
+    window.open(`https://wa.me/?text=${encodeURIComponent(data.text + ' ' + data.url)}`, '_blank');
+  } else if (channel === 'x') {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(data.text)}&url=${encodeURIComponent(data.url)}`, '_blank');
+  } else if (channel === 'copy' && navigator.clipboard) {
+    navigator.clipboard.writeText(data.url).then(showShareToast).catch(showShareToast);
+  } else {
+    showShareToast();
+  }
+  document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open'));
+}
+function showShareToast() {
+  const toast = document.getElementById('share-toast');
+  toast.classList.add('is-visible');
+  setTimeout(() => toast.classList.remove('is-visible'), 2200);
+}
+
+const WA_CLUB_NUMBER = '5493884103255';
+let currentReserveGame = 'Terraforming Mars: Ares Expedition';
+
+function openReserveModal(gameName, thumbEmoji) {
+  currentReserveGame = gameName;
+  document.getElementById('reserve-game-name').textContent = gameName;
+  document.getElementById('reserve-game-thumb').textContent = thumbEmoji || '🎲';
+  document.getElementById('reserve-step-form').style.display = '';
+  document.getElementById('reserve-step-success').style.display = 'none';
+  document.getElementById('reserve-name').value = '';
+  document.getElementById('reserve-error').classList.remove('is-visible');
+  document.getElementById('reserve-modal').classList.add('is-open');
+}
+function closeReserveModal() {
+  document.getElementById('reserve-modal').classList.remove('is-open');
+}
+function submitReserve() {
+  const nameInput = document.getElementById('reserve-name');
+  const name = nameInput.value.trim();
+  if (!name) {
+    document.getElementById('reserve-error').classList.add('is-visible');
+    nameInput.focus();
+    return;
+  }
+  const message = `¡Hola Pukllay Club! Quiero reservar "${currentReserveGame}" para jugar. Mi nombre es ${name}.`;
+  document.getElementById('wa-message-preview').textContent = message;
+  document.getElementById('wa-open-link').href = `https://wa.me/${WA_CLUB_NUMBER}?text=${encodeURIComponent(message)}`;
+  document.getElementById('reserve-step-form').style.display = 'none';
+  document.getElementById('reserve-step-success').style.display = '';
+}
+
+// ==================== ABOUT PAGE (verbatim from 004) ====================
+function setupCarousel(el) {
+  const slides = Array.from(el.querySelectorAll('.slide'));
+  const dotsWrap = el.querySelector('.cs-dots');
+  dotsWrap.innerHTML = slides.map((_, i) => `<button class="cs-dot${i === 0 ? ' is-active' : ''}" onclick="carouselGoTo(this, ${i})"></button>`).join('');
+  el._index = 0;
+}
+function carouselShow(el, index) {
+  const slides = Array.from(el.querySelectorAll('.slide'));
+  const dots = Array.from(el.querySelectorAll('.cs-dot'));
+  const next = (index + slides.length) % slides.length;
+  slides.forEach((s, i) => s.classList.toggle('is-active', i === next));
+  dots.forEach((d, i) => d.classList.toggle('is-active', i === next));
+  el._index = next;
+}
+function carouselStep(btn, dir) {
+  const el = btn.closest('.band-carousel');
+  carouselShow(el, (el._index || 0) + dir);
+}
+function carouselGoTo(btn, i) {
+  carouselShow(btn.closest('.band-carousel'), i);
+}
+document.querySelectorAll('.band-carousel[data-carousel]').forEach(setupCarousel);
+</script>
+
+</body>
+</html>

@@ -34,13 +34,18 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
   following system/user preference with a real toggle — not dark-purple as the sole default. Sketch
   003's header already mocks an unwired `☀/🌙` theme-toggle button, so this was implicitly
   anticipated by the shell design before the question came up explicitly.
-  **Not yet done:** `dark-purple.css` is still only a standalone comparison file, wired into
-  sketches 006–009's toolbars via a `<select>` swap — not the real mechanism (`prefers-color-scheme`
-  detection + a manual `data-theme` override, matching the light-default/dark-media/data-theme-wins
-  pattern) and not yet checked against sketches 001–005, which have only ever been visually validated
-  in light. Both are open work: a future sketch/consistency pass should (a) retrofit 001–005's real
-  content into the dark palette to catch any contrast/legibility issues the isolated toolbar-swap
-  can't surface, and (b) prove the actual toggle behavior, not just a theme-file swap.
+  **Done (2026-08-20, frontier consistency pass):** the real mechanism now lives directly in
+  `default.css` — light on `:root`, dark via `@media (prefers-color-scheme: dark)` unless
+  `[data-theme="light"]` opts out, and `[data-theme="dark"]` to force it explicitly regardless of
+  system preference ("data-theme wins" both directions). Proved with a working `☀/🌙` toggle button
+  + persisted JS, first on sketch 007 then reused verbatim on sketch 011's full composition — live
+  browser-verified across catalog, detail, and about content, including the "Juegos similares"
+  shelf's hover-portal and both image carousels. `dark-purple.css` is no longer needed as a
+  standalone file (its values are merged into `default.css`) but is left in place for reference.
+  Sketches 001–006/008/009 still only have the old toolbar `<select>` swap in their own files (now
+  stale — swapping to `dark-purple.css` there loses the merged mechanism and the 006-D motion-token
+  fix); only 007 and 011 carry the real toggle. Retrofitting the standalone files' toolbars is
+  low-value now that 011 supersedes them as the real composed reference.
 
 ## Sketches
 
@@ -56,3 +61,5 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
 | 008 | filter-search-ui | What does the catalog's own filter surface look like, and how should the nav search box's live-narrowing/typeahead behave? | C (Search-First Overlay, refined: shelf-rail results + popover/bottom-sheet filters panel) | filter, search, navigation, information-architecture |
 | 009 | empty-loading-error-states | What should the catalog/detail page's non-happy-path states (loading, no results, load error, 404) look like — utilitarian or on-brand illustrated? | A (Minimal/Utilitarian) | empty-state, loading, error, 404, edge-case |
 | — | *(shared-theme fix, no new sketch)* | Sketch 006's validated D winner (100/180/280ms, smaller hover-lift) was never applied to `themes/default.css`/`dark-purple.css` — both still had the original incidental values. Fixed 2026-08-20: theme tokens updated, real card hover-lift (001/002/007) corrected -4px → -3px. See sketch 006's README for details. | applied | motion, consistency |
+| 010 | *(real theme toggle, no new sketch dir)* | Does a real light/dark toggle mechanism (not a theme-file swap) work across real composed content? | applied — merged into `themes/default.css` + proved on 007 and 011 | theme, dark-mode, consistency |
+| 011 | full-shell-composition | Does the real shell hold together once it wraps the real detail page (005-B) and about page (004-B) instead of 007's placeholder skeletons? | single composed view — consistency check, found+fixed 6 real drift bugs (see README) | consistency, layout, detail, about, shell |
