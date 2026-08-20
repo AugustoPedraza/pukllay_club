@@ -80,7 +80,14 @@
   .detail-b .desc-collapse { margin-bottom: var(--space-5); max-width: 62ch; }
   .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
   .detail-b .desc.is-collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .detail-b .desc-toggle { background: none; border: none; color: var(--color-primary); font-weight: 700; font-size: var(--text-sm); cursor: pointer; padding: 6px 0 0; }
+  /* lighter weight + right-aligned so it reads as a small trailing control
+     on the paragraph it belongs to, not a competing bold CTA of its own */
+  .detail-b .desc-toggle {
+    display: block; margin-left: auto; background: none; border: none; color: var(--color-text-muted);
+    font-weight: 600; font-size: var(--text-xs); cursor: pointer; padding: 6px 0 0;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .detail-b .desc-toggle:hover { color: var(--color-primary); }
   .detail-b .cta-row { display: flex; gap: var(--space-3); align-items: center; }
   .detail-b .body { max-width: 1100px; margin: 0 auto; padding: var(--space-2) var(--pk-gutter) var(--space-8); }
 
@@ -123,11 +130,15 @@
   .detail-carousel .cs-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
   .detail-carousel .cs-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none; cursor: pointer; padding: 0; }
   .detail-carousel .cs-dot.is-active { background: #fff; }
+  /* zoom hint — a bare glyph in the corner reads as decoration on its
+     own, so it grows/brightens on hover to confirm the whole image is
+     clickable, and the carousel carries a title tooltip as a fallback cue */
   .detail-carousel .zoom-hint {
-    position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border-radius: 50%;
-    background: rgba(0,0,0,0.35); color: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 12px; z-index: 2; pointer-events: none;
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; z-index: 2; pointer-events: none; transition: all var(--duration-fast) var(--ease-standard);
   }
+  .detail-carousel:hover .zoom-hint { background: rgba(0,0,0,0.6); transform: scale(1.1); }
 
   /* lightbox */
   .lightbox-backdrop {
@@ -162,26 +173,34 @@
     .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
     .detail-b .cta-row { flex-direction: column; align-items: stretch; }
     .detail-b .cta-primary { width: 100%; justify-content: center; }
-    .detail-b .cta-icon { width: 100%; border-radius: var(--radius-full); gap: 8px; }
-    .detail-b .cta-icon .icon-label { display: inline; }
+    .detail-b .cta-icon { width: 100%; justify-content: center; }
   }
 
   /* ---- primary reservation CTA ---- */
+  /* subtle elevation + hover lift so this reads unambiguously as the
+     page's primary clickable action, not flat colored text */
   .cta-primary {
-    display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px; border-radius: var(--radius-full);
+    display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: var(--radius-full);
     border: none; background: var(--color-primary); color: var(--color-primary-content); font-weight: 700;
-    font-size: var(--text-sm); cursor: pointer; transition: all var(--duration-fast) var(--ease-standard);
+    font-size: var(--text-sm); cursor: pointer; box-shadow: var(--shadow-sm);
+    transition: all var(--duration-fast) var(--ease-standard);
   }
-  .cta-primary:hover { background: var(--color-secondary); }
+  .cta-primary:hover { background: var(--color-secondary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 
   /* ---- share button + popover ---- */
+  /* was an icon-only circle with just a bare "↗" glyph — not a recognized
+     share icon, and easy to misread as decoration or an external-link
+     marker. Now an always-labeled outlined pill (same height/shape family
+     as the primary CTA, secondary treatment) so the action is legible on
+     its own, not just on hover/mobile. */
   .cta-icon {
-    width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--color-border); background: var(--color-bg);
-    color: var(--color-text); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px;
-    position: relative; transition: all var(--duration-fast) var(--ease-standard);
+    display: inline-flex; align-items: center; gap: 6px; height: 46px; padding: 0 18px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
+    cursor: pointer; font-size: var(--text-sm); font-weight: 700; position: relative;
+    transition: all var(--duration-fast) var(--ease-standard);
   }
-  .cta-icon:hover { border-color: var(--color-primary); color: var(--color-primary); }
-  .cta-icon .icon-label { display: none; font-size: var(--text-sm); font-weight: 700; }
+  .cta-icon:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .cta-icon .icon-label { font-weight: 700; }
   .share-popover {
     position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-4px);
     background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);
@@ -314,7 +333,7 @@
       <div class="masthead-band">
         <div class="masthead">
           <div class="poster-col">
-            <div class="detail-carousel" data-carousel onclick="openLightbox()">
+            <div class="detail-carousel" data-carousel onclick="openLightbox()" title="Ampliar imagen">
               <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
               <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
               <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>

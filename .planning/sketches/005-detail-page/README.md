@@ -208,6 +208,23 @@ established principle (sketch 001/002's biggest recurring bug source), these sho
 actual CSS class, not two independently-declared rules with matching values that can drift apart
 again exactly like this.
 
+## Round 7 — action clarity: description toggle, CTA, share button, zoom hint
+- **"Leer más" toggle was too heavy and read as disconnected from the paragraph.** Was bold,
+  primary-color, left-aligned — competing with the real CTA below it rather than reading as a small
+  trailing control on the text it belongs to. Now muted (`color-text-muted`, 600-weight, `text-xs`),
+  right-aligned under the paragraph (`margin-left: auto`), turning primary-color only on hover.
+- **Primary CTA ("¡Quiero Jugarlo!") gained a subtle shadow + hover lift** (`box-shadow` +
+  `translateY(-1px)` on hover) so it reads unambiguously as the page's elevated primary action, not
+  flat colored text.
+- **Share button was an icon-only circle with a bare "↗" glyph** — not a recognized share icon on
+  its own, and previously only showed its "Compartir" text label on mobile, so on desktop it was
+  just an ambiguous arrow in a circle. Now an always-labeled outlined pill ("↗ Compartir") at every
+  viewport, same height/shape family as the primary CTA but secondary (bordered, not filled) —
+  legible on its own instead of relying on a hover state or narrow viewport to explain itself.
+- **Carousel zoom hint** (the ⤢ icon, top-right of the image) grows and brightens on hover now, and
+  the carousel carries a `title="Ampliar imagen"` tooltip as a fallback cue, since a lone corner
+  glyph at rest can read as decoration rather than an affordance.
+
 ## Future considerations (flagged, not built)
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a
