@@ -8,6 +8,48 @@ tags: [layout, detail, card, accordion, share, whatsapp, reservation, mobile, ca
 
 # Sketch 005: Game Detail Page
 
+## Current state (as of 2026-08-20, Round 31) — read this first if resuming
+Every round below is committed to git individually — `git log --oneline -- .planning/sketches/005-detail-page/`
+is the authoritative history; nothing in this file or the sketch depends on any prior chat session
+being remembered. Verified, not just claimed:
+
+- **Desktop**: sticky buy box (image + CTA, `position: sticky`) beside a scrolling reading column
+  (pills → title → tags → description → mecánicas/temas/ficha técnica, all inline, no accordion).
+  Ficha técnica is a 2-column grid, label stacked above value, uppercase labels, no per-row dividers.
+- **Mobile**: fixed bottom CTA bar, stacked (primary full-width, share full-width below it),
+  hides for the duration of an active scroll gesture and reappears ~200ms after scrolling stops.
+  Carousel is `4:3` (not desktop's `3:4`) to avoid dominating the screen. Ficha técnica auto-flows
+  2-per-row for short values, `.spec-row--wide` forces long ones to full width.
+- **Round 26–31 fixed a real chain of bugs**, in order: (1) a CSS cascade-order bug meant the
+  mobile CTA bar was `display: none` at every width since it was first built — never actually
+  visible; (2) this file's own dev toolbar (`#sketch-tools`) sat in the same bottom-right corner as
+  the CTA bar with a higher z-index, visually covering it; (3) an attempt to make the toolbar's
+  📱/📟/🖥 viewport buttons trigger real breakpoints via CSS container queries (`container-type`)
+  backfired — it implicitly made `.viewport-frame` a new containing block for `position: fixed`
+  descendants, breaking the CTA bar's fixed positioning entirely; reverted back to plain `@media`
+  queries in Round 30; (4) the title column was overflowing its own grid track by ~12px (nowrap
+  facts pills forcing `min-width: auto` overflow), which looked like "the CTA is narrower than the
+  title" but was actually the title rendering too wide — fixed with `min-width: 0` + letting the
+  pill row wrap on mobile.
+- **⚠ Not independently re-verified in a genuinely wide real browser window** — the agent's sandboxed
+  browser tool couldn't resize past ~335px, so the container-query revert (item 3 above) was
+  confirmed correct by code reasoning and by testing in real DevTools device emulation (390×844),
+  not by an actual wide-window screenshot. Worth a real check before treating this as fully closed.
+- **Known toolbar limitation, not a bug**: the in-page 📱375/📟768/🖥1280 buttons only set
+  `max-width` on the mockup — they do NOT change the real browser viewport, so they only reliably
+  match the real breakpoints when the actual browser window is already narrow. To preview mobile
+  layout, resize the real window or use your browser's own device-emulation toolbar (as the
+  screenshots in Round 28–31 did) — don't rely on the in-page buttons alone.
+
+### Resuming this sketch with GSD
+This is Sketch 005 in the project's sketch system — `.planning/sketches/005-detail-page/`, tracked
+in `.planning/sketches/MANIFEST.md` (row `005 | detail-page`, winner B). To continue in a fresh
+session: run `/gsd-sketch` and describe what you want refined next (e.g. "continue sketch 005, I
+want to look at X") — the workflow reads this README's Round history and the MANIFEST for grounding,
+so it doesn't need this chat's context to pick up accurately. If you want to formally close this
+sketch out and turn its decisions into a persistent build reference, run `/gsd-sketch --wrap-up`
+once you're happy with the current state.
+
 ## Design Question
 `CatalogLive.Show` (`lib/pukllay_club_web/live/catalog_live/show.ex`) already renders every real
 field — cover image, gallery, name, weight band, editorial tags, mechanic/theme chips,
@@ -26,7 +68,10 @@ band) are sketch 003 winner C, unmodified. Filter query params referenced below 
 open .planning/sketches/005-detail-page/index.html
 
 Click/drag the carousel arrows or dots to cycle images; click the image itself to open the
-lightbox. Shrink to mobile (toolbar → 📱 375) to see the mobile masthead layout.
+lightbox. **To see the mobile layout, resize your actual browser window narrow (or use your
+browser's device-emulation toolbar)** — the in-page 📱 375 button only visually narrows the mockup,
+it doesn't change the real viewport, so it won't reliably trigger the mobile CSS on its own unless
+your browser window is already narrow (see "Current state" above for why).
 
 ## History
 Started as 3 variants (poster-left sticky split, full-width hero band, magazine/editorial).
