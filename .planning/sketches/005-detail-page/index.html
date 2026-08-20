@@ -211,15 +211,22 @@
      "a bigger, stronger pill," not a distinct button type. Switched to
      radius-lg (a rounded rectangle, not a full capsule) specifically to
      break that shape association — pills/tags stay capsules, buttons are
-     rounded rectangles, one consistent rule going forward. Kept the
-     elevation + hover lift from the previous round. */
+     rounded rectangles, one consistent rule going forward.
+     Round 13: the elevation used to live almost entirely in the :hover
+     state (shadow-sm at rest → shadow-md on hover) — a hover-only cue is
+     invisible on a touch device (nothing hovers on tap) and reads as flat
+     colored text rather than a raised, pressable button at first glance.
+     Resting state now carries real depth (shadow-md) on its own; hover
+     goes further (shadow-lg) so the lift is additive, not the only signal
+     that this is clickable. */
   .cta-primary {
     display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px; border-radius: var(--radius-lg);
     border: none; background: var(--color-primary); color: var(--color-primary-content); font-weight: 700;
-    font-size: var(--text-sm); cursor: pointer; box-shadow: var(--shadow-sm);
+    font-size: var(--text-sm); cursor: pointer; box-shadow: var(--shadow-md);
     transition: all var(--duration-fast) var(--ease-standard);
   }
-  .cta-primary:hover { background: var(--color-secondary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .cta-primary:hover { background: var(--color-secondary); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .cta-primary:active { box-shadow: var(--shadow-sm); transform: translateY(0); }
 
   /* ---- share button + popover ---- */
   /* was an icon-only circle with just a bare "↗" glyph — not a recognized

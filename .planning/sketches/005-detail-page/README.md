@@ -331,6 +331,15 @@ known future direction so the current layout isn't designed in a way that fights
 later — the accordion pattern used for mechanics/ficha técnica could extend to a "Videos" or
 "Comentarios" section using the same collapsed-by-default treatment. Not scoped or designed here.
 
+## Round 13 — CTA affordance: elevation moved to the resting state
+The primary CTA's depth (`box-shadow`) lived almost entirely in `:hover` (`shadow-sm` at rest →
+`shadow-md` on hover, plus a lift). A hover-only cue never fires on touch — nothing hovers on tap —
+so on mobile (and on a static screenshot) the button could read as a flat colored label rather than
+a raised, pressable control. Now `shadow-md` is the resting state, `:hover` goes further to
+`shadow-lg` with the same lift, and a new `:active` state flattens back to `shadow-sm` with no lift
+so a tap/click gives a visible "pressed" response. Applies everywhere `.cta-primary` is used
+(desktop buy box and the mobile sticky bar both share the class, so both get the fix for free).
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
