@@ -531,6 +531,33 @@ readability convention in favor of actually using the available space; the share
 two blocks still can't drift apart from each other, per Round 20), it just isn't constraining either
 one anymore.
 
+## Round 24 — mobile parity: retired the accordion, unified the compact-value grid
+Four mobile questions, addressed together since they're all about the same block:
+
+- **Where's the CTA on mobile?** The fixed `.mobile-cta-bar` at the bottom of the viewport (Round
+  11) — always visible regardless of scroll position. Unchanged this round, just confirming: nothing
+  about "más información" affects it.
+- **"Two accordions" — yes, that was a real problem, not just a feeling.** The description's own
+  "Leer más" clamp-toggle and the separate "Más información" accordion trigger sat back to back,
+  two different expand/collapse interactions in a row for no real reason. The better affordance
+  isn't a different disclosure widget — it's no gate at all. Mobile users already scroll long pages
+  routinely (product pages, feeds); hiding supplementary spec data behind a click doesn't save
+  meaningful space the way it might on a much shorter page. Retired the accordion **at every width**,
+  matching what Round 14 already did for desktop only — `.info-accordion` (trigger, panel,
+  max-height animation, `toggleInfoAccordion`) is gone entirely, replaced by a plain `.more-info`
+  divider wrapper that was never a disclosure widget in the first place. The scroll-hint that used to
+  be desktop-only (replacing the trigger's implicit "there's more" cue) now runs at every width, for
+  the same reason.
+- **Short key/value pairs can pair up on mobile too — yes.** Round 21/22's 2-column split was
+  desktop-only and placed by `nth-child`, tied to a specific credits/BGG-stats column grouping.
+  Replaced with a simpler, width-independent rule: `.spec-list` is always a 2-column grid; short
+  values (Editorial, Edad mínima, Año, Peso BGG) auto-flow two per row at any width, while a new
+  `.spec-row--wide` class forces the genuinely long ones (Diseñadores' two linked names, the three
+  `.missing` explanatory sentences) to span the full row instead of cramming into ~140px on a 375px
+  screen. No more nth-child bookkeeping — auto-flow just places each row in the next open cell, in
+  source order, which also means mobile and desktop finally run the exact same CSS rule instead of
+  two different schemes.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
