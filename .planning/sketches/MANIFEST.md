@@ -29,6 +29,6 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
 | 001 | shelf-structure | Does the page read as distinct Netflix-style shelves with a real nav bar, or one continuous scroll? | D (Edge-Fade, refined) | layout, navigation, carousel |
 | 002 | card-hierarchy | What belongs on the card at rest vs. behind an expand, given the real schema fields (players, playtime, age, weight, tags, mechanics)? | D (hybrid, pop-forward preview) | card, information-architecture, interaction |
 | 003 | page-shell | Does a shared header+footer shell work across catalog, detail, and about page skeletons, with a quiet off-catalog header and a footer carrying mission/links/contact/BGG attribution? | C (Two-Tier Mission Band) | layout, header, footer, navigation, compliance |
-| 004 | about-page | Do the about page's four sections (mission, how it works, the club, FAQ/vocabulary) read well as one page? | TBD | content, about |
+| 004 | about-page | Do the about page's four sections (mission, how it works, the club, FAQ/vocabulary) read well as one page? | B (Alternating Bands, w/ image carousel) | content, about, carousel |
 | 005 | detail-page | What does the full game detail page (`/juegos/:id`) look like inside the shell — hero, facts, description, mechanics? | TBD | layout, detail, card |
 | 006 | motion-system | Is a dedicated motion system worth it, and what should hover-expand / row-scroll / focus transitions feel like? | TBD | motion, interaction |
