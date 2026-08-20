@@ -30,14 +30,17 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
   as default; only the color block changes (deep-purple `--color-bg`, brighter promoted `--color-primary`
   since the light theme's near-black primary disappears on a dark ground). Selectable via every
   sketch's theme switcher (006–009); not yet applied to 001–005's own switchers.
-  **Open decision (2026-08-20), not yet resolved:** user liked it and asked whether it should become
-  *the* default, vs. shipping both a light and dark theme that follow system/user preference — note
-  sketch 003's header already mocks an unwired `☀/🌙` theme-toggle button, so a light+dark toggle was
-  implicitly anticipated by the shell design even before this question came up. Resolving this
-  requires a scope decision (dark-only vs. light+dark+toggle) before any retrofit work, since sketches
-  001–005 have only ever been visually validated in the light `default` theme — going dark-default or
-  dual-theme means re-checking all five for dark-mode contrast/legibility, not just flipping a
-  variable. Tracked as a candidate future sketch/consistency pass once the scope is decided.
+  **Decision confirmed (2026-08-20):** ship both light (`default`) and dark (`dark-purple`) themes,
+  following system/user preference with a real toggle — not dark-purple as the sole default. Sketch
+  003's header already mocks an unwired `☀/🌙` theme-toggle button, so this was implicitly
+  anticipated by the shell design before the question came up explicitly.
+  **Not yet done:** `dark-purple.css` is still only a standalone comparison file, wired into
+  sketches 006–009's toolbars via a `<select>` swap — not the real mechanism (`prefers-color-scheme`
+  detection + a manual `data-theme` override, matching the light-default/dark-media/data-theme-wins
+  pattern) and not yet checked against sketches 001–005, which have only ever been visually validated
+  in light. Both are open work: a future sketch/consistency pass should (a) retrofit 001–005's real
+  content into the dark palette to catch any contrast/legibility issues the isolated toolbar-swap
+  can't surface, and (b) prove the actual toggle behavior, not just a theme-file swap.
 
 ## Sketches
 
