@@ -307,7 +307,24 @@ well-established pattern instead of another guess:
   resolved — style A stands, and the position question is superseded by this restructure rather
   than answered from within the old A–D set.
 
-## Future considerations (flagged, not built)
+## Round 12 — facts pills moved back to the title, out of the buy box
+Round 11's buy box grouped facts pills with the image and CTA. Moved the pill row back out of
+`.poster-col` to sit directly above `<h1>` in the reading column, restoring Round 5's original
+placement (which Round 11 had deliberately overridden).
+
+- **Why this is different from just re-litigating Round 5/11 again:** the pills are metadata about
+  *what's being read* (players, playtime, difficulty), not part of the *purchase decision* the buy
+  box exists to isolate — grouping them with the CTA was defensible on the "self-contained decision
+  panel" logic, but sitting at the top of the title block matches the home shelf's own card pattern
+  (pills directly above the title) more closely, and keeps the buy box focused purely on image +
+  action.
+- **Buy box now holds only image + CTA.** `.poster-col`'s flex `gap` still separates carousel from
+  CTA row; nothing else changed about the mobile sticky bar or desktop CTA shrinking from Round 11 —
+  those are unaffected by where the pills live.
+- On mobile, DOM order is unchanged in effect: carousel (full-bleed) → pills → title → tags →
+  description, same stacking as before Round 11 ever moved the pills.
+
+
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a
 known future direction so the current layout isn't designed in a way that fights against adding it
@@ -317,11 +334,11 @@ later — the accordion pattern used for mechanics/ficha técnica could extend t
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
-- Compare desktop vs. mobile (📱 375): on desktop, image + pills + CTA form one buy-box unit in the
-  left column, title/tags/description read as pure prose in the right column with no button
-  interrupting it. On mobile, does the sticky bottom bar feel like the right tradeoff (always
-  reachable, but permanently covering ~76px of viewport) vs. an inline CTA you'd have to scroll
-  back up for?
+- Compare desktop vs. mobile (📱 375): on desktop, image + CTA form the buy-box unit in the left
+  column; the right column leads with the facts pills directly above the title, then
+  tags/description as pure prose with no button interrupting it. On mobile, does the sticky bottom
+  bar feel like the right tradeoff (always reachable, but permanently covering ~76px of viewport)
+  vs. an inline CTA you'd have to scroll back up for?
 - Scroll the mobile view — confirm the sticky bar stays fixed and never overlaps the footer's last
   content.
 - Open "Más información" — does the ficha técnica's row-list style feel consistent with the

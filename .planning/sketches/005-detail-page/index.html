@@ -70,9 +70,13 @@
      click-to-lightbox. */
   .detail-b .masthead-band { background: linear-gradient(180deg, var(--color-surface), var(--color-bg)); }
   .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter) var(--space-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }
-  /* "buy box" column — image, quick facts, and the primary action grouped
-     as one self-contained decision panel (see the markup comment above
-     the masthead for the pattern this follows). */
+  /* "buy box" column — image and the primary action grouped as one
+     self-contained decision panel (see the markup comment above the
+     masthead for the pattern this follows). Round 12: the facts pills
+     (jugadores/tiempo/dificultad) moved back out of this column to sit
+     at the top of the title block instead — matching the home shelf's
+     card pattern (pills above the title) that Round 5 originally
+     established; the buy box itself now holds only image + CTA. */
   .detail-b .poster-col { width: 100%; display: flex; flex-direction: column; gap: var(--space-3); }
   /* no forced text-transform:uppercase — neither sketch 002's .card-title
      nor production's real show.ex h1 (`font-display text-3xl`, no
@@ -113,15 +117,16 @@
      approximation: 11px/600-weight muted text, 1px border, 4px/9px padding.
      Round 6 fix — the previous version used text-xs/700-weight/full-color
      text and a borderless pill, which was visibly heavier/darker than the
-     real settled component. Round 11: now lives in the buy-box column
-     (`.poster-col`, a flex column) alongside the image and CTA, rather
-     than with the title — spacing between them comes from the column's
-     own `gap`, not a margin here. nowrap so the 3 pills (jugadores/
-     tiempo/dificultad) hold to one line — 002's original didn't need
-     nowrap since its pills-row never has more than 3 short items in a
-     narrower, single-purpose card context, but ours needs to guarantee it
+     real settled component. Round 11 briefly moved this into the buy-box
+     column with the image/CTA; Round 12 moved it back to sit directly
+     above the title, at the top of the reading column — matching the
+     home shelf's own card pattern (pills above the title) and Round 5's
+     original placement. nowrap so the 3 pills (jugadores/tiempo/
+     dificultad) hold to one line — 002's original didn't need nowrap
+     since its pills-row never has more than 3 short items in a narrower,
+     single-purpose card context, but ours needs to guarantee it
      explicitly given the extra link/hover state. */
-  .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0; }
+  .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0 0 var(--space-2); }
   .pk-pill {
     display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
     background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted);
@@ -379,13 +384,17 @@
       <div class="masthead-band">
         <div class="masthead">
           <!-- "Buy box" pattern (Amazon/Shopify/Airbnb product & listing
-               pages): the image, quick facts, and the primary action live
-               together as one self-contained decision panel, separate from
-               the long-form reading content (title/description). Every
+               pages): the image and the primary action live together as
+               one self-contained decision panel, separate from the
+               long-form reading content (title/description). Every
                earlier attempt to fix the CTA row kept it rearranging
                buttons inside the reading column — the actual problem was
                that buttons don't belong in a prose flow at all, regardless
-               of how they're arranged within it. -->
+               of how they're arranged within it. The facts pills sit with
+               the title instead (Round 12) — they're metadata about what's
+               being read, not part of the purchase decision, so they read
+               naturally at the top of the title block, matching the home
+               shelf's own card pattern. -->
           <div class="poster-col">
             <div class="carousel-wrap">
               <div class="detail-carousel" data-carousel onclick="openLightbox()" title="Ampliar imagen">
@@ -398,16 +407,6 @@
                 <div class="cs-dots"></div>
                 <div class="zoom-hint">⤢</div>
               </div>
-            </div>
-            <!-- filterable facts pills. jugadores/tiempo are real params on
-                 CatalogLive.Index; dificultad links via weight_bands. See
-                 README for the URL-persistence gap this depends on. -->
-            <div class="pk-pill-row">
-              <a class="pk-pill" href="/?players=4" title="Filtrar por cantidad de jugadores">👥 1-4</a>
-              <a class="pk-pill" href="/?max_playtime=120" title="Filtrar por duración">⏱ 90-120 min</a>
-              <a class="pk-pill" href="/?weight_bands=Nivel+experto" title="Filtrar por dificultad">
-                <span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto
-              </a>
             </div>
             <div class="cta-row" id="masthead-cta-row">
               <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
@@ -424,6 +423,17 @@
             </div>
           </div>
           <div>
+            <!-- filterable facts pills, at the top of the title block —
+                 jugadores/tiempo are real params on CatalogLive.Index;
+                 dificultad links via weight_bands. See README for the
+                 URL-persistence gap this depends on. -->
+            <div class="pk-pill-row">
+              <a class="pk-pill" href="/?players=4" title="Filtrar por cantidad de jugadores">👥 1-4</a>
+              <a class="pk-pill" href="/?max_playtime=120" title="Filtrar por duración">⏱ 90-120 min</a>
+              <a class="pk-pill" href="/?weight_bands=Nivel+experto" title="Filtrar por dificultad">
+                <span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto
+              </a>
+            </div>
             <h1>Terraforming Mars: Ares Expedition</h1>
             <div class="tag-row">
               <a class="chip tag" href="/?tags=Duelos+Memorables" title="Filtrar por etiqueta">Duelos Memorables</a>
