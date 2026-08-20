@@ -159,6 +159,21 @@ would imply exact-filter behavior a fuzzy text search wouldn't actually deliver,
 text rather than building a link that overpromises. Peso (BGG)/año/BGG rank are also unlinked —
 none are real filter dimensions today.
 
+## Round 4 — pill row wrapping, tag content
+- **Pills now hold to one line.** The jugadores/tiempo/dificultad pill row was wrapping to 2 lines
+  inside the 300px poster column (the "Nivel experto" pill alone was pushing past the available
+  width). Fixed with tighter pill padding/gap (`5px 10px`, 4px internal gap, 6px between pills),
+  `flex-wrap: nowrap`, and widening the poster column slightly (300px → 320px). **Hierarchy check:**
+  confirmed image → pills → title is the right order (facts before the name mirrors how the browse
+  card's own hover-preview/sheet already work per sketch 002) — the fix here was purely a sizing
+  bug, not a structural one.
+- **Tag chips now use real-feeling Spanish editorial tags** instead of the placeholder English
+  "Sci-fi" — two tags, "Duelos Memorables" and "Equipo Ganador", both filter-linked like the other
+  chips. Two tags (not one) also matches production's real cap — sketch 002's grounding notes
+  that the current card shows "up to 2 editorial tags." **Flagging:** these two specific strings
+  are illustrative, chosen for length/flavor, not verified against `01-VOCABULARY.md`'s actual
+  editorial tag list (same caveat as the "Nivel experto" weight-band label in Round 3).
+
 ## Future considerations (flagged, not built)
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a

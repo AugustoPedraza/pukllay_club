@@ -66,7 +66,7 @@
      carousel (dots + arrows, matching sketch 004's carousel) with a
      click-to-lightbox. */
   .detail-b .masthead-band { background: linear-gradient(180deg, var(--color-surface), var(--color-bg)); }
-  .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter) var(--space-6); display: grid; grid-template-columns: 300px 1fr; gap: var(--space-8); align-items: start; }
+  .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter) var(--space-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }
   .detail-b .poster-col { width: 100%; }
   .detail-b h1 { font-family: var(--font-display); font-size: 2.25rem; margin: 0 0 var(--space-2); text-transform: uppercase; line-height: 1.05; }
   .detail-b .tag-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
@@ -83,11 +83,14 @@
      both breakpoints — matching the reference screenshot's rhythm
      (image -> pills -> title) rather than the round-2 title-then-pills
      order. Filterable pills (jugadores/tiempo/dificultad) are real links. */
-  .pk-pill-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin: var(--space-3) 0 0; }
+  /* nowrap + slightly tighter padding/gap than a first pass — 3 pills
+     (jugadores/tiempo/dificultad) must fit on one line inside the 320px
+     poster column without wrapping to a second line. */
+  .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: var(--space-3) 0 0; }
   .pk-pill {
-    display: inline-flex; align-items: center; gap: 5px; background: var(--color-surface); color: var(--color-text);
-    font-size: var(--text-xs); font-weight: 700; padding: 6px 12px; border-radius: var(--radius-full);
-    text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard);
+    display: inline-flex; align-items: center; gap: 4px; background: var(--color-surface); color: var(--color-text);
+    font-size: var(--text-xs); font-weight: 700; padding: 5px 10px; border-radius: var(--radius-full);
+    text-decoration: none; border: 1px solid transparent; white-space: nowrap; transition: all var(--duration-fast) var(--ease-standard);
   }
   a.pk-pill:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
   .pk-pill .pk-difficulty-dot { width: 6px; height: 6px; }
@@ -325,7 +328,8 @@
           <div>
             <h1>Terraforming Mars: Ares Expedition</h1>
             <div class="tag-row">
-              <a class="chip tag" href="/?tags=Sci-fi" title="Filtrar por etiqueta">Sci-fi</a>
+              <a class="chip tag" href="/?tags=Duelos+Memorables" title="Filtrar por etiqueta">Duelos Memorables</a>
+              <a class="chip tag" href="/?tags=Equipo+Ganador" title="Filtrar por etiqueta">Equipo Ganador</a>
             </div>
             <div class="desc-collapse">
               <p class="desc is-collapsed" id="detail-desc-b">Terraformá Marte compitiendo con otras
