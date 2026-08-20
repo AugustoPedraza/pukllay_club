@@ -6,9 +6,6 @@
 <title>Sketch 005 — Game Detail Page</title>
 <link rel="stylesheet" href="../themes/default.css">
 <style>
-  body { padding-top: 48px; }
-  .variant { display: none; }
-  .variant.active { display: block; }
   .shell { display: flex; flex-direction: column; min-height: 100vh; margin: 0 auto; }
 
   /* ---- header: quiet / detail state, carried over from sketch 003 winner ---- */
@@ -73,18 +70,7 @@
   .thumb { flex: 0 0 64px; height: 64px; border-radius: var(--radius-sm); border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; color: rgba(255,255,255,0.7); }
   .thumb.is-active { border-color: var(--color-primary); }
 
-  /* ============================= VARIANT A: poster-left split ============================= */
-  .detail-a { max-width: 1100px; margin: 0 auto; padding: var(--space-6) var(--pk-gutter) var(--space-8); display: grid; grid-template-columns: 340px 1fr; gap: var(--space-8); align-items: start; }
-  .detail-a .poster-col { position: sticky; top: 88px; }
-  .detail-a .main-image { aspect-ratio: 3/4; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); display: flex; align-items: center; justify-content: center; font-size: 56px; color: rgba(255,255,255,0.5); }
-  .detail-a h1 { font-family: var(--font-display); font-size: 2.5rem; margin: 0 0 var(--space-2); text-transform: uppercase; line-height: 1.05; }
-  .detail-a .badges-row { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-4); flex-wrap: wrap; }
-  .detail-a .facts-block { margin-bottom: var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
-  .detail-a .body-section { margin-bottom: var(--space-5); }
-  .detail-a .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); max-width: 68ch; }
-  @media (max-width: 768px) { .detail-a { grid-template-columns: 1fr; } .detail-a .poster-col { position: static; max-width: 280px; margin: 0 auto; } }
-
-  /* ============================= VARIANT B: full-width hero band ============================= */
+  /* ============================= VARIANT B: card-consistent masthead ============================= */
   /* Refined per feedback: the poster now reuses the exact browse-card visual
      language (.pk-poster-art proportions/treatment + a caption-style title
      block) instead of a cinematic 16:9 backdrop — this is the same card
@@ -105,12 +91,37 @@
   .detail-b .poster-card .card-caption h2 { margin: 0; font-family: var(--font-sans); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .detail-b h1 { font-family: var(--font-display); font-size: 2.5rem; margin: 0 0 var(--space-2); text-transform: uppercase; line-height: 1.05; }
   .detail-b .badges-row { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-4); }
-  .detail-b .facts-strip { display: flex; gap: var(--space-6); padding: var(--space-3) 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-4); flex-wrap: wrap; }
-  .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin-bottom: var(--space-5); max-width: 62ch; }
+  .detail-b .desc-collapse { margin-bottom: var(--space-5); max-width: 62ch; }
+  .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
+  .detail-b .desc.is-collapsed { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .detail-b .desc-toggle { background: none; border: none; color: var(--color-primary); font-weight: 700; font-size: var(--text-sm); cursor: pointer; padding: 6px 0 0; }
   .detail-b .cta-row { display: flex; gap: var(--space-3); align-items: center; }
   .detail-b .body { max-width: 1100px; margin: 0 auto; padding: var(--space-6) var(--pk-gutter) var(--space-8); }
   .detail-b .gallery-thumbs .thumb { background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); }
-  @media (max-width: 768px) { .detail-b .masthead { grid-template-columns: 1fr; } .detail-b .poster-card { max-width: 240px; margin: 0 auto; } }
+
+  /* facts pill row — reuses the exact pill pattern already settled for the
+     card hover-portal/mobile sheet in sketch 002 (icon + value chips),
+     instead of the k/v .pk-fact block style, for visual consistency across
+     card preview and full detail page. */
+  .pk-pill-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+  .pk-pill { display: inline-flex; align-items: center; gap: 5px; background: var(--color-surface); color: var(--color-text); font-size: var(--text-xs); font-weight: 700; padding: 6px 12px; border-radius: var(--radius-full); }
+  .pk-pill .pk-difficulty-dot { width: 6px; height: 6px; }
+
+  @media (max-width: 768px) {
+    /* image goes full-bleed edge-to-edge; everything else keeps the
+       masthead's normal gutter padding (breakout via negative margin,
+       not by stripping padding from the whole masthead). */
+    .detail-b .masthead { grid-template-columns: 1fr; padding-top: 0; }
+    .detail-b .poster-card { margin-left: calc(-1 * var(--pk-gutter)); margin-right: calc(-1 * var(--pk-gutter)); width: calc(100% + 2 * var(--pk-gutter)); }
+    .detail-b .poster-card .main-image { border-radius: 0; }
+    .detail-b .poster-card .card-caption { border-radius: 0; padding: var(--space-3) var(--pk-gutter); }
+    .detail-b .poster-card .gallery-thumbs { padding: 0 var(--pk-gutter); }
+    .detail-b h1 { font-size: 1.75rem; margin-top: var(--space-4); }
+    .detail-b .cta-row { flex-direction: column; align-items: stretch; }
+    .detail-b .cta-primary { width: 100%; justify-content: center; }
+    .detail-b .cta-icon { width: 100%; border-radius: var(--radius-full); gap: 8px; }
+    .detail-b .cta-icon .icon-label { display: inline; }
+  }
 
   /* ---- primary reservation CTA ---- */
   .cta-primary {
@@ -127,6 +138,7 @@
     position: relative; transition: all var(--duration-fast) var(--ease-standard);
   }
   .cta-icon:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .cta-icon .icon-label { display: none; font-size: var(--text-sm); font-weight: 700; }
   .share-popover {
     position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-4px);
     background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);
@@ -162,41 +174,63 @@
   .bgg-link-row a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
   .bgg-link-row a:hover { text-decoration: underline; }
 
-  /* ---- reservation modal ---- */
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(36,18,56,0.55); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); }
+  /* ---- reservation modal (polish pass) ---- */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(36,18,56,0.55); backdrop-filter: blur(2px); z-index: 100;
+    display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-standard); padding: var(--space-4);
+  }
   .modal-backdrop.is-open { opacity: 1; pointer-events: auto; }
-  .modal-box { background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: min(420px, 90vw); padding: var(--space-6); transform: scale(0.96) translateY(8px); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .modal-box {
+    position: relative; background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    width: min(420px, 100%); padding: var(--space-6); transform: scale(0.96) translateY(8px);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
   .modal-backdrop.is-open .modal-box { transform: scale(1) translateY(0); }
+  .modal-game-preview { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-4); margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .modal-game-thumb {
+    flex: 0 0 48px; width: 48px; height: 48px; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+    display: flex; align-items: center; justify-content: center; font-size: 20px; color: rgba(255,255,255,0.6);
+  }
+  .modal-game-name { font-family: var(--font-sans); font-weight: 700; font-size: var(--text-sm); margin: 0; color: var(--color-text); }
+  .modal-game-sub { font-size: var(--text-xs); color: var(--color-text-muted); margin: 2px 0 0; }
   .modal-box h3 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-1); text-transform: uppercase; }
-  .modal-box .modal-sub { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); }
+  .modal-box .modal-sub { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); line-height: 1.5; }
   .modal-box label { display: block; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); margin-bottom: 6px; }
-  .modal-box input[type=text] { width: 100%; padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--color-border); font-size: var(--text-base); font-family: var(--font-sans); margin-bottom: var(--space-2); }
-  .modal-box input[type=text]:focus { outline: none; border-color: var(--color-primary); }
-  .modal-actions { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
-  .modal-close { position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--color-surface); cursor: pointer; }
-  .modal-box { position: relative; }
-  .wa-preview { background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3); font-size: var(--text-sm); color: var(--color-text); margin: var(--space-3) 0; white-space: pre-wrap; }
-  .wa-success .icon { font-size: 40px; text-align: center; margin-bottom: var(--space-2); }
-  .wa-open-link { display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: #fff; padding: 12px; border-radius: var(--radius-full); font-weight: 700; text-decoration: none; margin-top: var(--space-2); }
-  .wa-open-link:hover { opacity: 0.9; }
-  .field-error { color: var(--color-danger); font-size: var(--text-xs); margin: -4px 0 8px; display: none; }
+  .modal-box input[type=text] {
+    width: 100%; padding: 12px 14px; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    font-size: var(--text-base); font-family: var(--font-sans); margin-bottom: var(--space-2);
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .modal-box input[type=text]:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-accent-bg); }
+  .modal-actions { margin-top: var(--space-2); }
+  .modal-close {
+    position: absolute; top: var(--space-4); right: var(--space-4); width: 30px; height: 30px; border-radius: 50%;
+    border: none; background: var(--color-surface); color: var(--color-text-muted); cursor: pointer; font-size: 13px;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .modal-close:hover { background: var(--color-accent-bg); color: var(--color-primary); }
+  .wa-preview {
+    background: var(--color-surface); border-left: 3px solid var(--color-primary); border-radius: var(--radius-sm);
+    padding: var(--space-3); font-size: var(--text-sm); color: var(--color-text); line-height: 1.5;
+    margin: 0 0 var(--space-4); white-space: pre-wrap;
+  }
+  .wa-success .icon {
+    width: 56px; height: 56px; margin: 0 auto var(--space-3); border-radius: 50%; background: var(--color-accent-bg);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .wa-success h3 { text-align: center; }
+  .wa-success .modal-sub { text-align: center; }
+  .wa-open-link {
+    display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: #fff;
+    padding: 13px; border-radius: var(--radius-full); font-weight: 700; text-decoration: none;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+  .wa-open-link:hover { opacity: 0.88; }
+  .field-error { color: var(--color-danger); font-size: var(--text-xs); margin: -4px 0 10px; display: none; }
   .field-error.is-visible { display: block; }
 
-  /* ============================= VARIANT C: magazine / editorial ============================= */
-  .detail-c { max-width: 980px; margin: 0 auto; padding: var(--space-6) var(--pk-gutter) var(--space-8); }
-  .detail-c .masthead { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-6); align-items: center; margin-bottom: var(--space-5); }
-  .detail-c .masthead .main-image { aspect-ratio: 3/4; border-radius: var(--radius-md); box-shadow: var(--shadow-md); background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); display: flex; align-items: center; justify-content: center; font-size: 40px; color: rgba(255,255,255,0.5); }
-  .detail-c h1 { font-family: var(--font-display); font-size: 2.75rem; margin: 0 0 var(--space-2); text-transform: uppercase; line-height: 1.05; }
-  .detail-c .pull-quote { font-family: var(--font-sans); font-style: italic; font-size: var(--text-lg); color: var(--color-text-muted); border-left: 3px solid var(--color-primary); padding-left: var(--space-3); margin: var(--space-2) 0 0; max-width: 60ch; }
-  .detail-c .facts-strip { display: flex; gap: var(--space-6); padding: var(--space-3) 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-6); flex-wrap: wrap; }
-  .detail-c .editorial-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: var(--space-8); align-items: start; }
-  .detail-c .tag-cloud { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-5); }
-  .detail-c .desc { font-size: var(--text-base); line-height: 1.75; color: var(--color-text); }
-  @media (max-width: 768px) { .detail-c .masthead, .detail-c .editorial-grid { grid-template-columns: 1fr; } }
-
-  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-sans); }
-  .variant-tab { font-size: 13px; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); cursor: pointer; }
-  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
   #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; }
   #sketch-tools:hover { opacity: 1; }
   .viewport-frame { transition: max-width var(--duration-base) var(--ease-standard); margin: 0 auto; }
@@ -204,97 +238,8 @@
 </head>
 <body>
 
-<div id="variant-nav">
-  <button class="variant-tab" onclick="showVariant('a', event)">A: Poster-Left Split (Sticky)</button>
-  <button class="variant-tab active" onclick="showVariant('b', event)">B: Card-Consistent Masthead ★ Selected</button>
-  <button class="variant-tab" onclick="showVariant('c', event)">C: Magazine / Editorial</button>
-</div>
-
-<!-- ============================= VARIANT A ============================= -->
-<div id="variant-a" class="variant">
-  <div class="shell viewport-frame">
-    <div class="pk-header pk-gutter">
-      <div class="pk-nav">
-        <a href="#" class="pk-brand">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
-          <span class="pk-brand-text"><span class="word">Pukllay Club</span><span class="tag">Juegos de mesa modernos</span></span>
-        </a>
-        <div class="pk-nav-crumb"><a href="#">Catálogo</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span></div>
-        <div class="pk-theme-toggle"><button>☀</button><button>🌙</button></div>
-      </div>
-    </div>
-
-    <main class="detail detail-a">
-      <div class="poster-col">
-        <div class="main-image" id="main-a">🚀</div>
-        <div class="gallery-thumbs">
-          <div class="thumb is-active" onclick="swapImage(this,'main-a','🚀')" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
-          <div class="thumb" onclick="swapImage(this,'main-a','🪐')" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
-          <div class="thumb" onclick="swapImage(this,'main-a','🌡')" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
-          <div class="thumb" onclick="swapImage(this,'main-a','📦')" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
-        </div>
-      </div>
-      <div>
-        <h1>Terraforming Mars: Ares Expedition</h1>
-        <div class="badges-row">
-          <span class="weight-badge">🎯 Experto</span>
-          <span class="chip tag">Sci-fi</span>
-        </div>
-        <div class="facts-block">
-          <div class="pk-facts-row">
-            <div class="pk-fact"><span class="k">Jugadores</span><span class="v">1-4</span></div>
-            <div class="pk-fact"><span class="k">Duración</span><span class="v">90-120 min</span></div>
-            <div class="pk-fact"><span class="k">Edad mínima</span><span class="v">12+</span></div>
-            <div class="pk-fact"><span class="k">Año</span><span class="v">2021</span></div>
-            <div class="pk-fact"><span class="k">Dificultad</span>
-              <span class="v"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span></span>
-            </div>
-          </div>
-        </div>
-        <div class="body-section">
-          <p class="desc">Terraformá Marte compitiendo con otras corporaciones: subí la temperatura,
-            el oxígeno y el agua del planeta mientras construís tu propio motor de producción de
-            recursos. Esta edición standalone simplifica las reglas del original sin perder
-            profundidad estratégica.</p>
-        </div>
-        <div class="body-section">
-          <p class="section-heading">Mecánicas</p>
-          <div class="chip-row"><span class="chip">Construcción de motor</span><span class="chip">Gestión de mano</span><span class="chip">Colocación de losetas</span><span class="chip">Puntuación variable</span></div>
-        </div>
-        <div class="body-section">
-          <p class="section-heading">Temas</p>
-          <div class="chip-row"><span class="chip">Ciencia ficción</span><span class="chip">Exploración espacial</span></div>
-        </div>
-        <div class="body-section">
-          <p class="section-heading">Ficha técnica</p>
-          <dl class="meta-list">
-            <dt>Diseñadores</dt><dd>Jacob Fryxelius, Isaac Fryxelius</dd>
-            <dt>Editorial</dt><dd>FryxGames</dd>
-          </dl>
-        </div>
-        <a href="#" class="cta-secondary">Ver en BoardGameGeek ↗</a>
-      </div>
-    </main>
-
-    <footer class="pk-footer footer-c">
-      <div class="mission-band">
-        <h3>Encontrá el juego justo para tu mesa</h3>
-        <p>Un catálogo curado de juegos de mesa modernos para gente nueva en el hobby.</p>
-        <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
-      </div>
-      <div class="utility-bar">
-        <ul class="footer-links inline"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">Contacto</a></li></ul>
-        <div style="display:flex; align-items:center; gap:var(--space-3)">
-          <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
-          <span class="footer-copyright">© 2026 Pukllay Club</span>
-        </div>
-      </div>
-    </footer>
-  </div>
-</div>
-
 <!-- ============================= VARIANT B ============================= -->
-<div id="variant-b" class="variant active">
+<div id="variant-b">
   <div class="shell viewport-frame">
     <div class="pk-header pk-gutter">
       <div class="pk-nav">
@@ -326,22 +271,26 @@
               <span class="weight-badge">🎯 Experto</span>
               <span class="chip tag">Sci-fi</span>
             </div>
-            <div class="facts-strip">
-              <div class="pk-fact"><span class="k">Jugadores</span><span class="v">1-4</span></div>
-              <div class="pk-fact"><span class="k">Duración</span><span class="v">90-120 min</span></div>
-              <div class="pk-fact"><span class="k">Edad mínima</span><span class="v">12+</span></div>
-              <div class="pk-fact"><span class="k">Dificultad</span>
-                <span class="v"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span></span>
-              </div>
+            <div class="pk-pill-row">
+              <span class="pk-pill">👥 1-4</span>
+              <span class="pk-pill">⏱ 90-120 min</span>
+              <span class="pk-pill"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Experto</span>
             </div>
-            <p class="desc">Terraformá Marte compitiendo con otras corporaciones: subí la
-              temperatura, el oxígeno y el agua del planeta mientras construís tu propio motor de
-              producción de recursos. Esta edición standalone simplifica las reglas del original
-              sin perder profundidad estratégica.</p>
+            <div class="desc-collapse">
+              <p class="desc is-collapsed" id="detail-desc-b">Terraformá Marte compitiendo con otras
+                corporaciones: subí la temperatura, el oxígeno y el agua del planeta mientras
+                construís tu propio motor de producción de recursos. Esta edición standalone
+                simplifica las reglas del original sin perder profundidad estratégica — ideal para
+                quienes quieren probar el sistema de Terraforming Mars sin la carga completa del
+                juego base.</p>
+              <button class="desc-toggle" onclick="toggleDescCollapse(this)">Leer más ▾</button>
+            </div>
             <div class="cta-row">
-              <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition')">🎲 ¡Quiero Jugarlo!</button>
+              <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
               <div style="position:relative">
-                <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir">↗</button>
+                <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir">
+                  <span>↗</span><span class="icon-label">Compartir</span>
+                </button>
                 <div class="share-popover">
                   <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
                   <button onclick="shareVia('x')" title="X / Twitter">X</button>
@@ -376,6 +325,7 @@
                   <dt>Ilustrador</dt><dd class="missing">No disponible aún — campo no existe en el catálogo hoy</dd>
                   <dt>Editorial</dt><dd>FryxGames</dd>
                   <dt>Año</dt><dd>2021</dd>
+                  <dt>Edad mínima</dt><dd>12+</dd>
                   <dt>Peso (BGG)</dt><dd>3.8 / 5</dd>
                   <dt>Puesto en ranking BGG</dt><dd>#142 general</dd>
                 </dl>
@@ -383,90 +333,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </main>
-
-    <footer class="pk-footer footer-c">
-      <div class="mission-band">
-        <h3>Encontrá el juego justo para tu mesa</h3>
-        <p>Un catálogo curado de juegos de mesa modernos para gente nueva en el hobby.</p>
-        <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
-      </div>
-      <div class="utility-bar">
-        <ul class="footer-links inline"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">Contacto</a></li></ul>
-        <div style="display:flex; align-items:center; gap:var(--space-3)">
-          <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
-          <span class="footer-copyright">© 2026 Pukllay Club</span>
-        </div>
-      </div>
-    </footer>
-  </div>
-</div>
-
-<!-- ============================= VARIANT C ============================= -->
-<div id="variant-c" class="variant">
-  <div class="shell viewport-frame">
-    <div class="pk-header pk-gutter">
-      <div class="pk-nav">
-        <a href="#" class="pk-brand">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
-          <span class="pk-brand-text"><span class="word">Pukllay Club</span><span class="tag">Juegos de mesa modernos</span></span>
-        </a>
-        <div class="pk-nav-crumb"><a href="#">Catálogo</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span></div>
-        <div class="pk-theme-toggle"><button>☀</button><button>🌙</button></div>
-      </div>
-    </div>
-
-    <main class="detail detail-c">
-      <div class="masthead">
-        <div class="main-image" id="main-c">🚀</div>
-        <div>
-          <h1>Terraforming Mars: Ares Expedition</h1>
-          <div class="badges-row" style="display:flex;gap:var(--space-2);margin-bottom:var(--space-2)">
-            <span class="weight-badge">🎯 Experto</span>
-            <span class="chip tag">Sci-fi</span>
-          </div>
-          <p class="pull-quote">"Construí tu motor de producción y terraformá Marte antes que tus
-            rivales."</p>
-        </div>
-      </div>
-
-      <div class="facts-strip">
-        <div class="pk-fact"><span class="k">Jugadores</span><span class="v">1-4</span></div>
-        <div class="pk-fact"><span class="k">Duración</span><span class="v">90-120 min</span></div>
-        <div class="pk-fact"><span class="k">Edad mínima</span><span class="v">12+</span></div>
-        <div class="pk-fact"><span class="k">Año</span><span class="v">2021</span></div>
-        <div class="pk-fact"><span class="k">Dificultad</span>
-          <span class="v"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span></span>
-        </div>
-      </div>
-
-      <div class="editorial-grid">
-        <div>
-          <p class="section-heading">Mecánicas y temas</p>
-          <div class="tag-cloud">
-            <span class="chip">Construcción de motor</span><span class="chip">Gestión de mano</span>
-            <span class="chip">Colocación de losetas</span><span class="chip">Puntuación variable</span>
-            <span class="chip tag">Ciencia ficción</span><span class="chip tag">Exploración espacial</span>
-          </div>
-          <div class="gallery-thumbs">
-            <div class="thumb is-active" onclick="swapImage(this,'main-c','🚀')" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
-            <div class="thumb" onclick="swapImage(this,'main-c','🪐')" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
-            <div class="thumb" onclick="swapImage(this,'main-c','🌡')" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
-          </div>
-        </div>
-        <div>
-          <p class="desc">Terraformá Marte compitiendo con otras corporaciones: subí la
-            temperatura, el oxígeno y el agua del planeta mientras construís tu propio motor de
-            producción de recursos. Esta edición standalone simplifica las reglas del original sin
-            perder profundidad estratégica — ideal para quienes quieren probar el sistema de
-            Terraforming Mars sin la carga completa del juego base.</p>
-          <dl class="meta-list" style="margin-top:var(--space-4)">
-            <dt>Diseñadores</dt><dd>Jacob Fryxelius, Isaac Fryxelius</dd>
-            <dt>Editorial</dt><dd>FryxGames</dd>
-          </dl>
-          <a href="#" class="cta-secondary" style="margin-top:var(--space-4)">Ver en BGG ↗</a>
         </div>
       </div>
     </main>
@@ -499,20 +365,27 @@
     <button class="modal-close" onclick="closeReserveModal()" aria-label="Cerrar">✕</button>
 
     <div id="reserve-step-form">
+      <div class="modal-game-preview">
+        <div class="modal-game-thumb" id="reserve-game-thumb">🚀</div>
+        <div>
+          <p class="modal-game-name" id="reserve-game-name">Terraforming Mars: Ares Expedition</p>
+          <p class="modal-game-sub">Reserva para la próxima juntada del club</p>
+        </div>
+      </div>
       <h3>¡Quiero Jugarlo!</h3>
-      <p class="modal-sub" id="reserve-game-label">Reservá <strong>Terraforming Mars: Ares Expedition</strong> para la próxima juntada del club.</p>
+      <p class="modal-sub">Dejanos tu nombre y le mandamos el pedido al club por WhatsApp.</p>
       <label for="reserve-name">Tu nombre</label>
       <input type="text" id="reserve-name" placeholder="Ej: Augusto Pedraza" />
       <p class="field-error" id="reserve-error">Ingresá tu nombre para continuar.</p>
       <div class="modal-actions">
-        <button class="cta-primary" style="flex:1; justify-content:center" onclick="submitReserve()">Reservar por WhatsApp</button>
+        <button class="cta-primary" style="width:100%; justify-content:center" onclick="submitReserve()">💬 Reservar por WhatsApp</button>
       </div>
     </div>
 
     <div id="reserve-step-success" style="display:none" class="wa-success">
       <div class="icon">✅</div>
-      <h3 style="text-align:center">¡Listo!</h3>
-      <p class="modal-sub" style="text-align:center">Le mandamos este mensaje al club por vos — confirmalo abriendo WhatsApp:</p>
+      <h3>¡Listo!</h3>
+      <p class="modal-sub">Le mandamos este mensaje al club por vos — confirmalo abriendo WhatsApp:</p>
       <div class="wa-preview" id="wa-message-preview"></div>
       <a href="#" target="_blank" class="wa-open-link" id="wa-open-link">💬 Abrir WhatsApp</a>
     </div>
@@ -532,12 +405,6 @@
 </div>
 
 <script>
-  function showVariant(id, evt) {
-    document.querySelectorAll('.variant').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.variant-tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('variant-' + id).classList.add('active');
-    evt.target.classList.add('active');
-  }
   // mirrors the real production interaction: click a thumbnail, swap the main/hero image
   function swapImage(thumbEl, mainId, emoji) {
     document.getElementById(mainId).textContent = emoji;
@@ -547,6 +414,13 @@
   // ---- "más información" accordion ----
   function toggleInfoAccordion(btn) {
     btn.closest('.info-accordion').classList.toggle('is-open');
+  }
+
+  // ---- collapsible description (long descriptions truncate to 2 lines by default) ----
+  function toggleDescCollapse(btn) {
+    const text = btn.previousElementSibling;
+    const collapsed = text.classList.toggle('is-collapsed');
+    btn.textContent = collapsed ? 'Leer más ▾' : 'Leer menos ▴';
   }
 
   // ---- share ----
@@ -601,9 +475,10 @@
   const WA_CLUB_NUMBER = '5493884103255';
   let currentReserveGame = 'Terraforming Mars: Ares Expedition';
 
-  function openReserveModal(gameName) {
+  function openReserveModal(gameName, thumbEmoji) {
     currentReserveGame = gameName;
-    document.getElementById('reserve-game-label').innerHTML = `Reservá <strong>${gameName}</strong> para la próxima juntada del club.`;
+    document.getElementById('reserve-game-name').textContent = gameName;
+    document.getElementById('reserve-game-thumb').textContent = thumbEmoji || '🎲';
     document.getElementById('reserve-step-form').style.display = '';
     document.getElementById('reserve-step-success').style.display = 'none';
     document.getElementById('reserve-name').value = '';
