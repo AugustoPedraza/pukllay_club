@@ -616,6 +616,39 @@ The CTA bar itself was rendering correctly the whole time. Moved `#sketch-tools`
 the sticky header (`top: 76px`) instead, clear of both the header's own controls and the bottom CTA
 bar at every viewport width.
 
+## Round 29 — real bug: the toolbar's viewport buttons never actually triggered mobile CSS
+"Not floating at the bottom of the viewport, at the bottom of the page" pointed at a second,
+different bug from Round 26/28 — this one in the sketch's own review tooling, not the design.
+
+The toolbar's 📱375/📟768/🖥1280 buttons only set `max-width` on `.viewport-frame` (`setViewport()`
+in the script) — they never touch `window.innerWidth`. Real `@media` queries respond only to the
+true browser window, not an inner element's width. So on an actual wide desktop browser window,
+clicking "📱 375" visually narrows the mockup but **never satisfies `@media (max-width: 768px)`** —
+every mobile-only rule (single-column masthead, full-bleed carousel, and the fixed `.mobile-cta-bar`
+itself) stays inactive regardless of what the toolbar shows. What's actually visible in that state is
+the *desktop* buy-box's inline `.cta-row`, squeezed into the narrowed frame and positioned wherever
+normal document flow puts it — which is exactly "at the bottom of the page" rather than fixed to the
+viewport. The fixed bar was never display:none from a bug this time; it was legitimately not the
+active CTA at all, because the media query condition was never true.
+
+Fixed properly with CSS **container queries**: `.viewport-frame` now declares
+`container-type: inline-size; container-name: sketch-frame`, and the two layout-relevant breakpoints
+(`.detail-b`'s mobile block, `.spec-list`'s desktop column-gap) became `@container sketch-frame (...)`
+instead of `@media (...)`. Container queries respond to the container element's own rendered width —
+exactly what the toolbar buttons control — so the simulator now actually simulates. The lightbox's
+own `@media (max-width: 720px)` was deliberately left as a real media query: the lightbox is a
+full-screen overlay relative to the true viewport, not scoped inside `.viewport-frame`'s simulated
+box, so it should keep responding to the real window.
+
+**Verification note:** this session's sandboxed browser tool couldn't be resized past ~335px width,
+so the exact "wide real window + narrowed simulator" scenario that caused the original confusion
+couldn't be reproduced end-to-end here. What was verified directly: at the frame's current width,
+the container query correctly matches (`.mobile-cta-bar` computed `display: flex`, `.masthead`'s
+`grid-template-columns` resolved to a single track) — confirming the mechanism itself works; the
+reasoning for the wide-window case rests on standard, well-documented `@container` semantics rather
+than an end-to-end screenshot. Worth a real confirm in an actual wide browser window when you get a
+chance.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

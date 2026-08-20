@@ -253,16 +253,16 @@
      scrolling actually stops), not scroll direction — see the scroll
      listener below. Visible by default/on first render, same as before.
      Round 26: this whole block MUST come before the
-     `@media (max-width: 768px)` block below — both declare
+     `@container (max-width: 768px)` block below — both declare
      `.mobile-cta-bar { display }` at equal specificity, and the later
      declaration in source order wins the cascade regardless of which
-     media query actually matches. This rule used to sit after that media
-     query (closer to `.cta-icon`, where it read naturally next to the
-     other CTA styles), which meant this `display: none` silently beat
-     the media query's `display: flex` at every viewport width — the bar
-     has never actually been visible until this reorder. Real bug, not a
-     rendering/browser quirk: verified by literal source-line order, not
-     by guessing from a screenshot. */
+     query actually matches. This rule used to sit after that block
+     (closer to `.cta-icon`, where it read naturally next to the other CTA
+     styles), which meant this `display: none` silently beat the query's
+     `display: flex` at every width — the bar has never actually been
+     visible until this reorder. Real bug, not a rendering/browser quirk:
+     verified by literal source-line order, not by guessing from a
+     screenshot. */
   .mobile-cta-bar {
     display: none; flex-direction: column; gap: var(--space-2);
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
@@ -276,7 +276,11 @@
   .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
   .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; }
 
-  @media (max-width: 768px) {
+  /* Round 29: @container, not @media — see the .viewport-frame comment
+     above for why. Responds to `.viewport-frame`'s own width (what the
+     toolbar's viewport buttons actually control), not the real browser
+     window. */
+  @container sketch-frame (max-width: 768px) {
     /* image goes full-bleed edge-to-edge; the breakout targets
        .carousel-wrap specifically (not the whole poster-col), since the
        CTA row below it keeps the masthead's normal gutter padding. */
@@ -402,7 +406,7 @@
      each row in the next open cell, in source order. */
   .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-3); row-gap: 0; }
   .spec-row--wide { grid-column: 1 / -1; }
-  @media (min-width: 769px) { .spec-list { column-gap: var(--space-6); } }
+  @container sketch-frame (min-width: 769px) { .spec-list { column-gap: var(--space-6); } }
   /* Round 19: label stacked above value (not side by side) — a small
      property card per field, uppercase label byte-matching
      .section-heading's rhythm on top, the value in normal reading weight
@@ -487,7 +491,20 @@
      theme toggle in the same way. */
   #sketch-tools { position: fixed; top: 76px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; }
   #sketch-tools:hover { opacity: 1; }
-  .viewport-frame { transition: max-width var(--duration-base) var(--ease-standard); margin: 0 auto; }
+  /* Round 29: container-type turns this into a query container so the
+     layout's mobile/desktop breakpoints (below, as @container rules) can
+     respond to THIS element's width — which is what the toolbar's 📱375/
+     📟768/🖥1280 buttons actually change (`max-width` on this element).
+     Real @media queries respond only to the true browser window width,
+     which those buttons never touch — a wide desktop window clicking
+     "📱 375" would visually narrow this box but never trigger a single
+     @media (max-width:768px) rule, so mobile-only elements like the fixed
+     bottom CTA bar would just stay display:none the whole time. That's
+     what "the CTA isn't floating at the bottom of the viewport, it's at
+     the bottom of the page" was actually describing: with the mobile
+     rules never active, the visible CTA was the desktop buy-box's inline
+     button, sitting whatever the document flow put it, not the fixed bar. */
+  .viewport-frame { transition: max-width var(--duration-base) var(--ease-standard); margin: 0 auto; container-type: inline-size; container-name: sketch-frame; }
 </style>
 </head>
 <body>
