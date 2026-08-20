@@ -186,6 +186,28 @@ the title column rather than below the image in the poster column. Also removed 
 (mobile gutter-padding compensation for pills, which was only needed while they lived inside the
 full-bleed poster column).
 
+## Round 6 — pill/title values byte-matched against sketch 002's real component
+Checked the pill and title CSS directly against `002-card-hierarchy/index.html` rather than
+continuing to approximate. Real differences found and fixed:
+- **`.pill`** (sketch 002) is `11px`/`600`-weight, muted (`color-text-muted`) text, `1px solid
+  var(--color-border)` border, `4px 9px` padding. My pill was `text-xs`(12px)/`700`-weight, full
+  `color-text`, borderless — visibly heavier/darker than the real component.
+- **Difficulty dots**: sketch 002's filled dot is `background: var(--color-text-muted)` (deliberately
+  muted — "a standalone colored badge tested as louder than a metadata detail should be," per its
+  own comment) at `5px`, `3px` gap. Mine used `var(--color-primary)` (bright brand purple) at
+  `8px`/`6px`, `4px` gap — a meaningfully different, louder treatment of the exact same field.
+- **Title**: neither sketch 002's `.card-title` nor production's real `show.ex` h1
+  (`font-display text-3xl`, no transform) force `text-transform: uppercase` — Bebas Neue reads
+  cap-height on its own, and forcing it would mangle a mixed-case title like "7 Wonders Duel".
+  Dropped the uppercase transform I'd added; kept the larger font-size appropriate for a full-page
+  `<h1>` vs. a small card caption, added the same `0.01em` letter-spacing as `.card-title`.
+
+Class names still differ (`.pk-pill` vs `.pill`) since these live in separate sketch files — but
+the values now byte-match. When this becomes a real shared component, per the project's own
+established principle (sketch 001/002's biggest recurring bug source), these should share one
+actual CSS class, not two independently-declared rules with matching values that can drift apart
+again exactly like this.
+
 ## Future considerations (flagged, not built)
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a

@@ -42,9 +42,12 @@
   main.detail { flex: 1 0 auto; }
 
   /* ---- shared: difficulty dots, chips, weight badge ---- */
-  .pk-difficulty { display: flex; align-items: center; gap: 4px; }
-  .pk-difficulty-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); }
-  .pk-difficulty-dot.is-filled { background: var(--color-primary); }
+  /* values byte-match sketch 002's real .difficulty/.dot — filled dots are
+     deliberately muted (color-text-muted), not brand purple; a colored
+     dot tested there as louder than a metadata detail should be. */
+  .pk-difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .pk-difficulty-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
+  .pk-difficulty-dot.is-filled { background: var(--color-text-muted); }
 
   .chip-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
   .chip {
@@ -68,7 +71,11 @@
   .detail-b .masthead-band { background: linear-gradient(180deg, var(--color-surface), var(--color-bg)); }
   .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter) var(--space-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }
   .detail-b .poster-col { width: 100%; }
-  .detail-b h1 { font-family: var(--font-display); font-size: 2.25rem; margin: 0 0 var(--space-2); text-transform: uppercase; line-height: 1.05; }
+  /* no forced text-transform:uppercase — neither sketch 002's .card-title
+     nor production's real show.ex h1 (`font-display text-3xl`, no
+     transform) force it; Bebas Neue reads cap-height on its own, and
+     forcing it would mangle mixed-case titles like "7 Wonders Duel". */
+  .detail-b h1 { font-family: var(--font-display); font-size: 2.25rem; letter-spacing: 0.01em; margin: 0 0 var(--space-2); line-height: 1.1; }
   .detail-b .tag-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
   .detail-b .desc-collapse { margin-bottom: var(--space-5); max-width: 62ch; }
   .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
@@ -77,20 +84,26 @@
   .detail-b .cta-row { display: flex; gap: var(--space-3); align-items: center; }
   .detail-b .body { max-width: 1100px; margin: 0 auto; padding: var(--space-2) var(--pk-gutter) var(--space-8); }
 
-  /* facts pill row — reuses the exact pill pattern already settled for the
-     card hover-portal/mobile sheet in sketch 002 (icon + value chips),
-     grouped with the title/text block (not the image) — directly above
-     the title, same as that settled pattern, regardless of where the
-     poster sits in the layout. nowrap + tight padding/gap so the 3 pills
-     (jugadores/tiempo/dificultad) hold to one line. */
+  /* facts pill row — values now byte-match sketch 002's real .pills-row/
+     .pill (checked directly against 002-card-hierarchy/index.html), not an
+     approximation: 11px/600-weight muted text, 1px border, 4px/9px padding.
+     Round 6 fix — the previous version used text-xs/700-weight/full-color
+     text and a borderless pill, which was visibly heavier/darker than the
+     real settled component. Grouped with the title/text block (not the
+     image), directly above the title, per the same settled pattern.
+     nowrap so the 3 pills (jugadores/tiempo/dificultad) hold to one line —
+     002's original didn't need nowrap since its pills-row never has more
+     than 3 short items in a narrower, single-purpose card context, but
+     ours needs to guarantee it explicitly given the extra link/hover state. */
   .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0 0 var(--space-2); }
   .pk-pill {
-    display: inline-flex; align-items: center; gap: 4px; background: var(--color-surface); color: var(--color-text);
-    font-size: var(--text-xs); font-weight: 700; padding: 5px 10px; border-radius: var(--radius-full);
-    text-decoration: none; border: 1px solid transparent; white-space: nowrap; transition: all var(--duration-fast) var(--ease-standard);
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted);
+    font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full);
+    text-decoration: none; transition: all var(--duration-fast) var(--ease-standard);
   }
   a.pk-pill:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
-  .pk-pill .pk-difficulty-dot { width: 6px; height: 6px; }
+  .pk-pill .pk-difficulty-dot { width: 5px; height: 5px; }
 
   /* minimal image carousel + lightbox trigger */
   .detail-carousel { position: relative; aspect-ratio: 3/4; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg); cursor: zoom-in; }
