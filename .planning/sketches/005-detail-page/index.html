@@ -25,6 +25,36 @@
   .pk-theme-toggle { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 4px; }
   .pk-theme-toggle button { width: 24px; height: 24px; border: none; background: none; border-radius: 50%; cursor: pointer; opacity: 0.6; }
 
+  /* ---- mobile sticky game-identity bar (Round 32) ----
+     Mirrors the mobile-cta-bar pattern below, but for identity instead of
+     action: pinned under the site header, hidden until #game-identity (the
+     real pills+title+tags in the masthead) scrolls out of view, then fades
+     in so the reader always knows what game they're reading about. Hidden
+     by default/on desktop; only switched on inside the mobile media query,
+     same convention as .mobile-cta-bar. */
+  .game-sticky-bar {
+    display: none;
+    position: fixed; top: 64px; left: 0; right: 0; z-index: 39;
+    background: rgba(255,255,255,0.97); border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm); padding: 8px var(--pk-gutter);
+    transform: translateY(-100%); opacity: 0; pointer-events: none;
+    transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+  }
+  .game-sticky-bar.is-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  /* condensed versions of .pk-pill-row/h1/.tag-row — same visual family,
+     smaller and single-line so three rows of context still fit in a strip
+     shorter than the header itself sits above it. */
+  .game-sticky-bar .pk-pill-row { flex-wrap: nowrap; overflow-x: auto; gap: 4px; margin-bottom: 3px; scrollbar-width: none; }
+  .game-sticky-bar .pk-pill-row::-webkit-scrollbar { display: none; }
+  .game-sticky-bar .pk-pill { font-size: 10px; padding: 2px 8px; white-space: nowrap; }
+  .game-sticky-bar h2 {
+    font-family: var(--font-display); font-size: var(--text-sm); font-weight: 700; margin: 0 0 3px;
+    color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .game-sticky-bar .tag-row { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; scrollbar-width: none; }
+  .game-sticky-bar .tag-row::-webkit-scrollbar { display: none; }
+  .game-sticky-bar .chip.tag { font-size: 10px; padding: 3px 9px; white-space: nowrap; }
+
   /* ---- footer: winner C from sketch 003 ---- */
   footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-8); }
   .footer-c .mission-band { background: var(--color-primary); color: var(--color-primary-content); padding: var(--space-8) var(--pk-gutter); text-align: center; }
@@ -318,6 +348,7 @@
        a redundant second copy of the same buttons sitting mid-page. */
     .detail-b .cta-row { display: none; }
     .mobile-cta-bar { display: flex; }
+    .game-sticky-bar { display: block; }
     /* keeps the sticky bar from covering the footer's last content —
        taller now that the bar stacks two full-width buttons (Round 25)
        instead of one row, so the reserved space grew alongside it. */
@@ -507,6 +538,13 @@
      theme toggle in the same way. */
   #sketch-tools { position: fixed; top: 76px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; }
   #sketch-tools:hover { opacity: 1; }
+  /* Round 32: mobile now has a second sticky element below the header
+     (.game-sticky-bar, up to ~3 lines once it fades in), so 76px isn't
+     always clear of real design chrome anymore on small widths — pushed
+     further down, review-tooling only, matching this rule's own Round 26
+     lesson: must come after the base rule above since both hit
+     `#sketch-tools { top }` at equal specificity. */
+  @media (max-width: 768px) { #sketch-tools { top: 168px; } }
   /* Round 29 tried making this a CSS container-query container
      (`container-type: inline-size`) so the layout's mobile/desktop
      breakpoints could respond to the toolbar's 📱375/📟768/🖥1280 buttons
@@ -541,6 +579,27 @@
         </a>
         <div class="pk-nav-crumb"><a href="#">Catálogo</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span></div>
         <div class="pk-theme-toggle"><button>☀</button><button>🌙</button></div>
+      </div>
+    </div>
+
+    <!-- Round 32, mobile-only: condensed copy of #game-identity (pills +
+         title + tags — the same content you get on first render), pinned
+         just below the site header. Fades in only once the real
+         #game-identity block has scrolled out of view (IntersectionObserver
+         below), so "what game is this" survives scrolling this long a page
+         without duplicating the identity block while it's still visible.
+         Desktop doesn't need this — Round 12's poster-col sidebar keeps the
+         title/facts in view for free via its own sticky behavior. -->
+    <div class="game-sticky-bar" id="game-sticky-bar">
+      <div class="pk-pill-row">
+        <span class="pk-pill">👥 1-4</span>
+        <span class="pk-pill">⏱ 90-120 min</span>
+        <span class="pk-pill"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto</span>
+      </div>
+      <h2>Terraforming Mars: Ares Expedition</h2>
+      <div class="tag-row">
+        <span class="chip tag">Duelos Memorables</span>
+        <span class="chip tag">Equipo Ganador</span>
       </div>
     </div>
 
@@ -590,18 +649,24 @@
             <!-- filterable facts pills, at the top of the title block —
                  jugadores/tiempo are real params on CatalogLive.Index;
                  dificultad links via weight_bands. See README for the
-                 URL-persistence gap this depends on. -->
-            <div class="pk-pill-row">
-              <a class="pk-pill" href="/?players=4" title="Filtrar por cantidad de jugadores">👥 1-4</a>
-              <a class="pk-pill" href="/?max_playtime=120" title="Filtrar por duración">⏱ 90-120 min</a>
-              <a class="pk-pill" href="/?weight_bands=Nivel+experto" title="Filtrar por dificultad">
-                <span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto
-              </a>
-            </div>
-            <h1>Terraforming Mars: Ares Expedition</h1>
-            <div class="tag-row">
-              <a class="chip tag" href="/?tags=Duelos+Memorables" title="Filtrar por etiqueta">Duelos Memorables</a>
-              <a class="chip tag" href="/?tags=Equipo+Ganador" title="Filtrar por etiqueta">Equipo Ganador</a>
+                 URL-persistence gap this depends on.
+                 Round 32: wrapped with the title/tags in #game-identity so
+                 the mobile sticky bar below can watch (via
+                 IntersectionObserver) exactly when this whole block has
+                 scrolled out of view — see .game-sticky-bar. -->
+            <div class="game-identity" id="game-identity">
+              <div class="pk-pill-row">
+                <a class="pk-pill" href="/?players=4" title="Filtrar por cantidad de jugadores">👥 1-4</a>
+                <a class="pk-pill" href="/?max_playtime=120" title="Filtrar por duración">⏱ 90-120 min</a>
+                <a class="pk-pill" href="/?weight_bands=Nivel+experto" title="Filtrar por dificultad">
+                  <span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto
+                </a>
+              </div>
+              <h1>Terraforming Mars: Ares Expedition</h1>
+              <div class="tag-row">
+                <a class="chip tag" href="/?tags=Duelos+Memorables" title="Filtrar por etiqueta">Duelos Memorables</a>
+                <a class="chip tag" href="/?tags=Equipo+Ganador" title="Filtrar por etiqueta">Equipo Ganador</a>
+              </div>
             </div>
             <div class="desc-collapse reading-measure">
               <p class="desc is-collapsed" id="detail-desc-b">Terraformá Marte compitiendo con otras
@@ -813,6 +878,25 @@
       clearTimeout(scrollEndTimer);
       scrollEndTimer = setTimeout(() => bar.classList.remove('is-hidden'), 200);
     });
+  })();
+
+  // ---- mobile sticky game-identity bar (Round 32): fades in once
+  // #game-identity (the real pills+title+tags up in the masthead) has
+  // scrolled fully out of view above the viewport, fades out again once
+  // it's back in view. IntersectionObserver instead of a scroll-position
+  // threshold so this stays correct regardless of how tall the masthead
+  // ends up being — it's watching the actual element, not a guessed pixel
+  // offset. rootMargin's top offset accounts for the 64px site header so
+  // "out of view" means "scrolled under the header," not just past y=0. ----
+  (function () {
+    const identity = document.getElementById('game-identity');
+    const stickyBar = document.getElementById('game-sticky-bar');
+    if (!identity || !stickyBar) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      const scrolledPast = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+      stickyBar.classList.toggle('is-visible', scrolledPast);
+    }, { rootMargin: '-64px 0px 0px 0px', threshold: 0 });
+    observer.observe(identity);
   })();
 
   // ---- collapsible description — toggle lives inside the <p> itself now,

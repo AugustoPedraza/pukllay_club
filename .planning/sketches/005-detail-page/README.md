@@ -743,6 +743,41 @@ mechanism (`container-type`) that behaved differently at different real widths, 
 known reason left for this to behave differently in a genuinely wide window — but that's reasoning
 from the code, not a screenshot, and it's worth an actual confirm on your end when convenient.
 
+## Round 32 — confirmed the mobile CTA bar's scroll behavior + added a sticky game-identity bar
+Two asks in one request:
+
+**1. Mobile CTA bar "visible on load, hidden while actively scrolling, shown again once scrolling
+stops."** This is exactly what Round 27 already built and Rounds 28–31 fixed real bugs in — verified
+it directly in a real (non-simulated) 335px-wide browser window with actual scroll gestures rather
+than assuming the existing implementation still held: visible at rest, `.is-hidden` added the instant
+a `scroll` event fires, removed again ~200ms after the last one (debounced gesture-end, not
+direction). No regression found; no code changed for this part.
+
+**2. New: sticky "game header" bar, mobile only** — matching the reference screenshot (facts pills +
+title + tag chips, pinned near the top while scrolling a long detail page, the way Amazon/Airbnb pin
+a condensed product identity bar once the real one scrolls away). Implementation:
+- Wrapped the existing pills/`<h1>`/tag-row in the masthead with `#game-identity` — no visual change,
+  just gives the new bar something concrete to watch.
+- Added `.game-sticky-bar` (`#game-sticky-bar`): a fixed bar pinned at `top: 64px` (directly under the
+  64px site header), holding a condensed copy of the same three rows — smaller type, single-line
+  pills/tags with horizontal scroll instead of wrap, ellipsis-truncated title — so it reads as "the
+  same identity, compressed" rather than a different component.
+- Driven by an `IntersectionObserver` on `#game-identity` (not a scroll-position pixel threshold —
+  this stays correct regardless of how tall the masthead ends up being): `rootMargin: '-64px 0 0 0'`
+  accounts for the site header, so the sticky bar fades in only once `#game-identity` has scrolled
+  fully underneath it, and fades out again once scrolling back up brings it into view.
+- Desktop is intentionally untouched — Round 12's `poster-col` sticky sidebar already keeps the
+  title/facts in view there for free, so a second sticky identity bar would be redundant chrome.
+- Verified with real scroll gestures at 335px width (this session's browser tool ceiling — see Round
+  31's note on why): bar stays hidden while `#game-identity` is on screen, fades in once fully
+  scrolled past, fades back out scrolling up past it again.
+
+**Side fix:** `#sketch-tools` (the review-only theme/viewport toolbar, already relocated once in
+Round 28) started overlapping the new sticky bar's bottom edge on mobile, since both now occupy the
+same "just under the header" real estate. Pushed it further down (`top: 168px`) inside the existing
+mobile media query only — matching Round 26's own lesson about `#sketch-tools` rules needing to come
+*after* the base rule in source order at equal specificity. Desktop's `top: 76px` is untouched.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
@@ -765,3 +800,8 @@ from the code, not a screenshot, and it's worth an actual confirm on your end wh
   threshold, now that it sits alone in a column without a CTA immediately following it?
 - Is the icon-only share button (both in the desktop buy-box and the mobile bar) legible enough
   now, relying on the `title` tooltip + adjacency to the primary CTA instead of a permanent label?
+- **New (Round 32), mobile only:** scroll past the title — does the condensed sticky bar (pills +
+  title + tags, pinned under the header) feel like a helpful "what game is this" reminder, or too
+  much permanent chrome stacked on top of the site header + bottom CTA bar? Does the fade-in/out
+  timing feel right, and is the truncated single-line title still legible at that size? Should it
+  drop the tag row entirely to save vertical space, keeping just pills + title?
