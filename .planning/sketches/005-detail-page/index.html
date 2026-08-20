@@ -217,6 +217,21 @@
   .cta-style-e { border-radius: var(--radius-lg) !important; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)) !important; box-shadow: var(--shadow-md) !important; }
   .cta-style-e:hover { background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)) !important; }
 
+  /* alternative CTA row layouts, toggled live onto the real .cta-row by
+     the second lab strip — same throwaway-comparison rationale as the
+     style modifiers above. */
+  .cta-pos-b { justify-content: space-between !important; }
+  .cta-pos-b .cta-primary { flex: 1; justify-content: center; }
+  .cta-pos-b .cta-icon { flex: 0 0 auto; width: 48px; padding: 0; justify-content: center; }
+  .cta-pos-b .cta-icon .icon-label { display: none; }
+
+  .cta-pos-c { flex-direction: column !important; align-items: stretch !important; gap: var(--space-2) !important; }
+  .cta-pos-c .cta-primary { width: 100%; justify-content: center; }
+  .cta-pos-c .cta-icon { border: none; background: none; box-shadow: none; justify-content: center; color: var(--color-text-muted); height: auto; padding: 4px 0; }
+  .cta-pos-c .cta-icon:hover { background: none; color: var(--color-primary); }
+
+  .cta-pos-d { justify-content: flex-end !important; }
+
   /* ---- share button + popover ---- */
   /* was an icon-only circle with just a bare "↗" glyph — not a recognized
      share icon, and easy to misread as decoration or an external-link
@@ -370,6 +385,13 @@
       <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-c', this)">C: Contorno (ghost)</button>
       <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-d', this)">D: Minimal (flat, sharp)</button>
       <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-e', this)">E: Degradé</button>
+    </div>
+    <div class="cta-lab">
+      <span class="cta-lab-label">Probar posición de CTAs:</span>
+      <button class="cta-lab-swatch is-active" onclick="setCtaPosition('', this)">A: Actual (lado a lado)</button>
+      <button class="cta-lab-swatch" onclick="setCtaPosition('cta-pos-b', this)">B: Primario ancho + ícono</button>
+      <button class="cta-lab-swatch" onclick="setCtaPosition('cta-pos-c', this)">C: Apilado (compartir como link)</button>
+      <button class="cta-lab-swatch" onclick="setCtaPosition('cta-pos-d', this)">D: Alineado a la derecha</button>
     </div>
 
     <main class="detail detail-b">
@@ -610,12 +632,22 @@
   }
 
   // ---- share ----
-  // ---- CTA style lab (sketch-only) — applies the chosen modifier class
-  // live to the real CTA button so styles can be compared in context ----
+  // ---- CTA style/position labs (sketch-only) — apply the chosen modifier
+  // class live to the real CTA elements so alternatives can be compared in
+  // context. Each strip tracks its own active swatch (scoped to
+  // btn.parentElement) — two separate labs share the .cta-lab-swatch
+  // class, so a global querySelectorAll would incorrectly clear the other
+  // strip's selection every time either one is clicked. ----
   function setCtaStyle(cls, btn) {
     const cta = document.querySelector('.cta-primary');
     cta.className = 'cta-primary' + (cls ? ' ' + cls : '');
-    document.querySelectorAll('.cta-lab-swatch').forEach(b => b.classList.remove('is-active'));
+    btn.parentElement.querySelectorAll('.cta-lab-swatch').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+  }
+  function setCtaPosition(cls, btn) {
+    const row = document.querySelector('.cta-row');
+    row.className = 'cta-row' + (cls ? ' ' + cls : '');
+    btn.parentElement.querySelectorAll('.cta-lab-swatch').forEach(b => b.classList.remove('is-active'));
     btn.classList.add('is-active');
   }
 

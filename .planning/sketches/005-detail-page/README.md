@@ -259,6 +259,20 @@ again exactly like this.
   be compared directly in context instead of via more rounds of blind guessing. Pick one and it
   becomes the real style; the lab strip itself is not part of the shipped page.
 
+## Round 10 — CTA position lab
+Style A (the rounded-rect from Round 8) is confirmed as the winner — no more style guessing needed
+there. But the CTA **row's layout/position** still didn't feel right, so rather than guess a third
+time, added a second **sketch-only lab strip** (same pattern as Round 9's style lab) with 4 live
+position alternatives applied to the real `.cta-row`:
+- **A: Actual** — primary + share side by side, roughly equal width, left-aligned in flow.
+- **B: Primary ancho + ícono** — primary CTA grows to fill available width; share shrinks to an
+  icon-only circle pinned to the row's end (`justify-content: space-between`).
+- **C: Apilado** — primary full-width on its own row; share demoted to a plain muted text link
+  below it (no button box, no border) — treats sharing as a clearly lower-priority secondary action
+  rather than a co-equal button.
+- **D: Alineado a la derecha** — same two buttons as A, but the whole row shifts to the right edge
+  of the column instead of sitting left-aligned under the description.
+
 ## Future considerations (flagged, not built)
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a
