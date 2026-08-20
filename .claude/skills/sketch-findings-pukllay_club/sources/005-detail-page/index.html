@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 005 — Game Detail Page</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  .shell { display: flex; flex-direction: column; min-height: 100vh; margin: 0 auto; }
+
+  /* ---- header: quiet / detail state, carried over from sketch 003 winner ---- */
+  :root { --pk-gutter: 2rem; }
+  .pk-gutter { padding-left: var(--pk-gutter); padding-right: var(--pk-gutter); }
+  .pk-header { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,0.92); box-shadow: var(--shadow-sm); }
+  .pk-nav { display: flex; align-items: center; gap: var(--space-4); height: 64px; }
+  .pk-brand { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: inherit; }
+  .pk-brand-text { display: flex; flex-direction: column; line-height: 1; }
+  .pk-brand-text .word { font-family: var(--font-display); font-size: var(--text-xl); letter-spacing: 0.03em; text-transform: uppercase; color: var(--color-primary); }
+  .pk-brand-text .tag { font-family: var(--font-sans); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+  .pk-nav-crumb { font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-text-muted); flex: 1 0 auto; display: flex; align-items: center; gap: 6px; }
+  .pk-nav-crumb a { color: var(--color-text-muted); text-decoration: none; }
+  .pk-nav-crumb a:hover { color: var(--color-primary); }
+  .pk-nav-crumb .sep { opacity: 0.5; }
+  .pk-nav-crumb .current { color: var(--color-text); font-weight: 600; }
+  .pk-theme-toggle { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 4px; }
+  .pk-theme-toggle button { width: 24px; height: 24px; border: none; background: none; border-radius: 50%; cursor: pointer; opacity: 0.6; }
+
+  /* Round 32: real bug, found via a genuine device-width screenshot (this
+     session's own browser tool caps at ~335px and never reproduced it —
+     see the sketch-tools comment above for that limitation). At true
+     narrow-mobile widths (~390px and below) `.pk-nav-crumb`'s
+     `flex: 1 0 auto` refuses to shrink below its own text's natural
+     width, and `.pk-theme-toggle` doesn't shrink either — between the two
+     of them they force `.pk-brand` (the only flexible item left) below
+     its content's natural width, wrapping "Pukllay Club" and its tagline
+     across multiple lines and blowing `.pk-nav`'s `height: 64px` out
+     (children overflow a fixed-height flex row rather than being clipped
+     by it). This matters beyond cosmetics: `.game-sticky-bar` assumes a
+     real 64px header via `top: 64px` — a taller, wrapped header would
+     sit underneath/behind it. Mobile fix: let the crumb actually shrink
+     and ellipsis instead of refusing to, and drop the tagline (redundant
+     under the game-sticky-bar) to keep the row to one line at 64px. */
+  @media (max-width: 480px) {
+    .pk-brand { flex-shrink: 0; }
+    .pk-brand-text .tag { display: none; }
+    /* `text-overflow: ellipsis` doesn't work here — .pk-nav-crumb is a flex
+       container of three separate boxes (link/separator/current-page span),
+       not one text run, so clipping it just chopped mid-word with no
+       ellipsis and no gap ("CLUBCat"). A full breadcrumb (site root + "/" +
+       current page name) is desktop-appropriate information density; on
+       mobile it's redundant anyway once the title is right there in the
+       masthead below (and, once scrolled, in .game-sticky-bar) — collapsed
+       to a plain "‹ Catálogo" back-link instead, the standard mobile
+       pattern in place of a breadcrumb trail. */
+    .pk-nav-crumb { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+    .pk-nav-crumb .sep, .pk-nav-crumb .current { display: none; }
+    .pk-nav-crumb a { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .pk-nav-crumb a::before { content: '‹ '; }
+  }
+
+  /* ---- mobile sticky game-identity bar (Round 32, simplified Round 33) ----
+     Mirrors the mobile-cta-bar pattern below, but for identity instead of
+     action: pinned under the site header, hidden until #game-identity (the
+     real pills+title+tags in the masthead) scrolls out of view, then fades
+     in so the reader always knows what game they're reading about. Hidden
+     by default/on desktop; only switched on inside the mobile media query,
+     same convention as .mobile-cta-bar.
+     Round 33: dropped pills + tags — feedback was that repeating the full
+     facts block here reads as overloaded; those already have a "full"
+     home in the real masthead the bar is standing in for, so the sticky
+     bar's only job is answering "what game is this," via the title alone.
+     That freed it up to become a single compact row (title left, a
+     scroll-to-top affordance right) instead of a 3-line block. */
+  .game-sticky-bar {
+    display: none;
+    align-items: center; gap: var(--space-3);
+    position: fixed; top: 64px; left: 0; right: 0; z-index: 39;
+    background: rgba(255,255,255,0.97); border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm); padding: 10px var(--pk-gutter);
+    transform: translateY(-100%); opacity: 0; pointer-events: none;
+    transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+  }
+  .game-sticky-bar.is-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .game-sticky-bar h2 {
+    flex: 1 1 auto; min-width: 0;
+    font-family: var(--font-display); font-size: var(--text-base); font-weight: 700; margin: 0;
+    color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Round 33: "the header could have a bouncing arrow to scroll up to top
+     automatically" — a small round affordance riding along the sticky
+     bar's own hide/show cycle (it only exists once you've scrolled far
+     enough for the bar to appear at all, so it's never competing with the
+     masthead's own real scroll position at the top of the page). The
+     bounce is a continuous, gentle nudge (not a one-shot on-appear
+     animation) so it keeps reading as "there's more above, tap me"
+     for as long as the bar itself is visible, not just at the moment it
+     fades in. Kept small in amplitude/slow in period — a beacon, not a
+     distraction sitting next to the game's own title. */
+  .scroll-top-btn {
+    flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;
+    animation: scroll-top-bounce 2.2s ease-in-out infinite;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+  }
+  .scroll-top-btn:hover { background: var(--color-accent-bg); border-color: var(--color-primary); }
+  @keyframes scroll-top-bounce {
+    0%, 20%, 100% { transform: translateY(0); }
+    10% { transform: translateY(-4px); }
+  }
+
+  /* ---- footer: winner C from sketch 003 ---- */
+  footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-8); }
+  .footer-c .mission-band { background: var(--color-primary); color: var(--color-primary-content); padding: var(--space-8) var(--pk-gutter); text-align: center; }
+  .footer-c .mission-band h3 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-2); text-transform: uppercase; }
+  .footer-c .mission-band p { max-width: 52ch; margin: 0 auto var(--space-4); opacity: 0.9; line-height: 1.6; }
+  .footer-social { display: flex; gap: var(--space-2); justify-content: center; }
+  .footer-social a { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.4); color: rgba(255,255,255,0.85); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; }
+  .footer-c .utility-bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--pk-gutter); flex-wrap: wrap; gap: var(--space-2); }
+  .footer-links.inline { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-4); flex-wrap: wrap; }
+  .footer-links a { color: var(--color-text-muted); text-decoration: none; font-size: var(--text-sm); }
+  .bgg-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); font-size: var(--text-xs); color: var(--color-text-muted); text-decoration: none; }
+  .bgg-badge .mark { width: 16px; height: 16px; border-radius: 3px; background: #ff5100; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .footer-copyright { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+  main.detail { flex: 1 0 auto; }
+
+  /* ---- shared: difficulty dots, chips, weight badge ---- */
+  /* values byte-match sketch 002's real .difficulty/.dot — filled dots are
+     deliberately muted (color-text-muted), not brand purple; a colored
+     dot tested there as louder than a metadata detail should be. */
+  .pk-difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .pk-difficulty-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
+  .pk-difficulty-dot.is-filled { background: var(--color-text-muted); }
+
+  /* Round 20: one shared measure for every block in the reading column
+     (description, "más información") instead of each declaring its own
+     `max-width: 62ch` — two independently-matching values is exactly the
+     drift risk this project's own principle warns about elsewhere in this
+     file (Round 6's pill/title byte-matching). One class means they can't
+     quietly drift apart if either gets edited later. */
+  /* Round 23: dropped the 62ch cap itself — it was leaving a real gap of
+     dead space to the right of the description and "más información",
+     since the actual text column (masthead's second grid track, ~668px
+     at the 1100px max-width) is wider than 62ch's ~500px. The title,
+     tag-row, and pk-pill-row above were never capped and already ran
+     full width, so the capped paragraph/details actually read as
+     narrower than everything around them, not as an intentional
+     typographic measure. Now full width — matching the rest of the
+     column, no dead space on the right — trading away the "ideal
+     paragraph line length" convention (~60-75 characters) in favor of
+     actually using the space. This class still exists so the two blocks
+     can't independently drift from each other again (Round 20's point
+     still holds), it's just no longer capping either of them. */
+  .reading-measure { max-width: 100%; }
+  /* gap matches .pk-pill-row's 6px (not the default --space-2/8px) now
+     that .chip's base styling byte-matches .pk-pill — same visual family,
+     same spacing between items. */
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  /* Round 16: base .chip (mecánicas/temas, in "más información") now
+     byte-matches .pk-pill's muted treatment — 11px/600-weight, muted
+     text, surface background — instead of its previous full-color-text/
+     white-bg/text-xs styling. That previous version was never actually
+     grounded in an existing component (sketch 002 has no mechanics-chip
+     pattern to check against, unlike pills/dots/title), and ended up
+     visually louder than the quick-facts pills above the title — a
+     hierarchy inversion, since mechanics/themes are deeper, secondary
+     detail that shouldn't outweigh the primary facts. .chip.tag (the
+     editorial tag next to the title) keeps its own distinct, more
+     prominent treatment — that one's meant to stand out as a highlight,
+     not blend in as quiet metadata. */
+  .chip {
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted);
+    text-decoration: none; display: inline-flex; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .chip.tag { border-color: var(--color-secondary); color: var(--color-secondary); background: var(--color-surface); font-size: var(--text-xs); padding: 5px 12px; }
+  a.chip:hover { border-color: var(--color-primary); background: var(--color-accent-bg); color: var(--color-primary); }
+
+  .section-heading { font-family: var(--font-sans); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
+
+  /* ---- "Juegos similares" shelf (Round 35) ----
+     Not a new pattern — this is the real, already-shipped home page's
+     shelf (`PukllayClubWeb.CarouselRow` + `GameCard`, `assets/css/app.css`
+     `.pk-shelf`/`.pk-rail`/`.pk-card*`), reused here rather than invented
+     fresh, translated 1:1 from daisyUI tokens into this sketch's own
+     `--color-*` vocabulary (base-100→bg, base-200→surface,
+     base-300→border, neutral→text-muted, accent→accent-bg) — same
+     mapping the rest of this file already uses. The real card is
+     poster-forward at rest (cover + one line of title, nothing else —
+     `GameCard`'s own doc comment: every secondary fact lives behind
+     hover/tap, not on the resting card), so this row matches that
+     restraint rather than reintroducing pills here. No `.pk-see-all`
+     trailing tile — unlike the home page's shelves (each backed by a
+     real filter a "ver todo" can point at), a detail page's "more like
+     this" row has no natural "see all" destination, matching how
+     Netflix's own "More Like This" rows don't carry one either. */
+  .pk-shelf { margin: var(--space-8) 0 0; scroll-margin-top: 6rem; }
+  .pk-row-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); }
+  .pk-row-header h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; text-transform: uppercase; letter-spacing: 0.02em; }
+  .pk-row-header p { font-size: var(--text-sm); color: var(--color-text-muted); margin: 4px 0 0; }
+  .pk-row-controls { display: flex; align-items: center; gap: var(--space-2); }
+  .pk-row-controls.is-hidden { display: none; }
+  .pk-row-controls button {
+    width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--color-border);
+    background: var(--color-bg); color: var(--color-text); cursor: pointer; font-size: 16px;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .pk-row-controls button:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .pk-rail-wrap { position: relative; }
+  .pk-rail-wrap::before, .pk-rail-wrap::after { content: ''; position: absolute; top: 0; bottom: 0; width: 48px; z-index: 4; pointer-events: none; }
+  .pk-rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  .pk-rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  .pk-rail { display: flex; gap: var(--space-4); overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; padding: 8px 0; overscroll-behavior-x: contain; }
+  .pk-rail::-webkit-scrollbar { display: none; }
+  .pk-poster-card { flex: 0 0 auto; width: 160px; display: block; text-decoration: none; color: inherit; border-radius: var(--radius-lg); overflow: hidden; background: var(--color-surface); box-shadow: var(--shadow-sm); transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard); }
+  .pk-poster-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .pk-poster-card .pk-card-poster { aspect-ratio: 1 / 1.05; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+  .pk-poster-card .pk-card-caption { padding: 8px 10px 12px; }
+  .pk-poster-card .pk-card-caption h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 480px) {
+    .pk-rail { gap: 10px; }
+    .pk-poster-card { width: 108px; }
+    .pk-rail-wrap::before, .pk-rail-wrap::after { width: 16px; }
+    .pk-shelf { margin-top: var(--space-6); }
+    .pk-poster-card .pk-card-caption { padding: 8px 8px 10px; }
+    .pk-poster-card .pk-card-caption h3 { font-size: var(--text-xs); }
+    /* Round 36: at this width the title+subtitle block was wrapping to
+       5 lines total while squeezed beside the prev/next controls
+       (`.pk-row-header`'s `align-items: flex-end` then left the buttons
+       stranded near the bottom of that tall block, not aligned with the
+       title). Stack instead of sharing a row — title/subtitle get the
+       full width to wrap on their own terms, controls drop to their own
+       right-aligned row below rather than fighting them for horizontal
+       space. */
+    .pk-row-header { flex-direction: column; align-items: stretch; gap: var(--space-2); }
+    .pk-row-controls { align-self: flex-end; }
+  }
+
+  /* ============================= VARIANT B: card-consistent masthead ============================= */
+  /* Refined per feedback: the poster reuses the browse-card's visual
+     materials (3:4 aspect, rounded corners, gradient placeholder) instead
+     of a cinematic 16:9 backdrop — same card you clicked from the shelf,
+     just presented larger. Round 3: the old thumbnail-strip-plus-duplicate-
+     title-caption under the image is gone, replaced with a minimal
+     carousel (dots + arrows, matching sketch 004's carousel) with a
+     click-to-lightbox. */
+  .detail-b .masthead-band { background: linear-gradient(180deg, var(--color-surface), var(--color-bg)); }
+  .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter) var(--space-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }
+  /* Round 31: grid/flex items default to `min-width: auto`, which means
+     "never shrink below your content's own minimum size" — and the facts
+     pill row's `flex-wrap: nowrap` (below) gives this column unshrinkable
+     content wider than the actual `1fr` track on mobile (3 pills need
+     ~268px, the mobile track is only ~256px). Without this override the
+     column — and everything in it, including the title — rendered ~12px
+     wider than its real track, overflowing into the masthead's right
+     padding. That's the real cause of "the CTA is narrower than the
+     title": the CTA bar (positioned independently of this grid, sized
+     directly off the true viewport width) was correctly matching the
+     gutter the whole time — the title column was the one rendering wrong. */
+  .detail-b .text-col { min-width: 0; }
+  /* "buy box" column — image and the primary action grouped as one
+     self-contained decision panel (see the markup comment above the
+     masthead for the pattern this follows). Round 12: the facts pills
+     (jugadores/tiempo/dificultad) moved back out of this column to sit
+     at the top of the title block instead — matching the home shelf's
+     card pattern (pills above the title) that Round 5 originally
+     established; the buy box itself now holds only image + CTA. */
+  .detail-b .poster-col { width: 100%; display: flex; flex-direction: column; gap: var(--space-3); }
+  /* no forced text-transform:uppercase — neither sketch 002's .card-title
+     nor production's real show.ex h1 (`font-display text-3xl`, no
+     transform) force it; Bebas Neue reads cap-height on its own, and
+     forcing it would mangle mixed-case titles like "7 Wonders Duel". */
+  .detail-b h1 { font-family: var(--font-display); font-size: 2.25rem; letter-spacing: 0.01em; margin: 0 0 var(--space-2); line-height: 1.1; }
+  .detail-b .tag-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+  .detail-b .desc-collapse { margin-bottom: var(--space-4); }
+  .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
+  .detail-b .desc.is-collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  /* Round 8 put this INSIDE the <p> as trailing inline content — but
+     -webkit-line-clamp clips trailing content along with the rest of the
+     overflow when it doesn't fit inside the visible lines, so the toggle
+     could vanish entirely with no way to expand. Moved back OUT as a
+     sibling (guaranteed visible, immune to the clamp's overflow:hidden) —
+     but zero top margin, left-aligned flush with the text, same font-size
+     as the body copy, and a leading "…" implying it continues the cut-off
+     sentence, so it still reads as attached rather than a floating button. */
+  .detail-b .desc-toggle {
+    display: block; background: none; border: none; padding: 2px 0 0; margin: 0;
+    color: var(--color-text-muted); font-weight: 600; font-size: var(--text-base); font-family: inherit;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .detail-b .desc-toggle:hover { color: var(--color-primary); }
+  /* Round 15: lives in the 320px buy-box column, stacked (not side by
+     side) — two full-labeled buttons don't reliably fit next to each
+     other at that width, which is why share previously shrank to an
+     icon-only circle with only a `title` tooltip. Stacking removes that
+     width constraint entirely: both buttons run full-width, and share
+     gets its label back ("↗ Compartir") instead of relying on a tooltip.
+     Matches the classic Amazon buy-box shape (primary action full-width
+     on top, secondary full-width directly below) more closely than the
+     side-by-side compromise did. Mobile's sticky bar keeps its own
+     side-by-side icon-only share — that's a different, more
+     space-constrained context (a permanently visible fixed bar), not
+     this buy-box column. */
+  .detail-b .cta-row { display: flex; flex-direction: column; gap: var(--space-2); }
+  .detail-b .cta-row .cta-primary { width: 100%; justify-content: center; }
+  .detail-b .cta-row .cta-icon { width: 100%; justify-content: center; }
+  /* Round 14: the "más información" block (mechanics/themes/ficha
+     técnica) moved out of its own full-width section below the masthead
+     and into the same column as the description — it's reading content,
+     not a separate page section. That freed up the buy-box column
+     (`.poster-col`) to become sticky: as the now-much-taller text column
+     scrolls, the image+CTA stay pinned in view the whole time, the same
+     "sticky sidebar beside scrolling content" pattern Airbnb's listing
+     page and Stripe's API reference both use. `top` clears the sticky
+     header's 64px height plus a little breathing room; `align-items:
+     start` on `.masthead` (set above) is what makes a sticky child
+     inside a grid track work at all — without it the item stretches to
+     the row's full height and never "detaches" to stick. */
+  .detail-b .poster-col { position: sticky; top: calc(64px + var(--space-4)); }
+
+  /* facts pill row — values now byte-match sketch 002's real .pills-row/
+     .pill (checked directly against 002-card-hierarchy/index.html), not an
+     approximation: 11px/600-weight muted text, 1px border, 4px/9px padding.
+     Round 6 fix — the previous version used text-xs/700-weight/full-color
+     text and a borderless pill, which was visibly heavier/darker than the
+     real settled component. Round 11 briefly moved this into the buy-box
+     column with the image/CTA; Round 12 moved it back to sit directly
+     above the title, at the top of the reading column — matching the
+     home shelf's own card pattern (pills above the title) and Round 5's
+     original placement. nowrap so the 3 pills (jugadores/tiempo/
+     dificultad) hold to one line — 002's original didn't need nowrap
+     since its pills-row never has more than 3 short items in a narrower,
+     single-purpose card context, but ours needs to guarantee it
+     explicitly given the extra link/hover state. */
+  .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0 0 var(--space-2); }
+  .pk-pill {
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted);
+    font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full);
+    text-decoration: none; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  a.pk-pill:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .pk-pill .pk-difficulty-dot { width: 5px; height: 5px; }
+
+  /* minimal image carousel + lightbox trigger */
+  .detail-carousel { position: relative; aspect-ratio: 3/4; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg); cursor: zoom-in; }
+  .detail-carousel .slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 64px; color: rgba(255,255,255,0.5); opacity: 0; transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+  .detail-carousel .slide.is-active { opacity: 1; }
+  .detail-carousel .cs-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.35); color: #fff; border: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 15px; z-index: 2; transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .detail-carousel .cs-arrow:hover { background: rgba(0,0,0,0.55); }
+  .detail-carousel .cs-arrow.prev { left: 10px; }
+  .detail-carousel .cs-arrow.next { right: 10px; }
+  .detail-carousel .cs-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+  .detail-carousel .cs-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none; cursor: pointer; padding: 0; }
+  .detail-carousel .cs-dot.is-active { background: #fff; }
+  /* zoom hint — a bare glyph in the corner reads as decoration on its
+     own, so it grows/brightens on hover to confirm the whole image is
+     clickable, and the carousel carries a title tooltip as a fallback cue */
+  .detail-carousel .zoom-hint {
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; z-index: 2; pointer-events: none; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .detail-carousel:hover .zoom-hint { background: rgba(0,0,0,0.6); transform: scale(1.1); }
+
+  /* lightbox */
+  .lightbox-backdrop {
+    position: fixed; inset: 0; background: rgba(20,10,30,0.92); z-index: 150; display: flex; align-items: center;
+    justify-content: center; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+    padding: var(--space-6);
+  }
+  .lightbox-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .lightbox-stage { position: relative; width: min(640px, 100%); aspect-ratio: 3/4; max-height: 82vh; }
+  .lightbox-slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 120px;
+    color: rgba(255,255,255,0.55); border-radius: var(--radius-md); opacity: 0; transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .lightbox-slide.is-active { opacity: 1; }
+  .lightbox-close { position: absolute; top: -44px; right: 0; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; cursor: pointer; font-size: 15px; }
+  .lightbox-close:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; cursor: pointer; font-size: 20px; z-index: 2; }
+  .lightbox-arrow:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-arrow.prev { left: -58px; }
+  .lightbox-arrow.next { right: -58px; }
+  @media (max-width: 720px) { .lightbox-arrow.prev { left: 4px; } .lightbox-arrow.next { right: 4px; } .lightbox-close { top: 10px; right: 10px; } }
+
+  /* ---- mobile sticky action bar (Amazon/Booking.com/Airbnb mobile
+     pattern) — replaces the inline cta-row on mobile so the primary
+     action stays reachable at the bottom of the viewport regardless of
+     scroll position, without ever sitting mid-paragraph in the reading
+     flow. Hidden by default; shown only in the mobile media query.
+     Round 25: stacked (primary on top, full-width share below) instead
+     of side by side — matching the same buy-box shape Round 15 already
+     settled on for desktop, and giving share its label back instead of
+     an icon-only circle.
+     Round 27: `.is-hidden` now means "an active scroll gesture is in
+     progress" (hidden for the duration of the scroll, shown again once
+     scrolling actually stops), not scroll direction — see the scroll
+     listener below. Visible by default/on first render, same as before.
+     Round 26: this whole block MUST come before the
+     `@media (max-width: 768px)` block below — both declare
+     `.mobile-cta-bar { display }` at equal specificity, and the later
+     declaration in source order wins the cascade regardless of which
+     media query actually matches. This rule used to sit after that media
+     query (closer to `.cta-icon`, where it read naturally next to the
+     other CTA styles), which meant this `display: none` silently beat
+     the media query's `display: flex` at every viewport width — the bar
+     has never actually been visible until this reorder. Real bug, not a
+     rendering/browser quirk: verified by literal source-line order, not
+     by guessing from a screenshot. */
+  /* Round 33: two fixes in one, both from "needs subtle animation and
+     better balance of color overlapping":
+     1. Background was `--color-bg` (#FFFFFF) — the exact same white as
+        `.cta-icon`'s own background (see the shared `.cta-icon` rule
+        below). With only a 1px, near-white `--color-border` between them,
+        the outlined share button barely read as a separate control from
+        the bar it sits on — everything at the bottom of the screen
+        visually fused into one white mass. Switched the bar to
+        `--color-surface` (the app's soft-lavender surface tone, already
+        used for the footer/cards) so the white share button now sits on a
+        visibly different plane instead of blending into it.
+     2. Hide/show was a plain `transform` slide with the standard (not
+        "soft") easing curve — mechanical, one property doing all the
+        work. Added a paired opacity fade and switched to
+        `--ease-out-soft` (already this file's convention for entrances —
+        share popover, modal) so the bar settles in/out instead of
+        snapping on a rail. */
+  .mobile-cta-bar {
+    display: none; flex-direction: column; gap: var(--space-2);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: var(--color-surface); border-top: 1px solid var(--color-border);
+    padding: var(--space-3) var(--pk-gutter);
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(20,8,34,0.08);
+    transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
+  }
+  .mobile-cta-bar.is-hidden { transform: translateY(12%); opacity: 0; pointer-events: none; }
+  /* Round 34: distinct from `.is-hidden` on purpose — `.is-hidden` is a
+     transient ~200ms state driven by the scroll-active debounce (Round
+     27) and clears itself on a timer regardless of where you are on the
+     page. `.is-parked` means "the footer is on screen, there's nothing
+     left to reach for" — it has to stay hidden for as long as that's
+     true, not clear itself after 200ms of stillness. Full off-screen
+     slide (not the smaller `.is-hidden` nudge) since this one's meant to
+     read as "gone," not "paused." */
+  .mobile-cta-bar.is-parked { transform: translateY(100%); opacity: 0; pointer-events: none; }
+  .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
+  .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; background: var(--color-bg); }
+
+  /* Round 30 reverted Round 29's @container back to plain @media — see
+     the .viewport-frame comment above for why. */
+  @media (max-width: 768px) {
+    /* image goes full-bleed edge-to-edge; the breakout targets
+       .carousel-wrap specifically (not the whole poster-col), since the
+       CTA row below it keeps the masthead's normal gutter padding. */
+    .detail-b .masthead { grid-template-columns: 1fr; padding-top: 0; }
+    /* sticky only makes sense once poster-col sits beside a taller
+       scrolling column (desktop's 2-column grid) — on the single-column
+       mobile stack it would just pin the image awkwardly mid-scroll. */
+    .detail-b .poster-col { position: static; }
+    .detail-b .carousel-wrap { margin-left: calc(-1 * var(--pk-gutter)); margin-right: calc(-1 * var(--pk-gutter)); }
+    /* Round 25: 3:4 (desktop's ratio) made the carousel ~500px tall on a
+       375px-wide phone — nearly a full screen of image before any content
+       is visible. 4:3 (landscape-ish) cuts that to ~280px, closer to how
+       most mobile product carousels size their hero image. */
+    .detail-b .detail-carousel { border-radius: 0; aspect-ratio: 4/3; }
+    .detail-b h1 { font-size: 1.75rem; }
+    .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
+    /* companion to `.text-col { min-width: 0 }` above: now that the
+       column can actually shrink to its real ~256px track, the 3
+       nowrap facts pills (~268px unwrapped) no longer have room to force
+       it wider — they wrap to a second line instead, rather than
+       clipping or re-introducing the overflow this was meant to fix. */
+    .pk-pill-row { flex-wrap: wrap; }
+    /* inline cta-row is desktop-only now — the fixed mobile-cta-bar below
+       takes over as the reachable action on mobile, so this would just be
+       a redundant second copy of the same buttons sitting mid-page. */
+    .detail-b .cta-row { display: none; }
+    .mobile-cta-bar { display: flex; }
+    .game-sticky-bar { display: flex; }
+    /* keeps the sticky bar from covering the footer's last content —
+       taller now that the bar stacks two full-width buttons (Round 25)
+       instead of one row, so the reserved space grew alongside it.
+       Round 34: this reserved space is only needed while the CTA bar is
+       actually floating over content. Once the footer itself scrolls into
+       view (`.is-cta-parked`, set by the IntersectionObserver below), the
+       bar retracts and this collapses to 0 — same "unstick at the natural
+       end of content" behavior desktop's sticky poster-col already gets
+       for free (Round 12), just done in JS here since `position: fixed`
+       (unlike `position: sticky`) has no native concept of a boundary to
+       stop at. Higher specificity than the bare `body` rule above (a
+       class beats an element selector), so it wins regardless of source
+       order — no Round 26-style cascade trap here. */
+    body { padding-bottom: 148px; transition: padding-bottom var(--duration-base) var(--ease-out-soft); }
+    body.is-cta-parked { padding-bottom: 0; }
+  }
+
+  /* ---- primary reservation CTA ---- */
+  /* Round 8: fully-rounded (radius-full) capsule shape is already the
+     established visual vocabulary for pills/chips (facts pills, tag
+     chips) — using the same capsule shape here just made the CTA read as
+     "a bigger, stronger pill," not a distinct button type. Switched to
+     radius-lg (a rounded rectangle, not a full capsule) specifically to
+     break that shape association — pills/tags stay capsules, buttons are
+     rounded rectangles, one consistent rule going forward.
+     Round 13: the elevation used to live almost entirely in the :hover
+     state (shadow-sm at rest → shadow-md on hover) — a hover-only cue is
+     invisible on a touch device (nothing hovers on tap) and reads as flat
+     colored text rather than a raised, pressable button at first glance.
+     Resting state now carries real depth (shadow-md) on its own; hover
+     goes further (shadow-lg) so the lift is additive, not the only signal
+     that this is clickable. */
+  .cta-primary {
+    display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px; border-radius: var(--radius-lg);
+    border: none; background: var(--color-primary); color: var(--color-primary-content); font-weight: 700;
+    font-size: var(--text-sm); cursor: pointer; box-shadow: var(--shadow-md);
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .cta-primary:hover { background: var(--color-secondary); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .cta-primary:active { box-shadow: var(--shadow-sm); transform: translateY(0); }
+
+  /* ---- share button + popover ---- */
+  /* was an icon-only circle with just a bare "↗" glyph — not a recognized
+     share icon, and easy to misread as decoration or an external-link
+     marker. Now an always-labeled button (same height/shape family as the
+     primary CTA — rounded rectangle, not a capsule — but secondary,
+     outlined instead of filled) so the action is legible on its own, not
+     just on hover/mobile. */
+  .cta-icon {
+    display: inline-flex; align-items: center; gap: 6px; height: 48px; padding: 0 20px; border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
+    cursor: pointer; font-size: var(--text-sm); font-weight: 700; position: relative;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .cta-icon:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .cta-icon .icon-label { font-weight: 700; }
+  .share-popover {
+    position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-4px);
+    background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg); padding: var(--space-2); display: flex; gap: 6px; opacity: 0; pointer-events: none;
+    transition: all var(--duration-fast) var(--ease-out-soft); z-index: 30; white-space: nowrap;
+  }
+  .share-popover.is-open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+  .share-popover button { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--color-surface); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .share-popover button:hover { background: var(--color-accent-bg); }
+  .share-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); z-index: 200;
+    background: var(--color-text); color: #fff; padding: 10px 18px; border-radius: var(--radius-full);
+    font-size: var(--text-sm); opacity: 0; pointer-events: none; transition: all var(--duration-base) var(--ease-out-soft);
+  }
+  .share-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---- "más información" (mechanics, themes, ficha técnica) ----
+     Round 3 gave this exactly one divider by relying on the masthead-band's
+     own bottom border, back when it lived in a separate full-width section
+     below the masthead (`.body`). Round 14 moved it into the same column as
+     the description instead — it's reading content, not a separate page
+     section — so it needs its own top divider now: one hairline border,
+     and (per Round 16) the ONLY divider in this whole block.
+     Round 24: retired the accordion entirely, mobile included — it was
+     the second disclosure widget in a row right after the description's
+     own "Leer más" toggle, which reads as two different expand/collapse
+     interactions stacked back to back for no real reason. Mobile users
+     already scroll long pages routinely; gating supplementary spec data
+     behind a click doesn't save meaningful space the way it might have
+     on a much shorter page. Same treatment at every width now: no
+     trigger, no button, content just flows — this class is a plain
+     divider wrapper, not a disclosure widget, at any viewport. */
+  .more-info { padding-top: var(--space-4); margin-top: var(--space-2); border-top: 1px solid var(--color-border); }
+  .more-info-inner { padding-bottom: var(--space-4); padding-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-4); }
+
+  /* "ficha técnica" as a clean spec-list. Round 16: dropped the
+     per-row hairline divider — with 7 rows, a line under every single
+     one competed with the section's own top divider (added Round 14) and
+     read as "dividers for everything" rather than a clean list; vertical
+     rhythm now comes from padding alone, no rules needed. Also switched
+     from justify-content:space-between + right-aligned value (label and
+     value distance varied row to row, depending on each label's length)
+     to a fixed-width label column + left-aligned value — every value now
+     starts at the same left edge regardless of label length, which is
+     what was actually meant by inconsistent "spacing between label and
+     value": it wasn't a gap-size bug, it was a lack of a shared column. */
+  /* Round 21/22 built a desktop-only 2-column split, explicitly placed by
+     nth-child to keep a credits-column/BGG-stats-column grouping aligned.
+     Round 24: dropped the viewport gate and the grouping-by-position
+     scheme entirely, in favor of one rule that works at every width —
+     short, simple values (Editorial, Edad mínima, Año, Peso BGG) pair up
+     two-per-row via plain grid auto-flow; anything with a long value
+     (Diseñadores' two linked names, and the three `.missing` explanatory
+     sentences) is marked `.spec-row--wide` and spans the full row instead
+     of cramming into half a column at any width, mobile's ~311px
+     included. No nth-child bookkeeping needed — auto-flow just places
+     each row in the next open cell, in source order. */
+  .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-3); row-gap: 0; }
+  .spec-row--wide { grid-column: 1 / -1; }
+  @media (min-width: 769px) { .spec-list { column-gap: var(--space-6); } }
+  /* Round 19: label stacked above value (not side by side) — a small
+     property card per field, uppercase label byte-matching
+     .section-heading's rhythm on top, the value in normal reading weight
+     below it. */
+  .spec-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; font-size: var(--text-sm); }
+  .spec-row dt {
+    margin: 0; color: var(--color-text-muted); font-weight: 700;
+    font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .spec-row dd { margin: 0; color: var(--color-text); }
+  .spec-row dd.missing { color: var(--color-text-muted); font-style: italic; font-size: var(--text-xs); }
+  .spec-row dd a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+  .spec-row dd a:hover { text-decoration: underline; }
+  .bgg-link-row { font-size: var(--text-sm); padding-top: var(--space-2); }
+  .bgg-link-row a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+  .bgg-link-row a:hover { text-decoration: underline; }
+
+  /* ---- reservation modal (polish pass) ---- */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(36,18,56,0.55); backdrop-filter: blur(2px); z-index: 100;
+    display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-standard); padding: var(--space-4);
+  }
+  .modal-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    position: relative; background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    width: min(420px, 100%); padding: var(--space-6); transform: scale(0.96) translateY(8px);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
+  .modal-backdrop.is-open .modal-box { transform: scale(1) translateY(0); }
+  .modal-game-preview { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-4); margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .modal-game-thumb {
+    flex: 0 0 48px; width: 48px; height: 48px; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+    display: flex; align-items: center; justify-content: center; font-size: 20px; color: rgba(255,255,255,0.6);
+  }
+  .modal-game-name { font-family: var(--font-sans); font-weight: 700; font-size: var(--text-sm); margin: 0; color: var(--color-text); }
+  .modal-game-sub { font-size: var(--text-xs); color: var(--color-text-muted); margin: 2px 0 0; }
+  .modal-box h3 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-1); text-transform: uppercase; }
+  .modal-box .modal-sub { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); line-height: 1.5; }
+  .modal-box label { display: block; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); margin-bottom: 6px; }
+  .modal-box input[type=text] {
+    width: 100%; padding: 12px 14px; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    font-size: var(--text-base); font-family: var(--font-sans); margin-bottom: var(--space-2);
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .modal-box input[type=text]:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-accent-bg); }
+  .modal-actions { margin-top: var(--space-2); }
+  .modal-close {
+    position: absolute; top: var(--space-4); right: var(--space-4); width: 30px; height: 30px; border-radius: 50%;
+    border: none; background: var(--color-surface); color: var(--color-text-muted); cursor: pointer; font-size: 13px;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .modal-close:hover { background: var(--color-accent-bg); color: var(--color-primary); }
+  .wa-preview {
+    background: var(--color-surface); border-left: 3px solid var(--color-primary); border-radius: var(--radius-sm);
+    padding: var(--space-3); font-size: var(--text-sm); color: var(--color-text); line-height: 1.5;
+    margin: 0 0 var(--space-4); white-space: pre-wrap;
+  }
+  .wa-success .icon {
+    width: 56px; height: 56px; margin: 0 auto var(--space-3); border-radius: 50%; background: var(--color-accent-bg);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .wa-success h3 { text-align: center; }
+  .wa-success .modal-sub { text-align: center; }
+  .wa-open-link {
+    display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: #fff;
+    padding: 13px; border-radius: var(--radius-full); font-weight: 700; text-decoration: none;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+  .wa-open-link:hover { opacity: 0.88; }
+  .field-error { color: var(--color-danger); font-size: var(--text-xs); margin: -4px 0 10px; display: none; }
+  .field-error.is-visible { display: block; }
+
+  /* Round 28: this sketch-only dev toolbar used to sit bottom-right,
+     directly on top of the real mobile-cta-bar (also bottom, full-width,
+     z-index:60) — its own z-index:9999 meant it visually covered/cut off
+     the share button, which looked exactly like "the CTA bar shows
+     nothing" even though the bar itself was rendering correctly. Moved
+     below the sticky header (top:76px clears its 64px height) instead of
+     the top edge itself, so it doesn't turn around and cover the header's
+     theme toggle in the same way. */
+  #sketch-tools { position: fixed; top: 76px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; }
+  #sketch-tools:hover { opacity: 1; }
+  /* Round 32: mobile now has a second sticky element below the header
+     (.game-sticky-bar), so 76px isn't always clear of real design chrome
+     anymore on small widths — pushed further down, review-tooling only,
+     matching this rule's own Round 26 lesson: must come after the base
+     rule above since both hit `#sketch-tools { top }` at equal
+     specificity. Round 33: bar shrank to a single title row once
+     pills/tags were dropped, so this came back down from 168px. */
+  @media (max-width: 768px) { #sketch-tools { top: 130px; } }
+  /* Round 29 tried making this a CSS container-query container
+     (`container-type: inline-size`) so the layout's mobile/desktop
+     breakpoints could respond to the toolbar's 📱375/📟768/🖥1280 buttons
+     (which only change THIS element's `max-width`, never the real
+     browser window — so plain @media queries never actually respond to
+     them). Round 30 reverted it: `container-type` implicitly applies CSS
+     containment, and a contained element becomes a new containing block
+     for `position: fixed` descendants — same effect as `transform`. Since
+     `#mobile-cta-bar` lives inside this element, its `bottom: 0` stopped
+     anchoring to the real viewport and started anchoring to THIS
+     element's own (full-page-height) box instead, pushing the bar far
+     below the visible screen — invisible in exactly the real devtools
+     device-emulation testing this toolbar exists to support, which
+     already sets a genuine window width and needs no help from
+     @container at all. Net worse than the problem it solved. To
+     preview mobile layout, resize the real browser window (or use
+     devtools' device toolbar) — the 📱/📟/🖥 buttons are a rough visual
+     approximation only, not a true breakpoint simulator. */
+  .viewport-frame { transition: max-width var(--duration-base) var(--ease-standard); margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<!-- ============================= VARIANT B ============================= -->
+<div id="variant-b">
+  <div class="shell viewport-frame">
+    <div class="pk-header pk-gutter">
+      <div class="pk-nav">
+        <a href="#" class="pk-brand">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+          <span class="pk-brand-text"><span class="word">Pukllay Club</span><span class="tag">Juegos de mesa modernos</span></span>
+        </a>
+        <div class="pk-nav-crumb"><a href="#">Catálogo</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span></div>
+        <div class="pk-theme-toggle"><button>☀</button><button>🌙</button></div>
+      </div>
+    </div>
+
+    <!-- Round 32, mobile-only: title-only echo of #game-identity, pinned
+         just below the site header. Fades in only once the real
+         #game-identity block has scrolled out of view (IntersectionObserver
+         below), so "what game is this" survives scrolling this long a page
+         without duplicating the identity block while it's still visible.
+         Desktop doesn't need this — Round 12's poster-col sidebar keeps the
+         title/facts in view for free via its own sticky behavior.
+         Round 33: dropped the pills+tags this used to repeat — feedback was
+         that duplicating the full facts block here felt overloaded; the
+         "full" version already lives in the real masthead just above,
+         this one's only job is the title. Paired with a scroll-to-top
+         button since it's otherwise a lot of empty horizontal space next
+         to a single line of text. -->
+    <div class="game-sticky-bar" id="game-sticky-bar">
+      <h2>Terraforming Mars: Ares Expedition</h2>
+      <button class="scroll-top-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Volver arriba" title="Volver arriba">↑</button>
+    </div>
+
+    <main class="detail detail-b">
+      <div class="masthead-band">
+        <div class="masthead">
+          <!-- "Buy box" pattern (Amazon/Shopify/Airbnb product & listing
+               pages): the image and the primary action live together as
+               one self-contained decision panel, separate from the
+               long-form reading content (title/description). Every
+               earlier attempt to fix the CTA row kept it rearranging
+               buttons inside the reading column — the actual problem was
+               that buttons don't belong in a prose flow at all, regardless
+               of how they're arranged within it. The facts pills sit with
+               the title instead (Round 12) — they're metadata about what's
+               being read, not part of the purchase decision, so they read
+               naturally at the top of the title block, matching the home
+               shelf's own card pattern. -->
+          <div class="poster-col">
+            <div class="carousel-wrap">
+              <div class="detail-carousel" data-carousel onclick="openLightbox()" title="Ampliar imagen">
+                <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
+                <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
+                <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
+                <div class="slide" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
+                <button class="cs-arrow prev" onclick="event.stopPropagation(); carouselStep(this,-1)" aria-label="Anterior">‹</button>
+                <button class="cs-arrow next" onclick="event.stopPropagation(); carouselStep(this,1)" aria-label="Siguiente">›</button>
+                <div class="cs-dots"></div>
+                <div class="zoom-hint">⤢</div>
+              </div>
+            </div>
+            <div class="cta-row" id="masthead-cta-row">
+              <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
+              <div style="position:relative">
+                <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
+                  <span>↗</span><span class="icon-label">Compartir</span>
+                </button>
+                <div class="share-popover">
+                  <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
+                  <button onclick="shareVia('x')" title="X / Twitter">X</button>
+                  <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="text-col">
+            <!-- filterable facts pills, at the top of the title block —
+                 jugadores/tiempo are real params on CatalogLive.Index;
+                 dificultad links via weight_bands. See README for the
+                 URL-persistence gap this depends on.
+                 Round 32: wrapped with the title/tags in #game-identity so
+                 the mobile sticky bar below can watch (via
+                 IntersectionObserver) exactly when this whole block has
+                 scrolled out of view — see .game-sticky-bar. -->
+            <div class="game-identity" id="game-identity">
+              <div class="pk-pill-row">
+                <a class="pk-pill" href="/?players=4" title="Filtrar por cantidad de jugadores">👥 1-4</a>
+                <a class="pk-pill" href="/?max_playtime=120" title="Filtrar por duración">⏱ 90-120 min</a>
+                <a class="pk-pill" href="/?weight_bands=Nivel+experto" title="Filtrar por dificultad">
+                  <span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto
+                </a>
+              </div>
+              <h1>Terraforming Mars: Ares Expedition</h1>
+              <div class="tag-row">
+                <a class="chip tag" href="/?tags=Duelos+Memorables" title="Filtrar por etiqueta">Duelos Memorables</a>
+                <a class="chip tag" href="/?tags=Equipo+Ganador" title="Filtrar por etiqueta">Equipo Ganador</a>
+              </div>
+            </div>
+            <div class="desc-collapse reading-measure">
+              <p class="desc is-collapsed" id="detail-desc-b">Terraformá Marte compitiendo con otras
+                corporaciones: subí la temperatura, el oxígeno y el agua del planeta mientras
+                construís tu propio motor de producción de recursos. Esta edición standalone
+                simplifica las reglas del original sin perder profundidad estratégica — ideal para
+                quienes quieren probar el sistema de Terraforming Mars sin la carga completa del
+                juego base.</p>
+              <button class="desc-toggle" onclick="toggleDescCollapse(this)">… Leer más</button>
+            </div>
+
+            <!-- Round 24: no longer an accordion at any width — see the
+                 .more-info CSS comment for why. -->
+            <div class="more-info">
+              <div class="more-info-inner reading-measure">
+                <div>
+                  <p class="section-heading">Mecánicas</p>
+                  <div class="chip-row">
+                    <a class="chip" href="/?mechanics=Construcción+de+motor">Construcción de motor</a>
+                    <a class="chip" href="/?mechanics=Gestión+de+mano">Gestión de mano</a>
+                    <a class="chip" href="/?mechanics=Colocación+de+losetas">Colocación de losetas</a>
+                    <a class="chip" href="/?mechanics=Puntuación+variable">Puntuación variable</a>
+                  </div>
+                </div>
+                <div>
+                  <p class="section-heading">Temas</p>
+                  <div class="chip-row">
+                    <a class="chip" href="/?themes=Ciencia+ficción">Ciencia ficción</a>
+                    <a class="chip" href="/?themes=Exploración+espacial">Exploración espacial</a>
+                  </div>
+                </div>
+                <div>
+                  <!-- .spec-row--wide: long values (linked names, the
+                       .missing explanatory sentences) always get the full
+                       row; short ones auto-flow two per row, at any
+                       viewport width — see the .spec-list CSS comment. -->
+                  <dl class="spec-list">
+                    <div class="spec-row spec-row--wide"><dt>Diseñadores</dt><dd><a href="/?q=Jacob+Fryxelius" title="Buscar juegos de este diseñador">Jacob Fryxelius</a>, <a href="/?q=Isaac+Fryxelius" title="Buscar juegos de este diseñador">Isaac Fryxelius</a></dd></div>
+                    <div class="spec-row spec-row--wide"><dt>Ilustrador</dt><dd class="missing">No disponible — campo no existe en el catálogo hoy</dd></div>
+                    <div class="spec-row"><dt>Editorial</dt><dd><a href="/?q=FryxGames" title="Buscar juegos de esta editorial">FryxGames</a></dd></div>
+                    <div class="spec-row"><dt>Edad mínima</dt><dd><a href="/?min_age=12">12+</a></dd></div>
+                    <div class="spec-row"><dt>Año</dt><dd>2021</dd></div>
+                    <div class="spec-row"><dt>Peso BGG</dt><dd>3.8 / 5</dd></div>
+                    <div class="spec-row spec-row--wide"><dt>Ranking BGG</dt><dd class="missing">#142 (dato de ejemplo, no confirmado)</dd></div>
+                    <div class="spec-row spec-row--wide"><dt>Calificación BGG</dt><dd class="missing">8.1 / 10 (dato de ejemplo, no confirmado)</dd></div>
+                  </dl>
+                  <div class="bgg-link-row"><a href="#">Ver en BoardGameGeek ↗</a></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile-only sticky action bar (Amazon/Booking.com/Airbnb
+               mobile pattern for long content pages with one primary
+               action): stays reachable at the bottom of the viewport
+               regardless of scroll position, and never interrupts the
+               reading flow above it. Duplicates the same CTA/share
+               actions as the desktop buy box — the inline cta-row above
+               is hidden on mobile via CSS, this bar takes over. -->
+          <div class="mobile-cta-bar" id="mobile-cta-bar">
+            <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
+            <div style="position:relative">
+              <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
+                <span>↗</span><span class="icon-label">Compartir</span>
+              </button>
+              <div class="share-popover">
+                <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
+                <button onclick="shareVia('x')" title="X / Twitter">X</button>
+                <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Round 35: "Juegos similares" shelf — the same real, shipped home
+           page pattern (CarouselRow + GameCard, see the .pk-shelf CSS
+           comment above for the exact source), placed as the exit hook
+           back into browsing once you've read through this game's detail.
+           Sits between the last real content (ficha técnica/BGG link) and
+           the footer, inside <main> so it still reads as page content, not
+           chrome — .pk-shelf's own top margin plus the footer's existing
+           margin-top give it room to breathe on both sides without a
+           dedicated wrapper. Data is a plausible fixture (real
+           "similar" — shared mechanics/weight band — would need an actual
+           query; not attempted here), and cards are plain `href="#"`
+           stubs, same convention as the mechanic/theme chips above. -->
+      <section class="pk-shelf pk-gutter" id="similar-games">
+        <div class="pk-row-header">
+          <div>
+            <h2>Juegos similares</h2>
+            <p>Mecánicas y complejidad parecidas a este juego</p>
+          </div>
+          <div class="pk-row-controls" data-controls>
+            <button type="button" data-scroll="prev" aria-label="Desplazar hacia la izquierda">‹</button>
+            <button type="button" data-scroll="next" aria-label="Desplazar hacia la derecha">›</button>
+          </div>
+        </div>
+        <div class="pk-rail-wrap">
+          <div class="pk-rail" data-rail>
+            <a class="pk-poster-card" href="#" title="Ver Res Arcana">
+              <div class="pk-card-poster" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary));color:var(--color-primary-content)">🔮</div>
+              <div class="pk-card-caption"><h3>Res Arcana</h3></div>
+            </a>
+            <a class="pk-poster-card" href="#" title="Ver Wingspan">
+              <div class="pk-card-poster" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary));color:var(--color-primary-content)">🐦</div>
+              <div class="pk-card-caption"><h3>Wingspan</h3></div>
+            </a>
+            <a class="pk-poster-card" href="#" title="Ver Everdell">
+              <div class="pk-card-poster" style="background:linear-gradient(135deg,var(--color-primary),#241238);color:var(--color-primary-content)">🌳</div>
+              <div class="pk-card-caption"><h3>Everdell</h3></div>
+            </a>
+            <a class="pk-poster-card" href="#" title="Ver Viticulture">
+              <div class="pk-card-poster" style="background:linear-gradient(135deg,var(--color-secondary),#241238);color:var(--color-primary-content)">🍇</div>
+              <div class="pk-card-caption"><h3>Viticulture</h3></div>
+            </a>
+            <a class="pk-poster-card" href="#" title="Ver Scythe">
+              <div class="pk-card-poster" style="background:linear-gradient(135deg,var(--color-primary),var(--color-secondary));color:var(--color-primary-content)">⚙️</div>
+              <div class="pk-card-caption"><h3>Scythe</h3></div>
+            </a>
+            <a class="pk-poster-card" href="#" title="Ver Gaia Project">
+              <div class="pk-card-poster" style="background:linear-gradient(135deg,var(--color-accent-text),#241238);color:var(--color-primary-content)">🌌</div>
+              <div class="pk-card-caption"><h3>Gaia Project</h3></div>
+            </a>
+            <a class="pk-poster-card" href="#" title="Ver Brass: Birmingham">
+              <div class="pk-card-poster" style="background:linear-gradient(135deg,#241238,var(--color-primary));color:var(--color-primary-content)">🏭</div>
+              <div class="pk-card-caption"><h3>Brass: Birmingham</h3></div>
+            </a>
+            <a class="pk-poster-card" href="#" title="Ver Great Western Trail">
+              <div class="pk-card-poster" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-accent-text));color:var(--color-primary-content)">🐄</div>
+              <div class="pk-card-caption"><h3>Great Western Trail</h3></div>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="pk-footer footer-c">
+      <div class="mission-band">
+        <h3>Encontrá el juego justo para tu mesa</h3>
+        <p>Un catálogo curado de juegos de mesa modernos para gente nueva en el hobby.</p>
+        <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
+      </div>
+      <div class="utility-bar">
+        <ul class="footer-links inline"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">Contacto</a></li></ul>
+        <div style="display:flex; align-items:center; gap:var(--space-3)">
+          <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
+          <span class="footer-copyright">© 2026 Pukllay Club</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- Lightbox — opened by clicking the masthead carousel. Stays in sync
+     with whichever slide the carousel is on (see carouselShow/lightboxShow). -->
+<div class="lightbox-backdrop" id="lightbox" onclick="if(event.target===this) closeLightbox()">
+  <div class="lightbox-stage">
+    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Cerrar">✕</button>
+    <button class="lightbox-arrow prev" onclick="lightboxStep(-1)" aria-label="Anterior">‹</button>
+    <button class="lightbox-arrow next" onclick="lightboxStep(1)" aria-label="Siguiente">›</button>
+    <div class="lightbox-slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
+  </div>
+</div>
+
+<!-- Shared "¡Quiero Jugarlo!" reservation modal — one instance, reused by
+     whichever variant/CTA opened it. Real implementation: name -> WhatsApp
+     Business deep link (wa.me) with a pre-filled reservation message, using
+     the club's real WhatsApp Business number. In the real app this number
+     belongs in runtime env config, not hardcoded in a template — it's
+     hardcoded here only because a static sketch has no config layer. -->
+<div class="modal-backdrop" id="reserve-modal" onclick="if(event.target===this) closeReserveModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeReserveModal()" aria-label="Cerrar">✕</button>
+
+    <div id="reserve-step-form">
+      <div class="modal-game-preview">
+        <div class="modal-game-thumb" id="reserve-game-thumb">🚀</div>
+        <div>
+          <p class="modal-game-name" id="reserve-game-name">Terraforming Mars: Ares Expedition</p>
+          <p class="modal-game-sub">Reserva para la próxima juntada del club</p>
+        </div>
+      </div>
+      <h3>¡Quiero Jugarlo!</h3>
+      <p class="modal-sub">Dejanos tu nombre y le mandamos el pedido al club por WhatsApp.</p>
+      <label for="reserve-name">Tu nombre</label>
+      <input type="text" id="reserve-name" placeholder="Ej: Augusto Pedraza" />
+      <p class="field-error" id="reserve-error">Ingresá tu nombre para continuar.</p>
+      <div class="modal-actions">
+        <button class="cta-primary" style="width:100%; justify-content:center" onclick="submitReserve()">💬 Reservar por WhatsApp</button>
+      </div>
+    </div>
+
+    <div id="reserve-step-success" style="display:none" class="wa-success">
+      <div class="icon">✅</div>
+      <h3>¡Listo!</h3>
+      <p class="modal-sub">Le mandamos este mensaje al club por vos — confirmalo abriendo WhatsApp:</p>
+      <div class="wa-preview" id="wa-message-preview"></div>
+      <a href="#" target="_blank" class="wa-open-link" id="wa-open-link">💬 Abrir WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<div class="share-toast" id="share-toast">¡Enlace copiado!</div>
+
+<div id="sketch-tools">
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default theme</option>
+  </select>
+  <button onclick="setViewport(375)">📱 375</button>
+  <button onclick="setViewport(768)">📟 768</button>
+  <button onclick="setViewport(1280)">🖥 1280</button>
+  <button onclick="setViewport('none')">↔ Full</button>
+</div>
+
+<script>
+  // ---- minimal image carousel (masthead) ----
+  const carouselEl = document.querySelector('[data-carousel]');
+  let carouselIndex = 0;
+
+  function setupCarouselDots() {
+    const slides = Array.from(carouselEl.querySelectorAll('.slide'));
+    const dotsWrap = carouselEl.querySelector('.cs-dots');
+    dotsWrap.innerHTML = slides.map((_, i) => `<button class="cs-dot${i === 0 ? ' is-active' : ''}" onclick="event.stopPropagation(); carouselGoTo(${i})"></button>`).join('');
+  }
+  function carouselShow(index) {
+    const slides = Array.from(carouselEl.querySelectorAll('.slide'));
+    const dots = Array.from(carouselEl.querySelectorAll('.cs-dot'));
+    carouselIndex = (index + slides.length) % slides.length;
+    slides.forEach((s, i) => s.classList.toggle('is-active', i === carouselIndex));
+    dots.forEach((d, i) => d.classList.toggle('is-active', i === carouselIndex));
+    lightboxShow(carouselIndex);
+  }
+  function carouselStep(btn, dir) { carouselShow(carouselIndex + dir); }
+  function carouselGoTo(i) { carouselShow(i); }
+  setupCarouselDots();
+
+  // ---- lightbox (click the carousel image to open a full-size viewer,
+  // synced to whichever slide the carousel is currently on) ----
+  function openLightbox() {
+    lightboxShow(carouselIndex);
+    document.getElementById('lightbox').classList.add('is-open');
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('is-open');
+  }
+  function lightboxShow(index) {
+    const slides = document.querySelectorAll('.lightbox-slide');
+    slides.forEach((s, i) => s.classList.toggle('is-active', i === index));
+  }
+  function lightboxStep(dir) { carouselShow(carouselIndex + dir); }
+
+  // ---- mobile sticky chrome: CTA bar (bottom) + game-identity bar (top),
+  // coordinated through one shared `footerReached` flag (Round 34). ----
+  (function () {
+    const ctaBar = document.getElementById('mobile-cta-bar');
+    const identity = document.getElementById('game-identity');
+    const stickyBar = document.getElementById('game-sticky-bar');
+    const footer = document.querySelector('.pk-footer');
+    let footerReached = false;
+    let scrolledPastIdentity = false;
+
+    function refreshStickyBar() {
+      if (!stickyBar) return;
+      stickyBar.classList.toggle('is-visible', scrolledPastIdentity && !footerReached);
+    }
+
+    // Visible at rest (including on first render), hides for the duration
+    // of an active scroll gesture, reveals again once scrolling actually
+    // stops. Round 27 replaced the earlier direction-based hide/show (down
+    // hides, up reveals) with this — the ask was specifically "hidden
+    // while scrolling, shown again when stop scrolling," not
+    // direction-dependent. Debounced: each scroll event hides the bar and
+    // resets a timer; the bar only reappears once no further scroll event
+    // has fired for 200ms (i.e. the gesture ended) — unless the footer is
+    // parked, in which case it stays hidden regardless (see below).
+    let scrollEndTimer;
+    if (ctaBar) {
+      window.addEventListener('scroll', () => {
+        if (footerReached) return;
+        ctaBar.classList.add('is-hidden');
+        clearTimeout(scrollEndTimer);
+        scrollEndTimer = setTimeout(() => ctaBar.classList.remove('is-hidden'), 200);
+      });
+    }
+
+    // Fades in once #game-identity (the real pills+title+tags up in the
+    // masthead) has scrolled fully out of view above the viewport, fades
+    // out again once it's back in view. IntersectionObserver instead of a
+    // scroll-position threshold so this stays correct regardless of how
+    // tall the masthead ends up being — it's watching the actual element,
+    // not a guessed pixel offset. rootMargin's top offset accounts for the
+    // 64px site header so "out of view" means "scrolled under the
+    // header," not just past y=0.
+    if (identity && stickyBar) {
+      new IntersectionObserver(([entry]) => {
+        scrolledPastIdentity = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+        refreshStickyBar();
+      }, { rootMargin: '-64px 0px 0px 0px', threshold: 0 }).observe(identity);
+    }
+
+    // Round 34: "once you reach the footer, the sticky chrome should park
+    // so the footer displays normally" — `position: fixed` (unlike
+    // `position: sticky`) has no native concept of a boundary to stop at,
+    // so this fakes it with an IntersectionObserver on the footer itself.
+    // The instant any part of the footer is on screen, both sticky bars
+    // retract and the CTA bar's reserved `body` padding collapses to 0 —
+    // matching the same "un-stick at the natural end of content" behavior
+    // desktop's sticky poster-col already gets for free via real
+    // `position: sticky` (Round 12). Reverses cleanly scrolling back up.
+    if (footer) {
+      new IntersectionObserver(([entry]) => {
+        footerReached = entry.isIntersecting;
+        document.body.classList.toggle('is-cta-parked', footerReached);
+        if (ctaBar) ctaBar.classList.toggle('is-parked', footerReached);
+        refreshStickyBar();
+      }, { threshold: 0 }).observe(footer);
+    }
+  })();
+
+  // ---- "Juegos similares" shelf (Round 35): mirrors the real
+  // `.CarouselScroll` colocated hook from `CarouselRow` — prev/next
+  // buttons scroll the rail by ~90% of its own width, and the controls
+  // hide themselves via ResizeObserver whenever the rail has nothing left
+  // to scroll to (e.g. a wide desktop viewport showing every card at
+  // once), rather than staying visible as dead buttons that do nothing. ----
+  (function () {
+    const shelf = document.getElementById('similar-games');
+    if (!shelf) return;
+    const rail = shelf.querySelector('[data-rail]');
+    const controls = shelf.querySelector('[data-controls]');
+    shelf.addEventListener('click', (e) => {
+      const button = e.target.closest('[data-scroll]');
+      if (!button) return;
+      const direction = button.dataset.scroll === 'prev' ? -1 : 1;
+      rail.scrollBy({ left: direction * rail.clientWidth * 0.9, behavior: 'smooth' });
+    });
+    function sync() {
+      controls.classList.toggle('is-hidden', rail.scrollWidth <= rail.clientWidth);
+    }
+    sync();
+    new ResizeObserver(sync).observe(rail);
+  })();
+
+  // ---- collapsible description — toggle lives inside the <p> itself now,
+  // as its own trailing inline content, so target the paragraph via
+  // closest() rather than assuming it's a preceding sibling. ----
+  function toggleDescCollapse(btn) {
+    const text = btn.previousElementSibling;
+    const collapsed = text.classList.toggle('is-collapsed');
+    btn.textContent = collapsed ? '… Leer más' : 'Leer menos';
+  }
+
+  // ---- share ----
+  // Real implementation: clicking the share button tries the native Web
+  // Share API first (navigator.share) — the OS-level share sheet with
+  // every installed app (WhatsApp, Instagram, Messages, etc.), which beats
+  // any hand-built icon list. It's only supported on HTTPS + mostly mobile/
+  // some desktop browsers, so the icon popover (WhatsApp/X/copy-link) is
+  // the fallback for browsers without it — never both at once.
+  function shareData() {
+    const gameName = 'Terraforming Mars: Ares Expedition';
+    return { title: gameName, text: `Mirá "${gameName}" en Pukllay Club`, url: 'https://pukllay.club/juegos/terraforming-mars-ares-expedition' };
+  }
+  function toggleShare(btn, evt) {
+    evt.stopPropagation();
+    if (navigator.share) {
+      navigator.share(shareData()).catch(() => {});
+      return;
+    }
+    const popover = btn.nextElementSibling;
+    const wasOpen = popover.classList.contains('is-open');
+    document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open'));
+    if (!wasOpen) popover.classList.add('is-open');
+  }
+  document.addEventListener('click', () => document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open')));
+
+  function shareVia(channel) {
+    const data = shareData();
+    if (channel === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(data.text + ' ' + data.url)}`, '_blank');
+    } else if (channel === 'x') {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(data.text)}&url=${encodeURIComponent(data.url)}`, '_blank');
+    } else if (channel === 'copy' && navigator.clipboard) {
+      navigator.clipboard.writeText(data.url).then(showShareToast).catch(showShareToast);
+    } else {
+      showShareToast();
+    }
+    document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open'));
+  }
+  function showShareToast() {
+    const toast = document.getElementById('share-toast');
+    toast.classList.add('is-visible');
+    setTimeout(() => toast.classList.remove('is-visible'), 2200);
+  }
+
+  // ---- "¡Quiero Jugarlo!" reservation modal -> WhatsApp handoff ----
+  // Real club WhatsApp Business number (+54 9 3884 10-3255), in wa.me's
+  // required format: country code + subscriber number, digits only, no
+  // "+", spaces, or dashes. In the real app this belongs in runtime env
+  // config (like the club's other secrets), not hardcoded in a template —
+  // this sketch hardcodes it only because it has no config layer.
+  const WA_CLUB_NUMBER = '5493884103255';
+  let currentReserveGame = 'Terraforming Mars: Ares Expedition';
+
+  function openReserveModal(gameName, thumbEmoji) {
+    currentReserveGame = gameName;
+    document.getElementById('reserve-game-name').textContent = gameName;
+    document.getElementById('reserve-game-thumb').textContent = thumbEmoji || '🎲';
+    document.getElementById('reserve-step-form').style.display = '';
+    document.getElementById('reserve-step-success').style.display = 'none';
+    document.getElementById('reserve-name').value = '';
+    document.getElementById('reserve-error').classList.remove('is-visible');
+    document.getElementById('reserve-modal').classList.add('is-open');
+  }
+  function closeReserveModal() {
+    document.getElementById('reserve-modal').classList.remove('is-open');
+  }
+  function submitReserve() {
+    const nameInput = document.getElementById('reserve-name');
+    const name = nameInput.value.trim();
+    if (!name) {
+      document.getElementById('reserve-error').classList.add('is-visible');
+      nameInput.focus();
+      return;
+    }
+    const message = `¡Hola Pukllay Club! Quiero reservar "${currentReserveGame}" para jugar. Mi nombre es ${name}.`;
+    document.getElementById('wa-message-preview').textContent = message;
+    document.getElementById('wa-open-link').href = `https://wa.me/${WA_CLUB_NUMBER}?text=${encodeURIComponent(message)}`;
+    document.getElementById('reserve-step-form').style.display = 'none';
+    document.getElementById('reserve-step-success').style.display = '';
+  }
+  function setViewport(px) {
+    document.querySelectorAll('.viewport-frame').forEach(f => {
+      f.style.maxWidth = px === 'none' ? 'none' : px + 'px';
+      f.style.border = px === 'none' ? 'none' : '1px dashed var(--color-border)';
+    });
+  }
+</script>
+
+</body>
+</html>

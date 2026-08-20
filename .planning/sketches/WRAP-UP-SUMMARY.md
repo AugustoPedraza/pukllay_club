@@ -1,6 +1,7 @@
 # Sketch Wrap-Up Summary
 
-**Date:** 2026-08-19
+## Session: 2026-08-19
+
 **Sketches processed:** 2
 **Design areas:** Layout & Navigation, Card & Preview Interaction
 **Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
@@ -56,3 +57,72 @@ scrolling rail to avoid a real CSS overflow-clipping bug) and a full-screen bott
   ships as real Phoenix/LiveView markup (`touch-action: pan-y`/`pan-x` is the standard mitigation).
 - The hover-portal positioning logic (`getBoundingClientRect()`-based) should carry directly into
   a colocated LiveView hook, mirroring `carousel_row.ex`'s existing `.CarouselScroll` hook pattern.
+
+---
+
+## Session: 2026-08-20
+
+**Sketches processed:** 3
+**Design areas added:** Page Shell (Header + Footer), About Page Content, Detail Page — Layout &
+Content, Detail Page — Mobile & Interaction Patterns
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/` (updated in place)
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 003 | page-shell | C (Two-Tier Mission Band) | Page Shell (Header + Footer) |
+| 004 | about-page | B (Alternating Bands, w/ image carousel) | About Page Content |
+| 005 | detail-page | B (36 refinement rounds) | Detail Page — Layout & Content / Mobile & Interaction Patterns |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none |
+
+Note: sketch 006 (motion-system) is still only a placeholder row in `MANIFEST.md` — no
+`.planning/sketches/006-*` directory exists, so it isn't part of this wrap-up either. Same open
+item as before, carried forward again.
+
+## Design Direction
+Extended the browse-screen direction outward into a full site shell: one header component with
+three states (full nav / breadcrumb / static label) shared across catalog, detail, and about; a
+Two-Tier Mission Band footer (persuasion band + utility bar) on every page, carrying a
+compliance-required BGG attribution badge; an alternating-band about page built to hold real content
+without structural rework later; and a fully designed detail page — desktop buy-box beside a
+scrolling reading column, mobile sticky chrome (CTA bar + title-echo bar) that both park at the
+footer, and a "Juegos similares" shelf reusing the real home-page carousel component as the page's
+exit hook back into browsing.
+
+## Key Decisions
+- **Shell:** one adaptive header, not per-page forks; footer splits mission (persuasion) from
+  links/badge/copyright (utility) into two visually distinct bands.
+- **About:** alternating image+text bands with a real (not static) carousel per band; FAQ as a
+  closing band, not an accordion, until there's enough volume to justify hiding it by default.
+- **Detail layout:** buy-box pattern (image+CTA as one sticky decision panel) separate from the
+  reading column; no accordion — mecánicas/temas/ficha técnica flow inline; every schema gap
+  (missing illustrator field, unconfirmed BGG rank, ~9% of catalog missing `bgg_id`) shown
+  explicitly rather than faked.
+- **Detail mobile:** `position: fixed` CTA bar fakes `position: sticky`'s "unstick at a boundary"
+  via `IntersectionObserver` on the real footer, since a page-spanning fixed bar has no natural
+  containing block to bound it the way a sidebar does; a "gesture paused" state (scroll-hide) and a
+  "content ended" state (footer-park) need independent lifecycles, not one shared class.
+- **Reusability over reinvention:** the "Juegos similares" shelf and the desktop sticky poster
+  column both deliberately reuse existing real patterns (the home page's `CarouselRow` component;
+  native `position: sticky`) instead of building new ones for this one page.
+- **Cross-cutting lesson:** equal-specificity CSS rules resolve by source order — caught one real,
+  multi-round bug (a mobile bar `display: none` at every width) this way, worth checking first
+  whenever a media-query override doesn't seem to be taking effect.
+
+## Open Items Carried Forward
+- Sketch 006 (motion-system) — still unbuilt, same as the previous session's note.
+- Filter-linked chips/pills throughout the detail page point at real `CatalogLive.Index` query
+  params, but URL-persistence round-tripping was never proven — review as link targets/labels only.
+- The about page's mission statement appears in both the page's own lead section and the shared
+  footer's mission band directly below it — flagged as possibly redundant, not resolved.
+- The detail page's sticky title-echo bar and mobile CTA bar were verified extensively in a
+  browser-automation tab that stays backgrounded (`document.visibilityState: 'hidden'`), which
+  throttles rAF-driven smooth-scroll and IntersectionObserver timing — underlying logic was
+  confirmed correct via computed styles and instant (`behavior:'auto'`) scrolling, but the actual
+  smooth-animated feel is worth one real-device confirm.
+- The real WhatsApp club number is hardcoded in the sketch's reservation flow — must move to
+  runtime env config before this becomes real `CatalogLive.Show` code, not copied as a literal.
