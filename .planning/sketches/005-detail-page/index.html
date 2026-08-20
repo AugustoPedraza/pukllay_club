@@ -70,7 +70,10 @@
      click-to-lightbox. */
   .detail-b .masthead-band { background: linear-gradient(180deg, var(--color-surface), var(--color-bg)); }
   .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter) var(--space-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }
-  .detail-b .poster-col { width: 100%; }
+  /* "buy box" column — image, quick facts, and the primary action grouped
+     as one self-contained decision panel (see the markup comment above
+     the masthead for the pattern this follows). */
+  .detail-b .poster-col { width: 100%; display: flex; flex-direction: column; gap: var(--space-3); }
   /* no forced text-transform:uppercase — neither sketch 002's .card-title
      nor production's real show.ex h1 (`font-display text-3xl`, no
      transform) force it; Bebas Neue reads cap-height on its own, and
@@ -95,7 +98,14 @@
     transition: color var(--duration-fast) var(--ease-standard);
   }
   .detail-b .desc-toggle:hover { color: var(--color-primary); }
-  .detail-b .cta-row { display: flex; gap: var(--space-3); align-items: center; }
+  /* now lives in the 320px buy-box column, not the wide text column — two
+     full-labeled buttons side by side don't reliably fit there, so the
+     primary CTA grows to fill the row and share shrinks to icon-only,
+     same shape language as .mobile-cta-bar below. */
+  .detail-b .cta-row { display: flex; gap: var(--space-2); align-items: center; }
+  .detail-b .cta-row .cta-primary { flex: 1; justify-content: center; }
+  .detail-b .cta-row .cta-icon { flex: 0 0 auto; width: 48px; padding: 0; justify-content: center; }
+  .detail-b .cta-row .cta-icon .icon-label { display: none; }
   .detail-b .body { max-width: 1100px; margin: 0 auto; padding: var(--space-2) var(--pk-gutter) var(--space-8); }
 
   /* facts pill row — values now byte-match sketch 002's real .pills-row/
@@ -103,13 +113,15 @@
      approximation: 11px/600-weight muted text, 1px border, 4px/9px padding.
      Round 6 fix — the previous version used text-xs/700-weight/full-color
      text and a borderless pill, which was visibly heavier/darker than the
-     real settled component. Grouped with the title/text block (not the
-     image), directly above the title, per the same settled pattern.
-     nowrap so the 3 pills (jugadores/tiempo/dificultad) hold to one line —
-     002's original didn't need nowrap since its pills-row never has more
-     than 3 short items in a narrower, single-purpose card context, but
-     ours needs to guarantee it explicitly given the extra link/hover state. */
-  .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0 0 var(--space-2); }
+     real settled component. Round 11: now lives in the buy-box column
+     (`.poster-col`, a flex column) alongside the image and CTA, rather
+     than with the title — spacing between them comes from the column's
+     own `gap`, not a margin here. nowrap so the 3 pills (jugadores/
+     tiempo/dificultad) hold to one line — 002's original didn't need
+     nowrap since its pills-row never has more than 3 short items in a
+     narrower, single-purpose card context, but ours needs to guarantee it
+     explicitly given the extra link/hover state. */
+  .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0; }
   .pk-pill {
     display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
     background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted);
@@ -169,18 +181,22 @@
   @media (max-width: 720px) { .lightbox-arrow.prev { left: 4px; } .lightbox-arrow.next { right: 4px; } .lightbox-close { top: 10px; right: 10px; } }
 
   @media (max-width: 768px) {
-    /* image goes full-bleed edge-to-edge; everything else keeps the
-       masthead's normal gutter padding (breakout via negative margin,
-       not by stripping padding from the whole masthead). */
+    /* image goes full-bleed edge-to-edge; the pill row (also inside
+       .poster-col) keeps the masthead's normal gutter padding, so the
+       breakout targets .carousel-wrap specifically, not the whole
+       buy-box column. */
     .detail-b .masthead { grid-template-columns: 1fr; padding-top: 0; }
-    .detail-b .poster-col { margin-left: calc(-1 * var(--pk-gutter)); margin-right: calc(-1 * var(--pk-gutter)); width: calc(100% + 2 * var(--pk-gutter)); }
+    .detail-b .carousel-wrap { margin-left: calc(-1 * var(--pk-gutter)); margin-right: calc(-1 * var(--pk-gutter)); }
     .detail-b .detail-carousel { border-radius: 0; }
-    .detail-b .pk-pill-row { margin-top: var(--space-3); }
     .detail-b h1 { font-size: 1.75rem; }
     .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
-    .detail-b .cta-row { flex-direction: column; align-items: stretch; }
-    .detail-b .cta-primary { width: 100%; justify-content: center; }
-    .detail-b .cta-icon { width: 100%; justify-content: center; }
+    /* inline cta-row is desktop-only now — the fixed mobile-cta-bar below
+       takes over as the reachable action on mobile, so this would just be
+       a redundant second copy of the same buttons sitting mid-page. */
+    .detail-b .cta-row { display: none; }
+    .mobile-cta-bar { display: flex; }
+    /* keeps the sticky bar from covering the footer's last content */
+    body { padding-bottom: 76px; }
   }
 
   /* ---- primary reservation CTA ---- */
@@ -200,38 +216,6 @@
   }
   .cta-primary:hover { background: var(--color-secondary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 
-  /* ---- CTA style lab (sketch-only comparison tool) ---- */
-  .cta-lab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px var(--pk-gutter); background: var(--color-accent-bg); border-bottom: 1px dashed var(--color-border); font-family: var(--font-sans); }
-  .cta-lab-label { font-size: 12px; color: var(--color-text-muted); font-weight: 700; margin-right: 4px; }
-  .cta-lab-swatch { font-size: 12px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); cursor: pointer; }
-  .cta-lab-swatch.is-active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
-
-  /* alternative CTA treatments, toggled live onto the real .cta-primary
-     button by the lab strip above — !important is fine here, this block
-     only exists for a throwaway in-sketch comparison, not shipped code */
-  .cta-style-b { border-radius: var(--radius-full) !important; padding: 15px 30px !important; font-size: var(--text-base) !important; box-shadow: var(--shadow-md) !important; }
-  .cta-style-c { background: transparent !important; border: 2px solid var(--color-primary) !important; color: var(--color-primary) !important; box-shadow: none !important; }
-  .cta-style-c:hover { background: var(--color-accent-bg) !important; color: var(--color-primary) !important; }
-  .cta-style-d { border-radius: var(--radius-sm) !important; box-shadow: none !important; }
-  .cta-style-d:hover { box-shadow: none !important; transform: none !important; filter: brightness(1.1); }
-  .cta-style-e { border-radius: var(--radius-lg) !important; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)) !important; box-shadow: var(--shadow-md) !important; }
-  .cta-style-e:hover { background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)) !important; }
-
-  /* alternative CTA row layouts, toggled live onto the real .cta-row by
-     the second lab strip — same throwaway-comparison rationale as the
-     style modifiers above. */
-  .cta-pos-b { justify-content: space-between !important; }
-  .cta-pos-b .cta-primary { flex: 1; justify-content: center; }
-  .cta-pos-b .cta-icon { flex: 0 0 auto; width: 48px; padding: 0; justify-content: center; }
-  .cta-pos-b .cta-icon .icon-label { display: none; }
-
-  .cta-pos-c { flex-direction: column !important; align-items: stretch !important; gap: var(--space-2) !important; }
-  .cta-pos-c .cta-primary { width: 100%; justify-content: center; }
-  .cta-pos-c .cta-icon { border: none; background: none; box-shadow: none; justify-content: center; color: var(--color-text-muted); height: auto; padding: 4px 0; }
-  .cta-pos-c .cta-icon:hover { background: none; color: var(--color-primary); }
-
-  .cta-pos-d { justify-content: flex-end !important; }
-
   /* ---- share button + popover ---- */
   /* was an icon-only circle with just a bare "↗" glyph — not a recognized
      share icon, and easy to misread as decoration or an external-link
@@ -247,6 +231,22 @@
   }
   .cta-icon:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
   .cta-icon .icon-label { font-weight: 700; }
+
+  /* ---- mobile sticky action bar (Amazon/Booking.com/Airbnb mobile
+     pattern) — replaces the inline cta-row on mobile so the primary
+     action stays reachable at the bottom of the viewport regardless of
+     scroll position, without ever sitting mid-paragraph in the reading
+     flow. Hidden by default; shown only in the mobile media query. */
+  .mobile-cta-bar {
+    display: none; gap: var(--space-2); align-items: center;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: var(--color-bg); border-top: 1px solid var(--color-border);
+    padding: var(--space-3) var(--pk-gutter);
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(20,8,34,0.08);
+  }
+  .mobile-cta-bar .cta-primary { flex: 1; justify-content: center; }
+  .mobile-cta-bar .cta-icon { flex: 0 0 auto; width: 48px; padding: 0; justify-content: center; }
   .share-popover {
     position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-4px);
     background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);
@@ -375,49 +375,33 @@
       </div>
     </div>
 
-    <!-- SKETCH-ONLY control, not part of the real page — pick a CTA style
-         to see it applied live to the actual "¡Quiero Jugarlo!" button
-         below, since guessing again wasn't landing. -->
-    <div class="cta-lab">
-      <span class="cta-lab-label">Probar estilo de CTA:</span>
-      <button class="cta-lab-swatch is-active" onclick="setCtaStyle('', this)">A: Actual (rounded-rect)</button>
-      <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-b', this)">B: Pill grande</button>
-      <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-c', this)">C: Contorno (ghost)</button>
-      <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-d', this)">D: Minimal (flat, sharp)</button>
-      <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-e', this)">E: Degradé</button>
-    </div>
-    <div class="cta-lab">
-      <span class="cta-lab-label">Probar posición de CTAs:</span>
-      <button class="cta-lab-swatch is-active" onclick="setCtaPosition('', this)">A: Actual (lado a lado)</button>
-      <button class="cta-lab-swatch" onclick="setCtaPosition('cta-pos-b', this)">B: Primario ancho + ícono</button>
-      <button class="cta-lab-swatch" onclick="setCtaPosition('cta-pos-c', this)">C: Apilado (compartir como link)</button>
-      <button class="cta-lab-swatch" onclick="setCtaPosition('cta-pos-d', this)">D: Alineado a la derecha</button>
-    </div>
-
     <main class="detail detail-b">
       <div class="masthead-band">
         <div class="masthead">
+          <!-- "Buy box" pattern (Amazon/Shopify/Airbnb product & listing
+               pages): the image, quick facts, and the primary action live
+               together as one self-contained decision panel, separate from
+               the long-form reading content (title/description). Every
+               earlier attempt to fix the CTA row kept it rearranging
+               buttons inside the reading column — the actual problem was
+               that buttons don't belong in a prose flow at all, regardless
+               of how they're arranged within it. -->
           <div class="poster-col">
-            <div class="detail-carousel" data-carousel onclick="openLightbox()" title="Ampliar imagen">
-              <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
-              <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
-              <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
-              <div class="slide" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
-              <button class="cs-arrow prev" onclick="event.stopPropagation(); carouselStep(this,-1)" aria-label="Anterior">‹</button>
-              <button class="cs-arrow next" onclick="event.stopPropagation(); carouselStep(this,1)" aria-label="Siguiente">›</button>
-              <div class="cs-dots"></div>
-              <div class="zoom-hint">⤢</div>
+            <div class="carousel-wrap">
+              <div class="detail-carousel" data-carousel onclick="openLightbox()" title="Ampliar imagen">
+                <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
+                <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
+                <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
+                <div class="slide" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
+                <button class="cs-arrow prev" onclick="event.stopPropagation(); carouselStep(this,-1)" aria-label="Anterior">‹</button>
+                <button class="cs-arrow next" onclick="event.stopPropagation(); carouselStep(this,1)" aria-label="Siguiente">›</button>
+                <div class="cs-dots"></div>
+                <div class="zoom-hint">⤢</div>
+              </div>
             </div>
-          </div>
-          <div>
-            <!-- filterable facts pills — grouped with the title/text block,
-                 not the image, matching the pattern sketch 002 already
-                 settled for the card hover-portal/mobile sheet (pills sit
-                 directly above the title, both live in the same text
-                 block regardless of where the poster sits). jugadores/
-                 tiempo are real params on CatalogLive.Index; dificultad
-                 links via weight_bands. See README for the URL-persistence
-                 gap this depends on. -->
+            <!-- filterable facts pills. jugadores/tiempo are real params on
+                 CatalogLive.Index; dificultad links via weight_bands. See
+                 README for the URL-persistence gap this depends on. -->
             <div class="pk-pill-row">
               <a class="pk-pill" href="/?players=4" title="Filtrar por cantidad de jugadores">👥 1-4</a>
               <a class="pk-pill" href="/?max_playtime=120" title="Filtrar por duración">⏱ 90-120 min</a>
@@ -425,6 +409,21 @@
                 <span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto
               </a>
             </div>
+            <div class="cta-row" id="masthead-cta-row">
+              <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
+              <div style="position:relative">
+                <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
+                  <span>↗</span><span class="icon-label">Compartir</span>
+                </button>
+                <div class="share-popover">
+                  <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
+                  <button onclick="shareVia('x')" title="X / Twitter">X</button>
+                  <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
             <h1>Terraforming Mars: Ares Expedition</h1>
             <div class="tag-row">
               <a class="chip tag" href="/?tags=Duelos+Memorables" title="Filtrar por etiqueta">Duelos Memorables</a>
@@ -439,17 +438,25 @@
                 juego base.</p>
               <button class="desc-toggle" onclick="toggleDescCollapse(this)">… Leer más</button>
             </div>
-            <div class="cta-row">
-              <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
-              <div style="position:relative">
-                <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir">
-                  <span>↗</span><span class="icon-label">Compartir</span>
-                </button>
-                <div class="share-popover">
-                  <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
-                  <button onclick="shareVia('x')" title="X / Twitter">X</button>
-                  <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
-                </div>
+          </div>
+
+          <!-- Mobile-only sticky action bar (Amazon/Booking.com/Airbnb
+               mobile pattern for long content pages with one primary
+               action): stays reachable at the bottom of the viewport
+               regardless of scroll position, and never interrupts the
+               reading flow above it. Duplicates the same CTA/share
+               actions as the desktop buy box — the inline cta-row above
+               is hidden on mobile via CSS, this bar takes over. -->
+          <div class="mobile-cta-bar" id="mobile-cta-bar">
+            <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
+            <div style="position:relative">
+              <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
+                <span>↗</span>
+              </button>
+              <div class="share-popover">
+                <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
+                <button onclick="shareVia('x')" title="X / Twitter">X</button>
+                <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
               </div>
             </div>
           </div>
@@ -632,25 +639,6 @@
   }
 
   // ---- share ----
-  // ---- CTA style/position labs (sketch-only) — apply the chosen modifier
-  // class live to the real CTA elements so alternatives can be compared in
-  // context. Each strip tracks its own active swatch (scoped to
-  // btn.parentElement) — two separate labs share the .cta-lab-swatch
-  // class, so a global querySelectorAll would incorrectly clear the other
-  // strip's selection every time either one is clicked. ----
-  function setCtaStyle(cls, btn) {
-    const cta = document.querySelector('.cta-primary');
-    cta.className = 'cta-primary' + (cls ? ' ' + cls : '');
-    btn.parentElement.querySelectorAll('.cta-lab-swatch').forEach(b => b.classList.remove('is-active'));
-    btn.classList.add('is-active');
-  }
-  function setCtaPosition(cls, btn) {
-    const row = document.querySelector('.cta-row');
-    row.className = 'cta-row' + (cls ? ' ' + cls : '');
-    btn.parentElement.querySelectorAll('.cta-lab-swatch').forEach(b => b.classList.remove('is-active'));
-    btn.classList.add('is-active');
-  }
-
   // Real implementation: clicking the share button tries the native Web
   // Share API first (navigator.share) — the OS-level share sheet with
   // every installed app (WhatsApp, Instagram, Messages, etc.), which beats

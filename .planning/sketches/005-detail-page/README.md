@@ -273,6 +273,40 @@ position alternatives applied to the real `.cta-row`:
 - **D: Alineado a la derecha** — same two buttons as A, but the whole row shifts to the right edge
   of the column instead of sitting left-aligned under the description.
 
+## Round 11 — buy box (desktop) + sticky action bar (mobile)
+All 4 of Round 10's position alternatives still broke the rhythm, because they were all just
+rearranging two buttons *within the reading column* — the real problem was that buttons don't
+belong in a prose flow at all, regardless of internal arrangement. Rebuilt around a named,
+well-established pattern instead of another guess:
+
+- **Desktop — "buy box" pattern** (Amazon/Shopify/Airbnb product & listing pages): the image,
+  facts pills, and the primary CTA now form one self-contained decision panel in the left column
+  (`.poster-col`, a flex column with its own internal `gap`), fully separated from the right
+  column, which is now pure reading content — title, tag chips, description. The CTA never
+  interrupts the prose because it's structurally not part of that column anymore.
+  - **Note on Round 5:** this deliberately moves the facts pills again — back into the image
+    column, alongside the CTA. Round 5 grouped pills with the title specifically because that's
+    how sketch 002's *compact card* (hover-portal/mobile-sheet) does it — but a compact card and a
+    full detail page's two-column buy-box are genuinely different contexts serving different
+    purposes (one glanceable unit vs. an image+specs+action panel beside a reading column). Both
+    decisions are correct for their own context; this isn't silently reversing Round 5, the
+    compact card is untouched.
+  - The CTA row itself also had to shrink to fit the narrower 320px buy-box column — two
+    full-labeled buttons side by side don't reliably fit there, so the primary CTA now grows to
+    fill the row and the share button shrinks to icon-only (`title="Compartir"` tooltip as the
+    accessible fallback for Round 7's labeling concern, since there's no room for a permanent
+    label in this narrower context).
+- **Mobile — sticky bottom action bar** (Amazon app / Booking.com / Airbnb mobile / most food-
+  delivery apps, for exactly this scenario: one primary action on a long content page): a new
+  `position: fixed` bar at the bottom of the viewport, duplicating the same CTA/share actions,
+  always reachable regardless of scroll position. The inline `cta-row` inside the buy-box column
+  is now `display: none` on mobile (it would just be a redundant second copy of the same buttons
+  mid-page) — the fixed bar is the only CTA surface below 768px. `body` gets `padding-bottom` on
+  mobile so the bar doesn't cover the footer's last content.
+- Removed both Round 9/10 comparison labs (CTA style + position) now that both questions are
+  resolved — style A stands, and the position question is superseded by this restructure rather
+  than answered from within the old A–D set.
+
 ## Future considerations (flagged, not built)
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a
@@ -283,13 +317,18 @@ later — the accordion pattern used for mechanics/ficha técnica could extend t
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
-- Compare desktop vs. mobile (📱 375) — on desktop, pills sit under the image in the left column;
-  on mobile everything stacks in one flow (image → pills → title → tag → description → CTA). Does
-  keeping pills "attached" to the image column on desktop read right, or should they move next to
-  the title instead?
-- Open "Más información" — does the ficha técnica's new row-list style feel consistent with the
-  chips/pills used elsewhere now?
+- Compare desktop vs. mobile (📱 375): on desktop, image + pills + CTA form one buy-box unit in the
+  left column, title/tags/description read as pure prose in the right column with no button
+  interrupting it. On mobile, does the sticky bottom bar feel like the right tradeoff (always
+  reachable, but permanently covering ~76px of viewport) vs. an inline CTA you'd have to scroll
+  back up for?
+- Scroll the mobile view — confirm the sticky bar stays fixed and never overlaps the footer's last
+  content.
+- Open "Más información" — does the ficha técnica's row-list style feel consistent with the
+  chips/pills used elsewhere?
 - Click a mechanic/theme chip or a pill — given the flagged URL-persistence gap, treat this as
   reviewing the *link targets and labels*, not a working filter yet.
 - Description: on desktop, does a 4-line clamp feel like the right "before it needs collapsing"
-  threshold?
+  threshold, now that it sits alone in a column without a CTA immediately following it?
+- Is the icon-only share button (both in the desktop buy-box and the mobile bar) legible enough
+  now, relying on the `title` tooltip + adjacency to the primary CTA instead of a permanent label?
