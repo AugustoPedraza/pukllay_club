@@ -50,12 +50,24 @@
   .pk-difficulty-dot.is-filled { background: var(--color-text-muted); }
 
   .chip-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  /* Round 16: base .chip (mecánicas/temas, in "más información") now
+     byte-matches .pk-pill's muted treatment — 11px/600-weight, muted
+     text, surface background — instead of its previous full-color-text/
+     white-bg/text-xs styling. That previous version was never actually
+     grounded in an existing component (sketch 002 has no mechanics-chip
+     pattern to check against, unlike pills/dots/title), and ended up
+     visually louder than the quick-facts pills above the title — a
+     hierarchy inversion, since mechanics/themes are deeper, secondary
+     detail that shouldn't outweigh the primary facts. .chip.tag (the
+     editorial tag next to the title) keeps its own distinct, more
+     prominent treatment — that one's meant to stand out as a highlight,
+     not blend in as quiet metadata. */
   .chip {
-    font-size: var(--text-xs); font-weight: 600; padding: 5px 12px; border-radius: var(--radius-full);
-    border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted);
     text-decoration: none; display: inline-flex; transition: all var(--duration-fast) var(--ease-standard);
   }
-  .chip.tag { border-color: var(--color-secondary); color: var(--color-secondary); background: var(--color-surface); }
+  .chip.tag { border-color: var(--color-secondary); color: var(--color-secondary); background: var(--color-surface); font-size: var(--text-xs); padding: 5px 12px; }
   a.chip:hover { border-color: var(--color-primary); background: var(--color-accent-bg); color: var(--color-primary); }
 
   .section-heading { font-family: var(--font-sans); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
@@ -302,8 +314,9 @@
      own bottom border, back when it lived in a separate full-width section
      below the masthead (`.body`). Round 14 moved it into the same column as
      the description instead — it's reading content, not a separate page
-     section — so it needs its own top divider now; one hairline border,
-     matching the same divider language `.spec-row` already uses below. */
+     section — so it needs its own top divider now: one hairline border,
+     and (per Round 16) the ONLY divider in this whole block — the
+     ficha técnica rows below no longer draw their own per-row lines. */
   .info-accordion { padding-top: var(--space-4); margin-top: var(--space-2); border-top: 1px solid var(--color-border); }
   .info-accordion-trigger {
     width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: none;
@@ -343,15 +356,21 @@
   @keyframes scrollHintBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
   @media (min-width: 769px) { .scroll-hint { display: inline-flex; } }
 
-  /* "ficha técnica" as a clean spec-list — rows with a consistent
-     label/value rhythm and one hairline divider between rows, replacing
-     the previous cramped 2-column dt/dd grid that didn't match any other
-     pattern on the page (chips, pills) and read as visually foreign. */
+  /* "ficha técnica" as a clean spec-list. Round 16: dropped the
+     per-row hairline divider — with 7 rows, a line under every single
+     one competed with the section's own top divider (added Round 14) and
+     read as "dividers for everything" rather than a clean list; vertical
+     rhythm now comes from padding alone, no rules needed. Also switched
+     from justify-content:space-between + right-aligned value (label and
+     value distance varied row to row, depending on each label's length)
+     to a fixed-width label column + left-aligned value — every value now
+     starts at the same left edge regardless of label length, which is
+     what was actually meant by inconsistent "spacing between label and
+     value": it wasn't a gap-size bug, it was a lack of a shared column. */
   .spec-list { display: flex; flex-direction: column; }
-  .spec-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: 10px 0; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); }
-  .spec-row:last-child { border-bottom: none; }
-  .spec-row dt { margin: 0; color: var(--color-text-muted); font-weight: 600; flex: 0 0 auto; }
-  .spec-row dd { margin: 0; color: var(--color-text); text-align: right; }
+  .spec-row { display: flex; align-items: baseline; gap: var(--space-4); padding: 7px 0; font-size: var(--text-sm); }
+  .spec-row dt { margin: 0; color: var(--color-text-muted); font-weight: 600; flex: 0 0 148px; }
+  .spec-row dd { margin: 0; color: var(--color-text); text-align: left; flex: 1 1 auto; }
   .spec-row dd.missing { color: var(--color-text-muted); font-style: italic; font-size: var(--text-xs); }
   .spec-row dd a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
   .spec-row dd a:hover { text-decoration: underline; }

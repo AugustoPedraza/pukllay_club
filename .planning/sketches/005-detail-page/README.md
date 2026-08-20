@@ -399,6 +399,29 @@ side-by-side version was. Mobile's sticky bottom bar is untouched — it's a dif
 space-constrained context (a permanently visible fixed bar spanning the full viewport width), where
 side-by-side icon-only share still makes sense.
 
+## Round 16 — "más información" polish: chip weight, spec-list alignment, fewer dividers
+Three fixes, all in the now-inline "más información" block:
+
+- **Mechanics/themes chips were never actually grounded, and it showed.** Unlike the pills/dots/
+  title (byte-matched against sketch 002 in Round 6), `.chip`'s mecánicas/temas styling had no
+  existing component to check against — sketch 002 has no chip pattern at all. It ended up
+  `text-xs`/full-color-text/white-background — visibly *louder* than the muted `.pk-pill` facts row
+  above the title, a hierarchy inversion (deeper, secondary detail outweighing the primary facts).
+  `.chip`'s base style now byte-matches `.pk-pill` (11px/600-weight, muted text, surface background)
+  so mechanics/themes read as quiet supplementary metadata, not competing for attention with the top
+  pills. `.chip.tag` (the editorial tag next to the title) keeps its own separate, more prominent
+  treatment — that one is meant to stand out as a highlight, so it wasn't touched.
+- **Ficha técnica: fixed-width label column instead of space-between + right-align.** The reported
+  "spacing between label and value" issue wasn't a gap-size bug (flex `gap` already enforced a
+  minimum) — it was that each row's label/value split point moved depending on that row's label
+  length, so values didn't align into a scannable column. `dt` is now a fixed `148px` flex-basis and
+  `dd` is left-aligned in the remaining space — every value starts at the same left edge across all
+  7 rows.
+- **Dropped the per-row hairline dividers in `.spec-list`.** Combined with the section's own top
+  divider (Round 14) and the surrounding chip-rows, a line under every single one of 7 rows read as
+  "dividers for everything." Vertical rhythm now comes from padding alone; the one remaining divider
+  in the whole "más información" block is the single top border separating it from the description.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
