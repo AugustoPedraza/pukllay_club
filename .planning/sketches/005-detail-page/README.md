@@ -558,6 +558,20 @@ Four mobile questions, addressed together since they're all about the same block
   source order, which also means mobile and desktop finally run the exact same CSS rule instead of
   two different schemes.
 
+## Round 25 — mobile: shorter carousel, stacked + auto-hiding CTA bar
+- **Carousel was too tall.** It inherited desktop's `3:4` aspect ratio, which on a 375px-wide phone
+  renders at ~500px — nearly a full screen of image before any other content is visible. Mobile now
+  overrides to `4:3` (~280px), closer to how most mobile product carousels size a hero image.
+- **CTA bar wasn't stacked** — it had kept its own separate side-by-side/icon-only-share layout from
+  before the desktop buy-box's Round 15 restructure. Now matches: primary full-width on top, share
+  full-width (with its label back, not just an icon) directly below it, same shape as the desktop
+  buy box.
+- **Stacking made the bar taller, so it now hides on scroll-down and reappears on scroll-up** —
+  the same pattern most mobile browser chrome and app bottom-nav bars use to reclaim vertical space
+  while you're actively reading, without ever making the action truly unreachable (it's one
+  scroll-up away, and it's always visible near the top of the page regardless of direction). `body`'s
+  reserved bottom padding grew from 76px to 148px to match the taller stacked bar.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

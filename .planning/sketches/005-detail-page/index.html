@@ -249,7 +249,11 @@
        mobile stack it would just pin the image awkwardly mid-scroll. */
     .detail-b .poster-col { position: static; }
     .detail-b .carousel-wrap { margin-left: calc(-1 * var(--pk-gutter)); margin-right: calc(-1 * var(--pk-gutter)); }
-    .detail-b .detail-carousel { border-radius: 0; }
+    /* Round 25: 3:4 (desktop's ratio) made the carousel ~500px tall on a
+       375px-wide phone — nearly a full screen of image before any content
+       is visible. 4:3 (landscape-ish) cuts that to ~280px, closer to how
+       most mobile product carousels size their hero image. */
+    .detail-b .detail-carousel { border-radius: 0; aspect-ratio: 4/3; }
     .detail-b h1 { font-size: 1.75rem; }
     .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
     /* inline cta-row is desktop-only now — the fixed mobile-cta-bar below
@@ -257,8 +261,10 @@
        a redundant second copy of the same buttons sitting mid-page. */
     .detail-b .cta-row { display: none; }
     .mobile-cta-bar { display: flex; }
-    /* keeps the sticky bar from covering the footer's last content */
-    body { padding-bottom: 76px; }
+    /* keeps the sticky bar from covering the footer's last content —
+       taller now that the bar stacks two full-width buttons (Round 25)
+       instead of one row, so the reserved space grew alongside it. */
+    body { padding-bottom: 148px; }
   }
 
   /* ---- primary reservation CTA ---- */
@@ -305,17 +311,26 @@
      pattern) — replaces the inline cta-row on mobile so the primary
      action stays reachable at the bottom of the viewport regardless of
      scroll position, without ever sitting mid-paragraph in the reading
-     flow. Hidden by default; shown only in the mobile media query. */
+     flow. Hidden by default; shown only in the mobile media query.
+     Round 25: stacked (primary on top, full-width share below) instead
+     of side by side — matching the same buy-box shape Round 15 already
+     settled on for desktop, and giving share its label back instead of
+     an icon-only circle. Stacking makes the bar taller, which is exactly
+     why it also now hides on scroll-down / reappears on scroll-up
+     (`.is-hidden`, driven by the scroll listener below) — reclaims that
+     space while reading, still reachable the moment you scroll back up. */
   .mobile-cta-bar {
-    display: none; gap: var(--space-2); align-items: center;
+    display: none; flex-direction: column; gap: var(--space-2);
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
     background: var(--color-bg); border-top: 1px solid var(--color-border);
     padding: var(--space-3) var(--pk-gutter);
     padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -4px 16px rgba(20,8,34,0.08);
+    transition: transform var(--duration-base) var(--ease-standard);
   }
-  .mobile-cta-bar .cta-primary { flex: 1; justify-content: center; }
-  .mobile-cta-bar .cta-icon { flex: 0 0 auto; width: 48px; padding: 0; justify-content: center; }
+  .mobile-cta-bar.is-hidden { transform: translateY(100%); }
+  .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
+  .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; }
   .share-popover {
     position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-4px);
     background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);
@@ -609,7 +624,7 @@
             <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
             <div style="position:relative">
               <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
-                <span>↗</span>
+                <span>↗</span><span class="icon-label">Compartir</span>
               </button>
               <div class="share-popover">
                 <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
@@ -755,6 +770,31 @@
         hint.classList.add('is-dismissed');
         dismissed = true;
       }
+    });
+  })();
+
+  // ---- mobile sticky CTA bar: hide on scroll-down, reveal on scroll-up.
+  // Stacking it (Round 25) made it taller, so this reclaims that space
+  // while actually reading/scrolling and brings it back the moment you
+  // reverse direction — same pattern as most mobile browser chrome
+  // (address bars) and app bottom-nav bars. Always visible near the top
+  // of the page regardless of direction, so it doesn't vanish the instant
+  // you start scrolling from rest. ----
+  (function () {
+    const bar = document.getElementById('mobile-cta-bar');
+    if (!bar) return;
+    let lastY = window.scrollY;
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      const goingDown = y > lastY;
+      if (y < 40) {
+        bar.classList.remove('is-hidden');
+      } else if (goingDown) {
+        bar.classList.add('is-hidden');
+      } else {
+        bar.classList.remove('is-hidden');
+      }
+      lastY = y;
     });
   })();
 
