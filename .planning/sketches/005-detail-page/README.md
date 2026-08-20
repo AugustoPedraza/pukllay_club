@@ -494,6 +494,30 @@ dedicated column exists in the `Game` schema for this either; like the ranking, 
 extracted from the untyped `bgg_payload` map. Shown as representative placeholder data ("8.1 / 10 (dato
 de ejemplo, no confirmado)"), same treatment as the ranking row.
 
+## Round 22 — row alignment fixed, labels shortened, credits fields made navigable
+- **Real alignment bug, not just cosmetic:** Round 21's two separate `<dl>`s (credits column, BGG
+  stats column) don't share row heights — they're independent boxes. Ilustrador's long "no
+  disponible" sentence wraps and makes the credits column's row 2 taller than the BGG column's row 2
+  (Peso BGG, one line), which pushes every row below it out of alignment between the two columns.
+  Fixed by going back to **one** grid instead of two boxes: all 8 fields are now one `<dl>`, placed
+  into explicit grid cells via `nth-child` (not auto-flow) so the credits/BGG-stats grouping from
+  Round 21 still lands in the right columns — but because it's genuinely one shared grid now, CSS
+  Grid itself guarantees each row is exactly as tall on both sides, so nothing can misalign. Source
+  order in the DOM stays grouped (credits, then BGG stats) specifically so mobile's single-column
+  stack still reads in a sensible order, even though desktop re-places things into a 2-column grid.
+- **Labels shortened:** "Peso (BGG)" → "Peso BGG", "Puesto en ranking BGG" → "Ranking BGG" (parens
+  and filler words dropped, matching "Calificación BGG"'s already-terse phrasing).
+- **Diseñadores and Editorial are now navigable**, linking to `/?q=<name>`. **Reopens a
+  deliberately-closed gap from Round 3**, which left these unlinked on purpose: `designers`/
+  `publishers` aren't structured filter dimensions in `CatalogLive.Index` at all — only the free-text
+  `:q` search comes close, and whether the `search_vector` full-text index even covers designer/
+  publisher names is unconfirmed. Implemented per this explicit request anyway, using `:q` as the
+  closest existing mechanism, but the same caveat applies even harder now that it's live on the page,
+  not just a hypothetical: **verify `search_vector` actually indexes these fields before this ships
+  for real** — if it doesn't, clicking a designer's name would silently return unrelated or empty
+  results. Ilustrador stays unlinked — there's no real value to link when the field itself doesn't
+  exist yet.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

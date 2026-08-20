@@ -377,19 +377,30 @@
      starts at the same left edge regardless of label length, which is
      what was actually meant by inconsistent "spacing between label and
      value": it wasn't a gap-size bug, it was a lack of a shared column. */
-  /* Round 21: the two-column split from Round 18/19 just paired items by
-     source order (whatever landed next got the next cell) — which is why
-     it produced an arbitrary-looking gap in the grid rather than a
-     meaningful grouping. Split into two deliberate, semantic columns
-     instead: credits/general info (Diseñadores, Ilustrador, Editorial,
-     Edad mínima) on the left, BGG-sourced stats (Año, Peso, Puesto en
-     ranking, Calificación) on the right — two separate <dl>s side by
-     side, not one auto-flowing grid. */
-  .spec-columns { display: flex; flex-direction: column; gap: var(--space-4); }
-  @media (min-width: 769px) {
-    .spec-columns { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-6); }
-  }
+  /* Round 21 grouped credits (Diseñadores, Ilustrador, Editorial, Edad
+     mínima) and BGG stats (Año, Peso, Ranking, Calificación) into two
+     separate <dl>s side by side — but two independent boxes don't share
+     row heights, so a wrapping value in one column (e.g. Ilustrador's
+     long "no disponible" sentence) knocked that column's later rows out
+     of alignment with the other column's. Round 22: back to ONE grid, so
+     every row is a real shared grid row (same height on both sides,
+     enforced by CSS Grid itself) — but placed explicitly by nth-child,
+     not auto-flow, so the two groups still land in their intended
+     columns regardless of source order. Source order itself stays
+     grouped (credits, then BGG stats) specifically so mobile's
+     single-column stack still reads in that same sensible order. */
   .spec-list { display: flex; flex-direction: column; }
+  @media (min-width: 769px) {
+    .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-6); row-gap: 0; }
+    .spec-row:nth-child(1) { grid-column: 1; grid-row: 1; }
+    .spec-row:nth-child(2) { grid-column: 1; grid-row: 2; }
+    .spec-row:nth-child(3) { grid-column: 1; grid-row: 3; }
+    .spec-row:nth-child(4) { grid-column: 1; grid-row: 4; }
+    .spec-row:nth-child(5) { grid-column: 2; grid-row: 1; }
+    .spec-row:nth-child(6) { grid-column: 2; grid-row: 2; }
+    .spec-row:nth-child(7) { grid-column: 2; grid-row: 3; }
+    .spec-row:nth-child(8) { grid-column: 2; grid-row: 4; }
+  }
   /* Round 19: label stacked above value (not side by side) — a small
      property card per field, uppercase label byte-matching
      .section-heading's rhythm on top, the value in normal reading weight
@@ -580,20 +591,19 @@
                     </div>
                   </div>
                   <div>
-                    <div class="spec-columns">
-                      <dl class="spec-list">
-                        <div class="spec-row"><dt>Diseñadores</dt><dd>Jacob Fryxelius, Isaac Fryxelius</dd></div>
-                        <div class="spec-row"><dt>Ilustrador</dt><dd class="missing">No disponible — campo no existe en el catálogo hoy</dd></div>
-                        <div class="spec-row"><dt>Editorial</dt><dd>FryxGames</dd></div>
-                        <div class="spec-row"><dt>Edad mínima</dt><dd><a href="/?min_age=12">12+</a></dd></div>
-                      </dl>
-                      <dl class="spec-list">
-                        <div class="spec-row"><dt>Año</dt><dd>2021</dd></div>
-                        <div class="spec-row"><dt>Peso (BGG)</dt><dd>3.8 / 5</dd></div>
-                        <div class="spec-row"><dt>Puesto en ranking BGG</dt><dd class="missing">#142 (dato de ejemplo, no confirmado)</dd></div>
-                        <div class="spec-row"><dt>Calificación BGG</dt><dd class="missing">8.1 / 10 (dato de ejemplo, no confirmado)</dd></div>
-                      </dl>
-                    </div>
+                    <!-- single grid, explicit desktop placement (not
+                         auto-flow) — see the .spec-list CSS comment for
+                         why this replaced the two-<dl> version. -->
+                    <dl class="spec-list">
+                      <div class="spec-row"><dt>Diseñadores</dt><dd><a href="/?q=Jacob+Fryxelius" title="Buscar juegos de este diseñador">Jacob Fryxelius</a>, <a href="/?q=Isaac+Fryxelius" title="Buscar juegos de este diseñador">Isaac Fryxelius</a></dd></div>
+                      <div class="spec-row"><dt>Ilustrador</dt><dd class="missing">No disponible — campo no existe en el catálogo hoy</dd></div>
+                      <div class="spec-row"><dt>Editorial</dt><dd><a href="/?q=FryxGames" title="Buscar juegos de esta editorial">FryxGames</a></dd></div>
+                      <div class="spec-row"><dt>Edad mínima</dt><dd><a href="/?min_age=12">12+</a></dd></div>
+                      <div class="spec-row"><dt>Año</dt><dd>2021</dd></div>
+                      <div class="spec-row"><dt>Peso BGG</dt><dd>3.8 / 5</dd></div>
+                      <div class="spec-row"><dt>Ranking BGG</dt><dd class="missing">#142 (dato de ejemplo, no confirmado)</dd></div>
+                      <div class="spec-row"><dt>Calificación BGG</dt><dd class="missing">8.1 / 10 (dato de ejemplo, no confirmado)</dd></div>
+                    </dl>
                     <div class="bgg-link-row"><a href="#">Ver en BoardGameGeek ↗</a></div>
                   </div>
                 </div>
