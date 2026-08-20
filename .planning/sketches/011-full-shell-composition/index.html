@@ -228,6 +228,30 @@
   section.shelf { margin-bottom: var(--space-6); scroll-margin-top: 120px; }
   section.shelf.hero { padding: var(--space-6) 0 var(--space-4); margin-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
 
+  /* Round 7: catalog shelf-jump index — same sticky anchor-tab component as
+     .about-index below (editorial underline-on-active, no fill), so both
+     pages' in-page section nav read as one consistent pattern, distinct
+     from the catalog's own filter/category .chip vocabulary. Unlike
+     .about-index it isn't centered/flex:1-stretched — natural-width tabs
+     with a gap, closer to a genre-shortcut row than a centered table of
+     contents, which fits a 1280px-wide browse page better than 4 tabs
+     stretched edge to edge. */
+  .catalog-index {
+    position: sticky; top: 64px; z-index: 50; display: flex; gap: var(--space-6);
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    max-width: 1280px; margin: 0 auto var(--space-2); padding: 0 var(--space-6);
+  }
+  .catalog-index-item {
+    display: flex; align-items: center; gap: 6px; padding: var(--space-3) 0;
+    text-decoration: none; color: var(--color-text-muted); border-bottom: 2px solid transparent;
+    font-size: var(--text-sm); font-weight: 600; white-space: nowrap;
+    transition: color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+  }
+  .catalog-index-item .idx-icon { font-size: 1rem; line-height: 1; }
+  .catalog-index-item:hover { color: var(--color-text); }
+  .catalog-index-item.active { color: var(--color-primary); border-color: var(--color-primary); }
+  @media (max-width: 480px) { .catalog-index { display: none; } }
+
   /* ============ rail — real edge-fade mechanics, shared by the catalog
      shelves AND the detail page's "Juegos similares" shelf (see README
      finding #3 — 005 originally had its own independently-declared
@@ -757,15 +781,20 @@
 <div class="app-nav" id="app-nav" data-scroll-nav>
   <div class="app-nav-inner">
     <button class="nav-hamburger" onclick="toggleNavDrawer()" aria-label="Abrir menú">☰</button>
-    <a href="#" class="brand">
+    <a href="#" class="brand" onclick="showPage('catalog'); return false;" aria-label="Ir al inicio" title="Ir al inicio">
       <svg class="brand-mark" width="30" height="30" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
       <span class="brand-text"><strong>PUKLLAY CLUB</strong><span>Juegos de mesa modernos</span></span>
     </a>
+    <!-- Round 7: global nav only carries real site-level destinations now
+         (Inicio/Acerca de) — Para empezar/Novedades/Clásicos moved into the
+         catalog page's own .catalog-index below, since they were shelf
+         shortcuts local to Inicio, not site sections, and looked wrong
+         paired with a game title in the Detalle/Acerca de crumb. The logo
+         itself is also a real "go home" link now (was inert href="#"
+         before) — the universal way back, present on every page. -->
     <div class="links" data-catalog-only>
       <a href="#" class="active">Inicio</a>
-      <a href="#">Para empezar</a>
-      <a href="#">Novedades</a>
-      <a href="#">Clásicos</a>
+      <a href="#" onclick="showPage('about'); return false;">Acerca de</a>
     </div>
     <div class="crumb" data-detail-only style="display:none">
       <a href="#" onclick="showPage('catalog'); return false;">Inicio</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span>
@@ -796,11 +825,12 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" placeholder="Busca por título, autor o editorial…">
   </div>
+  <!-- Round 7: matches the desktop .links trim — Inicio/Acerca de only.
+       The drawer is global chrome (reachable from every page via the
+       hamburger), so it had the same problem the desktop nav did: shelf
+       shortcuts that only mean something on Inicio, shown everywhere. -->
   <nav class="nav-drawer-links">
-    <a href="#" class="active">Inicio</a>
-    <a href="#">Para empezar</a>
-    <a href="#">Novedades</a>
-    <a href="#">Clásicos</a>
+    <a href="#" class="active" onclick="toggleNavDrawer(); showPage('catalog'); return false;">Inicio</a>
     <a href="#" onclick="toggleNavDrawer(); showPage('about'); return false;">Acerca de</a>
   </nav>
   <button class="nav-drawer-filters-trigger" onclick="toggleNavDrawer(); toggleFiltersPanel();">🎚 Filtros <span id="filters-active-count"></span> ›</button>
@@ -823,6 +853,19 @@
 </div>
 
 <main class="page is-active catalog-main" id="page-catalog">
+  <!-- Round 7: shelf-jump shortcuts, moved out of the global header (see
+       README) — same sticky anchor-tab component as .about-index (below),
+       reused for consistency, pointed at the real SHELVES ids/titles
+       instead of inventing separate labels. Desktop-only: mobile already
+       has its own filter-chip row (.mobile-chip-nav) right below the
+       header, and the drawer's site links cover Inicio/Acerca de — a
+       second sticky chip row here would just compete with that. -->
+  <nav class="catalog-index" aria-label="Secciones de esta página">
+    <a href="#shelf-destacados" class="catalog-index-item active" onclick="jumpToShelf(this,'shelf-destacados');return false;"><span class="idx-icon">🏆</span><span class="idx-label">Destacados del club</span></a>
+    <a href="#shelf-hobby" class="catalog-index-item" onclick="jumpToShelf(this,'shelf-hobby');return false;"><span class="idx-icon">🌱</span><span class="idx-label">Descubre el hobby</span></a>
+    <a href="#shelf-estratega" class="catalog-index-item" onclick="jumpToShelf(this,'shelf-estratega');return false;"><span class="idx-icon">🧠</span><span class="idx-label">Ingenio estratega</span></a>
+    <a href="#shelf-nuevos" class="catalog-index-item" onclick="jumpToShelf(this,'shelf-nuevos');return false;"><span class="idx-icon">🆕</span><span class="idx-label">Recientemente añadidos</span></a>
+  </nav>
   <div id="rows"></div>
 </main>
 
@@ -1360,12 +1403,28 @@ function showPage(page, evt) {
   // past the title" state into the catalog/about pages after leaving a
   // scrolled detail view without ever re-entering it.
   if (window.resetDetailStickyChrome) window.resetDetailStickyChrome();
+  // Round 7: since scroll always resets to 0 on any page switch (below),
+  // .catalog-index's active tab should reset to the first item too — the
+  // logo/crumb "Inicio" links land at the actual top of the catalog, but
+  // without this the tab bar kept highlighting whatever shelf was last
+  // clicked, disagreeing with what's on screen.
+  if (page === 'catalog') {
+    document.querySelectorAll('.catalog-index-item').forEach((c, i) => c.classList.toggle('active', i === 0));
+  }
   window.scrollTo(0, 0);
 }
 
 renderShelves();
 renderSimilarShelf();
 renderMobileChips();
+
+// catalog shelf-jump index (Round 7) — same click-to-highlight + smooth
+// scroll shape as jumpToAboutSection below, scoped to .catalog-index-item.
+function jumpToShelf(chip, targetId) {
+  document.querySelectorAll('.catalog-index-item').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 window.addEventListener('scroll', () => {
   document.getElementById('app-nav').classList.toggle('scrolled', window.scrollY > 40);

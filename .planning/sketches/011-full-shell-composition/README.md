@@ -414,3 +414,54 @@ layout and the drawer's renamed links.
 - Are FAQ/Contacto/Juntadas laid out horizontally, not stacked?
 - Does "datos de BoardGameGeek" read as quiet small print next to the copyright, not a bordered badge?
 - Is the footer noticeably shorter/less tall than before?
+
+## Round 7: Nav Only Where It Applies, Real "Go Home", Catalog's Own Shelf Index (2026-08-20)
+
+Follow-up to Round 6: renaming the nav to Inicio/Para empezar/Novedades/Clásicos exposed a deeper
+problem, not just a wording one — three of those four labels are catalog shelf shortcuts, not site
+sections, so pairing them with a game title in the Detalle crumb ("Inicio / Terraforming Mars: Ares
+Expedition" would have looked fine, but the *old* four-item nav sitting above a single-game page never
+would have) genuinely didn't make sense. The user's question — "how do I get from Acerca de back to the
+catalog?" — also surfaced a real gap: the brand logo (`.brand`) was `href="#"` with no handler, on every
+page, so the only way back to Inicio from anywhere was the small "Inicio" text inside the crumb.
+
+Fixed both by splitting two concerns that had been living in one component:
+
+1. **Global chrome now only carries real site-level destinations.** `.links`/`.nav-drawer-links`
+   trimmed to Inicio + Acerca de — the two things that exist as actual pages, present identically on
+   every page's chrome. The logo is now a real link (`onclick="showPage('catalog')"`, was inert before)
+   on every page, so there are two consistent, always-visible ways back to Inicio (logo, and the
+   crumb's own "Inicio" segment on Detalle/Acerca de) rather than relying on the crumb alone.
+2. **Para empezar/Novedades/Clásicos moved into a new `.catalog-index`** — a page-local shelf-jump
+   bar, visible only on Inicio, directly above the shelves. Deliberately reuses the About page's own
+   `.about-index` interaction shape (click a tab → smooth-scroll + underline-active, via a new
+   `jumpToShelf()` mirroring `jumpToAboutSection()`) for consistency between the two pages' in-page
+   navs, but sized/laid out differently on purpose: natural-width tabs with a gap instead of
+   `flex:1`-stretched across the box, since 4 tabs evenly stretched across 1280px (vs. about-index's
+   640px) would read as oddly sparse. Rather than inventing new labels a second time, it points at the
+   catalog's own real `SHELVES` array (`shelf-destacados`/`shelf-hobby`/`shelf-estratega`/`shelf-nuevos`
+   — "Destacados del club"/"Descubre el hobby"/"Ingenio estratega"/"Recientemente añadidos") so the tab
+   labels are guaranteed to match what's actually on the page below them. Desktop-only (`display:none`
+   at ≤480px) — mobile already has its own filter-chip row directly under the header, and the drawer's
+   site links cover Inicio/Acerca de; a second sticky chip row would just compete with the first.
+3. **Found and fixed a small residual-state bug while testing this live:** since `showPage()` always
+   resets scroll to 0, but the new `.catalog-index`'s active-tab class only ever changed on click, using
+   the logo/crumb to return to Inicio from a scrolled-away state left the *last-clicked* shelf tab
+   highlighted even though the page had visibly reset to the top (Destacados). Fixed by resetting
+   `.catalog-index-item.active` to the first tab inside `showPage()` whenever `page === 'catalog'`.
+
+Verified live: clicking a shelf tab smooth-scrolls to the right section with the right tab underlined
+(confirmed by screenshot after the scroll animation settled); clicking the logo from Detalle returns to
+Inicio; the mobile drawer (forced-mobile override, same limitation on real narrow viewports noted every
+round) shows just Inicio/Acerca de; and the tab-reset fix was confirmed with a scripted repro
+(click a non-first tab → navigate away → navigate back to catalog → first tab is active again).
+
+## What to Look For (Round 7)
+- On Inicio, does clicking each shelf-index tab smoothly scroll to the right shelf with the right tab
+  underlined?
+- On Detalle and Acerca de, does the header read as just logo + crumb + toggle — no shelf labels that
+  don't apply to the current page?
+- From Detalle or Acerca de, does clicking the logo return you to Inicio? Does clicking "Inicio" inside
+  the crumb also work?
+- Back on Inicio after using either of those, is "Destacados del club" the active shelf tab (not
+  whatever tab was last clicked before you navigated away)?
