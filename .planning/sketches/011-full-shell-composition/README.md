@@ -511,3 +511,47 @@ header's right edge (1525→1561 inside a 313→1593 box) on all three pages, no
 - On Acerca de at a wide desktop width, does the theme toggle sit at the header's right edge, or is
   there a large gap between "Acerca de" and the toggle?
 - On Detalle, is the crumb ("Inicio / {game title}") still exactly as before?
+
+## Round 9: Vocabulary — Ludoteca, Quiénes Somos (2026-08-20)
+
+A naming pass, decided through direct back-and-forth rather than variants — "Catálogo" read
+e-commerce, "Inicio" alone didn't carry a name for Detalle's crumb, and "Acerca de" said nothing about
+this specific club. Landed on:
+
+- **"Ludoteca"** (real Spanish word for a game/toy lending library) as the name of the catalog
+  section — fits the club's actual lending angle far better than "Catálogo," and reads warmer than
+  "Colección" (considered and passed over).
+- **"Quiénes Somos"** replacing "Acerca de" — "El Club" was rejected as redundant with the "PUKLLAY
+  CLUB" wordmark already in the logo; "Nosotros" alone was rejected as too cold.
+
+**Two names on purpose, not a drift.** "Inicio" stays as the nav item's label everywhere (`.links`,
+`.nav-drawer-links`) — it's a wayfinding action ("take me home"), not a name, same word implied by
+clicking the logo. "Ludoteca" is the actual *name* of that section, used only where a page is naming it
+rather than linking to it — right now that's exclusively Detalle's crumb ("Ludoteca / {game}"), since a
+breadcrumb literally states what section you drilled in from. This is deliberately different from every
+prior round's fix, which was always "stop having two words for the same thing" — here the two words mean
+two different things (an action vs. a name), so keeping them distinct is correct, not drift.
+"Quiénes Somos" has no such split: it replaced "Acerca de" everywhere it appeared as real product chrome
+(both `.links` instances, the mobile drawer).
+
+**Left alone on purpose:** the sketch's own page-switcher dev control (still reads
+Catálogo/Detalle/Acerca de) and the JS that matches its button text — established in Round 7 as
+meta-tooling, not real product nav, and this round didn't revisit that call. Updated the `<title>` tag
+for consistency since it was free. About's own body copy (which still says "catálogo" as a lowercase
+common noun in a sentence) was left untouched — that's the page content explicitly deferred to a future
+about-page session, not the shell this sketch covers.
+
+Verified live: Inicio's nav unchanged; Detalle's crumb reads "Ludoteca / Terraforming Mars: Ares
+Expedition" and its "Ludoteca" link still correctly returns to the catalog (scripted click test); Quiénes
+Somos renders with the header balance fix from Round 8 intact; the mobile drawer shows "Inicio / Quiénes
+Somos"; and the mobile collapsed crumb reads "‹ Ludoteca" at a real width (62px), not the `width:0`
+failure mode this project has hit before — an early manual test run without the full mobile CSS override
+briefly showed width:0, which turned out to be a test-script artifact (missing `.app-nav-inner` padding
+override), not a real regression, confirmed by rerunning with the complete override.
+
+## What to Look For (Round 9)
+- Does Detalle's crumb now read "Ludoteca / {game title}" instead of "Inicio / {game title}"?
+- Does the nav item that takes you home still say "Inicio" everywhere (Inicio's own nav, About's nav,
+  the mobile drawer)?
+- Does "Quiénes Somos" appear everywhere "Acerca de" used to (both nav-links states, the mobile drawer)?
+- On mobile, does the collapsed Detalle crumb read "‹ Ludoteca" clearly, not truncated or invisible?

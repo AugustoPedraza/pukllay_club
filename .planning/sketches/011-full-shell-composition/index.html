@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sketch 011 — Full Shell Composition (Catálogo + Detalle + Acerca de)</title>
+<title>Sketch 011 — Full Shell Composition (Ludoteca + Detalle + Quiénes Somos)</title>
 <link rel="stylesheet" href="../themes/default.css">
 <style>
   body { padding-top: 0; }
@@ -788,17 +788,31 @@
          About isn't nested under Inicio at all, it's a sibling top-level
          page, so "Inicio / Acerca de" implied a parent/child relationship
          that doesn't exist and read as disharmonious. Crumbs stay reserved
-         for Detalle, the one page that's actually a drill-down. -->
+         for Detalle, the one page that's actually a drill-down.
+         Round 9: two names on purpose. "Inicio" stays as the nav item's
+         wayfinding label (the universal "take me home" action, same word
+         a logo click implies) — .links items are actions, not names.
+         "Ludoteca" is the actual NAME of that section/collection, used
+         wherever a page is naming it rather than just linking to it — right
+         now that's only Detalle's crumb ("Ludoteca / {game}"), since a
+         breadcrumb literally states what section you drilled in from.
+         "Catálogo" was rejected (reads e-commerce); "Ludoteca" is a real
+         word for a game/toy lending library — fits the club's actual
+         lending angle. "Acerca de" → "Quiénes Somos" everywhere it named
+         that page (not just linked to it) — "Acerca de" said nothing
+         about this club specifically; "El Club" was rejected as redundant
+         with the "PUKLLAY CLUB" wordmark already in the logo, "Nosotros"
+         as too cold. -->
     <div class="links" data-catalog-only>
       <a href="#" class="active">Inicio</a>
-      <a href="#" onclick="showPage('about'); return false;">Acerca de</a>
+      <a href="#" onclick="showPage('about'); return false;">Quiénes Somos</a>
     </div>
     <div class="links" data-about-only style="display:none">
       <a href="#" onclick="showPage('catalog'); return false;">Inicio</a>
-      <a href="#" class="active">Acerca de</a>
+      <a href="#" class="active">Quiénes Somos</a>
     </div>
     <div class="crumb" data-detail-only style="display:none">
-      <a href="#" onclick="showPage('catalog'); return false;">Inicio</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span>
+      <a href="#" onclick="showPage('catalog'); return false;">Ludoteca</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span>
     </div>
     <div class="search" data-catalog-only>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -829,7 +843,7 @@
        shortcuts that only mean something on Inicio, shown everywhere. -->
   <nav class="nav-drawer-links">
     <a href="#" class="active" onclick="toggleNavDrawer(); showPage('catalog'); return false;">Inicio</a>
-    <a href="#" onclick="toggleNavDrawer(); showPage('about'); return false;">Acerca de</a>
+    <a href="#" onclick="toggleNavDrawer(); showPage('about'); return false;">Quiénes Somos</a>
   </nav>
   <button class="nav-drawer-filters-trigger" onclick="toggleNavDrawer(); toggleFiltersPanel();">🎚 Filtros <span id="filters-active-count"></span> ›</button>
 </div>
