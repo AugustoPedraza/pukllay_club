@@ -49,7 +49,10 @@
   .pk-difficulty-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
   .pk-difficulty-dot.is-filled { background: var(--color-text-muted); }
 
-  .chip-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  /* gap matches .pk-pill-row's 6px (not the default --space-2/8px) now
+     that .chip's base styling byte-matches .pk-pill — same visual family,
+     same spacing between items. */
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
   /* Round 16: base .chip (mecánicas/temas, in "más información") now
      byte-matches .pk-pill's muted treatment — 11px/600-weight, muted
      text, surface background — instead of its previous full-color-text/
@@ -96,7 +99,7 @@
      forcing it would mangle mixed-case titles like "7 Wonders Duel". */
   .detail-b h1 { font-family: var(--font-display); font-size: 2.25rem; letter-spacing: 0.01em; margin: 0 0 var(--space-2); line-height: 1.1; }
   .detail-b .tag-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
-  .detail-b .desc-collapse { margin-bottom: var(--space-5); max-width: 62ch; }
+  .detail-b .desc-collapse { margin-bottom: var(--space-4); max-width: 62ch; }
   .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
   .detail-b .desc.is-collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   /* Round 8 put this INSIDE the <p> as trailing inline content — but
@@ -326,7 +329,7 @@
   .info-accordion.is-open .chevron { transform: rotate(180deg); }
   .info-accordion-panel { max-height: 0; overflow: hidden; transition: max-height var(--duration-base) var(--ease-out-soft); }
   .info-accordion.is-open .info-accordion-panel { max-height: 700px; }
-  .info-accordion-panel-inner { padding-bottom: var(--space-5); padding-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-5); max-width: 62ch; }
+  .info-accordion-panel-inner { padding-bottom: var(--space-4); padding-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-4); max-width: 62ch; }
 
   /* Round 14, desktop only: no more accordion. The trigger disappears and
      the panel is forced open — the sticky poster-col means "más
@@ -551,7 +554,6 @@
                     </div>
                   </div>
                   <div>
-                    <p class="section-heading">Ficha técnica</p>
                     <dl class="spec-list">
                       <div class="spec-row"><dt>Diseñadores</dt><dd>Jacob Fryxelius, Isaac Fryxelius</dd></div>
                       <div class="spec-row"><dt>Ilustrador</dt><dd class="missing">No disponible — campo no existe en el catálogo hoy</dd></div>
@@ -561,7 +563,7 @@
                       <div class="spec-row"><dt>Peso (BGG)</dt><dd>3.8 / 5</dd></div>
                       <div class="spec-row"><dt>Puesto en ranking BGG</dt><dd class="missing">#142 (dato de ejemplo, no confirmado)</dd></div>
                     </dl>
-                    <div class="bgg-link-row"><a href="#">Ver ficha completa en BoardGameGeek ↗</a></div>
+                    <div class="bgg-link-row"><a href="#">Ver en BoardGameGeek ↗</a></div>
                   </div>
                 </div>
               </div>

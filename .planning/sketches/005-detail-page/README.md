@@ -422,6 +422,24 @@ Three fixes, all in the now-inline "más información" block:
   "dividers for everything." Vertical rhythm now comes from padding alone; the one remaining divider
   in the whole "más información" block is the single top border separating it from the description.
 
+## Round 17 — real spacing bug fixed; ficha técnica label dropped; BGG link shortened
+- **Real bug, not a preference: `--space-5` doesn't exist.** The theme's spacing scale only defines
+  steps 1/2/3/4/6/8/12 (`default.css`) — there's no `--space-5`. `.desc-collapse`'s `margin-bottom`
+  and `.info-accordion-panel-inner`'s `gap`/`padding-bottom` were all set to `var(--space-5)` with no
+  fallback, which is invalid at computed-value time and resolves to each property's initial value —
+  effectively **zero**. That's exactly the "spacing between Mecánicas and Temas" complaint: the gap
+  between those sections (and Ficha técnica below them) was silently collapsing to 0, not just too
+  tight. Fixed by using `--space-4` (24px, the nearest real step), both here and on `.desc-collapse`.
+  Also tightened `.chip-row`'s gap from `--space-2` (8px) to a literal `6px`, matching
+  `.pk-pill-row`'s gap now that `.chip` byte-matches `.pk-pill`'s styling (Round 16) — same family,
+  same spacing.
+- **Dropped the "Ficha técnica" section-heading.** The spec-list's own row labels (Diseñadores,
+  Editorial, Año, etc.) already make it obvious what the block is — a heading above it was redundant.
+  "Mecánicas" and "Temas" keep theirs, since chip rows alone don't self-explain their category the
+  way labeled spec rows do.
+- **BGG link text shortened**: "Ver ficha completa en BoardGameGeek ↗" → "Ver en BoardGameGeek ↗" —
+  tighter, reads as a simple outbound link rather than a formal call to action.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
