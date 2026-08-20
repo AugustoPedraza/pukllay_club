@@ -186,3 +186,49 @@ actually been driven at that width before. All fixed:
   it linger on the wrong page?
 - On Acerca de, use the section-index chips to jump between bands — does the target land below the
   sticky index bar, or does the heading get hidden underneath it?
+
+## Round 3: Section Index, Header Rhythm, Footer Balance (2026-08-20)
+
+Follow-up review flagged three more real issues:
+
+1. **The section index "sucked."** Round 2's fix reused `.chip` — the catalog's filled-capsule
+   filter/category-chip component — for an entirely different job (in-page reading navigation), and
+   items ran left-aligned/scrollable rather than fitting the row, both contributing to the "unbalanced"
+   read. Replaced with a dedicated editorial anchor-tab pattern: no fill, underline-on-active, evenly
+   distributed (`flex:1` each, capped to a 640px centered row) — the standard for in-page section nav on
+   long-form content, distinct from the catalog's own button vocabulary. Since the page already has
+   carousel imagery per band, each tab reuses that section's own carousel icon (🎯/🧩/🎲, plus 💬 for
+   FAQ which has no carousel) as a small visual anchor instead of relying on text alone.
+2. **"Acerca de" next to the isologo broke the header's rhythm.** It lived in its own `.quiet-label`
+   component — a bare label floating right after the brand block, different styling from how the detail
+   page identifies its own page (a proper `.crumb` breadcrumb). Unified both non-catalog header states
+   onto the same `.crumb` component: About now reads "Catálogo / Acerca de", matching the exact rhythm
+   already established for Detalle instead of inventing a second, competing pattern next to the logo.
+   Fixing this exposed a real layout bug: the wordmark itself ("PUKLLAY CLUB" in Bebas Neue at 1.5rem)
+   is ~190px wide on its own — Round 2 only ever hid the *tagline*, not the wordmark — which combined
+   with the hamburger + theme-toggle left the new About crumb almost no room; it rendered at
+   `width: 0` (invisible, not just truncated). Fixed by also shrinking the wordmark font-size on
+   mobile, the standard move (shrink the mark, don't just drop secondary text).
+3. **Footer distribution/balance was broken on mobile**: Round 2's fix centered the mission-band
+   headline but left the utility-bar below it `flex-start` (left-aligned, ragged) — two different
+   alignments stacked on each other reads as unbalanced regardless of either one's own correctness.
+   Standard minimal mobile-footer pattern instead: one alignment for the whole block (centered), link
+   row and meta row (BGG badge + copyright) separated by a plain divider rather than implied by
+   whitespace, matching how the rest of the footer already groups content.
+
+Verified via a temporary unconditional style injection standing in for the ≤480px media query (this
+review session's browser tooling could not obtain a genuinely narrow real viewport — window-resize
+calls did not take effect on the underlying display) — same computed CSS the real media query applies,
+confirmed live: About header now reads "‹ Catálogo" correctly (not width:0), section-index tabs render
+evenly spaced with the active underline, and the footer renders as one consistently centered block.
+
+## What to Look For (Round 3)
+- On Acerca de at desktop width, does "Catálogo / Acerca de" read as the same pattern as Detalle's own
+  breadcrumb, not a separate "page label" floating near the logo?
+- Do the section-index tabs (Misión/Cómo funciona/El club/FAQ) read as in-page navigation, not as
+  another set of catalog filter chips?
+- At ≤480px, is the collapsed "‹ Catálogo" back-link actually visible next to the theme toggle, or does
+  it disappear again (check after any future header-content addition — this is a `width:0` failure
+  mode, not just visually cramped)?
+- Scroll to the footer at ≤480px — does everything share one alignment, with a clear divider between
+  the link row and the BGG badge/copyright row?

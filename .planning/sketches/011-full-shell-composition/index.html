@@ -64,7 +64,11 @@
   .app-nav .crumb a:hover { color: var(--color-primary); }
   .app-nav .crumb .sep { opacity: 0.5; }
   .app-nav .crumb .current { color: var(--color-text); font-weight: 600; }
-  .app-nav .quiet-label { flex: 1; font-size: var(--text-sm); font-weight: 600; color: var(--color-text); }
+  /* about-page header now reuses .crumb (below) instead of its own
+     .quiet-label component — "Catálogo / Acerca de" matches the exact same
+     breadcrumb rhythm the detail page already established, instead of a
+     second, differently-styled "page name floating next to the logo"
+     pattern that read as competing with the brand lockup. */
 
   /* mobile nav drawer (fixes: "not search, not filter options — drawer menu
      and hamburger" missing). Below 480px the desktop .links/.search vanish
@@ -136,9 +140,16 @@
 
   .mobile-chip-nav { display: none; }
   @media (max-width: 480px) {
-    .app-nav { padding-left: var(--space-3); padding-right: var(--space-3); gap: var(--space-3); }
+    .app-nav { padding-left: var(--space-3); padding-right: var(--space-3); gap: var(--space-2); }
     .app-nav .links, .app-nav .search { display: none; }
     .app-nav .brand-text span { display: none; }
+    /* Dropping the tagline alone wasn't enough — the wordmark itself
+       ("PUKLLAY CLUB" in Bebas Neue at 1.5rem) is ~190px wide on its own,
+       which combined with the hamburger + theme-toggle left the crumb
+       almost no room and it rendered at width:0 (invisible, not just
+       truncated). Standard mobile-nav move: shrink the wordmark too, not
+       just drop secondary text. */
+    .app-nav .brand strong { font-size: 1.1rem; }
     .nav-hamburger {
       display: flex; align-items: center; justify-content: center; flex: 0 0 auto; order: -1;
       width: 36px; height: 36px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
@@ -326,6 +337,7 @@
   .footer-c .mission-band .footer-social a:hover { background: rgba(255,255,255,0.15); color: #fff; }
   .footer-c .mission-band .footer-social { justify-content: center; }
   .footer-c .utility-bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-6); flex-wrap: wrap; gap: var(--space-2); }
+  .footer-c .footer-meta { display: flex; align-items: center; gap: var(--space-3); }
 
   /* mobile footer: one compact tier, not two stacked "footers" (the
      full-bleed purple mission statement + a separate utility bar read as
@@ -333,13 +345,20 @@
      app's minimal chrome). Drops the mission paragraph + social row on
      mobile; keeps a short one-line brand statement, the compliance-required
      BGG badge, essential links, and copyright — same content tier the
-     desktop utility-bar already carries, just no second heavy band above it. */
+     desktop utility-bar already carries, just no second heavy band above it.
+     First pass switched the utility-bar to flex-start (left-aligned, ragged)
+     while the mission-band above it stayed centered — an alignment mismatch
+     that read as unbalanced on its own. Standard minimal mobile-footer
+     pattern instead: everything centered, one alignment for the whole
+     block, link row and meta row separated by a plain divider rather than
+     implied by whitespace alone. */
   @media (max-width: 480px) {
     .footer-c .mission-band { padding: var(--space-4) var(--space-4); }
     .footer-c .mission-band p, .footer-c .mission-band .footer-social { display: none; }
     .footer-c .mission-band h3 { font-size: var(--text-lg); margin: 0; }
-    .footer-c .utility-bar { flex-direction: column; align-items: flex-start; padding: var(--space-4); }
-    .footer-c .footer-links { gap: var(--space-3); }
+    .footer-c .utility-bar { flex-direction: column; align-items: center; text-align: center; padding: var(--space-4); gap: var(--space-3); }
+    .footer-c .footer-links { justify-content: center; gap: var(--space-4) var(--space-3); }
+    .footer-c .footer-meta { flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); width: 100%; }
   }
   .footer-brand .word { font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-primary); text-transform: uppercase; text-decoration: none; }
 
@@ -623,19 +642,36 @@
   .about-b .hero-band h1 { font-family: var(--font-display); font-size: 3rem; margin: 0 0 var(--space-3); text-transform: uppercase; color: var(--color-primary); }
   .about-b .hero-band p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 60ch; margin: 0 auto; line-height: 1.6; }
   /* about-page section index (fix: page was pure vertical scroll, no way to
-     jump to a section). Reuses .chip — same visual language as the
-     catalog's mobile category row, not a bolted-on table of contents.
-     Sticky so it stays reachable while reading a long band's text. */
+     jump to a section). First pass reused .chip — the catalog's filter/
+     category-chip language (filled capsule buttons) — which read as an
+     accidental borrow, not an intentional pattern, and left items ragged/
+     ellipsis-cut on narrower screens. This is an editorial anchor-tab
+     pattern instead (underline-on-active, no fill, evenly distributed) —
+     the standard for in-page section nav (docs sites, long-form product
+     pages), distinct from the catalog's own button vocabulary. Each item
+     reuses that section's own carousel icon as a small visual anchor,
+     since the page already has that imagery — a plain text label doesn't
+     need to be the only cue. Sticky so it stays reachable while reading. */
   .about-index {
     /* top matches the nav's own established height convention (see
        .game-sticky-bar / .poster-col's sticky top elsewhere in this file) —
        top:0 would stick this UNDER the real .app-nav (also sticky, higher
        z-index), the same hidden-behind-header bug just fixed above. */
-    position: sticky; top: 64px; z-index: 50; display: flex; gap: var(--space-2);
-    overflow-x: auto; scrollbar-width: none; background: var(--color-bg);
-    padding: var(--space-3) var(--space-6); border-bottom: 1px solid var(--color-border);
+    position: sticky; top: 64px; z-index: 50; display: flex;
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    max-width: 640px; margin: 0 auto; padding: 0 var(--space-6);
   }
-  .about-index::-webkit-scrollbar { display: none; }
+  .about-index-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: var(--space-3) var(--space-2); text-decoration: none; text-align: center;
+    color: var(--color-text-muted); border-bottom: 2px solid transparent;
+    transition: color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+  }
+  .about-index-item .idx-icon { font-size: 1.1rem; line-height: 1; }
+  .about-index-item .idx-label { font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .about-index-item:hover { color: var(--color-text); }
+  .about-index-item.active { color: var(--color-primary); border-color: var(--color-primary); }
+  @media (max-width: 480px) { .about-index-item .idx-label { font-size: 10px; white-space: normal; line-height: 1.2; } }
   .about-b .band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; padding: var(--space-8) var(--space-6); max-width: 1100px; margin: 0 auto; scroll-margin-top: 128px; }
   .about-b .band.tint { background: var(--color-surface); max-width: none; padding: var(--space-8) 0; }
   .about-b .band.tint > .band-inner { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6); }
@@ -691,7 +727,9 @@
   <div class="crumb" data-detail-only style="display:none">
     <a href="#" onclick="showPage('catalog'); return false;">Catálogo</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span>
   </div>
-  <div class="quiet-label" data-about-only style="display:none">Acerca de</div>
+  <div class="crumb" data-about-only style="display:none">
+    <a href="#" onclick="showPage('catalog'); return false;">Catálogo</a><span class="sep">/</span><span class="current">Acerca de</span>
+  </div>
   <div class="search" data-catalog-only>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" placeholder="Busca por título, autor o editorial…">
@@ -882,10 +920,10 @@
        mobile category row, so it reads as the same app, not a bolted-on
        table of contents. Sticky so it stays reachable while reading. -->
   <nav class="about-index" aria-label="Secciones de esta página">
-    <a href="#about-mission" class="chip active" onclick="jumpToAboutSection(this,'about-mission');return false;">Nuestra misión</a>
-    <a href="#about-how" class="chip" onclick="jumpToAboutSection(this,'about-how');return false;">Cómo funciona</a>
-    <a href="#about-club" class="chip" onclick="jumpToAboutSection(this,'about-club');return false;">El club</a>
-    <a href="#about-faq" class="chip" onclick="jumpToAboutSection(this,'about-faq');return false;">FAQ</a>
+    <a href="#about-mission" class="about-index-item active" onclick="jumpToAboutSection(this,'about-mission');return false;"><span class="idx-icon">🎯</span><span class="idx-label">Misión</span></a>
+    <a href="#about-how" class="about-index-item" onclick="jumpToAboutSection(this,'about-how');return false;"><span class="idx-icon">🧩</span><span class="idx-label">Cómo funciona</span></a>
+    <a href="#about-club" class="about-index-item" onclick="jumpToAboutSection(this,'about-club');return false;"><span class="idx-icon">🎲</span><span class="idx-label">El club</span></a>
+    <a href="#about-faq" class="about-index-item" onclick="jumpToAboutSection(this,'about-faq');return false;"><span class="idx-icon">💬</span><span class="idx-label">FAQ</span></a>
   </nav>
 
   <div class="band" id="about-mission">
@@ -959,7 +997,7 @@
   </div>
   <div class="utility-bar">
     <ul class="footer-links"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">FAQ</a></li><li><a href="#">Contacto</a></li></ul>
-    <div style="display:flex; align-items:center; gap:var(--space-3)">
+    <div class="footer-meta">
       <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
       <span class="footer-copyright">© 2026 Pukllay Club</span>
     </div>
@@ -1271,7 +1309,7 @@ function showPage(page, evt) {
   const nav = document.getElementById('app-nav');
   nav.querySelectorAll('[data-catalog-only]').forEach(el => el.style.display = page === 'catalog' ? '' : 'none');
   nav.querySelectorAll('[data-detail-only]').forEach(el => el.style.display = page === 'detail' ? 'flex' : 'none');
-  nav.querySelectorAll('[data-about-only]').forEach(el => el.style.display = page === 'about' ? 'block' : 'none');
+  nav.querySelectorAll('[data-about-only]').forEach(el => el.style.display = page === 'about' ? 'flex' : 'none');
   document.getElementById('chips-nav').style.display = page === 'catalog' ? '' : 'none';
   document.getElementById('mobile-cta-bar').style.display = page === 'detail' ? '' : 'none';
   // Finding #5 fix: the detail page's own scroll listeners/observers keep
@@ -1405,7 +1443,7 @@ function lightboxStep(dir) { detailCarouselShow(detailCarouselIndex + dir); }
 // .about-index's own sticky top offsets the scroll target below via CSS
 // scroll-margin-top so the section heading doesn't land underneath it.
 function jumpToAboutSection(chip, targetId) {
-  document.querySelectorAll('.about-index .chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.about-index-item').forEach(c => c.classList.remove('active'));
   chip.classList.add('active');
   document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
