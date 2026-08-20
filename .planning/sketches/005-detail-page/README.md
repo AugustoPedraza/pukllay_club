@@ -518,6 +518,19 @@ de ejemplo, no confirmado)"), same treatment as the ranking row.
   results. Ilustrador stays unlinked — there's no real value to link when the field itself doesn't
   exist yet.
 
+## Round 23 — dropped the 62ch cap, real dead space on the right
+Your screenshot showed real dead space to the right of the description and "más información" — not
+a misalignment between the two (Round 20 already guaranteed they match each other), but both of them
+being narrower than the actual available column. The text column (masthead's second grid track) is
+roughly 668px at the page's 1100px max-width; 62ch is only about 500px. Meanwhile the title, tag-row,
+and facts-pill-row above were never capped and already ran the column's full width — so the capped
+paragraph/details section was reading as an accidental narrow column next to full-width siblings, not
+an intentional design choice. `.reading-measure` now caps at `100%` instead of `62ch` — full width,
+matching everything else in the column. This trades away the "~60-75 characters per line" typographic
+readability convention in favor of actually using the available space; the shared class stays (so the
+two blocks still can't drift apart from each other, per Round 20), it just isn't constraining either
+one anymore.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

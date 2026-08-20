@@ -55,7 +55,20 @@
      drift risk this project's own principle warns about elsewhere in this
      file (Round 6's pill/title byte-matching). One class means they can't
      quietly drift apart if either gets edited later. */
-  .reading-measure { max-width: 62ch; }
+  /* Round 23: dropped the 62ch cap itself — it was leaving a real gap of
+     dead space to the right of the description and "más información",
+     since the actual text column (masthead's second grid track, ~668px
+     at the 1100px max-width) is wider than 62ch's ~500px. The title,
+     tag-row, and pk-pill-row above were never capped and already ran
+     full width, so the capped paragraph/details actually read as
+     narrower than everything around them, not as an intentional
+     typographic measure. Now full width — matching the rest of the
+     column, no dead space on the right — trading away the "ideal
+     paragraph line length" convention (~60-75 characters) in favor of
+     actually using the space. This class still exists so the two blocks
+     can't independently drift from each other again (Round 20's point
+     still holds), it's just no longer capping either of them. */
+  .reading-measure { max-width: 100%; }
   /* gap matches .pk-pill-row's 6px (not the default --space-2/8px) now
      that .chip's base styling byte-matches .pk-pill — same visual family,
      same spacing between items. */
