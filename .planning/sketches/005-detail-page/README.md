@@ -388,6 +388,17 @@ pinned image+CTA for most of the scroll. That's expected/normal for this pattern
 booking widget has the same gap), not a bug, but worth confirming it doesn't look broken once real
 content lengths are in play.
 
+## Round 15 — desktop CTA row: stacked, not side by side
+The buy box's `.cta-row` had primary + share side by side, which is why share had shrunk to an
+icon-only circle (Round 11) — two full-labeled buttons don't reliably fit next to each other in a
+320px column. Stacked instead: primary full-width on top, share full-width directly below it, both
+the same width. This removes the width constraint that forced the icon-only compromise, so share
+gets its label back ("↗ Compartir") rather than relying solely on a `title` tooltip. Also closer to
+the actual classic Amazon buy-box shape (stacked full-width primary/secondary actions) than the
+side-by-side version was. Mobile's sticky bottom bar is untouched — it's a different, more
+space-constrained context (a permanently visible fixed bar spanning the full viewport width), where
+side-by-side icon-only share still makes sense.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

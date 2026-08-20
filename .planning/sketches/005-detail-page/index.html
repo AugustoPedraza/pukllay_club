@@ -102,14 +102,21 @@
     transition: color var(--duration-fast) var(--ease-standard);
   }
   .detail-b .desc-toggle:hover { color: var(--color-primary); }
-  /* now lives in the 320px buy-box column, not the wide text column — two
-     full-labeled buttons side by side don't reliably fit there, so the
-     primary CTA grows to fill the row and share shrinks to icon-only,
-     same shape language as .mobile-cta-bar below. */
-  .detail-b .cta-row { display: flex; gap: var(--space-2); align-items: center; }
-  .detail-b .cta-row .cta-primary { flex: 1; justify-content: center; }
-  .detail-b .cta-row .cta-icon { flex: 0 0 auto; width: 48px; padding: 0; justify-content: center; }
-  .detail-b .cta-row .cta-icon .icon-label { display: none; }
+  /* Round 15: lives in the 320px buy-box column, stacked (not side by
+     side) — two full-labeled buttons don't reliably fit next to each
+     other at that width, which is why share previously shrank to an
+     icon-only circle with only a `title` tooltip. Stacking removes that
+     width constraint entirely: both buttons run full-width, and share
+     gets its label back ("↗ Compartir") instead of relying on a tooltip.
+     Matches the classic Amazon buy-box shape (primary action full-width
+     on top, secondary full-width directly below) more closely than the
+     side-by-side compromise did. Mobile's sticky bar keeps its own
+     side-by-side icon-only share — that's a different, more
+     space-constrained context (a permanently visible fixed bar), not
+     this buy-box column. */
+  .detail-b .cta-row { display: flex; flex-direction: column; gap: var(--space-2); }
+  .detail-b .cta-row .cta-primary { width: 100%; justify-content: center; }
+  .detail-b .cta-row .cta-icon { width: 100%; justify-content: center; }
   /* Round 14: the "más información" block (mechanics/themes/ficha
      técnica) moved out of its own full-width section below the masthead
      and into the same column as the description — it's reading content,
