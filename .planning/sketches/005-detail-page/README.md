@@ -241,6 +241,24 @@ again exactly like this.
   rectangle), keeping capsule/`radius-full` exclusively for pills and tags. One consistent rule
   going forward: **pills and tags are capsules; buttons are rounded rectangles.**
 
+## Round 9 — "Leer más" visibility bug fixed; CTA style lab added
+- **Real bug, not just a style miss:** Round 8 put the toggle inside the clamped `<p>` as trailing
+  inline content. `-webkit-line-clamp` clips trailing content along with the rest of the overflow
+  when it doesn't fit inside the visible lines — so the toggle could (and did) vanish entirely with
+  no visible way to expand the text. That's a real CSS limitation of line-clamp, not a preference
+  question. Fixed by moving the toggle back OUT as a sibling (guaranteed visible — a sibling isn't
+  subject to the paragraph's own `overflow: hidden`), while keeping the "attached to the text" goal
+  via: zero top margin, left-aligned flush with the paragraph, identical `text-base` font-size to
+  the body copy, and a leading "… " implying it continues the cut-off sentence. Reverted mobile's
+  clamp back to 2 lines (the 3-line bump from Round 8 was specifically to route around the
+  visibility bug, which no longer applies now that the toggle can't be clipped).
+- **CTA still didn't land after Round 8's shape change** — rather than guess a third time, added a
+  **sketch-only "CTA style lab"**: a small control strip above the masthead with 5 buttons (A:
+  current rounded-rect, B: large pill/capsule, C: outlined/ghost, D: flat minimal/sharp corners, E:
+  gradient) that apply live to the real "¡Quiero Jugarlo!" CTA in the masthead below, so styles can
+  be compared directly in context instead of via more rounds of blind guessing. Pick one and it
+  becomes the real style; the lab strip itself is not part of the shipped page.
+
 ## Future considerations (flagged, not built)
 You mentioned wanting to eventually add social/community information to this page — comments,
 in-page embedded YouTube (rules explainer or playthrough videos), and similar. Noting this as a

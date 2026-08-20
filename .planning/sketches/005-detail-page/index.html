@@ -80,14 +80,17 @@
   .detail-b .desc-collapse { margin-bottom: var(--space-5); max-width: 62ch; }
   .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
   .detail-b .desc.is-collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  /* lives INSIDE the <p> now, as the paragraph's own trailing inline
-     content — not a separate element below it — so it's literally part of
-     the text it collapses/expands, not an isolated component next to it.
-     Same font-size/family as the body copy it continues; only the
-     underline + muted color signal it's interactive. */
+  /* Round 8 put this INSIDE the <p> as trailing inline content — but
+     -webkit-line-clamp clips trailing content along with the rest of the
+     overflow when it doesn't fit inside the visible lines, so the toggle
+     could vanish entirely with no way to expand. Moved back OUT as a
+     sibling (guaranteed visible, immune to the clamp's overflow:hidden) —
+     but zero top margin, left-aligned flush with the text, same font-size
+     as the body copy, and a leading "…" implying it continues the cut-off
+     sentence, so it still reads as attached rather than a floating button. */
   .detail-b .desc-toggle {
-    display: inline; background: none; border: none; padding: 0; margin-left: 4px;
-    color: var(--color-text-muted); font-weight: 600; font-size: inherit; font-family: inherit;
+    display: block; background: none; border: none; padding: 2px 0 0; margin: 0;
+    color: var(--color-text-muted); font-weight: 600; font-size: var(--text-base); font-family: inherit;
     cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
     transition: color var(--duration-fast) var(--ease-standard);
   }
@@ -174,11 +177,7 @@
     .detail-b .detail-carousel { border-radius: 0; }
     .detail-b .pk-pill-row { margin-top: var(--space-3); }
     .detail-b h1 { font-size: 1.75rem; }
-    /* 3, not 2 — now that "Leer más" is trailing inline content inside
-       the paragraph itself, a 2-line clamp risks clipping the toggle text
-       out of view entirely (no visible way to expand) if the description
-       fills both lines before the button gets rendered. */
-    .detail-b .desc.is-collapsed { -webkit-line-clamp: 3; }
+    .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
     .detail-b .cta-row { flex-direction: column; align-items: stretch; }
     .detail-b .cta-primary { width: 100%; justify-content: center; }
     .detail-b .cta-icon { width: 100%; justify-content: center; }
@@ -200,6 +199,23 @@
     transition: all var(--duration-fast) var(--ease-standard);
   }
   .cta-primary:hover { background: var(--color-secondary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+  /* ---- CTA style lab (sketch-only comparison tool) ---- */
+  .cta-lab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px var(--pk-gutter); background: var(--color-accent-bg); border-bottom: 1px dashed var(--color-border); font-family: var(--font-sans); }
+  .cta-lab-label { font-size: 12px; color: var(--color-text-muted); font-weight: 700; margin-right: 4px; }
+  .cta-lab-swatch { font-size: 12px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); cursor: pointer; }
+  .cta-lab-swatch.is-active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  /* alternative CTA treatments, toggled live onto the real .cta-primary
+     button by the lab strip above — !important is fine here, this block
+     only exists for a throwaway in-sketch comparison, not shipped code */
+  .cta-style-b { border-radius: var(--radius-full) !important; padding: 15px 30px !important; font-size: var(--text-base) !important; box-shadow: var(--shadow-md) !important; }
+  .cta-style-c { background: transparent !important; border: 2px solid var(--color-primary) !important; color: var(--color-primary) !important; box-shadow: none !important; }
+  .cta-style-c:hover { background: var(--color-accent-bg) !important; color: var(--color-primary) !important; }
+  .cta-style-d { border-radius: var(--radius-sm) !important; box-shadow: none !important; }
+  .cta-style-d:hover { box-shadow: none !important; transform: none !important; filter: brightness(1.1); }
+  .cta-style-e { border-radius: var(--radius-lg) !important; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)) !important; box-shadow: var(--shadow-md) !important; }
+  .cta-style-e:hover { background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)) !important; }
 
   /* ---- share button + popover ---- */
   /* was an icon-only circle with just a bare "↗" glyph — not a recognized
@@ -344,6 +360,18 @@
       </div>
     </div>
 
+    <!-- SKETCH-ONLY control, not part of the real page — pick a CTA style
+         to see it applied live to the actual "¡Quiero Jugarlo!" button
+         below, since guessing again wasn't landing. -->
+    <div class="cta-lab">
+      <span class="cta-lab-label">Probar estilo de CTA:</span>
+      <button class="cta-lab-swatch is-active" onclick="setCtaStyle('', this)">A: Actual (rounded-rect)</button>
+      <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-b', this)">B: Pill grande</button>
+      <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-c', this)">C: Contorno (ghost)</button>
+      <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-d', this)">D: Minimal (flat, sharp)</button>
+      <button class="cta-lab-swatch" onclick="setCtaStyle('cta-style-e', this)">E: Degradé</button>
+    </div>
+
     <main class="detail detail-b">
       <div class="masthead-band">
         <div class="masthead">
@@ -386,7 +414,8 @@
                 construís tu propio motor de producción de recursos. Esta edición standalone
                 simplifica las reglas del original sin perder profundidad estratégica — ideal para
                 quienes quieren probar el sistema de Terraforming Mars sin la carga completa del
-                juego base. <button class="desc-toggle" onclick="toggleDescCollapse(this)">Leer más</button></p>
+                juego base.</p>
+              <button class="desc-toggle" onclick="toggleDescCollapse(this)">… Leer más</button>
             </div>
             <div class="cta-row">
               <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
@@ -575,12 +604,21 @@
   // as its own trailing inline content, so target the paragraph via
   // closest() rather than assuming it's a preceding sibling. ----
   function toggleDescCollapse(btn) {
-    const text = btn.closest('.desc');
+    const text = btn.previousElementSibling;
     const collapsed = text.classList.toggle('is-collapsed');
-    btn.textContent = collapsed ? 'Leer más' : 'Leer menos';
+    btn.textContent = collapsed ? '… Leer más' : 'Leer menos';
   }
 
   // ---- share ----
+  // ---- CTA style lab (sketch-only) — applies the chosen modifier class
+  // live to the real CTA button so styles can be compared in context ----
+  function setCtaStyle(cls, btn) {
+    const cta = document.querySelector('.cta-primary');
+    cta.className = 'cta-primary' + (cls ? ' ' + cls : '');
+    document.querySelectorAll('.cta-lab-swatch').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+  }
+
   // Real implementation: clicking the share button tries the native Web
   // Share API first (navigator.share) — the OS-level share sheet with
   // every installed app (WhatsApp, Instagram, Messages, etc.), which beats
