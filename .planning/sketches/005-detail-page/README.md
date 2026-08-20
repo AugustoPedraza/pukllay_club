@@ -603,6 +603,19 @@ and scroll-based hide/show were already correct, they just never had a chance to
   debounce: every `scroll` event adds `.is-hidden` and resets a 200ms timer; the bar only reappears
   once no further scroll event fires within that window (i.e. the gesture has ended).
 
+## Round 28 — "shows nothing" was the sketch-only dev toolbar covering it, not a real bug
+Confirmed the intended pattern is correct: visible at the bottom on first render, high z-index, in
+front of the reading content — that's exactly how `.mobile-cta-bar` was already built. Verified this
+directly in a browser rather than guessing further (loaded the file, resized to a 375px-equivalent
+viewport, inspected `#mobile-cta-bar` — `display: flex`, `opacity: 1`, correctly positioned at the
+bottom, real bug from Round 26 confirmed fixed). A screenshot showed the actual cause: `#sketch-tools`
+(this file's own theme/viewport picker, a review-only convention, not part of the design) sits
+`position: fixed; bottom: 12px; right: 12px; z-index: 9999` — the same bottom-of-screen region as
+the CTA bar, with a much higher z-index, so it was visually covering/cutting off the share button.
+The CTA bar itself was rendering correctly the whole time. Moved `#sketch-tools` to sit just below
+the sticky header (`top: 76px`) instead, clear of both the header's own controls and the bottom CTA
+bar at every viewport width.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

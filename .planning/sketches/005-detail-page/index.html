@@ -477,7 +477,15 @@
   .field-error { color: var(--color-danger); font-size: var(--text-xs); margin: -4px 0 10px; display: none; }
   .field-error.is-visible { display: block; }
 
-  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; }
+  /* Round 28: this sketch-only dev toolbar used to sit bottom-right,
+     directly on top of the real mobile-cta-bar (also bottom, full-width,
+     z-index:60) — its own z-index:9999 meant it visually covered/cut off
+     the share button, which looked exactly like "the CTA bar shows
+     nothing" even though the bar itself was rendering correctly. Moved
+     below the sticky header (top:76px clears its 64px height) instead of
+     the top edge itself, so it doesn't turn around and cover the header's
+     theme toggle in the same way. */
+  #sketch-tools { position: fixed; top: 76px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; }
   #sketch-tools:hover { opacity: 1; }
   .viewport-frame { transition: max-width var(--duration-base) var(--ease-standard); margin: 0 auto; }
 </style>
