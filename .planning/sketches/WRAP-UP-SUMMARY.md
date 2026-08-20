@@ -126,3 +126,73 @@ exit hook back into browsing.
   smooth-animated feel is worth one real-device confirm.
 - The real WhatsApp club number is hardcoded in the sketch's reservation flow — must move to
   runtime env config before this becomes real `CatalogLive.Show` code, not copied as a literal.
+
+---
+
+## Session: 2026-08-20 (continued)
+
+**Sketches processed:** 4 (1 partial)
+**Design areas added:** Motion System, Empty / Loading / Error States
+**Design areas replaced:** Page Shell (Header + Footer) — sketch 011 supersedes sketch 003 entirely
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/` (updated in place)
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 006 | motion-system | D (Subtle/Soft synthesis) | Motion System |
+| 007 | composed-catalog-page | — (partial) | Card/rail-gap correction folded into Layout & Navigation |
+| 009 | empty-loading-error-states | A (Minimal/Utilitarian) | Empty / Loading / Error States |
+| 011 | full-shell-composition | — (consistency check, 9 rounds) | Page Shell (Header + Footer) — replaces sketch 003 |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| 008 | filter-search-ui | User: "requires more polishing" — deliberately left off the processed list so a future `/gsd-sketch --wrap-up` reconsiders it once it's had another sketch pass, rather than treating today's "not ready" as a permanent exclusion. |
+
+## Design Direction
+This continuation is mostly a **correction and consolidation pass**, not new visual ground: sketch
+011 took the already-approved shell (003) and catalog composition (007) through 9 real revision
+rounds driven by direct user feedback on the actual composed page — header balance, content-width
+alignment across every section (not just the shell), a full footer redesign (two-tier Mission Band →
+one undivided row), a deliberate vocabulary pass (Inicio/Ludoteca/Quiénes Somos), and a real
+scroll-vs-IntersectionObserver bug fix that also corrected two other reference files' guidance.
+006 and 009 are the two new design areas — motion timing and non-happy-path states — both simple,
+decisive winners with no multi-round drama.
+
+## Key Decisions
+- **Page shell (011, replaces 003):** one header with 3 *states* (nav-links / breadcrumb / nav-links
+  again — not nav-links / breadcrumb / static label as originally designed), crumbs reserved for
+  genuine drill-downs only (Detalle), a single-row footer with no divider, "Inicio" (nav action) kept
+  deliberately distinct from "Ludoteca" (the catalog's actual name, used in the crumb) — two different
+  words for two different jobs, not drift. Full detail in `references/page-shell.md`.
+- **Content-width alignment (011, cross-cutting):** every page section — not just the header/footer —
+  must share the identical `max-width: 1280px; margin: 0 auto` box, with padding living on the same
+  element as the max-width rather than a wrapper around it. Caught as a real bug twice: once between
+  the shell and the catalog rail, once again inside the footer's own markup.
+- **IntersectionObserver → scroll listener (011, corrects 005's original guidance):** Chrome
+  throttles/suspends `IntersectionObserver` callbacks in a backgrounded tab, which silently broke
+  both the mobile CTA bar's footer-park and the sticky title bar. Both now use a plain `scroll`
+  listener + `getBoundingClientRect()`. This correction propagated into `detail-page-layout.md`,
+  `detail-page-mobile-interaction.md`, and the top-level `design_direction` principle in SKILL.md —
+  all three previously recommended the now-superseded approach.
+- **Card/rail sizing (007, folds into `layout-navigation.md`):** the shared rail gap is
+  `var(--space-4)` (24px), not `var(--space-3)` (16px) — 001 and 002 had disagreed on this without
+  either sketch noticing; 007 caught it composing them together, 011 confirmed it's still the
+  shipped value.
+- **Motion (006):** 100/180/280ms, no-overshoot soft ease-out, `-3px` hover-lift — already live in
+  the shared theme, not just a validated proposal.
+- **Empty/loading/error (009):** flat, terse, one action per state — the illustrated/warm alternative
+  was rejected as trying too hard for a moment a user wants to get past quickly.
+- **Theme file refreshed:** `sources/themes/default.css` was stale (missing the real light/dark
+  toggle mechanism and 006's motion tokens) — re-copied from the live sketch theme as part of this
+  wrap-up.
+
+## Open Items Carried Forward
+- Sketch 008 (filter-search-ui) — excluded this round per direct feedback ("requires more polishing"),
+  not added to the processed list. Revisit with a focused polish pass before the next wrap-up.
+- About page's own *content* (mission/how-it-works/club/FAQ) was explicitly flagged by the user as
+  needing its own dedicated future sketch session — 011 only touched the shell/header around it, not
+  the page itself. `about-page-content.md` is unchanged and still reflects sketch 004.
+- The about-page's mission-statement redundancy flagged in the previous session (appears in both the
+  page's own lead section and the footer) is now moot — the footer's mission paragraph was removed
+  entirely in 011's footer redesign.

@@ -1,0 +1,1631 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 011 — Full Shell Composition (Ludoteca + Detalle + Quiénes Somos)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 0; }
+
+  /* ============ header — VERBATIM from 007 (itself VERBATIM from 001-D's
+     .app-nav), extended with 003-C's quiet states grafted onto the SAME
+     element. Both 005's .pk-header and 004's .pk-header are DISCARDED
+     entirely here — see README finding #1: they were a second, independent
+     header implementation that would have stacked two headers instead of
+     one adapting component. ============ */
+  .app-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--color-bg);
+    border-bottom: 1px solid transparent;
+    transition: background var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard);
+  }
+  /* Round 4: the bar itself stays full-bleed (background/sticky), but its
+     content is capped + centered so the brand+links cluster and the
+     search+toggle cluster read as two evenly-weighted bookends instead of
+     one heavy left side and a growing dead void on wide viewports. */
+  .app-nav-inner { display: flex; align-items: center; gap: var(--space-6); max-width: 1280px; margin: 0 auto; padding: var(--space-3) var(--space-6); }
+  /* isologo — the mark 005's own (discarded) header designed but never
+     shipped, since it was attached to a second, redundant header. Grafted
+     onto the real .app-nav .brand instead of being lost with the rest of
+     that file (README finding #1). */
+  .app-nav .brand { display: flex; align-items: center; gap: var(--space-2); margin-right: var(--space-4); text-decoration: none; flex: 0 0 auto; }
+  .app-nav .brand-mark { flex-shrink: 0; }
+  .app-nav .brand-text { display: flex; flex-direction: column; line-height: 1; }
+  .app-nav .brand strong { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.03em; color: var(--color-primary); }
+  .app-nav .brand span { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+  .app-nav .links { display: flex; gap: var(--space-4); flex: 0 0 auto; }
+  .app-nav .links a {
+    color: var(--color-text); text-decoration: none; font-size: var(--text-sm); font-weight: 600;
+    padding: var(--space-1) 0; border-bottom: 2px solid transparent;
+    transition: border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+  }
+  .app-nav .links a:hover, .app-nav .links a.active { border-color: var(--color-primary); color: var(--color-primary); }
+  .app-nav .search {
+    display: flex; align-items: center; gap: var(--space-2);
+    background: var(--color-surface); border-radius: var(--radius-full);
+    padding: var(--space-2) var(--space-3);
+    /* Round 4: grows to fill the gap left by the brand+links cluster instead
+       of sitting as a small fixed-width chip with empty space in front of
+       it — this, plus the toggle right after it via margin-left:auto, is
+       what makes search+toggle read as one weighted cluster pinned to the
+       right edge rather than two orphaned small elements. */
+    flex: 1 1 auto; min-width: 160px; max-width: 360px; margin-left: auto;
+  }
+  .app-nav .search input { border: none; background: transparent; outline: none; font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-text); flex: 1; }
+  .app-nav .search svg { flex-shrink: 0; opacity: 0.6; }
+  .app-nav.scrolled { background: color-mix(in srgb, var(--color-bg) 94%, transparent); box-shadow: var(--shadow-sm); border-color: var(--color-border); }
+
+  /* real light/dark toggle (frontier 010) — sets/persists
+     documentElement[data-theme], not a theme-FILE swap. See themes/default.css
+     for the actual light/@media(dark)/[data-theme] cascade this drives.
+     Proved first on 007, reused verbatim here. */
+  .theme-toggle {
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+    cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .theme-toggle:hover { border-color: var(--color-primary); background: var(--color-accent-bg); }
+  /* Round 8: on Acerca de there's no crumb (flex:1) or search (flex-grow)
+     left of the toggle to consume the row's leftover space — .links there
+     is natural-width, so without this the toggle would sit right after
+     "Acerca de" with a large dead zone to its right instead of at the
+     row's edge. Scoped to the real header (not the drawer's reused
+     .theme-toggle close button, which is already right-aligned via its own
+     justify-content:space-between). Harmless no-op on Catálogo/Detalle,
+     where the search/crumb's own flex-grow already consumes that space. */
+  .app-nav-inner .theme-toggle { margin-left: auto; }
+
+  .app-nav .crumb { flex: 1; display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--color-text-muted); }
+  .app-nav .crumb a { color: var(--color-text-muted); text-decoration: none; }
+  .app-nav .crumb a:hover { color: var(--color-primary); }
+  .app-nav .crumb .sep { opacity: 0.5; }
+  .app-nav .crumb .current { color: var(--color-text); font-weight: 600; }
+  /* about-page header now reuses .crumb (below) instead of its own
+     .quiet-label component — "Catálogo / Acerca de" matches the exact same
+     breadcrumb rhythm the detail page already established, instead of a
+     second, differently-styled "page name floating next to the logo"
+     pattern that read as competing with the brand lockup. */
+
+  /* mobile nav drawer (fixes: "not search, not filter options — drawer menu
+     and hamburger" missing). Below 480px the desktop .links/.search vanish
+     with nothing replacing them — no way to reach site sections, search, or
+     filters at all. One hamburger opens one drawer holding search + nav
+     links + a "Filtros" trigger, keeping the header itself minimal (hamburger
+     / logo / theme-toggle only) rather than cramming several icon buttons
+     into an already-tight 375px bar. */
+  .nav-hamburger { display: none; }
+  .nav-drawer-backdrop {
+    position: fixed; inset: 0; background: rgba(20,8,34,0.5); z-index: 610;
+    opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .nav-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .nav-drawer {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 84%; max-width: 320px; z-index: 611;
+    background: var(--color-bg); box-shadow: var(--shadow-lg); padding: var(--space-4);
+    transform: translateX(-100%); transition: transform var(--duration-slow) var(--ease-out-soft);
+    overflow-y: auto;
+  }
+  .nav-drawer.open { transform: translateX(0); }
+  .nav-drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); }
+  .nav-drawer-header strong { font-family: var(--font-display); font-size: var(--text-lg); }
+  .nav-drawer .search {
+    display: flex; align-items: center; gap: var(--space-2); background: var(--color-surface);
+    border-radius: var(--radius-full); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-4);
+  }
+  .nav-drawer .search input { border: none; background: transparent; outline: none; font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-text); flex: 1; }
+  .nav-drawer .search svg { flex-shrink: 0; opacity: 0.6; }
+  .nav-drawer-links { display: flex; flex-direction: column; margin-bottom: var(--space-4); }
+  .nav-drawer-links a {
+    color: var(--color-text); text-decoration: none; font-size: var(--text-base); font-weight: 600;
+    padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border);
+  }
+  .nav-drawer-links a.active { color: var(--color-primary); }
+  .nav-drawer-filters-trigger {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    padding: var(--space-3); font-size: var(--text-sm); font-weight: 600; color: var(--color-text); cursor: pointer;
+  }
+
+  /* filters panel, opened from the drawer's "Filtros" row — ported from
+     sketch 008's validated bottom-sheet/popover pattern, adapted to 011's
+     real GAMES fields (weightLabel/maxT — no per-game mechanics field
+     exists in this dataset, so mechanics filtering isn't offered here). */
+  .pill-btn {
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--color-border); background: var(--color-bg);
+    color: var(--color-text); font-size: var(--text-sm); font-weight: 600; padding: 8px 14px; border-radius: var(--radius-full);
+    cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); white-space: nowrap;
+  }
+  .pill-btn:hover { border-color: var(--color-primary); }
+  .pill-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .filters-panel-backdrop { position: fixed; inset: 0; background: rgba(20,8,34,0.5); z-index: 612; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); }
+  .filters-panel-backdrop.open { opacity: 1; pointer-events: auto; }
+  .filters-panel {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 613; transform: translateY(100%);
+    background: var(--color-bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: var(--shadow-lg);
+    max-height: 78vh; overflow-y: auto; padding: var(--space-4) var(--space-4) var(--space-6);
+    transition: transform var(--duration-slow) var(--ease-out-soft);
+  }
+  .filters-panel.open { transform: translateY(0); }
+  .filters-panel-header { position: relative; display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); }
+  .filters-panel-header strong { font-family: var(--font-display); font-size: var(--text-lg); }
+  .filter-group { margin-bottom: var(--space-4); }
+  .filter-group h5 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
+  .filter-group label { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); padding: 4px 0; cursor: pointer; }
+  .filters-clear-row { margin-top: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+  .filters-clear-row .pill-btn { width: 100%; justify-content: center; }
+
+  .mobile-chip-nav { display: none; }
+  @media (max-width: 480px) {
+    .app-nav-inner { padding-left: var(--space-3); padding-right: var(--space-3); gap: var(--space-2); }
+    .app-nav .links, .app-nav .search { display: none; }
+    .app-nav .brand-text span { display: none; }
+    /* Dropping the tagline alone wasn't enough — the wordmark itself
+       ("PUKLLAY CLUB" in Bebas Neue at 1.5rem) is ~190px wide on its own,
+       which combined with the hamburger + theme-toggle left the crumb
+       almost no room and it rendered at width:0 (invisible, not just
+       truncated). Standard mobile-nav move: shrink the wordmark too, not
+       just drop secondary text. */
+    .app-nav .brand strong { font-size: 1.1rem; }
+    .nav-hamburger {
+      display: flex; align-items: center; justify-content: center; flex: 0 0 auto; order: -1;
+      width: 36px; height: 36px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
+      background: var(--color-surface); color: var(--color-text); cursor: pointer; font-size: 16px;
+    }
+    /* Same overflow this project's own detail-page sketch already found and
+       fixed once (005's "Round 32"): the full breadcrumb (site root + "/" +
+       full game title) doesn't fit a narrow nav alongside the hamburger/
+       logo/theme-toggle — it was pushing the row wider than 320px and
+       wrapping .app-nav onto a second line, which then hid .game-sticky-bar
+       and .mobile-cta-bar behind the now-taller header (both assume a fixed
+       64px header). 011 discarded 005's own header entirely (finding #1) but
+       never inherited this specific fix since 007's shell had never been
+       tested with a real, long game title in .crumb at this width before.
+       Collapses to a plain "‹ Catálogo" back-link, the standard mobile
+       swap-in for a breadcrumb trail. */
+    .app-nav .crumb { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+    .app-nav .crumb .sep, .app-nav .crumb .current { display: none; }
+    .app-nav .crumb a { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .app-nav .crumb a::before { content: '‹ '; }
+    .mobile-chip-nav[data-catalog-only] { display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; padding: var(--space-3) 0 var(--space-4); }
+    .mobile-chip-nav::-webkit-scrollbar { display: none; }
+  }
+  .chip-edge-spacer { flex: 0 0 var(--space-6); }
+  @media (max-width: 480px) { .chip-edge-spacer { flex: 0 0 14px; } }
+  /* .chip = mobile category-filter chip (nav-level). NOT the same widget as
+     the detail page's mechanic/theme tags below — those are renamed
+     .info-chip precisely to avoid colliding with this rule. See README
+     finding #4 for the real bug this prevents. */
+  .chip {
+    flex: 0 0 auto; border: 1px solid var(--color-border); background: var(--color-bg);
+    color: var(--color-text); font-size: var(--text-xs); font-weight: 600;
+    padding: 6px 14px; border-radius: var(--radius-full); white-space: nowrap; cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .chip.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  .page-switcher {
+    display: flex; gap: var(--space-2); justify-content: center; align-items: center;
+    padding: var(--space-2) 0; background: var(--color-accent-bg);
+    border-bottom: 1px dashed var(--color-border); font-family: var(--font-sans);
+  }
+  .page-switcher .label { font-size: var(--text-xs); color: var(--color-text-muted); margin-right: var(--space-2); }
+  .page-switcher button {
+    font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-primary);
+    background: transparent; color: var(--color-primary); cursor: pointer;
+  }
+  .page-switcher button.is-active { background: var(--color-primary); color: var(--color-primary-content); }
+
+  .page { display: none; }
+  .page.is-active { display: block; }
+
+  main.catalog-main { max-width: 100%; padding: var(--space-6) 0 var(--space-12); }
+  .row-heading { font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0; color: var(--color-text); }
+  .row-heading.hero { color: var(--color-primary); }
+  .row-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); margin: 2px 0 0; }
+  /* Round 5: capped + centered to the SAME 1280px the header/footer use
+     (.app-nav-inner / .footer-row) — before this, shelves
+     had padding only (no max-width), so on any viewport wider than
+     ~1280+64px the rail content bled edge-to-edge while the header/footer
+     content stayed capped, and their left/right edges no longer lined up
+     vertically down the page. Real user-reported bug, confirmed via
+     screenshots at a real wide desktop width this session's browser tooling
+     still can't reach itself (see Round 3/4 notes on that limitation). */
+  .row-header { padding: 0 var(--space-6); max-width: 1280px; margin: 0 auto; }
+  section.shelf { margin-bottom: var(--space-6); scroll-margin-top: 120px; }
+  section.shelf.hero { padding: var(--space-6) 0 var(--space-4); margin-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
+  /* Round 8: the sticky shelf-jump bar Round 7 added here (.catalog-index)
+     was removed — a second sticky bar pinned right under the already-sticky
+     header read as chrome overload, and the project's own reference point
+     (Netflix's row-first catalog) doesn't have one either; people just
+     scroll past shelves to browse. Para empezar/Novedades/Clásicos have no
+     replacement — they're reachable by scrolling, same as every other shelf. */
+
+  /* ============ rail — real edge-fade mechanics, shared by the catalog
+     shelves AND the detail page's "Juegos similares" shelf (see README
+     finding #3 — 005 originally had its own independently-declared
+     .pk-poster-card/.pk-rail that had already drifted from this one). ============ */
+  .rail-wrap { position: relative; padding: 0 var(--space-6); max-width: 1280px; margin: 0 auto; }
+  .rail-wrap::before, .rail-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 48px; z-index: 4; pointer-events: none; }
+  .rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  .rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  section.shelf.hero .rail-wrap::before, section.shelf.hero .rail-wrap::after { display: none; }
+  .rail { display: flex; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; padding: var(--space-2) 0 var(--space-3); gap: var(--space-4); }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail-btn {
+    position: absolute; top: 0; bottom: 0; width: 44px; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; z-index: 5;
+    background: transparent; color: var(--color-text); opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+  .rail-wrap:hover .rail-btn { opacity: 1; }
+  .rail-btn.prev { left: 0; } .rail-btn.next { right: 0; }
+  .rail-btn svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); }
+
+  .see-all-tile {
+    flex: 0 0 auto; width: 110px; cursor: pointer; border-radius: var(--radius-md);
+    border: 1px dashed var(--color-border); background: var(--color-surface);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1);
+    color: var(--color-primary); font-size: var(--text-xs); font-weight: 600; text-align: center; padding: var(--space-2);
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .see-all-tile:hover { background: var(--color-accent-bg); border-color: var(--color-primary); border-style: solid; }
+  .see-all-tile.hero-card { width: 150px; }
+
+  .p1 { background: linear-gradient(135deg,#3D096D,#7E4CA5); }
+  .p2 { background: linear-gradient(135deg,#7E4CA5,#A97FD1); }
+  .p3 { background: linear-gradient(135deg,#22103A,#3D096D); }
+  .p4 { background: linear-gradient(135deg,#B23A5C,#7E4CA5); }
+  .p5 { background: linear-gradient(135deg,#3F8F6B,#3D096D); }
+  .p6 { background: linear-gradient(135deg,#B8862F,#7E4CA5); }
+  .icon { flex-shrink: 0; opacity: 0.85; }
+
+  .card {
+    flex: 0 0 auto; width: 190px; cursor: pointer;
+    border-radius: var(--radius-md); overflow: hidden;
+    background: var(--color-surface);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
+  .card:hover { transform: translateY(-3px); } /* sketch 006-D's validated hover-lift amplitude */
+  .card.hero-card { width: 240px; }
+  .card.filtered-out { display: none; } /* mobile filters panel (frontier 010 follow-up) */
+  .poster-art { aspect-ratio: 1 / 1.05; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: rgba(255,255,255,0.85); }
+  .card.hero-card .poster-art { font-size: 3rem; }
+  .card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .card .cap h4 { margin: 0; font-size: var(--text-sm); font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .hover-portal {
+    position: fixed; z-index: 500; pointer-events: none; opacity: 0;
+    border-radius: var(--radius-lg); overflow: hidden;
+    background: var(--color-bg);
+    box-shadow: 0 28px 56px rgba(20,8,34,0.38), 0 10px 24px rgba(20,8,34,0.24);
+    transform: scale(0.9); transform-origin: center;
+    transition: opacity var(--duration-base) var(--ease-out-soft), transform var(--duration-base) var(--ease-out-soft);
+  }
+  .hover-portal.visible { opacity: 1; pointer-events: auto; transform: scale(1); }
+  .hover-portal .portal-poster { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; color: rgba(255,255,255,0.85); }
+  .hover-portal .portal-body { padding: var(--space-4); }
+
+  .sheet-backdrop { position: fixed; inset: 0; background: rgba(20, 8, 34, 0.55); z-index: 600; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); }
+  .sheet-backdrop.visible { opacity: 1; pointer-events: auto; }
+  .mobile-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 601;
+    background: var(--color-bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-lg); max-height: 82vh; overflow-y: auto;
+    transform: translateY(100%); transition: transform var(--duration-slow) var(--ease-out-soft);
+    padding-bottom: var(--space-6);
+  }
+  .mobile-sheet.open { transform: translateY(0); }
+  .sheet-close { position: absolute; top: var(--space-3); right: var(--space-3); z-index: 2; width: 32px; height: 32px; border-radius: var(--radius-full); border: none; background: rgba(0,0,0,0.5); color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .sheet-poster { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: rgba(255,255,255,0.85); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .sheet-body { padding: var(--space-4); }
+  .sheet-drag-handle { width: 40px; height: 4px; background: var(--color-border); border-radius: var(--radius-full); margin: var(--space-2) auto 0; }
+
+  .pills-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: var(--space-2); }
+  .pill { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); }
+  .difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .difficulty .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
+  .difficulty .dot.filled { background: var(--color-text-muted); }
+  .expand-tag { display: inline-block; font-size: 11px; font-weight: 600; background: var(--color-accent-bg); color: var(--color-accent-text); padding: 3px 8px; border-radius: var(--radius-full); }
+  .expand-cta { display: block; width: 100%; text-align: center; cursor: pointer; background: transparent; color: var(--color-primary); border: 2px solid var(--color-primary); border-radius: var(--radius-sm); padding: var(--space-2); font-size: var(--text-sm); font-weight: 600; transition: background var(--duration-fast) var(--ease-standard); }
+  .expand-cta:hover { background: var(--color-accent-bg); }
+  .card-title { font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0 0 var(--space-2); line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .theme-text { font-size: var(--text-base); line-height: 1.5; color: var(--color-text); margin: 0 0 var(--space-3); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .sheet-body .expand-tag { margin-bottom: var(--space-3); display: inline-block; }
+  .sheet-body .expand-cta { padding: var(--space-3); font-size: var(--text-base); }
+
+  @media (max-width: 480px) {
+    .row-header, .rail-wrap { padding: 0 14px; }
+    .rail-wrap::before, .rail-wrap::after { width: 16px; }
+    section.shelf { margin-bottom: var(--space-6); }
+    .rail { gap: 10px; padding: var(--space-2) 0 var(--space-3); }
+    .card, .see-all-tile { width: 96px; }
+    .card.hero-card, .see-all-tile.hero-card { width: 118px; }
+    .card .cap { padding: var(--space-2) var(--space-1) var(--space-1); }
+    .card .cap h4 { font-size: var(--text-xs); -webkit-line-clamp: 1; line-height: 1.4; }
+  }
+
+  /* ============ footer — Round 6: one single row, no internal divider.
+     Round 4 replaced a two-tier footer (colored mission band + thin utility
+     bar) with a capped multi-column grid + a separately-divided bottom bar;
+     Round 5 trimmed its redundant text. User feedback on Round 5 asked to
+     go further: one row only (no border/divisor splitting it into tiers),
+     the "Club" links horizontal instead of stacked, and the BGG attribution
+     de-emphasized — compliance requires it stay present, not that it stay
+     prominent. Net effect: roughly a third the height of the Round 5
+     footer, still capped to the same 1280px box as the header/catalog. ============ */
+  footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-8); }
+  .footer-d { padding: var(--space-4) 0; }
+  /* Two clusters (left: brand+links, right: social+meta), same
+     space-between-with-natural-width recipe validated on the header in
+     Round 4 — avoids the "flex-grow stretches, content hugs one side"
+     dead-gap bug found there. */
+  .footer-d .footer-row { max-width: 1280px; margin: 0 auto; padding: 0 var(--space-6); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3) var(--space-6); }
+  .footer-d .footer-left, .footer-d .footer-right { display: flex; align-items: center; gap: var(--space-6); }
+  .footer-d .footer-brand-mark { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; flex-shrink: 0; }
+  .footer-d .footer-brand-mark strong { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 0.03em; color: var(--color-primary); }
+  .footer-links { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-4); flex-wrap: wrap; }
+  .footer-links a { color: var(--color-text-muted); text-decoration: none; font-size: var(--text-sm); }
+  .footer-links a:hover { color: var(--color-primary); }
+  .footer-social { display: flex; gap: var(--space-2); }
+  .footer-social a { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); text-decoration: none; transition: all var(--duration-fast) var(--ease-standard); }
+  .footer-social a:hover { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  /* De-emphasized on purpose: plain small text, no badge/box chrome — the
+     compliance requirement is that BGG attribution is present and legible,
+     not that it competes visually with the rest of the footer. */
+  .footer-meta { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
+  .footer-dot { opacity: 0.5; }
+  .bgg-note { color: inherit; text-decoration: underline; text-decoration-color: var(--color-border); text-underline-offset: 2px; }
+  .bgg-note:hover { color: var(--color-primary); text-decoration-color: currentColor; }
+
+  @media (max-width: 480px) {
+    .footer-d { padding: var(--space-4) 0; text-align: center; }
+    .footer-d .footer-row { padding: 0 var(--space-4); flex-direction: column; gap: var(--space-3); }
+    .footer-d .footer-left, .footer-d .footer-right { flex-direction: column; gap: var(--space-3); }
+    .footer-links { justify-content: center; }
+  }
+
+  /* ================================================================
+     DETAIL PAGE — real content from 005 variant B. --pk-gutter/.pk-gutter
+     replaced with var(--space-6) throughout (see README finding #2);
+     .pk-header/.pk-nav/.pk-brand*/.pk-nav-crumb/.pk-theme-toggle removed
+     (finding #1); .chip renamed to .info-chip (finding #4). ================ */
+  main.detail { padding-bottom: var(--space-4); }
+
+  .pk-difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .pk-difficulty-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
+  .pk-difficulty-dot.is-filled { background: var(--color-text-muted); }
+
+  .reading-measure { max-width: 100%; }
+  .info-chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .info-chip {
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted);
+    text-decoration: none; display: inline-flex; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .info-chip.tag { border-color: var(--color-secondary); color: var(--color-secondary); background: var(--color-surface); font-size: var(--text-xs); padding: 5px 12px; }
+  a.info-chip:hover { border-color: var(--color-primary); background: var(--color-accent-bg); color: var(--color-primary); }
+
+  .section-heading { font-family: var(--font-sans); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
+
+  /* "Juegos similares" — REBUILT on the real .rail-wrap/.rail/.card/
+     hover-portal/mobile-sheet from the catalog above, instead of 005's
+     original .pk-poster-card/.pk-rail (which had drifted: 160px vs the
+     real card's 190px, radius-lg vs radius-md, -2px vs -4px hover-lift,
+     108px vs 96px mobile width, and no hover-portal/tap-sheet interaction
+     at all — see README finding #3). Only the section wrapper/heading
+     markup is 005's own. */
+  .pk-shelf { margin: var(--space-8) 0 0; scroll-margin-top: 6rem; }
+  /* Round 5: same 1280px cap as .row-header/.rail-wrap above — the section's
+     own padding used to double up with .rail-wrap's identical padding
+     (64px total instead of 32px) and, like the catalog rows, had no
+     max-width at all, so it bled past the header/footer's capped edge on
+     wide viewports. */
+  .pk-row-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); padding: 0 var(--space-6); max-width: 1280px; margin-left: auto; margin-right: auto; }
+  .pk-row-header h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; text-transform: uppercase; letter-spacing: 0.02em; }
+  .pk-row-header p { font-size: var(--text-sm); color: var(--color-text-muted); margin: 4px 0 0; }
+  @media (max-width: 480px) { .pk-row-header { flex-direction: column; align-items: stretch; gap: var(--space-2); } }
+
+  /* ============================= masthead / buy-box ============================= */
+  .detail-b .masthead-band { background: linear-gradient(180deg, var(--color-surface), var(--color-bg)); }
+  .detail-b .masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }
+  .detail-b .text-col { min-width: 0; }
+  .detail-b .poster-col { width: 100%; display: flex; flex-direction: column; gap: var(--space-3); position: sticky; top: calc(70px + var(--space-4)); }
+  .detail-b h1 { font-family: var(--font-display); font-size: 2.25rem; letter-spacing: 0.01em; margin: 0 0 var(--space-2); line-height: 1.1; }
+  .detail-b .tag-row { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+  .detail-b .desc-collapse { margin-bottom: var(--space-4); }
+  .detail-b .desc { font-size: var(--text-base); line-height: 1.7; color: var(--color-text); margin: 0; }
+  .detail-b .desc.is-collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .detail-b .desc-toggle {
+    display: block; background: none; border: none; padding: 2px 0 0; margin: 0;
+    color: var(--color-text-muted); font-weight: 600; font-size: var(--text-base); font-family: inherit;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .detail-b .desc-toggle:hover { color: var(--color-primary); }
+  .detail-b .cta-row { display: flex; flex-direction: column; gap: var(--space-2); }
+  .detail-b .cta-row .cta-primary { width: 100%; justify-content: center; }
+  .detail-b .cta-row .cta-icon { width: 100%; justify-content: center; }
+
+  .pk-pill-row { display: flex; gap: 6px; flex-wrap: nowrap; margin: 0 0 var(--space-2); }
+  .pk-pill {
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted);
+    font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full);
+    text-decoration: none; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  a.pk-pill:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .pk-pill .pk-difficulty-dot { width: 5px; height: 5px; }
+
+  .detail-carousel { position: relative; aspect-ratio: 3/4; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg); cursor: zoom-in; }
+  .detail-carousel .slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 64px; color: rgba(255,255,255,0.5); opacity: 0; transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+  .detail-carousel .slide.is-active { opacity: 1; }
+  .detail-carousel .cs-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.35); color: #fff; border: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 15px; z-index: 2; transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .detail-carousel .cs-arrow:hover { background: rgba(0,0,0,0.55); }
+  .detail-carousel .cs-arrow.prev { left: 10px; }
+  .detail-carousel .cs-arrow.next { right: 10px; }
+  .detail-carousel .cs-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+  .detail-carousel .cs-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none; cursor: pointer; padding: 0; }
+  .detail-carousel .cs-dot.is-active { background: #fff; }
+  .detail-carousel .zoom-hint {
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; z-index: 2; pointer-events: none; transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .detail-carousel:hover .zoom-hint { background: rgba(0,0,0,0.6); transform: scale(1.1); }
+
+  .lightbox-backdrop {
+    position: fixed; inset: 0; background: rgba(20,10,30,0.92); z-index: 150; display: flex; align-items: center;
+    justify-content: center; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+    padding: var(--space-6);
+  }
+  .lightbox-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .lightbox-stage { position: relative; width: min(640px, 100%); aspect-ratio: 3/4; max-height: 82vh; }
+  .lightbox-slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 120px;
+    color: rgba(255,255,255,0.55); border-radius: var(--radius-md); opacity: 0; transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .lightbox-slide.is-active { opacity: 1; }
+  .lightbox-close { position: absolute; top: -44px; right: 0; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; cursor: pointer; font-size: 15px; }
+  .lightbox-close:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; cursor: pointer; font-size: 20px; z-index: 2; }
+  .lightbox-arrow:hover { background: rgba(255,255,255,0.3); }
+  .lightbox-arrow.prev { left: -58px; }
+  .lightbox-arrow.next { right: -58px; }
+  @media (max-width: 720px) { .lightbox-arrow.prev { left: 4px; } .lightbox-arrow.next { right: 4px; } .lightbox-close { top: 10px; right: 10px; } }
+
+  /* ---- mobile sticky game-identity bar ---- */
+  .game-sticky-bar {
+    display: none;
+    align-items: center; gap: var(--space-3);
+    position: fixed; top: 64px; left: 0; right: 0; z-index: 39;
+    background: color-mix(in srgb, var(--color-bg) 97%, transparent); border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm); padding: 10px var(--space-6);
+    transform: translateY(-100%); opacity: 0; pointer-events: none;
+    transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+  }
+  .game-sticky-bar.is-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .game-sticky-bar h2 {
+    flex: 1 1 auto; min-width: 0;
+    font-family: var(--font-display); font-size: var(--text-base); font-weight: 700; margin: 0;
+    color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .scroll-top-btn {
+    flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;
+    animation: scroll-top-bounce 2.2s ease-in-out infinite;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+  }
+  .scroll-top-btn:hover { background: var(--color-accent-bg); border-color: var(--color-primary); }
+  @keyframes scroll-top-bounce { 0%, 20%, 100% { transform: translateY(0); } 10% { transform: translateY(-4px); } }
+
+  .mobile-cta-bar {
+    display: none; flex-direction: column; gap: var(--space-2);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: var(--color-surface); border-top: 1px solid var(--color-border);
+    padding: var(--space-3) var(--space-6);
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(20,8,34,0.08);
+    transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
+  }
+  .mobile-cta-bar.is-hidden { transform: translateY(12%); opacity: 0; pointer-events: none; }
+  .mobile-cta-bar.is-parked { transform: translateY(100%); opacity: 0; pointer-events: none; }
+  .mobile-cta-bar .cta-primary { width: 100%; justify-content: center; }
+  .mobile-cta-bar .cta-icon { width: 100%; justify-content: center; background: var(--color-bg); }
+
+  @media (max-width: 768px) {
+    .detail-b .masthead { grid-template-columns: 1fr; padding-top: 0; }
+    .detail-b .poster-col { position: static; }
+    .detail-b .carousel-wrap { margin-left: calc(-1 * var(--space-6)); margin-right: calc(-1 * var(--space-6)); }
+    .detail-b .detail-carousel { border-radius: 0; aspect-ratio: 4/3; }
+    .detail-b h1 { font-size: 1.75rem; }
+    .detail-b .desc.is-collapsed { -webkit-line-clamp: 2; }
+    .pk-pill-row { flex-wrap: wrap; }
+    .detail-b .cta-row { display: none; }
+    .mobile-cta-bar { display: flex; }
+    .game-sticky-bar { display: flex; }
+    body { padding-bottom: 148px; transition: padding-bottom var(--duration-base) var(--ease-out-soft); }
+    body.is-cta-parked { padding-bottom: 0; }
+  }
+
+  .cta-primary {
+    display: inline-flex; align-items: center; gap: 8px; padding: 13px 26px; border-radius: var(--radius-lg);
+    border: none; background: var(--color-primary); color: var(--color-primary-content); font-weight: 700;
+    font-size: var(--text-sm); cursor: pointer; box-shadow: var(--shadow-md);
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .cta-primary:hover { background: var(--color-secondary); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .cta-primary:active { box-shadow: var(--shadow-sm); transform: translateY(0); }
+
+  .cta-icon {
+    display: inline-flex; align-items: center; gap: 6px; height: 48px; padding: 0 20px; border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
+    cursor: pointer; font-size: var(--text-sm); font-weight: 700; position: relative;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .cta-icon:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .cta-icon .icon-label { font-weight: 700; }
+  .share-popover {
+    position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-4px);
+    background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg); padding: var(--space-2); display: flex; gap: 6px; opacity: 0; pointer-events: none;
+    transition: all var(--duration-fast) var(--ease-out-soft); z-index: 30; white-space: nowrap;
+  }
+  .share-popover.is-open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+  .share-popover button { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--color-surface); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .share-popover button:hover { background: var(--color-accent-bg); }
+  .share-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); z-index: 200;
+    background: var(--color-text); color: #fff; padding: 10px 18px; border-radius: var(--radius-full);
+    font-size: var(--text-sm); opacity: 0; pointer-events: none; transition: all var(--duration-base) var(--ease-out-soft);
+  }
+  .share-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .more-info { padding-top: var(--space-4); margin-top: var(--space-2); border-top: 1px solid var(--color-border); }
+  .more-info-inner { padding-bottom: var(--space-4); padding-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-4); }
+
+  .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-3); row-gap: 0; }
+  .spec-row--wide { grid-column: 1 / -1; }
+  @media (min-width: 769px) { .spec-list { column-gap: var(--space-6); } }
+  .spec-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; font-size: var(--text-sm); }
+  .spec-row dt { margin: 0; color: var(--color-text-muted); font-weight: 700; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em; }
+  .spec-row dd { margin: 0; color: var(--color-text); }
+  .spec-row dd.missing { color: var(--color-text-muted); font-style: italic; font-size: var(--text-xs); }
+  .spec-row dd a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+  .spec-row dd a:hover { text-decoration: underline; }
+  .bgg-link-row { font-size: var(--text-sm); padding-top: var(--space-2); }
+  .bgg-link-row a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+  .bgg-link-row a:hover { text-decoration: underline; }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(36,18,56,0.55); backdrop-filter: blur(2px); z-index: 100;
+    display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-standard); padding: var(--space-4);
+  }
+  .modal-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    position: relative; background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    width: min(420px, 100%); padding: var(--space-6); transform: scale(0.96) translateY(8px);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
+  .modal-backdrop.is-open .modal-box { transform: scale(1) translateY(0); }
+  .modal-game-preview { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-4); margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .modal-game-thumb {
+    flex: 0 0 48px; width: 48px; height: 48px; border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+    display: flex; align-items: center; justify-content: center; font-size: 20px; color: rgba(255,255,255,0.6);
+  }
+  .modal-game-name { font-family: var(--font-sans); font-weight: 700; font-size: var(--text-sm); margin: 0; color: var(--color-text); }
+  .modal-game-sub { font-size: var(--text-xs); color: var(--color-text-muted); margin: 2px 0 0; }
+  .modal-box h3 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-1); text-transform: uppercase; }
+  .modal-box .modal-sub { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); line-height: 1.5; }
+  .modal-box label { display: block; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); margin-bottom: 6px; }
+  .modal-box input[type=text] {
+    width: 100%; padding: 12px 14px; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    font-size: var(--text-base); font-family: var(--font-sans); margin-bottom: var(--space-2);
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .modal-box input[type=text]:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-accent-bg); }
+  .modal-actions { margin-top: var(--space-2); }
+  .modal-close {
+    position: absolute; top: var(--space-4); right: var(--space-4); width: 30px; height: 30px; border-radius: 50%;
+    border: none; background: var(--color-surface); color: var(--color-text-muted); cursor: pointer; font-size: 13px;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .modal-close:hover { background: var(--color-accent-bg); color: var(--color-primary); }
+  .wa-preview {
+    background: var(--color-surface); border-left: 3px solid var(--color-primary); border-radius: var(--radius-sm);
+    padding: var(--space-3); font-size: var(--text-sm); color: var(--color-text); line-height: 1.5;
+    margin: 0 0 var(--space-4); white-space: pre-wrap;
+  }
+  .wa-success .icon {
+    width: 56px; height: 56px; margin: 0 auto var(--space-3); border-radius: 50%; background: var(--color-accent-bg);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .wa-success h3 { text-align: center; }
+  .wa-success .modal-sub { text-align: center; }
+  .wa-open-link {
+    display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: #fff;
+    padding: 13px; border-radius: var(--radius-full); font-weight: 700; text-decoration: none;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+  .wa-open-link:hover { opacity: 0.88; }
+  .field-error { color: var(--color-danger); font-size: var(--text-xs); margin: -4px 0 10px; display: none; }
+  .field-error.is-visible { display: block; }
+
+  /* ================================================================
+     ABOUT PAGE — real content from 004 variant B ("Alternating Bands").
+     --pk-gutter replaced with var(--space-6); header/footer discarded
+     (same fixes as detail page). ================ */
+  main.about { padding-bottom: var(--space-4); }
+  .about-b .hero-band { text-align: center; padding: var(--space-12) var(--space-6) var(--space-8); }
+  .about-b .hero-band h1 { font-family: var(--font-display); font-size: 3rem; margin: 0 0 var(--space-3); text-transform: uppercase; color: var(--color-primary); }
+  .about-b .hero-band p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 60ch; margin: 0 auto; line-height: 1.6; }
+  /* about-page section index (fix: page was pure vertical scroll, no way to
+     jump to a section). First pass reused .chip — the catalog's filter/
+     category-chip language (filled capsule buttons) — which read as an
+     accidental borrow, not an intentional pattern, and left items ragged/
+     ellipsis-cut on narrower screens. This is an editorial anchor-tab
+     pattern instead (underline-on-active, no fill, evenly distributed) —
+     the standard for in-page section nav (docs sites, long-form product
+     pages), distinct from the catalog's own button vocabulary. Each item
+     reuses that section's own carousel icon as a small visual anchor,
+     since the page already has that imagery — a plain text label doesn't
+     need to be the only cue. Sticky so it stays reachable while reading. */
+  .about-index {
+    /* top matches the nav's own established height convention (see
+       .game-sticky-bar / .poster-col's sticky top elsewhere in this file) —
+       top:0 would stick this UNDER the real .app-nav (also sticky, higher
+       z-index), the same hidden-behind-header bug just fixed above. */
+    position: sticky; top: 64px; z-index: 50; display: flex;
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    max-width: 640px; margin: 0 auto; padding: 0 var(--space-6);
+  }
+  .about-index-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: var(--space-3) var(--space-2); text-decoration: none; text-align: center;
+    color: var(--color-text-muted); border-bottom: 2px solid transparent;
+    transition: color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+  }
+  .about-index-item .idx-icon { font-size: 1.1rem; line-height: 1; }
+  .about-index-item .idx-label { font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .about-index-item:hover { color: var(--color-text); }
+  .about-index-item.active { color: var(--color-primary); border-color: var(--color-primary); }
+  @media (max-width: 480px) { .about-index-item .idx-label { font-size: 10px; white-space: normal; line-height: 1.2; } }
+  /* Round 4: replaces the old "three structurally identical text+carousel
+     bands, just mirrored" shape (the actual source of the "breaks rhythm"
+     complaint — same block repeated 3x reads as flat, not editorial) with
+     four genuinely different section shapes reusing the site's own
+     component vocabulary: a full-width statement, a step-card grid, one
+     text+visual band, and an accordion. */
+
+  /* about-mission — a centered statement, not a second copy of the hero's
+     two-column-band shape. */
+  .about-b .about-statement { max-width: 760px; margin: 0 auto; padding: var(--space-8) var(--space-6); text-align: center; scroll-margin-top: 128px; }
+  .about-b .about-statement p { font-family: var(--font-display); font-size: var(--text-2xl); line-height: 1.35; color: var(--color-text); margin: 0; }
+
+  /* about-how — numbered step-cards using the site's own surface/radius/
+     shadow vocabulary instead of a text+carousel band. */
+  .about-b .about-steps { background: var(--color-surface); padding: var(--space-8) 0; scroll-margin-top: 128px; }
+  .about-b .about-steps-inner { max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6); }
+  .about-b .about-steps h2 { font-family: var(--font-display); font-size: var(--text-2xl); text-transform: uppercase; text-align: center; margin: 0 0 var(--space-6); }
+  .about-b .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+  .about-b .step-card { background: var(--color-bg); border-radius: var(--radius-md); padding: var(--space-4); box-shadow: var(--shadow-sm); }
+  .about-b .step-num {
+    display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+    border-radius: var(--radius-full); background: var(--color-accent-bg); color: var(--color-accent-text);
+    font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: var(--space-3);
+  }
+  .about-b .step-card h3 { font-family: var(--font-sans); font-size: var(--text-base); font-weight: 700; margin: 0 0 var(--space-2); }
+  .about-b .step-card p { color: var(--color-text-muted); line-height: 1.6; margin: 0; font-size: var(--text-sm); }
+
+  /* about-club — the one section that keeps a text+visual band, so the page
+     still has one "editorial" beat among the four; its visual is a single
+     static image-card (same radius/shadow chrome real posters use), not an
+     arrow/dot carousel widget that only existed on this one page. */
+  .about-b .band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; padding: var(--space-8) var(--space-6); max-width: 1100px; margin: 0 auto; scroll-margin-top: 128px; }
+  .about-b .band-text h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; }
+  .about-b .band-text p { color: var(--color-text); line-height: 1.7; margin: 0; }
+  .about-b .band-visual {
+    aspect-ratio: 4/3; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md);
+    display: flex; align-items: center; justify-content: center; font-size: 48px; color: rgba(255,255,255,0.55);
+  }
+
+  /* about-faq — a real accordion (one item open at a time), reusing the
+     site's surface/border/radius vocabulary instead of a bare <dl> list. */
+  .about-b .faq-band { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--space-6); scroll-margin-top: 128px; }
+  .about-b .faq-band h2 { font-family: var(--font-display); font-size: var(--text-2xl); text-align: center; margin: 0 0 var(--space-4); text-transform: uppercase; }
+  .about-b .accordion { display: flex; flex-direction: column; gap: var(--space-2); }
+  .about-b .accordion-item { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; }
+  .about-b .accordion-trigger {
+    width: 100%; display: flex; justify-content: space-between; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) var(--space-4); background: none; border: none; text-align: left;
+    font-family: var(--font-sans); font-size: var(--text-base); font-weight: 600; color: var(--color-text); cursor: pointer;
+  }
+  .about-b .accordion-caret { transition: transform var(--duration-fast) var(--ease-standard); color: var(--color-text-muted); flex-shrink: 0; }
+  .about-b .accordion-item.open .accordion-caret { transform: rotate(180deg); }
+  .about-b .accordion-panel { max-height: 0; overflow: hidden; transition: max-height var(--duration-base) var(--ease-standard); }
+  .about-b .accordion-item.open .accordion-panel { max-height: 200px; }
+  .about-b .accordion-panel p { margin: 0; padding: 0 var(--space-4) var(--space-4); color: var(--color-text-muted); line-height: 1.6; }
+
+  @media (max-width: 768px) {
+    .about-b .band { grid-template-columns: 1fr; }
+    .about-b .steps-grid { grid-template-columns: 1fr; }
+  }
+
+  #sketch-tools { position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;display:flex;gap:8px;align-items:center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="app-nav" id="app-nav" data-scroll-nav>
+  <div class="app-nav-inner">
+    <button class="nav-hamburger" onclick="toggleNavDrawer()" aria-label="Abrir menú">☰</button>
+    <a href="#" class="brand" onclick="showPage('catalog'); return false;" aria-label="Ir al inicio" title="Ir al inicio">
+      <svg class="brand-mark" width="30" height="30" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+      <span class="brand-text"><strong>PUKLLAY CLUB</strong><span>Juegos de mesa modernos</span></span>
+    </a>
+    <!-- Round 7: global nav only carries real site-level destinations now
+         (Inicio/Acerca de) — Para empezar/Novedades/Clásicos moved out
+         (Round 7 into a catalog-only shelf index, removed entirely in
+         Round 8 — see README). The logo itself is also a real "go home"
+         link now (was inert href="#" before) — the universal way back,
+         present on every page.
+         Round 8: Acerca de is a real .links row (Acerca de marked active),
+         NOT a crumb — a crumb was never right for it. Detalle's crumb
+         ("Inicio / {game}") is a genuine drill-down: catalog → one item.
+         About isn't nested under Inicio at all, it's a sibling top-level
+         page, so "Inicio / Acerca de" implied a parent/child relationship
+         that doesn't exist and read as disharmonious. Crumbs stay reserved
+         for Detalle, the one page that's actually a drill-down.
+         Round 9: two names on purpose. "Inicio" stays as the nav item's
+         wayfinding label (the universal "take me home" action, same word
+         a logo click implies) — .links items are actions, not names.
+         "Ludoteca" is the actual NAME of that section/collection, used
+         wherever a page is naming it rather than just linking to it — right
+         now that's only Detalle's crumb ("Ludoteca / {game}"), since a
+         breadcrumb literally states what section you drilled in from.
+         "Catálogo" was rejected (reads e-commerce); "Ludoteca" is a real
+         word for a game/toy lending library — fits the club's actual
+         lending angle. "Acerca de" → "Quiénes Somos" everywhere it named
+         that page (not just linked to it) — "Acerca de" said nothing
+         about this club specifically; "El Club" was rejected as redundant
+         with the "PUKLLAY CLUB" wordmark already in the logo, "Nosotros"
+         as too cold. -->
+    <div class="links" data-catalog-only>
+      <a href="#" class="active">Inicio</a>
+      <a href="#" onclick="showPage('about'); return false;">Quiénes Somos</a>
+    </div>
+    <div class="links" data-about-only style="display:none">
+      <a href="#" onclick="showPage('catalog'); return false;">Inicio</a>
+      <a href="#" class="active">Quiénes Somos</a>
+    </div>
+    <div class="crumb" data-detail-only style="display:none">
+      <a href="#" onclick="showPage('catalog'); return false;">Ludoteca</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span>
+    </div>
+    <div class="search" data-catalog-only>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Busca por título, autor o editorial…">
+    </div>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar a tema oscuro" title="Cambiar tema"></button>
+  </div>
+</div>
+<div class="mobile-chip-nav" id="chips-nav" data-catalog-only></div>
+
+<!-- mobile nav drawer: search + site links + filters trigger, the only way
+     to reach any of the three on mobile now that .links/.search are hidden
+     below 480px (see the .nav-drawer CSS comment for why one drawer, not
+     several separate icon buttons). -->
+<div class="nav-drawer-backdrop" id="nav-drawer-backdrop" onclick="toggleNavDrawer()"></div>
+<div class="nav-drawer" id="nav-drawer">
+  <div class="nav-drawer-header">
+    <strong>Menú</strong>
+    <button class="theme-toggle" onclick="toggleNavDrawer()" aria-label="Cerrar menú">✕</button>
+  </div>
+  <div class="search">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" placeholder="Busca por título, autor o editorial…">
+  </div>
+  <!-- Round 7: matches the desktop .links trim — Inicio/Acerca de only.
+       The drawer is global chrome (reachable from every page via the
+       hamburger), so it had the same problem the desktop nav did: shelf
+       shortcuts that only mean something on Inicio, shown everywhere. -->
+  <nav class="nav-drawer-links">
+    <a href="#" class="active" onclick="toggleNavDrawer(); showPage('catalog'); return false;">Inicio</a>
+    <a href="#" onclick="toggleNavDrawer(); showPage('about'); return false;">Quiénes Somos</a>
+  </nav>
+  <button class="nav-drawer-filters-trigger" onclick="toggleNavDrawer(); toggleFiltersPanel();">🎚 Filtros <span id="filters-active-count"></span> ›</button>
+</div>
+
+<div class="filters-panel-backdrop" id="filters-panel-backdrop" onclick="toggleFiltersPanel()"></div>
+<div class="filters-panel" id="filters-panel">
+  <div class="filters-panel-header">
+    <strong>Filtros</strong>
+    <button class="pill-btn" onclick="toggleFiltersPanel()">✕</button>
+  </div>
+  <div id="filters-panel-body"></div>
+</div>
+
+<div class="page-switcher">
+  <span class="label">Sketch control — ver la página:</span>
+  <button class="is-active" onclick="showPage('catalog',event)">Catálogo</button>
+  <button onclick="showPage('detail',event)">Detalle</button>
+  <button onclick="showPage('about',event)">Acerca de</button>
+</div>
+
+<main class="page is-active catalog-main" id="page-catalog">
+  <div id="rows"></div>
+</main>
+
+<!-- ============================= DETAIL PAGE ============================= -->
+<main class="page detail detail-b" id="page-detail">
+  <div class="masthead-band">
+    <div class="masthead">
+      <div class="poster-col">
+        <div class="carousel-wrap">
+          <div class="detail-carousel" data-carousel onclick="openLightbox()" title="Ampliar imagen">
+            <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
+            <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
+            <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
+            <div class="slide" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
+            <button class="cs-arrow prev" onclick="event.stopPropagation(); detailCarouselStep(-1)" aria-label="Anterior">‹</button>
+            <button class="cs-arrow next" onclick="event.stopPropagation(); detailCarouselStep(1)" aria-label="Siguiente">›</button>
+            <div class="cs-dots"></div>
+            <div class="zoom-hint">⤢</div>
+          </div>
+        </div>
+        <div class="cta-row" id="masthead-cta-row">
+          <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
+          <div style="position:relative">
+            <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
+              <span>↗</span><span class="icon-label">Compartir</span>
+            </button>
+            <div class="share-popover">
+              <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
+              <button onclick="shareVia('x')" title="X / Twitter">X</button>
+              <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="text-col">
+        <div class="game-identity" id="game-identity">
+          <div class="pk-pill-row">
+            <a class="pk-pill" href="/?players=4" title="Filtrar por cantidad de jugadores">👥 1-4</a>
+            <a class="pk-pill" href="/?max_playtime=120" title="Filtrar por duración">⏱ 90-120 min</a>
+            <a class="pk-pill" href="/?weight_bands=Nivel+experto" title="Filtrar por dificultad">
+              <span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto
+            </a>
+          </div>
+          <h1>Terraforming Mars: Ares Expedition</h1>
+          <div class="tag-row">
+            <a class="info-chip tag" href="/?tags=Duelos+Memorables" title="Filtrar por etiqueta">Duelos Memorables</a>
+            <a class="info-chip tag" href="/?tags=Equipo+Ganador" title="Filtrar por etiqueta">Equipo Ganador</a>
+          </div>
+        </div>
+        <div class="desc-collapse reading-measure">
+          <p class="desc is-collapsed" id="detail-desc-b">Terraformá Marte compitiendo con otras
+            corporaciones: subí la temperatura, el oxígeno y el agua del planeta mientras
+            construís tu propio motor de producción de recursos. Esta edición standalone
+            simplifica las reglas del original sin perder profundidad estratégica — ideal para
+            quienes quieren probar el sistema de Terraforming Mars sin la carga completa del
+            juego base.</p>
+          <button class="desc-toggle" onclick="toggleDescCollapse(this)">… Leer más</button>
+        </div>
+
+        <div class="more-info">
+          <div class="more-info-inner reading-measure">
+            <div>
+              <p class="section-heading">Mecánicas</p>
+              <div class="info-chip-row">
+                <a class="info-chip" href="/?mechanics=Construcción+de+motor">Construcción de motor</a>
+                <a class="info-chip" href="/?mechanics=Gestión+de+mano">Gestión de mano</a>
+                <a class="info-chip" href="/?mechanics=Colocación+de+losetas">Colocación de losetas</a>
+                <a class="info-chip" href="/?mechanics=Puntuación+variable">Puntuación variable</a>
+              </div>
+            </div>
+            <div>
+              <p class="section-heading">Temas</p>
+              <div class="info-chip-row">
+                <a class="info-chip" href="/?themes=Ciencia+ficción">Ciencia ficción</a>
+                <a class="info-chip" href="/?themes=Exploración+espacial">Exploración espacial</a>
+              </div>
+            </div>
+            <div>
+              <dl class="spec-list">
+                <div class="spec-row spec-row--wide"><dt>Diseñadores</dt><dd><a href="/?q=Jacob+Fryxelius" title="Buscar juegos de este diseñador">Jacob Fryxelius</a>, <a href="/?q=Isaac+Fryxelius" title="Buscar juegos de este diseñador">Isaac Fryxelius</a></dd></div>
+                <div class="spec-row spec-row--wide"><dt>Ilustrador</dt><dd class="missing">No disponible — campo no existe en el catálogo hoy</dd></div>
+                <div class="spec-row"><dt>Editorial</dt><dd><a href="/?q=FryxGames" title="Buscar juegos de esta editorial">FryxGames</a></dd></div>
+                <div class="spec-row"><dt>Edad mínima</dt><dd><a href="/?min_age=12">12+</a></dd></div>
+                <div class="spec-row"><dt>Año</dt><dd>2021</dd></div>
+                <div class="spec-row"><dt>Peso BGG</dt><dd>3.8 / 5</dd></div>
+                <div class="spec-row spec-row--wide"><dt>Ranking BGG</dt><dd class="missing">#142 (dato de ejemplo, no confirmado)</dd></div>
+                <div class="spec-row spec-row--wide"><dt>Calificación BGG</dt><dd class="missing">8.1 / 10 (dato de ejemplo, no confirmado)</dd></div>
+              </dl>
+              <div class="bgg-link-row"><a href="#">Ver en BoardGameGeek ↗</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-cta-bar" id="mobile-cta-bar">
+        <button class="cta-primary" onclick="openReserveModal('Terraforming Mars: Ares Expedition', '🚀')">🎲 ¡Quiero Jugarlo!</button>
+        <div style="position:relative">
+          <button class="cta-icon" onclick="toggleShare(this, event)" aria-label="Compartir" title="Compartir">
+            <span>↗</span><span class="icon-label">Compartir</span>
+          </button>
+          <div class="share-popover">
+            <button onclick="shareVia('whatsapp')" title="WhatsApp">WA</button>
+            <button onclick="shareVia('x')" title="X / Twitter">X</button>
+            <button onclick="shareVia('copy')" title="Copiar enlace">🔗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- "Juegos similares" — real .card/hover-portal/mobile-sheet, wired via
+       renderSimilarShelf() below (README finding #3). -->
+  <section class="pk-shelf" id="similar-games">
+    <div class="pk-row-header">
+      <div>
+        <h2>Juegos similares</h2>
+        <p>Mecánicas y complejidad parecidas a este juego</p>
+      </div>
+    </div>
+    <div class="rail-wrap">
+      <button class="rail-btn prev" aria-label="Anterior" onclick="scrollRail(this,-1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="rail" id="similar-rail"></div>
+      <button class="rail-btn next" aria-label="Siguiente" onclick="scrollRail(this,1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
+  </section>
+</main>
+
+<!-- ============================= ABOUT PAGE ============================= -->
+<main class="page about about-b" id="page-about">
+  <div class="hero-band">
+    <h1>Encontrá el juego justo para tu mesa</h1>
+    <p>Un catálogo curado de juegos de mesa modernos, pensado para gente nueva en el hobby —
+      sin jerga, sin necesitar ya "saber" de juegos.</p>
+  </div>
+
+  <!-- section index — the about page was pure vertical scroll with no way
+       to jump to a section (mobile especially, four bands + FAQ with no
+       wayfinding). Reuses the same chip visual language as the catalog's
+       mobile category row, so it reads as the same app, not a bolted-on
+       table of contents. Sticky so it stays reachable while reading. -->
+  <nav class="about-index" aria-label="Secciones de esta página">
+    <a href="#about-mission" class="about-index-item active" onclick="jumpToAboutSection(this,'about-mission');return false;"><span class="idx-icon">🎯</span><span class="idx-label">Misión</span></a>
+    <a href="#about-how" class="about-index-item" onclick="jumpToAboutSection(this,'about-how');return false;"><span class="idx-icon">🧩</span><span class="idx-label">Cómo funciona</span></a>
+    <a href="#about-club" class="about-index-item" onclick="jumpToAboutSection(this,'about-club');return false;"><span class="idx-icon">🎲</span><span class="idx-label">El club</span></a>
+    <a href="#about-faq" class="about-index-item" onclick="jumpToAboutSection(this,'about-faq');return false;"><span class="idx-icon">💬</span><span class="idx-label">FAQ</span></a>
+  </nav>
+
+  <section class="about-statement" id="about-mission">
+    <p>Creemos que cualquiera puede encontrar el juego justo si se lo explicás en su propio
+      idioma. Nuestro trabajo es enseñar la complejidad de los juegos — peso, mecánicas,
+      temas — no darla por sentada.</p>
+  </section>
+
+  <section class="about-steps" id="about-how">
+    <div class="about-steps-inner">
+      <h2>Cómo funciona</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <span class="step-num">1</span>
+          <h3>Explorá o describí</h3>
+          <p>Navegá el catálogo o contanos qué buscás en tus propias palabras — sin necesitar ya "saber" de juegos.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">2</span>
+          <h3>Encontrá matches</h3>
+          <p>Te mostramos juegos que matchean, explicados simple: duración, jugadores, complejidad.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">3</span>
+          <h3>Vení a jugar</h3>
+          <p>Probalo en una juntada del club o pedilo prestado.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="band" id="about-club">
+    <div class="band-text">
+      <h2>El club</h2>
+      <p>Somos un grupo de jugadores que se junta regularmente en persona. Este catálogo es la
+        puerta de entrada a esas juntadas — un lugar para descubrir qué jugar antes de venir.</p>
+    </div>
+    <div class="band-visual" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🎲</div>
+  </div>
+
+  <div class="faq-band" id="about-faq">
+    <h2>Preguntas frecuentes</h2>
+    <div class="accordion">
+      <div class="accordion-item open">
+        <button class="accordion-trigger" onclick="toggleFaqAccordion(this)">¿Qué significa el "peso" de un juego? <span class="accordion-caret">⌄</span></button>
+        <div class="accordion-panel"><p>Qué tan complejas son sus reglas y decisiones, de "ligero" a "experto".</p></div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-trigger" onclick="toggleFaqAccordion(this)">¿Necesito saber jugar de antemano? <span class="accordion-caret">⌄</span></button>
+        <div class="accordion-panel"><p>No — está pensado justamente para quienes están empezando.</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="pk-footer footer-d">
+  <div class="footer-row">
+    <div class="footer-left">
+      <a href="#" class="footer-brand-mark">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+        <strong>PUKLLAY CLUB</strong>
+      </a>
+      <ul class="footer-links"><li><a href="#">FAQ</a></li><li><a href="#">Contacto</a></li><li><a href="#">Juntadas</a></li></ul>
+    </div>
+    <div class="footer-right">
+      <div class="footer-social">
+        <a href="#" aria-label="Instagram" title="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none"/></svg></a>
+        <a href="#" aria-label="WhatsApp" title="WhatsApp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.4-4.2A8.5 8.5 0 1 1 8 19.6L3 21z"/><path d="M8.5 9.5c0 3.5 2.5 6 6 6 .5 0 1-.4 1-1v-1.2l-2-1-1 1a5 5 0 0 1-3-3l1-1-1-2H8.5c-.5 0-1 .5-1 1z"/></svg></a>
+        <a href="#" aria-label="Discord" title="Discord"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="5"/><circle cx="9" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+      </div>
+      <span class="footer-meta">© 2026 Pukllay Club <span class="footer-dot">·</span> <a href="#" class="bgg-note">datos de BoardGameGeek</a></span>
+    </div>
+  </div>
+</footer>
+
+<!-- Mobile-only sticky game-identity echo bar (detail page only) -->
+<div class="game-sticky-bar" id="game-sticky-bar">
+  <h2>Terraforming Mars: Ares Expedition</h2>
+  <button class="scroll-top-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Volver arriba" title="Volver arriba">↑</button>
+</div>
+
+<div class="hover-portal" id="hover-portal"></div>
+<div class="sheet-backdrop" id="sheet-backdrop" onclick="closeSheet()"></div>
+<div class="mobile-sheet" id="mobile-sheet">
+  <div class="sheet-drag-handle"></div>
+  <button class="sheet-close" onclick="closeSheet()" aria-label="Cerrar">✕</button>
+  <div class="sheet-poster" id="sheet-poster"></div>
+  <div class="sheet-body" id="sheet-body"></div>
+</div>
+
+<div class="lightbox-backdrop" id="lightbox" onclick="if(event.target===this) closeLightbox()">
+  <div class="lightbox-stage">
+    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Cerrar">✕</button>
+    <button class="lightbox-arrow prev" onclick="lightboxStep(-1)" aria-label="Anterior">‹</button>
+    <button class="lightbox-arrow next" onclick="lightboxStep(1)" aria-label="Siguiente">›</button>
+    <div class="lightbox-slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🚀</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🪐</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🌡</div>
+    <div class="lightbox-slide" style="background:linear-gradient(135deg,var(--color-secondary),#241238)">📦</div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="reserve-modal" onclick="if(event.target===this) closeReserveModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeReserveModal()" aria-label="Cerrar">✕</button>
+    <div id="reserve-step-form">
+      <div class="modal-game-preview">
+        <div class="modal-game-thumb" id="reserve-game-thumb">🚀</div>
+        <div>
+          <p class="modal-game-name" id="reserve-game-name">Terraforming Mars: Ares Expedition</p>
+          <p class="modal-game-sub">Reserva para la próxima juntada del club</p>
+        </div>
+      </div>
+      <h3>¡Quiero Jugarlo!</h3>
+      <p class="modal-sub">Dejanos tu nombre y le mandamos el pedido al club por WhatsApp.</p>
+      <label for="reserve-name">Tu nombre</label>
+      <input type="text" id="reserve-name" placeholder="Ej: Augusto Pedraza" />
+      <p class="field-error" id="reserve-error">Ingresá tu nombre para continuar.</p>
+      <div class="modal-actions">
+        <button class="cta-primary" style="width:100%; justify-content:center" onclick="submitReserve()">💬 Reservar por WhatsApp</button>
+      </div>
+    </div>
+    <div id="reserve-step-success" style="display:none" class="wa-success">
+      <div class="icon">✅</div>
+      <h3>¡Listo!</h3>
+      <p class="modal-sub">Le mandamos este mensaje al club por vos — confirmalo abriendo WhatsApp:</p>
+      <div class="wa-preview" id="wa-message-preview"></div>
+      <a href="#" target="_blank" class="wa-open-link" id="wa-open-link">💬 Abrir WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<div class="share-toast" id="share-toast">¡Enlace copiado!</div>
+
+<div id="sketch-tools">
+  <span>Sketch 011 — Full composition · use the ☀/🌙 button in the nav for the real theme toggle</span>
+</div>
+
+<script>
+// ==================== THEME TOGGLE (frontier 010, proved first on 007) ====================
+function currentResolvedTheme() {
+  const explicit = document.documentElement.dataset.theme;
+  if (explicit) return explicit;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function applyThemeToggleIcon() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const resolved = currentResolvedTheme();
+  btn.textContent = resolved === 'dark' ? '☀' : '🌙';
+  btn.setAttribute('aria-label', resolved === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+}
+function toggleTheme() {
+  const next = currentResolvedTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('pk-theme', next);
+  applyThemeToggleIcon();
+}
+(function initTheme() {
+  const saved = localStorage.getItem('pk-theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+})();
+document.addEventListener('DOMContentLoaded', applyThemeToggleIcon);
+
+// ==================== MOBILE NAV DRAWER + FILTERS (fixes: no search/filter
+// access, no hamburger/drawer on mobile) ====================
+function toggleNavDrawer() {
+  document.getElementById('nav-drawer').classList.toggle('open');
+  document.getElementById('nav-drawer-backdrop').classList.toggle('open');
+}
+
+const BANDS = ['Descubre el hobby', 'Ingenio estratega', 'Nivel experto'];
+const mobileFilterState = { band: null, maxPlaytime: null };
+
+function filtersPanelHTML() {
+  const s = mobileFilterState;
+  const anyActive = s.band || s.maxPlaytime;
+  return `
+    <div class="filter-group"><h5>Dificultad</h5>${BANDS.map(b => `<label><input type="radio" name="mf-band" ${s.band===b?'checked':''} onchange="quickMobileFilter('band','${b}')"> ${b}</label>`).join('')}</div>
+    <div class="filter-group"><h5>Duración</h5>${[30,60,90].map(t => `<label><input type="radio" name="mf-time" ${s.maxPlaytime===t?'checked':''} onchange="quickMobileFilter('maxPlaytime',${t})"> Hasta ${t} min</label>`).join('')}</div>
+    <div class="filters-clear-row"><button class="pill-btn" onclick="clearMobileFilters()" ${anyActive ? '' : 'disabled'}>✕ Limpiar filtros</button></div>
+  `;
+}
+function renderFiltersPanel() {
+  const body = document.getElementById('filters-panel-body');
+  if (body) body.innerHTML = filtersPanelHTML();
+  const n = [mobileFilterState.band, mobileFilterState.maxPlaytime].filter(Boolean).length;
+  const badge = document.getElementById('filters-active-count');
+  if (badge) badge.textContent = n ? `(${n})` : '';
+}
+function applyMobileFilters() {
+  const s = mobileFilterState;
+  document.querySelectorAll('.card[data-weight-label]').forEach(card => {
+    const matches = (!s.band || card.dataset.weightLabel === s.band)
+      && (!s.maxPlaytime || Number(card.dataset.maxPlaytime) <= s.maxPlaytime);
+    card.classList.toggle('filtered-out', !matches);
+  });
+}
+function quickMobileFilter(key, val) {
+  mobileFilterState[key] = mobileFilterState[key] === val ? null : val;
+  renderFiltersPanel();
+  applyMobileFilters();
+}
+function clearMobileFilters() {
+  mobileFilterState.band = null;
+  mobileFilterState.maxPlaytime = null;
+  renderFiltersPanel();
+  applyMobileFilters();
+}
+function toggleFiltersPanel() {
+  document.getElementById('filters-panel').classList.toggle('open');
+  document.getElementById('filters-panel-backdrop').classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.filters-panel') && !e.target.closest('#filters-panel-backdrop')
+      && e.target.id !== 'filters-panel' && !e.target.closest('.nav-drawer-filters-trigger')) {
+    document.getElementById('filters-panel')?.classList.remove('open');
+    document.getElementById('filters-panel-backdrop')?.classList.remove('open');
+  }
+});
+document.addEventListener('DOMContentLoaded', renderFiltersPanel);
+
+// ==================== CATALOG (verbatim from 007) ====================
+const ICON_USERS = `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+const ICON_CLOCK = `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+
+const GAMES = [
+  { title:'Catán', pal:'p1', icon:'🎲', minP:3, maxP:4, minT:60, maxT:90, weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Acabas de desembarcar en una isla sin explorar. Reparte los recursos, negocia con tus rivales y sé el primero en construir un imperio de carreteras y poblados por todo el territorio.', tag:'#CreaConexiones' },
+  { title:'Wingspan', pal:'p5', icon:'🦙', minP:1, maxP:5, minT:40, maxT:70, weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Eres una persona apasionada por la ornitología, construyendo la reserva natural de tus sueños. Atrae aves a tu santuario y encadena sus habilidades para crear la red de hábitats más próspera.', tag:null },
+  { title:'Hanabi', pal:'p2', icon:'🎆', minP:2, maxP:5, minT:25, maxT:25, weightLabel:'Descubre el hobby', weightLevel:1,
+    theme:'Un equipo de pirotécnicos distraídos mezcló su colección de fuegos artificiales. Sin ver tus propias cartas, ayuda a tus compañeros a reconstruir el espectáculo antes de que se acabe la pólvora.', tag:'#EquipoGanador' },
+  { title:'Terraforming Mars: Ares Expedition', pal:'p3', icon:'🌵', minP:1, maxP:5, minT:120, maxT:180, weightLabel:'Nivel experto', weightLevel:3,
+    theme:'Corporaciones rivales compiten por transformar Marte en un planeta habitable. Sube la temperatura, el oxígeno y los océanos mientras desarrollas la infraestructura que definirá la nueva frontera humana.', tag:null },
+  { title:'7 Wonders Duel', pal:'p4', icon:'⚔️', minP:2, maxP:2, minT:30, maxT:30, weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Dos civilizaciones antiguas compiten por la supremacía a través de la ciencia, el comercio, el ejército y las grandes maravillas del mundo, cara a cara en un duelo directo de dos jugadores.', tag:'#DuelosMemorables' },
+  { title:'El Resistencia', pal:'p6', icon:'🕵️', minP:5, maxP:10, minT:30, maxT:30, weightLabel:'Descubre el hobby', weightLevel:1,
+    theme:'Una red de espías se ha infiltrado en la Resistencia. Sin saber en quién confiar, cada misión es una oportunidad para sabotear en secreto — o para demostrar tu lealtad frente a las sospechas del grupo.', tag:'#EquipoGanador' },
+];
+
+const SHELVES = [
+  { id:'shelf-destacados', title:'Destacados del club', subtitle:'La selección del club — los juegos que más recomendamos ahora mismo.', hero:true },
+  { id:'shelf-hobby', title:'Descubre el hobby', subtitle:'Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez.' },
+  { id:'shelf-estratega', title:'Ingenio estratega', subtitle:'Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante.' },
+  { id:'shelf-nuevos', title:'Recientemente añadidos', subtitle:'Las incorporaciones más nuevas a la ludoteca.' },
+];
+
+const SIMILAR_GAMES = [
+  { title:'Res Arcana', pal:'p2', icon:'🔮', minP:2, maxP:4, minT:30, maxT:40, weightLabel:'Ingenio estratega', weightLevel:2, theme:'Dos magos rivales compiten por dominar fuentes de maná y artefactos arcanos en duelos rápidos y tácticos.', tag:null },
+  { title:'Wingspan', pal:'p5', icon:'🦙', minP:1, maxP:5, minT:40, maxT:70, weightLabel:'Ingenio estratega', weightLevel:2, theme:'Construí la reserva de aves de tus sueños encadenando sus habilidades en una red de hábitats próspera.', tag:null },
+  { title:'Everdell', pal:'p3', icon:'🌳', minP:1, maxP:4, minT:40, maxT:80, weightLabel:'Ingenio estratega', weightLevel:2, theme:'Construí una ciudad de criaturas del bosque a lo largo de las cuatro estaciones del año.', tag:'#MundoEncantado' },
+  { title:'Viticulture', pal:'p4', icon:'🍇', minP:1, maxP:6, minT:45, maxT:90, weightLabel:'Ingenio estratega', weightLevel:2, theme:'Gestioná tu propio viñedo en la Toscana: plantá, cosechá y llená órdenes de vino.', tag:null },
+  { title:'Scythe', pal:'p1', icon:'⚙️', minP:1, maxP:5, minT:90, maxT:115, weightLabel:'Nivel experto', weightLevel:3, theme:'Potencias rivales de una Europa alternativa expanden su territorio con mechs a vapor tras la Primera Guerra Mundial.', tag:null },
+  { title:'Gaia Project', pal:'p6', icon:'🌌', minP:1, maxP:4, minT:60, maxT:150, weightLabel:'Nivel experto', weightLevel:3, theme:'Catorce facciones alienígenas compiten por colonizar y terraformar un sistema planetario compartido.', tag:null },
+  { title:'Brass: Birmingham', pal:'p3', icon:'🏭', minP:2, maxP:4, minT:90, maxT:120, weightLabel:'Nivel experto', weightLevel:3, theme:'Construí redes de canales y ferrocarriles compitiendo por industrializar Birmingham.', tag:null },
+  { title:'Great Western Trail', pal:'p5', icon:'🐄', minP:2, maxP:4, minT:90, maxT:150, weightLabel:'Nivel experto', weightLevel:3, theme:'Arreá tu ganado desde Texas hasta Kansas City, mejorando tu manada y tu mazo en el camino.', tag:null },
+];
+
+function playersText(g) { return g.minP === g.maxP ? `${g.minP}` : `${g.minP}-${g.maxP}`; }
+function timeText(g) { return g.minT === g.maxT ? `${g.minT} min` : `${g.minT}-${g.maxT} min`; }
+function difficultyDotsHTML(level) { return `<span class="difficulty">${[1,2,3].map(n => `<span class="dot${n<=level?' filled':''}"></span>`).join('')}</span>`; }
+function pillsRowHTML(g) { return `<div class="pills-row"><span class="pill">${ICON_USERS} ${playersText(g)}</span><span class="pill">${ICON_CLOCK} ${timeText(g)}</span><span class="pill">${difficultyDotsHTML(g.weightLevel)} ${g.weightLabel}</span></div>`; }
+function titleAndFactsHTML(g, tag, cls) { return `${pillsRowHTML(g)}<${tag} class="${cls}">${g.title}</${tag}>`; }
+
+let cardCounter = 0;
+function cardHTML(g, hero) {
+  const id = cardCounter++;
+  window.__cardGames = window.__cardGames || {};
+  window.__cardGames[id] = g;
+  return `<div class="card${hero ? ' hero-card' : ''}" id="card-${id}"
+       data-weight-label="${g.weightLabel}" data-max-playtime="${g.maxT}"
+       onmouseenter="handleCardEnter(this, ${id})" onmouseleave="handleCardLeave()" onclick="handleCardTap(${id})">
+    <div class="poster-art ${g.pal}">${g.icon}</div>
+    <div class="cap"><h4>${g.title}</h4></div>
+  </div>`;
+}
+
+function renderShelves() {
+  const el = document.getElementById('rows');
+  el.innerHTML = SHELVES.map((s, si) => {
+    const items = GAMES.slice(si % GAMES.length).concat(GAMES.slice(0, si % GAMES.length));
+    return `
+    <section class="shelf${s.hero ? ' hero' : ''}" id="${s.id}">
+      <div class="row-header">
+        <h2 class="row-heading${s.hero ? ' hero' : ''}">${s.title}</h2>
+        <p class="row-subtitle">${s.subtitle}</p>
+      </div>
+      <div class="rail-wrap">
+        <button class="rail-btn prev" aria-label="Anterior" onclick="scrollRail(this,-1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div class="rail">
+          ${items.map(g => cardHTML(g, s.hero)).join('')}
+          <div class="see-all-tile${s.hero ? ' hero-card' : ''}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>Ver todo</span></div>
+        </div>
+        <button class="rail-btn next" aria-label="Siguiente" onclick="scrollRail(this,1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+    </section>`;
+  }).join('');
+}
+
+// "Juegos similares" — same real cardHTML()/rail markup as the catalog
+// shelves above, wired to the same hover-portal/tap-sheet (finding #3).
+function renderSimilarShelf() {
+  const el = document.getElementById('similar-rail');
+  if (!el) return;
+  el.innerHTML = SIMILAR_GAMES.map(g => cardHTML(g, false)).join('');
+}
+
+function renderMobileChips() {
+  const el = document.getElementById('chips-nav');
+  const chips = SHELVES.map((s, i) => `<button class="chip${i===0?' active':''}" onclick="jumpToChip(this,'${s.id}')">${s.title}</button>`).join('');
+  el.innerHTML = `<div class="chip-edge-spacer"></div>${chips}<div class="chip-edge-spacer"></div>`;
+}
+
+function jumpToChip(btn, targetId) {
+  btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function scrollRail(btn, dir) {
+  const rail = btn.closest('.rail-wrap').querySelector('.rail');
+  rail.scrollBy({ left: dir * rail.clientWidth * 0.9, behavior: 'smooth' });
+}
+
+const IS_TOUCH = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+let portalHideTimer = null, portalShowTimer = null;
+const portalEl = document.getElementById('hover-portal');
+const HOVER_INTENT_DELAY = 300;
+const PORTAL_WIDTH = 360;
+
+function handleCardEnter(cardEl, id) {
+  if (IS_TOUCH) return;
+  clearTimeout(portalHideTimer); clearTimeout(portalShowTimer);
+  portalShowTimer = setTimeout(() => showPortal(cardEl, id), HOVER_INTENT_DELAY);
+}
+
+function showPortal(cardEl, id) {
+  const rect = cardEl.getBoundingClientRect();
+  const w = PORTAL_WIDTH, grow = w - rect.width;
+  const left = Math.max(8, Math.min(rect.left - grow / 2, window.innerWidth - w - 8));
+  const top = Math.max(16, rect.top - grow / 2);
+  portalEl.style.width = w + 'px'; portalEl.style.left = left + 'px'; portalEl.style.top = top + 'px';
+  const g = window.__cardGames[id];
+  portalEl.innerHTML = `<div class="portal-poster ${g.pal}">${g.icon}</div><div class="portal-body">${titleAndFactsHTML(g,'p','card-title')}<p class="theme-text">${g.theme}</p><button class="expand-cta" onclick="event.stopPropagation(); portalEl.classList.remove('visible'); showPage('detail')">Ver detalles</button></div>`;
+  portalEl.classList.add('visible');
+  portalEl.onmouseenter = () => clearTimeout(portalHideTimer);
+  portalEl.onmouseleave = handleCardLeave;
+}
+
+function handleCardLeave() {
+  if (IS_TOUCH) return;
+  clearTimeout(portalShowTimer);
+  portalHideTimer = setTimeout(() => portalEl.classList.remove('visible'), 120);
+}
+
+function handleCardTap(id) { if (!IS_TOUCH) return; openSheet(id); }
+
+function openSheet(id) {
+  const g = window.__cardGames[id];
+  const posterEl = document.getElementById('sheet-poster');
+  posterEl.className = 'sheet-poster ' + g.pal; posterEl.textContent = g.icon;
+  document.getElementById('sheet-body').innerHTML = `${titleAndFactsHTML(g,'h2','card-title')}<p class="theme-text">${g.theme}</p>${g.tag ? `<span class="expand-tag">${g.tag}</span>` : ''}<button class="expand-cta" onclick="closeSheet(); showPage('detail')">Ver detalles</button>`;
+  document.getElementById('sheet-backdrop').classList.add('visible');
+  document.getElementById('mobile-sheet').classList.add('open');
+}
+function closeSheet() { document.getElementById('sheet-backdrop').classList.remove('visible'); document.getElementById('mobile-sheet').classList.remove('open'); }
+
+function showPage(page, evt) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('is-active'));
+  document.getElementById('page-' + page).classList.add('is-active');
+  if (evt && evt.target) {
+    evt.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
+    evt.target.classList.add('is-active');
+  } else {
+    document.querySelectorAll('.page-switcher button').forEach(b => b.classList.toggle('is-active', b.textContent.trim() === (page === 'detail' ? 'Detalle' : page === 'about' ? 'Acerca de' : 'Catálogo')));
+  }
+  const nav = document.getElementById('app-nav');
+  nav.querySelectorAll('[data-catalog-only]').forEach(el => el.style.display = page === 'catalog' ? '' : 'none');
+  nav.querySelectorAll('[data-detail-only]').forEach(el => el.style.display = page === 'detail' ? 'flex' : 'none');
+  nav.querySelectorAll('[data-about-only]').forEach(el => el.style.display = page === 'about' ? 'flex' : 'none');
+  document.getElementById('chips-nav').style.display = page === 'catalog' ? '' : 'none';
+  document.getElementById('mobile-cta-bar').style.display = page === 'detail' ? '' : 'none';
+  // Finding #5 fix: the detail page's own scroll listeners/observers keep
+  // running even while #page-detail is display:none (the page-switcher
+  // hides pages, it never unmounts them). Force a known-good "just arrived
+  // at the top of the page" state on EVERY switch — not just into detail —
+  // since #game-sticky-bar isn't scoped inside #page-detail (it's a
+  // page-independent fixed element) and was found bleeding its "scrolled
+  // past the title" state into the catalog/about pages after leaving a
+  // scrolled detail view without ever re-entering it.
+  if (window.resetDetailStickyChrome) window.resetDetailStickyChrome();
+  window.scrollTo(0, 0);
+}
+
+renderShelves();
+renderSimilarShelf();
+renderMobileChips();
+
+window.addEventListener('scroll', () => {
+  document.getElementById('app-nav').classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
+
+// ==================== DETAIL PAGE (from 005, namespaced) ====================
+// Finding #5: 005's own carousel functions were carouselShow(index)/
+// carouselStep(btn,dir)/carouselGoTo(i)/setupCarouselDots() — SAME NAMES as
+// 004's about-page carousel functions below, but with a DIFFERENT signature
+// (005's took no element argument, closing over one module-level
+// `carouselEl`). Composed on one page, whichever <script> block ran last
+// would silently overwrite the other's global function, breaking one
+// carousel's arrow/dot clicks (calling the wrong carousel, or throwing on a
+// null element). Renamed 005's masthead-carousel functions to a
+// detailCarousel* prefix; 004's about-page functions below keep their
+// original generic, already-element-scoped names untouched.
+const detailCarouselEl = document.querySelector('.detail-carousel[data-carousel]');
+let detailCarouselIndex = 0;
+
+function setupDetailCarouselDots() {
+  const slides = Array.from(detailCarouselEl.querySelectorAll('.slide'));
+  const dotsWrap = detailCarouselEl.querySelector('.cs-dots');
+  dotsWrap.innerHTML = slides.map((_, i) => `<button class="cs-dot${i === 0 ? ' is-active' : ''}" onclick="event.stopPropagation(); detailCarouselGoTo(${i})"></button>`).join('');
+}
+function detailCarouselShow(index) {
+  const slides = Array.from(detailCarouselEl.querySelectorAll('.slide'));
+  const dots = Array.from(detailCarouselEl.querySelectorAll('.cs-dot'));
+  detailCarouselIndex = (index + slides.length) % slides.length;
+  slides.forEach((s, i) => s.classList.toggle('is-active', i === detailCarouselIndex));
+  dots.forEach((d, i) => d.classList.toggle('is-active', i === detailCarouselIndex));
+  lightboxShow(detailCarouselIndex);
+}
+function detailCarouselStep(dir) { detailCarouselShow(detailCarouselIndex + dir); }
+function detailCarouselGoTo(i) { detailCarouselShow(i); }
+setupDetailCarouselDots();
+
+function openLightbox() {
+  lightboxShow(detailCarouselIndex);
+  document.getElementById('lightbox').classList.add('is-open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('is-open');
+}
+function lightboxShow(index) {
+  const slides = document.querySelectorAll('.lightbox-slide');
+  slides.forEach((s, i) => s.classList.toggle('is-active', i === index));
+}
+function lightboxStep(dir) { detailCarouselShow(detailCarouselIndex + dir); }
+
+(function () {
+  const ctaBar = document.getElementById('mobile-cta-bar');
+  const identity = document.getElementById('game-identity');
+  const stickyBar = document.getElementById('game-sticky-bar');
+  const footer = document.querySelector('.pk-footer');
+  let footerReached = false;
+  let scrolledPastIdentity = false;
+
+  function refreshStickyBar() {
+    if (!stickyBar) return;
+    stickyBar.classList.toggle('is-visible', scrolledPastIdentity && !footerReached);
+  }
+
+  let scrollEndTimer;
+  if (ctaBar) {
+    window.addEventListener('scroll', () => {
+      if (footerReached) return;
+      ctaBar.classList.add('is-hidden');
+      clearTimeout(scrollEndTimer);
+      scrollEndTimer = setTimeout(() => ctaBar.classList.remove('is-hidden'), 200);
+    });
+  }
+
+  // Driven directly off scroll position (getBoundingClientRect), not
+  // IntersectionObserver — Chrome throttles/suspends IntersectionObserver
+  // callbacks whenever document.visibilityState isn't "visible" (backgrounded
+  // window, some remote-control/automation contexts), which made this sticky
+  // bar silently never appear despite the trigger geometry being correct.
+  // A plain scroll listener has no such dependency.
+  //
+  // Round 4 fix: this listener is global (fires on every page, not just
+  // Detalle), and #game-identity lives inside #page-detail — which the
+  // page-switcher hides via display:none rather than unmounting. A hidden
+  // element's getBoundingClientRect() is always (0,0,0,0), so
+  // "bottom < 64" was trivially TRUE the moment the user scrolled at all on
+  // Catálogo or Acerca de — the sticky bar showed the last-viewed game title
+  // over pages that have nothing to do with it. resetDetailStickyChrome()
+  // only patched this at the instant of a page switch; the very next scroll
+  // on the new page recomputed it wrong again. offsetParent is null exactly
+  // when an ancestor is display:none, so gating on it is the real fix, not
+  // just a reset-at-switch-time workaround.
+  if (identity && stickyBar) {
+    const checkIdentityScroll = () => {
+      scrolledPastIdentity = identity.offsetParent !== null && identity.getBoundingClientRect().bottom < 64;
+      refreshStickyBar();
+    };
+    window.addEventListener('scroll', checkIdentityScroll, { passive: true });
+    window.checkIdentityScroll = checkIdentityScroll;
+  }
+
+  // Same scroll-driven approach as checkIdentityScroll above, same reason
+  // (IntersectionObserver throttled/suspended when the tab isn't visible).
+  if (footer) {
+    const checkFooterScroll = () => {
+      footerReached = footer.getBoundingClientRect().top < window.innerHeight;
+      document.body.classList.toggle('is-cta-parked', footerReached);
+      if (ctaBar) ctaBar.classList.toggle('is-parked', footerReached);
+      refreshStickyBar();
+    };
+    window.addEventListener('scroll', checkFooterScroll, { passive: true });
+    window.checkFooterScroll = checkFooterScroll;
+  }
+
+  // Finding #5 fix (see showPage() above): reset to a known "just landed at
+  // top of page" state whenever the page-switcher activates the detail page.
+  window.resetDetailStickyChrome = function () {
+    scrolledPastIdentity = false;
+    footerReached = false;
+    document.body.classList.remove('is-cta-parked');
+    if (ctaBar) { ctaBar.classList.remove('is-parked', 'is-hidden'); }
+    refreshStickyBar();
+  };
+})();
+
+// about-page section index (fix: no way to jump to a section on a long
+// vertical-scroll page). Smooth-scrolls and marks the clicked chip active;
+// .about-index's own sticky top offsets the scroll target below via CSS
+// scroll-margin-top so the section heading doesn't land underneath it.
+function jumpToAboutSection(chip, targetId) {
+  document.querySelectorAll('.about-index-item').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleDescCollapse(btn) {
+  const text = btn.previousElementSibling;
+  const collapsed = text.classList.toggle('is-collapsed');
+  btn.textContent = collapsed ? '… Leer más' : 'Leer menos';
+}
+
+function shareData() {
+  const gameName = 'Terraforming Mars: Ares Expedition';
+  return { title: gameName, text: `Mirá "${gameName}" en Pukllay Club`, url: 'https://pukllay.club/juegos/terraforming-mars-ares-expedition' };
+}
+function toggleShare(btn, evt) {
+  evt.stopPropagation();
+  if (navigator.share) {
+    navigator.share(shareData()).catch(() => {});
+    return;
+  }
+  const popover = btn.nextElementSibling;
+  const wasOpen = popover.classList.contains('is-open');
+  document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open'));
+  if (!wasOpen) popover.classList.add('is-open');
+}
+document.addEventListener('click', () => document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open')));
+
+function shareVia(channel) {
+  const data = shareData();
+  if (channel === 'whatsapp') {
+    window.open(`https://wa.me/?text=${encodeURIComponent(data.text + ' ' + data.url)}`, '_blank');
+  } else if (channel === 'x') {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(data.text)}&url=${encodeURIComponent(data.url)}`, '_blank');
+  } else if (channel === 'copy' && navigator.clipboard) {
+    navigator.clipboard.writeText(data.url).then(showShareToast).catch(showShareToast);
+  } else {
+    showShareToast();
+  }
+  document.querySelectorAll('.share-popover').forEach(p => p.classList.remove('is-open'));
+}
+function showShareToast() {
+  const toast = document.getElementById('share-toast');
+  toast.classList.add('is-visible');
+  setTimeout(() => toast.classList.remove('is-visible'), 2200);
+}
+
+const WA_CLUB_NUMBER = '5493884103255';
+let currentReserveGame = 'Terraforming Mars: Ares Expedition';
+
+function openReserveModal(gameName, thumbEmoji) {
+  currentReserveGame = gameName;
+  document.getElementById('reserve-game-name').textContent = gameName;
+  document.getElementById('reserve-game-thumb').textContent = thumbEmoji || '🎲';
+  document.getElementById('reserve-step-form').style.display = '';
+  document.getElementById('reserve-step-success').style.display = 'none';
+  document.getElementById('reserve-name').value = '';
+  document.getElementById('reserve-error').classList.remove('is-visible');
+  document.getElementById('reserve-modal').classList.add('is-open');
+}
+function closeReserveModal() {
+  document.getElementById('reserve-modal').classList.remove('is-open');
+}
+function submitReserve() {
+  const nameInput = document.getElementById('reserve-name');
+  const name = nameInput.value.trim();
+  if (!name) {
+    document.getElementById('reserve-error').classList.add('is-visible');
+    nameInput.focus();
+    return;
+  }
+  const message = `¡Hola Pukllay Club! Quiero reservar "${currentReserveGame}" para jugar. Mi nombre es ${name}.`;
+  document.getElementById('wa-message-preview').textContent = message;
+  document.getElementById('wa-open-link').href = `https://wa.me/${WA_CLUB_NUMBER}?text=${encodeURIComponent(message)}`;
+  document.getElementById('reserve-step-form').style.display = 'none';
+  document.getElementById('reserve-step-success').style.display = '';
+}
+
+// ==================== ABOUT PAGE ====================
+// Round 4: the about page no longer has any .band-carousel (its three
+// generic gradient+emoji carousels were the actual "breaks rhythm" culprit —
+// see README Round 4) — only a real accordion remains, one item open at a
+// time, same interaction shape as a normal FAQ.
+function toggleFaqAccordion(btn) {
+  const item = btn.closest('.accordion-item');
+  const wasOpen = item.classList.contains('open');
+  item.closest('.accordion').querySelectorAll('.accordion-item.open').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+</script>
+
+</body>
+</html>

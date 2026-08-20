@@ -26,6 +26,20 @@ narrower than the peeking sliver of the next card, or the fade visually swallows
 you're trying to create. (Cards ~96-104px, gaps ~8-10px, side padding ~14px, edge-fade ~16-24px
 wide, at that viewport width.)
 
+**Rail gap is `var(--space-4)` (24px), not `var(--space-3)` (16px) — a real, once-live disagreement
+between sketches.** 001 (which designed the rail/shelf shape) originally used a 160px card at 16px
+gap; 002 (built two sketches later specifically to design the card's own content) used a 190px card
+at 24px gap, despite 002's own README claiming it matched 001 exactly — it matched the poster/caption
+*markup*, not the sizing. Sketch 007 caught this composing the two for real and standardized on
+002's values (190px card, 24px gap — the deliberately-tuned iteration, and the wider gap gives the
+desktop hover-portal room to pop forward without crowding its neighbor); sketch 011 confirmed these
+are still the shipped values through 9 further rounds of shell work. **Content-width alignment: cap
+every row's own box to the same 1280px the header/footer use.** Found via 011: shelves originally had
+padding only, no `max-width` — full-bleed on any viewport. Once the header/footer got capped at
+1280px (see `page-shell.md`), shelves that stayed uncapped visibly overflowed past both on a wide
+monitor. `.row-header`/`.rail-wrap` now carry `max-width: 1280px; margin: 0 auto;` alongside their
+existing padding, so their edges line up with the header/footer at any viewport width.
+
 **A trailing "Ver todo {categoría}" tile caps each row** — an explicit way to go deeper into a
 shelf's full category instead of relying purely on scrolling further. Same card footprint/rhythm
 as the poster cards, dashed border to read as a distinct affordance rather than another game.
@@ -44,7 +58,9 @@ nav's padding — same token, not independently chosen):
 ```css
 main { max-width: 100%; padding-left: 0; padding-right: 0; }
 .app-nav { padding-left: var(--space-6); padding-right: var(--space-6); } /* must match rail-wrap */
-.row-header, .rail-wrap { padding: 0 var(--space-6); }
+/* max-width lives on the SAME element as the padding, not a wrapper around it — see page-shell.md's
+   "content-width alignment" note for why that distinction matters. */
+.row-header, .rail-wrap { padding: 0 var(--space-6); max-width: 1280px; margin: 0 auto; }
 
 .rail-wrap { position: relative; }
 .rail-wrap::before, .rail-wrap::after {
@@ -54,7 +70,7 @@ main { max-width: 100%; padding-left: 0; padding-right: 0; }
 .rail-wrap::after  { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
 
 .rail {
-  display: flex; gap: var(--space-3); overflow-x: auto; scroll-behavior: smooth;
+  display: flex; gap: var(--space-4); overflow-x: auto; scroll-behavior: smooth; /* 24px, not 16px — see decision above */
   scrollbar-width: none; padding: var(--space-2) 0;
 }
 .rail::-webkit-scrollbar { display: none; }
@@ -135,7 +151,15 @@ function humanizeHashtag(tag) {
   chip/badge elsewhere, but reads as broken visual harmony next to normal-Spanish-phrase headings.
 - A hero/featured shelf background wash (gradient panel behind the row) tested as "muddy" against
   a white background — a plain heading + thin divider read as cleaner than a light-lavender panel.
+- **Don't let two sketches independently declare "matching" sizing values** (card width, rail gap)
+  without actually diffing them — 001 and 002 both believed their card sizing matched, and it took a
+  third sketch composing them together to catch that it didn't. Prefer one sketch importing the
+  other's real values over re-declaring "the same" number from memory.
+- **Don't cap the header/footer to a max-width without capping the content below it to the same
+  value** — a real bug this project hit once already (see `page-shell.md`).
 
 ## Origin
-Synthesized from sketch 001 (shelf-structure), winning variant D.
-Source file available in: `sources/001-shelf-structure/index.html`
+Synthesized from sketch 001 (shelf-structure), winning variant D; card/rail sizing corrected by
+sketch 007, content-width alignment added by sketch 011.
+Source files available in: `sources/001-shelf-structure/`, `sources/007-composed-catalog-page/`,
+`sources/011-full-shell-composition/`

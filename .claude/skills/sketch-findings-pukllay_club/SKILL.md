@@ -25,7 +25,9 @@ Reference points: Airbnb-style card grid (big image, minimal chrome), Netflix we
 (row-first navigation, poster-primary cards, focus/hover expand-to-reveal-details), Amazon/Airbnb/
 Booking.com mobile product pages (sticky bottom action bar, buy-box pattern).
 
-Sketch sessions wrapped: 2026-08-19 (sketches 001–002), 2026-08-20 (sketches 003–005)
+Sketch sessions wrapped: 2026-08-19 (sketches 001–002), 2026-08-20 (sketches 003–005),
+2026-08-20 continued (sketches 006, 007 partial, 009, 011 — the shell went through 9 real revision
+rounds; see `references/page-shell.md`, which now supersedes the original sketch 003 design entirely)
 </context>
 
 <design_direction>
@@ -47,15 +49,34 @@ by a scrolling container's implied overflow behavior.
 
 Palette, typography, and spacing tokens: `sources/themes/default.css` (mirrors the real brand
 tokens in `assets/css/app.css` / 01-UI-SPEC.md — Bebas Neue display + Inter body, the brand
-purple/lavender palette, 4px-multiple spacing scale).
+purple/lavender palette, 4px-multiple spacing scale). This file also now carries a **real light/dark
+mode mechanism**, not just a light palette: `:root` is light, `@media (prefers-color-scheme: dark)`
+overrides to a dark purple palette unless an explicit `[data-theme="light"]` opts back out, and
+`[data-theme="dark"]` forces dark regardless of system preference — "data-theme wins" in both
+directions, driven by `document.documentElement.dataset.theme` from a real toggle button (see
+`page-shell.md`'s `.theme-toggle`). Motion tokens (`--duration-*`/`--ease-*`) are validated, not
+incidental — see `references/motion-system.md`.
 
-Two more load-bearing principles emerged from the shell/detail/about sketches:
+Three more load-bearing principles emerged from the shell/detail/about sketches:
+
+- **Cap every section of a page to the same content max-width, with padding on the same element as
+  the max-width — never on a wrapper around it.** Capping only the header/footer while leaving page
+  content uncapped (or vice versa) is a real bug this project hit twice: once between the shell and
+  the catalog rail, once again inside the footer's own markup. See `page-shell.md`'s "content-width
+  alignment" note.
 
 - **Prefer `position: sticky` over `position: fixed` whenever the element has a natural container
   boundary to stop at** (a sidebar beside scrolling content) — it un-sticks for free at the end of
-  that container, no JS needed. Reach for `fixed` + an `IntersectionObserver` watching a real
-  boundary element (like `<footer>`) only when there's no natural containing block to bound it,
-  e.g. a page-spanning mobile action bar.
+  that container, no JS needed. For a page-spanning element with no natural containing block (e.g. a
+  mobile action bar that needs to "park" at the real `<footer>`), reach for `fixed` + a plain
+  `scroll` listener checking `boundaryEl.getBoundingClientRect()` — **not** `IntersectionObserver`.
+  Superseded guidance: an earlier session recommended `IntersectionObserver` here; sketch 011 found
+  Chrome throttles/suspends its callbacks whenever `document.visibilityState` isn't `"visible"`
+  (backgrounded window, some automation contexts), which silently broke exactly this pattern. See
+  `detail-page-mobile-interaction.md` for the corrected implementation. If the boundary/trigger
+  element isn't guaranteed mounted, also guard the rect read with `el.offsetParent !== null` —
+  a hidden element's rect is always `(0,0,0,0)`, which can satisfy a threshold check that isn't
+  actually true.
 - **Equal-specificity CSS rules resolve by source order, not by which condition is "more specific"
   feeling** — a base rule and its `@media` override at the same specificity silently pick whichever
   is declared later in the file, regardless of which media query actually matches. Caused a real,
@@ -71,10 +92,12 @@ Two more load-bearing principles emerged from the shell/detail/about sketches:
 |------|-----------|--------------|
 | Layout & Navigation | references/layout-navigation.md | Full-bleed edge-fade shelves + aligned sticky nav; mobile gets a category-chip row instead of nav links |
 | Card & Preview Interaction | references/card-interaction.md | Minimal resting card (poster + title only); fixed-size hover-portal (desktop) / full-screen sheet (mobile) rendered outside the scrolling rail, sharing identical CSS classes for every field |
-| Page Shell (Header + Footer) | references/page-shell.md | One header component with 3 states (full nav / breadcrumb / static label) across catalog, detail, about; Two-Tier Mission Band footer splits persuasion from utility; BGG attribution badge is compliance-required |
+| Page Shell (Header + Footer) | references/page-shell.md | One header component with 3 states (nav-links / breadcrumb / nav-links, not 3 headers); crumbs reserved for genuine drill-downs only; single-row footer, no divider; "Inicio" (nav action) vs. "Ludoteca" (section name) kept deliberately distinct; every section capped to the same 1280px content width as the header |
 | About Page Content | references/about-page-content.md | Alternating tinted/untinted bands, each with a working image carousel instead of a static hero; FAQ as a closing band, not an accordion |
 | Detail Page — Layout & Content | references/detail-page-layout.md | Desktop buy-box (sticky image+CTA) beside a scrolling reading column, no accordion; ficha técnica as a 2-col grid; every field grounded in the real schema including its gaps; "Juegos similares" shelf reuses the real home-page carousel component |
-| Detail Page — Mobile & Interaction Patterns | references/detail-page-mobile-interaction.md | Mobile CTA bar hides while scrolling, parks at the footer via IntersectionObserver; sticky title-echo bar with bounce-to-top; lightbox/carousel sync; WhatsApp reservation flow |
+| Detail Page — Mobile & Interaction Patterns | references/detail-page-mobile-interaction.md | Mobile CTA bar hides while scrolling, parks at the footer; sticky title-echo bar with bounce-to-top — both driven by a plain `scroll` listener + `getBoundingClientRect()`, not `IntersectionObserver` (throttles in a backgrounded tab); lightbox/carousel sync; WhatsApp reservation flow |
+| Motion System | references/motion-system.md | Validated timing: 100/180/280ms, no-overshoot soft ease-out, `-3px` hover-lift — faster and smaller than every tested alternative, already live in the shared theme |
+| Empty / Loading / Error States | references/empty-loading-error-states.md | Flat gray skeletons (no shimmer), terse plain-Spanish copy, one action per state — illustrated/warm treatment tried and rejected as trying too hard for a low-stakes moment |
 
 ## Theme
 
@@ -94,4 +117,8 @@ self-contained, interactive HTML mockup (no build step) that can be opened direc
 - 003-page-shell
 - 004-about-page
 - 005-detail-page
+- 006-motion-system
+- 007-composed-catalog-page (partial — card/rail sizing correction only; shell findings superseded by 011)
+- 009-empty-loading-error-states
+- 011-full-shell-composition (replaces 003's page-shell design entirely)
 </metadata>

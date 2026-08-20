@@ -17,10 +17,11 @@ problem was that buttons don't belong in a prose flow at all, regardless of arra
 **`.poster-col` is `position: sticky`, not fixed, on desktop.** As the (much taller) text column
 scrolls, the image+CTA stay pinned in view via native sticky positioning — it naturally un-sticks at
 the real end of `.masthead`'s containing block, no JS needed. This is the boundary case mobile's
-`position: fixed` CTA bar has to fake with an `IntersectionObserver` instead (see the mobile
-reference file) — prefer `position: sticky` over `fixed` whenever the element's container naturally
-bounds where it should stop, which it does not for a fixed-bottom mobile bar spanning the whole
-page.
+`position: fixed` CTA bar has to fake with a scroll-driven `getBoundingClientRect()` check instead
+(see the mobile reference file — not `IntersectionObserver`, which was tried first and found to
+throttle in a backgrounded tab) — prefer `position: sticky` over `fixed` whenever the element's
+container naturally bounds where it should stop, which it does not for a fixed-bottom mobile bar
+spanning the whole page.
 
 ```css
 .detail-b .masthead { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: var(--space-8); align-items: start; }

@@ -1,6 +1,20 @@
 /* PukllayClub sketch theme — mirrors the approved 01-UI-SPEC.md brand tokens
    (assets/css/app.css daisyUI overrides) so sketches feel true to the real app,
-   not a generic mockup. Light values only; sketches default to light mode. */
+   not a generic mockup.
+
+   Real light/dark toggle mechanism (2026-08-20, frontier consistency pass):
+   previously the dark palette only existed as a separate file
+   (dark-purple.css), swapped in via each sketch toolbar's <select> — that
+   proved the *colors* but never the real mechanism a LiveView app would
+   actually ship. This file now carries both palettes directly:
+     1. :root below = light, the default with no JS/media-query involved.
+     2. @media (prefers-color-scheme: dark) overrides to dark IF the OS/browser
+        prefers it, UNLESS an explicit [data-theme="light"] opts back out.
+     3. [data-theme="dark"] forces dark regardless of system preference (for
+        an explicit toggle button, even on a light-system browser).
+     "data-theme wins" in both directions — an explicit choice always beats
+     the system default. See any composed sketch's toggle button/JS for the
+     real implementation (sets/persists document.documentElement.dataset.theme). */
 
 :root {
   /* Colors — from 01-UI-SPEC.md daisyUI theme overrides (light) */
@@ -50,12 +64,65 @@
   --shadow-lg: 0 12px 32px rgba(36, 18, 56, 0.24);
 
   /* Motion — shared easing vocabulary for sketch 003 and any hover/expand
-     interactions built into 001/002 */
+     interactions built into 001/002. Duration values were chosen
+     incidentally while building 001/002 (see sketch 006's own design
+     question) — sketch 006 deliberately validated them and picked winner
+     D ("Subtle/Soft": fastest of the three tested + no-overshoot ease-out,
+     smaller hover-lift amplitude). These are D's validated fast/base/slow
+     values (100/180/280ms), applied here so the shared theme actually
+     carries the winning system instead of the original incidental guess. */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast: 120ms;
-  --duration-base: 220ms;
-  --duration-slow: 360ms;
+  --duration-fast: 100ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+}
+
+/* Dark palette — values from the dark-purple.css exploratory fork (approved
+   2026-08-20 to ship alongside light, not replace it). Only the color block
+   changes; typography/spacing/shape/motion tokens are brand-locked and
+   identical in both palettes. The default primary (#3D096D) is a near-black
+   purple that disappears on a dark ground, so dark mode promotes a brighter
+   purple to --color-primary instead of reusing the light value. Shadows are
+   re-based on black instead of the brand-purple text color, since a
+   purple-tinted shadow reads as muddy against an already-purple background. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #150826;
+    --color-surface: #22103A;
+    --color-surface-2: #2E1750;
+    --color-text: #F3ECFA;
+    --color-text-muted: #A78FC0;
+    --color-primary: #9D5CE6;
+    --color-primary-content: #FFFFFF;
+    --color-secondary: #C9A6F5;
+    --color-accent-bg: #2E1750;
+    --color-accent-text: #E4D4FA;
+    --color-border: #3A2159;
+    --color-danger: #E0607F;
+    --color-success: #5CC79A;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg: #150826;
+  --color-surface: #22103A;
+  --color-surface-2: #2E1750;
+  --color-text: #F3ECFA;
+  --color-text-muted: #A78FC0;
+  --color-primary: #9D5CE6;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #C9A6F5;
+  --color-accent-bg: #2E1750;
+  --color-accent-text: #E4D4FA;
+  --color-border: #3A2159;
+  --color-danger: #E0607F;
+  --color-success: #5CC79A;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
 @font-face {
