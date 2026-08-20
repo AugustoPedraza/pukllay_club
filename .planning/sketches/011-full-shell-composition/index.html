@@ -16,12 +16,15 @@
      one adapting component. ============ */
   .app-nav {
     position: sticky; top: 0; z-index: 100;
-    display: flex; align-items: center; gap: var(--space-6);
-    padding: var(--space-3) var(--space-6);
     background: var(--color-bg);
     border-bottom: 1px solid transparent;
     transition: background var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard);
   }
+  /* Round 4: the bar itself stays full-bleed (background/sticky), but its
+     content is capped + centered so the brand+links cluster and the
+     search+toggle cluster read as two evenly-weighted bookends instead of
+     one heavy left side and a growing dead void on wide viewports. */
+  .app-nav-inner { display: flex; align-items: center; gap: var(--space-6); max-width: 1280px; margin: 0 auto; padding: var(--space-3) var(--space-6); }
   /* isologo — the mark 005's own (discarded) header designed but never
      shipped, since it was attached to a second, redundant header. Grafted
      onto the real .app-nav .brand instead of being lost with the rest of
@@ -31,7 +34,7 @@
   .app-nav .brand-text { display: flex; flex-direction: column; line-height: 1; }
   .app-nav .brand strong { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.03em; color: var(--color-primary); }
   .app-nav .brand span { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
-  .app-nav .links { display: flex; gap: var(--space-4); flex: 1; }
+  .app-nav .links { display: flex; gap: var(--space-4); flex: 0 0 auto; }
   .app-nav .links a {
     color: var(--color-text); text-decoration: none; font-size: var(--text-sm); font-weight: 600;
     padding: var(--space-1) 0; border-bottom: 2px solid transparent;
@@ -41,7 +44,13 @@
   .app-nav .search {
     display: flex; align-items: center; gap: var(--space-2);
     background: var(--color-surface); border-radius: var(--radius-full);
-    padding: var(--space-2) var(--space-3); min-width: 220px;
+    padding: var(--space-2) var(--space-3);
+    /* Round 4: grows to fill the gap left by the brand+links cluster instead
+       of sitting as a small fixed-width chip with empty space in front of
+       it — this, plus the toggle right after it via margin-left:auto, is
+       what makes search+toggle read as one weighted cluster pinned to the
+       right edge rather than two orphaned small elements. */
+    flex: 1 1 auto; min-width: 160px; max-width: 360px; margin-left: auto;
   }
   .app-nav .search input { border: none; background: transparent; outline: none; font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-text); flex: 1; }
   .app-nav .search svg { flex-shrink: 0; opacity: 0.6; }
@@ -140,7 +149,7 @@
 
   .mobile-chip-nav { display: none; }
   @media (max-width: 480px) {
-    .app-nav { padding-left: var(--space-3); padding-right: var(--space-3); gap: var(--space-2); }
+    .app-nav-inner { padding-left: var(--space-3); padding-right: var(--space-3); gap: var(--space-2); }
     .app-nav .links, .app-nav .search { display: none; }
     .app-nav .brand-text span { display: none; }
     /* Dropping the tagline alone wasn't enough — the wordmark itself
@@ -315,12 +324,25 @@
     .card .cap h4 { font-size: var(--text-xs); -webkit-line-clamp: 1; line-height: 1.4; }
   }
 
-  /* ============ footer — VERBATIM from 003-C, one shared instance for all
-     three pages. 005 and 004 each redeclared this same footer a second and
-     third time, using var(--pk-gutter) instead of var(--space-6) for the
-     exact same gutter — see README finding #2. Only one copy survives here. ============ */
+  /* ============ footer — Round 4 rework (footer-d), replacing the two-tier
+     footer-c (colored full-bleed mission band + a much thinner plain utility
+     bar stacked under it — two mismatched visual weights read as two
+     footers, not one balanced one). One consistent-weight, single-background
+     multi-column footer instead (Airbnb/Netflix pattern): a brand+mission
+     column carries the same copy the old mission-band did, at normal
+     surface-level weight instead of a heavy colored block, alongside two
+     link columns — then one thin divided bottom row for the
+     compliance-required BGG badge + copyright, same role the old
+     utility-bar's meta side played. ============ */
   footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-8); }
+  .footer-d { padding: var(--space-8) var(--space-6) var(--space-4); }
+  .footer-d .footer-grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: var(--space-8); padding-bottom: var(--space-6); }
+  .footer-d .footer-brand-mark { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; margin-bottom: var(--space-3); }
+  .footer-d .footer-brand-mark strong { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.03em; color: var(--color-primary); }
+  .footer-d .footer-brand p { color: var(--color-text-muted); line-height: 1.6; margin: 0 0 var(--space-4); max-width: 42ch; }
+  .footer-d .footer-col h4 { font-family: var(--font-sans); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin: 0 0 var(--space-3); }
   .footer-links { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-4); flex-wrap: wrap; }
+  .footer-links.vertical { flex-direction: column; gap: var(--space-2); }
   .footer-links a { color: var(--color-text-muted); text-decoration: none; font-size: var(--text-sm); }
   .footer-links a:hover { color: var(--color-primary); }
   .footer-social { display: flex; gap: var(--space-2); }
@@ -330,35 +352,21 @@
   .bgg-badge .mark { width: 16px; height: 16px; border-radius: 3px; background: #ff5100; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
   .bgg-badge:hover { border-color: var(--color-primary); color: var(--color-primary); }
   .footer-copyright { font-size: var(--text-xs); color: var(--color-text-muted); }
-  .footer-c .mission-band { background: var(--color-primary); color: var(--color-primary-content); padding: var(--space-8) var(--space-6); text-align: center; }
-  .footer-c .mission-band h3 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-2); text-transform: uppercase; }
-  .footer-c .mission-band p { max-width: 52ch; margin: 0 auto var(--space-4); opacity: 0.9; line-height: 1.6; }
-  .footer-c .mission-band .footer-social a { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.85); }
-  .footer-c .mission-band .footer-social a:hover { background: rgba(255,255,255,0.15); color: #fff; }
-  .footer-c .mission-band .footer-social { justify-content: center; }
-  .footer-c .utility-bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-6); flex-wrap: wrap; gap: var(--space-2); }
-  .footer-c .footer-meta { display: flex; align-items: center; gap: var(--space-3); }
+  .footer-d .footer-bottom { max-width: 1280px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding-top: var(--space-4); border-top: 1px solid var(--color-border); gap: var(--space-3); flex-wrap: wrap; }
 
-  /* mobile footer: one compact tier, not two stacked "footers" (the
-     full-bleed purple mission statement + a separate utility bar read as
-     nested footers on a narrow screen, out of rhythm with the rest of the
-     app's minimal chrome). Drops the mission paragraph + social row on
-     mobile; keeps a short one-line brand statement, the compliance-required
-     BGG badge, essential links, and copyright — same content tier the
-     desktop utility-bar already carries, just no second heavy band above it.
-     First pass switched the utility-bar to flex-start (left-aligned, ragged)
-     while the mission-band above it stayed centered — an alignment mismatch
-     that read as unbalanced on its own. Standard minimal mobile-footer
-     pattern instead: everything centered, one alignment for the whole
-     block, link row and meta row separated by a plain divider rather than
-     implied by whitespace alone. */
+  /* mobile footer: one column, one alignment (centered) throughout — the
+     grid collapses to a single stack instead of the old two-tier's
+     mismatched centered-band-over-ragged-bar problem, since there's only
+     ever one tier now. */
   @media (max-width: 480px) {
-    .footer-c .mission-band { padding: var(--space-4) var(--space-4); }
-    .footer-c .mission-band p, .footer-c .mission-band .footer-social { display: none; }
-    .footer-c .mission-band h3 { font-size: var(--text-lg); margin: 0; }
-    .footer-c .utility-bar { flex-direction: column; align-items: center; text-align: center; padding: var(--space-4); gap: var(--space-3); }
-    .footer-c .footer-links { justify-content: center; gap: var(--space-4) var(--space-3); }
-    .footer-c .footer-meta { flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); width: 100%; }
+    .footer-d { padding: var(--space-6) var(--space-4) var(--space-4); text-align: center; }
+    .footer-d .footer-grid { grid-template-columns: 1fr; gap: var(--space-6); padding-bottom: var(--space-4); }
+    .footer-d .footer-brand-mark { justify-content: center; }
+    .footer-d .footer-brand p { margin-left: auto; margin-right: auto; }
+    .footer-d .footer-brand .footer-social { justify-content: center; }
+    .footer-links { justify-content: center; }
+    .footer-links.vertical { flex-direction: row; justify-content: center; gap: var(--space-4) var(--space-3); }
+    .footer-d .footer-bottom { flex-direction: column-reverse; }
   }
   .footer-brand .word { font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-primary); text-transform: uppercase; text-decoration: none; }
 
@@ -672,38 +680,65 @@
   .about-index-item:hover { color: var(--color-text); }
   .about-index-item.active { color: var(--color-primary); border-color: var(--color-primary); }
   @media (max-width: 480px) { .about-index-item .idx-label { font-size: 10px; white-space: normal; line-height: 1.2; } }
+  /* Round 4: replaces the old "three structurally identical text+carousel
+     bands, just mirrored" shape (the actual source of the "breaks rhythm"
+     complaint — same block repeated 3x reads as flat, not editorial) with
+     four genuinely different section shapes reusing the site's own
+     component vocabulary: a full-width statement, a step-card grid, one
+     text+visual band, and an accordion. */
+
+  /* about-mission — a centered statement, not a second copy of the hero's
+     two-column-band shape. */
+  .about-b .about-statement { max-width: 760px; margin: 0 auto; padding: var(--space-8) var(--space-6); text-align: center; scroll-margin-top: 128px; }
+  .about-b .about-statement p { font-family: var(--font-display); font-size: var(--text-2xl); line-height: 1.35; color: var(--color-text); margin: 0; }
+
+  /* about-how — numbered step-cards using the site's own surface/radius/
+     shadow vocabulary instead of a text+carousel band. */
+  .about-b .about-steps { background: var(--color-surface); padding: var(--space-8) 0; scroll-margin-top: 128px; }
+  .about-b .about-steps-inner { max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6); }
+  .about-b .about-steps h2 { font-family: var(--font-display); font-size: var(--text-2xl); text-transform: uppercase; text-align: center; margin: 0 0 var(--space-6); }
+  .about-b .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+  .about-b .step-card { background: var(--color-bg); border-radius: var(--radius-md); padding: var(--space-4); box-shadow: var(--shadow-sm); }
+  .about-b .step-num {
+    display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+    border-radius: var(--radius-full); background: var(--color-accent-bg); color: var(--color-accent-text);
+    font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: var(--space-3);
+  }
+  .about-b .step-card h3 { font-family: var(--font-sans); font-size: var(--text-base); font-weight: 700; margin: 0 0 var(--space-2); }
+  .about-b .step-card p { color: var(--color-text-muted); line-height: 1.6; margin: 0; font-size: var(--text-sm); }
+
+  /* about-club — the one section that keeps a text+visual band, so the page
+     still has one "editorial" beat among the four; its visual is a single
+     static image-card (same radius/shadow chrome real posters use), not an
+     arrow/dot carousel widget that only existed on this one page. */
   .about-b .band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; padding: var(--space-8) var(--space-6); max-width: 1100px; margin: 0 auto; scroll-margin-top: 128px; }
-  .about-b .band.tint { background: var(--color-surface); max-width: none; padding: var(--space-8) 0; }
-  .about-b .band.tint > .band-inner { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6); }
-  .about-b .band.reverse .band-text { order: 2; }
-  .about-b .band.reverse .band-visual { order: 1; }
   .about-b .band-text h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; }
   .about-b .band-text p { color: var(--color-text); line-height: 1.7; margin: 0; }
-  .about-b .faq-band { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--space-6); scroll-margin-top: 128px; }
+  .about-b .band-visual {
+    aspect-ratio: 4/3; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md);
+    display: flex; align-items: center; justify-content: center; font-size: 48px; color: rgba(255,255,255,0.55);
+  }
 
-  .band-carousel { position: relative; aspect-ratio: 4/3; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); }
-  .band-carousel .slide {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-size: 48px; color: rgba(255,255,255,0.55); opacity: 0; pointer-events: none;
-    transition: opacity var(--duration-slow) var(--ease-standard);
-  }
-  .band-carousel .slide.is-active { opacity: 1; pointer-events: auto; }
-  .band-carousel .cs-arrow {
-    position: absolute; top: 50%; transform: translateY(-50%); width: 30px; height: 30px;
-    border-radius: 50%; background: rgba(0,0,0,0.35); color: #fff; border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 2;
-    transition: background var(--duration-fast) var(--ease-standard);
-  }
-  .band-carousel .cs-arrow:hover { background: rgba(0,0,0,0.55); }
-  .band-carousel .cs-arrow.prev { left: 10px; }
-  .band-carousel .cs-arrow.next { right: 10px; }
-  .band-carousel .cs-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
-  .band-carousel .cs-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none; cursor: pointer; padding: 0; }
-  .band-carousel .cs-dot.is-active { background: #fff; }
+  /* about-faq — a real accordion (one item open at a time), reusing the
+     site's surface/border/radius vocabulary instead of a bare <dl> list. */
+  .about-b .faq-band { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--space-6); scroll-margin-top: 128px; }
   .about-b .faq-band h2 { font-family: var(--font-display); font-size: var(--text-2xl); text-align: center; margin: 0 0 var(--space-4); text-transform: uppercase; }
+  .about-b .accordion { display: flex; flex-direction: column; gap: var(--space-2); }
+  .about-b .accordion-item { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; }
+  .about-b .accordion-trigger {
+    width: 100%; display: flex; justify-content: space-between; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) var(--space-4); background: none; border: none; text-align: left;
+    font-family: var(--font-sans); font-size: var(--text-base); font-weight: 600; color: var(--color-text); cursor: pointer;
+  }
+  .about-b .accordion-caret { transition: transform var(--duration-fast) var(--ease-standard); color: var(--color-text-muted); flex-shrink: 0; }
+  .about-b .accordion-item.open .accordion-caret { transform: rotate(180deg); }
+  .about-b .accordion-panel { max-height: 0; overflow: hidden; transition: max-height var(--duration-base) var(--ease-standard); }
+  .about-b .accordion-item.open .accordion-panel { max-height: 200px; }
+  .about-b .accordion-panel p { margin: 0; padding: 0 var(--space-4) var(--space-4); color: var(--color-text-muted); line-height: 1.6; }
+
   @media (max-width: 768px) {
-    .about-b .band, .about-b .band.tint > .band-inner { grid-template-columns: 1fr; }
-    .about-b .band.reverse .band-text, .about-b .band.reverse .band-visual { order: unset; }
+    .about-b .band { grid-template-columns: 1fr; }
+    .about-b .steps-grid { grid-template-columns: 1fr; }
   }
 
   #sketch-tools { position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;display:flex;gap:8px;align-items:center; }
@@ -713,28 +748,30 @@
 <body>
 
 <div class="app-nav" id="app-nav" data-scroll-nav>
-  <button class="nav-hamburger" onclick="toggleNavDrawer()" aria-label="Abrir menú">☰</button>
-  <a href="#" class="brand">
-    <svg class="brand-mark" width="30" height="30" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
-    <span class="brand-text"><strong>PUKLLAY CLUB</strong><span>Juegos de mesa modernos</span></span>
-  </a>
-  <div class="links" data-catalog-only>
-    <a href="#" class="active">Catálogo</a>
-    <a href="#">Para empezar</a>
-    <a href="#">Nivel experto</a>
-    <a href="#">Recién llegados</a>
+  <div class="app-nav-inner">
+    <button class="nav-hamburger" onclick="toggleNavDrawer()" aria-label="Abrir menú">☰</button>
+    <a href="#" class="brand">
+      <svg class="brand-mark" width="30" height="30" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+      <span class="brand-text"><strong>PUKLLAY CLUB</strong><span>Juegos de mesa modernos</span></span>
+    </a>
+    <div class="links" data-catalog-only>
+      <a href="#" class="active">Catálogo</a>
+      <a href="#">Para empezar</a>
+      <a href="#">Nivel experto</a>
+      <a href="#">Recién llegados</a>
+    </div>
+    <div class="crumb" data-detail-only style="display:none">
+      <a href="#" onclick="showPage('catalog'); return false;">Catálogo</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span>
+    </div>
+    <div class="crumb" data-about-only style="display:none">
+      <a href="#" onclick="showPage('catalog'); return false;">Catálogo</a><span class="sep">/</span><span class="current">Acerca de</span>
+    </div>
+    <div class="search" data-catalog-only>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Busca por título, autor o editorial…">
+    </div>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar a tema oscuro" title="Cambiar tema"></button>
   </div>
-  <div class="crumb" data-detail-only style="display:none">
-    <a href="#" onclick="showPage('catalog'); return false;">Catálogo</a><span class="sep">/</span><span class="current">Terraforming Mars: Ares Expedition</span>
-  </div>
-  <div class="crumb" data-about-only style="display:none">
-    <a href="#" onclick="showPage('catalog'); return false;">Catálogo</a><span class="sep">/</span><span class="current">Acerca de</span>
-  </div>
-  <div class="search" data-catalog-only>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" placeholder="Busca por título, autor o editorial…">
-  </div>
-  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar a tema oscuro" title="Cambiar tema"></button>
 </div>
 <div class="mobile-chip-nav" id="chips-nav" data-catalog-only></div>
 
@@ -926,41 +963,34 @@
     <a href="#about-faq" class="about-index-item" onclick="jumpToAboutSection(this,'about-faq');return false;"><span class="idx-icon">💬</span><span class="idx-label">FAQ</span></a>
   </nav>
 
-  <div class="band" id="about-mission">
-    <div class="band-text">
-      <h2>Nuestra misión</h2>
-      <p>Creemos que cualquiera puede encontrar el juego justo si se lo explicás en su propio
-        idioma. Nuestro trabajo es enseñar la complejidad de los juegos — peso, mecánicas,
-        temas — no darla por sentada.</p>
-    </div>
-    <div class="band-carousel" data-carousel>
-      <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🎯</div>
-      <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">📖</div>
-      <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">💬</div>
-      <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
-      <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
-      <div class="cs-dots"></div>
-    </div>
-  </div>
+  <section class="about-statement" id="about-mission">
+    <p>Creemos que cualquiera puede encontrar el juego justo si se lo explicás en su propio
+      idioma. Nuestro trabajo es enseñar la complejidad de los juegos — peso, mecánicas,
+      temas — no darla por sentada.</p>
+  </section>
 
-  <div class="band tint" id="about-how">
-    <div class="band-inner reverse">
-      <div class="band-text">
-        <h2>Cómo funciona</h2>
-        <p>Explorá el catálogo o describí lo que buscás en tus propias palabras. Te mostramos
-          juegos que matchean, explicados simple: duración, jugadores, complejidad. Después,
-          vení a probarlo en una juntada o pedilo prestado.</p>
-      </div>
-      <div class="band-carousel" data-carousel>
-        <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🧩</div>
-        <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🔍</div>
-        <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">✅</div>
-        <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
-        <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
-        <div class="cs-dots"></div>
+  <section class="about-steps" id="about-how">
+    <div class="about-steps-inner">
+      <h2>Cómo funciona</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <span class="step-num">1</span>
+          <h3>Explorá o describí</h3>
+          <p>Navegá el catálogo o contanos qué buscás en tus propias palabras — sin necesitar ya "saber" de juegos.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">2</span>
+          <h3>Encontrá matches</h3>
+          <p>Te mostramos juegos que matchean, explicados simple: duración, jugadores, complejidad.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">3</span>
+          <h3>Vení a jugar</h3>
+          <p>Probalo en una juntada del club o pedilo prestado.</p>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 
   <div class="band" id="about-club">
     <div class="band-text">
@@ -968,39 +998,48 @@
       <p>Somos un grupo de jugadores que se junta regularmente en persona. Este catálogo es la
         puerta de entrada a esas juntadas — un lugar para descubrir qué jugar antes de venir.</p>
     </div>
-    <div class="band-carousel" data-carousel>
-      <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🎲</div>
-      <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">📸</div>
-      <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🙌</div>
-      <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
-      <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
-      <div class="cs-dots"></div>
-    </div>
+    <div class="band-visual" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🎲</div>
   </div>
 
   <div class="faq-band" id="about-faq">
     <h2>Preguntas frecuentes</h2>
-    <dl>
-      <div class="faq-item" style="padding:var(--space-2) 0"><dt style="font-weight:600">¿Qué significa el "peso" de un juego?</dt><dd style="margin:0;color:var(--color-text-muted)">Qué tan complejas son sus reglas y decisiones, de "ligero" a "experto".</dd></div>
-      <div class="faq-item" style="padding:var(--space-2) 0"><dt style="font-weight:600">¿Necesito saber jugar de antemano?</dt><dd style="margin:0;color:var(--color-text-muted)">No — está pensado justamente para quienes están empezando.</dd></div>
-    </dl>
+    <div class="accordion">
+      <div class="accordion-item open">
+        <button class="accordion-trigger" onclick="toggleFaqAccordion(this)">¿Qué significa el "peso" de un juego? <span class="accordion-caret">⌄</span></button>
+        <div class="accordion-panel"><p>Qué tan complejas son sus reglas y decisiones, de "ligero" a "experto".</p></div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-trigger" onclick="toggleFaqAccordion(this)">¿Necesito saber jugar de antemano? <span class="accordion-caret">⌄</span></button>
+        <div class="accordion-panel"><p>No — está pensado justamente para quienes están empezando.</p></div>
+      </div>
+    </div>
   </div>
 </main>
 
-<footer class="pk-footer footer-c">
-  <div class="mission-band">
-    <h3>Encontrá el juego justo para tu mesa</h3>
-    <p>Pukllay Club es un catálogo curado de juegos de mesa modernos para gente nueva en el hobby —
-      sin jerga, sin presión de ya "saber" de juegos. Describís lo que buscás, en tu propio idioma,
-      y te ayudamos a encontrarlo.</p>
-    <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
-  </div>
-  <div class="utility-bar">
-    <ul class="footer-links"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">FAQ</a></li><li><a href="#">Contacto</a></li></ul>
-    <div class="footer-meta">
-      <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
-      <span class="footer-copyright">© 2026 Pukllay Club</span>
+<footer class="pk-footer footer-d">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="#" class="footer-brand-mark">
+        <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+        <strong>PUKLLAY CLUB</strong>
+      </a>
+      <p>Un catálogo curado de juegos de mesa modernos para gente nueva en el hobby — sin jerga,
+        sin presión de ya "saber" de juegos. Describís lo que buscás, en tu propio idioma, y te
+        ayudamos a encontrarlo.</p>
+      <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
     </div>
+    <div class="footer-col">
+      <h4>Explorar</h4>
+      <ul class="footer-links vertical"><li><a href="#">Catálogo</a></li><li><a href="#" onclick="showPage('about'); return false;">Acerca de</a></li><li><a href="#">Para empezar</a></li><li><a href="#">Nivel experto</a></li></ul>
+    </div>
+    <div class="footer-col">
+      <h4>Club</h4>
+      <ul class="footer-links vertical"><li><a href="#">FAQ</a></li><li><a href="#">Contacto</a></li><li><a href="#">Juntadas</a></li></ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copyright">© 2026 Pukllay Club</span>
+    <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
   </div>
 </footer>
 
@@ -1405,9 +1444,21 @@ function lightboxStep(dir) { detailCarouselShow(detailCarouselIndex + dir); }
   // window, some remote-control/automation contexts), which made this sticky
   // bar silently never appear despite the trigger geometry being correct.
   // A plain scroll listener has no such dependency.
+  //
+  // Round 4 fix: this listener is global (fires on every page, not just
+  // Detalle), and #game-identity lives inside #page-detail — which the
+  // page-switcher hides via display:none rather than unmounting. A hidden
+  // element's getBoundingClientRect() is always (0,0,0,0), so
+  // "bottom < 64" was trivially TRUE the moment the user scrolled at all on
+  // Catálogo or Acerca de — the sticky bar showed the last-viewed game title
+  // over pages that have nothing to do with it. resetDetailStickyChrome()
+  // only patched this at the instant of a page switch; the very next scroll
+  // on the new page recomputed it wrong again. offsetParent is null exactly
+  // when an ancestor is display:none, so gating on it is the real fix, not
+  // just a reset-at-switch-time workaround.
   if (identity && stickyBar) {
     const checkIdentityScroll = () => {
-      scrolledPastIdentity = identity.getBoundingClientRect().bottom < 64;
+      scrolledPastIdentity = identity.offsetParent !== null && identity.getBoundingClientRect().bottom < 64;
       refreshStickyBar();
     };
     window.addEventListener('scroll', checkIdentityScroll, { passive: true });
@@ -1521,29 +1572,17 @@ function submitReserve() {
   document.getElementById('reserve-step-success').style.display = '';
 }
 
-// ==================== ABOUT PAGE (verbatim from 004) ====================
-function setupCarousel(el) {
-  const slides = Array.from(el.querySelectorAll('.slide'));
-  const dotsWrap = el.querySelector('.cs-dots');
-  dotsWrap.innerHTML = slides.map((_, i) => `<button class="cs-dot${i === 0 ? ' is-active' : ''}" onclick="carouselGoTo(this, ${i})"></button>`).join('');
-  el._index = 0;
+// ==================== ABOUT PAGE ====================
+// Round 4: the about page no longer has any .band-carousel (its three
+// generic gradient+emoji carousels were the actual "breaks rhythm" culprit —
+// see README Round 4) — only a real accordion remains, one item open at a
+// time, same interaction shape as a normal FAQ.
+function toggleFaqAccordion(btn) {
+  const item = btn.closest('.accordion-item');
+  const wasOpen = item.classList.contains('open');
+  item.closest('.accordion').querySelectorAll('.accordion-item.open').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
 }
-function carouselShow(el, index) {
-  const slides = Array.from(el.querySelectorAll('.slide'));
-  const dots = Array.from(el.querySelectorAll('.cs-dot'));
-  const next = (index + slides.length) % slides.length;
-  slides.forEach((s, i) => s.classList.toggle('is-active', i === next));
-  dots.forEach((d, i) => d.classList.toggle('is-active', i === next));
-  el._index = next;
-}
-function carouselStep(btn, dir) {
-  const el = btn.closest('.band-carousel');
-  carouselShow(el, (el._index || 0) + dir);
-}
-function carouselGoTo(btn, i) {
-  carouselShow(btn.closest('.band-carousel'), i);
-}
-document.querySelectorAll('.band-carousel[data-carousel]').forEach(setupCarousel);
 </script>
 
 </body>

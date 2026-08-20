@@ -232,3 +232,86 @@ evenly spaced with the active underline, and the footer renders as one consisten
   mode, not just visually cramped)?
 - Scroll to the footer at ≤480px — does everything share one alignment, with a clear divider between
   the link row and the BGG badge/copyright row?
+
+## Round 4: Header/Footer Rebalance + About Page Rebuild (2026-08-20)
+
+Round 3 patched the about-page section index, header crumb, and footer mobile alignment, but the
+underlying complaint persisted: the about page still "broke rhythm" and the header/footer still didn't
+read as balanced. This round diagnosed and rebuilt the actual structures, not just their symptoms.
+Three directions were confirmed with the user up front (each had 2 alternatives considered and
+rejected — see the options each question offered):
+
+1. **About page — app-native rebuild.** The real problem wasn't the section-index (fixed in Round 3) —
+   it was that "Misión", "Cómo funciona", and "El club" were three *structurally identical* text +
+   gradient-carousel bands, just mirrored left/right. Same shape repeated 3x reads as flat, not
+   editorial, no matter how good the index nav is. Rebuilt with four genuinely different shapes reusing
+   the site's own component vocabulary instead of a marketing-template pattern unique to this page:
+   - **Misión** → a centered full-width statement (`.about-statement`), not a second copy of the band
+     shape.
+   - **Cómo funciona** → three numbered step-cards (`.step-card`, reusing `--radius-md`/`--shadow-sm`,
+     the same surface/radius/shadow vocabulary real cards use) instead of a text+carousel band.
+   - **El club** → keeps the one text+visual band (so the page still has one "editorial" beat among
+     four), but its visual is now a single static image-card, not an arrow/dot carousel widget that
+     only ever existed on this one page.
+   - **FAQ** → a real accordion (`.accordion`/`.accordion-item`, one item open at a time,
+     `toggleFaqAccordion()`) instead of a bare `<dl>` list.
+   Net effect: zero `.band-carousel` instances left on the about page (all three were removed, not
+   just re-skinned) — the now-dead `setupCarousel`/`carouselShow`/`carouselStep`/`carouselGoTo`
+   functions were deleted from the JS entirely rather than left unused.
+2. **Header — two balanced clusters.** Diagnosed the actual cause: `.links` had `flex:1`, so it grew to
+   consume all remaining space in the row, but its `<a>` children still left-aligned inside that grown
+   box — the empty space landed as a big dead gap *after* the last link and *before* the search box,
+   not evenly distributed. Fixed with three changes: (a) `.links` is now `flex:0 0 auto` (natural
+   width, no longer swallowing space it doesn't visually use); (b) `.search` now grows itself
+   (`flex:1 1 auto; max-width:360px; margin-left:auto`) to actually fill part of that gap instead of
+   sitting as a static 220px chip past a void; (c) all header content is wrapped in a new
+   `.app-nav-inner` (`max-width:1280px; margin:0 auto`) so the remaining gap is capped on ultra-wide
+   viewports instead of growing unbounded — the sticky/background `.app-nav` itself stays full-bleed.
+   Live-measured at a forced 1280px width (this session's browser tooling still can't get a real wide
+   viewport — see Round 3's note, same limitation): brand+links cluster spans 32–727px (695px), search
+   grows to its full 360px cap, gap between the two clusters is 93px — a single contained gap between
+   two intentional clusters, not the several-hundred-pixel void the flex:1 links box produced before.
+3. **Footer — single unified footer.** Replaced the two-tier `footer-c` (a full-bleed colored
+   `.mission-band` at `--space-8` padding stacked directly on a much thinner plain `.utility-bar` — two
+   mismatched visual weights read as two footers, not one) with `footer-d`: one consistent-weight,
+   single-background multi-column footer (Airbnb/Netflix pattern) — a brand+mission column (same copy
+   the old mission-band carried, at normal surface weight instead of a heavy colored block) alongside
+   two link columns (`Explorar`, `Club`), then one thin divided `.footer-bottom` row for the
+   compliance-required BGG badge + copyright. Live-measured at forced 1280px width (mobile media query
+   for the grid still applies at this session's real 335px viewport, so the 3-column rule was
+   temporarily forced to confirm the desktop grid computes correctly): brand column 481px, two link
+   columns 344px each, evenly gapped — confirms the grid math holds, not just the mobile single-column
+   fallback already screenshotted live.
+
+**Real bug found and fixed along the way (not part of the ask, but collided directly with the header
+area under rework):** the mobile sticky game-title bar (`#game-sticky-bar`) has a global `scroll`
+listener that read `#game-identity`'s `getBoundingClientRect()` to decide when to appear — but
+`#game-identity` lives inside `#page-detail`, which the page-switcher hides via `display:none` rather
+than unmounting. A hidden element's bounding rect is always `(0,0,0,0)`, so `bottom < 64` was trivially
+**true** the instant the user scrolled at all on Catálogo or Acerca de — the sticky bar showed
+"Terraforming Mars: Ares Expedition" over pages that have nothing to do with it. Round 2's
+`resetDetailStickyChrome()` only patched this at the instant of a page switch; the very next scroll on
+the new page recomputed it wrong again. Live-verified via scripted repro (`showPage('about')` +
+scroll + dispatch — see below) before and after. Fixed by gating on `identity.offsetParent !== null`
+(null exactly when an ancestor is `display:none`) before trusting the rect — confirmed via scripted
+repro that Catálogo/Acerca de now never show `is-visible` on scroll, while Detalle still shows/hides it
+correctly at the right scroll thresholds and still hides near the footer.
+
+Verified live (this session's browser tooling still cannot get a real wide/narrow viewport via
+resize — same limitation Round 3 hit — so desktop-width claims above used the same technique Round 3
+validated: forcing the relevant CSS directly and reading real computed `getBoundingClientRect()`/
+`getComputedStyle()` values rather than trusting a screenshot at the wrong width). At the real native
+mobile viewport (no forcing needed): about-page statement/steps/band/accordion all render and the
+accordion toggle works (verified by clicking); the footer's single-column mobile stack renders
+correctly end to end.
+
+## What to Look For (Round 4)
+- On Acerca de, do Misión (statement), Cómo funciona (step-cards), El club (band), and FAQ (accordion)
+  read as four different paced sections, not the same block shape repeated?
+- Click through the FAQ accordion — does only one item stay open at a time, with the caret rotating?
+- At desktop width, does the header's search bar visibly grow to help fill the space between the nav
+  links and the theme toggle, rather than sitting as a small box past an empty gap?
+- At desktop width, does the footer read as one consistent block (brand+mission, two link columns, a
+  thin divided bottom bar), not a heavy colored band over a thin bar?
+- Scroll on Catálogo or Acerca de — does the mobile sticky game-title bar stay hidden (it no longer
+  should ever appear outside Detalle)?
