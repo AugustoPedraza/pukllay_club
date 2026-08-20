@@ -52,6 +52,20 @@ of the three (100/180/280ms) with C's no-overshoot ease-out curve, plus a smalle
 amplitude (`translateY(-3px)` vs the shared `-6px scale(1.03)`) so restraint isn't only a timing
 question — the movement itself is smaller too.
 
+**Applied (2026-08-20, frontier consistency pass):** this winner was validated here but never
+actually landed in the shared theme — `themes/default.css`/`dark-purple.css` still carried the
+original incidental 120/220/360ms values. Both theme files now use D's validated 100/180/280ms for
+`--duration-fast/base/slow`. Since 004's about-carousel and 005's detail-carousel/lightbox already
+build their transitions from `var(--duration-*)`/`var(--ease-*)` tokens rather than hardcoded
+values, this correction lands on them automatically — no per-file changes needed there. The one
+concrete drift found: the real interactive card's hover-lift (`001-shelf-structure`,
+`002-card-hierarchy`, `007-composed-catalog-page`, all independently declaring
+`.card:hover`/`.poster-card:hover { transform: translateY(-4px); }`) had never been updated to D's
+smaller `-3px` amplitude — fixed in all three now. (006's own comparison baseline of "shared -6px
+scale(1.03)" was itself never the real component's value — that number only ever existed as this
+sketch's own demo-card default, not something 001/002/007 actually shipped — so the real
+before/after is -4px → -3px, not -6px → -3px.)
+
 ## What to Look For
 - Click the row-scroll arrows several times in a row on each variant — does the timing still feel
   good on the 5th click, or does it start to feel like it's fighting your intent to browse quickly?

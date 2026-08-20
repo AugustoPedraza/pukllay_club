@@ -50,12 +50,18 @@
   --shadow-lg: 0 12px 32px rgba(36, 18, 56, 0.24);
 
   /* Motion — shared easing vocabulary for sketch 003 and any hover/expand
-     interactions built into 001/002 */
+     interactions built into 001/002. Duration values were chosen
+     incidentally while building 001/002 (see sketch 006's own design
+     question) — sketch 006 deliberately validated them and picked winner
+     D ("Subtle/Soft": fastest of the three tested + no-overshoot ease-out,
+     smaller hover-lift amplitude). These are D's validated fast/base/slow
+     values (100/180/280ms), applied here so the shared theme actually
+     carries the winning system instead of the original incidental guess. */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast: 120ms;
-  --duration-base: 220ms;
-  --duration-slow: 360ms;
+  --duration-fast: 100ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
 }
 
 @font-face {

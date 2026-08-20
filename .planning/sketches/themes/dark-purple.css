@@ -54,12 +54,13 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
 
-  /* Motion — unchanged from default.css */
+  /* Motion — unchanged from default.css (kept in sync: sketch 006's
+     validated winner D duration values, 100/180/280ms) */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast: 120ms;
-  --duration-base: 220ms;
-  --duration-slow: 360ms;
+  --duration-fast: 100ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
 }
 
 @font-face {
