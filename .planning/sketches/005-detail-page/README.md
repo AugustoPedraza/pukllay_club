@@ -472,6 +472,28 @@ values): two rules with matching values today, with nothing stopping them from d
 next time either gets edited. Replaced both with one shared `.reading-measure` class, applied to
 `.desc-collapse` and `.info-accordion-panel-inner`; neither declares its own `max-width` anymore.
 
+## Round 21 — ficha técnica: two deliberate columns, not an auto-flow grid
+The Round 18/19 two-column grid paired items purely by source order — whichever field landed next
+took the next cell. With a full-sentence explanatory row (`.missing`) spanning both columns and
+breaking the flow partway through, that produced an arbitrary-looking gap rather than a real
+grouping (visible in your screenshot: Año/Peso stacked in what read as the left column with a big
+empty gap to the right, not an intentional split).
+
+Replaced the single auto-flowing `.spec-list` grid with two separate, semantically grouped `<dl>`
+lists side by side in a new `.spec-columns` wrapper:
+- **Left — credits/general info:** Diseñadores, Ilustrador, Editorial, Edad mínima.
+- **Right — BGG-sourced stats:** Año, Peso (BGG), Puesto en ranking BGG, **Calificación BGG** (new).
+
+Each column is its own independent stacked list now, so the `:has(dd.missing)` full-span hack from
+Round 18 is gone — an explanatory row just takes its natural place in whichever column it belongs
+to, no special-casing needed. Mobile stacks both `<dl>`s full-width, one after the other.
+
+**⚠ New field, same gap as "Puesto en ranking BGG":** you asked for "Calificación BGG" (BGG's
+average user rating — a different metric from `bgg_weight`, which is complexity, not quality). No
+dedicated column exists in the `Game` schema for this either; like the ranking, it would need to be
+extracted from the untyped `bgg_payload` map. Shown as representative placeholder data ("8.1 / 10 (dato
+de ejemplo, no confirmado)"), same treatment as the ranking row.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.

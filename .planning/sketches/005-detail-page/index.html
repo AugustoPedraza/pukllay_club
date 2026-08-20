@@ -377,12 +377,23 @@
      starts at the same left edge regardless of label length, which is
      what was actually meant by inconsistent "spacing between label and
      value": it wasn't a gap-size bug, it was a lack of a shared column. */
+  /* Round 21: the two-column split from Round 18/19 just paired items by
+     source order (whatever landed next got the next cell) — which is why
+     it produced an arbitrary-looking gap in the grid rather than a
+     meaningful grouping. Split into two deliberate, semantic columns
+     instead: credits/general info (Diseñadores, Ilustrador, Editorial,
+     Edad mínima) on the left, BGG-sourced stats (Año, Peso, Puesto en
+     ranking, Calificación) on the right — two separate <dl>s side by
+     side, not one auto-flowing grid. */
+  .spec-columns { display: flex; flex-direction: column; gap: var(--space-4); }
+  @media (min-width: 769px) {
+    .spec-columns { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-6); }
+  }
   .spec-list { display: flex; flex-direction: column; }
   /* Round 19: label stacked above value (not side by side) — a small
      property card per field, uppercase label byte-matching
      .section-heading's rhythm on top, the value in normal reading weight
-     below it. Same shape on mobile and desktop; only how many of these
-     sit per row changes (see the grid below). */
+     below it. */
   .spec-row { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; font-size: var(--text-sm); }
   .spec-row dt {
     margin: 0; color: var(--color-text-muted); font-weight: 700;
@@ -392,19 +403,6 @@
   .spec-row dd.missing { color: var(--color-text-muted); font-style: italic; font-size: var(--text-xs); }
   .spec-row dd a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
   .spec-row dd a:hover { text-decoration: underline; }
-  /* two columns of these stacked label/value cards on desktop, where the
-     column is wide enough (62ch ≈ 700px) to fit two side by side without
-     cramping either — 7 rows as one long single column was using the
-     available width poorly. Mobile keeps the original single column —
-     there's no spare width to split there. */
-  @media (min-width: 769px) {
-    .spec-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-6); row-gap: 0; }
-    /* the two "dato no disponible / de ejemplo" explanatory rows carry a
-       full sentence, not a short value — span both columns instead of
-       sitting cramped in half of one, using the existing .missing marker
-       rather than adding a new class. */
-    .spec-row:has(dd.missing) { grid-column: 1 / -1; }
-  }
   .bgg-link-row { font-size: var(--text-sm); padding-top: var(--space-2); }
   .bgg-link-row a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
   .bgg-link-row a:hover { text-decoration: underline; }
@@ -582,15 +580,20 @@
                     </div>
                   </div>
                   <div>
-                    <dl class="spec-list">
-                      <div class="spec-row"><dt>Diseñadores</dt><dd>Jacob Fryxelius, Isaac Fryxelius</dd></div>
-                      <div class="spec-row"><dt>Ilustrador</dt><dd class="missing">No disponible — campo no existe en el catálogo hoy</dd></div>
-                      <div class="spec-row"><dt>Editorial</dt><dd>FryxGames</dd></div>
-                      <div class="spec-row"><dt>Año</dt><dd>2021</dd></div>
-                      <div class="spec-row"><dt>Edad mínima</dt><dd><a href="/?min_age=12">12+</a></dd></div>
-                      <div class="spec-row"><dt>Peso (BGG)</dt><dd>3.8 / 5</dd></div>
-                      <div class="spec-row"><dt>Puesto en ranking BGG</dt><dd class="missing">#142 (dato de ejemplo, no confirmado)</dd></div>
-                    </dl>
+                    <div class="spec-columns">
+                      <dl class="spec-list">
+                        <div class="spec-row"><dt>Diseñadores</dt><dd>Jacob Fryxelius, Isaac Fryxelius</dd></div>
+                        <div class="spec-row"><dt>Ilustrador</dt><dd class="missing">No disponible — campo no existe en el catálogo hoy</dd></div>
+                        <div class="spec-row"><dt>Editorial</dt><dd>FryxGames</dd></div>
+                        <div class="spec-row"><dt>Edad mínima</dt><dd><a href="/?min_age=12">12+</a></dd></div>
+                      </dl>
+                      <dl class="spec-list">
+                        <div class="spec-row"><dt>Año</dt><dd>2021</dd></div>
+                        <div class="spec-row"><dt>Peso (BGG)</dt><dd>3.8 / 5</dd></div>
+                        <div class="spec-row"><dt>Puesto en ranking BGG</dt><dd class="missing">#142 (dato de ejemplo, no confirmado)</dd></div>
+                        <div class="spec-row"><dt>Calificación BGG</dt><dd class="missing">8.1 / 10 (dato de ejemplo, no confirmado)</dd></div>
+                      </dl>
+                    </div>
                     <div class="bgg-link-row"><a href="#">Ver en BoardGameGeek ↗</a></div>
                   </div>
                 </div>
