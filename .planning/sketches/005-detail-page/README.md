@@ -590,6 +590,19 @@ Fixed by moving the entire `.mobile-cta-bar` block (base rule, `.is-hidden`, and
 mobile override now correctly wins. Nothing else about the bar changed — Round 25's stacked layout
 and scroll-based hide/show were already correct, they just never had a chance to render.
 
+## Round 27 — scroll-hint removed; mobile CTA bar now hides only while actively scrolling
+- **Dropped the "↓ Mecánicas, temas y ficha técnica más abajo" scroll hint entirely** — markup, CSS
+  (`.scroll-hint`, the bounce keyframes), and its JS listener are all gone, at every width. It was
+  added in Round 14 specifically to replace the accordion trigger's implicit "there's more, click to
+  see it" affordance; now that content just flows with no gate at all, the hint wasn't doing a job
+  anyone needed done.
+- **Mobile CTA bar's hide/show changed from direction-based to activity-based.** Round 25 hid it on
+  scroll-down and revealed it on scroll-up. That's not what was asked for — the actual request is
+  simpler: visible at rest (including on first render), hidden for the duration of an active scroll
+  gesture, revealed again once scrolling actually stops, regardless of direction. Implemented as a
+  debounce: every `scroll` event adds `.is-hidden` and resets a 200ms timer; the bar only reappears
+  once no further scroll event fires within that window (i.e. the gesture has ended).
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
