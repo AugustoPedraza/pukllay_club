@@ -464,6 +464,14 @@ on mobile and desktop — only how many sit per grid row changes (one on mobile,
 as Round 18). The `:has(dd.missing)` full-width span for the two explanatory rows carries over
 unchanged.
 
+## Round 20 — one shared measure, not two matching declarations
+Asked to guarantee "más información" and the description are the same width. They already were —
+both had their own independently-declared `max-width: 62ch` — but that's exactly the anti-pattern
+this project has flagged and fixed repeatedly elsewhere in this same file (Round 6's pill/title
+values): two rules with matching values today, with nothing stopping them from drifting apart the
+next time either gets edited. Replaced both with one shared `.reading-measure` class, applied to
+`.desc-collapse` and `.info-accordion-panel-inner`; neither declares its own `max-width` anymore.
+
 ## What to Look For
 - Click through the carousel arrows/dots, then click the image to open the lightbox — confirm it
   opens on the same slide the carousel was on, and its own arrows keep both in sync.
