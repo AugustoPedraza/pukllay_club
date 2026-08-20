@@ -22,7 +22,13 @@
     border-bottom: 1px solid transparent;
     transition: background var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard);
   }
-  .app-nav .brand { display: flex; flex-direction: column; line-height: 1; margin-right: var(--space-4); text-decoration: none; flex: 0 0 auto; }
+  /* isologo — the mark 005's own (discarded) header designed but never
+     shipped, since it was attached to a second, redundant header. Grafted
+     onto the real .app-nav .brand instead of being lost with the rest of
+     that file (README finding #1). */
+  .app-nav .brand { display: flex; align-items: center; gap: var(--space-2); margin-right: var(--space-4); text-decoration: none; flex: 0 0 auto; }
+  .app-nav .brand-mark { flex-shrink: 0; }
+  .app-nav .brand-text { display: flex; flex-direction: column; line-height: 1; }
   .app-nav .brand strong { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.03em; color: var(--color-primary); }
   .app-nav .brand span { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
   .app-nav .links { display: flex; gap: var(--space-4); flex: 1; }
@@ -60,10 +66,99 @@
   .app-nav .crumb .current { color: var(--color-text); font-weight: 600; }
   .app-nav .quiet-label { flex: 1; font-size: var(--text-sm); font-weight: 600; color: var(--color-text); }
 
+  /* mobile nav drawer (fixes: "not search, not filter options — drawer menu
+     and hamburger" missing). Below 480px the desktop .links/.search vanish
+     with nothing replacing them — no way to reach site sections, search, or
+     filters at all. One hamburger opens one drawer holding search + nav
+     links + a "Filtros" trigger, keeping the header itself minimal (hamburger
+     / logo / theme-toggle only) rather than cramming several icon buttons
+     into an already-tight 375px bar. */
+  .nav-hamburger { display: none; }
+  .nav-drawer-backdrop {
+    position: fixed; inset: 0; background: rgba(20,8,34,0.5); z-index: 610;
+    opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .nav-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .nav-drawer {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 84%; max-width: 320px; z-index: 611;
+    background: var(--color-bg); box-shadow: var(--shadow-lg); padding: var(--space-4);
+    transform: translateX(-100%); transition: transform var(--duration-slow) var(--ease-out-soft);
+    overflow-y: auto;
+  }
+  .nav-drawer.open { transform: translateX(0); }
+  .nav-drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); }
+  .nav-drawer-header strong { font-family: var(--font-display); font-size: var(--text-lg); }
+  .nav-drawer .search {
+    display: flex; align-items: center; gap: var(--space-2); background: var(--color-surface);
+    border-radius: var(--radius-full); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-4);
+  }
+  .nav-drawer .search input { border: none; background: transparent; outline: none; font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-text); flex: 1; }
+  .nav-drawer .search svg { flex-shrink: 0; opacity: 0.6; }
+  .nav-drawer-links { display: flex; flex-direction: column; margin-bottom: var(--space-4); }
+  .nav-drawer-links a {
+    color: var(--color-text); text-decoration: none; font-size: var(--text-base); font-weight: 600;
+    padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border);
+  }
+  .nav-drawer-links a.active { color: var(--color-primary); }
+  .nav-drawer-filters-trigger {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    padding: var(--space-3); font-size: var(--text-sm); font-weight: 600; color: var(--color-text); cursor: pointer;
+  }
+
+  /* filters panel, opened from the drawer's "Filtros" row — ported from
+     sketch 008's validated bottom-sheet/popover pattern, adapted to 011's
+     real GAMES fields (weightLabel/maxT — no per-game mechanics field
+     exists in this dataset, so mechanics filtering isn't offered here). */
+  .pill-btn {
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--color-border); background: var(--color-bg);
+    color: var(--color-text); font-size: var(--text-sm); font-weight: 600; padding: 8px 14px; border-radius: var(--radius-full);
+    cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); white-space: nowrap;
+  }
+  .pill-btn:hover { border-color: var(--color-primary); }
+  .pill-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .filters-panel-backdrop { position: fixed; inset: 0; background: rgba(20,8,34,0.5); z-index: 612; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); }
+  .filters-panel-backdrop.open { opacity: 1; pointer-events: auto; }
+  .filters-panel {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 613; transform: translateY(100%);
+    background: var(--color-bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: var(--shadow-lg);
+    max-height: 78vh; overflow-y: auto; padding: var(--space-4) var(--space-4) var(--space-6);
+    transition: transform var(--duration-slow) var(--ease-out-soft);
+  }
+  .filters-panel.open { transform: translateY(0); }
+  .filters-panel-header { position: relative; display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); }
+  .filters-panel-header strong { font-family: var(--font-display); font-size: var(--text-lg); }
+  .filter-group { margin-bottom: var(--space-4); }
+  .filter-group h5 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
+  .filter-group label { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); padding: 4px 0; cursor: pointer; }
+  .filters-clear-row { margin-top: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+  .filters-clear-row .pill-btn { width: 100%; justify-content: center; }
+
   .mobile-chip-nav { display: none; }
   @media (max-width: 480px) {
     .app-nav { padding-left: var(--space-3); padding-right: var(--space-3); gap: var(--space-3); }
     .app-nav .links, .app-nav .search { display: none; }
+    .app-nav .brand-text span { display: none; }
+    .nav-hamburger {
+      display: flex; align-items: center; justify-content: center; flex: 0 0 auto; order: -1;
+      width: 36px; height: 36px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
+      background: var(--color-surface); color: var(--color-text); cursor: pointer; font-size: 16px;
+    }
+    /* Same overflow this project's own detail-page sketch already found and
+       fixed once (005's "Round 32"): the full breadcrumb (site root + "/" +
+       full game title) doesn't fit a narrow nav alongside the hamburger/
+       logo/theme-toggle — it was pushing the row wider than 320px and
+       wrapping .app-nav onto a second line, which then hid .game-sticky-bar
+       and .mobile-cta-bar behind the now-taller header (both assume a fixed
+       64px header). 011 discarded 005's own header entirely (finding #1) but
+       never inherited this specific fix since 007's shell had never been
+       tested with a real, long game title in .crumb at this width before.
+       Collapses to a plain "‹ Catálogo" back-link, the standard mobile
+       swap-in for a breadcrumb trail. */
+    .app-nav .crumb { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+    .app-nav .crumb .sep, .app-nav .crumb .current { display: none; }
+    .app-nav .crumb a { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .app-nav .crumb a::before { content: '‹ '; }
     .mobile-chip-nav[data-catalog-only] { display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; padding: var(--space-3) 0 var(--space-4); }
     .mobile-chip-nav::-webkit-scrollbar { display: none; }
   }
@@ -150,8 +245,9 @@
     background: var(--color-surface);
     transition: transform var(--duration-base) var(--ease-out-soft);
   }
-  .card:hover { transform: translateY(-4px); }
+  .card:hover { transform: translateY(-3px); } /* sketch 006-D's validated hover-lift amplitude */
   .card.hero-card { width: 240px; }
+  .card.filtered-out { display: none; } /* mobile filters panel (frontier 010 follow-up) */
   .poster-art { aspect-ratio: 1 / 1.05; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: rgba(255,255,255,0.85); }
   .card.hero-card .poster-art { font-size: 3rem; }
   .card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
@@ -230,6 +326,21 @@
   .footer-c .mission-band .footer-social a:hover { background: rgba(255,255,255,0.15); color: #fff; }
   .footer-c .mission-band .footer-social { justify-content: center; }
   .footer-c .utility-bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-6); flex-wrap: wrap; gap: var(--space-2); }
+
+  /* mobile footer: one compact tier, not two stacked "footers" (the
+     full-bleed purple mission statement + a separate utility bar read as
+     nested footers on a narrow screen, out of rhythm with the rest of the
+     app's minimal chrome). Drops the mission paragraph + social row on
+     mobile; keeps a short one-line brand statement, the compliance-required
+     BGG badge, essential links, and copyright — same content tier the
+     desktop utility-bar already carries, just no second heavy band above it. */
+  @media (max-width: 480px) {
+    .footer-c .mission-band { padding: var(--space-4) var(--space-4); }
+    .footer-c .mission-band p, .footer-c .mission-band .footer-social { display: none; }
+    .footer-c .mission-band h3 { font-size: var(--text-lg); margin: 0; }
+    .footer-c .utility-bar { flex-direction: column; align-items: flex-start; padding: var(--space-4); }
+    .footer-c .footer-links { gap: var(--space-3); }
+  }
   .footer-brand .word { font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-primary); text-transform: uppercase; text-decoration: none; }
 
   /* ================================================================
@@ -348,7 +459,7 @@
     display: none;
     align-items: center; gap: var(--space-3);
     position: fixed; top: 64px; left: 0; right: 0; z-index: 39;
-    background: rgba(255,255,255,0.97); border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg) 97%, transparent); border-bottom: 1px solid var(--color-border);
     box-shadow: var(--shadow-sm); padding: 10px var(--space-6);
     transform: translateY(-100%); opacity: 0; pointer-events: none;
     transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
@@ -511,14 +622,28 @@
   .about-b .hero-band { text-align: center; padding: var(--space-12) var(--space-6) var(--space-8); }
   .about-b .hero-band h1 { font-family: var(--font-display); font-size: 3rem; margin: 0 0 var(--space-3); text-transform: uppercase; color: var(--color-primary); }
   .about-b .hero-band p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 60ch; margin: 0 auto; line-height: 1.6; }
-  .about-b .band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; padding: var(--space-8) var(--space-6); max-width: 1100px; margin: 0 auto; }
+  /* about-page section index (fix: page was pure vertical scroll, no way to
+     jump to a section). Reuses .chip — same visual language as the
+     catalog's mobile category row, not a bolted-on table of contents.
+     Sticky so it stays reachable while reading a long band's text. */
+  .about-index {
+    /* top matches the nav's own established height convention (see
+       .game-sticky-bar / .poster-col's sticky top elsewhere in this file) —
+       top:0 would stick this UNDER the real .app-nav (also sticky, higher
+       z-index), the same hidden-behind-header bug just fixed above. */
+    position: sticky; top: 64px; z-index: 50; display: flex; gap: var(--space-2);
+    overflow-x: auto; scrollbar-width: none; background: var(--color-bg);
+    padding: var(--space-3) var(--space-6); border-bottom: 1px solid var(--color-border);
+  }
+  .about-index::-webkit-scrollbar { display: none; }
+  .about-b .band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; padding: var(--space-8) var(--space-6); max-width: 1100px; margin: 0 auto; scroll-margin-top: 128px; }
   .about-b .band.tint { background: var(--color-surface); max-width: none; padding: var(--space-8) 0; }
   .about-b .band.tint > .band-inner { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6); }
   .about-b .band.reverse .band-text { order: 2; }
   .about-b .band.reverse .band-visual { order: 1; }
   .about-b .band-text h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; }
   .about-b .band-text p { color: var(--color-text); line-height: 1.7; margin: 0; }
-  .about-b .faq-band { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--space-6); }
+  .about-b .faq-band { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--space-6); scroll-margin-top: 128px; }
 
   .band-carousel { position: relative; aspect-ratio: 4/3; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); }
   .band-carousel .slide {
@@ -552,7 +677,11 @@
 <body>
 
 <div class="app-nav" id="app-nav" data-scroll-nav>
-  <a href="#" class="brand"><strong>PUKLLAY CLUB</strong><span>Juegos de mesa modernos</span></a>
+  <button class="nav-hamburger" onclick="toggleNavDrawer()" aria-label="Abrir menú">☰</button>
+  <a href="#" class="brand">
+    <svg class="brand-mark" width="30" height="30" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+    <span class="brand-text"><strong>PUKLLAY CLUB</strong><span>Juegos de mesa modernos</span></span>
+  </a>
   <div class="links" data-catalog-only>
     <a href="#" class="active">Catálogo</a>
     <a href="#">Para empezar</a>
@@ -570,6 +699,39 @@
   <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar a tema oscuro" title="Cambiar tema"></button>
 </div>
 <div class="mobile-chip-nav" id="chips-nav" data-catalog-only></div>
+
+<!-- mobile nav drawer: search + site links + filters trigger, the only way
+     to reach any of the three on mobile now that .links/.search are hidden
+     below 480px (see the .nav-drawer CSS comment for why one drawer, not
+     several separate icon buttons). -->
+<div class="nav-drawer-backdrop" id="nav-drawer-backdrop" onclick="toggleNavDrawer()"></div>
+<div class="nav-drawer" id="nav-drawer">
+  <div class="nav-drawer-header">
+    <strong>Menú</strong>
+    <button class="theme-toggle" onclick="toggleNavDrawer()" aria-label="Cerrar menú">✕</button>
+  </div>
+  <div class="search">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" placeholder="Busca por título, autor o editorial…">
+  </div>
+  <nav class="nav-drawer-links">
+    <a href="#" class="active">Catálogo</a>
+    <a href="#">Para empezar</a>
+    <a href="#">Nivel experto</a>
+    <a href="#">Recién llegados</a>
+    <a href="#" onclick="toggleNavDrawer(); showPage('about'); return false;">Acerca de</a>
+  </nav>
+  <button class="nav-drawer-filters-trigger" onclick="toggleNavDrawer(); toggleFiltersPanel();">🎚 Filtros <span id="filters-active-count"></span> ›</button>
+</div>
+
+<div class="filters-panel-backdrop" id="filters-panel-backdrop" onclick="toggleFiltersPanel()"></div>
+<div class="filters-panel" id="filters-panel">
+  <div class="filters-panel-header">
+    <strong>Filtros</strong>
+    <button class="pill-btn" onclick="toggleFiltersPanel()">✕</button>
+  </div>
+  <div id="filters-panel-body"></div>
+</div>
 
 <div class="page-switcher">
   <span class="label">Sketch control — ver la página:</span>
@@ -714,7 +876,19 @@
       sin jerga, sin necesitar ya "saber" de juegos.</p>
   </div>
 
-  <div class="band">
+  <!-- section index — the about page was pure vertical scroll with no way
+       to jump to a section (mobile especially, four bands + FAQ with no
+       wayfinding). Reuses the same chip visual language as the catalog's
+       mobile category row, so it reads as the same app, not a bolted-on
+       table of contents. Sticky so it stays reachable while reading. -->
+  <nav class="about-index" aria-label="Secciones de esta página">
+    <a href="#about-mission" class="chip active" onclick="jumpToAboutSection(this,'about-mission');return false;">Nuestra misión</a>
+    <a href="#about-how" class="chip" onclick="jumpToAboutSection(this,'about-how');return false;">Cómo funciona</a>
+    <a href="#about-club" class="chip" onclick="jumpToAboutSection(this,'about-club');return false;">El club</a>
+    <a href="#about-faq" class="chip" onclick="jumpToAboutSection(this,'about-faq');return false;">FAQ</a>
+  </nav>
+
+  <div class="band" id="about-mission">
     <div class="band-text">
       <h2>Nuestra misión</h2>
       <p>Creemos que cualquiera puede encontrar el juego justo si se lo explicás en su propio
@@ -731,7 +905,7 @@
     </div>
   </div>
 
-  <div class="band tint">
+  <div class="band tint" id="about-how">
     <div class="band-inner reverse">
       <div class="band-text">
         <h2>Cómo funciona</h2>
@@ -750,7 +924,7 @@
     </div>
   </div>
 
-  <div class="band">
+  <div class="band" id="about-club">
     <div class="band-text">
       <h2>El club</h2>
       <p>Somos un grupo de jugadores que se junta regularmente en persona. Este catálogo es la
@@ -766,7 +940,7 @@
     </div>
   </div>
 
-  <div class="faq-band">
+  <div class="faq-band" id="about-faq">
     <h2>Preguntas frecuentes</h2>
     <dl>
       <div class="faq-item" style="padding:var(--space-2) 0"><dt style="font-weight:600">¿Qué significa el "peso" de un juego?</dt><dd style="margin:0;color:var(--color-text-muted)">Qué tan complejas son sus reglas y decisiones, de "ligero" a "experto".</dd></div>
@@ -881,6 +1055,64 @@ function toggleTheme() {
 })();
 document.addEventListener('DOMContentLoaded', applyThemeToggleIcon);
 
+// ==================== MOBILE NAV DRAWER + FILTERS (fixes: no search/filter
+// access, no hamburger/drawer on mobile) ====================
+function toggleNavDrawer() {
+  document.getElementById('nav-drawer').classList.toggle('open');
+  document.getElementById('nav-drawer-backdrop').classList.toggle('open');
+}
+
+const BANDS = ['Descubre el hobby', 'Ingenio estratega', 'Nivel experto'];
+const mobileFilterState = { band: null, maxPlaytime: null };
+
+function filtersPanelHTML() {
+  const s = mobileFilterState;
+  const anyActive = s.band || s.maxPlaytime;
+  return `
+    <div class="filter-group"><h5>Dificultad</h5>${BANDS.map(b => `<label><input type="radio" name="mf-band" ${s.band===b?'checked':''} onchange="quickMobileFilter('band','${b}')"> ${b}</label>`).join('')}</div>
+    <div class="filter-group"><h5>Duración</h5>${[30,60,90].map(t => `<label><input type="radio" name="mf-time" ${s.maxPlaytime===t?'checked':''} onchange="quickMobileFilter('maxPlaytime',${t})"> Hasta ${t} min</label>`).join('')}</div>
+    <div class="filters-clear-row"><button class="pill-btn" onclick="clearMobileFilters()" ${anyActive ? '' : 'disabled'}>✕ Limpiar filtros</button></div>
+  `;
+}
+function renderFiltersPanel() {
+  const body = document.getElementById('filters-panel-body');
+  if (body) body.innerHTML = filtersPanelHTML();
+  const n = [mobileFilterState.band, mobileFilterState.maxPlaytime].filter(Boolean).length;
+  const badge = document.getElementById('filters-active-count');
+  if (badge) badge.textContent = n ? `(${n})` : '';
+}
+function applyMobileFilters() {
+  const s = mobileFilterState;
+  document.querySelectorAll('.card[data-weight-label]').forEach(card => {
+    const matches = (!s.band || card.dataset.weightLabel === s.band)
+      && (!s.maxPlaytime || Number(card.dataset.maxPlaytime) <= s.maxPlaytime);
+    card.classList.toggle('filtered-out', !matches);
+  });
+}
+function quickMobileFilter(key, val) {
+  mobileFilterState[key] = mobileFilterState[key] === val ? null : val;
+  renderFiltersPanel();
+  applyMobileFilters();
+}
+function clearMobileFilters() {
+  mobileFilterState.band = null;
+  mobileFilterState.maxPlaytime = null;
+  renderFiltersPanel();
+  applyMobileFilters();
+}
+function toggleFiltersPanel() {
+  document.getElementById('filters-panel').classList.toggle('open');
+  document.getElementById('filters-panel-backdrop').classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.filters-panel') && !e.target.closest('#filters-panel-backdrop')
+      && e.target.id !== 'filters-panel' && !e.target.closest('.nav-drawer-filters-trigger')) {
+    document.getElementById('filters-panel')?.classList.remove('open');
+    document.getElementById('filters-panel-backdrop')?.classList.remove('open');
+  }
+});
+document.addEventListener('DOMContentLoaded', renderFiltersPanel);
+
 // ==================== CATALOG (verbatim from 007) ====================
 const ICON_USERS = `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
 const ICON_CLOCK = `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
@@ -930,6 +1162,7 @@ function cardHTML(g, hero) {
   window.__cardGames = window.__cardGames || {};
   window.__cardGames[id] = g;
   return `<div class="card${hero ? ' hero-card' : ''}" id="card-${id}"
+       data-weight-label="${g.weightLabel}" data-max-playtime="${g.maxT}"
        onmouseenter="handleCardEnter(this, ${id})" onmouseleave="handleCardLeave()" onclick="handleCardTap(${id})">
     <div class="poster-art ${g.pal}">${g.icon}</div>
     <div class="cap"><h4>${g.title}</h4></div>
@@ -1044,9 +1277,12 @@ function showPage(page, evt) {
   // Finding #5 fix: the detail page's own scroll listeners/observers keep
   // running even while #page-detail is display:none (the page-switcher
   // hides pages, it never unmounts them). Force a known-good "just arrived
-  // at the top of the page" state on every switch INTO detail instead of
-  // trusting whatever the IntersectionObservers last computed while hidden.
-  if (page === 'detail' && window.resetDetailStickyChrome) window.resetDetailStickyChrome();
+  // at the top of the page" state on EVERY switch — not just into detail —
+  // since #game-sticky-bar isn't scoped inside #page-detail (it's a
+  // page-independent fixed element) and was found bleeding its "scrolled
+  // past the title" state into the catalog/about pages after leaving a
+  // scrolled detail view without ever re-entering it.
+  if (window.resetDetailStickyChrome) window.resetDetailStickyChrome();
   window.scrollTo(0, 0);
 }
 
@@ -1125,20 +1361,32 @@ function lightboxStep(dir) { detailCarouselShow(detailCarouselIndex + dir); }
     });
   }
 
+  // Driven directly off scroll position (getBoundingClientRect), not
+  // IntersectionObserver — Chrome throttles/suspends IntersectionObserver
+  // callbacks whenever document.visibilityState isn't "visible" (backgrounded
+  // window, some remote-control/automation contexts), which made this sticky
+  // bar silently never appear despite the trigger geometry being correct.
+  // A plain scroll listener has no such dependency.
   if (identity && stickyBar) {
-    new IntersectionObserver(([entry]) => {
-      scrolledPastIdentity = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+    const checkIdentityScroll = () => {
+      scrolledPastIdentity = identity.getBoundingClientRect().bottom < 64;
       refreshStickyBar();
-    }, { rootMargin: '-64px 0px 0px 0px', threshold: 0 }).observe(identity);
+    };
+    window.addEventListener('scroll', checkIdentityScroll, { passive: true });
+    window.checkIdentityScroll = checkIdentityScroll;
   }
 
+  // Same scroll-driven approach as checkIdentityScroll above, same reason
+  // (IntersectionObserver throttled/suspended when the tab isn't visible).
   if (footer) {
-    new IntersectionObserver(([entry]) => {
-      footerReached = entry.isIntersecting;
+    const checkFooterScroll = () => {
+      footerReached = footer.getBoundingClientRect().top < window.innerHeight;
       document.body.classList.toggle('is-cta-parked', footerReached);
       if (ctaBar) ctaBar.classList.toggle('is-parked', footerReached);
       refreshStickyBar();
-    }, { threshold: 0 }).observe(footer);
+    };
+    window.addEventListener('scroll', checkFooterScroll, { passive: true });
+    window.checkFooterScroll = checkFooterScroll;
   }
 
   // Finding #5 fix (see showPage() above): reset to a known "just landed at
@@ -1151,6 +1399,16 @@ function lightboxStep(dir) { detailCarouselShow(detailCarouselIndex + dir); }
     refreshStickyBar();
   };
 })();
+
+// about-page section index (fix: no way to jump to a section on a long
+// vertical-scroll page). Smooth-scrolls and marks the clicked chip active;
+// .about-index's own sticky top offsets the scroll target below via CSS
+// scroll-margin-top so the section heading doesn't land underneath it.
+function jumpToAboutSection(chip, targetId) {
+  document.querySelectorAll('.about-index .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 function toggleDescCollapse(btn) {
   const text = btn.previousElementSibling;

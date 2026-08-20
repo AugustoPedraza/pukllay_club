@@ -131,3 +131,58 @@ redesign) doesn't cover — flagged for a future pass. Same observation applies 
 - Open the mobile category-filter chips (Catálogo, ≤480px) and the "más información" mechanic/theme
   chips (Detalle) side by side — do they now look like two intentionally different chip styles, not
   an accidentally-shared one?
+
+## Round 2: Mobile Round-Trip Fixes (2026-08-20)
+
+User testing at real mobile widths (≤480px) surfaced 6 more real issues — this composition had never
+actually been driven at that width before. All fixed:
+
+1. **No way to reach search, filters, or site nav on mobile at all.** `.app-nav .links`/`.search` are
+   `display:none` below 480px with nothing replacing them. Added one hamburger button opening one
+   drawer (search input + nav links + a "Filtros" trigger) — one entry point, not three separate icon
+   buttons crammed into an already-tight header, matching the app's minimal-chrome direction. "Filtros"
+   opens a bottom-sheet panel (ported from sketch 008's validated pattern) filtering by Dificultad/
+   Duración — the real dataset here has no per-game `mechanics` field, so that dimension isn't offered.
+   Filtering is real: cards get tagged `data-weight-label`/`data-max-playtime` at render and a
+   `.filtered-out` class hides non-matches live.
+2. **No isologo in the header.** 005's own (discarded) header had designed one — grafted onto the real
+   `.app-nav .brand` instead of losing it along with the rest of that file.
+3. **Footer read as two nested footers on mobile** (a full-bleed purple mission statement + a separate
+   utility bar). Flattened to one compact tier on mobile: headline only (no paragraph, no social row),
+   straight into the existing utility bar's links/BGG badge/copyright.
+4. **About page was pure vertical scroll with no way to jump to a section.** Added a sticky chip-row
+   index (reusing `.chip` — same visual language as the catalog's own mobile category row) that
+   smooth-scrolls to each band and marks itself active.
+5. **The sticky title bar and mobile CTA bar reported "missing" turned out to be a real regression from
+   fix #1-#2 above, not a pre-existing bug**: adding the hamburger + isologo made `.app-nav` wrap onto
+   a second line at narrow widths (96px tall instead of ~64px) — because `.crumb` (the full breadcrumb,
+   showing the entire game title) was never hidden on mobile, the same overflow 005's own header
+   already solved once ("Round 32" in its own history) and that fix never carried over when 011
+   discarded that header. `.game-sticky-bar`/`.mobile-cta-bar` both assume a fixed 64px header via
+   `top: 64px`, so the taller wrapped nav rendered them hidden behind it. Fixed by collapsing `.crumb`
+   to a plain "‹ Catálogo" back-link on mobile, same as 005's original fix.
+6. **`.game-sticky-bar`'s background was hardcoded `rgba(255,255,255,0.97)`**, not a theme token —
+   invisible/washed-out in dark mode. Switched to `color-mix(in srgb, var(--color-bg) 97%, transparent)`,
+   matching `.app-nav.scrolled`'s existing pattern.
+7. **The sticky title bar's trigger logic used `IntersectionObserver`, silently starved of callbacks
+   in a real environment condition** (`document.visibilityState` non-"visible" — backgrounded/
+   unfocused window; this is how the bug first surfaced during agent testing, but it's a real class of
+   failure, not just a testing artifact — the same throttling applies to real low-power-mode or
+   background-tab browsing). Replaced with a plain `scroll`-event listener computing
+   `getBoundingClientRect()` directly — no observer dependency, verified working. Applied the same
+   change to the footer-parked observer for consistency.
+8. **The sticky title bar's `.is-visible` state was never cleared when leaving Detalle for another
+   page** (only reset on *entering* Detalle) — since it's a page-independent fixed element, not scoped
+   inside `#page-detail`, a scrolled-then-switched-away state bled its "scrolled past the title" bar
+   into Catálogo/Acerca de. Fixed: the reset now runs on every `showPage()` call, not just entries into
+   Detalle.
+
+## What to Look For (Round 2)
+- At ≤480px: open the hamburger drawer, use the search input, tap "Filtros" and apply a Dificultad
+  filter — do non-matching catalog cards actually hide?
+- On Detalle at ≤480px, scroll down — does the sticky title bar with the game name appear, themed
+  correctly in both light and dark? Scroll back up — does it hide again?
+- Switch Detalle → Catálogo/Acerca de after scrolling — does the sticky title bar disappear, or does
+  it linger on the wrong page?
+- On Acerca de, use the section-index chips to jump between bands — does the target land below the
+  sticky index bar, or does the heading get hidden underneath it?
