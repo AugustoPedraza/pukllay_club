@@ -11,7 +11,14 @@
 
 /* Self-hosted brand typefaces (Bebas Neue + Inter). Both are OFL-licensed, so self-hosting
    from priv/static/fonts/ is permitted. Self-hosting avoids a runtime request to any
-   third-party Google font CDN for every visitor. */
+   third-party Google font CDN for every visitor.
+
+   Inter replaces "Segoe UI Semibold" from the brand manual, which is Windows-only and not
+   licensable for web embedding. Inter is the closest neo-grotesque with real tabular
+   numerals, which the rankings and tournament tables need (use Tailwind's built-in
+   `tabular-nums` utility on those, not a custom class). For literal metric fidelity to the
+   manual, Selawik — Microsoft's OFL, metric-compatible Segoe UI substitute — is the fallback
+   if that's ever needed. */
 @font-face {
   font-family: "Bebas Neue";
   font-style: normal;
@@ -86,8 +93,20 @@
 
 /* daisyUI theme plugin.
   Brand palette locked in .planning/phases/01-catalog-v1/01-UI-SPEC.md (source: "PUKLLAY CLUB —
-  Manual de Identidad Visual" brand manual). Hex values are kept as-is, not converted to any other
-  color function, per the design contract, to preserve direct traceability to the brand manual. */
+  Manual de Identidad Visual", Gustavo Nina, 2025). Hex values are kept as-is, not converted to
+  any other color function, per the design contract, to preserve direct traceability to the
+  brand manual.
+
+  Base:          #3D096D  Lila Oscuro   -> oklch(30.4% 0.151 300.1)
+  Base:          #FFFFFF  Blanco
+  Complementary: #7E4CA5  Violeta       -> oklch(51.4% 0.143 308.1)
+
+  MEASURED CONSTRAINTS (WCAG 2.1, verified — do not "improve" these by eye):
+    white on #3D096D ........ 14.4:1  AAA  -> safe for primary buttons
+    #7E4CA5 on white ......... 6.06:1  AA   -> safe for links / secondary text
+    #3D096D vs #7E4CA5 ....... 2.38:1  FAIL -> NEVER adjacent as surfaces or
+                                               as two levels of one hierarchy
+    #3D096D on dark bg ....... FAIL         -> dark mode lifts primary to L=66% */
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "dark";
   default: false;
