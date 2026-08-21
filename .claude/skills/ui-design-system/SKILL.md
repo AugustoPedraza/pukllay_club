@@ -42,6 +42,14 @@ Fonts: `font-display` (Bebas Neue) for all headings/titles/section labels — h1
 empty-state titles, brand wordmark. `font-sans` (Inter, the default) for everything else. Do
 not leave a heading on the plain sans default.
 
+**Single source of truth:** `assets/css/app.css` is the only file allowed to declare a
+`daisyui-theme` block (a stray second file was found and removed 2026-08-21 — don't recreate one).
+Theme names are locked to `light`/`dark` — renaming breaks four hardcoded copies
+(`assets/js/theme.js`, `layouts.ex`'s `data-theme` variants + `data-phx-theme` attrs, `app.css`'s
+`@custom-variant dark`, `layouts_test.exs`) and strands any visitor with a saved `phx:theme` in
+localStorage. Sketch themes under `.planning/sketches/themes/` mirror `app.css` via the mapping
+table in `default.css`, checked by `check-theme-drift.sh`.
+
 ## Spacing/typography scale (observed, not invented)
 
 - Card body padding: `p-4`.
