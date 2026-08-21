@@ -41,3 +41,24 @@ governs the trigger+drawer-side pairing and doesn't sit as a flex sibling of the
 `w-auto` fighting the grid track). Verify the fix by re-running `elementFromPoint` on the former
 overlap zone and confirming it resolves to the drawer-toggle label, not the select, at all three
 breakpoints.
+
+## Resolution
+
+**Date:** 2026-08-21
+
+**Fixed here.** `filter_drawer.ex`'s wrapper class changed from `drawer drawer-end w-auto` to
+`drawer drawer-end w-fit shrink-0` (the plan's first-choice fix, no fallback needed). `w-fit`
+replaces the collapsing `w-auto` override so the grid track daisyUI assigns to the trigger's
+`.drawer-content` column can no longer shrink below the "Filtros" label's own content width;
+`shrink-0` stops the parent `flex items-center justify-end gap-4` row in `index.ex` from squeezing
+the wrapper back down. `drawer`/`drawer-end` (load-bearing for the panel's side and open/close
+checkbox behaviour) were left untouched, and no restructuring of the toolbar row in `index.ex` was
+needed.
+
+Guarded by `test/pukllay_club_web/components/filter_drawer_test.exs` (asserts `w-fit`/`shrink-0`
+present, refutes `w-auto`, and asserts the trigger label keeps `min-h-11` + the `Filtros` text).
+
+The geometric proof — `document.elementFromPoint` resolving to the drawer-toggle label across the
+full label width at 375px/768px/1440px, and an actual click opening the drawer — is deferred to
+this plan's Task 5 browser checkpoint, per the plan's own scope split (rendered-HTML assertions can
+prove the classes are present, not that the resulting boxes are the right size).

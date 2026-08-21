@@ -30,7 +30,7 @@ defmodule PukllayClubWeb.FilterDrawer do
 
   def filter_drawer(assigns) do
     ~H"""
-    <div class="drawer drawer-end w-auto">
+    <div class="drawer drawer-end w-fit shrink-0">
       <input id={"#{@id}-toggle"} type="checkbox" class="drawer-toggle" />
       <div class="drawer-content">
         <label for={"#{@id}-toggle"} class="btn btn-primary min-h-11">
