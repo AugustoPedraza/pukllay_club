@@ -153,7 +153,7 @@ Class inventory by group:
 | Module | Function | Required attrs |
 |---|---|---|
 | `CoreComponents` | `flash/1` | `flash`, `kind` |
-| `CoreComponents` | `button/1` | inner_block (rest: href/navigate/patch/...) |
+| `CoreComponents` | `button/1` | inner_block (rest: href/navigate/patch/...). `variant`: unset (soft `btn-primary btn-soft`, default), `"primary"` (filled `btn-primary` — the page's one action), `"secondary"` (`btn-outline btn-primary` — repeated/secondary actions, e.g. a per-card CTA; the tier `GamePreview`'s Ver detalles hand-rolls the equivalent of) |
 | `CoreComponents` | `input/1` | `field` or `name`+`value`, `type` |
 | `CoreComponents` | `table/1` | `id`, `rows`, `:col` slot |
 | `CoreComponents` | `list/1` | `:item` slot (with `title`) |

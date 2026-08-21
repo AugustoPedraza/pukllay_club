@@ -31,3 +31,24 @@ Add `min-h-11` to the CTA's class list in `game_card.ex:73-75` (matching the pat
 `filter_drawer.ex`'s trigger and facet pills). Re-measure post-fix to confirm ≥44px height across the
 grid and all carousel-row instances, and re-check the card body doesn't visually break (button sits
 inside a `space-y-2` card-body with `p-4` — confirm no unwanted overflow/reflow once the button grows).
+
+## Resolution
+
+**Date:** 2026-08-21
+
+**Verified as already resolved by 01-10's preview-surface work — not re-fixed here.** The audit's
+`btn btn-primary btn-sm` (95×28px, 183 instances) no longer exists: `GameCard.game_card/1` doesn't
+render a "Ver detalles" CTA at all (confirmed by grep — no `Ver detalles`/`btn-primary`/`btn-sm` in
+`game_card.ex`). The CTA moved to `GamePreview.preview_body/1`
+(`lib/pukllay_club_web/components/game_preview.ex:112-117`), where it already renders
+`btn btn-outline btn-primary btn-block min-h-11` — outlined, not filled, and already at the app's
+44px floor.
+
+The 183-instance measurement also no longer describes the page's live geometry: `preview_body/1` is
+rendered once per card inside an inert `<template>` (`preview_template/1`,
+`game_preview.ex:123-134`) and cloned into a single shared portal/sheet on hover or tap — one live,
+painted instance at a time, not 183 simultaneously-rendered undersized buttons.
+
+This plan's Task 5 browser checkpoint confirms the live geometry (≥44px, no overflow/reflow in
+either the desktop portal or the mobile sheet) before this closure is considered final, per the
+plan's own scope split between rendered-HTML proof and geometric proof.

@@ -31,3 +31,26 @@ repeated per-item actions like "Ver detalles", reserving solid `btn-primary` for
 single actions like "Filtros" or a future checkout/submit action) added to
 `CoreComponents.button/1`'s `variants` map, then applied selectively. Low priority relative to the
 touch-target and overlap findings — a hierarchy/polish issue, not a functional one.
+
+## Resolution
+
+**Date:** 2026-08-21
+
+**Fixed here — the component-vocabulary gap, not the two live call sites.** Added a `"secondary"`
+entry to `CoreComponents.button/1`'s `variants` map (`"btn-outline btn-primary"`) and to its
+`attr :variant` `values:` list. The default (`nil`) and `"primary"` paths are byte-identical to
+before — proven by two dedicated tests. This is the same outline tier `GamePreview.preview_body/1`
+already hand-rolls for the Ver detalles CTA (`btn btn-outline btn-primary btn-block min-h-11`), so
+the new variant and the existing hand-written CTA now read as the same visual tier.
+
+Documented in `ui-design-system` SKILL.md's Component inventory row for `button/1`, so future UI
+work discovers the tier instead of rediscovering this gap.
+
+**Deliberately not retrofitted:** the two live filled `.btn-primary` instances today —
+`filter_drawer.ex:36`'s Filtros trigger and `index.ex:448`'s empty-state "Limpiar filtros" — were
+left as filled primaries. Each is genuinely the single action of its own surface (the toolbar's one
+drawer trigger; the empty state's one recovery action), so both are correct under the todo's own
+rule ("reserve `btn-primary` for a single page action"). The 183-instance "184 elements share
+`.btn-primary`" measurement that motivated this todo no longer describes the live page — see the
+companion `fix-ver-detalles-card-cta-touch-target` resolution: that CTA moved to `GamePreview` and
+renders `btn-outline`, not filled, before this plan even started.
