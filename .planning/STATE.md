@@ -4,13 +4,13 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Catalog v1
 status: executing
-stopped_at: Completed 01-12-PLAN.md
-last_updated: "2026-08-21T13:08:23.635Z"
+stopped_at: Phase 01.1 context gathered
+last_updated: "2026-08-21T13:47:37.635Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 01 execution started
-state_head: b90b4993bcb01452dc18b7382e152b56a2eb9186
+state_head: b80c10ca1c5a272d80932d008c70993f6efb3c3f
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 1
   total_plans: 12
   completed_plans: 12
@@ -198,6 +198,10 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 13 | Reconcile sketch theme with app.css (D2 conform, D2b retire dark-purple.css), add check-theme-drift.sh; D1 geometry deferred | 2026-08-21 | 34a40f0 | — | — |
 | 14 | Fix 7 UI audit findings on CatalogLive.Index (drawer overlap, theme-toggle a11y/hit-target, logo/tagline, button hierarchy, type inventory) — quick-260821-dah | 2026-08-21 | b90b499 | — | — |
 
+### Roadmap Evolution
+
+- Phase 01.1 edited: cleaned up title/goal/requirements/success-criteria after insertion; added SHELL-01..05 to REQUIREMENTS.md
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
@@ -208,6 +212,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T23:17:38.349Z
-Stopped at: Completed 01-12-PLAN.md
-Resume file: None
+Last session: 2026-08-21T13:47:36.926Z
+Stopped at: Phase 01.1 context gathered
+Resume file: .planning/phases/01.1-site-shell-content-pages-implement-the-not-yet-built-sketch/01.1-CONTEXT.md
