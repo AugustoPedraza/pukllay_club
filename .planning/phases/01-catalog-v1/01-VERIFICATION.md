@@ -221,7 +221,34 @@ UI/UX polish (including this carousel affordance/scroll issue) manually, section
 the GSD phase-plan machinery. These two items are carried forward as known, accepted UI debt — not
 silently dropped — and should be the starting point for that manual pass.
 
+## Addendum: Drawer-trigger/pills tappability closed (2026-08-21, quick task 260821-dah)
+
+The `01-05-PLAN.md` end-of-phase human-check — "confirm the drawer trigger and pills are
+comfortably tappable" — was never itself itemized as a discrete line in this report's
+`human_verification` list above; it fed directly into the retroactive 7-item UI audit logged
+2026-08-18 (see STATE.md "Pending Todos" at the time), which found one blocker (part of the
+Filtros trigger label was structurally dead — overlapped by the sort `<select>` and received its
+clicks) plus 6 related major/minor/cosmetic findings across the same shared app header.
+
+All 7 were closed by quick task 260821-dah (`.planning/quick/260821-dah-fix-7-ui-audit-findings-on-cataloglive-i/`),
+with a `checkpoint:human-verify` browser pass at 375px/768px/1440px:
+
+- **Filtros drawer trigger:** confirmed 0px overlap with the sort select at all three widths — a
+  tap on any pixel of the "Filtros" label (`elementFromPoint` swept across the full label width)
+  resolves to the drawer-toggle label, not the select, and the drawer opens on click. This is the
+  fix for the specific defect the 01-05 human-check would have caught.
+- **Facet pills** (weight-band/editorial-tag/mechanic/theme pills inside the drawer): already
+  carried `min-h-11` before this quick task and were unaffected by the wrapper-sizing fix; no
+  regression found.
+- **Theme toggle, brand logo, tagline, button hierarchy, type inventory:** the other 6 audit
+  findings in the same shared header/component set, closed alongside the trigger fix — see
+  `260821-dah-SUMMARY.md` for full detail per finding.
+
+**Result: the drawer trigger and pills are now confirmed comfortably tappable** at all three
+checked breakpoints — this closes the open thread from `01-05-PLAN.md`'s deferred human-check.
+
 ---
 
 _Verified: 2026-08-18_
 _Verifier: Claude (gsd-verifier)_
+_Addendum verified: 2026-08-21 (quick task 260821-dah, checkpoint:human-verify)_

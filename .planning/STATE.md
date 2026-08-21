@@ -5,13 +5,13 @@ current_phase: 01
 current_phase_name: Catalog v1
 status: executing
 stopped_at: Completed 01-12-PLAN.md
-last_updated: "2026-08-21T12:26:49.702Z"
+last_updated: "2026-08-21T13:08:23.635Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 01 execution started
-state_head: 34a40f094ab44733ecaba2d4fb70daecf8e21ca4
+state_head: b90b4993bcb01452dc18b7382e152b56a2eb9186
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 12
   completed_plans: 12
 milestone_name: milestone
@@ -131,22 +131,26 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-09: recent_query/0 filters is_expansion == false; exclusion deliberately scoped to only that carousel row (filter_games/1, count_games/1, other 7 rows untouched) so club-owned expansions remain searchable
 - [Phase ?]: 01-08: CarouselRow gains variant/subtitle (hero colour ranking, no fourth type size) + main-grid section header (G-01-4); 6/8 row subtitles reuse Vocabulary D-05/D-06 copy, 2 newly authored and flagged for review
 - [Phase ?]: 01-08: .CarouselScroll colocated hook adds persistent, self-hiding prev/next rail controls (ResizeObserver + scrollWidth/clientWidth), zero app.js/config.exs edits; @carousel_limit stays at 20 per ux-patterns B9's content-rail flip case (G-01-3)
+- [Phase 01]: Quick task 260821-dah: closed all 7 2026-08-18 UI audit findings on CatalogLive.Index (filter-drawer overlap, theme-toggle a11y/hit-target, logo/tagline tokens, button.secondary variant, re-measured type inventory at 5 combos/3-tier cap); closes the 01-05-PLAN.md drawer/pills tappability thread, recorded as an addendum in 01-VERIFICATION.md
 
 ### Pending Todos
 
-7 pending (area: ui) — retroactive UI audit of `CatalogLive.Index` against
-`ui-design-system`/`ux-patterns`/`ux-responsive`, tied to the still-open touch-target human-verification
-item in `01-VERIFICATION.md`. Full audit: https://claude.ai/code/artifact/f067cf3b-84ec-41d5-970c-71e035bc7f90
+0 pending. The 7-item retroactive UI audit of `CatalogLive.Index` (logged 2026-08-18 against
+`ui-design-system`/`ux-patterns`/`ux-responsive`) was closed 2026-08-21 by quick task 260821-dah —
+all 7 moved to `.planning/todos/completed/` with dated Resolution sections; see
+`260821-dah-SUMMARY.md`. This also closes the touch-target human-verification thread from
+`01-05-PLAN.md` ("the drawer trigger and pills are comfortably tappable"), recorded as an addendum
+in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f067cf3b-84ec-41d5-970c-71e035bc7f90
 
-| Severity | Todo |
-|----------|------|
-| blocker | Sort dropdown overlaps and steals clicks from Filtros button |
-| major | Ver detalles card CTA touch target (28px vs 44px, ×183) |
-| major | Theme toggle: no accessible names + undersized (32px) |
-| minor | 10 font combos on catalog screen vs cap of 3 |
-| minor | 184 elements share `.btn-primary` weight — no secondary button tier |
-| cosmetic | Brand tagline: banned `text-[10px]` / `text-base-content/70` |
-| cosmetic | Brand logo link: 42px vs 44px minimum |
+| Severity | Todo | Resolution |
+|----------|------|------------|
+| blocker | Sort dropdown overlaps and steals clicks from Filtros button | Fixed: `w-fit shrink-0` on the drawer wrapper |
+| major | Ver detalles card CTA touch target (28px vs 44px, ×183) | Verified already resolved by 01-10 (`GamePreview`, `btn-outline ... min-h-11`) |
+| major | Theme toggle: no accessible names + undersized (32px) | Fixed: 3 distinct `aria-label`s + `min-h-11 min-w-11` |
+| minor | 10 font combos on catalog screen vs cap of 3 | Re-measured live: 5 combos, already at cap — no CSS changed |
+| minor | 184 elements share `.btn-primary` weight — no secondary button tier | Fixed: `button/1` gained a `"secondary"` (outline) variant |
+| cosmetic | Brand tagline: banned `text-[10px]` / `text-base-content/70` | Fixed: `text-xs text-neutral` |
+| cosmetic | Brand logo link: 42px vs 44px minimum | Fixed: `min-h-11` on the anchor |
 
 ### Blockers/Concerns
 
@@ -173,7 +177,7 @@ item in `01-VERIFICATION.md`. Full audit: https://claude.ai/code/artifact/f067cf
 - [Phase 01, acknowledged 2026-08-18] Two UI/UX items from Phase 1's final human UAT were left open on purpose (developer chose to close the phase and fix these manually, section-by-section, rather than route through automated gap-closure — see `01-VERIFICATION.md` "Acknowledged Gaps"):
   - **G-01-4 (major):** Carousel shelves on `/` read as a single vertical list with no visible affordance that there are multiple carousels, and horizontal scroll happens at the window level instead of being scoped to each carousel row. A diagnosis was opened at `.planning/debug/G-01-4-carousel-affordance.md`.
   - **G-01-3 (unresolved):** The carousel prev/next scroll-controls test was skipped by the user ("I don't understand this") — whether the originally-reported "~20 columns forcing horizontal scroll" was a carousel rail or the `#games` grid is still an open question.
-  - These two, plus the pre-existing 7-item UI audit already logged under "Pending Todos" above, are the natural starting point for the next manual UI/UX pass.
+  - These two remain the next manual UI/UX pass's starting point. The third item originally grouped here — the 7-item UI audit — was closed 2026-08-21 by quick task 260821-dah (see "Pending Todos" above).
 
 ### Quick Tasks Completed
 
@@ -192,6 +196,7 @@ item in `01-VERIFICATION.md`. Full audit: https://claude.ai/code/artifact/f067cf
 | 11 | Add mix precommit/quality workflow rules to .planning/codebase/CONVENTIONS.md | 2026-08-18 | 4811893 | — | — |
 | 12 | Merge theme.css's brand-manual provenance/WCAG docs into app.css; remove non-compiling orphaned theme.css | 2026-08-21 | a3967fe | — | — |
 | 13 | Reconcile sketch theme with app.css (D2 conform, D2b retire dark-purple.css), add check-theme-drift.sh; D1 geometry deferred | 2026-08-21 | 34a40f0 | — | — |
+| 14 | Fix 7 UI audit findings on CatalogLive.Index (drawer overlap, theme-toggle a11y/hit-target, logo/tagline, button hierarchy, type inventory) — quick-260821-dah | 2026-08-21 | b90b499 | — | — |
 
 ## Deferred Items
 
