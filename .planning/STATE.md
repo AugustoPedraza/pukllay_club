@@ -5,10 +5,10 @@ current_phase: 01
 current_phase_name: Catalog v1
 status: executing
 stopped_at: Completed 01-12-PLAN.md
-last_updated: "2026-08-19T23:17:38.416Z"
+last_updated: "2026-08-21T12:06:06.938Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 01 execution started
-state_head: 2b688cfcbabf0512cff33ffc33318c1ba65e511d
+state_head: a3967fe4375f4f220296b4f356fcc86da90f0bb8
 progress:
   total_phases: 4
   completed_phases: 0
@@ -190,6 +190,7 @@ item in `01-VERIFICATION.md`. Full audit: https://claude.ai/code/artifact/f067cf
 | 260818-n4l | Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias | 2026-08-18 | c11b257 | Verified | [260818-n4l-add-dialyxir-and-excoveralls-and-make-th](./quick/260818-n4l-add-dialyxir-and-excoveralls-and-make-th/) |
 | 9 | Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias | 2026-08-18 | c11b257 | — | — |
 | 11 | Add mix precommit/quality workflow rules to .planning/codebase/CONVENTIONS.md | 2026-08-18 | 4811893 | — | — |
+| 12 | Merge theme.css's brand-manual provenance/WCAG docs into app.css; remove non-compiling orphaned theme.css | 2026-08-21 | a3967fe | — | — |
 
 ## Deferred Items
 
