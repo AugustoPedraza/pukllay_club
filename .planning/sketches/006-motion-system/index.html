@@ -199,9 +199,11 @@
 </div>
 
 <div id="sketch-tools">
-  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
-    <option value="default">Default theme</option>
-    <option value="dark-purple">Dark purple</option>
+  <!-- Real data-theme toggle (frontier 010, same mechanism as 007/011) — not
+       a theme-FILE swap. themes/default.css carries both palettes already. -->
+  <select onchange="document.documentElement.dataset.theme=this.value">
+    <option value="light">Light theme</option>
+    <option value="dark">Dark theme</option>
   </select>
 </div>
 

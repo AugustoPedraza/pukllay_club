@@ -40,12 +40,29 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
   system preference ("data-theme wins" both directions). Proved with a working `☀/🌙` toggle button
   + persisted JS, first on sketch 007 then reused verbatim on sketch 011's full composition — live
   browser-verified across catalog, detail, and about content, including the "Juegos similares"
-  shelf's hover-portal and both image carousels. `dark-purple.css` is no longer needed as a
-  standalone file (its values are merged into `default.css`) but is left in place for reference.
-  Sketches 001–006/008/009 still only have the old toolbar `<select>` swap in their own files (now
-  stale — swapping to `dark-purple.css` there loses the merged mechanism and the 006-D motion-token
-  fix); only 007 and 011 carry the real toggle. Retrofitting the standalone files' toolbars is
-  low-value now that 011 supersedes them as the real composed reference.
+  shelf's hover-portal and both image carousels.
+
+  **Retired (2026-08-21, theme consolidation):** `default.css`'s dark palette is now re-derived
+  directly from `assets/css/app.css`'s shipped daisyUI `dark` theme block (the single upstream
+  source of the brand palette; see `themes/check-theme-drift.sh`), not from this exploratory fork —
+  the fork had drifted from the real app in 11 of 13 mapped colour values, and the app's values
+  carry written per-value contrast rationale the fork never had. `dark-purple.css` has been deleted;
+  the "retrofitting the standalone files' toolbars is low-value" assessment above was revisited and
+  became necessary rather than optional once the file was removed, since sketches 006 and 009 still
+  loaded it at runtime via their toolbar `<select>`. Both were converted to the real `data-theme`
+  toggle mechanism (same as 007/011) so no theme-switcher option in the repo points at a missing
+  file. The fork's original values are preserved here so the exploration remains recoverable without
+  git archaeology:
+
+  ```
+  --color-bg: #150826            --color-secondary: #C9A6F5
+  --color-surface: #22103A       --color-accent-bg: #2E1750
+  --color-surface-2: #2E1750     --color-accent-text: #E4D4FA
+  --color-text: #F3ECFA          --color-border: #3A2159
+  --color-text-muted: #A78FC0    --color-danger: #E0607F
+  --color-primary: #9D5CE6       --color-success: #5CC79A
+  --color-primary-content: #FFFFFF
+  ```
 
 ## Sketches
 
