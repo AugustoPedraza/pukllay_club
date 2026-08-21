@@ -2,7 +2,7 @@
 sketch: 008
 name: filter-search-ui
 question: "What does the catalog's own filter surface look like, and how should the nav search box's live-narrowing/typeahead behave — given sketch 005's detail page chips already link to real query params that need somewhere to land?"
-winner: null
+winner: "Round 8 — centered Airbnb-style filter modal, icon-free/rebalanced, Autor/Mecánica as a checklist-in-dropdown"
 tags: [filter, search, navigation, information-architecture]
 ---
 
@@ -27,7 +27,7 @@ URL to pre-select a filter on page load needs that backend work first — not pr
 ## How to View
 open .planning/sketches/008-filter-search-ui/index.html
 
-## Status: Round 8 in progress — not yet approved
+## Status: Round 8 — approved
 
 **Round 1–2 (original build):** landed on **C — Search-First Overlay**: a large, centered search
 input leading the page, quick-filter suggestion chips appearing live below it, a "Más filtros ▾"
