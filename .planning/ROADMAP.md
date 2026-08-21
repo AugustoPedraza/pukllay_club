@@ -129,6 +129,54 @@ be pulled forward without breaking that dependency chain.
 
 - [x] 01-12-PLAN.md — Sticky gutter-aligned nav with shelf anchors and search, mobile category chips, design-system record (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
 
+### Phase 01.1: Site Shell & Content Pages (INSERTED)
+
+**Goal**: The sketch-validated designs that are not yet built in real code — a shared page shell, the about page, an upgraded detail page, the filter/search modal, and empty/loading/error states — are live in the app, composed together without reintroducing the drift the sketch composition rounds (007/011/012) already found and fixed once.
+**Depends on**: Phase 1 (reuses the card/shelf components sketches 001/002 already shipped in 01-10/11/12)
+**Requirements**: SHELL-01, SHELL-02, SHELL-03, SHELL-04, SHELL-05
+**Success Criteria** (what must be TRUE):
+
+  1. Catalog, detail, and about pages share one adaptive header and one footer (mission/links/BGG attribution), not per-page forks
+  2. An about page exists and communicates the club's mission, how borrowing works, and a FAQ/vocabulary section
+  3. The game detail page (`/juegos/:id`) shows a buy-box (cover + reservation CTA) beside a reading column and a "Juegos similares" shelf, on both desktop and mobile
+  4. The catalog's filter/search UI is a centered modal with checklist-style facets, reachable from a live-narrowing nav search box
+  5. The catalog and detail pages show a minimal, on-brand empty/loading/error state for no-results, in-flight, and failure conditions
+
+All findings for this phase are already captured in `.claude/skills/sketch-findings-pukllay_club/` — this phase implements them, it does not design them.
+
+**Plans:** 7 plans
+**UI hint**: yes
+
+Plans:
+
+**Wave 1**
+
+- [ ] 01.1-01-PLAN.md — TRACER: `/club` + `/quienes-somos` routes, 3-state header, site-wide Sumate CTA, shared footer (SHELL-01)
+
+**Wave 2** *(blocked on Wave 1: shared `about_live.ex` and `app.css`)*
+
+- [ ] 01.1-02-PLAN.md — About page content: photo rail, two-column band, dark FAQ band, Juntadas/Contacto, closing CTA (SHELL-02)
+
+**Wave 3** *(blocked on Wave 2: shared `app.css`)*
+
+- [ ] 01.1-03-PLAN.md — Detail desktop: `Catalog.similar_games/1`, buy-box masthead, reading column, ficha técnica, "Juegos similares" shelf (SHELL-03)
+
+**Wave 4** *(blocked on Wave 3: shared `catalog_live/show.ex` and `app.css`)*
+
+- [ ] 01.1-04-PLAN.md — Detail mobile chrome: fixed CTA bar, sticky title-echo bar, lightbox, share (SHELL-03)
+
+**Wave 5** *(blocked on Wave 4: shared `catalog_live/show.ex`)*
+
+- [ ] 01.1-05-PLAN.md — Reservation flow: runtime-configured number, name-capture modal, `wa.me` deep link (SHELL-03)
+
+**Wave 6** *(blocked on Wave 5: shared `catalog_live/show.ex` and `app.css`)*
+
+- [ ] 01.1-06-PLAN.md — Filter/search surface, nav-search entry point, URL filter params, filter-linked chips (SHELL-04)
+
+**Wave 7** *(blocked on Wave 6: shared `catalog_live/index.ex` and `catalog_live_test.exs`)*
+
+- [ ] 01.1-07-PLAN.md — Empty/loading/error states and the branded 404 page (SHELL-05)
+
 ### Phase 2: Natural-Language Spanish Search + Auth
 
 **Goal**: Members can describe what they want in plain Spanish and get matched games — the core value of the product — then save favorites behind lightweight auth.
