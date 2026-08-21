@@ -78,6 +78,7 @@ defmodule PukllayClubWeb.Layouts do
 
   slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
   slot :nav_search, doc: "the search form, rendered inside the header aligned with row content"
+  slot :crumb, doc: "breadcrumb content for a genuine drill-down page (Detalle only)"
 
   slot :subnav,
     doc: "content rendered below the header row, inside the sticky wrapper (e.g. mobile chips)"
@@ -142,11 +143,11 @@ defmodule PukllayClubWeb.Layouts do
           }
         }
       </script>
-      <.header_inner fullbleed={@fullbleed} nav_links={@nav_links} nav_search={@nav_search} />
+      <.header_inner nav_links={@nav_links} nav_search={@nav_search} crumb={@crumb} />
       {render_slot(@subnav)}
     </div>
     <div :if={!@sticky} id="app-header" class="pk-header">
-      <.header_inner fullbleed={@fullbleed} nav_links={@nav_links} nav_search={@nav_search} />
+      <.header_inner nav_links={@nav_links} nav_search={@nav_search} crumb={@crumb} />
       {render_slot(@subnav)}
     </div>
 
@@ -156,34 +157,86 @@ defmodule PukllayClubWeb.Layouts do
       </div>
     </main>
 
+    <.footer />
+
     <.flash_group flash={@flash} />
     """
   end
 
-  attr :fullbleed, :boolean, required: true
   attr :nav_links, :list, required: true
   attr :nav_search, :list, required: true
+  attr :crumb, :list, required: true
 
   defp header_inner(assigns) do
     ~H"""
-    <header class={["navbar pk-nav", if(@fullbleed, do: "pk-gutter", else: "px-4 sm:px-6 lg:px-8")]}>
-      <div class="flex-1">
-        <.brand_logo />
-      </div>
-      <div :if={@nav_links != []} class="pk-nav-links">
-        {render_slot(@nav_links)}
-      </div>
-      <div :if={@nav_search != []} class="pk-nav-search">
-        {render_slot(@nav_search)}
-      </div>
-      <div class="flex-none">
-        <ul class="flex flex-column px-1 space-x-4 items-center">
-          <li>
-            <.theme_toggle />
-          </li>
-        </ul>
+    <header class="navbar pk-nav">
+      <div class="pk-nav-inner mx-auto w-full max-w-7xl pk-gutter">
+        <div class="flex-1">
+          <.brand_logo />
+        </div>
+        <nav :if={@crumb != []} class="pk-nav-crumb" aria-label="Ruta de navegación">
+          {render_slot(@crumb)}
+        </nav>
+        <div :if={@nav_links != []} class="pk-nav-links">
+          {render_slot(@nav_links)}
+        </div>
+        <div :if={@nav_search != []} class="pk-nav-search">
+          {render_slot(@nav_search)}
+        </div>
+        <.sumate_cta />
+        <div class="flex-none">
+          <ul class="flex flex-column px-1 space-x-4 items-center">
+            <li>
+              <.theme_toggle />
+            </li>
+          </ul>
+        </div>
       </div>
     </header>
+    """
+  end
+
+  # The site-wide "Sumate" join CTA (D-05) — a built-in element of
+  # header_inner/1, deliberately NOT a caller-owned slot (unlike
+  # nav_links/nav_search/crumb above), so no page can fork by forgetting to
+  # pass it. This is this plan's one documented deviation from
+  # 01.1-PATTERNS.md's suggested `sumate_cta` slot: a slot can be omitted by
+  # a caller, which would silently reintroduce the exact per-page-fork risk
+  # SHELL-01 exists to prevent, so it's rendered unconditionally instead.
+  defp sumate_cta(assigns) do
+    ~H"""
+    <a
+      href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="btn btn-primary btn-sm min-h-11"
+    >
+      Sumate
+    </a>
+    """
+  end
+
+  # Shared footer (SHELL-01) — one row, two natural-width clusters
+  # (page-shell.md sketch 011), sharing the header's exact max-width +
+  # pk-gutter recipe on the same element (never a wrapper around it) so
+  # header/footer/content edges line up at any viewport width. The links
+  # list, social icons, and BGG attribution render as structural
+  # placeholders in this plan (01.1-01) — plan 01.1-01's Task 3 fills them
+  # with the content decided at the Task 2 checkpoint.
+  defp footer(assigns) do
+    ~H"""
+    <footer class="pk-footer">
+      <div class="pk-footer-row mx-auto w-full max-w-7xl pk-gutter">
+        <div class="pk-footer-left">
+          <.brand_logo />
+          <ul class="pk-footer-links"></ul>
+        </div>
+        <div class="pk-footer-right">
+          <div class="pk-footer-social"></div>
+          <span class="pk-footer-meta"></span>
+        </div>
+      </div>
+    </footer>
     """
   end
 

@@ -24,6 +24,8 @@ defmodule PukllayClubWeb.Router do
 
     live "/", CatalogLive.Index, :index
     live "/juegos/:id", CatalogLive.Show, :show
+    live "/club", AboutLive, :show
+    live "/quienes-somos", AboutLive, :show
   end
 
   scope "/", PukllayClubWeb do

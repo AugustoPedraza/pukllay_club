@@ -207,6 +207,18 @@
    never drift to two different spacing values again. */
 :root {
   --pk-gutter: 2rem;
+
+  /* Motion system (sketch 006, variant D — Subtle/Soft): the fastest of the
+     three tested options, paired with a no-overshoot soft ease-out. New
+     rules added from this phase forward must reference these tokens rather
+     than hardcode a timing value; the pre-existing 220ms/360ms literals in
+     .pk-nav/.pk-portal/.pk-sheet are UAT-verified and out of scope for this
+     phase — don't rewrite them as an uninstructed side effect. */
+  --duration-fast: 100ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .pk-gutter {
@@ -538,6 +550,97 @@ body.pk-sheet-open {
 
 .pk-nav-search {
   min-width: 220px;
+}
+
+/* Sketch 011 (full-shell-composition): the header's full-bleed background
+   bar (.pk-nav) and its capped+gutter-aligned content row are two separate
+   elements — pk-gutter lives on .pk-nav-inner, never on .pk-nav itself, so
+   the header's content shares the exact same max-width + gutter box every
+   other capped section on the page uses (page-shell.md's content-width
+   alignment rule). */
+.pk-nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Shared footer (SHELL-01, page-shell.md sketch 011) — one row, two
+   natural-width clusters, no divider. .pk-footer-row carries the same
+   max-w-7xl + pk-gutter recipe as .pk-nav-inner and every other capped
+   page section, on the same element as the padding (never a wrapper
+   around it) — the exact bug page-shell.md documents twice. */
+.pk-footer {
+  background: var(--color-base-200);
+  border-top: 1px solid var(--color-base-300);
+  margin-top: 3rem;
+}
+
+.pk-footer-row {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+}
+
+.pk-footer-left,
+.pk-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.pk-footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pk-footer-social {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pk-footer-social a {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-base-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-neutral);
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.pk-footer-social a:hover {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  border-color: var(--color-primary);
+}
+
+.pk-footer-meta {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+  white-space: nowrap;
+}
+
+.pk-bgg-note {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-base-300);
+  text-underline-offset: 2px;
+}
+
+.pk-bgg-note:hover {
+  color: var(--color-primary);
+  text-decoration-color: currentColor;
 }
 
 /* Mobile category chip row: a second navigation dimension replacing the
