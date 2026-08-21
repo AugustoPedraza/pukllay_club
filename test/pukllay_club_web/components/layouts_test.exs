@@ -1,9 +1,27 @@
 defmodule PukllayClubWeb.LayoutsTest do
   use PukllayClubWeb.ConnCase, async: true
+  use Phoenix.Component
 
   import Phoenix.LiveViewTest
 
   alias PukllayClubWeb.Layouts
+
+  # Local test-only wrappers around Layouts.app/1 so we can exercise the
+  # :crumb slot — render_component/2 can't build Phoenix.Component slot
+  # data by hand, so a tiny ~H template that passes the slot through is
+  # the standard way to test slot-bearing components.
+  defp render_with_crumb(assigns) do
+    ~H"""
+    <Layouts.app flash={%{}}>
+      <:crumb>
+        <.link navigate="/">Ludoteca</.link>
+        <span class="pk-crumb-sep">/</span>
+        <span class="pk-crumb-current">Test Game</span>
+      </:crumb>
+      content
+    </Layouts.app>
+    """
+  end
 
   describe "brand_logo/1" do
     test "renders the wordmark and tagline" do
@@ -47,17 +65,33 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ ~s(data-phx-theme="system")
     end
 
-    test "still emits the px-4 sm:px-6 lg:px-8 header classes when fullbleed is not passed (01-11)" do
+    # The header's content row (.pk-nav-inner) always uses the capped
+    # max-w-7xl + pk-gutter recipe now, regardless of `fullbleed` — only
+    # <main>'s own padding still toggles on that attr (page-shell.md's
+    # content-width alignment rule: header, footer and every capped page
+    # section share one max-width and one gutter source on the same
+    # element). Scoped to the header element so <main>'s independent
+    # px-4 sm:px-6 lg:px-8 (still present when fullbleed is not passed)
+    # doesn't produce a false pass/fail on the wrong element.
+    test "the header always uses the capped max-w-7xl + pk-gutter inner recipe, regardless of fullbleed (01-11 rework)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      assert html =~ "px-4 sm:px-6 lg:px-8"
-      refute html =~ "pk-gutter"
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ "pk-gutter"
+      assert header_html =~ "max-w-7xl"
+      refute header_html =~ "px-4 sm:px-6 lg:px-8"
     end
 
-    test "swaps to the shared pk-gutter class and drops its own horizontal padding when fullbleed is true (01-11)" do
+    test "fullbleed drops <main>'s own horizontal padding while the header keeps the same capped recipe (01-11)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], fullbleed: true})
 
       assert html =~ "pk-gutter"
+      assert html =~ "max-w-7xl"
       refute html =~ "px-4 sm:px-6 lg:px-8"
     end
 
@@ -133,6 +167,69 @@ defmodule PukllayClubWeb.LayoutsTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       assert html =~ ~s(lang="es")
+    end
+  end
+
+  describe "app/1 footer (SHELL-01, Task 2 checkpoint content)" do
+    test "renders the shared pk-footer element with exactly three footer link labels" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ "pk-footer"
+
+      footer_links =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-footer-links a")
+
+      assert Enum.count(footer_links) == 3
+
+      link_labels = Enum.map(footer_links, &(&1 |> LazyHTML.text() |> String.trim()))
+      assert link_labels == ["FAQ", "Contacto", "Juntadas"]
+    end
+
+    test "the footer link hrefs resolve to the three About-page anchor targets (D-02)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ ~s(href="/quienes-somos#faq")
+      assert html =~ ~s(href="/quienes-somos#contacto")
+      assert html =~ ~s(href="/quienes-somos#juntadas")
+    end
+  end
+
+  describe "app/1 Sumate CTA (D-05)" do
+    test "renders unconditionally with the ClubLinks WhatsApp href and rel=noopener noreferrer, even when no slot is passed" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ PukllayClubWeb.ClubLinks.whatsapp_group_url()
+      assert html =~ "Sumate"
+      assert html =~ ~s(rel="noopener noreferrer")
+    end
+  end
+
+  describe "app/1 :crumb slot (Detalle header state)" do
+    test "passing a crumb slot renders pk-nav-crumb" do
+      html = render_component(&render_with_crumb/1, %{})
+
+      assert html =~ "pk-nav-crumb"
+      assert html =~ "Test Game"
+    end
+
+    test "passing no crumb slot renders no pk-nav-crumb" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      refute html =~ "pk-nav-crumb"
+    end
+  end
+
+  describe "app/1 external anchor safety (T-01.1-03)" do
+    test ~s(every target="_blank" anchor in the rendered shell also carries rel="noopener noreferrer") do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      blank_count = html |> String.split(~s(target="_blank")) |> length() |> Kernel.-(1)
+      rel_count = html |> String.split(~s(rel="noopener noreferrer")) |> length() |> Kernel.-(1)
+
+      assert blank_count > 0
+      assert blank_count == rel_count
     end
   end
 end

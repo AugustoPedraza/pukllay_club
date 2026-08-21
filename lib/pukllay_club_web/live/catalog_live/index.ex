@@ -37,17 +37,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @page_size 24
   @skeleton_carousel_rows 8
 
-  # Label / row-key pairs for the sticky nav's shelf anchors (01-12), in
-  # the sketch's own order. Filtered against @carousel_rows at render time
-  # so an anchor can never point at a section carousel_row/1 declined to
-  # render (a shelf backed by zero games renders nothing at all).
-  @nav_link_targets [
-    {"Catálogo", :destacados_del_club},
-    {"Para empezar", :descubre_el_hobby},
-    {"Nivel experto", :nivel_experto},
-    {"Recién llegados", :recientemente_anadidos}
-  ]
-
   @impl true
   def mount(_params, _session, socket) do
     loading? = not connected?(socket)
@@ -325,26 +314,13 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       not is_nil(assigns.min_age)
   end
 
-  # The sticky nav's shelf anchors, filtered to rows that actually render
-  # (non-empty game list) so a link can never point at a section that
-  # doesn't exist in the document.
-  defp nav_link_entries(carousel_rows) do
-    populated =
-      carousel_rows
-      |> Enum.filter(&(&1.games != []))
-      |> MapSet.new(& &1.key)
-
-    Enum.filter(@nav_link_targets, fn {_label, key} -> key in populated end)
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} fullbleed sticky>
-      <:nav_links :if={not filters_active?(assigns)}>
-        <a :for={{label, key} <- nav_link_entries(@carousel_rows)} href={"#carousel-#{key}"}>
-          {label}
-        </a>
+      <:nav_links>
+        <.link navigate={~p"/"} aria-current="page">Inicio</.link>
+        <.link navigate={~p"/quienes-somos"}>Quiénes Somos</.link>
       </:nav_links>
       <:nav_search>
         <form phx-change="search" id="catalog-search-form">

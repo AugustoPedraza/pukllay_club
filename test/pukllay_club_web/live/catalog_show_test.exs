@@ -167,13 +167,33 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
-    test "renders inside its own max-w-4xl container, with no 672px ancestor cap", %{conn: conn} do
+    test "renders inside the shared capped-inner container (max-w-7xl + pk-gutter), with no 672px ancestor cap",
+         %{conn: conn} do
       game = game_fixture()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      assert html =~ "max-w-4xl"
+      assert html =~ "max-w-7xl"
+      assert html =~ "pk-gutter"
       refute html =~ "max-w-2xl"
+    end
+
+    test "renders the breadcrumb with the game's name inside pk-crumb-current, and the shared footer",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Juego Detalle Shell"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "pk-nav-crumb"
+
+      crumb_current_text =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-crumb-current")
+        |> LazyHTML.text()
+
+      assert crumb_current_text == "Juego Detalle Shell"
+      assert html =~ "pk-footer"
     end
   end
 end

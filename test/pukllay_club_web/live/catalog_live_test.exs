@@ -36,9 +36,20 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      refute html =~ "geekdo-images.com"
-      refute html =~ "boardgamegeek.com"
+      image_srcs =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("img")
+        |> LazyHTML.attribute("src")
+
+      refute Enum.any?(image_srcs, &(&1 =~ "geekdo-images.com"))
+      refute Enum.any?(image_srcs, &(&1 =~ "boardgamegeek.com"))
     end
+
+    # A "Powered by BGG" attribution *link* (D-04, plan 01.1-01 Task 3, not
+    # a hotlinked image src) legitimately points at boardgamegeek.com from
+    # the shared footer on every page — the assertion above scopes to `img`
+    # src attributes specifically so it stays correct alongside that link.
 
     test "renders the brand placeholder (not a broken image) for a game with no thumbnail, keeping the title accessible (D-18)",
          %{conn: conn} do
@@ -147,6 +158,14 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       assert html =~ "max-w-7xl"
       refute html =~ "max-w-2xl"
+    end
+
+    test "renders the shared footer (SHELL-01)", %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "pk-footer"
     end
   end
 
@@ -566,24 +585,22 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert header_html =~ ~s(id="catalog-search-form")
     end
 
-    test "every shelf anchor href resolves to an element id present in the document", %{
-      conn: conn
-    } do
-      game_fixture(%{name: "Nav Target Game", tags: ["#CreaConexiones"]})
+    test "the nav-links slot renders the shared Inicio/Quiénes Somos wayfinding links, not shelf anchors (SHELL-01)",
+         %{conn: conn} do
+      game_fixture(%{name: "Nav Wayfinding Game", tags: ["#CreaConexiones"]})
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      hrefs =
+      nav_links_html =
         html
         |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-nav-links a")
-        |> LazyHTML.attribute("href")
+        |> LazyHTML.query(".pk-nav-links")
+        |> LazyHTML.to_html()
 
-      assert hrefs != []
-
-      Enum.each(hrefs, fn "#" <> id ->
-        assert html =~ ~s(id="#{id}")
-      end)
+      assert nav_links_html =~ ~s(href="/")
+      assert nav_links_html =~ "Inicio"
+      assert nav_links_html =~ ~s(href="/quienes-somos")
+      assert nav_links_html =~ "Quiénes Somos"
     end
 
     test "the unfiltered landing render emits one chip per populated shelf, each targeting a real section id, bracketed by spacers",

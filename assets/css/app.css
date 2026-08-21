@@ -552,6 +552,29 @@ body.pk-sheet-open {
   min-width: 220px;
 }
 
+/* Detalle's breadcrumb (page-shell.md's Detalle header state). Base
+   styling only — the narrow-viewport collapse to "‹ Ludoteca" lives in
+   the one trailing @media block below, per this stylesheet's
+   single-block-single-position rule for narrow-viewport overrides. */
+.pk-nav-crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--color-neutral);
+  flex: 1;
+}
+
+.pk-nav-crumb a {
+  color: var(--color-base-content);
+  text-decoration: none;
+}
+
+.pk-nav-crumb a:hover,
+.pk-nav-crumb a:focus-visible {
+  color: var(--color-primary);
+}
+
 /* Sketch 011 (full-shell-composition): the header's full-bleed background
    bar (.pk-nav) and its capped+gutter-aligned content row are two separate
    elements — pk-gutter lives on .pk-nav-inner, never on .pk-nav itself, so
@@ -748,6 +771,34 @@ body.pk-sheet-open {
   .pk-nav-search {
     min-width: 0;
     flex: 1;
+  }
+
+  .pk-footer-row,
+  .pk-footer-left,
+  .pk-footer-right {
+    flex-direction: column;
+  }
+
+  .pk-crumb-sep,
+  .pk-crumb-current {
+    display: none;
+  }
+
+  .pk-nav-crumb {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .pk-nav-crumb a {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+
+  .pk-nav-crumb a::before {
+    content: "‹ ";
   }
 }
 

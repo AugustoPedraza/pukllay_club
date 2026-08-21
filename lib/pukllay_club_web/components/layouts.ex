@@ -219,24 +219,131 @@ defmodule PukllayClubWeb.Layouts do
   # Shared footer (SHELL-01) — one row, two natural-width clusters
   # (page-shell.md sketch 011), sharing the header's exact max-width +
   # pk-gutter recipe on the same element (never a wrapper around it) so
-  # header/footer/content edges line up at any viewport width. The links
-  # list, social icons, and BGG attribution render as structural
-  # placeholders in this plan (01.1-01) — plan 01.1-01's Task 3 fills them
-  # with the content decided at the Task 2 checkpoint.
+  # header/footer/content edges line up at any viewport width. Content
+  # decided at the Task 2 checkpoint (recorded verbatim in the plan
+  # SUMMARY): the links list is FAQ/Contacto/Juntadas (D-02), the social
+  # set is WhatsApp/Facebook/Instagram/Email (revised post-Task-1 by the
+  # developer — supersedes the plan's original WhatsApp/Instagram/
+  # linktr.ee menu), and the BGG attribution is "Powered by BGG" + the
+  # BGG logo mark, rendered by `bgg_attribution/1` below.
   defp footer(assigns) do
     ~H"""
     <footer class="pk-footer">
       <div class="pk-footer-row mx-auto w-full max-w-7xl pk-gutter">
         <div class="pk-footer-left">
           <.brand_logo />
-          <ul class="pk-footer-links"></ul>
+          <ul class="pk-footer-links">
+            <li><a href="/quienes-somos#faq">FAQ</a></li>
+            <li><a href="/quienes-somos#contacto">Contacto</a></li>
+            <li><a href="/quienes-somos#juntadas">Juntadas</a></li>
+          </ul>
         </div>
         <div class="pk-footer-right">
-          <div class="pk-footer-social"></div>
-          <span class="pk-footer-meta"></span>
+          <div class="pk-footer-social">
+            <a
+              href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                width="16"
+                height="16"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"
+                />
+              </svg>
+            </a>
+            <a
+              href={PukllayClubWeb.ClubLinks.facebook_url()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                width="16"
+                height="16"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M14.5 8.5h2V5.5h-2c-1.93 0-3.5 1.57-3.5 3.5v2H9v3h2v6.5h3V14h2.2l.5-3H14v-1.5c0-.55.45-1 1-1Z"
+                />
+              </svg>
+            </a>
+            <a
+              href={PukllayClubWeb.ClubLinks.instagram_url()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                width="16"
+                height="16"
+              >
+                <rect x="4" y="4" width="16" height="16" rx="4" />
+                <circle cx="12" cy="12" r="3.5" />
+                <circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none" />
+              </svg>
+            </a>
+            <a href={"mailto:#{PukllayClubWeb.ClubLinks.contact_email()}"} aria-label="Correo">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                width="16"
+                height="16"
+              >
+                <rect x="4" y="5.5" width="16" height="13" rx="2" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="m5 7 7 5.5L19 7" />
+              </svg>
+            </a>
+          </div>
+          <span class="pk-footer-meta">© 2026 Pukllay Club · <.bgg_attribution /></span>
         </div>
       </div>
     </footer>
+    """
+  end
+
+  # BGG attribution (D-04, decided at the Task 2 checkpoint): the exact
+  # required wording is "Powered by BGG", linking to boardgamegeek.com and
+  # carrying the BGG logo mark (priv/static/images/bgg-logo.jpeg — a flat
+  # 400x400 JPEG with its own baked-in background, not a transparent
+  # icon). Styled with .pk-bgg-note (underlined small print, no extra
+  # box/border/shadow beyond what the image itself already contains) — see
+  # the plan SUMMARY's "Claude's Discretion" note for the sizing rationale.
+  defp bgg_attribution(assigns) do
+    ~H"""
+    <a
+      href="https://boardgamegeek.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="pk-bgg-note inline-flex items-center gap-1"
+    >
+      <img src={~p"/images/bgg-logo.jpeg"} width="18" height="18" alt="" />Powered by BGG
+    </a>
     """
   end
 
