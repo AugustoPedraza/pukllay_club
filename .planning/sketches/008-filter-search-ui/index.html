@@ -3,106 +3,235 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sketch 008 — Filter / Search UI (winner: Search-First Overlay)</title>
+<title>Sketch 008 — Filter / Search UI, Round 8 (icon-free, rebalanced modal)</title>
 <link rel="stylesheet" href="../themes/default.css">
 <style>
-  body { padding-top: 44px; }
-  #sketch-note { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1a1a; border-bottom: 1px solid #333; padding: 10px 16px; display: flex; gap: 8px; align-items: center; font-family: var(--font-sans); font-size: 13px; color: #ddd; }
+  body { padding-top: 40px; }
+  #sketch-note { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1a1a; border-bottom: 1px solid #333; padding: 8px 16px; font-family: system-ui; font-size: 12px; color: #ccc; }
   #sketch-note strong { color: #fff; }
 
-  .app-nav { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-6); border-bottom: 1px solid var(--color-border); position: relative; }
-  .app-nav .brand strong { font-family: var(--font-display); font-size: 1.3rem; color: var(--color-primary); }
+  /* ============ header — same real chrome as Rounds 3–6. Filter trigger
+     stays next to search (kept from Round 6 — that part worked); only what
+     it OPENS changes this round. ============ */
+  .app-nav { position: sticky; top: 40px; z-index: 100; background: var(--color-bg); border-bottom: 1px solid var(--color-border); }
+  .app-nav-inner { display: flex; align-items: center; gap: var(--space-4); max-width: 1280px; margin: 0 auto; padding: var(--space-3) var(--space-6); }
+  .app-nav .brand { display: flex; align-items: center; gap: var(--space-2); margin-right: var(--space-2); text-decoration: none; flex: 0 0 auto; }
+  .app-nav .brand-text { display: flex; flex-direction: column; line-height: 1; }
+  .app-nav .brand strong { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.03em; color: var(--color-primary); }
+  .app-nav .brand span { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+  .app-nav .links { display: flex; gap: var(--space-4); flex: 0 0 auto; }
+  .app-nav .links a { color: var(--color-text); text-decoration: none; font-size: var(--text-sm); font-weight: 600; padding: var(--space-1) 0; border-bottom: 2px solid transparent; }
+  .app-nav .links a.active { border-color: var(--color-primary); color: var(--color-primary); }
+  .theme-toggle { flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .theme-toggle:hover { border-color: var(--color-primary); background: var(--color-accent-bg); }
 
-  main { max-width: 1200px; margin: 0 auto; padding: var(--space-6) var(--space-6) var(--space-12); }
-  .results-meta { font-size: var(--text-sm); color: var(--color-text-muted); margin: var(--space-4) 0 var(--space-3); }
+  .search-filter-cluster { display: flex; align-items: center; gap: var(--space-2); flex: 1 1 auto; max-width: 420px; margin-left: auto; }
+  .search-wrap { flex: 1 1 auto; min-width: 120px; }
+  .search-wrap .search { display: flex; align-items: center; gap: var(--space-2); background: var(--color-surface); border-radius: var(--radius-full); padding: var(--space-2) var(--space-3); }
+  .search-wrap .search input { border: none; background: transparent; outline: none; font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-text); flex: 1; width: 100%; }
+  .search-wrap .search svg { flex-shrink: 0; opacity: 0.6; }
+  .filter-icon-btn { position: relative; flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: all var(--duration-fast) var(--ease-standard); }
+  .filter-icon-btn:hover { border-color: var(--color-primary); background: var(--color-accent-bg); }
+  .filter-icon-btn.has-active { border-color: var(--color-primary); color: var(--color-primary); }
+  /* icon glyphs go in their own clipped box — some emoji (multi-part ones
+     like 👥/🎯/🤝 especially) can paint wider than their character cell on
+     some font stacks and bleed past the element they're "in"; a fixed-size
+     inline-flex box with overflow:hidden guarantees containment regardless
+     of the glyph's actual paint bounds. Kept separate from the button's own
+     box (not overflow:hidden on the button itself) because the badge below
+     intentionally pokes outside the button's circle and would get clipped
+     too if the button itself hid overflow. */
+  .icon-box { display: inline-flex; align-items: center; justify-content: center; width: 1.4em; height: 1.4em; overflow: hidden; }
+  .filter-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: var(--radius-full); background: var(--color-primary); color: var(--color-primary-content); font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
+  .filter-badge:empty { display: none; }
 
-  .p1{background:linear-gradient(135deg,#3D096D,#7E4CA5)}.p2{background:linear-gradient(135deg,#7E4CA5,#A97FD1)}
-  .p3{background:linear-gradient(135deg,#22103A,#3D096D)}.p4{background:linear-gradient(135deg,#B23A5C,#7E4CA5)}
-  .p5{background:linear-gradient(135deg,#3F8F6B,#3D096D)}.p6{background:linear-gradient(135deg,#B8862F,#7E4CA5)}
-  .g-card { border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); transition: transform 0.2s ease, opacity 0.2s ease; }
-  .g-card .art { aspect-ratio: 1/1.05; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; color: rgba(255,255,255,0.85); }
-  .g-card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
-  .g-card .cap h4 { margin: 0 0 4px; font-size: var(--text-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .g-card .fact { font-size: 11px; color: var(--color-text-muted); }
-  .empty-msg { padding: var(--space-8) 0; text-align: center; color: var(--color-text-muted); }
-
-  .pill-btn {
-    display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--color-border); background: var(--color-bg);
-    color: var(--color-text); font-size: var(--text-sm); font-weight: 600; padding: 8px 14px; border-radius: var(--radius-full);
-    cursor: pointer; transition: all 0.15s ease; white-space: nowrap;
+  /* ============ NEW: centered modal, à la Airbnb — deliberately chosen
+     over Round 6's edge drawer this round: a centered dialog with a strong
+     backdrop locks the user's attention onto the modal itself rather than
+     the page behind it, which is the actual UX goal here (not "avoid
+     overlaying anything," which was Round 6's read of the earlier
+     complaint — this round's complaint is specifically about wanting
+     focus-lock). Backdrop is intentionally darker/more opaque than the
+     drawer's was, since "focus the user into the modal" is the explicit
+     goal, not a light touch. ============ */
+  .filter-modal-backdrop { position: fixed; inset: 0; background: rgba(20,8,34,0.65); z-index: 610; opacity: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; padding: var(--space-6); transition: opacity var(--duration-base) var(--ease-standard); }
+  .filter-modal-backdrop.open { opacity: 1; pointer-events: auto; }
+  /* overflow:hidden — without it, the absolutely-positioned close button
+     near the top-left rounded corner (and the footer near the bottom
+     corners) can visually spill past the modal's own rounded silhouette,
+     since a border-radius doesn't clip children unless overflow is set. */
+  .filter-modal { width: 560px; max-width: 100%; max-height: 82vh; background: var(--color-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; overflow: hidden; transform: scale(0.96) translateY(8px); opacity: 0; transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-standard); }
+  .filter-modal-backdrop.open .filter-modal { transform: scale(1) translateY(0); opacity: 1; }
+  .filter-modal-header { display: flex; align-items: center; justify-content: center; position: relative; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border); flex: 0 0 auto; }
+  .filter-modal-header strong { font-family: var(--font-display); font-size: var(--text-lg); }
+  .filter-modal-header .fm-close { position: absolute; left: var(--space-4); top: 50%; transform: translateY(-50%); }
+  .filter-modal-body { padding: var(--space-6); overflow-y: auto; flex: 1 1 auto; text-align: left; }
+  .filter-modal-footer { padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: var(--space-3); }
+  /* Round 8: "Limpiar filtros" reads as a plain colored text link at this
+     point — same hue as .fm-show-btn's fill, no chrome of its own, easy to
+     misread as equally weighted to the primary action next to it. Restyled
+     as a real outlined pill button instead, reusing this project's own
+     established secondary-button pattern verbatim (011's .pill-btn, itself
+     ported from an earlier round of this sketch) rather than inventing new
+     chrome: neutral border + text at rest, primary-tinted border on hover,
+     clearly subordinate to the filled .fm-show-btn beside it. */
+  .filter-modal-footer .fm-clear {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--color-border); background: var(--color-bg);
+    color: var(--color-text); font-weight: 600; font-size: var(--text-sm);
+    padding: 9px 16px; border-radius: var(--radius-full); cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-standard);
   }
-  .pill-btn:hover { border-color: var(--color-primary); }
-  .pill-btn.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
-  .pill-btn .count { opacity: 0.7; font-size: 11px; }
-  .pill-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .pill-btn:disabled:hover { border-color: var(--color-border); }
+  .filter-modal-footer .fm-clear:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
+  .filter-modal-footer .fm-clear:disabled { opacity: 0.4; cursor: not-allowed; }
+  .filter-modal-footer .fm-show-btn { background: var(--color-primary); color: var(--color-primary-content); border: none; padding: 11px 22px; border-radius: var(--radius-full); font-weight: 700; font-size: var(--text-sm); cursor: pointer; transition: opacity var(--duration-fast) var(--ease-standard); }
+  .filter-modal-footer .fm-show-btn:hover { opacity: 0.9; }
 
-  /* ============ search-first hero ============ */
-  .c-search-hero { padding: var(--space-6) var(--space-6) var(--space-4); text-align: center; position: relative; }
-  .c-search-box { max-width: 560px; margin: 0 auto; position: relative; }
-  .c-search-input { width: 100%; box-sizing: border-box; padding: 14px 18px; border-radius: var(--radius-full); border: 2px solid var(--color-border); font-size: var(--text-base); font-family: var(--font-sans); outline: none; transition: border-color 0.15s ease; }
-  .c-search-input:focus { border-color: var(--color-primary); }
-  .c-suggest-row { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; margin-top: var(--space-3); }
-  .c-more-filters { text-align: center; margin-top: var(--space-3); position: relative; display: inline-block; }
-  .filters-trigger { background: none; border: none; color: var(--color-primary); font-size: var(--text-sm); font-weight: 600; cursor: pointer; padding: 4px 8px; }
-
-  /* ============ filters panel: desktop = anchored popover, mobile = bottom
-     sheet. Reuses two patterns already validated elsewhere in this sketch
-     set (a popover-style panel, and the card's mobile-sheet slide-up) rather
-     than inventing a third interaction for "more filters". ============ */
-  .filters-panel {
-    position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(0.96);
-    width: 320px; max-width: 90vw; background: var(--color-bg); border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-4);
-    z-index: 50; opacity: 0; pointer-events: none; text-align: left;
-    transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+  /* Hierarchy inside the modal — grounded in what a game already shows:
+     Jugadores/Duración/Dificultad are the exact same three facts every
+     game card's hover-portal and detail page already surface as "pills"
+     (001-D/002-D/005/011's pillsRowHTML) — those get the most visual
+     weight, biggest touch targets, and come first. Tipo is a secondary
+     cluster (still chip-based, still common, but not a "pill" today).
+     Autor/Mecánica — real fields, but the ones closest to hobbyist jargon
+     — get pushed to a visually quiet zone using a searchable combobox
+     (see .fm-combobox below) instead of a wall of buttons, so the modal
+     doesn't read as technical up front. Round 8: dropped every glyph
+     (👥/⏱/🎯/🤝/⚔️) from the group titles AND from the Tipo chip labels —
+     feedback was that this modal doesn't need icons at all, not just "no
+     NEW icons" (Round 7's bar). Text alone carries the labels now. */
+  /* Group labels — reuses the SAME micro-label formula this project has
+     used for every "filter group heading" since 011's real filters-panel
+     (.filter-group h5: text-xs / uppercase / letter-spacing / muted), not a
+     bespoke bigger/bolder style. Round 7 originally gave primary groups
+     their own bold text-base h5 and secondary a different text-sm h5 —
+     that's what read as "a different font" next to the rest of the site;
+     unified back to one label style for every group, primary vs secondary
+     communicated by order + chip size + spacing instead of by typography. */
+  /* Round 8: title→options rhythm rebalanced. Each group's own internal
+     gap (title to its chip row) is now tighter than the gap BETWEEN groups
+     — the Gestalt proximity cue that makes "this title belongs to these
+     options" read clearly, which a flat var(--space-4) for both distances
+     didn't provide. No icons here anymore either (see chip glyphs removed
+     below) so the label no longer needs the flex/gap it had for one. */
+  .fm-primary-group, .fm-secondary { margin-bottom: var(--space-6); }
+  .fm-primary-group h5, .fm-secondary h5 {
+    font-family: var(--font-sans); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--color-text-muted); margin: 0 0 var(--space-3);
   }
-  .filters-panel.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
-  .filters-panel-header { position: relative; display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); }
-  .filters-panel-header strong { font-family: var(--font-display); font-size: var(--text-lg); }
-  .filter-group { margin-bottom: var(--space-4); }
-  .filter-group h5 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin: 0 0 var(--space-2); }
-  .filter-group label { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); padding: 4px 0; cursor: pointer; }
-  .filters-clear-row { margin-top: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
-  .filters-clear-row .pill-btn { width: 100%; justify-content: center; }
-  .filters-backdrop { position: fixed; inset: 0; background: rgba(20,8,34,0.5); z-index: 45; opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); }
+  .fm-primary-row, .fm-secondary-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* primary keeps a slightly bigger tap target than secondary — the ONLY
+     hierarchy cue between them now, not a font swap */
+  .fm-primary-row .chip-toggle { padding: 8px 16px; }
 
-  /* results rail — real edge-fade mechanics VERBATIM from 001-D (via 007's
-     composition), reused here instead of a wrapping grid so filtered results
-     read as the same Netflix-shelf language as the home page, not a
-     different UI mode. */
-  .rail-wrap { position: relative; padding: 0 var(--space-6); }
+  .fm-secondary { padding-top: var(--space-6); border-top: 1px dashed var(--color-border); }
+
+  /* "Más específico" (Round 7) read as a technical meta-label — announcing
+     "this part is more technical" is itself a technical thing to say. No
+     label at all now: a plain text link doubles as the section's only
+     affordance, collapsed by default so Autor/Mecánica don't compete with
+     the primary facets at rest, and auto-expands if either already has a
+     selection (so re-opening the modal never hides an active choice). */
+  .fm-more-wrap { padding-top: var(--space-6); border-top: 1px dashed var(--color-border); }
+  .fm-more-toggle { background: none; border: none; padding: 0; font-family: var(--font-sans); font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .fm-more-chevron { display: inline-block; transition: transform var(--duration-fast) var(--ease-standard); }
+  .fm-more-toggle.open .fm-more-chevron { transform: rotate(90deg); }
+  .fm-tertiary { margin-top: var(--space-6); }
+  .fm-tertiary[hidden] { display: none; }
+  /* Round 8: Autor/Mecánica were flex:1 columns with a min-width, which
+     lets one column's own content (e.g. a wrapped chip row) push it wider
+     than its sibling at in-between viewport widths — the two comboboxes
+     never lined up 1:1. Grid forces an exact 50/50 split regardless of
+     either column's content, and the h6 label is now the SAME text-xs/
+     uppercase/letter-spacing formula as every other group's h5 above it
+     (it only differed in casing/tracking before) so this last section reads
+     as the same family of control as the rest of the modal, not a
+     visually distinct "form" bolted onto a "filter panel". */
+  .fm-tertiary-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+  .fm-tertiary-col h6 {
+    font-family: var(--font-sans); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--color-text-muted); margin: 0 0 var(--space-3);
+  }
+
+  /* Round 8, third follow-up: two tries at an inline growing tag field
+     (chips-above-input, then chips+input merged into one box) both kept
+     reading as "weird" — because a tag field that GROWS as you select more
+     is the pattern for assigning values to a record (Gmail "To:", Notion's
+     multi-select property), not for FILTERING a result set. The actual
+     common pattern for filtering a large-cardinality field (hundreds of
+     authors/mechanics once this catalog is real) is a fixed search box on
+     top of a scrollable checkbox list — Amazon/Etsy sidebar filters,
+     Airbnb's own filters, Linear, GitHub Issues, Notion filter views all do
+     this. Selected count shows as a small suffix on the column's own h6
+     label instead of growing chips, so nothing in this box ever changes
+     size or position as selections change — there's no rhythm to break. */
+  .fm-checklist { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; transition: border-color var(--duration-fast) var(--ease-standard); }
+  .fm-checklist:focus-within { border-color: var(--color-primary); }
+  .fm-checklist-search { display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; border: none; border-bottom: 1px solid var(--color-border); background: transparent; color: var(--color-text); font-size: var(--text-sm); font-family: var(--font-sans); outline: none; }
+  /* capped height + internal scroll, not the field growing — this is what
+     actually lets the ~400-game catalog's real author/mechanic counts fit
+     without ballooning the modal, unlike a chip field that grows per pick */
+  .fm-checklist-list { max-height: 160px; overflow-y: auto; }
+  .fm-checklist-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: var(--text-sm); color: var(--color-text); cursor: pointer; }
+  .fm-checklist-row:hover { background: var(--color-accent-bg); }
+  .fm-checklist-row input[type="checkbox"] { accent-color: var(--color-primary); width: 15px; height: 15px; flex: 0 0 auto; cursor: pointer; }
+  .fm-checklist-empty { padding: 10px; font-size: var(--text-xs); color: var(--color-text-muted); }
+  /* the count suffix sits inside an uppercase/tracked h6 (see .fm-tertiary-col
+     h6 above) — reset both so "(3)" reads as a normal number, not shouted */
+  .fm-count { text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--color-text-muted); }
+
+  /* Chip control — matches 011's real .chip (the mobile category-filter
+     chip, the project's own established "clickable filter pill" control),
+     NOT the plain display-only .pill from the card/detail page (that one's
+     a passive fact badge with no active state — 11px/text-muted/no
+     interaction — using its exact styling for something you click and
+     toggle would remove the selected-state affordance entirely). Matching
+     011's .chip means: same text-xs size, same 6px/14px padding, same
+     radius-full, same resting/active colors already proven elsewhere. */
+  .chip-toggle { border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); font-size: var(--text-xs); font-weight: 600; padding: 6px 14px; border-radius: var(--radius-full); cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); white-space: nowrap; }
+  .chip-toggle:hover { border-color: var(--color-primary); }
+  .chip-toggle.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  @media (max-width: 640px) {
+    .filter-modal-backdrop { align-items: flex-end; padding: 0; }
+    .filter-modal { width: 100%; max-width: none; max-height: 88vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+    /* the grid's 50/50 split gets too cramped for a combobox input at
+       phone widths — stack Autor above Mecánica instead */
+    .fm-tertiary-row { grid-template-columns: 1fr; }
+  }
+
+  /* ============ shelves / rail / card — verbatim from Round 3/4/5/6/011 ============ */
+  main.catalog-main { max-width: 100%; padding: 0 0 var(--space-12); }
+  .row-header { padding: 0 var(--space-6); max-width: 1280px; margin: 0 auto; }
+  .row-heading { font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0; color: var(--color-text); }
+  .row-heading.hero { color: var(--color-primary); }
+  .row-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); margin: 2px 0 0; }
+  section.shelf { margin-bottom: var(--space-6); }
+  section.shelf.hero { padding: var(--space-6) 0 var(--space-4); margin-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
+  .rail-wrap { position: relative; padding: 0 var(--space-6); max-width: 1280px; margin: 0 auto; }
   .rail-wrap::before, .rail-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 48px; z-index: 4; pointer-events: none; }
   .rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
   .rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
-  .rail { display: flex; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; gap: var(--space-4); padding: var(--space-2) 0 var(--space-3); }
+  section.shelf.hero .rail-wrap::before, section.shelf.hero .rail-wrap::after { display: none; }
+  .rail { display: flex; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; padding: var(--space-2) 0 var(--space-3); gap: var(--space-4); }
   .rail::-webkit-scrollbar { display: none; }
-  .s-card { flex: 0 0 auto; width: 190px; }
-
-  @media (max-width: 640px) {
-    .c-search-hero { padding: var(--space-4) var(--space-4) var(--space-3); }
-    .c-search-input { padding: 12px 16px; font-size: var(--text-sm); }
-    .c-search-input::placeholder { font-size: var(--text-xs); }
-    .c-suggest-row { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin: var(--space-3) calc(-1 * var(--space-4)) 0; padding: 0 var(--space-4); }
-    .c-suggest-row::-webkit-scrollbar { display: none; }
-    .c-suggest-row .pill-btn { white-space: nowrap; }
-    .rail-wrap, main { padding-left: var(--space-4); padding-right: var(--space-4); }
-    .rail-wrap::before, .rail-wrap::after { width: 20px; }
-    .s-card { width: 128px; }
-
-    /* filters panel becomes a bottom-sheet drawer on mobile — same slide-up
-       + backdrop language as the card's mobile-sheet pattern (002-D/007),
-       not the desktop popover's anchored-scale animation. */
-    .filters-panel {
-      position: fixed; top: auto; left: 0; right: 0; bottom: 0; transform: translateY(100%);
-      width: auto; max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      max-height: 78vh; overflow-y: auto; padding: var(--space-4) var(--space-4) var(--space-6);
-      transition: transform var(--duration-slow) var(--ease-out-soft);
-    }
-    .filters-panel.open { transform: translateY(0); }
-    .filters-backdrop.open { opacity: 1; pointer-events: auto; }
-    .filters-panel-header::before { content: ""; display: block; width: 40px; height: 4px; background: var(--color-border); border-radius: var(--radius-full); position: absolute; top: var(--space-2); left: 50%; transform: translateX(-50%); }
-  }
+  .rail-btn { position: absolute; top: 0; bottom: 0; width: 44px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; background: transparent; color: var(--color-text); opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
+  .rail-wrap:hover .rail-btn { opacity: 1; }
+  .rail-btn.prev { left: 0; } .rail-btn.next { right: 0; }
+  .rail-btn svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); }
+  .p1 { background: linear-gradient(135deg,#3D096D,#7E4CA5); } .p2 { background: linear-gradient(135deg,#7E4CA5,#A97FD1); }
+  .p3 { background: linear-gradient(135deg,#22103A,#3D096D); } .p4 { background: linear-gradient(135deg,#B23A5C,#7E4CA5); }
+  .p5 { background: linear-gradient(135deg,#3F8F6B,#3D096D); } .p6 { background: linear-gradient(135deg,#B8862F,#7E4CA5); }
+  .card { flex: 0 0 auto; width: 190px; border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .card:hover { transform: translateY(-3px); }
+  .card.hero-card { width: 240px; }
+  .card.filtered-out { display: none; }
+  .poster-art { aspect-ratio: 1 / 1.05; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: rgba(255,255,255,0.85); }
+  .card.hero-card .poster-art { font-size: 3rem; }
+  .card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .card .cap h4 { margin: 0; font-size: var(--text-sm); font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .shelf-empty { padding: 0 var(--space-6) var(--space-4); max-width: 1280px; margin: 0 auto; color: var(--color-text-muted); font-size: var(--text-sm); }
+  .shelf-empty[hidden] { display: none; }
 
   #sketch-tools { position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;display:flex;gap:8px;align-items:center; }
   #sketch-tools:hover { opacity: 1; }
@@ -110,151 +239,284 @@
 </head>
 <body>
 
-<div id="sketch-note">
-  <strong>Sketch 008 — Filter/Search UI</strong>&nbsp;·&nbsp;winner: Search-First Overlay (shelf results + real mobile treatment + filters panel)
-</div>
+<div id="sketch-note"><strong>Sketch 008 — Round 8</strong> · icons dropped from group titles + Tipo chips, title→options rhythm loosened, Autor/Mecánica now a true 50/50 grid with matching label style, "Limpiar filtros" restyled as an outlined secondary button</div>
 
-<div class="app-nav">
-  <span class="brand"><strong>PUKLLAY CLUB</strong></span>
-</div>
-
-<div class="c-search-hero">
-  <div class="c-search-box">
-    <input class="c-search-input" id="c-search" placeholder="¿Qué querés jugar hoy? Ej: algo de negociación para 4…" oninput="onSearchInput(this.value)">
-  </div>
-  <div class="c-suggest-row" id="c-suggest"></div>
-  <div class="c-more-filters">
-    <button class="filters-trigger" onclick="toggleFiltersPanel()">Más filtros <span class="count" id="active-count"></span> ▾</button>
-    <div class="filters-panel" id="filters-panel">
-      <div class="filters-panel-header">
-        <strong>Filtros</strong>
-        <button class="pill-btn" onclick="toggleFiltersPanel()">✕</button>
+<div class="app-nav" data-scroll-nav>
+  <div class="app-nav-inner">
+    <a href="#" class="brand" onclick="return false;" aria-label="Ir al inicio" title="Ir al inicio">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+      <span class="brand-text"><strong>PUKLLAY CLUB</strong><span>Juegos de mesa modernos</span></span>
+    </a>
+    <div class="links"><a href="#" class="active">Inicio</a><a href="#">Quiénes Somos</a></div>
+    <div class="search-filter-cluster">
+      <div class="search-wrap">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="search-input" placeholder="¿Qué querés jugar hoy? Título…" oninput="onSearchInput(this.value)">
+        </div>
       </div>
-      <div id="filters-panel-body"></div>
+      <button class="filter-icon-btn" id="filter-icon-btn" onclick="openModal()" aria-label="Filtrar">
+        <span class="icon-box">🎚</span><span class="filter-badge" id="filter-badge"></span>
+      </button>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar tema"></button>
+  </div>
+</div>
+
+<div class="filter-modal-backdrop" id="filter-modal-backdrop" onclick="if(event.target===this) closeModal()">
+  <div class="filter-modal">
+    <div class="filter-modal-header">
+      <button class="theme-toggle fm-close" onclick="closeModal()" aria-label="Cerrar filtros">✕</button>
+      <strong>Filtros</strong>
+    </div>
+    <div class="filter-modal-body" id="filter-modal-body"></div>
+    <div class="filter-modal-footer">
+      <button class="fm-clear" id="fm-clear" onclick="clearAll()">✕ Limpiar filtros</button>
+      <button class="fm-show-btn" id="fm-show-btn" onclick="closeModal()">Ver juegos</button>
     </div>
   </div>
 </div>
 
-<div class="filters-backdrop" id="filters-backdrop" onclick="toggleFiltersPanel()"></div>
+<main class="catalog-main"><div id="shelves"></div></main>
 
-<main style="padding-top:0;">
-  <div class="results-meta" id="meta"></div>
-  <div class="rail-wrap"><div class="rail" id="grid"></div></div>
-</main>
-
-<div id="sketch-tools">
-  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
-    <option value="default">Default theme</option>
-    <option value="dark-purple">Dark purple</option>
-  </select>
-</div>
+<div id="sketch-tools"><span>Round 8 — icon-free, rebalanced filter modal. ☀/🌙 uses the real theme toggle.</span></div>
 
 <script>
-// ---- real CatalogLive.Index filter dimensions: mechanics, weight_bands,
-// themes, tags, players, max_playtime, min_age. This demo exercises
-// weight_bands + mechanics + players + max_playtime + free-text search. ----
+// ==================== THEME TOGGLE ====================
+function currentResolvedTheme() {
+  const explicit = document.documentElement.dataset.theme;
+  if (explicit) return explicit;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function applyThemeToggleIcon() {
+  const btn = document.querySelector('.app-nav .theme-toggle');
+  if (!btn) return;
+  const resolved = currentResolvedTheme();
+  btn.textContent = resolved === 'dark' ? '☀' : '🌙';
+  btn.setAttribute('aria-label', resolved === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+}
+function toggleTheme() {
+  const next = currentResolvedTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('pk-theme', next);
+  applyThemeToggleIcon();
+}
+(function initTheme() {
+  const saved = localStorage.getItem('pk-theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+})();
+document.addEventListener('DOMContentLoaded', applyThemeToggleIcon);
+
+function openModal() { document.getElementById('filter-modal-backdrop').classList.add('open'); }
+function closeModal() { document.getElementById('filter-modal-backdrop').classList.remove('open'); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+// ==================== DATA — same 14-game set as Rounds 4–6 ====================
 const GAMES = [
-  { title:'Catán', pal:'p1', icon:'🎲', players:[3,4], playtime:[60,90], band:'Ingenio estratega', mechanics:['Comercio','Construcción'] },
-  { title:'Wingspan', pal:'p5', icon:'🦙', players:[1,5], playtime:[40,70], band:'Ingenio estratega', mechanics:['Construcción de motor'] },
-  { title:'Hanabi', pal:'p2', icon:'🎆', players:[2,5], playtime:[25,25], band:'Descubre el hobby', mechanics:['Cooperativo'] },
-  { title:'Terraforming Mars', pal:'p3', icon:'🌵', players:[1,5], playtime:[120,180], band:'Nivel experto', mechanics:['Construcción de motor'] },
-  { title:'7 Wonders Duel', pal:'p4', icon:'⚔️', players:[2,2], playtime:[30,30], band:'Ingenio estratega', mechanics:['Draft'] },
-  { title:'El Resistencia', pal:'p6', icon:'🕵️', players:[5,10], playtime:[30,30], band:'Descubre el hobby', mechanics:['Deducción social'] },
-  { title:'Azul', pal:'p2', icon:'🔷', players:[2,4], playtime:[30,45], band:'Descubre el hobby', mechanics:['Draft','Abstracto'] },
-  { title:'Brass: Birmingham', pal:'p3', icon:'🏭', players:[2,4], playtime:[90,120], band:'Nivel experto', mechanics:['Construcción de motor','Comercio'] },
-  { title:'Codenames', pal:'p1', icon:'🕶️', players:[4,8], playtime:[15,15], band:'Descubre el hobby', mechanics:['Equipo'] },
-  { title:'Pandemic', pal:'p5', icon:'🦠', players:[2,4], playtime:[45,60], band:'Ingenio estratega', mechanics:['Cooperativo'] },
-  { title:'Splendor', pal:'p4', icon:'💎', players:[2,4], playtime:[30,30], band:'Descubre el hobby', mechanics:['Motor económico'] },
-  { title:'Ticket to Ride', pal:'p6', icon:'🚂', players:[2,5], playtime:[30,60], band:'Descubre el hobby', mechanics:['Construcción','Set collection'] },
+  { key:'catan', title:'Catán', pal:'p1', icon:'🎲', minP:3, maxP:4, minT:60, maxT:90, weightLabel:'Ingenio estratega', mechanics:['Comercio','Construcción'], author:'Klaus Teuber', type:'Competitivo' },
+  { key:'wingspan', title:'Wingspan', pal:'p5', icon:'🦙', minP:1, maxP:5, minT:40, maxT:70, weightLabel:'Ingenio estratega', mechanics:['Construcción de motor'], author:'Elizabeth Hargrave', type:'Competitivo' },
+  { key:'hanabi', title:'Hanabi', pal:'p2', icon:'🎆', minP:2, maxP:5, minT:25, maxT:25, weightLabel:'Descubre el hobby', mechanics:['Cooperativo'], author:'Antoine Bauza', type:'Cooperativo' },
+  { key:'tm', title:'Terraforming Mars: Ares Expedition', pal:'p3', icon:'🌵', minP:1, maxP:5, minT:120, maxT:180, weightLabel:'Nivel experto', mechanics:['Construcción de motor'], author:'Jacob Fryxelius', type:'Competitivo' },
+  { key:'7wd', title:'7 Wonders Duel', pal:'p4', icon:'⚔️', minP:2, maxP:2, minT:30, maxT:30, weightLabel:'Ingenio estratega', mechanics:['Draft'], author:'Antoine Bauza & Bruno Cathala', type:'Competitivo' },
+  { key:'resistencia', title:'La Resistencia', pal:'p6', icon:'🕵️', minP:5, maxP:10, minT:30, maxT:30, weightLabel:'Descubre el hobby', mechanics:['Deducción social'], author:'Don Eskridge', type:'Equipo' },
+  { key:'azul', title:'Azul', pal:'p2', icon:'🔷', minP:2, maxP:4, minT:30, maxT:45, weightLabel:'Descubre el hobby', mechanics:['Draft','Abstracto'], author:'Michael Kiesling', type:'Competitivo' },
+  { key:'brass', title:'Brass: Birmingham', pal:'p3', icon:'🏭', minP:2, maxP:4, minT:90, maxT:120, weightLabel:'Nivel experto', mechanics:['Construcción de motor','Comercio'], author:'Martin Wallace & Gavan Brown', type:'Competitivo' },
+  { key:'codenames', title:'Codenames', pal:'p1', icon:'🕶️', minP:4, maxP:8, minT:15, maxT:15, weightLabel:'Descubre el hobby', mechanics:['Equipo'], author:'Vlaada Chvátil', type:'Equipo' },
+  { key:'pandemic', title:'Pandemic', pal:'p5', icon:'🦠', minP:2, maxP:4, minT:45, maxT:60, weightLabel:'Ingenio estratega', mechanics:['Cooperativo'], author:'Matt Leacock', type:'Cooperativo' },
+  { key:'splendor', title:'Splendor', pal:'p4', icon:'💎', minP:2, maxP:4, minT:30, maxT:30, weightLabel:'Descubre el hobby', mechanics:['Motor económico'], author:'Marc André', type:'Competitivo' },
+  { key:'ttr', title:'Ticket to Ride', pal:'p6', icon:'🚂', minP:2, maxP:5, minT:30, maxT:60, weightLabel:'Descubre el hobby', mechanics:['Construcción','Set collection'], author:'Alan R. Moon', type:'Competitivo' },
+  { key:'scythe', title:'Scythe', pal:'p1', icon:'⚙️', minP:1, maxP:5, minT:90, maxT:115, weightLabel:'Nivel experto', mechanics:['Construcción de motor'], author:'Jamey Stegmaier', type:'Competitivo' },
+  { key:'gaia', title:'Gaia Project', pal:'p6', icon:'🌌', minP:1, maxP:4, minT:60, maxT:150, weightLabel:'Nivel experto', mechanics:['Construcción de motor'], author:'Helge Ostertag & Jens Drögemüller', type:'Competitivo' },
 ];
 const MECHANICS = [...new Set(GAMES.flatMap(g => g.mechanics))];
+const AUTHORS = [...new Set(GAMES.map(g => g.author))].sort();
 const BANDS = ['Descubre el hobby','Ingenio estratega','Nivel experto'];
+const TYPES = [['Cooperativo','Cooperativo'], ['Competitivo','Competitivo'], ['Equipo','Equipo']];
+const PLAYERS = [['2','2'], ['3','3'], ['4','4'], ['5','5+']];
+const PLAYTIME = [['30','Hasta 30 min'], ['60','30–60 min'], ['90','60–90 min'], ['999','90+ min']];
 
-function playersText(g){ return g.players[0]===g.players[1] ? g.players[0] : g.players[0]+'-'+g.players[1]; }
-function timeText(g){ return g.playtime[0]===g.playtime[1] ? g.playtime[0]+' min' : g.playtime[0]+'-'+g.playtime[1]+' min'; }
+const SHELVES = [
+  { id:'shelf-destacados', title:'Destacados del club', subtitle:'La selección del club — los juegos que más recomendamos ahora mismo.', hero:true, keys:['catan','wingspan','tm','azul','codenames','ttr'] },
+  { id:'shelf-hobby', title:'Descubre el hobby', subtitle:'Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez.', keys:['hanabi','resistencia','azul','codenames','splendor','ttr'] },
+  { id:'shelf-estratega', title:'Ingenio estratega', subtitle:'Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante.', keys:['catan','wingspan','7wd','pandemic'] },
+  { id:'shelf-experto', title:'Nivel experto', subtitle:'Partidas largas y sistemas con varias piezas moviéndose a la vez.', keys:['tm','brass','scythe','gaia'] },
+];
 
-const state = { q:'', band:null, mechanic:null, maxPlaytime:null };
-
-function filterGames() {
-  return GAMES.filter(g =>
-    (!state.q || g.title.toLowerCase().includes(state.q.toLowerCase())) &&
-    (!state.band || g.band === state.band) &&
-    (!state.mechanic || g.mechanics.includes(state.mechanic)) &&
-    (!state.maxPlaytime || g.playtime[0] <= state.maxPlaytime)
-  );
+function cardHTML(g){ return `<div class="card" data-key="${g.key}"><div class="poster-art ${g.pal}">${g.icon}</div><div class="cap"><h4>${g.title}</h4></div></div>`; }
+function scrollRail(btn, dir) { const rail = btn.closest('.rail-wrap').querySelector('.rail'); rail.scrollBy({ left: dir * rail.clientWidth * 0.9, behavior: 'smooth' }); }
+function renderShelves() {
+  document.getElementById('shelves').innerHTML = SHELVES.map(s => `
+    <section class="shelf${s.hero ? ' hero' : ''}" data-shelf-id="${s.id}">
+      <div class="row-header"><h2 class="row-heading${s.hero ? ' hero' : ''}">${s.title}</h2><p class="row-subtitle">${s.subtitle}</p></div>
+      <div class="rail-wrap">
+        <button class="rail-btn prev" onclick="scrollRail(this,-1)" aria-label="Anterior"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div class="rail">${s.keys.map(k => cardHTML(GAMES.find(g => g.key === k))).join('')}</div>
+        <button class="rail-btn next" onclick="scrollRail(this,1)" aria-label="Siguiente"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+      <div class="shelf-empty" hidden>Sin juegos en esta sección con estos filtros.</div>
+    </section>`).join('');
 }
 
-function cardHTML(g) {
-  return `<div class="s-card g-card"><div class="art ${g.pal}">${g.icon}</div><div class="cap"><h4>${g.title}</h4><div class="fact">👥 ${playersText(g)} · ⏱ ${timeText(g)}</div></div></div>`;
+// ==================== FILTER STATE / LOGIC ====================
+// authors/mechanics are arrays now (OR-within-facet: "Draft o Cooperativo"),
+// not a single value — a plain single-select couldn't express that, and
+// wouldn't scale past this demo's 14 games once the real ~400-game catalog
+// gives these two facets far more possible values.
+const state = { q:'', players:null, playtime:null, band:null, type:null, authors:[], mechanics:[] };
+const CHIP_KEYS = ['players','playtime','band','type'];
+let moreExpanded = false;
+const comboQuery = { author:'', mechanic:'' };
+function overlapsPlaytime(g, bucketMax) {
+  const buckets = { '30':[0,30], '60':[30,60], '90':[60,90], '999':[90,Infinity] };
+  const [lo, hi] = buckets[bucketMax];
+  return g.maxT >= lo && g.minT <= hi;
 }
-
-function renderGrid() {
-  const items = filterGames();
-  const grid = document.getElementById('grid');
-  const meta = document.getElementById('meta');
-  const railWrap = grid.closest('.rail-wrap');
-  meta.textContent = items.length + ' juego' + (items.length === 1 ? '' : 's') + ' encontrado' + (items.length === 1 ? '' : 's');
-  grid.innerHTML = items.length ? items.map(cardHTML).join('') : '';
-  railWrap.parentElement.querySelector('.empty-msg')?.remove();
-  railWrap.style.display = items.length ? '' : 'none';
-  if (!items.length) {
-    const msg = document.createElement('div');
-    msg.className = 'empty-msg';
-    msg.textContent = 'Ningún juego coincide con esos filtros. Probá sacar alguno.';
-    railWrap.after(msg);
-  }
+function matches(g, s) {
+  return (!s.q || g.title.toLowerCase().includes(s.q.toLowerCase()))
+    && (!s.players || (s.players === '5' ? g.maxP >= 5 : (g.minP <= Number(s.players) && Number(s.players) <= g.maxP)))
+    && (!s.playtime || overlapsPlaytime(g, s.playtime))
+    && (!s.band || g.weightLabel === s.band)
+    && (!s.type || g.type === s.type)
+    && (!s.authors.length || s.authors.includes(g.author))
+    && (!s.mechanics.length || g.mechanics.some(m => s.mechanics.includes(m)));
 }
+function isActive() { return !!state.q || CHIP_KEYS.some(k => state[k]) || state.authors.length > 0 || state.mechanics.length > 0; }
+function totalMatches() { return GAMES.filter(g => matches(g, state)).length; }
+function escapeAttr(s) { return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
 
-function onSearchInput(val) {
-  state.q = val;
-  renderGrid();
-  const box = document.getElementById('c-suggest');
-  if (!val) { box.innerHTML = ''; return; }
-  box.innerHTML = MECHANICS.slice(0,5).map(m => `<button class="pill-btn ${state.mechanic===m?'active':''}" onclick="quickFilter('mechanic','${m}')">${m}</button>`).join('');
+function chipRowHTML(key, options) {
+  return options.map(([v,l]) => `<button class="chip-toggle" data-group="${key}" data-val="${v}">${l}</button>`).join('');
 }
-
-function quickFilter(key, val) {
-  state[key] = state[key] === val ? null : val;
-  renderGrid();
-  renderFiltersPanel();
-  onSearchInput(state.q);
+function comboSource(key) { return key === 'author' ? AUTHORS : MECHANICS; }
+function comboSelected(key) { return state[key === 'author' ? 'authors' : 'mechanics']; }
+// checklist rows: selected values pin to the top when there's no active
+// search, so a pick stays visible without scrolling — only the unfiltered
+// resting list needs this; an active query already narrows the list enough
+// that pinning would just be confusing (a selected-but-non-matching value
+// popping to the top of a filtered result set).
+function checklistRowsHTML(key) {
+  const selected = comboSelected(key);
+  const q = (comboQuery[key] || '').trim().toLowerCase();
+  const source = comboSource(key);
+  const list = q
+    ? source.filter(v => v.toLowerCase().includes(q))
+    : [...selected, ...source.filter(v => !selected.includes(v))];
+  if (!list.length) return `<div class="fm-checklist-empty">Sin coincidencias</div>`;
+  return list.map(v => `
+    <label class="fm-checklist-row">
+      <input type="checkbox" data-combo="${key}" data-val="${escapeAttr(v)}" ${selected.includes(v) ? 'checked' : ''}>
+      ${v}
+    </label>`).join('');
 }
-
-function filtersPanelHTML() {
-  const s = state;
-  const anyActive = s.band || s.mechanic || s.maxPlaytime;
+function comboboxHTML(key, label) {
+  const selected = comboSelected(key);
+  const count = selected.length ? ` <span class="fm-count">(${selected.length})</span>` : '';
+  return `<div class="fm-tertiary-col">
+    <h6>${label}${count}</h6>
+    <div class="fm-checklist" data-combo-wrap="${key}">
+      <input type="text" class="fm-checklist-search" id="fm-${key}-input" value="${escapeAttr(comboQuery[key] || '')}" placeholder="Buscar ${label.toLowerCase()}…" autocomplete="off">
+      <div class="fm-checklist-list" id="fm-${key}-list">${checklistRowsHTML(key)}</div>
+    </div>
+  </div>`;
+}
+function modalBodyHTML() {
+  const anyMore = state.authors.length > 0 || state.mechanics.length > 0;
+  if (anyMore) moreExpanded = true;
   return `
-    <div class="filter-group"><h5>Dificultad</h5>${BANDS.map(b => `<label><input type="radio" name="f-band" ${s.band===b?'checked':''} onchange="quickFilter('band','${b}')"> ${b}</label>`).join('')}</div>
-    <div class="filter-group"><h5>Mecánica</h5>${MECHANICS.map(m => `<label><input type="radio" name="f-mech" ${s.mechanic===m?'checked':''} onchange="quickFilter('mechanic','${m}')"> ${m}</label>`).join('')}</div>
-    <div class="filter-group"><h5>Duración</h5>${[30,60,90].map(t => `<label><input type="radio" name="f-time" ${s.maxPlaytime===t?'checked':''} onchange="quickFilter('maxPlaytime',${t})"> Hasta ${t} min</label>`).join('')}</div>
-    <div class="filters-clear-row"><button class="pill-btn" onclick="clearFilters()" ${anyActive ? '' : 'disabled'}>✕ Limpiar filtros</button></div>
+    <div class="fm-primary-group"><h5>Jugadores</h5><div class="fm-primary-row">${chipRowHTML('players', PLAYERS)}</div></div>
+    <div class="fm-primary-group"><h5>Duración</h5><div class="fm-primary-row">${chipRowHTML('playtime', PLAYTIME)}</div></div>
+    <div class="fm-primary-group"><h5>Dificultad</h5><div class="fm-primary-row">${chipRowHTML('band', BANDS.map(b => [b,b]))}</div></div>
+    <div class="fm-secondary"><h5>Tipo de juego</h5><div class="fm-secondary-row">${chipRowHTML('type', TYPES)}</div></div>
+    <div class="fm-more-wrap">
+      <button type="button" class="fm-more-toggle${moreExpanded ? ' open' : ''}" onclick="toggleMore()">Buscar por autor o mecánica <span class="fm-more-chevron">›</span></button>
+      <div class="fm-tertiary" ${moreExpanded ? '' : 'hidden'}>
+        <div class="fm-tertiary-row">
+          ${comboboxHTML('author', 'Autor')}
+          ${comboboxHTML('mechanic', 'Mecánica')}
+        </div>
+      </div>
+    </div>
   `;
 }
-function renderFiltersPanel() {
-  document.getElementById('filters-panel-body').innerHTML = filtersPanelHTML();
-  const n = [state.band, state.mechanic, state.maxPlaytime].filter(Boolean).length;
-  document.getElementById('active-count').textContent = n ? `(${n})` : '';
+function toggleMore() {
+  moreExpanded = !moreExpanded;
+  renderModal();
 }
-function toggleFiltersPanel() {
-  document.getElementById('filters-panel').classList.toggle('open');
-  document.getElementById('filters-backdrop').classList.toggle('open');
+// only the list re-renders on keystroke, not the whole modal body — a full
+// renderModal() on every 'input' event would rebuild the search box itself
+// and drop focus/cursor position mid-type
+function renderChecklistList(key) {
+  const box = document.getElementById('fm-' + key + '-list');
+  if (box) box.innerHTML = checklistRowsHTML(key);
 }
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.filters-panel') && !e.target.closest('.c-more-filters')) {
-    document.getElementById('filters-panel')?.classList.remove('open');
-    document.getElementById('filters-backdrop')?.classList.remove('open');
+function toggleComboValue(key, val) {
+  const stateKey = key === 'author' ? 'authors' : 'mechanics';
+  const idx = state[stateKey].indexOf(val);
+  if (idx === -1) state[stateKey].push(val); else state[stateKey].splice(idx, 1);
+  syncAll();
+  applyFilters();
+}
+function renderModal() {
+  document.getElementById('filter-modal-body').innerHTML = modalBodyHTML();
+  document.querySelectorAll('#filter-modal-body .chip-toggle[data-group]').forEach(c => c.classList.toggle('active', state[c.dataset.group] === c.dataset.val));
+  ['author','mechanic'].forEach(key => {
+    const input = document.getElementById('fm-' + key + '-input');
+    if (!input) return;
+    input.addEventListener('input', (e) => { comboQuery[key] = e.target.value; renderChecklistList(key); });
+  });
+}
+document.getElementById('filter-modal-body').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip-toggle[data-group]');
+  if (chip) {
+    state[chip.dataset.group] = state[chip.dataset.group] === chip.dataset.val ? null : chip.dataset.val;
+    syncAll();
+    applyFilters();
   }
 });
+// change (not click) — fires once per toggle whether the checkbox itself or
+// its wrapping <label> text was clicked, so there's no double-handling risk
+document.getElementById('filter-modal-body').addEventListener('change', (e) => {
+  const cb = e.target.closest('input[type="checkbox"][data-combo]');
+  if (cb) toggleComboValue(cb.dataset.combo, cb.dataset.val);
+});
 
-function clearFilters() {
-  state.band = null; state.mechanic = null; state.maxPlaytime = null;
-  renderGrid();
-  renderFiltersPanel();
-  onSearchInput(state.q);
+function syncAll() {
+  renderModal();
+  const n = CHIP_KEYS.filter(k => state[k]).length + (state.authors.length ? 1 : 0) + (state.mechanics.length ? 1 : 0);
+  document.getElementById('filter-badge').textContent = n ? n : '';
+  document.getElementById('filter-icon-btn').classList.toggle('has-active', n > 0);
+  const active = isActive();
+  const total = totalMatches();
+  document.getElementById('fm-show-btn').textContent = active ? `Ver ${total} juego${total===1?'':'s'}` : 'Ver juegos';
+  document.getElementById('fm-clear').disabled = !active;
+}
+function onSearchInput(val) { state.q = val; syncAll(); applyFilters(); }
+function clearAll() {
+  state.q = ''; CHIP_KEYS.forEach(k => state[k] = null); state.authors = []; state.mechanics = []; moreExpanded = false;
+  comboQuery.author = ''; comboQuery.mechanic = '';
+  document.getElementById('search-input').value = '';
+  syncAll();
+  applyFilters();
+}
+function applyFilters() {
+  document.querySelectorAll('#shelves .card').forEach(card => {
+    const g = GAMES.find(g => g.key === card.dataset.key);
+    card.classList.toggle('filtered-out', !matches(g, state));
+  });
+  document.querySelectorAll('#shelves section.shelf').forEach(shelf => {
+    const allHidden = [...shelf.querySelectorAll('.card')].every(c => c.classList.contains('filtered-out'));
+    shelf.querySelector('.rail-wrap').style.display = allHidden ? 'none' : '';
+    shelf.querySelector('.shelf-empty').hidden = !allHidden;
+  });
 }
 
-renderFiltersPanel();
-renderGrid();
+renderShelves();
+syncAll();
+applyFilters();
+applyThemeToggleIcon();
+window.addEventListener('scroll', () => {
+  document.querySelector('[data-scroll-nav]')?.classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
 </script>
 
 </body>
