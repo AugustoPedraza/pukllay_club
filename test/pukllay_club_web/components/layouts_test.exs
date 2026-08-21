@@ -89,6 +89,45 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  describe "brand_logo/1 hit target" do
+    test "the wordmark link meets the app's 44px hit-target floor" do
+      html = render_component(&Layouts.brand_logo/1, %{})
+
+      assert html =~ "min-h-11"
+    end
+  end
+
+  # Guards the 2026-08-18 banned-Tailwind-pattern todo: text-[10px] is an
+  # arbitrary value and text-base-content/70 is an unmaintained holdover —
+  # both explicitly banned by ui-design-system in favor of the app's
+  # documented text-neutral muted-text convention.
+  describe "brand_logo/1 tagline tokens" do
+    test "renders the tagline through theme tokens, not banned arbitrary/opacity classes" do
+      html = render_component(&Layouts.brand_logo/1, %{})
+
+      refute html =~ "text-[10px]"
+      refute html =~ "text-base-content/70"
+      assert html =~ "text-neutral"
+    end
+  end
+
+  describe "theme_toggle/1 accessible names and hit target" do
+    test "each of the three buttons announces a distinct Spanish accessible name" do
+      html = render_component(&Layouts.theme_toggle/1, %{})
+
+      assert html =~ ~r/aria-label="[^"]*sistema[^"]*"/i
+      assert html =~ ~r/aria-label="[^"]*claro[^"]*"/i
+      assert html =~ ~r/aria-label="[^"]*oscuro[^"]*"/i
+    end
+
+    test "each button meets the app's 44px hit-target floor on both axes" do
+      html = render_component(&Layouts.theme_toggle/1, %{})
+
+      assert html |> String.split("min-h-11") |> length() == 4
+      assert html |> String.split("min-w-11") |> length() == 4
+    end
+  end
+
   describe "root layout" do
     test "declares Spanish as the document language", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/")
