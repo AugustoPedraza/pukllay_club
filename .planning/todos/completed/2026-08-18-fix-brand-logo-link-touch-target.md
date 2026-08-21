@@ -21,3 +21,16 @@ https://claude.ai/code/artifact/f067cf3b-84ec-41d5-970c-71e035bc7f90
 
 Add `min-h-11` (or equivalent padding adjustment) to the `<a>` in `layouts.ex:31-39` without disturbing
 the logo/wordmark's visual alignment in the navbar. Re-measure post-fix to confirm ≥44px.
+
+## Resolution
+
+**Date:** 2026-08-21
+
+**Fixed here.** Added `min-h-11` directly to the `<a>` in `Layouts.brand_logo/1` (`flex-1 flex
+w-fit items-center gap-2 min-h-11`). The anchor was already `flex items-center`, so the height
+floor alone was sufficient — no padding restructuring needed; the isologo/wordmark/tagline lockup
+stays vertically centred inside the taller box.
+
+Guarded by `test/pukllay_club_web/components/layouts_test.exs` (asserts `min-h-11` present on the
+rendered `brand_logo/1` output). Optical alignment in the live navbar is re-confirmed in this
+plan's Task 5 browser checkpoint.

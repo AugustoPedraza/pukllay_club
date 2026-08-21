@@ -26,3 +26,28 @@ Replace `text-[10px] ... text-base-content/70` in `layouts.ex:35` with the app's
 (`text-neutral text-sm`, or the closest token-based size if `text-sm` reads too large for a tagline —
 check against the brand's actual UI-SPEC sizing intent, not just swap-and-ship). Re-check the resulting
 font-combo count on the catalog screen drops by one entry.
+
+## Resolution
+
+**Date:** 2026-08-21
+
+**Fixed here.** `text-[10px] uppercase tracking-widest text-base-content/70` became
+`text-xs uppercase tracking-widest text-neutral`.
+
+Color: `text-neutral` is the app's documented muted-text token, replacing the banned
+opacity-suffixed `text-base-content/70`.
+
+Size: `text-sm` (14px, the muted-text convention's documented size) was tried first and read too
+large for a tagline sitting directly under a `text-2xl` (24px) wordmark — at a near-1.7x ratio to
+the previous 10px, it competed with the wordmark rather than reading as a subordinate line.
+Dropped one token-based step down to `text-xs` (12px) — Tailwind's own default type scale, not an
+arbitrary value, so it stays inside the banned-patterns rule while landing closer to the original
+visual proportion. `font-sans`, `uppercase`, and `tracking-widest` were left unchanged (out of
+scope for this todo).
+
+Guarded by `test/pukllay_club_web/components/layouts_test.exs` (refutes both banned classes,
+asserts `text-neutral` present).
+
+This also removes the `10px/400` combo from the "10 font combos vs cap of 3" todo's measured
+inventory — Task 4 re-measures the full catalogue screen against the current, post-fix markup
+rather than assuming this one change resolves that todo on its own.
