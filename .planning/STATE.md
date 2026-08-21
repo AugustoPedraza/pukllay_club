@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.1
 current_phase_name: Site Shell & Content Pages (INSERTED)
 status: executing
-stopped_at: Phase 01.1 context gathered
-last_updated: "2026-08-21T14:48:20.505Z"
-last_activity: 2026-08-19
-last_activity_desc: Phase 01 execution started
-state_head: 8c1e2b54716a8225dfb102bb3f4c053ff83b28dc
+stopped_at: Completed 01.1-01-PLAN.md
+last_updated: "2026-08-21T17:56:47.206Z"
+last_activity: 2026-08-21
+last_activity_desc: Phase 01.1 execution started
+state_head: f4c7f6d947f61586bb45a883027f5b44342fdf4e
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 19
-  completed_plans: 12
+  completed_plans: 13
 milestone_name: milestone
 ---
 
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-07-24)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01 — Catalog v1
+**Current focus:** Phase 01.1 — Site Shell & Content Pages (INSERTED)
 
 ## Current Position
 
-Phase: 01.1 (Site Shell & Content Pages (INSERTED)) — READY TO EXECUTE
-Plan: 4 of 12
+Phase: 01.1 (Site Shell & Content Pages (INSERTED)) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-08-19 — Phase 01 execution started
+Last activity: 2026-08-21 — Phase 01.1 execution started
 structure (0-4)
 
 Progress: [██████████] 100%
@@ -78,6 +78,7 @@ Progress: [██████████] 100%
 | Phase 01 P10 | 55min | 3 tasks | 7 files |
 | Phase 01 P11 | 65min | 3 tasks | 6 files |
 | Phase 01 P12 | 90min | 3 tasks | 6 files |
+| Phase 01.1 P01 | 115min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-08: CarouselRow gains variant/subtitle (hero colour ranking, no fourth type size) + main-grid section header (G-01-4); 6/8 row subtitles reuse Vocabulary D-05/D-06 copy, 2 newly authored and flagged for review
 - [Phase ?]: 01-08: .CarouselScroll colocated hook adds persistent, self-hiding prev/next rail controls (ResizeObserver + scrollWidth/clientWidth), zero app.js/config.exs edits; @carousel_limit stays at 20 per ux-patterns B9's content-rail flip case (G-01-3)
 - [Phase 01]: Quick task 260821-dah: closed all 7 2026-08-18 UI audit findings on CatalogLive.Index (filter-drawer overlap, theme-toggle a11y/hit-target, logo/tagline tokens, button.secondary variant, re-measured type inventory at 5 combos/3-tier cap); closes the 01-05-PLAN.md drawer/pills tappability thread, recorded as an addendum in 01-VERIFICATION.md
+- [Phase 01.1]: Task 2(a) BGG attribution: 'Powered by BGG' link to boardgamegeek.com with the real logo mark; (b) footer social set revised post-Task-1 to WhatsApp/Facebook/Instagram/Email (linktree_url removed); (c) catalog header nav links replaced with the About page's Inicio/Quiénes Somos wayfinding links
 
 ### Pending Todos
 
@@ -212,6 +214,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T13:47:36.926Z
-Stopped at: Phase 01.1 context gathered
-Resume file: .planning/phases/01.1-site-shell-content-pages-implement-the-not-yet-built-sketch/01.1-CONTEXT.md
+Last session: 2026-08-21T17:56:47.118Z
+Stopped at: Completed 01.1-01-PLAN.md
+Resume file: None

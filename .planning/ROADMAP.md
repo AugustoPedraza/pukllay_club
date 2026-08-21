@@ -144,14 +144,14 @@ be pulled forward without breaking that dependency chain.
 
 All findings for this phase are already captured in `.claude/skills/sketch-findings-pukllay_club/` — this phase implements them, it does not design them.
 
-**Plans:** 7 plans
+**Plans:** 1/7 plans executed
 **UI hint**: yes
 
 Plans:
 
 **Wave 1**
 
-- [ ] 01.1-01-PLAN.md — TRACER: `/club` + `/quienes-somos` routes, 3-state header, site-wide Sumate CTA, shared footer (SHELL-01)
+- [x] 01.1-01-PLAN.md — TRACER: `/club` + `/quienes-somos` routes, 3-state header, site-wide Sumate CTA, shared footer (SHELL-01)
 
 **Wave 2** *(blocked on Wave 1: shared `about_live.ex` and `app.css`)*
 
