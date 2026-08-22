@@ -40,6 +40,68 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  describe "brand_logo/1 theme-aware isologo pair (260821-v7q)" do
+    test "renders exactly two <img> elements inside the <a> when both marks are present" do
+      html = render_component(&Layouts.brand_logo/1, %{})
+
+      imgs =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("a img")
+
+      assert Enum.count(imgs) == 2
+    end
+
+    test "the light mark carries dark:hidden and the dark mark carries hidden dark:block, both width=36 alt=\"\"" do
+      html = render_component(&Layouts.brand_logo/1, %{})
+
+      [light_img_html, dark_img_html] =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("a img")
+        |> Enum.map(&LazyHTML.to_html/1)
+
+      assert light_img_html =~ "isologo-light.png"
+      assert light_img_html =~ ~s(class="dark:hidden")
+      assert light_img_html =~ ~s(width="36")
+      assert light_img_html =~ ~s(alt="")
+
+      assert dark_img_html =~ "isologo-dark.png"
+      assert dark_img_html =~ ~s(class="hidden dark:block")
+      assert dark_img_html =~ ~s(width="36")
+      assert dark_img_html =~ ~s(alt="")
+    end
+
+    test "both marks also render inside the footer's .pk-footer-left cluster" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      footer_left_imgs =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-footer-left img")
+
+      assert Enum.count(footer_left_imgs) == 2
+    end
+
+    test "forcing isologo? false renders no <img> and keeps the wordmark + default tagline" do
+      html = render_component(&Layouts.brand_logo/1, %{isologo?: false})
+
+      imgs =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("img")
+
+      assert Enum.empty?(imgs)
+      assert html =~ "PUKLLAY CLUB"
+      assert html =~ "JUEGOS DE MESA MODERNOS"
+    end
+
+    test "both mark paths satisfy File.exists?/1 (gate truthfulness)" do
+      assert File.exists?("priv/static/images/isologo-light.png")
+      assert File.exists?("priv/static/images/isologo-dark.png")
+    end
+  end
+
   describe "app/1 header" do
     test "shows the brand wordmark and tagline" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
