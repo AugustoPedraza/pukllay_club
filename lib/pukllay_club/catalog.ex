@@ -19,6 +19,7 @@ defmodule PukllayClub.Catalog do
 
   @default_limit 24
   @carousel_limit 20
+  @similares_limit 12
   @allowed_sorts [
     :name_asc,
     :playtime_asc,
@@ -106,6 +107,32 @@ defmodule PukllayClub.Catalog do
   or a 500 (T-01-30).
   """
   def get_game!(id), do: Repo.get!(Game, id)
+
+  @doc """
+  Games "similar" to `game` for the detail page's Juegos similares shelf.
+
+  "Similar" means: same `weight_band` as `game`, excluding `game` itself,
+  ordered by name, capped at #{@similares_limit} (01.1-03 checkpoint
+  decision — weight band is this app's primary complexity-teaching facet
+  and already backs three home-page carousel rows; the alternative
+  mechanics/themes-overlap axis was rejected as a new query shape with no
+  existing precedent). `game.weight_band` is nullable — a game with no band
+  returns `[]` explicitly rather than matching every other unbanded game
+  (which `g.weight_band == ^nil` would otherwise do silently in SQL).
+
+  Anything semantic (mechanics/themes overlap, embeddings) belongs to
+  Phase 2's hybrid search (SEARCH-01..04), not here.
+  """
+  def similar_games(%Game{weight_band: nil}), do: []
+
+  def similar_games(%Game{id: id, weight_band: weight_band}) do
+    from(g in Game,
+      where: g.weight_band == ^weight_band and g.id != ^id,
+      order_by: [asc: g.name],
+      limit: ^@similares_limit
+    )
+    |> Repo.all()
+  end
 
   @doc """
   Pill options for the filter drawer: mechanic/theme Spanish labels, weight

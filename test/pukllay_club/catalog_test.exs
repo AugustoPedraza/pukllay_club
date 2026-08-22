@@ -279,4 +279,48 @@ defmodule PukllayClub.CatalogTest do
       assert Catalog.count_games(q: "Wingspan Europa") == 1
     end
   end
+
+  describe "similar_games/1 (SHELL-03 — 01.1-03 checkpoint: weight-band, capped at 12)" do
+    test "never includes the game itself" do
+      game = game_fixture(%{name: "Self", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Bandmate", weight_band: "nivel_experto"})
+
+      refute game.id in Enum.map(Catalog.similar_games(game), & &1.id)
+    end
+
+    test "only returns games sharing the same weight band" do
+      game = game_fixture(%{name: "Base", weight_band: "nivel_experto"})
+      same_band = game_fixture(%{name: "Same Band", weight_band: "nivel_experto"})
+      other_band = game_fixture(%{name: "Other Band", weight_band: "descubre_el_hobby"})
+
+      results = Catalog.similar_games(game)
+
+      assert Enum.any?(results, &(&1.id == same_band.id))
+      refute Enum.any?(results, &(&1.id == other_band.id))
+    end
+
+    test "a game whose band has no other members returns an empty list" do
+      lonely = game_fixture(%{name: "Lonely", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Different Band", weight_band: "nivel_experto"})
+
+      assert Catalog.similar_games(lonely) == []
+    end
+
+    test "a game with a nil weight_band returns an empty list" do
+      unbanded = game_fixture(%{name: "Unbanded", weight_band: nil})
+      game_fixture(%{name: "Also Unbanded", weight_band: nil})
+
+      assert Catalog.similar_games(unbanded) == []
+    end
+
+    test "the result never exceeds the cap when more than 12 band-mates exist" do
+      game = game_fixture(%{name: "Base", weight_band: "ingenio_estratega"})
+
+      for n <- 1..15 do
+        game_fixture(%{name: "Bandmate #{n}", weight_band: "ingenio_estratega"})
+      end
+
+      assert length(Catalog.similar_games(game)) == 12
+    end
+  end
 end
