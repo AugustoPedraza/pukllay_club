@@ -23,7 +23,13 @@ defmodule PukllayClubWeb.Layouts do
 
   Renders the isologo mark when `priv/static/images/isologo.svg` exists at compile time, and
   degrades to the wordmark + tagline lockup without a broken image reference when it does not.
+
+  The second-line tagline is overridable via the `tagline` attr — the header uses the default,
+  the footer overrides it with the About page's hero tagline so the two clusters don't repeat
+  the same copy (260821-umm).
   """
+  attr :tagline, :string, default: "JUEGOS DE MESA MODERNOS"
+
   def brand_logo(assigns) do
     assigns = assign(assigns, :isologo?, @isologo?)
 
@@ -33,7 +39,7 @@ defmodule PukllayClubWeb.Layouts do
       <span class="flex flex-col leading-none">
         <span class="font-display text-2xl uppercase tracking-wide">PUKLLAY CLUB</span>
         <span class="font-sans text-xs uppercase tracking-widest text-neutral">
-          JUEGOS DE MESA MODERNOS
+          {@tagline}
         </span>
       </span>
     </a>
@@ -226,12 +232,17 @@ defmodule PukllayClubWeb.Layouts do
   # developer — supersedes the plan's original WhatsApp/Instagram/
   # linktr.ee menu), and the BGG attribution is "Powered by BGG" + the
   # BGG logo mark, rendered by `bgg_attribution/1` below.
+  #
+  # The left cluster overrides brand_logo/1's tagline with the About page's
+  # hero tagline ("Conectá jugando", verbatim from about_live.ex) instead of
+  # the header's default subtitle, so the footer doesn't just repeat the
+  # header's copy (260821-umm).
   defp footer(assigns) do
     ~H"""
     <footer class="pk-footer">
       <div class="pk-footer-row mx-auto w-full max-w-7xl pk-gutter">
         <div class="pk-footer-left">
-          <.brand_logo />
+          <.brand_logo tagline="Conectá jugando" />
           <ul class="pk-footer-links">
             <li><a href="/quienes-somos#faq">FAQ</a></li>
             <li><a href="/quienes-somos#contacto">Contacto</a></li>
