@@ -10,7 +10,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   `handle_event("select-image", ...)` swaps the main image only when the
   client-supplied `url` is a member of the game's own
   `[cover_url | gallery_urls]` list — a crafted url is never echoed
-  unchecked into an `img src` (T-01-26).
+  unchecked into an `img src` (T-01-26). The lightbox (`handle_event(
+  "open-lightbox"/"close-lightbox", ...)`) reuses this exact handler and
+  whitelist for its own previous/next controls, so there is a single
+  guarded image-selection path, not a second one (T-01.1-16).
 
   Every field from this plan's `<planner_assumption>` omission table is
   individually conditional: an absent field removes its whole row/element,
@@ -20,10 +23,14 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   bottom CTA bar and the sticky title-echo bar off a single passive
   `scroll` listener + `getBoundingClientRect()` — deliberately not the
   viewport-observer API Chrome throttles/suspends in a backgrounded tab.
+  `.Lightbox` and `.ShareButton` never assemble markup or a URL from
+  strings/`dataset` values (T-01.1-08) — share intent hrefs are built
+  server-side in HEEx with `URI.encode_www_form/1`.
   """
   use PukllayClubWeb, :live_view
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.CarouselRow
   alias PukllayClubWeb.GameChips
@@ -42,7 +49,8 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:theme_labels, Vocabulary.covered_themes(game.themes))
      |> assign(:similar_games, Catalog.similar_games(game))
      |> assign(:similares_subtitle, similares_subtitle(game))
-     |> assign(:description_expanded, false)}
+     |> assign(:description_expanded, false)
+     |> assign(:lightbox_open, false)}
   end
 
   @impl true
@@ -57,6 +65,16 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   @impl true
   def handle_event("toggle-description", _params, socket) do
     {:noreply, update(socket, :description_expanded, &(!&1))}
+  end
+
+  @impl true
+  def handle_event("open-lightbox", _params, socket) do
+    {:noreply, assign(socket, :lightbox_open, true)}
+  end
+
+  @impl true
+  def handle_event("close-lightbox", _params, socket) do
+    {:noreply, assign(socket, :lightbox_open, false)}
   end
 
   # Inert stub — wired to a real reservation flow by plan 01.1-05. Returning
@@ -188,20 +206,21 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           <div class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
               <div class="pk-poster-col">
-                <div class="aspect-video overflow-hidden rounded-box bg-base-300">
-                  <img
-                    :if={@selected_image}
-                    src={@selected_image}
-                    alt={@game.name}
-                    class="h-full w-full object-cover"
-                  />
-                  <div
-                    :if={!@selected_image}
-                    class="flex h-full w-full items-center justify-center text-primary"
-                  >
-                    <.icon name="hero-puzzle-piece" class="size-16" />
-                    <span class="sr-only">{@game.name}</span>
-                  </div>
+                <button
+                  :if={@selected_image}
+                  type="button"
+                  phx-click="open-lightbox"
+                  aria-label="Ampliar imagen del juego"
+                  class="aspect-video overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
+                >
+                  <img src={@selected_image} alt={@game.name} class="h-full w-full object-cover" />
+                </button>
+                <div
+                  :if={!@selected_image}
+                  class="aspect-video overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
+                >
+                  <.icon name="hero-puzzle-piece" class="size-16" />
+                  <span class="sr-only">{@game.name}</span>
                 </div>
 
                 <div
@@ -225,13 +244,16 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
                 <%!-- Real handler lands in plan 01.1-05; open-reservation is
                 an inert stub until then so the button never crashes. --%>
-                <button
-                  type="button"
-                  phx-click="open-reservation"
-                  class="btn btn-primary btn-block min-h-11"
-                >
-                  {reservation_cta_label()}
-                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    phx-click="open-reservation"
+                    class="btn btn-primary min-h-11 flex-1"
+                  >
+                    {reservation_cta_label()}
+                  </button>
+                  <.share_control id="detail-share-buybox" game={@game} />
+                </div>
               </div>
 
               <div class="pk-text-col">
@@ -324,6 +346,81 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           <button type="button" phx-click="open-reservation" class="btn btn-primary min-h-11 flex-1">
             {reservation_cta_label()}
           </button>
+          <.share_control id="detail-share-ctabar" game={@game} />
+        </div>
+
+        <div
+          :if={@lightbox_open}
+          id="detail-lightbox"
+          class="pk-lightbox is-open"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Imágenes del juego"
+          phx-hook=".Lightbox"
+        >
+          <script :type={Phoenix.LiveView.ColocatedHook} name=".Lightbox">
+            export default {
+              mounted() {
+                this.closeBtn = this.el.querySelector("[data-lightbox-close]")
+                this.closeBtn?.focus()
+
+                this.onKeydown = (e) => {
+                  if (e.key === "Escape") {
+                    this.pushEvent("close-lightbox", {})
+                    return
+                  }
+                  if (e.key !== "Tab") return
+                  const focusable = this.el.querySelectorAll(
+                    'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                  )
+                  if (focusable.length === 0) return
+                  const first = focusable[0]
+                  const last = focusable[focusable.length - 1]
+                  if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault()
+                    last.focus()
+                  } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault()
+                    first.focus()
+                  }
+                }
+                this.el.addEventListener("keydown", this.onKeydown)
+              },
+              destroyed() {
+                this.el.removeEventListener("keydown", this.onKeydown)
+              }
+            }
+          </script>
+          <button
+            type="button"
+            data-lightbox-close
+            phx-click="close-lightbox"
+            aria-label="Cerrar"
+            class="pk-lightbox-close btn btn-circle min-h-11 min-w-11"
+          >
+            <.icon name="hero-x-mark" class="size-5" />
+          </button>
+          <button
+            :if={length(gallery_thumbnails(@game)) > 1}
+            type="button"
+            phx-click="select-image"
+            phx-value-url={lightbox_neighbor(@game, @selected_image, -1)}
+            aria-label="Imagen anterior"
+            class="btn btn-circle min-h-11 min-w-11 absolute left-4 top-1/2 -translate-y-1/2"
+          >
+            <.icon name="hero-chevron-left" class="size-5" />
+          </button>
+          <img src={@selected_image} alt={@game.name} class="pk-lightbox-img" />
+          <button
+            :if={length(gallery_thumbnails(@game)) > 1}
+            type="button"
+            phx-click="select-image"
+            phx-value-url={lightbox_neighbor(@game, @selected_image, 1)}
+            aria-label="Imagen siguiente"
+            class="btn btn-circle min-h-11 min-w-11 absolute right-4 top-1/2 -translate-y-1/2"
+          >
+            <.icon name="hero-chevron-right" class="size-5" />
+          </button>
         </div>
       </div>
     </Layouts.app>
@@ -335,10 +432,129 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # between the two surfaces.
   defp reservation_cta_label, do: "Reservar para el sábado"
 
+  @doc false
+  attr :id, :string, required: true
+  attr :game, Game, required: true
+
+  # Shared by the buy-box column and the mobile CTA bar (01.1-04) so the
+  # two share controls can never drift. Native Web Share API first
+  # (.ShareButton hook); the fallback popover's WhatsApp/X intent hrefs and
+  # the copy-link target are built server-side in HEEx with
+  # URI.encode_www_form/1 — no client-side URL assembly (T-01.1-08).
+  defp share_control(assigns) do
+    assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game.id}"))
+
+    ~H"""
+    <div class="pk-share-wrap relative inline-block">
+      <button
+        type="button"
+        id={@id}
+        phx-hook=".ShareButton"
+        data-share-title={@game.name}
+        data-share-url={@share_url}
+        aria-label="Compartir juego"
+        class="btn btn-circle btn-outline btn-primary min-h-11 min-w-11"
+      >
+        <.icon name="hero-share" class="size-5" />
+      </button>
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".ShareButton">
+        export default {
+          mounted() {
+            this.title = this.el.dataset.shareTitle
+            this.url = this.el.dataset.shareUrl
+            this.popover = this.el.parentElement.querySelector(".pk-share-popover")
+            this.copyBtn = this.popover?.querySelector("[data-copy-link]")
+            this.copyConfirm = this.popover?.querySelector("[data-copy-confirm]")
+            this.copyTimer = null
+
+            this.onClick = () => {
+              if (navigator.share) {
+                navigator.share({title: this.title, url: this.url}).catch(() => {})
+                return
+              }
+              this.popover?.classList.toggle("is-open")
+            }
+            this.el.addEventListener("click", this.onClick)
+
+            this.onCopyClick = () => {
+              navigator.clipboard.writeText(this.copyBtn.dataset.shareUrl).then(() => {
+                this.copyConfirm?.classList.remove("hidden")
+                clearTimeout(this.copyTimer)
+                this.copyTimer = setTimeout(() => this.copyConfirm?.classList.add("hidden"), 2000)
+              })
+            }
+            this.copyBtn?.addEventListener("click", this.onCopyClick)
+
+            this.onDocumentClick = (e) => {
+              if (this.popover?.classList.contains("is-open") && !this.el.parentElement.contains(e.target)) {
+                this.popover.classList.remove("is-open")
+              }
+            }
+            document.addEventListener("click", this.onDocumentClick)
+          },
+          destroyed() {
+            this.el.removeEventListener("click", this.onClick)
+            this.copyBtn?.removeEventListener("click", this.onCopyClick)
+            document.removeEventListener("click", this.onDocumentClick)
+            clearTimeout(this.copyTimer)
+          }
+        }
+      </script>
+      <div id={"#{@id}-popover"} class="pk-share-popover" role="menu" aria-label="Compartir por">
+        <a
+          href={"https://wa.me/?text=" <> URI.encode_www_form("#{@game.name} #{@share_url}")}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Compartir por WhatsApp"
+          class="btn btn-outline min-h-11 justify-start"
+        >
+          WhatsApp
+        </a>
+        <a
+          href={
+            "https://twitter.com/intent/tweet?text=" <>
+              URI.encode_www_form(@game.name) <> "&url=" <> URI.encode_www_form(@share_url)
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Compartir por X"
+          class="btn btn-outline min-h-11 justify-start"
+        >
+          X (Twitter)
+        </a>
+        <button
+          type="button"
+          data-copy-link
+          data-share-url={@share_url}
+          aria-label="Copiar enlace"
+          class="btn btn-outline min-h-11 justify-start"
+        >
+          Copiar enlace
+        </button>
+        <span data-copy-confirm class="pk-copy-confirm hidden text-sm text-neutral">
+          Enlace copiado
+        </span>
+      </div>
+    </div>
+    """
+  end
+
   # `cover_url` first so it's always the initial thumbnail/main image when
   # present; nils filtered so an absent cover never mints a broken `<img>`.
   defp gallery_thumbnails(game) do
     Enum.reject([game.cover_url | game.gallery_urls], &is_nil/1)
+  end
+
+  # The lightbox's previous/next controls reuse this against the same
+  # whitelist gallery_thumbnails/1 builds — there is no second,
+  # independently-derived image list (T-01.1-16). Wraps around both ends.
+  defp lightbox_neighbor(game, current, offset) do
+    urls = gallery_thumbnails(game)
+
+    case Enum.find_index(urls, &(&1 == current)) do
+      nil -> current
+      idx -> Enum.at(urls, rem(idx + offset + length(urls), length(urls)))
+    end
   end
 
   defp playtime_text(%{playing_time: t}) when is_integer(t), do: "#{t} min"
