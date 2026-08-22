@@ -31,13 +31,6 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ "JUEGOS DE MESA MODERNOS"
     end
 
-    test "renders without a broken image reference when the isologo asset is absent" do
-      refute File.exists?("priv/static/images/isologo.svg")
-
-      html = render_component(&Layouts.brand_logo/1, %{})
-
-      refute html =~ "isologo.svg"
-    end
   end
 
   describe "brand_logo/1 theme-aware isologo pair (260821-v7q)" do
@@ -306,7 +299,7 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ "JUEGOS DE MESA MODERNOS"
     end
 
-    test "the footer's left cluster still renders no broken isologo image reference" do
+    test "the footer's left cluster renders both theme marks with their dark: variant classes" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
       footer_left_html =
@@ -315,7 +308,10 @@ defmodule PukllayClubWeb.LayoutsTest do
         |> LazyHTML.query(".pk-footer-left")
         |> LazyHTML.to_html()
 
-      refute footer_left_html =~ "isologo.svg"
+      assert footer_left_html =~ "isologo-light.png"
+      assert footer_left_html =~ ~s(class="dark:hidden")
+      assert footer_left_html =~ "isologo-dark.png"
+      assert footer_left_html =~ ~s(class="hidden dark:block")
     end
   end
 
