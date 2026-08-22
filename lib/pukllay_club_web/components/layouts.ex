@@ -329,29 +329,54 @@ defmodule PukllayClubWeb.Layouts do
             <.icon name="hero-x-mark-micro" class="size-4" />
           </button>
         </div>
-        <div class="pk-nav-actions">
-          <.sumate_cta />
-          <.theme_toggle />
-        </div>
+        <.theme_toggle />
       </div>
     </header>
     """
   end
 
-  # The site-wide "Sumate" join CTA (D-05) — a built-in element of
-  # header_inner/1, deliberately NOT a caller-owned slot (unlike
-  # nav_links/nav_search/crumb above), so no page can fork by forgetting to
-  # pass it. This is this plan's one documented deviation from
-  # 01.1-PATTERNS.md's suggested `sumate_cta` slot: a slot can be omitted by
-  # a caller, which would silently reintroduce the exact per-page-fork risk
-  # SHELL-01 exists to prevent, so it's rendered unconditionally instead.
-  defp sumate_cta(assigns) do
+  @doc """
+  The "Sumate" join CTA — the club's WhatsApp group invite link.
+
+  **D-05 superseded (plan 01.1-08).** D-05 originally put this CTA in the
+  header site-wide, rendered unconditionally inside `header_inner/1` (never a
+  slot) precisely because *a slot can be omitted by a caller*, which would
+  silently reintroduce the per-page-fork risk SHELL-01 exists to prevent.
+  Sketch 013 asked the scope question and deferred it; sketch 017 Round 3
+  reopened it on the developer's direct, twice-repeated instruction. The CTA
+  is no longer a header element in any form — not a slot, not a built-in. It
+  renders on the About page's hero only (`AboutLive`), and, below 480px, in
+  a page-scoped mobile CTA bar (plan 01.1-09).
+
+  Search and the CTA moved in opposite directions for the same underlying
+  reason: search became cheap enough to spread to *more* pages (Catálogo and
+  Detalle) once it stopped needing a permanent box and became a 44px icon
+  (sketch 017 Round 4). The CTA was never a space problem, it was a
+  **context** problem — "Sumate al club" asks for a commitment before the
+  value case has been made, and only Quiénes Somos makes that case.
+
+  The omission risk D-05 feared is not lost — it is replaced by a stronger,
+  executable guarantee: tests assert the CTA is **absent** from `#app-header`
+  on `/` and `/juegos/:id`, and **present** in the hero of both `/club` and
+  `/quienes-somos` (D-01's two aliases). That catches accidental
+  reintroduction into the header too, which unconditional rendering could not.
+
+  Styled per sketch 013-E: outline at rest, filling on hover — checked
+  `CoreComponents.button/1`'s `"secondary"` variant (`btn-outline
+  btn-primary`, added by quick task 260821-dah) first and reused its exact
+  classes directly rather than the component itself, since `button/1`'s
+  `:rest` global attr list does not include `target`/`rel` (needed here for
+  an external link) and would silently drop them.
+  """
+  attr :class, :string, default: nil
+
+  def sumate_cta(assigns) do
     ~H"""
     <a
       href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
       target="_blank"
       rel="noopener noreferrer"
-      class="btn btn-primary min-h-12"
+      class={["btn btn-outline btn-primary min-h-12", @class]}
     >
       Sumate
     </a>

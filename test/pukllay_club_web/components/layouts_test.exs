@@ -181,34 +181,16 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  # Header cluster rework (quick task 260822-2v9): the Sumate CTA and the theme
-  # toggle now render as siblings inside one .pk-nav-actions container, the
-  # header element carries the horizontal-padding-zeroing utility alongside
-  # navbar, and the brand wrapper no longer swallows the row's free space.
-  # Scoped to #app-header via LazyHTML so main/footer markup can't produce a
-  # false pass (both also render a theme toggle / brand lockup elsewhere).
-  describe "app/1 header cluster rework (260822-2v9)" do
-    test "the header contains a pk-nav-actions container grouping the CTA and theme toggle" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      header_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("#app-header")
-        |> LazyHTML.to_html()
-
-      assert header_html =~ "pk-nav-actions"
-
-      actions_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("#app-header .pk-nav-actions")
-        |> LazyHTML.to_html()
-
-      assert actions_html =~ "Sumate"
-      assert actions_html =~ "phx:set-theme"
-    end
-
+  # Header cluster rework (quick task 260822-2v9): the header element carries
+  # the horizontal-padding-zeroing utility alongside navbar, and the brand
+  # wrapper no longer swallows the row's free space. The .pk-nav-actions
+  # container this describe block originally covered (grouping the CTA and
+  # theme toggle) is superseded by plan 01.1-08 — the CTA left the header
+  # entirely (Task 2, see "app/1 join CTA is not a shell element" below) and
+  # the wrapper itself was removed along with it. Scoped to #app-header via
+  # LazyHTML so main/footer markup can't produce a false pass (both also
+  # render a theme toggle / brand lockup elsewhere).
+  describe "app/1 header cluster rework (260822-2v9, .pk-nav-actions superseded by 01.1-08)" do
     test "the header element carries px-0 alongside navbar (kills the competing padding source)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
@@ -384,30 +366,51 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  describe "app/1 Sumate CTA (D-05)" do
-    test "renders unconditionally with the ClubLinks WhatsApp href and rel=noopener noreferrer, even when no slot is passed" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+  describe "sumate_cta/1 (D-05 superseded, plan 01.1-08)" do
+    test "renders the ClubLinks WhatsApp href with target=_blank and rel=noopener noreferrer" do
+      html = render_component(&Layouts.sumate_cta/1, %{})
 
       assert html =~ PukllayClubWeb.ClubLinks.whatsapp_group_url()
       assert html =~ "Sumate"
+      assert html =~ ~s(target="_blank")
       assert html =~ ~s(rel="noopener noreferrer")
     end
 
-    # 260822-2v9 Task 2: the CTA rises from daisyUI's small-size button (32px) to
-    # the row's shared 48px anchor height and drops the small-size modifier — the
-    # theme toggle's fixed 48px pill is what the other two row elements now match.
-    test "carries the filled primary button classes and the 48px height utility, no small-size modifier (260822-2v9)" do
+    # Sketch 013-E: outline at rest, filling on hover — the same classes as
+    # CoreComponents.button/1's "secondary" variant, applied directly since
+    # button/1's :rest global attr list doesn't carry target/rel through.
+    test "carries the outline-at-rest button classes and the 48px height utility" do
+      html = render_component(&Layouts.sumate_cta/1, %{})
+
+      assert html =~ "btn-outline"
+      assert html =~ "btn-primary"
+      assert html =~ "min-h-12"
+      refute html =~ "btn-sm"
+    end
+
+    test "is now public (no longer a private header-only function)" do
+      assert function_exported?(Layouts, :sumate_cta, 1)
+    end
+  end
+
+  describe "app/1 join CTA is not a shell element (D-05 superseded, plan 01.1-08)" do
+    test "the #app-header subtree contains neither the CTA label nor the WhatsApp URL" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      [cta_html] =
+      header_html =
         html
         |> LazyHTML.from_document()
-        |> LazyHTML.query("#app-header .pk-nav-actions a")
-        |> Enum.map(&LazyHTML.to_html/1)
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
 
-      assert cta_html =~ "btn-primary"
-      assert cta_html =~ "min-h-12"
-      refute cta_html =~ "btn-sm"
+      refute header_html =~ "Sumate"
+      refute header_html =~ PukllayClubWeb.ClubLinks.whatsapp_group_url()
+    end
+
+    test ".pk-nav-actions is absent from the rendered document" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      refute html =~ "pk-nav-actions"
     end
   end
 

@@ -705,19 +705,6 @@ body.pk-sheet-open {
   padding-block: 0;
 }
 
-/* One right-aligned action unit (Sumate CTA + theme toggle), deliberately tighter
-   (0.75rem) than .pk-nav-inner's 1.5rem row gap so the two read as one cluster rather
-   than two loose items. margin-left: auto is the universal right-edge fallback for
-   pages with neither a search box nor a crumb (Quiénes Somos) — a no-op everywhere
-   else since the growing search/crumb already consumes the leftover space. */
-.pk-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 0 0 auto;
-  margin-left: auto;
-}
-
 /* Detalle's breadcrumb (page-shell.md's Detalle header state). Base
    styling only — the narrow-viewport collapse to "‹ Ludoteca" lives in
    the one trailing @media block below, per this stylesheet's

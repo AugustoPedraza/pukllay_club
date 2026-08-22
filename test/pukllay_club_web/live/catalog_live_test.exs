@@ -689,6 +689,20 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "no join CTA in the header (D-05 superseded, plan 01.1-08)" do
+    test "the #app-header subtree contains no join-CTA label", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      refute header_html =~ "Sumate"
+    end
+  end
+
   describe "Ver todo tile wired to real filter state (01-11)" do
     test "clicking the tile on the tag-backed shelf renders only the tagged game and hides the shelves",
          %{conn: conn} do

@@ -44,6 +44,9 @@ defmodule PukllayClubWeb.AboutLive do
           <p class="font-sans text-base text-neutral">
             Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.
           </p>
+          <div class="flex justify-center">
+            <Layouts.sumate_cta />
+          </div>
         </section>
       </div>
     </Layouts.app>

@@ -35,21 +35,41 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert quienes_html =~ "pk-footer"
     end
 
-    test "both routes render the site-wide Sumate CTA linking to the WhatsApp group", %{
-      conn: conn
-    } do
-      {:ok, _view, club_html} = live(conn, ~p"/club")
-      {:ok, _view, quienes_html} = live(conn, ~p"/quienes-somos")
-
-      assert club_html =~ ClubLinks.whatsapp_group_url()
-      assert quienes_html =~ ClubLinks.whatsapp_group_url()
-    end
-
     test "renders nav-links with Quiénes Somos marked active, never a breadcrumb", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       assert html =~ ~s(aria-current="page")
       refute html =~ "pk-nav-crumb"
+    end
+  end
+
+  describe "join CTA renders in the hero, not the header (D-05 superseded, plan 01.1-08)" do
+    test "both /club and /quienes-somos render the CTA with the WhatsApp href and rel=noopener noreferrer", %{
+      conn: conn
+    } do
+      {:ok, _view, club_html} = live(conn, ~p"/club")
+      {:ok, _view, quienes_html} = live(conn, ~p"/quienes-somos")
+
+      for html <- [club_html, quienes_html] do
+        assert html =~ "Sumate"
+        assert html =~ ClubLinks.whatsapp_group_url()
+        assert html =~ ~s(rel="noopener noreferrer")
+      end
+    end
+
+    test "both routes render no join CTA inside #app-header", %{conn: conn} do
+      {:ok, _view, club_html} = live(conn, ~p"/club")
+      {:ok, _view, quienes_html} = live(conn, ~p"/quienes-somos")
+
+      for html <- [club_html, quienes_html] do
+        header_html =
+          html
+          |> LazyHTML.from_document()
+          |> LazyHTML.query("#app-header")
+          |> LazyHTML.to_html()
+
+        refute header_html =~ "Sumate"
+      end
     end
   end
 end

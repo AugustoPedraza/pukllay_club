@@ -212,5 +212,21 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert header_html =~ ~s(role="search")
       assert header_html =~ ~s(action="/")
     end
+
+    test "the #app-header subtree contains no join-CTA label (D-05 superseded, plan 01.1-08)", %{
+      conn: conn
+    } do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      refute header_html =~ "Sumate"
+    end
   end
 end
