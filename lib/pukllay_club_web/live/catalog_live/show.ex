@@ -20,7 +20,9 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Vocabulary
+  alias PukllayClubWeb.CarouselRow
   alias PukllayClubWeb.GameChips
+  alias PukllayClubWeb.GamePreview
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -32,7 +34,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:game, game)
      |> assign(:selected_image, game.cover_url)
      |> assign(:mechanic_labels, Vocabulary.covered_mechanics(game.mechanics))
-     |> assign(:theme_labels, Vocabulary.covered_themes(game.themes))}
+     |> assign(:theme_labels, Vocabulary.covered_themes(game.themes))
+     |> assign(:similar_games, Catalog.similar_games(game))
+     |> assign(:similares_subtitle, similares_subtitle(game))
+     |> assign(:description_expanded, false)}
   end
 
   @impl true
@@ -42,6 +47,19 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_event("toggle-description", _params, socket) do
+    {:noreply, update(socket, :description_expanded, &(!&1))}
+  end
+
+  # Inert stub — wired to a real reservation flow by plan 01.1-05. Returning
+  # {:noreply, socket} unchanged means clicking the buy-box CTA does nothing
+  # visible yet rather than crashing in the interim.
+  @impl true
+  def handle_event("open-reservation", _params, socket) do
+    {:noreply, socket}
   end
 
   @impl true
@@ -70,78 +88,135 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         </form>
       </:nav_search>
 
-      <div class="mx-auto w-full max-w-7xl pk-gutter space-y-6">
-        <div class="aspect-video overflow-hidden rounded-box bg-base-300">
-          <img
-            :if={@selected_image}
-            src={@selected_image}
-            alt={@game.name}
-            class="h-full w-full object-cover"
-          />
-          <div
-            :if={!@selected_image}
-            class="flex h-full w-full items-center justify-center text-primary"
-          >
-            <.icon name="hero-puzzle-piece" class="size-16" />
-            <span class="sr-only">{@game.name}</span>
+      <div class="mx-auto w-full max-w-7xl pk-gutter">
+        <div class="pk-detail-masthead">
+          <div class="pk-poster-col">
+            <div class="aspect-video overflow-hidden rounded-box bg-base-300">
+              <img
+                :if={@selected_image}
+                src={@selected_image}
+                alt={@game.name}
+                class="h-full w-full object-cover"
+              />
+              <div
+                :if={!@selected_image}
+                class="flex h-full w-full items-center justify-center text-primary"
+              >
+                <.icon name="hero-puzzle-piece" class="size-16" />
+                <span class="sr-only">{@game.name}</span>
+              </div>
+            </div>
+
+            <div
+              :if={@game.gallery_urls != []}
+              id="gallery-thumbnails"
+              class="flex gap-2 overflow-x-auto"
+            >
+              <button
+                :for={url <- gallery_thumbnails(@game)}
+                type="button"
+                phx-click="select-image"
+                phx-value-url={url}
+                class={[
+                  "h-16 w-16 shrink-0 overflow-hidden rounded-box border-2",
+                  (url == @selected_image && "border-primary") || "border-transparent"
+                ]}
+              >
+                <img src={url} alt={@game.name} class="h-full w-full object-cover" />
+              </button>
+            </div>
+
+            <%!-- Real handler lands in plan 01.1-05; open-reservation is an
+            inert stub until then so the button never crashes. --%>
+            <button
+              type="button"
+              phx-click="open-reservation"
+              class="btn btn-primary btn-block min-h-11"
+            >
+              Reservar para el sábado
+            </button>
+          </div>
+
+          <div class="pk-text-col">
+            <GamePreview.facts_row game={@game} />
+
+            <h1 class="font-display text-3xl">{@game.name}</h1>
+
+            <GameChips.weight_band_badge game={@game} show_descriptor={true} />
+            <GameChips.editorial_tags tags={@game.tags} />
+
+            <div :if={@game.description} class="pk-description">
+              <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
+                {@game.description}
+              </p>
+              <button type="button" phx-click="toggle-description" class="link link-primary text-sm">
+                {(@description_expanded && "Ver menos") || "Ver más"}
+              </button>
+            </div>
+
+            <h2 :if={@mechanic_labels != []} class="pk-section-heading">Mecánicas</h2>
+            <GameChips.chip_row terms={@mechanic_labels} limit={99} />
+
+            <h2 :if={@theme_labels != []} class="pk-section-heading">Temáticas</h2>
+            <GameChips.chip_row terms={@theme_labels} limit={99} />
+
+            <h2 class="pk-section-heading">Ficha técnica</h2>
+            <dl class="pk-spec-list">
+              <div :if={@game.min_players && @game.max_players} class="pk-spec-row">
+                <dt>Jugadores</dt>
+                <dd>{@game.min_players}-{@game.max_players}</dd>
+              </div>
+              <div :if={playtime_text(@game)} class="pk-spec-row">
+                <dt>Duración</dt>
+                <dd>{playtime_text(@game)}</dd>
+              </div>
+              <div :if={@game.min_age} class="pk-spec-row">
+                <dt>Edad mínima</dt>
+                <dd>{@game.min_age}+</dd>
+              </div>
+              <div :if={@game.year_published} class="pk-spec-row">
+                <dt>Año</dt>
+                <dd>{@game.year_published}</dd>
+              </div>
+              <div :if={@game.designers != []} class="pk-spec-row pk-spec-row--wide">
+                <dt>Diseñadores</dt>
+                <dd>{Enum.join(@game.designers, ", ")}</dd>
+              </div>
+              <div :if={@game.publishers != []} class="pk-spec-row pk-spec-row--wide">
+                <dt>Editorial</dt>
+                <dd>{Enum.join(@game.publishers, ", ")}</dd>
+              </div>
+              <div class="pk-spec-row pk-spec-row--wide">
+                <dt>Ilustrador</dt>
+                <dd>No disponible</dd>
+              </div>
+              <div class="pk-spec-row pk-spec-row--wide">
+                <dt>Puesto en el ranking BGG</dt>
+                <dd>No disponible</dd>
+              </div>
+              <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
+                <dd>
+                  <a
+                    href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="link link-primary"
+                  >
+                    Ver ficha completa en BoardGameGeek
+                  </a>
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
-
-        <div
-          :if={@game.gallery_urls != []}
-          id="gallery-thumbnails"
-          class="flex gap-2 overflow-x-auto"
-        >
-          <button
-            :for={url <- gallery_thumbnails(@game)}
-            type="button"
-            phx-click="select-image"
-            phx-value-url={url}
-            class={[
-              "h-16 w-16 shrink-0 overflow-hidden rounded-box border-2",
-              (url == @selected_image && "border-primary") || "border-transparent"
-            ]}
-          >
-            <img src={url} alt={@game.name} class="h-full w-full object-cover" />
-          </button>
-        </div>
-
-        <h1 class="font-display text-3xl">{@game.name}</h1>
-
-        <GameChips.weight_band_badge game={@game} show_descriptor={true} />
-        <GameChips.editorial_tags tags={@game.tags} />
-        <GameChips.chip_row terms={@mechanic_labels} limit={99} />
-        <GameChips.chip_row terms={@theme_labels} limit={99} />
-
-        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
-          <div :if={@game.min_players && @game.max_players}>
-            <dt class="text-neutral">Jugadores</dt>
-            <dd>{@game.min_players}-{@game.max_players}</dd>
-          </div>
-          <div :if={playtime_text(@game)}>
-            <dt class="text-neutral">Duración</dt>
-            <dd>{playtime_text(@game)}</dd>
-          </div>
-          <div :if={@game.min_age}>
-            <dt class="text-neutral">Edad mínima</dt>
-            <dd>{@game.min_age}+</dd>
-          </div>
-          <div :if={@game.year_published}>
-            <dt class="text-neutral">Año</dt>
-            <dd>{@game.year_published}</dd>
-          </div>
-          <div :if={@game.designers != []}>
-            <dt class="text-neutral">Diseñadores</dt>
-            <dd>{Enum.join(@game.designers, ", ")}</dd>
-          </div>
-          <div :if={@game.publishers != []}>
-            <dt class="text-neutral">Editorial</dt>
-            <dd>{Enum.join(@game.publishers, ", ")}</dd>
-          </div>
-        </dl>
-
-        <p :if={@game.description}>{@game.description}</p>
       </div>
+
+      <CarouselRow.carousel_row
+        id="similares"
+        title="Juegos similares"
+        games={@similar_games}
+        subtitle={@similares_subtitle}
+      />
     </Layouts.app>
     """
   end
@@ -160,4 +235,17 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   defp playtime_text(%{min_playtime: min}) when is_integer(min), do: "#{min} min"
   defp playtime_text(%{max_playtime: max}) when is_integer(max), do: "#{max} min"
   defp playtime_text(_game), do: nil
+
+  # Subtitle for the Juegos similares shelf — reuses Vocabulary.weight_band/1's
+  # existing plain-Spanish descriptor label rather than authoring new copy
+  # (01.1-03 checkpoint decision). nil when the game has no band, matching
+  # Catalog.similar_games/1's own nil-band guard (there is nothing to name).
+  defp similares_subtitle(%{weight_band: nil}), do: nil
+
+  defp similares_subtitle(game) do
+    case Vocabulary.weight_band(game.weight_band) do
+      nil -> nil
+      band -> "Otros juegos del mismo nivel: " <> band.label
+    end
+  end
 end

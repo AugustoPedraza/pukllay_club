@@ -271,5 +271,103 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       refute html =~ "pk-about-cta-bar"
     end
+
+    test "the buy-box CTA renders inside the poster column and the reading column has no primary button (SHELL-03)",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      poster_html = doc |> LazyHTML.query(".pk-poster-col") |> LazyHTML.to_html()
+      assert poster_html =~ "Reservar para el sábado"
+      assert poster_html =~ "btn-primary"
+
+      text_col_html = doc |> LazyHTML.query(".pk-text-col") |> LazyHTML.to_html()
+      refute text_col_html =~ "btn-primary"
+    end
+
+    test "a game with band-mates renders the Juegos similares shelf with the weight-band subtitle and no Ver todo tile",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Base", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Bandmate", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      assert html =~ "Otros juegos del mismo nivel: Nivel experto"
+      refute html =~ "pk-see-all"
+    end
+
+    test "a game whose band has no other members renders no Juegos similares heading and the page still renders",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Lonely", weight_band: "descubre_el_hobby"})
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Juegos similares"
+      assert view.module == PukllayClubWeb.CatalogLive.Show
+    end
+
+    test "the ficha técnica renders Ilustrador as No disponible and no BGG rank digits", %{
+      conn: conn
+    } do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      assert spec_html =~ "Ilustrador"
+      assert spec_html =~ "Puesto en el ranking BGG"
+
+      illustrator_row =
+        doc
+        |> LazyHTML.query(".pk-spec-row")
+        |> Enum.find(&(LazyHTML.text(&1) =~ "Ilustrador"))
+
+      assert LazyHTML.text(illustrator_row) =~ "No disponible"
+    end
+
+    test "a game with a bgg_id renders a boardgamegeek.com link in the ficha técnica, one without renders none",
+         %{conn: conn} do
+      # weight_band differs so neither game is the other's Juegos similares
+      # bandmate — the footer's own unconditional BGG attribution link
+      # would otherwise make "no boardgamegeek.com anywhere on the page"
+      # unassertable regardless of this game's own bgg_id.
+      with_id = game_fixture(%{name: "Con BGG", bgg_id: 13, weight_band: "nivel_experto"})
+      without_id = game_fixture(%{name: "Sin BGG", bgg_id: nil, weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_id.id}")
+      {:ok, _view, html_without} = live(conn, ~p"/juegos/#{without_id.id}")
+
+      spec_html_with =
+        html_with |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      spec_html_without =
+        html_without
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-spec-list")
+        |> LazyHTML.to_html()
+
+      assert spec_html_with =~ "boardgamegeek.com/boardgame/13"
+      refute spec_html_without =~ "boardgamegeek.com"
+    end
+
+    test "clicking the description toggle expands and collapses the clamp", %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba."})
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      assert html =~ "pk-clamp"
+      refute html =~ "is-expanded"
+
+      html2 = render_click(view, "toggle-description", %{})
+      assert html2 =~ "is-expanded"
+
+      html3 = render_click(view, "toggle-description", %{})
+      refute html3 =~ "is-expanded"
+    end
   end
 end
