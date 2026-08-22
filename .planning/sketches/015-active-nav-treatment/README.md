@@ -2,7 +2,7 @@
 sketch: 015
 name: active-nav-treatment
 question: "aria-current=\"page\" is emitted on the current page's nav link but only gets a color change today — too subtle. What's a stronger active-state signal?"
-winner: null
+winner: "A"
 tags: [header, navigation, active-state, accessibility]
 ---
 
@@ -47,3 +47,14 @@ top.
 ### What to Look For (Round 2)
 - Click between links — does the thin underline add clarity, or feel redundant next to weight+dot?
 - Compare directly against C (no underline) — which one still reads as "quiet" at a glance?
+
+## Winner: A (2026-08-22)
+
+Picked **A — Underline/Rule (refined)** — a reversal from the Round 2 lean toward C/D after
+seeing them side by side against A directly; a legitimate final call, not a mistake. B, C, and D
+were removed from the live HTML per explicit request — full descriptions stay above for the
+record, and the complete versions remain recoverable via git history
+(`git log -- .planning/sketches/015-active-nav-treatment/index.html`).
+
+Composes with sketch 013's winner E (CTA/nav weight) and sketch 014's winner D (toggle) — see
+sketch 017 for how all three combine into one real header.

@@ -2,7 +2,7 @@
 sketch: 013
 name: header-action-cluster
 question: "Should the 'Sumate' CTA be persistent on every page, contextual to landing/About only, or persistent-but-visually-demoted off-landing?"
-winner: null
+winner: "E"
 tags: [header, cta, navigation, information-architecture]
 ---
 
@@ -67,3 +67,16 @@ Two new variants, both keeping CTA scope persistent:
   it need to look more clickable at rest?
 - Compare D's toggle directly against sketch 014's Round 2 D — confirm they read as the same
   component in both contexts (they share identical CSS/markup by design).
+
+## Winner: E (2026-08-22)
+
+Picked **E — Uniform Light Weight** after direct comparison against D. A/B/C (Round 1) and D
+(Round 2) were removed from the live HTML per explicit request — their full descriptions stay
+above for the record, and the complete versions remain recoverable via git history
+(`git log -- .planning/sketches/013-header-action-cluster/index.html`).
+
+CTA scope stays **persistent** (matches 01.1-PATTERNS.md's D-05 — this sketch never reopened that
+axis, only visual weight). E's flattened-until-hover CTA composes with sketch 014's finalized bare
+icon toggle (winner D, further refined to monochromatic in Round 3) and sketch 015's finalized
+underline-only active-link treatment (winner A) — see sketch 017 for how all three compose into
+one real header.

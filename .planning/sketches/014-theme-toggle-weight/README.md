@@ -2,7 +2,7 @@
 sketch: 014
 name: theme-toggle-weight
 question: "The theme toggle is a 3-button segmented control (system/light/dark, 3×44px ≈134px) — the widest single element in the header cluster. Compress it, and if so, how?"
-winner: null
+winner: "D"
 tags: [header, theme-toggle, navigation, accessibility]
 ---
 
@@ -57,3 +57,31 @@ styling is.
 - Does removing the card make the toggle feel like it belongs to the header's navigation, rather
   than a separate control bolted onto the end of the row?
 - Cross-check against sketch 013 D/E — same toggle, does it hold up consistently in both?
+
+## Round 3 (2026-08-22): Monochromatic Icons
+
+Feedback: "D but simpler more monochromatic (not yellow for example) meaningful icons." The actual
+cause: D's three buttons used raw emoji (☀🌙🖥), and emoji render in their own fixed native glyph
+color regardless of surrounding CSS — the sun emoji in particular always renders yellow/orange, no
+matter what `color` is set on its parent. That's the concrete "not monochromatic" problem, not a
+vague styling note.
+
+Fixed by replacing all three emoji with simple stroke-based SVG icons (`stroke="currentColor"`,
+`fill="none"`) — same visual language as the header's own search icon. Every icon now inherits
+whatever color the button's `.toggle-bare button` rule sets (muted at rest, primary when active),
+so nothing stands out by color — only the active-state underline differs between states. Real
+implementation should swap these sketch SVGs for the project's existing `hero-sun-micro` /
+`hero-moon-micro` / `hero-computer-desktop-micro` icons already shipped in `theme_toggle/1` — those
+are Heroicons' solid "micro" set, which is inherently single-color/monochromatic; the sketch's
+inline SVGs are stand-ins matching the same semantics for the mockup.
+
+## Winner: D (2026-08-22)
+
+Picked **D — Bare Icons, Monochromatic** (refined through Round 3) after direct comparison. A/B/C
+were removed from the live HTML per explicit request — full descriptions stay above for the
+record, and the complete versions remain recoverable via git history
+(`git log -- .planning/sketches/014-theme-toggle-weight/index.html`).
+
+Shares identical toggle markup/CSS with sketch 013's winner E (`.toggle-bare`), and the same
+monochromatic-icon fix was applied to both for consistency — see sketch 017 for how this composes
+with 013's CTA and 015's active-link treatment into one real header.
