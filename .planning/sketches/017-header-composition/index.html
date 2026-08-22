@@ -42,8 +42,9 @@
   .links-plain a.active { color: var(--color-primary); border-color: var(--color-primary); }
 
   .crumb { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--color-text-muted); flex: 1; min-width: 0; }
-  .crumb a { text-decoration: none; color: var(--color-text); }
+  .crumb a { text-decoration: none; color: var(--color-text); flex-shrink: 0; }
   .crumb a:hover { color: var(--color-primary); }
+  .crumb-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 
   /* 013-E: CTA outline at rest, fills on hover — the cluster's one accent element.
      No longer used in the header itself (CTA is landing-only as of Round 3) —
@@ -99,7 +100,12 @@
   .nav-hamburger { display: none; width: 40px; height: 40px; align-items: center; justify-content: center; border: none; background: transparent; color: var(--color-text); font-size: 20px; cursor: pointer; flex-shrink: 0; }
   .nav-drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index: 40; }
   .nav-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
-  .nav-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 82%; max-width: 320px; background: var(--color-bg); box-shadow: var(--shadow-lg); transform: translateX(100%); transition: transform 0.25s var(--ease-out-soft); z-index: 41; padding: var(--space-4); overflow-y: auto; }
+  .nav-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 82%; max-width: 320px; background: var(--color-bg); box-shadow: var(--shadow-lg); transform: translateX(100%); transition: transform 0.25s var(--ease-out-soft); z-index: 41; padding: var(--space-4); overflow-y: auto; display: flex; flex-direction: column; }
+  /* Round 5: theme + social pinned to the drawer's actual bottom edge, not just
+     "after the links" — .nav-drawer is already full-viewport-height (top:0;
+     bottom:0), so margin-top:auto on this wrapper pushes it down regardless of
+     how many nav links exist above it, instead of just trailing them closely. */
+  .nav-drawer-bottom { margin-top: auto; }
   .nav-drawer.open { transform: translateX(0); }
   .nav-drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); }
   .nav-drawer-header strong { font-family: var(--font-display); font-size: var(--text-lg); }
@@ -142,12 +148,27 @@
   /* ---------- responsive collapse (mirrors real app.css breakpoint behavior) ---------- */
   .vp-frame.is-mobile .links-plain { display: none; }
   .vp-frame.is-mobile .nav-hamburger { display: flex; }
+  /* Round 5: mobile Detalle was overlapping — hamburger + full brand wordmark +
+     crumb + search-morph together don't fit a 390px row (the wordmark alone is
+     ~100px). The wordmark's job (identity) is already covered by the hamburger
+     (menu) + brand mark (home) at this width, and the crumb already tells you
+     where you are, so it's the safe thing to drop first. Also tighten the row's
+     own gap slightly — 16px x4 gaps was itself eating real estate the wordmark
+     removal alone wouldn't fully recover. */
+  .vp-frame.is-mobile .brand-text-hide { display: none; }
+  .vp-frame.is-mobile .app-nav-inner { gap: var(--space-2); }
 
   /* search-morph on mobile: full-width overlay instead of a fixed 260px pill —
      there's no room for a floating pill at 390px. Rest of the row fades via
      .search-open above while it's expanded; verified via the viewport toggle,
      not assumed from the desktop behavior. */
-  .vp-frame.is-mobile .search-morph.is-open { position: absolute; left: 0; right: 0; top: 0; bottom: 0; width: auto; height: 100%; border-radius: 0; z-index: 5; padding: 0 var(--space-4); }
+  /* Round 5: "too sharped" — the full-bleed overlay was a flat, hard-edged
+     rectangle with 0 radius, jarring against a UI where everything else
+     (buttons, chips, drawer icons) is soft/rounded. Rounding just the bottom
+     edge (the top meets the frame's own already-rounded top corners) plus a
+     soft shadow makes it read as a floating sheet dropping over the header,
+     not a harsh slab replacing it. */
+  .vp-frame.is-mobile .search-morph.is-open { position: absolute; left: 0; right: 0; top: 0; bottom: 0; width: auto; height: 100%; border-radius: 0 0 var(--radius-lg) var(--radius-lg); box-shadow: var(--shadow-md); z-index: 5; padding: 0 var(--space-4); }
   .vp-frame.is-mobile .search-morph.is-open .search-morph-icon { padding-left: 0; }
   /* Round 4: footer simplified on mobile — social icons + theme toggle moved into
      the drawer (there's no reason to make someone scroll all the way to the
@@ -196,7 +217,7 @@
           <a href="#" data-active-acerca>Quiénes Somos</a>
         </div>
         <nav class="crumb" data-state="detalle" style="display:none">
-          <a href="#">Ludoteca</a><span>/</span><span>Catan</span>
+          <a href="#">Ludoteca</a><span>/</span><span class="crumb-title">Catan: El Amanecer del Imperio</span>
         </nav>
 
         <div class="search-morph" data-state="catalogo,detalle" id="search-morph-e" aria-label="Buscar"
@@ -236,25 +257,27 @@
         <a href="#" class="active">Inicio <svg class="chevron" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4l6 6-6 6"/></svg></a>
         <a href="#">Quiénes Somos <svg class="chevron" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4l6 6-6 6"/></svg></a>
       </nav>
-      <div class="nav-drawer-divider"></div>
-      <div class="nav-drawer-utility">
-        <span class="nav-drawer-utility-label">Tema</span>
-        <div class="toggle-bare" data-mode="system" id="toggle-e-drawer">
-          <button class="is-active" data-mode-btn="system" onclick="setBareMode(this)" aria-label="Sistema">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="15" height="10" rx="1.2"/><path d="M7 17h6M10 14v3"/></svg>
-          </button>
-          <button data-mode-btn="light" onclick="setBareMode(this)" aria-label="Claro">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="3.2"/><path d="M10 2.5v2M10 15.5v2M3.6 10h2M14.4 10h2M5.5 5.5l1.4 1.4M13.1 13.1l1.4 1.4M5.5 14.5l1.4-1.4M13.1 6.9l1.4-1.4"/></svg>
-          </button>
-          <button data-mode-btn="dark" onclick="setBareMode(this)" aria-label="Oscuro">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 11.3A6.3 6.3 0 018.7 4.5a6.3 6.3 0 106.8 6.8z"/></svg>
-          </button>
+      <div class="nav-drawer-bottom">
+        <div class="nav-drawer-divider"></div>
+        <div class="nav-drawer-utility">
+          <span class="nav-drawer-utility-label">Tema</span>
+          <div class="toggle-bare" data-mode="system" id="toggle-e-drawer">
+            <button class="is-active" data-mode-btn="system" onclick="setBareMode(this)" aria-label="Sistema">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="15" height="10" rx="1.2"/><path d="M7 17h6M10 14v3"/></svg>
+            </button>
+            <button data-mode-btn="light" onclick="setBareMode(this)" aria-label="Claro">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="3.2"/><path d="M10 2.5v2M10 15.5v2M3.6 10h2M14.4 10h2M5.5 5.5l1.4 1.4M13.1 13.1l1.4 1.4M5.5 14.5l1.4-1.4M13.1 6.9l1.4-1.4"/></svg>
+            </button>
+            <button data-mode-btn="dark" onclick="setBareMode(this)" aria-label="Oscuro">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 11.3A6.3 6.3 0 018.7 4.5a6.3 6.3 0 106.8 6.8z"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="nav-drawer-social">
-        <a href="#" aria-label="WhatsApp">W</a>
-        <a href="#" aria-label="Facebook">F</a>
-        <a href="#" aria-label="Instagram">I</a>
+        <div class="nav-drawer-social">
+          <a href="#" aria-label="WhatsApp">W</a>
+          <a href="#" aria-label="Facebook">F</a>
+          <a href="#" aria-label="Instagram">I</a>
+        </div>
       </div>
     </div>
 

@@ -231,3 +231,40 @@ page has nothing to search.
   footer? Does the active link's left-accent-bar treatment read clearly on its own?
 - On mobile, scroll to the footer: does it now feel appropriately light (just the attribution line)?
 - On Detalle, is the search icon now present and working? On Acerca de, is it correctly still absent?
+
+## Round 5 (2026-08-22): Real Mobile Bugs From Round 4's Own Changes
+
+Round 4 added the Detalle search icon without checking whether the row could actually fit it — it
+couldn't. Two real bugs, plus one drawer layout request.
+
+**1. Mobile Detalle was overlapping.** Root cause: hamburger (40px) + full brand wordmark (~100px,
+never hidden on mobile, only faded during search) + crumb + the new Detalle search icon (44px) don't
+fit in a 390px row with four `--space-4` (16px) gaps between them — before this fix there wasn't
+enough room even without a long game title. Three changes, together: (a) the brand wordmark now hides
+entirely on mobile at rest (`.brand-text-hide { display: none }` under `.is-mobile`) — its job
+(identity) is already covered by the hamburger + brand mark icon at this width, and the crumb already
+says where you are; (b) the row's own gap tightens from 16px to 8px on mobile; (c) the crumb's game-name
+segment gets real truncation (`overflow: hidden; text-overflow: ellipsis; white-space: nowrap`) instead
+of assuming short demo text — tested against "Catan: El Amanecer del Imperio" specifically because the
+original one-word "Catan" example was too short to have ever caught this in Round 4.
+
+**2. "Search is too sharped."** The mobile full-bleed search overlay had `border-radius: 0` — a flat,
+hard-edged rectangle, jarring next to a UI where every other surface (buttons, chips, drawer icons) is
+soft/rounded. Rounded just the bottom edge (the top already reads as rounded via the frame's own clipped
+corners) and added a soft shadow, so it reads as a sheet dropping over the header rather than a slab
+replacing it.
+
+**3. Theme toggle + social pinned to the drawer's actual bottom.** Round 4 placed them directly after
+the nav links, which — with only two links — meant they sat high up, not "at the bottom of the drawer"
+as asked. `.nav-drawer` is now a flex column (it was already full-viewport height via `top:0;bottom:0`),
+and the toggle+social block is wrapped in `.nav-drawer-bottom` with `margin-top: auto`, so it's pinned
+to the drawer's true bottom edge regardless of how many links exist above it — not just "the last thing
+in the list."
+
+### What to Look For (Round 5)
+- On mobile, switch to Detalle: does the header hold together now (no overlap), and does a long game
+  title truncate with an ellipsis instead of overflowing?
+- On mobile, open search from Detalle or Catálogo: does the overlay read as a soft sheet rather than a
+  harsh flat rectangle?
+- On mobile, open the drawer: are the theme toggle and social icons anchored to the very bottom of the
+  panel, with visible space between them and the nav links above?
