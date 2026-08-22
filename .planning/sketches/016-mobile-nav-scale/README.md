@@ -38,3 +38,23 @@ open .planning/sketches/016-mobile-nav-scale/index.html
   for a 4-link nav, or does it hold up cleanly?
 - This sketch is lower-stakes than 013–015 — it's a stress-test/confirmation, not expected to
   change what ships now.
+
+## Round 2 (2026-08-22): Refine B's Balance, Keep the Scale Path
+
+Feedback: "B looks better (still need a better balance) and correct distribution, but that
+scalability path looks nice." The overflow concept and its growth-simulation are validated; only
+its distribution within the row needed work.
+
+- **C: Overflow, Refined Balance** — two changes to B: (1) the "⋯" trigger drops its
+  border/background, becoming a bare icon (same no-card direction as sketches 013/014's Round 2
+  toggle) so it reads as a peer of the CTA/toggle rather than a separate boxed widget; (2) the
+  opened menu is positioned relative to the header row's own content inset
+  (`right: var(--space-4)`) instead of relative to the trigger button, so it stays flush with the
+  header's true content edge — matching "Sumate" — regardless of which control ends up last in the
+  row.
+
+### What to Look For (Round 2)
+- Click "+2 items" — does the bare "⋯" trigger now sit in rhythm with the CTA/toggle, or still feel
+  bolted on?
+- Open the menu — does its right edge line up with the header's own content edge (same line as
+  "Sumate")?

@@ -65,6 +65,19 @@
   .overflow-menu a:hover { background: var(--color-accent-bg); }
   .links.has-overflow .overflow-item { display: none; }
 
+  /* Variant C (Round 2): refined balance — bare trigger (matches sketches 013/014's
+     Round 2 icon-only direction), menu flush to the header's own gutter edge
+     regardless of which control sits last in the row. */
+  .app-nav-inner.has-overflow-menu { position: relative; }
+  .overflow-btn-bare { display: none; align-items: center; justify-content: center; width: 40px; height: 40px; border: none; background: transparent; border-radius: var(--radius-sm); color: var(--color-text-muted); cursor: pointer; font-size: 16px; transition: color 0.15s ease; }
+  .overflow-btn-bare:hover { color: var(--color-primary); }
+  .overflow-menu-flush { position: absolute; top: calc(100% + 4px); right: var(--space-4); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: var(--space-1); display: none; min-width: 180px; z-index: 10; }
+  .overflow-menu-flush.is-open { display: block; }
+  .overflow-menu-flush a { display: block; padding: var(--space-2) var(--space-3); text-decoration: none; color: var(--color-text); font-size: var(--text-sm); border-radius: var(--radius-sm); }
+  .overflow-menu-flush a:hover { background: var(--color-accent-bg); }
+
+  .round2-tag { display: inline-block; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-secondary); background: color-mix(in srgb, var(--color-secondary) 14%, var(--color-bg)); padding: 2px 8px; border-radius: var(--radius-full); margin-bottom: var(--space-2); }
+
   main { max-width: 1000px; margin: 0 auto; padding: 0 var(--space-6) var(--space-6); }
   .intro { max-width: 720px; margin-bottom: var(--space-2); }
   .intro h1 { font-family: var(--font-display); font-size: var(--text-display); margin: 0 0 var(--space-2); letter-spacing: 0.02em; }
@@ -81,6 +94,7 @@
   <span class="label">Sketch 016 — Mobile Nav Scale:</span>
   <button class="variant-tab active" onclick="showVariant('a')">A: Confirm Current Split (inline desktop / drawer mobile)</button>
   <button class="variant-tab" onclick="showVariant('b')">B: Desktop Overflow (scale-ready)</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Overflow, Refined Balance (R2)</button>
 </div>
 
 <!-- ==================== VARIANT A ==================== -->
@@ -138,7 +152,7 @@
     <button class="ctl-btn is-active" onclick="setViewport(this,'b','desktop')">🖥 Desktop (1000px)</button>
     <button class="ctl-btn" onclick="setViewport(this,'b','mobile')">📱 Mobile (390px)</button>
     <span class="label" style="margin-left:var(--space-4)">Simulate future growth:</span>
-    <button class="ctl-btn" id="growth-btn" onclick="toggleGrowth()">+2 items (Reglas, Alquileres)</button>
+    <button class="ctl-btn" id="growth-btn-b" onclick="toggleGrowth('b')">+2 items (Reglas, Alquileres)</button>
   </div>
   <div class="viewport-frame desktop" id="frame-b">
     <header class="app-nav">
@@ -152,7 +166,7 @@
         <div class="actions">
           <a href="#" class="cta">Sumate</a>
           <div class="overflow-wrap">
-            <button class="overflow-btn" id="overflow-btn-b" onclick="toggleOverflow()" aria-label="Más opciones">⋯</button>
+            <button class="overflow-btn" id="overflow-btn-b" onclick="toggleOverflow('b')" aria-label="Más opciones">⋯</button>
             <div class="overflow-menu" id="overflow-menu-b">
               <a href="#" data-growth-menu style="display:none">Reglas</a>
               <a href="#" data-growth-menu style="display:none">Alquileres</a>
@@ -196,6 +210,67 @@
   </main>
 </div>
 
+<!-- ==================== VARIANT C (Round 2) ==================== -->
+<div id="variant-c" class="variant">
+  <div class="control-row">
+    <span class="label">Viewport:</span>
+    <button class="ctl-btn is-active" onclick="setViewport(this,'c','desktop')">🖥 Desktop (1000px)</button>
+    <button class="ctl-btn" onclick="setViewport(this,'c','mobile')">📱 Mobile (390px)</button>
+    <span class="label" style="margin-left:var(--space-4)">Simulate future growth:</span>
+    <button class="ctl-btn" id="growth-btn-c" onclick="toggleGrowth('c')">+2 items (Reglas, Alquileres)</button>
+  </div>
+  <div class="viewport-frame desktop" id="frame-c">
+    <header class="app-nav">
+      <div class="app-nav-inner has-overflow-menu">
+        <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+        <div class="links" id="links-c">
+          <a href="#" class="active">Inicio</a><a href="#">Quiénes Somos</a>
+          <a href="#" class="overflow-item" data-growth>Reglas</a><a href="#" class="overflow-item" data-growth>Alquileres</a>
+        </div>
+        <div class="search" id="search-c"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M17 17l-4-4"/></svg><input placeholder="Buscar juegos…"></div>
+        <div class="actions">
+          <a href="#" class="cta">Sumate</a>
+          <div class="overflow-wrap">
+            <button class="overflow-btn-bare" id="overflow-btn-c" onclick="toggleOverflow('c')" aria-label="Más opciones">⋯</button>
+            <div class="overflow-menu-flush" id="overflow-menu-c">
+              <a href="#" data-growth-menu style="display:none">Reglas</a>
+              <a href="#" data-growth-menu style="display:none">Alquileres</a>
+            </div>
+          </div>
+          <button class="hamburger" id="hamburger-c" onclick="openDrawer('c')" aria-label="Abrir menú"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h14M3 10h14M3 15h14"/></svg></button>
+        </div>
+      </div>
+    </header>
+  </div>
+
+  <div class="drawer-scrim" id="scrim-c" onclick="closeDrawer('c')"></div>
+  <div class="nav-drawer" id="drawer-c">
+    <h4>Buscar</h4>
+    <div class="nav-drawer-search"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M17 17l-4-4"/></svg><input placeholder="Buscar juegos…"></div>
+    <h4>Navegación</h4>
+    <div class="nav-drawer-links">
+      <a href="#" class="active">Inicio</a><a href="#">Quiénes Somos</a>
+      <a href="#" data-growth style="display:none">Reglas</a><a href="#" data-growth style="display:none">Alquileres</a>
+    </div>
+    <a href="#" class="drawer-cta">Sumate</a>
+  </div>
+
+  <main>
+    <div class="intro">
+      <span class="round2-tag">Round 2</span>
+      <h1>C: Overflow, Refined Balance</h1>
+      <p>Round 1 feedback: B's overflow path was the right call, but the trigger and its menu needed better distribution. Two changes: (1) the "⋯" trigger drops its border/background — bare icon, matching the same no-card direction as sketches 013/014's Round 2 toggle, so it reads as a peer control next to the CTA rather than a separate boxed widget; (2) the opened menu is now positioned relative to the header row itself (<code>right: var(--space-4)</code>, the same inset the header's own content uses) instead of relative to the trigger button, so it stays flush with the header's true content edge regardless of which control ends up last in the row.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Click "+2 items" — does the bare "⋯" trigger sit in rhythm with the CTA/toggle now, or still feel bolted on?</li>
+        <li>Open the menu — does its right edge line up with the header's own content edge (same line as "Sumate")?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
 <div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
   <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
     <option value="default">Default</option>
@@ -220,7 +295,8 @@ function setViewport(btn, variant, size) {
   const links = document.getElementById('links-' + variant);
   const search = document.getElementById('search-' + variant);
   const hamburger = document.getElementById('hamburger-' + variant);
-  const overflowBtn = document.getElementById('overflow-btn-b');
+  const overflowBtn = document.getElementById('overflow-btn-' + variant);
+  const growthBtn = document.getElementById('growth-btn-' + variant);
 
   if (size === 'mobile') {
     links.style.display = 'none';
@@ -231,7 +307,7 @@ function setViewport(btn, variant, size) {
     links.style.display = 'flex';
     search.style.display = 'flex';
     hamburger.style.display = 'none';
-    if (overflowBtn && document.getElementById('growth-btn').classList.contains('is-active')) {
+    if (overflowBtn && growthBtn && growthBtn.classList.contains('is-active')) {
       overflowBtn.style.display = 'flex';
     }
   }
@@ -246,27 +322,29 @@ function closeDrawer(variant) {
   document.getElementById('scrim-' + variant).classList.remove('is-open');
 }
 
-let growthOn = false;
-function toggleGrowth() {
-  growthOn = !growthOn;
-  const btn = document.getElementById('growth-btn');
-  btn.classList.toggle('is-active', growthOn);
+let growthState = {};
+function toggleGrowth(variant) {
+  const on = !growthState[variant];
+  growthState[variant] = on;
+  document.getElementById('growth-btn-' + variant).classList.toggle('is-active', on);
 
-  document.querySelectorAll('[data-growth]').forEach(el => el.style.display = growthOn ? 'block' : 'none');
-  document.querySelectorAll('[data-growth-menu]').forEach(el => el.style.display = growthOn ? 'block' : 'none');
-  document.querySelectorAll('.overflow-item').forEach(el => el.style.display = growthOn ? 'none' : 'inline');
+  document.querySelectorAll('#variant-' + variant + ' [data-growth]').forEach(el => el.style.display = on ? 'block' : 'none');
+  document.querySelectorAll('#variant-' + variant + ' [data-growth-menu]').forEach(el => el.style.display = on ? 'block' : 'none');
+  document.querySelectorAll('#variant-' + variant + ' .overflow-item').forEach(el => el.style.display = on ? 'none' : 'inline');
 
-  const frame = document.getElementById('frame-b');
+  const frame = document.getElementById('frame-' + variant);
   const isDesktop = frame.classList.contains('desktop');
-  const overflowBtn = document.getElementById('overflow-btn-b');
-  overflowBtn.style.display = (growthOn && isDesktop) ? 'flex' : 'none';
+  const overflowBtn = document.getElementById('overflow-btn-' + variant);
+  overflowBtn.style.display = (on && isDesktop) ? 'flex' : 'none';
 }
 
-function toggleOverflow() {
-  document.getElementById('overflow-menu-b').classList.toggle('is-open');
+function toggleOverflow(variant) {
+  document.getElementById('overflow-menu-' + variant).classList.toggle('is-open');
 }
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.overflow-wrap')) document.getElementById('overflow-menu-b')?.classList.remove('is-open');
+  if (!e.target.closest('.overflow-wrap')) {
+    document.querySelectorAll('.overflow-menu, .overflow-menu-flush').forEach(m => m.classList.remove('is-open'));
+  }
 });
 </script>
 </body>

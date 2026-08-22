@@ -51,6 +51,14 @@
   #variant-c .links a.active::after { content: '•'; color: var(--color-primary); margin-left: 6px; font-weight: 900; }
   #variant-c .links a:hover:not(.active) { color: var(--color-primary); }
 
+  /* Variant D (Round 2): C's weight+dot, plus a thin understated underline */
+  #variant-d .links a { color: var(--color-text-muted); font-weight: 600; font-size: var(--text-sm); text-decoration: none; padding: 4px 0 6px; border-bottom: 1.5px solid transparent; transition: all 0.15s ease; }
+  #variant-d .links a.active { color: var(--color-text); font-weight: 800; border-bottom-color: var(--color-primary); }
+  #variant-d .links a.active::after { content: '•'; color: var(--color-primary); margin-left: 6px; font-weight: 900; }
+  #variant-d .links a:hover:not(.active) { color: var(--color-primary); }
+
+  .round2-tag { display: inline-block; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-secondary); background: color-mix(in srgb, var(--color-secondary) 14%, var(--color-bg)); padding: 2px 8px; border-radius: var(--radius-full); margin-bottom: var(--space-2); }
+
   .look-for { max-width: 900px; margin: var(--space-6) auto; padding: var(--space-4) var(--space-6); background: var(--color-accent-bg); border-radius: var(--radius-md); font-size: var(--text-sm); }
   .look-for h3 { margin: 0 0 var(--space-2); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-primary); }
   .look-for ul { margin: 0; padding-left: 1.2em; line-height: 1.7; }
@@ -63,6 +71,7 @@
   <button class="variant-tab active" onclick="showVariant('a')">A: Underline/Rule (refined)</button>
   <button class="variant-tab" onclick="showVariant('b')">B: Pill/Chip Background</button>
   <button class="variant-tab" onclick="showVariant('c')">C: Weight + Dot</button>
+  <button class="variant-tab" onclick="showVariant('d')">D: Weight + Dot + Subtle Underline (R2)</button>
 </div>
 
 <!-- ==================== VARIANT A ==================== -->
@@ -139,6 +148,33 @@
       <ul>
         <li>At a glance (not staring directly at the nav), is it still obvious which page you're on?</li>
         <li>Does the dot read as intentional, or as a stray character?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== VARIANT D (Round 2) ==================== -->
+<div id="variant-d" class="variant">
+  <header class="app-nav">
+    <div class="app-nav-inner">
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links" id="links-d">
+        <a href="#" class="active" onclick="return setActive(event,'links-d')">Inicio</a>
+        <a href="#" onclick="return setActive(event,'links-d')">Quiénes Somos</a>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="intro">
+      <span class="round2-tag">Round 2</span>
+      <h1>D: Weight + Dot + Subtle Underline</h1>
+      <p>Round 1 feedback: C was the preferred direction but wanted more balance, plus a subtle underline. This keeps C's weight-800 + dot exactly as-is and adds a thin 1.5px underline beneath just the active link's own text (not full-width, not offset like variant A's thicker 3px rule) — a quiet confirmation signal layered on top of the typographic cue, not a competing graphic device.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Click between links — does the thin underline add clarity, or does it feel redundant next to the weight+dot?</li>
+        <li>Compare directly against C (no underline) — which one still reads as "quiet" at a glance?</li>
       </ul>
     </div>
   </main>

@@ -37,3 +37,33 @@ open .planning/sketches/013-header-action-cluster/index.html
 - On Detalle specifically: does "join the club" compete with someone who's mid-way through reading
   one game's rules?
 - Variant B's risk note appears when you switch to Acerca de — read it before picking B.
+
+## Round 2 (2026-08-22): Visual Weight, Not Just Scope
+
+Feedback on A/B/C: "013 still needs better balance and improve the semantics: do we need system
+color big and on the top? I think about the same for the navigation and main CTA." Read as: the
+scope question (persistent/contextual/demoted) wasn't the whole problem — the cluster still had
+*multiple* heavy elements competing at once (solid CTA + colored/underlined active link + boxed
+3-way toggle). CTA scope stays **persistent** here (matches the D-05 constraint documented above;
+this round doesn't reopen that axis) — the axis shifts to how much visual weight each element
+carries.
+
+Two new variants, both keeping CTA scope persistent:
+
+- **D: CTA Sole Accent Weight** — exactly one element in the cluster carries real color/fill:
+  "Sumate" stays solid/primary. Nav links drop to plain text (color + weight only, no
+  border-bottom). The theme toggle loses its card/border, becoming three bare icon buttons with a
+  small underline for the active state — same markup/CSS as sketch 014's Round 2 variant D, so the
+  two compose identically into the real header. Brand stays dominant by size, not color.
+- **E: Uniform Light Weight** — goes further: the CTA itself drops its solid fill at rest too
+  (outline, same weight as the nav links), filling only on hover. Nothing in the cluster outweighs
+  anything else at rest; hierarchy comes from position (right-aligned, consistent spacing) rather
+  than fill/color/boldness.
+
+### What to Look For (Round 2)
+- D: does "Sumate" now read as clearly the one actionable thing, with links/toggle receding around
+  it?
+- E: does the CTA still read as clickable/important without a permanent solid background, or does
+  it need to look more clickable at rest?
+- Compare D's toggle directly against sketch 014's Round 2 D — confirm they read as the same
+  component in both contexts (they share identical CSS/markup by design).

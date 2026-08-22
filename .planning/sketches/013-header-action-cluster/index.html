@@ -58,6 +58,23 @@
 
   .toggle-mini { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); flex-shrink: 0; }
 
+  /* ---- Round 2: plain-text nav links, hover-fill CTA, bare icon-only toggle ----
+     Shared 1:1 with sketch 014's Round 2 variant D — same class names, same rules,
+     so the two sketches compose into the same real header without divergence. */
+  .links-plain a { color: var(--color-text-muted); font-weight: 600; font-size: var(--text-sm); text-decoration: none; padding: 4px 2px; border: none; transition: color 0.15s ease; }
+  .links-plain a.active { color: var(--color-primary); }
+
+  .cta-hover-fill { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); font-weight: 700; font-size: var(--text-sm); text-decoration: none; background: transparent; color: var(--color-primary); border: 1.5px solid var(--color-primary); transition: all 0.15s ease; white-space: nowrap; }
+  .cta-hover-fill:hover { background: var(--color-primary); color: var(--color-primary-content); }
+
+  .toggle-bare { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .toggle-bare button { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: none; background: transparent; color: var(--color-text-muted); cursor: pointer; font-size: 15px; border-radius: var(--radius-sm); position: relative; transition: color 0.15s ease; }
+  .toggle-bare button.is-active { color: var(--color-primary); }
+  .toggle-bare button.is-active::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 6px; height: 2px; background: var(--color-primary); border-radius: 1px; }
+  .toggle-bare button:hover { color: var(--color-text); }
+
+  .round2-tag { display: inline-block; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-secondary); background: color-mix(in srgb, var(--color-secondary) 14%, var(--color-bg)); padding: 2px 8px; border-radius: var(--radius-full); margin-bottom: var(--space-2); }
+
   .annotate { max-width: 1000px; margin: var(--space-4) auto; padding: 0 var(--space-6); font-size: var(--text-xs); color: var(--color-text-muted); }
   .annotate strong { color: var(--color-text); }
 
@@ -75,6 +92,8 @@
   <button class="variant-tab active" onclick="showVariant('a')">A: Persistent Everywhere (current)</button>
   <button class="variant-tab" onclick="showVariant('b')">B: Landing-Only (contextual)</button>
   <button class="variant-tab" onclick="showVariant('c')">C: Persistent, Demoted Off-Landing</button>
+  <button class="variant-tab" onclick="showVariant('d')">D: CTA Sole Accent (R2)</button>
+  <button class="variant-tab" onclick="showVariant('e')">E: Uniform Light Weight (R2)</button>
 </div>
 
 <!-- ==================== VARIANT A ==================== -->
@@ -209,6 +228,103 @@
   </main>
 </div>
 
+<!-- ==================== VARIANT D (Round 2) ==================== -->
+<div id="variant-d" class="variant">
+  <div class="page-switcher">
+    <span class="label">View as:</span>
+    <button class="page-btn is-active" data-variant="d" onclick="setPage(this,'catalogo')">Catálogo</button>
+    <button class="page-btn" data-variant="d" onclick="setPage(this,'detalle')">Detalle</button>
+    <button class="page-btn" data-variant="d" onclick="setPage(this,'acerca')">Acerca de</button>
+  </div>
+  <header class="app-nav" data-variant="d">
+    <div class="app-nav-inner" data-page-root>
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links links-plain" data-state="catalogo,acerca">
+        <a href="#" class="active" data-active-catalogo>Inicio</a>
+        <a href="#" data-active-acerca>Quiénes Somos</a>
+      </div>
+      <nav class="crumb" data-state="detalle" style="display:none">
+        <a href="#">Ludoteca</a><span>/</span><span class="current">Catan</span>
+      </nav>
+      <div class="search" data-state="catalogo">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M17 17l-4-4"/></svg>
+        <input placeholder="Buscar juegos…">
+      </div>
+      <div class="actions">
+        <a href="#" class="cta cta-solid">Sumate</a>
+        <div class="toggle-bare" data-mode="system" id="toggle-d">
+          <button class="is-active" data-mode-btn="system" onclick="setBareMode(this)" aria-label="Sistema">🖥</button>
+          <button data-mode-btn="light" onclick="setBareMode(this)" aria-label="Claro">☀</button>
+          <button data-mode-btn="dark" onclick="setBareMode(this)" aria-label="Oscuro">🌙</button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="intro">
+      <span class="round2-tag">Round 2</span>
+      <h1>D: CTA Keeps Sole Accent Weight</h1>
+      <p>Round 1 feedback: A/B/C all still read as several competing "heavy" elements at once — a solid CTA, a colored+underlined active link, and a boxed 3-way toggle all pulling attention in the same row. D tests the opposite: exactly <strong>one</strong> element carries real color/fill weight — "Sumate". Nav links drop to plain text (color + weight only, no border-bottom). The toggle drops its card/border entirely — three bare icon buttons, active state marked by a small underline instead of a sliding pill. Brand stays dominant through size, not color.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Does "Sumate" now read as clearly the one thing to click, with everything else receding around it?</li>
+        <li>Do the plain-text nav links still feel like navigation, or too quiet next to a solid CTA?</li>
+        <li>Compare this toggle against sketch 014's new bare variant — same treatment, does it hold up in this fuller header context?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== VARIANT E (Round 2) ==================== -->
+<div id="variant-e" class="variant">
+  <div class="page-switcher">
+    <span class="label">View as:</span>
+    <button class="page-btn is-active" data-variant="e" onclick="setPage(this,'catalogo')">Catálogo</button>
+    <button class="page-btn" data-variant="e" onclick="setPage(this,'detalle')">Detalle</button>
+    <button class="page-btn" data-variant="e" onclick="setPage(this,'acerca')">Acerca de</button>
+  </div>
+  <header class="app-nav" data-variant="e">
+    <div class="app-nav-inner" data-page-root>
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links links-plain" data-state="catalogo,acerca">
+        <a href="#" class="active" data-active-catalogo>Inicio</a>
+        <a href="#" data-active-acerca>Quiénes Somos</a>
+      </div>
+      <nav class="crumb" data-state="detalle" style="display:none">
+        <a href="#">Ludoteca</a><span>/</span><span class="current">Catan</span>
+      </nav>
+      <div class="search" data-state="catalogo">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M17 17l-4-4"/></svg>
+        <input placeholder="Buscar juegos…">
+      </div>
+      <div class="actions">
+        <a href="#" class="cta cta-hover-fill">Sumate</a>
+        <div class="toggle-bare" data-mode="system" id="toggle-e">
+          <button class="is-active" data-mode-btn="system" onclick="setBareMode(this)" aria-label="Sistema">🖥</button>
+          <button data-mode-btn="light" onclick="setBareMode(this)" aria-label="Claro">☀</button>
+          <button data-mode-btn="dark" onclick="setBareMode(this)" aria-label="Oscuro">🌙</button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="intro">
+      <span class="round2-tag">Round 2</span>
+      <h1>E: Uniform Light Weight</h1>
+      <p>Goes one step further than D: "Sumate" also loses its solid fill at rest — outline only, same visual weight as the nav links around it — and gains fill only on hover. Nav links stay plain text, toggle stays bare-icon. Nothing in the cluster outweighs anything else at rest; hierarchy comes from position (right-aligned, consistent spacing) rather than fill or color. Tests whether the CTA still reads as clickable/important without a permanent solid background.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Hover "Sumate" — does the fill-on-hover feel like enough of a signal, or does it need to look more clickable at rest?</li>
+        <li>Compare directly against D — is a fully-flat cluster calmer, or does it make the CTA too easy to miss?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
 <div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
   <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
     <option value="default">Default</option>
@@ -250,6 +366,13 @@ function setPage(btn, page) {
     cta.classList.remove('cta-solid', 'cta-outline');
     cta.classList.add(page === 'acerca' ? 'cta-solid' : 'cta-outline');
   }
+}
+
+function setBareMode(btn) {
+  const group = btn.closest('.toggle-bare');
+  group.dataset.mode = btn.dataset.modeBtn;
+  group.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
 }
 </script>
 </body>
