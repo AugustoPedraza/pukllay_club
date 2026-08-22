@@ -533,7 +533,7 @@ body.pk-sheet-open {
 }
 
 .pk-nav-links a {
-  color: var(--color-base-content);
+  color: var(--color-neutral);
   font-weight: 600;
   font-size: 0.875rem;
   text-decoration: none;
@@ -548,11 +548,38 @@ body.pk-sheet-open {
   color: var(--color-primary);
 }
 
+/* Both header call sites already emit aria-current="page" on the current page's
+   link (CatalogLive.Index, AboutLive) — this is the CSS that finally consumes it,
+   making the active link legible against the muted (neutral) inactive tier above. */
+.pk-nav-links a[aria-current="page"] {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
 .pk-nav-search {
   min-width: 220px;
   max-width: 22.5rem;
   flex: 1 1 auto;
   margin-left: auto;
+}
+
+/* 48px, matching the theme toggle's fixed anchor height (its 44px touch-target
+   buttons plus a 2px border on each side) so the search box shares the row's one
+   shared height. Two-class specificity beats daisyUI's single-class .input rule,
+   so no !important is needed, and nothing outside the header is affected. */
+.pk-nav-search .input {
+  height: 3rem;
+}
+
+/* CoreComponents.input/1 wraps its text-input branch in a `fieldset mb-2` div —
+   daisyUI's .fieldset contributes vertical padding-block, and the mb-2 utility
+   adds a bottom margin. Inside this vertically-centered header row that space is
+   dead weight below the box, pushing the search field above the row's optical
+   centre line. Neutralised here, scoped to the header only — CoreComponents.
+   input/1 itself must stay untouched since every form in the app shares it. */
+.pk-nav-search .fieldset {
+  margin-bottom: 0;
+  padding-block: 0;
 }
 
 /* One right-aligned action unit (Sumate CTA + theme toggle), deliberately tighter

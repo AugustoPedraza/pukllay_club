@@ -376,6 +376,23 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ "Sumate"
       assert html =~ ~s(rel="noopener noreferrer")
     end
+
+    # 260822-2v9 Task 2: the CTA rises from daisyUI's small-size button (32px) to
+    # the row's shared 48px anchor height and drops the small-size modifier — the
+    # theme toggle's fixed 48px pill is what the other two row elements now match.
+    test "carries the filled primary button classes and the 48px height utility, no small-size modifier (260822-2v9)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      [cta_html] =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header .pk-nav-actions a")
+        |> Enum.map(&LazyHTML.to_html/1)
+
+      assert cta_html =~ "btn-primary"
+      assert cta_html =~ "min-h-12"
+      refute cta_html =~ "btn-sm"
+    end
   end
 
   describe "app/1 :crumb slot (Detalle header state)" do

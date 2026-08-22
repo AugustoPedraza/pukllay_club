@@ -236,7 +236,7 @@ defmodule PukllayClubWeb.Layouts do
       href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
       target="_blank"
       rel="noopener noreferrer"
-      class="btn btn-primary btn-sm min-h-11"
+      class="btn btn-primary min-h-12"
     >
       Sumate
     </a>
