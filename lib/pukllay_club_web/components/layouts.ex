@@ -11,18 +11,24 @@ defmodule PukllayClubWeb.Layouts do
   # and other static content.
   embed_templates "layouts/*"
 
-  # The brand isologo (Andean llama + hexagon + meeple silhouette per the brand manual) has no
-  # vector source yet — only the identity PDF. Gate on its presence at compile time so dropping
-  # priv/static/images/isologo.svg in later completes the horizontal lockup with no code change.
-  @isologo_path "priv/static/images/isologo.svg"
-  @external_resource @isologo_path
-  @isologo? File.exists?(@isologo_path)
+  # The brand isologo (Andean llama + hexagon + meeple silhouette per the brand manual) is a
+  # theme-aware pair: the dark-purple mark for light theme, the white mark for dark theme,
+  # toggled by the app's `dark:` custom variant (assets/css/app.css). Gate on both files
+  # existing at compile time — if either is missing the component degrades to the wordmark +
+  # tagline lockup with no <img> at all, never a half-rendered pair.
+  @isologo_light_path "priv/static/images/isologo-light.png"
+  @isologo_dark_path "priv/static/images/isologo-dark.png"
+  @external_resource @isologo_light_path
+  @external_resource @isologo_dark_path
+  @isologo? File.exists?(@isologo_light_path) and File.exists?(@isologo_dark_path)
 
   @doc """
   Renders the PUKLLAY CLUB horizontal logo lockup (isologo + wordmark + tagline).
 
-  Renders the isologo mark when `priv/static/images/isologo.svg` exists at compile time, and
-  degrades to the wordmark + tagline lockup without a broken image reference when it does not.
+  Renders a theme-aware isologo pair — the dark-purple mark for light theme, the white mark for
+  dark theme, toggled by the `dark:` custom variant — when both
+  `priv/static/images/isologo-light.png` and `isologo-dark.png` exist at compile time, and
+  degrades to the wordmark + tagline lockup with no `<img>` at all when either is missing.
 
   The second-line tagline is overridable via the `tagline` attr — the header uses the default,
   the footer overrides it with the About page's hero tagline so the two clusters don't repeat
@@ -30,12 +36,31 @@ defmodule PukllayClubWeb.Layouts do
   """
   attr :tagline, :string, default: "JUEGOS DE MESA MODERNOS"
 
+  # `isologo?` is deliberately not a declared `attr` — it's a test-only seam. No production call
+  # site ever passes it, so `assign_new/3` always falls through to the compile-time `@isologo?`
+  # constant in production, keeping behaviour byte-identical to a plain `assign/3`. This lets a
+  # test force the wordmark-only fallback branch via `render_component(&brand_logo/1,
+  # %{isologo?: false})`, which a compile-time constant alone would make unreachable on a
+  # machine where both marks exist on disk.
   def brand_logo(assigns) do
-    assigns = assign(assigns, :isologo?, @isologo?)
+    assigns = assign_new(assigns, :isologo?, fn -> @isologo? end)
 
     ~H"""
     <a href="/" class="flex-1 flex w-fit items-center gap-2 min-h-11">
-      <img :if={@isologo?} src={~p"/images/isologo.svg"} width="36" alt="" />
+      <img
+        :if={@isologo?}
+        src={~p"/images/isologo-light.png"}
+        width="36"
+        alt=""
+        class="dark:hidden"
+      />
+      <img
+        :if={@isologo?}
+        src={~p"/images/isologo-dark.png"}
+        width="36"
+        alt=""
+        class="hidden dark:block"
+      />
       <span class="flex flex-col leading-none">
         <span class="font-display text-2xl uppercase tracking-wide">PUKLLAY CLUB</span>
         <span class="font-sans text-xs uppercase tracking-widest text-neutral">
