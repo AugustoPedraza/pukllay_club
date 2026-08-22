@@ -692,7 +692,9 @@ body.pk-sheet-open {
   .pk-search-morph,
   .pk-search-morph-toggle,
   .pk-search-morph-close,
-  .pk-search-morph .pk-nav-search {
+  .pk-search-morph .pk-nav-search,
+  .pk-drawer,
+  .pk-drawer-backdrop {
     transition-duration: 1ms;
   }
 }
@@ -880,6 +882,100 @@ body.pk-sheet-open {
   text-decoration-color: currentColor;
 }
 
+/* Mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5): the
+   hamburger trigger and the slide-in panel it opens, ported through the
+   CSS Token Translation Layer. Both sides of the ≤480px display swap live
+   in the single trailing @media block below, per Pitfall 5 — this block
+   only carries the base (hidden-at-rest) geometry and the .is-open states,
+   never a display toggle of its own. */
+.pk-nav-hamburger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-base-content);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.pk-drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-base-100) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 60;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.pk-drawer-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* .pk-header-sticky's z-index: 50 creates a stacking context; the drawer is
+   a position: fixed child of it, so its z-index only needs to beat .pk-nav
+   within that context, not the page at large. position: sticky does not
+   create a containing block for fixed descendants, so viewport anchoring
+   here is safe without any transform/filter/contain/will-change hack. */
+.pk-drawer {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 82%;
+  max-width: 20rem;
+  z-index: 61;
+  background: var(--color-base-100);
+  box-shadow: 0 8px 24px rgba(20, 8, 34, 0.28);
+  padding: 1rem;
+  overflow-y: auto;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--duration-slow) var(--ease-out-soft);
+}
+
+.pk-drawer.is-open {
+  transform: translateX(0);
+}
+
+.pk-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.pk-drawer-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+}
+
+/* The panel is a full-height flex column (top: 0; bottom: 0 above, plus
+   flex-direction: column here) so margin-top: auto pins this block to the
+   panel's true bottom edge regardless of link count — sketch 017 Round 5's
+   exact fix for "they sat high up, not at the bottom". Content filled in
+   by plan 01.1-09 Task 2. */
+.pk-drawer-bottom {
+  margin-top: auto;
+}
+
+body.pk-drawer-open {
+  overflow: hidden;
+}
+
 /* Mobile category chip row: a second navigation dimension replacing the
    nav links below the narrow-viewport breakpoint. No horizontal padding
    of its own — spacer flex items reserve the end margins instead, since
@@ -980,6 +1076,18 @@ body.pk-sheet-open {
 
   .pk-chip-nav {
     display: flex;
+  }
+
+  .pk-nav-hamburger {
+    display: flex;
+  }
+
+  .pk-drawer {
+    display: flex;
+  }
+
+  .pk-drawer-backdrop {
+    display: block;
   }
 
   /* Row density (01.1-08): a tighter row gap plus hiding the wordmark

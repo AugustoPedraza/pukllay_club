@@ -532,6 +532,77 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  describe "app/1 mobile nav drawer (01.1-09)" do
+    test "the hamburger renders with a Spanish aria-label and aria-controls=\"pk-nav-drawer\"" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ ~s(aria-label="Abrir menú")
+      assert html =~ ~s(aria-controls="pk-nav-drawer")
+    end
+
+    test "the panel renders with role=dialog, aria-modal=true and carries inert at rest" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      drawer_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#pk-nav-drawer")
+        |> LazyHTML.to_html()
+
+      assert drawer_html =~ ~s(role="dialog")
+      assert drawer_html =~ ~s(aria-modal="true")
+      assert drawer_html =~ "inert"
+    end
+
+    test "both site links render regardless of which slots the caller passed" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      drawer_links_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-links")
+        |> LazyHTML.to_html()
+
+      assert drawer_links_html =~ "Inicio"
+      assert drawer_links_html =~ "Quiénes Somos"
+    end
+
+    test "active_nav :inicio places aria-current=\"page\" on Inicio only" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], active_nav: :inicio})
+
+      doc = LazyHTML.from_document(html)
+      inicio_link = doc |> LazyHTML.query(".pk-drawer-links a:first-child") |> LazyHTML.to_html()
+      quienes_link = doc |> LazyHTML.query(".pk-drawer-links a:last-child") |> LazyHTML.to_html()
+
+      assert inicio_link =~ ~s(aria-current="page")
+      refute quienes_link =~ ~s(aria-current="page")
+    end
+
+    test "active_nav :quienes_somos places aria-current=\"page\" on Quiénes Somos only" do
+      html =
+        render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], active_nav: :quienes_somos})
+
+      doc = LazyHTML.from_document(html)
+      inicio_link = doc |> LazyHTML.query(".pk-drawer-links a:first-child") |> LazyHTML.to_html()
+      quienes_link = doc |> LazyHTML.query(".pk-drawer-links a:last-child") |> LazyHTML.to_html()
+
+      refute inicio_link =~ ~s(aria-current="page")
+      assert quienes_link =~ ~s(aria-current="page")
+    end
+
+    test "active_nav nil (the default) marks neither drawer link current" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      drawer_links_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-links")
+        |> LazyHTML.to_html()
+
+      refute drawer_links_html =~ "aria-current"
+    end
+  end
+
   describe "app/1 external anchor safety (T-01.1-03)" do
     test ~s(every target="_blank" anchor in the rendered shell also carries rel="noopener noreferrer") do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})

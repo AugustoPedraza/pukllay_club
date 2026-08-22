@@ -49,6 +49,17 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       refute html =~ "pk-search-morph"
     end
+
+    test "the drawer marks Quiénes Somos as the current page (01.1-09)", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      inicio_link = doc |> LazyHTML.query(".pk-drawer-links a:first-child") |> LazyHTML.to_html()
+      quienes_link = doc |> LazyHTML.query(".pk-drawer-links a:last-child") |> LazyHTML.to_html()
+
+      refute inicio_link =~ ~s(aria-current="page")
+      assert quienes_link =~ ~s(aria-current="page")
+    end
   end
 
   describe "join CTA renders in the hero, not the header (D-05 superseded, plan 01.1-08)" do

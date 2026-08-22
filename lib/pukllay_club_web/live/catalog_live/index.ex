@@ -324,7 +324,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} fullbleed sticky search_expanded={@q != ""}>
+    <Layouts.app flash={@flash} fullbleed sticky search_expanded={@q != ""} active_nav={:inicio}>
       <:nav_links>
         <.link navigate={~p"/"} aria-current="page">Inicio</.link>
         <.link navigate={~p"/quienes-somos"}>Quiénes Somos</.link>

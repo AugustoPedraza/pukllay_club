@@ -29,7 +29,7 @@ defmodule PukllayClubWeb.AboutLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} fullbleed sticky>
+    <Layouts.app flash={@flash} fullbleed sticky active_nav={:quienes_somos}>
       <:nav_links>
         <.link navigate={~p"/"}>Inicio</.link>
         <.link navigate={~p"/quienes-somos"} aria-current="page">Quiénes Somos</.link>

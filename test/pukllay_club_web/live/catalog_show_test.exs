@@ -228,5 +228,40 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       refute header_html =~ "Sumate"
     end
+
+    # Detalle passes no nav_links slot — the exact case a slot-driven drawer
+    # would have silently broken. The drawer's link list is shell-owned
+    # (layouts.ex's nav_drawer/1), not slot-owned, so it still renders here.
+    test "the drawer's two site links render even though the page passes no nav_links slot (01.1-09)",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      drawer_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-links")
+        |> LazyHTML.to_html()
+
+      assert drawer_html =~ "Inicio"
+      assert drawer_html =~ "Quiénes Somos"
+    end
+
+    test "the drawer marks neither link current on Detalle (active_nav nil, 01.1-09)", %{
+      conn: conn
+    } do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      drawer_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-links")
+        |> LazyHTML.to_html()
+
+      refute drawer_html =~ "aria-current"
+    end
   end
 end

@@ -703,6 +703,19 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "mobile nav drawer active state (01.1-09)" do
+    test "the drawer marks Inicio as the current page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+      inicio_link = doc |> LazyHTML.query(".pk-drawer-links a:first-child") |> LazyHTML.to_html()
+      quienes_link = doc |> LazyHTML.query(".pk-drawer-links a:last-child") |> LazyHTML.to_html()
+
+      assert inicio_link =~ ~s(aria-current="page")
+      refute quienes_link =~ ~s(aria-current="page")
+    end
+  end
+
   describe "Ver todo tile wired to real filter state (01-11)" do
     test "clicking the tile on the tag-backed shelf renders only the tagged game and hides the shelves",
          %{conn: conn} do

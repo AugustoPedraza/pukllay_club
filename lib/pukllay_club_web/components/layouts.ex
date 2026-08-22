@@ -114,6 +114,14 @@ defmodule PukllayClubWeb.Layouts do
         "resting as a 44px icon. syncMorph() in .CatalogNav reads this via data-search-expanded " <>
         "and only ever opens, never closes, so a server round-trip can never yank an open box shut."
 
+  attr :active_nav, :atom,
+    default: nil,
+    doc:
+      "which top-level nav entry is current — :inicio, :quienes_somos, or nil for a drill-down " <>
+        "page that is neither. Drives the mobile drawer's own aria-current-based active row " <>
+        "(the drawer's link list is shell-owned, not slot-owned, so Detalle — which passes no " <>
+        "nav_links slot — still gets a real menu)."
+
   slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
   slot :nav_search, doc: "the search form, rendered inside the header aligned with row content"
   slot :crumb, doc: "breadcrumb content for a genuine drill-down page (Detalle only)"
@@ -239,10 +247,86 @@ defmodule PukllayClubWeb.Layouts do
 
               this.syncMorph()
             }
+
+            // Mobile nav drawer (01.1-09): guarded on this.drawer existing so
+            // this hook is a no-op everywhere the drawer markup isn't present.
+            // Extends this one hook rather than adding a second — the drawer
+            // reaches its own DOM via this.el.querySelector, never outside it
+            // except the one documented body-class scroll lock.
+            this.drawer = this.el.querySelector("#pk-nav-drawer")
+            if (this.drawer) {
+              this.drawerBackdrop = this.el.querySelector(".pk-drawer-backdrop")
+              this.hamburger = this.el.querySelector(".pk-nav-hamburger")
+              this.drawerClose = this.el.querySelector(".pk-drawer-close")
+              this.drawerReturnFocus = null
+
+              this.openDrawer = () => {
+                this.drawer.classList.add("is-open")
+                this.drawerBackdrop?.classList.add("is-open")
+                this.drawer.removeAttribute("inert")
+                this.hamburger?.setAttribute("aria-expanded", "true")
+                document.body.classList.add("pk-drawer-open")
+                this.drawerReturnFocus = document.activeElement
+                this.drawerClose?.focus()
+              }
+
+              // Idempotent: no-ops when already closed, so calling it
+              // unconditionally from updated() on every server round trip
+              // (see below) never steals focus back to the hamburger on an
+              // unrelated re-render.
+              this.closeDrawer = () => {
+                if (!this.drawer.classList.contains("is-open")) return
+                this.drawer.classList.remove("is-open")
+                this.drawerBackdrop?.classList.remove("is-open")
+                this.drawer.setAttribute("inert", "")
+                this.hamburger?.setAttribute("aria-expanded", "false")
+                document.body.classList.remove("pk-drawer-open")
+                const returnTarget = this.drawerReturnFocus || this.hamburger
+                returnTarget?.focus()
+                this.drawerReturnFocus = null
+              }
+
+              this.onHamburgerClick = () => this.openDrawer()
+              this.onDrawerCloseClick = () => this.closeDrawer()
+              this.onDrawerBackdropClick = () => this.closeDrawer()
+
+              // Escape closes unconditionally; Tab traps focus inside the
+              // panel — copied verbatim from GamePreview's onSheetKeydown
+              // focusable-elements query and first/last wrap (game_preview.ex).
+              this.onDrawerKeydown = (e) => {
+                if (e.key === "Escape") {
+                  this.closeDrawer()
+                  return
+                }
+                if (e.key !== "Tab") return
+                const focusable = this.drawer.querySelectorAll(
+                  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )
+                if (focusable.length === 0) return
+                const first = focusable[0]
+                const last = focusable[focusable.length - 1]
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault()
+                  last.focus()
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault()
+                  first.focus()
+                }
+              }
+
+              this.hamburger?.addEventListener("click", this.onHamburgerClick)
+              this.drawerClose?.addEventListener("click", this.onDrawerCloseClick)
+              this.drawerBackdrop?.addEventListener("click", this.onDrawerBackdropClick)
+              this.drawer.addEventListener("keydown", this.onDrawerKeydown)
+            }
           },
           updated() {
             this.publishHeaderHeight()
             this.syncMorph?.()
+            // A drawer-link navigation is the only way this hook's updated()
+            // fires while the drawer is open; closeDrawer() is idempotent, so
+            // calling it unconditionally here needs no old/new-link diffing.
+            this.closeDrawer?.()
           },
           destroyed() {
             window.removeEventListener("scroll", this.onScroll)
@@ -252,6 +336,13 @@ defmodule PukllayClubWeb.Layouts do
             this.morphClose?.removeEventListener("click", this.onMorphCloseClick)
             document.removeEventListener("keydown", this.onDocumentKeydown)
             document.removeEventListener("click", this.onDocumentClick)
+            this.hamburger?.removeEventListener("click", this.onHamburgerClick)
+            this.drawerClose?.removeEventListener("click", this.onDrawerCloseClick)
+            this.drawerBackdrop?.removeEventListener("click", this.onDrawerBackdropClick)
+            this.drawer?.removeEventListener("keydown", this.onDrawerKeydown)
+            // Defensive: a LiveView teardown mid-open must never leave the
+            // page permanently unscrollable.
+            document.body.classList.remove("pk-drawer-open")
           }
         }
       </script>
@@ -262,6 +353,7 @@ defmodule PukllayClubWeb.Layouts do
         search_expanded={@search_expanded}
       />
       {render_slot(@subnav)}
+      <.nav_drawer active_nav={@active_nav} />
     </div>
     <div :if={!@sticky} id="app-header" class="pk-header">
       <.header_inner
@@ -271,6 +363,7 @@ defmodule PukllayClubWeb.Layouts do
         search_expanded={@search_expanded}
       />
       {render_slot(@subnav)}
+      <.nav_drawer active_nav={@active_nav} />
     </div>
 
     <main class={["py-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
@@ -294,6 +387,15 @@ defmodule PukllayClubWeb.Layouts do
     ~H"""
     <header class="navbar pk-nav px-0">
       <div class="pk-nav-inner mx-auto w-full max-w-7xl pk-gutter">
+        <button
+          type="button"
+          class="pk-nav-hamburger"
+          aria-label="Abrir menú"
+          aria-expanded="false"
+          aria-controls="pk-nav-drawer"
+        >
+          <.icon name="hero-bars-3" class="size-6" />
+        </button>
         <div class="flex-initial">
           <.brand_logo />
         </div>
@@ -331,6 +433,47 @@ defmodule PukllayClubWeb.Layouts do
         </div>
       </div>
     </header>
+    """
+  end
+
+  # Mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5): the
+  # drawer's link list is defined ONCE here, shell-owned rather than
+  # slot-owned, so it is identical on all three routes — including Detalle,
+  # which passes no nav_links slot and would otherwise get an empty drawer.
+  # `inert` is the closed state's a11y mechanism (removes the panel from the
+  # tab order/a11y tree without display:none, which would kill the slide
+  # transition); `.CatalogNav` adds/removes it. Content (chevrons, the
+  # pinned theme-toggle/social bottom block) is filled in by plan 01.1-09
+  # Task 2 — Task 1 ships the empty `.pk-drawer-bottom` placeholder only.
+  attr :active_nav, :atom, default: nil
+
+  defp nav_drawer(assigns) do
+    ~H"""
+    <div class="pk-drawer-backdrop" aria-hidden="true"></div>
+    <aside
+      id="pk-nav-drawer"
+      class="pk-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menú"
+      inert
+    >
+      <div class="pk-drawer-header">
+        <span class="font-display text-lg">Menú</span>
+        <button type="button" class="pk-drawer-close" aria-label="Cerrar menú">
+          <.icon name="hero-x-mark" class="size-5" />
+        </button>
+      </div>
+      <nav class="pk-drawer-links" aria-label="Navegación principal">
+        <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
+          Inicio
+        </.link>
+        <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
+          Quiénes Somos
+        </.link>
+      </nav>
+      <div class="pk-drawer-bottom"></div>
+    </aside>
     """
   end
 
