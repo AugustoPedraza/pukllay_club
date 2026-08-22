@@ -1067,6 +1067,30 @@ body.pk-drawer-open {
   overflow: hidden;
 }
 
+/* About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
+   Page-owned (rendered by AboutLive only, never Layouts) and deliberately
+   has no hook and no scroll behavior at all — it is simply pinned, unlike
+   plan 01.1-04's .pk-mobile-cta-bar (the per-game reservation CTA, driven
+   by .DetailChrome's scroll-retract/footer-park lifecycle). No class, rule
+   or hook is shared between the two. Both sides of the display swap live
+   in the single trailing narrow-viewport media block below, per Pitfall 5. */
+.pk-about-cta-bar {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 0.75rem var(--pk-gutter);
+  background: var(--color-base-100);
+  border-top: 1px solid var(--color-base-300);
+}
+
+.pk-about-cta-spacer {
+  display: none;
+  height: 4.5rem;
+}
+
 /* Mobile category chip row: a second navigation dimension replacing the
    nav links below the narrow-viewport breakpoint. No horizontal padding
    of its own — spacer flex items reserve the end margins instead, since
@@ -1229,6 +1253,14 @@ body.pk-drawer-open {
   .pk-footer-toggle-tag,
   .pk-footer-social {
     display: none;
+  }
+
+  .pk-about-cta-bar {
+    display: block;
+  }
+
+  .pk-about-cta-spacer {
+    display: block;
   }
 
   .pk-crumb-sep,

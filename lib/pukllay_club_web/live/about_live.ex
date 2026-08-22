@@ -49,6 +49,17 @@ defmodule PukllayClubWeb.AboutLive do
           </div>
         </section>
       </div>
+
+      <%!-- About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
+      Page-owned, not shell-owned: no other route can accidentally inherit it,
+      which is the whole point of the D-05 supersession — a site-wide sticky
+      bar would put the join ask back on every page the header just stopped
+      putting it on. Reuses the hero's own sumate_cta/1 so the two placements
+      can never drift to different labels/destinations. Both elements are
+      display:none at base, turned on only in the trailing @media (max-width:
+      480px) block. --%>
+      <div class="pk-about-cta-spacer" aria-hidden="true"></div>
+      <div class="pk-about-cta-bar"><Layouts.sumate_cta class="w-full" /></div>
     </Layouts.app>
     """
   end

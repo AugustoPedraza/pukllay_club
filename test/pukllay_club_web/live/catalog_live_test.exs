@@ -716,6 +716,14 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "About-scoped mobile sticky join-CTA bar is absent here (01.1-09)" do
+    test "/ renders no .pk-about-cta-bar", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      refute html =~ "pk-about-cta-bar"
+    end
+  end
+
   describe "Ver todo tile wired to real filter state (01-11)" do
     test "clicking the tile on the tag-backed shelf renders only the tagged game and hides the shelves",
          %{conn: conn} do

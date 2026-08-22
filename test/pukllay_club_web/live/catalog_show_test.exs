@@ -263,5 +263,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       refute drawer_html =~ "aria-current"
     end
+
+    test "renders no .pk-about-cta-bar (About-scoped, 01.1-09)", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "pk-about-cta-bar"
+    end
   end
 end

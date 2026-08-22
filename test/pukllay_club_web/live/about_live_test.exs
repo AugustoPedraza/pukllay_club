@@ -91,4 +91,23 @@ defmodule PukllayClubWeb.AboutLiveTest do
       end
     end
   end
+
+  describe "mobile sticky join-CTA bar (01.1-09, D-05 superseded)" do
+    test "both /club and /quienes-somos render .pk-about-cta-bar with the WhatsApp href", %{
+      conn: conn
+    } do
+      {:ok, _view, club_html} = live(conn, ~p"/club")
+      {:ok, _view, quienes_html} = live(conn, ~p"/quienes-somos")
+
+      for html <- [club_html, quienes_html] do
+        bar_html =
+          html
+          |> LazyHTML.from_document()
+          |> LazyHTML.query(".pk-about-cta-bar")
+          |> LazyHTML.to_html()
+
+        assert bar_html =~ ClubLinks.whatsapp_group_url()
+      end
+    end
+  end
 end
