@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 014 — Theme Toggle Weight</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 52px; font-family: var(--font-sans); background: var(--color-bg); color: var(--color-text); margin: 0; }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1a1a; border-bottom: 1px solid #333; padding: 10px 16px; display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  #variant-nav .label { color: #999; margin-right: 8px; }
+  .variant-tab { background: #2a2a2a; color: #ddd; border: 1px solid #3a3a3a; padding: 6px 12px; border-radius: var(--radius-full); cursor: pointer; }
+  .variant-tab:hover { background: #3a3a3a; color: #fff; }
+  .variant-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  main { max-width: 1000px; margin: 0 auto; padding: var(--space-6); }
+  .intro { max-width: 720px; margin-bottom: var(--space-4); }
+  .intro h1 { font-family: var(--font-display); font-size: var(--text-display); margin: 0 0 var(--space-2); letter-spacing: 0.02em; }
+  .intro p { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-2); line-height: 1.5; }
+
+  .app-nav { background: var(--color-surface); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-6); }
+  .app-nav-inner { display: flex; align-items: center; gap: var(--space-4); max-width: 900px; margin: 0 auto; padding: var(--space-3) var(--space-6); min-height: 48px; }
+  .brand { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; flex: 0 0 auto; }
+  .brand-mark { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--color-primary); display: flex; align-items: center; justify-content: center; color: var(--color-primary-content); font-family: var(--font-display); font-size: 1rem; }
+  .brand strong { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.03em; color: var(--color-primary); }
+  .links { display: flex; gap: var(--space-4); flex: 0 0 auto; }
+  .links a { color: var(--color-text-muted); font-weight: 600; font-size: var(--text-sm); text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+  .links a.active { color: var(--color-primary); border-color: var(--color-primary); }
+  .actions { display: flex; align-items: center; gap: 0.75rem; flex: 0 0 auto; margin-left: auto; }
+  .cta { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); font-weight: 700; font-size: var(--text-sm); text-decoration: none; background: var(--color-primary); color: var(--color-primary-content); white-space: nowrap; }
+
+  /* Width ruler under the header, marking each control's real pixel footprint */
+  .ruler { max-width: 900px; margin: 0 auto var(--space-8); padding: 0 var(--space-6); }
+  .ruler-track { position: relative; height: 24px; background: repeating-linear-gradient(90deg, var(--color-border) 0 1px, transparent 1px 20px); border-radius: var(--radius-sm); }
+  .ruler-label { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-2); font-family: monospace; }
+
+  /* ---- Variant A: tighter 3-way segmented ---- */
+  .toggle-a { position: relative; display: flex; align-items: center; border: 1px solid var(--color-border); background: var(--color-bg); border-radius: var(--radius-full); overflow: hidden; }
+  .toggle-a button { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: none; background: transparent; color: var(--color-text-muted); cursor: pointer; font-size: 15px; transition: color 0.15s ease; }
+  .toggle-a button.is-active { color: var(--color-primary-content); }
+  .toggle-a .thumb { position: absolute; top: 2px; left: 2px; width: 40px; height: 40px; border-radius: var(--radius-full); background: var(--color-primary); transition: transform 0.2s var(--ease-out-soft); z-index: 0; }
+  .toggle-a button { z-index: 1; }
+  .toggle-a[data-mode="light"] .thumb { transform: translateX(44px); }
+  .toggle-a[data-mode="dark"] .thumb { transform: translateX(88px); }
+
+  /* ---- Variant B: single 2-state icon button ---- */
+  .toggle-b { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-size: 18px; transition: all 0.15s ease; }
+  .toggle-b:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+  /* ---- Variant C: icon button + popover ---- */
+  .toggle-c-wrap { position: relative; }
+  .toggle-c { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-size: 18px; }
+  .toggle-c:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .toggle-c-menu { position: absolute; top: 52px; right: 0; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: var(--space-1); display: none; min-width: 160px; z-index: 10; }
+  .toggle-c-menu.is-open { display: block; }
+  .toggle-c-menu button { display: flex; align-items: center; gap: var(--space-2); width: 100%; padding: var(--space-2) var(--space-3); background: none; border: none; text-align: left; font-size: var(--text-sm); color: var(--color-text); border-radius: var(--radius-sm); cursor: pointer; }
+  .toggle-c-menu button:hover { background: var(--color-accent-bg); }
+  .toggle-c-menu button.is-active { color: var(--color-primary); font-weight: 700; }
+
+  .look-for { max-width: 900px; margin: var(--space-6) auto; padding: var(--space-4) var(--space-6); background: var(--color-accent-bg); border-radius: var(--radius-md); font-size: var(--text-sm); }
+  .look-for h3 { margin: 0 0 var(--space-2); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-primary); }
+  .look-for ul { margin: 0; padding-left: 1.2em; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="label">Sketch 014 — Theme Toggle Weight:</span>
+  <button class="variant-tab active" onclick="showVariant('a')">A: Tighter 3-Way Segmented</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: 2-State Icon Toggle</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Icon + Dropdown</button>
+</div>
+
+<!-- ==================== VARIANT A ==================== -->
+<div id="variant-a" class="variant active">
+  <header class="app-nav">
+    <div class="app-nav-inner">
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links"><a href="#" class="active">Inicio</a><a href="#">Quiénes Somos</a></div>
+      <div class="actions">
+        <a href="#" class="cta">Sumate</a>
+        <div class="toggle-a" data-mode="system" id="toggle-a">
+          <div class="thumb"></div>
+          <button onclick="setModeA('system')" aria-label="Sistema">🖥</button>
+          <button onclick="setModeA('light')" aria-label="Claro">☀</button>
+          <button onclick="setModeA('dark')" aria-label="Oscuro">🌙</button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="ruler"><div class="ruler-track"></div><div class="ruler-label">toggle footprint: 3 × 44px buttons, ~134px total (vs. today's ~140px+2px border) — same 3 controls, lighter chrome: no card shadow, thinner track, no visible border-2</div></div>
+  <main>
+    <div class="intro">
+      <h1>A: Tighter 3-Way Segmented</h1>
+      <p>Keeps all 3 states (system/light/dark) visible and one-click, but strips the heavy chrome: no <code>card</code> shadow, single 1px border instead of 2px, smaller icon size. Same footprint, lighter visual weight.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Click through system/light/dark — does the thumb still read clearly against the CTA next to it?</li>
+        <li>Is 134px still too wide next to a 44px-tall CTA, even with lighter chrome?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== VARIANT B ==================== -->
+<div id="variant-b" class="variant">
+  <header class="app-nav">
+    <div class="app-nav-inner">
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links"><a href="#" class="active">Inicio</a><a href="#">Quiénes Somos</a></div>
+      <div class="actions">
+        <a href="#" class="cta">Sumate</a>
+        <button class="toggle-b" id="toggle-b" onclick="toggleB()" aria-label="Cambiar a tema oscuro">☀</button>
+      </div>
+    </div>
+  </header>
+  <div class="ruler"><div class="ruler-track"></div><div class="ruler-label">toggle footprint: 44px (single button) — matches the CTA's own height exactly, 1:1 visual weight</div></div>
+  <main>
+    <div class="intro">
+      <h1>B: 2-State Icon Toggle</h1>
+      <p>One 44px button, sun/moon only. "System" preference is still honored — it's what the site shows on first visit (via <code>prefers-color-scheme</code>) — it just isn't a persistent 3rd option in the header afterward. Loses the explicit "match my OS" control once someone has toggled manually.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Click the toggle — does a single icon-swap feel sufficient, or do you miss an explicit "system" state?</li>
+        <li>Compare its width directly against "Sumate" — do they now read as one balanced pair?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== VARIANT C ==================== -->
+<div id="variant-c" class="variant">
+  <header class="app-nav">
+    <div class="app-nav-inner">
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links"><a href="#" class="active">Inicio</a><a href="#">Quiénes Somos</a></div>
+      <div class="actions">
+        <a href="#" class="cta">Sumate</a>
+        <div class="toggle-c-wrap">
+          <button class="toggle-c" id="toggle-c" onclick="toggleMenuC()" aria-label="Tema" aria-haspopup="true">☀</button>
+          <div class="toggle-c-menu" id="toggle-c-menu">
+            <button onclick="setModeC('system','🖥')" class="is-active" data-c="system">🖥 Sistema</button>
+            <button onclick="setModeC('light','☀')" data-c="light">☀ Claro</button>
+            <button onclick="setModeC('dark','🌙')" data-c="dark">🌙 Oscuro</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="ruler"><div class="ruler-track"></div><div class="ruler-label">toggle footprint: 44px at rest (dropdown expands on demand, doesn't consume row width)</div></div>
+  <main>
+    <div class="intro">
+      <h1>C: Icon + Dropdown</h1>
+      <p>44px at rest — same footprint as the CTA — showing only the currently-active mode's icon. Click opens a small menu with all 3 options, so nothing is lost vs. today, it's just not permanently spread across the row.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Click the toggle to open the menu — does discovering "system" this way feel natural, or hidden?</li>
+        <li>This adds a click for a setting most people set once — is that an acceptable tradeoff for row balance?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setModeA(mode) {
+  const el = document.getElementById('toggle-a');
+  el.dataset.mode = mode;
+  el.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
+  event.target.classList.add('is-active');
+}
+
+let modeB = 'light';
+function toggleB() {
+  modeB = modeB === 'light' ? 'dark' : 'light';
+  const btn = document.getElementById('toggle-b');
+  btn.textContent = modeB === 'light' ? '☀' : '🌙';
+  btn.setAttribute('aria-label', modeB === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro');
+}
+
+function toggleMenuC() {
+  document.getElementById('toggle-c-menu').classList.toggle('is-open');
+}
+function setModeC(mode, icon) {
+  document.getElementById('toggle-c').textContent = icon;
+  document.querySelectorAll('.toggle-c-menu button').forEach(b => b.classList.remove('is-active'));
+  document.querySelector('[data-c="' + mode + '"]').classList.add('is-active');
+  document.getElementById('toggle-c-menu').classList.remove('is-open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.toggle-c-wrap')) document.getElementById('toggle-c-menu')?.classList.remove('is-open');
+});
+</script>
+</body>
+</html>

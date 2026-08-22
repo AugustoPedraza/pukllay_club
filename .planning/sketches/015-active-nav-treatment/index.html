@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 015 — Active Nav-Link Treatment</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 52px; font-family: var(--font-sans); background: var(--color-bg); color: var(--color-text); margin: 0; }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1a1a; border-bottom: 1px solid #333; padding: 10px 16px; display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  #variant-nav .label { color: #999; margin-right: 8px; }
+  .variant-tab { background: #2a2a2a; color: #ddd; border: 1px solid #3a3a3a; padding: 6px 12px; border-radius: var(--radius-full); cursor: pointer; }
+  .variant-tab:hover { background: #3a3a3a; color: #fff; }
+  .variant-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  main { max-width: 900px; margin: 0 auto; padding: var(--space-6); }
+  .intro { max-width: 720px; margin-bottom: var(--space-4); }
+  .intro h1 { font-family: var(--font-display); font-size: var(--text-display); margin: 0 0 var(--space-2); letter-spacing: 0.02em; }
+  .intro p { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-2); line-height: 1.5; }
+
+  .app-nav { background: var(--color-surface); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-6); }
+  .app-nav-inner { display: flex; align-items: center; gap: var(--space-4); max-width: 900px; margin: 0 auto; padding: var(--space-3) var(--space-6); min-height: 48px; }
+  .brand { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; flex: 0 0 auto; }
+  .brand-mark { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--color-primary); display: flex; align-items: center; justify-content: center; color: var(--color-primary-content); font-family: var(--font-display); font-size: 1rem; }
+  .brand strong { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.03em; color: var(--color-primary); }
+
+  .switch-row { display: flex; gap: var(--space-2); margin: 0 0 var(--space-4); }
+  .switch-btn { font-size: var(--text-xs); font-weight: 700; padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-primary); background: transparent; color: var(--color-primary); cursor: pointer; }
+  .switch-btn.is-active { background: var(--color-primary); color: var(--color-primary-content); }
+
+  .links { display: flex; gap: var(--space-4); flex: 0 0 auto; }
+
+  /* current shipped baseline (color + border-bottom) reference, shown as caption not a tab */
+  .baseline-note { font-size: var(--text-xs); color: var(--color-text-muted); background: var(--color-accent-bg); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-4); display: inline-block; }
+
+  /* Variant A: underline/rule — refined (thicker, offset) */
+  #variant-a .links a { color: var(--color-text-muted); font-weight: 600; font-size: var(--text-sm); text-decoration: none; padding: 4px 0 8px; border-bottom: 3px solid transparent; transition: all 0.15s ease; }
+  #variant-a .links a.active { color: var(--color-primary); border-color: var(--color-primary); }
+  #variant-a .links a:hover { color: var(--color-primary); }
+
+  /* Variant B: pill/chip background */
+  #variant-b .links a { color: var(--color-text-muted); font-weight: 600; font-size: var(--text-sm); text-decoration: none; padding: 8px 14px; border-radius: var(--radius-full); transition: all 0.15s ease; }
+  #variant-b .links a.active { color: var(--color-primary-content); background: var(--color-primary); }
+  #variant-b .links a:hover:not(.active) { background: var(--color-accent-bg); color: var(--color-primary); }
+
+  /* Variant C: weight + color combo, no border */
+  #variant-c .links a { color: var(--color-text-muted); font-weight: 600; font-size: var(--text-sm); text-decoration: none; padding: 4px 0; transition: all 0.15s ease; }
+  #variant-c .links a.active { color: var(--color-text); font-weight: 800; }
+  #variant-c .links a.active::after { content: '•'; color: var(--color-primary); margin-left: 6px; font-weight: 900; }
+  #variant-c .links a:hover:not(.active) { color: var(--color-primary); }
+
+  .look-for { max-width: 900px; margin: var(--space-6) auto; padding: var(--space-4) var(--space-6); background: var(--color-accent-bg); border-radius: var(--radius-md); font-size: var(--text-sm); }
+  .look-for h3 { margin: 0 0 var(--space-2); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-primary); }
+  .look-for ul { margin: 0; padding-left: 1.2em; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="label">Sketch 015 — Active Nav-Link Treatment:</span>
+  <button class="variant-tab active" onclick="showVariant('a')">A: Underline/Rule (refined)</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: Pill/Chip Background</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Weight + Dot</button>
+</div>
+
+<!-- ==================== VARIANT A ==================== -->
+<div id="variant-a" class="variant active">
+  <header class="app-nav">
+    <div class="app-nav-inner">
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links" id="links-a">
+        <a href="#" class="active" onclick="return setActive(event,'links-a')">Inicio</a>
+        <a href="#" onclick="return setActive(event,'links-a')">Quiénes Somos</a>
+      </div>
+    </div>
+  </header>
+  <main>
+    <span class="baseline-note">Today's shipped baseline: color-only + 2px border-bottom (subtle). This variant thickens the rule to 3px and adds vertical offset.</span>
+    <div class="intro">
+      <h1>A: Underline/Rule (refined)</h1>
+      <p>Same family as what's shipped, turned up: a thicker 3px rule with breathing room below the text, instead of a thin line sitting right against the descender.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Click "Quiénes Somos" — is the active state clearly stronger than today's shipped version?</li>
+        <li>Does it still read as "understated" (matching the header's quiet tone) or does it now compete with the CTA?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== VARIANT B ==================== -->
+<div id="variant-b" class="variant">
+  <header class="app-nav">
+    <div class="app-nav-inner">
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links" id="links-b">
+        <a href="#" class="active" onclick="return setActive(event,'links-b')">Inicio</a>
+        <a href="#" onclick="return setActive(event,'links-b')">Quiénes Somos</a>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="intro">
+      <h1>B: Pill/Chip Background</h1>
+      <p>The active link gets a solid primary-color pill behind it — the strongest, most unambiguous signal of the three. Borrows the same pill shape the CTA and filter chips already use elsewhere in the app.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>Does a solid pill on a nav link start to look like a second CTA, competing with "Sumate"?</li>
+        <li>Click between links — does the pill's presence feel like real navigation state, or a button?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== VARIANT C ==================== -->
+<div id="variant-c" class="variant">
+  <header class="app-nav">
+    <div class="app-nav-inner">
+      <a class="brand" href="#"><span class="brand-mark">P</span><strong>PukllayClub</strong></a>
+      <div class="links" id="links-c">
+        <a href="#" class="active" onclick="return setActive(event,'links-c')">Inicio</a>
+        <a href="#" onclick="return setActive(event,'links-c')">Quiénes Somos</a>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="intro">
+      <h1>C: Weight + Dot</h1>
+      <p>No border, no background — just a heavier font-weight (800 vs 600) plus a small primary-color dot after the label. Quietest of the three; relies on typography rather than a graphic device.</p>
+    </div>
+    <div class="look-for">
+      <h3>What to look for</h3>
+      <ul>
+        <li>At a glance (not staring directly at the nav), is it still obvious which page you're on?</li>
+        <li>Does the dot read as intentional, or as a stray character?</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+function setActive(e, groupId) {
+  e.preventDefault();
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('a').forEach(a => a.classList.remove('active'));
+  e.target.classList.add('active');
+  return false;
+}
+</script>
+</body>
+</html>

@@ -68,6 +68,10 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
 
 | # | Name | Design Question | Winner | Tags |
 |---|------|----------------|--------|------|
+| 016 | mobile-nav-scale | Does the current inline-desktop/drawer-mobile header split still hold at today's item count, or is a desktop-scale-ready overflow pattern worth prototyping ahead of future nav growth (Rules Oracle, Club Ops)? | *(pending review)* | header, navigation, mobile, responsive, scale |
+| 015 | active-nav-treatment | `aria-current="page"` is emitted on the current page's nav link but only gets a color change today — too subtle. What's a stronger active-state signal? | *(pending review)* | header, navigation, active-state, accessibility |
+| 014 | theme-toggle-weight | The theme toggle is a 3-button segmented control (system/light/dark, 3×44px ≈134px) — the widest single element in the header cluster. Compress it, and if so, how? | *(pending review)* | header, theme-toggle, navigation, accessibility |
+| 013 | header-action-cluster | Should the "Sumate" CTA be persistent on every page, contextual to landing/About only, or persistent-but-visually-demoted off-landing? | *(pending review)* | header, cta, navigation, information-architecture |
 | 001 | shelf-structure | Does the page read as distinct Netflix-style shelves with a real nav bar, or one continuous scroll? | D (Edge-Fade, refined) | layout, navigation, carousel |
 | 002 | card-hierarchy | What belongs on the card at rest vs. behind an expand, given the real schema fields (players, playtime, age, weight, tags, mechanics)? | D (hybrid, pop-forward preview) | card, information-architecture, interaction |
 | 003 | page-shell | Does a shared header+footer shell work across catalog, detail, and about page skeletons, with a quiet off-catalog header and a footer carrying mission/links/contact/BGG attribution? | C (Two-Tier Mission Band) | layout, header, footer, navigation, compliance |
