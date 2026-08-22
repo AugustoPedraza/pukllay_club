@@ -126,12 +126,13 @@ defmodule PukllayClub.Catalog do
   def similar_games(%Game{weight_band: nil}), do: []
 
   def similar_games(%Game{id: id, weight_band: weight_band}) do
-    from(g in Game,
-      where: g.weight_band == ^weight_band and g.id != ^id,
-      order_by: [asc: g.name],
-      limit: ^@similares_limit
+    Repo.all(
+      from(g in Game,
+        where: g.weight_band == ^weight_band and g.id != ^id,
+        order_by: [asc: g.name],
+        limit: ^@similares_limit
+      )
     )
-    |> Repo.all()
   end
 
   @doc """
