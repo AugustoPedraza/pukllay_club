@@ -2,7 +2,7 @@
 sketch: 017
 name: header-composition
 question: "With 013/014/015 decided (E / D-refined / A), does the full header row still feel overloaded, is a row-based structure even right, and should the CTA/theme-toggle live in the header at all? Covers mobile+desktop together."
-winner: null
+winner: "E"
 tags: [header, composition, search, navigation, mobile, information-architecture, cta-placement, footer]
 ---
 
@@ -147,3 +147,45 @@ narrow-viewport crumb collapse behavior (`.pk-nav-crumb a::before { content: "�
   still feel busy, meaning the toggle wasn't the (only) source of the overload?
 - F: does "‹ Ludoteca" read clearly as "go back," distinct from Inicio/Quiénes Somos? Does dropping the
   CTA/toggle question from Detalle's fix change how "weird" it feels, versus D/E's structural cuts?
+
+## Round 3 (2026-08-22): E Wins — Real Search-Morph, Mobile-Verified, CTA Landing-Only
+
+The developer picked **E** and closed out the round with three concrete refinements, then asked to
+drop the other variants. All applied directly to E; A/B/C/D/F are removed from the live HTML (full
+reasoning for each stays recoverable via this README's Round 1/2 sections and git history at
+`0338a24`/`9f59023`/`1253a23`).
+
+**1. The search icon now genuinely converts into the input, not two elements swapping.** The earlier
+B/E implementation toggled visibility between a separate trigger icon and an expanded input — visually
+two things, not one. Rebuilt as a single `.search-morph` element: a 44px circular icon at rest, whose
+`width` animates open to 260px on click (this project's own validated motion timing/easing from sketch
+006, not a new value), with the magnifying-glass icon sliding to become a leading glyph inside the now-
+open pill and a close (✕) button fading in on the trailing edge. Same DOM node, same left anchor point,
+throughout — it reads as one element transforming, not a swap.
+
+**2. Verified — not assumed — on mobile.** At the ~390px viewport (checked via the sketch's own
+viewport toggle) `.search-morph.is-open` switches to a full-width overlay (`position: absolute; inset:
+0`) instead of a fixed 260px pill, since a fixed desktop-sized pill wouldn't leave usable room in a
+mobile header. The rest of the row (brand text, nav links) dims to 0.35 opacity while search is open
+(`.e-row.search-open`) so the expanding input doesn't visually compete with content it's now overlapping.
+
+**3. CTA is landing-only.** "Sumate" no longer renders in the header on any page — Catálogo and Detalle
+now have no CTA at all in the action cluster. It lives only on Acerca de: in the hero (reusing sketch
+004's hero-CTA pattern) and, on mobile, in a sticky bar scoped to Acerca de only (mirroring 005's
+per-page, not site-wide, sticky bar — this is the second time in this project the developer has pointed
+at "CTA should only be where the context justifies it," first in 013's original scope question, now
+here).
+
+**Implementation flag, not resolved here:** the real shipped code hardcodes `sumate_cta/1` as an
+always-rendered non-slot inside `header_inner/1`, specifically to prevent per-page omission
+(`01.1-PATTERNS.md` D-05). Landing-only placement is now the developer's explicit, repeated direction —
+implementing this for real means deliberately reopening D-05 (e.g. making the CTA a caller-owned slot
+again, with Acerca de being the only caller that renders it), not just moving a template block. Flagged
+here so it isn't lost between sketch and build.
+
+### What to Look For (Round 3)
+- Click the search icon — does it read as one element transforming, or can you still tell it's two
+  things?
+- Switch to mobile and try search again — same morph, full-width this time, rest of the row dims.
+- Switch pages: Catálogo/Detalle have no CTA at all now; Acerca de has it in the hero, plus (mobile) the
+  sticky bar.
