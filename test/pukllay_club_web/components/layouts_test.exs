@@ -165,6 +165,60 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  # Header cluster rework (quick task 260822-2v9): the Sumate CTA and the theme
+  # toggle now render as siblings inside one .pk-nav-actions container, the
+  # header element carries the horizontal-padding-zeroing utility alongside
+  # navbar, and the brand wrapper no longer swallows the row's free space.
+  # Scoped to #app-header via LazyHTML so main/footer markup can't produce a
+  # false pass (both also render a theme toggle / brand lockup elsewhere).
+  describe "app/1 header cluster rework (260822-2v9)" do
+    test "the header contains a pk-nav-actions container grouping the CTA and theme toggle" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ "pk-nav-actions"
+
+      actions_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header .pk-nav-actions")
+        |> LazyHTML.to_html()
+
+      assert actions_html =~ "Sumate"
+      assert actions_html =~ "phx:set-theme"
+    end
+
+    test "the header element carries px-0 alongside navbar (kills the competing padding source)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ ~r/class="[^"]*\bnavbar\b[^"]*\bpx-0\b[^"]*"/
+    end
+
+    test "the brand wrapper no longer uses the row-swallowing flex-1 grow class" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      refute header_html =~ ~s(class="flex-1")
+      assert header_html =~ "flex-initial"
+    end
+  end
+
   # Guards against reintroducing the 672px page cap described by the
   # design-system's page-container rule — page width belongs to each
   # LiveView's own container, not to Layouts.app's wrapper.

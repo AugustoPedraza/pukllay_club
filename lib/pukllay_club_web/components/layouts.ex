@@ -200,9 +200,9 @@ defmodule PukllayClubWeb.Layouts do
 
   defp header_inner(assigns) do
     ~H"""
-    <header class="navbar pk-nav">
+    <header class="navbar pk-nav px-0">
       <div class="pk-nav-inner mx-auto w-full max-w-7xl pk-gutter">
-        <div class="flex-1">
+        <div class="flex-initial">
           <.brand_logo />
         </div>
         <nav :if={@crumb != []} class="pk-nav-crumb" aria-label="Ruta de navegación">
@@ -214,13 +214,9 @@ defmodule PukllayClubWeb.Layouts do
         <div :if={@nav_search != []} class="pk-nav-search">
           {render_slot(@nav_search)}
         </div>
-        <.sumate_cta />
-        <div class="flex-none">
-          <ul class="flex flex-column px-1 space-x-4 items-center">
-            <li>
-              <.theme_toggle />
-            </li>
-          </ul>
+        <div class="pk-nav-actions">
+          <.sumate_cta />
+          <.theme_toggle />
         </div>
       </div>
     </header>
