@@ -196,6 +196,67 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  # Footer's left cluster reuses brand_logo/1 but must not repeat the
+  # header's brand subtitle (260821-umm). The footer overrides the tagline
+  # with the About hero's <h1> text, verbatim including the accent
+  # (Conectá, not Conecta — see the plan's Correction note).
+  describe "app/1 footer left cluster tagline (260821-umm)" do
+    test "the footer's left cluster renders the About hero tagline" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      footer_left_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-footer-left")
+        |> LazyHTML.to_html()
+
+      assert footer_left_html =~ "Conectá jugando"
+    end
+
+    test "the footer's left cluster does not repeat the header's brand subtitle" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      footer_left_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-footer-left")
+        |> LazyHTML.to_html()
+
+      refute footer_left_html =~ "JUEGOS DE MESA MODERNOS"
+    end
+
+    test "the header's brand lockup still renders its original subtitle, unchanged" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ "JUEGOS DE MESA MODERNOS"
+      refute header_html =~ "Conectá jugando"
+    end
+
+    test "brand_logo/1 called with no attrs still renders the header subtitle (default preserved)" do
+      html = render_component(&Layouts.brand_logo/1, %{})
+
+      assert html =~ "JUEGOS DE MESA MODERNOS"
+    end
+
+    test "the footer's left cluster still renders no broken isologo image reference" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      footer_left_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-footer-left")
+        |> LazyHTML.to_html()
+
+      refute footer_left_html =~ "isologo.svg"
+    end
+  end
+
   describe "app/1 Sumate CTA (D-05)" do
     test "renders unconditionally with the ClubLinks WhatsApp href and rel=noopener noreferrer, even when no slot is passed" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
