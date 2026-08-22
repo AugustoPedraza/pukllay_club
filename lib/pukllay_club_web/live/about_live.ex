@@ -12,11 +12,12 @@ defmodule PukllayClubWeb.AboutLive do
   games — this page never describes borrowing or taking games home
   (D-09, prohibitions).
 
-  Structure (D-07): hero -> four-slide photo rail (`.AboutCarousel`) -> the
-  remaining content bands land in the rest of this plan (01.1-02). Every
-  band shares the `.pk-band`/`.pk-band-inner` full-bleed-wrapper/capped-
-  inner recipe so no band's content edge drifts from another's (the
-  about-page-content.md double-gutter lesson).
+  Structure (D-07): hero -> four-slide photo rail (`.AboutCarousel`) ->
+  "Qué hacemos"/"Nuestra historia" two-column band -> dark FAQ band
+  (`#faq`) -> Juntadas (`#juntadas`) + Contacto (`#contacto`) band ->
+  closing CTA band. Every band shares the `.pk-band`/`.pk-band-inner`
+  full-bleed-wrapper/capped-inner recipe so no band's content edge drifts
+  from another's (the about-page-content.md double-gutter lesson).
 
   Renders inside the shared `Layouts.app` shell with the "Quiénes Somos"
   nav-links state (page-shell.md: About is a sibling top-level page, not
@@ -29,6 +30,8 @@ defmodule PukllayClubWeb.AboutLive do
   this plan adds lives strictly between them, never inside or around them.**
   """
   use PukllayClubWeb, :live_view
+
+  alias PukllayClubWeb.ClubLinks
 
   @impl true
   def mount(_params, _session, socket) do
@@ -49,7 +52,7 @@ defmodule PukllayClubWeb.AboutLive do
           <p class="font-sans text-xs uppercase tracking-widest text-neutral">
             Club de juegos de mesa · Jujuy
           </p>
-          <h1 class="font-display text-5xl">Conectá jugando</h1>
+          <h1 class="font-display pk-about-h1">Conectá jugando</h1>
           <p class="font-sans text-base text-neutral">
             Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.
           </p>
@@ -200,6 +203,128 @@ defmodule PukllayClubWeb.AboutLive do
               ></button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <%!-- "Qué hacemos" / "Nuestra historia" — verbatim D-06 copy. --%>
+      <section class="pk-band">
+        <div class="pk-band-inner pk-gutter grid gap-11 sm:grid-cols-2">
+          <div>
+            <h2 class="font-display text-2xl">Qué hacemos</h2>
+            <p class="text-lg">
+              Llevamos nuestra ludoteca, armamos las mesas y enseñamos las reglas. Juegos de mesa modernos, para familias, grupos de amigos y gente que viene sola.
+            </p>
+          </div>
+          <div>
+            <h2 class="font-display text-2xl">Nuestra historia</h2>
+            <p class="text-lg">
+              Empezamos en 2024 con una mesa y unos pocos juegos. Hoy somos una comunidad que se encuentra cada semana en San Salvador de Jujuy. Pukllay significa jugar en quechua.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <%!-- Dark FAQ band — the #faq anchor target the footer's FAQ link
+      resolves to. Per D-11 there is no separate glossary/vocabulary
+      section. Token mapping (Claude's discretion, D-08): bg-primary/
+      text-primary-content, the brand's own measured-contrast pair, with
+      weight (font-semibold on the question) as the emphasis lever instead
+      of the design source's separate muted answer colour — a banned
+      opacity-modifier utility on the content token is never used here. --%>
+      <section id="faq" class="pk-band pk-band-dark">
+        <div class="pk-band-inner pk-gutter">
+          <h2 class="font-display text-2xl">Lo que todos preguntan</h2>
+          <dl class="max-w-2xl space-y-7">
+            <div class="pk-faq-item">
+              <dt class="text-lg font-semibold">¿Cuándo y dónde?</dt>
+              <dd class="text-lg">
+                Todos los sábados desde las 16 hs, en el Club de Emprendedores, San Salvador de Jujuy.
+              </dd>
+            </div>
+            <div class="pk-faq-item">
+              <dt class="text-lg font-semibold">¿Cuánto cuesta?</dt>
+              <dd class="text-lg">Nada. La entrada es libre y los juegos los ponemos nosotros.</dd>
+            </div>
+            <div class="pk-faq-item">
+              <dt class="text-lg font-semibold">¿Tengo que saber jugar?</dt>
+              <dd class="text-lg">
+                No. La mayoría de los juegos se aprenden en diez minutos y siempre hay alguien para explicarte.
+              </dd>
+            </div>
+            <div class="pk-faq-item">
+              <dt class="text-lg font-semibold">¿Puedo ir solo?</dt>
+              <dd class="text-lg">
+                Sí, mucha gente viene sola. Te sumamos a una mesa apenas llegás.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <%!-- Juntadas + Contacto (Claude's discretion per D-02, flagged for
+      review) — the #juntadas and #contacto anchor targets the footer's
+      remaining two links resolve to. Every clause traces back to the FAQ
+      answers above or to ClubLinks; no invented facts, no contact form. --%>
+      <section class="pk-band">
+        <div class="pk-band-inner pk-gutter grid gap-11 sm:grid-cols-2">
+          <div id="juntadas">
+            <h2 class="font-display text-2xl">Juntadas</h2>
+            <p class="text-lg">
+              Nos juntamos todos los sábados desde las 16 hs en el Club de Emprendedores, San Salvador de Jujuy. La entrada es libre y los juegos los ponemos nosotros.
+            </p>
+          </div>
+          <div id="contacto">
+            <h2 class="font-display text-2xl">Contacto</h2>
+            <p class="text-lg">
+              Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.
+            </p>
+            <p class="text-lg">
+              <a href={ClubLinks.whatsapp_group_url()} target="_blank" rel="noopener noreferrer">
+                WhatsApp
+              </a>
+              ·
+              <a href={ClubLinks.instagram_url()} target="_blank" rel="noopener noreferrer">Instagram</a>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <%!-- Closing CTA band. The design source's meta line links to a
+      link-aggregator site via ClubLinks.linktree_url/0 — that function no
+      longer exists: the developer explicitly removed the link-aggregator
+      channel site-wide during plan 01.1-01's footer revision ("remove it,
+      the channel is no longer rendered anywhere" — see ClubLinks'
+      moduledoc). Re-adding a link to a function that doesn't exist would
+      either fail to compile or require inventing a dead URL, so the
+      trailing link instead points at Instagram (still a real, live
+      channel) — same required "Pukllay Club · San Salvador de Jujuy,
+      Argentina ·" prefix, honest destination. Flagged for developer
+      review. --%>
+      <section class="pk-band">
+        <div class="pk-band-inner pk-gutter text-center">
+          <h2 class="font-display text-2xl">Nos vemos el sábado</h2>
+          <div class="flex flex-wrap justify-center gap-3">
+            <a
+              href={ClubLinks.whatsapp_group_url()}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-primary min-h-11"
+            >
+              Grupo de WhatsApp
+            </a>
+            <a
+              href={ClubLinks.instagram_url()}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-outline btn-primary min-h-11"
+            >
+              Instagram
+            </a>
+          </div>
+          <p class="pk-about-eyebrow">
+            Pukllay Club · San Salvador de Jujuy, Argentina ·
+            <a href={ClubLinks.instagram_url()} target="_blank" rel="noopener noreferrer">Instagram</a>
+          </p>
         </div>
       </section>
 

@@ -1092,11 +1092,11 @@ body.pk-drawer-open {
 }
 
 /* About page content bands (01.1-02, D-07 spine: hero -> photo rail ->
-   the remaining bands land later in this plan). Every band is a
-   full-bleed wrapper (.pk-band, vertical padding only) around a single
-   capped inner (.pk-band-inner, max-width + the shared .pk-gutter class)
-   — .pk-band never sets its own horizontal padding, which is exactly the
-   double-gutter bug about-page-content.md documents. */
+   two-column -> dark FAQ -> Juntadas/Contacto -> closing CTA). Every band
+   is a full-bleed wrapper (.pk-band, vertical padding only) around a
+   single capped inner (.pk-band-inner, max-width + the shared .pk-gutter
+   class) — .pk-band never sets its own horizontal padding, which is
+   exactly the double-gutter bug about-page-content.md documents. */
 .pk-band {
   padding: 4.5rem 0;
 }
@@ -1104,6 +1104,36 @@ body.pk-drawer-open {
 .pk-band-inner {
   max-width: 64rem;
   margin: 0 auto;
+}
+
+.pk-about-h1 {
+  font-size: clamp(2.75rem, 8vw, 5.5rem);
+  line-height: 1;
+}
+
+.pk-about-eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-neutral);
+}
+
+.pk-about-eyebrow a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* The dark FAQ band's token mapping (Claude's discretion, D-08): the
+   brand's own measured-contrast pair (app.css's WCAG comment above), not
+   the design source's own one-off literal colour values. */
+.pk-band-dark {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+.pk-faq-item {
+  border-top: 1px solid color-mix(in srgb, var(--color-primary-content) 25%, transparent);
+  padding-top: 1.125rem;
 }
 
 /* Four-slide photo rail (D-12: labelled placeholders, no real photography
