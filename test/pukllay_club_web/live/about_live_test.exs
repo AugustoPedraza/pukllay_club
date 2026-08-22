@@ -110,4 +110,130 @@ defmodule PukllayClubWeb.AboutLiveTest do
       end
     end
   end
+
+  # D-09: the club plays at the club and never lends games out — these
+  # patterns catch any accidental "take it home"/lending framing creeping
+  # into the page's copy.
+  @lending_vocabulary ~r/prestamo|préstamo|alquil|llevar a casa|llevate|llévate/iu
+
+  describe "About page content (SHELL-02)" do
+    test "renders all four FAQ questions and answers verbatim, under #faq", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      assert html =~ "Lo que todos preguntan"
+      assert html =~ "¿Cuándo y dónde?"
+      assert html =~ "Todos los sábados desde las 16 hs, en el Club de Emprendedores, San Salvador de Jujuy."
+      assert html =~ "¿Cuánto cuesta?"
+      assert html =~ "Nada. La entrada es libre y los juegos los ponemos nosotros."
+      assert html =~ "¿Tengo que saber jugar?"
+
+      assert html =~
+               "No. La mayoría de los juegos se aprenden en diez minutos y siempre hay alguien para explicarte."
+
+      assert html =~ "¿Puedo ir solo?"
+      assert html =~ "Sí, mucha gente viene sola. Te sumamos a una mesa apenas llegás."
+    end
+
+    test "renders the 'Qué hacemos' and 'Nuestra historia' paragraphs verbatim", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      assert html =~ "Qué hacemos"
+
+      assert html =~
+               "Llevamos nuestra ludoteca, armamos las mesas y enseñamos las reglas. Juegos de mesa modernos, para familias, grupos de amigos y gente que viene sola."
+
+      assert html =~ "Nuestra historia"
+
+      assert html =~
+               "Empezamos en 2024 con una mesa y unos pocos juegos. Hoy somos una comunidad que se encuentra cada semana en San Salvador de Jujuy. Pukllay significa jugar en quechua."
+    end
+
+    test "renders the closing CTA heading, both button labels and the meta line", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      assert html =~ "Nos vemos el sábado"
+      assert html =~ "Grupo de WhatsApp"
+      assert html =~ "Instagram"
+      assert html =~ "Pukllay Club · San Salvador de Jujuy, Argentina ·"
+    end
+
+    test "/club and /quienes-somos render byte-identical HTML once per-connection session/CSRF tokens are normalized (D-01)",
+         %{conn: conn} do
+      {:ok, _view, club_html} = live(conn, ~p"/club")
+      {:ok, _view, quienes_html} = live(conn, ~p"/quienes-somos")
+
+      # live/2 mints a fresh CSRF token, a random root container id and a
+      # phx-session/phx-static payload per connection, so raw HTML from two
+      # separate live/2 calls is never byte-identical even for the exact
+      # same route (verified empirically against this repo) — normalizing
+      # only those four per-connection fields, never any real page content,
+      # is what makes "byte-identical" a meaningful, non-flaky claim rather
+      # than a permanently-failing one.
+      normalize = fn html ->
+        html
+        |> String.replace(~r/csrf-token" content="[^"]*"/, "csrf-token\" content=\"X\"")
+        |> String.replace(~r/data-phx-session="[^"]*"/, "data-phx-session=\"X\"")
+        |> String.replace(~r/data-phx-static="[^"]*"/, "data-phx-static=\"X\"")
+        |> String.replace(~r/id="phx-[^"]*"/, "id=\"phx-X\"")
+      end
+
+      assert normalize.(club_html) == normalize.(quienes_html)
+    end
+
+    test "the footer's #faq, #contacto and #juntadas links all resolve to a real element id on the page",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      assert html =~ ~s(id="faq")
+      assert html =~ ~s(id="contacto")
+      assert html =~ ~s(id="juntadas")
+    end
+
+    test "never frames the club as lending or renting games to take home (D-09)", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      refute html =~ @lending_vocabulary
+    end
+
+    test "carries no design-source font reference and no inline style attribute (D-08)", %{
+      conn: conn
+    } do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      refute html =~ "Bricolage"
+      refute html =~ "Instrument Sans"
+      refute html =~ "JetBrains"
+      refute html =~ ~s(style=")
+    end
+
+    test "renders the four-slide placeholder photo rail with dot navigation and no <img> (D-12)",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      assert html =~ "foto — mesa llena un sábado"
+      assert html =~ "foto — explicando un juego"
+      assert html =~ "foto — la ludoteca"
+      assert html =~ "foto — la comunidad"
+
+      rail_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-about-rail")
+        |> LazyHTML.to_html()
+
+      refute rail_html =~ "<img"
+
+      dot_count =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("[data-goto]")
+        |> Enum.count()
+
+      assert dot_count == 4
+      assert html =~ ~s(aria-label="Foto 1")
+      assert html =~ ~s(aria-label="Foto 2")
+      assert html =~ ~s(aria-label="Foto 3")
+      assert html =~ ~s(aria-label="Foto 4")
+    end
+  end
 end
