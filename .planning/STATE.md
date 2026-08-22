@@ -32,7 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 01.1 (Site Shell & Content Pages (INSERTED)) — EXECUTING
 Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-08-21 - Completed quick task 260821-umm: Footer left cluster in layouts.ex footer/1 (plan 01.1-01, commit f4c7f6d) reuses brand_logo/1 as-is, repeating the header subtitle "JUEGOS DE MESA MODERNOS" redundantly. Replace that second line with the About hero tagline "Conectá jugando", footer-only, keeping the logo mark + PUKLLAY CLUB wordmark unchanged.
+Last activity: 2026-08-21 - Completed quick task 260821-v7q: theme-aware isologo pair wired into Layouts.brand_logo/1 (light/dark PNGs + rebuilt favicon.ico committed)
 structure (0-4)
 
 Progress: [██████████] 100%
@@ -202,6 +202,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 13 | Reconcile sketch theme with app.css (D2 conform, D2b retire dark-purple.css), add check-theme-drift.sh; D1 geometry deferred | 2026-08-21 | 34a40f0 | — | — |
 | 14 | Fix 7 UI audit findings on CatalogLive.Index (drawer overlap, theme-toggle a11y/hit-target, logo/tagline, button hierarchy, type inventory) — quick-260821-dah | 2026-08-21 | b90b499 | — | — |
 | 260821-umm | Footer's left cluster now shows the About hero tagline ("Conectá jugando") instead of repeating the header's "JUEGOS DE MESA MODERNOS" subtitle | 2026-08-21 | 9734f18 | | [260821-umm-footer-left-cluster-in-layouts-ex-footer](./quick/260821-umm-footer-left-cluster-in-layouts-ex-footer/) |
+| 260821-v7q | Wired the real isologo mark into Layouts.brand_logo/1 with theme-aware light/dark images and rebuilt favicon.ico from the purple isologo lockup | 2026-08-21 | aff2b1d | | [260821-v7q-wire-up-the-real-isologo-mark-theme-awar](./quick/260821-v7q-wire-up-the-real-isologo-mark-theme-awar/) |
 
 ### Roadmap Evolution
 
