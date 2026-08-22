@@ -4,11 +4,11 @@ milestone: v1.0
 current_phase: 01.1
 current_phase_name: Site Shell & Content Pages (INSERTED)
 status: executing
-stopped_at: Completed quick task 260821-v7q (theme-aware isologo pair wired into brand_logo/1, both marks + favicon committed)
-last_updated: "2026-08-22T01:47:45.503Z"
+stopped_at: "Completed quick task 260822-2v9 (desktop header polish: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers)"
+last_updated: "2026-08-22T05:31:12.787Z"
 last_activity: 2026-08-21
 last_activity_desc: Phase 01.1 execution started
-state_head: c2c95d0425dc596072c3143c647f1061fdc44bf6
+state_head: 919544354b85dfc207a5575e7e5da305031ad2ec
 progress:
   total_phases: 5
   completed_phases: 1
@@ -136,6 +136,7 @@ Recent decisions affecting current work:
 - [Phase 01]: Quick task 260821-dah: closed all 7 2026-08-18 UI audit findings on CatalogLive.Index (filter-drawer overlap, theme-toggle a11y/hit-target, logo/tagline tokens, button.secondary variant, re-measured type inventory at 5 combos/3-tier cap); closes the 01-05-PLAN.md drawer/pills tappability thread, recorded as an addendum in 01-VERIFICATION.md
 - [Phase 01.1]: Task 2(a) BGG attribution: 'Powered by BGG' link to boardgamegeek.com with the real logo mark; (b) footer social set revised post-Task-1 to WhatsApp/Facebook/Instagram/Email (linktree_url removed); (c) catalog header nav links replaced with the About page's Inicio/Quiénes Somos wayfinding links
 - [Phase 01.1]: Quick task 260821-v7q: assign_new/3 replaces a compile-time isologo? constant so tests can force the wordmark-only fallback branch that becomes unreachable once both real mark PNGs exist on disk; production behaviour byte-identical since no call site passes the key
+- [Phase 01.1]: Quick task 260822-2v9: header surface base-200 (matches footer token), brand wrapper flex-1->flex-initial, .pk-nav-actions groups Sumate CTA + theme toggle with margin-left:auto fallback, CTA rises to the toggle's fixed 48px anchor (min-h-12, small-size modifier dropped), CoreComponents.input/1's fieldset wrapper neutralized via header-scoped selector (not the shared component), .pk-nav-links demoted to neutral with a new aria-current active-state rule
 
 ### Pending Todos
 
@@ -203,6 +204,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 14 | Fix 7 UI audit findings on CatalogLive.Index (drawer overlap, theme-toggle a11y/hit-target, logo/tagline, button hierarchy, type inventory) — quick-260821-dah | 2026-08-21 | b90b499 | — | — |
 | 260821-umm | Footer's left cluster now shows the About hero tagline ("Conectá jugando") instead of repeating the header's "JUEGOS DE MESA MODERNOS" subtitle | 2026-08-21 | 9734f18 | | [260821-umm-footer-left-cluster-in-layouts-ex-footer](./quick/260821-umm-footer-left-cluster-in-layouts-ex-footer/) |
 | 260821-v7q | Wired the real isologo mark into Layouts.brand_logo/1 with theme-aware light/dark images and rebuilt favicon.ico from the purple isologo lockup | 2026-08-21 | aff2b1d | | [260821-v7q-wire-up-the-real-isologo-mark-theme-awar](./quick/260821-v7q-wire-up-the-real-isologo-mark-theme-awar/) |
+| 17 | Polish the desktop header: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers | 2026-08-22 | 9195443 | — | — |
 
 ### Roadmap Evolution
 
@@ -218,6 +220,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-22T01:47:45.259Z
-Stopped at: Completed quick task 260821-v7q (theme-aware isologo pair wired into brand_logo/1, both marks + favicon committed)
+Last session: 2026-08-22T05:30:58.064Z
+Stopped at: Completed quick task 260822-2v9 (desktop header polish: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers)
 Resume file: None
