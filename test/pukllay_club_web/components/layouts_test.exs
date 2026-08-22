@@ -126,13 +126,52 @@ defmodule PukllayClubWeb.LayoutsTest do
       refute html =~ "phoenix.hexdocs.pm"
     end
 
-    test "still renders the theme toggle" do
+    # Theme toggle relocated to the footer (sketch 017 Round 2, plan
+    # 01.1-08 Task 3) — scoped to the footer subtree, and a companion
+    # asserts the header ROW (.pk-nav-inner, not the whole #app-header —
+    # plan 01.1-09's mobile drawer renders its own toggle copy inside
+    # #app-header, so a wider assertion would false-fail one wave later)
+    # carries none of it.
+    test "still renders the theme toggle, now inside the footer" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      assert html =~ "phx:set-theme"
-      assert html =~ ~s(data-phx-theme="light")
-      assert html =~ ~s(data-phx-theme="dark")
-      assert html =~ ~s(data-phx-theme="system")
+      footer_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("footer")
+        |> LazyHTML.to_html()
+
+      assert footer_html =~ "phx:set-theme"
+      assert footer_html =~ ~s(data-phx-theme="light")
+      assert footer_html =~ ~s(data-phx-theme="dark")
+      assert footer_html =~ ~s(data-phx-theme="system")
+    end
+
+    test "the header row (.pk-nav-inner) carries no data-phx-theme attribute at all" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      nav_inner_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-nav-inner")
+        |> LazyHTML.to_html()
+
+      refute nav_inner_html =~ "data-phx-theme"
+    end
+
+    test "the theme toggle wrapper carries no card or border class, and the footer toggle tag renders" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      footer_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("footer")
+        |> LazyHTML.to_html()
+
+      refute footer_html =~ ~s(class="card)
+      refute footer_html =~ "border-base-300"
+      assert footer_html =~ "pk-footer-toggle-tag"
+      assert footer_html =~ "Tema"
     end
 
     # The header's content row (.pk-nav-inner) always uses the capped
@@ -203,17 +242,25 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert header_html =~ ~r/class="[^"]*\bnavbar\b[^"]*\bpx-0\b[^"]*"/
     end
 
-    test "the brand wrapper no longer uses the row-swallowing flex-1 grow class" do
+    # Rewritten (01.1-08 Task 3) to query every element's class attribute
+    # inside the header subtree and assert none of them carries flex-1 as a
+    # whitespace-delimited class token — the original assertion
+    # (`refute header_html =~ ~s(class="flex-1")`) only ever passed because
+    # brand_logo/1's anchor class string was longer than the exact literal,
+    # not because flex-1 was actually absent (the real bug this plan fixes:
+    # the anchor still carried flex-1 while its wrapper had already moved to
+    # flex-initial).
+    test "no element inside the header subtree carries flex-1 as a class token" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      header_html =
+      classes =
         html
         |> LazyHTML.from_document()
-        |> LazyHTML.query("#app-header")
-        |> LazyHTML.to_html()
+        |> LazyHTML.query("#app-header [class]")
+        |> LazyHTML.attribute("class")
 
-      refute header_html =~ ~s(class="flex-1")
-      assert header_html =~ "flex-initial"
+      refute Enum.any?(classes, fn class -> "flex-1" in String.split(class) end)
+      assert html =~ "flex-initial"
     end
   end
 

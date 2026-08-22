@@ -532,19 +532,22 @@ body.pk-sheet-open {
   gap: 1.5rem;
 }
 
+/* 013-E: nothing carries a border or fill at rest or on hover — hierarchy
+   comes from position, not weight. The active link (below) is the one
+   place a rule appears. The extra 8px bottom padding is what creates
+   015-A's offset rule instead of a line hugging the text. */
 .pk-nav-links a {
   color: var(--color-neutral);
   font-weight: 600;
   font-size: 0.875rem;
   text-decoration: none;
-  padding: 4px 0;
-  border-bottom: 2px solid transparent;
+  padding: 4px 0 8px;
+  border-bottom: 3px solid transparent;
   transition: border-color 150ms ease, color 150ms ease;
 }
 
 .pk-nav-links a:hover,
 .pk-nav-links a:focus-visible {
-  border-color: var(--color-primary);
   color: var(--color-primary);
 }
 
@@ -716,6 +719,7 @@ body.pk-sheet-open {
   font-size: 0.875rem;
   color: var(--color-neutral);
   flex: 1;
+  min-width: 0;
 }
 
 .pk-nav-crumb a {
@@ -726,6 +730,18 @@ body.pk-sheet-open {
 .pk-nav-crumb a:hover,
 .pk-nav-crumb a:focus-visible {
   color: var(--color-primary);
+}
+
+/* Base-width truncation (01.1-08): Detalle now carries a search control it
+   didn't have when this crumb was built, so a long game title has real
+   competition for the row between 481px and roughly 700px. The ≤480px
+   block below already collapses the crumb to "‹ Ludoteca"; this is the
+   band that collapse doesn't cover. */
+.pk-crumb-current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 /* Sketch 011 (full-shell-composition): the header's full-bleed background
@@ -800,6 +816,50 @@ body.pk-sheet-open {
   background: var(--color-primary);
   color: var(--color-primary-content);
   border-color: var(--color-primary);
+}
+
+/* Theme toggle, rebuilt bare (sketch 014 Round 3) and relocated to the
+   footer (sketch 017 Round 2) between the social icons and the meta line.
+   No card/border/background/sliding-pill — three bare monochrome icon
+   buttons, active state expressed as a small underline driven by the same
+   <html> data-theme/data-theme-source attributes assets/js/theme.js
+   already sets, reproducing the shipped arbitrary-variant classes'
+   precedence: data-theme-source="system" wins outright; otherwise
+   data-theme="light"|"dark" marks the respective button. */
+.pk-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pk-theme-toggle button {
+  position: relative;
+  color: var(--color-neutral);
+}
+
+[data-theme-source="system"] .pk-theme-toggle button[data-phx-theme="system"],
+[data-theme-source="user"][data-theme="light"] .pk-theme-toggle button[data-phx-theme="light"],
+[data-theme-source="user"][data-theme="dark"] .pk-theme-toggle button[data-phx-theme="dark"] {
+  color: var(--color-primary);
+}
+
+[data-theme-source="system"] .pk-theme-toggle button[data-phx-theme="system"]::after,
+[data-theme-source="user"][data-theme="light"] .pk-theme-toggle button[data-phx-theme="light"]::after,
+[data-theme-source="user"][data-theme="dark"] .pk-theme-toggle button[data-phx-theme="dark"]::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+}
+
+.pk-footer-toggle-tag {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+  white-space: nowrap;
 }
 
 .pk-footer-meta {
@@ -920,6 +980,18 @@ body.pk-sheet-open {
 
   .pk-chip-nav {
     display: flex;
+  }
+
+  /* Row density (01.1-08): a tighter row gap plus hiding the wordmark
+     (header-scoped only — the footer's own brand_logo/1 keeps its
+     wordmark) frees the room Detalle's crumb + search control need
+     between brand and the row's right edge. */
+  .pk-nav-inner {
+    gap: 0.5rem;
+  }
+
+  .pk-nav-inner .pk-brand-wordmark {
+    display: none;
   }
 
   /* Mobile overlay (sketch 017 Round 5's fix for the flat hard-edged slab):

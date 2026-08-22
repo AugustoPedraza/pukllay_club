@@ -46,7 +46,7 @@ defmodule PukllayClubWeb.Layouts do
     assigns = assign_new(assigns, :isologo?, fn -> @isologo? end)
 
     ~H"""
-    <a href="/" class="flex-1 flex w-fit items-center gap-2 min-h-11">
+    <a href="/" class="flex-initial flex w-fit items-center gap-2 min-h-11">
       <img
         :if={@isologo?}
         src={~p"/images/isologo-light.png"}
@@ -61,7 +61,7 @@ defmodule PukllayClubWeb.Layouts do
         alt=""
         class="hidden dark:block"
       />
-      <span class="flex flex-col leading-none">
+      <span class="pk-brand-wordmark flex flex-col leading-none">
         <span class="font-display text-2xl uppercase tracking-wide">PUKLLAY CLUB</span>
         <span class="font-sans text-xs uppercase tracking-widest text-neutral">
           {@tagline}
@@ -329,7 +329,6 @@ defmodule PukllayClubWeb.Layouts do
             <.icon name="hero-x-mark-micro" class="size-4" />
           </button>
         </div>
-        <.theme_toggle />
       </div>
     </header>
     """
@@ -492,6 +491,8 @@ defmodule PukllayClubWeb.Layouts do
               </svg>
             </a>
           </div>
+          <span class="pk-footer-toggle-tag">Tema</span>
+          <.theme_toggle />
           <span class="pk-footer-meta">© 2026 Pukllay Club · <.bgg_attribution /></span>
         </div>
       </div>
@@ -572,37 +573,49 @@ defmodule PukllayClubWeb.Layouts do
   Provides dark vs light theme toggle based on themes defined in app.css.
 
   See <head> in root.html.heex which applies the theme before page load.
+
+  Rebuilt bare (sketch 014 Round 3 — the "too yellow" complaint was caused by
+  emoji glyphs rendering in their own fixed native colour, not by anything
+  fixable with CSS opacity; the fix is the already-shipped Heroicons micro
+  set, which is inherently single-colour and inherits `currentColor`, not a
+  new icon set) and relocated to the footer (sketch 017 Round 2 — the
+  conventional home for utility controls). Every behaviour contract is
+  unchanged: the same `phx-click={JS.dispatch("phx:set-theme")}` dispatch,
+  the same three per-button theme-selecting attribute values, the three
+  distinct Spanish `aria-label`s, and `min-h-11 min-w-11` on each button.
+  Only the chrome changes — the card, border, background and sliding pill
+  are gone; the active state is a small underline expressed in `app.css`'s
+  `.pk-theme-toggle` rules, reading the same `<html>` theme attributes
+  `assets/js/theme.js` already sets.
   """
   def theme_toggle(assigns) do
     ~H"""
-    <div class="card relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full">
-      <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 [[data-theme-source=system]_&]:!left-0 transition-[left]" />
-
+    <div class="pk-theme-toggle">
       <button
-        class="flex items-center justify-center min-h-11 min-w-11 p-2 cursor-pointer w-1/3"
+        class="flex items-center justify-center min-h-11 min-w-11 p-2 cursor-pointer"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
         aria-label="Usar tema del sistema"
       >
-        <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-computer-desktop-micro" class="size-4" />
       </button>
 
       <button
-        class="flex items-center justify-center min-h-11 min-w-11 p-2 cursor-pointer w-1/3"
+        class="flex items-center justify-center min-h-11 min-w-11 p-2 cursor-pointer"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
         aria-label="Usar tema claro"
       >
-        <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-sun-micro" class="size-4" />
       </button>
 
       <button
-        class="flex items-center justify-center min-h-11 min-w-11 p-2 cursor-pointer w-1/3"
+        class="flex items-center justify-center min-h-11 min-w-11 p-2 cursor-pointer"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
         aria-label="Usar tema oscuro"
       >
-        <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-moon-micro" class="size-4" />
       </button>
     </div>
     """
