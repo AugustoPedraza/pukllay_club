@@ -694,7 +694,10 @@ body.pk-sheet-open {
   .pk-search-morph-close,
   .pk-search-morph .pk-nav-search,
   .pk-drawer,
-  .pk-drawer-backdrop {
+  .pk-drawer-backdrop,
+  .pk-mobile-cta-bar,
+  .pk-title-echo,
+  body.pk-has-cta-bar {
     transition-duration: 1ms;
   }
 }
@@ -1248,24 +1251,29 @@ body.pk-drawer-open {
   border-color: var(--color-primary);
 }
 
-/* Detail page (01.1-03): buy-box masthead beside a reading column, ficha
-   técnica grid, description clamp. .pk-poster-col is sticky, never fixed —
-   the grid container is a natural un-stick boundary, no JS needed. Facts
-   pills reuse GamePreview.facts_row/1's .pk-facts-row/.pk-fact verbatim
-   (already shipped for the browse-card preview) rather than a second pill
-   component declaring the same visual family twice. */
+/* Detail page (01.1-03/01.1-04): buy-box masthead beside a reading column
+   at the detail layout breakpoint, ficha técnica grid, description clamp.
+   Facts pills reuse GamePreview.facts_row/1's .pk-facts-row/.pk-fact
+   verbatim (already shipped for the browse-card preview) rather than a
+   second pill component declaring the same visual family twice.
+
+   Mobile-first (01.1-04): base is a single-column masthead with a static
+   poster column; the detail layout breakpoint declared below (48rem/
+   768px — a new breakpoint for this repo; a poster column beside a
+   reading column needs roughly that width to stay legible) flips the
+   masthead to its two-column sticky grid AND hides the mobile CTA bar in
+   one place, so the two concerns can never drift apart. */
 .pk-detail-masthead {
   max-width: 68.75rem;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 20rem 1fr;
+  grid-template-columns: 1fr;
   gap: 3rem;
   align-items: start;
 }
 
 .pk-poster-col {
-  position: sticky;
-  top: calc(var(--pk-header-h, 4.5rem) + 1.5rem);
+  position: static;
 }
 
 .pk-text-col {
@@ -1307,6 +1315,155 @@ body.pk-drawer-open {
   letter-spacing: 0.08em;
   color: var(--color-neutral);
   font-size: 0.75rem;
+}
+
+/* Mobile CTA bar (01.1-04, sketch 005/011): visible at rest below the
+   detail layout breakpoint, driven entirely by .DetailChrome's plain
+   scroll listener (never IntersectionObserver — it throttles/suspends in
+   a backgrounded tab). .is-hidden is the "paused" state (a small nudge,
+   mid active-scroll); .is-parked is the "gone" state (once the real
+   footer enters the viewport) — two distinct classes with two distinct
+   treatments and independent lifecycles, never merged into one, and the
+   debounce timer that drives .is-hidden must never fight .is-parked.
+   Background is one step darker/tinted from its own outlined share
+   button so the two never fuse into one visual mass (verify with computed
+   backgroundColor, not by eye). z-index 45 sits below the mobile nav
+   drawer (60/61, plan 01.1-09) on purpose — opening the drawer must cover
+   this bar, not be underlapped by it. Distinct from .pk-about-cta-bar
+   (z-index 40, plan 01.1-09's About-page club-wide join CTA) — different
+   page, different CTA, different lifecycle; no shared class, rule or
+   hook between the two. */
+.pk-mobile-cta-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem var(--pk-gutter);
+  background: var(--color-base-200);
+  transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-mobile-cta-bar.is-hidden {
+  transform: translateY(12%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pk-mobile-cta-bar.is-parked {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Reserved body padding so the fixed bar never overlaps the page's last
+   real content; collapses to 0 in the same transition as .is-parked
+   above, so the footer never renders above an empty gap. Scoped to a body
+   class (added/removed by .DetailChrome on mount/destroy), never a bare
+   body selector, so no other page in the app carries this padding.
+   body.pk-cta-parked is declared AFTER body.pk-has-cta-bar deliberately —
+   the two rules have equal specificity and resolve by source order. */
+body.pk-has-cta-bar {
+  padding-bottom: 9.25rem;
+  transition: padding-bottom var(--duration-base) var(--ease-out-soft);
+}
+
+body.pk-cta-parked {
+  padding-bottom: 0;
+}
+
+/* Sticky title-echo bar (01.1-04): a condensed, title-only copy of the
+   masthead's <h1> (a full facts+title+tags echo was tried and rejected as
+   overloaded), fading in under the site header once the real title has
+   scrolled fully out of view. Sticky, not fixed — it has a natural
+   container boundary. Also parks on the same footerReached flag as the
+   CTA bar, even though it doesn't spatially overlap the footer, so both
+   retract together as a coherent pair. */
+.pk-title-echo {
+  position: sticky;
+  top: var(--pk-header-h, 4.5rem);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem var(--pk-gutter);
+  background: var(--color-base-100);
+  border-bottom: 1px solid var(--color-base-300);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity var(--duration-base) var(--ease-out-soft), transform var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-title-echo.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.pk-title-echo.is-parked {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pk-scroll-top {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  cursor: pointer;
+}
+
+/* Continuous, gentle bounce for as long as the bar is visible — reads as
+   "there's more above, tap me" rather than a one-shot on-appear
+   animation. Wrapped in the no-preference query so a visitor who has
+   asked for reduced motion never sees it play. */
+@media (prefers-reduced-motion: no-preference) {
+  .pk-scroll-top {
+    animation: pk-scroll-top-bounce 1.6s var(--ease-out-soft) infinite;
+  }
+}
+
+@keyframes pk-scroll-top-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* The single detail layout breakpoint (48rem/768px — new for this repo,
+   see 01.1-04's SUMMARY for the reason): flips the masthead to its
+   two-column sticky grid AND hides the mobile CTA bar together, in one
+   place, so the two concerns can never drift apart. Declaring the
+   override here (after the base rules above) is deliberate — an
+   equal-specificity base rule placed AFTER its media override would
+   silently win at every width regardless of which query matches. */
+@media (min-width: 48rem) {
+  .pk-detail-masthead {
+    grid-template-columns: 20rem 1fr;
+  }
+
+  .pk-poster-col {
+    position: sticky;
+    top: calc(var(--pk-header-h, 4.5rem) + 1.5rem);
+  }
+
+  .pk-mobile-cta-bar {
+    display: none;
+  }
 }
 
 /* Narrow-viewport density and navigation switch (sketch 001, variant D):
@@ -1459,17 +1616,11 @@ body.pk-drawer-open {
     content: "‹ ";
   }
 
-  /* Detail page (01.1-03): single-column masthead (poster stops being
-     sticky — nothing to pin above a stacked column), a shorter clamp, and
-     a single-column ficha técnica. */
-  .pk-detail-masthead {
-    grid-template-columns: 1fr;
-  }
-
-  .pk-poster-col {
-    position: static;
-  }
-
+  /* Detail page (01.1-03/01.1-04): a shorter description clamp and a
+     single-column ficha técnica below 480px. The masthead's own column
+     count and the poster column's sticky/static toggle are now handled
+     by the 48rem detail layout breakpoint (01.1-04) — nothing to repeat
+     here, both are already single-column/static below that width. */
   .pk-clamp {
     -webkit-line-clamp: 2;
   }
