@@ -30,7 +30,6 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ "PUKLLAY CLUB"
       assert html =~ "JUEGOS DE MESA MODERNOS"
     end
-
   end
 
   describe "brand_logo/1 theme-aware isologo pair (260821-v7q)" do
