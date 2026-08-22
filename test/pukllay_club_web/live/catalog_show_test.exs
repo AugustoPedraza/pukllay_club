@@ -195,5 +195,22 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert crumb_current_text == "Juego Detalle Shell"
       assert html =~ "pk-footer"
     end
+
+    test "the header renders a role=search form whose action is the catalog root (01.1-08)", %{
+      conn: conn
+    } do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ ~s(role="search")
+      assert header_html =~ ~s(action="/")
+    end
   end
 end

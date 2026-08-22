@@ -23,6 +23,22 @@ defmodule PukllayClubWeb.LayoutsTest do
     """
   end
 
+  # Local wrapper for exercising the :nav_search slot / search-morph
+  # (01.1-08) — same render_component/2 slot-testing pattern as
+  # render_with_crumb/1 above.
+  defp render_with_nav_search(assigns) do
+    assigns = assign_new(assigns, :search_expanded, fn -> false end)
+
+    ~H"""
+    <Layouts.app flash={%{}} search_expanded={@search_expanded}>
+      <:nav_search>
+        <input type="text" name="q" id="test-search-input" />
+      </:nav_search>
+      content
+    </Layouts.app>
+    """
+  end
+
   describe "brand_logo/1" do
     test "renders the wordmark and tagline" do
       html = render_component(&Layouts.brand_logo/1, %{})
@@ -407,6 +423,62 @@ defmodule PukllayClubWeb.LayoutsTest do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
       refute html =~ "pk-nav-crumb"
+    end
+  end
+
+  describe "app/1 search-morph (01.1-08)" do
+    test "the morph does not render when no nav_search slot is passed" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      refute html =~ "pk-search-morph"
+    end
+
+    test "the morph renders the toggle and close buttons with the slot content between them" do
+      html = render_component(&render_with_nav_search/1, %{})
+
+      morph_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph")
+        |> LazyHTML.to_html()
+
+      assert morph_html =~ "pk-search-morph-toggle"
+      assert morph_html =~ "test-search-input"
+      assert morph_html =~ "pk-search-morph-close"
+
+      toggle_pos = morph_html |> :binary.match("pk-search-morph-toggle") |> elem(0)
+      slot_pos = morph_html |> :binary.match("test-search-input") |> elem(0)
+      close_pos = morph_html |> :binary.match("pk-search-morph-close") |> elem(0)
+
+      assert toggle_pos < slot_pos
+      assert slot_pos < close_pos
+    end
+
+    test "the toggle and close buttons each carry a distinct Spanish aria-label" do
+      html = render_component(&render_with_nav_search/1, %{})
+
+      assert html =~ ~s(aria-label="Buscar")
+      assert html =~ ~s(aria-label="Cerrar búsqueda")
+    end
+
+    test "the close button is tabindex=\"-1\" at rest" do
+      html = render_component(&render_with_nav_search/1, %{})
+
+      close_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-close")
+        |> LazyHTML.to_html()
+
+      assert close_html =~ ~s(tabindex="-1")
+    end
+
+    test "data-search-expanded reflects the search_expanded attr" do
+      html_false = render_component(&render_with_nav_search/1, %{search_expanded: false})
+      html_true = render_component(&render_with_nav_search/1, %{search_expanded: true})
+
+      assert html_false =~ ~s(data-search-expanded="false")
+      assert html_true =~ ~s(data-search-expanded="true")
     end
   end
 

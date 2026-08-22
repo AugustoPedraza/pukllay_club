@@ -47,12 +47,25 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} fullbleed sticky>
+    <Layouts.app flash={@flash} fullbleed sticky search_expanded={false}>
       <:crumb>
         <.link navigate={~p"/"}>Ludoteca</.link>
         <span class="pk-crumb-sep">/</span>
         <span class="pk-crumb-current">{@game.name}</span>
       </:crumb>
+      <:nav_search>
+        <form action={~p"/"} method="get" role="search">
+          <label for="detail-search-q" class="sr-only">Buscar juegos</label>
+          <.input
+            type="text"
+            id="detail-search-q"
+            name="q"
+            value=""
+            placeholder="Buscar juegos…"
+            maxlength="100"
+          />
+        </form>
+      </:nav_search>
 
       <div class="mx-auto w-full max-w-7xl pk-gutter space-y-6">
         <div class="aspect-video overflow-hidden rounded-box bg-base-300">

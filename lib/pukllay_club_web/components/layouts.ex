@@ -107,6 +107,13 @@ defmodule PukllayClubWeb.Layouts do
         "subnav slots. false renders no hook attribute at all — the non-sticky path is byte-" <>
         "compatible with pages that don't opt in."
 
+  attr :search_expanded, :boolean,
+    default: false,
+    doc:
+      "when true, the search-morph opens on mount (e.g. a catalog URL carrying ?q=) instead of " <>
+        "resting as a 44px icon. syncMorph() in .CatalogNav reads this via data-search-expanded " <>
+        "and only ever opens, never closes, so a server round-trip can never yank an open box shut."
+
   slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
   slot :nav_search, doc: "the search form, rendered inside the header aligned with row content"
   slot :crumb, doc: "breadcrumb content for a genuine drill-down page (Detalle only)"
@@ -167,18 +174,102 @@ defmodule PukllayClubWeb.Layouts do
               )
               this.chipsByTarget.forEach((_chip, section) => this.observer.observe(section))
             }
+
+            // Header-height publisher (01.1-08): this hook already owns the
+            // header DOM and this plan is what changes the header's real
+            // height (the CTA and the theme toggle both leave the row), so
+            // it is the one place that publishes --pk-header-h. Plans
+            // 01.1-03/01.1-04 are consumers only — never a second publisher.
+            this.publishHeaderHeight = () => {
+              const height = this.el.getBoundingClientRect().height
+              document.documentElement.style.setProperty("--pk-header-h", height + "px")
+            }
+            this.heightObserver = new ResizeObserver(() => this.publishHeaderHeight())
+            this.heightObserver.observe(this.el)
+            this.publishHeaderHeight()
+
+            // Search-morph (01.1-08): guarded on this.morph existing so the
+            // Quiénes Somos header (no search slot) is unaffected.
+            this.morph = this.el.querySelector(".pk-search-morph")
+            if (this.morph) {
+              this.morphToggle = this.morph.querySelector(".pk-search-morph-toggle")
+              this.morphClose = this.morph.querySelector(".pk-search-morph-close")
+              this.morphInput = this.morph.querySelector(".pk-nav-search input")
+              this.navInner = this.el.querySelector(".pk-nav-inner")
+
+              this.openMorph = ({focus = true} = {}) => {
+                this.morph.classList.add("is-open")
+                this.navInner?.classList.add("is-search-open")
+                this.morphToggle?.setAttribute("aria-expanded", "true")
+                this.morphToggle?.setAttribute("tabindex", "-1")
+                this.morphClose?.setAttribute("tabindex", "0")
+                if (focus) this.morphInput?.focus()
+              }
+
+              this.closeMorph = () => {
+                this.morph.classList.remove("is-open")
+                this.navInner?.classList.remove("is-search-open")
+                this.morphToggle?.setAttribute("aria-expanded", "false")
+                this.morphToggle?.setAttribute("tabindex", "0")
+                this.morphClose?.setAttribute("tabindex", "-1")
+                this.morphToggle?.focus()
+              }
+
+              this.syncMorph = () => {
+                if (this.morph.dataset.searchExpanded === "true" && !this.morph.classList.contains("is-open")) {
+                  this.openMorph({focus: false})
+                }
+              }
+
+              this.onMorphToggleClick = () => this.openMorph()
+              this.onMorphCloseClick = () => this.closeMorph()
+              this.onDocumentKeydown = (e) => {
+                if (e.key === "Escape" && this.morph.classList.contains("is-open")) this.closeMorph()
+              }
+              this.onDocumentClick = (e) => {
+                if (this.morph.classList.contains("is-open") && !this.morph.contains(e.target)) {
+                  this.closeMorph()
+                }
+              }
+
+              this.morphToggle?.addEventListener("click", this.onMorphToggleClick)
+              this.morphClose?.addEventListener("click", this.onMorphCloseClick)
+              document.addEventListener("keydown", this.onDocumentKeydown)
+              document.addEventListener("click", this.onDocumentClick)
+
+              this.syncMorph()
+            }
+          },
+          updated() {
+            this.publishHeaderHeight()
+            this.syncMorph?.()
           },
           destroyed() {
             window.removeEventListener("scroll", this.onScroll)
             this.observer?.disconnect()
+            this.heightObserver?.disconnect()
+            this.morphToggle?.removeEventListener("click", this.onMorphToggleClick)
+            this.morphClose?.removeEventListener("click", this.onMorphCloseClick)
+            document.removeEventListener("keydown", this.onDocumentKeydown)
+            document.removeEventListener("click", this.onDocumentClick)
           }
         }
       </script>
-      <.header_inner nav_links={@nav_links} nav_search={@nav_search} crumb={@crumb} />
+      <.header_inner
+        nav_links={@nav_links}
+        nav_search={@nav_search}
+        crumb={@crumb}
+        search_expanded={@search_expanded}
+      />
       {render_slot(@subnav)}
     </div>
     <div :if={!@sticky} id="app-header" class="pk-header">
-      <.header_inner nav_links={@nav_links} nav_search={@nav_search} crumb={@crumb} />
+      <.header_inner
+        nav_links={@nav_links}
+        nav_search={@nav_search}
+        crumb={@crumb}
+        search_expanded={@search_expanded}
+      />
       {render_slot(@subnav)}
     </div>
 
@@ -197,6 +288,7 @@ defmodule PukllayClubWeb.Layouts do
   attr :nav_links, :list, required: true
   attr :nav_search, :list, required: true
   attr :crumb, :list, required: true
+  attr :search_expanded, :boolean, default: false
 
   defp header_inner(assigns) do
     ~H"""
@@ -211,8 +303,31 @@ defmodule PukllayClubWeb.Layouts do
         <div :if={@nav_links != []} class="pk-nav-links">
           {render_slot(@nav_links)}
         </div>
-        <div :if={@nav_search != []} class="pk-nav-search">
-          {render_slot(@nav_search)}
+        <div
+          :if={@nav_search != []}
+          class="pk-search-morph"
+          data-search-expanded={to_string(@search_expanded)}
+        >
+          <button
+            type="button"
+            class="pk-search-morph-toggle"
+            aria-label="Buscar"
+            aria-expanded="false"
+            aria-controls="pk-nav-search-region"
+          >
+            <.icon name="hero-magnifying-glass-micro" class="size-4" />
+          </button>
+          <div id="pk-nav-search-region" class="pk-nav-search">
+            {render_slot(@nav_search)}
+          </div>
+          <button
+            type="button"
+            class="pk-search-morph-close"
+            aria-label="Cerrar búsqueda"
+            tabindex="-1"
+          >
+            <.icon name="hero-x-mark-micro" class="size-4" />
+          </button>
         </div>
         <div class="pk-nav-actions">
           <.sumate_cta />

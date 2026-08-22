@@ -38,13 +38,13 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @skeleton_carousel_rows 8
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     loading? = not connected?(socket)
 
     socket =
       socket
       |> assign(:page_title, "Catálogo")
-      |> assign(:q, "")
+      |> assign(:q, initial_q(params))
       |> assign(:mechanics, [])
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
@@ -74,6 +74,13 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   end
 
   defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
+
+  # A ?q= URL param reaches a catalog-wide ILIKE (T-01.1-28) — bounded at the
+  # entry point, same discipline plan 01.1-06 applies to the rest of the
+  # filter params. Any non-binary value (missing param, an array from a
+  # malformed query string) degrades to "" rather than crashing mount/3.
+  defp initial_q(%{"q" => q}) when is_binary(q), do: String.slice(q, 0, 100)
+  defp initial_q(_params), do: ""
 
   @impl true
   def handle_event("search", %{"q" => q}, socket) do
@@ -317,7 +324,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} fullbleed sticky>
+    <Layouts.app flash={@flash} fullbleed sticky search_expanded={@q != ""}>
       <:nav_links>
         <.link navigate={~p"/"} aria-current="page">Inicio</.link>
         <.link navigate={~p"/quienes-somos"}>Quiénes Somos</.link>

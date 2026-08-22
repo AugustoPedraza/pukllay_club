@@ -665,6 +665,30 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "?q= deep link opens the search-morph pre-expanded (01.1-08)" do
+    test "mounting /?q=<term> narrows the stream and renders the morph pre-expanded", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Catan Deep Link"})
+      game_fixture(%{name: "Unrelated Game"})
+
+      {:ok, _view, html} = live(conn, "/?q=Catan")
+
+      grid = grid_html(html)
+      assert grid =~ "Catan Deep Link"
+      refute grid =~ "Unrelated Game"
+      assert html =~ ~s(data-search-expanded="true")
+    end
+
+    test "mounting / with no q renders the morph at rest (not pre-expanded)", %{conn: conn} do
+      game_fixture(%{name: "Rest State Game"})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ ~s(data-search-expanded="false")
+    end
+  end
+
   describe "Ver todo tile wired to real filter state (01-11)" do
     test "clicking the tile on the tag-backed shelf renders only the tagged game and hides the shelves",
          %{conn: conn} do

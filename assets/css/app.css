@@ -556,19 +556,142 @@ body.pk-sheet-open {
   border-bottom-color: var(--color-primary);
 }
 
-.pk-nav-search {
-  min-width: 220px;
-  max-width: 22.5rem;
-  flex: 1 1 auto;
+/* The search-morph (sketch 017-E, plan 01.1-08): a single element converting
+   from a 44px icon at rest into a 17.5rem pill on open — never a trigger and
+   a separate box swapping visibility. .pk-nav-search below is now the morph's
+   caller-owned slot region, not a free-standing element; its 220px min-width/
+   max-width/flex-grow/auto-margin geometry moved onto .pk-search-morph
+   itself. New rules reference the shared motion tokens (--duration-*/
+   --ease-*), not literal timing values. */
+.pk-search-morph {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  width: 44px;
+  transition: width var(--duration-slow) var(--ease-out-soft),
+    background-color var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard);
+  flex: 0 0 auto;
   margin-left: auto;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  background: transparent;
 }
 
-/* 48px, matching the theme toggle's fixed anchor height (its 44px touch-target
-   buttons plus a 2px border on each side) so the search box shares the row's one
-   shared height. Two-class specificity beats daisyUI's single-class .input rule,
-   so no !important is needed, and nothing outside the header is affected. */
-.pk-nav-search .input {
-  height: 3rem;
+/* 17.5rem (sketch 017 used 260px): the sketch's trailing close control was a
+   24px glyph, but this app's locked touch floor is 44px (quick task
+   260821-dah / ux-responsive), so the close control is 44px wide and the
+   pill grows by the 20px difference to keep the same usable input width. */
+.pk-search-morph.is-open {
+  width: 17.5rem;
+  background: var(--color-base-100);
+  border-color: var(--color-primary);
+  cursor: text;
+}
+
+.pk-search-morph-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition: width var(--duration-slow) var(--ease-out-soft),
+    padding var(--duration-slow) var(--ease-out-soft), opacity var(--duration-fast) var(--ease-standard);
+}
+
+.pk-search-morph:hover:not(.is-open) .pk-search-morph-toggle {
+  color: var(--color-primary);
+}
+
+.pk-search-morph.is-open .pk-search-morph-toggle {
+  width: auto;
+  padding-left: 0.75rem;
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* .pk-nav-search is now the morph's inner slot region: collapsed to zero
+   width and transparent at rest, expanding only once the morph itself opens.
+   The opacity transition carries a --duration-fast delay so the text fades
+   in only after the width has started opening. */
+.pk-search-morph .pk-nav-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  margin-left: 0;
+  width: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+  transition-delay: var(--duration-fast);
+}
+
+.pk-search-morph.is-open .pk-nav-search {
+  width: auto;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* The morph owns the border/background now, so the daisyUI input must not
+   draw a second one inside it. Supersedes the shipped .pk-nav-search .input
+   { height: 3rem } rule, which existed only to match the removed theme
+   toggle's 48px anchor — deleted rather than left behind as a second,
+   competing height declaration. */
+.pk-search-morph .pk-nav-search .input {
+  height: 42px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  padding-inline: 0.5rem;
+}
+
+.pk-search-morph-close {
+  flex: 0 0 auto;
+  width: 0;
+  height: 44px;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition: width var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard), padding var(--duration-fast) var(--ease-standard);
+}
+
+.pk-search-morph.is-open .pk-search-morph-close {
+  width: 2.75rem;
+  opacity: 1;
+}
+
+/* Dim the rest of the row while the morph is open (hook-owned modifier on
+   .pk-nav-inner, not the morph itself — the toggle behaviour lives entirely
+   in .CatalogNav, never a second hook). .pk-brand-wordmark is added to
+   brand_logo/1 in Task 3; scoping the selector now is harmless. */
+.pk-nav-inner.is-search-open .pk-nav-links,
+.pk-nav-inner.is-search-open .pk-nav-crumb,
+.pk-nav-inner.is-search-open .pk-brand-wordmark {
+  opacity: 0.35;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-search-morph,
+  .pk-search-morph-toggle,
+  .pk-search-morph-close,
+  .pk-search-morph .pk-nav-search {
+    transition-duration: 1ms;
+  }
 }
 
 /* CoreComponents.input/1 wraps its text-input branch in a `fieldset mb-2` div —
@@ -625,6 +748,7 @@ body.pk-sheet-open {
    other capped section on the page uses (page-shell.md's content-width
    alignment rule). */
 .pk-nav-inner {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 1.5rem;
@@ -811,9 +935,24 @@ body.pk-sheet-open {
     display: flex;
   }
 
-  .pk-nav-search {
-    min-width: 0;
-    flex: 1;
+  /* Mobile overlay (sketch 017 Round 5's fix for the flat hard-edged slab):
+     the morph becomes a full-width sheet over the header instead of a
+     leftward-growing pill, with a rounded bottom edge and a soft shadow.
+     The morph owns the geometry now — no separate .pk-nav-search override
+     is left behind competing with it. */
+  .pk-search-morph.is-open {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: 100%;
+    z-index: 5;
+    border-radius: 0 0 var(--radius-box) var(--radius-box);
+    box-shadow: 0 8px 24px rgba(20, 8, 34, 0.28);
+    padding-inline: var(--pk-gutter);
+  }
+
+  .pk-search-morph.is-open .pk-search-morph-toggle {
+    padding-left: 0;
   }
 
   .pk-footer-row,
