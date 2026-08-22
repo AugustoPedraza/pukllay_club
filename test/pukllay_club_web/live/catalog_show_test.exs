@@ -370,4 +370,160 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html3 =~ "is-expanded"
     end
   end
+
+  describe "detail page mobile chrome and interaction (SHELL-03)" do
+    test "the CTA bar, title-echo bar, and title block all render with their ids", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ ~s(id="detail-cta-bar")
+      assert html =~ ~s(id="detail-title-echo")
+      assert html =~ ~s(id="detail-title-block")
+    end
+
+    test "the CTA bar's button and the buy-box button share the same phx-click and label", %{
+      conn: conn
+    } do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      cta_bar_html = doc |> LazyHTML.query("#detail-cta-bar") |> LazyHTML.to_html()
+      poster_html = doc |> LazyHTML.query(".pk-poster-col") |> LazyHTML.to_html()
+
+      assert cta_bar_html =~ ~s(phx-click="open-reservation")
+      assert cta_bar_html =~ "Reservar para el sábado"
+      assert poster_html =~ ~s(phx-click="open-reservation")
+      assert poster_html =~ "Reservar para el sábado"
+
+      # The label string exists in exactly one place in the source (a shared
+      # private helper) — asserted structurally: the rendered page shows it
+      # exactly twice (buy-box + CTA bar), never a third independently
+      # authored copy.
+      occurrences =
+        html
+        |> String.split("Reservar para el sábado")
+        |> length()
+        |> Kernel.-(1)
+
+      assert occurrences == 2
+    end
+
+    test "the page carries the .DetailChrome hook and no IntersectionObserver or inline on*= handler",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      # Phoenix qualifies a colocated hook's leading-dot name at render time
+      # (".DetailChrome" -> "PukllayClubWeb.CatalogLive.Show.DetailChrome"),
+      # per layouts.ex's documented reason for using a static string literal.
+      assert html =~ ~s(phx-hook="PukllayClubWeb.CatalogLive.Show.DetailChrome")
+      refute html =~ "IntersectionObserver"
+      refute html =~ ~r/\son[a-z]+=/
+    end
+
+    test "the lightbox opens on the currently selected image and stays in sync with select-image",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      refute html =~ "pk-lightbox"
+
+      html2 = render_click(view, "open-lightbox", %{})
+      assert html2 =~ "pk-lightbox"
+      assert html2 =~ ~s(aria-modal="true")
+      assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
+
+      html3 =
+        render_click(view, "select-image", %{
+          "url" => "https://images.test.invalid/games/1/gallery-1.webp"
+        })
+
+      assert html3 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
+
+      html4 = render_click(view, "close-lightbox", %{})
+      refute html4 =~ "pk-lightbox"
+    end
+
+    test "the select-image whitelist guard still rejects a foreign url while the lightbox is open",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: []
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      render_click(view, "open-lightbox", %{})
+
+      html2 = render_click(view, "select-image", %{"url" => "https://evil.example.com/x.jpg"})
+
+      refute html2 =~ "evil.example.com"
+      assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
+    end
+
+    test "both share buttons render, carry identical data-share-url matching the canonical route",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Juego Compartido"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      buybox_url =
+        doc |> LazyHTML.query("#detail-share-buybox") |> LazyHTML.attribute("data-share-url")
+
+      ctabar_url =
+        doc |> LazyHTML.query("#detail-share-ctabar") |> LazyHTML.attribute("data-share-url")
+
+      assert buybox_url != []
+      assert buybox_url == ctabar_url
+      assert hd(buybox_url) =~ ~p"/juegos/#{game.id}"
+    end
+
+    test "the share fallback's WhatsApp and X hrefs are percent-encoded", %{conn: conn} do
+      game = game_fixture(%{name: "Catán: Edición Básica"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      whatsapp_hrefs =
+        doc
+        |> LazyHTML.query("a[aria-label='Compartir por WhatsApp']")
+        |> LazyHTML.attribute("href")
+
+      x_hrefs =
+        doc
+        |> LazyHTML.query("a[aria-label='Compartir por X']")
+        |> LazyHTML.attribute("href")
+
+      assert length(whatsapp_hrefs) == 2
+      assert length(x_hrefs) == 2
+
+      for href <- whatsapp_hrefs ++ x_hrefs do
+        query = href |> String.split("?", parts: 2) |> List.last()
+        refute query =~ " "
+        refute query =~ "?"
+      end
+    end
+
+    # The following behaviors are genuinely visual/timing-based (scroll-driven
+    # CSS class toggles) and have no LiveView render-test equivalent — they
+    # are routed to 01.1-VALIDATION.md's Manual-Only table rather than faked
+    # here:
+    #   - the CTA bar's debounced hide-while-scrolling and its ~200ms return
+    #   - the CTA bar and title-echo bar both parking at the real footer,
+    #     with the reserved body padding collapsing in the same transition
+    #   - the title-echo bar's fade-in once the real <h1> has scrolled past
+    #     the header
+  end
 end
