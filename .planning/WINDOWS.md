@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 8
+open_count: 10
 waived_count: 0
 fixed_count: 0
-total_count: 8
-last_updated: 2026-08-22T19:27:49.892Z
+total_count: 10
+last_updated: 2026-08-22T20:00:32.776Z
 ---
 
 # Broken Windows Ledger
@@ -23,6 +23,8 @@ last_updated: 2026-08-22T19:27:49.892Z
 | 6 | 01.1-02 | deviation | lib/pukllay_club_web/live/about_live.ex |  | Four photo-rail slides render as labelled placeholders (D-12, no real club photography exists yet) -- intentional per plan, resolves when real photos are swapped in (structural no-op) | open |  | 2026-08-22T14:30:46.847Z |  |
 | 7 | 01.1-02 | unrun-verify | lib/pukllay_club_web/live/about_live.ex |  | Photo rail human-check: dots scroll-sync, click-to-jump, auto-advance every 4.5s, pauses on pointer interaction/unfocused tab/reduced-motion -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-22T14:30:53.492Z |  |
 | 8 | 01.1-03 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual human-check: at 1440px scroll /juegos/:id -- the poster column pins below the header with no overlap/gap and releases at the end of the masthead; at 390px the layout is a single column and the ficha tecnica is one column wide -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-22T19:27:49.892Z |  |
+| 9 | 01.1-04 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual human-check: at a real 390px viewport, the CTA bar is visible on first paint with no scroll, retracts during an active scroll and returns ~200ms after it stops, parks with the footer while body padding-bottom collapses in the same transition, and the title-echo bar fades in only after the h1 has fully scrolled past the header -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-22T20:00:25.349Z |  |
+| 10 | 01.1-04 | unrun-verify | assets/css/app.css |  | Manual human-check: the mobile CTA bar's computed backgroundColor is visibly distinct from its own outlined share button's background (verify via computed style, not by eye) -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-22T20:00:32.776Z |  |
 
 ````json
 [
@@ -120,6 +122,30 @@ last_updated: 2026-08-22T19:27:49.892Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-22T19:27:49.892Z",
+    "resolved_at": null
+  },
+  {
+    "id": 9,
+    "kind": "unrun-verify",
+    "phase": "01.1-04",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "Manual human-check: at a real 390px viewport, the CTA bar is visible on first paint with no scroll, retracts during an active scroll and returns ~200ms after it stops, parks with the footer while body padding-bottom collapses in the same transition, and the title-echo bar fades in only after the h1 has fully scrolled past the header -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-22T20:00:25.349Z",
+    "resolved_at": null
+  },
+  {
+    "id": 10,
+    "kind": "unrun-verify",
+    "phase": "01.1-04",
+    "file": "assets/css/app.css",
+    "line": null,
+    "description": "Manual human-check: the mobile CTA bar's computed backgroundColor is visibly distinct from its own outlined share button's background (verify via computed style, not by eye) -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-22T20:00:32.776Z",
     "resolved_at": null
   }
 ]

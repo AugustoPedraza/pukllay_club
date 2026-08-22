@@ -31,7 +31,7 @@ Requirements for this milestone (Phases 0-4, per PROJECT.md's fixed roadmap). Ea
 
 - [x] **SHELL-01**: A shared header+footer shell (adaptive header, single-row footer with mission/links/BGG attribution) wraps the catalog, detail, and about pages consistently
 - [ ] **SHELL-02**: An about page communicates the club's mission, how borrowing works, and a FAQ/vocabulary section
-- [ ] **SHELL-03**: The game detail page (`/juegos/:id`) presents a buy-box (cover + reservation CTA) beside a reading column (description, mechanics, specs) and a "Juegos similares" shelf, working on both desktop and mobile
+- [x] **SHELL-03**: The game detail page (`/juegos/:id`) presents a buy-box (cover + reservation CTA) beside a reading column (description, mechanics, specs) and a "Juegos similares" shelf, working on both desktop and mobile
 - [ ] **SHELL-04**: The catalog's filter/search UI is a centered modal with checklist-style facets, reachable from a nav search box with live narrowing
 - [ ] **SHELL-05**: The catalog and detail pages show a minimal, on-brand empty/loading/error state for no-results, in-flight, and failure conditions
 
@@ -114,7 +114,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CATALOG-09 | Phase 1 | Complete |
 | SHELL-01 | Phase 1.1 | Complete |
 | SHELL-02 | Phase 1.1 | Pending |
-| SHELL-03 | Phase 1.1 | Pending |
+| SHELL-03 | Phase 1.1 | Complete |
 | SHELL-04 | Phase 1.1 | Pending |
 | SHELL-05 | Phase 1.1 | Pending |
 | SEARCH-01 | Phase 2 | Pending |
