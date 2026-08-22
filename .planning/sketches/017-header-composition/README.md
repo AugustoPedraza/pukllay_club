@@ -1,9 +1,9 @@
 ---
 sketch: 017
 name: header-composition
-question: "With 013/014/015 decided (E / D-refined / A), does the full header row still feel overloaded — and if so, what's the real structural alternative? Covers mobile+desktop together."
+question: "With 013/014/015 decided (E / D-refined / A), does the full header row still feel overloaded, is a row-based structure even right, and should the CTA/theme-toggle live in the header at all? Covers mobile+desktop together."
 winner: null
-tags: [header, composition, search, navigation, mobile, information-architecture]
+tags: [header, composition, search, navigation, mobile, information-architecture, cta-placement, footer]
 ---
 
 # Sketch 017: Header Composition
@@ -81,3 +81,69 @@ the brand/logo in one left-side cluster (visually separated from the right-side 
 thin divider), rather than sitting alone in the middle of an undifferentiated row. The hypothesis: the
 "weird" feeling wasn't about how the links themselves were styled (013–015 already addressed that) but
 about them having no clear relationship to anything else in the row.
+
+## Round 2 (2026-08-22): Does It Belong in the Header at All?
+
+Even after picking B (Expandable Search) as the overall composition winner, developer feedback was
+that the row still feels overloaded, and that nav "breaks rhythm" because Inicio/landing get different
+representations of the same idea — prompting a bigger question than styling: should the CTA and theme
+toggle be in the header at all, and is there really only one semantic thing "navigation" is doing here?
+
+**Research grounding this round:**
+- CTA placement: persistent/sticky header CTAs earn their keep mainly on mobile scroll; on desktop "a
+  prominent in-layout button is often enough" *where the value case has already been made* (after a
+  hero, after social proof) — not floating in a nav bar with no surrounding context.
+- Toggle placement: the footer is specifically called out in UX literature as the conventional
+  "affordable area" for utility controls like theme/language switchers, precisely because users already
+  expect to find them there.
+- Nav semantics: today's header tries to make three treatments (Catálogo nav-links, Acerca de
+  nav-links-with-active, Detalle crumb) read as one consistent "navigation" component, but there are
+  really only two semantically distinct jobs — top-level peer navigation (Inicio ↔ Quiénes Somos) and a
+  drill-down back-affordance (Detalle → back to Ludoteca, which is *not* a peer relationship). Forcing a
+  crumb to visually resemble nav-links fights the fact that they're different affordances; a back-link
+  is supposed to look different, that's correct signaling, not broken rhythm.
+
+Two existing, already-validated precedents got reused rather than inventing new patterns: sketch
+004-about-page's hero (where a join-CTA has actual context) and sketch 005-detail-page's mobile sticky
+CTA bar (already-validated, page-scoped CTA reinforcement, not a global mechanism).
+
+### D: Minimal Header
+The boldest reduction. Header = logo (home) + one plain "Quiénes Somos" link + Catálogo-only
+expandable search (B's exact mechanism). CTA and toggle are both removed from the header entirely.
+- **CTA** moves to the Acerca de hero (reusing 004's hero-CTA pattern) — the developer's own research
+  question ("maybe just search for catalog and CTA for landing page") applied directly. Mobile gets a
+  sticky CTA bar, but scoped to Acerca de only (mirroring 005's per-page, not site-wide, sticky bar) —
+  a site-wide sticky bar would just reintroduce "asking before context" on every other page.
+- **Toggle** moves to the footer's right cluster, next to the social icons, tagged "Tema" for
+  discoverability.
+- **Side effect worth naming, not engineered on purpose:** with only one link and one icon left, there's
+  nothing left to hide at narrow widths — no hamburger, no drawer. That fell out of the reduction itself
+  rather than being a separate mobile decision.
+
+### E: Toggle-Out Only
+Isolates one variable against your current favorite (B): identical expandable search, CTA still in the
+header, same drawer — the *only* change is the toggle relocating to the footer (same markup/CSS as D's
+footer toggle, confirmed byte-identical between the two so neither reads as a different component).
+Purpose: D changes three things (CTA, toggle, nav) at once, so it can't isolate which one was actually
+driving "still feels overloaded." E changes exactly one thing from B, so the toggle's specific
+contribution can be judged on its own.
+
+### F: Nav Semantics Fix
+Isolated from the CTA/toggle question on purpose — identical to B in every other respect. The real
+finding here: Catálogo and Acerca de already share one `.links-plain` treatment (that was never actually
+inconsistent). The genuine mismatch is Detalle's crumb, styled just close enough to nav-links to read as
+a third, slightly-off variant of the same thing, when it's actually a different affordance (back
+navigation, not peer navigation). Fixed by replacing "Ludoteca / Catan" with a small, deliberately
+distinct "‹ Ludoteca" back-caret — muted color, no border, no active-underline, no game-name segment
+(the page's own heading already says which game this is). This is exactly the real shipped app.css's own
+narrow-viewport crumb collapse behavior (`.pk-nav-crumb a::before { content: "‹ "; }`, today gated to
+≤480px) — F asks whether it's simply the right treatment at every width, not a mobile-only concession.
+
+### What to Look For (Round 2)
+- D: does identity + one link + search feel like *enough* header? Does the CTA land better with hero
+  context around it than it did floating in the header? Does the footer toggle placement feel
+  discoverable?
+- E: compared directly against B, does removing just the toggle meaningfully calm the row — or does it
+  still feel busy, meaning the toggle wasn't the (only) source of the overload?
+- F: does "‹ Ludoteca" read clearly as "go back," distinct from Inicio/Quiénes Somos? Does dropping the
+  CTA/toggle question from Detalle's fix change how "weird" it feels, versus D/E's structural cuts?
