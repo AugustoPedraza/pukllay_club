@@ -1091,6 +1091,89 @@ body.pk-drawer-open {
   height: 4.5rem;
 }
 
+/* About page content bands (01.1-02, D-07 spine: hero -> photo rail ->
+   the remaining bands land later in this plan). Every band is a
+   full-bleed wrapper (.pk-band, vertical padding only) around a single
+   capped inner (.pk-band-inner, max-width + the shared .pk-gutter class)
+   — .pk-band never sets its own horizontal padding, which is exactly the
+   double-gutter bug about-page-content.md documents. */
+.pk-band {
+  padding: 4.5rem 0;
+}
+
+.pk-band-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+/* Four-slide photo rail (D-12: labelled placeholders, no real photography
+   yet). Scroll-snapping, scrollbar hidden — same treatment as .pk-rail. */
+.pk-about-rail {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.pk-about-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.pk-about-slide {
+  flex: 0 0 min(84vw, 720px);
+  scroll-snap-align: center;
+  margin: 0;
+}
+
+.pk-about-slide-ph {
+  aspect-ratio: 3 / 2;
+  border-radius: var(--radius-box);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-base-200) 0 10px,
+    var(--color-base-100) 10px 20px
+  );
+}
+
+.pk-about-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1rem;
+}
+
+/* The button itself stays the full 44px touch target (ux-responsive); the
+   visible pill is a smaller pseudo-element inside it — never shrink the
+   button to match the pill. */
+.pk-about-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pk-about-dot::before {
+  content: "";
+  width: 26px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-base-300);
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.pk-about-dot.is-active::before {
+  background: var(--color-primary);
+}
+
 /* Mobile category chip row: a second navigation dimension replacing the
    nav links below the narrow-viewport breakpoint. No horizontal padding
    of its own — spacer flex items reserve the end margins instead, since
