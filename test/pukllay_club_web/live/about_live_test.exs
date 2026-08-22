@@ -41,6 +41,14 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert html =~ ~s(aria-current="page")
       refute html =~ "pk-nav-crumb"
     end
+
+    test "renders no search-morph control (About passes no nav_search slot) (01.1-08)", %{
+      conn: conn
+    } do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      refute html =~ "pk-search-morph"
+    end
   end
 
   describe "join CTA renders in the hero, not the header (D-05 superseded, plan 01.1-08)" do
