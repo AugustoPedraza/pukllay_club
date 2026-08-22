@@ -466,13 +466,20 @@ defmodule PukllayClubWeb.Layouts do
       </div>
       <nav class="pk-drawer-links" aria-label="Navegación principal">
         <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
-          Inicio
+          Inicio <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
         </.link>
         <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
-          Quiénes Somos
+          Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
         </.link>
       </nav>
-      <div class="pk-drawer-bottom"></div>
+      <div class="pk-drawer-bottom">
+        <div class="pk-drawer-divider"></div>
+        <div class="pk-drawer-utility">
+          <span class="pk-drawer-utility-label">Tema</span>
+          <.theme_toggle />
+        </div>
+        <.social_links class="pk-drawer-social" />
+      </div>
     </aside>
     """
   end
@@ -553,93 +560,109 @@ defmodule PukllayClubWeb.Layouts do
           </ul>
         </div>
         <div class="pk-footer-right">
-          <div class="pk-footer-social">
-            <a
-              href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="WhatsApp"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                width="16"
-                height="16"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"
-                />
-              </svg>
-            </a>
-            <a
-              href={PukllayClubWeb.ClubLinks.facebook_url()}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                width="16"
-                height="16"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M14.5 8.5h2V5.5h-2c-1.93 0-3.5 1.57-3.5 3.5v2H9v3h2v6.5h3V14h2.2l.5-3H14v-1.5c0-.55.45-1 1-1Z"
-                />
-              </svg>
-            </a>
-            <a
-              href={PukllayClubWeb.ClubLinks.instagram_url()}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                width="16"
-                height="16"
-              >
-                <rect x="4" y="4" width="16" height="16" rx="4" />
-                <circle cx="12" cy="12" r="3.5" />
-                <circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none" />
-              </svg>
-            </a>
-            <a href={"mailto:#{PukllayClubWeb.ClubLinks.contact_email()}"} aria-label="Correo">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                width="16"
-                height="16"
-              >
-                <rect x="4" y="5.5" width="16" height="13" rx="2" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="m5 7 7 5.5L19 7" />
-              </svg>
-            </a>
-          </div>
+          <.social_links class="pk-footer-social" />
           <span class="pk-footer-toggle-tag">Tema</span>
           <.theme_toggle />
           <span class="pk-footer-meta">© 2026 Pukllay Club · <.bgg_attribution /></span>
         </div>
       </div>
     </footer>
+    """
+  end
+
+  # Extracted (01.1-09 Task 2) from what was previously the footer's own
+  # inline block — one definition of the club's four social links, shared
+  # verbatim by the footer and the mobile drawer via two container classes
+  # (`ui-design-system`'s single-shared-definition rule: the alternative is
+  # two hand-maintained copies of four SVGs, exactly the drift this project
+  # has already been bitten by). Every href resolves through ClubLinks (one
+  # source), and every external link carries target="_blank" rel="noopener
+  # noreferrer" — the mailto: link keeps its existing shape with neither.
+  attr :class, :string, required: true
+
+  defp social_links(assigns) do
+    ~H"""
+    <div class={@class}>
+      <a
+        href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="WhatsApp"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          width="16"
+          height="16"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"
+          />
+        </svg>
+      </a>
+      <a
+        href={PukllayClubWeb.ClubLinks.facebook_url()}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Facebook"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          width="16"
+          height="16"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M14.5 8.5h2V5.5h-2c-1.93 0-3.5 1.57-3.5 3.5v2H9v3h2v6.5h3V14h2.2l.5-3H14v-1.5c0-.55.45-1 1-1Z"
+          />
+        </svg>
+      </a>
+      <a
+        href={PukllayClubWeb.ClubLinks.instagram_url()}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Instagram"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          width="16"
+          height="16"
+        >
+          <rect x="4" y="4" width="16" height="16" rx="4" />
+          <circle cx="12" cy="12" r="3.5" />
+          <circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none" />
+        </svg>
+      </a>
+      <a href={"mailto:#{PukllayClubWeb.ClubLinks.contact_email()}"} aria-label="Correo">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          width="16"
+          height="16"
+        >
+          <rect x="4" y="5.5" width="16" height="13" rx="2" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="m5 7 7 5.5L19 7" />
+        </svg>
+      </a>
+    </div>
     """
   end
 

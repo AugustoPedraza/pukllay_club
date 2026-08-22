@@ -966,10 +966,101 @@ body.pk-sheet-open {
 /* The panel is a full-height flex column (top: 0; bottom: 0 above, plus
    flex-direction: column here) so margin-top: auto pins this block to the
    panel's true bottom edge regardless of link count — sketch 017 Round 5's
-   exact fix for "they sat high up, not at the bottom". Content filled in
-   by plan 01.1-09 Task 2. */
+   exact fix for "they sat high up, not at the bottom". */
 .pk-drawer-bottom {
   margin-top: auto;
+}
+
+/* Drawer link rows (sketch 017 Round 4): real list affordance — full-width
+   ≥44px tap targets (the negative inline margin bleeds the row to the
+   panel's own 1rem padding), a trailing chevron, and a hover/tap tint. */
+.pk-drawer-links {
+  display: flex;
+  flex-direction: column;
+  margin-inline: -1rem;
+}
+
+.pk-drawer-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  color: var(--color-base-content);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-left: 3px solid transparent;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-drawer-links a:hover,
+.pk-drawer-links a:active,
+.pk-drawer-links a:focus-visible {
+  background: var(--color-base-200);
+}
+
+.pk-drawer-chevron {
+  color: var(--color-neutral);
+  flex-shrink: 0;
+}
+
+/* The drawer's OWN active-state language for a vertical list — a left
+   accent bar, a tint and bold weight — not a copy of the header's
+   horizontal underline pasted somewhere it doesn't fit. This is the only
+   place an active-page signal renders on mobile: .pk-nav-links is
+   display: none below 480px, so 015-A's underline never appears there. */
+.pk-drawer-links a[aria-current="page"] {
+  color: var(--color-primary);
+  font-weight: 800;
+  border-left-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.pk-drawer-links a[aria-current="page"] .pk-drawer-chevron {
+  color: var(--color-primary);
+}
+
+.pk-drawer-divider {
+  height: 1px;
+  background: var(--color-base-300);
+  margin-block: 0.75rem;
+}
+
+.pk-drawer-utility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 0.5rem;
+}
+
+.pk-drawer-utility-label {
+  font-size: 0.875rem;
+  color: var(--color-neutral);
+  font-weight: 600;
+}
+
+.pk-drawer-social {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+}
+
+.pk-drawer-social a {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-base-200);
+  color: var(--color-neutral);
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.pk-drawer-social a:hover {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
 }
 
 body.pk-drawer-open {
@@ -1126,6 +1217,18 @@ body.pk-drawer-open {
   .pk-footer-left,
   .pk-footer-right {
     flex-direction: column;
+  }
+
+  /* Mobile/desktop swap (01.1-09 Task 2): the toggle and social cluster
+     move into the drawer below 480px — reaching the footer there means
+     scrolling the whole page, the drawer is one tap away. Deliberately
+     NOT .pk-footer-right wholesale: that cluster also holds
+     .pk-footer-meta (the copyright line and D-04's BGG attribution),
+     which must stay visible at every viewport width. */
+  .pk-footer-right .pk-theme-toggle,
+  .pk-footer-toggle-tag,
+  .pk-footer-social {
+    display: none;
   }
 
   .pk-crumb-sep,

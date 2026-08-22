@@ -441,17 +441,25 @@ defmodule PukllayClubWeb.LayoutsTest do
   end
 
   describe "app/1 join CTA is not a shell element (D-05 superseded, plan 01.1-08)" do
-    test "the #app-header subtree contains neither the CTA label nor the WhatsApp URL" do
+    # Scoped to exclude the drawer's own .pk-drawer-social row (01.1-09
+    # Task 2): that row legitimately links the WhatsApp URL as its
+    # WhatsApp icon, an unrelated consumer of ClubLinks.whatsapp_group_url/0
+    # from the join CTA this test actually guards against. "Sumate" (the
+    # CTA's own label, absent from the drawer's markup) stays the direct,
+    # unscoped signal.
+    test "the #app-header subtree contains neither the CTA label nor its WhatsApp URL outside the drawer's social row" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      header_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("#app-header")
+      doc = LazyHTML.from_document(html)
+      header_html = doc |> LazyHTML.query("#app-header") |> LazyHTML.to_html()
+
+      non_drawer_social_html =
+        doc
+        |> LazyHTML.query("#app-header :not(.pk-drawer-social) > a")
         |> LazyHTML.to_html()
 
       refute header_html =~ "Sumate"
-      refute header_html =~ PukllayClubWeb.ClubLinks.whatsapp_group_url()
+      refute non_drawer_social_html =~ PukllayClubWeb.ClubLinks.whatsapp_group_url()
     end
 
     test ".pk-nav-actions is absent from the rendered document" do
@@ -600,6 +608,110 @@ defmodule PukllayClubWeb.LayoutsTest do
         |> LazyHTML.to_html()
 
       refute drawer_links_html =~ "aria-current"
+    end
+
+    test "each drawer link row renders a chevron icon" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      chevrons =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-links .pk-drawer-chevron")
+
+      assert Enum.count(chevrons) == 2
+    end
+
+    test "the drawer's bottom block renders the theme toggle and exactly four social links" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      bottom_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-bottom")
+        |> LazyHTML.to_html()
+
+      assert bottom_html =~ "phx:set-theme"
+
+      drawer_social_links =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-social a")
+
+      assert Enum.count(drawer_social_links) == 4
+    end
+
+    # Guards against the footer and the drawer drifting to two independently
+    # maintained social lists — both must resolve to the exact same four
+    # ClubLinks hrefs, in the same order.
+    test "the footer and drawer social markup resolve to the same four hrefs" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      doc = LazyHTML.from_document(html)
+
+      footer_hrefs =
+        doc |> LazyHTML.query(".pk-footer-social a") |> LazyHTML.attribute("href")
+
+      drawer_hrefs =
+        doc |> LazyHTML.query(".pk-drawer-social a") |> LazyHTML.attribute("href")
+
+      assert length(footer_hrefs) == 4
+      assert footer_hrefs == drawer_hrefs
+    end
+
+    test ".pk-footer-meta is present in the rendered footer" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ "pk-footer-meta"
+    end
+  end
+
+  # social_links/1 is a private (defp) component — same convention as
+  # footer/1 / header_inner/1 elsewhere in this module — so it's exercised
+  # indirectly through Layouts.app/1's rendered footer subtree, its one
+  # consumer with a stable, always-present container class.
+  describe "social_links/1 (exercised via the footer's .pk-footer-social)" do
+    test "renders four distinct Spanish aria-labels" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      footer_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-footer-social")
+        |> LazyHTML.to_html()
+
+      assert footer_html =~ ~s(aria-label="WhatsApp")
+      assert footer_html =~ ~s(aria-label="Facebook")
+      assert footer_html =~ ~s(aria-label="Instagram")
+      assert footer_html =~ ~s(aria-label="Correo")
+    end
+
+    test "the three external links carry rel=noopener noreferrer, the mailto: link carries neither target nor rel" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      doc = LazyHTML.from_document(html)
+      footer_social = LazyHTML.query(doc, ".pk-footer-social")
+      footer_html = LazyHTML.to_html(footer_social)
+
+      blank_count = footer_html |> String.split(~s(target="_blank")) |> length() |> Kernel.-(1)
+      rel_count = footer_html |> String.split(~s(rel="noopener noreferrer")) |> length() |> Kernel.-(1)
+
+      assert blank_count == 3
+      assert rel_count == 3
+
+      mailto_html =
+        footer_social
+        |> LazyHTML.query(~s(a[aria-label="Correo"]))
+        |> LazyHTML.to_html()
+
+      refute mailto_html =~ "target="
+      refute mailto_html =~ "rel="
+    end
+
+    test "the caller-supplied class wraps the rendered links (two container classes, one markup definition)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ ~s(class="pk-footer-social")
+      assert html =~ ~s(class="pk-drawer-social")
     end
   end
 
