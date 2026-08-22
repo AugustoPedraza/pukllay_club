@@ -189,3 +189,45 @@ here so it isn't lost between sketch and build.
 - Switch to mobile and try search again — same morph, full-width this time, rest of the row dims.
 - Switch pages: Catálogo/Detalle have no CTA at all now; Acerca de has it in the hero, plus (mobile) the
   sticky bar.
+
+## Round 4 (2026-08-22): Mobile-Only Refinements
+
+Four follow-up questions, all scoped to mobile — desktop E is untouched by this round.
+
+**1. Theme toggle moved into the drawer.** Previously the mobile footer carried the toggle (inherited
+from D's original placement, applied everywhere regardless of viewport). The developer's question —
+"could [the toggle] be part of the drawer?" — is really about discoverability cost: on mobile, reaching
+the footer means scrolling through the entire page first, while the drawer is one tap from anywhere.
+Moved the toggle (same `.toggle-bare` component, unchanged) into a new `.nav-drawer-utility` row inside
+the drawer, labeled "Tema". The footer's toggle markup stays for desktop (`.vp-frame.is-mobile
+.mini-footer-right { display: none; }` hides it only at the mobile viewport) — this mirrors the existing
+pattern where `.links-plain`/`.nav-hamburger` already swap by viewport rather than duplicating chrome
+everywhere.
+
+**2. Drawer link affordance rebuilt.** The drawer's nav links previously reused the same plain
+underline-on-hover treatment as any inline text link — weak affordance for a tap-target list on a phone.
+Rebuilt as real list rows: full-width, explicit ≥44px height (this project's established touch-target
+floor, from quick task 260821-dah), a trailing chevron (›) signaling "this navigates," and a
+background tint on hover/tap.
+
+**3. Active-state now lives only in the drawer, confirmed by design not by accident.** The developer's
+point — "the current link shouldn't be part of the header, that belongs to the drawer" — turned out to
+already be true in the CSS (`.links-plain` is `display:none` on mobile, so 015-A's underline never
+renders in the collapsed header there) but the drawer's own active treatment was underdeveloped (just a
+color change, no real signal). Fixed together with #2: the active row now gets a left accent bar +
+tinted background + bold, in addition to color — a vertical list's own active language, not a copy of
+the header's horizontal underline pasted somewhere it doesn't fit the shape.
+
+**4. Search now also available on Detalle.** Reopens the 003/011-established "Catálogo-only" search
+rule — deliberately, per the developer's direct question. The reasoning that justified Catálogo-only
+originally was clutter avoidance from a permanent search box; that argument weakens once search is a
+44px icon at rest (Round 3's morph), and letting someone jump to search mid-way through reading a game's
+detail page is a real use case, not just filling space. `search-morph`'s `data-state` changed from
+`"catalogo"` to `"catalogo,detalle"`. Acerca de deliberately still excludes it — a static informational
+page has nothing to search.
+
+### What to Look For (Round 4)
+- On mobile, open the drawer: does the theme toggle/social placement feel natural there instead of the
+  footer? Does the active link's left-accent-bar treatment read clearly on its own?
+- On mobile, scroll to the footer: does it now feel appropriately light (just the attribution line)?
+- On Detalle, is the search icon now present and working? On Acerca de, is it correctly still absent?
