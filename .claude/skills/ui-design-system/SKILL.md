@@ -178,7 +178,7 @@ Class inventory by group:
 | `CoreComponents` | `list/1` | `:item` slot (with `title`) |
 | `CoreComponents` | `icon/1` | `name` (`hero-*`) |
 | `Layouts` | `app/1` | `flash`, inner_block. Optional: `fullbleed` (bool, default `false`), `sticky` (bool, default `false`), `:nav_links`/`:nav_search`/`:subnav` slots |
-| `Layouts` | `brand_logo/1` | — |
+| `Layouts` | `brand_logo/1` | —. Optional: `tagline` (string, default `"JUEGOS DE MESA MODERNOS"`) — the footer is the one call site that overrides it |
 | `GameCard` | `game_card/1` | `id`, `game` |
 | `FilterDrawer` | `filter_drawer/1` | `id`, `facet_options` |
 | `CarouselRow` | `carousel_row/1` | `id`, `title`, `games`. Optional: `variant` (`:standard`/`:hero`), `subtitle`, `see_all_row` |
