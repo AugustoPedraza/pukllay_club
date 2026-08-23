@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 01.1
-current_phase_name: Site Shell & Content Pages (INSERTED)
-status: executing
-stopped_at: "Completed quick task 260822-2v9 (desktop header polish: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers)"
-last_updated: "2026-08-22T05:31:12.787Z"
-last_activity: 2026-08-21
-last_activity_desc: Phase 01.1 execution started
-state_head: 919544354b85dfc207a5575e7e5da305031ad2ec
+current_phase: 2
+current_phase_name: Natural-Language Spanish Search + Auth
+status: planning
+stopped_at: Phase 01.1 complete, ready to plan Phase 2
+last_updated: "2026-08-23T01:57:41.696Z"
+last_activity: 2026-08-22
+last_activity_desc: Phase 01.1 complete, transitioned to Phase 2
+state_head: 5d4d2b83c6f7c7a39562d9924705523e9b236c11
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 19
-  completed_plans: 13
+  completed_phases: 2
+  total_plans: 21
+  completed_plans: 21
 milestone_name: milestone
 ---
 
@@ -29,10 +29,10 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.1 (Site Shell & Content Pages (INSERTED)) — EXECUTING
-Plan: 2 of 7
-Status: Ready to execute
-Last activity: 2026-08-21 - Completed quick task 260821-v7q: theme-aware isologo pair wired into Layouts.brand_logo/1 (light/dark PNGs + rebuilt favicon.ico committed)
+Phase: 2 — Natural-Language Spanish Search + Auth
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-22 — Phase 01.1 complete, transitioned to Phase 2
 structure (0-4)
 
 Progress: [██████████] 100%
@@ -41,7 +41,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 15
+- Total plans completed: 24
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -51,6 +51,7 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | 00 | 6 | - | - |
 | 01 | 9 | - | - |
+| 01.1 | 9 | - | - |
 
 **Recent Trend:**
 
@@ -221,5 +222,5 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-08-22T05:30:58.064Z
-Stopped at: Completed quick task 260822-2v9 (desktop header polish: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers)
+Stopped at: Phase 01.1 complete, ready to plan Phase 2
 Resume file: None

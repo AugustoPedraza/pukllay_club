@@ -144,7 +144,7 @@ be pulled forward without breaking that dependency chain.
 
 All findings for this phase are already captured in `.claude/skills/sketch-findings-pukllay_club/` — this phase implements them, it does not design them.
 
-**Plans:** 1/9 plans executed
+**Plans:** 9/9 plans complete
 **UI hint**: yes
 
 > **Header rework inserted 2026-08-22.** Sketches 013–017 reworked the header plan 01.1-01 shipped;
@@ -162,35 +162,35 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1: shared `layouts.ex` and `app.css`)*
 
-- [ ] 01.1-08-PLAN.md — Header rework (sketch 017-E): expandable search-morph on Catálogo + Detalle, Sumate CTA relocated to the About hero (D-05 superseded), theme toggle relocated to the footer as bare icons, `--pk-header-h` published (SHELL-01, SHELL-04)
+- [x] 01.1-08-PLAN.md — Header rework (sketch 017-E): expandable search-morph on Catálogo + Detalle, Sumate CTA relocated to the About hero (D-05 superseded), theme toggle relocated to the footer as bare icons, `--pk-header-h` published (SHELL-01, SHELL-04)
 
 **Wave 3** *(blocked on Wave 2: shared `layouts.ex` and `app.css`)*
 
-- [ ] 01.1-09-PLAN.md — Mobile nav drawer (list rows, left-accent active state, bottom-pinned theme toggle + socials) and the About-scoped mobile sticky join-CTA bar (SHELL-01)
+- [x] 01.1-09-PLAN.md — Mobile nav drawer (list rows, left-accent active state, bottom-pinned theme toggle + socials) and the About-scoped mobile sticky join-CTA bar (SHELL-01)
 
 **Wave 4** *(blocked on Wave 3: shared `about_live.ex` and `app.css`)*
 
-- [ ] 01.1-02-PLAN.md — About page content: photo rail, two-column band, dark FAQ band, Juntadas/Contacto, closing CTA (SHELL-02)
+- [x] 01.1-02-PLAN.md — About page content: photo rail, two-column band, dark FAQ band, Juntadas/Contacto, closing CTA (SHELL-02)
 
 **Wave 5** *(blocked on Wave 4: shared `app.css`)*
 
-- [ ] 01.1-03-PLAN.md — Detail desktop: `Catalog.similar_games/1`, buy-box masthead, reading column, ficha técnica, "Juegos similares" shelf (SHELL-03)
+- [x] 01.1-03-PLAN.md — Detail desktop: `Catalog.similar_games/1`, buy-box masthead, reading column, ficha técnica, "Juegos similares" shelf (SHELL-03)
 
 **Wave 6** *(blocked on Wave 5: shared `catalog_live/show.ex` and `app.css`)*
 
-- [ ] 01.1-04-PLAN.md — Detail mobile chrome: fixed CTA bar, sticky title-echo bar, lightbox, share (SHELL-03)
+- [x] 01.1-04-PLAN.md — Detail mobile chrome: fixed CTA bar, sticky title-echo bar, lightbox, share (SHELL-03)
 
 **Wave 7** *(blocked on Wave 6: shared `catalog_live/show.ex`)*
 
-- [ ] 01.1-05-PLAN.md — Reservation flow: runtime-configured number, name-capture modal, `wa.me` deep link (SHELL-03)
+- [x] 01.1-05-PLAN.md — Reservation flow: runtime-configured number, name-capture modal, `wa.me` deep link (SHELL-03)
 
 **Wave 8** *(blocked on Wave 7: shared `catalog_live/show.ex` and `app.css`)*
 
-- [ ] 01.1-06-PLAN.md — Filter/search surface, entry point inside the search-morph, URL filter params, filter-linked chips (SHELL-04)
+- [x] 01.1-06-PLAN.md — Filter/search surface, entry point inside the search-morph, URL filter params, filter-linked chips (SHELL-04)
 
 **Wave 9** *(blocked on Wave 8: shared `catalog_live/index.ex` and `catalog_live_test.exs`)*
 
-- [ ] 01.1-07-PLAN.md — Empty/loading/error states and the branded 404 page (SHELL-05)
+- [x] 01.1-07-PLAN.md — Empty/loading/error states and the branded 404 page (SHELL-05)
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
