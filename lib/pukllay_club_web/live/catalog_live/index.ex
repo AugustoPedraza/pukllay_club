@@ -30,7 +30,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.CarouselRow
-  alias PukllayClubWeb.FilterDrawer
+  alias PukllayClubWeb.FilterModal
   alias PukllayClubWeb.GameCard
   alias PukllayClubWeb.GamePreview
 
@@ -53,25 +53,86 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:max_playtime, nil)
       |> assign(:min_age, nil)
       |> assign(:sort, :name_asc)
+      |> assign(:filters_open, false)
       |> assign(:loading, loading?)
       |> assign(:page_size, @page_size)
       |> assign(:skeleton_carousel_rows, @skeleton_carousel_rows)
       |> assign(:facet_options, if(loading?, do: empty_facet_options(), else: Catalog.facet_options()))
       |> assign(:carousel_rows, if(loading?, do: [], else: Catalog.list_carousel_rows()))
 
+    # 01.1-06: mount/3 no longer calls apply_filters/1 on the connected
+    # branch — it only ever set *default* filter state anyway, and
+    # handle_params/3 (which Phoenix always invokes right after mount, on
+    # both the disconnected and connected phases) is what applies whatever
+    # the URL actually supplied. Calling apply_filters/1 (and therefore
+    # stream/4 with reset: true) from BOTH callbacks before the first render
+    # is a real bug, not just redundant work: LiveView's stream diff
+    # accumulates insert operations across multiple stream/4 calls issued
+    # before any render has flushed, so a second reset: true does not
+    # actually clear the first call's entries — the initial page would
+    # render every game from the connected-mount default pass AND every
+    # game from the handle_params pass concatenated together. Skeleton
+    # placeholders on both branches keep parity until handle_params runs.
     socket =
-      if loading? do
-        socket
-        |> assign(:offset, 0)
-        |> assign(:total, 0)
-        |> assign(:load_error, false)
-        |> stream(:games, [])
-      else
-        apply_filters(socket)
-      end
+      socket
+      |> assign(:offset, 0)
+      |> assign(:total, 0)
+      |> assign(:load_error, false)
+      |> stream(:games, [])
 
     {:ok, socket}
   end
+
+  # Read-in-only URL deep-linking (01.1-06, SHELL-04). Runs after mount/3's
+  # defaults and overrides only what the URL actually supplied — this module
+  # never writes filter state back to the address bar (deliberately out of
+  # scope, see 01.1-06-PLAN.md flagged_assumptions #3). Skipped on the
+  # disconnected static render — the skeleton state from mount/3 is fine
+  # there; the connected mount is what needs the real params.
+  @impl true
+  def handle_params(params, _uri, socket) do
+    if connected?(socket) do
+      mechanic_set = Vocabulary.mechanic_options()
+      theme_set = Vocabulary.theme_options()
+      weight_band_set = Enum.map(Vocabulary.weight_bands(), & &1.value)
+      tag_set = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
+
+      socket =
+        socket
+        |> assign(:q, initial_q(params))
+        |> assign(:mechanics, parse_list_param(params["mechanics"], mechanic_set))
+        |> assign(:themes, parse_list_param(params["themes"], theme_set))
+        |> assign(:weight_bands, parse_list_param(params["weight_bands"], weight_band_set))
+        |> assign(:tags, parse_list_param(params["tags"], tag_set))
+        |> assign(:players, parse_int(params["players"]))
+        |> assign(:max_playtime, parse_int(params["max_playtime"]))
+        |> assign(:min_age, parse_int(params["min_age"]))
+        |> assign(:sort, parse_sort(params["sort"]))
+        |> apply_filters()
+
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Accepts either a repeated-key list (`?mechanics[]=A&mechanics[]=B`, which
+  # Plug decodes to a list) or a single comma-separated value
+  # (`?mechanics=A,B`). Truncated to 20 elements BEFORE membership validation
+  # (T-01.1-22 — bounds the work even for a maliciously long param), then
+  # every element must be a member of the closed Vocabulary set `allowed` or
+  # it is dropped silently, never assigned, never reaching a query (T-01.1-23).
+  defp parse_list_param(nil, _allowed), do: []
+
+  defp parse_list_param(value, allowed) when is_list(value) do
+    value |> Enum.take(20) |> Enum.filter(&(&1 in allowed))
+  end
+
+  defp parse_list_param(value, allowed) when is_binary(value) do
+    value |> String.split(",", trim: true) |> Enum.take(20) |> Enum.filter(&(&1 in allowed))
+  end
+
+  defp parse_list_param(_other, _allowed), do: []
 
   defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
 
@@ -85,6 +146,14 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def handle_event("search", %{"q" => q}, socket) do
     {:noreply, socket |> assign(:q, q) |> apply_filters()}
+  end
+
+  def handle_event("open-filters", _params, socket) do
+    {:noreply, assign(socket, :filters_open, true)}
+  end
+
+  def handle_event("close-filters", _params, socket) do
+    {:noreply, assign(socket, :filters_open, false)}
   end
 
   def handle_event("toggle-facet", %{"facet" => facet, "value" => value}, socket) do
@@ -203,12 +272,17 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp parse_int(nil), do: nil
   defp parse_int(""), do: nil
 
-  defp parse_int(str) do
+  defp parse_int(str) when is_binary(str) do
     case Integer.parse(str) do
       {n, _rest} -> n
       :error -> nil
     end
   end
+
+  # A crafted `?players[]=1&players[]=2` decodes to a list, not a binary —
+  # Integer.parse/1 would raise on that (T-01.1-22). Degrade to unset rather
+  # than 500.
+  defp parse_int(_non_binary), do: nil
 
   defp parse_sort("name_asc"), do: :name_asc
   defp parse_sort("playtime_asc"), do: :playtime_asc
@@ -258,8 +332,21 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     _error -> :error
   end
 
-  defp result_count_text(1), do: "1 juego encontrado"
-  defp result_count_text(n), do: "#{n} juegos encontrados"
+  # Public (not defp) — reused verbatim by PukllayClubWeb.FilterModal's live
+  # match-count line, per 01.1-06's "reuse result_count_text/1 rather than
+  # authoring second copy" instruction. Same pluralization for both surfaces.
+  def result_count_text(1), do: "1 juego encontrado"
+  def result_count_text(n), do: "#{n} juegos encontrados"
+
+  # Count of active facet/scalar filters, for the nav-search filter button's
+  # badge (01.1-06). Deliberately excludes @q — the free-text query has its
+  # own visible presence in the search input, this badge is about facets a
+  # visitor can't otherwise see once the search control is collapsed.
+  defp active_filter_count(assigns) do
+    length(assigns.mechanics) + length(assigns.themes) + length(assigns.weight_bands) +
+      length(assigns.tags) +
+      Enum.count([assigns.players, assigns.max_playtime, assigns.min_age], &(not is_nil(&1)))
+  end
 
   # Ranks the curated row above the other 7 by colour (G-01-4) — never by a
   # fourth type size, per ui-design-system's 3-level cap.
@@ -324,13 +411,19 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} fullbleed sticky search_expanded={@q != ""} active_nav={:inicio}>
+    <Layouts.app
+      flash={@flash}
+      fullbleed
+      sticky
+      search_expanded={@q != "" or filters_active?(assigns)}
+      active_nav={:inicio}
+    >
       <:nav_links>
         <.link navigate={~p"/"} aria-current="page">Inicio</.link>
         <.link navigate={~p"/quienes-somos"}>Quiénes Somos</.link>
       </:nav_links>
       <:nav_search>
-        <form phx-change="search" id="catalog-search-form">
+        <form phx-change="search" id="catalog-search-form" class="pk-nav-search-form">
           <.input
             type="text"
             name="q"
@@ -339,6 +432,17 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             phx-debounce="300"
           />
         </form>
+        <button
+          type="button"
+          phx-click="open-filters"
+          aria-label="Abrir filtros"
+          class="pk-filter-trigger min-h-11 min-w-11"
+        >
+          <.icon name="hero-adjustments-horizontal" class="size-5" />
+          <span :if={active_filter_count(assigns) > 0} class="pk-filter-badge" aria-hidden="true">
+            {active_filter_count(assigns)}
+          </span>
+        </button>
       </:nav_search>
       <:subnav :if={not filters_active?(assigns)}>
         <nav class="pk-chip-nav" aria-label="Categorías">
@@ -357,18 +461,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       <div class="pk-page space-y-6">
         <div class="mx-auto w-full max-w-7xl pk-gutter">
           <div class="flex items-center justify-end gap-4">
-            <FilterDrawer.filter_drawer
-              id="filter-drawer"
-              facet_options={@facet_options}
-              mechanics={@mechanics}
-              themes={@themes}
-              weight_bands={@weight_bands}
-              tags={@tags}
-              players={@players}
-              max_playtime={@max_playtime}
-              min_age={@min_age}
-            />
-
             <select
               name="sort"
               phx-change="sort"
@@ -460,6 +552,21 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         </div>
 
         <GamePreview.preview_host />
+
+        <FilterModal.filter_modal
+          id="filter-modal"
+          facet_options={@facet_options}
+          mechanics={@mechanics}
+          themes={@themes}
+          weight_bands={@weight_bands}
+          tags={@tags}
+          players={@players}
+          max_playtime={@max_playtime}
+          min_age={@min_age}
+          open={@filters_open}
+          q={@q}
+          total={@total}
+        />
       </div>
     </Layouts.app>
     """

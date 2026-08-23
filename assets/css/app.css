@@ -624,8 +624,13 @@ body.pk-sheet-open {
 /* .pk-nav-search is now the morph's inner slot region: collapsed to zero
    width and transparent at rest, expanding only once the morph itself opens.
    The opacity transition carries a --duration-fast delay so the text fades
-   in only after the width has started opening. */
+   in only after the width has started opening. As of 01.1-06 the region also
+   holds the filter-open affordance (.pk-filter-trigger) as a sibling of the
+   search form — flex row so both sit on the same line inside the pill. */
 .pk-search-morph .pk-nav-search {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   flex: 1 1 auto;
   min-width: 0;
   max-width: none;
@@ -635,6 +640,50 @@ body.pk-sheet-open {
   pointer-events: none;
   transition: opacity var(--duration-fast) var(--ease-standard);
   transition-delay: var(--duration-fast);
+}
+
+.pk-nav-search-form {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Filter-open affordance (SHELL-04, 01.1-06): lives inside the search-morph's
+   slot region, immediately before the morph's own close button — this is
+   what "reachable from the nav search box" means once the box collapses to
+   an icon. Bare, matching the morph's own icon language (no card/border). */
+.pk-filter-trigger {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-filter-trigger:hover {
+  color: var(--color-primary);
+}
+
+.pk-filter-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
 }
 
 .pk-search-morph.is-open .pk-nav-search {

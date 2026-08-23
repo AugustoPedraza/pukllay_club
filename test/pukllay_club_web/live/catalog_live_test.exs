@@ -332,9 +332,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert html =~ "No encontramos juegos con esos filtros"
       assert html =~ "Limpiar filtros"
 
+      # Scoped to .btn-primary (01.1-06): the empty-state's own clear-filters
+      # button, distinct from FilterModal's btn-outline clear-filters button
+      # now also present in the DOM — a bare text selector would be ambiguous.
       html2 =
         view
-        |> element("button", "Limpiar filtros")
+        |> element("button.btn-primary", "Limpiar filtros")
         |> render_click()
 
       assert html2 =~ "Existing Game"
@@ -361,7 +364,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html =
         view
-        |> form("#filter-drawer-scalars")
+        |> form("#filter-modal-scalars")
         |> render_change(%{min_age: "99999999999999"})
 
       assert html =~ "No pudimos cargar el catálogo en este momento"
@@ -871,6 +874,204 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert html =~ ~s(id="game-preview-portal")
       assert html =~ ~s(id="game-preview-backdrop")
       assert html =~ ~s(id="game-preview-sheet")
+    end
+  end
+
+  describe "filter surface reachable from the nav search box (SHELL-04, 01.1-06)" do
+    test "exactly one filter-open affordance renders, no second Filtros trigger", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ ~s(aria-label="Abrir filtros")
+      # The retired FilterDrawer's own trigger read literally ">Filtros<" as a
+      # label rendered inline next to the icon (no aria-label). FilterModal's
+      # own title heading also says "Filtros" (as text, inside <h2>), so a
+      # bare substring check would false-positive on that — check for the
+      # drawer's specific `<label for=... class="btn ...">` trigger shape
+      # instead, which no longer exists anywhere in the page.
+      refute html =~ "drawer-toggle"
+      refute html =~ "drawer-side"
+    end
+
+    test "the filter-open button renders inside #pk-nav-search-region, not elsewhere", %{
+      conn: conn
+    } do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      region_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#pk-nav-search-region")
+        |> LazyHTML.to_html()
+
+      assert region_html =~ ~s(aria-label="Abrir filtros")
+    end
+
+    test "clicking the filter-open button opens the modal surface", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> element(~s([aria-label="Abrir filtros"]))
+        |> render_click()
+
+      assert html =~ "modal-open"
+      assert html =~ "Filtros"
+    end
+
+    test "typing in the nav search box narrows the grid and does not open the filter surface", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Catan Search"})
+      game_fixture(%{name: "Unrelated Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Catan"})
+
+      grid = grid_html(html)
+      assert grid =~ "Catan Search"
+      refute grid =~ "Unrelated Game"
+      refute html =~ "class=\"modal modal-open\""
+    end
+
+    test "toggling a facet from inside the open surface narrows the grid and leaves the surface open",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+
+      html =
+        view
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> render_click()
+
+      grid = grid_html(html)
+      assert grid =~ "Hobby Game"
+      refute grid =~ "Expert Game"
+      assert html =~ "modal-open"
+    end
+
+    test "the live match count in the surface changes as a facet is toggled", %{conn: conn} do
+      game_fixture(%{name: "Hobby Game A", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game B", weight_band: "nivel_experto"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html_before = view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+      assert html_before =~ "2 juegos encontrados"
+
+      html_after =
+        view
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> render_click()
+
+      assert html_after =~ "1 juego encontrado"
+    end
+
+    test "the surface closes on close-filters", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+      html = render_click(view, "close-filters", %{})
+
+      refute html =~ "class=\"modal modal-open\""
+    end
+
+    test "with a facet active and q empty, the morph carries data-search-expanded=\"true\"", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> render_click()
+
+      assert html =~ ~s(data-search-expanded="true")
+    end
+
+    test "with no facet active and q empty, the morph carries data-search-expanded=\"false\"", %{
+      conn: conn
+    } do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ ~s(data-search-expanded="false")
+    end
+
+    test "/juegos/:id renders no filter-open affordance", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
+
+      refute html =~ "Abrir filtros"
+    end
+  end
+
+  describe "filter state read from URL query params (SHELL-04, 01.1-06)" do
+    test "?weight_bands=<band> lands the catalog already filtered to that band", %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/?weight_bands=descubre_el_hobby")
+
+      grid = grid_html(html)
+      assert grid =~ "Hobby Game"
+      refute grid =~ "Expert Game"
+    end
+
+    test "?mechanics=<covered label> renders only matching games", %{conn: conn} do
+      game_fixture(%{name: "Dice Game", mechanics: ["Dice Rolling"]})
+      game_fixture(%{name: "Other Game", mechanics: ["Trading"]})
+
+      {:ok, _view, html} = live(conn, ~p"/?mechanics=Tira dados")
+
+      grid = grid_html(html)
+      assert grid =~ "Dice Game"
+      refute grid =~ "Other Game"
+    end
+
+    test "an unrecognised facet value renders the unfiltered set rather than raising or zero rows",
+         %{conn: conn} do
+      game_fixture(%{name: "Any Game"})
+
+      {:ok, _view, html_unfiltered} = live(conn, ~p"/")
+      {:ok, _view2, html_bogus} = live(conn, ~p"/?mechanics=NoExiste")
+
+      assert grid_html(html_unfiltered) =~ "Any Game"
+      assert grid_html(html_bogus) =~ "Any Game"
+    end
+
+    test "a 50-element param list is truncated and the page still renders", %{conn: conn} do
+      game_fixture(%{name: "Any Game"})
+
+      long_list = Enum.map_join(1..50, ",", &"Fake#{&1}")
+
+      assert {:ok, _view, html} = live(conn, ~p"/?mechanics=#{long_list}")
+      assert html =~ "Any Game"
+    end
+
+    test "?sort=nope falls back to name order", %{conn: conn} do
+      game_fixture(%{name: "Zebra Game", csv_row: 9001})
+      game_fixture(%{name: "Alpha Game", csv_row: 9002})
+
+      {:ok, _view, html} = live(conn, ~p"/?sort=nope")
+
+      assert position(html, "Alpha Game") < position(html, "Zebra Game")
+    end
+
+    test "?players=abc leaves the players filter unset rather than raising", %{conn: conn} do
+      game_fixture(%{name: "Any Game"})
+
+      assert {:ok, _view, html} = live(conn, ~p"/?players=abc")
+      assert grid_html(html) =~ "Any Game"
     end
   end
 
