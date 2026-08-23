@@ -541,10 +541,47 @@ body.pk-sheet-open {
   box-shadow: 0 1px 0 color-mix(in srgb, var(--color-base-content) 8%, transparent);
 }
 
+/* Header brand lockup. The header row (.pk-nav-inner) is a single-line,
+   auto-height flex row with align-items:center, so ANY text inside it that is
+   free to reflow silently becomes the row's height — and the .CatalogNav
+   ResizeObserver then publishes that height as --pk-header-h, shifting every
+   sticky-offset element on the page. Two rules make that structurally
+   impossible rather than merely unlikely:
+
+   1. nowrap, header-scoped. The lockup is a two-line composition by design
+      (name over tagline — flex-col + leading-none in brand_logo/1); a third
+      line is always a bug, never a narrow-viewport adaptation. Scoped to
+      .pk-nav-inner because the footer shares brand_logo/1 and has no
+      fixed-height contract of its own.
+   2. Hidden by default, revealed only at 48rem (see the min-width block near
+      the end of this file). Max-content widths measured on the live page:
+      isologo 36 + gap 8 + wordmark 206 = 250px brand, nav links 166.3px, row
+      gap 24px, gutters 64px. Seating brand + links + the open 17.5rem pill
+      therefore needs 250+24+166.3+24+280+64 = 808.3px, and seating them with
+      only the collapsed 44px icon still needs 572.3px — so from 481px to
+      768px the row genuinely cannot hold the wordmark, search open or closed.
+      Hiding it there is the same treatment ≤480px already applied; it just
+      now applies at the width the arithmetic actually calls for.
+
+   The tagline is the widest line in the lockup (206px vs 111.3px for
+   "PUKLLAY CLUB"), so it is always the first thing to reflow — which is why
+   this failed as a growing header rather than as a clipped brand. */
+.pk-nav-inner .pk-brand-wordmark {
+  display: none;
+  white-space: nowrap;
+}
+
 .pk-nav-links {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  /* Pinned for the same reason as the brand above. Left shrinkable, the links
+     collapse from their natural 166.3px to their 116.3px min-content and
+     "Quiénes Somos" wraps, growing the row exactly the same way — so
+     shrink-proofing only the brand would relocate the bug, not remove it.
+     With both text items pinned, .pk-search-morph.is-open's shrink guard is
+     the row's single point of give, which is what it was added for. */
+  flex-shrink: 0;
 }
 
 /* 013-E: nothing carries a border or fill at rest or on hover — hierarchy
@@ -558,6 +595,10 @@ body.pk-sheet-open {
   text-decoration: none;
   padding: 4px 0 8px;
   border-bottom: 3px solid transparent;
+  /* Belt to .pk-nav-links' braces: even with the list pinned, a single
+     two-word link ("Quiénes Somos") reflowing would put a second line into
+     the row. */
+  white-space: nowrap;
   transition: border-color 150ms ease, color 150ms ease;
 }
 
@@ -1598,6 +1639,28 @@ body.pk-cta-parked {
   }
 }
 
+/* Header wordmark reveal — the other half of the `.pk-nav-inner
+   .pk-brand-wordmark` base rule far above, positioned here (after every base
+   rule it overrides) for the same ordering reason spelled out on the block
+   directly above.
+
+   Deliberately reuses 48rem instead of introducing a new breakpoint. The row
+   needs 808.3px to seat brand + nav links + a full 17.5rem pill, and 48rem is
+   the widest existing breakpoint at or below that; the 40.3px difference is
+   given back by the pill's own shrink guard, which lands it at 239.7px at
+   768px — still above the 220px minimum the search box carried before
+   01.1-08. 640px/sm was measured and rejected: it leaves the pill 111.7px,
+   narrower than its own 44px toggle plus 44px close control together.
+
+   This is a SEPARATE concern from the detail-layout block above that merely
+   shares the same width. Do not merge them — retuning the detail masthead
+   would then silently change the header. */
+@media (min-width: 48rem) {
+  .pk-nav-inner .pk-brand-wordmark {
+    display: flex;
+  }
+}
+
 /* Empty / load-error / 404 states (sketch 009, empty-loading-error-states.md,
    01.1-07). One shared shape for all three non-happy-path moments — the
    catalog's zero-results and load-error branches (CatalogLive.Index) and
@@ -1700,16 +1763,17 @@ body.pk-cta-parked {
     display: block;
   }
 
-  /* Row density (01.1-08): a tighter row gap plus hiding the wordmark
-     (header-scoped only — the footer's own brand_logo/1 keeps its
-     wordmark) frees the room Detalle's crumb + search control need
-     between brand and the row's right edge. */
+  /* Row density (01.1-08): a tighter row gap frees the room Detalle's crumb
+     + search control need between brand and the row's right edge.
+
+     The wordmark hide that used to sit here moved to the base rule far above
+     (debug header-height-wordmark-wrap). 480px was never the width at which
+     the wordmark stops fitting — it just happened to be the only place anyone
+     had hidden it, which is precisely why the header silently inflated
+     everywhere from 481px to 808px. Leaving a duplicate here would also be a
+     second rule owning one visual property, which this layer forbids. */
   .pk-nav-inner {
     gap: 0.5rem;
-  }
-
-  .pk-nav-inner .pk-brand-wordmark {
-    display: none;
   }
 
   /* Mobile overlay (sketch 017 Round 5's fix for the flat hard-edged slab):

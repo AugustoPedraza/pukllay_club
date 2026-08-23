@@ -396,7 +396,12 @@ defmodule PukllayClubWeb.Layouts do
         >
           <.icon name="hero-bars-3" class="size-6" />
         </button>
-        <div class="flex-initial">
+        <%!-- shrink-0, not flex-initial: this row is a single-line auto-height
+        flex row, so a shrinkable brand does not get narrower — it reflows its
+        wordmark onto extra lines and the row inherits that height (debug
+        header-height-wordmark-wrap). The lockup is a fixed-size composition;
+        the search pill is the row's designated give. --%>
+        <div class="shrink-0">
           <.brand_logo />
         </div>
         <nav :if={@crumb != []} class="pk-nav-crumb" aria-label="Ruta de navegación">
