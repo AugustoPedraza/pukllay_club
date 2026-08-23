@@ -44,8 +44,18 @@ defmodule PukllayClubWeb.GamePreview do
   space-between` across up to three `pk-fact` pills. Each fact is omitted
   independently when its underlying data is absent — see the field-level
   rules in the moduledoc-referenced sketch findings.
+
+  Optional `linked` (01.1-06, default `false`): when `true`, the players
+  and tiempo facts render as `<.link navigate>` into the catalog's
+  `players`/`max_playtime` filter params. The dificultad fact is
+  deliberately never linked here — `GameChips.weight_band_badge/1`
+  (rendered separately on the detail page) already owns that link target,
+  and this component is also the browse-card hover preview, where `false`
+  (the default) renders every existing caller byte-identically to before
+  this attr existed.
   """
   attr :game, Game, required: true
+  attr :linked, :boolean, default: false
 
   def facts_row(assigns) do
     assigns =
@@ -57,12 +67,34 @@ defmodule PukllayClubWeb.GamePreview do
 
     ~H"""
     <div class="pk-facts-row">
-      <span :if={@players_text} class="pk-fact">
+      <.link
+        :if={@players_text && @linked && @game.min_players && @game.max_players}
+        navigate={~p"/?players=#{@game.max_players}"}
+        class="pk-fact"
+      >
+        <.icon name="hero-users-micro" class="size-3" />{@players_text}
+      </.link>
+      <span
+        :if={@players_text && (!@linked || !(@game.min_players && @game.max_players))}
+        class="pk-fact"
+      >
         <.icon name="hero-users-micro" class="size-3" />{@players_text}
       </span>
-      <span :if={@tiempo_text} class="pk-fact">
+
+      <.link
+        :if={@tiempo_text && @linked && (@game.playing_time || @game.max_playtime)}
+        navigate={~p"/?max_playtime=#{@game.playing_time || @game.max_playtime}"}
+        class="pk-fact"
+      >
+        <.icon name="hero-clock-micro" class="size-3" />{@tiempo_text}
+      </.link>
+      <span
+        :if={@tiempo_text && (!@linked || !(@game.playing_time || @game.max_playtime))}
+        class="pk-fact"
+      >
         <.icon name="hero-clock-micro" class="size-3" />{@tiempo_text}
       </span>
+
       <span :if={@band} class="pk-fact">
         <.difficulty_indicator level={@level} />{@band.label}
       </span>

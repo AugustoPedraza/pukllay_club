@@ -43,9 +43,16 @@ defmodule PukllayClubWeb.GameChips do
   Renders nothing for an empty list. Callers pass already-covered labels
   (e.g. `Vocabulary.covered_mechanics/1`) — this component never filters
   or translates on its own.
+
+  Optional `href_fun` (01.1-06): a 1-arity function from a term to a
+  navigate target. When given, each visible chip renders inside
+  `<.link navigate={...}>`; the overflow `+N` chip never links (it names no
+  single term). `nil` (the default) renders every existing caller
+  byte-identically to before this attr existed.
   """
   attr :terms, :list, required: true
   attr :limit, :integer, default: 4
+  attr :href_fun, :any, default: nil
 
   def chip_row(assigns) do
     visible = Enum.take(assigns.terms, assigns.limit)
@@ -58,7 +65,10 @@ defmodule PukllayClubWeb.GameChips do
 
     ~H"""
     <div :if={@terms != []} class="flex flex-wrap gap-1">
-      <span :for={term <- @visible} class="badge badge-sm">{term}</span>
+      <%= for term <- @visible do %>
+        <.link :if={@href_fun} navigate={@href_fun.(term)} class="badge badge-sm">{term}</.link>
+        <span :if={!@href_fun} class="badge badge-sm">{term}</span>
+      <% end %>
       <span :if={@overflow > 0} class="badge badge-sm">+{@overflow}</span>
     </div>
     """
@@ -74,9 +84,15 @@ defmodule PukllayClubWeb.GameChips do
   detail page's uncapped behaviour. When `limit` is an integer and there
   are more tags than the limit, renders the visible tags followed by one
   `+N` overflow chip, mirroring `chip_row/1`'s cap pattern.
+
+  Optional `href_fun` (01.1-06): a 1-arity function from a tag to a
+  navigate target, same contract as `chip_row/1`'s. `nil` (the default)
+  renders every existing caller byte-identically to before this attr
+  existed.
   """
   attr :tags, :list, required: true
   attr :limit, :integer, default: nil
+  attr :href_fun, :any, default: nil
 
   def editorial_tags(assigns) do
     visible = if assigns.limit, do: Enum.take(assigns.tags, assigns.limit), else: assigns.tags
@@ -89,7 +105,12 @@ defmodule PukllayClubWeb.GameChips do
 
     ~H"""
     <div :if={@tags != []} class="flex flex-wrap gap-1">
-      <span :for={tag <- @visible} class="badge badge-sm badge-accent">{tag}</span>
+      <%= for tag <- @visible do %>
+        <.link :if={@href_fun} navigate={@href_fun.(tag)} class="badge badge-sm badge-accent">
+          {tag}
+        </.link>
+        <span :if={!@href_fun} class="badge badge-sm badge-accent">{tag}</span>
+      <% end %>
       <span :if={@overflow > 0} class="badge badge-sm badge-accent">+{@overflow}</span>
     </div>
     """

@@ -307,12 +307,17 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               </div>
 
               <div class="pk-text-col">
-                <GamePreview.facts_row game={@game} />
+                <GamePreview.facts_row game={@game} linked={true} />
 
                 <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
 
-                <GameChips.weight_band_badge game={@game} show_descriptor={true} />
-                <GameChips.editorial_tags tags={@game.tags} />
+                <.link :if={@game.weight_band} navigate={~p"/?weight_bands=#{@game.weight_band}"}>
+                  <GameChips.weight_band_badge game={@game} show_descriptor={true} />
+                </.link>
+                <GameChips.editorial_tags
+                  tags={@game.tags}
+                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
+                />
 
                 <div :if={@game.description} class="pk-description">
                   <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
@@ -328,10 +333,18 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 </div>
 
                 <h2 :if={@mechanic_labels != []} class="pk-section-heading">Mecánicas</h2>
-                <GameChips.chip_row terms={@mechanic_labels} limit={99} />
+                <GameChips.chip_row
+                  terms={@mechanic_labels}
+                  limit={99}
+                  href_fun={fn label -> ~p"/?mechanics=#{label}" end}
+                />
 
                 <h2 :if={@theme_labels != []} class="pk-section-heading">Temáticas</h2>
-                <GameChips.chip_row terms={@theme_labels} limit={99} />
+                <GameChips.chip_row
+                  terms={@theme_labels}
+                  limit={99}
+                  href_fun={fn label -> ~p"/?themes=#{label}" end}
+                />
 
                 <h2 class="pk-section-heading">Ficha técnica</h2>
                 <dl class="pk-spec-list">

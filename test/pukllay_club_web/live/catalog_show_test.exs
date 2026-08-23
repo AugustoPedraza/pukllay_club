@@ -670,4 +670,74 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute Code.ensure_loaded?(Reservation)
     end
   end
+
+  describe "facts pills and chips link into the catalog's filter params (SHELL-04, 01.1-06)" do
+    test "the weight-band badge links to ?weight_bands=<band>", %{conn: conn} do
+      game = game_fixture(%{name: "Banded Game", weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ ~s(href="/?weight_bands=ingenio_estratega")
+    end
+
+    test "each editorial tag links to ?tags=<tag>", %{conn: conn} do
+      game = game_fixture(%{name: "Tagged Game", tags: ["#CreaConexiones", "#EquipoGanador"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "tags=%23CreaConexiones"
+      assert html =~ "tags=%23EquipoGanador"
+    end
+
+    test "each mechanic chip links to ?mechanics=<label>", %{conn: conn} do
+      game = game_fixture(%{name: "Mechanic Game", mechanics: ["Dice Rolling"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "mechanics="
+    end
+
+    test "each theme chip links to ?themes=<label>", %{conn: conn} do
+      game = game_fixture(%{name: "Theme Game", themes: ["Economic"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "themes="
+    end
+
+    test "the players fact links to ?players=<n> when min and max players are both present", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Player Game", min_players: 2, max_players: 5})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "players=5"
+    end
+
+    test "the tiempo fact links to ?max_playtime=<n>", %{conn: conn} do
+      game =
+        game_fixture(%{name: "Time Game", min_playtime: 30, max_playtime: 45, playing_time: nil})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "max_playtime=45"
+    end
+
+    test "the browse-card hover preview's facts_row does NOT link (linked defaults to false)", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Card Preview Game", min_players: 2, max_players: 5})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      preview_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("template[data-game-preview]")
+        |> LazyHTML.to_html()
+
+      refute preview_html =~ "players="
+    end
+  end
 end
