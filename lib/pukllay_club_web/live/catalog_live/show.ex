@@ -26,6 +26,17 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   `.Lightbox` and `.ShareButton` never assemble markup or a URL from
   strings/`dataset` values (T-01.1-08) — share intent hrefs are built
   server-side in HEEx with `URI.encode_www_form/1`.
+
+  Reservation flow (SHELL-03's reservation half, D-09/D-10, plan 01.1-05):
+  the buy-box and mobile-bar CTAs both dispatch `open-reservation`, which
+  opens a name-capture modal. `reservation_url/3` builds the destination
+  link entirely server-side (T-01.1-02) — the visitor's name is
+  percent-encoded via `URI.encode_www_form/1` before it ever reaches the
+  query string, and is never persisted, logged, or sent anywhere else. The
+  destination number comes from `Application.get_env(:pukllay_club,
+  :reservation_whatsapp_number)`, a runtime-configured value distinct from
+  `PukllayClubWeb.ClubLinks`' group-invite URL — a different WhatsApp
+  destination for a different purpose.
   """
   use PukllayClubWeb, :live_view
 
@@ -50,7 +61,11 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:similar_games, Catalog.similar_games(game))
      |> assign(:similares_subtitle, similares_subtitle(game))
      |> assign(:description_expanded, false)
-     |> assign(:lightbox_open, false)}
+     |> assign(:lightbox_open, false)
+     |> assign(:reservation_number, Application.get_env(:pukllay_club, :reservation_whatsapp_number))
+     |> assign(:reservation_open, false)
+     |> assign(:reservation_name, "")
+     |> assign(:reservation_error, nil)}
   end
 
   @impl true
@@ -77,13 +92,50 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     {:noreply, assign(socket, :lightbox_open, false)}
   end
 
-  # Inert stub — wired to a real reservation flow by plan 01.1-05. Returning
-  # {:noreply, socket} unchanged means clicking either reservation CTA
-  # (buy-box or mobile bar) does nothing visible yet rather than crashing
-  # in the interim.
+  # Opens the reservation modal, reset to a blank/untouched state every time
+  # (not just on first open) so a name typed and abandoned in a prior visit
+  # never leaks into a later one.
   @impl true
   def handle_event("open-reservation", _params, socket) do
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> assign(:reservation_open, true)
+     |> assign(:reservation_name, "")
+     |> assign(:reservation_error, nil)}
+  end
+
+  @impl true
+  def handle_event("close-reservation", _params, socket) do
+    {:noreply, assign(socket, :reservation_open, false)}
+  end
+
+  # Validate on blur only (ux-patterns B12: "validate after the action —
+  # blur/submit — not while typing"). No phx-change is wired on the form
+  # for this reason; only the name input's own phx-blur reaches here.
+  @impl true
+  def handle_event("validate-reservation", %{"nombre" => name}, socket) do
+    {:noreply, assign_reservation_name(socket, name)}
+  end
+
+  @impl true
+  def handle_event("reserve", %{"nombre" => name}, socket) do
+    {:noreply, assign_reservation_name(socket, name)}
+  end
+
+  defp assign_reservation_name(socket, name) do
+    trimmed = String.trim(name)
+
+    socket
+    |> assign(:reservation_name, trimmed)
+    |> assign(:reservation_error, reservation_name_error(trimmed))
+  end
+
+  defp reservation_name_error(""), do: "Ingresá tu nombre para continuar."
+
+  defp reservation_name_error(name) do
+    if String.length(name) > 60 do
+      "El nombre es demasiado largo (máximo 60 caracteres)."
+    end
   end
 
   @impl true
@@ -422,6 +474,117 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             <.icon name="hero-chevron-right" class="size-5" />
           </button>
         </div>
+
+        <%!-- Reservation modal (SHELL-03, D-09/D-10, plan 01.1-05): pure
+        daisyUI .modal/.modal-open/.modal-box/.modal-backdrop classes — no
+        .pk-* CSS needed, daisyUI's own modal is already the highest
+        z-index (999) in this page's overlay stack. Focus-trap/Escape reuse
+        .Lightbox's exact pattern above (T-01.1-16-style single mechanism,
+        not a second bespoke one). Server builds the wa.me link entirely —
+        reservation_url/3 below, never client-assembled (mirrors
+        .ShareButton's own T-01.1-08 rule). --%>
+        <div
+          :if={@reservation_open}
+          id="reservation-modal"
+          class="modal modal-open"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reservation-modal-title"
+          phx-hook=".ReservationModal"
+        >
+          <script :type={Phoenix.LiveView.ColocatedHook} name=".ReservationModal">
+            export default {
+              mounted() {
+                this.el.querySelector("input, a, button")?.focus()
+
+                this.onKeydown = (e) => {
+                  if (e.key === "Escape") {
+                    this.pushEvent("close-reservation", {})
+                    return
+                  }
+                  if (e.key !== "Tab") return
+                  const focusable = this.el.querySelectorAll(
+                    'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                  )
+                  if (focusable.length === 0) return
+                  const first = focusable[0]
+                  const last = focusable[focusable.length - 1]
+                  if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault()
+                    last.focus()
+                  } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault()
+                    first.focus()
+                  }
+                }
+                this.el.addEventListener("keydown", this.onKeydown)
+              },
+              destroyed() {
+                this.el.removeEventListener("keydown", this.onKeydown)
+              }
+            }
+          </script>
+          <div class="modal-box">
+            <button
+              type="button"
+              phx-click="close-reservation"
+              aria-label="Cerrar"
+              class="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
+            >
+              <.icon name="hero-x-mark" class="size-5" />
+            </button>
+            <h3 id="reservation-modal-title" class="font-display text-xl pr-8">
+              {reservation_cta_label()}
+            </h3>
+
+            <p :if={is_nil(@reservation_number)} class="text-sm text-neutral mt-4">
+              La reserva no está disponible por el momento. Escribinos directamente para coordinar.
+            </p>
+
+            <div :if={@reservation_number}>
+              <div
+                :if={@reservation_name == "" or @reservation_error}
+                class="mt-4"
+              >
+                <form phx-submit="reserve">
+                  <.input
+                    type="text"
+                    id="reservation-nombre"
+                    name="nombre"
+                    label="Tu nombre"
+                    value={@reservation_name}
+                    placeholder="¿Cómo te llamás?"
+                    required
+                    maxlength="60"
+                    phx-blur="validate-reservation"
+                    errors={if @reservation_error, do: [@reservation_error], else: []}
+                  />
+                  <button type="submit" class="btn btn-primary min-h-11 w-full mt-2">
+                    Continuar
+                  </button>
+                </form>
+              </div>
+
+              <div
+                :if={@reservation_name != "" and is_nil(@reservation_error)}
+                class="mt-4 space-y-3"
+              >
+                <p class="text-sm text-base-content">
+                  {reservation_message(@reservation_name, @game.name)}
+                </p>
+                <a
+                  href={reservation_url(@reservation_number, @reservation_name, @game.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn btn-primary min-h-11 w-full"
+                >
+                  Abrir WhatsApp
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="modal-backdrop" phx-click="close-reservation"></div>
+        </div>
       </div>
     </Layouts.app>
     """
@@ -431,6 +594,21 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # string exists in exactly one place in the source and can never drift
   # between the two surfaces.
   defp reservation_cta_label, do: "Reservar para el sábado"
+
+  # D-09/D-10 framing: asks the club to have the game set up at the next
+  # Saturday session — never to lend/take it home. Approved verbatim at the
+  # 01.1-05 checkpoint; see 01.1-05-SUMMARY.md for the decision record.
+  defp reservation_message(name, game_name) do
+    "¡Hola! Soy #{name} y quiero reservar #{game_name} para jugarlo el próximo sábado en el club."
+  end
+
+  # Built entirely server-side (T-01.1-02) — URI.encode_www_form/1 percent-
+  # (or +-)encodes the visitor's name so it cannot break out of the `text=`
+  # query parameter, superseding 01.1-RESEARCH.md's client-side
+  # encodeURIComponent suggestion with a strictly stronger mitigation.
+  defp reservation_url(number, name, game_name) do
+    "https://wa.me/" <> number <> "?text=" <> URI.encode_www_form(reservation_message(name, game_name))
+  end
 
   @doc false
   attr :id, :string, required: true

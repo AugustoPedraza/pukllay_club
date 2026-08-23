@@ -71,6 +71,11 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
 
 config :pukllay_club, :image_origin, dev_image_origin
 
+# Dev placeholder for the detail page's reservation CTA (plan 01.1-05) — not
+# a real number. config/runtime.exs's :prod block raises instead of falling
+# back to this value, so this placeholder can never reach production.
+config :pukllay_club, :reservation_whatsapp_number, "5491100000000"
+
 # ## SSL Support
 #
 # In order to use HTTPS in development, a self-signed

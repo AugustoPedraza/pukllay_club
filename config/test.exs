@@ -59,5 +59,10 @@ config :pukllay_club, :image_download_req_options, plug: {Req.Test, PukllayClub.
 # would scope to in a real environment.
 config :pukllay_club, :image_origin, "https://images.test.invalid"
 
+# Test placeholder for the detail page's reservation CTA (plan 01.1-05) —
+# not a real number. config/runtime.exs's :prod block raises instead of
+# falling back to this value, so this placeholder can never reach production.
+config :pukllay_club, :reservation_whatsapp_number, "5491100000000"
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false

@@ -113,6 +113,25 @@ if config_env() == :prod do
         "#{scheme}://#{host}:#{port}"
     end
 
+  # The detail page's reservation CTA (SHELL-03, D-09/D-10, plan 01.1-05)
+  # deep-links to the club's real WhatsApp number via wa.me — a published
+  # business number, not a secret, but still required at boot (like
+  # DATABASE_URL/R2_PUBLIC_BASE_URL above) rather than defaulted, so a
+  # missing value fails loudly instead of shipping a dead reservation CTA.
+  # This is a DIFFERENT WhatsApp destination from PukllayClubWeb.ClubLinks'
+  # group-invite URL — never resolve it through that module.
+  reservation_whatsapp_number =
+    System.get_env("RESERVATION_WHATSAPP_NUMBER") ||
+      raise """
+      environment variable RESERVATION_WHATSAPP_NUMBER is missing.
+      Required for the detail page's reservation CTA to deep-link to the
+      club's real WhatsApp number. This is a published business number, not
+      a secret — add it to config/deploy.yml's env.clear block before the
+      next deploy.
+      """
+
+  normalized_reservation_number = String.replace(reservation_whatsapp_number, ~r/\D/, "")
+
   config :pukllay_club, PukllayClub.Repo,
     # ACCEPTED RISK (WR-04, 00-REVIEW.md): TLS is intentionally disabled here.
     # App <-> db traffic (including DATABASE_URL's embedded credentials)
@@ -143,6 +162,17 @@ if config_env() == :prod do
 
   config :pukllay_club, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
   config :pukllay_club, :image_origin, image_origin
+
+  if normalized_reservation_number == "" do
+    raise """
+    environment variable RESERVATION_WHATSAPP_NUMBER contains no digits
+    after normalization (got: #{inspect(reservation_whatsapp_number)}).
+    Expected an international phone number, digits only or with spaces/
+    dashes/a leading '+' that normalize away to digits.
+    """
+  end
+
+  config :pukllay_club, :reservation_whatsapp_number, normalized_reservation_number
 
   # ## SSL Support
   #
