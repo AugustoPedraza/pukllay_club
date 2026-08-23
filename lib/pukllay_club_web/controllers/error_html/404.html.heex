@@ -1,0 +1,25 @@
+<%!-- Branded 404 (01.1-07, empty-loading-error-states.md). Renders through
+{PukllayClubWeb.Layouts, :root} (config/config.exs), so it inherits the
+real <head> (stylesheet, theme script, lang="es") but nothing else — this
+view has no LiveView assigns, so it cannot render Layouts.app/1's
+nav_links/nav_search/subnav slots or the shared header/footer chrome. Kept
+to the shared .pk-state shape (Task 1), the brand wordmark, and exactly one
+action. Never interpolates @reason/@conn/an exception message/a stack
+trace/the requested id — this template only ever emits the three fixed
+strings below plus one link, regardless of what assigns Phoenix passes in
+(T-01.1-09). --%>
+<div class="flex min-h-screen items-center justify-center px-4">
+  <div class="pk-state">
+    <%!-- The plain wordmark text, not Layouts.brand_logo/1 — that component
+    always wraps itself in its own <a href="/">, which would make this page
+    render two links to the same destination instead of the one action the
+    empty/error/404 states share (Task 1's one-action rule). --%>
+    <span class="font-display text-2xl uppercase tracking-wide">PUKLLAY CLUB</span>
+    <h2>Juego no encontrado</h2>
+    <p>Este juego no existe o fue removido del catálogo.</p>
+    <%!-- CoreComponents.button/1 checked first (ui-design-system's "check
+    core_components.ex before hand-rolling markup" rule), same as Task 1's
+    catalog states. --%>
+    <.button navigate={~p"/"} variant="primary">Volver al catálogo</.button>
+  </div>
+</div>

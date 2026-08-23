@@ -169,6 +169,25 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
+    # 01.1-07: the plain live/2 helper above re-raises Ecto.NoResultsError
+    # straight to the test process rather than rendering through the
+    # endpoint's normal error pipeline — that's how live/2 itself is
+    # implemented in this test env, not a debug_errors setting. A plain
+    # conn GET through Phoenix.ConnTest also re-raises rather than
+    # returning a rendered response, so Phoenix.ConnTest.assert_error_sent/2
+    # (which wraps the call, catches the raise, and asserts the status Plug
+    # would have sent) is the documented way to assert the actual rendered
+    # 404 body end-to-end, per this plan's own fallback instruction.
+    test "an unknown game id renders the branded 404 end-to-end, not Phoenix's default plain text",
+         %{conn: conn} do
+      {404, _headers, body} =
+        assert_error_sent(404, fn ->
+          get(conn, ~p"/juegos/999999999")
+        end)
+
+      assert body =~ "Juego no encontrado"
+    end
+
     test "renders inside the shared capped-inner container (max-w-7xl + pk-gutter), with no 672px ancestor cap",
          %{conn: conn} do
       game = game_fixture()

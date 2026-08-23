@@ -5,7 +5,15 @@ defmodule PukllayClubWeb.ErrorHTMLTest do
   import Phoenix.Template, only: [render_to_string: 4]
 
   test "renders 404.html" do
-    assert render_to_string(PukllayClubWeb.ErrorHTML, "404", "html", []) == "Not Found"
+    html = render_to_string(PukllayClubWeb.ErrorHTML, "404", "html", [])
+
+    assert html =~ "Juego no encontrado"
+    assert html =~ "Este juego no existe o fue removido del catálogo."
+    assert html =~ "Volver al catálogo"
+    refute html == "Not Found"
+    refute html =~ "Exception"
+    refute html =~ "stacktrace"
+    refute html =~ "Ecto"
   end
 
   test "renders 500.html" do

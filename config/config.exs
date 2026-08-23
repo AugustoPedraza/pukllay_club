@@ -43,9 +43,16 @@ config :pukllay_club, PukllayClub.Mailer, adapter: Swoosh.Adapters.Local
 config :pukllay_club, PukllayClubWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
+  # 01.1-07: renders through the root layout (head/body/stylesheet/theme
+  # script/lang="es") rather than with no layout wrapper at all, so an
+  # error page inherits the app's real <head> instead of declaring a
+  # second one that could drift from it. This is {PukllayClubWeb.Layouts,
+  # :root} — root.html.heex only, NOT Layouts.app/1 — the error views have
+  # no LiveView assigns (nav_links/nav_search/current_scope/etc.)
+  # Layouts.app's slots need.
   render_errors: [
     formats: [html: PukllayClubWeb.ErrorHTML, json: PukllayClubWeb.ErrorJSON],
-    layout: false
+    layout: {PukllayClubWeb.Layouts, :root}
   ],
   pubsub_server: PukllayClub.PubSub,
   live_view: [signing_salt: "dmrfmHVT"]
