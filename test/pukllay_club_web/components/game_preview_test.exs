@@ -81,6 +81,14 @@ defmodule PukllayClubWeb.GamePreviewTest do
       assert html =~ "60-90 min"
     end
 
+    test "a game with min_playtime: nil and a non-nil, non-equal max_playtime renders without crashing (CR-01 regression)" do
+      game = %{@nivel_experto | min_playtime: nil, max_playtime: 45}
+
+      html = render_component(&GamePreview.preview_body/1, game: game)
+
+      assert html =~ "45 min"
+    end
+
     test "the CTA is an outlined link to the game's detail page and carries no filled-button class" do
       html = render_component(&GamePreview.preview_body/1, game: @nivel_experto)
 

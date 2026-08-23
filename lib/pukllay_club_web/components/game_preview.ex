@@ -375,8 +375,9 @@ defmodule PukllayClubWeb.GamePreview do
 
   defp tiempo_text(%{min_playtime: nil, max_playtime: nil, playing_time: nil}), do: nil
   defp tiempo_text(%{min_playtime: nil, max_playtime: nil, playing_time: pt}), do: "#{pt} min"
-
-  defp tiempo_text(%{min_playtime: min, max_playtime: max}) when is_nil(max) or min == max, do: "#{min} min"
+  defp tiempo_text(%{min_playtime: nil, max_playtime: max}), do: "#{max} min"
+  defp tiempo_text(%{min_playtime: min, max_playtime: nil}), do: "#{min} min"
+  defp tiempo_text(%{min_playtime: min, max_playtime: max}) when min == max, do: "#{min} min"
 
   defp tiempo_text(%{min_playtime: min, max_playtime: max}), do: "#{min}-#{max} min"
 end
