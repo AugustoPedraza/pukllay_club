@@ -579,7 +579,7 @@ body.pk-sheet-open {
    a separate box swapping visibility. .pk-nav-search below is now the morph's
    caller-owned slot region, not a free-standing element; its 220px min-width/
    max-width/flex-grow/auto-margin geometry moved onto .pk-search-morph
-   itself. New rules reference the shared motion tokens (--duration-*/
+   itself. New rules reference the shared motion tokens (--duration-* and
    --ease-*), not literal timing values. */
 .pk-search-morph {
   position: relative;
@@ -601,9 +601,17 @@ body.pk-sheet-open {
 /* 17.5rem (sketch 017 used 260px): the sketch's trailing close control was a
    24px glyph, but this app's locked touch floor is 44px (quick task
    260821-dah / ux-responsive), so the close control is 44px wide and the
-   pill grows by the 20px difference to keep the same usable input width. */
+   pill grows by the 20px difference to keep the same usable input width.
+   That 17.5rem is a target, not a floor: between 481px (where the <=480px
+   full-width overlay below stops applying) and roughly 790px the row is too
+   narrow to seat brand + nav links + a full pill on one line, so the pill is
+   allowed to shrink there rather than push the row past the viewport edge and
+   raise a horizontal scrollbar. The base rule's flex: 0 0 auto still pins the
+   collapsed icon at exactly 44px — only the open state gives way. */
 .pk-search-morph.is-open {
   width: 17.5rem;
+  min-width: 0;
+  flex-shrink: 1;
   background: var(--color-base-100);
   border-color: var(--color-primary);
   cursor: text;
