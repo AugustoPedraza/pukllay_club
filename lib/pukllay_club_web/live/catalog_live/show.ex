@@ -294,8 +294,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   </button>
                 </div>
 
-                <%!-- Real handler lands in plan 01.1-05; open-reservation is
-                an inert stub until then so the button never crashes. --%>
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
