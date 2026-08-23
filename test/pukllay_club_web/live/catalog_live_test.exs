@@ -479,15 +479,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html2 =~ "Recientemente añadidos"
     end
 
-    test "the initial disconnected render shows skeleton card placeholders, not an empty grid", %{
-      conn: conn
-    } do
+    test "the initial disconnected render shows flat-skeleton card placeholders, not an empty grid",
+         %{conn: conn} do
       game_fixture(%{name: "Some Game"})
 
       conn = get(conn, ~p"/")
       html = html_response(conn, 200)
 
-      assert html =~ "skeleton"
+      assert html =~ "pk-skel"
+      refute html =~ "animate-pulse"
+      refute html =~ ~s("skeleton")
     end
   end
 

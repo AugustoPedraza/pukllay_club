@@ -4,8 +4,19 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   auth). Reached from `PukllayClubWeb.GameCard`'s `Ver detalles` CTA.
 
   `mount/3` loads the game via `Catalog.get_game!/1`, which raises
-  `Ecto.NoResultsError` for an unknown id — Phoenix renders the generated
-  404 page for that case rather than crashing (T-01-30).
+  `Ecto.NoResultsError` for an unknown id — Phoenix renders the branded
+  404 page (`PukllayClubWeb.ErrorHTML`'s `404.html.heex`, 01.1-07) for that
+  case rather than crashing (T-01-30).
+
+  `:loading` (01.1-07) mirrors `CatalogLive.Index`'s own two-phase mount
+  trick: `not Phoenix.LiveView.connected?/1` of the socket, set once in
+  `mount/3` and never toggled by any `handle_event`. The disconnected
+  static render skips
+  `Catalog.similar_games/1` entirely (`:similar_games` stays `[]`) and
+  paints a flat skeleton shelf in its place, occupying the same footprint;
+  the connected mount runs the real query via `safe_similar_games/1`, whose
+  `rescue` degrades a failed "more like this" lookup to no shelf rather than
+  taking down a detail page whose primary content already loaded fine.
 
   `handle_event("select-image", ...)` swaps the main image only when the
   client-supplied `url` is a member of the game's own
@@ -50,6 +61,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     game = Catalog.get_game!(id)
+    # 01.1-07: the same disconnected/connected two-phase mount trick
+    # CatalogLive.Index already uses. :loading is set once here and never
+    # toggled by an event; the disconnected static render skips the
+    # similar-games query entirely (a skeleton shelf occupies the same
+    # footprint instead), the connected mount runs it for real.
+    loading? = not connected?(socket)
 
     {:ok,
      socket
@@ -58,7 +75,8 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:selected_image, game.cover_url)
      |> assign(:mechanic_labels, Vocabulary.covered_mechanics(game.mechanics))
      |> assign(:theme_labels, Vocabulary.covered_themes(game.themes))
-     |> assign(:similar_games, Catalog.similar_games(game))
+     |> assign(:loading, loading?)
+     |> assign(:similar_games, if(loading?, do: [], else: safe_similar_games(game)))
      |> assign(:similares_subtitle, similares_subtitle(game))
      |> assign(:description_expanded, false)
      |> assign(:lightbox_open, false)
@@ -397,7 +415,13 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             </div>
           </div>
 
+          <%!-- 01.1-07: skeleton shelf while @loading (disconnected pass) —
+          reserves the shelf's own footprint so nothing jumps once the
+          connected mount replaces it with real (or, if there are none,
+          absent) content. --%>
+          <CarouselRow.skeleton_row :if={@loading} id="similares-skeleton" />
           <CarouselRow.carousel_row
+            :if={!@loading}
             id="similares"
             title="Juegos similares"
             games={@similar_games}
@@ -759,6 +783,18 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # existing plain-Spanish descriptor label rather than authoring new copy
   # (01.1-03 checkpoint decision). nil when the game has no band, matching
   # Catalog.similar_games/1's own nil-band guard (there is nothing to name).
+  # 01.1-07: mirrors CatalogLive.Index's safe_filter_games/1 shape — a
+  # failure in the "more like this" row must never take down a detail page
+  # whose primary content already loaded fine. carousel_row/1's own
+  # :if={@games != []} guard already renders nothing for an empty list,
+  # which is the correct minimal outcome for a supplementary row: no error
+  # banner for a shelf that is not the page's primary content.
+  defp safe_similar_games(game) do
+    Catalog.similar_games(game)
+  rescue
+    _error -> []
+  end
+
   defp similares_subtitle(%{weight_band: nil}), do: nil
 
   defp similares_subtitle(game) do

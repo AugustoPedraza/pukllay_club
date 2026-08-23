@@ -122,8 +122,9 @@ defmodule PukllayClubWeb.CarouselRow do
   end
 
   @doc """
-  Renders the same-footprint skeleton treatment as `carousel_row/1`, for
-  the loading backstop (01-UI-SPEC.md "Carousel rows" loading row).
+  Renders the same-footprint flat-skeleton-row treatment (`.pk-skel`, no
+  shimmer) as `carousel_row/1`, for the loading backstop (01-UI-SPEC.md
+  "Carousel rows" loading row).
   """
   attr :id, :string, required: true
   attr :count, :integer, default: 6
@@ -132,8 +133,8 @@ defmodule PukllayClubWeb.CarouselRow do
     ~H"""
     <section id={@id} class="pk-shelf space-y-3">
       <div class="pk-row-header pk-gutter space-y-1">
-        <div class="skeleton h-7 w-48"></div>
-        <div class="skeleton h-4 w-32"></div>
+        <div class="pk-skel h-7 w-48"></div>
+        <div class="pk-skel h-4 w-32"></div>
       </div>
       <div class="pk-rail-wrap pk-gutter">
         <div class="pk-rail">
@@ -145,7 +146,7 @@ defmodule PukllayClubWeb.CarouselRow do
   end
 
   @doc """
-  A single skeleton card, matching `GameCard.game_card/1`'s footprint (a
+  A single flat-skeleton-card placeholder, matching `GameCard.game_card/1`'s footprint (a
   `.pk-card-poster`-proportioned figure over a caption block) so the
   layout does not jump once real content replaces it.
   """
@@ -155,9 +156,9 @@ defmodule PukllayClubWeb.CarouselRow do
   def skeleton_card(assigns) do
     ~H"""
     <div id={@id} class={["pk-card overflow-hidden rounded-box bg-base-200 shadow-sm", @class]}>
-      <div class="pk-card-poster skeleton w-full rounded-b-none"></div>
+      <div class="pk-card-poster pk-skel w-full rounded-b-none"></div>
       <div class="pk-card-caption space-y-1">
-        <div class="skeleton h-4 w-3/4"></div>
+        <div class="pk-skel h-4 w-3/4"></div>
       </div>
     </div>
     """

@@ -740,4 +740,44 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute preview_html =~ "players="
     end
   end
+
+  describe "detail page in-flight state (01.1-07)" do
+    test "the disconnected render paints the similares skeleton shelf, not the real query", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Base Disconnected", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Bandmate Disconnected", weight_band: "nivel_experto"})
+
+      conn = get(conn, ~p"/juegos/#{game.id}")
+      html = html_response(conn, 200)
+
+      assert html =~ "similares-skeleton"
+      refute html =~ "Bandmate Disconnected"
+    end
+
+    test "the connected render replaces the skeleton with the real shelf", %{conn: conn} do
+      game = game_fixture(%{name: "Base Connected", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Bandmate Connected", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "similares-skeleton"
+      assert html =~ "Bandmate Connected"
+    end
+
+    test "the loading skeleton and the real shelf share the pk-card-poster footprint class", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Base Footprint", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Bandmate Footprint", weight_band: "nivel_experto"})
+
+      disconnected_conn = get(conn, ~p"/juegos/#{game.id}")
+      disconnected_html = html_response(disconnected_conn, 200)
+
+      {:ok, _view, connected_html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert disconnected_html =~ "pk-card-poster"
+      assert connected_html =~ "pk-card-poster"
+    end
+  end
 end
