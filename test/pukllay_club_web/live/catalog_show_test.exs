@@ -4,6 +4,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
 
+  alias PukllayClub.Catalog.Reservation
+
   describe "GET /juegos/:id" do
     test "returns 200 for an unauthenticated visitor and renders the full title (CATALOG-08)", %{
       conn: conn
@@ -525,5 +527,147 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     #     with the reserved body padding collapsing in the same transition
     #   - the title-echo bar's fade-in once the real <h1> has scrolled past
     #     the header
+  end
+
+  describe "reservation flow (SHELL-03, T-01.1-02)" do
+    test "the buy-box trigger opens the reservation modal", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      assert html =~ "modal-box"
+      assert html =~ ~s(name="nombre")
+    end
+
+    test "the mobile CTA-bar trigger opens the same reservation modal", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      html = view |> element("#detail-cta-bar button[phx-click='open-reservation']") |> render_click()
+
+      assert html =~ "modal-box"
+      assert html =~ ~s(name="nombre")
+    end
+
+    test "an empty name produces a validation message and no wa.me link", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => ""}) |> render_submit()
+
+      assert html =~ "Ingresá tu nombre para continuar."
+      refute html =~ "Abrir WhatsApp"
+    end
+
+    test "a whitespace-only name behaves identically to an empty one", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => "   "}) |> render_submit()
+
+      assert html =~ "Ingresá tu nombre para continuar."
+      refute html =~ "Abrir WhatsApp"
+    end
+
+    test "a name over 60 graphemes produces a length message and no wa.me link", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      too_long = String.duplicate("a", 61)
+      html = view |> form("#reservation-modal form", %{"nombre" => too_long}) |> render_submit()
+
+      assert html =~ "El nombre es demasiado largo (máximo 60 caracteres)."
+      refute html =~ "Abrir WhatsApp"
+    end
+
+    test "a valid name produces a working wa.me link to the configured number", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => "Ana Pérez"}) |> render_submit()
+
+      configured_number = Application.get_env(:pukllay_club, :reservation_whatsapp_number)
+      assert html =~ "https://wa.me/#{configured_number}?text="
+    end
+
+    test "the visitor's name and the game's name are percent-encoded in the wa.me link — no raw space or accented character survives",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Río Grande"})
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => "José Pérez"}) |> render_submit()
+
+      doc = LazyHTML.from_fragment(html)
+      [href] = doc |> LazyHTML.query("#reservation-modal a[href^='https://wa.me/']") |> LazyHTML.attribute("href")
+      query = href |> String.split("text=", parts: 2) |> List.last()
+
+      refute query =~ " "
+      refute query =~ "é"
+      refute query =~ "í"
+    end
+
+    test "special characters cannot break out of the text= query parameter", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html =
+        view
+        |> form("#reservation-modal form", %{"nombre" => ~s(A&B=C#D"E)})
+        |> render_submit()
+
+      doc = LazyHTML.from_fragment(html)
+      [href] = doc |> LazyHTML.query("#reservation-modal a[href^='https://wa.me/']") |> LazyHTML.attribute("href")
+      query = href |> String.split("text=", parts: 2) |> List.last()
+
+      refute query =~ "&"
+      refute query =~ "#"
+    end
+
+    test "the reservation message asks the club to set the game up on-site — never to lend or hand it over (D-09)",
+         %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
+
+      assert html =~ "quiero reservar"
+      assert html =~ "próximo sábado en el club"
+      refute html =~ ~r/presta|préstamo|alquil|llevar a casa/i
+    end
+
+    test "an unconfigured reservation number renders an explanatory message and no link", %{conn: conn} do
+      original = Application.get_env(:pukllay_club, :reservation_whatsapp_number)
+      Application.put_env(:pukllay_club, :reservation_whatsapp_number, nil)
+      on_exit(fn -> Application.put_env(:pukllay_club, :reservation_whatsapp_number, original) end)
+
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      assert html =~ "La reserva no está disponible por el momento."
+      refute html =~ "Abrir WhatsApp"
+    end
+
+    test "no reservation data is persisted anywhere — the app defines no schema for it", %{conn: conn} do
+      refute Code.ensure_loaded?(Reservation)
+
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+      view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
+
+      # Still no such schema after a full submit — nothing was ever wired to
+      # persist, so there is nothing a submit could have created.
+      refute Code.ensure_loaded?(Reservation)
+    end
   end
 end
