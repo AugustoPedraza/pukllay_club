@@ -188,6 +188,21 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert body =~ "Juego no encontrado"
     end
 
+    # CR-02: a non-numeric id can't be cast to the `:id` primary key type,
+    # so `Repo.get!/2` alone would raise `Ecto.Query.CastError` (no
+    # `Plug.Exception` impl) instead of the branded 404 — this exercises
+    # the same end-to-end path as the nonexistent-numeric-id test above,
+    # but for a non-numeric id.
+    test "a non-numeric game id renders the branded 404 end-to-end, not a 500",
+         %{conn: conn} do
+      {404, _headers, body} =
+        assert_error_sent(404, fn ->
+          get(conn, ~p"/juegos/abc")
+        end)
+
+      assert body =~ "Juego no encontrado"
+    end
+
     test "renders inside the shared capped-inner container (max-w-7xl + pk-gutter), with no 672px ancestor cap",
          %{conn: conn} do
       game = game_fixture()

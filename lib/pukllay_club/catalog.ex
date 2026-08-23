@@ -105,7 +105,22 @@ defmodule PukllayClub.Catalog do
   id. `Ecto.NoResultsError` implements `Plug.Exception` with a 404 status,
   so `CatalogLive.Show` renders the generated 404 page rather than a crash
   or a 500 (T-01-30).
+
+  A non-numeric id (e.g. `"abc"`) cannot be cast to the `:id` primary key
+  type — `Repo.get!/2` would otherwise raise `Ecto.Query.CastError`, which
+  does *not* implement `Plug.Exception` and would 500 instead of rendering
+  the branded 404. Parsing the id first and raising `Ecto.NoResultsError`
+  for anything that doesn't fully parse as an integer keeps the single
+  404 contract intact for every kind of bad id, not just the
+  numeric-but-nonexistent one.
   """
+  def get_game!(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int_id, ""} -> Repo.get!(Game, int_id)
+      _ -> raise Ecto.NoResultsError, queryable: Game
+    end
+  end
+
   def get_game!(id), do: Repo.get!(Game, id)
 
   @doc """
