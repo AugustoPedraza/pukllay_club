@@ -80,7 +80,7 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert dark_img_html =~ ~s(alt="")
     end
 
-    test "both marks also render inside the footer's .pk-footer-left cluster" do
+    test "the footer's .pk-footer-left cluster renders no mark (D-A, 260823-snj)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
       footer_left_imgs =
@@ -88,7 +88,18 @@ defmodule PukllayClubWeb.LayoutsTest do
         |> LazyHTML.from_document()
         |> LazyHTML.query(".pk-footer-left img")
 
-      assert Enum.count(footer_left_imgs) == 2
+      assert Enum.empty?(footer_left_imgs)
+    end
+
+    test "the header still renders exactly two <img> marks (header-only, not removed, 260823-snj)" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      header_imgs =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header img")
+
+      assert Enum.count(header_imgs) == 2
     end
 
     test "forcing isologo? false renders no <img> and keeps the wordmark + default tagline" do
@@ -107,6 +118,34 @@ defmodule PukllayClubWeb.LayoutsTest do
     test "both mark paths satisfy File.exists?/1 (gate truthfulness)" do
       assert File.exists?("priv/static/images/isologo-light.png")
       assert File.exists?("priv/static/images/isologo-dark.png")
+    end
+  end
+
+  describe "brand_logo/1 mark attr (260823-snj)" do
+    test "mark: false renders no <img> but still renders the wordmark" do
+      html = render_component(&Layouts.brand_logo/1, %{mark: false})
+
+      imgs =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("img")
+
+      assert Enum.empty?(imgs)
+      assert html =~ "PUKLLAY CLUB"
+    end
+
+    test "mark: false composes with a passed tagline" do
+      html = render_component(&Layouts.brand_logo/1, %{mark: false, tagline: "Conectá jugando"})
+
+      assert html =~ "Conectá jugando"
+    end
+
+    test "mark: false emits pk-brand-quiet; the header default does not" do
+      quiet_html = render_component(&Layouts.brand_logo/1, %{mark: false})
+      default_html = render_component(&Layouts.brand_logo/1, %{})
+
+      assert quiet_html =~ "pk-brand-quiet"
+      refute default_html =~ "pk-brand-quiet"
     end
   end
 
@@ -397,7 +436,7 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ "JUEGOS DE MESA MODERNOS"
     end
 
-    test "the footer's left cluster renders both theme marks with their dark: variant classes" do
+    test "the footer's left cluster renders neither theme mark filename (D-A, 260823-snj)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
       footer_left_html =
@@ -406,10 +445,8 @@ defmodule PukllayClubWeb.LayoutsTest do
         |> LazyHTML.query(".pk-footer-left")
         |> LazyHTML.to_html()
 
-      assert footer_left_html =~ "isologo-light.png"
-      assert footer_left_html =~ ~s(class="dark:hidden")
-      assert footer_left_html =~ "isologo-dark.png"
-      assert footer_left_html =~ ~s(class="hidden dark:block")
+      refute footer_left_html =~ "isologo-light.png"
+      refute footer_left_html =~ "isologo-dark.png"
     end
   end
 

@@ -571,6 +571,18 @@ body.pk-sheet-open {
   white-space: nowrap;
 }
 
+/* D-B (260823-snj): the footer's brand_logo/1 call passes mark={false},
+   which drops the isologo (D-A — the mark is the header's alone) and adds
+   pk-brand-quiet to the anchor. Demotion is by colour, not size: the
+   catalogue's measured type inventory is already at its 3-tier cap with
+   Bebas Neue/24px/400 as the single heading combo, so shrinking the footer
+   wordmark would add a 4th combo. Colour is the lever ui-design-system
+   names for this instead. Scoped override, matching the header-scoped rule
+   above — the two surfaces are meant to differ here. */
+.pk-brand-quiet .pk-brand-name {
+  color: var(--color-neutral);
+}
+
 .pk-nav-links {
   display: flex;
   align-items: center;
