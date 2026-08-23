@@ -329,7 +329,9 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> form("#catalog-search-form")
         |> render_change(%{q: "no existe ningún juego con este nombre"})
 
-      assert html =~ "No encontramos juegos con esos filtros"
+      assert html =~ "No se encontraron juegos"
+      assert html =~ "Probá con otros filtros o términos de búsqueda."
+      refute html =~ "No encontramos juegos con esos filtros"
       assert html =~ "Limpiar filtros"
 
       # Scoped to .btn-primary (01.1-06): the empty-state's own clear-filters
@@ -341,6 +343,26 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> render_click()
 
       assert html2 =~ "Existing Game"
+    end
+
+    test "the empty state renders exactly one button inside .pk-state (01.1-07)", %{conn: conn} do
+      game_fixture(%{name: "Existing Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "no existe ningún juego con este nombre"})
+
+      pk_state_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-state")
+        |> LazyHTML.to_html()
+
+      assert pk_state_html =~ "No se encontraron juegos"
+      assert ~r/<button\b/ |> Regex.scan(pk_state_html) |> length() == 1
     end
 
     test "the result count renders in correct Spanish singular/plural form", %{conn: conn} do
@@ -367,7 +389,25 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> form("#filter-modal-scalars")
         |> render_change(%{min_age: "99999999999999"})
 
-      assert html =~ "No pudimos cargar el catálogo en este momento"
+      assert html =~ "No pudimos cargar el catálogo"
+      assert html =~ "Hubo un problema de conexión."
+      assert html =~ "Reintentar"
+      # The daisyUI flash placeholders (always present, hidden) legitimately
+      # carry "alert-error" as one of several classes — scoped to the old
+      # two-class combo this state used to render, not a bare substring.
+      refute html =~ ~s(class="alert alert-error")
+    end
+
+    test "dispatching retry while the catalog is healthy re-renders a populated grid (01.1-07)", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Retry Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "retry", %{})
+
+      assert html =~ "Retry Game"
     end
   end
 

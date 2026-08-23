@@ -184,6 +184,14 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     {:noreply, socket |> assign(:sort, parse_sort(sort)) |> apply_filters()}
   end
 
+  # 01.1-07: the load-error state's Reintentar action. Re-enters the same
+  # apply_filters/1 pipeline every other filter-changing event uses — it
+  # already clears :load_error on success and re-sets it on failure, so no
+  # new error handling is needed here.
+  def handle_event("retry", _params, socket) do
+    {:noreply, apply_filters(socket)}
+  end
+
   def handle_event("clear-filters", _params, socket) do
     socket =
       socket
@@ -504,8 +512,14 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         </div>
 
         <div :if={@load_error} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="alert alert-error">
-            No pudimos cargar el catálogo en este momento. Intenta recargar la página en unos segundos.
+          <div class="pk-state">
+            <h2>No pudimos cargar el catálogo</h2>
+            <p>Hubo un problema de conexión.</p>
+            <%!-- CoreComponents.button/1 checked first (ui-design-system's
+            "check core_components.ex before hand-rolling markup" rule) —
+            its "primary" variant is btn-primary, matching this page's one
+            action per non-happy-path state (01.1-07). --%>
+            <.button phx-click="retry" variant="primary">Reintentar</.button>
           </div>
         </div>
 
@@ -515,14 +529,10 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         </div>
 
         <div :if={@total == 0 and not @load_error} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="bg-base-200 space-y-4 rounded-box p-8 text-center">
-            <h2 class="font-display text-2xl">No encontramos juegos con esos filtros</h2>
-            <p>
-              Prueba a quitar algún filtro o ajustar tu búsqueda — seguro hay algo en nuestra colección que te va a gustar.
-            </p>
-            <button type="button" phx-click="clear-filters" class="btn btn-primary">
-              Limpiar filtros
-            </button>
+          <div class="pk-state">
+            <h2>No se encontraron juegos</h2>
+            <p>Probá con otros filtros o términos de búsqueda.</p>
+            <.button phx-click="clear-filters" variant="primary">Limpiar filtros</.button>
           </div>
         </div>
 

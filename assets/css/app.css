@@ -1575,6 +1575,38 @@ body.pk-cta-parked {
   }
 }
 
+/* Empty / load-error / 404 states (sketch 009, empty-loading-error-states.md,
+   01.1-07). One shared shape for all three non-happy-path moments — the
+   catalog's zero-results and load-error branches (CatalogLive.Index) and
+   the branded 404 (PukllayClubWeb.ErrorHTML's 404.html.heex) — so they
+   cannot visually drift from one another. Terse centred copy, one action,
+   never illustrated/warm (variant B was tried and rejected: these are
+   moments a visitor wants to get past quickly, not read copy about). */
+.pk-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-neutral);
+}
+
+.pk-state h2 {
+  font-family: var(--font-display);
+  color: var(--color-base-content);
+  margin: 0 0 0.5rem;
+}
+
+.pk-state p {
+  margin: 0 0 1rem;
+}
+
+/* Flat skeleton fill (sketch 009): no shimmer, no @keyframes — daisyUI's
+   own `skeleton` class animates, which the design explicitly rejects.
+   Reuses .pk-card-poster/.pk-card-caption for shape (CarouselRow), so a
+   loading placeholder never declares its own aspect-ratio/radius. */
+.pk-skel {
+  background: var(--color-base-300);
+  border-radius: var(--radius-box);
+}
+
 /* Narrow-viewport density and navigation switch (sketch 001, variant D):
    every number and every display toggle below is part of one
    calculation/decision and must flip together, in this one block, placed
