@@ -896,10 +896,29 @@ body.pk-sheet-open {
   gap: 0.75rem 1.5rem;
 }
 
+/* Both clusters wrap, matching .pk-footer-row above and .pk-footer-links
+   below — every other flex container in this footer already does, and these
+   two were the only ones that didn't (debug footer-overflow-tablet-width).
+   Without it a flex item's default `min-width: auto` makes the cluster's
+   minimum the SUM of its children's min-contents: .pk-footer-right's four
+   children (social 136 + "Tema" 31.1 + toggle 136 + meta 227.8, plus 3x1.5rem
+   gaps) floored it at 602.8px, with the BGG logo spilling 18px further to a
+   652.8px ink edge that no viewport width could compress. Every viewport from
+   481px — where the ≤480px block below stops collapsing the cluster — to 652px
+   therefore scrolled horizontally. Wrapping makes that minimum max(children)
+   instead of sum(children), so the cluster reflows onto a second line rather
+   than pushing past the viewport.
+
+   Deliberately NOT solved by extending the ≤480px `display: none` override up
+   through the band: it hides the social + theme controls only because they
+   move into the drawer, and .pk-nav-hamburger/.pk-drawer are themselves
+   display:none above 480px — so that would delete both controls outright with
+   nowhere to reach them. */
 .pk-footer-left,
 .pk-footer-right {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1.5rem;
 }
 
