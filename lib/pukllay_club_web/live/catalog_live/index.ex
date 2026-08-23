@@ -145,7 +145,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
   @impl true
   def handle_event("search", %{"q" => q}, socket) do
-    {:noreply, socket |> assign(:q, q) |> apply_filters()}
+    {:noreply, socket |> assign(:q, String.slice(q, 0, 100)) |> apply_filters()}
   end
 
   def handle_event("open-filters", _params, socket) do
@@ -235,7 +235,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   end
 
   def handle_event("load-more", _params, socket) do
-    opts = socket.assigns |> filter_opts() |> Map.put(:offset, socket.assigns.offset)
+    opts =
+      socket.assigns
+      |> filter_opts()
+      |> Map.put(:offset, socket.assigns.offset)
+      |> Map.put(:limit, @page_size)
 
     case safe_filter_games(opts) do
       {:ok, games} ->
@@ -438,6 +442,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             value={@q}
             placeholder="Busca por título, autor o editorial…"
             phx-debounce="300"
+            maxlength="100"
           />
         </form>
         <button

@@ -102,7 +102,14 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   @impl true
   def handle_event("open-lightbox", _params, socket) do
-    {:noreply, assign(socket, :lightbox_open, true)}
+    socket =
+      if socket.assigns.selected_image do
+        assign(socket, :lightbox_open, true)
+      else
+        socket
+      end
+
+    {:noreply, socket}
   end
 
   @impl true

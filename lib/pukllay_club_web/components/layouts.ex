@@ -548,6 +548,8 @@ defmodule PukllayClubWeb.Layouts do
   # the header's default subtitle, so the footer doesn't just repeat the
   # header's copy (260821-umm).
   defp footer(assigns) do
+    assigns = assign(assigns, :copyright_year, Date.utc_today().year)
+
     ~H"""
     <footer class="pk-footer">
       <div class="pk-footer-row mx-auto w-full max-w-7xl pk-gutter">
@@ -563,7 +565,7 @@ defmodule PukllayClubWeb.Layouts do
           <.social_links class="pk-footer-social" />
           <span class="pk-footer-toggle-tag">Tema</span>
           <.theme_toggle />
-          <span class="pk-footer-meta">© 2026 Pukllay Club · <.bgg_attribution /></span>
+          <span class="pk-footer-meta">© {@copyright_year} Pukllay Club · <.bgg_attribution /></span>
         </div>
       </div>
     </footer>

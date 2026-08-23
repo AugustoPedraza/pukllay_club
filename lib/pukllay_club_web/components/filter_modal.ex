@@ -123,6 +123,7 @@ defmodule PukllayClubWeb.FilterModal do
             value={@q}
             placeholder="Busca por título, autor o editorial…"
             phx-debounce="300"
+            maxlength="100"
           />
         </form>
         <p class="text-neutral text-sm">
