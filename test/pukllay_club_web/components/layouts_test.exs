@@ -538,6 +538,45 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html_false =~ ~s(data-search-expanded="false")
       assert html_true =~ ~s(data-search-expanded="true")
     end
+
+    test "the toggle's icon is the full hero-magnifying-glass at size-5 (260823-snj)" do
+      html = render_component(&render_with_nav_search/1, %{})
+
+      toggle_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-toggle")
+        |> LazyHTML.to_html()
+
+      assert toggle_html =~ "hero-magnifying-glass"
+      assert toggle_html =~ "size-5"
+    end
+
+    test "the toggle carries title=\"Buscar\" alongside its aria-label (260823-snj)" do
+      html = render_component(&render_with_nav_search/1, %{})
+
+      toggle_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-toggle")
+        |> LazyHTML.to_html()
+
+      assert toggle_html =~ ~s(title="Buscar")
+      assert toggle_html =~ ~s(aria-label="Buscar")
+    end
+
+    test "the toggle still carries aria-expanded and aria-controls (regression guard, 260823-snj)" do
+      html = render_component(&render_with_nav_search/1, %{})
+
+      toggle_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-toggle")
+        |> LazyHTML.to_html()
+
+      assert toggle_html =~ ~s(aria-expanded="false")
+      assert toggle_html =~ ~s(aria-controls="pk-nav-search-region")
+    end
   end
 
   describe "app/1 mobile nav drawer (01.1-09)" do

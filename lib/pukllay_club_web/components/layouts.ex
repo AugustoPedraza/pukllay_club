@@ -419,10 +419,11 @@ defmodule PukllayClubWeb.Layouts do
             type="button"
             class="pk-search-morph-toggle"
             aria-label="Buscar"
+            title="Buscar"
             aria-expanded="false"
             aria-controls="pk-nav-search-region"
           >
-            <.icon name="hero-magnifying-glass-micro" class="size-4" />
+            <.icon name="hero-magnifying-glass" class="size-5" />
           </button>
           <div id="pk-nav-search-region" class="pk-nav-search">
             {render_slot(@nav_search)}
