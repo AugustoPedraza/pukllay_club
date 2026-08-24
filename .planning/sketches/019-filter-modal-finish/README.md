@@ -1,8 +1,8 @@
 ---
 sketch: 019
 name: filter-modal-finish
-question: "What does a modern, minimal, non-technical filter modal look like for this app — resolving the CRM/advanced-search feel, chip chrome weight, CTA hierarchy, and copy — without re-litigating the already-validated information hierarchy (primary chip clusters → secondary → collapsed checklist disclosure)?"
-winner: "D — Synthesis: A's soft-bordered pill chips + C's grouped accent-card sections"
+question: "What does a modern, minimal, non-technical filter modal look like for this app — resolving the CRM/advanced-search feel, chip chrome weight, CTA hierarchy, and copy — without re-litigating the already-validated information hierarchy (primary chip clusters → collapsed checklist disclosure)?"
+winner: "D — Synthesis: A's soft-bordered pill chips + C's grouped accent-card sections (final; A/B/C removed from index.html after selection, kept only in this README for the record)"
 tags: [filter, modal, polish, microcopy, responsive]
 ---
 
@@ -53,7 +53,11 @@ Click "⚙ Filtrar" in the faux header to open the modal. Toggle chips, expand t
 type in a checklist search box, click "Limpiar filtros" — everything is live/functional against
 fake state (the CTA count is a plausible-looking narrowing estimate, not a real query).
 
-## Variants
+**Note:** `index.html` now shows only the winning design (D) directly — no tab bar, no A/B/C
+variants in the file. Round 1's three variants are described below for the historical record
+only; open an earlier commit if you need to see them rendered.
+
+## Variants (Round 1 — historical record, no longer in index.html)
 
 - **A: Soft-bordered pills** — daisyUI-adjacent but refined: 1px border pills at rest, filled
   primary + a subtle colored shadow when selected. Closest to "the current app, but finished
@@ -80,17 +84,41 @@ subtle colored shadow when selected) placed inside C's grouped `--color-surface`
 (Jugadores/Duración/Nivel/Destacados/disclosure each in their own soft accent-wash card). No new
 CSS beyond combining the two existing rule sets under a `.vd` scope — confirmed live: chip
 select/toggle, count update, and `Limpiar filtros` enable/disable all work identically to A and C
-individually. **Winner: D.** Set as the sketch's default-active tab; A/B/C preserved as reference,
-not deleted.
+individually. **Winner: D.**
+
+## Round 3 — Cleanup + scope cuts + duration decision (final)
+
+Three follow-up decisions from the user, all applied directly to `index.html` (no new variants —
+these are decided, not explored):
+
+1. **A/B/C removed from the file.** `index.html` now renders only the winning design D directly —
+   no tab bar, no variant switching, no `.va`/`.vb`/`.vc`/`.vd` CSS scoping (just plain `.chip`/
+   `.fm-group` rules). Round 1's three variants are preserved only in this README (above) for the
+   historical record, not in the live file. Re-verified live after the rewrite: chip
+   select/toggle, live count, disclosure auto-expand/count-suffix, checklist search, and
+   `Limpiar filtros` enable/disable all still work identically to before the cleanup.
+2. **Destacados (editorial hashtag) group removed from the modal entirely** — deferred to a later
+   pass per direct instruction ("we can go with better filters later"). The modal's primary group
+   is now just Jugadores / Duración máxima / Nivel, followed directly by the Mecánica/Temática
+   disclosure — no secondary group in between. This is a scope cut for the eventual build task,
+   not just a sketch-only omission: `Destacados` should not ship in the next implementation pass
+   either, pending a future decision on how to re-introduce it.
+3. **Duration control stays chips — slider rejected.** User asked whether a slider (and whether
+   that's mobile-appropriate) would suit Duración máxima better. Recommendation given and accepted
+   implicitly (no pushback, proceeded with chips): the real predicate only has 4 meaningful values
+   (30/60/90/120 min, tied to `coalesce(playing_time, max_playtime) <= n`), so a slider would imply
+   continuous precision the data doesn't have (dragging to "75 min" would silently snap somewhere,
+   which is confusing) — and sliders are a known weak point for touch precision (small thumb
+   target, easy to overshoot) versus a chip's forgiving tap target, which is worse rather than
+   better for mobile with only 4 discrete stops. A slider would be the right call if this ever grew
+   to 10+ discrete steps where chips would overflow a row; not the case here. Kept as chips,
+   matching Jugadores' treatment for visual/interaction consistency.
 
 ## What to Look For
 
-- Does any variant actually stop reading as "CRM advanced search"? Which one crosses that line
-  most convincingly?
-- Is the borderless underline treatment (B) too subtle to discover as clickable, or does it read
-  as confidently minimal?
-- Does the grouped-card treatment (C) help a newcomer understand "these are different kinds of
-  filters" — or does it just add visual weight without adding clarity?
+- Does the final design actually stop reading as "CRM advanced search"?
+- Do the grouped accent-card sections help a newcomer understand "these are different kinds of
+  filters" — or do they just add visual weight without adding clarity?
 - Does the blurred/dimmed background read as "intentional focus" now, or still distracting?
 - Is "Encuentra tu juego" the right title, or does another framing feel more natural in Spanish?
 - Is "¿Qué juego buscas?" too casual/conversational for the search box, or does it land well?
@@ -101,3 +129,6 @@ not deleted.
   (`min_players <= n AND max_players >= n`). A genuine "6 or more players" filter needs a
   different predicate shape (e.g. `max_players >= 6`, no upper bound) — this sketch shows the chip
   visually but the actual backend/query decision needs to happen during implementation, not here.
+- **Destacados' eventual return.** Removed from this pass per Round 3 (see above) — a future
+  design pass needs to decide how/whether editorial hashtags come back into the filter surface,
+  not just re-add the old flat pill row unchanged.

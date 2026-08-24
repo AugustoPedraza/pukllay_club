@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sketch 019 — Filter Modal Finish</title>
+<title>Sketch 019 — Filter Modal Finish (winner: D)</title>
 <link rel="stylesheet" href="../themes/default.css">
 <style>
   * { box-sizing: border-box; }
@@ -12,28 +12,7 @@
     font-family: var(--font-sans);
     background: var(--color-bg);
     color: var(--color-text);
-    padding-top: 52px;
   }
-
-  /* ---------- variant tab bar ---------- */
-  #variant-nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
-    background: var(--color-surface); border-bottom: 1px solid var(--color-border);
-    padding: 10px 16px; display: flex; gap: 8px; align-items: center;
-    font-family: var(--font-sans);
-  }
-  .variant-tab {
-    font-family: var(--font-sans); font-size: var(--text-sm); font-weight: 600;
-    padding: 7px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
-    background: var(--color-bg); color: var(--color-text-muted); cursor: pointer;
-    transition: all var(--duration-fast) var(--ease-standard);
-  }
-  .variant-tab:hover { border-color: var(--color-primary); color: var(--color-text); }
-  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
-  .variant-tab .star { margin-left: 4px; }
-
-  .variant { display: none; }
-  .variant.active { display: block; }
 
   /* ---------- faux page (catalog grid) ---------- */
   .fauxpage-header {
@@ -76,7 +55,7 @@
   }
   .fauxcard .title { padding: var(--space-2) var(--space-3); font-size: var(--text-sm); font-weight: 600; }
 
-  /* the grid dims/blurs when the modal is open — fixes complaint #5 */
+  /* the grid dims/blurs when the modal is open */
   .fauxpage-body.dimmed .fauxgrid {
     filter: blur(3px) saturate(0.7) brightness(0.94);
     transition: filter var(--duration-base) var(--ease-out-soft);
@@ -84,14 +63,14 @@
   }
   .fauxpage-body .fauxgrid { transition: filter var(--duration-base) var(--ease-out-soft); }
 
-  /* ---------- modal shell (shared across variants) ---------- */
+  /* ---------- modal shell ---------- */
   .fm-backdrop {
     position: fixed; inset: 0; z-index: 500; display: none;
     align-items: center; justify-content: center;
     background: rgba(20, 8, 36, 0.32);
     backdrop-filter: blur(2px);
   }
-  :root[data-theme="dark"] .fm-backdrop, .fm-backdrop.dark-scrim { background: rgba(0,0,0,0.55); }
+  :root[data-theme="dark"] .fm-backdrop { background: rgba(0,0,0,0.55); }
   .fm-backdrop.open { display: flex; }
 
   .fm-panel {
@@ -131,16 +110,18 @@
   .fm-search::placeholder { color: var(--color-text-muted); }
 
   .fm-body { flex: 1 1 auto; overflow-y: auto; padding: 0 var(--space-4) var(--space-4); }
-  .fm-group { margin-bottom: var(--space-4); }
+  .fm-group {
+    margin-bottom: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3);
+  }
   .fm-group h3 {
     margin: 0 0 var(--space-2); font-size: 11px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.07em; color: var(--color-text-muted);
   }
   .fm-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
-  .fm-secondary { padding-top: var(--space-3); border-top: 1px dashed var(--color-border); }
-
-  .fm-disclosure { border-top: 1px solid var(--color-border); padding-top: var(--space-3); margin-top: var(--space-1); }
+  .fm-disclosure {
+    background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3); margin-top: var(--space-1);
+  }
   .fm-disclosure summary {
     list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between;
     font-size: var(--text-sm); font-weight: 600; padding: 4px 0;
@@ -152,7 +133,7 @@
 
   .fm-checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-top: var(--space-3); }
   @media (max-width: 480px) { .fm-checklist-grid { grid-template-columns: 1fr; } }
-  .fm-checklist { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+  .fm-checklist { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: var(--color-bg); }
   .fm-checklist-search {
     width: 100%; border: none; border-bottom: 1px solid var(--color-border); background: transparent;
     padding: 8px 10px; font-size: var(--text-sm); font-family: var(--font-sans); color: var(--color-text); outline: none;
@@ -185,69 +166,18 @@
   .fm-cta:hover { opacity: 0.92; }
   .fm-cta:active { transform: scale(0.97); }
 
-  /* ============ CHIP TREATMENTS (differ per variant) ============ */
-
-  /* Variant A: soft-bordered pills, subtle elevation on select */
-  .va .chip {
+  /* chip contract — soft-bordered pill, filled + subtle shadow when selected (winning variant A's chip) */
+  .chip {
     border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
     font-size: var(--text-sm); font-weight: 600; padding: 8px 16px; border-radius: var(--radius-full);
     cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); min-height: 40px;
     display: inline-flex; align-items: center;
   }
-  .va .chip:hover { border-color: var(--color-primary); }
-  .va .chip.active {
+  .chip:hover { border-color: var(--color-primary); }
+  .chip.active {
     background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary);
     box-shadow: 0 2px 8px rgba(61, 9, 109, 0.25);
   }
-  .va .fm-panel { box-shadow: var(--shadow-lg); }
-
-  /* Variant B: borderless flat, color-underline active state (sketch 008 Round 8 direction) */
-  .vb .chip {
-    border: none; background: transparent; color: var(--color-text-muted);
-    font-size: var(--text-sm); font-weight: 600; padding: 8px 4px; margin-right: 4px;
-    cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); min-height: 40px;
-    display: inline-flex; align-items: center; position: relative;
-    border-bottom: 2px solid transparent;
-  }
-  .vb .chip:hover { color: var(--color-text); }
-  .vb .chip.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: 700; }
-  .vb .fm-row { gap: 4px; }
-  .vb .fm-panel { box-shadow: var(--shadow-md); border: 1px solid var(--color-border); }
-
-  /* Variant C: grouped cards with light accent wash per section */
-  .vc .fm-group {
-    background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3);
-  }
-  .vc .fm-secondary { background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3); border-top: none; }
-  .vc .chip {
-    border: 1px solid transparent; background: var(--color-bg); color: var(--color-text);
-    font-size: var(--text-sm); font-weight: 600; padding: 8px 16px; border-radius: var(--radius-full);
-    cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); min-height: 40px;
-    display: inline-flex; align-items: center;
-  }
-  .vc .chip:hover { border-color: var(--color-primary); }
-  .vc .chip.active { background: var(--color-primary); color: var(--color-primary-content); }
-  .vc .fm-panel { box-shadow: var(--shadow-md); }
-  .vc .fm-disclosure { background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3); border-top: none; margin-top: var(--space-3); }
-
-  /* Synthesis D: A's soft-bordered pill chips inside C's grouped accent-card sections */
-  .vd .fm-group {
-    background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3);
-  }
-  .vd .fm-secondary { background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3); border-top: none; }
-  .vd .fm-disclosure { background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3); border-top: none; margin-top: var(--space-3); }
-  .vd .chip {
-    border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
-    font-size: var(--text-sm); font-weight: 600; padding: 8px 16px; border-radius: var(--radius-full);
-    cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); min-height: 40px;
-    display: inline-flex; align-items: center;
-  }
-  .vd .chip:hover { border-color: var(--color-primary); }
-  .vd .chip.active {
-    background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary);
-    box-shadow: 0 2px 8px rgba(61, 9, 109, 0.25);
-  }
-  .vd .fm-panel { box-shadow: var(--shadow-lg); }
 
   /* ---------- sketch toolbar ---------- */
   #sketch-tools {
@@ -261,173 +191,98 @@
 </head>
 <body>
 
-<div id="variant-nav">
-  <button class="variant-tab" onclick="showVariant('a', event)">A: Soft-bordered pills</button>
-  <button class="variant-tab" onclick="showVariant('b', event)">B: Borderless / underline</button>
-  <button class="variant-tab" onclick="showVariant('c', event)">C: Grouped accent cards</button>
-  <button class="variant-tab active" onclick="showVariant('d', event)">Synthesis: A + C <span class="star">★ Selected</span></button>
-</div>
-
-<!-- ===================== VARIANT A ===================== -->
-<div id="variant-a" class="variant va">
-  <div class="fauxpage-header">
-    <div class="fauxpage-brand">PUKLLAY CLUB</div>
-    <div class="fauxpage-search-cluster">
-      <input class="fauxpage-search" placeholder="¿Qué juego buscas?" disabled>
-      <button class="filter-trigger" onclick="openModal('a')">
-        ⚙ Filtrar <span class="badge-count" id="count-a-trigger" style="display:none">0</span>
-      </button>
-    </div>
-  </div>
-  <div class="fauxpage-body" id="fauxbody-a">
-    <h1 class="fauxpage-section-title">Destacados del club</h1>
-    <p class="fauxpage-section-sub">La selección del club — los juegos que más recomendamos ahora mismo.</p>
-    <div class="fauxgrid" id="grid-a"></div>
+<div class="fauxpage-header">
+  <div class="fauxpage-brand">PUKLLAY CLUB</div>
+  <div class="fauxpage-search-cluster">
+    <input class="fauxpage-search" placeholder="¿Qué juego buscas?" disabled>
+    <button class="filter-trigger" id="open-btn">
+      ⚙ Filtrar <span class="badge-count" id="count-trigger" style="display:none">0</span>
+    </button>
   </div>
 </div>
-
-<!-- ===================== VARIANT B ===================== -->
-<div id="variant-b" class="variant vb">
-  <div class="fauxpage-header">
-    <div class="fauxpage-brand">PUKLLAY CLUB</div>
-    <div class="fauxpage-search-cluster">
-      <input class="fauxpage-search" placeholder="¿Qué juego buscas?" disabled>
-      <button class="filter-trigger" onclick="openModal('b')">
-        ⚙ Filtrar <span class="badge-count" id="count-b-trigger" style="display:none">0</span>
-      </button>
-    </div>
-  </div>
-  <div class="fauxpage-body" id="fauxbody-b">
-    <h1 class="fauxpage-section-title">Destacados del club</h1>
-    <p class="fauxpage-section-sub">La selección del club — los juegos que más recomendamos ahora mismo.</p>
-    <div class="fauxgrid" id="grid-b"></div>
-  </div>
+<div class="fauxpage-body" id="fauxbody">
+  <h1 class="fauxpage-section-title">Destacados del club</h1>
+  <p class="fauxpage-section-sub">La selección del club — los juegos que más recomendamos ahora mismo.</p>
+  <div class="fauxgrid" id="grid"></div>
 </div>
 
-<!-- ===================== VARIANT C ===================== -->
-<div id="variant-c" class="variant vc">
-  <div class="fauxpage-header">
-    <div class="fauxpage-brand">PUKLLAY CLUB</div>
-    <div class="fauxpage-search-cluster">
-      <input class="fauxpage-search" placeholder="¿Qué juego buscas?" disabled>
-      <button class="filter-trigger" onclick="openModal('c')">
-        ⚙ Filtrar <span class="badge-count" id="count-c-trigger" style="display:none">0</span>
-      </button>
-    </div>
-  </div>
-  <div class="fauxpage-body" id="fauxbody-c">
-    <h1 class="fauxpage-section-title">Destacados del club</h1>
-    <p class="fauxpage-section-sub">La selección del club — los juegos que más recomendamos ahora mismo.</p>
-    <div class="fauxgrid" id="grid-c"></div>
-  </div>
-</div>
-
-<!-- ===================== SYNTHESIS D (A's chips + C's grouped cards) ===================== -->
-<div id="variant-d" class="variant active vd">
-  <div class="fauxpage-header">
-    <div class="fauxpage-brand">PUKLLAY CLUB</div>
-    <div class="fauxpage-search-cluster">
-      <input class="fauxpage-search" placeholder="¿Qué juego buscas?" disabled>
-      <button class="filter-trigger" onclick="openModal('d')">
-        ⚙ Filtrar <span class="badge-count" id="count-d-trigger" style="display:none">0</span>
-      </button>
-    </div>
-  </div>
-  <div class="fauxpage-body" id="fauxbody-d">
-    <h1 class="fauxpage-section-title">Destacados del club</h1>
-    <p class="fauxpage-section-sub">La selección del club — los juegos que más recomendamos ahora mismo.</p>
-    <div class="fauxgrid" id="grid-d"></div>
-  </div>
-</div>
-
-<!-- ===================== MODAL TEMPLATE (rendered per variant via JS) ===================== -->
-<template id="modal-template">
-  <div class="fm-backdrop" data-modal>
-    <div class="fm-panel" role="dialog" aria-modal="true">
-      <div class="fm-header">
-        <div>
-          <h2>Encuentra tu juego</h2>
-          <p class="fm-sub">Combina filtros para llegar a los juegos que te interesan.</p>
-        </div>
-        <button class="fm-close" data-close aria-label="Cerrar">✕</button>
+<div class="fm-backdrop" id="modal">
+  <div class="fm-panel" role="dialog" aria-modal="true">
+    <div class="fm-header">
+      <div>
+        <h2>Encuentra tu juego</h2>
+        <p class="fm-sub">Combina filtros para llegar a los juegos que te interesan.</p>
       </div>
-      <div class="fm-search-wrap">
-        <input class="fm-search" placeholder="¿Qué juego buscas?">
+      <button class="fm-close" id="close-btn" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="fm-search-wrap">
+      <input class="fm-search" placeholder="¿Qué juego buscas?">
+    </div>
+    <div class="fm-body">
+      <div class="fm-group">
+        <h3>Jugadores</h3>
+        <div class="fm-row" data-group="players">
+          <button class="chip" data-value="2">2</button>
+          <button class="chip" data-value="3">3</button>
+          <button class="chip" data-value="4">4</button>
+          <button class="chip" data-value="5">5</button>
+          <button class="chip" data-value="6+">6+</button>
+        </div>
       </div>
-      <div class="fm-body">
-        <div class="fm-group">
-          <h3>Jugadores</h3>
-          <div class="fm-row" data-group="players">
-            <button class="chip" data-value="2">2</button>
-            <button class="chip" data-value="3">3</button>
-            <button class="chip" data-value="4">4</button>
-            <button class="chip" data-value="5">5</button>
-            <button class="chip" data-value="6+">6+</button>
-          </div>
+      <div class="fm-group">
+        <h3>Duración máxima</h3>
+        <div class="fm-row" data-group="duration">
+          <button class="chip" data-value="30">30 min</button>
+          <button class="chip" data-value="60">60 min</button>
+          <button class="chip" data-value="90">90 min</button>
+          <button class="chip" data-value="120">120 min</button>
         </div>
-        <div class="fm-group">
-          <h3>Duración máxima</h3>
-          <div class="fm-row" data-group="duration">
-            <button class="chip" data-value="30">30 min</button>
-            <button class="chip" data-value="60">60 min</button>
-            <button class="chip" data-value="90">90 min</button>
-            <button class="chip" data-value="120">120 min</button>
-          </div>
+      </div>
+      <div class="fm-group">
+        <h3>Nivel</h3>
+        <div class="fm-row" data-group="nivel">
+          <button class="chip" data-value="descubre">Descubre el hobby</button>
+          <button class="chip" data-value="ingenio">Ingenio estratega</button>
+          <button class="chip" data-value="experto">Nivel experto</button>
         </div>
-        <div class="fm-group">
-          <h3>Nivel</h3>
-          <div class="fm-row" data-group="nivel">
-            <button class="chip" data-value="descubre">Descubre el hobby</button>
-            <button class="chip" data-value="ingenio">Ingenio estratega</button>
-            <button class="chip" data-value="experto">Nivel experto</button>
-          </div>
-        </div>
-        <div class="fm-secondary">
-          <h3>Destacados</h3>
-          <div class="fm-row" data-group="destacados">
-            <button class="chip" data-value="conexiones">CreaConexiones</button>
-            <button class="chip" data-value="equipo">EquipoGanador</button>
-            <button class="chip" data-value="duelos">DuelosMemorables</button>
-          </div>
-        </div>
-        <details class="fm-disclosure">
-          <summary>
-            <span>Más filtros: mecánica y temática <span class="count-suffix" data-more-count style="display:none"></span></span>
-            <span class="chev">›</span>
-          </summary>
-          <div class="fm-checklist-grid">
-            <div class="fm-checklist">
-              <input class="fm-checklist-search" placeholder="Buscar mecánica…" data-checklist-search="mechanics">
-              <div class="fm-checklist-list" data-checklist-list="mechanics">
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Coloca losetas"> Coloca losetas</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Gestión de mano"> Gestión de mano</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Construye tu mazo"> Construye tu mazo</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Coloca trabajadores"> Coloca trabajadores</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Tira dados"> Tira dados</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Colecciona sets"> Colecciona sets</label>
-              </div>
-            </div>
-            <div class="fm-checklist">
-              <input class="fm-checklist-search" placeholder="Buscar temática…" data-checklist-search="themes">
-              <div class="fm-checklist-list" data-checklist-list="themes">
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Juego de fiesta"> Juego de fiesta</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Fantasía"> Fantasía</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Ciencia ficción"> Ciencia ficción</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Animales"> Animales</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Medieval"> Medieval</label>
-                <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Para peques"> Para peques</label>
-              </div>
+      </div>
+      <details class="fm-disclosure">
+        <summary>
+          <span>Más filtros: mecánica y temática <span class="count-suffix" data-more-count style="display:none"></span></span>
+          <span class="chev">›</span>
+        </summary>
+        <div class="fm-checklist-grid">
+          <div class="fm-checklist">
+            <input class="fm-checklist-search" placeholder="Buscar mecánica…" data-checklist-search="mechanics">
+            <div class="fm-checklist-list" data-checklist-list="mechanics">
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Coloca losetas"> Coloca losetas</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Gestión de mano"> Gestión de mano</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Construye tu mazo"> Construye tu mazo</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Coloca trabajadores"> Coloca trabajadores</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Tira dados"> Tira dados</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Colecciona sets"> Colecciona sets</label>
             </div>
           </div>
-        </details>
-      </div>
-      <div class="fm-footer">
-        <button class="fm-clear" data-clear disabled>Limpiar filtros</button>
-        <button class="fm-cta" data-cta>Ver 27 juegos</button>
-      </div>
+          <div class="fm-checklist">
+            <input class="fm-checklist-search" placeholder="Buscar temática…" data-checklist-search="themes">
+            <div class="fm-checklist-list" data-checklist-list="themes">
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Juego de fiesta"> Juego de fiesta</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Fantasía"> Fantasía</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Ciencia ficción"> Ciencia ficción</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Animales"> Animales</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Medieval"> Medieval</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Para peques"> Para peques</label>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="fm-footer">
+      <button class="fm-clear" id="clear-btn" disabled>Limpiar filtros</button>
+      <button class="fm-cta" id="cta-btn">Ver 434 juegos</button>
     </div>
   </div>
-</template>
+</div>
 
 <script>
 const GAMES = [
@@ -437,147 +292,104 @@ const GAMES = [
 ];
 const TOTAL_GAMES = 434;
 
-function buildGrid(containerId) {
-  const el = document.getElementById(containerId);
-  el.innerHTML = GAMES.map(name => `
-    <div class="fauxcard">
-      <div class="cover">${name}</div>
-      <div class="title">${name}</div>
-    </div>
-  `).join('');
+document.getElementById('grid').innerHTML = GAMES.map(name => `
+  <div class="fauxcard">
+    <div class="cover">${name}</div>
+    <div class="title">${name}</div>
+  </div>
+`).join('');
+
+const modal = document.getElementById('modal');
+const fauxbody = document.getElementById('fauxbody');
+const state = { selections: {}, checklistSelected: { mechanics: new Set(), themes: new Set() } };
+
+function openModal() {
+  modal.classList.add('open');
+  fauxbody.classList.add('dimmed');
+  updateFooter();
 }
-['grid-a','grid-b','grid-c','grid-d'].forEach(buildGrid);
-
-function showVariant(id, evt) {
-  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('variant-' + id).classList.add('active');
-  if (evt) evt.target.classList.add('active');
-}
-
-// ---- modal state per variant ----
-const state = {};
-
-function mountModal(variant) {
-  const tpl = document.getElementById('modal-template');
-  const clone = tpl.content.cloneNode(true);
-  const host = document.getElementById('variant-' + variant);
-  host.appendChild(clone);
-  const backdrop = host.querySelector('[data-modal]');
-
-  state[variant] = { selections: {}, checklistSelected: { mechanics: new Set(), themes: new Set() } };
-
-  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(variant); });
-  backdrop.querySelector('[data-close]').addEventListener('click', () => closeModal(variant));
-  backdrop.querySelector('[data-cta]').addEventListener('click', () => closeModal(variant));
-  backdrop.querySelector('[data-clear]').addEventListener('click', () => clearAll(variant));
-
-  backdrop.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const group = chip.closest('[data-group]').dataset.group;
-      const current = state[variant].selections[group];
-      if (current === chip.dataset.value) {
-        delete state[variant].selections[group];
-        chip.classList.remove('active');
-      } else {
-        // clear siblings in same group
-        chip.closest('[data-group]').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-        state[variant].selections[group] = chip.dataset.value;
-        chip.classList.add('active');
-      }
-      updateFooter(variant);
-    });
-  });
-
-  backdrop.querySelectorAll('[data-checklist-list] input[type=checkbox]').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const listKey = cb.closest('[data-checklist-list]').dataset.checklistList;
-      const set = state[variant].checklistSelected[listKey];
-      if (cb.checked) set.add(cb.dataset.value); else set.delete(cb.dataset.value);
-      updateFooter(variant);
-      updateDisclosureCount(variant);
-    });
-  });
-
-  backdrop.querySelectorAll('[data-checklist-search]').forEach(input => {
-    input.addEventListener('input', () => {
-      const key = input.dataset.checklistSearch;
-      const list = backdrop.querySelector(`[data-checklist-list="${key}"]`);
-      const q = input.value.trim().toLowerCase();
-      list.querySelectorAll('[data-row]').forEach(row => {
-        const label = row.textContent.trim().toLowerCase();
-        row.style.display = (!q || label.includes(q)) ? '' : 'none';
-      });
-    });
-  });
-
-  return backdrop;
+function closeModal() {
+  modal.classList.remove('open');
+  fauxbody.classList.remove('dimmed');
 }
 
-function updateDisclosureCount(variant) {
-  const backdrop = document.querySelector('#variant-' + variant + ' [data-modal]');
-  const s = state[variant].checklistSelected;
+document.getElementById('open-btn').addEventListener('click', openModal);
+document.getElementById('close-btn').addEventListener('click', closeModal);
+document.getElementById('cta-btn').addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+modal.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const group = chip.closest('[data-group]').dataset.group;
+    const current = state.selections[group];
+    if (current === chip.dataset.value) {
+      delete state.selections[group];
+      chip.classList.remove('active');
+    } else {
+      chip.closest('[data-group]').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      state.selections[group] = chip.dataset.value;
+      chip.classList.add('active');
+    }
+    updateFooter();
+  });
+});
+
+modal.querySelectorAll('[data-checklist-list] input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    const listKey = cb.closest('[data-checklist-list]').dataset.checklistList;
+    const set = state.checklistSelected[listKey];
+    if (cb.checked) set.add(cb.dataset.value); else set.delete(cb.dataset.value);
+    updateFooter();
+    updateDisclosureCount();
+  });
+});
+
+modal.querySelectorAll('[data-checklist-search]').forEach(input => {
+  input.addEventListener('input', () => {
+    const key = input.dataset.checklistSearch;
+    const list = modal.querySelector(`[data-checklist-list="${key}"]`);
+    const q = input.value.trim().toLowerCase();
+    list.querySelectorAll('[data-row]').forEach(row => {
+      const label = row.textContent.trim().toLowerCase();
+      row.style.display = (!q || label.includes(q)) ? '' : 'none';
+    });
+  });
+});
+
+function updateDisclosureCount() {
+  const s = state.checklistSelected;
   const total = s.mechanics.size + s.themes.size;
-  const el = backdrop.querySelector('[data-more-count]');
+  const el = modal.querySelector('[data-more-count]');
   if (total > 0) { el.style.display = ''; el.textContent = `(${total})`; }
   else { el.style.display = 'none'; }
-  const details = backdrop.querySelector('.fm-disclosure');
+  const details = modal.querySelector('.fm-disclosure');
   if (total > 0) details.open = true;
 }
 
-function updateFooter(variant) {
-  const backdrop = document.querySelector('#variant-' + variant + ' [data-modal]');
-  const sel = state[variant].selections;
-  const checklist = state[variant].checklistSelected;
-  const activeCount = Object.keys(sel).length + checklist.mechanics.size + checklist.themes.size;
+function updateFooter() {
+  const checklist = state.checklistSelected;
+  const activeCount = Object.keys(state.selections).length + checklist.mechanics.size + checklist.themes.size;
 
-  // fake a plausible narrowing count based on how many filters are active
   let count = TOTAL_GAMES;
   if (activeCount > 0) {
     count = Math.max(3, Math.round(TOTAL_GAMES / (1 + activeCount * 2.6)));
   }
-  const cta = backdrop.querySelector('[data-cta]');
-  cta.textContent = count === 1 ? 'Ver 1 juego' : `Ver ${count} juegos`;
+  document.getElementById('cta-btn').textContent = count === 1 ? 'Ver 1 juego' : `Ver ${count} juegos`;
+  document.getElementById('clear-btn').disabled = activeCount === 0;
 
-  const clearBtn = backdrop.querySelector('[data-clear]');
-  clearBtn.disabled = activeCount === 0;
-
-  const trigger = document.getElementById('count-' + variant + '-trigger');
+  const trigger = document.getElementById('count-trigger');
   if (activeCount > 0) { trigger.style.display = ''; trigger.textContent = activeCount; }
   else { trigger.style.display = 'none'; }
 }
 
-function clearAll(variant) {
-  const backdrop = document.querySelector('#variant-' + variant + ' [data-modal]');
-  backdrop.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
-  backdrop.querySelectorAll('[data-checklist-list] input[type=checkbox]').forEach(cb => cb.checked = false);
-  state[variant].selections = {};
-  state[variant].checklistSelected = { mechanics: new Set(), themes: new Set() };
-  updateFooter(variant);
-  updateDisclosureCount(variant);
-}
-
-function openModal(variant) {
-  let backdrop = document.querySelector('#variant-' + variant + ' [data-modal]');
-  if (!backdrop) backdrop = mountModal(variant);
-  backdrop.classList.add('open');
-  document.getElementById('fauxbody-' + variant).classList.add('dimmed');
-  updateFooter(variant);
-}
-
-function closeModal(variant) {
-  const backdrop = document.querySelector('#variant-' + variant + ' [data-modal]');
-  backdrop.classList.remove('open');
-  document.getElementById('fauxbody-' + variant).classList.remove('dimmed');
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.fm-backdrop.open').forEach(b => {
-      const variant = b.closest('.variant').id.replace('variant-', '');
-      closeModal(variant);
-    });
-  }
+document.getElementById('clear-btn').addEventListener('click', () => {
+  modal.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+  modal.querySelectorAll('[data-checklist-list] input[type=checkbox]').forEach(cb => cb.checked = false);
+  state.selections = {};
+  state.checklistSelected = { mechanics: new Set(), themes: new Set() };
+  updateFooter();
+  updateDisclosureCount();
 });
 </script>
 
