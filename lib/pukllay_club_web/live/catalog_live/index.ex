@@ -198,10 +198,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
-  def handle_event("sort", %{"sort" => sort}, socket) do
-    {:noreply, socket |> assign(:sort, parse_sort(sort)) |> apply_filters()}
-  end
-
   # 01.1-07: the load-error state's Reintentar action. Re-enters the same
   # apply_filters/1 pipeline every other filter-changing event uses — it
   # already clears :load_error on success and re-sets it on failure, so no
@@ -301,11 +297,10 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp see_all_selection("descubre_el_hobby"), do: %{weight_bands: ["descubre_el_hobby"]}
   defp see_all_selection("ingenio_estratega"), do: %{weight_bands: ["ingenio_estratega"]}
   defp see_all_selection("nivel_experto"), do: %{weight_bands: ["nivel_experto"]}
-  # `:year_desc` sorts by the game's own publication year, the closest
-  # "newest first" option the main grid's sort control already exposes —
-  # not `inserted_at` (what the shelf itself is ordered by), since adding
-  # a club-acquisition-recency sort mode to the grid is out of this
-  # plan's scope. See SUMMARY for the known limitation.
+  # `:year_desc` sorts by the game's own publication year, not `inserted_at`
+  # (what the shelf itself is ordered by) — a club-acquisition-recency sort
+  # mode does not exist in `PukllayClub.Catalog`. See SUMMARY for the known
+  # limitation.
   defp see_all_selection("recientemente_anadidos"), do: %{sort: :year_desc}
   defp see_all_selection(_unrecognized), do: %{}
 
@@ -516,31 +511,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         over a subtree containing focusable elements is itself an
         accessibility violation. --%>
         <div class={["space-y-6", "pk-dimmable", @filters_open && "is-dimmed"]}>
-          <div class="mx-auto w-full max-w-7xl pk-gutter">
-            <div class="flex items-center justify-end gap-4">
-              <select
-                name="sort"
-                phx-change="sort"
-                class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
-              >
-                <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
-                <option value="playtime_asc" selected={@sort == :playtime_asc}>
-                  Duración: menor a mayor
-                </option>
-                <option value="playtime_desc" selected={@sort == :playtime_desc}>
-                  Duración: mayor a menor
-                </option>
-                <option value="complexity_asc" selected={@sort == :complexity_asc}>
-                  Complejidad: menor a mayor
-                </option>
-                <option value="complexity_desc" selected={@sort == :complexity_desc}>
-                  Complejidad: mayor a menor
-                </option>
-                <option value="year_desc" selected={@sort == :year_desc}>Más recientes</option>
-              </select>
-            </div>
-          </div>
-
           <div :if={not filters_active?(assigns)} id="carousel-rows" class="space-y-8">
             <%= if @loading do %>
               <CarouselRow.skeleton_row
