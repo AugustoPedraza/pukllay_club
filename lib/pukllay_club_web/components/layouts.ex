@@ -151,7 +151,12 @@ defmodule PukllayClubWeb.Layouts do
         "owns contents"
 
   slot :subnav,
-    doc: "content rendered below the header row, inside the sticky wrapper (e.g. mobile chips)"
+    doc:
+      "content rendered below the header row and OUTSIDE the sticky wrapper, in normal page " <>
+        "flow (e.g. the mobile category chip row). It scrolls away with the page — only the nav " <>
+        "itself stays pinned. Rendered into #app-subnav, which the .CatalogNav hook reads by id " <>
+        "when collecting scroll-spy targets, so anything carrying data-chip-target still joins " <>
+        "the header's own observer."
 
   slot :inner_block, required: true
 
@@ -186,7 +191,20 @@ defmodule PukllayClubWeb.Layouts do
             // least one target and one resolvable section so the detail
             // page and filtered views (neither renders either surface) are
             // unaffected.
-            this.spyTargets = Array.from(this.el.querySelectorAll("[data-chip-target]"))
+            //
+            // Collected from TWO roots, not from this.el alone (debug
+            // search-right-align-mobile, cycle 5). The two surfaces no longer
+            // live in the same element: .pk-cat-item is inside the header, but
+            // the mobile chips moved out to #app-subnav when the chip row was
+            // un-stuck. Scoped to this.el this would still find all 8 desktop
+            // rows and zero chips — the chips would keep rendering and silently
+            // stop highlighting, which is exactly the kind of half-working
+            // failure a DOM move produces. Named roots rather than a bare
+            // document query so the two participating surfaces stay explicit.
+            this.spyRoots = [this.el, document.getElementById("app-subnav")].filter(Boolean)
+            this.spyTargets = this.spyRoots.flatMap((root) =>
+              Array.from(root.querySelectorAll("[data-chip-target]"))
+            )
             this.spyTargetsBySection = new Map()
             this.spyTargets.forEach((target) => {
               const section = target.dataset.chipTarget && document.getElementById(target.dataset.chipTarget)
@@ -436,7 +454,6 @@ defmodule PukllayClubWeb.Layouts do
         nav_menu={@nav_menu}
         search_expanded={@search_expanded}
       />
-      {render_slot(@subnav)}
       <.nav_drawer active_nav={@active_nav} />
     </div>
     <div :if={!@sticky} id="app-header" class="pk-header">
@@ -447,11 +464,60 @@ defmodule PukllayClubWeb.Layouts do
         nav_menu={@nav_menu}
         search_expanded={@search_expanded}
       />
-      {render_slot(@subnav)}
       <.nav_drawer active_nav={@active_nav} />
     </div>
 
-    <main class={["py-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
+    <%!--
+    OUTSIDE #app-header, deliberately (debug search-right-align-mobile, cycle 5,
+    on the user's explicit call). This slot used to render as a child of the
+    header, and .pk-header-sticky is `position: sticky; top: 0` — sticky pins the
+    whole box, so the chip row shared the header's common fate at every scroll
+    position (measured y=0..133 at scrollY 0 AND at scrollY 1400). No CSS can
+    exempt a child from its ancestor's sticky box; the row has to leave the
+    element, which is why this is a markup change and not a rule.
+
+    Only the nav stays pinned now; the chip row scrolls away with the page and
+    is occluded by the nav (z-index 50) on its way up. Two consequences worth
+    knowing before moving it back:
+
+      1. --pk-header-h is published from #app-header's own height, so it now
+         reports the nav alone (65px, was 133px at <=480px). That is what makes
+         .pk-shelf's `scroll-margin-top: calc(var(--pk-header-h) + 1rem)` land a
+         chip-anchor jump correctly — clearing only what actually occludes it.
+      2. The .CatalogNav hook collects scroll-spy targets from BOTH this element
+         and the header (the desktop .pk-cat-item rows stay inside the header and
+         share the same data-chip-target contract). A hook scoped to this.el
+         alone would silently orphan every chip — they would still render and
+         simply stop highlighting.
+
+    The id is what the hook keys off, so it is load-bearing, not decorative.
+    --%>
+    <div :if={@subnav != []} id="app-subnav">
+      {render_slot(@subnav)}
+    </div>
+
+    <%!--
+    pt-8 at mobile, pt-20 from `sm` up (debug search-right-align-mobile, cycle 5).
+    This was a flat `py-20`: 5rem/80px of top padding at EVERY width, a
+    desktop-scale value shipped unconditionally to phones. Measured at 390px it
+    put the first heading at y=213 — 25% of an 844px viewport, ~32% of a 667px
+    iPhone SE — spent before the first pixel of content, and it was 100% of the
+    gap the user photographed between the chip row and "DESTACADOS DEL CLUB"
+    (gapWrapToHeading measured 80.00px exactly; nothing else contributed).
+
+    TOP only. `pb-20` is NOT symmetric decoration — it is the clearance that
+    keeps the last content on Detalle (.pk-mobile-cta-bar) and Quiénes Somos
+    (.pk-about-cta-bar) from sitting permanently behind their `position: fixed;
+    bottom: 0` CTA bars. Cutting the bottom to match the top would trade a
+    spacing complaint for a content-occlusion bug on two other pages.
+
+    Restored at `sm` because 80px under a 65px desktop header is a normal airy
+    layout and was never what was reported — desktop stays byte-identical. 32px
+    rather than 0 because this layer's documented page-container value is
+    py-6/24px and its section rhythm is space-y-6; 32px sits just above that
+    floor while cutting the reported gap by 60%.
+    --%>
+    <main class={["pb-20 pt-8 sm:pt-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
       <div class="mx-auto space-y-4">
         {render_slot(@inner_block)}
       </div>

@@ -246,8 +246,14 @@
   /* Derived from the header's own published height (--pk-header-h, set by
      .CatalogNav's ResizeObserver) plus a small gap, rather than a hardcoded
      constant — the same fallback form .pk-poster-col/.pk-title-echo already
-     use. This is what makes a jump land correctly under BOTH the taller
-     narrow-viewport header (chip row attached) and the shorter desktop one. */
+     use, and what makes a chip-anchor jump clear exactly what occludes it
+     instead of a guessed constant.
+     Since cycle 5 un-stuck the chip row (see #app-subnav in layouts.ex), the
+     published height is the nav alone at every width — 65px, not the 133px it
+     reported while the chip row was pinned to the header. That is a correction,
+     not a regression: the chip row no longer occludes anything, so a jump that
+     cleared it was overshooting by the band's full height. This value tracks
+     that automatically, which is the whole reason it is derived. */
   scroll-margin-top: calc(var(--pk-header-h, 4.5rem) + 1rem);
 }
 
@@ -959,9 +965,27 @@ body.pk-sheet-open {
    own auto margin only when a .pk-cat-trigger actually precedes it in the
    DOM, so Detalle (no trigger) is unaffected and CatalogLive's trigger
    alone absorbs the row's free space, landing both as one right-anchored
-   group with .pk-nav-inner's ordinary gap between them. */
-.pk-cat-trigger ~ .pk-search-morph {
-  margin-left: 0;
+   group with .pk-nav-inner's ordinary gap between them.
+
+   SCOPED, not unconditional (debug search-right-align-mobile). The `~`
+   combinator matches on DOM TREE structure, but the grouping this rule hands
+   off to depends on BOX GENERATION — and `display: none` separates the two.
+   .pk-cat-trigger is display:none in the trailing max-width:480px block
+   (mobile shows the chip index row instead of the mega-menu) yet stays in the
+   DOM for the desktop panel's containing-block contract, so an unscoped
+   override still matched there: it stripped the pill's margin-left:auto while
+   the hidden trigger generated no box to push anything right. Measured at
+   390px, the closed pill sat at x=110 — 8px past the brand, the row's own gap
+   — with 222px of dead space before .pk-nav-inner's content edge at 376
+   (right-aligned means 0). The condition below is the EXACT complement of that
+   hide: `not all and (max-width: 480px)` rather than `min-width: 481px`, which
+   would leave a sub-pixel band (e.g. 480.5px) matching NEITHER rule, where the
+   trigger is visible and the 303px gap above returns. Both halves pin the same
+   480px literal deliberately — they must move together. */
+@media not all and (max-width: 480px) {
+  .pk-cat-trigger ~ .pk-search-morph {
+    margin-left: 0;
+  }
 }
 
 .pk-cat-backdrop {
@@ -1829,11 +1853,78 @@ body.pk-drawer-open {
    static parent, not on .pk-chip-nav, which is the element that actually
    scrolls. Hidden by default; the narrow-viewport media block (below) is
    what reveals it. Cannot be `display: contents` — that would discard the
-   `position: relative` the fade pseudo-elements depend on. */
+   `position: relative` the fade pseudo-elements depend on.
+
+   The band is on the PAGE surface (base-100), NOT the header's (base-200) —
+   this is load-bearing, not a palette preference (debug
+   search-right-align-mobile, cycle 2). This row and .pk-nav are two
+   full-bleed bands stacked flush against each other — they were both inside
+   the sticky #app-header when this was diagnosed; cycle 5 later moved this one
+   out to #app-subnav, which changes nothing about the fill argument below (the
+   two bands are still adjacent at rest, which is all the argument needs).
+   Shipped on base-200 they were BYTE-IDENTICAL fills (measured at 390px: y=0..63
+   #F3ECFA, y=64 #E3D3F0, y=65..108 #F3ECFA), leaving the entire boundary to
+   that 1px base-300 hairline — 1.226:1 in light, 1.130:1 in dark, roughly
+   2.5x under the 3:1 non-text floor — so the 64px header row and the 45px
+   chip row read as one continuous 109px block. That is precisely the shape
+   the theme block's own MEASURED CONSTRAINTS comment forbids: never two
+   sub-3:1 colours as adjacent surfaces or as two levels of one hierarchy.
+   A stronger LINE cannot fix it — no pair of this app's surface tokens
+   clears 3:1 (base-200/300 1.226:1 light / 1.130:1 dark; base-200/100
+   1.415:1 / 1.086:1; the existing 8% base-content shadow computes 1.170:1),
+   and a line that did would need ~50% base-content, a hard rule nothing else
+   here uses. So the boundary is carried by a FILL STEP over the band's full
+   45px instead, which is also what this row semantically is: a page-level
+   index, not header chrome. Matches sketch 001's finding that a plain
+   surface + thin divider beats a light-lavender panel, and restores the
+   relationship production shipped before c61e6a6.
+
+   The two fades below MUST track this fill — they are the same surface
+   dissolving to transparent, so a mismatch renders as a coloured smudge at
+   each end of the row. Same base-100 the .pk-rail-wrap fades already use.
+
+   The vertical padding is load-bearing too, and for a different reason than
+   the fill (debug search-right-align-mobile, cycle 4). Shipped, this band had
+   NONE: measured at 390px the wrap was y=64..109 and the 44px chips were
+   y=65..109, so the pills filled the band edge to edge — touching the header's
+   1px rule above and the line where page content scrolls under below. Zero
+   whitespace anywhere in the resulting 109px block, which is why cycle 2's
+   fill step alone was rejected on a real device: at 0px proximity, no fill
+   step this app's tokens can produce (1.415:1 light, 1.086:1 dark — the whole
+   ladder) separates two bands. Whitespace is not bounded by the token ladder;
+   that is why it works where colour could not.
+
+   That flush band was a PORT REGRESSION, not a design choice. Sketch 020's
+   .index-row — the direct source of .pk-chip-nav — declares
+   `padding: var(--space-2) var(--space-4)` (8px vertical). 260824-jkc
+   correctly replaced the HORIZONTAL half with .pk-chip-spacer flex items (the
+   documented iOS Safari trailing-padding clip), but dropped the vertical half
+   with it, which that fix never required — the iOS clip only affects the
+   scroll axis. It left the chip row as the only horizontal scroller in this
+   file with no vertical padding; .pk-rail carries `padding: 8px 0`.
+
+   It lives on the WRAP, not on .pk-chip-nav where the sketch had it, for two
+   reasons: the fades are positioned against the wrap (top/bottom: 0), so they
+   keep spanning the band's full height for free; and this layer has a written
+   rule against padding on a horizontally-scrolling element, so `padding` back
+   on .pk-chip-nav would read as that bug and get "fixed" to 0 again.
+
+   0.75rem, not the sketch's 8px: 8px is this app's INTERIOR row rhythm
+   (.pk-rail), whereas this gap separates two levels of one hierarchy — and two
+   sub-perceptible fixes were already rejected here before this one landed.
+   It cost 24px of PINNED header height while the row was still inside the
+   sticky header (109px -> 133px), which was the accepted price of the
+   whitespace. Cycle 5 refunded that cost rather than the whitespace: the row is
+   now in normal flow (#app-subnav), so these 24px are ordinary page pixels that
+   scroll away, not viewport permanently spent. Keep the padding — the user
+   confirmed this boundary reads correctly, and cycles 2-4 established that a
+   zero gap here reads as "glued to the header". When trimming this band's
+   vertical budget, trim <main>'s padding, not this. */
 .pk-chip-nav-wrap {
   display: none;
   position: relative;
-  background: var(--color-base-200);
+  padding: 0.75rem 0;
+  background: var(--color-base-100);
   border-top: 1px solid var(--color-base-300);
 }
 
@@ -1850,12 +1941,12 @@ body.pk-drawer-open {
 
 .pk-chip-nav-wrap::before {
   left: 0;
-  background: linear-gradient(90deg, var(--color-base-200), transparent);
+  background: linear-gradient(90deg, var(--color-base-100), transparent);
 }
 
 .pk-chip-nav-wrap::after {
   right: 0;
-  background: linear-gradient(270deg, var(--color-base-200), transparent);
+  background: linear-gradient(270deg, var(--color-base-100), transparent);
 }
 
 /* Mobile category chip row: a second navigation dimension replacing the

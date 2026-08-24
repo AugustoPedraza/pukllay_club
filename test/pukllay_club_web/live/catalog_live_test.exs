@@ -985,9 +985,30 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert header_html =~ "pk-header-sticky"
       assert header_html =~ ~s(id="catalog-search-form")
 
-      # Nav links block + chip row
+      # Nav links block
       assert header_html =~ "pk-nav-links"
-      assert header_html =~ "pk-chip-nav"
+
+      # Chip row — a SIBLING of the header, not a child of it (debug
+      # search-right-align-mobile, cycle 5). This line used to assert
+      # `header_html =~ "pk-chip-nav"`, back when the subnav slot rendered
+      # inside `#app-header`. That element is `position: sticky; top: 0`, which
+      # pinned the chip row along with the nav at every scroll position; the
+      # user asked for the row to scroll away with the page, and nothing but
+      # moving it out of that box can deliver it. Kept as a positive assertion
+      # on the new location rather than deleted, so the composite still proves
+      # the chip row is composed into the page — and `refute` on the old
+      # location so a well-meaning revert has to argue with a test instead of
+      # silently re-sticking the row. Placement is guarded in full, with the
+      # scroll-spy consequence, by header_subnav_placement_test.exs.
+      refute header_html =~ "pk-chip-nav"
+
+      subnav_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-subnav")
+        |> LazyHTML.to_html()
+
+      assert subnav_html =~ "pk-chip-nav"
 
       # A gutter-shared row header and rail wrap, rail marker, scroll controls
       carousel_html =
