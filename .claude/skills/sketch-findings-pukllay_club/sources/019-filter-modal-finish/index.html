@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 019 — Filter Modal Finish (winner: D)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  /* ---------- faux page (catalog grid) ---------- */
+  .fauxpage-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border);
+  }
+  .fauxpage-brand { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.02em; color: var(--color-primary); }
+  .fauxpage-search-cluster { display: flex; align-items: center; gap: var(--space-2); }
+  .fauxpage-search {
+    width: 220px; padding: 9px 14px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface);
+    color: var(--color-text); font-size: var(--text-sm); font-family: var(--font-sans);
+  }
+  .filter-trigger {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    width: auto; padding: 0 16px; height: 40px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+    cursor: pointer; font-size: var(--text-sm); font-weight: 600; font-family: var(--font-sans);
+    transition: all var(--duration-fast) var(--ease-standard); position: relative;
+  }
+  .filter-trigger:hover { border-color: var(--color-primary); }
+  .filter-trigger .badge-count {
+    background: var(--color-primary); color: var(--color-primary-content);
+    font-size: 11px; font-weight: 700; border-radius: var(--radius-full);
+    min-width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 5px;
+  }
+
+  .fauxpage-body { padding: var(--space-6); }
+  .fauxpage-section-title { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: 0.01em; margin: 0 0 var(--space-1); }
+  .fauxpage-section-sub { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); }
+  .fauxgrid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-4);
+  }
+  .fauxcard { border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); }
+  .fauxcard .cover {
+    aspect-ratio: 3/4; background: linear-gradient(135deg, var(--color-accent-bg), var(--color-surface-2));
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--color-text-muted);
+    text-align: center; padding: var(--space-2); font-weight: 600;
+  }
+  .fauxcard .title { padding: var(--space-2) var(--space-3); font-size: var(--text-sm); font-weight: 600; }
+
+  /* the grid dims/blurs when the modal is open */
+  .fauxpage-body.dimmed .fauxgrid {
+    filter: blur(3px) saturate(0.7) brightness(0.94);
+    transition: filter var(--duration-base) var(--ease-out-soft);
+    pointer-events: none;
+  }
+  .fauxpage-body .fauxgrid { transition: filter var(--duration-base) var(--ease-out-soft); }
+
+  /* ---------- modal shell ---------- */
+  .fm-backdrop {
+    position: fixed; inset: 0; z-index: 500; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(20, 8, 36, 0.32);
+    backdrop-filter: blur(2px);
+  }
+  :root[data-theme="dark"] .fm-backdrop { background: rgba(0,0,0,0.55); }
+  .fm-backdrop.open { display: flex; }
+
+  .fm-panel {
+    width: min(480px, 92vw);
+    max-height: min(720px, 88vh);
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(8px) scale(0.98); opacity: 0;
+    transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
+  }
+  .fm-backdrop.open .fm-panel { transform: translateY(0) scale(1); opacity: 1; }
+
+  .fm-header {
+    flex: 0 0 auto; padding: var(--space-4) var(--space-4) var(--space-3);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3);
+  }
+  .fm-header h2 { margin: 0 0 2px; font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.01em; }
+  .fm-header .fm-sub { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+  .fm-close {
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--radius-full);
+    border: none; background: transparent; color: var(--color-text-muted);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .fm-close:hover { background: var(--color-surface); color: var(--color-text); }
+
+  .fm-search-wrap { padding: 0 var(--space-4) var(--space-3); flex: 0 0 auto; }
+  .fm-search {
+    width: 100%; padding: 11px 16px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface);
+    color: var(--color-text); font-size: var(--text-sm); font-family: var(--font-sans);
+    transition: border-color var(--duration-fast) var(--ease-standard);
+  }
+  .fm-search:focus { outline: none; border-color: var(--color-primary); }
+  .fm-search::placeholder { color: var(--color-text-muted); }
+
+  .fm-body { flex: 1 1 auto; overflow-y: auto; padding: 0 var(--space-4) var(--space-4); }
+  .fm-group {
+    margin-bottom: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3);
+  }
+  .fm-group h3 {
+    margin: 0 0 var(--space-2); font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--color-text-muted);
+  }
+  .fm-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .fm-disclosure {
+    background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3); margin-top: var(--space-1);
+  }
+  .fm-disclosure summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+    font-size: var(--text-sm); font-weight: 600; padding: 4px 0;
+  }
+  .fm-disclosure summary::-webkit-details-marker { display: none; }
+  .fm-disclosure summary .chev { transition: transform var(--duration-fast) var(--ease-standard); color: var(--color-text-muted); }
+  .fm-disclosure[open] summary .chev { transform: rotate(90deg); }
+  .fm-disclosure summary .count-suffix { color: var(--color-text-muted); font-weight: 400; margin-left: 4px; }
+
+  .fm-checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-top: var(--space-3); }
+  @media (max-width: 480px) { .fm-checklist-grid { grid-template-columns: 1fr; } }
+  .fm-checklist { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: var(--color-bg); }
+  .fm-checklist-search {
+    width: 100%; border: none; border-bottom: 1px solid var(--color-border); background: transparent;
+    padding: 8px 10px; font-size: var(--text-sm); font-family: var(--font-sans); color: var(--color-text); outline: none;
+  }
+  .fm-checklist-list { max-height: 128px; overflow-y: auto; }
+  .fm-checklist-row {
+    display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: var(--text-sm);
+    cursor: pointer; transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .fm-checklist-row:hover { background: var(--color-accent-bg); }
+  .fm-checklist-row input { accent-color: var(--color-primary); }
+
+  .fm-footer {
+    flex: 0 0 auto; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-border);
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  }
+  .fm-clear {
+    border: none; background: transparent; color: var(--color-text-muted); font-size: var(--text-sm);
+    font-weight: 600; font-family: var(--font-sans); cursor: pointer; padding: 8px 4px;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  .fm-clear:hover:not(:disabled) { color: var(--color-primary); text-decoration: underline; }
+  .fm-clear:disabled { opacity: 0.4; cursor: not-allowed; }
+  .fm-cta {
+    border: none; background: var(--color-primary); color: var(--color-primary-content);
+    font-weight: 700; font-size: var(--text-sm); font-family: var(--font-sans);
+    padding: 11px 22px; border-radius: var(--radius-full); cursor: pointer;
+    transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+  }
+  .fm-cta:hover { opacity: 0.92; }
+  .fm-cta:active { transform: scale(0.97); }
+
+  /* chip contract — soft-bordered pill, filled + subtle shadow when selected (winning variant A's chip) */
+  .chip {
+    border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
+    font-size: var(--text-sm); font-weight: 600; padding: 8px 16px; border-radius: var(--radius-full);
+    cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); min-height: 40px;
+    display: inline-flex; align-items: center;
+  }
+  .chip:hover { border-color: var(--color-primary); }
+  .chip.active {
+    background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(61, 9, 109, 0.25);
+  }
+
+  /* ---------- sketch toolbar ---------- */
+  #sketch-tools {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,0.7); color: #fff; padding: 8px 12px; border-radius: 8px;
+    opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 10px; align-items: center;
+  }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools select, #sketch-tools button { font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="fauxpage-header">
+  <div class="fauxpage-brand">PUKLLAY CLUB</div>
+  <div class="fauxpage-search-cluster">
+    <input class="fauxpage-search" placeholder="¿Qué juego buscas?" disabled>
+    <button class="filter-trigger" id="open-btn">
+      ⚙ Filtrar <span class="badge-count" id="count-trigger" style="display:none">0</span>
+    </button>
+  </div>
+</div>
+<div class="fauxpage-body" id="fauxbody">
+  <h1 class="fauxpage-section-title">Destacados del club</h1>
+  <p class="fauxpage-section-sub">La selección del club — los juegos que más recomendamos ahora mismo.</p>
+  <div class="fauxgrid" id="grid"></div>
+</div>
+
+<div class="fm-backdrop" id="modal">
+  <div class="fm-panel" role="dialog" aria-modal="true">
+    <div class="fm-header">
+      <div>
+        <h2>Encuentra tu juego</h2>
+        <p class="fm-sub">Combina filtros para llegar a los juegos que te interesan.</p>
+      </div>
+      <button class="fm-close" id="close-btn" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="fm-search-wrap">
+      <input class="fm-search" placeholder="¿Qué juego buscas?">
+    </div>
+    <div class="fm-body">
+      <div class="fm-group">
+        <h3>Jugadores</h3>
+        <div class="fm-row" data-group="players">
+          <button class="chip" data-value="2">2</button>
+          <button class="chip" data-value="3">3</button>
+          <button class="chip" data-value="4">4</button>
+          <button class="chip" data-value="5">5</button>
+          <button class="chip" data-value="6+">6+</button>
+        </div>
+      </div>
+      <div class="fm-group">
+        <h3>Duración máxima</h3>
+        <div class="fm-row" data-group="duration">
+          <button class="chip" data-value="30">30 min</button>
+          <button class="chip" data-value="60">60 min</button>
+          <button class="chip" data-value="90">90 min</button>
+          <button class="chip" data-value="120">120 min</button>
+        </div>
+      </div>
+      <div class="fm-group">
+        <h3>Nivel</h3>
+        <div class="fm-row" data-group="nivel">
+          <button class="chip" data-value="descubre">Descubre el hobby</button>
+          <button class="chip" data-value="ingenio">Ingenio estratega</button>
+          <button class="chip" data-value="experto">Nivel experto</button>
+        </div>
+      </div>
+      <details class="fm-disclosure">
+        <summary>
+          <span>Más filtros: mecánica y temática <span class="count-suffix" data-more-count style="display:none"></span></span>
+          <span class="chev">›</span>
+        </summary>
+        <div class="fm-checklist-grid">
+          <div class="fm-checklist">
+            <input class="fm-checklist-search" placeholder="Buscar mecánica…" data-checklist-search="mechanics">
+            <div class="fm-checklist-list" data-checklist-list="mechanics">
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Coloca losetas"> Coloca losetas</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Gestión de mano"> Gestión de mano</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Construye tu mazo"> Construye tu mazo</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Coloca trabajadores"> Coloca trabajadores</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Tira dados"> Tira dados</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Colecciona sets"> Colecciona sets</label>
+            </div>
+          </div>
+          <div class="fm-checklist">
+            <input class="fm-checklist-search" placeholder="Buscar temática…" data-checklist-search="themes">
+            <div class="fm-checklist-list" data-checklist-list="themes">
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Juego de fiesta"> Juego de fiesta</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Fantasía"> Fantasía</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Ciencia ficción"> Ciencia ficción</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Animales"> Animales</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Medieval"> Medieval</label>
+              <label class="fm-checklist-row" data-row><input type="checkbox" data-value="Para peques"> Para peques</label>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="fm-footer">
+      <button class="fm-clear" id="clear-btn" disabled>Limpiar filtros</button>
+      <button class="fm-cta" id="cta-btn">Ver 434 juegos</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAMES = [
+  "1812 Argentina","7 Wonders Duel","Amazonia","Back to the Future","Bandido",
+  "Catán","Wingspan","Terraforming Mars","Azul","Carcassonne",
+  "Hanabi","Camel Up","Sonar","Caza Bombas","Century: Golden Ruby","Ticket to Ride"
+];
+const TOTAL_GAMES = 434;
+
+document.getElementById('grid').innerHTML = GAMES.map(name => `
+  <div class="fauxcard">
+    <div class="cover">${name}</div>
+    <div class="title">${name}</div>
+  </div>
+`).join('');
+
+const modal = document.getElementById('modal');
+const fauxbody = document.getElementById('fauxbody');
+const state = { selections: {}, checklistSelected: { mechanics: new Set(), themes: new Set() } };
+
+function openModal() {
+  modal.classList.add('open');
+  fauxbody.classList.add('dimmed');
+  updateFooter();
+}
+function closeModal() {
+  modal.classList.remove('open');
+  fauxbody.classList.remove('dimmed');
+}
+
+document.getElementById('open-btn').addEventListener('click', openModal);
+document.getElementById('close-btn').addEventListener('click', closeModal);
+document.getElementById('cta-btn').addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+modal.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const group = chip.closest('[data-group]').dataset.group;
+    const current = state.selections[group];
+    if (current === chip.dataset.value) {
+      delete state.selections[group];
+      chip.classList.remove('active');
+    } else {
+      chip.closest('[data-group]').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      state.selections[group] = chip.dataset.value;
+      chip.classList.add('active');
+    }
+    updateFooter();
+  });
+});
+
+modal.querySelectorAll('[data-checklist-list] input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    const listKey = cb.closest('[data-checklist-list]').dataset.checklistList;
+    const set = state.checklistSelected[listKey];
+    if (cb.checked) set.add(cb.dataset.value); else set.delete(cb.dataset.value);
+    updateFooter();
+    updateDisclosureCount();
+  });
+});
+
+modal.querySelectorAll('[data-checklist-search]').forEach(input => {
+  input.addEventListener('input', () => {
+    const key = input.dataset.checklistSearch;
+    const list = modal.querySelector(`[data-checklist-list="${key}"]`);
+    const q = input.value.trim().toLowerCase();
+    list.querySelectorAll('[data-row]').forEach(row => {
+      const label = row.textContent.trim().toLowerCase();
+      row.style.display = (!q || label.includes(q)) ? '' : 'none';
+    });
+  });
+});
+
+function updateDisclosureCount() {
+  const s = state.checklistSelected;
+  const total = s.mechanics.size + s.themes.size;
+  const el = modal.querySelector('[data-more-count]');
+  if (total > 0) { el.style.display = ''; el.textContent = `(${total})`; }
+  else { el.style.display = 'none'; }
+  const details = modal.querySelector('.fm-disclosure');
+  if (total > 0) details.open = true;
+}
+
+function updateFooter() {
+  const checklist = state.checklistSelected;
+  const activeCount = Object.keys(state.selections).length + checklist.mechanics.size + checklist.themes.size;
+
+  let count = TOTAL_GAMES;
+  if (activeCount > 0) {
+    count = Math.max(3, Math.round(TOTAL_GAMES / (1 + activeCount * 2.6)));
+  }
+  document.getElementById('cta-btn').textContent = count === 1 ? 'Ver 1 juego' : `Ver ${count} juegos`;
+  document.getElementById('clear-btn').disabled = activeCount === 0;
+
+  const trigger = document.getElementById('count-trigger');
+  if (activeCount > 0) { trigger.style.display = ''; trigger.textContent = activeCount; }
+  else { trigger.style.display = 'none'; }
+}
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  modal.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+  modal.querySelectorAll('[data-checklist-list] input[type=checkbox]').forEach(cb => cb.checked = false);
+  state.selections = {};
+  state.checklistSelected = { mechanics: new Set(), themes: new Set() };
+  updateFooter();
+  updateDisclosureCount();
+});
+</script>
+
+<div id="sketch-tools">
+  <span>Theme:</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+  <button onclick="document.documentElement.removeAttribute('data-theme')">System</button>
+  <button onclick="document.documentElement.setAttribute('data-theme','light')">Light</button>
+  <button onclick="document.documentElement.setAttribute('data-theme','dark')">Dark</button>
+</div>
+
+</body>
+</html>

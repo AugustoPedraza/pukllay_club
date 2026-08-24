@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 020 — Catalog Index Row</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font-sans); background: var(--color-bg); color: var(--color-text); padding-top: 0; }
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  /* ---------- viewport frame ---------- */
+  .vp-controls { display: flex; gap: 8px; justify-content: center; padding: var(--space-4) var(--space-4) 0; }
+  .vp-btn { font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; }
+  .vp-btn.is-active { background: var(--color-accent-bg); color: var(--color-accent-text); border-color: var(--color-accent-text); }
+  .vp-frame { max-width: 1280px; margin: var(--space-4) auto var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; transition: max-width 0.25s ease; box-shadow: var(--shadow-sm); height: 640px; overflow-y: auto; position: relative; }
+  .vp-frame.is-mobile { max-width: 390px; }
+  .vp-label { text-align: center; font-size: 11px; color: var(--color-text-muted); margin: 0 0 var(--space-6); }
+
+  /* ---------- shared header (013-E / 014-D / 015-A winners, simplified —
+     search/CTA omitted, out of scope for this sketch's question) ---------- */
+  .app-nav { background: var(--color-surface); position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--color-border); }
+  .app-nav-inner { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-4); min-height: 56px; }
+  .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; flex: 0 0 auto; }
+  .brand-mark { width: 26px; height: 26px; border-radius: var(--radius-sm); background: var(--color-primary); display: flex; align-items: center; justify-content: center; color: var(--color-primary-content); font-family: var(--font-display); font-size: 14px; flex-shrink: 0; }
+  .brand strong { font-family: var(--font-display); font-size: var(--text-lg); letter-spacing: 0.02em; white-space: nowrap; }
+  .links-plain { display: flex; gap: var(--space-4); flex: 0 0 auto; margin-left: var(--space-2); }
+  .links-plain a { color: var(--color-text-muted); font-weight: 600; font-size: var(--text-sm); text-decoration: none; padding: 4px 0 8px; border-bottom: 3px solid transparent; transition: all 0.15s ease; white-space: nowrap; }
+  .links-plain a:hover { color: var(--color-primary); }
+  .links-plain a.active { color: var(--color-primary); border-color: var(--color-primary); }
+  .nav-spacer { flex: 1; }
+
+  /* ============ shared shelf/rail/card — verbatim from 007 (which itself
+     is 001-D rail + 002-D card standardized) — this sketch is not
+     re-litigating card/rail design, only the index row above it. ============ */
+  main.catalog-main { max-width: 100%; padding: var(--space-4) 0 var(--space-12); }
+  .row-heading { font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0; color: var(--color-text); }
+  .row-heading.hero { color: var(--color-primary); }
+  .row-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); margin: 2px 0 0; }
+  .row-header { padding: 0 var(--space-4); }
+  section.shelf { margin-bottom: var(--space-6); scroll-margin-top: 132px; }
+  section.shelf.hero { padding: var(--space-4) 0 var(--space-2); margin-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
+  .rail-wrap { position: relative; padding: 0 var(--space-4); }
+  .rail-wrap::before, .rail-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40px; z-index: 4; pointer-events: none; }
+  .rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  .rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  .rail { display: flex; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; padding: var(--space-2) 0 var(--space-3); gap: var(--space-4); }
+  .rail::-webkit-scrollbar { display: none; }
+  .card { flex: 0 0 auto; width: 150px; cursor: pointer; border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .card:hover { transform: translateY(-3px); }
+  .card.hero-card { width: 190px; }
+  .poster-art { aspect-ratio: 1 / 1.05; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: rgba(255,255,255,0.85); }
+  .card.hero-card .poster-art { font-size: 2.4rem; }
+  .card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .card .cap h4 { margin: 0; font-size: var(--text-sm); font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .p1 { background: linear-gradient(135deg,#3D096D,#7E4CA5); }
+  .p2 { background: linear-gradient(135deg,#7E4CA5,#A97FD1); }
+  .p3 { background: linear-gradient(135deg,#22103A,#3D096D); }
+  .p4 { background: linear-gradient(135deg,#B23A5C,#7E4CA5); }
+  .p5 { background: linear-gradient(135deg,#3F8F6B,#3D096D); }
+  .p6 { background: linear-gradient(135deg,#B8862F,#7E4CA5); }
+
+  /* ============ index row — Round 2, minimal ============
+
+     Round 1 (see README) tried 3 dramatically different approaches and the
+     user picked C (hero-ranked chips + mega-menu), then asked for a second
+     pass: strip it down to match the REST OF THE APP's actual restraint —
+     production's real filter chip is a bare daisyUI `badge` (1px outline at
+     rest, filled only when truly "on"; `chip_class/1` in filter_modal.ex)
+     and the header's only other utility control (the theme toggle, sketch
+     018-B) is bare-icon-no-box at rest. Applied here:
+
+       - chip: 1px border at rest (not 1.5px), no fill until the scroll-spy
+         says "you're looking at this shelf" — and even then a soft
+         accent-tint fill, not a solid primary block. No separate "hero"
+         treatment on the chip itself: the hero shelf already announces
+         itself once you land there (primary-colored heading, sketch 002),
+         restating it on the index chip too was double-signalling.
+       - no boxed prev/next scroll buttons — an edge-fade (same mechanism
+         the carousel rails already use) plus native touch/trackpad scroll
+         is enough for a fixed 8-item strip; explicit buttons were chrome
+         this row doesn't need.
+       - desktop trigger: bare icon + label, no border/fill at rest (same
+         restraint as the theme-toggle), not the boxed pill button Round 1
+         used.
+       - mega-menu panel: plain typographic rows (hairline divider, no
+         per-item card/border) instead of a bordered card grid — the panel
+         itself still needs a surface + shadow to read as an overlay, but
+         its CONTENTS stay unboxed. */
+  .index-wrap { position: relative; border-top: 1px solid var(--color-border); background: var(--color-surface); }
+  .index-wrap::before, .index-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 24px; z-index: 4; pointer-events: none; }
+  .index-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-surface), transparent); }
+  .index-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-surface), transparent); }
+  .index-row { display: flex; align-items: center; gap: var(--space-2); overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; padding: var(--space-2) var(--space-4); }
+  .index-row::-webkit-scrollbar { display: none; }
+
+  .chip { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--color-border); background: transparent; color: var(--color-text-muted); font-weight: 600; font-size: var(--text-xs); white-space: nowrap; text-decoration: none; border-radius: var(--radius-full); transition: all var(--duration-fast) var(--ease-standard); }
+  .chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .chip.is-active { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+
+  .cat-trigger { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 var(--space-2); border: none; background: transparent; color: var(--color-text-muted); font-weight: 600; font-size: var(--text-sm); cursor: pointer; border-radius: var(--radius-sm); transition: color var(--duration-fast) var(--ease-standard); }
+  .cat-trigger:hover, .cat-trigger.is-open { color: var(--color-primary); }
+  .cat-trigger svg { transition: transform var(--duration-fast) var(--ease-standard); opacity: 0.8; }
+  .cat-trigger.is-open svg { transform: rotate(180deg); }
+
+  .mega-backdrop { position: absolute; inset: 0; background: rgba(20,8,34,0.4); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); z-index: 25; }
+  .mega-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  /* Anchored via `right` only (not left+right) so it hangs directly under
+     the trigger — the trigger sits at the far right of the header (pushed
+     there by .nav-spacer), and a left+right span with a max-width resolves
+     left-anchored per the CSS spec's over-constrained rules, which visibly
+     detached the panel from the button that opens it. */
+  .mega-panel { position: absolute; top: 64px; right: var(--space-4); width: 480px; max-width: calc(100% - var(--space-8)); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-4) var(--space-2); z-index: 26; opacity: 0; visibility: hidden; transform: translateY(-8px); transition: all var(--duration-base) var(--ease-out-soft); }
+  .mega-panel.is-open { opacity: 1; visibility: visible; transform: translateY(0); }
+  .mega-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .mega-item { display: block; padding: var(--space-3) var(--space-3); text-decoration: none; color: var(--color-text); border-bottom: 1px solid var(--color-border); transition: color var(--duration-fast) var(--ease-standard); }
+  .mega-item:hover, .mega-item.is-active { color: var(--color-primary); }
+  .mega-item strong { display: block; font-size: var(--text-sm); font-weight: 700; margin-bottom: 2px; }
+  .mega-item span { display: block; font-size: var(--text-xs); color: var(--color-text-muted); }
+  .mega-item:hover span, .mega-item.is-active span { color: inherit; opacity: 0.75; }
+  /* last row in each column loses its divider */
+  .mega-item:nth-last-child(-n+2) { border-bottom: none; }
+
+  /* mobile/desktop swap, mirrors 017's convention */
+  .vp-frame.is-mobile .desktop-only { display: none !important; }
+  .vp-frame:not(.is-mobile) .mobile-only { display: none !important; }
+
+  /* ---------- page intro / annotation blocks ---------- */
+  main .intro { max-width: 900px; margin: var(--space-6) auto var(--space-4); padding: 0 var(--space-6); }
+  main .intro h1 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-2); }
+  main .intro p { color: var(--color-text-muted); line-height: 1.6; font-size: var(--text-sm); }
+  .look-for { max-width: 900px; margin: var(--space-6) auto var(--space-8); padding: var(--space-4) var(--space-6); background: var(--color-accent-bg); border-radius: var(--radius-md); font-size: var(--text-sm); }
+  .look-for h3 { margin: 0 0 var(--space-2); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-primary); }
+  .look-for ul { margin: 0; padding-left: 1.2em; line-height: 1.7; }
+
+  #sketch-tools select { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<main class="intro">
+  <h1>Índice de shelves — Ronda 2: minimalista</h1>
+  <p>
+    Ronda 1 probó 3 direcciones distintas; ganó C (chips + mega-menu). Esta
+    versión final aplica el mismo lenguaje de contención que ya usa el resto
+    de la app — el chip real de filtros (<code>badge</code> de daisyUI, 1px
+    borde en reposo) y el toggle de tema (icono desnudo, sin caja) — en vez
+    del look más "cargado" de la primera ronda.
+  </p>
+</main>
+
+<div class="look-for">
+  <h3>Qué mirar</h3>
+  <ul>
+    <li>¿El chip mobile ahora se siente a tono con el resto de la app (chips de filtro, botones bare) en vez de una pieza aparte?</li>
+    <li>¿El trigger "Explorar categorías" en desktop se siente lo bastante liviano — o todavía compite con el header?</li>
+    <li>¿El menú (lista plana, sin cajas por ítem) da suficiente jerarquía sin la caja/borde que tenía antes?</li>
+    <li>Probá hacer scroll dentro del marco — el ítem activo se resalta solo (scroll-spy).</li>
+  </ul>
+</div>
+
+<div class="vp-controls">
+  <button class="vp-btn is-active" onclick="setViewport('mobile', event)">📱 Mobile 390px</button>
+  <button class="vp-btn" onclick="setViewport('desktop', event)">🖥️ Desktop 1280px</button>
+</div>
+<div class="vp-frame is-mobile" id="frame-c" data-variant="c">
+  <div class="app-nav">
+    <div class="app-nav-inner">
+      <a href="#" class="brand brand-home">
+        <span class="brand-mark">P</span>
+        <strong>Pukllay</strong>
+      </a>
+      <div class="links-plain">
+        <a href="#" class="active">Inicio</a>
+        <a href="#">Quiénes Somos</a>
+      </div>
+      <div class="nav-spacer"></div>
+      <!-- Desktop-only: bare icon+label trigger, no border/fill at rest —
+           same restraint as the footer theme toggle (018-B). Opens a
+           mega-menu overlay; never a second sticky row. -->
+      <button class="desktop-only cat-trigger" id="cat-trigger-c" onclick="toggleMega(event)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Explorar categorías
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+    <!-- Mobile-only: bare-outline chips, edge-fade only (no boxed
+         prev/next — native scroll is enough for a fixed 8-item row) -->
+    <nav class="mobile-only index-wrap" aria-label="Categorías">
+      <div class="index-row" id="chiprow-c"></div>
+    </nav>
+  </div>
+  <div class="mega-backdrop" id="mega-backdrop-c" onclick="closeMega()"></div>
+  <div class="mega-panel desktop-only" id="mega-panel-c">
+    <div class="mega-grid" id="mega-grid-c"></div>
+  </div>
+  <main class="catalog-main">
+    <div id="shelves-c"></div>
+  </main>
+</div>
+<p class="vp-label">Bare-outline chips + edge-fade (mobile) · bare icon trigger + unboxed list menu (desktop)</p>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span>Tema:</span>
+    <select id="theme-select" onchange="setTheme(this.value)">
+      <option value="light">Claro</option>
+      <option value="dark">Oscuro</option>
+    </select>
+  </div>
+</div>
+
+<script>
+  const SHELVES = [
+    { key: 'destacados_del_club', title: 'Destacados del club', subtitle: 'Elegidos por el equipo del club', hero: true },
+    { key: 'crea_conexiones', title: 'Crea conexiones', subtitle: 'Juegos que abren charla' },
+    { key: 'equipo_ganador', title: 'Equipo ganador', subtitle: 'Cooperativos: ganan o pierden todos juntos' },
+    { key: 'duelos_memorables', title: 'Duelos memorables', subtitle: 'Cara a cara, 2 jugadores' },
+    { key: 'descubre_el_hobby', title: 'Descubre el hobby', subtitle: 'Livianos, ideales para empezar' },
+    { key: 'ingenio_estratega', title: 'Ingenio estratega', subtitle: 'Nivel intermedio, para pensar' },
+    { key: 'nivel_experto', title: 'Nivel experto', subtitle: 'Reglas más densas' },
+    { key: 'recientemente_anadidos', title: 'Recientemente añadidos', subtitle: 'Lo último que sumó el club' },
+  ];
+  const GAME_NAMES = ['Catán', 'Azul', 'Wingspan', 'Carcassonne', '7 Wonders', 'Splendor', 'Dixit', 'Terraforming Mars'];
+  const paletteClass = (i) => 'p' + ((i % 6) + 1);
+
+  function buildShelvesHTML(frameId) {
+    return SHELVES.map((s, si) => {
+      const cards = Array.from({ length: 6 }).map((_, ci) => {
+        const name = GAME_NAMES[(si + ci) % GAME_NAMES.length];
+        return `<div class="card${s.hero ? ' hero-card' : ''}">
+          <div class="poster-art ${paletteClass(si + ci)}">🎲</div>
+          <div class="cap"><h4>${name}</h4></div>
+        </div>`;
+      }).join('');
+      return `<section class="shelf${s.hero ? ' hero' : ''}" id="${frameId}-${s.key}" data-shelf-key="${s.key}">
+        <div class="row-header">
+          <h2 class="row-heading${s.hero ? ' hero' : ''}">${s.title}</h2>
+          <p class="row-subtitle">${s.subtitle}</p>
+        </div>
+        <div class="rail-wrap"><div class="rail">${cards}</div></div>
+      </section>`;
+    }).join('');
+  }
+
+  document.getElementById('shelves-c').innerHTML = buildShelvesHTML('c');
+
+  document.getElementById('chiprow-c').innerHTML = SHELVES.map((s) =>
+    `<a href="#" class="chip" data-shelf="${s.key}">${s.title}</a>`
+  ).join('');
+
+  document.getElementById('mega-grid-c').innerHTML = SHELVES.map((s) =>
+    `<a href="#" class="mega-item" data-shelf="${s.key}"><strong>${s.title}</strong><span>${s.subtitle}</span></a>`
+  ).join('');
+
+  // ---- jump-to-shelf: click any nav item -> smooth-scroll within the frame ----
+  document.querySelectorAll('[data-shelf]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const frameEl = document.getElementById('frame-c');
+      const shelfKey = el.dataset.shelf;
+      const target = document.getElementById('c-' + shelfKey);
+      if (target && frameEl) {
+        // Measure the CURRENT sticky header height rather than a hardcoded
+        // constant — header height differs mobile (chip row attached) vs
+        // desktop (bare nav row, mega-menu is an overlay, not sticky flow).
+        const headerEl = frameEl.querySelector('.app-nav');
+        const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
+        const top = target.offsetTop - headerHeight - 8;
+        frameEl.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      }
+      setActiveShelf(shelfKey);
+      closeMega();
+    });
+  });
+
+  function setActiveShelf(shelfKey) {
+    document.querySelectorAll('[data-shelf]').forEach((el) => {
+      el.classList.toggle('is-active', el.dataset.shelf === shelfKey);
+    });
+  }
+
+  // ---- scroll-spy: highlight the nav item for whichever shelf is in view ----
+  const frameC = document.getElementById('frame-c');
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) setActiveShelf(entry.target.dataset.shelfKey);
+      });
+    },
+    { root: frameC, threshold: 0, rootMargin: '-40% 0px -55% 0px' }
+  );
+  frameC.querySelectorAll('.shelf').forEach((s) => observer.observe(s));
+  setActiveShelf(SHELVES[0].key);
+
+  // ---- mega-menu ----
+  function toggleMega(e) {
+    e.stopPropagation();
+    const open = document.getElementById('mega-panel-c').classList.toggle('is-open');
+    document.getElementById('mega-backdrop-c').classList.toggle('is-open', open);
+    document.getElementById('cat-trigger-c').classList.toggle('is-open', open);
+  }
+  function closeMega() {
+    document.getElementById('mega-panel-c')?.classList.remove('is-open');
+    document.getElementById('mega-backdrop-c')?.classList.remove('is-open');
+    document.getElementById('cat-trigger-c')?.classList.remove('is-open');
+  }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMega(); });
+
+  // ---- viewport toggle ----
+  function setViewport(mode, e) {
+    const frame = document.getElementById('frame-c');
+    frame.classList.toggle('is-mobile', mode === 'mobile');
+    e.target.parentElement.querySelectorAll('.vp-btn').forEach((b) => b.classList.remove('is-active'));
+    e.target.classList.add('is-active');
+    frame.scrollTop = 0;
+    closeMega();
+  }
+
+  // ---- theme switcher ----
+  function setTheme(mode) {
+    document.documentElement.dataset.theme = mode;
+  }
+</script>
+
+</body>
+</html>

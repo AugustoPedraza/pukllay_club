@@ -27,7 +27,17 @@ Booking.com mobile product pages (sticky bottom action bar, buy-box pattern).
 
 Sketch sessions wrapped: 2026-08-19 (sketches 001–002), 2026-08-20 (sketches 003–005),
 2026-08-20 continued (sketches 006, 007 partial, 009, 011 — the shell went through 9 real revision
-rounds; see `references/page-shell.md`, which now supersedes the original sketch 003 design entirely)
+rounds; see `references/page-shell.md`, which now supersedes the original sketch 003 design entirely),
+2026-08-24 (sketches 008, 012–015, 017–026 — filter/search, header/nav/drawer, and carousel-native-
+feel groups; 016 excluded, no confirmed winner)
+
+**Note on this wrap-up round:** most of the Filter & Search and Header/Navigation/Drawer sketches
+turned out to already be implemented in production by the time this wrap-up ran — a separate
+implementation stream (quick tasks, debug sessions) had shipped and, in at least one case (the
+"Sumate" CTA's scope — see `header-navigation-drawer.md`), *revised* what a sketch's own README
+records as its winner. Where that happened, the reference files below document the real shipped
+state and flag the drift explicitly, rather than repeating the sketch's now-stale claim. The
+carousel group had a similar but narrower drift (arrow behavior) — see `carousel-mechanics.md`.
 </context>
 
 <design_direction>
@@ -98,6 +108,9 @@ Three more load-bearing principles emerged from the shell/detail/about sketches:
 | Detail Page — Mobile & Interaction Patterns | references/detail-page-mobile-interaction.md | Mobile CTA bar hides while scrolling, parks at the footer; sticky title-echo bar with bounce-to-top — both driven by a plain `scroll` listener + `getBoundingClientRect()`, not `IntersectionObserver` (throttles in a backgrounded tab); lightbox/carousel sync; WhatsApp reservation flow |
 | Motion System | references/motion-system.md | Validated timing: 100/180/280ms, no-overshoot soft ease-out, `-3px` hover-lift — faster and smaller than every tested alternative, already live in the shared theme |
 | Empty / Loading / Error States | references/empty-loading-error-states.md | Flat gray skeletons (no shimmer), terse plain-Spanish copy, one action per state — illustrated/warm treatment tried and rejected as trying too hard for a low-stakes moment |
+| Filter & Search | references/filter-search.md | Already shipped: centered modal (desktop) / bottom sheet (mobile), always-visible primary chip clusters in cards, no age filter, editorial-tags group deliberately cut |
+| Header, Navigation & Drawer | references/header-navigation-drawer.md | Already shipped: CTA lives on About-page hero only (NOT persistent — supersedes 013/017's recorded winner), bare-icon `sr-only`-labeled theme toggle, underline active-nav, search-icon-morph, category mega-menu, icon-only drawer bottom block |
+| Carousel Mechanics — Native Feel | references/carousel-mechanics.md | Free-momentum scroll + no position indicator already shipped; edge-overlay pointer-fine-gated arrows approved but not yet built (relocates from today's header-embedded circular buttons); shimmer scoped to filter-repopulation is new surface area, distinct from the flat full-page skeleton |
 
 ## Theme
 
@@ -121,4 +134,19 @@ self-contained, interactive HTML mockup (no build step) that can be opened direc
 - 007-composed-catalog-page (partial — card/rail sizing correction only; shell findings superseded by 011)
 - 009-empty-loading-error-states
 - 011-full-shell-composition (replaces 003's page-shell design entirely)
+- 008-filter-search-ui
+- 012-filter-modal-in-shell
+- 013-header-action-cluster (CTA-scope claim superseded by shipped `sumate_cta/1` — see header-navigation-drawer.md)
+- 014-theme-toggle-weight
+- 015-active-nav-treatment
+- 017-header-composition
+- 018-theme-toggle-subtlety
+- 019-filter-modal-finish
+- 020-catalog-index-row
+- 021-mobile-drawer-theme-social
+- 022-carousel-arrow-behavior
+- 023-carousel-scroll-physics
+- 024-row-position-indicator
+- 025-carousel-loading-repopulation
+- 026-composed-native-carousel
 </metadata>

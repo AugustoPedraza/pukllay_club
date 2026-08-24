@@ -196,3 +196,94 @@ decisive winners with no multi-round drama.
 - The about-page's mission-statement redundancy flagged in the previous session (appears in both the
   page's own lead section and the footer) is now moot — the footer's mission paragraph was removed
   entirely in 011's footer redesign.
+
+---
+
+## Session: 2026-08-24
+
+**Sketches processed:** 15 (016 excluded — no confirmed winner)
+**Design areas added:** Filter & Search, Header/Navigation & Drawer, Carousel Mechanics — Native Feel
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/` (updated in place)
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 008 | filter-search-ui | Round 8 — centered modal, checklist-in-dropdown | Filter & Search |
+| 012 | filter-modal-in-shell | consistency check — fixed 1 crash risk | Filter & Search |
+| 019 | filter-modal-finish | D — pill chips + accent-card sections | Filter & Search |
+| 013 | header-action-cluster | E (scope claim later superseded by shipped code) | Header, Navigation & Drawer |
+| 014 | theme-toggle-weight | D | Header, Navigation & Drawer |
+| 015 | active-nav-treatment | A | Header, Navigation & Drawer |
+| 017 | header-composition | E | Header, Navigation & Drawer |
+| 018 | theme-toggle-subtlety | B | Header, Navigation & Drawer |
+| 020 | catalog-index-row | C (refined) | Header, Navigation & Drawer |
+| 021 | mobile-drawer-theme-social | E1 | Header, Navigation & Drawer |
+| 022 | carousel-arrow-behavior | C | Carousel Mechanics — Native Feel |
+| 023 | carousel-scroll-physics | B | Carousel Mechanics — Native Feel |
+| 024 | row-position-indicator | A | Carousel Mechanics — Native Feel |
+| 025 | carousel-loading-repopulation | B | Carousel Mechanics — Native Feel |
+| 026 | composed-native-carousel | single composed view | Carousel Mechanics — Native Feel |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| 016 | mobile-nav-scale | No confirmed winner (README frontmatter `winner: null`; MANIFEST only notes "Round 2: C refines B's balance, scale path validated" without a final call). User confirmed excluding rather than locking in an unresolved decision. |
+
+## Design Direction
+Two very different kinds of work landed in one wrap-up round. Filter & Search and Header/Navigation
+& Drawer (008–021, minus 016) turned out to be **retroactive documentation of already-shipped
+production code** — a separate implementation stream (quick tasks, debug sessions) had built and, in
+places, further refined these areas after the sketches were drawn, faster than they were wrapped up.
+Carousel Mechanics (022–026) is this session's actual new design work: closing the gap between the
+shelf-row carousel's current behavior and a genuinely native, Netflix-inspired feel — arrows,
+momentum/snap physics, pagination, and loading state — grounded in real research on Netflix's own
+pattern and the modern CSS scroll-snap platform, not reinvented from scratch.
+
+**A real grounding check changed the outcome.** Before writing findings into the skill, production
+code was checked against every sketch's claims (per explicit user instruction: "base the answers on
+what we already have working"). This caught two real discrepancies:
+1. Sketch 013/017 both record the "Sumate" CTA as staying persistent site-wide — production's
+   `sumate_cta/1` doc comment states this was explicitly superseded later ("the developer's direct,
+   twice-repeated instruction"): the CTA now lives only on the About page hero + a mobile CTA bar,
+   asserted absent from the header by test.
+2. Sketches 001/006 described the carousel's "current shipped" arrow behavior as hover-reveal — a
+   separate debug session (G-01-3/G-01-4) had already reworked it to always-visible, header-embedded
+   circular buttons (any pointer type) before this sketch session started. Sketch 022's exploration
+   and its winner (C — pointer-fine-gated edge-overlay arrows) were reframed as an **approved but
+   not-yet-implemented change** against that real baseline, not a restatement of "current" behavior.
+   Two of the four carousel sketch conclusions (023's free-momentum physics, 024's no-indicator)
+   turned out to already match production exactly — confirmed as correct via code, not proposed.
+
+## Key Decisions
+- **Filter & Search (already shipped):** centered modal / bottom sheet, always-visible primary chip
+  clusters in cards, no age filter (Nivel substitutes), editorial-tags group deliberately cut pending
+  a future presentation decision. See `references/filter-search.md`.
+- **Header/Navigation/Drawer (already shipped):** CTA is About-page-hero-only, not persistent — this
+  wrap-up's reference file documents the real shipped rule, not sketch 013/017's now-superseded one.
+  Bare-icon, `sr-only`-labeled theme toggle (75% rest fade, not the sketch's 55% — the sketch's value
+  failed a real WCAG contrast check). Underline active-nav. Search morphs from a 44px icon, not a
+  fixed box. Category mega-menu shares its scroll-spy target attribute with the mobile chip row —
+  one mechanism, not two. Drawer bottom block is icon-only, centered, no label. See
+  `references/header-navigation-drawer.md`.
+- **Carousel — already correct, no change needed:** free-momentum scroll (no `scroll-snap-type`),
+  `overscroll-behavior-x: contain`, `touch-action: manipulation`, no position indicator, flat
+  no-shimmer skeleton for full-page load.
+- **Carousel — approved change:** relocate prev/next from header-embedded circular buttons to
+  Netflix-style edge-overlay icon arrows, gated by `@media (hover: hover) and (pointer: fine)` so
+  they're absent from the DOM on touch (not just hidden) rather than shown on every pointer type as
+  today.
+- **Carousel — genuinely new:** a shimmer treatment scoped specifically to a shelf repopulating after
+  a filter change — a moment that doesn't exist as a distinct state in the LiveView today at all.
+  Deliberately retested 009's "no shimmer" call in this narrower context rather than assuming it
+  still applied, and confirmed shimmer reads differently (acceptable) here than on a full-page load.
+- **`layout-navigation.md` corrected in place:** its arrow-behavior paragraph was stale relative to
+  the real carousel rework; a warning note now points to `carousel-mechanics.md` as authoritative.
+
+## Open Items Carried Forward
+- Sketch 016 (mobile-nav-scale) — excluded, no confirmed winner. Revisit once a winner is picked.
+- The carousel's arrow relocation (edge-overlay, pointer-fine-gated) and the filter-repopulation
+  shimmer are both approved designs, not yet implemented — next natural step is a `/gsd-plan-phase`
+  or quick task against `carousel_row.ex`/`app.css`.
+- Sketch 023's custom-eased arrow-click scroll (006-D's curve, replacing the current plain
+  `scroll-behavior: smooth`) is a nice-to-have, explicitly not required for correctness — flagged as
+  optional in `carousel-mechanics.md` rather than bundled into the arrow-relocation work.
