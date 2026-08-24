@@ -482,4 +482,230 @@ defmodule PukllayClubWeb.FooterRhythmTest do
                "hanging off one piece with nothing on the other side of it."
     end
   end
+
+  # Guards FOOTPRINT hierarchy between the right cluster's two icon rows — the
+  # channel that four prior sessions on this footer never measured.
+  #
+  # Motivating incident (debug session footer-theme-toggle-balance). Sketch 014
+  # stripped the toggle's chrome, footer-desktop-overloaded fixed its proximity,
+  # and sketch 018 / quick task 260824-7mt faded its colour, shrank its glyph
+  # 16px -> 14px and toned its active state. All of those move INK. Measured on
+  # the live app, byte-identical at 481/768/1024/1280/1440px in both themes,
+  # the BOX told the opposite story: `.pk-footer-social` and `.pk-theme-toggle`
+  # were BOTH exactly 136.00px wide, so the subordinate control claimed the same
+  # horizontal band as the entire four-icon social row — 175.06px (1.287x) once
+  # the visible "Tema" label was counted — at 44x44 per button against social's
+  # 28x28 (a 2.469x area ratio), while filling only 30.88% of that band with ink
+  # against social's 82.35%.
+  #
+  # The trap worth naming: shrinking the glyph LOWERED the fill ratio inside an
+  # unchanged box, so the ink fix made the control sparser rather than smaller.
+  # That is why the user re-reported the same complaint the next day, and why
+  # these assertions are about the BOX and never about the glyph.
+  #
+  # Oracle type: derived (contract), as everywhere in this file — ExUnit cannot
+  # measure a rendered box, so these pin the declarations the geometry is
+  # computed from. The geometric oracle itself was exercised via CDP against the
+  # running app, before and after.
+  describe "the theme control is subordinate to the social row by footprint, not just by ink" do
+    # `.pk-footer-social a`'s square side. This is the number the theme buttons
+    # must be measured against — deliberately read from the CSS rather than
+    # hard-coded, so rescaling the social row cannot silently leave the theme
+    # buttons behind at a value that used to be equal.
+    defp social_box!(src) do
+      case Regex.run(~r/(?m)^\.pk-footer-social a\s*\{([^}]*)\}/, strip_comments(src)) do
+        [_, body] ->
+          case Regex.run(~r/width:\s*([\d.]+)px/, body) do
+            [_, v] -> String.to_integer(v)
+            nil -> flunk("`.pk-footer-social a` no longer declares a px width to compare against")
+          end
+
+        nil ->
+          flunk("No `.pk-footer-social a` rule found in assets/css/app.css")
+      end
+    end
+
+    defp footer_theme_button_block!(src) do
+      case Regex.run(
+             ~r/\.pk-footer-theme \.pk-theme-toggle button\s*\{([^}]*)\}/,
+             strip_comments(src)
+           ) do
+        [_, body] ->
+          body
+
+        nil ->
+          flunk(
+            "The footer-scoped `.pk-footer-theme .pk-theme-toggle button` rule is gone. " <>
+              "Without it the buttons fall back to the shared component's `min-w-11`/`min-h-11` " <>
+              "(44px), which makes the theme control exactly as wide as the whole social row " <>
+              "(136px each, measured) and re-inverts the hierarchy."
+          )
+      end
+    end
+
+    defp px!(block, prop) do
+      case Regex.run(~r/#{prop}:\s*([\d.]+)px/, block) do
+        [_, v] -> String.to_integer(v)
+        nil -> flunk("`#{prop}` is missing from the footer-scoped theme button rule")
+      end
+    end
+
+    test "a footer theme button is never larger than a social link" do
+      src = source()
+      social = social_box!(src)
+      block = footer_theme_button_block!(src)
+
+      for prop <- ["min-width", "min-height"] do
+        assert px!(block, prop) <= social,
+               "A footer theme button's #{prop} exceeds `.pk-footer-social a`'s #{social}px. " <>
+                 "The two icon rows in this cluster must share ONE sizing system; the defect " <>
+                 "was that the LESS important concern had been given the LARGER box (44px vs " <>
+                 "28px, a 2.469x area ratio)."
+      end
+
+      # `padding: 0` is load-bearing, and this assertion exists because a
+      # mutation check found the gap: the buttons carry Tailwind's `p-2`, so
+      # 14px of glyph + 16px of padding = 30px would beat a 28px `min-width` and
+      # the box would render at 30px while every number above still read as
+      # correct. A contract oracle that pins only the min-* pair is satisfied by
+      # a layout that never shrank.
+      assert block =~ ~r/padding:\s*0/,
+             "The footer-scoped theme button rule dropped `padding: 0`. The component's `p-2` " <>
+               "then wins the box back to 30px, and min-width silently stops being the " <>
+               "constraint that decides the rendered size."
+    end
+
+    # The load-bearing assertion in this block. A bare `<=` on the per-button box
+    # is not sufficient on its own, because the toggle could still be widened by
+    # its gap or by gaining a fourth button. This compares the two rows as the
+    # eye does: total declared footprint against total declared footprint.
+    test "the theme control's total footprint stays clearly under the social row's" do
+      src = source()
+      social_box = social_box!(src)
+      theme_box = px!(footer_theme_button_block!(src), "min-width")
+
+      social_gap = 8
+      theme_gap = 2
+
+      # 4 social links / 3 theme buttons, as pinned by their own markup tests.
+      social_row = 4 * social_box + 3 * social_gap
+      theme_row = 3 * theme_box + 2 * theme_gap
+      ratio = theme_row / social_row
+
+      # The ceiling is 0.8, NOT a bare `< 1.0`. The shipped defect measured
+      # exactly 1.000 (136.00px vs 136.00px), so a strict inequality alone would
+      # still admit a 0.99 near-peer that reproduces the complaint in full — the
+      # same reason the sibling tier test uses a `>= 2.0` ratio floor instead of
+      # a strict `>`. 0.8 is the boundary neighbour that closes the class.
+      assert ratio <= 0.8,
+             "The theme control's footprint is #{Float.round(ratio, 3)}x the social row's " <>
+               "(#{theme_row}px vs #{social_row}px). Anything at or near 1.0x reads as a PEER " <>
+               "of the social links, not as subordinate to them — the shipped defect was " <>
+               "exactly 1.000x. Social links outrank the theme switcher; the footprint has to " <>
+               "say so."
+    end
+
+    test "the shrink is scoped to the footer, so the mobile drawer keeps its 44px touch targets" do
+      src = strip_comments(source())
+
+      # `theme_toggle/1` renders in BOTH the footer and `.pk-drawer-utility`.
+      # Below 480px the footer copy is hidden and the drawer copy IS the touch
+      # surface, so an unscoped shrink would silently drop every phone user's
+      # theme control under the 44px floor locked by quick task 260821-dah.
+      refute src =~ ~r/(?m)^\.pk-theme-toggle button\s*\{[^}]*min-width/,
+             "A bare `.pk-theme-toggle button` rule now sets a min-width. That reaches the " <>
+               "mobile drawer too, where the control is the actual touch target. Scope the " <>
+               "override to `.pk-footer-theme` instead."
+
+      html = render_component(&Layouts.theme_toggle/1, %{})
+
+      assert html |> String.split("min-h-11") |> length() == 4,
+             "The shared component dropped `min-h-11`. The footer overrides the box in CSS " <>
+               "precisely so these utilities can stay on the markup for the drawer's benefit."
+    end
+
+    test "the underline insets are tokens, so resizing the box cannot leave them stranded" do
+      src = strip_comments(source())
+
+      # Both of these started as `src =~ token` / `src =~ "var(token)"`, and a
+      # mutation check caught them SURVIVING: the footer scope declares the same
+      # token name and `right:` consumes the same var, so a bare substring match
+      # was still satisfied after deleting the base declaration or hardcoding
+      # `left`. A file-wide `=~` is not an assertion about the rule you mean.
+      base =
+        case Regex.run(~r/(?m)^\.pk-theme-toggle \{([^}]*)\}/, src) do
+          [_, body] -> body
+          nil -> flunk("No base `.pk-theme-toggle` rule found in assets/css/app.css")
+        end
+
+      underline =
+        case Regex.run(~r/\[data-theme-source[^{]*::after[^{]*\{([^}]*)\}/, src) do
+          [_, body] -> body
+          nil -> flunk("No active-state `::after` underline rule found in assets/css/app.css")
+        end
+
+      for token <- ["--pk-toggle-underline-inset", "--pk-toggle-underline-bottom"] do
+        assert base =~ "#{token}:",
+               "`#{token}` is missing from the BASE `.pk-theme-toggle` rule. The footer scope " <>
+                 "re-declares it, so the footer would still look right while the drawer's 44px " <>
+                 "button lost the value entirely — the exact asymmetry this token exists to stop."
+      end
+
+      # Every inset side must read the token. Checking one side is not enough:
+      # hardcoding just `left` renders the footer's underline asymmetrically
+      # (8px one side, 5px the other) and no other assertion here would notice.
+      for {prop, token} <- [
+            {"left", "--pk-toggle-underline-inset"},
+            {"right", "--pk-toggle-underline-inset"},
+            {"bottom", "--pk-toggle-underline-bottom"}
+          ] do
+        assert underline =~ "#{prop}: var(#{token})",
+               "The underline's `#{prop}` no longer reads `var(#{token})`. A literal here " <>
+                 "renders at the 44px button's value on the footer's 28px one."
+      end
+
+      assert src =~ ~r/\.pk-footer-theme \.pk-theme-toggle\s*\{[^}]*--pk-toggle-underline-inset/,
+             "The footer scope no longer retunes the underline inset. At the 44px default of " <>
+               "8px it renders 12px wide under a 14px glyph — narrower than the thing it marks."
+
+      # The specificity trap this indirection exists to avoid, pinned so nobody
+      # "simplifies" it back. The active-state selectors are (0,4,2); a plain
+      # `.pk-footer-theme .pk-theme-toggle button::after` override is (0,2,2)
+      # and silently loses. That was observed happening, not theorised.
+      refute src =~ ~r/\.pk-footer-theme \.pk-theme-toggle button::after\s*\{[^}]*left:/,
+             "The underline is being overridden through a `button::after` rule again. That " <>
+               "selector is (0,2,2) and loses to the active-state rules' (0,4,2) — it will " <>
+               "compile, look correct in the diff, and do nothing. Retune the tokens instead."
+    end
+
+    test "the Tema label is hidden visually but still names the control for assistive tech" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      tag = LazyHTML.query(doc, ".pk-footer-theme .pk-footer-toggle-tag")
+      assert Enum.count(tag) == 1
+
+      classes = tag |> LazyHTML.attribute("class") |> List.first()
+
+      assert classes =~ "sr-only",
+             "The footer's \"Tema\" label is visible again. It was 31.06px of text plus an 8px " <>
+               "gap sitting between two icon rows, and it is what took the theme concern to " <>
+               "1.287x the social row's width. Vercel's Geist ships the same control in a " <>
+               "footer with an sr-only <legend> and no visible text."
+
+      # Hiding it is only acceptable BECAUSE the string was promoted to the
+      # group's accessible name. If a later edit deletes the label, this fails
+      # rather than quietly leaving the control unnamed.
+      wrapper = LazyHTML.query(doc, ".pk-footer-theme")
+      assert wrapper |> LazyHTML.attribute("role") |> List.first() == "group"
+
+      labelledby = wrapper |> LazyHTML.attribute("aria-labelledby") |> List.first()
+      id = tag |> LazyHTML.attribute("id") |> List.first()
+
+      assert labelledby == id and is_binary(id),
+             "`.pk-footer-theme`'s aria-labelledby does not resolve to the \"Tema\" span. " <>
+               "The label may only be hidden while it still supplies the group's accessible " <>
+               "name — otherwise this is a plain accessibility regression, not a visual fix."
+    end
+  end
 end

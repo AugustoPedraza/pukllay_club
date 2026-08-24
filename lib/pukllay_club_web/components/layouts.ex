@@ -585,6 +585,26 @@ defmodule PukllayClubWeb.Layouts do
   # theme_toggle pair; the footer was the surface that had drifted, not the
   # drawer.
   #
+  # That label is now `sr-only` and promoted to the control's accessible GROUP
+  # NAME via role="group" + aria-labelledby (debug footer-theme-toggle-balance).
+  # It is CONVERTED, not deleted, and the distinction matters: plan
+  # 01.1-08-PLAN.md:429-433 added it "so the control is discoverable in a place
+  # users are not yet used to looking for it", and that single stated premise is
+  # what changed. Vercel's Geist design system documents the footer as the
+  # CANONICAL home for a Light/System/Dark control ("Place it once per app, in
+  # the footer or settings"), so the location is no longer unfamiliar. Geist's
+  # own footer-density variant carries no visible text either — it ships
+  # `<legend class="sr-only">Select a display theme:</legend>`, which is exactly
+  # the shape adopted here. This is also a net accessibility GAIN rather than a
+  # trade: the three buttons already had per-button aria-labels but the control
+  # had NO group name at all, so assistive tech now announces one where it
+  # previously announced three unrelated buttons.
+  #
+  # The visible label survives where Geist says it should — the mobile drawer's
+  # `.pk-drawer-utility-label`, a settings-like surface with "room for the labels
+  # to breathe". Footer = dense chrome = small + hidden label; drawer = settings
+  # = full size + visible label. One component, two contexts, matching guidance.
+  #
   # The legal line lives in its OWN full-width row, `.pk-footer-legal`, not
   # inside the right cluster (debug footer-desktop-imbalance). Sketch 011 gave
   # this footer two peer clusters; the right one then accreted a third concern
@@ -643,8 +663,8 @@ defmodule PukllayClubWeb.Layouts do
         </div>
         <div class="pk-footer-right">
           <.social_links class="pk-footer-social" />
-          <div class="pk-footer-theme">
-            <span class="pk-footer-toggle-tag">Tema</span>
+          <div class="pk-footer-theme" role="group" aria-labelledby="pk-footer-theme-label">
+            <span id="pk-footer-theme-label" class="pk-footer-toggle-tag sr-only">Tema</span>
             <.theme_toggle />
           </div>
         </div>

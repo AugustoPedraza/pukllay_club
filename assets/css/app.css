@@ -1141,10 +1141,23 @@ body.pk-sheet-open {
    44px wide (min-w-11, the touch target added by quick task 260821-dah),
    so those numbers don't transfer and a re-derived value would be an
    unverified guess. */
+/* The active underline's insets are TOKENS, not literals, because the control
+   renders at two different box sizes (debug footer-theme-toggle-balance): 44px
+   in the mobile drawer, 28px in the footer. They are declared here and consumed
+   by the active-state `::after` rule below, so a scope that resizes the button
+   retunes the underline by re-declaring the token on `.pk-theme-toggle` — it
+   does NOT have to out-specify that rule. That matters: the active selectors
+   carry specificity (0,4,2) (two attributes + a class + an attribute + the
+   pseudo-element), so a plain `.pk-footer-theme .pk-theme-toggle button::after`
+   override is (0,2,2) and silently loses — measured losing exactly that way
+   before this indirection was added. Custom properties resolve at use time from
+   the ELEMENT they are inherited on, so specificity never enters into it. */
 .pk-theme-toggle {
   display: flex;
   align-items: center;
   gap: 2px;
+  --pk-toggle-underline-inset: 8px;
+  --pk-toggle-underline-bottom: 4px;
 }
 
 .pk-theme-toggle button {
@@ -1172,14 +1185,94 @@ body.pk-sheet-open {
 [data-theme-source="user"][data-theme="dark"] .pk-theme-toggle button[data-phx-theme="dark"]::after {
   content: "";
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 4px;
+  left: var(--pk-toggle-underline-inset);
+  right: var(--pk-toggle-underline-inset);
+  bottom: var(--pk-toggle-underline-bottom);
   height: 2px;
   border-radius: 9999px;
   background: color-mix(in srgb, var(--color-primary) 65%, var(--color-neutral));
 }
 
+/* Footer-scoped BOX sizing for the theme control (debug
+   footer-theme-toggle-balance). The subordination levers above are all INK —
+   colour fade, glyph size, active tint (sketch 018 / quick task 260824-7mt) —
+   and they were measured insufficient, because the channel that was actually
+   inverted is FOOTPRINT and nothing had ever touched it.
+
+   Measured on the running app, byte-identical at 481/768/1024/1280/1440px in
+   both themes: `.pk-footer-social` and `.pk-theme-toggle` were BOTH exactly
+   136.00px wide. The subordinate control claimed the same horizontal band as
+   the entire four-icon social row, and 175.06px (1.287x) once the "Tema" label
+   was counted. Per item that is 44x44 against the social links' 28x28 —
+   a 2.469x area ratio — and the 44px buttons were also the tallest objects in
+   the cluster, setting `.pk-footer-right`'s whole height while social sat at
+   28px. Because these buttons are BARE (sketch 014 winner D: no card, border or
+   background), those 136px carried only 3x14px of glyph: 30.88% ink fill
+   against the social row's 82.35%. Shrinking the glyph to 14px therefore made
+   the emptiness WORSE, not the control smaller — a sparser band, not a lighter
+   one, which is why that fix did not resolve the complaint.
+
+   28px is not a new number: it is `.pk-footer-social a`'s own value, five rules
+   up. The two icon rows in this cluster were being sized by two different
+   systems — social to a visual circle, theme to the 44px touch floor — and the
+   larger system had been applied to the LESS important concern. Sharing one
+   value is a consistency repair against the pattern already in this file, not
+   an invented design. Result: 3x28 + 2x2 gap = 88.00px, i.e. 0.647x the social
+   row, cluster height 44px -> 28px, ink fill 30.88% -> 47.73%.
+
+   `padding: 0` is load-bearing, not tidying. The buttons carry Tailwind's `p-2`
+   (8px), so 14px of glyph + 16px of padding = 30px would beat a 28px
+   `min-width` and the box would silently stay 30px.
+
+   Scoping to `.pk-footer-theme` is what keeps the 44px touch floor (locked by
+   quick task 260821-dah) intact where it is genuinely the touch surface: the
+   same `theme_toggle/1` renders in the mobile drawer at <=480px, and the drawer
+   must keep its 44px targets. Specificity (0,2,1) beats the `.min-w-11` /
+   `.min-h-11` / `.p-2` utilities (0,1,0) on the component, so those classes stay
+   on the markup — which also keeps `layouts_test.exs`'s component-level 44px
+   assertion honest rather than working around it.
+
+   This matches how Vercel's Geist ships the same control: its footer variant
+   shrinks the BOX (`data-[small]:h-6`, 24px) and keeps the glyph at 16px
+   (`size-4`). This repo had done the exact inverse. */
+.pk-footer-theme .pk-theme-toggle button {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+}
+
+/* The active underline's insets were explicitly tuned for a 44px button (the
+   old comment above says so outright), so they do not transfer to a 28px one.
+   Measured at 8px on the smaller box: a 12px rule under a 14px glyph — 2px
+   NARROWER than the thing it marks, sitting 1px below it. Both numbers are
+   re-derived from the new geometry rather than guessed:
+
+     inset 5px  -> 28 - 5 - 5 = 18px of rule under a 14px glyph, so it overhangs
+                   by 2px per side and reads as marking the glyph. It also
+                   leaves 5 + 2 (the toggle's gap) + 5 = 12px of clear space
+                   between adjacent underlines, so they cannot read as merged.
+     bottom 1px -> the glyph is 14px centred in 28px, so its bottom edge is at
+                   y=21 and the 2px rule occupies y=25-27: a 4px gap. At 44px
+                   that gap was 9px, and the 28px box only has 7px of slack
+                   below the glyph in total, so 4px is the closest honest
+                   equivalent rather than a proportional 5.7px that would not
+                   leave room for the rule itself.
+
+   Set on `.pk-theme-toggle` (not on the button) because that is the element the
+   tokens are declared on — re-declaring them at (0,2,0) beats the base (0,1,0)
+   by ordinary inheritance, with no need to out-specify the (0,4,2) active-state
+   rule that consumes them. */
+.pk-footer-theme .pk-theme-toggle {
+  --pk-toggle-underline-inset: 5px;
+  --pk-toggle-underline-bottom: 1px;
+}
+
+/* Now inert in the footer: the element carries `sr-only` alongside this class
+   (debug footer-theme-toggle-balance), so these visual declarations no longer
+   render anywhere. Kept, not deleted, because the sr-only conversion reverses a
+   documented decision (01.1-08-PLAN.md:429-433) and restoring a visible label
+   should stay a one-attribute change. The drawer's visible label is a different
+   class, `.pk-drawer-utility-label`, and is unaffected. */
 .pk-footer-toggle-tag {
   font-size: 0.75rem;
   color: var(--color-neutral);
