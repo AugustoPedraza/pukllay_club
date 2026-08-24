@@ -5,10 +5,10 @@ current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
 stopped_at: Phase 01.1 complete, ready to plan Phase 2
-last_updated: "2026-08-23T01:57:41.696Z"
-last_activity: 2026-08-22
+last_updated: "2026-08-24T16:04:58.797Z"
+last_activity: 2026-08-24
 last_activity_desc: Phase 01.1 complete, transitioned to Phase 2
-state_head: 5d4d2b83c6f7c7a39562d9924705523e9b236c11
+state_head: 0fcc255377dea6a67a549f860edea67cd3ac937f
 progress:
   total_phases: 5
   completed_phases: 2
@@ -211,6 +211,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260821-umm | Footer's left cluster now shows the About hero tagline ("Conectá jugando") instead of repeating the header's "JUEGOS DE MESA MODERNOS" subtitle | 2026-08-21 | 9734f18 | | [260821-umm-footer-left-cluster-in-layouts-ex-footer](./quick/260821-umm-footer-left-cluster-in-layouts-ex-footer/) |
 | 260821-v7q | Wired the real isologo mark into Layouts.brand_logo/1 with theme-aware light/dark images and rebuilt favicon.ico from the purple isologo lockup | 2026-08-21 | aff2b1d | | [260821-v7q-wire-up-the-real-isologo-mark-theme-awar](./quick/260821-v7q-wire-up-the-real-isologo-mark-theme-awar/) |
 | 17 | Polish the desktop header: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers | 2026-08-22 | 9195443 | — | — |
+| 260824-hu1 | On mobile the expanded header search now aligns its own edges (not just its contents) to the shared gutter line, restoring the fully-rounded pill shape | 2026-08-24 | 0fcc255 | Complete | [260824-hu1-on-mobile-the-expanded-search-looks-awfu](./quick/260824-hu1-on-mobile-the-expanded-search-looks-awfu/) |
 
 ### Roadmap Evolution
 
