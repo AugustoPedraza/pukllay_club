@@ -902,6 +902,34 @@ body.pk-sheet-open {
    page section, on the same element as the padding (never a wrapper
    around it) — the exact bug page-shell.md documents twice. */
 .pk-footer {
+  /* Footer spacing scale (debug footer-desktop-overloaded). Sketch 011
+     deliberately gives this footer no divider, so PROXIMITY is the only
+     grouping cue it has — which means the tiers below have to be visibly
+     distinct from each other or the grouping simply isn't communicated.
+     Before this, a single 1.5rem value served every tier at once: the gap
+     separating unrelated concerns inside .pk-footer-right was the same 24px
+     that bound the "Tema" label to the toggle it labels, measured identical at
+     every viewport, so roughly nine atoms read as one flat 620.8px run.
+
+     Each tier is declared ONCE here and consumed by BOTH the desktop row and
+     the <=480px column layout — that shared declaration is what makes the two
+     orientations one rhythm instead of two values that drift apart (they had
+     already drifted: see .pk-footer-row's gap below). The <=480px block
+     retunes two of these values for vertical rhythm but never reorders the
+     tiers.
+
+     Values are deliberately restrained rather than maximally separated: the
+     tiers only have to be DISTINGUISHABLE, and every rem added to the two
+     upper tiers both grows the footer's height in the wrapped band and pushes
+     the single-line threshold further right. 0.5/1/1.5/2rem keeps the
+     one-line layout starting at ~1065px (slightly earlier than the 1073px it
+     started at before this fix) while still giving the item tier a 3x contrast
+     against the group tier — enough to visibly bind "Tema" to its buttons. */
+  --pk-footer-gap-item: 0.5rem; /* inside ONE unit: icon set, label+control */
+  --pk-footer-gap-list: 1rem; /* between sibling text links */
+  --pk-footer-gap-group: 1.5rem; /* between distinct concerns in a cluster */
+  --pk-footer-gap-cluster: 2rem; /* between clusters, in EITHER orientation */
+
   background: var(--color-base-200);
   border-top: 1px solid var(--color-base-300);
   margin-top: 3rem;
@@ -914,7 +942,14 @@ body.pk-sheet-open {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.75rem 1.5rem;
+
+  /* One value, not the previous `0.75rem 1.5rem`. That row-gap (12px) was
+     SMALLER than the clusters' own gap (24px), so on every wrapped line
+     same-group items sat twice as far apart as different-group items —
+     proximity pointing backwards. That affected far more than mobile: the row
+     wraps to two tiers at every width from 481px to 1072px (it only becomes a
+     single line at 1073px), so most laptop widths inherited the inversion too. */
+  gap: var(--pk-footer-gap-cluster);
 }
 
 /* Both clusters wrap, matching .pk-footer-row above and .pk-footer-links
@@ -940,7 +975,20 @@ body.pk-sheet-open {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1.5rem;
+  gap: var(--pk-footer-gap-group);
+}
+
+/* The theme control is ONE atom. Its "Tema" label is not decoration — it
+   exists so the control is discoverable in a place users don't yet look for it
+   (plan 01.1-08, sketch 017 Round 2) — so it has to read as attached to the
+   buttons rather than as a third sibling concern next to the social icons.
+   The mobile drawer already does exactly this with .pk-drawer-utility around
+   the same label + theme_toggle pair; the footer was the surface that had
+   drifted. Item tier, not group tier, is the whole point of this rule. */
+.pk-footer-theme {
+  display: flex;
+  align-items: center;
+  gap: var(--pk-footer-gap-item);
 }
 
 .pk-footer-links {
@@ -948,14 +996,14 @@ body.pk-sheet-open {
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 1rem;
+  gap: var(--pk-footer-gap-list);
   flex-wrap: wrap;
 }
 
 .pk-footer-social {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--pk-footer-gap-item);
 }
 
 .pk-footer-social a {
@@ -1842,14 +1890,34 @@ body.pk-cta-parked {
     flex-direction: column;
   }
 
+  /* Same scale as desktop, two tiers retuned for VERTICAL rhythm: a stacked
+     list needs less absolute space than a horizontal row to read as separated,
+     and holding the desktop values here would have grown the mobile footer
+     from 180px to ~215px for no benefit (mobile is this project's primary
+     surface — it must not regress to fix desktop). What must NOT change is the
+     tiers' ORDER: cluster (24px) stays greater than group (16px), so the
+     stack groups brand+links together and sets the legal line apart. Before
+     this the mobile footer had those two backwards — 24px within, 12px
+     between. Retuning values inside one shared scale keeps desktop and mobile
+     one rhythm; declaring separate literals per orientation is what caused
+     the drift in the first place. */
+  .pk-footer {
+    --pk-footer-gap-group: 1rem;
+    --pk-footer-gap-cluster: 1.5rem;
+  }
+
   /* Mobile/desktop swap (01.1-09 Task 2): the toggle and social cluster
      move into the drawer below 480px — reaching the footer there means
      scrolling the whole page, the drawer is one tap away. Deliberately
      NOT .pk-footer-right wholesale: that cluster also holds
      .pk-footer-meta (the copyright line and D-04's BGG attribution),
-     which must stay visible at every viewport width. */
-  .pk-footer-right .pk-theme-toggle,
-  .pk-footer-toggle-tag,
+     which must stay visible at every viewport width.
+
+     `.pk-footer-theme` replaces the previous pair of selectors
+     (`.pk-footer-right .pk-theme-toggle` + `.pk-footer-toggle-tag`): the
+     wrapper is footer-only, so it needs no descendant scoping to avoid
+     catching the drawer's own reused `.pk-theme-toggle`. */
+  .pk-footer-theme,
   .pk-footer-social {
     display: none;
   }

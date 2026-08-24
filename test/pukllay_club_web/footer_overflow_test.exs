@@ -33,6 +33,12 @@ defmodule PukllayClubWeb.FooterOverflowTest do
 
   defp source, do: File.read!(@css_path)
 
+  # Comments are prose, not cascade. Selector-name assertions below must match a
+  # real rule, and a comment that merely NAMES a selector was enough to satisfy
+  # them — a false pass this file actually hit when `.pk-footer-toggle-tag` was
+  # folded into `.pk-footer-theme` and survived only as a word in a comment.
+  defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
+
   # First declaration block for a selector, matched on the exact selector text.
   defp block!(src, selector) do
     pattern = Regex.compile!("(?m)^#{Regex.escape(selector)}\\s*\\{([^}]*)\\}")
@@ -45,7 +51,7 @@ defmodule PukllayClubWeb.FooterOverflowTest do
 
   # Everything from the trailing narrow-viewport block to the end of the file.
   defp narrow_viewport_block(src) do
-    [_, tail] = String.split(src, "@media (max-width: 480px) {", parts: 2)
+    [_, tail] = String.split(strip_comments(src), "@media (max-width: 480px) {", parts: 2)
     tail
   end
 
@@ -103,9 +109,15 @@ defmodule PukllayClubWeb.FooterOverflowTest do
     test "the social and theme controls are hidden only inside the block that opens the drawer" do
       narrow = narrow_viewport_block(source())
 
-      for selector <- [".pk-footer-social", ".pk-footer-toggle-tag"] do
-        assert narrow =~ selector,
-               "`#{selector}` is no longer hidden in the ≤480px block."
+      # `.pk-footer-theme` is the wrapper around the "Tema" label and the toggle
+      # (debug footer-desktop-overloaded). It replaced the previous pair of
+      # selectors here, so hiding it hides both — and because the wrapper is
+      # footer-only it needs no descendant scoping to spare the drawer's own
+      # reused `.pk-theme-toggle`.
+      for selector <- [".pk-footer-social", ".pk-footer-theme"] do
+        assert narrow =~ ~r/#{Regex.escape(selector)}[^{]*\{[^}]*display:\s*none/,
+               "`#{selector}` is no longer hidden in the ≤480px block. Match is against a real " <>
+                 "rule, not a bare mention — naming it in a comment must not satisfy this."
       end
 
       # The hide is only defensible because the same block reveals the drawer.
@@ -150,7 +162,13 @@ defmodule PukllayClubWeb.FooterOverflowTest do
   end
 
   describe "the footer renders the controls this contract assumes" do
-    test "the right cluster really does carry four children" do
+    # The cluster now carries THREE direct children, not four: the "Tema" label and
+    # the toggle were wrapped into `.pk-footer-theme` (debug footer-desktop-overloaded).
+    # The queries below stay descendant-based on purpose — this test cares that each
+    # control is still *inside* the cluster (the wrapping contract above depends on
+    # what has to fit), not how deeply it nests. The exact child count is pinned by
+    # FooterRhythmTest instead.
+    test "the right cluster really does carry every control this contract assumes" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
       doc = LazyHTML.from_document(html)

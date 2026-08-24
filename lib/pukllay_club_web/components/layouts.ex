@@ -574,6 +574,17 @@ defmodule PukllayClubWeb.Layouts do
   # the isologo belongs to the header alone — see brand_logo/1's @doc for the
   # full contract. The footer's wordmark is demoted to the muted colour tier
   # by the pk-brand-quiet class mark={false} adds, not by shrinking it (D-B).
+  #
+  # The right cluster's "Tema" label and the toggle it labels are wrapped
+  # together in `.pk-footer-theme` (debug footer-desktop-overloaded). They are
+  # ONE control, and the wrapper is what lets CSS bind them at the item spacing
+  # tier instead of the group tier — before it, the label sat exactly as far
+  # from its own buttons (24px) as from the unrelated social icons, so the
+  # cluster's three concerns read as one flat run. This mirrors the mobile
+  # drawer, where `.pk-drawer-utility` already groups the identical label +
+  # theme_toggle pair; the footer was the surface that had drifted, not the
+  # drawer. The wrapper also gives the <=480px block a single element to hide
+  # when the control moves into the drawer.
   defp footer(assigns) do
     assigns = assign(assigns, :copyright_year, Date.utc_today().year)
 
@@ -590,8 +601,10 @@ defmodule PukllayClubWeb.Layouts do
         </div>
         <div class="pk-footer-right">
           <.social_links class="pk-footer-social" />
-          <span class="pk-footer-toggle-tag">Tema</span>
-          <.theme_toggle />
+          <div class="pk-footer-theme">
+            <span class="pk-footer-toggle-tag">Tema</span>
+            <.theme_toggle />
+          </div>
           <span class="pk-footer-meta">© {@copyright_year} Pukllay Club · <.bgg_attribution /></span>
         </div>
       </div>
