@@ -129,21 +129,24 @@ defmodule PukllayClubWeb.FilterModalTest do
     end
 
     test "facet pills dispatch toggle-facet with the value/facet pair, selected state reflected in aria-pressed" do
+      # weight_bands (Nivel), not mechanics — Task 3 moved mechanics/themes
+      # off the badge-pill treatment into the checklist inside the
+      # disclosure; weight_bands is still rendered via facet_pill/1.
       html =
         render_component(&FilterModal.filter_modal/1, %{
           id: "filter-modal",
           facet_options: %{
-            mechanics: ["Tira dados"],
+            mechanics: [],
             themes: [],
-            weight_bands: [],
+            weight_bands: [%{value: "ingenio_estratega", label: "Ingenio estratega"}],
             editorial_tags: []
           },
-          mechanics: ["Tira dados"]
+          weight_bands: ["ingenio_estratega"]
         })
 
       assert html =~ ~s(phx-click="toggle-facet")
-      assert html =~ ~s(phx-value-facet="mechanics")
-      assert html =~ ~s(phx-value-value="Tira dados")
+      assert html =~ ~s(phx-value-facet="weight_bands")
+      assert html =~ ~s(phx-value-value="ingenio_estratega")
       # HEEx renders a Boolean assign on a recognized aria-* attribute as a
       # bare present/absent attribute, not a "true"/"false" string — same
       # behavior the retired FilterDrawer's identical `aria-pressed={@selected}`
@@ -178,6 +181,109 @@ defmodule PukllayClubWeb.FilterModalTest do
 
       assert html =~ ~s(phx-click="clear-filters")
       assert html =~ "Limpiar filtros"
+    end
+  end
+
+  describe "mecánica/temática disclosure (quick-260824-b71)" do
+    test "renders closed when mechanics and themes are both empty" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      refute html =~ ~r/<details[^>]*id="filter-modal-more"[^>]*\sopen/
+    end
+
+    test "renders open when a mechanic is already selected" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: ["Tira dados"],
+            themes: [],
+            weight_bands: [],
+            editorial_tags: []
+          },
+          mechanics: ["Tira dados"]
+        })
+
+      assert html =~ ~r/<details[^>]*id="filter-modal-more"[^>]*\sopen/
+    end
+
+    test "renders open when a theme is already selected" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: [],
+            themes: ["Fantasía"],
+            weight_bands: [],
+            editorial_tags: []
+          },
+          themes: ["Fantasía"]
+        })
+
+      assert html =~ ~r/<details[^>]*id="filter-modal-more"[^>]*\sopen/
+    end
+
+    test "a checklist row carries data-fc-row, toggle-facet and the matching phx-value-facet" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: ["Tira dados"],
+            themes: [],
+            weight_bands: [],
+            editorial_tags: []
+          }
+        })
+
+      assert html =~ ~s(data-fc-row="Tira dados")
+      assert html =~ ~s(phx-click="toggle-facet")
+      assert html =~ ~s(phx-value-facet="mechanics")
+    end
+
+    test "the count suffix renders (2) for two selected mechanics" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: ["Tira dados", "Coloca trabajadores"],
+            themes: [],
+            weight_bands: [],
+            editorial_tags: []
+          },
+          mechanics: ["Tira dados", "Coloca trabajadores"]
+        })
+
+      assert html =~ "(2)"
+    end
+
+    test "both checklists carry the max-h-40 list cap and a data-fc-input search box" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html =~ ~s(data-fc-list="mechanics")
+      assert html =~ ~s(data-fc-list="themes")
+      assert html =~ ~s(data-fc-input="mechanics")
+      assert html =~ ~s(data-fc-input="themes")
+      assert html =~ "max-h-40"
+    end
+
+    test "there is no age filter control and no Edad mínima label" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      refute html =~ "Edad mínima"
+      refute html =~ "Edad del jugador"
+      refute html =~ ~s(phx-value-scalar="min_age")
     end
   end
 end

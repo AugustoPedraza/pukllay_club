@@ -5,10 +5,24 @@ defmodule PukllayClubWeb.FilterModal do
   three-region shell (header / scrolling body / pinned footer). The body
   holds the free-text query input, then a primary always-visible cluster
   (Jugadores/Duración máxima chips + the Nivel weight-band pills), then a
-  secondary cluster (Destacados), then the (still-flat, pre-Task-3)
-  Mecánicas/Temáticas pill walls. The footer holds two actions: a
-  `Limpiar filtros` secondary button (disabled whenever no filter or
-  query is active) and a `Ver N juegos` primary CTA.
+  secondary cluster (Destacados), then one collapsed `<details>`
+  disclosure holding a searchable Mecánicas/Temáticas checklist pair (the
+  67-option pill walls the shipped component used to dump flat into the
+  always-visible body). The footer holds two actions: a `Limpiar filtros`
+  secondary button (disabled whenever no filter or query is active) and a
+  `Ver N juegos` primary CTA.
+
+  The disclosure auto-expands whenever a mechanic or theme is already
+  selected, so re-opening the modal never hides an active choice — see
+  `open={@mechanics != [] or @themes != []}` below. There is no age
+  filter anywhere in this component: `min_age` was dropped per an
+  explicit scope correction made during execution (difficulty/Nivel
+  already serves the purpose an age filter would have), so the
+  disclosure's expand condition and count suffix cover only mechanics
+  and themes. The `.FilterChecklist` colocated hook gives each checklist
+  client-side, accent-insensitive text filtering and keeps the
+  disclosure open across LiveView patches — see its own comment block
+  below for the full contract.
 
   Jugadores/Duración máxima render as chip clusters (`scalar_chip/1`)
   rather than the retired `Otros filtros` number-input form — each chip
@@ -210,31 +224,99 @@ defmodule PukllayClubWeb.FilterModal do
             </div>
           </section>
 
-          <section>
-            <h3 class="mb-2 text-sm font-semibold">Mecánicas</h3>
-            <div class="flex flex-wrap gap-2">
-              <.facet_pill
-                :for={label <- @facet_options.mechanics}
-                facet="mechanics"
-                value={label}
-                label={label}
-                selected={label in @mechanics}
-              />
-            </div>
-          </section>
+          <details
+            id={"#{@id}-more"}
+            phx-hook=".FilterChecklist"
+            class="border-t border-base-300 pt-3"
+            open={@mechanics != [] or @themes != []}
+          >
+            <script :type={Phoenix.LiveView.ColocatedHook} name=".FilterChecklist">
+              export default {
+                // Owns two jobs, no server communication:
+                //   1. Sticky disclosure state — without this, unchecking the
+                //      last mechanic/theme re-renders `open` as false and
+                //      snaps the disclosure shut under the user mid-browse.
+                //   2. Client-side, accent-insensitive checklist filtering —
+                //      operates ONLY on already-rendered, HEEx-escaped DOM
+                //      nodes (never assigns innerHTML or builds markup from a
+                //      facet label). Sets row visibility via a JS-assigned
+                //      `row.style.display` (not the banned author-written
+                //      `style=` markup attribute): Tailwind's `flex` on the
+                //      row and the `hidden` attribute/utility resolve
+                //      `display` at equal specificity, so only a JS-assigned
+                //      inline property reliably wins.
+                mounted() {
+                  this.sticky = this.el.open
+                  this.queries = {}
 
-          <section>
-            <h3 class="mb-2 text-sm font-semibold">Temáticas</h3>
-            <div class="flex flex-wrap gap-2">
-              <.facet_pill
-                :for={label <- @facet_options.themes}
-                facet="themes"
-                value={label}
-                label={label}
-                selected={label in @themes}
+                  this.onToggle = () => { this.sticky = this.el.open }
+                  this.el.addEventListener("toggle", this.onToggle)
+
+                  this.onInput = (event) => {
+                    const input = event.target.closest("[data-fc-input]")
+                    if (!input) return
+                    const key = input.dataset.fcInput
+                    this.queries[key] = input.value
+                    this.filterList(key, input.value)
+                  }
+                  this.el.addEventListener("input", this.onInput)
+                },
+                updated() {
+                  if (this.sticky) this.el.open = true
+                  for (const [key, query] of Object.entries(this.queries)) {
+                    const input = this.el.querySelector(`[data-fc-input="${key}"]`)
+                    if (input) input.value = query
+                    this.filterList(key, query)
+                  }
+                },
+                destroyed() {
+                  this.el.removeEventListener("toggle", this.onToggle)
+                  this.el.removeEventListener("input", this.onInput)
+                },
+                normalize(value) {
+                  return value
+                    .normalize("NFD")
+                    .replace(/[̀-ͯ]/g, "")
+                    .toLowerCase()
+                },
+                filterList(key, query) {
+                  const list = this.el.querySelector(`[data-fc-list="${key}"]`)
+                  const empty = this.el.querySelector(`[data-fc-empty="${key}"]`)
+                  if (!list) return
+                  const needle = this.normalize(query || "")
+                  let visibleCount = 0
+                  list.querySelectorAll("[data-fc-row]").forEach((row) => {
+                    const matches = this.normalize(row.dataset.fcRow).includes(needle)
+                    row.style.display = matches ? "" : "none"
+                    if (matches) visibleCount += 1
+                  })
+                  if (empty) empty.hidden = visibleCount !== 0
+                }
+              }
+            </script>
+
+            <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-semibold">
+              Más filtros: mecánica y temática
+              <span :if={length(@mechanics) + length(@themes) > 0} class="text-neutral font-normal">
+                ({length(@mechanics) + length(@themes)})
+              </span>
+            </summary>
+
+            <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <.checklist
+                key="mechanics"
+                label="Mecánicas"
+                options={@facet_options.mechanics}
+                selected={@mechanics}
+              />
+              <.checklist
+                key="themes"
+                label="Temáticas"
+                options={@facet_options.themes}
+                selected={@themes}
               />
             </div>
-          </section>
+          </details>
         </div>
 
         <%!-- button/1 uses assign_new(:class, ...), which only fills in a
@@ -297,6 +379,58 @@ defmodule PukllayClubWeb.FilterModal do
     </button>
     """
   end
+
+  attr :key, :string, required: true
+  attr :label, :string, required: true
+  attr :options, :list, required: true
+  attr :selected, :list, required: true
+
+  # One searchable checklist (`.FilterChecklist`'s `data-fc-*` contract) —
+  # used twice (mechanics, themes) inside the shared disclosure. `key` must
+  # match `facet_assign_key/1`'s clauses in `CatalogLive.Index`, since each
+  # row reuses `toggle-facet` verbatim (no new server plumbing). A raw
+  # `<input>` is used for the search box rather than `CoreComponents.input/1`,
+  # which wraps its field in a fieldset this layout has no room for.
+  defp checklist(assigns) do
+    ~H"""
+    <div>
+      <h4 class="mb-2 text-sm font-semibold">
+        {@label}
+        <span :if={@selected != []} class="text-neutral font-normal">({length(@selected)})</span>
+      </h4>
+      <div class="rounded-box border border-base-300">
+        <input
+          type="text"
+          data-fc-input={@key}
+          autocomplete="off"
+          class="input input-ghost w-full rounded-none border-0 border-b border-base-300"
+          placeholder={checklist_placeholder(@key)}
+        />
+        <div data-fc-list={@key} class="max-h-40 overflow-y-auto">
+          <label
+            :for={opt <- @options}
+            data-fc-row={opt}
+            class="flex min-h-11 cursor-pointer items-center gap-2 px-3 text-sm hover:bg-base-200"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm"
+              checked={opt in @selected}
+              phx-click="toggle-facet"
+              phx-value-facet={@key}
+              phx-value-value={opt}
+            />
+            {opt}
+          </label>
+        </div>
+        <p data-fc-empty={@key} hidden class="text-neutral p-3 text-sm">Sin coincidencias</p>
+      </div>
+    </div>
+    """
+  end
+
+  defp checklist_placeholder("mechanics"), do: "Buscar mecánica…"
+  defp checklist_placeholder("themes"), do: "Buscar temática…"
 
   # Single source of truth for the chip's visual contract (ui-design-system:
   # "a field that must look identical on two surfaces is declared in exactly

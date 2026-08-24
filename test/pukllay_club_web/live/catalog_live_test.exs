@@ -188,6 +188,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
     test "toggling a mechanic pill re-renders the grid; toggling it again restores the previous set",
          %{conn: conn} do
+      # Selector targets an `input[type=checkbox]`, not a `button` (Task 3
+      # moved mechanics into the searchable checklist inside the
+      # disclosure) — `toggle-facet` and its phx-value-* pair are unchanged,
+      # only the element carrying them changed.
       game_fixture(%{name: "Dice Game", mechanics: ["Dice Rolling"]})
       game_fixture(%{name: "Other Game", mechanics: ["Auction / Bidding"]})
 
@@ -195,7 +199,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html =
         view
-        |> element("button[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+        |> element("input[phx-value-facet=mechanics][phx-value-value='Tira dados']")
         |> render_click()
 
       assert html =~ "Dice Game"
@@ -203,7 +207,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html2 =
         view
-        |> element("button[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+        |> element("input[phx-value-facet=mechanics][phx-value-value='Tira dados']")
         |> render_click()
 
       assert html2 =~ "Dice Game"
@@ -219,12 +223,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/")
 
       view
-      |> element("button[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+      |> element("input[phx-value-facet=mechanics][phx-value-value='Tira dados']")
       |> render_click()
 
       html =
         view
-        |> element("button[phx-value-facet=mechanics][phx-value-value='Coloca trabajadores']")
+        |> element("input[phx-value-facet=mechanics][phx-value-value='Coloca trabajadores']")
         |> render_click()
 
       assert html =~ "Dice Game"
@@ -241,7 +245,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/")
 
       view
-      |> element("button[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+      |> element("input[phx-value-facet=mechanics][phx-value-value='Tira dados']")
       |> render_click()
 
       html =

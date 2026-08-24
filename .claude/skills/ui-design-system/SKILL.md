@@ -60,8 +60,9 @@ table in `default.css`, checked by `check-theme-drift.sh`.
 - Chip/pill rows: `gap-1`; icon+text pairs: `gap-2`; grids/carousels: `gap-4`.
 - Muted/secondary text: `text-neutral text-sm` — this app's convention. Not
   `text-base-content/70`, which survives only in unmaintained boilerplate; don't propagate it.
-- Touch targets: add `min-h-11` to any tappable pill/button under 44px (see
-  `filter_drawer.ex`'s `facet_pill`).
+- Touch targets: add `min-h-11` to any tappable pill/button under 44px (see `filter_modal.ex`'s
+  `badge min-h-11 px-3` — the class combo `chip_class/1` produces for both the facet pill and the
+  scalar chip families).
 - Page container: one `mx-auto max-w-{size} px-4 py-6 sm:px-6 lg:px-8` per page. Page width is
   each LiveView's own responsibility. `Layouts.app`'s inner wrapper deliberately declares no
   `max-w-*` so the page's own container is the one that wins — never add a width cap back to the
@@ -188,7 +189,7 @@ Class inventory by group:
 | `Layouts` | `app/1` | `flash`, inner_block. Optional: `fullbleed` (bool, default `false`), `sticky` (bool, default `false`), `:nav_links`/`:nav_search`/`:subnav` slots |
 | `Layouts` | `brand_logo/1` | —. Optional: `tagline` (string, default `"JUEGOS DE MESA MODERNOS"`) — the footer is the one call site that overrides it. `mark` (bool, default `true`) — when `false`, omits the isologo `<img>` pair entirely and demotes the wordmark to the muted colour tier via `pk-brand-quiet`; the footer is the one call site that passes `false` (D-A/D-B, 260823-snj) so the mark belongs to the header alone. Renders a theme-aware isologo pair toggled by the `dark:` variant, gated at compile time on both `priv/static/images/isologo-light.png` and `isologo-dark.png` existing (falls back to wordmark-only if either is missing) |
 | `GameCard` | `game_card/1` | `id`, `game` |
-| `FilterDrawer` | `filter_drawer/1` | `id`, `facet_options` |
+| `FilterModal` | `filter_modal/1` | `id`, `facet_options`. Optional: `mechanics`/`themes`/`weight_bands`/`tags` (lists, default `[]`), `players`/`max_playtime` (integers, default `nil`), `open` (bool, default `false`), `q` (string, default `""`), `total` (integer, default `0`), `filters_active` (bool, default `false`) |
 | `CarouselRow` | `carousel_row/1` | `id`, `title`, `games`. Optional: `variant` (`:standard`/`:hero`), `subtitle`, `see_all_row` |
 | `CarouselRow` | `skeleton_card/1` | `id` |
 | `GamePreview` | `preview_body/1` | `game` — the shared body cloned by both the portal and the sheet |
