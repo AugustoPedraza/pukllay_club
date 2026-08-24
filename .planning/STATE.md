@@ -32,7 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-22 — Phase 01.1 complete, transitioned to Phase 2
+Last activity: 2026-08-23 - Completed quick task 260823-snj: Polish desktop header: improve the search magnifying-glass icon relevance and stop the header brand mark duplicating/competing with the footer isologo
 structure (0-4)
 
 Progress: [██████████] 100%
@@ -191,6 +191,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 |---|-------------|------|--------|--------|-----------|
 | 260806-rq8 | Add Styler + mix_audit quality gates (superseded credence) to mix quality | 2026-08-06 | 9477e7f | | [260806-rq8-add-credence-semantic-ast-elixir-linter-](./quick/260806-rq8-add-credence-semantic-ast-elixir-linter-/) |
 | 260818-fro | Integrate Tidewave (dev-only) MCP plug into Phoenix endpoint | 2026-08-18 | d3761dd | | [260818-fro-integrate-tidewave-dev-only-into-phoenix](./quick/260818-fro-integrate-tidewave-dev-only-into-phoenix/) |
+| 260823-snj | Polish desktop header: search icon relevance + header-only isologo (footer de-duplicated) | 2026-08-23 | f0484a0 | | [260823-snj-polish-desktop-header-improve-the-search](./quick/260823-snj-polish-desktop-header-improve-the-search/) |
 | 260818-lg2 | Convert docs/ux-patterns.md into ux-patterns + ux-responsive skills, merge hierarchy/affordance into ui-design-system | 2026-08-18 | 3a4380e | | [260818-lg2-convert-docs-ux-patterns-md-into-three-s](./quick/260818-lg2-convert-docs-ux-patterns-md-into-three-s/) |
 | 260818-gdb | Fix the max-w-2xl container bug in Layouts.app | 2026-08-18 | b44d927 | | [260818-gdb-fix-the-max-w-2xl-container-bug-in-lib-p](./quick/260818-gdb-fix-the-max-w-2xl-container-bug-in-lib-p/) |
 | 260818-h9p | Build UX pattern reference doc at docs/ux-patterns.md from research | 2026-08-18 | 703a919 | | [260818-h9p-build-ux-pattern-reference-doc-at-docs-u](./quick/260818-h9p-build-ux-pattern-reference-doc-at-docs-u/) |
