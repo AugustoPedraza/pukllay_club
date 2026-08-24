@@ -4,11 +4,11 @@ milestone: v1.0
 current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
-stopped_at: Phase 01.1 complete, ready to plan Phase 2
-last_updated: "2026-08-24T16:17:44.000Z"
+stopped_at: "Completed quick task 260824-jkc: sketch 020 catalog index row (desktop mega-menu + mobile chip refinement)"
+last_updated: "2026-08-24T17:39:01.577Z"
 last_activity: 2026-08-24
 last_activity_desc: Completed quick task 260824-i8e - removed stale sort dropdown from catalog
-state_head: c3b14b3ed6cb0d093bee2d33330e7435db5d2caa
+state_head: 9b881683b0c3c98d72c05569fa69b9d38f17f0e2
 progress:
   total_phases: 5
   completed_phases: 2
@@ -81,6 +81,7 @@ Progress: [██████████] 100%
 | Phase 01 P12 | 90min | 3 tasks | 6 files |
 | Phase 01.1 P01 | 115min | 3 tasks | 9 files |
 | Phase quick-260821-v7q P01 | 35min | 3 tasks | 6 files |
+| Phase quick-260824-jkc P01 | 40min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,7 @@ Recent decisions affecting current work:
 - [Phase 01.1]: Task 2(a) BGG attribution: 'Powered by BGG' link to boardgamegeek.com with the real logo mark; (b) footer social set revised post-Task-1 to WhatsApp/Facebook/Instagram/Email (linktree_url removed); (c) catalog header nav links replaced with the About page's Inicio/Quiénes Somos wayfinding links
 - [Phase 01.1]: Quick task 260821-v7q: assign_new/3 replaces a compile-time isologo? constant so tests can force the wordmark-only fallback branch that becomes unreachable once both real mark PNGs exist on disk; production behaviour byte-identical since no call site passes the key
 - [Phase 01.1]: Quick task 260822-2v9: header surface base-200 (matches footer token), brand wrapper flex-1->flex-initial, .pk-nav-actions groups Sumate CTA + theme toggle with margin-left:auto fallback, CTA rises to the toggle's fixed 48px anchor (min-h-12, small-size modifier dropped), CoreComponents.input/1's fieldset wrapper neutralized via header-scoped selector (not the shared component), .pk-nav-links demoted to neutral with a new aria-current active-state rule
+- [Phase 2]: Quick task 260824-jkc: shipped sketch 020's winning design — desktop 'Explorar categorías' mega-menu (Layouts.category_menu/1, right-anchored panel, one shared derived shelf list feeding both surfaces) + refined bare-outline/soft-tint mobile chip row; scroll-spy widened to [data-chip-target] so both surfaces share one IntersectionObserver; .pk-shelf landing offset derived from --pk-header-h. Two Rule-1 auto-fixes found via live headless-Chrome CDP measurement (not caught by ExUnit): dual flex margin-left:auto competing between trigger/search (fixed via general-sibling override) and the trigger label's 48rem reveal overflowing the row at 768px (moved to a measured 50rem breakpoint).
 
 ### Pending Todos
 
@@ -228,6 +230,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-22T05:30:58.064Z
-Stopped at: Phase 01.1 complete, ready to plan Phase 2
+Last session: 2026-08-24T17:38:54.453Z
+Stopped at: Completed quick task 260824-jkc: sketch 020 catalog index row (desktop mega-menu + mobile chip refinement)
 Resume file: None
