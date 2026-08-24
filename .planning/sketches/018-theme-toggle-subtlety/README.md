@@ -54,6 +54,24 @@ rather than broken, in both themes. C (opacity envelope) was not selected — th
 risk of a control that reads as disabled at rest cuts against the documented reason the "Tema"
 label exists in the first place.
 
+### Implemented in quick-260824-7mt (2026-08-24)
+
+Shipped with two measured divergences from this sketch's assumptions, both recorded so a future
+reader doesn't mistake them for implementation errors:
+
+- **Fade shipped at 75%, not 55%.** The 55% mix measured 2.25:1 against the light-theme footer
+  surface, missing WCAG 2.1 SC 1.4.11's 3:1 non-text-contrast floor (bare icon buttons have no
+  border/background, so the glyph is the control's only visual identifier). 75% clears the floor
+  in both themes (3.22:1 light, 4.94:1 dark).
+- **Social glyphs measured 16px, not 14px.** The sketch believed it was matching the toggle down
+  to the social icons' own 14px for size parity; shipped markup has both already at 16px. So the
+  toggle's 14px produces subordination (smaller than its neighbor), not the parity this variant's
+  prose describes.
+- **Underline geometry left unchanged.** Only its color moved to the toned active mix. Variant B's
+  absolute inset values were measured on a 32px-wide demo button; the shipped button is 44px wide
+  (`min-w-11`, the touch target added by quick task 260821-dah), so those numbers don't transfer
+  and a re-derived value would have been an unverified guess.
+
 ## What to Look For
 - Click through system/light/dark in each variant — does the "on" icon ever outweigh a resting
   social icon?
