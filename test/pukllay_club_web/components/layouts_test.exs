@@ -758,6 +758,67 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       assert html =~ "pk-footer-meta"
     end
+
+    # Mirrors the desktop footer's already-shipped role="group" +
+    # aria-labelledby pattern (debug footer-theme-toggle-balance): the three
+    # theme buttons get one accessible group name instead of announcing as
+    # three unrelated buttons (quick task 260824-q8z).
+    test "the drawer's theme control carries role=\"group\" and aria-labelledby" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      utility = LazyHTML.query(doc, ".pk-drawer-utility")
+
+      assert utility |> LazyHTML.attribute("role") |> List.first() == "group"
+      assert utility |> LazyHTML.attribute("aria-labelledby") |> List.first() ==
+               "pk-drawer-theme-label"
+    end
+
+    # The label is CONVERTED (sr-only), not deleted — it still supplies the
+    # group's accessible name. Its id must be document-unique: the footer
+    # already renders "pk-footer-theme-label" in the same document, so
+    # reusing that id would point both controls' aria-labelledby at one
+    # ambiguous target.
+    test "the drawer's theme label is sr-only with a document-unique id" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      label = LazyHTML.query(doc, "#pk-drawer-theme-label")
+      assert Enum.count(label) == 1
+
+      classes = label |> LazyHTML.attribute("class") |> List.first()
+
+      assert classes =~ "sr-only",
+             "The drawer's \"Tema\" label is visible again. Sketch 021's Round 6 conclusion " <>
+               "(E1 — Icon-Only, Centered) and the footer's already-shipped debug session " <>
+               "both converge on sr-only for this control."
+
+      assert classes =~ "pk-drawer-utility-label"
+
+      # Must not collide with the footer's own id in the same document.
+      id_occurrences =
+        html |> String.split(~s(id="pk-drawer-theme-label")) |> length() |> Kernel.-(1)
+
+      assert id_occurrences == 1
+      refute html =~ ~s(id="pk-footer-theme-label" class="pk-drawer-utility-label")
+    end
+
+    # Guards the 44px touch floor against a future "tidy the duplicate
+    # footer/drawer theme CSS" refactor accidentally widening the footer's
+    # 28px scope to the drawer — the drawer is the sole mobile home for the
+    # theme control below 480px (`.pk-footer-right` is display:none there).
+    test "the drawer's three theme buttons stay 44px after centering" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      utility_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-utility")
+        |> LazyHTML.to_html()
+
+      assert utility_html |> String.split("min-h-11") |> length() |> Kernel.-(1) == 3
+      assert utility_html |> String.split("min-w-11") |> length() |> Kernel.-(1) == 3
+    end
   end
 
   # social_links/1 is a private (defp) component — same convention as
