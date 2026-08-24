@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 002 — Card Hierarchy</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* full-bleed, matching sketch 001 variant D — the rail's edge-fade only
+     reads correctly against the true viewport edge, and 001 D is the
+     established page structure this card lives inside. */
+  main { max-width: 100%; margin: 0 auto; padding: var(--space-6) 0 var(--space-12); }
+
+  .intro { max-width: 640px; margin: 0 var(--space-6) var(--space-6); }
+  .intro h1 { font-family: var(--font-display); font-size: var(--text-display); margin: 0 0 var(--space-2); }
+  .intro p { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0; }
+
+  .row-heading { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; padding: 0 var(--space-6); }
+  .row-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); margin: 2px 0 var(--space-4); padding: 0 var(--space-6); }
+  .touch-hint { padding: 0 var(--space-6); display: none; font-size: 11px; color: var(--color-text-muted); font-style: italic; margin: -4px 0 var(--space-4); }
+  @media (hover: none) { .touch-hint { display: block; } }
+
+  /* ---------- rail — matches sketch 001 variant D's winning treatment:
+     edge-fade cues, matching side padding between row text and rail
+     content, denser mobile card sizing. ---------- */
+  .rail-wrap { position: relative; margin-bottom: var(--space-8); padding: 0 var(--space-6); }
+  .rail-wrap::before, .rail-wrap::after {
+    content: ""; position: absolute; top: 0; bottom: 0; width: 48px; z-index: 4; pointer-events: none;
+  }
+  .rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  .rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  .rail {
+    display: flex; gap: var(--space-4); overflow-x: auto; scroll-behavior: smooth;
+    scrollbar-width: none; padding: var(--space-2) 0 var(--space-8);
+  }
+  .rail::-webkit-scrollbar { display: none; }
+
+  @media (max-width: 480px) {
+    .intro, .row-heading, .row-subtitle, .touch-hint, .rail-wrap { padding-left: 14px; padding-right: 14px; }
+    .rail-wrap::before, .rail-wrap::after { width: 16px; }
+    .rail { gap: 10px; }
+    .card { width: 132px; }
+  }
+
+  /* palette for placeholder posters */
+  .p1 { background: linear-gradient(135deg,#3D096D,#7E4CA5); }
+  .p2 { background: linear-gradient(135deg,#7E4CA5,#A97FD1); }
+  .p3 { background: linear-gradient(135deg,#22103A,#3D096D); }
+  .p4 { background: linear-gradient(135deg,#B23A5C,#7E4CA5); }
+  .p5 { background: linear-gradient(135deg,#3F8F6B,#3D096D); }
+  .p6 { background: linear-gradient(135deg,#B8862F,#7E4CA5); }
+
+  .icon { flex-shrink: 0; opacity: 0.85; }
+
+
+  /* difficulty — replaces min_age everywhere on this card. A raw age
+     recommendation doesn't help someone judge a game; a beginner-legible
+     difficulty cue derived from weight_band does. 3 dots (filled =
+     weightLevel) PLUS the same official band label used elsewhere in the
+     app (row headings, chips) — dots alone tested as ambiguous, so they're
+     paired with real vocabulary rather than a second invented one.
+     It's a third item INSIDE the facts row now, not a separate pill — a
+     standalone colored badge was visually louder than a metadata detail
+     should be. Same muted size/color/font as players and tiempo. */
+  .difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .difficulty .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
+  .difficulty .dot.filled { background: var(--color-text-muted); }
+
+  .expand-tag { display: inline-block; font-size: 11px; font-weight: 600; background: var(--color-accent-bg); color: var(--color-accent-text); padding: 3px 8px; border-radius: var(--radius-full); }
+
+  /* pilled metadata — its own row above the title, right-aligned. The
+     earlier same-row-as-title layout hit a real CSS quirk: a
+     -webkit-line-clamp element's intrinsic width for flex-shrink purposes
+     isn't reliably based on its clamped size in every browser, so the
+     "truncated" title didn't actually shrink and bled into the pills. Its
+     own row sidesteps that entirely — title is full-width, nothing to
+     share space with. One shared definition for portal + sheet. */
+  .pills-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: var(--space-2); }
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted);
+    font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full);
+  }
+
+  /* secondary CTA — "Ver detalles" from a preview/sheet is a lower-
+     commitment action than the interaction that opened it, so it
+     shouldn't out-compete the content for attention */
+  .expand-cta {
+    display: block; width: 100%; text-align: center; cursor: pointer;
+    background: transparent; color: var(--color-primary); border: 2px solid var(--color-primary);
+    border-radius: var(--radius-sm); padding: var(--space-2); font-size: var(--text-sm); font-weight: 600;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .expand-cta:hover { background: var(--color-accent-bg); }
+
+  /* ================= card shell (resting state) =================
+     Matches sketch 001 variant D's card exactly: poster art, then a plain
+     caption block below it (dark text on --color-surface, NOT a gradient
+     overlay on the image) — same class names, same values. 001's card had
+     no facts row (it was a page-structure sketch using a minimal
+     placeholder card); the players/tiempo strip is 002's addition, placed
+     inside the same caption block rather than inventing a different
+     resting-card visual language. */
+  .card {
+    flex: 0 0 auto; width: 190px; cursor: pointer;
+    border-radius: var(--radius-md); overflow: hidden;
+    background: var(--color-surface);
+    transition: transform var(--duration-base) var(--ease-out-soft);
+  }
+  .card:hover { transform: translateY(-3px); } /* sketch 006-D's validated, smaller hover-lift amplitude */
+  .poster-art {
+    aspect-ratio: 1 / 1.05; display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; color: rgba(255,255,255,0.85);
+  }
+  /* tight top, generous bottom — the title reads as attached to the poster
+     above it. Single-line only, always: reserving room for a possible 2nd
+     line was the actual source of the empty-space problem (a short title
+     like "Catán" left a visible gap below it) — removing that possibility
+     entirely means every caption is naturally the same tight height, no
+     row-alignment trick needed. */
+  .card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .card .cap h4 {
+    margin: 0; font-size: var(--text-sm); font-weight: 600; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Desktop: the expand panel is a single shared element, position:fixed,
+     appended once to <body> — never nested inside .rail, so the rail's
+     implied overflow-y:auto (a consequence of overflow-x:auto per the CSS
+     spec) can never clip it. JS positions it over the hovered card.
+
+     Netflix desktop's actual hover behavior: the card doesn't stay put and
+     grow a panel underneath it — it pops forward, larger than its resting
+     size, floating above the row with a strong shadow suggesting depth. */
+  .hover-portal {
+    position: fixed; z-index: 500; pointer-events: none; opacity: 0;
+    border-radius: var(--radius-lg); overflow: hidden;
+    background: var(--color-bg);
+    box-shadow: 0 28px 56px rgba(20,8,34,0.38), 0 10px 24px rgba(20,8,34,0.24);
+    transform: scale(0.9); transform-origin: center;
+    transition: opacity var(--duration-base) var(--ease-out-soft), transform var(--duration-base) var(--ease-out-soft);
+  }
+  .hover-portal.visible { opacity: 1; pointer-events: auto; transform: scale(1); }
+  /* matches the sheet's poster ratio (16/9) — the sheet was already
+     correct; the portal's near-square ratio was the actual inconsistency */
+  .hover-portal .portal-poster {
+    aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; color: rgba(255,255,255,0.85);
+  }
+  .hover-portal .portal-body { padding: var(--space-4); }
+
+  /* Mobile: tap opens a full-screen sheet instead of an inline expand —
+     matches Netflix's own mobile pattern, and has no clipping container to
+     fight since it's fixed to the viewport, not the rail. */
+  .sheet-backdrop {
+    position: fixed; inset: 0; background: rgba(20, 8, 34, 0.55); z-index: 600;
+    opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .sheet-backdrop.visible { opacity: 1; pointer-events: auto; }
+  .mobile-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 601;
+    background: var(--color-bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-lg); max-height: 82vh; overflow-y: auto;
+    transform: translateY(100%); transition: transform var(--duration-slow) var(--ease-out-soft);
+    padding-bottom: var(--space-6);
+  }
+  .mobile-sheet.open { transform: translateY(0); }
+  .sheet-close {
+    position: absolute; top: var(--space-3); right: var(--space-3); z-index: 2;
+    width: 32px; height: 32px; border-radius: var(--radius-full); border: none;
+    background: rgba(0,0,0,0.5); color: #fff; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* 16/9 — this was already correct; the portal was made to match it */
+  .sheet-poster {
+    aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center;
+    font-size: 4rem; color: rgba(255,255,255,0.85);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .sheet-body { padding: var(--space-4); }
+  /* one shared title style for the portal and the sheet — same font-size,
+     same clamp — so the title genuinely looks the same on both, not just
+     "similar". Earlier the portal used text-xl and the sheet used
+     text-display: two different sizes for the same field, same mistake as
+     the theme-text divergence fixed earlier. */
+  .card-title {
+    font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0 0 var(--space-2); line-height: 1.2;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  /* real theme/flavor text (game.description) — NOT the rules-complexity
+     sentence, which was standing in for theme text it isn't. Clamped so a
+     long blurb doesn't push the CTA below the fold — "…" signals there's
+     more without needing a "read more" affordance at this depth. One
+     shared definition for the portal AND the sheet — same font-size, same
+     clamp — so the same game shows the same description text either way,
+     not a shorter/differently-sized version depending on which surface. */
+  .theme-text {
+    font-size: var(--text-base); line-height: 1.5; color: var(--color-text); margin: 0 0 var(--space-3);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .sheet-body .expand-tag { margin-bottom: var(--space-3); display: inline-block; }
+  .sheet-body .expand-cta { padding: var(--space-3); font-size: var(--text-base); }
+  .sheet-drag-handle { width: 40px; height: 4px; background: var(--color-border); border-radius: var(--radius-full); margin: var(--space-2) auto 0; }
+</style>
+</head>
+<body>
+
+<main>
+  <div class="intro">
+    <h1>Sketch 002 — Card Hierarchy (Variant D)</h1>
+    <p>Poster-forward resting card (poster + title + a slim players/tiempo strip). Desktop hover
+    pops a preview forward, outside the scrolling rail so it can't be clipped. Touch opens a
+    full-screen sheet — Netflix's own mobile pattern, for the same underlying reason.</p>
+  </div>
+  <p class="touch-hint">👆 En pantallas táctiles: toca una carta para abrir la ficha completa.</p>
+  <h2 class="row-heading">Ingenio estratega</h2>
+  <p class="row-subtitle">Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante.</p>
+  <div class="rail-wrap"><div class="rail" id="rail-d"></div></div>
+</main>
+
+<div class="hover-portal" id="hover-portal"></div>
+<div class="sheet-backdrop" id="sheet-backdrop" onclick="closeSheet()"></div>
+<div class="mobile-sheet" id="mobile-sheet">
+  <div class="sheet-drag-handle"></div>
+  <button class="sheet-close" onclick="closeSheet()" aria-label="Cerrar">✕</button>
+  <div class="sheet-poster" id="sheet-poster"></div>
+  <div class="sheet-body" id="sheet-body"></div>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  <div>Sketch 002 — D only</div>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+</div>
+
+<script>
+// ---- icons (Heroicons-style outline, matches production's icon language) ----
+const ICON_USERS = `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+const ICON_CLOCK = `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+
+// ---- real Game schema shape, representative sample data (not live seed data) ----
+// deliberately covers: normal case, no-tag case, cooperative tag, long title
+// (overflow), min=max player/time (no range).
+const GAMES = [
+  { title:'Catán', pal:'p1', icon:'🎲', minP:3, maxP:4, minT:60, maxT:90,
+    weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Acabas de desembarcar en una isla sin explorar. Reparte los recursos, negocia con tus rivales y sé el primero en construir un imperio de carreteras y poblados por todo el territorio.',
+    tag:'#CreaConexiones' },
+  { title:'Wingspan', pal:'p5', icon:'🦙', minP:1, maxP:5, minT:40, maxT:70,
+    weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Eres una persona apasionada por la ornitología, construyendo la reserva natural de tus sueños. Atrae aves a tu santuario y encadena sus habilidades para crear la red de hábitats más próspera.',
+    tag:null },
+  { title:'Hanabi', pal:'p2', icon:'🎆', minP:2, maxP:5, minT:25, maxT:25,
+    weightLabel:'Descubre el hobby', weightLevel:1,
+    theme:'Un equipo de pirotécnicos distraídos mezcló su colección de fuegos artificiales. Sin ver tus propias cartas, ayuda a tus compañeros a reconstruir el espectáculo antes de que se acabe la pólvora.',
+    tag:'#EquipoGanador' },
+  { title:'Terraforming Mars: Ares Expedition', pal:'p3', icon:'🌵', minP:1, maxP:5, minT:120, maxT:180,
+    weightLabel:'Nivel experto', weightLevel:3,
+    theme:'Corporaciones rivales compiten por transformar Marte en un planeta habitable. Sube la temperatura, el oxígeno y los océanos mientras desarrollas la infraestructura que definirá la nueva frontera humana.',
+    tag:null },
+  { title:'7 Wonders Duel', pal:'p4', icon:'⚔️', minP:2, maxP:2, minT:30, maxT:30,
+    weightLabel:'Ingenio estratega', weightLevel:2,
+    theme:'Dos civilizaciones antiguas compiten por la supremacía a través de la ciencia, el comercio, el ejército y las grandes maravillas del mundo, cara a cara en un duelo directo de dos jugadores.',
+    tag:'#DuelosMemorables' },
+  { title:'El Resistencia', pal:'p6', icon:'🕵️', minP:5, maxP:10, minT:30, maxT:30,
+    weightLabel:'Descubre el hobby', weightLevel:1,
+    theme:'Una red de espías se ha infiltrado en la Resistencia. Sin saber en quién confiar, cada misión es una oportunidad para sabotear en secreto — o para demostrar tu lealtad frente a las sospechas del grupo.',
+    tag:'#EquipoGanador' },
+];
+
+function playersText(g) { return g.minP === g.maxP ? `${g.minP}` : `${g.minP}-${g.maxP}`; }
+function timeText(g) { return g.minT === g.maxT ? `${g.minT} min` : `${g.minT}-${g.maxT} min`; }
+
+function difficultyDotsHTML(level) {
+  return `<span class="difficulty">${[1, 2, 3].map(n =>
+    `<span class="dot${n <= level ? ' filled' : ''}"></span>`).join('')}</span>`;
+}
+
+// Pilled metadata, on its own row ABOVE the title, right-aligned — one
+// shared function for the portal (<p>) and the sheet (<h2>) so the two
+// surfaces can't drift apart on this again.
+function pillsRowHTML(g) {
+  return `<div class="pills-row">
+    <span class="pill">${ICON_USERS} ${playersText(g)}</span>
+    <span class="pill">${ICON_CLOCK} ${timeText(g)}</span>
+    <span class="pill">${difficultyDotsHTML(g.weightLevel)} ${g.weightLabel}</span>
+  </div>`;
+}
+
+function titleAndFactsHTML(g, titleTag, titleClass) {
+  return `${pillsRowHTML(g)}<${titleTag} class="${titleClass}">${g.title}</${titleTag}>`;
+}
+
+function renderRail() {
+  const el = document.getElementById('rail-d');
+  el.innerHTML = GAMES.map((g, i) => `
+    <div class="card" id="card-${i}"
+         onmouseenter="handleCardEnter(this, ${i})" onmouseleave="handleCardLeave()"
+         onclick="handleCardTap(${i})">
+      <div class="poster-art ${g.pal}">${g.icon}</div>
+      <div class="cap">
+        <h4>${g.title}</h4>
+      </div>
+    </div>
+  `).join('');
+}
+
+// No hover:none/hover:hover ambiguity for touch-capable laptops — this checks
+// for an actual fine pointer, which is what determines whether hover-intent
+// is reliable at all.
+const IS_TOUCH = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+let portalHideTimer = null;
+let portalShowTimer = null;
+const portalEl = document.getElementById('hover-portal');
+// Hover-intent delay: sweeping the pointer across a row of cards must NOT
+// fire a preview per card passed over — only a card the pointer actually
+// rests on for a beat. Netflix/Amazon-style "hover intent" pattern.
+const HOVER_INTENT_DELAY = 300;
+// A fixed width, not a multiple of the resting card's own (narrow, 190px)
+// width — the portal shares exact font sizes with the mobile sheet, so it
+// needs a similar "modal" proportion for that text to have the same
+// breathing room, not a size derived from how big the little card happens
+// to be.
+const PORTAL_WIDTH = 360;
+
+function handleCardEnter(cardEl, i) {
+  if (IS_TOUCH) return;
+  clearTimeout(portalHideTimer);
+  clearTimeout(portalShowTimer);
+  portalShowTimer = setTimeout(() => showPortal(cardEl, i), HOVER_INTENT_DELAY);
+}
+
+function showPortal(cardEl, i) {
+  const rect = cardEl.getBoundingClientRect();
+  // Pops forward and grows from the card's own center — Netflix's actual
+  // desktop hover behavior, not an inline panel attached below the card.
+  const w = PORTAL_WIDTH;
+  const grow = w - rect.width;
+  const left = Math.max(8, Math.min(rect.left - grow / 2, window.innerWidth - w - 8));
+  const top = Math.max(16, rect.top - grow / 2);
+  portalEl.style.width = w + 'px';
+  portalEl.style.left = left + 'px';
+  portalEl.style.top = top + 'px';
+  const g = GAMES[i];
+  portalEl.innerHTML = `
+    <div class="portal-poster ${g.pal}">${g.icon}</div>
+    <div class="portal-body">
+      ${titleAndFactsHTML(g, 'p', 'card-title')}
+      <p class="theme-text">${g.theme}</p>
+      <button class="expand-cta" onclick="event.stopPropagation(); alert('Navegaría a /juegos/${i}')">Ver detalles</button>
+    </div>
+  `;
+  portalEl.classList.add('visible');
+  portalEl.onmouseenter = () => clearTimeout(portalHideTimer);
+  portalEl.onmouseleave = handleCardLeave;
+}
+
+function handleCardLeave() {
+  if (IS_TOUCH) return;
+  clearTimeout(portalShowTimer);
+  portalHideTimer = setTimeout(() => portalEl.classList.remove('visible'), 120);
+}
+
+function handleCardTap(i) {
+  if (!IS_TOUCH) return; // desktop already has hover — tap-to-navigate would be the real prod behavior
+  openSheet(i);
+}
+
+function openSheet(i) {
+  const g = GAMES[i];
+  const posterEl = document.getElementById('sheet-poster');
+  posterEl.className = 'sheet-poster ' + g.pal;
+  posterEl.textContent = g.icon;
+  document.getElementById('sheet-body').innerHTML = `
+    ${titleAndFactsHTML(g, 'h2', 'card-title')}
+    <p class="theme-text">${g.theme}</p>
+    ${g.tag ? `<span class="expand-tag">${g.tag}</span>` : ''}
+    <button class="expand-cta" onclick="alert('Navegaría a /juegos/${i}')">Ver detalles</button>
+  `;
+  document.getElementById('sheet-backdrop').classList.add('visible');
+  document.getElementById('mobile-sheet').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('sheet-backdrop').classList.remove('visible');
+  document.getElementById('mobile-sheet').classList.remove('open');
+}
+
+renderRail();
+</script>
+
+</body>
+</html>

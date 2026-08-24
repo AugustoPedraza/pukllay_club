@@ -9,6 +9,79 @@
 /* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
 @source "../../_build/dev/phoenix-colocated/pukllay_club/*/";
 
+/* Self-hosted brand typefaces (Bebas Neue + Inter). Both are OFL-licensed, so self-hosting
+   from priv/static/fonts/ is permitted. Self-hosting avoids a runtime request to any
+   third-party Google font CDN for every visitor.
+
+   Inter replaces "Segoe UI Semibold" from the brand manual, which is Windows-only and not
+   licensable for web embedding. Inter is the closest neo-grotesque with real tabular
+   numerals, which the rankings and tournament tables need (use Tailwind's built-in
+   `tabular-nums` utility on those, not a custom class). For literal metric fidelity to the
+   manual, Selawik — Microsoft's OFL, metric-compatible Segoe UI substitute — is the fallback
+   if that's ever needed. */
+@font-face {
+  font-family: "Bebas Neue";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/bebas-neue-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Bebas Neue";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/bebas-neue-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/inter-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/inter-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/inter-600-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/inter-600-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bebas Neue", ui-sans-serif, sans-serif;
+}
+
 /* A Tailwind plugin that makes "hero-#{ICON}" classes available.
    The heroicons installation itself is managed by your mix.exs */
 @plugin "../vendor/heroicons";
@@ -19,33 +92,46 @@
 }
 
 /* daisyUI theme plugin.
-  We ship with two themes, a light one inspired on Phoenix colors and a dark one inspired
-  on Elixir colors. Build your own at: https://daisyui.com/theme-generator/ */
+  Brand palette locked in .planning/phases/01-catalog-v1/01-UI-SPEC.md (source: "PUKLLAY CLUB —
+  Manual de Identidad Visual", Gustavo Nina, 2025). Hex values are kept as-is, not converted to
+  any other color function, per the design contract, to preserve direct traceability to the
+  brand manual.
+
+  Base:          #3D096D  Lila Oscuro   -> oklch(30.4% 0.151 300.1)
+  Base:          #FFFFFF  Blanco
+  Complementary: #7E4CA5  Violeta       -> oklch(51.4% 0.143 308.1)
+
+  MEASURED CONSTRAINTS (WCAG 2.1, verified — do not "improve" these by eye):
+    white on #3D096D ........ 14.4:1  AAA  -> safe for primary buttons
+    #7E4CA5 on white ......... 6.06:1  AA   -> safe for links / secondary text
+    #3D096D vs #7E4CA5 ....... 2.38:1  FAIL -> NEVER adjacent as surfaces or
+                                               as two levels of one hierarchy
+    #3D096D on dark bg ....... FAIL         -> dark mode lifts primary to L=66% */
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "dark";
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: oklch(30.33% 0.016 252.42);
-  --color-base-200: oklch(25.26% 0.014 253.1);
-  --color-base-300: oklch(20.15% 0.012 254.09);
-  --color-base-content: oklch(97.807% 0.029 256.847);
-  --color-primary: oklch(58% 0.233 277.117);
-  --color-primary-content: oklch(96% 0.018 272.314);
-  --color-secondary: oklch(58% 0.233 277.117);
-  --color-secondary-content: oklch(96% 0.018 272.314);
-  --color-accent: oklch(60% 0.25 292.717);
-  --color-accent-content: oklch(96% 0.016 293.756);
-  --color-neutral: oklch(37% 0.044 257.287);
-  --color-neutral-content: oklch(98% 0.003 247.858);
-  --color-info: oklch(58% 0.158 241.966);
-  --color-info-content: oklch(97% 0.013 236.62);
-  --color-success: oklch(60% 0.118 184.704);
-  --color-success-content: oklch(98% 0.014 180.72);
-  --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-content: oklch(98% 0.022 95.277);
-  --color-error: oklch(58% 0.253 17.585);
-  --color-error-content: oklch(96% 0.015 12.422);
+  --color-base-100: #170A26;
+  --color-base-200: #22103A;
+  --color-base-300: #2F1750;
+  --color-base-content: #F3ECFA;
+  --color-primary: #A97FD1;
+  --color-primary-content: #170A26;
+  --color-secondary: #7E4CA5;
+  --color-secondary-content: #FFFFFF;
+  --color-accent: #3D2A56;
+  --color-accent-content: #E4D3F5;
+  --color-neutral: #B8A6CC;
+  --color-neutral-content: #170A26;
+  --color-info: #7C9AD1;
+  --color-info-content: #170A26;
+  --color-success: #5FBE95;
+  --color-success-content: #170A26;
+  --color-warning: #D9A24B;
+  --color-warning-content: #170A26;
+  --color-error: #E06B90;
+  --color-error-content: #170A26;
   --radius-selector: 0.25rem;
   --radius-field: 0.25rem;
   --radius-box: 0.5rem;
@@ -61,26 +147,26 @@
   default: true;
   prefersdark: false;
   color-scheme: "light";
-  --color-base-100: oklch(98% 0 0);
-  --color-base-200: oklch(96% 0.001 286.375);
-  --color-base-300: oklch(92% 0.004 286.32);
-  --color-base-content: oklch(21% 0.006 285.885);
-  --color-primary: oklch(70% 0.213 47.604);
-  --color-primary-content: oklch(98% 0.016 73.684);
-  --color-secondary: oklch(55% 0.027 264.364);
-  --color-secondary-content: oklch(98% 0.002 247.839);
-  --color-accent: oklch(0% 0 0);
-  --color-accent-content: oklch(100% 0 0);
-  --color-neutral: oklch(44% 0.017 285.786);
-  --color-neutral-content: oklch(98% 0 0);
-  --color-info: oklch(62% 0.214 259.815);
-  --color-info-content: oklch(97% 0.014 254.604);
-  --color-success: oklch(70% 0.14 182.503);
-  --color-success-content: oklch(98% 0.014 180.72);
-  --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-content: oklch(98% 0.022 95.277);
-  --color-error: oklch(58% 0.253 17.585);
-  --color-error-content: oklch(96% 0.015 12.422);
+  --color-base-100: #FFFFFF;
+  --color-base-200: #F3ECFA;
+  --color-base-300: #E3D3F0;
+  --color-base-content: #241238;
+  --color-primary: #3D096D;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #7E4CA5;
+  --color-secondary-content: #FFFFFF;
+  --color-accent: #EDE1F7;
+  --color-accent-content: #3D096D;
+  --color-neutral: #6B5B7B;
+  --color-neutral-content: #FFFFFF;
+  --color-info: #4C6FA5;
+  --color-info-content: #FFFFFF;
+  --color-success: #3F8F6B;
+  --color-success-content: #FFFFFF;
+  --color-warning: #B8862F;
+  --color-warning-content: #241238;
+  --color-error: #B23A5C;
+  --color-error-content: #FFFFFF;
   --radius-selector: 0.25rem;
   --radius-field: 0.25rem;
   --radius-box: 0.5rem;
@@ -101,5 +187,1985 @@
 
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* PK CATALOG SURFACES START
+   Sketch 002 (card-hierarchy, variant D): shared classes consumed verbatim
+   by the desktop hover-preview portal and the mobile full-screen sheet
+   (see PukllayClubWeb.GamePreview). Each field below is declared exactly
+   once — never a portal- or sheet-scoped override of the same property —
+   because two independently-declared rules for one field is exactly what
+   drifted apart during sketching (title 20px vs 28px, description 2 vs 3
+   lines, poster near-square vs widescreen). All colours resolve through
+   the daisyUI theme variables already declared above, so both the light
+   and dark themes work — except drop-shadow color, which uses the single
+   `--pk-shadow-color` token declared in :root (WR-04): a fixed dark shadow
+   reads correctly in both themes, whereas a theme-variable shadow color
+   would invert to a light shadow in dark mode. */
+
+/* Sketch 001 (shelf-structure, variant D): the single gutter token every
+   aligned surface (header, row headers, rail wraps, capped page sections)
+   shares. .pk-gutter below is the ONLY rule that reads this token — no
+   other selector in this stylesheet may set a horizontal padding on an
+   aligned surface, which is what guarantees the nav and row content can
+   never drift to two different spacing values again. */
+:root {
+  --pk-gutter: 2rem;
+
+  /* WR-04: the one literal color allowed in this block — every floating
+     surface's drop shadow (portal/sheet/drawer/lightbox/popover) needs a
+     fixed dark shadow color that reads correctly in both themes (a
+     theme-variable shadow color would invert to a light shadow in dark
+     mode, which looks wrong). Declared once here so it's a single
+     controlled exception to "never a literal color" instead of five
+     independently copy-pasted literals — consume via
+     `color-mix(in srgb, var(--pk-shadow-color) N%, transparent)`, matching
+     this file's existing color-mix-for-alpha idiom (see .pk-sheet-backdrop
+     below for a theme-token example of the same pattern). */
+  --pk-shadow-color: rgb(20 8 34);
+
+  /* Motion system (sketch 006, variant D — Subtle/Soft): the fastest of the
+     three tested options, paired with a no-overshoot soft ease-out. New
+     rules added from this phase forward must reference these tokens rather
+     than hardcode a timing value; the pre-existing 220ms/360ms literals in
+     .pk-nav/.pk-portal/.pk-sheet are UAT-verified and out of scope for this
+     phase — don't rewrite them as an uninstructed side effect. */
+  --duration-fast: 100ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pk-gutter {
+  padding-left: var(--pk-gutter);
+  padding-right: var(--pk-gutter);
+}
+
+.pk-shelf {
+  margin-bottom: 3rem;
+  scroll-margin-top: 6rem;
+}
+
+.pk-rail-wrap {
+  position: relative;
+}
+
+.pk-rail-wrap::before,
+.pk-rail-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.pk-rail-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-base-100), transparent);
+}
+
+.pk-rail-wrap::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--color-base-100), transparent);
+}
+
+.pk-rail {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding: 8px 0;
+  /* A horizontal overscroll cannot chain out to the page or trigger the
+     browser's back gesture; a tap opens the mobile sheet without waiting
+     out the double-tap-zoom delay. Both pan axes stay available — a
+     single-axis pan-x would intersect with the page's own panning and
+     stop a vertical swipe that starts on a card from scrolling the page,
+     trading a minor swipe ambiguity for a much worse regression. */
+  overscroll-behavior-x: contain;
+  touch-action: manipulation;
+}
+
+.pk-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.pk-poster-card {
+  flex: 0 0 auto;
+  width: 160px;
+}
+
+.pk-poster-card.is-hero {
+  width: 240px;
+}
+
+/* .pk-see-all reuses .pk-poster-card for width — no second width rule
+   here — so the tile automatically tracks the hero and narrow-viewport
+   width steps declared on that one class. Only the fields that differ
+   from a card are styled here. */
+.pk-see-all {
+  border: 1px dashed var(--color-base-300);
+  background: var(--color-base-200);
+  border-radius: var(--radius-box);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.pk-see-all:hover {
+  background: var(--color-accent);
+  border-color: var(--color-primary);
+  border-style: solid;
+}
+
+.pk-facts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pk-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  background: var(--color-base-200);
+  border: 1px solid var(--color-base-300);
+  color: var(--color-neutral);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 9999px;
+}
+
+.pk-difficulty {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pk-difficulty-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--color-base-300);
+}
+
+.pk-difficulty-dot.is-filled {
+  background: var(--color-neutral);
+}
+
+/* resting card (Task 2): poster art then a plain caption block below it —
+   tight top, generous bottom padding so the title reads as attached to
+   the poster rather than floating between two equal gaps. */
+.pk-card-poster {
+  aspect-ratio: 1 / 1.05;
+}
+
+.pk-card-caption {
+  padding: 8px 8px 12px;
+}
+
+.pk-card-caption h3 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pk-preview-poster {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+}
+
+.pk-preview-body {
+  padding: 24px;
+}
+
+.pk-preview-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pk-preview-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-base-content);
+  margin: 0 0 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pk-preview-cta {
+  margin-top: 8px;
+}
+
+/* position: fixed and appended once, outside every scrolling rail — the
+   only fix for the overflow-x/overflow-y clipping interaction documented
+   in card-interaction.md. */
+.pk-portal {
+  position: fixed;
+  z-index: 500;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.9);
+  transform-origin: center;
+  border-radius: var(--radius-box);
+  overflow: hidden;
+  background: var(--color-base-100);
+  box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pk-portal.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.pk-portal [data-sheet-only] {
+  display: none;
+}
+
+/* Mobile: tap opens a full-screen sheet, not an inline expand — the same
+   fixed-to-viewport reasoning as the portal, since a coarse pointer has
+   no hover to trigger the desktop surface. No sheet-scoped override of
+   .pk-preview-title/.pk-preview-text/.pk-preview-poster/.pk-facts-row
+   exists here — the sheet reuses Task 1's single declaration of each. */
+.pk-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-base-content) 55%, transparent);
+  z-index: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pk-sheet-backdrop.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pk-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 601;
+  background: var(--color-base-100);
+  border-radius: var(--radius-box) var(--radius-box) 0 0;
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--pk-shadow-color) 25%, transparent);
+  max-height: 82vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pk-sheet.is-open {
+  transform: translateY(0);
+}
+
+/* .pk-sheet-body deliberately carries no padding of its own — the cloned
+   content is the same preview_body markup the portal clones (poster
+   figure + .pk-preview-body), and .pk-preview-body already owns its own
+   24px inset. A second padding layer here would inset the text content
+   further than the poster above it (double padding on one field, single
+   on the other, the two-surfaces-diverge bug the shared-class rule
+   exists to prevent) — the portal has zero padding of its own for the
+   same reason, so the poster stays full-bleed in both surfaces. */
+
+.pk-sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--color-base-300);
+  border-radius: 9999px;
+  margin: 8px auto 0;
+}
+
+.pk-sheet-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+body.pk-sheet-open {
+  overflow: hidden;
+}
+
+/* Sketch 001 (shelf-structure, variant D): sticky nav, padding-aligned to
+   the row content below it via the same .pk-gutter rule 01-11 created —
+   never a second, independently-chosen padding value for the nav. Flat
+   translucent tint on scroll, deliberately no backdrop blur (the sketch
+   tested blur and rejected it in favour of the flat tint's clarity). */
+.pk-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.pk-nav {
+  background: var(--color-base-200);
+  border-bottom: 1px solid transparent;
+  transition: background 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pk-nav.is-scrolled {
+  background: color-mix(in srgb, var(--color-base-200) 94%, transparent);
+  border-bottom-color: var(--color-base-300);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-base-content) 8%, transparent);
+}
+
+/* Header brand lockup. The header row (.pk-nav-inner) is a single-line,
+   auto-height flex row with align-items:center, so ANY text inside it that is
+   free to reflow silently becomes the row's height — and the .CatalogNav
+   ResizeObserver then publishes that height as --pk-header-h, shifting every
+   sticky-offset element on the page. Two rules make that structurally
+   impossible rather than merely unlikely:
+
+   1. nowrap, header-scoped. The lockup is a two-line composition by design
+      (name over tagline — flex-col + leading-none in brand_logo/1); a third
+      line is always a bug, never a narrow-viewport adaptation. Scoped to
+      .pk-nav-inner because the footer shares brand_logo/1 and has no
+      fixed-height contract of its own.
+   2. Hidden by default, revealed only at 48rem (see the min-width block near
+      the end of this file). Max-content widths measured on the live page:
+      isologo 36 + gap 8 + wordmark 206 = 250px brand, nav links 166.3px, row
+      gap 24px, gutters 64px. Seating brand + links + the open 17.5rem pill
+      therefore needs 250+24+166.3+24+280+64 = 808.3px, and seating them with
+      only the collapsed 44px icon still needs 572.3px — so from 481px to
+      768px the row genuinely cannot hold the wordmark, search open or closed.
+      Hiding it there is the same treatment ≤480px already applied; it just
+      now applies at the width the arithmetic actually calls for.
+
+   The tagline is the widest line in the lockup (206px vs 111.3px for
+   "PUKLLAY CLUB"), so it is always the first thing to reflow — which is why
+   this failed as a growing header rather than as a clipped brand. */
+.pk-nav-inner .pk-brand-wordmark {
+  display: none;
+  white-space: nowrap;
+}
+
+/* D-B (260823-snj): the footer's brand_logo/1 call passes mark={false},
+   which drops the isologo (D-A — the mark is the header's alone) and adds
+   pk-brand-quiet to the anchor. Demotion is by colour, not size: the
+   catalogue's measured type inventory is already at its 3-tier cap with
+   Bebas Neue/24px/400 as the single heading combo, so shrinking the footer
+   wordmark would add a 4th combo. Colour is the lever ui-design-system
+   names for this instead. Scoped override, matching the header-scoped rule
+   above — the two surfaces are meant to differ here. */
+.pk-brand-quiet .pk-brand-name {
+  color: var(--color-neutral);
+}
+
+.pk-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  /* Pinned for the same reason as the brand above. Left shrinkable, the links
+     collapse from their natural 166.3px to their 116.3px min-content and
+     "Quiénes Somos" wraps, growing the row exactly the same way — so
+     shrink-proofing only the brand would relocate the bug, not remove it.
+     With both text items pinned, .pk-search-morph.is-open's shrink guard is
+     the row's single point of give, which is what it was added for. */
+  flex-shrink: 0;
+}
+
+/* 013-E: nothing carries a border or fill at rest or on hover — hierarchy
+   comes from position, not weight. The active link (below) is the one
+   place a rule appears. The extra 8px bottom padding is what creates
+   015-A's offset rule instead of a line hugging the text. */
+.pk-nav-links a {
+  color: var(--color-neutral);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  padding: 4px 0 8px;
+  border-bottom: 3px solid transparent;
+  /* Belt to .pk-nav-links' braces: even with the list pinned, a single
+     two-word link ("Quiénes Somos") reflowing would put a second line into
+     the row. */
+  white-space: nowrap;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.pk-nav-links a:hover,
+.pk-nav-links a:focus-visible {
+  color: var(--color-primary);
+}
+
+/* Both header call sites already emit aria-current="page" on the current page's
+   link (CatalogLive.Index, AboutLive) — this is the CSS that finally consumes it,
+   making the active link legible against the muted (neutral) inactive tier above. */
+.pk-nav-links a[aria-current="page"] {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* The search-morph (sketch 017-E, plan 01.1-08): a single element converting
+   from a 44px icon at rest into a 17.5rem pill on open — never a trigger and
+   a separate box swapping visibility. .pk-nav-search below is now the morph's
+   caller-owned slot region, not a free-standing element; its 220px min-width/
+   max-width/flex-grow/auto-margin geometry moved onto .pk-search-morph
+   itself. New rules reference the shared motion tokens (--duration-* and
+   --ease-*), not literal timing values. */
+.pk-search-morph {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  width: 44px;
+  transition: width var(--duration-slow) var(--ease-out-soft),
+    background-color var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard);
+  flex: 0 0 auto;
+  margin-left: auto;
+  overflow: hidden;
+  border: 1px solid var(--color-base-300);
+  border-radius: 9999px;
+  background: var(--color-base-100);
+}
+
+/* 17.5rem (sketch 017 used 260px): the sketch's trailing close control was a
+   24px glyph, but this app's locked touch floor is 44px (quick task
+   260821-dah / ux-responsive), so the close control is 44px wide and the
+   pill grows by the 20px difference to keep the same usable input width.
+   That 17.5rem is a target, not a floor: between 481px (where the <=480px
+   full-width overlay below stops applying) and roughly 790px the row is too
+   narrow to seat brand + nav links + a full pill on one line, so the pill is
+   allowed to shrink there rather than push the row past the viewport edge and
+   raise a horizontal scrollbar. The base rule's flex: 0 0 auto still pins the
+   collapsed icon at exactly 44px — only the open state gives way. */
+.pk-search-morph.is-open {
+  width: 17.5rem;
+  min-width: 0;
+  flex-shrink: 1;
+  background: var(--color-base-100);
+  border-color: var(--color-primary);
+  cursor: text;
+}
+
+.pk-search-morph-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-base-content);
+  cursor: pointer;
+  transition: width var(--duration-slow) var(--ease-out-soft),
+    padding var(--duration-slow) var(--ease-out-soft), opacity var(--duration-fast) var(--ease-standard);
+}
+
+.pk-search-morph:hover:not(.is-open) .pk-search-morph-toggle,
+.pk-search-morph:focus-within:not(.is-open) .pk-search-morph-toggle {
+  color: var(--color-primary);
+}
+
+/* The container answers the pointer and the keyboard the same way the glyph
+   does — hover and focus-within both drive the border to primary. :not(.is-
+   open) keeps the open state's own border-color rule authoritative. */
+.pk-search-morph:hover:not(.is-open),
+.pk-search-morph:focus-within:not(.is-open) {
+  border-color: var(--color-primary);
+}
+
+.pk-search-morph.is-open .pk-search-morph-toggle {
+  width: auto;
+  padding-left: 0.75rem;
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* .pk-nav-search is now the morph's inner slot region: collapsed to zero
+   width and transparent at rest, expanding only once the morph itself opens.
+   The opacity transition carries a --duration-fast delay so the text fades
+   in only after the width has started opening. As of 01.1-06 the region also
+   holds the filter-open affordance (.pk-filter-trigger) as a sibling of the
+   search form — flex row so both sit on the same line inside the pill. */
+.pk-search-morph .pk-nav-search {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  margin-left: 0;
+  width: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+  transition-delay: var(--duration-fast);
+}
+
+.pk-nav-search-form {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Filter-open affordance (SHELL-04, 01.1-06): lives inside the search-morph's
+   slot region, immediately before the morph's own close button — this is
+   what "reachable from the nav search box" means once the box collapses to
+   an icon. Bare, matching the morph's own icon language (no card/border). */
+.pk-filter-trigger {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-filter-trigger:hover {
+  color: var(--color-primary);
+}
+
+.pk-filter-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.pk-search-morph.is-open .pk-nav-search {
+  width: auto;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* The morph owns the border/background now, so the daisyUI input must not
+   draw a second one inside it. Supersedes the shipped .pk-nav-search .input
+   { height: 3rem } rule, which existed only to match the removed theme
+   toggle's 48px anchor — deleted rather than left behind as a second,
+   competing height declaration. */
+.pk-search-morph .pk-nav-search .input {
+  height: 42px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  padding-inline: 0.5rem;
+}
+
+.pk-search-morph-close {
+  flex: 0 0 auto;
+  width: 0;
+  height: 44px;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition: width var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard), padding var(--duration-fast) var(--ease-standard);
+}
+
+.pk-search-morph.is-open .pk-search-morph-close {
+  width: 2.75rem;
+  opacity: 1;
+}
+
+/* Dim the rest of the row while the morph is open (hook-owned modifier on
+   .pk-nav-inner, not the morph itself — the toggle behaviour lives entirely
+   in .CatalogNav, never a second hook). .pk-brand-wordmark is added to
+   brand_logo/1 in Task 3; scoping the selector now is harmless. */
+.pk-nav-inner.is-search-open .pk-nav-links,
+.pk-nav-inner.is-search-open .pk-nav-crumb,
+.pk-nav-inner.is-search-open .pk-brand-wordmark {
+  opacity: 0.35;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-search-morph,
+  .pk-search-morph-toggle,
+  .pk-search-morph-close,
+  .pk-search-morph .pk-nav-search,
+  .pk-drawer,
+  .pk-drawer-backdrop,
+  .pk-mobile-cta-bar,
+  .pk-title-echo,
+  body.pk-has-cta-bar {
+    transition-duration: 1ms;
+  }
+}
+
+/* CoreComponents.input/1 wraps its text-input branch in a `fieldset mb-2` div —
+   daisyUI's .fieldset contributes vertical padding-block, and the mb-2 utility
+   adds a bottom margin. Inside this vertically-centered header row that space is
+   dead weight below the box, pushing the search field above the row's optical
+   centre line. Neutralised here, scoped to the header only — CoreComponents.
+   input/1 itself must stay untouched since every form in the app shares it. */
+.pk-nav-search .fieldset {
+  margin-bottom: 0;
+  padding-block: 0;
+}
+
+/* Detalle's breadcrumb (page-shell.md's Detalle header state). Base
+   styling only — the narrow-viewport collapse to "‹ Ludoteca" lives in
+   the one trailing @media block below, per this stylesheet's
+   single-block-single-position rule for narrow-viewport overrides. */
+.pk-nav-crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--color-neutral);
+  flex: 1;
+  min-width: 0;
+}
+
+.pk-nav-crumb a {
+  color: var(--color-base-content);
+  text-decoration: none;
+}
+
+.pk-nav-crumb a:hover,
+.pk-nav-crumb a:focus-visible {
+  color: var(--color-primary);
+}
+
+/* Base-width truncation (01.1-08): Detalle now carries a search control it
+   didn't have when this crumb was built, so a long game title has real
+   competition for the row between 481px and roughly 700px. The ≤480px
+   block below already collapses the crumb to "‹ Ludoteca"; this is the
+   band that collapse doesn't cover. */
+.pk-crumb-current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Sketch 011 (full-shell-composition): the header's full-bleed background
+   bar (.pk-nav) and its capped+gutter-aligned content row are two separate
+   elements — pk-gutter lives on .pk-nav-inner, never on .pk-nav itself, so
+   the header's content shares the exact same max-width + gutter box every
+   other capped section on the page uses (page-shell.md's content-width
+   alignment rule). */
+.pk-nav-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Shared footer (SHELL-01, page-shell.md sketch 011) — one row, two
+   natural-width clusters, no divider. .pk-footer-row carries the same
+   max-w-7xl + pk-gutter recipe as .pk-nav-inner and every other capped
+   page section, on the same element as the padding (never a wrapper
+   around it) — the exact bug page-shell.md documents twice. */
+.pk-footer {
+  /* Footer spacing scale (debug footer-desktop-overloaded). Sketch 011
+     deliberately gives this footer no divider, so PROXIMITY is the only
+     grouping cue it has — which means the tiers below have to be visibly
+     distinct from each other or the grouping simply isn't communicated.
+     Before this, a single 1.5rem value served every tier at once: the gap
+     separating unrelated concerns inside .pk-footer-right was the same 24px
+     that bound the "Tema" label to the toggle it labels, measured identical at
+     every viewport, so roughly nine atoms read as one flat 620.8px run.
+
+     Each tier is declared ONCE here and consumed by BOTH the desktop row and
+     the <=480px column layout — that shared declaration is what makes the two
+     orientations one rhythm instead of two values that drift apart (they had
+     already drifted: see .pk-footer-row's gap below). The <=480px block
+     retunes two of these values for vertical rhythm but never reorders the
+     tiers.
+
+     Values are deliberately restrained rather than maximally separated: the
+     tiers only have to be DISTINGUISHABLE, and every rem added to the two
+     upper tiers both grows the footer's height in the wrapped band and pushes
+     the single-line threshold further right. 0.5/1/1.5/2rem keeps the
+     one-line layout starting at ~1065px (slightly earlier than the 1073px it
+     started at before this fix) while still giving the item tier a 3x contrast
+     against the group tier — enough to visibly bind "Tema" to its buttons. */
+  --pk-footer-gap-item: 0.5rem; /* inside ONE unit: icon set, label+control */
+  --pk-footer-gap-list: 1rem; /* between sibling text links */
+  --pk-footer-gap-group: 1.5rem; /* between distinct concerns in a cluster */
+  --pk-footer-gap-cluster: 2rem; /* between clusters, in EITHER orientation */
+
+  background: var(--color-base-200);
+  border-top: 1px solid var(--color-base-300);
+  margin-top: 3rem;
+}
+
+.pk-footer-row {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+
+  /* One value, not the previous `0.75rem 1.5rem`. That row-gap (12px) was
+     SMALLER than the clusters' own gap (24px), so on every wrapped line
+     same-group items sat twice as far apart as different-group items —
+     proximity pointing backwards. That affected far more than mobile: the row
+     wraps to two tiers at every width from 481px to 1072px (it only becomes a
+     single line at 1073px), so most laptop widths inherited the inversion too. */
+  gap: var(--pk-footer-gap-cluster);
+}
+
+/* Both clusters wrap, matching .pk-footer-row above and .pk-footer-links
+   below — every other flex container in this footer already does, and these
+   two were the only ones that didn't (debug footer-overflow-tablet-width).
+   Without it a flex item's default `min-width: auto` makes the cluster's
+   minimum the SUM of its children's min-contents: .pk-footer-right's four
+   children (social 136 + "Tema" 31.1 + toggle 136 + meta 227.8, plus 3x1.5rem
+   gaps) floored it at 602.8px, with the BGG logo spilling 18px further to a
+   652.8px ink edge that no viewport width could compress. Every viewport from
+   481px — where the ≤480px block below stops collapsing the cluster — to 652px
+   therefore scrolled horizontally. Wrapping makes that minimum max(children)
+   instead of sum(children), so the cluster reflows onto a second line rather
+   than pushing past the viewport.
+
+   Deliberately NOT solved by extending the ≤480px `display: none` override up
+   through the band: it hides the social + theme controls only because they
+   move into the drawer, and .pk-nav-hamburger/.pk-drawer are themselves
+   display:none above 480px — so that would delete both controls outright with
+   nowhere to reach them. */
+.pk-footer-left,
+.pk-footer-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--pk-footer-gap-group);
+}
+
+/* The theme control is ONE atom. Its "Tema" label is not decoration — it
+   exists so the control is discoverable in a place users don't yet look for it
+   (plan 01.1-08, sketch 017 Round 2) — so it has to read as attached to the
+   buttons rather than as a third sibling concern next to the social icons.
+   The mobile drawer already does exactly this with .pk-drawer-utility around
+   the same label + theme_toggle pair; the footer was the surface that had
+   drifted. Item tier, not group tier, is the whole point of this rule. */
+.pk-footer-theme {
+  display: flex;
+  align-items: center;
+  gap: var(--pk-footer-gap-item);
+}
+
+/* The legal band (debug footer-desktop-imbalance). The copyright + BGG
+   attribution used to be the third child of .pk-footer-right, which put a
+   passive compliance run in the same cluster as two interactive utilities.
+   Measured at 1280px, that made the two "peer" clusters anything but peers:
+   right 604.81px carrying 3 concerns against left 364.11px carrying 2 (1.66x)
+   with 247.08px of void between, and .pk-footer-meta alone accounted for 59.9%
+   of the right cluster's ink mass while occupying 40.7% of its width. The
+   footer's least important content was its densest.
+
+   Spacing could not fix that. footer-desktop-overloaded had already restored a
+   correct 4-tier proximity scale and the complaint survived it unchanged (all
+   tiers re-measured intact, so this is not a regression of that work) — because
+   proximity can only say "these belong together", and the problem was that they
+   don't. The repair has to be structural: KIND maps to ROW.
+
+   `width: 100%` is the entire break mechanism: it makes this item's
+   hypothetical main size the row's full content box, so a wrapping flex
+   container can never fit it beside anything and it always takes a line of its
+   own, at every width from 481px up. Deliberately NOT `flex-basis: 100%` —
+   flex-basis is the MAIN size, so it would silently become "height: 100%" the
+   moment the <=480px block turns this row into a column.
+
+   `display: flex` is not decoration either: it suppresses this block's own
+   strut. .pk-footer-meta sets font-size 0.75rem but this wrapper inherits the
+   footer's 1rem, and a block-level box's line box is at least as tall as its
+   OWN font's strut — so as a plain block it rendered an 18px line inside a
+   24px box and quietly added 6px to the footer at every viewport, including
+   mobile. As a flex container there is no strut and no anonymous line box; the
+   height is the child's 18px, measured.
+
+   The separation above it is .pk-footer-row's own row-gap (the cluster tier),
+   which is why no fifth token exists: the legal band is a peer top-level block,
+   not a super-group, so it takes the tier that already separates top-level
+   blocks. Sketch 011 forbids a divider here, so the gap does the work alone.
+
+   `justify-content: space-between` anchors one piece to each edge of the band,
+   and that is the whole remaining fix. Giving the legal line its own row left
+   241.75px of ink in a 1216px band at 1280px — 19.88% filled, the other 80.1%
+   one unbroken 974.25px void — so it read as an orphaned fragment under a
+   dense utility row, which is exactly the "two mismatched weights stacked"
+   failure sketch 011 rejected the original two-tier footer for. Measured, that
+   is a FILL problem, not an alignment one: left, centre and right ALL produce
+   19.88%, because alignment relocates the void instead of reducing it. Only
+   splitting the run into two edge-anchored pieces moves the number (-> 100%),
+   and it is also the only candidate that survives the wrapped 481-790px band,
+   where `space-between` degenerates to left-flush and the right/centre
+   variants became the single odd element in the footer.
+
+   `align-items: baseline` is a CONSTRAINT, not a default. The copyright and
+   the attribution are now ~984px apart at 1280px, and the defect that opened
+   this session was those two sitting on different baselines. Baseline
+   alignment makes them share one by construction at any separation; the
+   alternative (the initial `stretch`) only aligned them because the two boxes
+   happened to be the same height, which is a coincidence a future font-size
+   or logo change would quietly break. Pinned by its own test.
+
+   `gap` is load-bearing too. `space-between` distributes FREE space, and there
+   is none once the <=480px block shrink-wraps this band to `width: auto` — the
+   two pieces would butt directly together on this project's primary viewport.
+   The gap is the floor in that state and a no-op in the wide one. It takes the
+   group tier because these are two distinct concerns, not one unit.
+
+   `flex-wrap: wrap` is the narrow-viewport escape: each .pk-footer-meta is
+   `white-space: nowrap` individually, so below the width where both fit the
+   band breaks BETWEEN them rather than overflowing. The single merged run
+   could not break at all. */
+.pk-footer-legal {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--pk-footer-gap-group);
+  flex-wrap: wrap;
+}
+
+.pk-footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: var(--pk-footer-gap-list);
+  flex-wrap: wrap;
+}
+
+.pk-footer-social {
+  display: flex;
+  align-items: center;
+  gap: var(--pk-footer-gap-item);
+}
+
+.pk-footer-social a {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-base-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-neutral);
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.pk-footer-social a:hover {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  border-color: var(--color-primary);
+}
+
+/* Theme toggle, rebuilt bare (sketch 014 Round 3) and relocated to the
+   footer (sketch 017 Round 2) between the social icons and the meta line.
+   No card/border/background/sliding-pill — three bare monochrome icon
+   buttons, active state expressed as a small underline driven by the same
+   <html> data-theme/data-theme-source attributes assets/js/theme.js
+   already sets, reproducing the shipped arbitrary-variant classes'
+   precedence: data-theme-source="system" wins outright; otherwise
+   data-theme="light"|"dark" marks the respective button.
+
+   Subtlety pass — sketch 018's winner B, picked 2026-08-24, quick task
+   260824-7mt. Three levers: fade the rest-state glyph, shrink it, and tone
+   the active state down, so the toggle reads as clearly subordinate to the
+   four social icons beside it in the footer.
+
+   Fade is 75%, not the sketch's 55% — 55% measured 2.25:1 against the
+   light-theme footer surface (--color-base-200), missing WCAG 2.1 SC
+   1.4.11's 3:1 non-text-contrast floor, which applies here because these
+   are bare icon buttons with no border/background: the glyph is the
+   control's only visual identifier. 75% clears the floor in both themes
+   (3.22:1 light, 4.94:1 dark).
+
+   The size lever targets `.pk-theme-toggle button > span`, not `button
+   svg`, because CoreComponents.icon/1 renders hero icons as a
+   mask-painted <span> (assets/vendor/heroicons.js), not an <svg> — there
+   is no svg anywhere in this control. The child-span selector's higher
+   specificity (0,1,2) is what beats the two competing single-class width
+   declarations (.size-4 from the template, .hero-*-micro from the
+   heroicons plugin), both (0,1,0), rather than source order.
+
+   14px produces subordination, not the size parity the sketch's prose
+   assumed: the social glyphs measured 16px in shipped markup (literal
+   width/height attributes), not the 14px the sketch believed, and the
+   toggle's own glyphs were already 16px too (.size-4). So 14px makes the
+   toggle glyph smaller than its neighbor, which serves "read as clearly
+   subordinate" better than the parity the sketch described.
+
+   The active underline's geometry (left/right/bottom/height/border-radius)
+   is deliberately unchanged — only its color moved. Variant B's absolute
+   inset values were measured on a 32px-wide demo button; this button is
+   44px wide (min-w-11, the touch target added by quick task 260821-dah),
+   so those numbers don't transfer and a re-derived value would be an
+   unverified guess. */
+.pk-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pk-theme-toggle button {
+  position: relative;
+  color: color-mix(in srgb, var(--color-neutral) 75%, var(--color-base-200));
+}
+
+.pk-theme-toggle button > span {
+  width: 14px;
+  height: 14px;
+}
+
+.pk-theme-toggle button:hover {
+  color: var(--color-base-content);
+}
+
+[data-theme-source="system"] .pk-theme-toggle button[data-phx-theme="system"],
+[data-theme-source="user"][data-theme="light"] .pk-theme-toggle button[data-phx-theme="light"],
+[data-theme-source="user"][data-theme="dark"] .pk-theme-toggle button[data-phx-theme="dark"] {
+  color: color-mix(in srgb, var(--color-primary) 65%, var(--color-neutral));
+}
+
+[data-theme-source="system"] .pk-theme-toggle button[data-phx-theme="system"]::after,
+[data-theme-source="user"][data-theme="light"] .pk-theme-toggle button[data-phx-theme="light"]::after,
+[data-theme-source="user"][data-theme="dark"] .pk-theme-toggle button[data-phx-theme="dark"]::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-primary) 65%, var(--color-neutral));
+}
+
+.pk-footer-toggle-tag {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+  white-space: nowrap;
+}
+
+.pk-footer-meta {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+  white-space: nowrap;
+}
+
+/* BGG attribution — required by compliance (D-04), but page-shell.md is
+   equally explicit that it must be "de-emphasized ... not a bordered,
+   backgrounded 'badge' competing visually with the rest of the footer".
+   That second half was silently lost when D-04 added the logo, because the
+   supplied asset is a 400x400 JPEG with a baked-in dark background — an
+   opaque tile IS the badge, no CSS box required (debug
+   footer-desktop-imbalance).
+
+   Measured on the light theme at 1280px, the 18px version was 100% ink
+   (every pixel departing from the footer background) at meanChroma 0.32,
+   against 6.3-28.4% ink and 0.06-0.10 chroma for every other footer region.
+   Per pixel it was 12.1x the social row; in absolute ink mass those 324px²
+   equalled the ENTIRE four-icon social row spread over 11.75x the area.
+   The loudest object in the footer was its least important content, which
+   is a hierarchy that runs backwards — the measurable form of the reported
+   "full of data and lack of clear hierarchy".
+
+   Size is the only lever taken here. The mark is NOT recoloured,
+   desaturated, opacity-faded or background-stripped: BGG's terms make the
+   logo a trademark and forbid enclosing it in framing chrome, so altering
+   its appearance is not a call to make unilaterally. Scaling is ordinary
+   permitted use, and it is also the lever that works in BOTH themes — on
+   dark the tile's baked-in background camouflages against the footer
+   (ink mass/px drops to 0.054, below the nav links' 0.089) and only its
+   chroma still stands out, so a contrast-based tweak would have helped one
+   theme and hurt the other while scaling shrinks light-theme ink mass and
+   the high-chroma pixel count at once. */
+.pk-bgg-note {
+  color: inherit;
+}
+
+/* The underline lives on the words, not on the anchor. The anchor is plain
+   inline now (see bgg_attribution/1), so an anchor-level underline would be
+   drawn straight across the logo tile. */
+.pk-bgg-note span {
+  text-decoration: underline;
+  text-decoration-color: var(--color-base-300);
+  text-underline-offset: 2px;
+}
+
+/* Tailwind's preflight sets `img { display: block }`, so this must be
+   restored to an inline-level box or the image would split the anchor's
+   inline flow. `vertical-align: middle` centres the mark on the parent's
+   x-height and self-adjusts to the type — no magic pixel offset.
+
+   14px, not the previous 18px. The 18px came from sizing the mark to the
+   line-height (01.1-01-SUMMARY.md's "~18px, roughly text line-height"),
+   which is the wrong reference metric for an inline mark: matching the line
+   box means filling it edge to edge, leaving no leading, which is what
+   inflated .pk-footer-meta from 18px to 23px and made the tile stand at
+   roughly twice the cap height of the 12px type it annotates. The metric
+   that belongs here is the TYPE, not the line box. */
+.pk-bgg-note img {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
+.pk-bgg-note:hover {
+  color: var(--color-primary);
+}
+
+.pk-bgg-note:hover span {
+  text-decoration-color: currentColor;
+}
+
+/* Mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5): the
+   hamburger trigger and the slide-in panel it opens, ported through the
+   CSS Token Translation Layer. Both sides of the ≤480px display swap live
+   in the single trailing @media block below, per Pitfall 5 — this block
+   only carries the base (hidden-at-rest) geometry and the .is-open states,
+   never a display toggle of its own. */
+.pk-nav-hamburger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-base-content);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.pk-drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-base-100) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 60;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.pk-drawer-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* .pk-header-sticky's z-index: 50 creates a stacking context; the drawer is
+   a position: fixed child of it, so its z-index only needs to beat .pk-nav
+   within that context, not the page at large. position: sticky does not
+   create a containing block for fixed descendants, so viewport anchoring
+   here is safe without any transform/filter/contain/will-change hack. */
+.pk-drawer {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 82%;
+  max-width: 20rem;
+  z-index: 61;
+  background: var(--color-base-100);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
+  padding: 1rem;
+  overflow-y: auto;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--duration-slow) var(--ease-out-soft);
+}
+
+.pk-drawer.is-open {
+  transform: translateX(0);
+}
+
+.pk-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.pk-drawer-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+}
+
+/* The panel is a full-height flex column (top: 0; bottom: 0 above, plus
+   flex-direction: column here) so margin-top: auto pins this block to the
+   panel's true bottom edge regardless of link count — sketch 017 Round 5's
+   exact fix for "they sat high up, not at the bottom". */
+.pk-drawer-bottom {
+  margin-top: auto;
+}
+
+/* Drawer link rows (sketch 017 Round 4): real list affordance — full-width
+   ≥44px tap targets (the negative inline margin bleeds the row to the
+   panel's own 1rem padding), a trailing chevron, and a hover/tap tint. */
+.pk-drawer-links {
+  display: flex;
+  flex-direction: column;
+  margin-inline: -1rem;
+}
+
+.pk-drawer-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  color: var(--color-base-content);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-left: 3px solid transparent;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-drawer-links a:hover,
+.pk-drawer-links a:active,
+.pk-drawer-links a:focus-visible {
+  background: var(--color-base-200);
+}
+
+.pk-drawer-chevron {
+  color: var(--color-neutral);
+  flex-shrink: 0;
+}
+
+/* The drawer's OWN active-state language for a vertical list — a left
+   accent bar, a tint and bold weight — not a copy of the header's
+   horizontal underline pasted somewhere it doesn't fit. This is the only
+   place an active-page signal renders on mobile: .pk-nav-links is
+   display: none below 480px, so 015-A's underline never appears there. */
+.pk-drawer-links a[aria-current="page"] {
+  color: var(--color-primary);
+  font-weight: 800;
+  border-left-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.pk-drawer-links a[aria-current="page"] .pk-drawer-chevron {
+  color: var(--color-primary);
+}
+
+.pk-drawer-divider {
+  height: 1px;
+  background: var(--color-base-300);
+  margin-block: 0.75rem;
+}
+
+.pk-drawer-utility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 0.5rem;
+}
+
+.pk-drawer-utility-label {
+  font-size: 0.875rem;
+  color: var(--color-neutral);
+  font-weight: 600;
+}
+
+.pk-drawer-social {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+}
+
+.pk-drawer-social a {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-base-200);
+  color: var(--color-neutral);
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.pk-drawer-social a:hover {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+body.pk-drawer-open {
+  overflow: hidden;
+}
+
+/* About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
+   Page-owned (rendered by AboutLive only, never Layouts) and deliberately
+   has no hook and no scroll behavior at all — it is simply pinned, unlike
+   plan 01.1-04's .pk-mobile-cta-bar (the per-game reservation CTA, driven
+   by .DetailChrome's scroll-retract/footer-park lifecycle). No class, rule
+   or hook is shared between the two. Both sides of the display swap live
+   in the single trailing narrow-viewport media block below, per Pitfall 5. */
+.pk-about-cta-bar {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 0.75rem var(--pk-gutter);
+  background: var(--color-base-100);
+  border-top: 1px solid var(--color-base-300);
+}
+
+.pk-about-cta-spacer {
+  display: none;
+  height: 4.5rem;
+}
+
+/* About page content bands (01.1-02, D-07 spine: hero -> photo rail ->
+   two-column -> dark FAQ -> Juntadas/Contacto -> closing CTA). Every band
+   is a full-bleed wrapper (.pk-band, vertical padding only) around a
+   single capped inner (.pk-band-inner, max-width + the shared .pk-gutter
+   class) — .pk-band never sets its own horizontal padding, which is
+   exactly the double-gutter bug about-page-content.md documents. */
+.pk-band {
+  padding: 4.5rem 0;
+}
+
+.pk-band-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.pk-about-h1 {
+  font-size: clamp(2.75rem, 8vw, 5.5rem);
+  line-height: 1;
+}
+
+.pk-about-eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-neutral);
+}
+
+.pk-about-eyebrow a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* The dark FAQ band's token mapping (Claude's discretion, D-08): the
+   brand's own measured-contrast pair (app.css's WCAG comment above), not
+   the design source's own one-off literal colour values. */
+.pk-band-dark {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+.pk-faq-item {
+  border-top: 1px solid color-mix(in srgb, var(--color-primary-content) 25%, transparent);
+  padding-top: 1.125rem;
+}
+
+/* Four-slide photo rail (D-12: labelled placeholders, no real photography
+   yet). Scroll-snapping, scrollbar hidden — same treatment as .pk-rail. */
+.pk-about-rail {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.pk-about-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.pk-about-slide {
+  flex: 0 0 min(84vw, 720px);
+  scroll-snap-align: center;
+  margin: 0;
+}
+
+.pk-about-slide-ph {
+  aspect-ratio: 3 / 2;
+  border-radius: var(--radius-box);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-base-200) 0 10px,
+    var(--color-base-100) 10px 20px
+  );
+}
+
+.pk-about-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1rem;
+}
+
+/* The button itself stays the full 44px touch target (ux-responsive); the
+   visible pill is a smaller pseudo-element inside it — never shrink the
+   button to match the pill. */
+.pk-about-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pk-about-dot::before {
+  content: "";
+  width: 26px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-base-300);
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.pk-about-dot.is-active::before {
+  background: var(--color-primary);
+}
+
+/* Mobile category chip row: a second navigation dimension replacing the
+   nav links below the narrow-viewport breakpoint. No horizontal padding
+   of its own — spacer flex items reserve the end margins instead, since
+   iOS Safari drops the TRAILING padding of a horizontally-scrolling
+   element once scrolled to its end. Hidden by default; the narrow-
+   viewport media block (below) is what reveals it. */
+.pk-chip-nav {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pk-chip-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.pk-chip-spacer {
+  flex: 0 0 var(--pk-gutter);
+}
+
+.pk-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-base-300);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  font-weight: 600;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  text-decoration: none;
+  border-radius: 9999px;
+}
+
+.pk-chip.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  border-color: var(--color-primary);
+}
+
+/* Detail page (01.1-03/01.1-04): buy-box masthead beside a reading column
+   at the detail layout breakpoint, ficha técnica grid, description clamp.
+   Facts pills reuse GamePreview.facts_row/1's .pk-facts-row/.pk-fact
+   verbatim (already shipped for the browse-card preview) rather than a
+   second pill component declaring the same visual family twice.
+
+   Mobile-first (01.1-04): base is a single-column masthead with a static
+   poster column; the detail layout breakpoint declared below (48rem/
+   768px — a new breakpoint for this repo; a poster column beside a
+   reading column needs roughly that width to stay legible) flips the
+   masthead to its two-column sticky grid AND hides the mobile CTA bar in
+   one place, so the two concerns can never drift apart. */
+.pk-detail-masthead {
+  max-width: 68.75rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+
+.pk-poster-col {
+  position: static;
+}
+
+.pk-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pk-section-heading {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.pk-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.pk-clamp.is-expanded {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.pk-spec-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.pk-spec-row--wide {
+  grid-column: 1 / -1;
+}
+
+.pk-spec-row dt {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-neutral);
+  font-size: 0.75rem;
+}
+
+/* Mobile CTA bar (01.1-04, sketch 005/011): visible at rest below the
+   detail layout breakpoint, driven entirely by .DetailChrome's plain
+   scroll listener (never IntersectionObserver — it throttles/suspends in
+   a backgrounded tab). .is-hidden is the "paused" state (a small nudge,
+   mid active-scroll); .is-parked is the "gone" state (once the real
+   footer enters the viewport) — two distinct classes with two distinct
+   treatments and independent lifecycles, never merged into one, and the
+   debounce timer that drives .is-hidden must never fight .is-parked.
+   Background is one step darker/tinted from its own outlined share
+   button so the two never fuse into one visual mass (verify with computed
+   backgroundColor, not by eye). z-index 45 sits below the mobile nav
+   drawer (60/61, plan 01.1-09) on purpose — opening the drawer must cover
+   this bar, not be underlapped by it. Distinct from .pk-about-cta-bar
+   (z-index 40, plan 01.1-09's About-page club-wide join CTA) — different
+   page, different CTA, different lifecycle; no shared class, rule or
+   hook between the two. */
+.pk-mobile-cta-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem var(--pk-gutter);
+  background: var(--color-base-200);
+  transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-mobile-cta-bar.is-hidden {
+  transform: translateY(12%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pk-mobile-cta-bar.is-parked {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Reserved body padding so the fixed bar never overlaps the page's last
+   real content; collapses to 0 in the same transition as .is-parked
+   above, so the footer never renders above an empty gap. Scoped to a body
+   class (added/removed by .DetailChrome on mount/destroy), never a bare
+   body selector, so no other page in the app carries this padding.
+   body.pk-cta-parked is declared AFTER body.pk-has-cta-bar deliberately —
+   the two rules have equal specificity and resolve by source order. */
+body.pk-has-cta-bar {
+  padding-bottom: 9.25rem;
+  transition: padding-bottom var(--duration-base) var(--ease-out-soft);
+}
+
+body.pk-cta-parked {
+  padding-bottom: 0;
+}
+
+/* Sticky title-echo bar (01.1-04): a condensed, title-only copy of the
+   masthead's <h1> (a full facts+title+tags echo was tried and rejected as
+   overloaded), fading in under the site header once the real title has
+   scrolled fully out of view. Sticky, not fixed — it has a natural
+   container boundary. Also parks on the same footerReached flag as the
+   CTA bar, even though it doesn't spatially overlap the footer, so both
+   retract together as a coherent pair. */
+.pk-title-echo {
+  position: sticky;
+  top: var(--pk-header-h, 4.5rem);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem var(--pk-gutter);
+  background: var(--color-base-100);
+  border-bottom: 1px solid var(--color-base-300);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity var(--duration-base) var(--ease-out-soft), transform var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-title-echo.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.pk-title-echo.is-parked {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pk-scroll-top {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  cursor: pointer;
+}
+
+/* Continuous, gentle bounce for as long as the bar is visible — reads as
+   "there's more above, tap me" rather than a one-shot on-appear
+   animation. Wrapped in the no-preference query so a visitor who has
+   asked for reduced motion never sees it play. */
+@media (prefers-reduced-motion: no-preference) {
+  .pk-scroll-top {
+    animation: pk-scroll-top-bounce 1.6s var(--ease-out-soft) infinite;
+  }
+}
+
+@keyframes pk-scroll-top-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Lightbox (01.1-04): full-viewport image view synced to the same
+   @selected_image assign the inline gallery renders — there is no
+   client-side carouselIndex, so "gallery and lightbox share one
+   selection" is structural, not something two listeners keep in sync
+   (T-01.1-16 — its previous/next controls reuse the existing
+   select-image whitelist unchanged). Reuses .pk-sheet-backdrop's exact
+   background value and .pk-portal's exact shadow values rather than
+   declaring a second set of matching numbers. */
+.pk-lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-base-content) 55%, transparent);
+}
+
+.pk-lightbox.is-open {
+  display: flex;
+}
+
+.pk-lightbox-img {
+  max-width: min(90vw, 60rem);
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: var(--radius-box);
+  box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
+}
+
+.pk-lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2;
+}
+
+/* Share popover (01.1-04): the native-Web-Share-API fallback surface,
+   anchored to its own trigger button. Reuses .pk-portal's exact shadow
+   values (same floating-surface family) rather than a third set of
+   matching numbers. */
+.pk-share-popover {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  z-index: 20;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 12rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
+}
+
+.pk-share-popover.is-open {
+  display: flex;
+}
+
+/* The single detail layout breakpoint (48rem/768px — new for this repo,
+   see 01.1-04's SUMMARY for the reason): flips the masthead to its
+   two-column sticky grid AND hides the mobile CTA bar together, in one
+   place, so the two concerns can never drift apart. Declaring the
+   override here (after the base rules above) is deliberate — an
+   equal-specificity base rule placed AFTER its media override would
+   silently win at every width regardless of which query matches. */
+@media (min-width: 48rem) {
+  .pk-detail-masthead {
+    grid-template-columns: 20rem 1fr;
+  }
+
+  .pk-poster-col {
+    position: sticky;
+    top: calc(var(--pk-header-h, 4.5rem) + 1.5rem);
+  }
+
+  .pk-mobile-cta-bar {
+    display: none;
+  }
+}
+
+/* Header wordmark reveal — the other half of the `.pk-nav-inner
+   .pk-brand-wordmark` base rule far above, positioned here (after every base
+   rule it overrides) for the same ordering reason spelled out on the block
+   directly above.
+
+   Deliberately reuses 48rem instead of introducing a new breakpoint. The row
+   needs 808.3px to seat brand + nav links + a full 17.5rem pill, and 48rem is
+   the widest existing breakpoint at or below that; the 40.3px difference is
+   given back by the pill's own shrink guard, which lands it at 239.7px at
+   768px — still above the 220px minimum the search box carried before
+   01.1-08. 640px/sm was measured and rejected: it leaves the pill 111.7px,
+   narrower than its own 44px toggle plus 44px close control together.
+
+   This is a SEPARATE concern from the detail-layout block above that merely
+   shares the same width. Do not merge them — retuning the detail masthead
+   would then silently change the header. */
+@media (min-width: 48rem) {
+  .pk-nav-inner .pk-brand-wordmark {
+    display: flex;
+  }
+}
+
+/* Empty / load-error / 404 states (sketch 009, empty-loading-error-states.md,
+   01.1-07). One shared shape for all three non-happy-path moments — the
+   catalog's zero-results and load-error branches (CatalogLive.Index) and
+   the branded 404 (PukllayClubWeb.ErrorHTML's 404.html.heex) — so they
+   cannot visually drift from one another. Terse centred copy, one action,
+   never illustrated/warm (variant B was tried and rejected: these are
+   moments a visitor wants to get past quickly, not read copy about). */
+.pk-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-neutral);
+}
+
+.pk-state h2 {
+  font-family: var(--font-display);
+  color: var(--color-base-content);
+  margin: 0 0 0.5rem;
+}
+
+.pk-state p {
+  margin: 0 0 1rem;
+}
+
+/* Flat skeleton fill (sketch 009): no shimmer, no @keyframes — daisyUI's
+   own `skeleton` class animates, which the design explicitly rejects.
+   Reuses .pk-card-poster/.pk-card-caption for shape (CarouselRow), so a
+   loading placeholder never declares its own aspect-ratio/radius. */
+.pk-skel {
+  background: var(--color-base-300);
+  border-radius: var(--radius-box);
+}
+
+/* Narrow-viewport density and navigation switch (sketch 001, variant D):
+   every number and every display toggle below is part of one
+   calculation/decision and must flip together, in this one block, placed
+   last so it wins the cascade against every base rule above it it
+   overrides (a same-specificity override earlier in the file would lose
+   to a later plain rule regardless of the media query, which is exactly
+   the class of bug this single-block, single-position discipline exists
+   to prevent). At 96px cards, 10px gaps and a 0.875rem gutter, a 390px
+   viewport shows three full cards plus roughly half of a fourth, and an
+   edge-fade wider than that sliver would swallow the very peek it exists
+   to create. Nav links stop fitting below this breakpoint; the mobile
+   chip row becomes the second navigation dimension — both sides of that
+   swap live here too, so no viewport width ends up with neither. This
+   raw breakpoint (not the repo's sm: 640px) is deliberate: the number
+   set is only correct below roughly 480px and visibly under-fills a
+   600px viewport. */
+@media (max-width: 480px) {
+  :root {
+    --pk-gutter: 0.875rem;
+  }
+
+  .pk-rail {
+    gap: 10px;
+  }
+
+  .pk-poster-card {
+    width: 96px;
+  }
+
+  .pk-poster-card.is-hero {
+    width: 118px;
+  }
+
+  .pk-rail-wrap::before,
+  .pk-rail-wrap::after {
+    width: 16px;
+  }
+
+  .pk-shelf {
+    margin-bottom: 2rem;
+  }
+
+  .pk-card-caption {
+    padding: 8px 4px 4px;
+  }
+
+  .pk-card-caption h3 {
+    font-size: 0.75rem;
+  }
+
+  .pk-nav-links {
+    display: none;
+  }
+
+  .pk-chip-nav {
+    display: flex;
+  }
+
+  .pk-nav-hamburger {
+    display: flex;
+  }
+
+  .pk-drawer {
+    display: flex;
+  }
+
+  .pk-drawer-backdrop {
+    display: block;
+  }
+
+  /* Row density (01.1-08): a tighter row gap frees the room Detalle's crumb
+     + search control need between brand and the row's right edge.
+
+     The wordmark hide that used to sit here moved to the base rule far above
+     (debug header-height-wordmark-wrap). 480px was never the width at which
+     the wordmark stops fitting — it just happened to be the only place anyone
+     had hidden it, which is precisely why the header silently inflated
+     everywhere from 481px to 808px. Leaving a duplicate here would also be a
+     second rule owning one visual property, which this layer forbids. */
+  .pk-nav-inner {
+    gap: 0.5rem;
+  }
+
+  /* Mobile overlay (sketch 017 Round 5's fix for the flat hard-edged slab):
+     the morph becomes a full-width sheet over the header instead of a
+     leftward-growing pill, with a rounded bottom edge and a soft shadow.
+     The morph owns the geometry now — no separate .pk-nav-search override
+     is left behind competing with it. */
+  .pk-search-morph.is-open {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: 100%;
+    z-index: 5;
+    border-radius: 0 0 var(--radius-box) var(--radius-box);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
+    padding-inline: var(--pk-gutter);
+  }
+
+  .pk-search-morph.is-open .pk-search-morph-toggle {
+    padding-left: 0;
+  }
+
+  .pk-footer-row,
+  .pk-footer-left,
+  .pk-footer-right {
+    flex-direction: column;
+  }
+
+  /* Same scale as desktop, two tiers retuned for VERTICAL rhythm: a stacked
+     list needs less absolute space than a horizontal row to read as separated,
+     and holding the desktop values here would have grown the mobile footer
+     from 180px to ~215px for no benefit (mobile is this project's primary
+     surface — it must not regress to fix desktop). What must NOT change is the
+     tiers' ORDER: cluster (24px) stays greater than group (16px), so the
+     stack groups brand+links together and sets the legal line apart. Before
+     this the mobile footer had those two backwards — 24px within, 12px
+     between. Retuning values inside one shared scale keeps desktop and mobile
+     one rhythm; declaring separate literals per orientation is what caused
+     the drift in the first place. */
+  .pk-footer {
+    --pk-footer-gap-group: 1rem;
+    --pk-footer-gap-cluster: 1.5rem;
+  }
+
+  /* Mobile/desktop swap (01.1-09 Task 2): the toggle and social cluster
+     move into the drawer below 480px — reaching the footer there means
+     scrolling the whole page, the drawer is one tap away.
+
+     Now the CLUSTER itself, not its two children individually (debug
+     footer-desktop-imbalance). This rule previously had to spare
+     .pk-footer-right because the copyright/BGG line lived inside it and must
+     stay visible at every width; that line has moved to .pk-footer-legal, so
+     the cluster's entire contents are exactly the two controls that relocate
+     to the drawer, and hiding the box is both simpler and NECESSARY. A
+     `display: none` child is skipped by flex gap, but an empty flex PARENT is
+     not — left an empty .pk-footer-right in the stack, the mobile column would
+     have spent two 24px cluster gaps on a zero-height box and pushed the legal
+     line 24px further down. Mobile is this project's primary surface; that
+     would have been a real regression to fix a desktop complaint.
+
+     The safety property this rule used to carry per-child — that nothing gets
+     hidden unless it has a drawer equivalent — now lives in FooterRhythmTest,
+     which pins .pk-footer-right to exactly the two relocating concerns. Adding
+     a third child there fails that test rather than silently vanishing on
+     phones. */
+  .pk-footer-right {
+    display: none;
+  }
+
+  /* The stacked footer is a CENTRED column — .pk-footer-row keeps the base
+     rule's `align-items: center`, which stops meaning "vertically centre the
+     clusters" and starts meaning "horizontally centre the stack" the moment
+     the direction flips. Every block in it shrink-wraps and is centred:
+     measured at 320px, .pk-footer-left sits at x=59.42 for a width of 201.14,
+     i.e. dead centre.
+
+     .pk-footer-legal's `width: 100%` would opt it out of exactly that — a
+     full-width box makes its content start at the left gutter while
+     everything above it stays centred. Restoring `auto` gives the legal line
+     back the same shrink-to-fit box every other block in the stack has, so
+     `align-items: center` centres it identically (verified: x returns to the
+     pre-change 39.13 at 320px). The full-width trick is only needed where the
+     row is a ROW and something has to be forced off the line; here there is
+     one item per line already. */
+  .pk-footer-legal {
+    width: auto;
+  }
+
+  .pk-about-cta-bar {
+    display: block;
+  }
+
+  .pk-about-cta-spacer {
+    display: block;
+  }
+
+  .pk-crumb-sep,
+  .pk-crumb-current {
+    display: none;
+  }
+
+  .pk-nav-crumb {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .pk-nav-crumb a {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+
+  .pk-nav-crumb a::before {
+    content: "‹ ";
+  }
+
+  /* Detail page (01.1-03/01.1-04): a shorter description clamp and a
+     single-column ficha técnica below 480px. The masthead's own column
+     count and the poster column's sticky/static toggle are now handled
+     by the 48rem detail layout breakpoint (01.1-04) — nothing to repeat
+     here, both are already single-column/static below that width. */
+  .pk-clamp {
+    -webkit-line-clamp: 2;
+  }
+
+  .pk-spec-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* PK CATALOG SURFACES END */
 
 /* This file is for your main application CSS */

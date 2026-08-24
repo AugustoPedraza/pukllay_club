@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 009 — Empty / Loading / Error States</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 52px; }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1a1a; border-bottom: 1px solid #333; padding: 10px 16px; display: flex; gap: 8px; align-items: center; font-family: var(--font-sans); font-size: 13px; }
+  #variant-nav .label { color: #999; margin-right: 8px; }
+  .variant-tab { background: #2a2a2a; color: #ddd; border: 1px solid #3a3a3a; padding: 6px 12px; border-radius: var(--radius-full); cursor: pointer; transition: all 0.15s ease; }
+  .variant-tab:hover { background: #3a3a3a; color: #fff; }
+  .variant-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  .state-switcher { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-6); background: var(--color-accent-bg); border-bottom: 1px dashed var(--color-border); font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  .state-switcher .label { font-size: var(--text-xs); color: var(--color-text-muted); margin-right: var(--space-2); }
+  .state-btn { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-primary); background: transparent; color: var(--color-primary); cursor: pointer; }
+  .state-btn.is-active { background: var(--color-primary); color: var(--color-primary-content); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: var(--space-6) var(--space-6) var(--space-12); min-height: 480px; }
+  .intro { max-width: 680px; margin-bottom: var(--space-2); }
+  .intro h1 { font-family: var(--font-display); font-size: var(--text-display); margin: 0 0 var(--space-2); }
+  .intro p { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0; }
+
+  .state-panel { display: none; }
+  .state-panel.is-active { display: block; }
+
+  .p1{background:linear-gradient(135deg,#3D096D,#7E4CA5)}.p2{background:linear-gradient(135deg,#7E4CA5,#A97FD1)}
+  .p3{background:linear-gradient(135deg,#22103A,#3D096D)}.p5{background:linear-gradient(135deg,#3F8F6B,#3D096D)}
+
+  .row-heading { font-family: var(--font-display); font-size: var(--text-2xl); margin: var(--space-6) 0 var(--space-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-4); }
+  .g-card { border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); }
+  .g-card .art { aspect-ratio: 1/1.05; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; color: rgba(255,255,255,0.85); }
+  .g-card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .g-card .cap h4 { margin: 0; font-size: var(--text-sm); font-weight: 600; }
+
+  /* ---- skeleton loaders: shared shape, per-variant treatment below ---- */
+  .skel-card { border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); }
+  .skel-art { aspect-ratio: 1/1.05; }
+  .skel-line { height: 12px; border-radius: 4px; margin: var(--space-2) var(--space-2) var(--space-3); }
+
+  /* Variant A: minimal/utilitarian — flat gray blocks, no shimmer, no illustration */
+  #variant-a .skel-art, #variant-a .skel-line { background: var(--color-border); }
+  #variant-a .empty-state, #variant-a .error-state, #variant-a .notfound-state {
+    text-align: center; padding: var(--space-12) var(--space-4); color: var(--color-text-muted);
+  }
+  #variant-a .empty-state h3, #variant-a .error-state h3, #variant-a .notfound-state h3 { font-family: var(--font-sans); font-size: var(--text-lg); color: var(--color-text); margin: 0 0 var(--space-2); }
+  #variant-a .empty-state p, #variant-a .error-state p, #variant-a .notfound-state p { margin: 0 0 var(--space-3); font-size: var(--text-sm); }
+  #variant-a .retry-btn { background: var(--color-primary); color: var(--color-primary-content); border: none; padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; }
+
+  /* Variant B: illustrated/friendly — shimmer, emoji anchor, warmer copy, card-style empty/error panels */
+  #variant-b .skel-art, #variant-b .skel-line {
+    background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-2) 50%, var(--color-surface) 75%);
+    background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  #variant-b .empty-state, #variant-b .error-state, #variant-b .notfound-state {
+    text-align: center; padding: var(--space-8) var(--space-6); max-width: 420px; margin: var(--space-6) auto;
+    background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);
+  }
+  #variant-b .state-emoji { font-size: 2.75rem; margin-bottom: var(--space-3); }
+  #variant-b .empty-state h3, #variant-b .error-state h3, #variant-b .notfound-state h3 { font-family: var(--font-display); font-size: var(--text-xl); margin: 0 0 var(--space-2); text-transform: uppercase; letter-spacing: 0.01em; }
+  #variant-b .empty-state p, #variant-b .error-state p, #variant-b .notfound-state p { margin: 0 0 var(--space-4); font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.5; }
+  #variant-b .retry-btn { background: var(--color-primary); color: var(--color-primary-content); border: none; padding: var(--space-3) var(--space-6); border-radius: var(--radius-md); font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  #variant-b .retry-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  #variant-b .suggest-chips { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; margin-top: var(--space-3); }
+  #variant-b .suggest-chips button { font-size: var(--text-xs); font-weight: 600; padding: 6px 12px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg); cursor: pointer; }
+
+  #sketch-tools { position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;display:flex;gap:8px;align-items:center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="label">Sketch 009 — Empty/Loading/Error:</span>
+  <button class="variant-tab active" onclick="showVariant('a', event)">A: Minimal / Utilitarian ★ Selected</button>
+  <button class="variant-tab" onclick="showVariant('b', event)">B: Illustrated / Friendly</button>
+</div>
+
+<!-- ============ VARIANT A ============ -->
+<div id="variant-a" class="variant active">
+  <div class="state-switcher">
+    <span class="label">Estado:</span>
+    <button class="state-btn is-active" onclick="setState('a','populated',event)">Con resultados</button>
+    <button class="state-btn" onclick="setState('a','loading',event)">Cargando</button>
+    <button class="state-btn" onclick="setState('a','empty',event)">Sin resultados</button>
+    <button class="state-btn" onclick="setState('a','error',event)">Error de carga</button>
+    <button class="state-btn" onclick="setState('a','notfound',event)">404 (detalle)</button>
+  </div>
+  <main>
+    <div class="intro"><h1>A: Minimal / Utilitarian</h1><p>Flat gray skeleton blocks, no shimmer or illustration. Terse, neutral copy. Cheapest to build, lowest visual risk, but doesn't reinforce the "human-first, teach the hobby" brand tone at the exact moments a new user is most likely to feel lost (nothing found, something broke).</p></div>
+    <div id="panels-a"></div>
+  </main>
+</div>
+
+<!-- ============ VARIANT B ============ -->
+<div id="variant-b" class="variant">
+  <div class="state-switcher">
+    <span class="label">Estado:</span>
+    <button class="state-btn is-active" onclick="setState('b','populated',event)">Con resultados</button>
+    <button class="state-btn" onclick="setState('b','loading',event)">Cargando</button>
+    <button class="state-btn" onclick="setState('b','empty',event)">Sin resultados</button>
+    <button class="state-btn" onclick="setState('b','error',event)">Error de carga</button>
+    <button class="state-btn" onclick="setState('b','notfound',event)">404 (detalle)</button>
+  </div>
+  <main>
+    <div class="intro"><h1>B: Illustrated / Friendly</h1><p>Shimmering skeletons, an emoji anchor + warmer copy on empty/error/404, and — on empty results — suggestion chips offering a way forward instead of a dead end. Costs more (shimmer keyframes, extra copywriting, a card treatment) but matches the brand's teach-don't-assume tone at exactly the moments a beginner is most likely to bail.</p></div>
+    <div id="panels-b"></div>
+  </main>
+</div>
+
+<div id="sketch-tools">
+  <!-- Real data-theme toggle (frontier 010, same mechanism as 007/011) — not
+       a theme-FILE swap. themes/default.css carries both palettes already. -->
+  <select onchange="document.documentElement.dataset.theme=this.value">
+    <option value="light">Light theme</option>
+    <option value="dark">Dark theme</option>
+  </select>
+</div>
+
+<script>
+function showVariant(id, evt) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  evt.target.classList.add('active');
+}
+
+const GAMES = [
+  {title:'Catán', pal:'p1', icon:'🎲'}, {title:'Wingspan', pal:'p5', icon:'🦙'},
+  {title:'Azul', pal:'p2', icon:'🔷'}, {title:'Terraforming Mars', pal:'p3', icon:'🌵'},
+];
+
+function populatedHTML() {
+  return `<h2 class="row-heading">Ingenio estratega</h2><div class="grid">${GAMES.map(g =>
+    `<div class="g-card"><div class="art ${g.pal}">${g.icon}</div><div class="cap"><h4>${g.title}</h4></div></div>`).join('')}</div>`;
+}
+
+function loadingHTML() {
+  return `<h2 class="row-heading">Ingenio estratega</h2><div class="grid">${Array.from({length:4}).map(() =>
+    `<div class="skel-card"><div class="skel-art"></div><div class="skel-line" style="width:70%"></div></div>`).join('')}</div>`;
+}
+
+function emptyHTML(variant) {
+  if (variant === 'a') {
+    return `<div class="empty-state"><h3>No se encontraron juegos</h3><p>Probá con otros filtros o términos de búsqueda.</p><button class="retry-btn" onclick="setState('${variant}','populated')">Limpiar filtros</button></div>`;
+  }
+  return `<div class="empty-state"><div class="state-emoji">🎲</div><h3>Todavía no hay match</h3><p>Ningún juego del catálogo coincide con esa combinación. Probá sacar un filtro, o mirá alguna de estas categorías populares.</p>
+    <button class="retry-btn" onclick="setState('${variant}','populated')">Limpiar filtros</button>
+    <div class="suggest-chips"><button>Descubre el hobby</button><button>Ingenio estratega</button><button>Cooperativos</button></div></div>`;
+}
+
+function errorHTML(variant) {
+  if (variant === 'a') {
+    return `<div class="error-state"><h3>No pudimos cargar el catálogo</h3><p>Hubo un problema de conexión.</p><button class="retry-btn" onclick="setState('${variant}','populated')">Reintentar</button></div>`;
+  }
+  return `<div class="error-state"><div class="state-emoji">📡</div><h3>Se nos cruzó un cable</h3><p>No pudimos cargar el catálogo esta vez — puede que sea algo de tu conexión, o nuestro. Probá de nuevo en un momento.</p><button class="retry-btn" onclick="setState('${variant}','populated')">Reintentar</button></div>`;
+}
+
+function notfoundHTML(variant) {
+  if (variant === 'a') {
+    return `<div class="notfound-state"><h3>Juego no encontrado</h3><p>Este juego no existe o fue removido del catálogo.</p><button class="retry-btn" onclick="setState('${variant}','populated')">Volver al catálogo</button></div>`;
+  }
+  return `<div class="notfound-state"><div class="state-emoji">🔍</div><h3>Ese juego se nos escapó</h3><p>No encontramos la ficha que buscás — puede que el link esté roto o el juego ya no esté en el catálogo. Volvé y probá desde ahí.</p><button class="retry-btn" onclick="setState('${variant}','populated')">Volver al catálogo</button></div>`;
+}
+
+const RENDERERS = {
+  populated: () => populatedHTML(),
+  loading: () => loadingHTML(),
+  empty: (v) => emptyHTML(v),
+  error: (v) => errorHTML(v),
+  notfound: (v) => notfoundHTML(v),
+};
+
+function setState(variant, stateName, evt) {
+  document.getElementById('panels-' + variant).innerHTML = RENDERERS[stateName](variant);
+  const switcher = document.getElementById('variant-' + variant).querySelector('.state-switcher');
+  switcher.querySelectorAll('.state-btn').forEach(b => b.classList.remove('is-active'));
+  if (evt && evt.target) evt.target.classList.add('is-active');
+  else [...switcher.querySelectorAll('.state-btn')].find(b => b.textContent.toLowerCase().includes(stateName === 'populated' ? 'resultados' : stateName))?.classList.add('is-active');
+}
+
+setState('a', 'populated');
+setState('b', 'populated');
+</script>
+
+</body>
+</html>

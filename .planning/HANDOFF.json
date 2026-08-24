@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-08-07T00:44:38.135Z",
+  "phase": "01",
+  "phase_name": "catalog-v1",
+  "phase_dir": ".planning/phases/01-catalog-v1",
+  "plan": 4,
+  "task": 1,
+  "total_tasks": 6,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "01-01", "name": "Prerequisites: BGG application token, R2 catalog bucket, seed dependencies", "status": "done", "commit": "c433315"},
+    {"id": "01-02", "name": "Brand identity: theme tokens, self-hosted type, header lockup", "status": "done", "commit": "0c154d5"},
+    {"id": "01-03", "name": "TRACER: one real game from CSV row through BGG, resize, R2, DB, to a public browse LiveView", "status": "done", "commit": "f769515"}
+  ],
+  "remaining_tasks": [
+    {"id": "01-04", "name": "Full 434-game seed: D-20 data-quality rules, Spanish cover + gallery, search vector and GIN indexes", "status": "not_started"},
+    {"id": "01-05", "name": "Browse: vocabulary, composed filter/search/sort query, filter drawer, carousels, load-more", "status": "not_started"},
+    {"id": "01-06", "name": "Complexity-teaching UX: weight bands, plain-Spanish chips, game detail page, CSP", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "Local main is 31 commits ahead of origin/main, entirely unpushed (includes all of Phase 1 work so far + a quick task)", "type": "human_action", "workaround": "Push and open a PR when ready to land on origin — main is branch-protected (required 'quality' status check, enforce_admins=true, no bypass), so it cannot be pushed to directly once a PR/CI cycle is needed. Not blocking further local execution."}
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {"action": "Push accumulated local commits via a PR and let the 'quality' CI check run", "context": "Branch protection on main requires the 'quality' status check with no bypass; 31 commits have accumulated locally without CI validation", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Swapped the planned 'credence' semantic linter for Styler (adobe/elixir-styler)", "rationale": "credence was 3 months old, 9.7K downloads, single maintainer, no CLI task (would need a hand-rolled wrapper around a non-public API). Styler does the same underlying job (auto-fix non-idiomatic Elixir) but is battle-tested: 3.6M downloads, 3 years old, Adobe-maintained, installs as a standard mix format plugin.", "phase": "quick-task-260806-rq8"},
+    {"decision": "mix quality is now a 7-step gate: hex.audit, deps.audit, deps.unlock --check-unused, format (Styler-augmented), credo --strict, sobelow, test --warnings-as-errors", "rationale": "Layered supply-chain (mix_audit) and idiomatic-code (Styler) checks on top of the existing Credo/Sobelow gate, prompted by a user-shared blog post on guarding against AI-generated code drift over time.", "phase": "quick-task-260806-rq8"},
+    {"decision": "Plan 01-01's BGG/R2 credentials live only in gitignored config/dev.secret.exs, resolved via PukllayClub.Catalog.Seed.Credentials.fetch!/0 (env var takes precedence over Application config)", "rationale": "Repo is public (Phase 0 D-19); credentials must never land in a tracked file, and the seed pipeline is dev/CI-only by design (never runs on the production host, so not routed through Kamal secrets).", "phase": "01"},
+    {"decision": "Wave/plan-level executor dispatch ran sequentially on the main working tree (not isolated worktrees) for all of Wave 1 (01-01) and Wave 2 (01-03)", "rationale": "01-01 produces a gitignored local secret file that would be lost if created inside a temporary worktree later deleted; 01-03 auto-degraded to sequential because local main had diverged from origin/HEAD (worktree fork-base guard #1941/#683).", "phase": "01"}
+  ],
+  "uncommitted_files": [
+    ".planning/config.json (pre-existing modification, unrelated to this session's work)",
+    ".claude/settings.local.json.tmp.2748278.a52952526320 (stray local Claude Code temp file, pre-existing)",
+    ".planning/research/.cache/*.json (research cache artifacts, pre-existing, not meant to be committed)"
+  ],
+  "next_action": "/gsd-execute-phase 01 — auto-discovers 01-04 as the next incomplete plan (Wave 3) and executes it. 01-04 depends on 01-03 (satisfied). It loads the full ~434-game catalog from priv/repo/seed_data/ludoteca.csv using the now-proven BGG/R2 pipeline from 01-03, so expect a long-running real seed run against the live BGG API (rate-limit-aware) — not a quick task.",
+  "context_notes": "Phase 01 (catalog-v1) is 3/6 plans done, clean wave boundary — no work in progress, no uncommitted plan-related changes. Wave 1 (01-01 human-checkpoint prerequisites + 01-02 brand identity) and Wave 2 (01-03 tracer slice, human-verified against real R2-hosted images) are both fully closed. 01-01's checkpoint:human-action gate was cleared in-session by the user providing real BGG/Cloudflare R2 credentials directly in chat; 01-03's checkpoint:human-verify gate was cleared by the user visually confirming two R2-hosted cover images render correctly. Both checkpoints are fully resolved — do not re-prompt for them on resume. A mid-session quick task (260806-rq8) added Styler + mix_audit to mix quality, unrelated to Phase 01 plan work but landed on the same branch. Resuming agent should just run /gsd-execute-phase 01 and let it auto-route to 01-04; no manual state reconstruction needed beyond what's in ROADMAP.md/STATE.md, which are already up to date."
+}

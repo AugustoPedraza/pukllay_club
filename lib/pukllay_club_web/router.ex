@@ -8,6 +8,7 @@ defmodule PukllayClubWeb.Router do
     plug :put_root_layout, html: {PukllayClubWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :put_csp
   end
 
   pipeline :api do
@@ -21,7 +22,10 @@ defmodule PukllayClubWeb.Router do
   scope "/", PukllayClubWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", CatalogLive.Index, :index
+    live "/juegos/:id", CatalogLive.Show, :show
+    live "/club", AboutLive, :show
+    live "/quienes-somos", AboutLive, :show
   end
 
   scope "/", PukllayClubWeb do
@@ -50,5 +54,14 @@ defmodule PukllayClubWeb.Router do
       live_dashboard "/dashboard", metrics: PukllayClubWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  # Closes Phase 0's deferred Sobelow `Config.CSP` finding (.sobelow-conf).
+  # `put_secure_browser_headers` above does not set a Content-Security-Policy
+  # by default — Sobelow's static Config.CSP check only inspects that call's
+  # own arguments and cannot observe a header set by a separate plug, which
+  # is why this exemption is named there instead of silenced here.
+  defp put_csp(conn, _opts) do
+    put_resp_header(conn, "content-security-policy", PukllayClubWeb.CSP.policy())
   end
 end

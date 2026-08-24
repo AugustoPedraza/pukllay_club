@@ -17,15 +17,23 @@ Requirements for this milestone (Phases 0-4, per PROJECT.md's fixed roadmap). Ea
 
 ### Catalog
 
-- [ ] **CATALOG-01**: Member can browse the full catalog (~400 games) with cover images, presented as carousels/cards in LiveView streams
-- [ ] **CATALOG-02**: Member can filter by player count, playtime, category/mechanic/theme (text[] + GIN), and minimum age
-- [ ] **CATALOG-03**: Member can search the catalog by keyword (title, designer, publisher) via tsvector
-- [ ] **CATALOG-04**: Member can sort results by playtime, complexity, or other scalar fields
-- [ ] **CATALOG-05**: Each game shows a plain-Spanish weight-band + one-line complexity descriptor instead of a bare 1-5 number
-- [ ] **CATALOG-06**: Each game shows plain-Spanish mechanic/theme chips translated from a curated vocabulary, not raw hobbyist jargon
-- [ ] **CATALOG-07**: Each game carries the club's existing editorial curation/custom tags (from the Excel catalog) as a lightweight "club favorite"/"beginner-friendly" signal
-- [ ] **CATALOG-08**: Catalog is fully public — no account required to browse
-- [ ] **CATALOG-09**: Catalog images are the club's own resized copies, not hotlinked/BGG-sourced
+- [x] **CATALOG-01**: Member can browse the full catalog (~400 games) with cover images, presented as carousels/cards in LiveView streams
+- [x] **CATALOG-02**: Member can filter by player count, playtime, category/mechanic/theme (text[] + GIN), and minimum age
+- [x] **CATALOG-03**: Member can search the catalog by keyword (title, designer, publisher) via tsvector
+- [x] **CATALOG-04**: Member can sort results by playtime, complexity, or other scalar fields
+- [x] **CATALOG-05**: Each game shows a plain-Spanish weight-band + one-line complexity descriptor instead of a bare 1-5 number
+- [x] **CATALOG-06**: Each game shows plain-Spanish mechanic/theme chips translated from a curated vocabulary, not raw hobbyist jargon
+- [x] **CATALOG-07**: Each game carries the club's existing editorial curation/custom tags (from the Excel catalog) as a lightweight "club favorite"/"beginner-friendly" signal
+- [x] **CATALOG-08**: Catalog is fully public — no account required to browse
+- [x] **CATALOG-09**: Catalog images are the club's own resized copies, not hotlinked/BGG-sourced
+
+### Site Shell
+
+- [x] **SHELL-01**: A shared header+footer shell (adaptive header, single-row footer with mission/links/BGG attribution) wraps the catalog, detail, and about pages consistently
+- [x] **SHELL-02**: An about page communicates the club's mission, how borrowing works, and a FAQ/vocabulary section
+- [x] **SHELL-03**: The game detail page (`/juegos/:id`) presents a buy-box (cover + reservation CTA) beside a reading column (description, mechanics, specs) and a "Juegos similares" shelf, working on both desktop and mobile
+- [x] **SHELL-04**: The catalog's filter/search UI is a centered modal with checklist-style facets, reachable from a nav search box with live narrowing
+- [x] **SHELL-05**: The catalog and detail pages show a minimal, on-brand empty/loading/error state for no-results, in-flight, and failure conditions
 
 ### Search
 
@@ -95,15 +103,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEPLOY-03 | Phase 0 | Complete |
 | DEPLOY-04 | Phase 0 | Complete |
 | DEPLOY-05 | Phase 0 | Complete |
-| CATALOG-01 | Phase 1 | Pending |
-| CATALOG-02 | Phase 1 | Pending |
-| CATALOG-03 | Phase 1 | Pending |
-| CATALOG-04 | Phase 1 | Pending |
-| CATALOG-05 | Phase 1 | Pending |
-| CATALOG-06 | Phase 1 | Pending |
-| CATALOG-07 | Phase 1 | Pending |
-| CATALOG-08 | Phase 1 | Pending |
-| CATALOG-09 | Phase 1 | Pending |
+| CATALOG-01 | Phase 1 | Complete |
+| CATALOG-02 | Phase 1 | Complete |
+| CATALOG-03 | Phase 1 | Complete |
+| CATALOG-04 | Phase 1 | Complete |
+| CATALOG-05 | Phase 1 | Complete |
+| CATALOG-06 | Phase 1 | Complete |
+| CATALOG-07 | Phase 1 | Complete |
+| CATALOG-08 | Phase 1 | Complete |
+| CATALOG-09 | Phase 1 | Complete |
+| SHELL-01 | Phase 1.1 | Complete |
+| SHELL-02 | Phase 1.1 | Complete |
+| SHELL-03 | Phase 1.1 | Complete |
+| SHELL-04 | Phase 1.1 | Complete |
+| SHELL-05 | Phase 1.1 | Complete |
 | SEARCH-01 | Phase 2 | Pending |
 | SEARCH-02 | Phase 2 | Pending |
 | SEARCH-03 | Phase 2 | Pending |
@@ -121,8 +134,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 
-- v1 requirements: 28 total
-- Mapped to phases: 28
+- v1 requirements: 33 total
+- Mapped to phases: 33
 - Unmapped: 0 ✓
 
 ---

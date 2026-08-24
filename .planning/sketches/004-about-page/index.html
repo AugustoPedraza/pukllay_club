@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 004 — About Page Content</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 48px; }
+  .variant { display: none; }
+  .variant.active { display: block; }
+  .shell { display: flex; flex-direction: column; min-height: 100vh; margin: 0 auto; }
+
+  /* ---- header: quiet / about state, carried over from sketch 003 winner ---- */
+  :root { --pk-gutter: 2rem; }
+  .pk-gutter { padding-left: var(--pk-gutter); padding-right: var(--pk-gutter); }
+  .pk-header { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,0.92); box-shadow: var(--shadow-sm); }
+  .pk-nav { display: flex; align-items: center; gap: var(--space-4); height: 64px; }
+  .pk-brand { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: inherit; }
+  .pk-brand-text { display: flex; flex-direction: column; line-height: 1; }
+  .pk-brand-text .word { font-family: var(--font-display); font-size: var(--text-xl); letter-spacing: 0.03em; text-transform: uppercase; color: var(--color-primary); }
+  .pk-brand-text .tag { font-family: var(--font-sans); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+  .pk-nav-crumb { font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-text); font-weight: 600; flex: 1 0 auto; }
+  .pk-theme-toggle { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 4px; }
+  .pk-theme-toggle button { width: 24px; height: 24px; border: none; background: none; border-radius: 50%; cursor: pointer; opacity: 0.6; }
+
+  /* ---- footer: winner C from sketch 003 ---- */
+  footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-8); }
+  .footer-c .mission-band { background: var(--color-primary); color: var(--color-primary-content); padding: var(--space-8) var(--pk-gutter); text-align: center; }
+  .footer-c .mission-band h3 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-2); text-transform: uppercase; }
+  .footer-c .mission-band p { max-width: 52ch; margin: 0 auto var(--space-4); opacity: 0.9; line-height: 1.6; }
+  .footer-social { display: flex; gap: var(--space-2); justify-content: center; }
+  .footer-social a { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.4); color: rgba(255,255,255,0.85); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; }
+  .footer-c .utility-bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--pk-gutter); flex-wrap: wrap; gap: var(--space-2); }
+  .footer-links.inline { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--space-4); flex-wrap: wrap; }
+  .footer-links a { color: var(--color-text-muted); text-decoration: none; font-size: var(--text-sm); }
+  .bgg-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); font-size: var(--text-xs); color: var(--color-text-muted); text-decoration: none; }
+  .bgg-badge .mark { width: 16px; height: 16px; border-radius: 3px; background: #ff5100; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .footer-copyright { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+  main.about { flex: 1 0 auto; }
+
+  /* ============================= VARIANT A: single flowing scroll ============================= */
+  .about-a { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter); }
+  .about-a .lead { text-align: center; margin-bottom: var(--space-8); }
+  .about-a .lead h1 { font-family: var(--font-display); font-size: 2.75rem; margin: 0 0 var(--space-3); text-transform: uppercase; color: var(--color-primary); }
+  .about-a .lead p { font-size: var(--text-lg); color: var(--color-text-muted); line-height: 1.6; max-width: 56ch; margin: 0 auto; }
+  .about-a section { padding: var(--space-6) 0; border-bottom: 1px solid var(--color-border); }
+  .about-a section:last-of-type { border-bottom: none; }
+  .about-a section h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; letter-spacing: 0.02em; }
+  .about-a section p { color: var(--color-text); line-height: 1.7; margin: 0 0 var(--space-3); max-width: 62ch; }
+  .about-a .steps { display: flex; flex-direction: column; gap: var(--space-3); }
+  .about-a .step { display: flex; gap: var(--space-3); align-items: flex-start; }
+  .about-a .step .num { flex: 0 0 32px; height: 32px; border-radius: 50%; background: var(--color-accent-bg); color: var(--color-primary); font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: var(--font-sans); }
+  .about-a .faq-item { padding: var(--space-2) 0; }
+  .about-a .faq-item dt { font-weight: 600; margin-bottom: 4px; }
+  .about-a .faq-item dd { margin: 0; color: var(--color-text-muted); }
+
+  /* ============================= VARIANT B: alternating bands ============================= */
+  .about-b .hero-band { text-align: center; padding: var(--space-12) var(--pk-gutter) var(--space-8); }
+  .about-b .hero-band h1 { font-family: var(--font-display); font-size: 3rem; margin: 0 0 var(--space-3); text-transform: uppercase; color: var(--color-primary); }
+  .about-b .hero-band p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 60ch; margin: 0 auto; line-height: 1.6; }
+  .about-b .band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; padding: var(--space-8) var(--pk-gutter); max-width: 1100px; margin: 0 auto; }
+  /* .band.tint goes full-bleed for its background wash, but must not add a
+     second layer of horizontal padding on top of .band-inner's own gutter —
+     that double-padding was pushing this band's content ~2rem wider than
+     the non-tint bands above/below it on desktop (invisible on mobile,
+     where the viewport is already narrower than the 1100px max-width). */
+  .about-b .band.tint { background: var(--color-surface); max-width: none; padding: var(--space-8) 0; }
+  .about-b .band.tint > .band-inner { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 var(--pk-gutter); }
+  .about-b .band.reverse .band-text { order: 2; }
+  .about-b .band.reverse .band-visual { order: 1; }
+  .about-b .band-text h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; }
+  .about-b .band-text p { color: var(--color-text); line-height: 1.7; margin: 0; }
+  .about-b .faq-band { max-width: 680px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter); }
+
+  /* band image carousel — replaces the single static visual placeholder.
+     Slides are gradient-tinted placeholders (no real photography yet);
+     structurally a real <img> carousel, same markup shape either way. */
+  .band-carousel { position: relative; aspect-ratio: 4/3; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); }
+  .band-carousel .slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 48px; color: rgba(255,255,255,0.55); opacity: 0; pointer-events: none;
+    transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+  .band-carousel .slide.is-active { opacity: 1; pointer-events: auto; }
+  .band-carousel .cs-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 30px; height: 30px;
+    border-radius: 50%; background: rgba(0,0,0,0.35); color: #fff; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 2;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .band-carousel .cs-arrow:hover { background: rgba(0,0,0,0.55); }
+  .band-carousel .cs-arrow.prev { left: 10px; }
+  .band-carousel .cs-arrow.next { right: 10px; }
+  .band-carousel .cs-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+  .band-carousel .cs-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none; cursor: pointer; padding: 0; }
+  .band-carousel .cs-dot.is-active { background: #fff; }
+  .about-b .faq-band h2 { font-family: var(--font-display); font-size: var(--text-2xl); text-align: center; margin: 0 0 var(--space-4); text-transform: uppercase; }
+  @media (max-width: 768px) {
+    .about-b .band, .about-b .band.tint > .band-inner { grid-template-columns: 1fr; }
+    .about-b .band.reverse .band-text, .about-b .band.reverse .band-visual { order: unset; }
+  }
+
+  /* ============================= VARIANT C: narrative + FAQ accordion ============================= */
+  .about-c { max-width: 700px; margin: 0 auto; padding: var(--space-8) var(--pk-gutter); }
+  .about-c .lead { text-align: center; margin-bottom: var(--space-8); }
+  .about-c .lead h1 { font-family: var(--font-display); font-size: 2.75rem; margin: 0 0 var(--space-3); text-transform: uppercase; color: var(--color-primary); }
+  .about-c .lead p { font-size: var(--text-lg); color: var(--color-text-muted); line-height: 1.6; }
+  .about-c .steps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin: var(--space-6) 0 var(--space-8); }
+  .about-c .step-card { background: var(--color-surface); border-radius: var(--radius-lg); padding: var(--space-4); text-align: center; }
+  .about-c .step-card .icon { font-size: 28px; margin-bottom: var(--space-2); }
+  .about-c .step-card h3 { font-family: var(--font-sans); font-size: var(--text-base); font-weight: 700; margin: 0 0 var(--space-1); }
+  .about-c .step-card p { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; }
+  .about-c .club-section { padding: var(--space-6) 0; border-top: 1px solid var(--color-border); }
+  .about-c .club-section h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; }
+  .about-c .club-section p { line-height: 1.7; margin: 0; color: var(--color-text); }
+  .about-c .faq-section { padding: var(--space-6) 0; border-top: 1px solid var(--color-border); }
+  .about-c .faq-section h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-3); text-transform: uppercase; }
+  .about-c .accordion-item { border-bottom: 1px solid var(--color-border); }
+  .about-c .accordion-trigger {
+    width: 100%; text-align: left; background: none; border: none; cursor: pointer;
+    padding: var(--space-3) 0; display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-sans); font-size: var(--text-base); font-weight: 600; color: var(--color-text);
+  }
+  .about-c .accordion-trigger .chevron { transition: transform var(--duration-fast) var(--ease-standard); color: var(--color-primary); }
+  .about-c .accordion-item.is-open .chevron { transform: rotate(180deg); }
+  .about-c .accordion-panel { max-height: 0; overflow: hidden; transition: max-height var(--duration-base) var(--ease-out-soft); }
+  .about-c .accordion-item.is-open .accordion-panel { max-height: 200px; }
+  .about-c .accordion-panel p { margin: 0 0 var(--space-3); color: var(--color-text-muted); line-height: 1.6; }
+  @media (max-width: 640px) { .about-c .steps-row { grid-template-columns: 1fr; } }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-sans); }
+  .variant-tab { font-size: 13px; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); cursor: pointer; }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; }
+  #sketch-tools:hover { opacity: 1; }
+  .viewport-frame { transition: max-width var(--duration-base) var(--ease-standard); margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a', event)">A: Single Flowing Scroll</button>
+  <button class="variant-tab" onclick="showVariant('b', event)">B: Alternating Bands ★ Selected</button>
+  <button class="variant-tab" onclick="showVariant('c', event)">C: Narrative + FAQ Accordion</button>
+</div>
+
+<!-- ============================= VARIANT A ============================= -->
+<div id="variant-a" class="variant active">
+  <div class="shell viewport-frame">
+    <div class="pk-header pk-gutter">
+      <div class="pk-nav">
+        <a href="#" class="pk-brand">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+          <span class="pk-brand-text"><span class="word">Pukllay Club</span><span class="tag">Juegos de mesa modernos</span></span>
+        </a>
+        <div class="pk-nav-crumb">Acerca de</div>
+        <div class="pk-theme-toggle"><button>☀</button><button>🌙</button></div>
+      </div>
+    </div>
+
+    <main class="about about-a">
+      <div class="lead">
+        <h1>Encontrá el juego justo para tu mesa</h1>
+        <p>Pukllay Club es un catálogo curado de juegos de mesa modernos, pensado para gente nueva
+          en el hobby — sin jerga, sin necesitar ya "saber" de juegos.</p>
+      </div>
+
+      <section>
+        <h2>Nuestra misión</h2>
+        <p>La mayoría de los catálogos de juegos de mesa asumen que ya sabés lo que es un "worker
+          placement" o cuánto pesa un "engine builder". Nosotros no. Creemos que cualquiera puede
+          encontrar el juego justo si se lo explicás en su propio idioma — el nuestro es enseñar,
+          no dar por sentado.</p>
+      </section>
+
+      <section>
+        <h2>Cómo funciona</h2>
+        <div class="steps">
+          <div class="step"><span class="num">1</span><p>Explorá el catálogo o describí lo que buscás — "algo de negociación estilo Catán" alcanza.</p></div>
+          <div class="step"><span class="num">2</span><p>Te mostramos juegos que matchean, explicados en lenguaje simple: cuánto dura, para cuántos jugadores, qué tan complejo es.</p></div>
+          <div class="step"><span class="num">3</span><p>Vení a una juntada del club a probarlo, o pedilo prestado.</p></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>El club</h2>
+        <p>Somos un grupo de jugadores que se junta regularmente en persona. Este catálogo es la
+          puerta de entrada — un lugar para descubrir qué jugar antes de venir a una juntada.
+          Si te copa, sumate.</p>
+      </section>
+
+      <section>
+        <h2>Preguntas frecuentes</h2>
+        <dl>
+          <div class="faq-item"><dt>¿Qué significa el "peso" de un juego?</dt><dd>Qué tan complejas son sus reglas y decisiones — no cuánto pesa la caja. Va de "ligero" a "experto".</dd></div>
+          <div class="faq-item"><dt>¿Necesito saber jugar de antemano?</dt><dd>No. El catálogo está pensado justamente para quienes están empezando.</dd></div>
+          <div class="faq-item"><dt>¿Puedo pedir un juego prestado?</dt><dd>Sí, coordinando con el club — próximamente vas a poder hacerlo directo desde acá.</dd></div>
+        </dl>
+      </section>
+    </main>
+
+    <footer class="pk-footer footer-c">
+      <div class="mission-band">
+        <h3>Encontrá el juego justo para tu mesa</h3>
+        <p>Un catálogo curado de juegos de mesa modernos para gente nueva en el hobby.</p>
+        <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
+      </div>
+      <div class="utility-bar">
+        <ul class="footer-links inline"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">Contacto</a></li></ul>
+        <div style="display:flex; align-items:center; gap:var(--space-3)">
+          <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
+          <span class="footer-copyright">© 2026 Pukllay Club</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ============================= VARIANT B ============================= -->
+<div id="variant-b" class="variant">
+  <div class="shell viewport-frame">
+    <div class="pk-header pk-gutter">
+      <div class="pk-nav">
+        <a href="#" class="pk-brand">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+          <span class="pk-brand-text"><span class="word">Pukllay Club</span><span class="tag">Juegos de mesa modernos</span></span>
+        </a>
+        <div class="pk-nav-crumb">Acerca de</div>
+        <div class="pk-theme-toggle"><button>☀</button><button>🌙</button></div>
+      </div>
+    </div>
+
+    <main class="about about-b">
+      <div class="hero-band">
+        <h1>Encontrá el juego justo para tu mesa</h1>
+        <p>Un catálogo curado de juegos de mesa modernos, pensado para gente nueva en el hobby —
+          sin jerga, sin necesitar ya "saber" de juegos.</p>
+      </div>
+
+      <div class="band">
+        <div class="band-text">
+          <h2>Nuestra misión</h2>
+          <p>Creemos que cualquiera puede encontrar el juego justo si se lo explicás en su propio
+            idioma. Nuestro trabajo es enseñar la complejidad de los juegos — peso, mecánicas,
+            temas — no darla por sentada.</p>
+        </div>
+        <div class="band-carousel" data-carousel>
+          <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🎯</div>
+          <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">📖</div>
+          <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">💬</div>
+          <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
+          <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
+          <div class="cs-dots"></div>
+        </div>
+      </div>
+
+      <div class="band tint">
+        <div class="band-inner reverse">
+          <div class="band-text">
+            <h2>Cómo funciona</h2>
+            <p>Explorá el catálogo o describí lo que buscás en tus propias palabras. Te mostramos
+              juegos que matchean, explicados simple: duración, jugadores, complejidad. Después,
+              vení a probarlo en una juntada o pedilo prestado.</p>
+          </div>
+          <div class="band-carousel" data-carousel>
+            <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🧩</div>
+            <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">🔍</div>
+            <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">✅</div>
+            <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
+            <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
+            <div class="cs-dots"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="band">
+        <div class="band-text">
+          <h2>El club</h2>
+          <p>Somos un grupo de jugadores que se junta regularmente en persona. Este catálogo es la
+            puerta de entrada a esas juntadas — un lugar para descubrir qué jugar antes de venir.</p>
+        </div>
+        <div class="band-carousel" data-carousel>
+          <div class="slide is-active" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary))">🎲</div>
+          <div class="slide" style="background:linear-gradient(135deg,var(--color-primary),#241238)">📸</div>
+          <div class="slide" style="background:linear-gradient(135deg,var(--color-accent-text),var(--color-secondary))">🙌</div>
+          <button class="cs-arrow prev" onclick="carouselStep(this,-1)" aria-label="Anterior">‹</button>
+          <button class="cs-arrow next" onclick="carouselStep(this,1)" aria-label="Siguiente">›</button>
+          <div class="cs-dots"></div>
+        </div>
+      </div>
+
+      <div class="faq-band">
+        <h2>Preguntas frecuentes</h2>
+        <dl>
+          <div class="faq-item" style="padding:var(--space-2) 0"><dt style="font-weight:600">¿Qué significa el "peso" de un juego?</dt><dd style="margin:0;color:var(--color-text-muted)">Qué tan complejas son sus reglas y decisiones, de "ligero" a "experto".</dd></div>
+          <div class="faq-item" style="padding:var(--space-2) 0"><dt style="font-weight:600">¿Necesito saber jugar de antemano?</dt><dd style="margin:0;color:var(--color-text-muted)">No — está pensado justamente para quienes están empezando.</dd></div>
+        </dl>
+      </div>
+    </main>
+
+    <footer class="pk-footer footer-c">
+      <div class="mission-band">
+        <h3>Encontrá el juego justo para tu mesa</h3>
+        <p>Un catálogo curado de juegos de mesa modernos para gente nueva en el hobby.</p>
+        <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
+      </div>
+      <div class="utility-bar">
+        <ul class="footer-links inline"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">Contacto</a></li></ul>
+        <div style="display:flex; align-items:center; gap:var(--space-3)">
+          <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
+          <span class="footer-copyright">© 2026 Pukllay Club</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ============================= VARIANT C ============================= -->
+<div id="variant-c" class="variant">
+  <div class="shell viewport-frame">
+    <div class="pk-header pk-gutter">
+      <div class="pk-nav">
+        <a href="#" class="pk-brand">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,2 29,9 29,23 16,30 3,23 3,9" fill="var(--color-primary)"/><circle cx="16" cy="16" r="6" fill="var(--color-accent-bg)"/></svg>
+          <span class="pk-brand-text"><span class="word">Pukllay Club</span><span class="tag">Juegos de mesa modernos</span></span>
+        </a>
+        <div class="pk-nav-crumb">Acerca de</div>
+        <div class="pk-theme-toggle"><button>☀</button><button>🌙</button></div>
+      </div>
+    </div>
+
+    <main class="about about-c">
+      <div class="lead">
+        <h1>Encontrá el juego justo para tu mesa</h1>
+        <p>Un catálogo curado de juegos de mesa modernos, pensado para gente nueva en el hobby.</p>
+      </div>
+
+      <div class="steps-row">
+        <div class="step-card"><div class="icon">🔍</div><h3>Explorá o describí</h3><p>Navegá el catálogo, o contanos qué buscás en tus propias palabras.</p></div>
+        <div class="step-card"><div class="icon">✨</div><h3>Te mostramos opciones</h3><p>Explicadas simple: duración, jugadores, qué tan complejo es.</p></div>
+        <div class="step-card"><div class="icon">🎲</div><h3>Vení a jugar</h3><p>Probalo en una juntada del club, o pedilo prestado.</p></div>
+      </div>
+
+      <div class="club-section">
+        <h2>Nuestra misión</h2>
+        <p>Creemos que cualquiera puede encontrar el juego justo si se lo explicás en su propio
+          idioma. Nuestro trabajo es enseñar la complejidad de los juegos — peso, mecánicas,
+          temas, autores — no darla por sentada.</p>
+      </div>
+
+      <div class="club-section">
+        <h2>El club</h2>
+        <p>Somos un grupo de jugadores que se junta regularmente en persona. Este catálogo es la
+          puerta de entrada a esas juntadas — un lugar para descubrir qué jugar antes de venir.
+          Si te copa, sumate.</p>
+      </div>
+
+      <div class="faq-section">
+        <h2>Preguntas frecuentes</h2>
+        <div class="accordion">
+          <div class="accordion-item">
+            <button class="accordion-trigger" onclick="toggleAccordion(this)">¿Qué significa el "peso" de un juego? <span class="chevron">▾</span></button>
+            <div class="accordion-panel"><p>Qué tan complejas son sus reglas y decisiones — no cuánto pesa la caja. Va de "ligero" a "experto".</p></div>
+          </div>
+          <div class="accordion-item">
+            <button class="accordion-trigger" onclick="toggleAccordion(this)">¿Necesito saber jugar de antemano? <span class="chevron">▾</span></button>
+            <div class="accordion-panel"><p>No. El catálogo está pensado justamente para quienes están empezando.</p></div>
+          </div>
+          <div class="accordion-item">
+            <button class="accordion-trigger" onclick="toggleAccordion(this)">¿Puedo pedir un juego prestado? <span class="chevron">▾</span></button>
+            <div class="accordion-panel"><p>Sí, coordinando con el club — próximamente vas a poder hacerlo directo desde acá.</p></div>
+          </div>
+          <div class="accordion-item">
+            <button class="accordion-trigger" onclick="toggleAccordion(this)">¿Qué es una "mecánica" de juego? <span class="chevron">▾</span></button>
+            <div class="accordion-panel"><p>La forma en la que el juego funciona por dentro — por ejemplo, "negociación" (Catán) o "construcción de motor" (Terraforming Mars).</p></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="pk-footer footer-c">
+      <div class="mission-band">
+        <h3>Encontrá el juego justo para tu mesa</h3>
+        <p>Un catálogo curado de juegos de mesa modernos para gente nueva en el hobby.</p>
+        <div class="footer-social"><a href="#">IG</a><a href="#">WA</a><a href="#">DC</a></div>
+      </div>
+      <div class="utility-bar">
+        <ul class="footer-links inline"><li><a href="#">Catálogo</a></li><li><a href="#">Acerca de</a></li><li><a href="#">Contacto</a></li></ul>
+        <div style="display:flex; align-items:center; gap:var(--space-3)">
+          <a href="#" class="bgg-badge"><span class="mark">BGG</span> Powered by BoardGameGeek</a>
+          <span class="footer-copyright">© 2026 Pukllay Club</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default theme</option>
+  </select>
+  <button onclick="setViewport(375)">📱 375</button>
+  <button onclick="setViewport(768)">📟 768</button>
+  <button onclick="setViewport(1280)">🖥 1280</button>
+  <button onclick="setViewport('none')">↔ Full</button>
+</div>
+
+<script>
+  function showVariant(id, evt) {
+    document.querySelectorAll('.variant').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.variant-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('variant-' + id).classList.add('active');
+    evt.target.classList.add('active');
+  }
+  // ---- band image carousel (variant B) ----
+  function setupCarousel(el) {
+    const slides = Array.from(el.querySelectorAll('.slide'));
+    const dotsWrap = el.querySelector('.cs-dots');
+    dotsWrap.innerHTML = slides.map((_, i) => `<button class="cs-dot${i === 0 ? ' is-active' : ''}" onclick="carouselGoTo(this, ${i})"></button>`).join('');
+    el._index = 0;
+  }
+  function carouselShow(el, index) {
+    const slides = Array.from(el.querySelectorAll('.slide'));
+    const dots = Array.from(el.querySelectorAll('.cs-dot'));
+    const next = (index + slides.length) % slides.length;
+    slides.forEach((s, i) => s.classList.toggle('is-active', i === next));
+    dots.forEach((d, i) => d.classList.toggle('is-active', i === next));
+    el._index = next;
+  }
+  function carouselStep(btn, dir) {
+    const el = btn.closest('.band-carousel');
+    carouselShow(el, (el._index || 0) + dir);
+  }
+  function carouselGoTo(btn, i) {
+    carouselShow(btn.closest('.band-carousel'), i);
+  }
+  document.querySelectorAll('[data-carousel]').forEach(setupCarousel);
+
+  function toggleAccordion(btn) {
+    const item = btn.closest('.accordion-item');
+    const wasOpen = item.classList.contains('is-open');
+    item.parentElement.querySelectorAll('.accordion-item').forEach(i => i.classList.remove('is-open'));
+    if (!wasOpen) item.classList.add('is-open');
+  }
+  function setViewport(px) {
+    document.querySelectorAll('.viewport-frame').forEach(f => {
+      f.style.maxWidth = px === 'none' ? 'none' : px + 'px';
+      f.style.border = px === 'none' ? 'none' : '1px dashed var(--color-border)';
+    });
+  }
+</script>
+
+</body>
+</html>

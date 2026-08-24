@@ -52,6 +52,10 @@ env:
   clear:
     PHX_HOST: pukllay.club
     PHX_SERVER: "true"
+    # The detail page's reservation CTA deep-link (SHELL-03, plan 01.1-05) —
+    # a published club business number, not a secret. Different from the
+    # ClubLinks group-invite URL (a different WhatsApp feature).
+    RESERVATION_WHATSAPP_NUMBER: "5493884103255"
   secret:
     - SECRET_KEY_BASE
     - DATABASE_URL

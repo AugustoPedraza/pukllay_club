@@ -1,0 +1,174 @@
+/* PukllayClub sketch theme — mirrors assets/css/app.css's daisyUI light/dark
+   theme blocks (the single upstream source of the brand palette) so sketches
+   feel true to the real app, not a generic mockup. Drift from upstream is
+   checked by ./check-theme-drift.sh — run it after editing either file.
+
+   Upstream mapping (app.css daisyUI variable -> sketch variable here):
+     --color-base-100      -> --color-bg
+     --color-base-200      -> --color-surface
+     --color-base-300      -> --color-surface-2 AND --color-border (feeds both)
+     --color-base-content  -> --color-text
+     --color-neutral       -> --color-text-muted
+     --color-primary       -> --color-primary
+     --color-primary-content -> --color-primary-content
+     --color-secondary     -> --color-secondary
+     --color-accent        -> --color-accent-bg
+     --color-accent-content -> --color-accent-text
+     --color-error         -> --color-danger
+     --color-success       -> --color-success
+   Typography, spacing, radius, shadow and motion tokens have no daisyUI
+   counterpart and are sketch-only — the motion values in particular are
+   sketch 006's validated winner (see below) and must not be touched here.
+
+   Real light/dark toggle mechanism (2026-08-20, frontier consistency pass):
+   previously the dark palette only existed as a separate file
+   (dark-purple.css), swapped in via each sketch toolbar's <select> — that
+   proved the *colors* but never the real mechanism a LiveView app would
+   actually ship. This file now carries both palettes directly:
+     1. :root below = light, the default with no JS/media-query involved.
+     2. @media (prefers-color-scheme: dark) overrides to dark IF the OS/browser
+        prefers it, UNLESS an explicit [data-theme="light"] opts back out.
+     3. [data-theme="dark"] forces dark regardless of system preference (for
+        an explicit toggle button, even on a light-system browser).
+     "data-theme wins" in both directions — an explicit choice always beats
+     the system default. See any composed sketch's toggle button/JS for the
+     real implementation (sets/persists document.documentElement.dataset.theme). */
+
+:root {
+  /* Colors — from 01-UI-SPEC.md daisyUI theme overrides (light) */
+  --color-bg: #FFFFFF;
+  --color-surface: #F3ECFA;
+  --color-surface-2: #E3D3F0;
+  --color-text: #241238;
+  --color-text-muted: #6B5B7B;
+  --color-primary: #3D096D;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #7E4CA5;
+  --color-accent-bg: #EDE1F7;
+  --color-accent-text: #3D096D;
+  --color-border: #E3D3F0;
+  --color-danger: #B23A5C;
+  --color-success: #3F8F6B;
+
+  /* Typography — Bebas Neue (display) + Inter (body/UI), per 01-UI-SPEC.md */
+  --font-display: "Bebas Neue", ui-sans-serif, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-display: 1.75rem;
+
+  /* Spacing — 4px-multiple scale, per 01-UI-SPEC.md */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-12: 64px;
+
+  /* Shapes */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(36, 18, 56, 0.06);
+  --shadow-md: 0 4px 12px rgba(36, 18, 56, 0.12);
+  --shadow-lg: 0 12px 32px rgba(36, 18, 56, 0.24);
+
+  /* Motion — shared easing vocabulary for sketch 003 and any hover/expand
+     interactions built into 001/002. Duration values were chosen
+     incidentally while building 001/002 (see sketch 006's own design
+     question) — sketch 006 deliberately validated them and picked winner
+     D ("Subtle/Soft": fastest of the three tested + no-overshoot ease-out,
+     smaller hover-lift amplitude). These are D's validated fast/base/slow
+     values (100/180/280ms), applied here so the shared theme actually
+     carries the winning system instead of the original incidental guess. */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 100ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+}
+
+/* Dark palette — re-derived 2026-08-21 from assets/css/app.css's shipped
+   "dark" daisyUI theme block via the mapping table above, replacing an
+   exploratory "dark-purple" fork that had drifted from the real app in 11 of
+   13 colour values (see MANIFEST.md for the retired fork's original values).
+   The app's dark values are the checker-verified 01-UI-SPEC.md contract with
+   per-value contrast rationale in writing, so sketches now preview the real
+   dark mode rather than a superseded proposal. Only the color block changes;
+   typography/spacing/shape/motion tokens are brand-locked and identical in
+   both palettes. Shadows stay re-based on black instead of the brand-purple
+   text color, since a purple-tinted shadow reads as muddy against an
+   already-purple background — they have no upstream daisyUI equivalent. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #170A26;
+    --color-surface: #22103A;
+    --color-surface-2: #2F1750;
+    --color-text: #F3ECFA;
+    --color-text-muted: #B8A6CC;
+    --color-primary: #A97FD1;
+    --color-primary-content: #170A26;
+    --color-secondary: #7E4CA5;
+    --color-accent-bg: #3D2A56;
+    --color-accent-text: #E4D3F5;
+    --color-border: #2F1750;
+    --color-danger: #E06B90;
+    --color-success: #5FBE95;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg: #170A26;
+  --color-surface: #22103A;
+  --color-surface-2: #2F1750;
+  --color-text: #F3ECFA;
+  --color-text-muted: #B8A6CC;
+  --color-primary: #A97FD1;
+  --color-primary-content: #170A26;
+  --color-secondary: #7E4CA5;
+  --color-accent-bg: #3D2A56;
+  --color-accent-text: #E4D3F5;
+  --color-border: #2F1750;
+  --color-danger: #E06B90;
+  --color-success: #5FBE95;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+@font-face {
+  font-family: "Bebas Neue";
+  src: local("Bebas Neue");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: local("Inter");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}

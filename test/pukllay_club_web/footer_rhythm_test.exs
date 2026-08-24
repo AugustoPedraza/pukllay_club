@@ -1,0 +1,485 @@
+defmodule PukllayClubWeb.FooterRhythmTest do
+  # Guards the footer's SPACING HIERARCHY — the class of bug where a layout has
+  # enough room and no overflow, yet reads as cluttered because proximity, the
+  # only grouping cue available, is spent uniformly instead of in tiers.
+  #
+  # Motivating incident (debug session footer-desktop-overloaded): sketch 011
+  # deliberately gives this footer no divider, so proximity is the ONLY way it
+  # can express grouping. But `.pk-footer-left, .pk-footer-right` declared a
+  # single `gap: 1.5rem` that served every tier at once, and 1.5rem was also
+  # `.pk-footer-row`'s column-gap. Measured on the live app, EVERY within-cluster
+  # gap was exactly 24.0px at every viewport from 375px to 1440px: the gap
+  # separating the social icons from the copyright line was the same 24px that
+  # separated the "Tema" label from the toggle it labels. Roughly nine atoms read
+  # as one flat 620.8px run — the reported "too overloaded for being one line".
+  #
+  # A second, independent defect lived in the same rule set: `.pk-footer-row`'s
+  # row-gap was 0.75rem while its clusters' gap was 1.5rem, so on every wrapped
+  # line, same-group items sat 24px apart and different-group items only 12px
+  # apart — proximity pointing backwards. That affected far more than phones:
+  # the row wraps to two tiers at every width from 481px to ~1070px.
+  #
+  # Oracle type: derived (contract). The real proof is rendered geometry, which
+  # ExUnit cannot observe; these assertions pin the token ordering that geometry
+  # depends on. Every assertion here was verified RED against the pre-fix values
+  # (item/list/group/cluster = 1.5/1/1.5/0.75rem), not merely green after them.
+  use ExUnit.Case, async: true
+
+  import Phoenix.LiveViewTest, only: [render_component: 2]
+
+  alias PukllayClubWeb.Layouts
+
+  @css_path Path.expand("../../assets/css/app.css", __DIR__)
+
+  defp source, do: File.read!(@css_path)
+
+  # Comments are prose, not cascade. Matching selector names inside a comment is
+  # a false pass — this file's sibling (footer_overflow_test) was silently
+  # satisfied by a comment once, which is why stripping is done up front here.
+  defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
+
+  defp base_footer_block(src) do
+    case Regex.run(~r/(?m)^\.pk-footer\s*\{([^}]*)\}/, strip_comments(src)) do
+      [_, body] -> body
+      nil -> flunk("No top-level `.pk-footer` rule found in assets/css/app.css")
+    end
+  end
+
+  # Everything from the trailing narrow-viewport block to the end of the file.
+  defp narrow_viewport_tail(src) do
+    [_, tail] = String.split(strip_comments(src), "@media (max-width: 480px) {", parts: 2)
+    tail
+  end
+
+  defp narrow_footer_block(src) do
+    case Regex.run(~r/\.pk-footer\s*\{([^}]*)\}/, narrow_viewport_tail(src)) do
+      [_, body] -> body
+      nil -> flunk("The ≤480px block no longer re-declares `.pk-footer` spacing tokens")
+    end
+  end
+
+  # The top-level `.pk-footer-legal` rule — i.e. the one that governs every width
+  # from 481px up. Deliberately NOT the ≤480px override.
+  defp legal_block(src) do
+    case Regex.run(~r/(?m)^\.pk-footer-legal\s*\{([^}]*)\}/, strip_comments(src)) do
+      [_, body] -> body
+      nil -> flunk("No top-level `.pk-footer-legal` rule found in assets/css/app.css")
+    end
+  end
+
+  # Everything BEFORE the trailing narrow-viewport block: the cascade that any
+  # viewport wider than 480px actually gets.
+  defp wide_viewport_source(src) do
+    [head, _] = String.split(strip_comments(src), "@media (max-width: 480px) {", parts: 2)
+    head
+  end
+
+  defp rem_token!(block, name) do
+    case Regex.run(~r/--pk-footer-gap-#{name}:\s*([\d.]+)rem/, block) do
+      [_, value] -> String.to_float(if String.contains?(value, "."), do: value, else: value <> ".0")
+      nil -> flunk("Token `--pk-footer-gap-#{name}` is missing from this block")
+    end
+  end
+
+  describe "the spacing scale keeps its tiers in order" do
+    test "the four tiers are strictly ordered item < list < group <= cluster" do
+      block = base_footer_block(source())
+
+      item = rem_token!(block, "item")
+      list = rem_token!(block, "list")
+      group = rem_token!(block, "group")
+      cluster = rem_token!(block, "cluster")
+
+      assert item < list,
+             "The item tier (#{item}rem) must be tighter than the list tier (#{list}rem), or " <>
+               "the \"Tema\" label stops reading as attached to the toggle it labels."
+
+      assert list < group,
+             "The list tier (#{list}rem) must be tighter than the group tier (#{group}rem), or " <>
+               "sibling links space out as far as unrelated concerns do."
+
+      assert group <= cluster,
+             "The group tier (#{group}rem) must not exceed the cluster tier (#{cluster}rem). " <>
+               "This is the inversion that made items in the SAME group sit further apart than " <>
+               "items in DIFFERENT groups on every wrapped line."
+    end
+
+    test "the item tier is separated from the group tier by a visible margin, not a rounding error" do
+      block = base_footer_block(source())
+      item = rem_token!(block, "item")
+      group = rem_token!(block, "group")
+
+      # Boundary neighbour on the defect's equivalence class: the original bug was
+      # ratio 1.0 (24px vs 24px). Anything near 1.0 re-creates it even though the
+      # strict `<` above would still pass.
+      assert group / item >= 2.0,
+             "The group tier is only #{Float.round(group / item, 2)}x the item tier. Below 2x " <>
+               "the eye cannot tell a binding gap from a separating one, which is the whole " <>
+               "mechanism of this bug (it was exactly 1.0x before the fix)."
+    end
+
+    test "the ≤480px override retunes values without reordering the tiers" do
+      narrow = narrow_footer_block(source())
+
+      group = rem_token!(narrow, "group")
+      cluster = rem_token!(narrow, "cluster")
+
+      # Mobile is this project's primary surface, so the values are allowed to be
+      # smaller there. The ORDER is what must survive the retune.
+      assert group <= cluster,
+             "The ≤480px block sets group #{group}rem > cluster #{cluster}rem, re-inverting " <>
+               "proximity on the stacked mobile footer — brand/links would sit further apart " <>
+               "than the legal line sits from them. This is the exact pre-fix mobile defect."
+    end
+  end
+
+  describe "the footer consumes the scale instead of re-declaring literals" do
+    test "the row and both clusters use the tokens, not hand-written gap values" do
+      src = strip_comments(source())
+
+      row = ~r/(?m)^\.pk-footer-row\s*\{([^}]*)\}/ |> Regex.run(src) |> Enum.at(1)
+      clusters = ~r/(?m)^\.pk-footer-left,\n\.pk-footer-right\s*\{([^}]*)\}/ |> Regex.run(src) |> Enum.at(1)
+
+      assert row =~ "gap: var(--pk-footer-gap-cluster)",
+             "`.pk-footer-row` must take its gap from the shared token. A literal here is how " <>
+               "the row-gap drifted to 0.75rem while the clusters sat at 1.5rem — two values " <>
+               "for one rhythm, which is what inverted the proximity signal."
+
+      assert clusters =~ "gap: var(--pk-footer-gap-group)",
+             "`.pk-footer-left, .pk-footer-right` must take their gap from the shared token, " <>
+               "so desktop and mobile provably share one scale rather than two that match today."
+
+      refute row =~ ~r/gap:\s*[\d.]+rem\s+[\d.]+rem/,
+             "`.pk-footer-row` declares a two-value gap. Separate row/column gaps are exactly " <>
+               "how the wrapped layout ended up with a tighter between-group gap than " <>
+               "within-group gap."
+    end
+  end
+
+  describe "the theme control renders as one unit" do
+    test "the Tema label and the toggle share a single wrapper" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-footer-right > .pk-footer-theme") |> Enum.count() == 1,
+             "`.pk-footer-theme` must be a direct child of the right cluster — it is what lets " <>
+               "the label and the buttons be bound at the item tier while the cluster separates " <>
+               "concerns at the group tier."
+
+      for selector <- [".pk-footer-theme > .pk-footer-toggle-tag", ".pk-footer-theme > .pk-theme-toggle"] do
+        assert doc |> LazyHTML.query(selector) |> Enum.count() == 1,
+               "`#{selector}` is missing. The label exists to make the control discoverable " <>
+                 "(plan 01.1-08, sketch 017 Round 2); if it is separated from the toggle again, " <>
+                 "it reads as a third unrelated concern beside the social icons."
+      end
+    end
+
+    test "the right cluster carries exactly two concern-level children" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      children = doc |> LazyHTML.query(".pk-footer-right > *") |> Enum.count()
+
+      # Four originally (social, label, toggle, meta); three after the label and
+      # toggle were wrapped; two now that the legal line moved to its own row.
+      # Two is load-bearing in three separate ways, so do not just bump this
+      # number if it fails:
+      #
+      #   1. It matches `.pk-footer-left`'s two concerns — the cluster symmetry
+      #      that resolved the 1.66x ink asymmetry (see the describe block below).
+      #   2. Everything in here is a control that RELOCATES to the mobile drawer,
+      #      which is the only reason the ≤480px block may hide the whole cluster
+      #      with one `display: none` instead of hiding children individually. A
+      #      third child that does not relocate would silently vanish on phones.
+      #   3. It is the count the group tier was measured against.
+      assert children == 2,
+             "`.pk-footer-right` has #{children} direct children, expected 2 (social, theme). " <>
+               "Every child of this cluster must be a control that has a mobile-drawer " <>
+               "equivalent, because the ≤480px block hides the CLUSTER, not its children — " <>
+               "anything else added here disappears on phones with no way to reach it. If a " <>
+               "new concern is genuinely needed, re-measure the row and revisit that hide rule " <>
+               "rather than only updating this number."
+    end
+  end
+
+  # The structural half of debug footer-desktop-imbalance. Spacing tiers alone
+  # did not settle the "overloaded" report: with the four-tier scale measurably
+  # intact (re-verified on the live app — 8px item, 24px group, 32px cluster, no
+  # overflow), the same complaint came back the same day. Proximity can only say
+  # "these belong together"; it cannot make unlike things alike, and the right
+  # cluster held two interactive utilities PLUS a passive compliance run.
+  #
+  # Measured at 1280px before this change: right cluster 604.81px carrying 3
+  # concerns against left 364.11px carrying 2 (1.66x) with 247.08px of void
+  # between them, and `.pk-footer-meta` alone was 59.9% of the right cluster's
+  # ink mass while occupying 40.7% of its width — the footer's least important
+  # content was its densest. After: 364.11 vs 335.06 (1.09x), two concerns each.
+  #
+  # Oracle type: derived (contract), same as the rest of this file — the proof is
+  # rendered geometry, so these pin the structure and declarations that geometry
+  # depends on.
+  describe "the legal line is its own band, not a third concern in the right cluster" do
+    test "the copyright/BGG line is a full-width row of its own, outside both clusters" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-footer-row > .pk-footer-legal") |> Enum.count() == 1,
+             "`.pk-footer-legal` must be a direct child of `.pk-footer-row`. It is a peer of " <>
+               "the two clusters, which is what lets the row's own row-gap (the cluster tier) " <>
+               "separate it without a divider — sketch 011 forbids one."
+
+      # Two pieces, not one: see the "the band's ink reaches both edges" describe
+      # block below for why the count is load-bearing rather than incidental.
+      assert doc |> LazyHTML.query(".pk-footer-legal .pk-footer-meta") |> Enum.count() == 2,
+             "The copyright + BGG attribution must live inside `.pk-footer-legal`. D-04 makes " <>
+               "the attribution a compliance requirement, so it has to stay rendered at every " <>
+               "viewport width — this assertion is what proves it did not simply get dropped."
+
+      assert doc |> LazyHTML.query(".pk-footer-right .pk-footer-meta") |> Enum.count() == 0,
+             "`.pk-footer-meta` is back inside the right cluster. That is the exact structure " <>
+               "this fix undid: a passive legal run sharing a proximity band with two " <>
+               "interactive controls, which made the two \"peer\" clusters 1.66x apart in width."
+    end
+
+    test "both clusters carry the same number of concerns" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      left = doc |> LazyHTML.query(".pk-footer-left > *") |> Enum.count()
+      right = doc |> LazyHTML.query(".pk-footer-right > *") |> Enum.count()
+
+      assert left == right,
+             "The footer's two clusters carry #{left} and #{right} concerns. Sketch 011 " <>
+               "specified them as PEERS; an imbalance here is what the reported ink/void " <>
+               "asymmetry actually was, and it is invisible to every spacing assertion above " <>
+               "because each individual gap can be perfectly correct while the clusters they " <>
+               "sit in are not comparable."
+    end
+
+    test "the break is width-based and survives the column flip at ≤480px" do
+      src = strip_comments(source())
+
+      legal =
+        case Regex.run(~r/(?m)^\.pk-footer-legal\s*\{([^}]*)\}/, src) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-footer-legal` rule found in assets/css/app.css")
+        end
+
+      assert legal =~ ~r/width:\s*100%/,
+             "`.pk-footer-legal` must declare `width: 100%`. That is the whole break " <>
+               "mechanism: it makes the item's hypothetical main size the row's full content " <>
+               "box, so a wrapping flex row can never fit it beside a cluster."
+
+      # The direction trap. `flex-basis` is the MAIN size, so at ≤480px — where
+      # `.pk-footer-row` becomes `flex-direction: column` — `flex-basis: 100%`
+      # stops meaning "full width" and starts meaning "full height".
+      refute legal =~ ~r/flex-basis:\s*100%/,
+             "`.pk-footer-legal` uses `flex-basis: 100%` to force its line. flex-basis is the " <>
+               "MAIN axis size, and the ≤480px block turns this row into a column — so that " <>
+               "declaration silently becomes a height on this project's primary viewport. Use " <>
+               "`width: 100%`, which is correct in both orientations."
+
+      assert legal =~ ~r/display:\s*flex/,
+             "`.pk-footer-legal` must be a flex container. As a plain block it generates an " <>
+               "anonymous line box whose height is its OWN inherited 1rem strut, not the " <>
+               "0.75rem line inside it — measured, that silently added 6px to the footer at " <>
+               "every viewport including mobile."
+
+      # Sketch 011: no divider anywhere in this footer. The row-gap does the work.
+      refute legal =~ ~r/border/,
+             "`.pk-footer-legal` declares a border. Sketch 011 gives this footer no dividers " <>
+               "on purpose — separating the legal band is the row-gap's job, and a rule here " <>
+               "would re-introduce exactly the \"two visual weights read as two footers\" " <>
+               "problem that killed the original Mission Band design."
+    end
+
+    test "the ≤480px block returns the legal band to the centred stack" do
+      narrow = narrow_viewport_tail(source())
+
+      # The stacked footer is centred: `.pk-footer-row` keeps `align-items: center`,
+      # which flips from "centre the clusters vertically" to "centre the stack
+      # horizontally" when the direction changes. A width:100% box opts out of that
+      # and left-aligns against the gutter while everything above it stays centred.
+      assert narrow =~ ~r/\.pk-footer-legal\s*\{[^}]*width:\s*auto/,
+             "The ≤480px block no longer resets `.pk-footer-legal`'s width to auto. Mobile is " <>
+               "this project's primary surface and its footer is a CENTRED column — leaving " <>
+               "the band full-width left-aligns the legal line while the brand and links above " <>
+               "it stay centred (measured: x=14 instead of 39.13 at 320px)."
+    end
+
+    test "the emptied right cluster cannot spend a gap slot on the mobile stack" do
+      narrow = narrow_viewport_tail(source())
+
+      # `display: none` children are skipped by flex gap; an empty flex PARENT is
+      # not. Once the legal line moved out, everything left in `.pk-footer-right`
+      # relocates to the drawer at ≤480px, so the cluster renders as a zero-height
+      # box that still consumes two 24px cluster gaps.
+      assert narrow =~ ~r/\.pk-footer-right\s*\{[^}]*display:\s*none/,
+             "The ≤480px block must hide `.pk-footer-right` itself, not only its children. " <>
+               "A hidden child is skipped by flex `gap`, but an empty visible parent still " <>
+               "takes a slot in the column — leaving it in would push the legal line 24px " <>
+               "further down the mobile footer to fix a desktop complaint."
+    end
+  end
+
+  # Treatment D of debug footer-desktop-imbalance, and the last open half of it.
+  # Giving the legal line its own band (the describe block above) fixed the
+  # cluster asymmetry but created a new one INSIDE the band: 241.75px of ink in a
+  # 1216px band at 1280px — 19.88% filled, with the remaining 80.1% sitting as
+  # ONE unbroken 974.25px void — so the band read as an orphaned fragment under a
+  # dense utility row rather than as a peer band.
+  #
+  # The load-bearing measurement is that this is a FILL problem and not an
+  # alignment one. Built as runtime variants and measured at 1280px, left, centre
+  # and right all produce the SAME 19.88% fill; they relocate the void instead of
+  # reducing it. Only splitting the run into two edge-anchored pieces changed the
+  # number (-> 100%), and it is also the only candidate that stays correct in the
+  # wrapped 481-790px band, where `space-between` on the ROW degenerates to
+  # left-flush and the right/centre variants became the single odd element in the
+  # footer — a defect completely invisible in a 1280px screenshot.
+  #
+  # Oracle type: derived (contract), as everywhere in this file — ExUnit cannot
+  # observe rendered geometry, so these pin the declarations and structure the
+  # measured geometry depends on.
+  describe "the legal band's ink reaches both edges instead of stubbing at one" do
+    test "the band holds two pieces, because space-between over one item is a no-op" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      pieces = doc |> LazyHTML.query(".pk-footer-legal > .pk-footer-meta") |> Enum.count()
+
+      # This count IS the fix, not a rendering detail. `justify-content:
+      # space-between` distributes free space BETWEEN items; with a single item
+      # there is nothing to distribute and the declaration silently does nothing,
+      # returning the band to the 19.88% stub with the CSS still looking correct.
+      assert pieces == 2,
+             "`.pk-footer-legal` has #{pieces} direct `.pk-footer-meta` children, expected 2 " <>
+               "(copyright, attribution). Merging them back into one run makes " <>
+               "`justify-content: space-between` a no-op — the band silently returns to a " <>
+               "19.88%-filled stub while the stylesheet still reads as if it were anchored."
+    end
+
+    test "the two pieces are anchored to opposite edges, not just spread out" do
+      legal = legal_block(source())
+
+      assert legal =~ ~r/justify-content:\s*space-between/,
+             "`.pk-footer-legal` must use `justify-content: space-between`. That is what puts " <>
+               "one piece on each edge of the band, taking its fill from 19.88% to 100% and " <>
+               "making the copyright flush with the brand above it while the attribution " <>
+               "closes the row's right gutter."
+
+      # Boundary neighbours on the defect's own equivalence class. The defect is
+      # "the band's ink does not reach its edges", and a guard that only refuted
+      # `flex-start` would still admit these three, which all LOOK like
+      # distribution but leave a half- or third-gap outside the first and last
+      # item. Measured on the live app at 1280px:
+      #
+      #   space-between  fill 100.00%   left edge  +0.00px   right edge  +0.00px
+      #   space-around   fill  60.51%   left edge +240.11px
+      #   space-evenly   fill  47.34%   left edge +320.14px
+      #   center         fill  21.02%   left edge +480.22px
+      #   flex-end       fill  21.02%   left edge +960.45px
+      #
+      # Only space-between anchors anything. The rest reproduce the reported
+      # defect to varying degrees while reading as a deliberate choice in review.
+      for near_miss <- ["space-around", "space-evenly", "center", "flex-end"] do
+        refute legal =~ ~r/justify-content:\s*#{near_miss}/,
+               "`.pk-footer-legal` uses `justify-content: #{near_miss}`. Measured at 1280px " <>
+                 "that fills the band to at most 60.51% and pushes the copyright at least " <>
+                 "240px off the brand edge it is supposed to line up with — the orphaned-stub " <>
+                 "reading this treatment exists to remove. Only `space-between` anchors a " <>
+                 "piece to each edge."
+      end
+    end
+
+    test "the copyright and the attribution stay on one shared baseline however far apart they sit" do
+      legal = legal_block(source())
+
+      # This is a CONSTRAINT carried in from the first half of the same debug
+      # session, not a style preference. The originally-reported defect was these
+      # two runs sitting 5.00px apart vertically (an `inline-flex` anchor
+      # synthesizing its baseline from an 18px logo). Treatment D then moved them
+      # ~984px apart horizontally, which is precisely the arrangement where a
+      # reintroduced vertical offset would be most visible and least explicable.
+      #
+      # `align-items: baseline` makes them share a baseline BY CONSTRUCTION at any
+      # separation. The initial `stretch` default also happened to align them —
+      # but only because both boxes measured exactly 18px tall, which is a
+      # coincidence that the next font-size or logo-size change would silently
+      # break. Verified on the live app: baseline delta 0.00px at every width from
+      # 260px to 1920px, in both themes.
+      assert legal =~ ~r/align-items:\s*baseline/,
+             "`.pk-footer-legal` must declare `align-items: baseline`. The copyright and the " <>
+               "BGG attribution now sit ~984px apart at 1280px, and this session OPENED with " <>
+               "a report that those two were not aligned. Baseline alignment is what keeps " <>
+               "them on one shared baseline structurally; any other value leaves it to the " <>
+               "two boxes coincidentally measuring the same height."
+
+      refute legal =~ ~r/align-items:\s*(center|flex-start|flex-end|stretch)/,
+             "`.pk-footer-legal` overrides the baseline alignment. The two pieces have " <>
+               "different content — one is plain text, the other carries a 14px image — so " <>
+               "any box-edge alignment ties their text position to their box heights instead " <>
+               "of their baselines, which is the exact class of bug (a synthesized baseline " <>
+               "from an image box) that this debug session started from."
+    end
+
+    test "the band degrades by breaking between its pieces, not by bleeding out of them" do
+      src = source()
+      legal = legal_block(src)
+
+      # `space-between` distributes FREE space, and there is none once the ≤480px
+      # block shrink-wraps this band to `width: auto` — so without an explicit gap
+      # the copyright and the attribution butt directly together on this project's
+      # primary viewport. The gap is the floor in that state and a no-op in the
+      # wide one.
+      assert legal =~ ~r/gap:\s*var\(--pk-footer-gap-group\)/,
+             "`.pk-footer-legal` must declare a gap from the group token. `space-between` has " <>
+               "no free space to distribute once the ≤480px block shrink-wraps this band, so " <>
+               "without it the copyright and the attribution touch on phones. The group tier " <>
+               "is correct because these are two distinct concerns, not one unit."
+
+      assert legal =~ ~r/flex-wrap:\s*wrap/,
+             "`.pk-footer-legal` must wrap. Both pieces are `white-space: nowrap`, so below " <>
+               "the width where they both fit, wrapping is what lets the band break BETWEEN " <>
+               "them instead of shrinking their boxes while the text spills out of the " <>
+               "gutter. See FooterOverflowTest for the measured 260px case."
+    end
+
+    test "the full-width band holds at every width above the mobile breakpoint" do
+      wide = wide_viewport_source(source())
+
+      # The wrapped 481-790px band is where the rejected treatments actually
+      # broke, and it is invisible in the 1280px screenshot this was reported
+      # from. There, `.pk-footer-row` itself wraps, so both clusters sit flush at
+      # the left gutter and any legal band that is not full-width-with-both-edges-
+      # anchored becomes the only non-flush element in the footer.
+      #
+      # The band gets that from `width: 100%`, which the ≤480px block deliberately
+      # resets to `auto` for the centred mobile stack. That reset must stay scoped
+      # to ≤480px: a `width: auto` anywhere in the wide cascade would collapse the
+      # band to shrink-to-fit, at which point `space-between` has no free space
+      # and both pieces bunch at the left — the 481-790px failure, silently.
+      refute wide =~ ~r/\.pk-footer-legal[^{]*\{[^}]*width:\s*auto/,
+             "A rule outside the ≤480px block resets `.pk-footer-legal` to `width: auto`. " <>
+               "That collapses the band to shrink-to-fit, which leaves `space-between` no " <>
+               "free space to distribute and bunches both pieces at the left gutter. It looks " <>
+               "harmless at 1280px only if the band still happens to be full width there — " <>
+               "the state it actually breaks is the wrapped 481-790px band."
+    end
+
+    test "the inline separator is gone, since the pieces no longer sit next to each other" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      band = doc |> LazyHTML.query(".pk-footer-legal") |> LazyHTML.text()
+
+      # "·" joined two runs that were adjacent. At 1280px they are now ~984px
+      # apart, where a separator reads as a dangling glyph trailing one of them.
+      refute band =~ "·",
+             "The legal band still contains the \"·\" separator. It existed to join the " <>
+               "copyright and the attribution while they were one run; treatment D anchors " <>
+               "them to opposite edges of the band, so it now renders as a stray glyph " <>
+               "hanging off one piece with nothing on the other side of it."
+    end
+  end
+end

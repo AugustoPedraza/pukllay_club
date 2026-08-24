@@ -29,6 +29,7 @@ defmodule PukllayClubWeb.CoreComponents do
   use Phoenix.Component
   use Gettext, backend: PukllayClubWeb.Gettext
 
+  alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -97,11 +98,15 @@ defmodule PukllayClubWeb.CoreComponents do
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
   attr :class, :any
-  attr :variant, :string, values: ~w(primary)
+  attr :variant, :string, values: ~w(primary secondary)
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
+    variants = %{
+      "primary" => "btn-primary",
+      "secondary" => "btn-outline btn-primary",
+      nil => "btn-primary btn-soft"
+    }
 
     assigns =
       assign_new(assigns, :class, fn ->
@@ -173,8 +178,7 @@ defmodule PukllayClubWeb.CoreComponents do
     values: ~w(checkbox color date datetime-local email file month number password
                search select tel text textarea time url week hidden)
 
-  attr :field, Phoenix.HTML.FormField,
-    doc: "a form field struct retrieved from the form, for example: @form[:email]"
+  attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
@@ -184,11 +188,10 @@ defmodule PukllayClubWeb.CoreComponents do
   attr :class, :any, default: nil, doc: "the input class to use over defaults"
   attr :error_class, :any, default: nil, doc: "the input error class to use over defaults"
 
-  attr :rest, :global,
-    include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
+  attr :rest, :global, include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
-  def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+  def input(%{field: %FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
     assigns
@@ -246,7 +249,10 @@ defmodule PukllayClubWeb.CoreComponents do
         <select
           id={@id}
           name={@name}
-          class={[@class || "w-full select", @errors != [] && (@error_class || "select-error")]}
+          class={[
+            @class || "w-full select focus:outline-hidden focus-within:outline-hidden",
+            @errors != [] && (@error_class || "select-error")
+          ]}
           multiple={@multiple}
           {@rest}
         >
@@ -268,7 +274,7 @@ defmodule PukllayClubWeb.CoreComponents do
           id={@id}
           name={@name}
           class={[
-            @class || "w-full textarea",
+            @class || "w-full textarea focus:outline-hidden focus-within:outline-hidden",
             @errors != [] && (@error_class || "textarea-error")
           ]}
           {@rest}
@@ -291,7 +297,7 @@ defmodule PukllayClubWeb.CoreComponents do
           id={@id}
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
           class={[
-            @class || "w-full input",
+            @class || "w-full input focus:outline-hidden focus-within:outline-hidden",
             @errors != [] && (@error_class || "input-error")
           ]}
           {@rest}
@@ -459,8 +465,7 @@ defmodule PukllayClubWeb.CoreComponents do
       to: selector,
       time: 300,
       transition:
-        {"transition-all ease-out duration-300",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
+        {"transition-all ease-out duration-300", "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
          "opacity-100 translate-y-0 sm:scale-100"}
     )
   end

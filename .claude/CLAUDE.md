@@ -108,11 +108,17 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
 | `mix format --check-formatted` | Built into Elixir | Formatting gate | No install needed. |
 | `mix test --warnings-as-errors` | Built into Elixir/ExUnit | Test gate that also fails on compiler warnings | Standard practice — catches unused-variable/deprecated-function drift before it becomes a real bug. |
 | `erlef/setup-beam` GitHub Action | `@v1` (auto-resolves latest within v1) | CI toolchain setup | The standard, Elixir-team-maintained action for pinning Elixir+OTP versions in GitHub Actions — every current Elixir CI guide found uses this over manually installing Erlang. |
+| Styler (`adobe/elixir-styler`) | 1.12.2 | `mix format` plugin — auto-fixes non-idiomatic Elixir | Wired via `.formatter.exs`'s `plugins` list (`plugins: [Phoenix.LiveView.HTMLFormatter, Styler]`), **not** a separate `mix quality` alias step — it runs automatically inside `format --check-formatted` (already step 4 of the alias). Guards against AI-generated code drift over time; battle-tested (3.6M downloads, ~3 years old, Adobe-maintained). **Caveat (documented in its own README): Styler can change the behaviour of your program** — e.g. `case`->`if` rewrites can alter semantics when a `case` clause's expression isn't strictly `true`/`false`, since the equivalent `if` silently completes where the `case` would raise. Always review `git diff` for every Styler-produced rewrite before committing — do not accept rewrites on trust, per Styler's own guidance. |
+| `mix_audit` | 2.1.5 | `mix deps.audit` — scans `mix.lock` against the elixir-security-advisories DB | Dev/test-only dep (`only: [:dev, :test], runtime: false`), matching the Credo/Sobelow pattern. Gates `mix quality` alongside `mix hex.audit` (built into Hex, flags retired packages) — closes a supply-chain/dependency-hygiene gap Credo/Sobelow don't cover. |
 
 ## `mix quality` Alias Pattern
 
 - `sobelow --config` reads a `.sobelow-conf` file for allowlisting known-safe findings (e.g. a specific `Mix.env() != :prod` check) — create this file empty initially and only add exceptions when Sobelow flags a reviewed false positive, not preemptively.
-- Order matters for fast local feedback: cheapest/fastest checks first (`format`, `credo`) before the slower `test` run, so a formatting typo fails in seconds, not after a 30s+ test suite run. `sobelow` before `test` is a judgment call either way; the ordering above front-loads all static checks before the dynamic test run.
+- Order matters for fast local feedback: cheapest/fastest checks first before the slower `test` run, so a formatting typo fails in seconds, not after a 30s+ test suite run.
+  - `hex.audit` runs first because Mix's own `mix help hex.audit` states it "must be invoked before any other tasks that may load or start your application" — first position satisfies this without touching `:extra_applications`.
+  - `deps.audit` and `deps.unlock --check-unused` are grouped right after it: both are metadata-only checks against `mix.lock`/`mix.exs` with no compilation step, so they're cheaper than `format`/`credo` and belong ahead of them.
+  - `format --check-formatted` (now Styler-augmented — see the Development Tools table above), `credo --strict`, `sobelow` (security), and `test` (slowest) keep their original relative order.
+- `.formatter.exs`'s `plugins` list now includes `Styler` alongside `Phoenix.LiveView.HTMLFormatter`, so `format --check-formatted` also gates on Styler's idiom checks — no separate alias step exists for Styler itself.
 - Do **not** add `dialyzer` to this same alias unless you're prepared for its first-run PLT build cost (~2-5 min) — if you want type-checking, run it as a separate CI job with its own PLT cache, not inline in the fast local `mix quality` loop.
 
 ## GitHub Actions CI Pattern
@@ -197,7 +203,7 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 
 ## Project Skills
 
-No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, or `.codex/skills/` with a `SKILL.md` index file.
+- **Sketch findings for pukllay_club** (design decisions, CSS patterns, visual direction) → `Skill("sketch-findings-pukllay_club")`
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->

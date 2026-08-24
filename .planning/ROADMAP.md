@@ -27,7 +27,7 @@ be pulled forward without breaking that dependency chain.
   integers in numeric order
 
 - [x] **Phase 0: Walking Skeleton to Production** - Deploy pipeline only (CI, Kamal, migrations, backups) — no product features (completed 2026-07-27)
-- [ ] **Phase 1: Catalog v1** - Public browse/filter/search catalog with complexity-teaching UX, no auth, no AI
+- [x] **Phase 1: Catalog v1** - Public browse/filter/search catalog with complexity-teaching UX, no auth, no AI (completed 2026-08-18)
 - [ ] **Phase 2: Natural-Language Spanish Search + Auth** - Hero feature: NL search via hybrid ranking, plus magic-link auth and favorites
 - [ ] **Phase 3: RAG Rules Oracle** - Per-game rules Q&A grounded in official rulebooks with citations
 - [ ] **Phase 4: Club Operations** - Admin catalog/copy management and in-person rental tracking
@@ -84,8 +84,113 @@ be pulled forward without breaking that dependency chain.
   4. Each game displays a plain-Spanish weight-band descriptor and plain-Spanish mechanic/theme chips instead of a bare 1-5 number or raw hobbyist jargon
   5. Each game shows the club's own resized cover image and any editorial "club favorite"/"beginner-friendly" tag carried over from the existing Excel catalog
 
-**Plans**: TBD
+**Plans**: 12/12 plans executed (6 original + 3 gap-closure executed; 3 sketch-implementation plans pending)
 **UI hint**: yes
+
+**Wave 1**
+
+- [x] 01-01-PLAN.md — BGG application token + R2 catalog bucket + seed dependencies (blocking human checkpoint) (CATALOG-09)
+- [x] 01-02-PLAN.md — Brand identity: daisyUI theme tokens, self-hosted Bebas Neue/Inter, header lockup (CATALOG-01)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 01-03-PLAN.md — TRACER: one real game from CSV row through BGG, resize, R2, DB, to a public browse LiveView (CATALOG-01, CATALOG-08, CATALOG-09)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 01-04-PLAN.md — Full 434-game seed: D-20 data-quality rules, Spanish cover + gallery, search vector and GIN indexes (CATALOG-01, CATALOG-03, CATALOG-05, CATALOG-07, CATALOG-09)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 01-05-PLAN.md — Browse: vocabulary, composed filter/search/sort query, filter drawer, carousels, load-more (CATALOG-01, CATALOG-02, CATALOG-03, CATALOG-04, CATALOG-06, CATALOG-08)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [x] 01-06-PLAN.md — Complexity-teaching UX: weight bands, plain-Spanish chips, game detail page, CSP (CATALOG-05, CATALOG-06, CATALOG-07)
+
+**Gap closure — Wave 1** *(from 01-UAT.md, run via `/gsd-execute-phase 1 --gaps-only`)*
+
+- [x] 01-07-PLAN.md — Card chip hierarchy, weight-band badge overflow, app-wide focus ring (G-01-2, G-01-6, G-01-7)
+- [x] 01-09-PLAN.md — `is_expansion` column, seed classifier + migration backfill, expansion-free recency row (G-01-5)
+
+**Gap closure — Wave 2** *(blocked on 01-07: shared `catalog_live/index.ex`)*
+
+- [x] 01-08-PLAN.md — Section heading differentiation and persistent carousel scroll controls (G-01-3, G-01-4)
+
+**Sketch implementation — Wave 1** *(from `/gsd-sketch` 001/002, run via `/gsd-execute-phase 1`)*
+
+- [x] 01-10-PLAN.md — Minimal resting card, shared hover-portal + mobile-sheet preview surfaces, difficulty dots (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
+
+**Sketch implementation — Wave 2** *(blocked on 01-10: shared `app.css` block and `game_card.ex`)*
+
+- [x] 01-11-PLAN.md — Full-bleed edge-fade shelves, shared gutter token, `Ver todo` tile, narrow-viewport rail density (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
+
+**Sketch implementation — Wave 3** *(blocked on 01-11: shared `app.css` block, `layouts.ex` and `catalog_live/index.ex`)*
+
+- [x] 01-12-PLAN.md — Sticky gutter-aligned nav with shelf anchors and search, mobile category chips, design-system record (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
+
+### Phase 01.1: Site Shell & Content Pages (INSERTED)
+
+**Goal**: The sketch-validated designs that are not yet built in real code — a shared page shell, the about page, an upgraded detail page, the filter/search modal, and empty/loading/error states — are live in the app, composed together without reintroducing the drift the sketch composition rounds (007/011/012) already found and fixed once.
+**Depends on**: Phase 1 (reuses the card/shelf components sketches 001/002 already shipped in 01-10/11/12)
+**Requirements**: SHELL-01, SHELL-02, SHELL-03, SHELL-04, SHELL-05
+**Success Criteria** (what must be TRUE):
+
+  1. Catalog, detail, and about pages share one adaptive header and one footer (mission/links/BGG attribution), not per-page forks
+  2. An about page exists and communicates the club's mission, how borrowing works, and a FAQ/vocabulary section
+  3. The game detail page (`/juegos/:id`) shows a buy-box (cover + reservation CTA) beside a reading column and a "Juegos similares" shelf, on both desktop and mobile
+  4. The catalog's filter/search UI is a centered modal with checklist-style facets, reachable from a live-narrowing nav search box
+  5. The catalog and detail pages show a minimal, on-brand empty/loading/error state for no-results, in-flight, and failure conditions
+
+All findings for this phase are already captured in `.claude/skills/sketch-findings-pukllay_club/` — this phase implements them, it does not design them.
+
+**Plans:** 9/9 plans complete
+**UI hint**: yes
+
+> **Header rework inserted 2026-08-22.** Sketches 013–017 reworked the header plan 01.1-01 shipped;
+> the developer approved 017-E and asked for it before the remaining waves continue. Plans 01.1-08
+> and 01.1-09 are **numbered last but execute second and third** — plan numbers are stable identities,
+> waves are execution order, and renumbering six pending plans would have broken every
+> cross-reference between them. Plans 01.1-02 through 01.1-07 each moved down two waves; their
+> `depends_on` chain is unchanged except 01.1-02, which now waits on 01.1-09.
+
+Plans:
+
+**Wave 1**
+
+- [x] 01.1-01-PLAN.md — TRACER: `/club` + `/quienes-somos` routes, 3-state header, shared footer (SHELL-01)
+
+**Wave 2** *(blocked on Wave 1: shared `layouts.ex` and `app.css`)*
+
+- [x] 01.1-08-PLAN.md — Header rework (sketch 017-E): expandable search-morph on Catálogo + Detalle, Sumate CTA relocated to the About hero (D-05 superseded), theme toggle relocated to the footer as bare icons, `--pk-header-h` published (SHELL-01, SHELL-04)
+
+**Wave 3** *(blocked on Wave 2: shared `layouts.ex` and `app.css`)*
+
+- [x] 01.1-09-PLAN.md — Mobile nav drawer (list rows, left-accent active state, bottom-pinned theme toggle + socials) and the About-scoped mobile sticky join-CTA bar (SHELL-01)
+
+**Wave 4** *(blocked on Wave 3: shared `about_live.ex` and `app.css`)*
+
+- [x] 01.1-02-PLAN.md — About page content: photo rail, two-column band, dark FAQ band, Juntadas/Contacto, closing CTA (SHELL-02)
+
+**Wave 5** *(blocked on Wave 4: shared `app.css`)*
+
+- [x] 01.1-03-PLAN.md — Detail desktop: `Catalog.similar_games/1`, buy-box masthead, reading column, ficha técnica, "Juegos similares" shelf (SHELL-03)
+
+**Wave 6** *(blocked on Wave 5: shared `catalog_live/show.ex` and `app.css`)*
+
+- [x] 01.1-04-PLAN.md — Detail mobile chrome: fixed CTA bar, sticky title-echo bar, lightbox, share (SHELL-03)
+
+**Wave 7** *(blocked on Wave 6: shared `catalog_live/show.ex`)*
+
+- [x] 01.1-05-PLAN.md — Reservation flow: runtime-configured number, name-capture modal, `wa.me` deep link (SHELL-03)
+
+**Wave 8** *(blocked on Wave 7: shared `catalog_live/show.ex` and `app.css`)*
+
+- [x] 01.1-06-PLAN.md — Filter/search surface, entry point inside the search-morph, URL filter params, filter-linked chips (SHELL-04)
+
+**Wave 9** *(blocked on Wave 8: shared `catalog_live/index.ex` and `catalog_live_test.exs`)*
+
+- [x] 01.1-07-PLAN.md — Empty/loading/error states and the branded 404 page (SHELL-05)
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
@@ -143,7 +248,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Walking Skeleton to Production | 6/6 | Complete    | 2026-07-27 |
-| 1. Catalog v1 | 0/TBD | Not started | - |
+| 1. Catalog v1 | 12/12 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
