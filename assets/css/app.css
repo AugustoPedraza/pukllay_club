@@ -2147,24 +2147,24 @@ body.pk-cta-parked {
     gap: 0.5rem;
   }
 
-  /* Mobile overlay (sketch 017 Round 5's fix for the flat hard-edged slab):
-     the morph becomes a full-width sheet over the header instead of a
-     leftward-growing pill, with a rounded bottom edge and a soft shadow.
-     The morph owns the geometry now — no separate .pk-nav-search override
-     is left behind competing with it. */
+  /* Mobile overlay (quick task 260824-hu1, superseding sketch 017 Round 5's
+     full-bleed sheet): the open box is a gutter-aligned overlay pill, not a
+     slab that steps over the row's own alignment line. Its horizontal inset
+     is expressed through the shared --pk-gutter token (retuned above), so its
+     own background/border/shadow land on the same content line the brand
+     mark, chip row, catalog grid and footer already share — a zero-inset
+     shorthand only ever aligned the box's PADDING edge to the containing
+     block's edge, which at this width is the viewport edge. The base rule's
+     fully-rounded pill radius is left untouched (no override here), and no
+     horizontal padding is declared on this box: the inset alone owns the
+     horizontal space now, so a second declaration would double-apply it. */
   .pk-search-morph.is-open {
     position: absolute;
-    inset: 0;
+    inset: 0 var(--pk-gutter);
     width: auto;
     height: 100%;
     z-index: 5;
-    border-radius: 0 0 var(--radius-box) var(--radius-box);
     box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
-    padding-inline: var(--pk-gutter);
-  }
-
-  .pk-search-morph.is-open .pk-search-morph-toggle {
-    padding-left: 0;
   }
 
   .pk-footer-row,
