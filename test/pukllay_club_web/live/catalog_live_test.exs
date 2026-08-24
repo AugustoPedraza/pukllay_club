@@ -387,10 +387,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/")
 
+      # Was driven through the now-removed #filter-modal-scalars set-scalar
+      # form (quick-260824-b71 deleted it in favor of toggle-scalar chips) —
+      # an out-of-Postgres-int-range value reaches the same
+      # safe_filter_games/1 rescue via the players chip's toggle-scalar
+      # event instead.
       html =
-        view
-        |> form("#filter-modal-scalars")
-        |> render_change(%{min_age: "99999999999999"})
+        render_click(view, "toggle-scalar", %{
+          "scalar" => "players",
+          "value" => "99999999999999"
+        })
 
       assert html =~ "No pudimos cargar el catálogo"
       assert html =~ "Hubo un problema de conexión."

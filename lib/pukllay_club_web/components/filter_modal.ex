@@ -2,24 +2,38 @@ defmodule PukllayClubWeb.FilterModal do
   @moduledoc """
   Stateless filter modal (SHELL-04, 01.1-06, quick-260824-b71) — replaces
   the slide-over `FilterDrawer` retired before it. Presents a pinned
-  three-region shell (header / scrolling body / pinned footer) holding
-  the free-text query input, weight-band/editorial/mechanic/theme facet
-  pills, and player-count/playtime/min-age scalar controls. The footer
-  holds two actions: a `Limpiar filtros` secondary button (disabled
-  whenever no filter or query is active) and a `Ver N juegos` primary
-  CTA.
+  three-region shell (header / scrolling body / pinned footer). The body
+  holds the free-text query input, then a primary always-visible cluster
+  (Jugadores/Duración máxima chips + the Nivel weight-band pills), then a
+  secondary cluster (Destacados), then the (still-flat, pre-Task-3)
+  Mecánicas/Temáticas pill walls. The footer holds two actions: a
+  `Limpiar filtros` secondary button (disabled whenever no filter or
+  query is active) and a `Ver N juegos` primary CTA.
 
-  Every pill toggle still emits `"toggle-facet"` with `phx-value-facet`/
-  `phx-value-value`; the query input still emits `"search"` with
-  `phx-debounce="300"`. Selection state and open/closed state both live
-  entirely in the parent `PukllayClubWeb.CatalogLive.Index` (this is a
-  `Phoenix.Component`, not a `Phoenix.LiveComponent` — no state of its
-  own, matching `FilterDrawer`'s discipline before it, per
-  01-PATTERNS.md). Live-apply is unchanged by this shell: every control
-  still applies its filter immediately on click/keystroke, nothing is
-  staged. The CTA is an exit affordance, not a submit — its only effect
-  is `phx-click="close-filters"`; it does not filter or apply anything
-  itself, since filtering already happened underneath.
+  Jugadores/Duración máxima render as chip clusters (`scalar_chip/1`)
+  rather than the retired `Otros filtros` number-input form — each chip
+  click emits `"toggle-scalar"` with `phx-value-scalar`/`phx-value-value`
+  for exactly one scalar, so clicking one never resets another (the
+  regression the old shared scalar form would have caused). `min_age`
+  has no control anywhere in this component — dropped per an explicit
+  scope correction during execution: difficulty (Nivel) already serves
+  the purpose an age filter would have, and `min_age` stays reachable
+  only via its existing `?min_age=` URL param, never via a UI control.
+
+  Every facet pill toggle still emits `"toggle-facet"` with
+  `phx-value-facet`/`phx-value-value`; the query input still emits
+  `"search"` with `phx-debounce="300"`. `facet_pill/1` and `scalar_chip/1`
+  both build their class list from one shared `chip_class/1` helper so
+  the two visually-identical chip families cannot drift apart. Selection
+  state and open/closed state both live entirely in the parent
+  `PukllayClubWeb.CatalogLive.Index` (this is a `Phoenix.Component`, not a
+  `Phoenix.LiveComponent` — no state of its own, matching `FilterDrawer`'s
+  discipline before it, per 01-PATTERNS.md). Live-apply is unchanged by
+  this shell: every control still applies its filter immediately on
+  click/keystroke, nothing is staged. The CTA is an exit affordance, not
+  a submit — its only effect is `phx-click="close-filters"`; it does not
+  filter or apply anything itself, since filtering already happened
+  underneath.
 
   `core_components.ex` was checked and has no modal component — this uses
   daisyUI's bundled `modal`/`modal-open`/`modal-box`/`modal-backdrop`
@@ -50,7 +64,6 @@ defmodule PukllayClubWeb.FilterModal do
   attr :tags, :list, default: []
   attr :players, :integer, default: nil
   attr :max_playtime, :integer, default: nil
-  attr :min_age, :integer, default: nil
   attr :open, :boolean, default: false
   attr :q, :string, default: ""
   attr :total, :integer, default: 0
@@ -146,6 +159,32 @@ defmodule PukllayClubWeb.FilterModal do
           </form>
 
           <section>
+            <h3 class="mb-2 text-sm font-semibold">Jugadores</h3>
+            <div class="flex flex-wrap gap-2">
+              <.scalar_chip
+                :for={n <- [2, 3, 4, 5, 6]}
+                scalar="players"
+                value={to_string(n)}
+                label={to_string(n)}
+                selected={@players == n}
+              />
+            </div>
+          </section>
+
+          <section>
+            <h3 class="mb-2 text-sm font-semibold">Duración máxima</h3>
+            <div class="flex flex-wrap gap-2">
+              <.scalar_chip
+                :for={n <- [30, 60, 90, 120]}
+                scalar="max_playtime"
+                value={to_string(n)}
+                label={"Hasta #{n} min"}
+                selected={@max_playtime == n}
+              />
+            </div>
+          </section>
+
+          <section>
             <h3 class="mb-2 text-sm font-semibold">Nivel</h3>
             <div class="flex flex-wrap gap-2">
               <.facet_pill
@@ -196,21 +235,6 @@ defmodule PukllayClubWeb.FilterModal do
               />
             </div>
           </section>
-
-          <section>
-            <h3 class="mb-2 text-sm font-semibold">Otros filtros</h3>
-            <form phx-change="set-scalar" id={"#{@id}-scalars"} class="space-y-2">
-              <.input type="number" name="players" value={@players} label="Jugadores" min="1" />
-              <.input
-                type="number"
-                name="max_playtime"
-                value={@max_playtime}
-                label="Duración máxima (min)"
-                min="1"
-              />
-              <.input type="number" name="min_age" value={@min_age} label="Edad mínima" min="0" />
-            </form>
-          </section>
         </div>
 
         <%!-- button/1 uses assign_new(:class, ...), which only fills in a
@@ -247,15 +271,39 @@ defmodule PukllayClubWeb.FilterModal do
       phx-value-facet={@facet}
       phx-value-value={@value}
       aria-pressed={@selected}
-      class={[
-        "badge min-h-11 px-3",
-        (@selected && "badge-primary") || "badge-neutral badge-outline"
-      ]}
+      class={chip_class(@selected)}
     >
       {@label}
     </button>
     """
   end
+
+  attr :scalar, :string, required: true
+  attr :value, :string, required: true
+  attr :label, :string, required: true
+  attr :selected, :boolean, default: false
+
+  defp scalar_chip(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click="toggle-scalar"
+      phx-value-scalar={@scalar}
+      phx-value-value={@value}
+      aria-pressed={@selected}
+      class={chip_class(@selected)}
+    >
+      {@label}
+    </button>
+    """
+  end
+
+  # Single source of truth for the chip's visual contract (ui-design-system:
+  # "a field that must look identical on two surfaces is declared in exactly
+  # one place") — both `facet_pill/1` and `scalar_chip/1` build their class
+  # from this, so the two chip families cannot drift apart.
+  defp chip_class(true), do: ["badge", "min-h-11", "px-3", "badge-primary"]
+  defp chip_class(false), do: ["badge", "min-h-11", "px-3", "badge-neutral", "badge-outline"]
 
   defp cta_label(1), do: "Ver 1 juego"
   defp cta_label(n), do: "Ver #{n} juegos"

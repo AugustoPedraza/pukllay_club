@@ -169,15 +169,27 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
-  def handle_event("set-scalar", params, socket) do
-    socket =
-      socket
-      |> assign(:players, parse_int(params["players"]))
-      |> assign(:max_playtime, parse_int(params["max_playtime"]))
-      |> assign(:min_age, parse_int(params["min_age"]))
-      |> apply_filters()
+  # Chip-shaped toggle for the players/max_playtime scalar filters
+  # (quick-260824-b71) — shaped like `toggle-facet` above rather than a
+  # form-wide scalar-setting handler: each chip click sends exactly one
+  # scalar/value pair, so clicking one scalar chip never touches another
+  # scalar's current value (the regression a shared form would have
+  # caused via `parse_int(nil)` on the untouched fields). `min_age` has
+  # no chip and no entry in `scalar_assign_key/1` — it stays unfilterable
+  # via the UI, exactly as it is today; the field remains a valid
+  # `?min_age=` URL param via `handle_params/3` only.
+  def handle_event("toggle-scalar", %{"scalar" => scalar, "value" => value}, socket) do
+    case scalar_assign_key(scalar) do
+      nil ->
+        {:noreply, socket}
 
-    {:noreply, socket}
+      key ->
+        current = Map.get(socket.assigns, key)
+        parsed = parse_int(value)
+        new_value = if parsed == current, do: nil, else: parsed
+
+        {:noreply, socket |> assign(key, new_value) |> apply_filters()}
+    end
   end
 
   def handle_event("sort", %{"sort" => sort}, socket) do
@@ -258,6 +270,16 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp facet_assign_key("weight_bands"), do: :weight_bands
   defp facet_assign_key("tags"), do: :tags
   defp facet_assign_key(_unrecognized), do: nil
+
+  # Same never-build-an-atom-from-client-input discipline as
+  # `facet_assign_key/1` above (T-01-37) — literal clauses with a final
+  # catch-all, no dynamic atom conversion from the client-supplied string.
+  # Only `players`/`max_playtime` are chip-controlled; `min_age`
+  # deliberately has no clause here (quick-260824-b71 scope correction: no
+  # age filter control anywhere in the UI).
+  defp scalar_assign_key("players"), do: :players
+  defp scalar_assign_key("max_playtime"), do: :max_playtime
+  defp scalar_assign_key(_unrecognized), do: nil
 
   # Maps a "see-all" row key to the filter selection that reproduces that
   # shelf's own query (see `PukllayClub.Catalog.list_carousel_rows/0`).
@@ -577,7 +599,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           tags={@tags}
           players={@players}
           max_playtime={@max_playtime}
-          min_age={@min_age}
           open={@filters_open}
           q={@q}
           total={@total}
