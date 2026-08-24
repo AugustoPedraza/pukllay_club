@@ -770,6 +770,7 @@ defmodule PukllayClubWeb.LayoutsTest do
       utility = LazyHTML.query(doc, ".pk-drawer-utility")
 
       assert utility |> LazyHTML.attribute("role") |> List.first() == "group"
+
       assert utility |> LazyHTML.attribute("aria-labelledby") |> List.first() ==
                "pk-drawer-theme-label"
     end
