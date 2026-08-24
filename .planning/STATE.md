@@ -32,7 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-24 - Completed quick task 260824-7mt: Implement sketch 018 winner B — mute theme toggle color/size and tone active state vs social icons
+Last activity: 2026-08-24 - Completed quick task 260824-9zo: on desktop, make the content respect the shell width
 structure (0-4)
 
 Progress: [██████████] 100%
@@ -189,6 +189,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260824-9zo | On desktop, make the content respect the shell width | 2026-08-24 | 9b47d4e | | [260824-9zo-on-desktop-make-the-content-respect-the-](./quick/260824-9zo-on-desktop-make-the-content-respect-the-/) |
 | 260806-rq8 | Add Styler + mix_audit quality gates (superseded credence) to mix quality | 2026-08-06 | 9477e7f | | [260806-rq8-add-credence-semantic-ast-elixir-linter-](./quick/260806-rq8-add-credence-semantic-ast-elixir-linter-/) |
 | 260818-fro | Integrate Tidewave (dev-only) MCP plug into Phoenix endpoint | 2026-08-18 | d3761dd | | [260818-fro-integrate-tidewave-dev-only-into-phoenix](./quick/260818-fro-integrate-tidewave-dev-only-into-phoenix/) |
 | 260823-snj | Polish desktop header: search icon relevance + header-only isologo (footer de-duplicated) | 2026-08-23 | f0484a0 | | [260823-snj-polish-desktop-header-improve-the-search](./quick/260823-snj-polish-desktop-header-improve-the-search/) |
