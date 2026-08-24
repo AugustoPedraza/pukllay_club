@@ -177,18 +177,23 @@ defmodule PukllayClubWeb.Layouts do
             window.addEventListener("scroll", this.onScroll, {passive: true})
             this.onScroll()
 
-            // Chip scroll-spy: highlights the chip whose shelf is currently
-            // under the header. Guarded on there being at least one chip and
-            // one resolvable target section so the detail page and filtered
-            // views (which render no chip row) are unaffected.
-            this.chips = Array.from(this.el.querySelectorAll(".pk-chip"))
-            this.chipsByTarget = new Map()
-            this.chips.forEach((chip) => {
-              const section = chip.dataset.chipTarget && document.getElementById(chip.dataset.chipTarget)
-              if (section) this.chipsByTarget.set(section, chip)
+            // Scroll-spy: highlights whichever element (a mobile chip or a
+            // desktop category-panel row) shares data-chip-target with the
+            // shelf currently under the header. Widened from a chip-only
+            // selector so the desktop panel's items join this one observer
+            // instead of getting a second, parallel one — both surfaces
+            // light up from the same mechanism. Guarded on there being at
+            // least one target and one resolvable section so the detail
+            // page and filtered views (neither renders either surface) are
+            // unaffected.
+            this.spyTargets = Array.from(this.el.querySelectorAll("[data-chip-target]"))
+            this.spyTargetsBySection = new Map()
+            this.spyTargets.forEach((target) => {
+              const section = target.dataset.chipTarget && document.getElementById(target.dataset.chipTarget)
+              if (section) this.spyTargetsBySection.set(section, target)
             })
 
-            if (this.chips.length > 0 && this.chipsByTarget.size > 0) {
+            if (this.spyTargets.length > 0 && this.spyTargetsBySection.size > 0) {
               this.observer = new IntersectionObserver(
                 (entries) => {
                   const topmost = entries
@@ -196,15 +201,15 @@ defmodule PukllayClubWeb.Layouts do
                     .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
                   if (!topmost) return
 
-                  const activeChip = this.chipsByTarget.get(topmost.target)
-                  if (!activeChip) return
+                  const activeTarget = this.spyTargetsBySection.get(topmost.target)
+                  if (!activeTarget) return
 
-                  this.chips.forEach((chip) => chip.classList.remove("is-active"))
-                  activeChip.classList.add("is-active")
+                  this.spyTargets.forEach((target) => target.classList.remove("is-active"))
+                  activeTarget.classList.add("is-active")
                 },
                 {rootMargin: "-20% 0px -70% 0px"}
               )
-              this.chipsByTarget.forEach((_chip, section) => this.observer.observe(section))
+              this.spyTargetsBySection.forEach((_target, section) => this.observer.observe(section))
             }
 
             // Header-height publisher (01.1-08): this hook already owns the

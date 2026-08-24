@@ -496,18 +496,20 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         <Layouts.category_menu rows={index_rows(assigns)} />
       </:nav_menu>
       <:subnav :if={not filters_active?(assigns)}>
-        <nav class="pk-chip-nav" aria-label="Categorías">
-          <span class="pk-chip-spacer" aria-hidden="true"></span>
-          <a
-            :for={row <- index_rows(assigns)}
-            href={"#carousel-#{row.key}"}
-            data-chip-target={"carousel-#{row.key}"}
-            class="pk-chip"
-          >
-            {row.title}
-          </a>
-          <span class="pk-chip-spacer" aria-hidden="true"></span>
-        </nav>
+        <div class="pk-chip-nav-wrap">
+          <nav class="pk-chip-nav" aria-label="Categorías">
+            <span class="pk-chip-spacer" aria-hidden="true"></span>
+            <a
+              :for={row <- index_rows(assigns)}
+              href={"#carousel-#{row.key}"}
+              data-chip-target={"carousel-#{row.key}"}
+              class="pk-chip"
+            >
+              {row.title}
+            </a>
+            <span class="pk-chip-spacer" aria-hidden="true"></span>
+          </nav>
+        </div>
       </:subnav>
       <div class="pk-page">
         <%!-- quick-260824-eqc: `space-y-6` moved from the outer div to this

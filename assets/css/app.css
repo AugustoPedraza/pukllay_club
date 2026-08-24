@@ -243,7 +243,12 @@
 
 .pk-shelf {
   margin-bottom: 3rem;
-  scroll-margin-top: 6rem;
+  /* Derived from the header's own published height (--pk-header-h, set by
+     .CatalogNav's ResizeObserver) plus a small gap, rather than a hardcoded
+     constant — the same fallback form .pk-poster-col/.pk-title-echo already
+     use. This is what makes a jump land correctly under BOTH the taller
+     narrow-viewport header (chip row attached) and the shorter desktop one. */
+  scroll-margin-top: calc(var(--pk-header-h, 4.5rem) + 1rem);
 }
 
 .pk-rail-wrap {
@@ -1802,14 +1807,50 @@ body.pk-drawer-open {
   background: var(--color-primary);
 }
 
+/* Mobile category chip row wrapper (sketch 020 Round 2): exists solely so
+   the edge-fade gradient (mirroring .pk-rail-wrap's ::before/::after pair)
+   stays put while the chips scroll past it — the fade has to live on this
+   static parent, not on .pk-chip-nav, which is the element that actually
+   scrolls. Hidden by default; the narrow-viewport media block (below) is
+   what reveals it. Cannot be `display: contents` — that would discard the
+   `position: relative` the fade pseudo-elements depend on. */
+.pk-chip-nav-wrap {
+  display: none;
+  position: relative;
+  background: var(--color-base-200);
+  border-top: 1px solid var(--color-base-300);
+}
+
+.pk-chip-nav-wrap::before,
+.pk-chip-nav-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.pk-chip-nav-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-base-200), transparent);
+}
+
+.pk-chip-nav-wrap::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--color-base-200), transparent);
+}
+
 /* Mobile category chip row: a second navigation dimension replacing the
    nav links below the narrow-viewport breakpoint. No horizontal padding
    of its own — spacer flex items reserve the end margins instead, since
    iOS Safari drops the TRAILING padding of a horizontally-scrolling
-   element once scrolled to its end. Hidden by default; the narrow-
-   viewport media block (below) is what reveals it. */
+   element once scrolled to its end. Unconditionally flex now — the
+   viewport swap moved onto .pk-chip-nav-wrap above, which is what the
+   narrow-viewport media block (below) toggles. */
 .pk-chip-nav {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
   overflow-x: auto;
@@ -1824,6 +1865,10 @@ body.pk-drawer-open {
   flex: 0 0 var(--pk-gutter);
 }
 
+/* Bare outline at rest (sketch 020 Round 2 item 1) — the same
+   outline-at-rest logic filter_modal.ex's chip_class/1 already ships for
+   this app's other chip family, so this stops reading as a separate
+   component with its own rules. */
 .pk-chip {
   flex: 0 0 auto;
   display: inline-flex;
@@ -1831,18 +1876,34 @@ body.pk-drawer-open {
   min-height: 44px;
   padding: 0 16px;
   border: 1px solid var(--color-base-300);
-  background: var(--color-base-100);
-  color: var(--color-base-content);
+  background: transparent;
+  color: var(--color-neutral);
   font-weight: 600;
   font-size: 0.75rem;
   white-space: nowrap;
   text-decoration: none;
   border-radius: 9999px;
+  transition: color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
 }
 
+.pk-chip:hover,
+.pk-chip:focus-visible {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* A soft tint, not the solid primary fill this used to render (sketch 020
+   Round 2 item 1) — "you are here" reads as a tint. The -content pairing
+   (not the sketch's literal --color-primary text) is deliberate: the two
+   resolve identically in the light theme, and only the -content pairing
+   clears the contrast floor against the accent surface in the dark theme.
+   No promoted/hero variant exists for any single chip (item 2) — every
+   chip carries this exact rule set at rest. */
 .pk-chip.is-active {
-  background: var(--color-primary);
-  color: var(--color-primary-content);
+  background: var(--color-accent);
+  color: var(--color-accent-content);
   border-color: var(--color-primary);
 }
 
@@ -2259,8 +2320,8 @@ body.pk-cta-parked {
     display: none;
   }
 
-  .pk-chip-nav {
-    display: flex;
+  .pk-chip-nav-wrap {
+    display: block;
   }
 
   .pk-cat-trigger {

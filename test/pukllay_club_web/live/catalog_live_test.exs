@@ -706,6 +706,22 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert Regex.match?(~r/<span[^>]*class="pk-chip-spacer"[^>]*><\/span>\s*<\/nav>$/, chip_nav_html)
     end
 
+    test "the chip nav is wrapped by .pk-chip-nav-wrap (sketch 020, quick-260824-jkc)", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Chip Wrap Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      wrap_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-chip-nav-wrap")
+        |> LazyHTML.to_html()
+
+      assert wrap_html =~ ~s(class="pk-chip-nav")
+    end
+
     test "a shelf backed by zero games produces no chip for it", %{conn: conn} do
       game_fixture(%{name: "Only Crea Game", tags: ["#CreaConexiones"]})
 
