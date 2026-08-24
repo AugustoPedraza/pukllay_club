@@ -583,8 +583,50 @@ defmodule PukllayClubWeb.Layouts do
   # cluster's three concerns read as one flat run. This mirrors the mobile
   # drawer, where `.pk-drawer-utility` already groups the identical label +
   # theme_toggle pair; the footer was the surface that had drifted, not the
-  # drawer. The wrapper also gives the <=480px block a single element to hide
-  # when the control moves into the drawer.
+  # drawer.
+  #
+  # The legal line lives in its OWN full-width row, `.pk-footer-legal`, not
+  # inside the right cluster (debug footer-desktop-imbalance). Sketch 011 gave
+  # this footer two peer clusters; the right one then accreted a third concern
+  # and, worse, one of a different KIND — two interactive utilities plus one
+  # passive compliance run — so the row read as 2 concerns on the left against
+  # 3 on the right (364.11px vs 604.81px of ink, 1.66x, with a 247.08px void
+  # between them). Promoting the legal line to its own band makes KIND map to
+  # ROW: utilities above, small print below, two concerns per cluster. That is
+  # the structural repair the spacing tiers could not reach — proximity can
+  # group unlike things, it cannot make them alike.
+  #
+  # `.pk-footer-legal` is a normal child of `.pk-footer-row`, not a second
+  # capped-width wrapper. Its `width: 100%` is what forces the line break, so
+  # the row's own row-gap (the cluster tier) provides the separation — no
+  # divider (sketch 011 forbids one), no fifth spacing token, and no second
+  # element carrying the max-width/padding recipe that page-shell.md warns
+  # about twice.
+  #
+  # The band holds TWO sibling `.pk-footer-meta` spans, not one run with a "·"
+  # separator, and that split is the fix rather than a formatting preference
+  # (debug footer-desktop-imbalance). Once the legal line had its own
+  # full-width band, 241.75px of ink was being asked to occupy a 1216px band —
+  # 19.88% filled, with the other 80.1% sitting as ONE unbroken 974.25px void,
+  # so it read as an orphaned fragment rather than a peer band. Measured, that
+  # is a FILL problem and not an alignment one: left, centre and right all
+  # produce the identical 19.88%, because alignment only relocates the void.
+  # Splitting the run into two edge-anchored pieces is the only treatment that
+  # changes the number the eye is responding to (19.88% -> 100%), and the only
+  # one that stays correct in the wrapped 481-790px band as well as at 1280px.
+  #
+  # Two spans is therefore load-bearing, not cosmetic: `justify-content:
+  # space-between` over a SINGLE flex item is a no-op, so re-merging these
+  # back into one span silently restores the 19.88% stub. The "·" separator
+  # goes with it — it existed to join two things sitting next to each other,
+  # and they are now ~984px apart at 1280px.
+  #
+  # Deliberately NOT undoing the earlier baseline fix: the two spans remain
+  # flex items on ONE line, and `.pk-footer-legal`'s `align-items: baseline`
+  # keeps their text on a single shared baseline by construction, at any
+  # separation. That was this session's originally-reported defect, so it is
+  # pinned by its own test rather than left to the coincidence that two boxes
+  # of equal height happen to align.
   defp footer(assigns) do
     assigns = assign(assigns, :copyright_year, Date.utc_today().year)
 
@@ -605,7 +647,10 @@ defmodule PukllayClubWeb.Layouts do
             <span class="pk-footer-toggle-tag">Tema</span>
             <.theme_toggle />
           </div>
-          <span class="pk-footer-meta">© {@copyright_year} Pukllay Club · <.bgg_attribution /></span>
+        </div>
+        <div class="pk-footer-legal">
+          <span class="pk-footer-meta">© {@copyright_year} Pukllay Club</span>
+          <span class="pk-footer-meta"><.bgg_attribution /></span>
         </div>
       </div>
     </footer>
@@ -713,17 +758,33 @@ defmodule PukllayClubWeb.Layouts do
   # carrying the BGG logo mark (priv/static/images/bgg-logo.jpeg — a flat
   # 400x400 JPEG with its own baked-in background, not a transparent
   # icon). Styled with .pk-bgg-note (underlined small print, no extra
-  # box/border/shadow beyond what the image itself already contains) — see
-  # the plan SUMMARY's "Claude's Discretion" note for the sizing rationale.
+  # box/border/shadow beyond what the image itself already contains).
+  #
+  # This anchor is deliberately PLAIN INLINE, never `inline-flex` (debug
+  # footer-desktop-imbalance). It used to carry `inline-flex items-center
+  # gap-1`, and that is a trap for any icon+text run that sits inside a
+  # sentence: an inline-level flex container with no baseline-aligned item
+  # must SYNTHESIZE its baseline from the first flex item's border box
+  # (CSS Flexbox §8.3), and the first item here is the logo. So the image's
+  # BOTTOM edge became this link's baseline and sat on the copyright text's
+  # baseline — measured coinciding exactly — shoving "Powered by BGG" 5px
+  # above the "© 2026 Pukllay Club ·" it is supposed to sit beside, and
+  # inflating the meta line box from 18px to 23px.
+  #
+  # Being plain inline means the attribution words share ONE inline
+  # formatting context (and therefore one baseline, by construction) with
+  # the copyright text they follow. There is no offset number to keep in
+  # sync — which is the point; a `vertical-align: -5px` compensator would
+  # have hard-coded the output of the very computation that was wrong and
+  # broken again on the next font-size or logo-size change.
+  #
+  # The words are wrapped in their own <span> so the underline decorates
+  # the TEXT and not the logo tile: on a plain inline anchor the decoration
+  # would otherwise be drawn straight across the image.
   defp bgg_attribution(assigns) do
     ~H"""
-    <a
-      href="https://boardgamegeek.com/"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="pk-bgg-note inline-flex items-center gap-1"
-    >
-      <img src={~p"/images/bgg-logo.jpeg"} width="18" height="18" alt="" />Powered by BGG
+    <a href="https://boardgamegeek.com/" target="_blank" rel="noopener noreferrer" class="pk-bgg-note">
+      <img src={~p"/images/bgg-logo.jpeg"} width="14" height="14" alt="" /><span>Powered by BGG</span>
     </a>
     """
   end

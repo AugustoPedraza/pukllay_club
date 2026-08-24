@@ -81,22 +81,53 @@ defmodule PukllayClubWeb.FooterOverflowTest do
       end
     end
 
-    test "the meta line is the only remaining hard floor, and it is a single item" do
+    test "the legal band's two nowrap pieces can break apart instead of summing into a floor" do
       src = source()
 
-      # .pk-footer-meta keeps white-space: nowrap deliberately (measured safe: it is
-      # 245.8px against 417px of available width at the band's worst point, and no
-      # overflow was observed anywhere from 260px up). That is only true while it
-      # stays ONE item on a wrapping line. If a second nowrap sibling were ever
-      # added to the same cluster without wrapping, the floor becomes their sum again.
+      # This test used to be called "the meta line is the only remaining hard
+      # floor, and it is a single item", and its comment warned: "That is only
+      # true while it stays ONE item on a line of its own. If a second nowrap
+      # sibling were ever added beside it without wrapping, the floor becomes
+      # their sum again."
+      #
+      # A second nowrap sibling was then added, deliberately — the legal band now
+      # holds two `.pk-footer-meta` pieces so `space-between` can anchor one to
+      # each edge (debug footer-desktop-imbalance, treatment D). So the warned-of
+      # condition is now REAL and this test guards the mitigation rather than the
+      # old single-item assumption.
       assert block!(src, ".pk-footer-meta") =~ "white-space: nowrap",
              "This test encodes the assumption that .pk-footer-meta is nowrap. If that changed " <>
                "deliberately, update this test's reasoning rather than deleting it."
 
-      assert block!(src, ".pk-footer-left,\n.pk-footer-right") =~ "flex-wrap: wrap",
-             "A nowrap text run is only safe inside a wrapping cluster, where it can take a " <>
-               "line of its own. Inside a non-wrapping cluster it is an unshrinkable term in a " <>
-               "sum, which is exactly how this bug happened."
+      # `flex-wrap: wrap` on the band is what stops the two nowrap pieces from
+      # summing into a hard floor: below the width where both fit, the band breaks
+      # BETWEEN them (each piece keeps its own line) instead of shrinking their
+      # boxes while the nowrap text spills out.
+      #
+      # This is not theoretical. Measured on the live app at 260px BEFORE the
+      # split, the single merged run was 241.75px of ink inside a 232px box: the
+      # text escaped its own flex item by 9.75px and ran into the right gutter.
+      # documentElement.scrollWidth still reported ZERO overflow, because the ink
+      # stopped 4.25px short of the viewport edge — which is exactly why the
+      # earlier "no overflow down to 260px" claim looked clean while the text was
+      # already out of bounds. After the split the same 260px viewport breaks the
+      # band onto two lines with 114.67px of room to spare and no bleed at all.
+      assert block!(src, ".pk-footer-legal") =~ "flex-wrap: wrap",
+             "`.pk-footer-legal` holds two `white-space: nowrap` pieces. Without flex-wrap " <>
+               "their min-contents SUM into a hard floor, and because each piece's box is " <>
+               "shrinkable while its text is not, the failure is silent: the text bleeds past " <>
+               "its box into the gutter without ever registering as document overflow."
+
+      assert block!(src, ".pk-footer-legal") =~ ~r/width:\s*100%/,
+             "`.pk-footer-legal` no longer spans the full row. The nowrap pieces are only " <>
+               "safe while the band has a whole line to itself; sharing one with a cluster " <>
+               "puts it back into a sum-of-min-contents floor, which is the mechanism of " <>
+               "this bug."
+
+      assert block!(src, ".pk-footer-row") =~ "flex-wrap: wrap",
+             "A full-width item can only take a line of its own inside a WRAPPING container. " <>
+               "Without flex-wrap on .pk-footer-row it would instead be squeezed onto the " <>
+               "single line beside both clusters."
     end
   end
 
@@ -109,16 +140,19 @@ defmodule PukllayClubWeb.FooterOverflowTest do
     test "the social and theme controls are hidden only inside the block that opens the drawer" do
       narrow = narrow_viewport_block(source())
 
-      # `.pk-footer-theme` is the wrapper around the "Tema" label and the toggle
-      # (debug footer-desktop-overloaded). It replaced the previous pair of
-      # selectors here, so hiding it hides both — and because the wrapper is
-      # footer-only it needs no descendant scoping to spare the drawer's own
-      # reused `.pk-theme-toggle`.
-      for selector <- [".pk-footer-social", ".pk-footer-theme"] do
-        assert narrow =~ ~r/#{Regex.escape(selector)}[^{]*\{[^}]*display:\s*none/,
-               "`#{selector}` is no longer hidden in the ≤480px block. Match is against a real " <>
-                 "rule, not a bare mention — naming it in a comment must not satisfy this."
-      end
+      # The hide is now at the CLUSTER, not per child (debug footer-desktop-imbalance).
+      # It could not be before: `.pk-footer-right` also held the copyright/BGG line,
+      # which must stay visible at every width. Once that moved to `.pk-footer-legal`,
+      # the cluster's entire contents became the two controls that relocate — and
+      # hiding the box became necessary as well as sufficient, because flex `gap`
+      # skips a hidden CHILD but still spends a slot on an empty visible PARENT.
+      #
+      # What this rule no longer states per-child — that nothing is hidden unless it
+      # has a drawer equivalent — is pinned by FooterRhythmTest, which asserts this
+      # cluster holds exactly the two relocating concerns.
+      assert narrow =~ ~r/\.pk-footer-right[^{]*\{[^}]*display:\s*none/,
+             "`.pk-footer-right` is no longer hidden in the ≤480px block. Match is against a " <>
+               "real rule, not a bare mention — naming it in a comment must not satisfy this."
 
       # The hide is only defensible because the same block reveals the drawer.
       # These must never drift apart into different breakpoints.
@@ -139,12 +173,13 @@ defmodule PukllayClubWeb.FooterOverflowTest do
         |> String.split(~r/@media \(min-width: /)
         |> Enum.drop(1)
 
-      for chunk <- wider_blocks do
+      for chunk <- wider_blocks, selector <- [".pk-footer-social", ".pk-footer-right"] do
         head = chunk |> String.split("@media", parts: 2) |> hd()
 
-        refute head =~ ~r/\.pk-footer-social\s*\{[^}]*display:\s*none/,
-               "A min-width media query hides .pk-footer-social. The drawer only exists below " <>
-                 "480px, so hiding the social cluster at any wider viewport strands it."
+        refute head =~ ~r/#{Regex.escape(selector)}\s*\{[^}]*display:\s*none/,
+               "A min-width media query hides `#{selector}`. The drawer only exists below " <>
+                 "480px, so hiding the social/theme controls at any wider viewport strands " <>
+                 "them with nowhere to reach them."
       end
 
       # And the ≤480px threshold itself must not creep upward: everything above it
@@ -162,8 +197,6 @@ defmodule PukllayClubWeb.FooterOverflowTest do
   end
 
   describe "the footer renders the controls this contract assumes" do
-    # The cluster now carries THREE direct children, not four: the "Tema" label and
-    # the toggle were wrapped into `.pk-footer-theme` (debug footer-desktop-overloaded).
     # The queries below stay descendant-based on purpose — this test cares that each
     # control is still *inside* the cluster (the wrapping contract above depends on
     # what has to fit), not how deeply it nests. The exact child count is pinned by
@@ -176,10 +209,39 @@ defmodule PukllayClubWeb.FooterOverflowTest do
       assert doc |> LazyHTML.query(".pk-footer-right .pk-footer-social") |> Enum.count() == 1
       assert doc |> LazyHTML.query(".pk-footer-right .pk-footer-toggle-tag") |> Enum.count() == 1
       assert doc |> LazyHTML.query(".pk-footer-right .pk-theme-toggle") |> Enum.count() == 1
+    end
 
-      assert doc |> LazyHTML.query(".pk-footer-right .pk-footer-meta") |> Enum.count() == 1,
-             "The BGG attribution + copyright line must stay in the footer at every viewport " <>
-               "width (D-04). If it moved, the wrapping contract above needs re-measuring."
+    # The legal line MOVED (debug footer-desktop-imbalance) — out of the right
+    # cluster and into its own full-width band. The wrapping contract above was
+    # re-measured for that move, exactly as the previous version of this test
+    # demanded: zero horizontal overflow at 260/320/360/375/430/481/652/700/790/
+    # 800/900/1024/1070/1280/1440/1920px, in both themes.
+    #
+    # What must not change is that it is still RENDERED, at every viewport width.
+    # D-04 makes the attribution a compliance requirement, and the ≤480px block now
+    # hides `.pk-footer-right` wholesale — so if the line ever drifted back into
+    # that cluster, phones would silently lose it. This assertion is deliberately
+    # scoped OUTSIDE the hidden cluster rather than merely "somewhere in the footer".
+    test "the legal line renders outside the cluster that gets hidden on phones" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      # Two pieces since treatment D split the run so each edge gets an anchor —
+      # copyright left, attribution right. Both must be in the band.
+      assert doc |> LazyHTML.query(".pk-footer-legal .pk-footer-meta") |> Enum.count() == 2,
+             "The BGG attribution + copyright line must render inside `.pk-footer-legal`, " <>
+               "which is the only footer band shown at every viewport width."
+
+      assert doc |> LazyHTML.query(".pk-footer-legal .pk-bgg-note") |> Enum.count() == 1,
+             "The attribution anchor itself must be inside `.pk-footer-legal`. Counting " <>
+               "`.pk-footer-meta` spans alone would still pass if the piece holding the BGG " <>
+               "link were dropped and some other small-print span took its place."
+
+      assert doc |> LazyHTML.query(".pk-footer-right .pk-footer-meta") |> Enum.count() == 0,
+             "`.pk-footer-meta` is inside `.pk-footer-right`, which the ≤480px block hides " <>
+               "entirely — that would drop a compliance-required attribution (D-04) on every " <>
+               "phone. If the cluster is genuinely the right home again, the ≤480px hide rule " <>
+               "has to go back to being per-child first."
     end
   end
 end

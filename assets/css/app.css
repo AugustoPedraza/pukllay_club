@@ -991,6 +991,81 @@ body.pk-sheet-open {
   gap: var(--pk-footer-gap-item);
 }
 
+/* The legal band (debug footer-desktop-imbalance). The copyright + BGG
+   attribution used to be the third child of .pk-footer-right, which put a
+   passive compliance run in the same cluster as two interactive utilities.
+   Measured at 1280px, that made the two "peer" clusters anything but peers:
+   right 604.81px carrying 3 concerns against left 364.11px carrying 2 (1.66x)
+   with 247.08px of void between, and .pk-footer-meta alone accounted for 59.9%
+   of the right cluster's ink mass while occupying 40.7% of its width. The
+   footer's least important content was its densest.
+
+   Spacing could not fix that. footer-desktop-overloaded had already restored a
+   correct 4-tier proximity scale and the complaint survived it unchanged (all
+   tiers re-measured intact, so this is not a regression of that work) — because
+   proximity can only say "these belong together", and the problem was that they
+   don't. The repair has to be structural: KIND maps to ROW.
+
+   `width: 100%` is the entire break mechanism: it makes this item's
+   hypothetical main size the row's full content box, so a wrapping flex
+   container can never fit it beside anything and it always takes a line of its
+   own, at every width from 481px up. Deliberately NOT `flex-basis: 100%` —
+   flex-basis is the MAIN size, so it would silently become "height: 100%" the
+   moment the <=480px block turns this row into a column.
+
+   `display: flex` is not decoration either: it suppresses this block's own
+   strut. .pk-footer-meta sets font-size 0.75rem but this wrapper inherits the
+   footer's 1rem, and a block-level box's line box is at least as tall as its
+   OWN font's strut — so as a plain block it rendered an 18px line inside a
+   24px box and quietly added 6px to the footer at every viewport, including
+   mobile. As a flex container there is no strut and no anonymous line box; the
+   height is the child's 18px, measured.
+
+   The separation above it is .pk-footer-row's own row-gap (the cluster tier),
+   which is why no fifth token exists: the legal band is a peer top-level block,
+   not a super-group, so it takes the tier that already separates top-level
+   blocks. Sketch 011 forbids a divider here, so the gap does the work alone.
+
+   `justify-content: space-between` anchors one piece to each edge of the band,
+   and that is the whole remaining fix. Giving the legal line its own row left
+   241.75px of ink in a 1216px band at 1280px — 19.88% filled, the other 80.1%
+   one unbroken 974.25px void — so it read as an orphaned fragment under a
+   dense utility row, which is exactly the "two mismatched weights stacked"
+   failure sketch 011 rejected the original two-tier footer for. Measured, that
+   is a FILL problem, not an alignment one: left, centre and right ALL produce
+   19.88%, because alignment relocates the void instead of reducing it. Only
+   splitting the run into two edge-anchored pieces moves the number (-> 100%),
+   and it is also the only candidate that survives the wrapped 481-790px band,
+   where `space-between` degenerates to left-flush and the right/centre
+   variants became the single odd element in the footer.
+
+   `align-items: baseline` is a CONSTRAINT, not a default. The copyright and
+   the attribution are now ~984px apart at 1280px, and the defect that opened
+   this session was those two sitting on different baselines. Baseline
+   alignment makes them share one by construction at any separation; the
+   alternative (the initial `stretch`) only aligned them because the two boxes
+   happened to be the same height, which is a coincidence a future font-size
+   or logo change would quietly break. Pinned by its own test.
+
+   `gap` is load-bearing too. `space-between` distributes FREE space, and there
+   is none once the <=480px block shrink-wraps this band to `width: auto` — the
+   two pieces would butt directly together on this project's primary viewport.
+   The gap is the floor in that state and a no-op in the wide one. It takes the
+   group tier because these are two distinct concerns, not one unit.
+
+   `flex-wrap: wrap` is the narrow-viewport escape: each .pk-footer-meta is
+   `white-space: nowrap` individually, so below the width where both fit the
+   band breaks BETWEEN them rather than overflowing. The single merged run
+   could not break at all. */
+.pk-footer-legal {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--pk-footer-gap-group);
+  flex-wrap: wrap;
+}
+
 .pk-footer-links {
   list-style: none;
   margin: 0;
@@ -1074,15 +1149,69 @@ body.pk-sheet-open {
   white-space: nowrap;
 }
 
+/* BGG attribution — required by compliance (D-04), but page-shell.md is
+   equally explicit that it must be "de-emphasized ... not a bordered,
+   backgrounded 'badge' competing visually with the rest of the footer".
+   That second half was silently lost when D-04 added the logo, because the
+   supplied asset is a 400x400 JPEG with a baked-in dark background — an
+   opaque tile IS the badge, no CSS box required (debug
+   footer-desktop-imbalance).
+
+   Measured on the light theme at 1280px, the 18px version was 100% ink
+   (every pixel departing from the footer background) at meanChroma 0.32,
+   against 6.3-28.4% ink and 0.06-0.10 chroma for every other footer region.
+   Per pixel it was 12.1x the social row; in absolute ink mass those 324px²
+   equalled the ENTIRE four-icon social row spread over 11.75x the area.
+   The loudest object in the footer was its least important content, which
+   is a hierarchy that runs backwards — the measurable form of the reported
+   "full of data and lack of clear hierarchy".
+
+   Size is the only lever taken here. The mark is NOT recoloured,
+   desaturated, opacity-faded or background-stripped: BGG's terms make the
+   logo a trademark and forbid enclosing it in framing chrome, so altering
+   its appearance is not a call to make unilaterally. Scaling is ordinary
+   permitted use, and it is also the lever that works in BOTH themes — on
+   dark the tile's baked-in background camouflages against the footer
+   (ink mass/px drops to 0.054, below the nav links' 0.089) and only its
+   chroma still stands out, so a contrast-based tweak would have helped one
+   theme and hurt the other while scaling shrinks light-theme ink mass and
+   the high-chroma pixel count at once. */
 .pk-bgg-note {
   color: inherit;
+}
+
+/* The underline lives on the words, not on the anchor. The anchor is plain
+   inline now (see bgg_attribution/1), so an anchor-level underline would be
+   drawn straight across the logo tile. */
+.pk-bgg-note span {
   text-decoration: underline;
   text-decoration-color: var(--color-base-300);
   text-underline-offset: 2px;
 }
 
+/* Tailwind's preflight sets `img { display: block }`, so this must be
+   restored to an inline-level box or the image would split the anchor's
+   inline flow. `vertical-align: middle` centres the mark on the parent's
+   x-height and self-adjusts to the type — no magic pixel offset.
+
+   14px, not the previous 18px. The 18px came from sizing the mark to the
+   line-height (01.1-01-SUMMARY.md's "~18px, roughly text line-height"),
+   which is the wrong reference metric for an inline mark: matching the line
+   box means filling it edge to edge, leaving no leading, which is what
+   inflated .pk-footer-meta from 18px to 23px and made the tile stand at
+   roughly twice the cap height of the 12px type it annotates. The metric
+   that belongs here is the TYPE, not the line box. */
+.pk-bgg-note img {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
 .pk-bgg-note:hover {
   color: var(--color-primary);
+}
+
+.pk-bgg-note:hover span {
   text-decoration-color: currentColor;
 }
 
@@ -1908,18 +2037,46 @@ body.pk-cta-parked {
 
   /* Mobile/desktop swap (01.1-09 Task 2): the toggle and social cluster
      move into the drawer below 480px — reaching the footer there means
-     scrolling the whole page, the drawer is one tap away. Deliberately
-     NOT .pk-footer-right wholesale: that cluster also holds
-     .pk-footer-meta (the copyright line and D-04's BGG attribution),
-     which must stay visible at every viewport width.
+     scrolling the whole page, the drawer is one tap away.
 
-     `.pk-footer-theme` replaces the previous pair of selectors
-     (`.pk-footer-right .pk-theme-toggle` + `.pk-footer-toggle-tag`): the
-     wrapper is footer-only, so it needs no descendant scoping to avoid
-     catching the drawer's own reused `.pk-theme-toggle`. */
-  .pk-footer-theme,
-  .pk-footer-social {
+     Now the CLUSTER itself, not its two children individually (debug
+     footer-desktop-imbalance). This rule previously had to spare
+     .pk-footer-right because the copyright/BGG line lived inside it and must
+     stay visible at every width; that line has moved to .pk-footer-legal, so
+     the cluster's entire contents are exactly the two controls that relocate
+     to the drawer, and hiding the box is both simpler and NECESSARY. A
+     `display: none` child is skipped by flex gap, but an empty flex PARENT is
+     not — left an empty .pk-footer-right in the stack, the mobile column would
+     have spent two 24px cluster gaps on a zero-height box and pushed the legal
+     line 24px further down. Mobile is this project's primary surface; that
+     would have been a real regression to fix a desktop complaint.
+
+     The safety property this rule used to carry per-child — that nothing gets
+     hidden unless it has a drawer equivalent — now lives in FooterRhythmTest,
+     which pins .pk-footer-right to exactly the two relocating concerns. Adding
+     a third child there fails that test rather than silently vanishing on
+     phones. */
+  .pk-footer-right {
     display: none;
+  }
+
+  /* The stacked footer is a CENTRED column — .pk-footer-row keeps the base
+     rule's `align-items: center`, which stops meaning "vertically centre the
+     clusters" and starts meaning "horizontally centre the stack" the moment
+     the direction flips. Every block in it shrink-wraps and is centred:
+     measured at 320px, .pk-footer-left sits at x=59.42 for a width of 201.14,
+     i.e. dead centre.
+
+     .pk-footer-legal's `width: 100%` would opt it out of exactly that — a
+     full-width box makes its content start at the left gutter while
+     everything above it stays centred. Restoring `auto` gives the legal line
+     back the same shrink-to-fit box every other block in the stack has, so
+     `align-items: center` centres it identically (verified: x returns to the
+     pre-change 39.13 at 320px). The full-width trick is only needed where the
+     row is a ROW and something has to be forced off the line; here there is
+     one item per line already. */
+  .pk-footer-legal {
+    width: auto;
   }
 
   .pk-about-cta-bar {
