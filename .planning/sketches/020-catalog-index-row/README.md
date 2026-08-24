@@ -110,6 +110,21 @@ to the session, not the sketch):
   Escape; items carry no top/left border (confirms the unboxed-list
   treatment actually shipped, not just described).
 
+## Round 3 — Panel alignment fix
+
+User caught a real bug: the trigger sits at the far right of the header
+(pushed there by `.nav-spacer`), but the panel opened pinned to the frame's
+*left* edge — visually detached from the button that opens it. Root cause:
+`.mega-panel` had both `left: var(--space-4)` and `right: var(--space-4)`
+with a `max-width` capping the span below the full left-right distance. Per
+the CSS spec, an absolutely-positioned box with both `left` and `right` set
+resolves an over-constrained width by keeping `left` fixed and shrinking
+from the right — so the panel stayed left-anchored no matter where the
+trigger was. Fixed to anchor via `right: var(--space-4)` only (no `left`),
+with an explicit `width: 480px` instead of relying on the left-right span —
+the same gutter distance the header's own `.app-nav-inner` padding uses on
+its right edge, so the panel now hangs directly under the trigger.
+
 ## What to Look For
 
 - Does the mobile chip row now read as "this app's chip," not a separate

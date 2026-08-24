@@ -107,7 +107,12 @@
 
   .mega-backdrop { position: absolute; inset: 0; background: rgba(20,8,34,0.4); opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard); z-index: 25; }
   .mega-backdrop.is-open { opacity: 1; pointer-events: auto; }
-  .mega-panel { position: absolute; top: 64px; left: var(--space-4); right: var(--space-4); max-width: 640px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-4) var(--space-2); z-index: 26; opacity: 0; visibility: hidden; transform: translateY(-8px); transition: all var(--duration-base) var(--ease-out-soft); }
+  /* Anchored via `right` only (not left+right) so it hangs directly under
+     the trigger — the trigger sits at the far right of the header (pushed
+     there by .nav-spacer), and a left+right span with a max-width resolves
+     left-anchored per the CSS spec's over-constrained rules, which visibly
+     detached the panel from the button that opens it. */
+  .mega-panel { position: absolute; top: 64px; right: var(--space-4); width: 480px; max-width: calc(100% - var(--space-8)); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-4) var(--space-2); z-index: 26; opacity: 0; visibility: hidden; transform: translateY(-8px); transition: all var(--duration-base) var(--ease-out-soft); }
   .mega-panel.is-open { opacity: 1; visibility: visible; transform: translateY(0); }
   .mega-grid { display: grid; grid-template-columns: 1fr 1fr; }
   .mega-item { display: block; padding: var(--space-3) var(--space-3); text-decoration: none; color: var(--color-text); border-bottom: 1px solid var(--color-border); transition: color var(--duration-fast) var(--ease-standard); }
