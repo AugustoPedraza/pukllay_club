@@ -74,6 +74,22 @@ defmodule PukllayClub.CatalogTest do
       assert [players: 4] |> Catalog.filter_games() |> Enum.map(& &1.name) == ["Fits4"]
     end
 
+    test "players: 6 is the open-ended top bucket — it also matches a game whose min_players exceeds 6, which the exact-fit predicate would have excluded" do
+      game_fixture(%{name: "SixMax", min_players: 2, max_players: 6})
+      game_fixture(%{name: "BigParty", min_players: 7, max_players: 8})
+      game_fixture(%{name: "TooSmall", min_players: 2, max_players: 5})
+
+      names = [players: 6] |> Catalog.filter_games() |> Enum.map(& &1.name) |> Enum.sort()
+
+      assert names == ["BigParty", "SixMax"]
+    end
+
+    test "players: nil applies no players predicate at all" do
+      game_fixture(%{name: "AnyPlayers", min_players: 1, max_players: 2})
+
+      assert [players: nil] |> Catalog.filter_games() |> Enum.map(& &1.name) == ["AnyPlayers"]
+    end
+
     test "max_playtime: 60 excludes a 120-minute game" do
       game_fixture(%{name: "Quick", playing_time: 45})
       game_fixture(%{name: "Long", playing_time: 120})

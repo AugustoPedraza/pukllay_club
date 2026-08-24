@@ -30,6 +30,15 @@ defmodule PukllayClub.Catalog do
   ]
   @weight_band_order ["descubre_el_hobby", "ingenio_estratega", "nivel_experto"]
 
+  # quick-260824-eqc: the Jugadores chip cluster's top chip is labelled
+  # "6+" and means "seats at least this many players", not "seats exactly
+  # this many". Below this threshold a `:players` request is a literal
+  # seat-count fit (min_players <= n <= max_players); at or above it there
+  # is no upper bound, so a party game requiring 7-8 players is a valid
+  # answer to "we are six or more" while an exact-fit predicate would
+  # silently hide it.
+  @players_open_bucket 6
+
   @doc """
   Lists games ordered by name. Accepts `:limit` (default #{@default_limit}).
 
@@ -75,6 +84,11 @@ defmodule PukllayClub.Catalog do
   `:max_playtime`, `:min_age`, `:sort`, `:limit` (default
   #{@default_limit}), `:offset` (default 0). Always applies `LIMIT` —
   never returns an unbounded result set (T-01-22).
+
+  `:players` is an exact seat-count fit (`min_players <= n <= max_players`)
+  below #{@players_open_bucket}; at or above #{@players_open_bucket} it is
+  open-ended (`max_players >= n`, no upper bound) — the "6+" bucket, quick
+  task 260824-eqc.
   """
   def filter_games(opts \\ []) do
     opts = normalize_opts(opts)
@@ -288,6 +302,16 @@ defmodule PukllayClub.Catalog do
   end
 
   defp maybe_filter_players(query, nil), do: query
+
+  # Open-ended top bucket ("6+") — must come before the exact-fit clause
+  # below, or it is unreachable. Deliberately NOT a new assign/URL param/
+  # scalar name/facet: the chip keeps sending
+  # `phx-value-scalar="players" phx-value-choice="6"` through the untouched
+  # `toggle-scalar` handler, which is what preserves the cluster's
+  # single-select behavior for free (see @players_open_bucket above).
+  defp maybe_filter_players(query, n) when n >= @players_open_bucket do
+    from g in query, where: g.max_players >= ^n
+  end
 
   defp maybe_filter_players(query, n) do
     from g in query, where: g.min_players <= ^n and g.max_players >= ^n
