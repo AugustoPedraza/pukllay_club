@@ -985,7 +985,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> render_click()
 
       assert html =~ "modal-open"
-      assert html =~ "Filtros"
+      assert html =~ "Encuentra tu juego"
     end
 
     test "typing in the nav search box narrows the grid and does not open the filter surface", %{
@@ -1082,6 +1082,51 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "Abrir filtros"
+    end
+
+    test "on first render the catalog wrapper carries pk-dimmable but not the dimmed modifier", %{
+      conn: conn
+    } do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "pk-dimmable"
+      refute html =~ "is-dimmed"
+    end
+
+    test "opening the filter surface adds the dimmed modifier to the pk-dimmable wrapper", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> element(~s([aria-label="Abrir filtros"]))
+        |> render_click()
+
+      assert html =~ "pk-dimmable"
+      assert html =~ "is-dimmed"
+    end
+
+    test "closing the filter surface removes the dimmed modifier again", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+      html = render_click(view, "close-filters", %{})
+
+      assert html =~ "pk-dimmable"
+      refute html =~ "is-dimmed"
+    end
+
+    test "the header nav search input shares the modal's search placeholder", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ ~s(placeholder="¿Qué juego buscas?")
     end
   end
 

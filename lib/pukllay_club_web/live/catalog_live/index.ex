@@ -468,7 +468,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             type="text"
             name="q"
             value={@q}
-            placeholder="Busca por título, autor o editorial…"
+            placeholder="¿Qué juego buscas?"
             phx-debounce="300"
             maxlength="100"
           />
@@ -499,98 +499,115 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           <span class="pk-chip-spacer" aria-hidden="true"></span>
         </nav>
       </:subnav>
-      <div class="pk-page space-y-6">
-        <div class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="flex items-center justify-end gap-4">
-            <select
-              name="sort"
-              phx-change="sort"
-              class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
-            >
-              <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
-              <option value="playtime_asc" selected={@sort == :playtime_asc}>
-                Duración: menor a mayor
-              </option>
-              <option value="playtime_desc" selected={@sort == :playtime_desc}>
-                Duración: mayor a menor
-              </option>
-              <option value="complexity_asc" selected={@sort == :complexity_asc}>
-                Complejidad: menor a mayor
-              </option>
-              <option value="complexity_desc" selected={@sort == :complexity_desc}>
-                Complejidad: mayor a menor
-              </option>
-              <option value="year_desc" selected={@sort == :year_desc}>Más recientes</option>
-            </select>
+      <div class="pk-page">
+        <%!-- quick-260824-eqc: `space-y-6` moved from the outer div to this
+        inner one — left on the outer div it would apply to a single child
+        and silently collapse every gap between the page's sections.
+        `pk-dimmable`/`is-dimmed` (below, sketch 019) blur+dim this wrapper
+        while the filter modal is open, driven by the existing
+        `@filters_open` assign (the same one already passed to the modal as
+        `open=`) — no new assign. The modal and GamePreview.preview_host
+        MUST stay OUTSIDE this wrapper: a CSS `filter` on an ancestor
+        establishes a containing block for `position: fixed` descendants,
+        so nesting them here would both blur the modal itself and re-anchor
+        its fixed positioning to this wrapper's box. Deliberately NOT
+        `aria-hidden`/`inert` on the wrapper either — the `.FilterModal`
+        hook already traps Tab focus inside the dialog, and `aria-hidden`
+        over a subtree containing focusable elements is itself an
+        accessibility violation. --%>
+        <div class={["space-y-6", "pk-dimmable", @filters_open && "is-dimmed"]}>
+          <div class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="flex items-center justify-end gap-4">
+              <select
+                name="sort"
+                phx-change="sort"
+                class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
+              >
+                <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
+                <option value="playtime_asc" selected={@sort == :playtime_asc}>
+                  Duración: menor a mayor
+                </option>
+                <option value="playtime_desc" selected={@sort == :playtime_desc}>
+                  Duración: mayor a menor
+                </option>
+                <option value="complexity_asc" selected={@sort == :complexity_asc}>
+                  Complejidad: menor a mayor
+                </option>
+                <option value="complexity_desc" selected={@sort == :complexity_desc}>
+                  Complejidad: mayor a menor
+                </option>
+                <option value="year_desc" selected={@sort == :year_desc}>Más recientes</option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        <div :if={not filters_active?(assigns)} id="carousel-rows" class="space-y-8">
-          <%= if @loading do %>
-            <CarouselRow.skeleton_row
-              :for={n <- 1..@skeleton_carousel_rows}
-              id={"carousel-skeleton-#{n}"}
-            />
-          <% else %>
-            <CarouselRow.carousel_row
-              :for={row <- @carousel_rows}
-              id={"carousel-#{row.key}"}
-              title={row.title}
-              games={row.games}
-              variant={row_variant(row.key)}
-              subtitle={row_subtitle(row.key)}
-              see_all_row={to_string(row.key)}
-            />
-          <% end %>
-        </div>
+          <div :if={not filters_active?(assigns)} id="carousel-rows" class="space-y-8">
+            <%= if @loading do %>
+              <CarouselRow.skeleton_row
+                :for={n <- 1..@skeleton_carousel_rows}
+                id={"carousel-skeleton-#{n}"}
+              />
+            <% else %>
+              <CarouselRow.carousel_row
+                :for={row <- @carousel_rows}
+                id={"carousel-#{row.key}"}
+                title={row.title}
+                games={row.games}
+                variant={row_variant(row.key)}
+                subtitle={row_subtitle(row.key)}
+                see_all_row={to_string(row.key)}
+              />
+            <% end %>
+          </div>
 
-        <div :if={@load_error} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="pk-state">
-            <h2>No pudimos cargar el catálogo</h2>
-            <p>Hubo un problema de conexión.</p>
-            <%!-- CoreComponents.button/1 checked first (ui-design-system's
+          <div :if={@load_error} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="pk-state">
+              <h2>No pudimos cargar el catálogo</h2>
+              <p>Hubo un problema de conexión.</p>
+              <%!-- CoreComponents.button/1 checked first (ui-design-system's
             "check core_components.ex before hand-rolling markup" rule) —
             its "primary" variant is btn-primary, matching this page's one
             action per non-happy-path state (01.1-07). --%>
-            <.button phx-click="retry" variant="primary">Reintentar</.button>
+              <.button phx-click="retry" variant="primary">Reintentar</.button>
+            </div>
           </div>
-        </div>
 
-        <div class="mx-auto w-full max-w-7xl pk-gutter space-y-1">
-          <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
-          <p class="text-neutral text-sm">{result_count_text(@total)}</p>
-        </div>
-
-        <div :if={@total == 0 and not @load_error} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="pk-state">
-            <h2>No se encontraron juegos</h2>
-            <p>Probá con otros filtros o términos de búsqueda.</p>
-            <.button phx-click="clear-filters" variant="primary">Limpiar filtros</.button>
+          <div class="mx-auto w-full max-w-7xl pk-gutter space-y-1">
+            <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
+            <p class="text-neutral text-sm">{result_count_text(@total)}</p>
           </div>
-        </div>
 
-        <div :if={@loading} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            <CarouselRow.skeleton_card :for={n <- 1..@page_size} id={"grid-skeleton-#{n}"} />
+          <div :if={@total == 0 and not @load_error} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="pk-state">
+              <h2>No se encontraron juegos</h2>
+              <p>Probá con otros filtros o términos de búsqueda.</p>
+              <.button phx-click="clear-filters" variant="primary">Limpiar filtros</.button>
+            </div>
           </div>
-        </div>
 
-        <div :if={not @loading} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div
-            id="games"
-            phx-update="stream"
-            class={[
-              "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4",
-              @total == 0 && "hidden"
-            ]}
-          >
-            <GameCard.game_card :for={{id, game} <- @streams.games} id={id} game={game} />
+          <div :if={@loading} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <CarouselRow.skeleton_card :for={n <- 1..@page_size} id={"grid-skeleton-#{n}"} />
+            </div>
           </div>
-        </div>
 
-        <div :if={@total > 0 and @offset < @total} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="flex justify-center">
-            <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
+          <div :if={not @loading} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div
+              id="games"
+              phx-update="stream"
+              class={[
+                "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4",
+                @total == 0 && "hidden"
+              ]}
+            >
+              <GameCard.game_card :for={{id, game} <- @streams.games} id={id} game={game} />
+            </div>
+          </div>
+
+          <div :if={@total > 0 and @offset < @total} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="flex justify-center">
+              <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
+            </div>
           </div>
         </div>
 

@@ -831,6 +831,7 @@ body.pk-sheet-open {
   .pk-drawer-backdrop,
   .pk-mobile-cta-bar,
   .pk-title-echo,
+  .pk-dimmable,
   body.pk-has-cta-bar {
     transition-duration: 1ms;
   }
@@ -2044,6 +2045,23 @@ body.pk-cta-parked {
 .pk-skel {
   background: var(--color-base-300);
   border-radius: var(--radius-box);
+}
+
+/* Background dim/blur while the filter modal is open (sketch 019, quick
+   task 260824-eqc): the catalog grid reads as "paused/backgrounded while
+   you focus on filtering" instead of "something happening independently
+   while a dialog floats on top." `filter: blur()/saturate()/brightness()`
+   has no daisyUI/Tailwind utility equivalent without an arbitrary value
+   (banned by ui-design-system), which is why it lives in this block.
+   `.is-dimmed` is driven entirely by the existing `@filters_open` assign
+   in `CatalogLive.Index` — no new hook, no new assign. */
+.pk-dimmable {
+  transition: filter var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-dimmable.is-dimmed {
+  filter: blur(3px) saturate(0.7) brightness(0.94);
+  pointer-events: none;
 }
 
 /* Narrow-viewport density and navigation switch (sketch 001, variant D):
