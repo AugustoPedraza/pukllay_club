@@ -933,9 +933,11 @@ body.pk-sheet-open {
   color: var(--color-primary);
 }
 
-/* Icon-only below 48rem (see the third min-width:48rem block near the end
-   of this file) — the trigger's aria-label is load-bearing at every width,
-   not decorative, because this text is what makes it visible. */
+/* Icon-only below 50rem (see the dedicated min-width:50rem block near the
+   end of this file, and its comment for why this reveal needed its own
+   breakpoint rather than reusing 48rem) — the trigger's aria-label is
+   load-bearing at every width, not decorative, because this text is what
+   makes it visible. */
 .pk-cat-trigger-label {
   display: none;
 }
@@ -946,6 +948,20 @@ body.pk-sheet-open {
 
 .pk-cat-trigger.is-open .pk-cat-trigger-chevron {
   transform: rotate(180deg);
+}
+
+/* .pk-search-morph also carries its own margin-left: auto (needed on pages
+   with search but no category trigger, e.g. Detalle) — with BOTH elements
+   auto-margined in the same flex row, flexbox splits the free space evenly
+   between them instead of grouping them, landing the trigger mid-row with
+   a large gap before the search pill (measured: 303px at 1280px, not
+   "adjacent"). This general-sibling override neutralises the search pill's
+   own auto margin only when a .pk-cat-trigger actually precedes it in the
+   DOM, so Detalle (no trigger) is unaffected and CatalogLive's trigger
+   alone absorbs the row's free space, landing both as one right-anchored
+   group with .pk-nav-inner's ordinary gap between them. */
+.pk-cat-trigger ~ .pk-search-morph {
+  margin-left: 0;
 }
 
 .pk-cat-backdrop {
@@ -2204,14 +2220,20 @@ body.pk-cta-parked {
   }
 }
 
-/* A THIRD, separate min-width:48rem block — deliberately not merged into
-   either block above (see the comment on the second block for why they are
-   kept apart). Reveals the category-menu trigger's text label once the row
-   can seat it; below 48rem the trigger stays icon-only. Reuses the existing
-   breakpoint rather than inventing a new one, and is what keeps the
-   481-768px row — already the tightest band per the arithmetic above, and
-   now the one this control also joined — from overflowing. */
-@media (min-width: 48rem) {
+/* A THIRD, separate breakpoint block — deliberately not merged into either
+   48rem block above (see the comment on the second block for why they are
+   kept apart) and deliberately NOT reusing 48rem itself either, unlike
+   every other swap in this file (Rule 1 auto-fix, quick-260824-jkc Task 3):
+   measured live at 48rem/768px with the label forced visible, the closed
+   row overflowed the viewport by 10px (documentElement.scrollWidth 763 vs
+   clientWidth 753) and the open search pill was squeezed down to a
+   functionally useless 2px — the pre-existing 48rem arithmetic (see the
+   wordmark-reveal block above) never accounted for this control's ~155px
+   of added text. Measured the real threshold by bisection: overflow
+   persisted through 775px and cleared at 780px. 50rem/800px is the next
+   breakpoint above that measured value with real headroom (confirmed 0
+   overflow), not a re-guessed number. */
+@media (min-width: 50rem) {
   .pk-cat-trigger-label {
     display: inline;
   }
