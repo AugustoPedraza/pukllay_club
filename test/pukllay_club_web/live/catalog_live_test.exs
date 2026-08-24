@@ -334,12 +334,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html =~ "No encontramos juegos con esos filtros"
       assert html =~ "Limpiar filtros"
 
-      # Scoped to .btn-primary (01.1-06): the empty-state's own clear-filters
-      # button, distinct from FilterModal's btn-outline clear-filters button
-      # now also present in the DOM — a bare text selector would be ambiguous.
+      # Scoped to .pk-state button.btn-primary (quick-260824-b71): the
+      # empty-state's own clear-filters button lives inside .pk-state.
+      # FilterModal's footer clear-filters button is now ALSO btn-primary
+      # (its "secondary" tier is "btn-outline btn-primary", per
+      # ui-design-system's component inventory) — a bare .btn-primary
+      # selector is ambiguous between the two, so scope by ancestor instead.
       html2 =
         view
-        |> element("button.btn-primary", "Limpiar filtros")
+        |> element(".pk-state button.btn-primary", "Limpiar filtros")
         |> render_click()
 
       assert html2 =~ "Existing Game"

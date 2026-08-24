@@ -581,6 +581,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           open={@filters_open}
           q={@q}
           total={@total}
+          filters_active={filters_active?(assigns)}
         />
       </div>
     </Layouts.app>

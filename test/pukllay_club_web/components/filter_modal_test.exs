@@ -47,7 +47,7 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ "catan"
     end
 
-    test "renders the live match count via CatalogLive.Index.result_count_text/1" do
+    test "renders the CTA label with the live total, singular and plural" do
       html =
         render_component(&FilterModal.filter_modal/1, %{
           id: "filter-modal",
@@ -55,7 +55,7 @@ defmodule PukllayClubWeb.FilterModalTest do
           total: 1
         })
 
-      assert html =~ "1 juego encontrado"
+      assert html =~ "Ver 1 juego"
 
       html =
         render_component(&FilterModal.filter_modal/1, %{
@@ -64,7 +64,45 @@ defmodule PukllayClubWeb.FilterModalTest do
           total: 12
         })
 
-      assert html =~ "12 juegos encontrados"
+      assert html =~ "Ver 12 juegos"
+    end
+
+    test "the root element carries daisyUI's bottom-sheet/centered-dialog responsive modifiers" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html =~ "modal-bottom"
+      assert html =~ "sm:modal-middle"
+    end
+
+    test "the clear-filters button is disabled when filters_active is unset/false, enabled when true" do
+      # Scoped to the "btn-outline btn-primary min-h-11" class combo, unique
+      # to this footer button (the CTA is "btn btn-primary min-h-11" with no
+      # btn-outline) — HEEx does not preserve attribute-write order for
+      # global/rest attrs, so a naive "attr-A ... attr-B" regex is fragile.
+      clear_button_class = "btn-outline btn-primary min-h-11"
+
+      html_inactive =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html_inactive =~
+               ~r/<button[^>]*#{clear_button_class}[^>]*disabled[^>]*clear-filters/
+
+      html_active =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options,
+          filters_active: true
+        })
+
+      refute html_active =~
+               ~r/<button[^>]*#{clear_button_class}[^>]*disabled[^>]*clear-filters/
     end
 
     test "close button and backdrop both dispatch close-filters, meet the 44px touch floor" do
