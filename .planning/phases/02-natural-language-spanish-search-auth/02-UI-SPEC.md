@@ -1,7 +1,7 @@
 ---
 phase: 2
 slug: natural-language-spanish-search-auth
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-08-24
@@ -119,28 +119,92 @@ weight only on activation" convention (`header-navigation-drawer.md` 013-E/014/0
 
 ## UI Considerations
 
-> Populated by the ui-phase UI-consideration probe. Elements classified: (1) NL search results
-> list (`list-collection`), (2) search input/submit (`interactive-control`, `form`), (3) favorites
-> list (`list-collection`), (4) favorite-toggle control (`interactive-control`), (5) magic-link
-> auth form (`form`), (6) account/session nav control (`interactive-control`, `nav`).
+> Populated by the ui-phase UI-consideration probe (`ui-consideration-probe.cjs`, compiled
+> 8-category taxonomy). Elements classified: (E1) NL search results list (`list-collection`),
+> (E2) search input/submit (`interactive-control`, `form`), (E3) favorites list
+> (`list-collection`), (E4) favorite-toggle control (`interactive-control`), (E5) magic-link
+> auth form (`form`), (E6) account/session nav control (`interactive-control`, `nav`).
+>
+> Run in auto (`yolo`) mode: every applicable category was resolved by Claude rather than a
+> live AskUserQuestion pass — resolutions are honest, not glossing over gaps (see the 4
+> backstop rows for real ambiguities flagged rather than hand-waved).
 
-Applicable state considerations resolved: 11 covered, 2 backstop, 0 unresolved
+Applicable state considerations resolved: 31 applicable — 15 resolved (explicit), 4 resolved
+(backstop), 12 dismissed (n/a, reason given), 0 unresolved.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | search results list | ✅ covered | Reuses the existing shipped empty-state (`"No se encontraron juegos"` + `Limpiar filtros`) verbatim — no new NL-specific empty copy, see Copywriting Contract |
-| empty | favorites list | ✅ covered | New copy defined above: `"Todavía no tenés favoritos"` + `Explorar catálogo` CTA |
-| loading | search results list | ✅ covered | Two-phase: (1) keyword-only results render immediately on submit (existing flat-grid path, no wait); (2) while the Oban-queued hybrid pipeline is in flight, a small `text-neutral text-sm` inline indicator ("Ajustando resultados…") appears above the grid — no full-page skeleton, this is a sub-second-to-few-second in-flight update per B13, not an initial load |
-| loading | favorite-toggle control | ✅ covered | Optimistic UI: the heart flips state instantly on tap (LiveView `phx-click`), no spinner — matches the app's existing instant-toggle pattern used by filter facet pills |
-| loading | magic-link auth form | ✅ covered | Standard `phx-submit` disables the button + shows daisyUI's `loading` spinner modifier on `btn-primary` while the request is in flight (no async job here — sending the email is synchronous relative to the request, unlike search) |
-| error | search results list | ✅ covered | Silent degrade to keyword-only results, no visible error — see Copywriting Contract "Error state — search pipeline degraded" |
-| error | magic-link auth form | ✅ covered | Expired/invalid-link copy defined above; field-level validation (malformed email) uses the existing `CoreComponents.input/1` `<.error>` slot pattern, unchanged |
-| populated | search results list | ✅ covered | Reuses the existing shipped flat grid (`grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4` + `GameCard.game_card/1`) verbatim — no new card shape for search results |
-| populated | favorites list | ✅ covered | Same flat grid + `GameCard.game_card/1`, filtered to the member's favorited games — no new list surface |
-| zero-one-many | favorites list | ✅ covered | 0 → empty state above; 1 or many → same grid, no singular/plural copy variant needed since the page has no count-based header text (matches the existing catalog grid, which also has no "N resultados" copy on the grid itself — see `filter_modal.ex`'s "Ver N juegos" for where counts *do* appear, which is unaffected by this phase) |
-| overflow | search-input text | ✅ covered | Existing `String.slice(q, 0, 100)` cap (`catalog_live/index.ex:148`) already bounds query length app-wide; no change needed for NL queries |
-| long-text | magic-link confirmation email echo | 🧪 backstop | The confirmation copy interpolates the member's own email address (`{email}`) inline in a sentence — a very long email (rare, but not impossible) could wrap awkwardly in the centered auth card. **Backstop**: the auth-page card container must allow normal text wrap (no `nowrap`/`truncate` on this specific line) so a long address wraps onto a second line rather than overflowing the card — verify at implementation/verify time with a synthetic long-email test case, not assumed safe by inspection alone. |
-| long-text | game title in favorites/search grid | 🧪 backstop | Same truncation contract as the existing catalog grid (`card-interaction.md`: single-line ellipsis, no line-clamp) — this is inherited, not new, but flagged as backstop since it's the first time this exact card renders inside a *filtered-by-favorite* context; confirm at verify time that no favorites-specific wrapper reintroduces a second title treatment. |
+### E1 — NL search results list
+
+| Category | Status | Resolution / Reason |
+|----------|--------|---------------------|
+| empty | ✅ explicit | Reuses the existing shipped empty-state (`"No se encontraron juegos"` + `Limpiar filtros`) verbatim — no new NL-specific empty copy, see Copywriting Contract |
+| loading | ✅ explicit | Two-phase: (1) keyword-only results render immediately on submit (existing flat-grid path, no wait); (2) while the Oban-queued hybrid pipeline is in flight, a small `text-neutral text-sm` inline indicator ("Ajustando resultados…") appears above the grid — no full-page skeleton |
+| error | ✅ explicit | Silent degrade to keyword-only results, no visible error — see Copywriting Contract "Error state — search pipeline degraded" |
+| populated | ✅ explicit | Reuses the existing shipped flat grid (`grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4` + `GameCard.game_card/1`) verbatim — no new card shape for search results |
+| partial | ➖ dismissed | Same card/grid inherited unchanged from Phase 1's catalog grid — any partial-data handling (e.g. missing cover art) is an existing Phase 1 concern already resolved there, not newly introduced by Phase 2 |
+| overflow | ➖ dismissed | Grid overflow/pagination behavior is inherited unchanged from the existing Phase 1 catalog grid — Phase 2 only re-ranks the same grid, it does not alter list-container overflow handling |
+| zero-one-many | ✅ explicit | Same shape as the favorites list below: 0 → empty state; 1 or many → same grid, no singular/plural copy variant on the grid itself (matches the inherited catalog pattern, which has no "N resultados" copy on the grid — counts only appear in `filter_modal.ex`'s "Ver N juegos", unaffected by this phase) |
+
+### E2 — search input/submit
+
+| Category | Status | Resolution / Reason |
+|----------|--------|---------------------|
+| empty | ✅ explicit | The search-morph's submit affordance only appears when text is present (existing shipped behavior); an empty-query submit is not reachable — Enter on an empty field is a no-op inherited from the existing search-morph component |
+| loading | 🧪 backstop | The input itself is not disabled/spinner-decorated during an in-flight hybrid-pipeline job (only the below-grid "Ajustando resultados…" line signals it). **Gap**: rapid re-submission while a prior job is in-flight isn't addressed — verify at implementation time whether the LiveView/Oban side cancels/supersedes the stale job or queues cleanly, since job racing could otherwise land a stale ranking after a newer one |
+| error | ➖ dismissed | Free-text NL search has no format constraint to violate — there is no "invalid search query" concept; only the length cap applies (covered under long-text below) |
+| partial | ➖ dismissed | A single text input has no "partial" state distinct from empty/populated — not applicable to a single-field text control |
+| long-text | ✅ explicit | Existing `String.slice(q, 0, 100)` cap (`catalog_live/index.ex:148`) already bounds query length app-wide; no change needed for NL queries |
+
+### E3 — favorites list
+
+| Category | Status | Resolution / Reason |
+|----------|--------|---------------------|
+| empty | ✅ explicit | New copy defined above: `"Todavía no tenés favoritos"` + `Explorar catálogo` CTA |
+| loading | ✅ explicit | Standard synchronous LiveView mount (like the catalog grid) — no async pipeline involved, uses the app's existing flat/no-shimmer initial-load convention (`empty-loading-error-states.md` sketch 009), no new loading treatment |
+| error | 🧪 backstop | No error-state UI is specified for a favorites-list load failure (e.g. DB error on mount). Not expected in normal operation, but should degrade to the app's standard error boundary/flash rather than a blank crash — verify at implementation time that LiveView's default crash/reconnect handling is acceptable, or define a bespoke error state if needed |
+| populated | ✅ explicit | Same flat grid + `GameCard.game_card/1`, filtered to the member's favorited games — no new list surface |
+| partial | ➖ dismissed | Same reasoning as E1/partial — inherited card, no partial-record concept introduced |
+| overflow | ➖ dismissed | Same reasoning as E1/overflow — inherited grid overflow/pagination handling, unchanged by this phase |
+| zero-one-many | ✅ explicit | 0 → empty state above; 1 or many → same grid, no singular/plural copy variant needed (matches the existing catalog grid, which also has no count-based header text on the grid itself) |
+
+### E4 — favorite-toggle control
+
+| Category | Status | Resolution / Reason |
+|----------|--------|---------------------|
+| loading | ✅ explicit | Optimistic UI: the heart flips state instantly on tap (LiveView `phx-click`), no spinner — matches the app's existing instant-toggle pattern used by filter facet pills |
+| error | 🧪 backstop | Optimistic toggle has no specified rollback/error-recovery behavior if the underlying save fails (e.g. DB error) — the heart could visually diverge from persisted state. Verify at implementation time whether the handler reverts the icon on a failed save, or add an explicit error-recovery rule before this ships |
+| long-text | ➖ dismissed | Icon-only control with an `aria-label` only (no visible text) — no long-text/wrapping concern |
+
+### E5 — magic-link auth form
+
+| Category | Status | Resolution / Reason |
+|----------|--------|---------------------|
+| empty | ✅ explicit | Uses the existing `CoreComponents.input/1` required-field/native email validation — an empty submit is blocked by native browser validation, inherited unchanged from every other form in the app (matches the `phx.gen.auth` generator default) |
+| loading | ✅ explicit | Standard `phx-submit` disables the button + shows daisyUI's `loading` spinner modifier on `btn-primary` while the request is in flight (synchronous relative to the request, unlike search) |
+| error | ✅ explicit | Expired/invalid-link copy defined above; field-level validation (malformed email) uses the existing `CoreComponents.input/1` `<.error>` slot pattern, unchanged |
+| partial | ➖ dismissed | Single required email field — no concept of a partially-filled multi-field form here |
+| long-text | 🧪 backstop | The confirmation copy interpolates the member's own email address (`{email}`) inline in a sentence — a very long email (rare, but possible) could wrap awkwardly in the centered auth card. The auth-page card container must allow normal text wrap (no `nowrap`/`truncate` on this line) so a long address wraps onto a second line rather than overflowing — verify at implementation/verify time with a synthetic long-email test case, not assumed safe by inspection alone |
+
+### E6 — account/session nav control
+
+| Category | Status | Resolution / Reason |
+|----------|--------|---------------------|
+| loading | ➖ dismissed | Opening the account menu is a client-side, instant interaction (no data fetch) — no loading state applies, same as the existing theme-toggle/drawer-nav pattern this control is modeled on |
+| error | ➖ dismissed | No network/data operation occurs when opening the menu itself — sign-out and navigation actions use existing, already-covered link/form behaviors, not a new error surface |
+| overflow | ➖ dismissed | Menu has exactly two fixed, short items ("Mis favoritos", "Cerrar sesión") — no scrolling/overflow concern at this fixed length |
+| long-text | ➖ dismissed | Menu item labels are fixed, short, app-authored strings (not user-generated or dynamic content) — no long-text/wrapping risk |
+
+### Backstop items requiring verification (4)
+
+The four `🧪 backstop` rows above are the real, honest gaps this phase's design does not fully
+close in prose — each needs an explicit test or implementation decision, not just inspection,
+before Phase 2 can be considered verified:
+
+1. **Search-input re-submission racing** (E2/loading) — stale-job handling while a prior hybrid
+   pipeline job is in flight.
+2. **Favorites-list load failure** (E3/error) — no defined error UI for a DB error on mount.
+3. **Favorite-toggle save failure** (E4/error) — no defined rollback if the optimistic save fails.
+4. **Long email wrap in magic-link confirmation** (E5/long-text) — text-wrap contract needs a
+   synthetic long-email test case.
 
 ---
 
@@ -247,11 +311,16 @@ fixed stack, no React/Next.js/Vite target for shadcn to initialize against).
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (non-blocking FLAG — see recommendation below)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved
+
+**Non-blocking recommendation (Dimension 2 — Visuals):** declare an explicit focal-point
+statement per primary screen for implementation clarity — e.g. "Search results page: the
+`.pk-search-morph` input is the primary visual anchor at viewport top; the grid below is the
+secondary focus." Not required to ship; flagged for the planner/executor to consider.
