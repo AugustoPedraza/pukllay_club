@@ -729,8 +729,8 @@ defmodule PukllayClubWeb.LayoutsTest do
         |> LazyHTML.query(".pk-drawer-bottom")
         |> LazyHTML.to_html()
 
-      social_index = :binary.match(bottom_html, ~s(class="pk-drawer-social")) |> elem(0)
-      utility_index = :binary.match(bottom_html, ~s(class="pk-drawer-utility")) |> elem(0)
+      social_index = bottom_html |> :binary.match(~s(class="pk-drawer-social")) |> elem(0)
+      utility_index = bottom_html |> :binary.match(~s(class="pk-drawer-utility")) |> elem(0)
 
       assert social_index < utility_index
     end
