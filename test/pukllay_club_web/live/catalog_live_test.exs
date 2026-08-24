@@ -199,7 +199,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html =
         view
-        |> element("input[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+        |> element("input[phx-value-facet=mechanics][phx-value-choice='Tira dados']")
         |> render_click()
 
       assert html =~ "Dice Game"
@@ -207,7 +207,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html2 =
         view
-        |> element("input[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+        |> element("input[phx-value-facet=mechanics][phx-value-choice='Tira dados']")
         |> render_click()
 
       assert html2 =~ "Dice Game"
@@ -223,12 +223,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/")
 
       view
-      |> element("input[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+      |> element("input[phx-value-facet=mechanics][phx-value-choice='Tira dados']")
       |> render_click()
 
       html =
         view
-        |> element("input[phx-value-facet=mechanics][phx-value-value='Coloca trabajadores']")
+        |> element("input[phx-value-facet=mechanics][phx-value-choice='Coloca trabajadores']")
         |> render_click()
 
       assert html =~ "Dice Game"
@@ -245,7 +245,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/")
 
       view
-      |> element("input[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+      |> element("input[phx-value-facet=mechanics][phx-value-choice='Tira dados']")
       |> render_click()
 
       html =
@@ -399,7 +399,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       html =
         render_click(view, "toggle-scalar", %{
           "scalar" => "players",
-          "value" => "99999999999999"
+          "choice" => "99999999999999"
         })
 
       assert html =~ "No pudimos cargar el catálogo"
@@ -1018,7 +1018,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html =
         view
-        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
       grid = grid_html(html)
@@ -1038,7 +1038,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html_after =
         view
-        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
       assert html_after =~ "1 juego encontrado"
@@ -1062,7 +1062,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html =
         view
-        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
       assert html =~ ~s(data-search-expanded="true")
@@ -1095,7 +1095,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/")
 
       html =
-        render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
 
       grid = grid_html(html)
       assert grid =~ "Four Player Game"
@@ -1108,10 +1108,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/")
 
-      render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
 
       html =
-        render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
 
       grid = grid_html(html)
       assert grid =~ "Four Player Game"
@@ -1142,10 +1142,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/")
 
-      render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
 
       html =
-        render_click(view, "toggle-scalar", %{"scalar" => "max_playtime", "value" => "60"})
+        render_click(view, "toggle-scalar", %{"scalar" => "max_playtime", "choice" => "60"})
 
       grid = grid_html(html)
       assert grid =~ "Match Game"
@@ -1161,7 +1161,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       before_count = card_count(html)
 
       html2 =
-        render_click(view, "toggle-scalar", %{"scalar" => "__proto__", "value" => "5"})
+        render_click(view, "toggle-scalar", %{"scalar" => "__proto__", "choice" => "5"})
 
       assert card_count(html2) == before_count
       assert html2 =~ "Untouched Scalar Game"
@@ -1173,10 +1173,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/")
 
-      render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
 
       html =
-        render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "abc"})
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "abc"})
 
       grid = grid_html(html)
       assert grid =~ "Four Player Game"

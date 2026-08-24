@@ -128,7 +128,7 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ ~s(aria-modal="true")
     end
 
-    test "facet pills dispatch toggle-facet with the value/facet pair, selected state reflected in aria-pressed" do
+    test "facet pills dispatch toggle-facet with the choice/facet pair, selected state reflected in aria-pressed" do
       # weight_bands (Nivel), not mechanics — Task 3 moved mechanics/themes
       # off the badge-pill treatment into the checklist inside the
       # disclosure; weight_bands is still rendered via facet_pill/1.
@@ -146,7 +146,11 @@ defmodule PukllayClubWeb.FilterModalTest do
 
       assert html =~ ~s(phx-click="toggle-facet")
       assert html =~ ~s(phx-value-facet="weight_bands")
-      assert html =~ ~s(phx-value-value="ingenio_estratega")
+      # `choice`, not `value` — a `phx-value-value` binding on a <button> is
+      # silently clobbered by the element's native `.value` DOM property in
+      # LiveView's client-side extractMeta (see FilterModal's moduledoc).
+      assert html =~ ~s(phx-value-choice="ingenio_estratega")
+      refute html =~ "phx-value-value"
       # HEEx renders a Boolean assign on a recognized aria-* attribute as a
       # bare present/absent attribute, not a "true"/"false" string — same
       # behavior the retired FilterDrawer's identical `aria-pressed={@selected}`

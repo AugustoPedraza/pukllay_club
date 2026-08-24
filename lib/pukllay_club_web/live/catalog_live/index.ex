@@ -156,7 +156,13 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     {:noreply, assign(socket, :filters_open, false)}
   end
 
-  def handle_event("toggle-facet", %{"facet" => facet, "value" => value}, socket) do
+  # The payload key is `choice`, not `value`: LiveView's client-side
+  # `extractMeta` overwrites `payload.value` with the clicked element's
+  # native `.value` DOM property (`""` for a `<button>`, `"on"` for a
+  # checkbox), silently clobbering any `phx-value-value` binding. See the
+  # `FilterModal` moduledoc for the full mechanism — this key must stay in
+  # sync with the `phx-value-choice` attributes there.
+  def handle_event("toggle-facet", %{"facet" => facet, "choice" => value}, socket) do
     case facet_assign_key(facet) do
       nil ->
         {:noreply, socket}
@@ -178,7 +184,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # no chip and no entry in `scalar_assign_key/1` — it stays unfilterable
   # via the UI, exactly as it is today; the field remains a valid
   # `?min_age=` URL param via `handle_params/3` only.
-  def handle_event("toggle-scalar", %{"scalar" => scalar, "value" => value}, socket) do
+  def handle_event("toggle-scalar", %{"scalar" => scalar, "choice" => value}, socket) do
     case scalar_assign_key(scalar) do
       nil ->
         {:noreply, socket}

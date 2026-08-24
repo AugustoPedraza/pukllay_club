@@ -26,7 +26,7 @@ defmodule PukllayClubWeb.FilterModal do
 
   Jugadores/Duración máxima render as chip clusters (`scalar_chip/1`)
   rather than the retired `Otros filtros` number-input form — each chip
-  click emits `"toggle-scalar"` with `phx-value-scalar`/`phx-value-value`
+  click emits `"toggle-scalar"` with `phx-value-scalar`/`phx-value-choice`
   for exactly one scalar, so clicking one never resets another (the
   regression the old shared scalar form would have caused). `min_age`
   has no control anywhere in this component — dropped per an explicit
@@ -35,8 +35,22 @@ defmodule PukllayClubWeb.FilterModal do
   only via its existing `?min_age=` URL param, never via a UI control.
 
   Every facet pill toggle still emits `"toggle-facet"` with
-  `phx-value-facet`/`phx-value-value`; the query input still emits
-  `"search"` with `phx-debounce="300"`. `facet_pill/1` and `scalar_chip/1`
+  `phx-value-facet`/`phx-value-choice`; the query input still emits
+  `"search"` with `phx-debounce="300"`.
+
+  The payload key is `choice`, never `value`, and that is load-bearing:
+  LiveView's client-side `extractMeta` copies every `phx-value-*`
+  attribute into the event payload and then unconditionally overwrites
+  `payload.value` with the clicked element's NATIVE `.value` DOM property
+  for any non-form element that has one. A `<button>` with no `value=`
+  attribute has a native `.value` of `""` and a checkbox has `"on"`, so a
+  `phx-value-value` binding on these controls is silently clobbered with
+  no error anywhere in the stack — the exact bug that made every filter
+  control a no-op in the browser while ExUnit stayed green (`render_click`
+  builds the params map directly and never runs `extractMeta`). Do not
+  rename this back to `value`; `mix test` cannot catch the regression.
+
+  `facet_pill/1` and `scalar_chip/1`
   both build their class list from one shared `chip_class/1` helper so
   the two visually-identical chip families cannot drift apart. Selection
   state and open/closed state both live entirely in the parent
@@ -351,7 +365,7 @@ defmodule PukllayClubWeb.FilterModal do
       type="button"
       phx-click="toggle-facet"
       phx-value-facet={@facet}
-      phx-value-value={@value}
+      phx-value-choice={@value}
       aria-pressed={@selected}
       class={chip_class(@selected)}
     >
@@ -371,7 +385,7 @@ defmodule PukllayClubWeb.FilterModal do
       type="button"
       phx-click="toggle-scalar"
       phx-value-scalar={@scalar}
-      phx-value-value={@value}
+      phx-value-choice={@value}
       aria-pressed={@selected}
       class={chip_class(@selected)}
     >
@@ -418,7 +432,7 @@ defmodule PukllayClubWeb.FilterModal do
               checked={opt in @selected}
               phx-click="toggle-facet"
               phx-value-facet={@key}
-              phx-value-value={opt}
+              phx-value-choice={opt}
             />
             {opt}
           </label>
