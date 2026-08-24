@@ -1106,7 +1106,41 @@ body.pk-sheet-open {
    <html> data-theme/data-theme-source attributes assets/js/theme.js
    already sets, reproducing the shipped arbitrary-variant classes'
    precedence: data-theme-source="system" wins outright; otherwise
-   data-theme="light"|"dark" marks the respective button. */
+   data-theme="light"|"dark" marks the respective button.
+
+   Subtlety pass — sketch 018's winner B, picked 2026-08-24, quick task
+   260824-7mt. Three levers: fade the rest-state glyph, shrink it, and tone
+   the active state down, so the toggle reads as clearly subordinate to the
+   four social icons beside it in the footer.
+
+   Fade is 75%, not the sketch's 55% — 55% measured 2.25:1 against the
+   light-theme footer surface (--color-base-200), missing WCAG 2.1 SC
+   1.4.11's 3:1 non-text-contrast floor, which applies here because these
+   are bare icon buttons with no border/background: the glyph is the
+   control's only visual identifier. 75% clears the floor in both themes
+   (3.22:1 light, 4.94:1 dark).
+
+   The size lever targets `.pk-theme-toggle button > span`, not `button
+   svg`, because CoreComponents.icon/1 renders hero icons as a
+   mask-painted <span> (assets/vendor/heroicons.js), not an <svg> — there
+   is no svg anywhere in this control. The child-span selector's higher
+   specificity (0,1,2) is what beats the two competing single-class width
+   declarations (.size-4 from the template, .hero-*-micro from the
+   heroicons plugin), both (0,1,0), rather than source order.
+
+   14px produces subordination, not the size parity the sketch's prose
+   assumed: the social glyphs measured 16px in shipped markup (literal
+   width/height attributes), not the 14px the sketch believed, and the
+   toggle's own glyphs were already 16px too (.size-4). So 14px makes the
+   toggle glyph smaller than its neighbor, which serves "read as clearly
+   subordinate" better than the parity the sketch described.
+
+   The active underline's geometry (left/right/bottom/height/border-radius)
+   is deliberately unchanged — only its color moved. Variant B's absolute
+   inset values were measured on a 32px-wide demo button; this button is
+   44px wide (min-w-11, the touch target added by quick task 260821-dah),
+   so those numbers don't transfer and a re-derived value would be an
+   unverified guess. */
 .pk-theme-toggle {
   display: flex;
   align-items: center;
@@ -1115,13 +1149,22 @@ body.pk-sheet-open {
 
 .pk-theme-toggle button {
   position: relative;
-  color: var(--color-neutral);
+  color: color-mix(in srgb, var(--color-neutral) 75%, var(--color-base-200));
+}
+
+.pk-theme-toggle button > span {
+  width: 14px;
+  height: 14px;
+}
+
+.pk-theme-toggle button:hover {
+  color: var(--color-base-content);
 }
 
 [data-theme-source="system"] .pk-theme-toggle button[data-phx-theme="system"],
 [data-theme-source="user"][data-theme="light"] .pk-theme-toggle button[data-phx-theme="light"],
 [data-theme-source="user"][data-theme="dark"] .pk-theme-toggle button[data-phx-theme="dark"] {
-  color: var(--color-primary);
+  color: color-mix(in srgb, var(--color-primary) 65%, var(--color-neutral));
 }
 
 [data-theme-source="system"] .pk-theme-toggle button[data-phx-theme="system"]::after,
@@ -1134,7 +1177,7 @@ body.pk-sheet-open {
   bottom: 4px;
   height: 2px;
   border-radius: 9999px;
-  background: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 65%, var(--color-neutral));
 }
 
 .pk-footer-toggle-tag {
