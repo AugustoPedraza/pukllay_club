@@ -267,18 +267,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html2 =~ "Catán Cards"
     end
 
-    test "changing the sort control reorders the rendered cards", %{conn: conn} do
+    test "a non-default ?sort= param reorders the rendered cards", %{conn: conn} do
       game_fixture(%{name: "Alfa Corto", playing_time: 20})
       game_fixture(%{name: "Zeta Largo", playing_time: 120})
 
-      {:ok, view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/")
 
       assert position(grid_html(html), "Alfa Corto") < position(grid_html(html), "Zeta Largo")
 
-      html2 =
-        view
-        |> element("select[name=sort]")
-        |> render_change(%{sort: "playtime_desc"})
+      {:ok, _view, html2} = live(conn, ~p"/?sort=playtime_desc")
 
       assert position(grid_html(html2), "Zeta Largo") < position(grid_html(html2), "Alfa Corto")
     end
