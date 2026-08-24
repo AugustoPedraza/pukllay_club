@@ -1,16 +1,35 @@
 defmodule PukllayClubWeb.FilterModal do
   @moduledoc """
-  Stateless filter modal (SHELL-04, 01.1-06, quick-260824-b71) — replaces
-  the slide-over `FilterDrawer` retired before it. Presents a pinned
-  three-region shell (header / scrolling body / pinned footer). The body
-  holds the free-text query input, then a primary always-visible cluster
-  (Jugadores/Duración máxima chips + the Nivel weight-band pills), then a
-  secondary cluster (Destacados), then one collapsed `<details>`
-  disclosure holding a searchable Mecánicas/Temáticas checklist pair (the
-  67-option pill walls the shipped component used to dump flat into the
-  always-visible body). The footer holds two actions: a `Limpiar filtros`
-  secondary button (disabled whenever no filter or query is active) and a
-  `Ver N juegos` primary CTA.
+  Stateless filter modal (SHELL-04, 01.1-06, quick-260824-b71, sketch 019
+  finish pass quick-260824-eqc) — replaces the slide-over `FilterDrawer`
+  retired before it. Presents a pinned three-region shell (header /
+  scrolling body / pinned footer). The header reads "Encuentra tu juego"
+  with a one-line subtitle framing the modal as answering the visitor's
+  own question rather than a technical "Filtros" label. The body holds
+  the free-text query input (placeholder `¿Qué juego buscas?`, matching
+  `CatalogLive.Index`'s nav search box — Task 3 of quick-260824-eqc keeps
+  the two in sync), then a primary always-visible cluster (Jugadores/
+  Duración máxima chips + the Nivel weight-band pills, each inside its
+  own `rounded-box bg-base-200 p-4` card per sketch 019 variant D), then
+  one collapsed `<details>` disclosure — also carrying the card
+  treatment — holding a searchable Mecánicas/Temáticas checklist pair
+  (the 67-option pill walls the shipped component used to dump flat into
+  the always-visible body). The footer holds two actions: a `Limpiar
+  filtros` ghost (no border/fill at rest) button (disabled whenever no
+  filter or query is active) and a `Ver N juegos` primary CTA.
+
+  **Editorial-hashtag group cut, deliberately (sketch 019 Round 3,
+  quick-260824-eqc).** The `Destacados` facet-pill section that used to
+  render `@facet_options.editorial_tags` here is GONE — not a bug, not an
+  oversight. Sketch 019's design review moved it out of the modal's
+  primary group pending a future decision on how it should return (e.g. a
+  different presentation than a flat pill row). `facet_options/0` still
+  returns `editorial_tags`, `attr :tags` and its `tags={@tags}` pass-
+  through are still declared below, and `?tags=`/`clear-filters` still
+  work exactly as before — only the UI control is gone. Do NOT re-add the
+  old flat pill section here as a "fix"; that reintroduces exactly what
+  this pass deliberately removed. A future design pass owns bringing it
+  back, not a bug report.
 
   The disclosure auto-expands whenever a mechanic or theme is already
   selected, so re-opening the modal never hides an active choice — see
@@ -33,6 +52,27 @@ defmodule PukllayClubWeb.FilterModal do
   scope correction during execution: difficulty (Nivel) already serves
   the purpose an age filter would have, and `min_age` stays reachable
   only via its existing `?min_age=` URL param, never via a UI control.
+
+  **The "6+" bucket (quick-260824-eqc).** Jugadores renders the four
+  exact-fit chips (2/3/4/5, `@players == n`) plus one standalone open-
+  ended chip labelled "6+". Both families send `scalar="players"`, which
+  is what keeps the cluster single-select through the untouched
+  `toggle-scalar` handler — a second scalar name would let "4" and "6+"
+  be selected simultaneously, which the chip row's visual language
+  promises is impossible. The predicate difference lives entirely in
+  `PukllayClub.Catalog.maybe_filter_players/2`: below 6 it's an exact
+  seat-count fit, at/above 6 it's open-ended (`max_players >= n`, no
+  upper bound) — see that module's `@players_open_bucket` for the full
+  rationale. Duración máxima's chip labels dropped the redundant "Hasta"
+  prefix (now bare `"N min"`) since the section heading already
+  carries the "up to" meaning; the underlying `max_playtime`/
+  `coalesce(playing_time, max_playtime) <= n` predicate is unchanged.
+
+  **Type-tier deviation (quick-260824-eqc):** sketch 019's group label
+  used an 11px uppercase letter-spaced treatment. That would add a 4th
+  type combo to a catalogue screen already measured and capped at 3
+  (`ui-design-system` SKILL.md) — not adopted. Each card's `<h3>` stays
+  on the existing `text-sm font-semibold` body-tier combo instead.
 
   Every facet pill toggle still emits `"toggle-facet"` with
   `phx-value-facet`/`phx-value-choice`; the query input still emits
@@ -159,10 +199,15 @@ defmodule PukllayClubWeb.FilterModal do
         class="modal-box flex flex-col overflow-hidden p-0"
         role="dialog"
         aria-modal="true"
-        aria-label="Filtros"
+        aria-label="Encuentra tu juego"
       >
-        <div class="flex flex-none items-center justify-between border-b border-base-300 p-4">
-          <h2 class="font-display text-xl">Filtros</h2>
+        <div class="flex flex-none items-start justify-between gap-3 border-b border-base-300 p-4">
+          <div class="space-y-1">
+            <h2 class="font-display text-xl">Encuentra tu juego</h2>
+            <p class="text-neutral text-sm">
+              Combina filtros para llegar a los juegos que te interesan.
+            </p>
+          </div>
           <button
             type="button"
             data-modal-close
@@ -180,39 +225,44 @@ defmodule PukllayClubWeb.FilterModal do
               type="text"
               name="q"
               value={@q}
-              placeholder="Busca por título, autor o editorial…"
+              placeholder="¿Qué juego buscas?"
               phx-debounce="300"
               maxlength="100"
             />
           </form>
 
-          <section>
+          <section class="rounded-box bg-base-200 p-4">
             <h3 class="mb-2 text-sm font-semibold">Jugadores</h3>
             <div class="flex flex-wrap gap-2">
               <.scalar_chip
-                :for={n <- [2, 3, 4, 5, 6]}
+                :for={n <- [2, 3, 4, 5]}
                 scalar="players"
                 value={to_string(n)}
                 label={to_string(n)}
                 selected={@players == n}
               />
+              <%!-- Open-ended top bucket — rides the SAME :players scalar as
+              the exact-fit chips above (single-select, by design). Its
+              predicate lives in PukllayClub.Catalog.maybe_filter_players/2,
+              guarded by @players_open_bucket (quick-260824-eqc). --%>
+              <.scalar_chip scalar="players" value="6" label="6+" selected={@players == 6} />
             </div>
           </section>
 
-          <section>
+          <section class="rounded-box bg-base-200 p-4">
             <h3 class="mb-2 text-sm font-semibold">Duración máxima</h3>
             <div class="flex flex-wrap gap-2">
               <.scalar_chip
                 :for={n <- [30, 60, 90, 120]}
                 scalar="max_playtime"
                 value={to_string(n)}
-                label={"Hasta #{n} min"}
+                label={"#{n} min"}
                 selected={@max_playtime == n}
               />
             </div>
           </section>
 
-          <section>
+          <section class="rounded-box bg-base-200 p-4">
             <h3 class="mb-2 text-sm font-semibold">Nivel</h3>
             <div class="flex flex-wrap gap-2">
               <.facet_pill
@@ -225,23 +275,10 @@ defmodule PukllayClubWeb.FilterModal do
             </div>
           </section>
 
-          <section>
-            <h3 class="mb-2 text-sm font-semibold">Destacados</h3>
-            <div class="flex flex-wrap gap-2">
-              <.facet_pill
-                :for={tag <- @facet_options.editorial_tags}
-                facet="tags"
-                value={tag.tag}
-                label={String.trim_leading(tag.tag, "#")}
-                selected={tag.tag in @tags}
-              />
-            </div>
-          </section>
-
           <details
             id={"#{@id}-more"}
             phx-hook=".FilterChecklist"
-            class="border-t border-base-300 pt-3"
+            class="rounded-box bg-base-200 p-4"
             open={@mechanics != [] or @themes != []}
           >
             <script :type={Phoenix.LiveView.ColocatedHook} name=".FilterChecklist">
@@ -339,7 +376,7 @@ defmodule PukllayClubWeb.FilterModal do
         therefore pass an explicit class list and omit variant entirely. --%>
         <div class="flex flex-none items-center justify-between gap-3 border-t border-base-300 p-4">
           <.button
-            class={["btn", "btn-outline", "btn-primary", "min-h-11"]}
+            class={["btn", "btn-ghost", "min-h-11"]}
             phx-click="clear-filters"
             disabled={not @filters_active}
           >
@@ -449,8 +486,12 @@ defmodule PukllayClubWeb.FilterModal do
   # Single source of truth for the chip's visual contract (ui-design-system:
   # "a field that must look identical on two surfaces is declared in exactly
   # one place") — both `facet_pill/1` and `scalar_chip/1` build their class
-  # from this, so the two chip families cannot drift apart.
-  defp chip_class(true), do: ["badge", "min-h-11", "px-3", "badge-primary"]
+  # from this, so the two chip families cannot drift apart. `shadow-sm` on
+  # the selected state (sketch 019, quick-260824-eqc) is the non-arbitrary
+  # translation of the sketch's soft colored box-shadow on the active chip —
+  # a literal colored shadow would need an arbitrary Tailwind value, which is
+  # banned.
+  defp chip_class(true), do: ["badge", "min-h-11", "px-3", "badge-primary", "shadow-sm"]
   defp chip_class(false), do: ["badge", "min-h-11", "px-3", "badge-neutral", "badge-outline"]
 
   defp cta_label(1), do: "Ver 1 juego"

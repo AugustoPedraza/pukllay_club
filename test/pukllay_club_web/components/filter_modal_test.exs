@@ -78,12 +78,12 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ "sm:modal-middle"
     end
 
-    test "the clear-filters button is disabled when filters_active is unset/false, enabled when true" do
-      # Scoped to the "btn-outline btn-primary min-h-11" class combo, unique
-      # to this footer button (the CTA is "btn btn-primary min-h-11" with no
-      # btn-outline) — HEEx does not preserve attribute-write order for
-      # global/rest attrs, so a naive "attr-A ... attr-B" regex is fragile.
-      clear_button_class = "btn-outline btn-primary min-h-11"
+    test "the clear-filters button is disabled when filters_active is unset/false, enabled when true, and carries no outline (sketch 019 ghost treatment)" do
+      # Scoped to the "btn-ghost min-h-11" class combo, unique to this footer
+      # button (the CTA is "btn btn-primary min-h-11" with no btn-ghost) —
+      # HEEx does not preserve attribute-write order for global/rest attrs,
+      # so a naive "attr-A ... attr-B" regex is fragile.
+      clear_button_class = "btn-ghost min-h-11"
 
       html_inactive =
         render_component(&FilterModal.filter_modal/1, %{
@@ -93,6 +93,8 @@ defmodule PukllayClubWeb.FilterModalTest do
 
       assert html_inactive =~
                ~r/<button[^>]*#{clear_button_class}[^>]*disabled[^>]*clear-filters/
+
+      refute html_inactive =~ "btn-outline"
 
       html_active =
         render_component(&FilterModal.filter_modal/1, %{
@@ -171,9 +173,22 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ ~s(phx-click="toggle-scalar")
       assert html =~ ~s(phx-value-scalar="players")
       assert html =~ ~s(phx-value-scalar="max_playtime")
-      assert html =~ "Hasta 60 min"
+      assert html =~ "60 min"
+      refute html =~ "Hasta"
       refute html =~ ~s(type="number")
       refute html =~ ~s(phx-change="set-scalar")
+    end
+
+    test "renders the open-ended '6+' Jugadores chip riding the players scalar" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options,
+          players: 6
+        })
+
+      assert html =~ "6+"
+      assert html =~ ~s(phx-value-scalar="players" phx-value-choice="6")
     end
 
     test "renders a clear-filters button" do
@@ -185,6 +200,47 @@ defmodule PukllayClubWeb.FilterModalTest do
 
       assert html =~ ~s(phx-click="clear-filters")
       assert html =~ "Limpiar filtros"
+    end
+
+    test "renders the new title, subtitle, and search placeholder (sketch 019)" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html =~ "Encuentra tu juego"
+      assert html =~ "Combina filtros para llegar a los juegos que te interesan."
+      assert html =~ "¿Qué juego buscas?"
+    end
+
+    test "the editorial-hashtag group renders nowhere, even when editorial_tags is non-empty" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: [],
+            themes: [],
+            weight_bands: [],
+            editorial_tags: [%{tag: "#CreaConexiones", meaning: "x"}]
+          },
+          tags: ["#CreaConexiones"]
+        })
+
+      refute html =~ "CreaConexiones"
+      refute html =~ ~s(phx-value-facet="tags")
+      refute html =~ "Destacados"
+    end
+
+    test "Jugadores, Duración máxima, Nivel, and the disclosure each sit inside a rounded, surface-tinted card" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html |> String.split("rounded-box") |> length() |> Kernel.-(1) >= 4
+      assert html |> String.split("bg-base-200") |> length() |> Kernel.-(1) >= 4
     end
   end
 
