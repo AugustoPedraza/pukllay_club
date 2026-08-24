@@ -33,8 +33,21 @@ defmodule PukllayClubWeb.Layouts do
   The second-line tagline is overridable via the `tagline` attr — the header uses the default,
   the footer overrides it with the About page's hero tagline so the two clusters don't repeat
   the same copy (260821-umm).
+
+  **The mark is the header's (D-A, 260823-snj).** `brand_logo/1` renders on both the header and
+  the footer, and rendering the isologo pair unconditionally on both doubled the brand identity
+  on every page. The `mark` attr (default `true`) selects between the two: the header keeps the
+  default and renders the full pair, the footer passes `mark={false}` and renders the wordmark +
+  tagline lockup only, demoted to the muted colour tier via the `pk-brand-quiet` class (D-B).
   """
   attr :tagline, :string, default: "JUEGOS DE MESA MODERNOS"
+
+  attr :mark, :boolean,
+    default: true,
+    doc:
+      "when false, renders the wordmark + tagline lockup with no isologo <img> at all, and " <>
+        "demotes the wordmark to the muted colour tier via pk-brand-quiet. The footer is the " <>
+        "one call site that passes false (D-A) — the header keeps the true default."
 
   # `isologo?` is deliberately not a declared `attr` — it's a test-only seam. No production call
   # site ever passes it, so `assign_new/3` always falls through to the compile-time `@isologo?`
@@ -46,23 +59,28 @@ defmodule PukllayClubWeb.Layouts do
     assigns = assign_new(assigns, :isologo?, fn -> @isologo? end)
 
     ~H"""
-    <a href="/" class="flex-initial flex w-fit items-center gap-2 min-h-11">
+    <a
+      href="/"
+      class={["flex-initial flex w-fit items-center gap-2 min-h-11", !@mark && "pk-brand-quiet"]}
+    >
       <img
-        :if={@isologo?}
+        :if={@isologo? and @mark}
         src={~p"/images/isologo-light.png"}
         width="36"
         alt=""
         class="dark:hidden"
       />
       <img
-        :if={@isologo?}
+        :if={@isologo? and @mark}
         src={~p"/images/isologo-dark.png"}
         width="36"
         alt=""
         class="hidden dark:block"
       />
       <span class="pk-brand-wordmark flex flex-col leading-none">
-        <span class="font-display text-2xl uppercase tracking-wide">PUKLLAY CLUB</span>
+        <span class="pk-brand-name font-display text-2xl uppercase tracking-wide">
+          PUKLLAY CLUB
+        </span>
         <span class="font-sans text-xs uppercase tracking-widest text-neutral">
           {@tagline}
         </span>
@@ -419,10 +437,11 @@ defmodule PukllayClubWeb.Layouts do
             type="button"
             class="pk-search-morph-toggle"
             aria-label="Buscar"
+            title="Buscar"
             aria-expanded="false"
             aria-controls="pk-nav-search-region"
           >
-            <.icon name="hero-magnifying-glass-micro" class="size-4" />
+            <.icon name="hero-magnifying-glass" class="size-5" />
           </button>
           <div id="pk-nav-search-region" class="pk-nav-search">
             {render_slot(@nav_search)}
@@ -551,7 +570,10 @@ defmodule PukllayClubWeb.Layouts do
   # The left cluster overrides brand_logo/1's tagline with the About page's
   # hero tagline ("Conectá jugando", verbatim from about_live.ex) instead of
   # the header's default subtitle, so the footer doesn't just repeat the
-  # header's copy (260821-umm).
+  # header's copy (260821-umm). It also passes mark={false} (D-A, 260823-snj):
+  # the isologo belongs to the header alone — see brand_logo/1's @doc for the
+  # full contract. The footer's wordmark is demoted to the muted colour tier
+  # by the pk-brand-quiet class mark={false} adds, not by shrinking it (D-B).
   defp footer(assigns) do
     assigns = assign(assigns, :copyright_year, Date.utc_today().year)
 
@@ -559,7 +581,7 @@ defmodule PukllayClubWeb.Layouts do
     <footer class="pk-footer">
       <div class="pk-footer-row mx-auto w-full max-w-7xl pk-gutter">
         <div class="pk-footer-left">
-          <.brand_logo tagline="Conectá jugando" />
+          <.brand_logo tagline="Conectá jugando" mark={false} />
           <ul class="pk-footer-links">
             <li><a href="/quienes-somos#faq">FAQ</a></li>
             <li><a href="/quienes-somos#contacto">Contacto</a></li>

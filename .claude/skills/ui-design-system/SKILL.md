@@ -178,7 +178,7 @@ Class inventory by group:
 | `CoreComponents` | `list/1` | `:item` slot (with `title`) |
 | `CoreComponents` | `icon/1` | `name` (`hero-*`) |
 | `Layouts` | `app/1` | `flash`, inner_block. Optional: `fullbleed` (bool, default `false`), `sticky` (bool, default `false`), `:nav_links`/`:nav_search`/`:subnav` slots |
-| `Layouts` | `brand_logo/1` | —. Optional: `tagline` (string, default `"JUEGOS DE MESA MODERNOS"`) — the footer is the one call site that overrides it. Renders a theme-aware isologo pair toggled by the `dark:` variant, gated at compile time on both `priv/static/images/isologo-light.png` and `isologo-dark.png` existing (falls back to wordmark-only if either is missing) |
+| `Layouts` | `brand_logo/1` | —. Optional: `tagline` (string, default `"JUEGOS DE MESA MODERNOS"`) — the footer is the one call site that overrides it. `mark` (bool, default `true`) — when `false`, omits the isologo `<img>` pair entirely and demotes the wordmark to the muted colour tier via `pk-brand-quiet`; the footer is the one call site that passes `false` (D-A/D-B, 260823-snj) so the mark belongs to the header alone. Renders a theme-aware isologo pair toggled by the `dark:` variant, gated at compile time on both `priv/static/images/isologo-light.png` and `isologo-dark.png` existing (falls back to wordmark-only if either is missing) |
 | `GameCard` | `game_card/1` | `id`, `game` |
 | `FilterDrawer` | `filter_drawer/1` | `id`, `facet_options` |
 | `CarouselRow` | `carousel_row/1` | `id`, `title`, `games`. Optional: `variant` (`:standard`/`:hero`), `subtitle`, `see_all_row` |

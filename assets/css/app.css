@@ -571,6 +571,18 @@ body.pk-sheet-open {
   white-space: nowrap;
 }
 
+/* D-B (260823-snj): the footer's brand_logo/1 call passes mark={false},
+   which drops the isologo (D-A — the mark is the header's alone) and adds
+   pk-brand-quiet to the anchor. Demotion is by colour, not size: the
+   catalogue's measured type inventory is already at its 3-tier cap with
+   Bebas Neue/24px/400 as the single heading combo, so shrinking the footer
+   wordmark would add a 4th combo. Colour is the lever ui-design-system
+   names for this instead. Scoped override, matching the header-scoped rule
+   above — the two surfaces are meant to differ here. */
+.pk-brand-quiet .pk-brand-name {
+  color: var(--color-neutral);
+}
+
 .pk-nav-links {
   display: flex;
   align-items: center;
@@ -634,9 +646,9 @@ body.pk-sheet-open {
   flex: 0 0 auto;
   margin-left: auto;
   overflow: hidden;
-  border: 1px solid transparent;
+  border: 1px solid var(--color-base-300);
   border-radius: 9999px;
-  background: transparent;
+  background: var(--color-base-100);
 }
 
 /* 17.5rem (sketch 017 used 260px): the sketch's trailing close control was a
@@ -668,14 +680,23 @@ body.pk-sheet-open {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--color-neutral);
+  color: var(--color-base-content);
   cursor: pointer;
   transition: width var(--duration-slow) var(--ease-out-soft),
     padding var(--duration-slow) var(--ease-out-soft), opacity var(--duration-fast) var(--ease-standard);
 }
 
-.pk-search-morph:hover:not(.is-open) .pk-search-morph-toggle {
+.pk-search-morph:hover:not(.is-open) .pk-search-morph-toggle,
+.pk-search-morph:focus-within:not(.is-open) .pk-search-morph-toggle {
   color: var(--color-primary);
+}
+
+/* The container answers the pointer and the keyboard the same way the glyph
+   does — hover and focus-within both drive the border to primary. :not(.is-
+   open) keeps the open state's own border-color rule authoritative. */
+.pk-search-morph:hover:not(.is-open),
+.pk-search-morph:focus-within:not(.is-open) {
+  border-color: var(--color-primary);
 }
 
 .pk-search-morph.is-open .pk-search-morph-toggle {
