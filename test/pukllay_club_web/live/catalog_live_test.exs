@@ -1075,6 +1075,105 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "toggle-scalar chip handler (quick-260824-b71)" do
+    test "toggling a players chip narrows the grid to games matching that exact seat count", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Four Player Game", min_players: 2, max_players: 4})
+      game_fixture(%{name: "Big Group Game", min_players: 5, max_players: 8})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+
+      grid = grid_html(html)
+      assert grid =~ "Four Player Game"
+      refute grid =~ "Big Group Game"
+    end
+
+    test "toggling the same players chip again clears it (toggle-off)", %{conn: conn} do
+      game_fixture(%{name: "Four Player Game", min_players: 2, max_players: 4})
+      game_fixture(%{name: "Big Group Game", min_players: 5, max_players: 8})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+
+      html =
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+
+      grid = grid_html(html)
+      assert grid =~ "Four Player Game"
+      assert grid =~ "Big Group Game"
+    end
+
+    test "toggling max_playtime does not reset an already-active players chip", %{conn: conn} do
+      game_fixture(%{
+        name: "Match Game",
+        min_players: 2,
+        max_players: 6,
+        max_playtime: 45
+      })
+
+      game_fixture(%{
+        name: "Wrong Players Game",
+        min_players: 5,
+        max_players: 6,
+        max_playtime: 30
+      })
+
+      game_fixture(%{
+        name: "Wrong Duration Game",
+        min_players: 2,
+        max_players: 6,
+        max_playtime: 120
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+
+      html =
+        render_click(view, "toggle-scalar", %{"scalar" => "max_playtime", "value" => "60"})
+
+      grid = grid_html(html)
+      assert grid =~ "Match Game"
+      refute grid =~ "Wrong Players Game"
+      refute grid =~ "Wrong Duration Game"
+    end
+
+    test "an unrecognised scalar leaves the socket unchanged rather than raising or creating a new atom",
+         %{conn: conn} do
+      game_fixture(%{name: "Untouched Scalar Game"})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before_count = card_count(html)
+
+      html2 =
+        render_click(view, "toggle-scalar", %{"scalar" => "__proto__", "value" => "5"})
+
+      assert card_count(html2) == before_count
+      assert html2 =~ "Untouched Scalar Game"
+    end
+
+    test "an unparseable value degrades that scalar to nil rather than raising", %{conn: conn} do
+      game_fixture(%{name: "Four Player Game", min_players: 2, max_players: 4})
+      game_fixture(%{name: "Big Group Game", min_players: 5, max_players: 8})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "4"})
+
+      html =
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "value" => "abc"})
+
+      grid = grid_html(html)
+      assert grid =~ "Four Player Game"
+      assert grid =~ "Big Group Game"
+    end
+  end
+
   describe "filter state read from URL query params (SHELL-04, 01.1-06)" do
     test "?weight_bands=<band> lands the catalog already filtered to that band", %{conn: conn} do
       game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})

@@ -152,18 +152,21 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ "badge-primary"
     end
 
-    test "scalar inputs live in one set-scalar form" do
+    test "Jugadores and Duración máxima render as toggle-scalar chip clusters, not number inputs" do
       html =
         render_component(&FilterModal.filter_modal/1, %{
           id: "filter-modal",
           facet_options: @empty_facet_options,
-          players: 4
+          players: 4,
+          max_playtime: 60
         })
 
-      assert html =~ ~s(phx-change="set-scalar")
-      assert html =~ ~s(name="players")
-      assert html =~ ~s(name="max_playtime")
-      assert html =~ ~s(name="min_age")
+      assert html =~ ~s(phx-click="toggle-scalar")
+      assert html =~ ~s(phx-value-scalar="players")
+      assert html =~ ~s(phx-value-scalar="max_playtime")
+      assert html =~ "Hasta 60 min"
+      refute html =~ ~s(type="number")
+      refute html =~ ~s(phx-change="set-scalar")
     end
 
     test "renders a clear-filters button" do
