@@ -1686,18 +1686,18 @@ body.pk-sheet-open {
 .pk-drawer-social {
   display: flex;
   gap: 0.5rem;
-  padding-top: 0.75rem;
+  justify-content: space-between;
 }
 
 .pk-drawer-social a {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-base-200);
-  color: var(--color-neutral);
+  color: var(--color-base-content);
   transition: all var(--duration-fast) var(--ease-standard);
 }
 

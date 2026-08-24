@@ -688,11 +688,12 @@ defmodule PukllayClubWeb.Layouts do
       </nav>
       <div class="pk-drawer-bottom">
         <div class="pk-drawer-divider"></div>
+        <.social_links class="pk-drawer-social" />
+        <div class="pk-drawer-divider"></div>
         <div class="pk-drawer-utility">
           <span class="pk-drawer-utility-label">Tema</span>
           <.theme_toggle />
         </div>
-        <.social_links class="pk-drawer-social" />
       </div>
     </aside>
     """

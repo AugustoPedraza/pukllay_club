@@ -716,6 +716,25 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert Enum.count(drawer_social_links) == 4
     end
 
+    # Pins the reordered bottom block (quick task 260824-q8z): social reads
+    # first (more relevance), the theme control second — both wrapped in
+    # their own divider. Guards against a future edit silently reverting the
+    # order back to theme-first.
+    test "the social row renders before the theme control in the drawer's bottom block" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      bottom_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-drawer-bottom")
+        |> LazyHTML.to_html()
+
+      social_index = :binary.match(bottom_html, ~s(class="pk-drawer-social")) |> elem(0)
+      utility_index = :binary.match(bottom_html, ~s(class="pk-drawer-utility")) |> elem(0)
+
+      assert social_index < utility_index
+    end
+
     # Guards against the footer and the drawer drifting to two independently
     # maintained social lists — both must resolve to the exact same four
     # ClubLinks hrefs, in the same order.
