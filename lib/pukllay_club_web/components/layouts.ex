@@ -690,8 +690,8 @@ defmodule PukllayClubWeb.Layouts do
         <div class="pk-drawer-divider"></div>
         <.social_links class="pk-drawer-social" />
         <div class="pk-drawer-divider"></div>
-        <div class="pk-drawer-utility">
-          <span class="pk-drawer-utility-label">Tema</span>
+        <div class="pk-drawer-utility" role="group" aria-labelledby="pk-drawer-theme-label">
+          <span id="pk-drawer-theme-label" class="pk-drawer-utility-label sr-only">Tema</span>
           <.theme_toggle />
         </div>
       </div>
@@ -791,10 +791,20 @@ defmodule PukllayClubWeb.Layouts do
   # had NO group name at all, so assistive tech now announces one where it
   # previously announced three unrelated buttons.
   #
-  # The visible label survives where Geist says it should — the mobile drawer's
-  # `.pk-drawer-utility-label`, a settings-like surface with "room for the labels
-  # to breathe". Footer = dense chrome = small + hidden label; drawer = settings
-  # = full size + visible label. One component, two contexts, matching guidance.
+  # UPDATE (quick task 260824-q8z): the drawer's `.pk-drawer-utility-label` is
+  # now ALSO `sr-only`, superseding the paragraph above's original claim that it
+  # "survives where Geist says it should" as a full-size, visible label. That
+  # claim rested on Geist's "room for the labels to breathe" framing for a
+  # settings-like surface — but sketch 021 independently ran the drawer's own
+  # theme control through 6 rounds of this same developer's feedback and
+  # converged on E1 (Icon-Only, Centered) with NO visible label, the same
+  # answer this debug session reached for the footer. Both surfaces now carry
+  # "Tema" as an sr-only accessible group name only (role="group" +
+  # aria-labelledby on each wrapper). The drawer's real distinguishing property
+  # is its 44px touch floor — `.pk-footer-theme .pk-theme-toggle button` shrinks
+  # to 28px, footer-scoped; the drawer's buttons do not shrink, because the
+  # drawer is the sole mobile home for this control below 480px
+  # (`.pk-footer-right` is `display: none` there).
   #
   # The legal line lives in its OWN full-width row, `.pk-footer-legal`, not
   # inside the right cluster (debug footer-desktop-imbalance). Sketch 011 gave

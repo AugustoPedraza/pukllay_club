@@ -1445,8 +1445,10 @@ body.pk-sheet-open {
    (debug footer-theme-toggle-balance), so these visual declarations no longer
    render anywhere. Kept, not deleted, because the sr-only conversion reverses a
    documented decision (01.1-08-PLAN.md:429-433) and restoring a visible label
-   should stay a one-attribute change. The drawer's visible label is a different
-   class, `.pk-drawer-utility-label`, and is unaffected. */
+   should stay a one-attribute change. The drawer's own label span,
+   `.pk-drawer-utility-label`, is now ALSO `sr-only` for the same reason (quick
+   task 260824-q8z, applying sketch 021's own Round-6 conclusion) — both label
+   spans are kept inert rather than deleted, not just this one. */
 .pk-footer-toggle-tag {
   font-size: 0.75rem;
   color: var(--color-neutral);
@@ -1670,10 +1672,17 @@ body.pk-sheet-open {
   margin-block: 0.75rem;
 }
 
+/* Centered, not space-between (quick task 260824-q8z): the theme control is
+   the drawer's FOOTER — a small, quiet, self-contained strip trailing the
+   social row's CONTENT, not another edge-to-edge list row. This is sketch
+   021's own Round-6 conclusion (E1 — Icon-Only, Centered), reached
+   independently over 6 rounds of the same developer's feedback and landing
+   on the same answer as the desktop footer's already-shipped debug session
+   (footer-theme-toggle-balance). */
 .pk-drawer-utility {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding-block: 0.5rem;
 }
 
