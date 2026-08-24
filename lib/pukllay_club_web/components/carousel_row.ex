@@ -1,8 +1,13 @@
 defmodule PukllayClubWeb.CarouselRow do
   @moduledoc """
-  Full-bleed, edge-fade horizontally-scrolling rail of `GameCard`s (sketch
+  Shell-capped, edge-fade horizontally-scrolling rail of `GameCard`s (sketch
   001, variant D), plus the matching `skeleton_card/1` loading placeholder.
   Renders one of the 8 fixed D-09 carousel rows above the browse grid.
+
+  The rail's width comes from the shared shell column recipe (see
+  `ui-design-system`'s SKILL.md) applied to `.pk-row-header`/`.pk-rail-wrap`,
+  the same recipe the header and footer use — not from full-bleed viewport
+  width (quick task 260824-9zo).
 
   Not daisyUI's `.carousel` component (used pre-01-11): that component
   hides the scrollbar with no replacement cue, which is precisely why the

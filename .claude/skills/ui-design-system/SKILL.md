@@ -70,13 +70,21 @@ table in `default.css`, checked by `check-theme-drift.sh`.
   Caution: `Layouts.app`'s `<main>` still owns `px-4 py-20 sm:px-6 lg:px-8`, and
   `CatalogLive.Show` relies on it (it declares no padding of its own) — stripping `<main>`'s
   padding is a separate, breaking change, not a cleanup.
-  **Deliberate exception: `CatalogLive.Index` (01-11/01-12).** The catalogue page runs
-  `fullbleed`/`sticky` on `Layouts.app` and its own carousel shelves reach the viewport edge with
-  no page-container padding at all — that full-bleed reach is the entire point of the Netflix-
-  style edge-fade shelf pattern. Its capped inner sections (toolbar, main grid, load-more) each
-  still get `mx-auto w-full max-w-7xl pk-gutter`, individually wrapped. This is the one page in
-  the app that intentionally has no single page-container div; don't "fix" it to match the rule
-  above, and don't copy the full-bleed pattern onto a page that has no edge-to-edge content.
+  **Deliberate exception: `CatalogLive.Index` (01-11/01-12, corrected 2026-08-24).** The catalogue
+  page runs `fullbleed`/`sticky` on `Layouts.app` and has no single page-container div — every one
+  of its sections (toolbar, main grid, load-more, and every carousel row header and rail wrap) is
+  individually wrapped in the same shared **shell column**: `mx-auto w-full max-w-7xl pk-gutter`,
+  the identical recipe the header inner and footer row use. `fullbleed` on this page means "the
+  layout adds no padding of its own" — not "content reaches the viewport edge." Each carousel
+  rail's horizontal scroll and edge-fade are scoped to that shell column, not to the viewport: the
+  fade sits at the column's edges, and the poster cards, row titles and prev/next controls all
+  share one x-position with the header wordmark and footer brand lockup. Don't "fix" the shell
+  column back into a single page-container div — the page's sections are individually wrapped by
+  design — and don't copy the full-bleed treatment onto a page that has no edge-to-edge content.
+  Before 2026-08-24 this paragraph described the shelves as intentionally reaching the viewport
+  edge; that was a bug, not a design decision — see the sketch 011 content-width-alignment finding
+  in `sketch-findings-pukllay_club/references/layout-navigation.md`, which had already validated
+  the shell-column cap for shelves and was simply never ported into production.
 
 ## Type hierarchy
 
