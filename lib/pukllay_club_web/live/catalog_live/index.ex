@@ -422,6 +422,18 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
+  # One derived list feeding BOTH the mobile chip row (:subnav) AND the
+  # desktop mega-menu (:nav_menu) — sketch-findings' single most load-bearing
+  # rule for this layer is that two independently-built lists here is exactly
+  # how the two surfaces silently drift apart on shelf count or subtitle
+  # copy. Both consumers read this one call, under the same
+  # not-filters_active? guard the chip row already carried.
+  defp index_rows(assigns) do
+    assigns.carousel_rows
+    |> Enum.filter(&(&1.games != []))
+    |> Enum.map(fn row -> %{key: row.key, title: row.title, subtitle: row_subtitle(row.key)} end)
+  end
+
   # "El catálogo completo" is a false claim once filters narrow the result
   # set — the heading text depends on whether a filter is active, but the
   # header itself always renders (even on a zero-result view).
@@ -480,11 +492,14 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           </span>
         </button>
       </:nav_search>
+      <:nav_menu :if={not filters_active?(assigns)}>
+        <Layouts.category_menu rows={index_rows(assigns)} />
+      </:nav_menu>
       <:subnav :if={not filters_active?(assigns)}>
         <nav class="pk-chip-nav" aria-label="Categorías">
           <span class="pk-chip-spacer" aria-hidden="true"></span>
           <a
-            :for={row <- Enum.filter(@carousel_rows, &(&1.games != []))}
+            :for={row <- index_rows(assigns)}
             href={"#carousel-#{row.key}"}
             data-chip-target={"carousel-#{row.key}"}
             class="pk-chip"

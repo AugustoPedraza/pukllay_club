@@ -144,6 +144,12 @@ defmodule PukllayClubWeb.Layouts do
   slot :nav_search, doc: "the search form, rendered inside the header aligned with row content"
   slot :crumb, doc: "breadcrumb content for a genuine drill-down page (Detalle only)"
 
+  slot :nav_menu,
+    doc:
+      "an on-demand category overlay rendered inside the header row; the shell owns " <>
+        "placement (inside .pk-nav-inner, immediately before .pk-search-morph), the page " <>
+        "owns contents"
+
   slot :subnav,
     doc: "content rendered below the header row, inside the sticky wrapper (e.g. mobile chips)"
 
@@ -337,6 +343,55 @@ defmodule PukllayClubWeb.Layouts do
               this.drawerBackdrop?.addEventListener("click", this.onDrawerBackdropClick)
               this.drawer.addEventListener("keydown", this.onDrawerKeydown)
             }
+
+            // Desktop category mega-menu (SHELL-01, sketch 020): guarded on
+            // this.catTrigger existing so Quiénes Somos and Detalle (neither
+            // renders the nav_menu slot) are untouched no-ops. Modelled line
+            // for line on the drawer block directly above.
+            this.catTrigger = this.el.querySelector(".pk-cat-trigger")
+            if (this.catTrigger) {
+              this.catBackdrop = this.el.querySelector(".pk-cat-backdrop")
+              this.catPanel = this.el.querySelector("#pk-cat-menu")
+              this.catItems = Array.from(this.el.querySelectorAll(".pk-cat-item"))
+
+              this.openCatMenu = () => {
+                this.catTrigger.classList.add("is-open")
+                this.catPanel?.classList.add("is-open")
+                this.catBackdrop?.classList.add("is-open")
+                this.catTrigger.setAttribute("aria-expanded", "true")
+                this.catPanel?.removeAttribute("inert")
+              }
+
+              // Idempotent: no-ops when already closed, same reason
+              // closeDrawer() is above — safe to call unconditionally from
+              // updated() on every server round trip.
+              this.closeCatMenu = () => {
+                if (!this.catTrigger.classList.contains("is-open")) return
+                this.catTrigger.classList.remove("is-open")
+                this.catPanel?.classList.remove("is-open")
+                this.catBackdrop?.classList.remove("is-open")
+                this.catTrigger.setAttribute("aria-expanded", "false")
+                this.catPanel?.setAttribute("inert", "")
+              }
+
+              this.onCatTriggerClick = () => {
+                if (this.catTrigger.classList.contains("is-open")) {
+                  this.closeCatMenu()
+                } else {
+                  this.openCatMenu()
+                }
+              }
+              this.onCatBackdropClick = () => this.closeCatMenu()
+              this.onCatItemClick = () => this.closeCatMenu()
+              this.onCatDocumentKeydown = (e) => {
+                if (e.key === "Escape") this.closeCatMenu()
+              }
+
+              this.catTrigger.addEventListener("click", this.onCatTriggerClick)
+              this.catBackdrop?.addEventListener("click", this.onCatBackdropClick)
+              this.catItems.forEach((item) => item.addEventListener("click", this.onCatItemClick))
+              document.addEventListener("keydown", this.onCatDocumentKeydown)
+            }
           },
           updated() {
             this.publishHeaderHeight()
@@ -345,6 +400,7 @@ defmodule PukllayClubWeb.Layouts do
             // fires while the drawer is open; closeDrawer() is idempotent, so
             // calling it unconditionally here needs no old/new-link diffing.
             this.closeDrawer?.()
+            this.closeCatMenu?.()
           },
           destroyed() {
             window.removeEventListener("scroll", this.onScroll)
@@ -358,6 +414,10 @@ defmodule PukllayClubWeb.Layouts do
             this.drawerClose?.removeEventListener("click", this.onDrawerCloseClick)
             this.drawerBackdrop?.removeEventListener("click", this.onDrawerBackdropClick)
             this.drawer?.removeEventListener("keydown", this.onDrawerKeydown)
+            this.catTrigger?.removeEventListener("click", this.onCatTriggerClick)
+            this.catBackdrop?.removeEventListener("click", this.onCatBackdropClick)
+            this.catItems?.forEach((item) => item.removeEventListener("click", this.onCatItemClick))
+            document.removeEventListener("keydown", this.onCatDocumentKeydown)
             // Defensive: a LiveView teardown mid-open must never leave the
             // page permanently unscrollable.
             document.body.classList.remove("pk-drawer-open")
@@ -368,6 +428,7 @@ defmodule PukllayClubWeb.Layouts do
         nav_links={@nav_links}
         nav_search={@nav_search}
         crumb={@crumb}
+        nav_menu={@nav_menu}
         search_expanded={@search_expanded}
       />
       {render_slot(@subnav)}
@@ -378,6 +439,7 @@ defmodule PukllayClubWeb.Layouts do
         nav_links={@nav_links}
         nav_search={@nav_search}
         crumb={@crumb}
+        nav_menu={@nav_menu}
         search_expanded={@search_expanded}
       />
       {render_slot(@subnav)}
@@ -399,6 +461,7 @@ defmodule PukllayClubWeb.Layouts do
   attr :nav_links, :list, required: true
   attr :nav_search, :list, required: true
   attr :crumb, :list, required: true
+  attr :nav_menu, :list, required: true
   attr :search_expanded, :boolean, default: false
 
   defp header_inner(assigns) do
@@ -428,6 +491,7 @@ defmodule PukllayClubWeb.Layouts do
         <div :if={@nav_links != []} class="pk-nav-links">
           {render_slot(@nav_links)}
         </div>
+        {render_slot(@nav_menu)}
         <div
           :if={@nav_search != []}
           class="pk-search-morph"
@@ -457,6 +521,61 @@ defmodule PukllayClubWeb.Layouts do
         </div>
       </div>
     </header>
+    """
+  end
+
+  @doc """
+  Desktop "Explorar categorías" mega-menu — trigger + backdrop + panel
+  (SHELL-01, sketch 020 Round 2 items 4/5 + Round 3 alignment fix).
+  Rendered via the `nav_menu` slot on `app/1`, threaded into `header_inner/1`
+  immediately before `.pk-search-morph` — the shell owns placement (inside
+  `.pk-nav-inner`, already `position: relative` and this panel's containing
+  block), the page owns contents (`rows`, one map per populated shelf).
+
+  Checked daisyUI's `dropdown` component first (`ui-design-system`'s "state
+  which one you checked and why it doesn't fit" rule): its CSS-only
+  focus/`popover` show mechanism has no first-class way to pair a dimmed
+  backdrop, a document-level Escape handler, and the `.CatalogNav`
+  scroll-spy's `is-active` class on individual rows — all three are required
+  here. Hand-rolled instead, following the exact
+  `inert`/`aria-expanded`/idempotent-close pattern the mobile drawer below
+  already established as this page's sanctioned precedent for this kind of
+  overlay.
+
+  `data-chip-target` on each `.pk-cat-item` is deliberate, not incidental —
+  it is the same attribute the mobile chip row already carries, so the
+  `.CatalogNav` scroll-spy's widened selector highlights this panel's rows
+  for free instead of needing a second, parallel mechanism.
+  """
+  attr :rows, :list, required: true, doc: "one map per populated shelf: %{key:, title:, subtitle:}"
+
+  def category_menu(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class="pk-cat-trigger"
+      aria-expanded="false"
+      aria-controls="pk-cat-menu"
+      aria-label="Explorar categorías"
+    >
+      <.icon name="hero-squares-2x2" class="size-5" />
+      <span class="pk-cat-trigger-label">Explorar categorías</span>
+      <.icon name="hero-chevron-down-micro" class="pk-cat-trigger-chevron size-4" />
+    </button>
+    <div class="pk-cat-backdrop" aria-hidden="true"></div>
+    <div id="pk-cat-menu" class="pk-cat-panel" inert>
+      <div class="pk-cat-grid">
+        <a
+          :for={row <- @rows}
+          href={"#carousel-#{row.key}"}
+          data-chip-target={"carousel-#{row.key}"}
+          class="pk-cat-item"
+        >
+          <strong>{row.title}</strong>
+          <span>{row.subtitle}</span>
+        </a>
+      </div>
+    </div>
     """
   end
 

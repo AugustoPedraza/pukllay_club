@@ -735,6 +735,62 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "desktop category mega-menu (SHELL-01, sketch 020, quick-260824-jkc)" do
+    test "the unfiltered landing render emits a trigger and one .pk-cat-item per populated shelf, matching the chip row's targets",
+         %{conn: conn} do
+      game_fixture(%{name: "Cat Menu Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-cat-trigger") |> Enum.count() == 1
+
+      shelf_count = doc |> LazyHTML.query("#carousel-rows section") |> Enum.count()
+
+      panel_targets =
+        doc |> LazyHTML.query(".pk-cat-item") |> LazyHTML.attribute("data-chip-target")
+
+      chip_targets =
+        doc |> LazyHTML.query(".pk-chip-nav a.pk-chip") |> LazyHTML.attribute("data-chip-target")
+
+      assert panel_targets != []
+      assert length(panel_targets) == shelf_count
+      assert Enum.sort(panel_targets) == Enum.sort(chip_targets)
+
+      Enum.each(panel_targets, fn id -> assert html =~ ~s(id="#{id}") end)
+    end
+
+    test "a shelf backed by zero games produces no panel item for it", %{conn: conn} do
+      game_fixture(%{name: "Only Crea Menu Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      panel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-cat-panel")
+        |> LazyHTML.to_html()
+
+      refute panel_html =~ "carousel-equipo_ganador"
+      refute panel_html =~ "carousel-duelos_memorables"
+    end
+
+    test "a filtered render emits neither the trigger nor the panel", %{conn: conn} do
+      game_fixture(%{name: "Filtered Cat Menu Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Filtered"})
+
+      refute html =~ "pk-cat-trigger"
+      refute html =~ "pk-cat-panel"
+    end
+  end
+
   describe "?q= deep link opens the search-morph pre-expanded (01.1-08)" do
     test "mounting /?q=<term> narrows the stream and renders the morph pre-expanded", %{
       conn: conn

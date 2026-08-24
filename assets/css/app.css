@@ -817,7 +817,8 @@ body.pk-sheet-open {
    brand_logo/1 in Task 3; scoping the selector now is harmless. */
 .pk-nav-inner.is-search-open .pk-nav-links,
 .pk-nav-inner.is-search-open .pk-nav-crumb,
-.pk-nav-inner.is-search-open .pk-brand-wordmark {
+.pk-nav-inner.is-search-open .pk-brand-wordmark,
+.pk-nav-inner.is-search-open .pk-cat-trigger {
   opacity: 0.35;
   transition: opacity var(--duration-base) var(--ease-standard);
 }
@@ -832,7 +833,9 @@ body.pk-sheet-open {
   .pk-mobile-cta-bar,
   .pk-title-echo,
   .pk-dimmable,
-  body.pk-has-cta-bar {
+  body.pk-has-cta-bar,
+  .pk-cat-panel,
+  .pk-cat-backdrop {
     transition-duration: 1ms;
   }
 }
@@ -895,6 +898,131 @@ body.pk-sheet-open {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+}
+
+/* Desktop "Explorar categorías" mega-menu (SHELL-01, sketch 020 Round 2
+   items 4/5 + Round 3 alignment fix): trigger + backdrop + panel rendered
+   by Layouts.category_menu/1 via the nav_menu slot, placed immediately
+   before .pk-search-morph inside .pk-nav-inner — the rule directly above,
+   which is this panel's containing block (position: relative). No second
+   positioned ancestor may sit between them, or the panel is silently
+   clipped or re-anchored (sketch-findings' recurring failure mode). */
+.pk-cat-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-cat-trigger:hover,
+.pk-cat-trigger:focus-visible,
+.pk-cat-trigger.is-open {
+  color: var(--color-primary);
+}
+
+/* Icon-only below 48rem (see the third min-width:48rem block near the end
+   of this file) — the trigger's aria-label is load-bearing at every width,
+   not decorative, because this text is what makes it visible. */
+.pk-cat-trigger-label {
+  display: none;
+}
+
+.pk-cat-trigger-chevron {
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.pk-cat-trigger.is-open .pk-cat-trigger-chevron {
+  transform: rotate(180deg);
+}
+
+.pk-cat-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-base-100) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 60;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.pk-cat-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Anchored by `right` + an explicit `width` only — never an opposing
+   `left`/`inset` alongside it. Declaring both is exactly the
+   over-constrained-width bug sketch 020 Round 3 diagnosed: the box would
+   resolve start-anchored and visually detach from its trigger at the
+   header's right edge. `top` resolves from the row itself (100% plus a
+   small gap), never a hardcoded header height. */
+.pk-cat-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: var(--pk-gutter);
+  width: 30rem;
+  max-width: calc(100vw - 2 * var(--pk-gutter));
+  z-index: 62;
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
+  padding: 0.5rem 1rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard), visibility var(--duration-base) var(--ease-standard);
+}
+
+.pk-cat-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.pk-cat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* No per-item box, border or fill beyond the hairline divider — plain
+   typographic rows, per sketch 020 Round 2 item 5. */
+.pk-cat-item {
+  display: block;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--color-base-300);
+  text-decoration: none;
+  color: var(--color-base-content);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-cat-item:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+.pk-cat-item:hover,
+.pk-cat-item.is-active {
+  color: var(--color-primary);
+}
+
+.pk-cat-item strong {
+  display: block;
+  font-weight: 700;
+}
+
+.pk-cat-item span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-neutral);
 }
 
 /* Shared footer (SHELL-01, page-shell.md sketch 011) — one row, two
@@ -2015,6 +2143,19 @@ body.pk-cta-parked {
   }
 }
 
+/* A THIRD, separate min-width:48rem block — deliberately not merged into
+   either block above (see the comment on the second block for why they are
+   kept apart). Reveals the category-menu trigger's text label once the row
+   can seat it; below 48rem the trigger stays icon-only. Reuses the existing
+   breakpoint rather than inventing a new one, and is what keeps the
+   481-768px row — already the tightest band per the arithmetic above, and
+   now the one this control also joined — from overflowing. */
+@media (min-width: 48rem) {
+  .pk-cat-trigger-label {
+    display: inline;
+  }
+}
+
 /* Empty / load-error / 404 states (sketch 009, empty-loading-error-states.md,
    01.1-07). One shared shape for all three non-happy-path moments — the
    catalog's zero-results and load-error branches (CatalogLive.Index) and
@@ -2120,6 +2261,10 @@ body.pk-cta-parked {
 
   .pk-chip-nav {
     display: flex;
+  }
+
+  .pk-cat-trigger {
+    display: none;
   }
 
   .pk-nav-hamburger {
