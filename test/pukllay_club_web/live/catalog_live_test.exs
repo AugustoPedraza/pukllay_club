@@ -556,8 +556,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
-  describe "full-bleed edge-fade shelves, gutter-aligned (01-11)" do
-    test "a shelf's row-header and rail-wrap both carry the shared gutter class", %{conn: conn} do
+  describe "shell-capped, gutter-aligned, edge-fade shelves (01-11, quick-260824-9zo)" do
+    test "a shelf's row-header and rail-wrap both carry the shell column and gutter classes", %{
+      conn: conn
+    } do
       game_fixture(%{name: "Shelf Game", tags: ["#CreaConexiones"]})
 
       {:ok, _view, html} = live(conn, ~p"/")
@@ -568,8 +570,22 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> LazyHTML.query("#carousel-rows")
         |> LazyHTML.to_html()
 
-      assert carousel_html =~ "pk-row-header pk-gutter"
-      assert carousel_html =~ "pk-rail-wrap pk-gutter"
+      assert carousel_html =~ "pk-row-header mx-auto w-full max-w-7xl pk-gutter"
+      assert carousel_html =~ "pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter"
+    end
+
+    test "the disconnected skeleton row carries the same shell column and gutter classes as the real row",
+         %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      skeleton_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      assert skeleton_html =~ "pk-row-header mx-auto w-full max-w-7xl pk-gutter"
+      assert skeleton_html =~ "pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter"
     end
 
     test "the page renders the pk-page shell", %{conn: conn} do
@@ -898,8 +914,8 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> LazyHTML.query("#carousel-rows")
         |> LazyHTML.to_html()
 
-      assert carousel_html =~ "pk-row-header pk-gutter"
-      assert carousel_html =~ "pk-rail-wrap pk-gutter"
+      assert carousel_html =~ "pk-row-header mx-auto w-full max-w-7xl pk-gutter"
+      assert carousel_html =~ "pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter"
       assert carousel_html =~ "data-rail"
       assert carousel_html =~ ~s(data-scroll="prev")
       assert carousel_html =~ ~s(data-scroll="next")

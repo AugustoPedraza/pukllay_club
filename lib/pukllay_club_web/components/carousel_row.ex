@@ -72,7 +72,7 @@ defmodule PukllayClubWeb.CarouselRow do
           }
         }
       </script>
-      <div class="pk-row-header pk-gutter flex items-end justify-between gap-4">
+      <div class="pk-row-header mx-auto w-full max-w-7xl pk-gutter flex items-end justify-between gap-4">
         <div class="space-y-1">
           <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>{@title}</h2>
           <p :if={@subtitle} class="text-neutral text-sm">{@subtitle}</p>
@@ -96,7 +96,7 @@ defmodule PukllayClubWeb.CarouselRow do
           </button>
         </div>
       </div>
-      <div class="pk-rail-wrap pk-gutter">
+      <div class="pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter">
         <div data-rail class="pk-rail">
           <GameCard.game_card
             :for={game <- @games}
@@ -132,11 +132,11 @@ defmodule PukllayClubWeb.CarouselRow do
   def skeleton_row(assigns) do
     ~H"""
     <section id={@id} class="pk-shelf space-y-3">
-      <div class="pk-row-header pk-gutter space-y-1">
+      <div class="pk-row-header mx-auto w-full max-w-7xl pk-gutter space-y-1">
         <div class="pk-skel h-7 w-48"></div>
         <div class="pk-skel h-4 w-32"></div>
       </div>
-      <div class="pk-rail-wrap pk-gutter">
+      <div class="pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter">
         <div class="pk-rail">
           <.skeleton_card :for={n <- 1..@count} id={"#{@id}-#{n}"} class="pk-poster-card" />
         </div>
