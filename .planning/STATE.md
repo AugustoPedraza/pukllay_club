@@ -5,10 +5,10 @@ current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
 stopped_at: Phase 01.1 complete, ready to plan Phase 2
-last_updated: "2026-08-24T16:04:58.797Z"
+last_updated: "2026-08-24T16:17:44.000Z"
 last_activity: 2026-08-24
-last_activity_desc: Phase 01.1 complete, transitioned to Phase 2
-state_head: 0fcc255377dea6a67a549f860edea67cd3ac937f
+last_activity_desc: Completed quick task 260824-i8e - removed stale sort dropdown from catalog
+state_head: c3b14b3ed6cb0d093bee2d33330e7435db5d2caa
 progress:
   total_phases: 5
   completed_phases: 2
@@ -32,7 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-24 - Completed quick task 260824-eqc: implement sketch 019 (6+ players bucket, per-section cards, background dim/blur, Destacados cut)
+Last activity: 2026-08-24 - Completed quick task 260824-i8e: removed stale sort dropdown from catalog (kept underlying sort machinery for URL/see-all deep links)
 structure (0-4)
 
 Progress: [██████████] 100%
@@ -212,6 +212,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260821-v7q | Wired the real isologo mark into Layouts.brand_logo/1 with theme-aware light/dark images and rebuilt favicon.ico from the purple isologo lockup | 2026-08-21 | aff2b1d | | [260821-v7q-wire-up-the-real-isologo-mark-theme-awar](./quick/260821-v7q-wire-up-the-real-isologo-mark-theme-awar/) |
 | 17 | Polish the desktop header: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers | 2026-08-22 | 9195443 | — | — |
 | 260824-hu1 | On mobile the expanded header search now aligns its own edges (not just its contents) to the shared gutter line, restoring the fully-rounded pill shape | 2026-08-24 | 0fcc255 | Complete | [260824-hu1-on-mobile-the-expanded-search-looks-awfu](./quick/260824-hu1-on-mobile-the-expanded-search-looks-awfu/) |
+| 260824-i8e | Removed the stale native sort `<select>` (Nombre/Duración/Complejidad/Más recientes) from the catalog page; sort machinery underneath (parse_sort/1, :sort assign, see-all/URL deep links) left fully intact | 2026-08-24 | c3b14b3 | Complete | [260824-i8e-the-select-for-nombre-duracion-etc-looks](./quick/260824-i8e-the-select-for-nombre-duracion-etc-looks/) |
 
 ### Roadmap Evolution
 
