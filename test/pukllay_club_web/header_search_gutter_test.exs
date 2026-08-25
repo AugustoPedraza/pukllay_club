@@ -58,17 +58,72 @@ defmodule PukllayClubWeb.HeaderSearchGutterTest do
     end
   end
 
-  describe "the open box's own edges sit on the shared gutter line" do
-    test "the inset's horizontal component reads the shared gutter token" do
-      body = open_morph_narrow_block(source())
+  # The narrow-viewport BASE rule (indented inside the media block, so the
+  # line-anchored block!/2 above deliberately cannot reach it). Since debug
+  # mobile-search-expand-jump this rule — not `.is-open` — owns the box's
+  # position and right edge, because the morph must be absolutely positioned in
+  # BOTH states for the width transition to animate symmetrically.
+  defp base_morph_narrow_block(src) do
+    case Regex.run(~r/(?m)^\s+\.pk-search-morph\s*\{([^}]*)\}/, narrow_viewport_block(src)) do
+      [_, body] -> body
+      nil -> flunk("No base `.pk-search-morph` rule found in the ≤480px block")
+    end
+  end
 
-      assert body =~ ~r/inset:\s*0\s+var\(--pk-gutter\)\s*;/,
-             "`.pk-search-morph.is-open`'s `inset` must be a two-value shorthand whose " <>
-               "horizontal component is `var(--pk-gutter)` (vertical stays 0). A single-value " <>
-               "`inset: 0` resolves against the containing block's PADDING edge, which at " <>
-               "≤480px is the viewport edge — that is the whole bug: the box's own background, " <>
-               "border and shadow reach the screen edge instead of the content line every other " <>
-               "aligned surface (brand mark, chip row, grid, footer) shares."
+  describe "the open box's own edges sit on the shared gutter line" do
+    # Rewritten by debug mobile-search-expand-jump. This asserted the literal
+    # `inset: 0 var(--pk-gutter)` shorthand — the MECHANISM rather than the
+    # INVARIANT — so it failed on a change that preserves the alignment it
+    # exists to protect. The box is no longer positioned by a two-value inset
+    # (a `left`+`right` pair makes `width` resolve to `auto`, which is not
+    # interpolable and is precisely why the pill snapped open instead of
+    # animating). It is now anchored by its RIGHT edge with an explicit
+    # interpolable width. Both horizontal edges still land on the gutter line:
+    # right = gutter by declaration, left = 100% − (100% − 2·gutter) − gutter =
+    # gutter by arithmetic. Verified in-browser at 390px: x=14, right=376.
+    test "both horizontal edges are derived from the shared gutter token" do
+      base = base_morph_narrow_block(source())
+      open = open_morph_narrow_block(source())
+
+      assert base =~ ~r/right:\s*var\(--pk-gutter\)\s*;/,
+             "The ≤480px base `.pk-search-morph` rule must pin the box's RIGHT edge to " <>
+               "`var(--pk-gutter)`. This is what keeps the open box's own background, border " <>
+               "and shadow on the content line every other aligned surface (brand mark, chip " <>
+               "row, grid, footer) shares, instead of running to the viewport edge."
+
+      assert open =~ ~r/width:\s*calc\(\s*100%\s*-\s*2\s*\*\s*var\(--pk-gutter\)\s*\)/,
+             "`.pk-search-morph.is-open`'s width must be " <>
+               "`calc(100% - 2 * var(--pk-gutter))`. Two things ride on this single " <>
+               "declaration. ALIGNMENT: with the right edge pinned to the gutter, subtracting " <>
+               "exactly two gutters is what lands the LEFT edge on the same line. MOTION: it " <>
+               "must be a calc(), never `auto` — `auto` is not interpolable, so the width " <>
+               "transition never starts and the pill snaps open in a single frame (318px of " <>
+               "travel in one paint). See debug mobile-search-expand-jump."
+
+      refute open =~ ~r/width:\s*auto/,
+             "`.pk-search-morph.is-open` must never set `width: auto` at ≤480px. That is the " <>
+               "original mobile-search-expand-jump defect verbatim: a non-interpolable width " <>
+               "means `transitionrun` never fires and the box teleports."
+    end
+
+    test "the box stays absolutely positioned in BOTH states, not just when open" do
+      base = base_morph_narrow_block(source())
+      open = open_morph_narrow_block(source())
+
+      assert base =~ ~r/position:\s*absolute/,
+             "The ≤480px base `.pk-search-morph` rule must declare `position: absolute` so the " <>
+               "morph is out of flow in BOTH states. `position` is not an animatable property, " <>
+               "so flipping it on the `.is-open` toggle is a discrete teleport."
+
+      refute open =~ ~r/position:\s*/,
+             "`.pk-search-morph.is-open` must NOT declare `position` at ≤480px — the base rule " <>
+               "above owns it. Moving it back here recreates the half of the bug that only " <>
+               "bites on COLLAPSE: `.is-open` leaves at t=0, the still-362px box drops back " <>
+               "into the flex row, and because `.is-open`'s `flex-shrink: 1` left with it the " <>
+               "base `flex: 0 0 auto` refuses to give — measured documentElement.scrollWidth " <>
+               "444px against a 390px viewport, i.e. a horizontal scrollbar flashing for 280ms " <>
+               "on every close. This is the boundary neighbour: fixing only the width passes " <>
+               "every expand-direction check and still ships that regression."
     end
 
     test "the box no longer fakes the inset with its own horizontal padding" do

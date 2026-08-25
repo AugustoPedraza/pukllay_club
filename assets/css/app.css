@@ -540,7 +540,15 @@
   overflow: hidden;
   background: var(--color-base-100);
   box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
-  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* Tokens, not `220ms cubic-bezier(0.16, 1, 0.3, 1)` (debug
+     mobile-search-expand-jump, audit sweep) — same abandoned-literal drift as
+     .pk-nav. The CURVE is deliberately still --ease-out-soft: the
+     catalog-preview-modal-jump sweep measured this surface at 18-23px per
+     edge / 7.19px first frame and explicitly LEFT it on the accent curve,
+     which is well inside the 51px ceiling that curve carries at
+     --duration-base. Only the literals changed here, never the feel. */
+  transition: opacity var(--duration-base) var(--ease-out-soft),
+    transform var(--duration-base) var(--ease-out-soft);
 }
 
 .pk-portal.is-visible {
@@ -648,8 +656,16 @@ body.pk-sheet-open {
 .pk-nav {
   background: var(--color-base-200);
   border-bottom: 1px solid transparent;
-  transition: background 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* Tokens, not `220ms cubic-bezier(0.16, 1, 0.3, 1)` (debug
+     mobile-search-expand-jump, audit sweep). 220ms is an abandoned
+     sketch-001/002 value that the sketch-006 tuning pass never reached
+     precisely BECAUSE it was hardcoded — the same token drift the
+     catalog-preview-modal-jump session found on .pk-sheet. All three
+     properties here are paint-only (no travelling geometry), so the
+     amplitude rule does not apply and --ease-standard is correct. */
+  transition: background var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
 }
 
 .pk-nav.is-scrolled {
@@ -728,7 +744,13 @@ body.pk-sheet-open {
      two-word link ("Quiénes Somos") reflowing would put a second line into
      the row. */
   white-space: nowrap;
-  transition: border-color 150ms ease, color 150ms ease;
+  /* Tokens, not `150ms ease` (debug mobile-search-expand-jump, audit sweep).
+     The CSS keyword `ease` is cubic-bezier(0.25, 0.1, 0.25, 1) — a curve
+     belonging to NEITHER motion token, and 150ms is not one of the three
+     durations. This is a paint-only change (no travel), so it takes the
+     hover tier every other hover in this file already uses. */
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-nav-links a:hover,
@@ -768,16 +790,52 @@ body.pk-sheet-open {
      transform — but the curve does not change that cost. The transition runs
      its full 280ms either way, so the number of layout passes is identical;
      the curve only decides WHERE the pixels are on each of them.
-     At <=480px .is-open switches to `width: auto` (the overlay rule at the
-     bottom of this file), which is NOT interpolable — that state snaps in one
-     frame regardless of curve. Fixing that is a different problem (a
-     non-interpolable value, not a front-loaded curve) and is deliberately not
-     addressed here. Amplitude decides the curve: don't "restore consistency"
-     by putting --ease-out-soft back. */
+     RESOLVED (debug mobile-search-expand-jump): this comment used to end by
+     noting that <=480px switches to `width: auto`, which is not interpolable,
+     and deferring it as "a different problem". It was the same problem's other
+     half and it was the whole reported bug — the mobile overlay rule at the
+     bottom of this file now animates an interpolable calc() width and stays
+     absolutely positioned in both states, so this transition drives BOTH
+     breakpoints. Amplitude decides the curve: don't "restore consistency"
+     by putting --ease-out-soft back.
+     box-shadow is in the list for the <=480px overlay only (no shadow changes
+     above 480px, so it is inert there): without it the overlay's drop shadow
+     popped in at full strength on frame one while the pill was still 44px
+     wide, which reads as a flash against an otherwise 280ms glide. */
   transition: width var(--duration-slow) var(--ease-standard),
     background-color var(--duration-base) var(--ease-standard),
-    border-color var(--duration-base) var(--ease-standard);
-  flex: 0 0 auto;
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-slow) var(--ease-standard);
+  /* `0 1 auto` + an explicit 44px floor, not `0 0 auto` (debug
+     mobile-search-expand-jump, audit sweep). These two express the SAME
+     closed-state geometry — the icon is 44px wide and floored at 44px, so
+     shrink permission it can never use changes nothing — but they behave
+     completely differently while the width is mid-transition.
+
+     `0 0 auto` produced a second, worse jump than the mobile one this session
+     was reported for, and it fired on COLLAPSE at every width from 481px to
+     beyond 900px. Between those widths the row cannot seat brand + nav links +
+     a full 17.5rem pill, so `.is-open`'s `flex-shrink: 1` squeezes the open
+     pill to fit — 99px at 481px, against a 280px SPECIFIED width. The `width`
+     transition interpolates the SPECIFIED value, and flex shrinking is applied
+     on top of it. So the moment `.is-open` left, the shrink permission left
+     with it, the used width snapped from 99px up to the full specified 280px,
+     and only then eased down to 44px: measured first painted frame 331.5% of
+     the total travel at 481px (84.8% at 768px, 124.8% at 900px), with the
+     pill's right edge blowing through the viewport and taking
+     documentElement.scrollWidth with it.
+
+     Keeping the shrink permission CONSTANT across both states is what removes
+     it — used width stays min(specified, available) throughout, which
+     decreases smoothly, instead of jumping to `specified` when the permission
+     disappears. `min-width: 44px` is then load-bearing rather than
+     defensive: it is what still pins the collapsed icon at the locked 44px
+     touch floor (quick task 260821-dah / ux-responsive) now that
+     `flex-shrink: 0` is no longer doing that job — and it cannot be left to
+     `min-width: auto`, because this element sets `overflow: hidden`, which per
+     spec collapses the automatic minimum size to zero. */
+  flex: 0 1 auto;
+  min-width: 44px;
   margin-left: auto;
   overflow: hidden;
   border: 1px solid var(--color-base-300);
@@ -833,8 +891,16 @@ body.pk-sheet-open {
   border-color: var(--color-primary);
 }
 
+/* 2rem, not `auto` (debug mobile-search-expand-jump, audit sweep). `auto`
+   resolved to exactly 32px — 0.75rem padding-left + the 1.25rem icon,
+   measured identical at 390px and 1280px — but as a keyword it is NOT
+   interpolable, so this width silently snapped instead of animating, the
+   same defect class as the mobile overlay pill this session fixed. 2rem is
+   that measured value written as a length, so the rendered result is
+   unchanged and the 12px travel now actually plays. Keep the two terms in
+   sync if the icon size or padding ever changes. */
 .pk-search-morph.is-open .pk-search-morph-toggle {
-  width: auto;
+  width: 2rem;
   padding-left: 0.75rem;
   opacity: 0.6;
   cursor: default;
@@ -1378,7 +1444,14 @@ body.pk-sheet-open {
   align-items: center;
   justify-content: center;
   color: var(--color-neutral);
-  transition: all var(--duration-fast) var(--ease-standard);
+  /* Explicit properties, not `all` (debug mobile-search-expand-jump, audit
+     sweep). `transition: all` opts every animatable property in — including
+     geometry this element never intends to animate — which is how a layout
+     change elsewhere silently acquires a transition nobody designed. These
+     three are exactly what :hover below changes. */
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-footer-social a:hover {
@@ -1451,6 +1524,14 @@ body.pk-sheet-open {
 .pk-theme-toggle button {
   position: relative;
   color: color-mix(in srgb, var(--color-neutral) 75%, var(--color-base-200));
+  /* Was declared with NO transition at all (debug mobile-search-expand-jump,
+     audit sweep) — the one interactive control in this file whose hover and
+     active-state colour changes snapped, while every sibling control
+     (.pk-chip, .pk-cat-item, .pk-filter-trigger, the social links) already
+     eased at the hover tier. An absent declaration has no diff and no error,
+     which is exactly why it survived: the initial value `all 0s` is a valid
+     behaviour, just not the designed one. */
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-theme-toggle button > span {
@@ -1833,7 +1914,10 @@ body.pk-sheet-open {
   justify-content: center;
   background: var(--color-base-200);
   color: var(--color-base-content);
-  transition: all var(--duration-fast) var(--ease-standard);
+  /* Explicit properties, not `all` — same reasoning as .pk-footer-social a.
+     :hover below changes exactly these two. */
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-drawer-social a:hover {
@@ -2628,17 +2712,67 @@ body.pk-cta-parked {
      slab that steps over the row's own alignment line. Its horizontal inset
      is expressed through the shared --pk-gutter token (retuned above), so its
      own background/border/shadow land on the same content line the brand
-     mark, chip row, catalog grid and footer already share — a zero-inset
-     shorthand only ever aligned the box's PADDING edge to the containing
-     block's edge, which at this width is the viewport edge. The base rule's
+     mark, chip row, catalog grid and footer already share. The base rule's
      fully-rounded pill radius is left untouched (no override here), and no
      horizontal padding is declared on this box: the inset alone owns the
-     horizontal space now, so a second declaration would double-apply it. */
-  .pk-search-morph.is-open {
+     horizontal space now, so a second declaration would double-apply it.
+
+     MOTION (debug mobile-search-expand-jump). This rule used to read
+     `position: absolute; inset: 0 var(--pk-gutter); width: auto` and the pill
+     SNAPPED open and shut — 318px of travel in a single painted frame, both
+     directions, measured. It had no animatable channel at all:
+
+       (1) `width: 44px -> auto` is NOT INTERPOLABLE, so the base rule's
+           `transition: width ...` never even started — `transitionrun` for
+           `width` never fired on mobile, while the same harness saw it fire
+           normally at 1280px. This is an ABSENCE of motion, not a
+           front-loaded curve (contrast .pk-sheet/.pk-drawer above, whose
+           transitions DID run and were merely badly distributed).
+       (2) `position` is not an animatable property AT ALL, and it was being
+           changed by the same class toggle. This one is invisible on expand
+           and bites on COLLAPSE: `.is-open` leaves at t=0, so the box drops
+           back into the flex row still ~362px wide, and since `.is-open`'s
+           `flex-shrink: 1` left with it the base `flex: 0 0 auto` refuses to
+           give — measured documentElement.scrollWidth 444px against a 390px
+           viewport, i.e. a horizontal scrollbar flashing for 280ms on every
+           close.
+
+     So the morph is now ABSOLUTE IN BOTH STATES and the only thing `.is-open`
+     changes is an interpolable width. That is safe because the two states'
+     boxes were already measured identical everywhere except the left edge:
+     right edge 376px and vertical box (y 9.5, h 44) are the same open and
+     shut, so pinning them here removes the discontinuity by construction
+     rather than compensating for it. Taking the collapsed icon out of flow
+     shifts nothing — `margin-left: auto` was already absorbing all the free
+     space (hamburger x:14 w:44 and brand x:66 w:36 measured byte-identical
+     before/after), the 44px hamburger holds the row's height so --pk-header-h
+     stays 64px, and `.pk-nav-crumb` on the Detalle page cannot expand into
+     the vacated slot because `flex: 0 1 auto` has flex-grow 0 (measured
+     right:181.1 w:71.1 unchanged).
+
+     DON'T "simplify" this back to a single `.is-open` rule that also flips
+     `position` — that is the C1 fix, it passes every check on EXPAND and
+     regresses the collapse into horizontal overflow, the class
+     footer_overflow_test.exs already guards. And don't reach for
+     `interpolate-size: allow-keywords` to make `auto` animate: it is
+     Chrome-only, so on iOS Safari — this project's primary surface — it would
+     silently do nothing, and it does not address (2) either way. */
+  .pk-search-morph {
     position: absolute;
-    inset: 0 var(--pk-gutter);
-    width: auto;
+    top: 0;
+    right: var(--pk-gutter);
+    left: auto;
     height: 100%;
+  }
+
+  .pk-search-morph.is-open {
+    /* calc(), not `auto`: this is the whole fix. 100% resolves against
+       .pk-nav-inner's padding box (it is position: relative, so it is this
+       box's containing block), giving 390 - 2*14 = 362px at a 390px viewport
+       — the identical width `auto` produced, but as a length the browser can
+       interpolate. Measured first painted frame 2.6px = 0.8% of the 318px
+       travel, spread over 16 frames, matching the 1280px arm's 0.8% exactly. */
+    width: calc(100% - 2 * var(--pk-gutter));
     z-index: 5;
     box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
   }

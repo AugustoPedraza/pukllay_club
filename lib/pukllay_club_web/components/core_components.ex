@@ -460,23 +460,40 @@ defmodule PukllayClubWeb.CoreComponents do
 
   ## JS Commands
 
+  # Motion rhythm (debug mobile-search-expand-jump, audit sweep). These arrived
+  # as phx.new scaffolding using `transition-all ease-out duration-300` /
+  # `ease-in duration-200` — raw Tailwind timings and two curves that belong to
+  # neither project token, so the one animated surface owned by Elixir rather
+  # than app.css was the one drifting furthest from the shipped system.
+  #
+  # Now driven by the same --duration-*/--ease-* custom properties as every CSS
+  # surface, via arbitrary-value utilities, so a future tuning pass to the
+  # tokens propagates here too instead of needing a separate hunt.
+  #
+  # `time:` MUST stay numerically in sync with the duration token it names —
+  # LiveView uses it to decide when to actually apply/remove the class, and an
+  # Elixir integer cannot read a CSS variable. --duration-slow = 280ms,
+  # --duration-base = 180ms. If those tokens are retuned, retune these too.
+  # `transition` (not `transition-all`): Tailwind's default property set
+  # already covers the opacity and transform this animates, without opting in
+  # every other animatable property.
   def show(js \\ %JS{}, selector) do
     JS.show(js,
       to: selector,
-      time: 300,
+      time: 280,
       transition:
-        {"transition-all ease-out duration-300", "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
-         "opacity-100 translate-y-0 sm:scale-100"}
+        {"transition duration-[var(--duration-slow)] ease-[var(--ease-standard)]",
+         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95", "opacity-100 translate-y-0 sm:scale-100"}
     )
   end
 
   def hide(js \\ %JS{}, selector) do
     JS.hide(js,
       to: selector,
-      time: 200,
+      time: 180,
       transition:
-        {"transition-all ease-in duration-200", "opacity-100 translate-y-0 sm:scale-100",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+        {"transition duration-[var(--duration-base)] ease-[var(--ease-standard)]",
+         "opacity-100 translate-y-0 sm:scale-100", "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
   end
 
