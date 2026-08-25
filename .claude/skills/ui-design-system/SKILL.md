@@ -60,8 +60,9 @@ table in `default.css`, checked by `check-theme-drift.sh`.
 - Chip/pill rows: `gap-1`; icon+text pairs: `gap-2`; grids/carousels: `gap-4`.
 - Muted/secondary text: `text-neutral text-sm` — this app's convention. Not
   `text-base-content/70`, which survives only in unmaintained boilerplate; don't propagate it.
-- Touch targets: add `min-h-11` to any tappable pill/button under 44px (see
-  `filter_drawer.ex`'s `facet_pill`).
+- Touch targets: add `min-h-11` to any tappable pill/button under 44px (see `filter_modal.ex`'s
+  `badge min-h-11 px-3` — the class combo `chip_class/1` produces for both the facet pill and the
+  scalar chip families).
 - Page container: one `mx-auto max-w-{size} px-4 py-6 sm:px-6 lg:px-8` per page. Page width is
   each LiveView's own responsibility. `Layouts.app`'s inner wrapper deliberately declares no
   `max-w-*` so the page's own container is the one that wins — never add a width cap back to the
@@ -70,13 +71,21 @@ table in `default.css`, checked by `check-theme-drift.sh`.
   Caution: `Layouts.app`'s `<main>` still owns `px-4 py-20 sm:px-6 lg:px-8`, and
   `CatalogLive.Show` relies on it (it declares no padding of its own) — stripping `<main>`'s
   padding is a separate, breaking change, not a cleanup.
-  **Deliberate exception: `CatalogLive.Index` (01-11/01-12).** The catalogue page runs
-  `fullbleed`/`sticky` on `Layouts.app` and its own carousel shelves reach the viewport edge with
-  no page-container padding at all — that full-bleed reach is the entire point of the Netflix-
-  style edge-fade shelf pattern. Its capped inner sections (toolbar, main grid, load-more) each
-  still get `mx-auto w-full max-w-7xl pk-gutter`, individually wrapped. This is the one page in
-  the app that intentionally has no single page-container div; don't "fix" it to match the rule
-  above, and don't copy the full-bleed pattern onto a page that has no edge-to-edge content.
+  **Deliberate exception: `CatalogLive.Index` (01-11/01-12, corrected 2026-08-24).** The catalogue
+  page runs `fullbleed`/`sticky` on `Layouts.app` and has no single page-container div — every one
+  of its sections (toolbar, main grid, load-more, and every carousel row header and rail wrap) is
+  individually wrapped in the same shared **shell column**: `mx-auto w-full max-w-7xl pk-gutter`,
+  the identical recipe the header inner and footer row use. `fullbleed` on this page means "the
+  layout adds no padding of its own" — not "content reaches the viewport edge." Each carousel
+  rail's horizontal scroll and edge-fade are scoped to that shell column, not to the viewport: the
+  fade sits at the column's edges, and the poster cards, row titles and prev/next controls all
+  share one x-position with the header wordmark and footer brand lockup. Don't "fix" the shell
+  column back into a single page-container div — the page's sections are individually wrapped by
+  design — and don't copy the full-bleed treatment onto a page that has no edge-to-edge content.
+  Before 2026-08-24 this paragraph described the shelves as intentionally reaching the viewport
+  edge; that was a bug, not a design decision — see the sketch 011 content-width-alignment finding
+  in `sketch-findings-pukllay_club/references/layout-navigation.md`, which had already validated
+  the shell-column cap for shelves and was simply never ported into production.
 
 ## Type hierarchy
 
@@ -180,7 +189,7 @@ Class inventory by group:
 | `Layouts` | `app/1` | `flash`, inner_block. Optional: `fullbleed` (bool, default `false`), `sticky` (bool, default `false`), `:nav_links`/`:nav_search`/`:subnav` slots |
 | `Layouts` | `brand_logo/1` | —. Optional: `tagline` (string, default `"JUEGOS DE MESA MODERNOS"`) — the footer is the one call site that overrides it. `mark` (bool, default `true`) — when `false`, omits the isologo `<img>` pair entirely and demotes the wordmark to the muted colour tier via `pk-brand-quiet`; the footer is the one call site that passes `false` (D-A/D-B, 260823-snj) so the mark belongs to the header alone. Renders a theme-aware isologo pair toggled by the `dark:` variant, gated at compile time on both `priv/static/images/isologo-light.png` and `isologo-dark.png` existing (falls back to wordmark-only if either is missing) |
 | `GameCard` | `game_card/1` | `id`, `game` |
-| `FilterDrawer` | `filter_drawer/1` | `id`, `facet_options` |
+| `FilterModal` | `filter_modal/1` | `id`, `facet_options`. Optional: `mechanics`/`themes`/`weight_bands`/`tags` (lists, default `[]`), `players`/`max_playtime` (integers, default `nil`), `open` (bool, default `false`), `q` (string, default `""`), `total` (integer, default `0`), `filters_active` (bool, default `false`) |
 | `CarouselRow` | `carousel_row/1` | `id`, `title`, `games`. Optional: `variant` (`:standard`/`:hero`), `subtitle`, `see_all_row` |
 | `CarouselRow` | `skeleton_card/1` | `id` |
 | `GamePreview` | `preview_body/1` | `game` — the shared body cloned by both the portal and the sheet |

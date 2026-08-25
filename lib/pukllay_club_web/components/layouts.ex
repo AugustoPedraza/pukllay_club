@@ -144,8 +144,19 @@ defmodule PukllayClubWeb.Layouts do
   slot :nav_search, doc: "the search form, rendered inside the header aligned with row content"
   slot :crumb, doc: "breadcrumb content for a genuine drill-down page (Detalle only)"
 
+  slot :nav_menu,
+    doc:
+      "an on-demand category overlay rendered inside the header row; the shell owns " <>
+        "placement (inside .pk-nav-inner, immediately before .pk-search-morph), the page " <>
+        "owns contents"
+
   slot :subnav,
-    doc: "content rendered below the header row, inside the sticky wrapper (e.g. mobile chips)"
+    doc:
+      "content rendered below the header row and OUTSIDE the sticky wrapper, in normal page " <>
+        "flow (e.g. the mobile category chip row). It scrolls away with the page — only the nav " <>
+        "itself stays pinned. Rendered into #app-subnav, which the .CatalogNav hook reads by id " <>
+        "when collecting scroll-spy targets, so anything carrying data-chip-target still joins " <>
+        "the header's own observer."
 
   slot :inner_block, required: true
 
@@ -171,18 +182,36 @@ defmodule PukllayClubWeb.Layouts do
             window.addEventListener("scroll", this.onScroll, {passive: true})
             this.onScroll()
 
-            // Chip scroll-spy: highlights the chip whose shelf is currently
-            // under the header. Guarded on there being at least one chip and
-            // one resolvable target section so the detail page and filtered
-            // views (which render no chip row) are unaffected.
-            this.chips = Array.from(this.el.querySelectorAll(".pk-chip"))
-            this.chipsByTarget = new Map()
-            this.chips.forEach((chip) => {
-              const section = chip.dataset.chipTarget && document.getElementById(chip.dataset.chipTarget)
-              if (section) this.chipsByTarget.set(section, chip)
+            // Scroll-spy: highlights whichever element (a mobile chip or a
+            // desktop category-panel row) shares data-chip-target with the
+            // shelf currently under the header. Widened from a chip-only
+            // selector so the desktop panel's items join this one observer
+            // instead of getting a second, parallel one — both surfaces
+            // light up from the same mechanism. Guarded on there being at
+            // least one target and one resolvable section so the detail
+            // page and filtered views (neither renders either surface) are
+            // unaffected.
+            //
+            // Collected from TWO roots, not from this.el alone (debug
+            // search-right-align-mobile, cycle 5). The two surfaces no longer
+            // live in the same element: .pk-cat-item is inside the header, but
+            // the mobile chips moved out to #app-subnav when the chip row was
+            // un-stuck. Scoped to this.el this would still find all 8 desktop
+            // rows and zero chips — the chips would keep rendering and silently
+            // stop highlighting, which is exactly the kind of half-working
+            // failure a DOM move produces. Named roots rather than a bare
+            // document query so the two participating surfaces stay explicit.
+            this.spyRoots = [this.el, document.getElementById("app-subnav")].filter(Boolean)
+            this.spyTargets = this.spyRoots.flatMap((root) =>
+              Array.from(root.querySelectorAll("[data-chip-target]"))
+            )
+            this.spyTargetsBySection = new Map()
+            this.spyTargets.forEach((target) => {
+              const section = target.dataset.chipTarget && document.getElementById(target.dataset.chipTarget)
+              if (section) this.spyTargetsBySection.set(section, target)
             })
 
-            if (this.chips.length > 0 && this.chipsByTarget.size > 0) {
+            if (this.spyTargets.length > 0 && this.spyTargetsBySection.size > 0) {
               this.observer = new IntersectionObserver(
                 (entries) => {
                   const topmost = entries
@@ -190,15 +219,15 @@ defmodule PukllayClubWeb.Layouts do
                     .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
                   if (!topmost) return
 
-                  const activeChip = this.chipsByTarget.get(topmost.target)
-                  if (!activeChip) return
+                  const activeTarget = this.spyTargetsBySection.get(topmost.target)
+                  if (!activeTarget) return
 
-                  this.chips.forEach((chip) => chip.classList.remove("is-active"))
-                  activeChip.classList.add("is-active")
+                  this.spyTargets.forEach((target) => target.classList.remove("is-active"))
+                  activeTarget.classList.add("is-active")
                 },
                 {rootMargin: "-20% 0px -70% 0px"}
               )
-              this.chipsByTarget.forEach((_chip, section) => this.observer.observe(section))
+              this.spyTargetsBySection.forEach((_target, section) => this.observer.observe(section))
             }
 
             // Header-height publisher (01.1-08): this hook already owns the
@@ -337,6 +366,55 @@ defmodule PukllayClubWeb.Layouts do
               this.drawerBackdrop?.addEventListener("click", this.onDrawerBackdropClick)
               this.drawer.addEventListener("keydown", this.onDrawerKeydown)
             }
+
+            // Desktop category mega-menu (SHELL-01, sketch 020): guarded on
+            // this.catTrigger existing so Quiénes Somos and Detalle (neither
+            // renders the nav_menu slot) are untouched no-ops. Modelled line
+            // for line on the drawer block directly above.
+            this.catTrigger = this.el.querySelector(".pk-cat-trigger")
+            if (this.catTrigger) {
+              this.catBackdrop = this.el.querySelector(".pk-cat-backdrop")
+              this.catPanel = this.el.querySelector("#pk-cat-menu")
+              this.catItems = Array.from(this.el.querySelectorAll(".pk-cat-item"))
+
+              this.openCatMenu = () => {
+                this.catTrigger.classList.add("is-open")
+                this.catPanel?.classList.add("is-open")
+                this.catBackdrop?.classList.add("is-open")
+                this.catTrigger.setAttribute("aria-expanded", "true")
+                this.catPanel?.removeAttribute("inert")
+              }
+
+              // Idempotent: no-ops when already closed, same reason
+              // closeDrawer() is above — safe to call unconditionally from
+              // updated() on every server round trip.
+              this.closeCatMenu = () => {
+                if (!this.catTrigger.classList.contains("is-open")) return
+                this.catTrigger.classList.remove("is-open")
+                this.catPanel?.classList.remove("is-open")
+                this.catBackdrop?.classList.remove("is-open")
+                this.catTrigger.setAttribute("aria-expanded", "false")
+                this.catPanel?.setAttribute("inert", "")
+              }
+
+              this.onCatTriggerClick = () => {
+                if (this.catTrigger.classList.contains("is-open")) {
+                  this.closeCatMenu()
+                } else {
+                  this.openCatMenu()
+                }
+              }
+              this.onCatBackdropClick = () => this.closeCatMenu()
+              this.onCatItemClick = () => this.closeCatMenu()
+              this.onCatDocumentKeydown = (e) => {
+                if (e.key === "Escape") this.closeCatMenu()
+              }
+
+              this.catTrigger.addEventListener("click", this.onCatTriggerClick)
+              this.catBackdrop?.addEventListener("click", this.onCatBackdropClick)
+              this.catItems.forEach((item) => item.addEventListener("click", this.onCatItemClick))
+              document.addEventListener("keydown", this.onCatDocumentKeydown)
+            }
           },
           updated() {
             this.publishHeaderHeight()
@@ -345,6 +423,7 @@ defmodule PukllayClubWeb.Layouts do
             // fires while the drawer is open; closeDrawer() is idempotent, so
             // calling it unconditionally here needs no old/new-link diffing.
             this.closeDrawer?.()
+            this.closeCatMenu?.()
           },
           destroyed() {
             window.removeEventListener("scroll", this.onScroll)
@@ -358,6 +437,10 @@ defmodule PukllayClubWeb.Layouts do
             this.drawerClose?.removeEventListener("click", this.onDrawerCloseClick)
             this.drawerBackdrop?.removeEventListener("click", this.onDrawerBackdropClick)
             this.drawer?.removeEventListener("keydown", this.onDrawerKeydown)
+            this.catTrigger?.removeEventListener("click", this.onCatTriggerClick)
+            this.catBackdrop?.removeEventListener("click", this.onCatBackdropClick)
+            this.catItems?.forEach((item) => item.removeEventListener("click", this.onCatItemClick))
+            document.removeEventListener("keydown", this.onCatDocumentKeydown)
             // Defensive: a LiveView teardown mid-open must never leave the
             // page permanently unscrollable.
             document.body.classList.remove("pk-drawer-open")
@@ -368,9 +451,9 @@ defmodule PukllayClubWeb.Layouts do
         nav_links={@nav_links}
         nav_search={@nav_search}
         crumb={@crumb}
+        nav_menu={@nav_menu}
         search_expanded={@search_expanded}
       />
-      {render_slot(@subnav)}
       <.nav_drawer active_nav={@active_nav} />
     </div>
     <div :if={!@sticky} id="app-header" class="pk-header">
@@ -378,13 +461,63 @@ defmodule PukllayClubWeb.Layouts do
         nav_links={@nav_links}
         nav_search={@nav_search}
         crumb={@crumb}
+        nav_menu={@nav_menu}
         search_expanded={@search_expanded}
       />
-      {render_slot(@subnav)}
       <.nav_drawer active_nav={@active_nav} />
     </div>
 
-    <main class={["py-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
+    <%!--
+    OUTSIDE #app-header, deliberately (debug search-right-align-mobile, cycle 5,
+    on the user's explicit call). This slot used to render as a child of the
+    header, and .pk-header-sticky is `position: sticky; top: 0` — sticky pins the
+    whole box, so the chip row shared the header's common fate at every scroll
+    position (measured y=0..133 at scrollY 0 AND at scrollY 1400). No CSS can
+    exempt a child from its ancestor's sticky box; the row has to leave the
+    element, which is why this is a markup change and not a rule.
+
+    Only the nav stays pinned now; the chip row scrolls away with the page and
+    is occluded by the nav (z-index 50) on its way up. Two consequences worth
+    knowing before moving it back:
+
+      1. --pk-header-h is published from #app-header's own height, so it now
+         reports the nav alone (65px, was 133px at <=480px). That is what makes
+         .pk-shelf's `scroll-margin-top: calc(var(--pk-header-h) + 1rem)` land a
+         chip-anchor jump correctly — clearing only what actually occludes it.
+      2. The .CatalogNav hook collects scroll-spy targets from BOTH this element
+         and the header (the desktop .pk-cat-item rows stay inside the header and
+         share the same data-chip-target contract). A hook scoped to this.el
+         alone would silently orphan every chip — they would still render and
+         simply stop highlighting.
+
+    The id is what the hook keys off, so it is load-bearing, not decorative.
+    --%>
+    <div :if={@subnav != []} id="app-subnav">
+      {render_slot(@subnav)}
+    </div>
+
+    <%!--
+    pt-8 at mobile, pt-20 from `sm` up (debug search-right-align-mobile, cycle 5).
+    This was a flat `py-20`: 5rem/80px of top padding at EVERY width, a
+    desktop-scale value shipped unconditionally to phones. Measured at 390px it
+    put the first heading at y=213 — 25% of an 844px viewport, ~32% of a 667px
+    iPhone SE — spent before the first pixel of content, and it was 100% of the
+    gap the user photographed between the chip row and "DESTACADOS DEL CLUB"
+    (gapWrapToHeading measured 80.00px exactly; nothing else contributed).
+
+    TOP only. `pb-20` is NOT symmetric decoration — it is the clearance that
+    keeps the last content on Detalle (.pk-mobile-cta-bar) and Quiénes Somos
+    (.pk-about-cta-bar) from sitting permanently behind their `position: fixed;
+    bottom: 0` CTA bars. Cutting the bottom to match the top would trade a
+    spacing complaint for a content-occlusion bug on two other pages.
+
+    Restored at `sm` because 80px under a 65px desktop header is a normal airy
+    layout and was never what was reported — desktop stays byte-identical. 32px
+    rather than 0 because this layer's documented page-container value is
+    py-6/24px and its section rhythm is space-y-6; 32px sits just above that
+    floor while cutting the reported gap by 60%.
+    --%>
+    <main class={["pb-20 pt-8 sm:pt-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
       <div class="mx-auto space-y-4">
         {render_slot(@inner_block)}
       </div>
@@ -399,6 +532,7 @@ defmodule PukllayClubWeb.Layouts do
   attr :nav_links, :list, required: true
   attr :nav_search, :list, required: true
   attr :crumb, :list, required: true
+  attr :nav_menu, :list, required: true
   attr :search_expanded, :boolean, default: false
 
   defp header_inner(assigns) do
@@ -428,6 +562,7 @@ defmodule PukllayClubWeb.Layouts do
         <div :if={@nav_links != []} class="pk-nav-links">
           {render_slot(@nav_links)}
         </div>
+        {render_slot(@nav_menu)}
         <div
           :if={@nav_search != []}
           class="pk-search-morph"
@@ -457,6 +592,61 @@ defmodule PukllayClubWeb.Layouts do
         </div>
       </div>
     </header>
+    """
+  end
+
+  @doc """
+  Desktop "Explorar categorías" mega-menu — trigger + backdrop + panel
+  (SHELL-01, sketch 020 Round 2 items 4/5 + Round 3 alignment fix).
+  Rendered via the `nav_menu` slot on `app/1`, threaded into `header_inner/1`
+  immediately before `.pk-search-morph` — the shell owns placement (inside
+  `.pk-nav-inner`, already `position: relative` and this panel's containing
+  block), the page owns contents (`rows`, one map per populated shelf).
+
+  Checked daisyUI's `dropdown` component first (`ui-design-system`'s "state
+  which one you checked and why it doesn't fit" rule): its CSS-only
+  focus/`popover` show mechanism has no first-class way to pair a dimmed
+  backdrop, a document-level Escape handler, and the `.CatalogNav`
+  scroll-spy's `is-active` class on individual rows — all three are required
+  here. Hand-rolled instead, following the exact
+  `inert`/`aria-expanded`/idempotent-close pattern the mobile drawer below
+  already established as this page's sanctioned precedent for this kind of
+  overlay.
+
+  `data-chip-target` on each `.pk-cat-item` is deliberate, not incidental —
+  it is the same attribute the mobile chip row already carries, so the
+  `.CatalogNav` scroll-spy's widened selector highlights this panel's rows
+  for free instead of needing a second, parallel mechanism.
+  """
+  attr :rows, :list, required: true, doc: "one map per populated shelf: %{key:, title:, subtitle:}"
+
+  def category_menu(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class="pk-cat-trigger"
+      aria-expanded="false"
+      aria-controls="pk-cat-menu"
+      aria-label="Explorar categorías"
+    >
+      <.icon name="hero-squares-2x2" class="size-5" />
+      <span class="pk-cat-trigger-label">Explorar categorías</span>
+      <.icon name="hero-chevron-down-micro" class="pk-cat-trigger-chevron size-4" />
+    </button>
+    <div class="pk-cat-backdrop" aria-hidden="true"></div>
+    <div id="pk-cat-menu" class="pk-cat-panel" inert>
+      <div class="pk-cat-grid">
+        <a
+          :for={row <- @rows}
+          href={"#carousel-#{row.key}"}
+          data-chip-target={"carousel-#{row.key}"}
+          class="pk-cat-item"
+        >
+          <strong>{row.title}</strong>
+          <span>{row.subtitle}</span>
+        </a>
+      </div>
+    </div>
     """
   end
 
@@ -498,11 +688,12 @@ defmodule PukllayClubWeb.Layouts do
       </nav>
       <div class="pk-drawer-bottom">
         <div class="pk-drawer-divider"></div>
-        <div class="pk-drawer-utility">
-          <span class="pk-drawer-utility-label">Tema</span>
+        <.social_links class="pk-drawer-social" />
+        <div class="pk-drawer-divider"></div>
+        <div class="pk-drawer-utility" role="group" aria-labelledby="pk-drawer-theme-label">
+          <span id="pk-drawer-theme-label" class="pk-drawer-utility-label sr-only">Tema</span>
           <.theme_toggle />
         </div>
-        <.social_links class="pk-drawer-social" />
       </div>
     </aside>
     """
@@ -585,6 +776,36 @@ defmodule PukllayClubWeb.Layouts do
   # theme_toggle pair; the footer was the surface that had drifted, not the
   # drawer.
   #
+  # That label is now `sr-only` and promoted to the control's accessible GROUP
+  # NAME via role="group" + aria-labelledby (debug footer-theme-toggle-balance).
+  # It is CONVERTED, not deleted, and the distinction matters: plan
+  # 01.1-08-PLAN.md:429-433 added it "so the control is discoverable in a place
+  # users are not yet used to looking for it", and that single stated premise is
+  # what changed. Vercel's Geist design system documents the footer as the
+  # CANONICAL home for a Light/System/Dark control ("Place it once per app, in
+  # the footer or settings"), so the location is no longer unfamiliar. Geist's
+  # own footer-density variant carries no visible text either — it ships
+  # `<legend class="sr-only">Select a display theme:</legend>`, which is exactly
+  # the shape adopted here. This is also a net accessibility GAIN rather than a
+  # trade: the three buttons already had per-button aria-labels but the control
+  # had NO group name at all, so assistive tech now announces one where it
+  # previously announced three unrelated buttons.
+  #
+  # UPDATE (quick task 260824-q8z): the drawer's `.pk-drawer-utility-label` is
+  # now ALSO `sr-only`, superseding the paragraph above's original claim that it
+  # "survives where Geist says it should" as a full-size, visible label. That
+  # claim rested on Geist's "room for the labels to breathe" framing for a
+  # settings-like surface — but sketch 021 independently ran the drawer's own
+  # theme control through 6 rounds of this same developer's feedback and
+  # converged on E1 (Icon-Only, Centered) with NO visible label, the same
+  # answer this debug session reached for the footer. Both surfaces now carry
+  # "Tema" as an sr-only accessible group name only (role="group" +
+  # aria-labelledby on each wrapper). The drawer's real distinguishing property
+  # is its 44px touch floor — `.pk-footer-theme .pk-theme-toggle button` shrinks
+  # to 28px, footer-scoped; the drawer's buttons do not shrink, because the
+  # drawer is the sole mobile home for this control below 480px
+  # (`.pk-footer-right` is `display: none` there).
+  #
   # The legal line lives in its OWN full-width row, `.pk-footer-legal`, not
   # inside the right cluster (debug footer-desktop-imbalance). Sketch 011 gave
   # this footer two peer clusters; the right one then accreted a third concern
@@ -643,8 +864,8 @@ defmodule PukllayClubWeb.Layouts do
         </div>
         <div class="pk-footer-right">
           <.social_links class="pk-footer-social" />
-          <div class="pk-footer-theme">
-            <span class="pk-footer-toggle-tag">Tema</span>
+          <div class="pk-footer-theme" role="group" aria-labelledby="pk-footer-theme-label">
+            <span id="pk-footer-theme-label" class="pk-footer-toggle-tag sr-only">Tema</span>
             <.theme_toggle />
           </div>
         </div>

@@ -431,8 +431,11 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             :if={!@loading}
             id="similares"
             title="Juegos similares"
-            games={@similar_games}
+            games={Enum.map(@similar_games, &{"similares-#{&1.id}", &1})}
             subtitle={@similares_subtitle}
+            empty={@similar_games == []}
+            row_key="similares"
+            exhausted={true}
           />
         </div>
 

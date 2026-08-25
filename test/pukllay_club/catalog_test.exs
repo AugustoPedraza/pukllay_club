@@ -74,6 +74,22 @@ defmodule PukllayClub.CatalogTest do
       assert [players: 4] |> Catalog.filter_games() |> Enum.map(& &1.name) == ["Fits4"]
     end
 
+    test "players: 6 is the open-ended top bucket — it also matches a game whose min_players exceeds 6, which the exact-fit predicate would have excluded" do
+      game_fixture(%{name: "SixMax", min_players: 2, max_players: 6})
+      game_fixture(%{name: "BigParty", min_players: 7, max_players: 8})
+      game_fixture(%{name: "TooSmall", min_players: 2, max_players: 5})
+
+      names = [players: 6] |> Catalog.filter_games() |> Enum.map(& &1.name) |> Enum.sort()
+
+      assert names == ["BigParty", "SixMax"]
+    end
+
+    test "players: nil applies no players predicate at all" do
+      game_fixture(%{name: "AnyPlayers", min_players: 1, max_players: 2})
+
+      assert [players: nil] |> Catalog.filter_games() |> Enum.map(& &1.name) == ["AnyPlayers"]
+    end
+
     test "max_playtime: 60 excludes a 120-minute game" do
       game_fixture(%{name: "Quick", playing_time: 45})
       game_fixture(%{name: "Long", playing_time: 120})
@@ -266,6 +282,87 @@ defmodule PukllayClub.CatalogTest do
 
       band_row = Enum.find(rows, &(&1.key == :nivel_experto))
       assert Enum.any?(band_row.games, &(&1.name == "Expansion Band Game(expa)"))
+    end
+  end
+
+  describe "carousel_page/3 — in-row infinite scroll pagination (quick task 260824-u5d)" do
+    test "page 2 continues from page 1 with no overlap and no gap" do
+      for n <- 1..25 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      assert {:ok, {page1, false}} = Catalog.carousel_page("equipo_ganador", 0, 20)
+      assert {:ok, {page2, true}} = Catalog.carousel_page("equipo_ganador", 20)
+
+      assert length(page1) == 20
+      assert length(page2) == 5
+
+      page1_ids = MapSet.new(page1, & &1.id)
+      page2_ids = MapSet.new(page2, & &1.id)
+
+      assert MapSet.disjoint?(page1_ids, page2_ids)
+      assert MapSet.size(MapSet.union(page1_ids, page2_ids)) == 25
+    end
+
+    test "a category with fewer games than the limit is exhausted on its first page" do
+      for n <- 1..5, do: game_fixture(%{name: "Duel #{n}", tags: ["#DuelosMemorables"]})
+
+      assert {:ok, {games, true}} = Catalog.carousel_page("duelos_memorables", 0, 20)
+      assert length(games) == 5
+    end
+
+    test "list_carousel_rows/0 marks a row shorter than the initial page exhausted on first paint" do
+      for n <- 1..5, do: game_fixture(%{name: "Duel #{n}", tags: ["#DuelosMemorables"]})
+
+      rows = Catalog.list_carousel_rows()
+      duelos = Enum.find(rows, &(&1.key == :duelos_memorables))
+
+      assert duelos.exhausted? == true
+      assert duelos.offset == 5
+    end
+
+    test "paging stops at the 30-game ceiling even when the category holds far more" do
+      for n <- 1..40 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      assert {:ok, {_page1, false}} = Catalog.carousel_page("equipo_ganador", 0, 20)
+      assert {:ok, {page2, true}} = Catalog.carousel_page("equipo_ganador", 20, 10)
+
+      assert length(page2) == 10
+    end
+
+    test "a fetch that would cross the ceiling is clamped to the remaining allowance" do
+      for n <- 1..40 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      assert {:ok, {games, true}} = Catalog.carousel_page("equipo_ganador", 25, 10)
+      assert length(games) == 5
+    end
+
+    test "a fetch-more request issued at or beyond the ceiling returns no games" do
+      for n <- 1..40 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      assert {:ok, {[], true}} = Catalog.carousel_page("equipo_ganador", 30, 10)
+    end
+
+    test "an unrecognised row key returns :error rather than raising" do
+      assert Catalog.carousel_page("not-a-real-row", 0) == :error
     end
   end
 

@@ -47,7 +47,7 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ "catan"
     end
 
-    test "renders the live match count via CatalogLive.Index.result_count_text/1" do
+    test "renders the CTA label with the live total, singular and plural" do
       html =
         render_component(&FilterModal.filter_modal/1, %{
           id: "filter-modal",
@@ -55,7 +55,7 @@ defmodule PukllayClubWeb.FilterModalTest do
           total: 1
         })
 
-      assert html =~ "1 juego encontrado"
+      assert html =~ "Ver 1 juego"
 
       html =
         render_component(&FilterModal.filter_modal/1, %{
@@ -64,7 +64,47 @@ defmodule PukllayClubWeb.FilterModalTest do
           total: 12
         })
 
-      assert html =~ "12 juegos encontrados"
+      assert html =~ "Ver 12 juegos"
+    end
+
+    test "the root element carries daisyUI's bottom-sheet/centered-dialog responsive modifiers" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html =~ "modal-bottom"
+      assert html =~ "sm:modal-middle"
+    end
+
+    test "the clear-filters button is disabled when filters_active is unset/false, enabled when true, and carries no outline (sketch 019 ghost treatment)" do
+      # Scoped to the "btn-ghost min-h-11" class combo, unique to this footer
+      # button (the CTA is "btn btn-primary min-h-11" with no btn-ghost) —
+      # HEEx does not preserve attribute-write order for global/rest attrs,
+      # so a naive "attr-A ... attr-B" regex is fragile.
+      clear_button_class = "btn-ghost min-h-11"
+
+      html_inactive =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html_inactive =~
+               ~r/<button[^>]*#{clear_button_class}[^>]*disabled[^>]*clear-filters/
+
+      refute html_inactive =~ "btn-outline"
+
+      html_active =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options,
+          filters_active: true
+        })
+
+      refute html_active =~
+               ~r/<button[^>]*#{clear_button_class}[^>]*disabled[^>]*clear-filters/
     end
 
     test "close button and backdrop both dispatch close-filters, meet the 44px touch floor" do
@@ -90,7 +130,132 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ ~s(aria-modal="true")
     end
 
-    test "facet pills dispatch toggle-facet with the value/facet pair, selected state reflected in aria-pressed" do
+    test "facet pills dispatch toggle-facet with the choice/facet pair, selected state reflected in aria-pressed" do
+      # weight_bands (Nivel), not mechanics — Task 3 moved mechanics/themes
+      # off the badge-pill treatment into the checklist inside the
+      # disclosure; weight_bands is still rendered via facet_pill/1.
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: [],
+            themes: [],
+            weight_bands: [%{value: "ingenio_estratega", label: "Ingenio estratega"}],
+            editorial_tags: []
+          },
+          weight_bands: ["ingenio_estratega"]
+        })
+
+      assert html =~ ~s(phx-click="toggle-facet")
+      assert html =~ ~s(phx-value-facet="weight_bands")
+      # `choice`, not `value` — a `phx-value-value` binding on a <button> is
+      # silently clobbered by the element's native `.value` DOM property in
+      # LiveView's client-side extractMeta (see FilterModal's moduledoc).
+      assert html =~ ~s(phx-value-choice="ingenio_estratega")
+      refute html =~ "phx-value-value"
+      # HEEx renders a Boolean assign on a recognized aria-* attribute as a
+      # bare present/absent attribute, not a "true"/"false" string — same
+      # behavior the retired FilterDrawer's identical `aria-pressed={@selected}`
+      # already relied on; badge-primary is this pill's own selected-state signal.
+      assert html =~ "aria-pressed"
+      assert html =~ "badge-primary"
+    end
+
+    test "Jugadores and Duración máxima render as toggle-scalar chip clusters, not number inputs" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options,
+          players: 4,
+          max_playtime: 60
+        })
+
+      assert html =~ ~s(phx-click="toggle-scalar")
+      assert html =~ ~s(phx-value-scalar="players")
+      assert html =~ ~s(phx-value-scalar="max_playtime")
+      assert html =~ "60 min"
+      refute html =~ "Hasta"
+      refute html =~ ~s(type="number")
+      refute html =~ ~s(phx-change="set-scalar")
+    end
+
+    test "renders the open-ended '6+' Jugadores chip riding the players scalar" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options,
+          players: 6
+        })
+
+      assert html =~ "6+"
+      assert html =~ ~s(phx-value-scalar="players" phx-value-choice="6")
+    end
+
+    test "renders a clear-filters button" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html =~ ~s(phx-click="clear-filters")
+      assert html =~ "Limpiar filtros"
+    end
+
+    test "renders the new title, subtitle, and search placeholder (sketch 019)" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html =~ "Encuentra tu juego"
+      assert html =~ "Combina filtros para llegar a los juegos que te interesan."
+      assert html =~ "¿Qué juego buscas?"
+    end
+
+    test "the editorial-hashtag group renders nowhere, even when editorial_tags is non-empty" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: [],
+            themes: [],
+            weight_bands: [],
+            editorial_tags: [%{tag: "#CreaConexiones", meaning: "x"}]
+          },
+          tags: ["#CreaConexiones"]
+        })
+
+      refute html =~ "CreaConexiones"
+      refute html =~ ~s(phx-value-facet="tags")
+      refute html =~ "Destacados"
+    end
+
+    test "Jugadores, Duración máxima, Nivel, and the disclosure each sit inside a rounded, surface-tinted card" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      assert html |> String.split("rounded-box") |> length() |> Kernel.-(1) >= 4
+      assert html |> String.split("bg-base-200") |> length() |> Kernel.-(1) >= 4
+    end
+  end
+
+  describe "mecánica/temática disclosure (quick-260824-b71)" do
+    test "renders closed when mechanics and themes are both empty" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      refute html =~ ~r/<details[^>]*id="filter-modal-more"[^>]*\sopen/
+    end
+
+    test "renders open when a mechanic is already selected" do
       html =
         render_component(&FilterModal.filter_modal/1, %{
           id: "filter-modal",
@@ -103,40 +268,82 @@ defmodule PukllayClubWeb.FilterModalTest do
           mechanics: ["Tira dados"]
         })
 
-      assert html =~ ~s(phx-click="toggle-facet")
-      assert html =~ ~s(phx-value-facet="mechanics")
-      assert html =~ ~s(phx-value-value="Tira dados")
-      # HEEx renders a Boolean assign on a recognized aria-* attribute as a
-      # bare present/absent attribute, not a "true"/"false" string — same
-      # behavior the retired FilterDrawer's identical `aria-pressed={@selected}`
-      # already relied on; badge-primary is this pill's own selected-state signal.
-      assert html =~ "aria-pressed"
-      assert html =~ "badge-primary"
+      assert html =~ ~r/<details[^>]*id="filter-modal-more"[^>]*\sopen/
     end
 
-    test "scalar inputs live in one set-scalar form" do
+    test "renders open when a theme is already selected" do
       html =
         render_component(&FilterModal.filter_modal/1, %{
           id: "filter-modal",
-          facet_options: @empty_facet_options,
-          players: 4
+          facet_options: %{
+            mechanics: [],
+            themes: ["Fantasía"],
+            weight_bands: [],
+            editorial_tags: []
+          },
+          themes: ["Fantasía"]
         })
 
-      assert html =~ ~s(phx-change="set-scalar")
-      assert html =~ ~s(name="players")
-      assert html =~ ~s(name="max_playtime")
-      assert html =~ ~s(name="min_age")
+      assert html =~ ~r/<details[^>]*id="filter-modal-more"[^>]*\sopen/
     end
 
-    test "renders a clear-filters button" do
+    test "a checklist row carries data-fc-row, toggle-facet and the matching phx-value-facet" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: ["Tira dados"],
+            themes: [],
+            weight_bands: [],
+            editorial_tags: []
+          }
+        })
+
+      assert html =~ ~s(data-fc-row="Tira dados")
+      assert html =~ ~s(phx-click="toggle-facet")
+      assert html =~ ~s(phx-value-facet="mechanics")
+    end
+
+    test "the count suffix renders (2) for two selected mechanics" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: ["Tira dados", "Coloca trabajadores"],
+            themes: [],
+            weight_bands: [],
+            editorial_tags: []
+          },
+          mechanics: ["Tira dados", "Coloca trabajadores"]
+        })
+
+      assert html =~ "(2)"
+    end
+
+    test "both checklists carry the max-h-40 list cap and a data-fc-input search box" do
       html =
         render_component(&FilterModal.filter_modal/1, %{
           id: "filter-modal",
           facet_options: @empty_facet_options
         })
 
-      assert html =~ ~s(phx-click="clear-filters")
-      assert html =~ "Limpiar filtros"
+      assert html =~ ~s(data-fc-list="mechanics")
+      assert html =~ ~s(data-fc-list="themes")
+      assert html =~ ~s(data-fc-input="mechanics")
+      assert html =~ ~s(data-fc-input="themes")
+      assert html =~ "max-h-40"
+    end
+
+    test "there is no age filter control and no Edad mínima label" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      refute html =~ "Edad mínima"
+      refute html =~ "Edad del jugador"
+      refute html =~ ~s(phx-value-scalar="min_age")
     end
   end
 end

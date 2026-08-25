@@ -4,11 +4,11 @@ milestone: v1.0
 current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
-stopped_at: Phase 01.1 complete, ready to plan Phase 2
-last_updated: "2026-08-23T01:57:41.696Z"
-last_activity: 2026-08-22
-last_activity_desc: Phase 01.1 complete, transitioned to Phase 2
-state_head: 5d4d2b83c6f7c7a39562d9924705523e9b236c11
+stopped_at: Phase 2 UI-SPEC approved
+last_updated: "2026-08-25T00:00:03.828Z"
+last_activity: 2026-08-24
+last_activity_desc: Completed quick task 260824-q8z - mobile drawer bottom block content/footer split
+state_head: 368d0b8ecb844439b469c74ede0ccab41fad8bd0
 progress:
   total_phases: 5
   completed_phases: 2
@@ -32,8 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-24 - Completed quick task 260824-7mt: Implement sketch 018 winner B — mute theme toggle color/size and tone active state vs social icons
-structure (0-4)
+Last activity: 2026-08-24 - Completed quick task 260824-u5d: in-row horizontal infinite scroll for the 8 catalog carousels (30-game ceiling), Ver todo tile removed
 
 Progress: [██████████] 100%
 
@@ -81,6 +80,7 @@ Progress: [██████████] 100%
 | Phase 01 P12 | 90min | 3 tasks | 6 files |
 | Phase 01.1 P01 | 115min | 3 tasks | 9 files |
 | Phase quick-260821-v7q P01 | 35min | 3 tasks | 6 files |
+| Phase quick-260824-jkc P01 | 40min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -138,6 +138,7 @@ Recent decisions affecting current work:
 - [Phase 01.1]: Task 2(a) BGG attribution: 'Powered by BGG' link to boardgamegeek.com with the real logo mark; (b) footer social set revised post-Task-1 to WhatsApp/Facebook/Instagram/Email (linktree_url removed); (c) catalog header nav links replaced with the About page's Inicio/Quiénes Somos wayfinding links
 - [Phase 01.1]: Quick task 260821-v7q: assign_new/3 replaces a compile-time isologo? constant so tests can force the wordmark-only fallback branch that becomes unreachable once both real mark PNGs exist on disk; production behaviour byte-identical since no call site passes the key
 - [Phase 01.1]: Quick task 260822-2v9: header surface base-200 (matches footer token), brand wrapper flex-1->flex-initial, .pk-nav-actions groups Sumate CTA + theme toggle with margin-left:auto fallback, CTA rises to the toggle's fixed 48px anchor (min-h-12, small-size modifier dropped), CoreComponents.input/1's fieldset wrapper neutralized via header-scoped selector (not the shared component), .pk-nav-links demoted to neutral with a new aria-current active-state rule
+- [Phase 2]: Quick task 260824-jkc: shipped sketch 020's winning design — desktop 'Explorar categorías' mega-menu (Layouts.category_menu/1, right-anchored panel, one shared derived shelf list feeding both surfaces) + refined bare-outline/soft-tint mobile chip row; scroll-spy widened to [data-chip-target] so both surfaces share one IntersectionObserver; .pk-shelf landing offset derived from --pk-header-h. Two Rule-1 auto-fixes found via live headless-Chrome CDP measurement (not caught by ExUnit): dual flex margin-left:auto competing between trigger/search (fixed via general-sibling override) and the trigger label's 48rem reveal overflowing the row at 768px (moved to a measured 50rem breakpoint).
 
 ### Pending Todos
 
@@ -189,6 +190,11 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260824-9zo | On desktop, make the content respect the shell width | 2026-08-24 | 9b47d4e | | [260824-9zo-on-desktop-make-the-content-respect-the-](./quick/260824-9zo-on-desktop-make-the-content-respect-the-/) |
+| 260824-b71 | Polish catalog search filtering UX: mechanics, content hierarchy, desktop no-scroll, mobile bottom sheet | 2026-08-24 | 64a4cde | Complete | [260824-b71-polish-catalog-search-filtering-ux-defin](./quick/260824-b71-polish-catalog-search-filtering-ux-defin/) |
+| 260824-eqc | Implement sketch 019 (variant D) in FilterModal: new copy, per-section cards, 6+ Jugadores bucket, ghost Limpiar filtros, background dim/blur, Destacados cut | 2026-08-24 | ce04eff | Complete | [260824-eqc-implement-sketch-019-s-winning-design-va](./quick/260824-eqc-implement-sketch-019-s-winning-design-va/) |
+| 260824-jkc | Implement sketch 020's winning design: refined mobile chip index row + desktop mega-menu | 2026-08-24 | 9b88168 | Complete | [260824-jkc-implement-sketch-020-s-winning-design-re](./quick/260824-jkc-implement-sketch-020-s-winning-design-re/) |
+| 260824-u5d | Implement pagination for the catalog carousels/sections: in-row horizontal infinite scroll (30-game ceiling), Ver todo tile removed | 2026-08-24 | 218accf | Complete | [260824-u5d-implement-pagination-for-the-catalog-car](./quick/260824-u5d-implement-pagination-for-the-catalog-car/) |
 | 260806-rq8 | Add Styler + mix_audit quality gates (superseded credence) to mix quality | 2026-08-06 | 9477e7f | | [260806-rq8-add-credence-semantic-ast-elixir-linter-](./quick/260806-rq8-add-credence-semantic-ast-elixir-linter-/) |
 | 260818-fro | Integrate Tidewave (dev-only) MCP plug into Phoenix endpoint | 2026-08-18 | d3761dd | | [260818-fro-integrate-tidewave-dev-only-into-phoenix](./quick/260818-fro-integrate-tidewave-dev-only-into-phoenix/) |
 | 260823-snj | Polish desktop header: search icon relevance + header-only isologo (footer de-duplicated) | 2026-08-23 | f0484a0 | | [260823-snj-polish-desktop-header-improve-the-search](./quick/260823-snj-polish-desktop-header-improve-the-search/) |
@@ -208,6 +214,10 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260821-umm | Footer's left cluster now shows the About hero tagline ("Conectá jugando") instead of repeating the header's "JUEGOS DE MESA MODERNOS" subtitle | 2026-08-21 | 9734f18 | | [260821-umm-footer-left-cluster-in-layouts-ex-footer](./quick/260821-umm-footer-left-cluster-in-layouts-ex-footer/) |
 | 260821-v7q | Wired the real isologo mark into Layouts.brand_logo/1 with theme-aware light/dark images and rebuilt favicon.ico from the purple isologo lockup | 2026-08-21 | aff2b1d | | [260821-v7q-wire-up-the-real-isologo-mark-theme-awar](./quick/260821-v7q-wire-up-the-real-isologo-mark-theme-awar/) |
 | 17 | Polish the desktop header: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers | 2026-08-22 | 9195443 | — | — |
+| 260824-hu1 | On mobile the expanded header search now aligns its own edges (not just its contents) to the shared gutter line, restoring the fully-rounded pill shape | 2026-08-24 | 0fcc255 | Complete | [260824-hu1-on-mobile-the-expanded-search-looks-awfu](./quick/260824-hu1-on-mobile-the-expanded-search-looks-awfu/) |
+| 260824-i8e | Removed the stale native sort `<select>` (Nombre/Duración/Complejidad/Más recientes) from the catalog page; sort machinery underneath (parse_sort/1, :sort assign, see-all/URL deep links) left fully intact | 2026-08-24 | c3b14b3 | Complete | [260824-i8e-the-select-for-nombre-duracion-etc-looks](./quick/260824-i8e-the-select-for-nombre-duracion-etc-looks/) |
+| 260824-q8z | Mobile drawer bottom block: social links reordered as a full-width, high-contrast, 44px CONTENT row; theme control centered and its "Tema" label converted to sr-only as a quiet FOOTER strip (mirrors the desktop footer's shipped pattern, applies sketch 021's Round-6 conclusion) | 2026-08-24 | 79b392b | Complete | [260824-q8z-for-mobile-the-social-links-at-the-botto](./quick/260824-q8z-for-mobile-the-social-links-at-the-botto/) |
+| 260824-t7g | New carousel arrow layer from sketches 022-026: relocated prev/next controls to Netflix-style edge-overlay chevrons gated to pointer-fine devices (022-C), replaced the browser's fixed smooth-scroll with the project's own 200ms soft ease-out curve (023-B) | 2026-08-24 | d106248 | Partial (live-smoothness sub-check needs a human eyeballing it in a foregrounded tab — see SUMMARY) | [260824-t7g-new-carousel-from-latest-sketches](./quick/260824-t7g-new-carousel-from-latest-sketches/) |
 
 ### Roadmap Evolution
 
@@ -223,6 +233,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-22T05:30:58.064Z
-Stopped at: Phase 01.1 complete, ready to plan Phase 2
-Resume file: None
+Last session: 2026-08-25T00:00:03.053Z
+Stopped at: Phase 2 UI-SPEC approved
+Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/02-natural-language-spanish-search-auth/02-UI-SPEC.md

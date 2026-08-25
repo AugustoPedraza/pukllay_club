@@ -227,8 +227,14 @@
      three tested options, paired with a no-overshoot soft ease-out. New
      rules added from this phase forward must reference these tokens rather
      than hardcode a timing value; the pre-existing 220ms/360ms literals in
-     .pk-nav/.pk-portal/.pk-sheet are UAT-verified and out of scope for this
-     phase — don't rewrite them as an uninstructed side effect. */
+     .pk-nav/.pk-portal are UAT-verified and out of scope — don't rewrite them
+     as an uninstructed side effect.
+     .pk-sheet/.pk-sheet-backdrop were on that same list until 2026-08-25, when
+     a user report ("polished fluid animation, not jump") falsified their
+     UAT-verified status: their 360ms/220ms literals were the abandoned
+     sketch-001/002 numbers, and being hardcoded is exactly what kept the 006
+     pass from reaching them. Both now read tokens — see the note on .pk-sheet
+     for why that rule needs --ease-standard and not --ease-out-soft. */
   --duration-fast: 100ms;
   --duration-base: 180ms;
   --duration-slow: 280ms;
@@ -241,9 +247,57 @@
   padding-right: var(--pk-gutter);
 }
 
+/* Category-anchor scroll animation (debug category-menu-scroll-animation).
+   Both category surfaces — the desktop .pk-cat-item mega-menu rows and the
+   mobile .pk-chip row — are plain native anchors (href="#carousel-KEY"), and
+   .CatalogNav's onCatItemClick deliberately only closes the panel rather than
+   intercepting the click. Native fragment navigation animates ONLY when the
+   document's scrolling element computes `scroll-behavior: smooth`, and nothing
+   ever declared it — the CSS initial value `auto` was in force, which is why
+   every category tap landed as an instant jump on both mobile and desktop. One
+   declaration fixes both surfaces precisely because both were always riding the
+   same browser mechanism; neither needs its own handler.
+
+   Scoped to `html` (the document scrolling element — neither html nor body
+   carries an `overflow` outside the transient .pk-sheet-open/.pk-drawer-open
+   scroll locks) and deliberately NOT to a descendant: `scroll-behavior` is not
+   an inherited property, so this cannot reach .pk-rail and start the
+   competing-animation fight that rail's own `scroll-behavior: auto` guards
+   against (.CarouselScroll assigns rail.scrollLeft every animation frame — see
+   the comment on .pk-rail below). The rail keeps its explicit `auto` either
+   way; this rule and that one can never meet.
+
+   Wrapped in no-preference rather than declared bare: browsers are not
+   consistent about honouring reduced-motion for smooth scrolling on their own.
+   Gating it here matches both this file's existing motion discipline
+   (.pk-scroll-top's bounce) and daisyUI's own .carousel rule, which gates its
+   smooth scroll behind the identical query. A visitor who asked for less motion
+   keeps the instant jump — for them that is the correct outcome, not a
+   regression.
+
+   Landing POSITION is not this rule's business: .pk-shelf's scroll-margin-top
+   directly below already clears the header, and it applies to a smooth scroll
+   exactly as it did to the jump. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 .pk-shelf {
   margin-bottom: 3rem;
-  scroll-margin-top: 6rem;
+  /* Derived from the header's own published height (--pk-header-h, set by
+     .CatalogNav's ResizeObserver) plus a small gap, rather than a hardcoded
+     constant — the same fallback form .pk-poster-col/.pk-title-echo already
+     use, and what makes a chip-anchor jump clear exactly what occludes it
+     instead of a guessed constant.
+     Since cycle 5 un-stuck the chip row (see #app-subnav in layouts.ex), the
+     published height is the nav alone at every width — 65px, not the 133px it
+     reported while the chip row was pinned to the header. That is a correction,
+     not a regression: the chip row no longer occludes anything, so a jump that
+     cleared it was overshooting by the band's full height. This value tracks
+     that automatically, which is the whole reason it is derived. */
+  scroll-margin-top: calc(var(--pk-header-h, 4.5rem) + 1rem);
 }
 
 .pk-rail-wrap {
@@ -275,7 +329,14 @@
   display: flex;
   gap: 1rem;
   overflow-x: auto;
-  scroll-behavior: smooth;
+  /* The browser's own smooth-scroll mode is deliberately off: .CarouselScroll's
+     per-frame eased arrow scroller (sketch 023-B) assigns scrollLeft on every
+     animation frame, and if the browser's smooth-scroll mode were in force each
+     of those assignments would kick off its own competing animation toward that
+     value — the two curves fight and the rail visibly stutters instead of
+     easing. Free-momentum touch scroll is native browser behavior either way
+     and is unaffected by this declaration. */
+  scroll-behavior: auto;
   scrollbar-width: none;
   padding: 8px 0;
   /* A horizontal overscroll cannot chain out to the page or trigger the
@@ -292,6 +353,58 @@
   display: none;
 }
 
+/* Sketch 022, winner C: Netflix-style edge-overlay prev/next chevrons —
+   bare, drop-shadowed glyph, no boxed button chrome, anchored to
+   .pk-rail-wrap's own left/right edges rather than sitting beside the row
+   title. z-index: 5 puts the glyph above .pk-rail-wrap::before/::after's
+   edge-fade (z-index: 4) — without this it renders under the gradient it
+   is meant to overlay. The pointer-fine gate below and the
+   data-overflows check COMBINE rather than either replacing the other:
+   the media query supplies the device condition, data-overflows the
+   content condition, so touch devices never render the button at all
+   (display: none, not merely transparent) and a non-overflowing rail
+   never shows a chevron on any device. */
+.pk-rail-btn {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-base-content);
+  cursor: pointer;
+  padding: 0;
+}
+
+.pk-rail-btn[data-scroll="prev"] {
+  left: 0;
+}
+
+.pk-rail-btn[data-scroll="next"] {
+  right: 0;
+}
+
+.pk-rail-btn > span {
+  filter: drop-shadow(0 1px 3px color-mix(in srgb, var(--pk-shadow-color) 45%, transparent));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pk-rail-wrap[data-overflows="true"] .pk-rail-btn {
+    display: flex;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .pk-rail-wrap[data-overflows="true"]:hover .pk-rail-btn,
+  .pk-rail-wrap[data-overflows="true"] .pk-rail-btn:focus-visible {
+    opacity: 1;
+  }
+}
+
 .pk-poster-card {
   flex: 0 0 auto;
   width: 160px;
@@ -301,31 +414,21 @@
   width: 240px;
 }
 
-/* .pk-see-all reuses .pk-poster-card for width — no second width rule
-   here — so the tile automatically tracks the hero and narrow-viewport
-   width steps declared on that one class. Only the fields that differ
-   from a card are styled here. */
-.pk-see-all {
-  border: 1px dashed var(--color-base-300);
-  background: var(--color-base-200);
-  border-radius: var(--radius-box);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: var(--color-primary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: center;
-  padding: 8px;
-  cursor: pointer;
+/* Trailing in-row-infinite-scroll skeleton placeholders (quick task
+   260824-u5d): permanent non-stream children of .pk-rail (LiveView forbids
+   removing them once a stream container exists), hidden at rest and shown
+   only while that specific rail's fetch-more request is in flight — the
+   .CarouselScroll hook sets/clears [data-loading] on .pk-rail itself, never
+   an inline style. `display: block` mirrors GameCard's own explicit
+   Tailwind `block` utility (the shared resting-card footprint) rather than
+   inventing a new display value, so a revealed placeholder occupies exactly
+   the same box a real card does and the rail does not reflow. */
+.pk-trailing-skel {
+  display: none;
 }
 
-.pk-see-all:hover {
-  background: var(--color-accent);
-  border-color: var(--color-primary);
-  border-style: solid;
+.pk-rail[data-loading] .pk-trailing-skel {
+  display: block;
 }
 
 .pk-facts-row {
@@ -437,7 +540,15 @@
   overflow: hidden;
   background: var(--color-base-100);
   box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
-  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* Tokens, not `220ms cubic-bezier(0.16, 1, 0.3, 1)` (debug
+     mobile-search-expand-jump, audit sweep) — same abandoned-literal drift as
+     .pk-nav. The CURVE is deliberately still --ease-out-soft: the
+     catalog-preview-modal-jump sweep measured this surface at 18-23px per
+     edge / 7.19px first frame and explicitly LEFT it on the accent curve,
+     which is well inside the 51px ceiling that curve carries at
+     --duration-base. Only the literals changed here, never the feel. */
+  transition: opacity var(--duration-base) var(--ease-out-soft),
+    transform var(--duration-base) var(--ease-out-soft);
 }
 
 .pk-portal.is-visible {
@@ -462,7 +573,7 @@
   z-index: 600;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity var(--duration-slow) var(--ease-standard);
 }
 
 .pk-sheet-backdrop.is-visible {
@@ -482,7 +593,21 @@
   max-height: 82vh;
   overflow-y: auto;
   transform: translateY(100%);
-  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* --ease-standard, not --ease-out-soft. Sketch 006 validated --ease-out-soft
+     (easeOutExpo) against ~3px amplitudes — the hover-lift and row-scroll — where
+     its front-loading is imperceptible. This sheet travels its own full height
+     (~515px at 390x844), and over that distance the same curve spends 26.3% of
+     the trip in the first 16.7ms frame and 80% within 62ms, so it reads as a pop
+     followed by a ~280ms sub-10px/frame crawl: measured first painted frame
+     jumped 135px, against 134.4px predicted closed-form. --ease-standard over
+     the same travel moves 4px in frame one and spreads the motion across all 16.
+     Shortening the duration does NOT help — it front-loads the curve harder
+     (169px at 280ms). Amplitude is the variable that decides the curve here, so
+     don't "restore consistency" by putting --ease-out-soft back. The literal
+     360ms/220ms these two rules used to carry were the pre-006 sketch-001/002
+     numbers, which the 006 tuning pass never reached precisely because they were
+     hardcoded rather than tokenised. */
+  transition: transform var(--duration-slow) var(--ease-standard);
 }
 
 .pk-sheet.is-open {
@@ -531,8 +656,16 @@ body.pk-sheet-open {
 .pk-nav {
   background: var(--color-base-200);
   border-bottom: 1px solid transparent;
-  transition: background 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* Tokens, not `220ms cubic-bezier(0.16, 1, 0.3, 1)` (debug
+     mobile-search-expand-jump, audit sweep). 220ms is an abandoned
+     sketch-001/002 value that the sketch-006 tuning pass never reached
+     precisely BECAUSE it was hardcoded — the same token drift the
+     catalog-preview-modal-jump session found on .pk-sheet. All three
+     properties here are paint-only (no travelling geometry), so the
+     amplitude rule does not apply and --ease-standard is correct. */
+  transition: background var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
 }
 
 .pk-nav.is-scrolled {
@@ -553,15 +686,18 @@ body.pk-sheet-open {
       line is always a bug, never a narrow-viewport adaptation. Scoped to
       .pk-nav-inner because the footer shares brand_logo/1 and has no
       fixed-height contract of its own.
-   2. Hidden by default, revealed only at 48rem (see the min-width block near
-      the end of this file). Max-content widths measured on the live page:
-      isologo 36 + gap 8 + wordmark 206 = 250px brand, nav links 166.3px, row
-      gap 24px, gutters 64px. Seating brand + links + the open 17.5rem pill
-      therefore needs 250+24+166.3+24+280+64 = 808.3px, and seating them with
-      only the collapsed 44px icon still needs 572.3px — so from 481px to
-      768px the row genuinely cannot hold the wordmark, search open or closed.
-      Hiding it there is the same treatment ≤480px already applied; it just
-      now applies at the width the arithmetic actually calls for.
+   2. Hidden by default, revealed only at 56rem (see the HEADER ROW CAPACITY
+      block near the end of this file, which carries the full inventory and
+      both reveal sums). Seating the lockup, the nav links, the category
+      trigger AND a full 17.5rem pill needs 876.3px.
+
+      This used to read 48rem and "808.3px", and that sum was wrong by a
+      provable 68px (debug search-pill-tablet-squeeze): it counted three items
+      and two gaps, omitting `.pk-cat-trigger` (44px) and its 24px gap
+      entirely. Because the open pill is the row's only yielder, the whole
+      68px landed on the search box — the comment predicted a 239.7px pill at
+      768px and it measured 171.7px. Do not re-derive this number here; the
+      capacity block owns it and header_capacity_test.exs recomputes it.
 
    The tagline is the widest line in the lockup (206px vs 111.3px for
    "PUKLLAY CLUB"), so it is always the first thing to reflow — which is why
@@ -611,7 +747,13 @@ body.pk-sheet-open {
      two-word link ("Quiénes Somos") reflowing would put a second line into
      the row. */
   white-space: nowrap;
-  transition: border-color 150ms ease, color 150ms ease;
+  /* Tokens, not `150ms ease` (debug mobile-search-expand-jump, audit sweep).
+     The CSS keyword `ease` is cubic-bezier(0.25, 0.1, 0.25, 1) — a curve
+     belonging to NEITHER motion token, and 150ms is not one of the three
+     durations. This is a paint-only change (no travel), so it takes the
+     hover tier every other hover in this file already uses. */
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-nav-links a:hover,
@@ -640,10 +782,63 @@ body.pk-sheet-open {
   align-items: center;
   height: 44px;
   width: 44px;
-  transition: width var(--duration-slow) var(--ease-out-soft),
+  /* width uses --ease-standard, not --ease-out-soft — same amplitude reasoning
+     as .pk-sheet and .pk-drawer, see the long note on .pk-sheet. Above 480px
+     this pill travels 44px -> 17.5rem/280px = 236px, and --ease-out-soft
+     (easeOutExpo) spends 32.7% of that in the first 16.7ms frame: measured
+     first painted step 77.0-77.3px across 4/4 reps, against 77.2px predicted
+     closed-form. --ease-standard over the identical travel moves 2.0px in
+     frame one, peaks at 37px and spreads across all 17 frames.
+     NOTE this is `width`, so every frame is a LAYOUT pass, not a compositor
+     transform — but the curve does not change that cost. The transition runs
+     its full 280ms either way, so the number of layout passes is identical;
+     the curve only decides WHERE the pixels are on each of them.
+     RESOLVED (debug mobile-search-expand-jump): this comment used to end by
+     noting that <=480px switches to `width: auto`, which is not interpolable,
+     and deferring it as "a different problem". It was the same problem's other
+     half and it was the whole reported bug — the mobile overlay rule at the
+     bottom of this file now animates an interpolable calc() width and stays
+     absolutely positioned in both states, so this transition drives BOTH
+     breakpoints. Amplitude decides the curve: don't "restore consistency"
+     by putting --ease-out-soft back.
+     box-shadow is in the list for the <=480px overlay only (no shadow changes
+     above 480px, so it is inert there): without it the overlay's drop shadow
+     popped in at full strength on frame one while the pill was still 44px
+     wide, which reads as a flash against an otherwise 280ms glide. */
+  transition: width var(--duration-slow) var(--ease-standard),
     background-color var(--duration-base) var(--ease-standard),
-    border-color var(--duration-base) var(--ease-standard);
-  flex: 0 0 auto;
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-slow) var(--ease-standard);
+  /* `0 1 auto` + an explicit 44px floor, not `0 0 auto` (debug
+     mobile-search-expand-jump, audit sweep). These two express the SAME
+     closed-state geometry — the icon is 44px wide and floored at 44px, so
+     shrink permission it can never use changes nothing — but they behave
+     completely differently while the width is mid-transition.
+
+     `0 0 auto` produced a second, worse jump than the mobile one this session
+     was reported for, and it fired on COLLAPSE at every width from 481px to
+     beyond 900px. Between those widths the row cannot seat brand + nav links +
+     a full 17.5rem pill, so `.is-open`'s `flex-shrink: 1` squeezes the open
+     pill to fit — 99px at 481px, against a 280px SPECIFIED width. The `width`
+     transition interpolates the SPECIFIED value, and flex shrinking is applied
+     on top of it. So the moment `.is-open` left, the shrink permission left
+     with it, the used width snapped from 99px up to the full specified 280px,
+     and only then eased down to 44px: measured first painted frame 331.5% of
+     the total travel at 481px (84.8% at 768px, 124.8% at 900px), with the
+     pill's right edge blowing through the viewport and taking
+     documentElement.scrollWidth with it.
+
+     Keeping the shrink permission CONSTANT across both states is what removes
+     it — used width stays min(specified, available) throughout, which
+     decreases smoothly, instead of jumping to `specified` when the permission
+     disappears. `min-width: 44px` is then load-bearing rather than
+     defensive: it is what still pins the collapsed icon at the locked 44px
+     touch floor (quick task 260821-dah / ux-responsive) now that
+     `flex-shrink: 0` is no longer doing that job — and it cannot be left to
+     `min-width: auto`, because this element sets `overflow: hidden`, which per
+     spec collapses the automatic minimum size to zero. */
+  flex: 0 1 auto;
+  min-width: 44px;
   margin-left: auto;
   overflow: hidden;
   border: 1px solid var(--color-base-300);
@@ -655,12 +850,24 @@ body.pk-sheet-open {
    24px glyph, but this app's locked touch floor is 44px (quick task
    260821-dah / ux-responsive), so the close control is 44px wide and the
    pill grows by the 20px difference to keep the same usable input width.
-   That 17.5rem is a target, not a floor: between 481px (where the <=480px
-   full-width overlay below stops applying) and roughly 790px the row is too
-   narrow to seat brand + nav links + a full pill on one line, so the pill is
-   allowed to shrink there rather than push the row past the viewport edge and
-   raise a horizontal scrollbar. The base rule's flex: 0 0 auto still pins the
-   collapsed icon at exactly 44px — only the open state gives way. */
+   `min-width: 0; flex-shrink: 1` makes this the row's SINGLE POINT OF GIVE —
+   deliberately, since search-expand-header-overlap added it to stop the row
+   overflowing the viewport, and header-height-wordmark-wrap then pinned the
+   brand and the nav links so they can never absorb any of it. Do not "balance"
+   that by re-granting shrink to a sibling: it does not make them narrower, it
+   makes them REFLOW, and the row's height is what grows.
+
+   17.5rem is a target rather than a guarantee, and the rest of this file's
+   header work exists to make the shortfall never reach the input. Above
+   662.3px every breakpoint is derived so the row can seat a full pill (see the
+   HEADER ROW CAPACITY blocks near the end of the file); below it the row
+   provably cannot, at any breakpoint setting, so the pill leaves the flow and
+   overlays instead. It is therefore no longer true that the pill "is allowed
+   to shrink" across 481-790px — it did, all the way down to 49px of pill with
+   zero input at 800px, and that was the defect (debug
+   search-pill-tablet-squeeze). What remains of the shrink guard is the ramp
+   just above the overlay ceiling, where a few px of content drift costs a few
+   px of input width. */
 .pk-search-morph.is-open {
   width: 17.5rem;
   min-width: 0;
@@ -699,8 +906,16 @@ body.pk-sheet-open {
   border-color: var(--color-primary);
 }
 
+/* 2rem, not `auto` (debug mobile-search-expand-jump, audit sweep). `auto`
+   resolved to exactly 32px — 0.75rem padding-left + the 1.25rem icon,
+   measured identical at 390px and 1280px — but as a keyword it is NOT
+   interpolable, so this width silently snapped instead of animating, the
+   same defect class as the mobile overlay pill this session fixed. 2rem is
+   that measured value written as a length, so the rendered result is
+   unchanged and the 12px travel now actually plays. Keep the two terms in
+   sync if the icon size or padding ever changes. */
 .pk-search-morph.is-open .pk-search-morph-toggle {
-  width: auto;
+  width: 2rem;
   padding-left: 0.75rem;
   opacity: 0.6;
   cursor: default;
@@ -817,24 +1032,19 @@ body.pk-sheet-open {
    brand_logo/1 in Task 3; scoping the selector now is harmless. */
 .pk-nav-inner.is-search-open .pk-nav-links,
 .pk-nav-inner.is-search-open .pk-nav-crumb,
-.pk-nav-inner.is-search-open .pk-brand-wordmark {
+.pk-nav-inner.is-search-open .pk-brand-wordmark,
+.pk-nav-inner.is-search-open .pk-cat-trigger {
   opacity: 0.35;
   transition: opacity var(--duration-base) var(--ease-standard);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pk-search-morph,
-  .pk-search-morph-toggle,
-  .pk-search-morph-close,
-  .pk-search-morph .pk-nav-search,
-  .pk-drawer,
-  .pk-drawer-backdrop,
-  .pk-mobile-cta-bar,
-  .pk-title-echo,
-  body.pk-has-cta-bar {
-    transition-duration: 1ms;
-  }
-}
+/* An enumerated `prefers-reduced-motion: reduce` block used to sit here,
+   listing 14 selectors by hand. It was silently inert for 8 of them and has
+   been replaced by a single global guard at the very end of this file (see
+   "REDUCED-MOTION GUARD" there, and debug session reduced-motion-order-bug).
+   Nothing needs to be registered in this position again — the replacement
+   covers every animated surface in the app automatically, including whatever
+   gets added below this line. */
 
 /* CoreComponents.input/1 wraps its text-input branch in a `fieldset mb-2` div —
    daisyUI's .fieldset contributes vertical padding-block, and the mb-2 utility
@@ -894,6 +1104,165 @@ body.pk-sheet-open {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+}
+
+/* Desktop "Explorar categorías" mega-menu (SHELL-01, sketch 020 Round 2
+   items 4/5 + Round 3 alignment fix): trigger + backdrop + panel rendered
+   by Layouts.category_menu/1 via the nav_menu slot, placed immediately
+   before .pk-search-morph inside .pk-nav-inner — the rule directly above,
+   which is this panel's containing block (position: relative). No second
+   positioned ancestor may sit between them, or the panel is silently
+   clipped or re-anchored (sketch-findings' recurring failure mode). */
+.pk-cat-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-cat-trigger:hover,
+.pk-cat-trigger:focus-visible,
+.pk-cat-trigger.is-open {
+  color: var(--color-primary);
+}
+
+/* Icon-only below 66rem (see the HEADER ROW CAPACITY blocks near the end of
+   this file for the derivation, and for why this reveal needs its own
+   breakpoint rather than sharing the wordmark's) — the trigger's aria-label is
+   load-bearing at every width, not decorative, because below that width this
+   text is not what makes the control identifiable. */
+.pk-cat-trigger-label {
+  display: none;
+}
+
+.pk-cat-trigger-chevron {
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.pk-cat-trigger.is-open .pk-cat-trigger-chevron {
+  transform: rotate(180deg);
+}
+
+/* .pk-search-morph also carries its own margin-left: auto (needed on pages
+   with search but no category trigger, e.g. Detalle) — with BOTH elements
+   auto-margined in the same flex row, flexbox splits the free space evenly
+   between them instead of grouping them, landing the trigger mid-row with
+   a large gap before the search pill (measured: 303px at 1280px, not
+   "adjacent"). This general-sibling override neutralises the search pill's
+   own auto margin only when a .pk-cat-trigger actually precedes it in the
+   DOM, so Detalle (no trigger) is unaffected and CatalogLive's trigger
+   alone absorbs the row's free space, landing both as one right-anchored
+   group with .pk-nav-inner's ordinary gap between them.
+
+   SCOPED, not unconditional (debug search-right-align-mobile). The `~`
+   combinator matches on DOM TREE structure, but the grouping this rule hands
+   off to depends on BOX GENERATION — and `display: none` separates the two.
+   .pk-cat-trigger is display:none in the trailing max-width:480px block
+   (mobile shows the chip index row instead of the mega-menu) yet stays in the
+   DOM for the desktop panel's containing-block contract, so an unscoped
+   override still matched there: it stripped the pill's margin-left:auto while
+   the hidden trigger generated no box to push anything right. Measured at
+   390px, the closed pill sat at x=110 — 8px past the brand, the row's own gap
+   — with 222px of dead space before .pk-nav-inner's content edge at 376
+   (right-aligned means 0). The condition below is the EXACT complement of that
+   hide: `not all and (max-width: 480px)` rather than `min-width: 481px`, which
+   would leave a sub-pixel band (e.g. 480.5px) matching NEITHER rule, where the
+   trigger is visible and the 303px gap above returns. Both halves pin the same
+   480px literal deliberately — they must move together. */
+@media not all and (max-width: 480px) {
+  .pk-cat-trigger ~ .pk-search-morph {
+    margin-left: 0;
+  }
+}
+
+.pk-cat-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-base-100) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 60;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.pk-cat-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Anchored by `right` + an explicit `width` only — never an opposing
+   `left`/`inset` alongside it. Declaring both is exactly the
+   over-constrained-width bug sketch 020 Round 3 diagnosed: the box would
+   resolve start-anchored and visually detach from its trigger at the
+   header's right edge. `top` resolves from the row itself (100% plus a
+   small gap), never a hardcoded header height. */
+.pk-cat-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: var(--pk-gutter);
+  width: 30rem;
+  max-width: calc(100vw - 2 * var(--pk-gutter));
+  z-index: 62;
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
+  padding: 0.5rem 1rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard), visibility var(--duration-base) var(--ease-standard);
+}
+
+.pk-cat-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.pk-cat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* No per-item box, border or fill beyond the hairline divider — plain
+   typographic rows, per sketch 020 Round 2 item 5. */
+.pk-cat-item {
+  display: block;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--color-base-300);
+  text-decoration: none;
+  color: var(--color-base-content);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-cat-item:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+.pk-cat-item:hover,
+.pk-cat-item.is-active {
+  color: var(--color-primary);
+}
+
+.pk-cat-item strong {
+  display: block;
+  font-weight: 700;
+}
+
+.pk-cat-item span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-neutral);
 }
 
 /* Shared footer (SHELL-01, page-shell.md sketch 011) — one row, two
@@ -1090,7 +1459,14 @@ body.pk-sheet-open {
   align-items: center;
   justify-content: center;
   color: var(--color-neutral);
-  transition: all var(--duration-fast) var(--ease-standard);
+  /* Explicit properties, not `all` (debug mobile-search-expand-jump, audit
+     sweep). `transition: all` opts every animatable property in — including
+     geometry this element never intends to animate — which is how a layout
+     change elsewhere silently acquires a transition nobody designed. These
+     three are exactly what :hover below changes. */
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-footer-social a:hover {
@@ -1141,15 +1517,36 @@ body.pk-sheet-open {
    44px wide (min-w-11, the touch target added by quick task 260821-dah),
    so those numbers don't transfer and a re-derived value would be an
    unverified guess. */
+/* The active underline's insets are TOKENS, not literals, because the control
+   renders at two different box sizes (debug footer-theme-toggle-balance): 44px
+   in the mobile drawer, 28px in the footer. They are declared here and consumed
+   by the active-state `::after` rule below, so a scope that resizes the button
+   retunes the underline by re-declaring the token on `.pk-theme-toggle` — it
+   does NOT have to out-specify that rule. That matters: the active selectors
+   carry specificity (0,4,2) (two attributes + a class + an attribute + the
+   pseudo-element), so a plain `.pk-footer-theme .pk-theme-toggle button::after`
+   override is (0,2,2) and silently loses — measured losing exactly that way
+   before this indirection was added. Custom properties resolve at use time from
+   the ELEMENT they are inherited on, so specificity never enters into it. */
 .pk-theme-toggle {
   display: flex;
   align-items: center;
   gap: 2px;
+  --pk-toggle-underline-inset: 8px;
+  --pk-toggle-underline-bottom: 4px;
 }
 
 .pk-theme-toggle button {
   position: relative;
   color: color-mix(in srgb, var(--color-neutral) 75%, var(--color-base-200));
+  /* Was declared with NO transition at all (debug mobile-search-expand-jump,
+     audit sweep) — the one interactive control in this file whose hover and
+     active-state colour changes snapped, while every sibling control
+     (.pk-chip, .pk-cat-item, .pk-filter-trigger, the social links) already
+     eased at the hover tier. An absent declaration has no diff and no error,
+     which is exactly why it survived: the initial value `all 0s` is a valid
+     behaviour, just not the designed one. */
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-theme-toggle button > span {
@@ -1172,14 +1569,96 @@ body.pk-sheet-open {
 [data-theme-source="user"][data-theme="dark"] .pk-theme-toggle button[data-phx-theme="dark"]::after {
   content: "";
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 4px;
+  left: var(--pk-toggle-underline-inset);
+  right: var(--pk-toggle-underline-inset);
+  bottom: var(--pk-toggle-underline-bottom);
   height: 2px;
   border-radius: 9999px;
   background: color-mix(in srgb, var(--color-primary) 65%, var(--color-neutral));
 }
 
+/* Footer-scoped BOX sizing for the theme control (debug
+   footer-theme-toggle-balance). The subordination levers above are all INK —
+   colour fade, glyph size, active tint (sketch 018 / quick task 260824-7mt) —
+   and they were measured insufficient, because the channel that was actually
+   inverted is FOOTPRINT and nothing had ever touched it.
+
+   Measured on the running app, byte-identical at 481/768/1024/1280/1440px in
+   both themes: `.pk-footer-social` and `.pk-theme-toggle` were BOTH exactly
+   136.00px wide. The subordinate control claimed the same horizontal band as
+   the entire four-icon social row, and 175.06px (1.287x) once the "Tema" label
+   was counted. Per item that is 44x44 against the social links' 28x28 —
+   a 2.469x area ratio — and the 44px buttons were also the tallest objects in
+   the cluster, setting `.pk-footer-right`'s whole height while social sat at
+   28px. Because these buttons are BARE (sketch 014 winner D: no card, border or
+   background), those 136px carried only 3x14px of glyph: 30.88% ink fill
+   against the social row's 82.35%. Shrinking the glyph to 14px therefore made
+   the emptiness WORSE, not the control smaller — a sparser band, not a lighter
+   one, which is why that fix did not resolve the complaint.
+
+   28px is not a new number: it is `.pk-footer-social a`'s own value, five rules
+   up. The two icon rows in this cluster were being sized by two different
+   systems — social to a visual circle, theme to the 44px touch floor — and the
+   larger system had been applied to the LESS important concern. Sharing one
+   value is a consistency repair against the pattern already in this file, not
+   an invented design. Result: 3x28 + 2x2 gap = 88.00px, i.e. 0.647x the social
+   row, cluster height 44px -> 28px, ink fill 30.88% -> 47.73%.
+
+   `padding: 0` is load-bearing, not tidying. The buttons carry Tailwind's `p-2`
+   (8px), so 14px of glyph + 16px of padding = 30px would beat a 28px
+   `min-width` and the box would silently stay 30px.
+
+   Scoping to `.pk-footer-theme` is what keeps the 44px touch floor (locked by
+   quick task 260821-dah) intact where it is genuinely the touch surface: the
+   same `theme_toggle/1` renders in the mobile drawer at <=480px, and the drawer
+   must keep its 44px targets. Specificity (0,2,1) beats the `.min-w-11` /
+   `.min-h-11` / `.p-2` utilities (0,1,0) on the component, so those classes stay
+   on the markup — which also keeps `layouts_test.exs`'s component-level 44px
+   assertion honest rather than working around it.
+
+   This matches how Vercel's Geist ships the same control: its footer variant
+   shrinks the BOX (`data-[small]:h-6`, 24px) and keeps the glyph at 16px
+   (`size-4`). This repo had done the exact inverse. */
+.pk-footer-theme .pk-theme-toggle button {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+}
+
+/* The active underline's insets were explicitly tuned for a 44px button (the
+   old comment above says so outright), so they do not transfer to a 28px one.
+   Measured at 8px on the smaller box: a 12px rule under a 14px glyph — 2px
+   NARROWER than the thing it marks, sitting 1px below it. Both numbers are
+   re-derived from the new geometry rather than guessed:
+
+     inset 5px  -> 28 - 5 - 5 = 18px of rule under a 14px glyph, so it overhangs
+                   by 2px per side and reads as marking the glyph. It also
+                   leaves 5 + 2 (the toggle's gap) + 5 = 12px of clear space
+                   between adjacent underlines, so they cannot read as merged.
+     bottom 1px -> the glyph is 14px centred in 28px, so its bottom edge is at
+                   y=21 and the 2px rule occupies y=25-27: a 4px gap. At 44px
+                   that gap was 9px, and the 28px box only has 7px of slack
+                   below the glyph in total, so 4px is the closest honest
+                   equivalent rather than a proportional 5.7px that would not
+                   leave room for the rule itself.
+
+   Set on `.pk-theme-toggle` (not on the button) because that is the element the
+   tokens are declared on — re-declaring them at (0,2,0) beats the base (0,1,0)
+   by ordinary inheritance, with no need to out-specify the (0,4,2) active-state
+   rule that consumes them. */
+.pk-footer-theme .pk-theme-toggle {
+  --pk-toggle-underline-inset: 5px;
+  --pk-toggle-underline-bottom: 1px;
+}
+
+/* Now inert in the footer: the element carries `sr-only` alongside this class
+   (debug footer-theme-toggle-balance), so these visual declarations no longer
+   render anywhere. Kept, not deleted, because the sr-only conversion reverses a
+   documented decision (01.1-08-PLAN.md:429-433) and restoring a visible label
+   should stay a one-attribute change. The drawer's own label span,
+   `.pk-drawer-utility-label`, is now ALSO `sr-only` for the same reason (quick
+   task 260824-q8z, applying sketch 021's own Round-6 conclusion) — both label
+   spans are kept inert rather than deleted, not just this one. */
 .pk-footer-toggle-tag {
   font-size: 0.75rem;
   color: var(--color-neutral);
@@ -1313,7 +1792,19 @@ body.pk-sheet-open {
   overflow-y: auto;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform var(--duration-slow) var(--ease-out-soft);
+  /* --ease-standard, not --ease-out-soft — same reasoning as .pk-sheet, see the
+     long note on that rule. This panel travels its own width (82%, capped at
+     20rem = ~320px at 390px wide), and --ease-out-soft (easeOutExpo) puts 32.7%
+     of that trip into the first 16.7ms frame and 80% of it inside 67ms, leaving
+     ~210ms of sub-10px/frame crawl that reads as "popped, then nothing".
+     --ease-standard over the identical travel moves 2.7px in frame one, peaks at
+     50px, and is still only 80% done at 150ms — motion spread over all 17 frames
+     instead of spent in four. Unlike .pk-sheet, the duration here was already
+     tokenised correctly; only the curve was wrong, so only the curve changed.
+     Amplitude decides the curve: --ease-out-soft stays correct on the small
+     amplitudes sketch 006 actually validated it against (~3px hover-lift,
+     row-scroll), so don't "restore consistency" by putting it back here. */
+  transition: transform var(--duration-slow) var(--ease-standard);
 }
 
 .pk-drawer.is-open {
@@ -1403,10 +1894,17 @@ body.pk-sheet-open {
   margin-block: 0.75rem;
 }
 
+/* Centered, not space-between (quick task 260824-q8z): the theme control is
+   the drawer's FOOTER — a small, quiet, self-contained strip trailing the
+   social row's CONTENT, not another edge-to-edge list row. This is sketch
+   021's own Round-6 conclusion (E1 — Icon-Only, Centered), reached
+   independently over 6 rounds of the same developer's feedback and landing
+   on the same answer as the desktop footer's already-shipped debug session
+   (footer-theme-toggle-balance). */
 .pk-drawer-utility {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding-block: 0.5rem;
 }
 
@@ -1419,19 +1917,22 @@ body.pk-sheet-open {
 .pk-drawer-social {
   display: flex;
   gap: 0.5rem;
-  padding-top: 0.75rem;
+  justify-content: space-between;
 }
 
 .pk-drawer-social a {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-base-200);
-  color: var(--color-neutral);
-  transition: all var(--duration-fast) var(--ease-standard);
+  color: var(--color-base-content);
+  /* Explicit properties, not `all` — same reasoning as .pk-footer-social a.
+     :hover below changes exactly these two. */
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-drawer-social a:hover {
@@ -1580,14 +2081,117 @@ body.pk-drawer-open {
   background: var(--color-primary);
 }
 
+/* Mobile category chip row wrapper (sketch 020 Round 2): exists solely so
+   the edge-fade gradient (mirroring .pk-rail-wrap's ::before/::after pair)
+   stays put while the chips scroll past it — the fade has to live on this
+   static parent, not on .pk-chip-nav, which is the element that actually
+   scrolls. Hidden by default; the narrow-viewport media block (below) is
+   what reveals it. Cannot be `display: contents` — that would discard the
+   `position: relative` the fade pseudo-elements depend on.
+
+   The band is on the PAGE surface (base-100), NOT the header's (base-200) —
+   this is load-bearing, not a palette preference (debug
+   search-right-align-mobile, cycle 2). This row and .pk-nav are two
+   full-bleed bands stacked flush against each other — they were both inside
+   the sticky #app-header when this was diagnosed; cycle 5 later moved this one
+   out to #app-subnav, which changes nothing about the fill argument below (the
+   two bands are still adjacent at rest, which is all the argument needs).
+   Shipped on base-200 they were BYTE-IDENTICAL fills (measured at 390px: y=0..63
+   #F3ECFA, y=64 #E3D3F0, y=65..108 #F3ECFA), leaving the entire boundary to
+   that 1px base-300 hairline — 1.226:1 in light, 1.130:1 in dark, roughly
+   2.5x under the 3:1 non-text floor — so the 64px header row and the 45px
+   chip row read as one continuous 109px block. That is precisely the shape
+   the theme block's own MEASURED CONSTRAINTS comment forbids: never two
+   sub-3:1 colours as adjacent surfaces or as two levels of one hierarchy.
+   A stronger LINE cannot fix it — no pair of this app's surface tokens
+   clears 3:1 (base-200/300 1.226:1 light / 1.130:1 dark; base-200/100
+   1.415:1 / 1.086:1; the existing 8% base-content shadow computes 1.170:1),
+   and a line that did would need ~50% base-content, a hard rule nothing else
+   here uses. So the boundary is carried by a FILL STEP over the band's full
+   45px instead, which is also what this row semantically is: a page-level
+   index, not header chrome. Matches sketch 001's finding that a plain
+   surface + thin divider beats a light-lavender panel, and restores the
+   relationship production shipped before c61e6a6.
+
+   The two fades below MUST track this fill — they are the same surface
+   dissolving to transparent, so a mismatch renders as a coloured smudge at
+   each end of the row. Same base-100 the .pk-rail-wrap fades already use.
+
+   The vertical padding is load-bearing too, and for a different reason than
+   the fill (debug search-right-align-mobile, cycle 4). Shipped, this band had
+   NONE: measured at 390px the wrap was y=64..109 and the 44px chips were
+   y=65..109, so the pills filled the band edge to edge — touching the header's
+   1px rule above and the line where page content scrolls under below. Zero
+   whitespace anywhere in the resulting 109px block, which is why cycle 2's
+   fill step alone was rejected on a real device: at 0px proximity, no fill
+   step this app's tokens can produce (1.415:1 light, 1.086:1 dark — the whole
+   ladder) separates two bands. Whitespace is not bounded by the token ladder;
+   that is why it works where colour could not.
+
+   That flush band was a PORT REGRESSION, not a design choice. Sketch 020's
+   .index-row — the direct source of .pk-chip-nav — declares
+   `padding: var(--space-2) var(--space-4)` (8px vertical). 260824-jkc
+   correctly replaced the HORIZONTAL half with .pk-chip-spacer flex items (the
+   documented iOS Safari trailing-padding clip), but dropped the vertical half
+   with it, which that fix never required — the iOS clip only affects the
+   scroll axis. It left the chip row as the only horizontal scroller in this
+   file with no vertical padding; .pk-rail carries `padding: 8px 0`.
+
+   It lives on the WRAP, not on .pk-chip-nav where the sketch had it, for two
+   reasons: the fades are positioned against the wrap (top/bottom: 0), so they
+   keep spanning the band's full height for free; and this layer has a written
+   rule against padding on a horizontally-scrolling element, so `padding` back
+   on .pk-chip-nav would read as that bug and get "fixed" to 0 again.
+
+   0.75rem, not the sketch's 8px: 8px is this app's INTERIOR row rhythm
+   (.pk-rail), whereas this gap separates two levels of one hierarchy — and two
+   sub-perceptible fixes were already rejected here before this one landed.
+   It cost 24px of PINNED header height while the row was still inside the
+   sticky header (109px -> 133px), which was the accepted price of the
+   whitespace. Cycle 5 refunded that cost rather than the whitespace: the row is
+   now in normal flow (#app-subnav), so these 24px are ordinary page pixels that
+   scroll away, not viewport permanently spent. Keep the padding — the user
+   confirmed this boundary reads correctly, and cycles 2-4 established that a
+   zero gap here reads as "glued to the header". When trimming this band's
+   vertical budget, trim <main>'s padding, not this. */
+.pk-chip-nav-wrap {
+  display: none;
+  position: relative;
+  padding: 0.75rem 0;
+  background: var(--color-base-100);
+  border-top: 1px solid var(--color-base-300);
+}
+
+.pk-chip-nav-wrap::before,
+.pk-chip-nav-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.pk-chip-nav-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-base-100), transparent);
+}
+
+.pk-chip-nav-wrap::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--color-base-100), transparent);
+}
+
 /* Mobile category chip row: a second navigation dimension replacing the
    nav links below the narrow-viewport breakpoint. No horizontal padding
    of its own — spacer flex items reserve the end margins instead, since
    iOS Safari drops the TRAILING padding of a horizontally-scrolling
-   element once scrolled to its end. Hidden by default; the narrow-
-   viewport media block (below) is what reveals it. */
+   element once scrolled to its end. Unconditionally flex now — the
+   viewport swap moved onto .pk-chip-nav-wrap above, which is what the
+   narrow-viewport media block (below) toggles. */
 .pk-chip-nav {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
   overflow-x: auto;
@@ -1602,6 +2206,10 @@ body.pk-drawer-open {
   flex: 0 0 var(--pk-gutter);
 }
 
+/* Bare outline at rest (sketch 020 Round 2 item 1) — the same
+   outline-at-rest logic filter_modal.ex's chip_class/1 already ships for
+   this app's other chip family, so this stops reading as a separate
+   component with its own rules. */
 .pk-chip {
   flex: 0 0 auto;
   display: inline-flex;
@@ -1609,18 +2217,34 @@ body.pk-drawer-open {
   min-height: 44px;
   padding: 0 16px;
   border: 1px solid var(--color-base-300);
-  background: var(--color-base-100);
-  color: var(--color-base-content);
+  background: transparent;
+  color: var(--color-neutral);
   font-weight: 600;
   font-size: 0.75rem;
   white-space: nowrap;
   text-decoration: none;
   border-radius: 9999px;
+  transition: color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
 }
 
+.pk-chip:hover,
+.pk-chip:focus-visible {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* A soft tint, not the solid primary fill this used to render (sketch 020
+   Round 2 item 1) — "you are here" reads as a tint. The -content pairing
+   (not the sketch's literal --color-primary text) is deliberate: the two
+   resolve identically in the light theme, and only the -content pairing
+   clears the contrast floor against the accent surface in the dark theme.
+   No promoted/hero variant exists for any single chip (item 2) — every
+   chip carries this exact rule set at rest. */
 .pk-chip.is-active {
-  background: var(--color-primary);
-  color: var(--color-primary-content);
+  background: var(--color-accent);
+  color: var(--color-accent-content);
   border-color: var(--color-primary);
 }
 
@@ -1717,7 +2341,20 @@ body.pk-drawer-open {
   gap: 0.75rem;
   padding: 0.75rem var(--pk-gutter);
   background: var(--color-base-200);
-  transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
+  /* --ease-standard, not --ease-out-soft — same amplitude reasoning as
+     .pk-sheet/.pk-drawer, see the long note on .pk-sheet. The subtlety here is
+     that ONE rule drives TWO states with very different travels, so it is
+     simultaneously safe and unsafe depending on which class fires:
+       .is-hidden  translateY(12%)  =  8.16px -> measured first frame 3.8px  (fine)
+       .is-parked  translateY(100%) = 68.00px -> measured first frame 31.8px (a pop)
+     --duration-base puts 46.7% of the travel in the first frame, so the safe
+     ceiling at this duration is ~51px of travel and .is-parked is over it.
+     --ease-standard moves 1.5px in frame one and peaks at 16.5px instead.
+     Measuring only the .is-hidden state would have cleared this rule falsely.
+     Keep this in lockstep with body.pk-has-cta-bar below: the two animate
+     together on the same footerReached flag, and giving them different curves
+     desyncs the bar from the page padding it is clearing. */
+  transition: transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 
 .pk-mobile-cta-bar.is-hidden {
@@ -1741,7 +2378,16 @@ body.pk-drawer-open {
    the two rules have equal specificity and resolve by source order. */
 body.pk-has-cta-bar {
   padding-bottom: 9.25rem;
-  transition: padding-bottom var(--duration-base) var(--ease-out-soft);
+  /* --ease-standard, not --ease-out-soft. This is the largest travel of the
+     whole sweep: 9.25rem/148px collapsing to 0, which at --duration-base put
+     46.7% = a measured 68.9px (3/3 reps, 69.1px predicted) into the first
+     frame — the footer leapt two thirds of the way up in one frame and then
+     crawled. --ease-standard moves 3.2px in frame one and peaks at 35.8px.
+     Must stay on the SAME duration and curve as .pk-mobile-cta-bar above:
+     both fire on the same footerReached flag, and this padding is precisely
+     the clearance the bar occupies, so any desync between them shows up as
+     the footer and the bar sliding at different rates. */
+  transition: padding-bottom var(--duration-base) var(--ease-standard);
 }
 
 body.pk-cta-parked {
@@ -1899,25 +2545,86 @@ body.pk-cta-parked {
   }
 }
 
-/* Header wordmark reveal — the other half of the `.pk-nav-inner
-   .pk-brand-wordmark` base rule far above, positioned here (after every base
-   rule it overrides) for the same ordering reason spelled out on the block
-   directly above.
+/* ─── HEADER ROW CAPACITY: the two reveal breakpoints ─────────────────────
+   Both blocks below reveal a piece of header content, so both are CLIFFS in
+   the row's width demand — the revealed item's whole width appears in a single
+   pixel of viewport. `.pk-search-morph.is-open` is the row's only yielder
+   (`min-width: 0; flex-shrink: 1`, while the brand and nav links are pinned
+   `flex-shrink: 0` by debug header-height-wordmark-wrap and the trigger is
+   `flex: 0 0 auto`), so 100% of every cliff lands on the search box, with no
+   floor. Both widths are therefore DERIVED FROM THE ROW'S OWN ARITHMETIC,
+   never from the nearest convenient breakpoint.
 
-   Deliberately reuses 48rem instead of introducing a new breakpoint. The row
-   needs 808.3px to seat brand + nav links + a full 17.5rem pill, and 48rem is
-   the widest existing breakpoint at or below that; the 40.3px difference is
-   given back by the pill's own shrink guard, which lands it at 239.7px at
-   768px — still above the 220px minimum the search box carried before
-   01.1-08. 640px/sm was measured and rejected: it leaves the pill 111.7px,
-   narrower than its own 44px toggle plus 44px close control together.
+   The shared inventory — max-content widths measured live on the catalog
+   header (debug search-pill-tablet-squeeze, CDP sweep over 24 widths):
 
-   This is a SEPARATE concern from the detail-layout block above that merely
-   shares the same width. Do not merge them — retuning the detail masthead
-   would then silently change the header. */
-@media (min-width: 48rem) {
+     isologo alone ........  36px   brand lockup (isologo+8+wordmark 206) 250px
+     nav links ............ 166.3px  cat-trigger, icon only .............. 44px
+     cat-trigger label .... 154.7px  open pill (17.5rem) ................ 280px
+     row gap (.pk-nav-inner) 24px    gutters (2 x --pk-gutter) ........... 64px
+
+   Each requirement is `content + gaps + gutters + a FULL 280px pill`, and the
+   declared breakpoint is the smallest whole rem at least 1rem above it. That
+   1rem is deliberate headroom, not slack: both sums depend on RENDERED TEXT
+   (the tagline, the link labels, the trigger's Spanish label), so they drift
+   with copy and with font metrics headless Chrome does not reproduce exactly,
+   and a reveal that lands a few px short does not degrade gracefully — it
+   drops the entire revealed item's width onto the pill at once.
+   header_capacity_test.exs RECOMPUTES both sums from this stylesheet's own
+   declared values instead of pinning these literals, and fails with the new
+   number if the copy moves.
+
+   THREE separate blocks (this pair plus the detail-layout block above), never
+   merged even where a width would coincide: retuning the detail masthead must
+   not silently move the header, and the two reveals are independent decisions
+   with independent arithmetic. */
+
+/* Wordmark reveal — the other half of the `.pk-nav-inner .pk-brand-wordmark`
+   base rule far above, positioned here (after every base rule it overrides)
+   for the ordering reason spelled out on the detail-layout block above.
+
+   Requirement: 250 + 24 + 166.3 + 24 + 44 + 24 + 280 + 64 = 876.3px.
+   Declared:    56rem / 896px.
+
+   WAS 48rem/768px, and that number was wrong by a provable 68px (debug
+   search-pill-tablet-squeeze). Its sum read `250 + 24 + 166.3 + 24 + 280 + 64
+   = 808.3` — three items and two gaps. It OMITTED `.pk-cat-trigger` entirely:
+   both the control's 44px and its 24px gap. The comment predicted the pill
+   would land at 239.7px at 768px; measured, it landed at 171.7px — short by
+   exactly the omitted 68px. The breakpoint was derived from a row inventory
+   that was missing a row item. 640px/sm was rejected when this rule was
+   written and stays rejected: it leaves the pill 111.7px, narrower than its
+   own 44px toggle plus 44px close control together. */
+@media (min-width: 56rem) {
   .pk-nav-inner .pk-brand-wordmark {
     display: flex;
+  }
+}
+
+/* Cat-trigger label reveal. Requirement: the wordmark sum above plus this
+   label's own 154.7px = 1031.0px. Declared: 66rem / 1056px.
+
+   WAS 50rem/800px, and that block's own comment recorded, without recognising
+   it, the reason it had to move. Verbatim: "measured live at 48rem/768px with
+   the label forced visible, the closed row overflowed the viewport by 10px
+   (documentElement.scrollWidth 763 vs clientWidth 753) and the open search
+   pill was squeezed down to a functionally useless 2px ... Measured the real
+   threshold by bisection: overflow persisted through 775px and cleared at
+   780px."
+
+   That is THIS defect, already seen once at 2px. But the bisection ran on the
+   CLOSED row's `scrollWidth` alone, and the open pill was never re-measured at
+   the breakpoint it moved to — so 50rem RELOCATED the cliff from 768px to
+   800px rather than removing it. Measured after that change: 202.7px of pill
+   at 799px, 49px at 800px — five pixels wider than the closed icon it morphed
+   from. One extra pixel of viewport destroyed the search box.
+
+   The open state is the binding constraint and it is 251px wider than the
+   closed one, so no amount of bisecting on the closed row can find this
+   number. Compute it, don't probe for it. */
+@media (min-width: 66rem) {
+  .pk-cat-trigger-label {
+    display: inline;
   }
 }
 
@@ -1951,6 +2658,109 @@ body.pk-cta-parked {
 .pk-skel {
   background: var(--color-base-300);
   border-radius: var(--radius-box);
+}
+
+/* Background dim/blur while the filter modal is open (sketch 019, quick
+   task 260824-eqc): the catalog grid reads as "paused/backgrounded while
+   you focus on filtering" instead of "something happening independently
+   while a dialog floats on top." `filter: blur()/saturate()/brightness()`
+   has no daisyUI/Tailwind utility equivalent without an arbitrary value
+   (banned by ui-design-system), which is why it lives in this block.
+   `.is-dimmed` is driven entirely by the existing `@filters_open` assign
+   in `CatalogLive.Index` — no new hook, no new assign. */
+.pk-dimmable {
+  transition: filter var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-dimmable.is-dimmed {
+  filter: blur(3px) saturate(0.7) brightness(0.94);
+  pointer-events: none;
+}
+
+/* ─── HEADER ROW CAPACITY: the band that cannot fit at all ────────────────
+   The two reveal breakpoints above give the row a full 280px pill everywhere
+   the row can HOLD one. Below 662.3px it cannot, at any breakpoint setting:
+
+     36 (isologo, wordmark already hidden here) + 24 + 166.3 (nav links)
+        + 24 + 44 (icon-only trigger) + 24 + 280 (open pill) + 64 (gutters)
+        = 662.3px
+
+   Nothing above may be retuned to fix that — the two obvious moves are both
+   pre-blocked by resolved sessions. Letting the brand or the nav links shrink
+   regresses header-height-wordmark-wrap (they reflow, the row grows 65 -> 129px
+   and --pk-header-h republishes the wrong value to every sticky element).
+   Giving the open pill a min-width floor regresses footer-overflow-tablet-width
+   (the row has no slack to give, so the floor becomes horizontal overflow) —
+   that is the mirror image of search-expand-header-overlap's fix, which added
+   `min-width: 0; flex-shrink: 1` here precisely to stop that overflow.
+
+   So in this band the pill stops competing for the row and OVERLAYS it, which
+   is the treatment <=480px has always used — the same mechanism, applied at the
+   width the arithmetic actually calls for rather than at the width someone
+   happened to test. The row is already dimmed to 0.35 while the search is open
+   (`.pk-nav-inner.is-search-open` far above), so what the pill covers reads as
+   backgrounded rather than clipped.
+
+   662px, with NO headroom added, deliberately unlike the two reveals above.
+   Those are cliffs; this is a ramp. One pixel above this ceiling the in-flow
+   pill is 280px, then 279, then 278 — so if the copy drifts a few px, a few px
+   of input width is the entire cost. Adding headroom here would instead push
+   the overlay into widths that fit, covering the category glyph for no reason.
+
+   MOTION (the constraint that dictates the shape of these rules). The morph is
+   absolute in BOTH states, exactly as in the <=480px block below, so `.is-open`
+   changes only an interpolable `width` — 44px to the base rule's own 17.5rem,
+   which now renders in full because an out-of-flow box is not flex-shrunk. Do
+   NOT "simplify" this by moving `position` onto `.is-open`: `position` is not
+   an animatable property, and flipping it on the class toggle is the C1 trap
+   debug mobile-search-expand-jump measured at 444px of horizontal overflow on
+   every COLLAPSE while passing every expand-direction check. The right edge is
+   `var(--pk-gutter)` in both states by declaration, so the closed-vs-open
+   right-edge invariant holds by construction instead of by compensation.
+
+   `max-width: 662px` OVERLAPS the <=480px block below rather than starting at
+   `min-width: 481px`, and that is the debug search-right-align-mobile lesson
+   applied: a `min-width: N+1` complement leaves a sub-pixel band (480.5px)
+   matching NEITHER rule, and this particular gap would render the squeezed
+   pill the whole session is about. The overlap is resolved by SOURCE ORDER,
+   which is why the selector is written `:where()`-wrapped: it holds the rule at
+   `.pk-search-morph`'s own 0-1-0 specificity so the <=480px block below simply
+   wins where both match. Written as a plain `.pk-nav-links ~ .pk-search-morph`
+   (0-2-0) it would silently outrank that block on the catalog page and freeze
+   the mobile overlay at these values — a rule two thousand lines away quietly
+   deciding what phones get. */
+@media (max-width: 662px) {
+  /* Scoped to headers carrying `.pk-nav-links`, which is the catalog index in
+     both its filter states and nothing else. NOT unscoped: Detalle's
+     `.pk-nav-crumb` is `flex: 1`, so taking the morph out of flow there would
+     let the crumb grow into the vacated 68px and run the game title under the
+     search icon. Detalle was measured at 10 widths and is the one surface the
+     defect never touched (pill = 280px everywhere, because the crumb yields
+     instead of the pill); it must not be dragged into the fix. Quiénes Somos
+     renders no search slot at all, so it cannot match either way. */
+  .pk-search-morph:where(.pk-nav-links ~ *) {
+    position: absolute;
+    top: 0;
+    right: var(--pk-gutter);
+    left: auto;
+    height: 100%;
+  }
+
+  /* Reserving the footprint the morph just stopped occupying. Out of flow it
+     no longer consumes its 44px plus the row's 24px gap, so `.pk-cat-trigger`'s
+     own `margin-left: auto` would slide the trigger 68px right — landing it
+     directly underneath the closed search icon. This keeps the CLOSED row
+     byte-identical to what it renders today, which is the property that makes
+     this fix invisible until you open the search.
+
+     On `.pk-cat-trigger`, not on `.pk-nav-inner`'s padding: the comment on
+     `--pk-gutter` at the top of this file makes `.pk-gutter` the only rule
+     allowed to set horizontal padding on an aligned surface, and that is what
+     keeps the header and the row content from drifting to two spacing values.
+     Inert below 480px, where the trigger is `display: none`. */
+  .pk-nav-links ~ .pk-cat-trigger {
+    margin-right: calc(44px + 1.5rem);
+  }
 }
 
 /* Narrow-viewport density and navigation switch (sketch 001, variant D):
@@ -2007,8 +2817,12 @@ body.pk-cta-parked {
     display: none;
   }
 
-  .pk-chip-nav {
-    display: flex;
+  .pk-chip-nav-wrap {
+    display: block;
+  }
+
+  .pk-cat-trigger {
+    display: none;
   }
 
   .pk-nav-hamburger {
@@ -2036,24 +2850,74 @@ body.pk-cta-parked {
     gap: 0.5rem;
   }
 
-  /* Mobile overlay (sketch 017 Round 5's fix for the flat hard-edged slab):
-     the morph becomes a full-width sheet over the header instead of a
-     leftward-growing pill, with a rounded bottom edge and a soft shadow.
-     The morph owns the geometry now — no separate .pk-nav-search override
-     is left behind competing with it. */
-  .pk-search-morph.is-open {
+  /* Mobile overlay (quick task 260824-hu1, superseding sketch 017 Round 5's
+     full-bleed sheet): the open box is a gutter-aligned overlay pill, not a
+     slab that steps over the row's own alignment line. Its horizontal inset
+     is expressed through the shared --pk-gutter token (retuned above), so its
+     own background/border/shadow land on the same content line the brand
+     mark, chip row, catalog grid and footer already share. The base rule's
+     fully-rounded pill radius is left untouched (no override here), and no
+     horizontal padding is declared on this box: the inset alone owns the
+     horizontal space now, so a second declaration would double-apply it.
+
+     MOTION (debug mobile-search-expand-jump). This rule used to read
+     `position: absolute; inset: 0 var(--pk-gutter); width: auto` and the pill
+     SNAPPED open and shut — 318px of travel in a single painted frame, both
+     directions, measured. It had no animatable channel at all:
+
+       (1) `width: 44px -> auto` is NOT INTERPOLABLE, so the base rule's
+           `transition: width ...` never even started — `transitionrun` for
+           `width` never fired on mobile, while the same harness saw it fire
+           normally at 1280px. This is an ABSENCE of motion, not a
+           front-loaded curve (contrast .pk-sheet/.pk-drawer above, whose
+           transitions DID run and were merely badly distributed).
+       (2) `position` is not an animatable property AT ALL, and it was being
+           changed by the same class toggle. This one is invisible on expand
+           and bites on COLLAPSE: `.is-open` leaves at t=0, so the box drops
+           back into the flex row still ~362px wide, and since `.is-open`'s
+           `flex-shrink: 1` left with it the base `flex: 0 0 auto` refuses to
+           give — measured documentElement.scrollWidth 444px against a 390px
+           viewport, i.e. a horizontal scrollbar flashing for 280ms on every
+           close.
+
+     So the morph is now ABSOLUTE IN BOTH STATES and the only thing `.is-open`
+     changes is an interpolable width. That is safe because the two states'
+     boxes were already measured identical everywhere except the left edge:
+     right edge 376px and vertical box (y 9.5, h 44) are the same open and
+     shut, so pinning them here removes the discontinuity by construction
+     rather than compensating for it. Taking the collapsed icon out of flow
+     shifts nothing — `margin-left: auto` was already absorbing all the free
+     space (hamburger x:14 w:44 and brand x:66 w:36 measured byte-identical
+     before/after), the 44px hamburger holds the row's height so --pk-header-h
+     stays 64px, and `.pk-nav-crumb` on the Detalle page cannot expand into
+     the vacated slot because `flex: 0 1 auto` has flex-grow 0 (measured
+     right:181.1 w:71.1 unchanged).
+
+     DON'T "simplify" this back to a single `.is-open` rule that also flips
+     `position` — that is the C1 fix, it passes every check on EXPAND and
+     regresses the collapse into horizontal overflow, the class
+     footer_overflow_test.exs already guards. And don't reach for
+     `interpolate-size: allow-keywords` to make `auto` animate: it is
+     Chrome-only, so on iOS Safari — this project's primary surface — it would
+     silently do nothing, and it does not address (2) either way. */
+  .pk-search-morph {
     position: absolute;
-    inset: 0;
-    width: auto;
+    top: 0;
+    right: var(--pk-gutter);
+    left: auto;
     height: 100%;
-    z-index: 5;
-    border-radius: 0 0 var(--radius-box) var(--radius-box);
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
-    padding-inline: var(--pk-gutter);
   }
 
-  .pk-search-morph.is-open .pk-search-morph-toggle {
-    padding-left: 0;
+  .pk-search-morph.is-open {
+    /* calc(), not `auto`: this is the whole fix. 100% resolves against
+       .pk-nav-inner's padding box (it is position: relative, so it is this
+       box's containing block), giving 390 - 2*14 = 362px at a 390px viewport
+       — the identical width `auto` produced, but as a length the browser can
+       interpolate. Measured first painted frame 2.6px = 0.8% of the 318px
+       travel, spread over 16 frames, matching the 1280px arm's 0.8% exactly. */
+    width: calc(100% - 2 * var(--pk-gutter));
+    z-index: 5;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
   }
 
   .pk-footer-row,
@@ -2163,6 +3027,80 @@ body.pk-cta-parked {
 
   .pk-spec-list {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ─── REDUCED-MOTION GUARD ────────────────────────────────────────────────
+   Honours a visitor's `prefers-reduced-motion: reduce` preference across
+   every animated surface in the app — the ones that exist today and the ones
+   nobody has written yet.
+
+   Replaces a hand-maintained 14-selector list that used to sit mid-file
+   (debug session reduced-motion-order-bug). That list was silently inert for
+   8 of its 14 selectors. A media query contributes NO specificity, and every
+   rule in this stylesheet is unlayered, so plain source order decided the
+   winner: any selector whose own `transition:` SHORTHAND appeared further
+   down the file re-expanded transition-duration back to full, because a
+   shorthand resets every longhand it owns. Measured in Chrome under
+   --force-prefers-reduced-motion, the split was perfect and had zero
+   exceptions — the 6 selectors declared above the old block reported 0.001s,
+   the 8 declared below it still reported their full 0.18-0.28s. Relocating
+   the block was verified to fix all 14, which is precisely why relocating it
+   was NOT the fix chosen: it cures the symptom and leaves the trap armed for
+   the next rule anyone appends.
+
+   TWO independent conditions had to hold to produce that bug. This rule
+   breaks both, which is what makes it structural rather than a patch:
+
+     * `!important` makes the guard POSITION-INDEPENDENT. An important
+       declaration outranks every normal one regardless of source order, so
+       the guard can no longer lose a placement race. A user's motion
+       preference outranking author styling is the textbook case the cascade
+       reserves !important for. This is the only !important in the file —
+       deliberate, not drift; deleting it silently restores the original bug.
+
+     * `*` makes the guard ENUMERATION-INDEPENDENT. The old list could only
+       protect surfaces someone remembered to add to it, so every newly
+       authored animation was unprotected until a human noticed. There is now
+       no list to forget to update.
+
+   Corollary worth stating plainly: a surface can no longer opt out by being
+   declared later or by raising its specificity. That is the intent. If some
+   future surface genuinely needs motion under reduced-motion (an animation
+   that conveys information with no static equivalent), it must opt out
+   explicitly and visibly here, with a reason.
+
+   1ms rather than 0s: a zero-duration transition generates no transition at
+   all, so `transitionend` never fires. Nothing in assets/js or the colocated
+   hooks listens for that event today (verified), but 1ms keeps the event
+   contract intact for whatever does next, and it preserves the value the
+   previous block already used.
+
+   animation-iteration-count is pinned to 1 because an `infinite` animation
+   left at a 1ms duration would spin roughly a thousand iterations a second —
+   dramatically worse than the motion being suppressed. .pk-scroll-top's
+   bounce is infinite (already behind a no-preference query, so this is belt
+   and braces).
+
+   Delays are zeroed because the app's one transition-delay stages the header
+   search input's fade behind the pill's widening. With the widening collapsed
+   to 1ms there is nothing left to wait for, so the delay would only add dead
+   time before an instant change.
+
+   scroll-behavior is redundant today — html's smooth scroll already sits
+   behind a no-preference query (debug session category-anchor-scroll) — and
+   is included so a future ungated `scroll-behavior: smooth` cannot reopen
+   this same class of defect. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
   }
 }
 

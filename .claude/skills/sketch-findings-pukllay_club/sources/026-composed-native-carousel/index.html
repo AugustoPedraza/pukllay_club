@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 026 — Composed Native Carousel</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font-sans); background: var(--color-bg); color: var(--color-text); }
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  .intro { max-width: 760px; margin: var(--space-6) auto var(--space-2); padding: 0 var(--space-6); }
+  .intro h1 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0 0 var(--space-2); }
+  .intro p { color: var(--color-text-muted); line-height: 1.6; font-size: var(--text-sm); margin: 0 0 var(--space-2); }
+  .compose-list { background: var(--color-accent-bg); color: var(--color-accent-text); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-sm); margin: 0 0 var(--space-2); }
+  .compose-list ul { margin: var(--space-2) 0 0; padding-left: 1.2em; line-height: 1.7; }
+  .intro .tip { border: 1px dashed var(--color-border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: var(--text-xs); color: var(--color-text-muted); }
+
+  .vp-controls { display: flex; gap: 8px; justify-content: center; align-items: center; padding: var(--space-4) var(--space-4) 0; flex-wrap: wrap; }
+  .vp-btn { font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; }
+  .vp-btn.is-active { background: var(--color-accent-bg); color: var(--color-accent-text); border-color: var(--color-accent-text); }
+  .touch-sim { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); border: 1px dashed var(--color-border); padding: 5px 12px; border-radius: var(--radius-full); cursor: pointer; }
+  .touch-sim input { accent-color: var(--color-primary); }
+  .vp-frame { max-width: 1280px; margin: var(--space-3) auto var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; transition: max-width 0.25s ease; box-shadow: var(--shadow-sm); }
+  .vp-frame.is-mobile { max-width: 390px; }
+  .vp-frame.is-tablet { max-width: 768px; }
+  .vp-label { text-align: center; font-size: 11px; color: var(--color-text-muted); margin: 0 0 var(--space-4); }
+
+  /* ============ shared shelf/rail/card mechanics (001-D / 020) ============ */
+  main.catalog-main { padding: var(--space-3) 0 var(--space-8); }
+  .row-header { padding: 0 var(--space-4); display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+  .row-heading { font-family: var(--font-display); font-size: var(--text-xl); letter-spacing: 0.01em; margin: 0; color: var(--color-text); }
+  .row-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); margin: 2px 0 0; }
+  .filter-btn { font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-primary); background: var(--color-bg); color: var(--color-primary); cursor: pointer; transition: all 0.15s ease; }
+  .filter-btn:hover { background: var(--color-accent-bg); }
+  .filter-btn:disabled { opacity: 0.5; cursor: default; }
+  section.shelf { margin-bottom: var(--space-6); }
+  .rail-wrap { position: relative; padding: 0 var(--space-4); }
+  .rail-wrap::before, .rail-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 32px; z-index: 4; pointer-events: none; }
+  .rail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  .rail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+
+  /* 023-B: free momentum, no scroll-snap-type, overscroll-behavior-x:
+     contain (fixes 001's flagged diagonal-swipe chaining risk). */
+  .rail { display: flex; overflow-x: auto; overscroll-behavior-x: contain; scroll-behavior: auto; scrollbar-width: none; padding: var(--space-2) 0 var(--space-3); gap: var(--space-3); min-height: 178px; }
+  .rail::-webkit-scrollbar { display: none; }
+  .card { flex: 0 0 auto; width: 150px; cursor: pointer; border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .card:hover { transform: translateY(-3px); }
+  .poster-art { aspect-ratio: 1 / 1.05; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: rgba(255,255,255,0.85); }
+  .card .cap { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .card .cap h4 { margin: 0; font-size: var(--text-sm); font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .p1 { background: linear-gradient(135deg,#3D096D,#7E4CA5); }
+  .p2 { background: linear-gradient(135deg,#7E4CA5,#A97FD1); }
+  .p3 { background: linear-gradient(135deg,#22103A,#3D096D); }
+  .p4 { background: linear-gradient(135deg,#B23A5C,#7E4CA5); }
+  .p5 { background: linear-gradient(135deg,#3F8F6B,#3D096D); }
+  .p6 { background: linear-gradient(135deg,#B8862F,#7E4CA5); }
+
+  /* 022-C: arrows gated to pointer-fine devices only — not just hidden,
+     removed from the rendered layout entirely on touch. */
+  .rail-btn { position: absolute; top: 0; bottom: 0; width: 44px; border: none; cursor: pointer; align-items: center; justify-content: center; z-index: 5; color: var(--color-text); background: transparent; display: none; }
+  .rail-btn.prev { left: 0; } .rail-btn.next { right: 0; }
+  .rail-btn svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); }
+  @media (hover: hover) and (pointer: fine) {
+    .rail-btn { display: flex; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
+    .rail-wrap:hover .rail-btn { opacity: 1; }
+  }
+  body.simulate-touch .rail-btn { display: none !important; }
+
+  /* 024-A: no position indicator — nothing added here, edge-fade only. */
+
+  /* 025-B: shimmer scoped to the repopulation moment only. */
+  .skel-card { flex: 0 0 auto; width: 150px; border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); }
+  .skel-art { aspect-ratio: 1/1.05; }
+  .skel-line { height: 12px; border-radius: 4px; margin: var(--space-2) var(--space-2) var(--space-3); }
+  .skel-art, .skel-line {
+    background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-2) 50%, var(--color-surface) 75%);
+    background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  #sketch-tools { position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s; max-width: 300px; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Sketch 026: Composed Native Carousel</h1>
+  <p>Consistency check — do the four independently-validated winners from 022-025 still hold up
+  once they're all applied together on the same real shelves, instead of one isolated mechanic per
+  sketch?</p>
+  <div class="compose-list">Composed from:
+    <ul>
+      <li><strong>022-C</strong> — arrows gated to pointer-fine devices only (CSS media query, not just hidden)</li>
+      <li><strong>023-B</strong> — free momentum scroll, no snap, custom-eased arrow clicks (006-D curve)</li>
+      <li><strong>024-A</strong> — no position indicator, edge-fade only</li>
+      <li><strong>025-B</strong> — shimmer scoped to filter-triggered repopulation only</li>
+    </ul>
+  </div>
+  <p class="tip">💡 Hover a rail to see the arrow (mouse/trackpad only, per 022-C). Two-finger
+  trackpad swipe or a real phone shows 023-B's momentum feel. Click "Filtrar" on either shelf to
+  trigger 025-B's shimmer. Toggle "Simular táctil" to force the no-arrow state a real phone already
+  has natively.</p>
+</div>
+
+<div class="vp-controls">
+  <button class="vp-btn is-active" data-vp="desktop">🖥 Desktop</button>
+  <button class="vp-btn" data-vp="tablet">📟 Tablet</button>
+  <button class="vp-btn" data-vp="mobile">📱 Mobile</button>
+  <label class="touch-sim"><input type="checkbox" id="touch-sim-toggle"> Simular dispositivo táctil (sin hover)</label>
+</div>
+<p class="vp-label">"Simular táctil" fuerza el estado que un teléfono real ya tiene de forma nativa.</p>
+
+<div class="vp-frame" id="vp-frame">
+  <main class="catalog-main"><div id="rows"></div></main>
+</div>
+
+<div id="sketch-tools">Sketch 026 — Composed (022-C + 023-B + 024-A + 025-B). Consistency check, no new design questions of its own.</div>
+
+<script>
+const ICONS = ['🎲','🧩','🃏','♟️','🏆','🌵','🦙','⚔️','🎯','🗺️'];
+const PALETTES = ['p1','p2','p3','p4','p5','p6'];
+const TITLES_A = ['Catán','Azul','Wingspan','Carcassonne','7 Wonders','Terraforming Mars','Codenames','Splendor','Pandemic','Ticket to Ride'];
+const TITLES_B = ['Dixit','Just One','El Resistencia','Marrakech','Patchwork','Onitama','Hanabi','Skull King','Coup','Bang!'];
+function makeCard(i, titles) {
+  const icon = ICONS[i % ICONS.length];
+  const pal = PALETTES[i % PALETTES.length];
+  const title = titles[i % titles.length];
+  return `<div class="card"><div class="poster-art ${pal}">${icon}</div><div class="cap"><h4>${title}</h4></div></div>`;
+}
+function makeSkeleton() {
+  return `<div class="skel-card"><div class="skel-art"></div><div class="skel-line" style="width:70%"></div></div>`;
+}
+function railBtnSvg(dir) {
+  const points = dir === -1 ? '15 18 9 12 15 6' : '9 18 15 12 9 6';
+  return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="${points}"/></svg>`;
+}
+const SHELVES = [
+  { id: 'destacados', title: 'Destacados del club', subtitle: 'La selección del club — los juegos que más recomendamos ahora mismo.', filterable: true },
+  { id: 'hobby', title: 'Descubre el hobby', subtitle: 'Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez.', filterable: false },
+];
+document.getElementById('rows').innerHTML = SHELVES.map(s => `
+  <section class="shelf">
+    <div class="row-header">
+      <div><h3 class="row-heading">${s.title}</h3><p class="row-subtitle">${s.subtitle}</p></div>
+      ${s.filterable ? `<button class="filter-btn" onclick="simulateFilter('${s.id}', this)">🔀 Filtrar por Estrategia</button>` : ''}
+    </div>
+    <div class="rail-wrap">
+      <button class="rail-btn prev" aria-label="Anterior" onclick="handleScroll(this,-1)">${railBtnSvg(-1)}</button>
+      <div class="rail" id="rail-${s.id}" data-showing="a">${Array.from({length:10}).map((_,i) => makeCard(i, TITLES_A)).join('')}</div>
+      <button class="rail-btn next" aria-label="Siguiente" onclick="handleScroll(this,1)">${railBtnSvg(1)}</button>
+    </div>
+  </section>`).join('');
+
+// 023-B: custom eased scroll (006-D's validated soft ease-out, 200ms) so
+// arrow-driven motion matches free-momentum's fluid feel.
+const EASE_D = t => 1 - Math.pow(1 - t, 5);
+function handleScroll(btn, dir) {
+  const rail = btn.closest('.rail-wrap').querySelector('.rail');
+  const delta = dir * rail.clientWidth * 0.85;
+  const start = rail.scrollLeft;
+  const startTime = performance.now();
+  const duration = 200;
+  function step(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    rail.scrollLeft = start + delta * EASE_D(t);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// 025-B: shimmer skeleton for a beat, then swap in new cards
+function simulateFilter(shelfId, btn) {
+  const rail = document.getElementById('rail-' + shelfId);
+  const nextShowing = rail.dataset.showing === 'a' ? 'b' : 'a';
+  const nextTitles = nextShowing === 'a' ? TITLES_A : TITLES_B;
+  btn.disabled = true;
+  rail.scrollTo({ left: 0, behavior: 'auto' });
+  rail.innerHTML = Array.from({length:10}).map(() => makeSkeleton()).join('');
+  setTimeout(() => {
+    rail.innerHTML = Array.from({length:10}).map((_,i) => makeCard(i, nextTitles)).join('');
+    rail.dataset.showing = nextShowing;
+    btn.disabled = false;
+  }, 650);
+}
+
+document.querySelectorAll('.vp-btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.vp-btn').forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  const frame = document.getElementById('vp-frame');
+  frame.classList.remove('is-mobile', 'is-tablet');
+  if (btn.dataset.vp === 'mobile') frame.classList.add('is-mobile');
+  if (btn.dataset.vp === 'tablet') frame.classList.add('is-tablet');
+}));
+
+document.getElementById('touch-sim-toggle').addEventListener('change', (e) => {
+  document.body.classList.toggle('simulate-touch', e.target.checked);
+});
+</script>
+</body>
+</html>

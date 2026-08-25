@@ -1,5 +1,12 @@
 # Layout & Navigation
 
+> **⚠️ Arrow/scroll-cue claim below is stale.** It describes the pre-G-01-3/G-01-4 production state
+> (daisyUI's bare `.carousel`, hover-revealed arrows). Production has since shipped `.pk-rail`
+> (always-on edge-fade + header-embedded circular prev/next, visible on every pointer type) and a
+> further approved-but-not-yet-built change (edge-overlay, pointer-fine-gated arrows). See
+> `carousel-mechanics.md` for the current, accurate state — treat that file as authoritative for
+> anything carousel-arrow-related, not this paragraph.
+
 ## Design Decisions
 
 **Full-bleed rows with edge-fade, not hover-only prev/next.** The catalog browse page reads as

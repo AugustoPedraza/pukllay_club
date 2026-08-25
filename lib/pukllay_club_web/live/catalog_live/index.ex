@@ -58,7 +58,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:page_size, @page_size)
       |> assign(:skeleton_carousel_rows, @skeleton_carousel_rows)
       |> assign(:facet_options, if(loading?, do: empty_facet_options(), else: Catalog.facet_options()))
-      |> assign(:carousel_rows, if(loading?, do: [], else: Catalog.list_carousel_rows()))
+      |> assign_carousel_rows(loading?)
 
     # 01.1-06: mount/3 no longer calls apply_filters/1 on the connected
     # branch — it only ever set *default* filter state anyway, and
@@ -136,6 +136,63 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
   defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
 
+  # Connected-mount-only (never also in handle_params/3, see the comment on
+  # mount/3 above about accumulating stream diffs across two stream/4 calls
+  # issued before the first render flush) construction of the 8 per-row
+  # carousel streams plus their metadata (quick task 260824-u5d, in-row
+  # infinite scroll). Per-row stream names are mandatory, not stylistic —
+  # the 8 rows genuinely overlap (a tagged game sits in up to 4 rows at
+  # once), so one shared stream name would emit the same DOM id in four
+  # different rails. The atom is derived only from Catalog's own
+  # server-side row list, never from client input.
+  defp assign_carousel_rows(socket, true), do: assign(socket, :carousel_rows, [])
+
+  defp assign_carousel_rows(socket, false) do
+    rows = Catalog.list_carousel_rows()
+
+    socket =
+      Enum.reduce(rows, socket, fn row, acc ->
+        stream(acc, carousel_stream_name(row.key), row.games)
+      end)
+
+    assign(socket, :carousel_rows, Enum.map(rows, &carousel_row_metadata/1))
+  end
+
+  # The games themselves now live only in the per-row streams — this
+  # metadata map carries everything else `carousel_row/1`'s render and
+  # `handle_event("carousel-load-more", ...)` need: `empty?` is the one
+  # shared non-stream emptiness signal both the chip-nav filter below and
+  # `CarouselRow.carousel_row/1`'s section guard read (a `%LiveStream{}`
+  # is never `== []`, so a guard left reading `row.games != []` would
+  # silently start rendering empty rows).
+  defp carousel_row_metadata(row) do
+    %{
+      key: row.key,
+      title: row.title,
+      offset: row.offset,
+      exhausted?: row.exhausted?,
+      empty?: row.games == []
+    }
+  end
+
+  defp carousel_stream_name(key), do: :"carousel_#{key}"
+
+  defp find_carousel_row(rows, row_key) do
+    Enum.find(rows, &(Atom.to_string(&1.key) == row_key))
+  end
+
+  defp update_carousel_row(socket, key, changes) do
+    changes = Map.new(changes)
+
+    rows =
+      Enum.map(socket.assigns.carousel_rows, fn
+        %{key: ^key} = row -> Map.merge(row, changes)
+        row -> row
+      end)
+
+    assign(socket, :carousel_rows, rows)
+  end
+
   # A ?q= URL param reaches a catalog-wide ILIKE (T-01.1-28) — bounded at the
   # entry point, same discipline plan 01.1-06 applies to the rest of the
   # filter params. Any non-binary value (missing param, an array from a
@@ -156,7 +213,13 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     {:noreply, assign(socket, :filters_open, false)}
   end
 
-  def handle_event("toggle-facet", %{"facet" => facet, "value" => value}, socket) do
+  # The payload key is `choice`, not `value`: LiveView's client-side
+  # `extractMeta` overwrites `payload.value` with the clicked element's
+  # native `.value` DOM property (`""` for a `<button>`, `"on"` for a
+  # checkbox), silently clobbering any `phx-value-value` binding. See the
+  # `FilterModal` moduledoc for the full mechanism — this key must stay in
+  # sync with the `phx-value-choice` attributes there.
+  def handle_event("toggle-facet", %{"facet" => facet, "choice" => value}, socket) do
     case facet_assign_key(facet) do
       nil ->
         {:noreply, socket}
@@ -169,19 +232,27 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
-  def handle_event("set-scalar", params, socket) do
-    socket =
-      socket
-      |> assign(:players, parse_int(params["players"]))
-      |> assign(:max_playtime, parse_int(params["max_playtime"]))
-      |> assign(:min_age, parse_int(params["min_age"]))
-      |> apply_filters()
+  # Chip-shaped toggle for the players/max_playtime scalar filters
+  # (quick-260824-b71) — shaped like `toggle-facet` above rather than a
+  # form-wide scalar-setting handler: each chip click sends exactly one
+  # scalar/value pair, so clicking one scalar chip never touches another
+  # scalar's current value (the regression a shared form would have
+  # caused via `parse_int(nil)` on the untouched fields). `min_age` has
+  # no chip and no entry in `scalar_assign_key/1` — it stays unfilterable
+  # via the UI, exactly as it is today; the field remains a valid
+  # `?min_age=` URL param via `handle_params/3` only.
+  def handle_event("toggle-scalar", %{"scalar" => scalar, "choice" => value}, socket) do
+    case scalar_assign_key(scalar) do
+      nil ->
+        {:noreply, socket}
 
-    {:noreply, socket}
-  end
+      key ->
+        current = Map.get(socket.assigns, key)
+        parsed = parse_int(value)
+        new_value = if parsed == current, do: nil, else: parsed
 
-  def handle_event("sort", %{"sort" => sort}, socket) do
-    {:noreply, socket |> assign(:sort, parse_sort(sort)) |> apply_filters()}
+        {:noreply, socket |> assign(key, new_value) |> apply_filters()}
+    end
   end
 
   # 01.1-07: the load-error state's Reintentar action. Re-enters the same
@@ -209,29 +280,40 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     {:noreply, socket}
   end
 
-  def handle_event("see-all", %{"row" => row}, socket) do
-    selection =
-      Map.merge(
-        %{
-          q: "",
-          mechanics: [],
-          themes: [],
-          weight_bands: [],
-          tags: [],
-          players: nil,
-          max_playtime: nil,
-          min_age: nil,
-          sort: :name_asc
-        },
-        see_all_selection(row)
-      )
+  # In-row horizontal infinite scroll (quick task 260824-u5d). The client
+  # (`.CarouselScroll`'s rAF-throttled scroll listener, added in Task 2)
+  # sends the row key it read off its own section's data attribute — fully
+  # attacker-controlled, so this handler is the authoritative guard
+  # (T-u5d-01/T-u5d-02): an unknown key, or a row the server already
+  # considers exhausted, short-circuits to a no-op reply with no query at
+  # all, never building an atom from `row_key`. A LiveView process handles
+  # events sequentially, so two rapid taps can't interleave into a
+  # double-fetch of the same offset — the second sees the already-advanced
+  # offset from the first. A failed carousel fetch degrades that one row
+  # to exhausted; it must NOT raise the full-page :load_error banner,
+  # which is scoped to the main grid (T-01-24's precedent).
+  def handle_event("carousel-load-more", %{"row" => row_key}, socket) when is_binary(row_key) do
+    case find_carousel_row(socket.assigns.carousel_rows, row_key) do
+      nil ->
+        {:reply, %{exhausted: true}, socket}
 
-    socket =
-      selection
-      |> Enum.reduce(socket, fn {key, value}, acc -> assign(acc, key, value) end)
-      |> apply_filters()
+      %{exhausted?: true} ->
+        {:reply, %{exhausted: true}, socket}
 
-    {:noreply, socket}
+      row ->
+        case Catalog.carousel_page(row_key, row.offset) do
+          {:ok, {games, exhausted?}} ->
+            socket =
+              socket
+              |> stream(carousel_stream_name(row.key), games, at: -1)
+              |> update_carousel_row(row.key, offset: row.offset + length(games), exhausted?: exhausted?)
+
+            {:reply, %{exhausted: exhausted?}, socket}
+
+          :error ->
+            {:reply, %{exhausted: true}, update_carousel_row(socket, row.key, exhausted?: true)}
+        end
+    end
   end
 
   def handle_event("load-more", _params, socket) do
@@ -259,27 +341,15 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp facet_assign_key("tags"), do: :tags
   defp facet_assign_key(_unrecognized), do: nil
 
-  # Maps a "see-all" row key to the filter selection that reproduces that
-  # shelf's own query (see `PukllayClub.Catalog.list_carousel_rows/0`).
-  # Literal string clauses with a final catch-all, matching the existing
-  # `facet_assign_key/1`/`parse_sort/1` convention above — never build an
-  # atom out of client input — so an unrecognised value leaves the socket
-  # unchanged rather than creating a new atom from user input (T-01-37).
-  defp see_all_selection("destacados_del_club"), do: %{tags: Enum.map(Vocabulary.editorial_tags(), & &1.tag)}
-
-  defp see_all_selection("crea_conexiones"), do: %{tags: ["#CreaConexiones"]}
-  defp see_all_selection("equipo_ganador"), do: %{tags: ["#EquipoGanador"]}
-  defp see_all_selection("duelos_memorables"), do: %{tags: ["#DuelosMemorables"]}
-  defp see_all_selection("descubre_el_hobby"), do: %{weight_bands: ["descubre_el_hobby"]}
-  defp see_all_selection("ingenio_estratega"), do: %{weight_bands: ["ingenio_estratega"]}
-  defp see_all_selection("nivel_experto"), do: %{weight_bands: ["nivel_experto"]}
-  # `:year_desc` sorts by the game's own publication year, the closest
-  # "newest first" option the main grid's sort control already exposes —
-  # not `inserted_at` (what the shelf itself is ordered by), since adding
-  # a club-acquisition-recency sort mode to the grid is out of this
-  # plan's scope. See SUMMARY for the known limitation.
-  defp see_all_selection("recientemente_anadidos"), do: %{sort: :year_desc}
-  defp see_all_selection(_unrecognized), do: %{}
+  # Same never-build-an-atom-from-client-input discipline as
+  # `facet_assign_key/1` above (T-01-37) — literal clauses with a final
+  # catch-all, no dynamic atom conversion from the client-supplied string.
+  # Only `players`/`max_playtime` are chip-controlled; `min_age`
+  # deliberately has no clause here (quick-260824-b71 scope correction: no
+  # age filter control anywhere in the UI).
+  defp scalar_assign_key("players"), do: :players
+  defp scalar_assign_key("max_playtime"), do: :max_playtime
+  defp scalar_assign_key(_unrecognized), do: nil
 
   defp parse_int(nil), do: nil
   defp parse_int(""), do: nil
@@ -399,6 +469,18 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
+  # One derived list feeding BOTH the mobile chip row (:subnav) AND the
+  # desktop mega-menu (:nav_menu) — sketch-findings' single most load-bearing
+  # rule for this layer is that two independently-built lists here is exactly
+  # how the two surfaces silently drift apart on shelf count or subtitle
+  # copy. Both consumers read this one call, under the same
+  # not-filters_active? guard the chip row already carried.
+  defp index_rows(assigns) do
+    assigns.carousel_rows
+    |> Enum.reject(& &1.empty?)
+    |> Enum.map(fn row -> %{key: row.key, title: row.title, subtitle: row_subtitle(row.key)} end)
+  end
+
   # "El catálogo completo" is a false claim once filters narrow the result
   # set — the heading text depends on whether a filter is active, but the
   # header itself always renders (even on a zero-result view).
@@ -440,7 +522,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             type="text"
             name="q"
             value={@q}
-            placeholder="Busca por título, autor o editorial…"
+            placeholder="¿Qué juego buscas?"
             phx-debounce="300"
             maxlength="100"
           />
@@ -457,112 +539,112 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           </span>
         </button>
       </:nav_search>
+      <:nav_menu :if={not filters_active?(assigns)}>
+        <Layouts.category_menu rows={index_rows(assigns)} />
+      </:nav_menu>
       <:subnav :if={not filters_active?(assigns)}>
-        <nav class="pk-chip-nav" aria-label="Categorías">
-          <span class="pk-chip-spacer" aria-hidden="true"></span>
-          <a
-            :for={row <- Enum.filter(@carousel_rows, &(&1.games != []))}
-            href={"#carousel-#{row.key}"}
-            data-chip-target={"carousel-#{row.key}"}
-            class="pk-chip"
-          >
-            {row.title}
-          </a>
-          <span class="pk-chip-spacer" aria-hidden="true"></span>
-        </nav>
-      </:subnav>
-      <div class="pk-page space-y-6">
-        <div class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="flex items-center justify-end gap-4">
-            <select
-              name="sort"
-              phx-change="sort"
-              class="select select-bordered focus:outline-hidden focus-within:outline-hidden"
+        <div class="pk-chip-nav-wrap">
+          <nav class="pk-chip-nav" aria-label="Categorías">
+            <span class="pk-chip-spacer" aria-hidden="true"></span>
+            <a
+              :for={row <- index_rows(assigns)}
+              href={"#carousel-#{row.key}"}
+              data-chip-target={"carousel-#{row.key}"}
+              class="pk-chip"
             >
-              <option value="name_asc" selected={@sort == :name_asc}>Nombre</option>
-              <option value="playtime_asc" selected={@sort == :playtime_asc}>
-                Duración: menor a mayor
-              </option>
-              <option value="playtime_desc" selected={@sort == :playtime_desc}>
-                Duración: mayor a menor
-              </option>
-              <option value="complexity_asc" selected={@sort == :complexity_asc}>
-                Complejidad: menor a mayor
-              </option>
-              <option value="complexity_desc" selected={@sort == :complexity_desc}>
-                Complejidad: mayor a menor
-              </option>
-              <option value="year_desc" selected={@sort == :year_desc}>Más recientes</option>
-            </select>
+              {row.title}
+            </a>
+            <span class="pk-chip-spacer" aria-hidden="true"></span>
+          </nav>
+        </div>
+      </:subnav>
+      <div class="pk-page">
+        <%!-- quick-260824-eqc: `space-y-6` moved from the outer div to this
+        inner one — left on the outer div it would apply to a single child
+        and silently collapse every gap between the page's sections.
+        `pk-dimmable`/`is-dimmed` (below, sketch 019) blur+dim this wrapper
+        while the filter modal is open, driven by the existing
+        `@filters_open` assign (the same one already passed to the modal as
+        `open=`) — no new assign. The modal and GamePreview.preview_host
+        MUST stay OUTSIDE this wrapper: a CSS `filter` on an ancestor
+        establishes a containing block for `position: fixed` descendants,
+        so nesting them here would both blur the modal itself and re-anchor
+        its fixed positioning to this wrapper's box. Deliberately NOT
+        `aria-hidden`/`inert` on the wrapper either — the `.FilterModal`
+        hook already traps Tab focus inside the dialog, and `aria-hidden`
+        over a subtree containing focusable elements is itself an
+        accessibility violation. --%>
+        <div class={["space-y-6", "pk-dimmable", @filters_open && "is-dimmed"]}>
+          <div :if={not filters_active?(assigns)} id="carousel-rows" class="space-y-8">
+            <%= if @loading do %>
+              <CarouselRow.skeleton_row
+                :for={n <- 1..@skeleton_carousel_rows}
+                id={"carousel-skeleton-#{n}"}
+              />
+            <% else %>
+              <CarouselRow.carousel_row
+                :for={row <- @carousel_rows}
+                :key={row.key}
+                id={"carousel-#{row.key}"}
+                title={row.title}
+                games={Map.fetch!(@streams, carousel_stream_name(row.key))}
+                variant={row_variant(row.key)}
+                subtitle={row_subtitle(row.key)}
+                empty={row.empty?}
+                row_key={to_string(row.key)}
+                exhausted={row.exhausted?}
+              />
+            <% end %>
           </div>
-        </div>
 
-        <div :if={not filters_active?(assigns)} id="carousel-rows" class="space-y-8">
-          <%= if @loading do %>
-            <CarouselRow.skeleton_row
-              :for={n <- 1..@skeleton_carousel_rows}
-              id={"carousel-skeleton-#{n}"}
-            />
-          <% else %>
-            <CarouselRow.carousel_row
-              :for={row <- @carousel_rows}
-              id={"carousel-#{row.key}"}
-              title={row.title}
-              games={row.games}
-              variant={row_variant(row.key)}
-              subtitle={row_subtitle(row.key)}
-              see_all_row={to_string(row.key)}
-            />
-          <% end %>
-        </div>
-
-        <div :if={@load_error} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="pk-state">
-            <h2>No pudimos cargar el catálogo</h2>
-            <p>Hubo un problema de conexión.</p>
-            <%!-- CoreComponents.button/1 checked first (ui-design-system's
+          <div :if={@load_error} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="pk-state">
+              <h2>No pudimos cargar el catálogo</h2>
+              <p>Hubo un problema de conexión.</p>
+              <%!-- CoreComponents.button/1 checked first (ui-design-system's
             "check core_components.ex before hand-rolling markup" rule) —
             its "primary" variant is btn-primary, matching this page's one
             action per non-happy-path state (01.1-07). --%>
-            <.button phx-click="retry" variant="primary">Reintentar</.button>
+              <.button phx-click="retry" variant="primary">Reintentar</.button>
+            </div>
           </div>
-        </div>
 
-        <div class="mx-auto w-full max-w-7xl pk-gutter space-y-1">
-          <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
-          <p class="text-neutral text-sm">{result_count_text(@total)}</p>
-        </div>
-
-        <div :if={@total == 0 and not @load_error} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="pk-state">
-            <h2>No se encontraron juegos</h2>
-            <p>Probá con otros filtros o términos de búsqueda.</p>
-            <.button phx-click="clear-filters" variant="primary">Limpiar filtros</.button>
+          <div class="mx-auto w-full max-w-7xl pk-gutter space-y-1">
+            <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
+            <p class="text-neutral text-sm">{result_count_text(@total)}</p>
           </div>
-        </div>
 
-        <div :if={@loading} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            <CarouselRow.skeleton_card :for={n <- 1..@page_size} id={"grid-skeleton-#{n}"} />
+          <div :if={@total == 0 and not @load_error} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="pk-state">
+              <h2>No se encontraron juegos</h2>
+              <p>Probá con otros filtros o términos de búsqueda.</p>
+              <.button phx-click="clear-filters" variant="primary">Limpiar filtros</.button>
+            </div>
           </div>
-        </div>
 
-        <div :if={not @loading} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div
-            id="games"
-            phx-update="stream"
-            class={[
-              "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4",
-              @total == 0 && "hidden"
-            ]}
-          >
-            <GameCard.game_card :for={{id, game} <- @streams.games} id={id} game={game} />
+          <div :if={@loading} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <CarouselRow.skeleton_card :for={n <- 1..@page_size} id={"grid-skeleton-#{n}"} />
+            </div>
           </div>
-        </div>
 
-        <div :if={@total > 0 and @offset < @total} class="mx-auto w-full max-w-7xl pk-gutter">
-          <div class="flex justify-center">
-            <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
+          <div :if={not @loading} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div
+              id="games"
+              phx-update="stream"
+              class={[
+                "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4",
+                @total == 0 && "hidden"
+              ]}
+            >
+              <GameCard.game_card :for={{id, game} <- @streams.games} id={id} game={game} />
+            </div>
+          </div>
+
+          <div :if={@total > 0 and @offset < @total} class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="flex justify-center">
+              <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
+            </div>
           </div>
         </div>
 
@@ -577,10 +659,10 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           tags={@tags}
           players={@players}
           max_playtime={@max_playtime}
-          min_age={@min_age}
           open={@filters_open}
           q={@q}
           total={@total}
+          filters_active={filters_active?(assigns)}
         />
       </div>
     </Layouts.app>

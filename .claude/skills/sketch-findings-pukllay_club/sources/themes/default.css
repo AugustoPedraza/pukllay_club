@@ -1,6 +1,24 @@
-/* PukllayClub sketch theme — mirrors the approved 01-UI-SPEC.md brand tokens
-   (assets/css/app.css daisyUI overrides) so sketches feel true to the real app,
-   not a generic mockup.
+/* PukllayClub sketch theme — mirrors assets/css/app.css's daisyUI light/dark
+   theme blocks (the single upstream source of the brand palette) so sketches
+   feel true to the real app, not a generic mockup. Drift from upstream is
+   checked by ./check-theme-drift.sh — run it after editing either file.
+
+   Upstream mapping (app.css daisyUI variable -> sketch variable here):
+     --color-base-100      -> --color-bg
+     --color-base-200      -> --color-surface
+     --color-base-300      -> --color-surface-2 AND --color-border (feeds both)
+     --color-base-content  -> --color-text
+     --color-neutral       -> --color-text-muted
+     --color-primary       -> --color-primary
+     --color-primary-content -> --color-primary-content
+     --color-secondary     -> --color-secondary
+     --color-accent        -> --color-accent-bg
+     --color-accent-content -> --color-accent-text
+     --color-error         -> --color-danger
+     --color-success       -> --color-success
+   Typography, spacing, radius, shadow and motion tokens have no daisyUI
+   counterpart and are sketch-only — the motion values in particular are
+   sketch 006's validated winner (see below) and must not be touched here.
 
    Real light/dark toggle mechanism (2026-08-20, frontier consistency pass):
    previously the dark palette only existed as a separate file
@@ -78,48 +96,51 @@
   --duration-slow: 280ms;
 }
 
-/* Dark palette — values from the dark-purple.css exploratory fork (approved
-   2026-08-20 to ship alongside light, not replace it). Only the color block
-   changes; typography/spacing/shape/motion tokens are brand-locked and
-   identical in both palettes. The default primary (#3D096D) is a near-black
-   purple that disappears on a dark ground, so dark mode promotes a brighter
-   purple to --color-primary instead of reusing the light value. Shadows are
-   re-based on black instead of the brand-purple text color, since a
-   purple-tinted shadow reads as muddy against an already-purple background. */
+/* Dark palette — re-derived 2026-08-21 from assets/css/app.css's shipped
+   "dark" daisyUI theme block via the mapping table above, replacing an
+   exploratory "dark-purple" fork that had drifted from the real app in 11 of
+   13 colour values (see MANIFEST.md for the retired fork's original values).
+   The app's dark values are the checker-verified 01-UI-SPEC.md contract with
+   per-value contrast rationale in writing, so sketches now preview the real
+   dark mode rather than a superseded proposal. Only the color block changes;
+   typography/spacing/shape/motion tokens are brand-locked and identical in
+   both palettes. Shadows stay re-based on black instead of the brand-purple
+   text color, since a purple-tinted shadow reads as muddy against an
+   already-purple background — they have no upstream daisyUI equivalent. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #150826;
+    --color-bg: #170A26;
     --color-surface: #22103A;
-    --color-surface-2: #2E1750;
+    --color-surface-2: #2F1750;
     --color-text: #F3ECFA;
-    --color-text-muted: #A78FC0;
-    --color-primary: #9D5CE6;
-    --color-primary-content: #FFFFFF;
-    --color-secondary: #C9A6F5;
-    --color-accent-bg: #2E1750;
-    --color-accent-text: #E4D4FA;
-    --color-border: #3A2159;
-    --color-danger: #E0607F;
-    --color-success: #5CC79A;
+    --color-text-muted: #B8A6CC;
+    --color-primary: #A97FD1;
+    --color-primary-content: #170A26;
+    --color-secondary: #7E4CA5;
+    --color-accent-bg: #3D2A56;
+    --color-accent-text: #E4D3F5;
+    --color-border: #2F1750;
+    --color-danger: #E06B90;
+    --color-success: #5FBE95;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
   }
 }
 :root[data-theme="dark"] {
-  --color-bg: #150826;
+  --color-bg: #170A26;
   --color-surface: #22103A;
-  --color-surface-2: #2E1750;
+  --color-surface-2: #2F1750;
   --color-text: #F3ECFA;
-  --color-text-muted: #A78FC0;
-  --color-primary: #9D5CE6;
-  --color-primary-content: #FFFFFF;
-  --color-secondary: #C9A6F5;
-  --color-accent-bg: #2E1750;
-  --color-accent-text: #E4D4FA;
-  --color-border: #3A2159;
-  --color-danger: #E0607F;
-  --color-success: #5CC79A;
+  --color-text-muted: #B8A6CC;
+  --color-primary: #A97FD1;
+  --color-primary-content: #170A26;
+  --color-secondary: #7E4CA5;
+  --color-accent-bg: #3D2A56;
+  --color-accent-text: #E4D3F5;
+  --color-border: #2F1750;
+  --color-danger: #E06B90;
+  --color-success: #5FBE95;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);

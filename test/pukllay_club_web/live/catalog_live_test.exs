@@ -188,6 +188,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
     test "toggling a mechanic pill re-renders the grid; toggling it again restores the previous set",
          %{conn: conn} do
+      # Selector targets an `input[type=checkbox]`, not a `button` (Task 3
+      # moved mechanics into the searchable checklist inside the
+      # disclosure) — `toggle-facet` and its phx-value-* pair are unchanged,
+      # only the element carrying them changed.
       game_fixture(%{name: "Dice Game", mechanics: ["Dice Rolling"]})
       game_fixture(%{name: "Other Game", mechanics: ["Auction / Bidding"]})
 
@@ -195,7 +199,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html =
         view
-        |> element("button[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+        |> element("input[phx-value-facet=mechanics][phx-value-choice='Tira dados']")
         |> render_click()
 
       assert html =~ "Dice Game"
@@ -203,7 +207,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html2 =
         view
-        |> element("button[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+        |> element("input[phx-value-facet=mechanics][phx-value-choice='Tira dados']")
         |> render_click()
 
       assert html2 =~ "Dice Game"
@@ -219,12 +223,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/")
 
       view
-      |> element("button[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+      |> element("input[phx-value-facet=mechanics][phx-value-choice='Tira dados']")
       |> render_click()
 
       html =
         view
-        |> element("button[phx-value-facet=mechanics][phx-value-value='Coloca trabajadores']")
+        |> element("input[phx-value-facet=mechanics][phx-value-choice='Coloca trabajadores']")
         |> render_click()
 
       assert html =~ "Dice Game"
@@ -241,7 +245,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/")
 
       view
-      |> element("button[phx-value-facet=mechanics][phx-value-value='Tira dados']")
+      |> element("input[phx-value-facet=mechanics][phx-value-choice='Tira dados']")
       |> render_click()
 
       html =
@@ -263,18 +267,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html2 =~ "Catán Cards"
     end
 
-    test "changing the sort control reorders the rendered cards", %{conn: conn} do
+    test "a non-default ?sort= param reorders the rendered cards", %{conn: conn} do
       game_fixture(%{name: "Alfa Corto", playing_time: 20})
       game_fixture(%{name: "Zeta Largo", playing_time: 120})
 
-      {:ok, view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/")
 
       assert position(grid_html(html), "Alfa Corto") < position(grid_html(html), "Zeta Largo")
 
-      html2 =
-        view
-        |> element("select[name=sort]")
-        |> render_change(%{sort: "playtime_desc"})
+      {:ok, _view, html2} = live(conn, ~p"/?sort=playtime_desc")
 
       assert position(grid_html(html2), "Zeta Largo") < position(grid_html(html2), "Alfa Corto")
     end
@@ -334,12 +335,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html =~ "No encontramos juegos con esos filtros"
       assert html =~ "Limpiar filtros"
 
-      # Scoped to .btn-primary (01.1-06): the empty-state's own clear-filters
-      # button, distinct from FilterModal's btn-outline clear-filters button
-      # now also present in the DOM — a bare text selector would be ambiguous.
+      # Scoped to .pk-state button.btn-primary (quick-260824-b71): the
+      # empty-state's own clear-filters button lives inside .pk-state.
+      # FilterModal's footer clear-filters button is now ALSO btn-primary
+      # (its "secondary" tier is "btn-outline btn-primary", per
+      # ui-design-system's component inventory) — a bare .btn-primary
+      # selector is ambiguous between the two, so scope by ancestor instead.
       html2 =
         view
-        |> element("button.btn-primary", "Limpiar filtros")
+        |> element(".pk-state button.btn-primary", "Limpiar filtros")
         |> render_click()
 
       assert html2 =~ "Existing Game"
@@ -384,10 +388,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/")
 
+      # Was driven through the now-removed #filter-modal-scalars set-scalar
+      # form (quick-260824-b71 deleted it in favor of toggle-scalar chips) —
+      # an out-of-Postgres-int-range value reaches the same
+      # safe_filter_games/1 rescue via the players chip's toggle-scalar
+      # event instead.
       html =
-        view
-        |> form("#filter-modal-scalars")
-        |> render_change(%{min_age: "99999999999999"})
+        render_click(view, "toggle-scalar", %{
+          "scalar" => "players",
+          "choice" => "99999999999999"
+        })
 
       assert html =~ "No pudimos cargar el catálogo"
       assert html =~ "Hubo un problema de conexión."
@@ -492,6 +502,91 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "in-row horizontal infinite scroll: carousel-load-more (quick task 260824-u5d)" do
+    test "appends cards into exactly one row's rail and leaves a sibling rail untouched", %{
+      conn: conn
+    } do
+      for n <- 1..25 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      game_fixture(%{name: "Sibling Game", tags: ["#CreaConexiones"]})
+
+      {:ok, view, html} = live(conn, ~p"/")
+
+      assert carousel_card_count(html, "equipo_ganador") == 20
+      sibling_before = carousel_card_count(html, "crea_conexiones")
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "equipo_ganador"})
+
+      assert carousel_card_count(html2, "equipo_ganador") == 25
+      assert carousel_card_count(html2, "crea_conexiones") == sibling_before
+    end
+
+    test "is a no-op on an already-exhausted row", %{conn: conn} do
+      game_fixture(%{name: "Only Duel", tags: ["#DuelosMemorables"]})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before = carousel_card_count(html, "duelos_memorables")
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "duelos_memorables"})
+
+      assert carousel_card_count(html2, "duelos_memorables") == before
+    end
+
+    test "is a no-op on an unrecognised row key and does not raise", %{conn: conn} do
+      game_fixture(%{name: "Untouched Game"})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before_count = card_count(html)
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "not-a-real-row"})
+
+      assert card_count(html2) == before_count
+      assert html2 =~ "Untouched Game"
+    end
+  end
+
+  describe "trailing skeleton placeholders + hook data attributes (Task 2, quick task 260824-u5d)" do
+    test "a rendered rail carries the row-key and exhausted data attributes and trailing placeholder markup",
+         %{conn: conn} do
+      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      section_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-equipo_ganador")
+        |> LazyHTML.to_html()
+
+      assert section_html =~ ~s(data-carousel-row="equipo_ganador")
+      assert section_html =~ ~s(data-exhausted="true")
+      assert section_html =~ "pk-trailing-skel"
+      assert section_html =~ ~s(id="carousel-equipo_ganador-skel-1")
+      assert section_html =~ ~s(id="carousel-equipo_ganador-skel-2")
+    end
+
+    test "an exhausted row still carries the trailing placeholder markup — it is always in the DOM, only hidden",
+         %{conn: conn} do
+      game_fixture(%{name: "Only Duel", tags: ["#DuelosMemorables"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      section_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-duelos_memorables")
+        |> LazyHTML.to_html()
+
+      assert section_html =~ ~s(data-exhausted="true")
+      assert section_html =~ "pk-trailing-skel"
+    end
+  end
+
   describe "differentiated row headers and titled main grid (G-01-4)" do
     test "the hero row renders in the primary colour and a weight-band row renders its Vocabulary descriptor as a subtitle",
          %{conn: conn} do
@@ -554,10 +649,75 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       # app.js/theme.js are expected and unaffected by this check.
       refute html =~ "export default"
     end
+
+    test "sketch 022-C: each rendered shelf's two scroll buttons live inside .pk-rail-wrap, none inside .pk-row-header, and no daisyUI circular-button class remains",
+         %{conn: conn} do
+      game_fixture(%{name: "Rail Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      carousel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      rail_wrap_buttons =
+        carousel_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-rail-wrap button[data-scroll]")
+
+      row_header_buttons =
+        carousel_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-row-header button[data-scroll]")
+
+      shelf_count =
+        carousel_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("[data-rail-wrap]")
+        |> Enum.count()
+
+      assert Enum.count(rail_wrap_buttons) == shelf_count * 2
+      assert Enum.empty?(row_header_buttons)
+      refute carousel_html =~ "btn-circle"
+      assert carousel_html =~ "data-rail-wrap"
+    end
+
+    test "sketch 022-C: CatalogLive.Show's Juegos similares shelf gets the identical treatment with no show.ex edit",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Rail Detail Game"})
+      game_fixture(%{name: "Similar Rail Game", bgg_id: 14, csv_row: 9_991})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
+
+      similares_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#similares")
+        |> LazyHTML.to_html()
+
+      rail_wrap_buttons =
+        similares_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-rail-wrap button[data-scroll]")
+
+      row_header_buttons =
+        similares_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-row-header button[data-scroll]")
+
+      assert Enum.count(rail_wrap_buttons) == 2
+      assert Enum.empty?(row_header_buttons)
+      refute similares_html =~ "btn-circle"
+      assert similares_html =~ "data-rail-wrap"
+    end
   end
 
-  describe "full-bleed edge-fade shelves, gutter-aligned (01-11)" do
-    test "a shelf's row-header and rail-wrap both carry the shared gutter class", %{conn: conn} do
+  describe "shell-capped, gutter-aligned, edge-fade shelves (01-11, quick-260824-9zo)" do
+    test "a shelf's row-header and rail-wrap both carry the shell column and gutter classes", %{
+      conn: conn
+    } do
       game_fixture(%{name: "Shelf Game", tags: ["#CreaConexiones"]})
 
       {:ok, _view, html} = live(conn, ~p"/")
@@ -568,8 +728,22 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> LazyHTML.query("#carousel-rows")
         |> LazyHTML.to_html()
 
-      assert carousel_html =~ "pk-row-header pk-gutter"
-      assert carousel_html =~ "pk-rail-wrap pk-gutter"
+      assert carousel_html =~ "pk-row-header mx-auto w-full max-w-7xl pk-gutter"
+      assert carousel_html =~ "pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter"
+    end
+
+    test "the disconnected skeleton row carries the same shell column and gutter classes as the real row",
+         %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      skeleton_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      assert skeleton_html =~ "pk-row-header mx-auto w-full max-w-7xl pk-gutter"
+      assert skeleton_html =~ "pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter"
     end
 
     test "the page renders the pk-page shell", %{conn: conn} do
@@ -680,6 +854,22 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert Regex.match?(~r/<span[^>]*class="pk-chip-spacer"[^>]*><\/span>\s*<\/nav>$/, chip_nav_html)
     end
 
+    test "the chip nav is wrapped by .pk-chip-nav-wrap (sketch 020, quick-260824-jkc)", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Chip Wrap Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      wrap_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-chip-nav-wrap")
+        |> LazyHTML.to_html()
+
+      assert wrap_html =~ ~s(class="pk-chip-nav")
+    end
+
     test "a shelf backed by zero games produces no chip for it", %{conn: conn} do
       game_fixture(%{name: "Only Crea Game", tags: ["#CreaConexiones"]})
 
@@ -706,6 +896,62 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> render_change(%{q: "Filtered"})
 
       refute html =~ "pk-chip-nav"
+    end
+  end
+
+  describe "desktop category mega-menu (SHELL-01, sketch 020, quick-260824-jkc)" do
+    test "the unfiltered landing render emits a trigger and one .pk-cat-item per populated shelf, matching the chip row's targets",
+         %{conn: conn} do
+      game_fixture(%{name: "Cat Menu Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-cat-trigger") |> Enum.count() == 1
+
+      shelf_count = doc |> LazyHTML.query("#carousel-rows section") |> Enum.count()
+
+      panel_targets =
+        doc |> LazyHTML.query(".pk-cat-item") |> LazyHTML.attribute("data-chip-target")
+
+      chip_targets =
+        doc |> LazyHTML.query(".pk-chip-nav a.pk-chip") |> LazyHTML.attribute("data-chip-target")
+
+      assert panel_targets != []
+      assert length(panel_targets) == shelf_count
+      assert Enum.sort(panel_targets) == Enum.sort(chip_targets)
+
+      Enum.each(panel_targets, fn id -> assert html =~ ~s(id="#{id}") end)
+    end
+
+    test "a shelf backed by zero games produces no panel item for it", %{conn: conn} do
+      game_fixture(%{name: "Only Crea Menu Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      panel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-cat-panel")
+        |> LazyHTML.to_html()
+
+      refute panel_html =~ "carousel-equipo_ganador"
+      refute panel_html =~ "carousel-duelos_memorables"
+    end
+
+    test "a filtered render emits neither the trigger nor the panel", %{conn: conn} do
+      game_fixture(%{name: "Filtered Cat Menu Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Filtered"})
+
+      refute html =~ "pk-cat-trigger"
+      refute html =~ "pk-cat-panel"
     end
   end
 
@@ -768,75 +1014,6 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
-  describe "Ver todo tile wired to real filter state (01-11)" do
-    test "clicking the tile on the tag-backed shelf renders only the tagged game and hides the shelves",
-         %{conn: conn} do
-      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
-      game_fixture(%{name: "Untagged Game", tags: []})
-
-      {:ok, view, _html} = live(conn, ~p"/")
-
-      html =
-        view
-        |> element("button[phx-value-row=equipo_ganador]")
-        |> render_click()
-
-      grid = grid_html(html)
-      assert grid =~ "Equipo Game"
-      refute grid =~ "Untagged Game"
-      refute html =~ ~s(id="carousel-rows")
-    end
-
-    test "clicking the tile on the band-backed shelf renders only games in that band", %{
-      conn: conn
-    } do
-      game_fixture(%{name: "Experto Game", weight_band: "nivel_experto"})
-      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
-
-      {:ok, view, _html} = live(conn, ~p"/")
-
-      html =
-        view
-        |> element("button[phx-value-row=nivel_experto]")
-        |> render_click()
-
-      grid = grid_html(html)
-      assert grid =~ "Experto Game"
-      refute grid =~ "Hobby Game"
-    end
-
-    test "clicking the tile on the recency shelf reorders the grid newest-first and leaves the shelves rendered",
-         %{conn: conn} do
-      game_fixture(%{name: "Old Game", tags: ["#CreaConexiones"], year_published: 1995})
-      game_fixture(%{name: "New Game", tags: ["#CreaConexiones"], year_published: 2023})
-
-      {:ok, view, _html} = live(conn, ~p"/")
-
-      html =
-        view
-        |> element("button[phx-value-row=recientemente_anadidos]")
-        |> render_click()
-
-      grid = grid_html(html)
-      assert position(grid, "New Game") < position(grid, "Old Game")
-      assert html =~ ~s(id="carousel-rows")
-    end
-
-    test "an unrecognised row value leaves the result set unchanged rather than raising", %{
-      conn: conn
-    } do
-      game_fixture(%{name: "Untouched Game"})
-
-      {:ok, view, html} = live(conn, ~p"/")
-      before_count = card_count(html)
-
-      html2 = render_click(view, "see-all", %{"row" => "not-a-real-row"})
-
-      assert card_count(html2) == before_count
-      assert html2 =~ "Untouched Game"
-    end
-  end
-
   describe "Content-Security-Policy (T-01-28, closes Phase 0's deferred Sobelow Config.CSP finding)" do
     test "the response carries a content-security-policy header scoped to the configured image origin",
          %{conn: conn} do
@@ -887,9 +1064,30 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert header_html =~ "pk-header-sticky"
       assert header_html =~ ~s(id="catalog-search-form")
 
-      # Nav links block + chip row
+      # Nav links block
       assert header_html =~ "pk-nav-links"
-      assert header_html =~ "pk-chip-nav"
+
+      # Chip row — a SIBLING of the header, not a child of it (debug
+      # search-right-align-mobile, cycle 5). This line used to assert
+      # `header_html =~ "pk-chip-nav"`, back when the subnav slot rendered
+      # inside `#app-header`. That element is `position: sticky; top: 0`, which
+      # pinned the chip row along with the nav at every scroll position; the
+      # user asked for the row to scroll away with the page, and nothing but
+      # moving it out of that box can deliver it. Kept as a positive assertion
+      # on the new location rather than deleted, so the composite still proves
+      # the chip row is composed into the page — and `refute` on the old
+      # location so a well-meaning revert has to argue with a test instead of
+      # silently re-sticking the row. Placement is guarded in full, with the
+      # scroll-spy consequence, by header_subnav_placement_test.exs.
+      refute header_html =~ "pk-chip-nav"
+
+      subnav_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-subnav")
+        |> LazyHTML.to_html()
+
+      assert subnav_html =~ "pk-chip-nav"
 
       # A gutter-shared row header and rail wrap, rail marker, scroll controls
       carousel_html =
@@ -898,14 +1096,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> LazyHTML.query("#carousel-rows")
         |> LazyHTML.to_html()
 
-      assert carousel_html =~ "pk-row-header pk-gutter"
-      assert carousel_html =~ "pk-rail-wrap pk-gutter"
+      assert carousel_html =~ "pk-row-header mx-auto w-full max-w-7xl pk-gutter"
+      assert carousel_html =~ "pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter"
       assert carousel_html =~ "data-rail"
       assert carousel_html =~ ~s(data-scroll="prev")
       assert carousel_html =~ ~s(data-scroll="next")
 
-      # A Ver todo tile
-      assert carousel_html =~ "pk-see-all"
+      # No Ver todo tile (removed entirely, quick task 260824-u5d — in-row
+      # infinite scroll replaces it)
+      refute carousel_html =~ "pk-see-all"
 
       # A card carrying the card marker and its preview template
       assert carousel_html =~ "data-game-card"
@@ -956,7 +1155,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> render_click()
 
       assert html =~ "modal-open"
-      assert html =~ "Filtros"
+      assert html =~ "Encuentra tu juego"
     end
 
     test "typing in the nav search box narrows the grid and does not open the filter surface", %{
@@ -989,7 +1188,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html =
         view
-        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
       grid = grid_html(html)
@@ -1009,7 +1208,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html_after =
         view
-        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
       assert html_after =~ "1 juego encontrado"
@@ -1033,7 +1232,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       html =
         view
-        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-value="descubre_el_hobby"]))
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
       assert html =~ ~s(data-search-expanded="true")
@@ -1053,6 +1252,150 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "Abrir filtros"
+    end
+
+    test "on first render the catalog wrapper carries pk-dimmable but not the dimmed modifier", %{
+      conn: conn
+    } do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "pk-dimmable"
+      refute html =~ "is-dimmed"
+    end
+
+    test "opening the filter surface adds the dimmed modifier to the pk-dimmable wrapper", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> element(~s([aria-label="Abrir filtros"]))
+        |> render_click()
+
+      assert html =~ "pk-dimmable"
+      assert html =~ "is-dimmed"
+    end
+
+    test "closing the filter surface removes the dimmed modifier again", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+      html = render_click(view, "close-filters", %{})
+
+      assert html =~ "pk-dimmable"
+      refute html =~ "is-dimmed"
+    end
+
+    test "the header nav search input shares the modal's search placeholder", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      assert header_html =~ ~s(placeholder="¿Qué juego buscas?")
+    end
+  end
+
+  describe "toggle-scalar chip handler (quick-260824-b71)" do
+    test "toggling a players chip narrows the grid to games matching that exact seat count", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Four Player Game", min_players: 2, max_players: 4})
+      game_fixture(%{name: "Big Group Game", min_players: 5, max_players: 8})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
+
+      grid = grid_html(html)
+      assert grid =~ "Four Player Game"
+      refute grid =~ "Big Group Game"
+    end
+
+    test "toggling the same players chip again clears it (toggle-off)", %{conn: conn} do
+      game_fixture(%{name: "Four Player Game", min_players: 2, max_players: 4})
+      game_fixture(%{name: "Big Group Game", min_players: 5, max_players: 8})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
+
+      html =
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
+
+      grid = grid_html(html)
+      assert grid =~ "Four Player Game"
+      assert grid =~ "Big Group Game"
+    end
+
+    test "toggling max_playtime does not reset an already-active players chip", %{conn: conn} do
+      game_fixture(%{
+        name: "Match Game",
+        min_players: 2,
+        max_players: 6,
+        max_playtime: 45
+      })
+
+      game_fixture(%{
+        name: "Wrong Players Game",
+        min_players: 5,
+        max_players: 6,
+        max_playtime: 30
+      })
+
+      game_fixture(%{
+        name: "Wrong Duration Game",
+        min_players: 2,
+        max_players: 6,
+        max_playtime: 120
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
+
+      html =
+        render_click(view, "toggle-scalar", %{"scalar" => "max_playtime", "choice" => "60"})
+
+      grid = grid_html(html)
+      assert grid =~ "Match Game"
+      refute grid =~ "Wrong Players Game"
+      refute grid =~ "Wrong Duration Game"
+    end
+
+    test "an unrecognised scalar leaves the socket unchanged rather than raising or creating a new atom",
+         %{conn: conn} do
+      game_fixture(%{name: "Untouched Scalar Game"})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before_count = card_count(html)
+
+      html2 =
+        render_click(view, "toggle-scalar", %{"scalar" => "__proto__", "choice" => "5"})
+
+      assert card_count(html2) == before_count
+      assert html2 =~ "Untouched Scalar Game"
+    end
+
+    test "an unparseable value degrades that scalar to nil rather than raising", %{conn: conn} do
+      game_fixture(%{name: "Four Player Game", min_players: 2, max_players: 4})
+      game_fixture(%{name: "Big Group Game", min_players: 5, max_players: 8})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
+
+      html =
+        render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "abc"})
+
+      grid = grid_html(html)
+      assert grid =~ "Four Player Game"
+      assert grid =~ "Big Group Game"
     end
   end
 
@@ -1139,6 +1482,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     |> String.split("data-game-card")
     |> length()
     |> Kernel.-(1)
+  end
+
+  # Counts cards inside one carousel row's rail only, by row key — scoped
+  # to `#carousel-<row_key>` so a fetch-more assertion on one row cannot be
+  # satisfied by cards that landed in a sibling rail instead (260824-u5d).
+  defp carousel_card_count(html, row_key) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("#carousel-#{row_key} [data-game-card]")
+    |> Enum.count()
   end
 
   # A resting card's inert <template data-game-preview> carries the shared
