@@ -957,31 +957,13 @@ body.pk-sheet-open {
   transition: opacity var(--duration-base) var(--ease-standard);
 }
 
-/* .pk-sheet/.pk-sheet-backdrop were missing from this list until 2026-08-25
-   (debug catalog-preview-modal-jump, sweep pass). The app's LARGEST sliding
-   surface — a full-height ~515px translateY at 390x844 — was the one surface
-   not honouring reduced motion, while its smaller sibling .pk-drawer (~320px)
-   already was. Note that moving the sheet onto --ease-standard does NOT help
-   here: reduced motion collapses the duration to 1ms regardless of curve, so
-   this listing is the only thing that suppresses the travel. */
-@media (prefers-reduced-motion: reduce) {
-  .pk-search-morph,
-  .pk-search-morph-toggle,
-  .pk-search-morph-close,
-  .pk-search-morph .pk-nav-search,
-  .pk-sheet,
-  .pk-sheet-backdrop,
-  .pk-drawer,
-  .pk-drawer-backdrop,
-  .pk-mobile-cta-bar,
-  .pk-title-echo,
-  .pk-dimmable,
-  body.pk-has-cta-bar,
-  .pk-cat-panel,
-  .pk-cat-backdrop {
-    transition-duration: 1ms;
-  }
-}
+/* An enumerated `prefers-reduced-motion: reduce` block used to sit here,
+   listing 14 selectors by hand. It was silently inert for 8 of them and has
+   been replaced by a single global guard at the very end of this file (see
+   "REDUCED-MOTION GUARD" there, and debug session reduced-motion-order-bug).
+   Nothing needs to be registered in this position again — the replacement
+   covers every animated surface in the app automatically, including whatever
+   gets added below this line. */
 
 /* CoreComponents.input/1 wraps its text-input branch in a `fieldset mb-2` div —
    daisyUI's .fieldset contributes vertical padding-block, and the mb-2 utility
@@ -2768,6 +2750,80 @@ body.pk-cta-parked {
 
   .pk-spec-list {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ─── REDUCED-MOTION GUARD ────────────────────────────────────────────────
+   Honours a visitor's `prefers-reduced-motion: reduce` preference across
+   every animated surface in the app — the ones that exist today and the ones
+   nobody has written yet.
+
+   Replaces a hand-maintained 14-selector list that used to sit mid-file
+   (debug session reduced-motion-order-bug). That list was silently inert for
+   8 of its 14 selectors. A media query contributes NO specificity, and every
+   rule in this stylesheet is unlayered, so plain source order decided the
+   winner: any selector whose own `transition:` SHORTHAND appeared further
+   down the file re-expanded transition-duration back to full, because a
+   shorthand resets every longhand it owns. Measured in Chrome under
+   --force-prefers-reduced-motion, the split was perfect and had zero
+   exceptions — the 6 selectors declared above the old block reported 0.001s,
+   the 8 declared below it still reported their full 0.18-0.28s. Relocating
+   the block was verified to fix all 14, which is precisely why relocating it
+   was NOT the fix chosen: it cures the symptom and leaves the trap armed for
+   the next rule anyone appends.
+
+   TWO independent conditions had to hold to produce that bug. This rule
+   breaks both, which is what makes it structural rather than a patch:
+
+     * `!important` makes the guard POSITION-INDEPENDENT. An important
+       declaration outranks every normal one regardless of source order, so
+       the guard can no longer lose a placement race. A user's motion
+       preference outranking author styling is the textbook case the cascade
+       reserves !important for. This is the only !important in the file —
+       deliberate, not drift; deleting it silently restores the original bug.
+
+     * `*` makes the guard ENUMERATION-INDEPENDENT. The old list could only
+       protect surfaces someone remembered to add to it, so every newly
+       authored animation was unprotected until a human noticed. There is now
+       no list to forget to update.
+
+   Corollary worth stating plainly: a surface can no longer opt out by being
+   declared later or by raising its specificity. That is the intent. If some
+   future surface genuinely needs motion under reduced-motion (an animation
+   that conveys information with no static equivalent), it must opt out
+   explicitly and visibly here, with a reason.
+
+   1ms rather than 0s: a zero-duration transition generates no transition at
+   all, so `transitionend` never fires. Nothing in assets/js or the colocated
+   hooks listens for that event today (verified), but 1ms keeps the event
+   contract intact for whatever does next, and it preserves the value the
+   previous block already used.
+
+   animation-iteration-count is pinned to 1 because an `infinite` animation
+   left at a 1ms duration would spin roughly a thousand iterations a second —
+   dramatically worse than the motion being suppressed. .pk-scroll-top's
+   bounce is infinite (already behind a no-preference query, so this is belt
+   and braces).
+
+   Delays are zeroed because the app's one transition-delay stages the header
+   search input's fade behind the pill's widening. With the widening collapsed
+   to 1ms there is nothing left to wait for, so the delay would only add dead
+   time before an instant change.
+
+   scroll-behavior is redundant today — html's smooth scroll already sits
+   behind a no-preference query (debug session category-anchor-scroll) — and
+   is included so a future ungated `scroll-behavior: smooth` cannot reopen
+   this same class of defect. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
   }
 }
 
