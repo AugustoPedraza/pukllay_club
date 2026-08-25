@@ -104,14 +104,23 @@ defmodule PukllayClubWeb.HeaderRowHeightTest do
              "The header wordmark must be hidden by default and opted back in at a breakpoint. " <>
                "Showing it by default is what left 481-767px over-subscribed."
 
-      # Locate the min-width block that reveals it, and pin the width itself.
-      # This is the boundary assertion: the reveal width is the whole fix. The
-      # row needs 250 (brand) + 24 + 166.3 (links) + 24 + 280 (open pill) + 64
-      # (gutters) = 808.3px to seat everything at natural size. 48rem/768px is
-      # the widest existing breakpoint at or below that, and the pill's own
-      # shrink guard covers the 40.3px difference (it lands at 239.7px there).
-      # Anything narrower reopens the bug: at 640px/sm the pill would be left
-      # 111.7px, narrower than its own 44px toggle plus 44px close control.
+      # A reveal block must exist, and it must be nowhere near the widths where
+      # the row demonstrably cannot hold the lockup.
+      #
+      # This is a FLOOR, not the boundary. It used to be the boundary, and the
+      # arithmetic recorded here was wrong: "250 + 24 + 166.3 + 24 + 280 + 64 =
+      # 808.3px" counts three items and two gaps, omitting `.pk-cat-trigger`
+      # (44px) and its 24px gap, so it under-stated the requirement by 68px and
+      # this test passed the defect (debug search-pill-tablet-squeeze). The real
+      # requirement is 876.3px, and header_capacity_test.exs now owns it —
+      # RECOMPUTED from the stylesheet's own gutter, row gap and pill width plus
+      # a fenced content inventory, rather than pinned as a literal here where
+      # it silently rotted.
+      #
+      # The floor below is kept because it is this file's own concern (a reveal
+      # at 640px/sm leaves the pill 111.7px, narrower than its own 44px toggle
+      # plus 44px close control, and the row starts growing) and because it
+      # holds independently of the capacity model being right.
       reveal_widths =
         src
         |> String.split("@media (min-width: ")

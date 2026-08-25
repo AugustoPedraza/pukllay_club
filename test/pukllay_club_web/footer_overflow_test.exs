@@ -182,15 +182,37 @@ defmodule PukllayClubWeb.FooterOverflowTest do
                  "them with nowhere to reach them."
       end
 
-      # And the ≤480px threshold itself must not creep upward: everything above it
-      # relies on the controls being present and the clusters wrapping instead.
-      scanned = Regex.scan(~r/@media \(max-width: (\d+)px\)/, src)
-      thresholds = Enum.map(scanned, fn [_, n] -> String.to_integer(n) end)
+      # And the hide must not creep upward past ≤480px: everything above it relies
+      # on the controls being present and the clusters wrapping instead.
+      #
+      # This asserted the MECHANISM until debug search-pill-tablet-squeeze — it
+      # banned the mere EXISTENCE of any `@media (max-width: Npx)` block above
+      # 480px, anywhere in the stylesheet, whatever that block contained. So it
+      # failed on a header-only change that never mentions the footer, which is
+      # a false positive of exactly the class header_search_gutter_test.exs
+      # already had to correct once ("it asserted the literal inset shorthand —
+      # the MECHANISM rather than the INVARIANT — so it failed on a change that
+      # preserves the alignment it exists to protect").
+      #
+      # Now it pins the INVARIANT: a wider max-width block is fine, but it may
+      # not hide these controls. That is strictly stronger than the old check as
+      # well as narrower — the old one only ever inspected the BODY of min-width
+      # blocks, and used "no wide max-width block exists at all" as a proxy for
+      # the other half. A wide max-width block that hid the cluster while the
+      # threshold check was relaxed would have walked straight through.
+      wide_max_width_blocks =
+        ~r/@media \(max-width: (\d+)px\) \{(.*?)\n\}/s
+        |> Regex.scan(src)
+        |> Enum.map(fn [_, n, body] -> {String.to_integer(n), body} end)
+        |> Enum.filter(fn {n, _} -> n > 480 end)
 
-      for t <- thresholds do
-        assert t <= 480,
-               "A max-width breakpoint at #{t}px was introduced. The footer's hide-controls " <>
-                 "treatment is only valid at ≤480px where the drawer exists; widening it is the " <>
+      for {width, body} <- wide_max_width_blocks,
+          selector <- [".pk-footer-social", ".pk-footer-right", ".pk-footer-theme"] do
+        refute body =~ ~r/#{Regex.escape(selector)}\s*\{[^}]*display:\s*none/,
+               "The `@media (max-width: #{width}px)` block hides `#{selector}`. The drawer that " <>
+                 "these controls relocate INTO only exists below 480px, so hiding them anywhere " <>
+                 "between 481px and #{width}px does not relocate them — it removes them from the " <>
+                 "page entirely, with nothing anywhere to reach them. Widening the hide is the " <>
                  "fix path this bug's investigation explicitly ruled out."
       end
     end
