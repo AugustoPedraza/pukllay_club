@@ -502,6 +502,91 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "in-row horizontal infinite scroll: carousel-load-more (quick task 260824-u5d)" do
+    test "appends cards into exactly one row's rail and leaves a sibling rail untouched", %{
+      conn: conn
+    } do
+      for n <- 1..25 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      game_fixture(%{name: "Sibling Game", tags: ["#CreaConexiones"]})
+
+      {:ok, view, html} = live(conn, ~p"/")
+
+      assert carousel_card_count(html, "equipo_ganador") == 20
+      sibling_before = carousel_card_count(html, "crea_conexiones")
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "equipo_ganador"})
+
+      assert carousel_card_count(html2, "equipo_ganador") == 25
+      assert carousel_card_count(html2, "crea_conexiones") == sibling_before
+    end
+
+    test "is a no-op on an already-exhausted row", %{conn: conn} do
+      game_fixture(%{name: "Only Duel", tags: ["#DuelosMemorables"]})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before = carousel_card_count(html, "duelos_memorables")
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "duelos_memorables"})
+
+      assert carousel_card_count(html2, "duelos_memorables") == before
+    end
+
+    test "is a no-op on an unrecognised row key and does not raise", %{conn: conn} do
+      game_fixture(%{name: "Untouched Game"})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before_count = card_count(html)
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "not-a-real-row"})
+
+      assert card_count(html2) == before_count
+      assert html2 =~ "Untouched Game"
+    end
+  end
+
+  describe "trailing skeleton placeholders + hook data attributes (Task 2, quick task 260824-u5d)" do
+    test "a rendered rail carries the row-key and exhausted data attributes and trailing placeholder markup",
+         %{conn: conn} do
+      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      section_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-equipo_ganador")
+        |> LazyHTML.to_html()
+
+      assert section_html =~ ~s(data-carousel-row="equipo_ganador")
+      assert section_html =~ ~s(data-exhausted="true")
+      assert section_html =~ "pk-trailing-skel"
+      assert section_html =~ ~s(id="carousel-equipo_ganador-skel-1")
+      assert section_html =~ ~s(id="carousel-equipo_ganador-skel-2")
+    end
+
+    test "an exhausted row still carries the trailing placeholder markup — it is always in the DOM, only hidden",
+         %{conn: conn} do
+      game_fixture(%{name: "Only Duel", tags: ["#DuelosMemorables"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      section_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-duelos_memorables")
+        |> LazyHTML.to_html()
+
+      assert section_html =~ ~s(data-exhausted="true")
+      assert section_html =~ "pk-trailing-skel"
+    end
+  end
+
   describe "differentiated row headers and titled main grid (G-01-4)" do
     test "the hero row renders in the primary colour and a weight-band row renders its Vocabulary descriptor as a subtitle",
          %{conn: conn} do
@@ -929,75 +1014,6 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
-  describe "Ver todo tile wired to real filter state (01-11)" do
-    test "clicking the tile on the tag-backed shelf renders only the tagged game and hides the shelves",
-         %{conn: conn} do
-      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
-      game_fixture(%{name: "Untagged Game", tags: []})
-
-      {:ok, view, _html} = live(conn, ~p"/")
-
-      html =
-        view
-        |> element("button[phx-value-row=equipo_ganador]")
-        |> render_click()
-
-      grid = grid_html(html)
-      assert grid =~ "Equipo Game"
-      refute grid =~ "Untagged Game"
-      refute html =~ ~s(id="carousel-rows")
-    end
-
-    test "clicking the tile on the band-backed shelf renders only games in that band", %{
-      conn: conn
-    } do
-      game_fixture(%{name: "Experto Game", weight_band: "nivel_experto"})
-      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
-
-      {:ok, view, _html} = live(conn, ~p"/")
-
-      html =
-        view
-        |> element("button[phx-value-row=nivel_experto]")
-        |> render_click()
-
-      grid = grid_html(html)
-      assert grid =~ "Experto Game"
-      refute grid =~ "Hobby Game"
-    end
-
-    test "clicking the tile on the recency shelf reorders the grid newest-first and leaves the shelves rendered",
-         %{conn: conn} do
-      game_fixture(%{name: "Old Game", tags: ["#CreaConexiones"], year_published: 1995})
-      game_fixture(%{name: "New Game", tags: ["#CreaConexiones"], year_published: 2023})
-
-      {:ok, view, _html} = live(conn, ~p"/")
-
-      html =
-        view
-        |> element("button[phx-value-row=recientemente_anadidos]")
-        |> render_click()
-
-      grid = grid_html(html)
-      assert position(grid, "New Game") < position(grid, "Old Game")
-      assert html =~ ~s(id="carousel-rows")
-    end
-
-    test "an unrecognised row value leaves the result set unchanged rather than raising", %{
-      conn: conn
-    } do
-      game_fixture(%{name: "Untouched Game"})
-
-      {:ok, view, html} = live(conn, ~p"/")
-      before_count = card_count(html)
-
-      html2 = render_click(view, "see-all", %{"row" => "not-a-real-row"})
-
-      assert card_count(html2) == before_count
-      assert html2 =~ "Untouched Game"
-    end
-  end
-
   describe "Content-Security-Policy (T-01-28, closes Phase 0's deferred Sobelow Config.CSP finding)" do
     test "the response carries a content-security-policy header scoped to the configured image origin",
          %{conn: conn} do
@@ -1086,8 +1102,9 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert carousel_html =~ ~s(data-scroll="prev")
       assert carousel_html =~ ~s(data-scroll="next")
 
-      # A Ver todo tile
-      assert carousel_html =~ "pk-see-all"
+      # No Ver todo tile (removed entirely, quick task 260824-u5d — in-row
+      # infinite scroll replaces it)
+      refute carousel_html =~ "pk-see-all"
 
       # A card carrying the card marker and its preview template
       assert carousel_html =~ "data-game-card"
@@ -1465,6 +1482,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     |> String.split("data-game-card")
     |> length()
     |> Kernel.-(1)
+  end
+
+  # Counts cards inside one carousel row's rail only, by row key — scoped
+  # to `#carousel-<row_key>` so a fetch-more assertion on one row cannot be
+  # satisfied by cards that landed in a sibling rail instead (260824-u5d).
+  defp carousel_card_count(html, row_key) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("#carousel-#{row_key} [data-game-card]")
+    |> Enum.count()
   end
 
   # A resting card's inert <template data-game-preview> carries the shared

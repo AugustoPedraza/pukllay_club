@@ -285,6 +285,87 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
+  describe "carousel_page/3 — in-row infinite scroll pagination (quick task 260824-u5d)" do
+    test "page 2 continues from page 1 with no overlap and no gap" do
+      for n <- 1..25 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      assert {:ok, {page1, false}} = Catalog.carousel_page("equipo_ganador", 0, 20)
+      assert {:ok, {page2, true}} = Catalog.carousel_page("equipo_ganador", 20)
+
+      assert length(page1) == 20
+      assert length(page2) == 5
+
+      page1_ids = MapSet.new(page1, & &1.id)
+      page2_ids = MapSet.new(page2, & &1.id)
+
+      assert MapSet.disjoint?(page1_ids, page2_ids)
+      assert MapSet.size(MapSet.union(page1_ids, page2_ids)) == 25
+    end
+
+    test "a category with fewer games than the limit is exhausted on its first page" do
+      for n <- 1..5, do: game_fixture(%{name: "Duel #{n}", tags: ["#DuelosMemorables"]})
+
+      assert {:ok, {games, true}} = Catalog.carousel_page("duelos_memorables", 0, 20)
+      assert length(games) == 5
+    end
+
+    test "list_carousel_rows/0 marks a row shorter than the initial page exhausted on first paint" do
+      for n <- 1..5, do: game_fixture(%{name: "Duel #{n}", tags: ["#DuelosMemorables"]})
+
+      rows = Catalog.list_carousel_rows()
+      duelos = Enum.find(rows, &(&1.key == :duelos_memorables))
+
+      assert duelos.exhausted? == true
+      assert duelos.offset == 5
+    end
+
+    test "paging stops at the 30-game ceiling even when the category holds far more" do
+      for n <- 1..40 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      assert {:ok, {_page1, false}} = Catalog.carousel_page("equipo_ganador", 0, 20)
+      assert {:ok, {page2, true}} = Catalog.carousel_page("equipo_ganador", 20, 10)
+
+      assert length(page2) == 10
+    end
+
+    test "a fetch that would cross the ceiling is clamped to the remaining allowance" do
+      for n <- 1..40 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      assert {:ok, {games, true}} = Catalog.carousel_page("equipo_ganador", 25, 10)
+      assert length(games) == 5
+    end
+
+    test "a fetch-more request issued at or beyond the ceiling returns no games" do
+      for n <- 1..40 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      assert {:ok, {[], true}} = Catalog.carousel_page("equipo_ganador", 30, 10)
+    end
+
+    test "an unrecognised row key returns :error rather than raising" do
+      assert Catalog.carousel_page("not-a-real-row", 0) == :error
+    end
+  end
+
   describe "filter_games/1 and count_games/1 — expansions remain searchable (G-01-5)" do
     test "an expansion-flagged game is still findable by search and still counted" do
       game_fixture(%{name: "Wingspan Europa(expa)", is_expansion: true})

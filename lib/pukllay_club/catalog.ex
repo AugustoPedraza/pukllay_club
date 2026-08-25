@@ -18,7 +18,20 @@ defmodule PukllayClub.Catalog do
   alias PukllayClub.Repo
 
   @default_limit 24
+  # @carousel_limit is the initial per-row page size on first paint —
+  # unchanged by quick task 260824-u5d, so first-paint query cost stays
+  # identical to before in-row infinite scroll existed.
+  # @carousel_page_size is the per-increment page size for subsequent
+  # in-row "load more" fetches. @carousel_infinite_scroll_max is a
+  # deliberate browse-depth ceiling (CONTEXT.md "Row size ceiling",
+  # revision note: locked at 30 games/row), not a technical/perf limit —
+  # tunable later without reopening that decision. Given the locked 30 and
+  # the unchanged initial 20, only one 10-game increment can ever land per
+  # row (see the plan's <sizing_note> for the arithmetic); 10 is not a
+  # typo for 20.
   @carousel_limit 20
+  @carousel_page_size 10
+  @carousel_infinite_scroll_max 30
   @similares_limit 12
   @allowed_sorts [
     :name_asc,
@@ -180,9 +193,19 @@ defmodule PukllayClub.Catalog do
 
   @doc """
   The fixed, hardcoded D-09 carousel rows, in order: `Destacados del club`
-  (any editorial hashtag, capped at #{@carousel_limit}), one row per
-  editorial hashtag, one row per weight band, then `Recientemente
-  añadidos`. Each row is `%{key:, title:, games:}`.
+  (any editorial hashtag, initial page capped at #{@carousel_limit}), one
+  row per editorial hashtag, one row per weight band, then `Recientemente
+  añadidos`. Each row is `%{key:, title:, games:, offset:, exhausted?:}` —
+  `offset`/`exhausted?` seed the in-row infinite-scroll pagination
+  (`carousel_page/3`) a connected `CatalogLive.Index` mount turns into
+  per-row streams; `games` is kept on this map (rather than dropped) so
+  existing callers of this function still get a plain list back.
+
+  Both this function and `carousel_page/3` route through the same
+  `row_query/1` dispatch (via `carousel_row_specs/0`) so page 1 and every
+  later page are always built from the identical predicate — the single
+  most likely silent bug in in-row pagination is page 1 and page N
+  silently diverging onto two different `WHERE` clauses.
 
   **Recorded limitation:** the club export has no acquisition date, so
   after a single bulk seed `Recientemente añadidos` is effectively
@@ -205,51 +228,116 @@ defmodule PukllayClub.Catalog do
   admin form, no dynamic registry. D-10 defers that to Phase 4.
   """
   def list_carousel_rows do
-    editorial_tag_values = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
+    Enum.map(carousel_row_specs(), fn {key, title} ->
+      {games, exhausted?} = fetch_row_page(Atom.to_string(key), 0, @carousel_limit)
+      %{key: key, title: title, games: games, offset: length(games), exhausted?: exhausted?}
+    end)
+  end
 
+  @doc """
+  Next page for one carousel row (quick task 260824-u5d, in-row horizontal
+  infinite scroll). Returns `{:ok, {games, exhausted?}}` for a known
+  `key` string, `:error` for an unrecognised one — never builds an atom
+  from `key` (T-01-37 convention). `exhausted?` is true once the row's
+  underlying category truly runs out OR the `@carousel_infinite_scroll_max`
+  ceiling is reached, whichever comes first.
+  """
+  def carousel_page(key, offset, limit \\ @carousel_page_size)
+
+  def carousel_page(key, offset, limit) when is_integer(offset) and offset >= 0 do
+    case row_query(key) do
+      nil -> :error
+      _query -> {:ok, fetch_row_page(key, offset, limit)}
+    end
+  end
+
+  # `limit + 1` over-fetch: one extra row tells us whether more exist,
+  # with no second COUNT query per row. Also makes the *initial*
+  # exhausted? correct for free — a row shorter than @carousel_limit is
+  # exhausted at first paint (e.g. Duelos memorables' 19 games).
+  #
+  # The request is clamped against the ceiling BEFORE touching the
+  # database: when the ceiling is already reached (or would be exceeded),
+  # `effective` is 0 and no query runs at all — a client cannot force
+  # unbounded queries by repeatedly scrolling an exhausted rail.
+  defp fetch_row_page(key, offset, limit) do
+    allowed = max(@carousel_infinite_scroll_max - offset, 0)
+    effective = min(limit, allowed)
+
+    if effective == 0 do
+      {[], true}
+    else
+      rows =
+        key
+        |> row_query()
+        |> offset(^offset)
+        |> limit(^(effective + 1))
+        |> Repo.all()
+
+      games = Enum.take(rows, effective)
+      exhausted? = length(rows) <= effective or offset + effective >= @carousel_infinite_scroll_max
+
+      {games, exhausted?}
+    end
+  end
+
+  # Ordered `{key_atom, title}` pairs for the 8 fixed D-09 rows — the
+  # single source `list_carousel_rows/0` maps over, so the row set and
+  # its order live in exactly one place.
+  defp carousel_row_specs do
     [
-      carousel_row(:destacados_del_club, "Destacados del club", tags_query(editorial_tag_values)),
-      carousel_row(:crea_conexiones, "Crea conexiones", tags_query(["#CreaConexiones"])),
-      carousel_row(:equipo_ganador, "Equipo ganador", tags_query(["#EquipoGanador"])),
-      carousel_row(:duelos_memorables, "Duelos memorables", tags_query(["#DuelosMemorables"])),
-      carousel_row(
-        :descubre_el_hobby,
-        "Descubre el hobby",
-        weight_band_query("descubre_el_hobby")
-      ),
-      carousel_row(
-        :ingenio_estratega,
-        "Ingenio estratega",
-        weight_band_query("ingenio_estratega")
-      ),
-      carousel_row(:nivel_experto, "Nivel experto", weight_band_query("nivel_experto")),
-      carousel_row(:recientemente_anadidos, "Recientemente añadidos", recent_query())
+      {:destacados_del_club, "Destacados del club"},
+      {:crea_conexiones, "Crea conexiones"},
+      {:equipo_ganador, "Equipo ganador"},
+      {:duelos_memorables, "Duelos memorables"},
+      {:descubre_el_hobby, "Descubre el hobby"},
+      {:ingenio_estratega, "Ingenio estratega"},
+      {:nivel_experto, "Nivel experto"},
+      {:recientemente_anadidos, "Recientemente añadidos"}
     ]
   end
 
-  defp carousel_row(key, title, query) do
-    %{key: key, title: title, games: Repo.all(query)}
+  # Literal-string clauses with a final catch-all — the T-01-37 convention
+  # already used by `facet_assign_key/1` in `CatalogLive.Index`. The
+  # client sends a STRING row key (`carousel-load-more`'s payload); never
+  # `String.to_atom/1` it. Both `list_carousel_rows/0` and
+  # `carousel_page/3` route through this one dispatch.
+  defp row_query("destacados_del_club") do
+    tags_query(Enum.map(Vocabulary.editorial_tags(), & &1.tag))
   end
 
+  defp row_query("crea_conexiones"), do: tags_query(["#CreaConexiones"])
+  defp row_query("equipo_ganador"), do: tags_query(["#EquipoGanador"])
+  defp row_query("duelos_memorables"), do: tags_query(["#DuelosMemorables"])
+  defp row_query("descubre_el_hobby"), do: weight_band_query("descubre_el_hobby")
+  defp row_query("ingenio_estratega"), do: weight_band_query("ingenio_estratega")
+  defp row_query("nivel_experto"), do: weight_band_query("nivel_experto")
+  defp row_query("recientemente_anadidos"), do: recent_query()
+  defp row_query(_unrecognized), do: nil
+
+  # The limit is lifted out of these queries (unlike pre-260824-u5d) so one
+  # paginator (`fetch_row_page/3`) serves both the initial page and every
+  # increment. An `:id` tiebreaker is added after `:name` on the two
+  # name-ordered helpers below — there is no unique index on `name`, so
+  # without it Postgres could order tied rows differently between page 1
+  # and page 2 and silently duplicate one card while skipping another.
+  # `recent_query/0` already tiebreaks on `csv_row` and needs nothing.
   defp tags_query(tags) do
     from g in Game,
       where: fragment("? && ?", g.tags, type(^tags, {:array, :string})),
-      order_by: [asc: g.name],
-      limit: ^@carousel_limit
+      order_by: [asc: g.name, asc: g.id]
   end
 
   defp weight_band_query(band) do
     from g in Game,
       where: g.weight_band == ^band,
-      order_by: [asc: g.name],
-      limit: ^@carousel_limit
+      order_by: [asc: g.name, asc: g.id]
   end
 
   defp recent_query do
     from g in Game,
       where: g.is_expansion == false,
-      order_by: [desc: g.inserted_at, desc: g.csv_row],
-      limit: ^@carousel_limit
+      order_by: [desc: g.inserted_at, desc: g.csv_row]
   end
 
   defp normalize_opts(opts), do: Map.new(opts)
