@@ -227,8 +227,14 @@
      three tested options, paired with a no-overshoot soft ease-out. New
      rules added from this phase forward must reference these tokens rather
      than hardcode a timing value; the pre-existing 220ms/360ms literals in
-     .pk-nav/.pk-portal/.pk-sheet are UAT-verified and out of scope for this
-     phase — don't rewrite them as an uninstructed side effect. */
+     .pk-nav/.pk-portal are UAT-verified and out of scope — don't rewrite them
+     as an uninstructed side effect.
+     .pk-sheet/.pk-sheet-backdrop were on that same list until 2026-08-25, when
+     a user report ("polished fluid animation, not jump") falsified their
+     UAT-verified status: their 360ms/220ms literals were the abandoned
+     sketch-001/002 numbers, and being hardcoded is exactly what kept the 006
+     pass from reaching them. Both now read tokens — see the note on .pk-sheet
+     for why that rule needs --ease-standard and not --ease-out-soft. */
   --duration-fast: 100ms;
   --duration-base: 180ms;
   --duration-slow: 280ms;
@@ -559,7 +565,7 @@
   z-index: 600;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity var(--duration-slow) var(--ease-standard);
 }
 
 .pk-sheet-backdrop.is-visible {
@@ -579,7 +585,21 @@
   max-height: 82vh;
   overflow-y: auto;
   transform: translateY(100%);
-  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* --ease-standard, not --ease-out-soft. Sketch 006 validated --ease-out-soft
+     (easeOutExpo) against ~3px amplitudes — the hover-lift and row-scroll — where
+     its front-loading is imperceptible. This sheet travels its own full height
+     (~515px at 390x844), and over that distance the same curve spends 26.3% of
+     the trip in the first 16.7ms frame and 80% within 62ms, so it reads as a pop
+     followed by a ~280ms sub-10px/frame crawl: measured first painted frame
+     jumped 135px, against 134.4px predicted closed-form. --ease-standard over
+     the same travel moves 4px in frame one and spreads the motion across all 16.
+     Shortening the duration does NOT help — it front-loads the curve harder
+     (169px at 280ms). Amplitude is the variable that decides the curve here, so
+     don't "restore consistency" by putting --ease-out-soft back. The literal
+     360ms/220ms these two rules used to carry were the pre-006 sketch-001/002
+     numbers, which the 006 tuning pass never reached precisely because they were
+     hardcoded rather than tokenised. */
+  transition: transform var(--duration-slow) var(--ease-standard);
 }
 
 .pk-sheet.is-open {
@@ -1668,7 +1688,19 @@ body.pk-sheet-open {
   overflow-y: auto;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform var(--duration-slow) var(--ease-out-soft);
+  /* --ease-standard, not --ease-out-soft — same reasoning as .pk-sheet, see the
+     long note on that rule. This panel travels its own width (82%, capped at
+     20rem = ~320px at 390px wide), and --ease-out-soft (easeOutExpo) puts 32.7%
+     of that trip into the first 16.7ms frame and 80% of it inside 67ms, leaving
+     ~210ms of sub-10px/frame crawl that reads as "popped, then nothing".
+     --ease-standard over the identical travel moves 2.7px in frame one, peaks at
+     50px, and is still only 80% done at 150ms — motion spread over all 17 frames
+     instead of spent in four. Unlike .pk-sheet, the duration here was already
+     tokenised correctly; only the curve was wrong, so only the curve changed.
+     Amplitude decides the curve: --ease-out-soft stays correct on the small
+     amplitudes sketch 006 actually validated it against (~3px hover-lift,
+     row-scroll), so don't "restore consistency" by putting it back here. */
+  transition: transform var(--duration-slow) var(--ease-standard);
 }
 
 .pk-drawer.is-open {
