@@ -32,14 +32,24 @@ defmodule PukllayClubWeb.CarouselRow do
 
   attr :id, :string, required: true
   attr :title, :string, required: true
-  attr :games, :list, required: true
+  attr :games, :any, required: true
   attr :variant, :atom, default: :standard, values: [:standard, :hero]
   attr :subtitle, :string, default: nil
   attr :see_all_row, :string, default: nil
+  attr :empty, :boolean, default: false
+  attr :row_key, :string, required: true
+  attr :exhausted, :boolean, default: false
 
   def carousel_row(assigns) do
     ~H"""
-    <section :if={@games != []} id={@id} class="pk-shelf space-y-3" phx-hook=".CarouselScroll">
+    <section
+      :if={not @empty}
+      id={@id}
+      class="pk-shelf space-y-3"
+      phx-hook=".CarouselScroll"
+      data-carousel-row={@row_key}
+      data-exhausted={to_string(@exhausted)}
+    >
       <script :type={Phoenix.LiveView.ColocatedHook} name=".CarouselScroll">
         export default {
           mounted() {
@@ -97,15 +107,16 @@ defmodule PukllayClubWeb.CarouselRow do
         </div>
       </div>
       <div class="pk-rail-wrap pk-gutter">
-        <div data-rail class="pk-rail">
+        <div data-rail id={"#{@id}-rail"} phx-update="stream" class="pk-rail">
           <GameCard.game_card
-            :for={game <- @games}
-            id={"#{@id}-#{game.id}"}
+            :for={{dom_id, game} <- @games}
+            id={dom_id}
             game={game}
             class={["pk-poster-card", @variant == :hero && "is-hero"]}
           />
           <button
             :if={@see_all_row}
+            id={"#{@id}-see-all"}
             type="button"
             phx-click="see-all"
             phx-value-row={@see_all_row}

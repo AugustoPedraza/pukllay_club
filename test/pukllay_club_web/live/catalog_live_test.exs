@@ -492,6 +492,54 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "in-row horizontal infinite scroll: carousel-load-more (quick task 260824-u5d)" do
+    test "appends cards into exactly one row's rail and leaves a sibling rail untouched", %{
+      conn: conn
+    } do
+      for n <- 1..25 do
+        game_fixture(%{
+          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
+          tags: ["#EquipoGanador"]
+        })
+      end
+
+      game_fixture(%{name: "Sibling Game", tags: ["#CreaConexiones"]})
+
+      {:ok, view, html} = live(conn, ~p"/")
+
+      assert carousel_card_count(html, "equipo_ganador") == 20
+      sibling_before = carousel_card_count(html, "crea_conexiones")
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "equipo_ganador"})
+
+      assert carousel_card_count(html2, "equipo_ganador") == 25
+      assert carousel_card_count(html2, "crea_conexiones") == sibling_before
+    end
+
+    test "is a no-op on an already-exhausted row", %{conn: conn} do
+      game_fixture(%{name: "Only Duel", tags: ["#DuelosMemorables"]})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before = carousel_card_count(html, "duelos_memorables")
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "duelos_memorables"})
+
+      assert carousel_card_count(html2, "duelos_memorables") == before
+    end
+
+    test "is a no-op on an unrecognised row key and does not raise", %{conn: conn} do
+      game_fixture(%{name: "Untouched Game"})
+
+      {:ok, view, html} = live(conn, ~p"/")
+      before_count = card_count(html)
+
+      html2 = render_click(view, "carousel-load-more", %{"row" => "not-a-real-row"})
+
+      assert card_count(html2) == before_count
+      assert html2 =~ "Untouched Game"
+    end
+  end
+
   describe "differentiated row headers and titled main grid (G-01-4)" do
     test "the hero row renders in the primary colour and a weight-band row renders its Vocabulary descriptor as a subtitle",
          %{conn: conn} do
@@ -1139,6 +1187,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     |> String.split("data-game-card")
     |> length()
     |> Kernel.-(1)
+  end
+
+  # Counts cards inside one carousel row's rail only, by row key — scoped
+  # to `#carousel-<row_key>` so a fetch-more assertion on one row cannot be
+  # satisfied by cards that landed in a sibling rail instead (260824-u5d).
+  defp carousel_card_count(html, row_key) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("#carousel-#{row_key} [data-game-card]")
+    |> Enum.count()
   end
 
   # A resting card's inert <template data-game-preview> carries the shared

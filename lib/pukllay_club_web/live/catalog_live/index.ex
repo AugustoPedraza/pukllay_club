@@ -58,7 +58,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:page_size, @page_size)
       |> assign(:skeleton_carousel_rows, @skeleton_carousel_rows)
       |> assign(:facet_options, if(loading?, do: empty_facet_options(), else: Catalog.facet_options()))
-      |> assign(:carousel_rows, if(loading?, do: [], else: Catalog.list_carousel_rows()))
+      |> assign_carousel_rows(loading?)
 
     # 01.1-06: mount/3 no longer calls apply_filters/1 on the connected
     # branch — it only ever set *default* filter state anyway, and
@@ -135,6 +135,63 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp parse_list_param(_other, _allowed), do: []
 
   defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
+
+  # Connected-mount-only (never also in handle_params/3, see the comment on
+  # mount/3 above about accumulating stream diffs across two stream/4 calls
+  # issued before the first render flush) construction of the 8 per-row
+  # carousel streams plus their metadata (quick task 260824-u5d, in-row
+  # infinite scroll). Per-row stream names are mandatory, not stylistic —
+  # the 8 rows genuinely overlap (a tagged game sits in up to 4 rows at
+  # once), so one shared stream name would emit the same DOM id in four
+  # different rails. The atom is derived only from Catalog's own
+  # server-side row list, never from client input.
+  defp assign_carousel_rows(socket, true), do: assign(socket, :carousel_rows, [])
+
+  defp assign_carousel_rows(socket, false) do
+    rows = Catalog.list_carousel_rows()
+
+    socket =
+      Enum.reduce(rows, socket, fn row, acc ->
+        stream(acc, carousel_stream_name(row.key), row.games)
+      end)
+
+    assign(socket, :carousel_rows, Enum.map(rows, &carousel_row_metadata/1))
+  end
+
+  # The games themselves now live only in the per-row streams — this
+  # metadata map carries everything else `carousel_row/1`'s render and
+  # `handle_event("carousel-load-more", ...)` need: `empty?` is the one
+  # shared non-stream emptiness signal both the chip-nav filter below and
+  # `CarouselRow.carousel_row/1`'s section guard read (a `%LiveStream{}`
+  # is never `== []`, so a guard left reading `row.games != []` would
+  # silently start rendering empty rows).
+  defp carousel_row_metadata(row) do
+    %{
+      key: row.key,
+      title: row.title,
+      offset: row.offset,
+      exhausted?: row.exhausted?,
+      empty?: row.games == []
+    }
+  end
+
+  defp carousel_stream_name(key), do: :"carousel_#{key}"
+
+  defp find_carousel_row(rows, row_key) do
+    Enum.find(rows, &(Atom.to_string(&1.key) == row_key))
+  end
+
+  defp update_carousel_row(socket, key, changes) do
+    changes = Map.new(changes)
+
+    rows =
+      Enum.map(socket.assigns.carousel_rows, fn
+        %{key: ^key} = row -> Map.merge(row, changes)
+        row -> row
+      end)
+
+    assign(socket, :carousel_rows, rows)
+  end
 
   # A ?q= URL param reaches a catalog-wide ILIKE (T-01.1-28) — bounded at the
   # entry point, same discipline plan 01.1-06 applies to the rest of the
@@ -232,6 +289,42 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> apply_filters()
 
     {:noreply, socket}
+  end
+
+  # In-row horizontal infinite scroll (quick task 260824-u5d). The client
+  # (`.CarouselScroll`'s rAF-throttled scroll listener, added in Task 2)
+  # sends the row key it read off its own section's data attribute — fully
+  # attacker-controlled, so this handler is the authoritative guard
+  # (T-u5d-01/T-u5d-02): an unknown key, or a row the server already
+  # considers exhausted, short-circuits to a no-op reply with no query at
+  # all, never building an atom from `row_key`. A LiveView process handles
+  # events sequentially, so two rapid taps can't interleave into a
+  # double-fetch of the same offset — the second sees the already-advanced
+  # offset from the first. A failed carousel fetch degrades that one row
+  # to exhausted; it must NOT raise the full-page :load_error banner,
+  # which is scoped to the main grid (T-01-24's precedent).
+  def handle_event("carousel-load-more", %{"row" => row_key}, socket) when is_binary(row_key) do
+    case find_carousel_row(socket.assigns.carousel_rows, row_key) do
+      nil ->
+        {:reply, %{exhausted: true}, socket}
+
+      %{exhausted?: true} ->
+        {:reply, %{exhausted: true}, socket}
+
+      row ->
+        case Catalog.carousel_page(row_key, row.offset) do
+          {:ok, {games, exhausted?}} ->
+            socket =
+              socket
+              |> stream(carousel_stream_name(row.key), games, at: -1)
+              |> update_carousel_row(row.key, offset: row.offset + length(games), exhausted?: exhausted?)
+
+            {:reply, %{exhausted: exhausted?}, socket}
+
+          :error ->
+            {:reply, %{exhausted: true}, update_carousel_row(socket, row.key, exhausted?: true)}
+        end
+    end
   end
 
   def handle_event("load-more", _params, socket) do
@@ -461,7 +554,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         <nav class="pk-chip-nav" aria-label="Categorías">
           <span class="pk-chip-spacer" aria-hidden="true"></span>
           <a
-            :for={row <- Enum.filter(@carousel_rows, &(&1.games != []))}
+            :for={row <- Enum.reject(@carousel_rows, & &1.empty?)}
             href={"#carousel-#{row.key}"}
             data-chip-target={"carousel-#{row.key}"}
             class="pk-chip"
@@ -506,12 +599,16 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           <% else %>
             <CarouselRow.carousel_row
               :for={row <- @carousel_rows}
+              :key={row.key}
               id={"carousel-#{row.key}"}
               title={row.title}
-              games={row.games}
+              games={Map.fetch!(@streams, carousel_stream_name(row.key))}
               variant={row_variant(row.key)}
               subtitle={row_subtitle(row.key)}
               see_all_row={to_string(row.key)}
+              empty={row.empty?}
+              row_key={to_string(row.key)}
+              exhausted={row.exhausted?}
             />
           <% end %>
         </div>
