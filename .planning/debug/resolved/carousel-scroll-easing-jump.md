@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Follow-up from resolved session catalog-preview-modal-jump (commit 78642fa): the .CarouselScroll colocated hook in lib/pukllay_club_web/components/carousel_row.ex (mounted(), lines ~66-96) drives the carousel row's prev/next arrow-click scroll with a hand-rolled quintic ease-out (`1 - Math.pow(1 - t, 5)`) over `0.85 * rail.clientWidth`, which the just-closed session's report estimated at roughly 107px on mobile widths up to ~365px on desktop container widths. This is the same 'easing curve validated at small amplitude, reused at large amplitude' bug class fixed in app.css this session (see knowledge-base.md's catalog-preview-modal-jump entry for the CSS-side pattern and its ~35/51/73px --ease-out-soft safety thresholds at fast/base/slow durations — this JS curve is a different function, not directly covered by those numbers, so its own safety threshold must be derived independently). User instruction: 'Fix both using gsd-debug' (this + the reduced-motion source-order bug, filed separately as reduced-motion-order-bug)."
 created: 2026-08-25T12:00:00Z
-updated: 2026-08-25T12:00:00Z
+updated: 2026-08-25T14:20:00Z
 ---
 
 ## Current Focus
@@ -77,9 +77,12 @@ reasoning_checkpoint:
     amplitude is not independently a defect. Proven by holding amplitude constant at 1033.6px and
     varying only the curve: 364.6px -> 17.8px. One condition, one fix.
 
-next_action: DONE — fix applied and verified (341px -> 2px measured first frame, prediction matched
-term for term, `mix quality` green at 466 tests). AWAITING HUMAN VERIFICATION on a real pointer-fine
-display >= 1440px, where the amplitude sits at its 1033.6px cap. Do NOT archive until confirmed.
+next_action: NONE — session CLOSED. Fix applied, verified by measurement (341px -> 2px first frame,
+prediction matched term for term, `mix quality` green at 466 tests) and CONFIRMED BY THE USER on a
+real pointer-fine display >= 1440px with a mouse, at the 1033.6px amplitude cap: "confirmed — feels
+right. Smooth, continuous scroll, no pop or teleport. No further tuning needed (duration stays at
+200ms)." Committed as 22e1711; archived to `.planning/debug/resolved/`; knowledge-base entry
+appended.
 
 ## Symptoms
 
@@ -237,6 +240,11 @@ surfaced as a candidate concern now, by analogy to the CSS-side finding, not by 
 
 ## Resolution
 
+status: RESOLVED AND CLOSED (2026-08-25). Fix committed as `22e1711`
+("fix(carousel): scroll arrows start from rest instead of teleporting"), human-verified on a real
+>= 1440px pointer-fine display with a mouse, `mix quality` exit 0 at 466 tests / 0 failures at
+close-out. Duration deliberately unchanged at 200ms, per the user's own judgement at the checkpoint.
+
 verdict: DEFECT CONFIRMED AND FIXED — but only after measurement, and the measurement changed the
 shape of the finding twice. The lead was raised as "same class as the CSS `--ease-out-soft` bug".
 It is NOT the same class: the CSS surfaces were defective because a specific curve was
@@ -377,16 +385,26 @@ verification:
     string `easeOutSoft` and the literal `1 - Math.pow(1 - t, 5)` survive nowhere in `lib/`,
     `assets/` or the built bundle except inside the new explanatory comment.
   signal_human_verify: >
-    NOT DONE — this is the one signal that cannot be self-certified, and it matters more than usual
-    here because this was never a user-reported symptom. Measurement establishes MECHANISM, not
-    PERCEPTUAL SUFFICIENCY (KB: search-right-align-mobile-cycle-3). Requires a click on a real
-    pointer-fine display >= 1440px, where the amplitude is at its 1033.6px cap.
+    PASS — CONFIRMED BY THE USER, 2026-08-25, on a real pointer-fine display >= 1440px with a mouse,
+    i.e. at the 1033.6px amplitude cap this session identified as the worst case. Verbatim: "confirmed
+    — feels right. Smooth, continuous scroll on a real >=1440px display with a mouse, no pop or
+    teleport. No further tuning needed (duration stays at 200ms)."
+    This is the signal that mattered most here, for the reason recorded above: measurement establishes
+    MECHANISM, not PERCEPTUAL SUFFICIENCY (KB: search-right-align-mobile-cycle-3, where three
+    consecutive self-verified fixes were rejected on real-device review). Two things are settled by
+    it beyond "the pop is gone". FIRST, the CURVE-ONLY fix is sufficient — the 200ms duration is
+    explicitly retained by the user's own judgement, so `follow_ups_not_done`'s amplitude-scaled-
+    duration lever stays unpulled and unneeded. SECOND, the substitute for a real reported symptom
+    is now in place: this defect was never user-reported (it was found by code-pattern match during
+    the prior session's sweep), so the fix had no complaint to satisfy and no before/after human
+    baseline. The user's confirmation supplies the missing perceptual endpoint, which is what makes
+    this closable rather than merely measured.
 
 files_changed:
   - "lib/pukllay_club_web/components/carousel_row.ex: `.CarouselScroll` hook's easing replaced — quintic ease-out `1 - Math.pow(1 - t, 5)` -> `easeStandard`, a closed-form cubic-bezier(0.4, 0, 0.2, 1) solver (the JS twin of --ease-standard). Duration, amplitude, reduced-motion short-circuit and rAF cancellation all unchanged. Rule-level comment added recording the amplitude arithmetic, the fling-vs-click category error, and the don't-revert warning."
   - "test/pukllay_club_web/category_anchor_scroll_test.exs: assertion failure message updated to name `easeStandard` instead of the now-nonexistent `easeOutSoft`. Message text only — no assertion changed."
 
 follow_ups_not_done:
-  - "Real-device human verification (signal_human_verify above). The measured mechanism is unambiguous; the perceptual judgement is not mine to make."
+  - "CLOSED, no longer outstanding: real-device human verification (signal_human_verify above). Confirmed 2026-08-25 on a >= 1440px pointer-fine display with a mouse — smooth and continuous, no pop or teleport, 200ms retained."
   - "The rail's amplitude is `0.85 * clientWidth` with a fixed 200ms, so average scroll VELOCITY scales 4.2x across the arrow-bearing viewport range (248px travel at 320px wide, 1034px at >=1440px). This is NOT the reported defect and is not fixed — after the curve fix both extremes measure well (first frame 1px and 2px). Recorded only because if a future report says 'too fast on a big monitor', an amplitude-scaled duration is the lever, and it should be reached for deliberately rather than by reintroducing a front-loaded curve."
   - "Untouched, and confirmed still open: the `prefers-reduced-motion: reduce` CSS source-order defect (session `reduced-motion-order-bug`). Unrelated to this hook, whose reduced-motion branch is JS `matchMedia` and was verified working."
