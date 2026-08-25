@@ -564,6 +564,69 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       # app.js/theme.js are expected and unaffected by this check.
       refute html =~ "export default"
     end
+
+    test "sketch 022-C: each rendered shelf's two scroll buttons live inside .pk-rail-wrap, none inside .pk-row-header, and no daisyUI circular-button class remains",
+         %{conn: conn} do
+      game_fixture(%{name: "Rail Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      carousel_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      rail_wrap_buttons =
+        carousel_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-rail-wrap button[data-scroll]")
+
+      row_header_buttons =
+        carousel_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-row-header button[data-scroll]")
+
+      shelf_count =
+        carousel_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("[data-rail-wrap]")
+        |> Enum.count()
+
+      assert Enum.count(rail_wrap_buttons) == shelf_count * 2
+      assert Enum.empty?(row_header_buttons)
+      refute carousel_html =~ "btn-circle"
+      assert carousel_html =~ "data-rail-wrap"
+    end
+
+    test "sketch 022-C: CatalogLive.Show's Juegos similares shelf gets the identical treatment with no show.ex edit",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Rail Detail Game"})
+      game_fixture(%{name: "Similar Rail Game", bgg_id: 14, csv_row: 9_991})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
+
+      similares_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#similares")
+        |> LazyHTML.to_html()
+
+      rail_wrap_buttons =
+        similares_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-rail-wrap button[data-scroll]")
+
+      row_header_buttons =
+        similares_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-row-header button[data-scroll]")
+
+      assert Enum.count(rail_wrap_buttons) == 2
+      assert Enum.empty?(row_header_buttons)
+      refute similares_html =~ "btn-circle"
+      assert similares_html =~ "data-rail-wrap"
+    end
   end
 
   describe "shell-capped, gutter-aligned, edge-fade shelves (01-11, quick-260824-9zo)" do

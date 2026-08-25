@@ -25,10 +25,13 @@ defmodule PukllayClubWeb.CarouselRow do
 
   G-01-3: the rail's horizontal scroll is intentional — it is NOT the
   responsive `#games` grid. The always-visible `.pk-rail-wrap` edge-fade
-  is now the primary passive scroll cue (01-11); the persistent prev/next
-  controls below stay as a secondary, pointer-device cue: a
-  `.CarouselScroll` colocated hook scrolls the rail and hides the controls
-  whenever the rail has nothing to scroll to.
+  is the primary passive scroll cue (01-11); Netflix-style edge-overlay
+  chevrons (sketch 022, winner C) are a secondary cue gated to
+  pointer-fine devices only — `@media (hover: hover) and (pointer: fine)`
+  removes them from the rendered layout entirely on touch, so no dead tap
+  target ever sits over the swipe area. A `.CarouselScroll` colocated hook
+  writes `data-overflows` on `.pk-rail-wrap` (combined with the pointer-fine
+  gate in CSS, not replaced by it) and scrolls the rail on click.
   """
   use Phoenix.Component
 
@@ -49,7 +52,7 @@ defmodule PukllayClubWeb.CarouselRow do
         export default {
           mounted() {
             this.rail = this.el.querySelector("[data-rail]")
-            this.controls = this.el.querySelector("[data-controls]")
+            this.wrap = this.el.querySelector("[data-rail-wrap]")
 
             this.onClick = (e) => {
               const button = e.target.closest("[data-scroll]")
@@ -61,7 +64,7 @@ defmodule PukllayClubWeb.CarouselRow do
 
             this.sync = () => {
               const overflows = this.rail.scrollWidth > this.rail.clientWidth
-              this.controls.classList.toggle("hidden", !overflows)
+              this.wrap.dataset.overflows = String(overflows)
             }
             this.sync()
 
@@ -82,26 +85,16 @@ defmodule PukllayClubWeb.CarouselRow do
           <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>{@title}</h2>
           <p :if={@subtitle} class="text-neutral text-sm">{@subtitle}</p>
         </div>
-        <div data-controls class="hidden flex items-center gap-2">
-          <button
-            type="button"
-            data-scroll="prev"
-            aria-label="Desplazar hacia la izquierda"
-            class="btn btn-circle size-11"
-          >
-            <CoreComponents.icon name="hero-chevron-left" class="size-5" />
-          </button>
-          <button
-            type="button"
-            data-scroll="next"
-            aria-label="Desplazar hacia la derecha"
-            class="btn btn-circle size-11"
-          >
-            <CoreComponents.icon name="hero-chevron-right" class="size-5" />
-          </button>
-        </div>
       </div>
-      <div class="pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter">
+      <div data-rail-wrap class="pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter">
+        <button
+          type="button"
+          data-scroll="prev"
+          aria-label="Desplazar hacia la izquierda"
+          class="pk-rail-btn"
+        >
+          <CoreComponents.icon name="hero-chevron-left-solid" class="size-8" />
+        </button>
         <div data-rail class="pk-rail">
           <GameCard.game_card
             :for={game <- @games}
@@ -121,6 +114,14 @@ defmodule PukllayClubWeb.CarouselRow do
             <span>{@title}</span>
           </button>
         </div>
+        <button
+          type="button"
+          data-scroll="next"
+          aria-label="Desplazar hacia la derecha"
+          class="pk-rail-btn"
+        >
+          <CoreComponents.icon name="hero-chevron-right-solid" class="size-8" />
+        </button>
       </div>
     </section>
     """

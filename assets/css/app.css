@@ -303,6 +303,58 @@
   display: none;
 }
 
+/* Sketch 022, winner C: Netflix-style edge-overlay prev/next chevrons —
+   bare, drop-shadowed glyph, no boxed button chrome, anchored to
+   .pk-rail-wrap's own left/right edges rather than sitting beside the row
+   title. z-index: 5 puts the glyph above .pk-rail-wrap::before/::after's
+   edge-fade (z-index: 4) — without this it renders under the gradient it
+   is meant to overlay. The pointer-fine gate below and the
+   data-overflows check COMBINE rather than either replacing the other:
+   the media query supplies the device condition, data-overflows the
+   content condition, so touch devices never render the button at all
+   (display: none, not merely transparent) and a non-overflowing rail
+   never shows a chevron on any device. */
+.pk-rail-btn {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-base-content);
+  cursor: pointer;
+  padding: 0;
+}
+
+.pk-rail-btn[data-scroll="prev"] {
+  left: 0;
+}
+
+.pk-rail-btn[data-scroll="next"] {
+  right: 0;
+}
+
+.pk-rail-btn > span {
+  filter: drop-shadow(0 1px 3px color-mix(in srgb, var(--pk-shadow-color) 45%, transparent));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pk-rail-wrap[data-overflows="true"] .pk-rail-btn {
+    display: flex;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .pk-rail-wrap[data-overflows="true"]:hover .pk-rail-btn,
+  .pk-rail-wrap[data-overflows="true"] .pk-rail-btn:focus-visible {
+    opacity: 1;
+  }
+}
+
 .pk-poster-card {
   flex: 0 0 auto;
   width: 160px;
