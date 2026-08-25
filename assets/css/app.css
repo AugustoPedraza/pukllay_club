@@ -757,7 +757,24 @@ body.pk-sheet-open {
   align-items: center;
   height: 44px;
   width: 44px;
-  transition: width var(--duration-slow) var(--ease-out-soft),
+  /* width uses --ease-standard, not --ease-out-soft — same amplitude reasoning
+     as .pk-sheet and .pk-drawer, see the long note on .pk-sheet. Above 480px
+     this pill travels 44px -> 17.5rem/280px = 236px, and --ease-out-soft
+     (easeOutExpo) spends 32.7% of that in the first 16.7ms frame: measured
+     first painted step 77.0-77.3px across 4/4 reps, against 77.2px predicted
+     closed-form. --ease-standard over the identical travel moves 2.0px in
+     frame one, peaks at 37px and spreads across all 17 frames.
+     NOTE this is `width`, so every frame is a LAYOUT pass, not a compositor
+     transform — but the curve does not change that cost. The transition runs
+     its full 280ms either way, so the number of layout passes is identical;
+     the curve only decides WHERE the pixels are on each of them.
+     At <=480px .is-open switches to `width: auto` (the overlay rule at the
+     bottom of this file), which is NOT interpolable — that state snaps in one
+     frame regardless of curve. Fixing that is a different problem (a
+     non-interpolable value, not a front-loaded curve) and is deliberately not
+     addressed here. Amplitude decides the curve: don't "restore consistency"
+     by putting --ease-out-soft back. */
+  transition: width var(--duration-slow) var(--ease-standard),
     background-color var(--duration-base) var(--ease-standard),
     border-color var(--duration-base) var(--ease-standard);
   flex: 0 0 auto;
@@ -940,11 +957,20 @@ body.pk-sheet-open {
   transition: opacity var(--duration-base) var(--ease-standard);
 }
 
+/* .pk-sheet/.pk-sheet-backdrop were missing from this list until 2026-08-25
+   (debug catalog-preview-modal-jump, sweep pass). The app's LARGEST sliding
+   surface — a full-height ~515px translateY at 390x844 — was the one surface
+   not honouring reduced motion, while its smaller sibling .pk-drawer (~320px)
+   already was. Note that moving the sheet onto --ease-standard does NOT help
+   here: reduced motion collapses the duration to 1ms regardless of curve, so
+   this listing is the only thing that suppresses the travel. */
 @media (prefers-reduced-motion: reduce) {
   .pk-search-morph,
   .pk-search-morph-toggle,
   .pk-search-morph-close,
   .pk-search-morph .pk-nav-search,
+  .pk-sheet,
+  .pk-sheet-backdrop,
   .pk-drawer,
   .pk-drawer-backdrop,
   .pk-mobile-cta-bar,
@@ -2234,7 +2260,20 @@ body.pk-drawer-open {
   gap: 0.75rem;
   padding: 0.75rem var(--pk-gutter);
   background: var(--color-base-200);
-  transition: transform var(--duration-base) var(--ease-out-soft), opacity var(--duration-base) var(--ease-out-soft);
+  /* --ease-standard, not --ease-out-soft — same amplitude reasoning as
+     .pk-sheet/.pk-drawer, see the long note on .pk-sheet. The subtlety here is
+     that ONE rule drives TWO states with very different travels, so it is
+     simultaneously safe and unsafe depending on which class fires:
+       .is-hidden  translateY(12%)  =  8.16px -> measured first frame 3.8px  (fine)
+       .is-parked  translateY(100%) = 68.00px -> measured first frame 31.8px (a pop)
+     --duration-base puts 46.7% of the travel in the first frame, so the safe
+     ceiling at this duration is ~51px of travel and .is-parked is over it.
+     --ease-standard moves 1.5px in frame one and peaks at 16.5px instead.
+     Measuring only the .is-hidden state would have cleared this rule falsely.
+     Keep this in lockstep with body.pk-has-cta-bar below: the two animate
+     together on the same footerReached flag, and giving them different curves
+     desyncs the bar from the page padding it is clearing. */
+  transition: transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 
 .pk-mobile-cta-bar.is-hidden {
@@ -2258,7 +2297,16 @@ body.pk-drawer-open {
    the two rules have equal specificity and resolve by source order. */
 body.pk-has-cta-bar {
   padding-bottom: 9.25rem;
-  transition: padding-bottom var(--duration-base) var(--ease-out-soft);
+  /* --ease-standard, not --ease-out-soft. This is the largest travel of the
+     whole sweep: 9.25rem/148px collapsing to 0, which at --duration-base put
+     46.7% = a measured 68.9px (3/3 reps, 69.1px predicted) into the first
+     frame — the footer leapt two thirds of the way up in one frame and then
+     crawled. --ease-standard moves 3.2px in frame one and peaks at 35.8px.
+     Must stay on the SAME duration and curve as .pk-mobile-cta-bar above:
+     both fire on the same footerReached flag, and this padding is precisely
+     the clearance the bar occupies, so any desync between them shows up as
+     the footer and the bar sliding at different rates. */
+  transition: padding-bottom var(--duration-base) var(--ease-standard);
 }
 
 body.pk-cta-parked {

@@ -77,6 +77,46 @@ only one of the two halves needed touching to reach it.
 next_action: DONE — drawer fix applied and verified by the same instrumented per-frame capture
 (104.6px -> 2.7px predicted, 105px -> 3px measured). Session archived.
 
+sweep_reasoning_checkpoint:
+  <!-- Written 2026-08-25 BEFORE any CSS edit in the follow-up sweep pass, per
+       the fix-acceptance protocol. The sweep extends the confirmed root cause to
+       the remaining surfaces; no new root cause is being proposed. -->
+  hypothesis: >
+    The confirmed cause — --ease-out-soft (easeOutExpo) front-loading a travel too
+    large for it — is present on exactly three more rules, and absent on the rest.
+    The discriminator is arithmetic, not judgement: the curve puts 68.6%/46.7%/32.7%
+    of the travel into frame one at --duration-fast/base/slow, so against a ~24px
+    perceptibility threshold it is only safe below ~35px/51px/73px of travel.
+  confirming_evidence:
+    - "Harness validated against a KNOWN result first: the closed-form evaluator reproduces the prior session's 68.6/46.7/32.7% and 35.0/51.4/73.4px figures exactly before being used on anything new."
+    - "Every candidate measured live, 3-4 reps each, anchored on the RESTING value: .pk-search-morph 236px/77.2px, .pk-mobile-cta-bar.is-parked 68px/31.8px, body.pk-has-cta-bar 148px/68.9px — all three predicted term-for-term before measurement."
+    - "Every SAFE candidate is safe by the same arithmetic, not by assumption: .pk-title-echo 8px/3.7px, .pk-portal 18-23px/7.19px, .pk-search-morph-toggle padding 12px/3.92px."
+  falsification_test: >
+    If amplitude were NOT the operative variable, surfaces sharing the identical
+    token pair would fail identically. They do not: .pk-title-echo and
+    .pk-mobile-cta-bar carry the SAME `var(--duration-base) var(--ease-out-soft)`
+    on the SAME property (transform), and measure 3.7px vs 31.8px first frame — an
+    8.6x spread produced purely by 8px vs 68px of travel. The token pair is held
+    constant and the defect still appears and disappears with amplitude alone.
+  fix_rationale: >
+    Change only the curve, only where the measured first-frame step exceeds the
+    threshold. This addresses the mechanism (distribution of motion over time),
+    not the symptom, and uses tokens that already exist and are already validated.
+  blind_spots:
+    - "Headless x86 Chrome again, not a real phone. Mitigated the same way: every conclusion rests on arithmetic-derived first-frame values that matched prediction, never on frame timing."
+    - "'Perceptible' is operationalised as a 24px first-frame step. That threshold is inherited from the prior session, not independently derived; it is a reasonable bright line, not a measured perceptual constant."
+    - "The .is-hidden/.is-parked pair share one rule but have 8.16px and 68px amplitudes — a single rule can be simultaneously safe and unsafe depending on which state fires. Only found by measuring both states."
+  candidate_causes:
+    - "code (CSS): a curve whose front-loading is amplitude-inappropriate — CONFIRMED on 3 rules."
+    - "config (tokens): raw 220ms literals on .pk-portal/.pk-nav (token drift) — PRESENT but NOT a defect here; both measured safe, and the :root comment explicitly rules them out of scope."
+    - "code (CSS): non-interpolable `width: auto` producing a DISCRETE snap no curve can smooth — FOUND on .pk-search-morph <=480px (318px in one frame) and .pk-search-morph-toggle. Genuinely different class; recorded, not fixed."
+    - "environment: headless frame drops — controlled for by 3-4 reps and rAF-gap correlation, exactly as in the primary session."
+  and_gate: >
+    NO for the sweep itself. The primary session's AND-gate (curve x amplitude AND
+    token drift) applied to .pk-sheet only; .pk-drawer already proved condition (2)
+    is not required. All three sweep targets are fully tokenised, so they are pure
+    single-condition instances of the dominant cause — the same shape as .pk-drawer.
+
 ## Symptoms
 
 expected: On mobile, tapping a game card in the catalog opens the game preview modal/drawer with a
@@ -212,6 +252,24 @@ fix: >
   system where a future system pass will reach it, and it was not part of the reported defect.
   Changing it would have been an uninstructed side effect, so it is recorded here instead.
 
+  SWEEP (2026-08-25, follow-up pass). Three further rules moved `var(--ease-out-soft)` ->
+  `var(--ease-standard)`, each keeping its already-correct duration and each carrying a
+  rule-level comment with its own measured arithmetic and a "don't restore consistency by
+  putting --ease-out-soft back" warning, matching the pattern set on `.pk-sheet`/`.pk-drawer`:
+  `.pk-search-morph` (`width`, 236px, 77.2 -> 1.97px first frame), `.pk-mobile-cta-bar`
+  (`transform`/`opacity`, 68px in `.is-parked`, 31.8 -> 1.48px), and `body.pk-has-cta-bar`
+  (`padding-bottom`, 148px, 68.9 -> 3.20px). The last two are explicitly documented as a
+  LOCKSTEP PAIR — they fire on the same `footerReached` flag and the padding is precisely the
+  clearance the bar occupies, so splitting their curves would desync the footer from the bar.
+  Separately, `.pk-sheet` and `.pk-sheet-backdrop` were added to the
+  `prefers-reduced-motion: reduce` selector list, closing the primary session's own follow-up:
+  the app's largest sliding surface was the one not honouring reduced motion while its smaller
+  sibling `.pk-drawer` was listed. Verified under emulated `reduce`: both now compute 0.001s.
+  Five further `--ease-out-soft` sites were measured and DELIBERATELY LEFT, each with numbers
+  rather than an assertion (`.pk-title-echo` 8px/3.7px, `.pk-search-morph-toggle` 12px/3.92px,
+  `.pk-portal` 18-23px/7.19px, `.pk-nav` and `.pk-dimmable` no travelling property,
+  `.pk-scroll-top` a 3px keyframe accent). See sweep_results for the complete enumeration.
+
 verification:
   guardrail_verdict: accepted
   signal_reproduce_before: >
@@ -316,17 +374,125 @@ verification_drawer:
     curve; row-scroll is one of the two surfaces sketch 006 actually validated that curve against,
     so it is correct usage on a correct amplitude, not another instance of this defect.
 
+verification_sweep:
+  <!-- Follow-up pass, 2026-08-25. Extends the confirmed cause to the remaining
+       surfaces and closes the reduced-motion gap. -->
+  guardrail_verdict: accepted
+  method: >
+    Same instrumented per-frame capture as the sheet and drawer, re-pointed at each
+    surface: headless Chrome 151 over CDP, 390x844 (touch) or 1280x900, rAF-sampling
+    the travelling property and ANCHORING THE FIRST FRAME ON THE RESTING VALUE.
+    Each target ran BEFORE/AFTER arms interleaved in one browser session, the BEFORE
+    arm forcing `--ease-out-soft` back via inline style so the ONLY variable between
+    arms is the easing token. 3-4 reps each; reps whose rAF gaps exceeded 30ms are
+    reported separately as dropped-frame noise and never used to support a claim.
+    HARNESS VALIDATED FIRST: the closed-form cubic-bezier evaluator was required to
+    reproduce the primary session's already-known figures (68.6/46.7/32.7% and
+    35.0/51.4/73.4px) before being trusted on any new surface.
+  exhaustiveness: >
+    The flagged list was NOT trusted. `assets/css/app.css` contains exactly ONE
+    spelling of the curve (`cubic-bezier(0.16, 1, 0.3, 1)`, 6 occurrences: 1 token
+    declaration + 5 usages) and 10 `var(--ease-out-soft)` references. All 15 usage
+    sites were enumerated and individually accounted for, so the sweep is closed by
+    construction rather than by assumption. Full table under sweep_results below.
+  signal_reproduce_before: >
+    PASS on all three targets, each matching its closed-form prediction term for term.
+    .pk-search-morph 77.11/77.36/77.09px (predicted 77.2); .pk-mobile-cta-bar
+    .is-parked 31.84/31.82/31.70px (predicted 31.8); body.pk-has-cta-bar
+    69.22/68.90px (predicted 69.1).
+  signal_fixed_after: >
+    PASS. .pk-search-morph 77.2 -> 1.97px (39x), max delta 77.1 -> 36.9px, frames
+    15 -> 17. .pk-mobile-cta-bar .is-parked 31.8 -> 1.48px (21x), max 31.8 -> 16.5px,
+    frames 9 -> 11. body.pk-has-cta-bar 68.9 -> 3.20px (21.5x, 4/4 reps), max 69.2 ->
+    35.9px, frames 10 -> 11. Every AFTER sequence matched the closed-form prediction
+    for cubic-bezier(0.4,0,0.2,1) term for term.
+  signal_differential_controls: >
+    PASS. Both arms ran in the same session, same document, alternating, so frame
+    timing is shared. Every rep with rAF gaps under 25ms reported the predicted value;
+    every outlier correlates with a measured gap of 40-160ms and always in the WORSE
+    direction, never better — the same invariance the primary session established.
+  signal_mechanism_understood: >
+    PASS. Every predicted value was computed BEFORE the corresponding edit and matched
+    after. The strongest control is that .pk-title-echo and .pk-mobile-cta-bar carry
+    the IDENTICAL token pair on the IDENTICAL property and measure 3.7px vs 31.8px
+    first frame — an 8.6x spread produced by amplitude alone (8px vs 68px), with the
+    token pair held constant.
+  signal_falsification: >
+    PASS. If the token pair rather than the amplitude were the defect, every surface
+    using it would fail. Five do not, at measured first-frame steps of 0.18-9.2px.
+    The rule discriminates in both directions, which is what makes it a rule and not
+    a blanket ban on the token.
+  signal_no_regression: >
+    PASS. 460 tests, 0 failures — identical to the pre-sweep baseline.
+    .pk-sheet re-measured UNCHANGED: 0.28s / cubic-bezier(0.4,0,0.2,1), first frame
+    4.26-4.35px, max ~81px, 17 frames; settled top=329 height=515 aria-hidden
+    false->true, backdrop 1->0, body overflow hidden->visible.
+    .pk-drawer re-measured UNCHANGED: first frame 2.65-2.69px, max 49.95-50.27px,
+    17 frames; a11y verified through its OWN mechanism — `inert` (absent when open,
+    restored on close) plus aria-modal="true" and the hamburger's aria-expanded
+    true->false, with focus moving to .pk-drawer-close and returning. NOT aria-hidden,
+    which is .pk-sheet's mechanism; each surface was checked against the one it
+    actually uses rather than a single assumed contract.
+    .pk-search-morph a11y verified through the REAL hook path (an earlier reading of
+    aria-expanded="false" while open was a harness artifact of driving the class
+    directly, and was chased down rather than reported): aria-expanded false->true->
+    false, input focused on open, close control 0->44px, width 44->280->44px,
+    .pk-nav-inner.is-search-open dimming toggling correctly.
+    .pk-mobile-cta-bar settled states verified both directions: rest transform none /
+    opacity 1 / pointer-events auto; parked translateY(68px) / opacity 0 /
+    pointer-events none. body padding 148px <-> 0px.
+    .is-hidden (the small state of the changed CTA rule) re-measured on the NEW curve
+    at 0.18px first frame / 1.97px max, 4/4 reps — still well-behaved, confirming the
+    change did not trade the large state's fix for a regression in the small one.
+  signal_grep_for_encoded_old_value: >
+    PASS — no test or source file asserts any of the changed curves or durations.
+  signal_built_bundle: >
+    PASS — after `mix assets.build`, all three transitions survive LightningCSS as
+    `var(--ease-standard)` token references (not inlined literals), and the reduce
+    block ships with `.pk-sheet, .pk-sheet-backdrop` present in its selector list.
+
+sweep_results:
+  <!-- Complete enumeration. Every one of the 15 usage sites of --ease-out-soft /
+       cubic-bezier(0.16,1,0.3,1) in app.css, with its measured amplitude. -->
+  rule: >
+    --ease-out-soft puts 68.6% / 46.7% / 32.7% of the travel into the first 16.7ms
+    frame at --duration-fast / base / slow. Against a ~24px first-step perceptibility
+    threshold it is only safe below roughly 35px / 51px / 73px of travel.
+  fixed:
+    - "`.pk-search-morph` (app.css:754) `width` — 44px -> 17.5rem/280px = 236px travel at >=481px. Measured first frame 77.11/77.36/77.09px vs 77.2px predicted. -> --ease-standard, now 1.97px. NOTE: `width` is layout-triggering, but the curve does not change that cost — the transition runs its full 280ms either way, so the number of layout passes is identical; the curve only decides where the pixels are on each one."
+    - "`.pk-mobile-cta-bar` (app.css:2252) `transform`/`opacity` — bar measured 68px tall (not the briefed ~64px). ONE rule drives TWO states with very different travels: `.is-hidden` translateY(12%) = 8.16px (first frame 3.8px, fine) and `.is-parked` translateY(100%) = 68px (first frame 31.8px, a pop). -> --ease-standard, now 1.48px. Measuring only .is-hidden would have cleared this rule falsely."
+    - "`body.pk-has-cta-bar` (app.css:2298) `padding-bottom` — 9.25rem/148px -> 0, the LARGEST travel in the sweep and not on the briefed list. Measured first frame 68.9px vs 69.1px predicted. -> --ease-standard, now 3.2px. Kept in lockstep with .pk-mobile-cta-bar: both fire on the same footerReached flag and this padding is exactly the clearance the bar occupies, so a curve split between them would desync the footer from the bar."
+  left_alone_with_measurements:
+    - "`.pk-title-echo` (app.css:2323) `transform` translateY(-8px) — 8px travel, measured first frame 3.7px (3/3 reps). 6.5x under threshold. SAFE. Also the sweep's key control: identical token pair and property to .pk-mobile-cta-bar, 8.6x smaller first frame, purely from amplitude."
+    - "`.pk-search-morph-toggle` (app.css:802-803) `width`/`padding` — the `width` leg resolves to `auto`, which is NOT interpolable: it snaps ~12px in one frame identically under BOTH curves, so no curve change addresses it. The interpolable `padding` leg travels 12px with a measured first frame of 3.92px (= 32.7% x 12, exactly as predicted). SAFE. The feared desync against its now---ease-standard parent was measured in both arms rather than assumed: net glyph displacement relative to the pill is 0.00px either way (the width shrink and padding growth cancel), and the per-frame difference between arms is <=1.9px. Changing it would alter nothing measurable, so it was left."
+    - "`.pk-portal` (app.css:543) `opacity`/`transform` scale(0.9)->scale(1) on a raw 220ms literal — settled box 360x462.59px, so per-edge travel is 18px in X and 23.13px in Y. Measured first-frame edge displacement 7.19px (4/4 reps). SAFE, confirming the primary session's judgement call with numbers. Its raw literal is token drift, but the :root comment explicitly rules .pk-portal/.pk-nav out of scope, and drift is not the defect here."
+    - "`.pk-nav` (app.css:651-652) — `background`/`border-color`/`box-shadow` only. No travelling property; nothing to front-load."
+    - "`.pk-dimmable` (app.css:2548) — `filter: blur()`. No travelling property."
+    - "`.pk-scroll-top` (app.css:2370) — an `animation`, not a transition: `pk-scroll-top-bounce` translateY 0 -> -3px over 1.6s, infinite. This is literally sketch 006's validated accent case (~3px), and it is already wrapped in `prefers-reduced-motion: no-preference`."
+    - "`.pk-search-morph` at <=480px — a DIFFERENT defect class, recorded not fixed. The `.is-open` overlay rule sets `width: auto`, which is not interpolable, so the pill snaps 44px -> 362px in ONE frame (measured 318px first frame, framesCarryingMotion: 1, in 4/4 reps). No easing curve can fix a discrete step; this needs an interpolable target value, which is a design change, not a curve swap."
+  noted_outside_the_css_sweep:
+    - "`carousel_row.ex:66` — the `.CarouselScroll` hook's JS `easeOutSoft = t => 1 - (1-t)^5` (a QUINTIC ease-out, not the CSS token's cubic-bezier) over `rail.clientWidth * 0.85` at 200ms. First-frame share 35.3%, so ~107px at a 358px mobile rail and ~365px at a 1216px desktop rail. Arguably the same class on much larger amplitudes. NOT swept: it is JS rather than CSS, a different curve so no token swap applies, unreported, and changing it is a behaviour change to a hook. Recorded here because the primary session cleared it as 'correct usage on a correct amplitude' — that justification is weaker than it looked, since 107-365px is not a small amplitude. Row-scroll IS one of the two surfaces sketch 006 validated, but it was validated as a FEEL, not at these travels."
+
 files_changed:
   - "assets/css/app.css: .pk-sheet + .pk-sheet-backdrop transitions moved onto --duration-slow/--ease-standard; rule comment added; stale :root scoping comment corrected."
   - "assets/css/app.css: .pk-drawer transition curve --ease-out-soft -> --ease-standard (duration left as the already-correct --duration-slow); rule comment added cross-referencing .pk-sheet."
+  - "assets/css/app.css (sweep): .pk-search-morph `width` curve --ease-out-soft -> --ease-standard, with a rule comment recording the 236px/77.2px arithmetic, the layout-vs-compositor note, and the <=480px non-interpolable `width: auto` caveat."
+  - "assets/css/app.css (sweep): .pk-mobile-cta-bar `transform`/`opacity` curve -> --ease-standard, with a rule comment recording BOTH states' amplitudes (8.16px vs 68px) and the lockstep requirement with body.pk-has-cta-bar."
+  - "assets/css/app.css (sweep): body.pk-has-cta-bar `padding-bottom` curve -> --ease-standard, with a rule comment recording the 148px/68.9px arithmetic and the same lockstep note."
+  - "assets/css/app.css (sweep): .pk-sheet and .pk-sheet-backdrop added to the `prefers-reduced-motion: reduce` selector list, with a comment recording why the curve fix does not substitute for it."
 
 follow_ups_done:
-  - "RESOLVED 2026-08-25 — `.pk-drawer` (was app.css:1656, now :1691). Was the SAME defect class: `translateX(100%)` across 319.8px on `var(--ease-out-soft)`. Predicted ~105px first frame; measured 104.8px, fixed to 2.7px. Authorised by the user as a scope extension after the sheet fix passed human verification. See verification_drawer above."
+  - "RESOLVED 2026-08-25 — `.pk-drawer` (was app.css:1656, now :1702). Was the SAME defect class: `translateX(100%)` across 319.8px on `var(--ease-out-soft)`. Predicted ~105px first frame; measured 104.8px, fixed to 2.7px. Authorised by the user as a scope extension after the sheet fix passed human verification. See verification_drawer above."
+  - "CLOSED 2026-08-25 (sweep) — `.pk-sheet`/`.pk-sheet-backdrop` added to the `prefers-reduced-motion: reduce` block. VERIFIED under emulated `reduce`: both now compute `transition-duration: 0.001s`, where they previously computed 0.28s."
+  - "CLOSED 2026-08-25 (sweep) — `.pk-mobile-cta-bar`. Confirmed a real instance and fixed: 68px `.is-parked` travel, 31.8px first frame -> 1.48px. The briefed estimate (~64px bar, ~30px first frame) was close; the correction is that the defect lives in `.is-parked` (100%), not `.is-hidden` (12%), which is only 8.16px."
+  - "CLOSED 2026-08-25 (sweep) — `.pk-search-morph` amplitude measured and found UNSAFE at >=481px (236px travel, 77.2px first frame): fixed. `.pk-search-morph-toggle` measured SAFE (12px interpolable travel, 3.92px first frame) and deliberately left, with the desync question against its changed parent measured in both arms rather than assumed."
 
 follow_ups_not_done:
-  - "`.pk-sheet`/`.pk-sheet-backdrop` are absent from the `prefers-reduced-motion: reduce` block (app.css:943) even though `.pk-drawer`/`.pk-drawer-backdrop`/`.pk-cat-panel` are listed. The app's largest sliding surface is the one not honouring reduced motion. Unchanged by this pass — and note the drawer fix does NOT help here, since reduced-motion collapses duration to 1ms regardless of curve."
-  - "THIRD instance of the same class, not reported and not fixed: `.pk-mobile-cta-bar` (app.css:2237) transforms on `var(--duration-base) var(--ease-out-soft)`. At `--duration-base` that curve puts 46.7% of the travel in the first frame — roughly 30px for a ~64px-tall bar. Marginal rather than clearly broken, which is exactly why it warrants a deliberate decision rather than a silent sweep."
-  - "`.pk-search-morph` / `.pk-search-morph-toggle` (app.css:760, 802) animate `width` on `--ease-out-soft`. Width is a travel-like property, so the same front-loading applies, but the amplitudes were not measured in this session — unquantified, flagged only."
+  - "NEW, pre-existing, found by this sweep's instrumentation and deliberately NOT fixed: the `prefers-reduced-motion: reduce` block (app.css:967) is INERT for every selector declared after it in source order. Media queries add no specificity, and each surface's own later `transition:` SHORTHAND resets `transition-duration`, so source order decides. Verified under emulated `reduce` on two pages with a perfect 6/8 split and zero exceptions: REDUCED are .pk-sheet-backdrop (561), .pk-sheet (576), .pk-search-morph (754), -toggle (802), .pk-nav-search, -close — all declared BEFORE 967. NOT REDUCED are .pk-cat-backdrop (981), .pk-cat-panel (1144), .pk-drawer-backdrop (1681), .pk-drawer (1702), .pk-mobile-cta-bar (2252), body.pk-has-cta-bar (2298), .pk-title-echo (2323), .pk-dimmable (2548) — all declared AFTER it, all still reporting their full 0.18-0.28s. The sheet addition works precisely BECAUSE .pk-sheet is declared before the block. Fixing the rest (moving the block to the end of the file, or converting each to a longhand override) changes reduced-motion behaviour on 8 surfaces at once and needs its own decision — it is a real accessibility defect, not a cosmetic one, and should be its own task."
+  - "`.pk-search-morph` at <=480px snaps 44px -> 362px in one frame because `.is-open` sets the non-interpolable `width: auto`. Different defect class (a discrete step, not a front-loaded curve); no curve change can address it. Measured 4/4 reps, recorded above under sweep_results."
+  - "`carousel_row.ex:66`'s JS quintic ease-out over ~107px (mobile) to ~365px (desktop) of rail scroll — see noted_outside_the_css_sweep above."
+  - "The sheet's poster fetches `cover-large.webp` only on tap (the `<template>` defers it by design) while the card already shows `cover-thumb.webp`, so the image pops in with no fade ~240ms after the sheet lands. Distinct from the travel jump."
+  - "Incidental, unrelated to this bug: seeded descriptions render literal `&mdash;` text (double-escaped HTML entity in the catalog data), visible in the Century Big Box preview."
 
 ## Prevention
 
@@ -399,5 +565,24 @@ recurrence_guard: >
   this one. Both required real-device human confirmation to close. Corollary established here:
   "UAT-verified" is not a durable property for sub-100ms motion defects, and must not be used as a
   reason to exclude a rule from a systematic sweep.
-  - "The sheet's poster fetches `cover-large.webp` only on tap (the `<template>` defers it by design) while the card already shows `cover-thumb.webp`, so the image pops in with no fade ~240ms after the sheet lands. Distinct from the travel jump."
-  - "Incidental, unrelated to this bug: seeded descriptions render literal `&mdash;` text (double-escaped HTML entity in the catalog data), visible in the Century Big Box preview."
+
+  SWEEP ADDENDUM (2026-08-25). The sweep produced the checkable rule the primary session
+  could only propose, and it now discriminates in BOTH directions rather than only
+  condemning: --ease-out-soft is safe below ~35px/51px/73px of travel at
+  --duration-fast/base/slow, and five surfaces were LEFT on it on that basis
+  (0.18-9.2px measured first steps) while three were moved off it (31.8-77.2px). A rule
+  that only ever says "remove the token" is a ban; this one is a threshold.
+  Two things the sweep changed about the prevention story:
+  (1) The proposed stylelint rule's asymmetry is now confirmed empirically, not just
+  predicted. A literal-hunting lint would have caught .pk-sheet (hardcoded 360ms) and
+  MISSED every one of the three surfaces fixed in this sweep, because all three were
+  already correctly tokenised. Being inside the token system is not protection when the
+  token itself is amplitude-inappropriate — only the amplitude-aware half of the
+  proposed rule has any purchase on this class.
+  (2) A NEW gate failure was discovered that no prior entry anticipated: a
+  `prefers-reduced-motion: reduce` block placed in the MIDDLE of a stylesheet is silently
+  inert for every rule declared after it, because media queries add no specificity and a
+  later `transition:` shorthand resets `transition-duration`. Eight of fourteen listed
+  selectors were not reduced at all. This is a documented intent with no effect — the
+  same shape as this codebase's recurring "prose is not a gate" finding, except here the
+  non-gate is CSS that looks like it works. Recorded as an open follow-up, not fixed.
