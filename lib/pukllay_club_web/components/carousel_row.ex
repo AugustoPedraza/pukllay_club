@@ -63,13 +63,61 @@ defmodule PukllayClubWeb.CarouselRow do
             this.rail = this.el.querySelector("[data-rail]")
             this.wrap = this.el.querySelector("[data-rail-wrap]")
 
-            // Sketch 023-B: the project's own soft ease-out curve (--ease-out-soft's
-            // JS twin), 200ms, 0.85 of the rail's client width — replaces the
-            // browser's fixed behavior: "smooth" curve so an arrow click matches
-            // the free-momentum touch scroll's feel. Cancelled before a new loop
-            // starts and again in destroyed() so rapid clicks never leave two
-            // loops writing scrollLeft in the same frame.
-            const easeOutSoft = (t) => 1 - Math.pow(1 - t, 5)
+            // Sketch 023-B, corrected by debug carousel-scroll-easing-jump.
+            // 200ms over 0.85 of the rail's client width, replacing the browser's
+            // fixed "smooth" behavior so an arrow click stays snappier than
+            // native (measured: native scrollBy takes ~530ms for the same 1034px).
+            //
+            // This curve is the JS twin of --ease-standard, NOT of --ease-out-soft.
+            // It used to be `1 - Math.pow(1 - t, 5)` (a quintic ease-out) on the
+            // stated intent of matching a touch fling's feel. That was a category
+            // error: a fling reads as continuous only because the FINGER supplied
+            // the launch velocity — the hand is the ease-in. A click starts from
+            // REST, so an ease-out's maximal t=0 velocity (v0 = nA/D for any
+            // 1-(1-t)^n) is a velocity discontinuity, i.e. a teleport.
+            // Measured at the amplitude cap (0.85 x 1216px = 1033.6px, where
+            // 1216 = max-w-7xl 1280 minus 2x2rem gutter, so this is the true worst
+            // case on any display >= 1440px): the quintic put 341px into the first
+            // painted frame — 2.5x the PEAK frame of native smooth scroll, out of a
+            // standing start, and more than two 176px card pitches. This bezier
+            // puts 17.8px there instead.
+            //
+            // DO NOT "restore consistency" by putting an ease-OUT back here, and do
+            // not try to fix a pop by lengthening scrollDuration: neither works.
+            // Every 1-(1-t)^n starts at maximum velocity regardless of exponent
+            // (the cubic n=3 still measures 237.5px), and rescuing the quintic by
+            // duration alone would need 3591ms. Only v0 = 0 — an ease-in-out —
+            // fixes it. Curve only; the 200ms is not implicated and shortening it
+            // makes any front-loaded curve strictly worse.
+            //
+            // Kept as a closed-form solver rather than handing the scroll to CSS
+            // because .pk-rail deliberately sets `scroll-behavior: auto` (see the
+            // rule comment in app.css) — this loop assigns scrollLeft every frame,
+            // and native smooth-scroll mode would start a competing animation per
+            // assignment.
+            //
+            // Cancelled before a new loop starts and again in destroyed() so rapid
+            // clicks never leave two loops writing scrollLeft in the same frame.
+            const cubicBezier = (x1, y1, x2, y2) => {
+              const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx
+              const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by
+              const xAt = (u) => ((ax * u + bx) * u + cx) * u
+              const dxAt = (u) => (3 * ax * u + 2 * bx) * u + cx
+              return (t) => {
+                if (t <= 0) return 0
+                if (t >= 1) return 1
+                let u = t
+                for (let i = 0; i < 8; i++) {
+                  const dx = dxAt(u)
+                  if (dx < 1e-6) break
+                  const err = xAt(u) - t
+                  if (Math.abs(err) < 1e-6) break
+                  u -= err / dx
+                }
+                return ((ay * u + by) * u + cy) * u
+              }
+            }
+            const easeStandard = cubicBezier(0.4, 0, 0.2, 1)
             const scrollDuration = 200
 
             this.onClick = (e) => {
@@ -89,7 +137,7 @@ defmodule PukllayClubWeb.CarouselRow do
               const startTime = performance.now()
               const step = (now) => {
                 const t = Math.min(1, (now - startTime) / scrollDuration)
-                this.rail.scrollLeft = start + delta * easeOutSoft(t)
+                this.rail.scrollLeft = start + delta * easeStandard(t)
                 if (t < 1) this.frame = requestAnimationFrame(step)
               }
               this.frame = requestAnimationFrame(step)

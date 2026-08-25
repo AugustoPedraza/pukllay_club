@@ -142,7 +142,9 @@ defmodule PukllayClubWeb.CategoryAnchorScrollTest do
       assert Enum.any?(bodies, &(&1 =~ ~r/scroll-behavior:\s*auto/)),
              "`.pk-rail` no longer pins `scroll-behavior: auto`. `.CarouselScroll` " <>
                "(carousel_row.ex) animates the rails itself, assigning `rail.scrollLeft` on " <>
-               "every animation frame with its own `easeOutSoft` curve. If the rail ever " <>
+               "every animation frame with its own `easeStandard` curve (the JS twin of " <>
+               "`--ease-standard`; it was `easeOutSoft` until debug " <>
+               "carousel-scroll-easing-jump). If the rail ever " <>
                "computes `smooth`, the browser's scroll animation and the hook's per-frame " <>
                "writes fight over the same property and the carousel stutters or stalls. " <>
                "`scroll-behavior` is not inherited, so the `html` rule above cannot reach the " <>
