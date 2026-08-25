@@ -35,7 +35,6 @@ defmodule PukllayClubWeb.CarouselRow do
   attr :games, :any, required: true
   attr :variant, :atom, default: :standard, values: [:standard, :hero]
   attr :subtitle, :string, default: nil
-  attr :see_all_row, :string, default: nil
   attr :empty, :boolean, default: false
   attr :row_key, :string, required: true
   attr :exhausted, :boolean, default: false
@@ -160,18 +159,6 @@ defmodule PukllayClubWeb.CarouselRow do
             game={game}
             class={["pk-poster-card", @variant == :hero && "is-hero"]}
           />
-          <button
-            :if={@see_all_row}
-            id={"#{@id}-see-all"}
-            type="button"
-            phx-click="see-all"
-            phx-value-row={@see_all_row}
-            class={["pk-poster-card pk-see-all", @variant == :hero && "is-hero"]}
-          >
-            <CoreComponents.icon name="hero-arrow-right" class="size-5" />
-            <span>Ver todo</span>
-            <span>{@title}</span>
-          </button>
           <%!-- Permanent trailing skeleton placeholders (quick task
           260824-u5d): non-stream items in a phx-update="stream" container
           can be added/updated but never removed, so these render

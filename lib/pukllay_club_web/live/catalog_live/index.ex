@@ -266,31 +266,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     {:noreply, socket}
   end
 
-  def handle_event("see-all", %{"row" => row}, socket) do
-    selection =
-      Map.merge(
-        %{
-          q: "",
-          mechanics: [],
-          themes: [],
-          weight_bands: [],
-          tags: [],
-          players: nil,
-          max_playtime: nil,
-          min_age: nil,
-          sort: :name_asc
-        },
-        see_all_selection(row)
-      )
-
-    socket =
-      selection
-      |> Enum.reduce(socket, fn {key, value}, acc -> assign(acc, key, value) end)
-      |> apply_filters()
-
-    {:noreply, socket}
-  end
-
   # In-row horizontal infinite scroll (quick task 260824-u5d). The client
   # (`.CarouselScroll`'s rAF-throttled scroll listener, added in Task 2)
   # sends the row key it read off its own section's data attribute — fully
@@ -351,28 +326,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp facet_assign_key("weight_bands"), do: :weight_bands
   defp facet_assign_key("tags"), do: :tags
   defp facet_assign_key(_unrecognized), do: nil
-
-  # Maps a "see-all" row key to the filter selection that reproduces that
-  # shelf's own query (see `PukllayClub.Catalog.list_carousel_rows/0`).
-  # Literal string clauses with a final catch-all, matching the existing
-  # `facet_assign_key/1`/`parse_sort/1` convention above — never build an
-  # atom out of client input — so an unrecognised value leaves the socket
-  # unchanged rather than creating a new atom from user input (T-01-37).
-  defp see_all_selection("destacados_del_club"), do: %{tags: Enum.map(Vocabulary.editorial_tags(), & &1.tag)}
-
-  defp see_all_selection("crea_conexiones"), do: %{tags: ["#CreaConexiones"]}
-  defp see_all_selection("equipo_ganador"), do: %{tags: ["#EquipoGanador"]}
-  defp see_all_selection("duelos_memorables"), do: %{tags: ["#DuelosMemorables"]}
-  defp see_all_selection("descubre_el_hobby"), do: %{weight_bands: ["descubre_el_hobby"]}
-  defp see_all_selection("ingenio_estratega"), do: %{weight_bands: ["ingenio_estratega"]}
-  defp see_all_selection("nivel_experto"), do: %{weight_bands: ["nivel_experto"]}
-  # `:year_desc` sorts by the game's own publication year, the closest
-  # "newest first" option the main grid's sort control already exposes —
-  # not `inserted_at` (what the shelf itself is ordered by), since adding
-  # a club-acquisition-recency sort mode to the grid is out of this
-  # plan's scope. See SUMMARY for the known limitation.
-  defp see_all_selection("recientemente_anadidos"), do: %{sort: :year_desc}
-  defp see_all_selection(_unrecognized), do: %{}
 
   defp parse_int(nil), do: nil
   defp parse_int(""), do: nil
@@ -605,7 +558,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
               games={Map.fetch!(@streams, carousel_stream_name(row.key))}
               variant={row_variant(row.key)}
               subtitle={row_subtitle(row.key)}
-              see_all_row={to_string(row.key)}
               empty={row.empty?}
               row_key={to_string(row.key)}
               exhausted={row.exhausted?}
