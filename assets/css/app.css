@@ -241,6 +241,43 @@
   padding-right: var(--pk-gutter);
 }
 
+/* Category-anchor scroll animation (debug category-menu-scroll-animation).
+   Both category surfaces — the desktop .pk-cat-item mega-menu rows and the
+   mobile .pk-chip row — are plain native anchors (href="#carousel-KEY"), and
+   .CatalogNav's onCatItemClick deliberately only closes the panel rather than
+   intercepting the click. Native fragment navigation animates ONLY when the
+   document's scrolling element computes `scroll-behavior: smooth`, and nothing
+   ever declared it — the CSS initial value `auto` was in force, which is why
+   every category tap landed as an instant jump on both mobile and desktop. One
+   declaration fixes both surfaces precisely because both were always riding the
+   same browser mechanism; neither needs its own handler.
+
+   Scoped to `html` (the document scrolling element — neither html nor body
+   carries an `overflow` outside the transient .pk-sheet-open/.pk-drawer-open
+   scroll locks) and deliberately NOT to a descendant: `scroll-behavior` is not
+   an inherited property, so this cannot reach .pk-rail and start the
+   competing-animation fight that rail's own `scroll-behavior: auto` guards
+   against (.CarouselScroll assigns rail.scrollLeft every animation frame — see
+   the comment on .pk-rail below). The rail keeps its explicit `auto` either
+   way; this rule and that one can never meet.
+
+   Wrapped in no-preference rather than declared bare: browsers are not
+   consistent about honouring reduced-motion for smooth scrolling on their own.
+   Gating it here matches both this file's existing motion discipline
+   (.pk-scroll-top's bounce) and daisyUI's own .carousel rule, which gates its
+   smooth scroll behind the identical query. A visitor who asked for less motion
+   keeps the instant jump — for them that is the correct outcome, not a
+   regression.
+
+   Landing POSITION is not this rule's business: .pk-shelf's scroll-margin-top
+   directly below already clears the header, and it applies to a smooth scroll
+   exactly as it did to the jump. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 .pk-shelf {
   margin-bottom: 3rem;
   /* Derived from the header's own published height (--pk-header-h, set by
