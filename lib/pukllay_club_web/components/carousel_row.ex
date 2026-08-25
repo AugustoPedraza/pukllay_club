@@ -54,11 +54,36 @@ defmodule PukllayClubWeb.CarouselRow do
             this.rail = this.el.querySelector("[data-rail]")
             this.wrap = this.el.querySelector("[data-rail-wrap]")
 
+            // Sketch 023-B: the project's own soft ease-out curve (--ease-out-soft's
+            // JS twin), 200ms, 0.85 of the rail's client width — replaces the
+            // browser's fixed behavior: "smooth" curve so an arrow click matches
+            // the free-momentum touch scroll's feel. Cancelled before a new loop
+            // starts and again in destroyed() so rapid clicks never leave two
+            // loops writing scrollLeft in the same frame.
+            const easeOutSoft = (t) => 1 - Math.pow(1 - t, 5)
+            const scrollDuration = 200
+
             this.onClick = (e) => {
               const button = e.target.closest("[data-scroll]")
               if (!button || !this.el.contains(button)) return
               const direction = button.dataset.scroll === "prev" ? -1 : 1
-              this.rail.scrollBy({left: direction * this.rail.clientWidth * 0.9, behavior: "smooth"})
+              const delta = direction * this.rail.clientWidth * 0.85
+              const start = this.rail.scrollLeft
+
+              cancelAnimationFrame(this.frame)
+
+              if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                this.rail.scrollLeft = start + delta
+                return
+              }
+
+              const startTime = performance.now()
+              const step = (now) => {
+                const t = Math.min(1, (now - startTime) / scrollDuration)
+                this.rail.scrollLeft = start + delta * easeOutSoft(t)
+                if (t < 1) this.frame = requestAnimationFrame(step)
+              }
+              this.frame = requestAnimationFrame(step)
             }
             this.el.addEventListener("click", this.onClick)
 
@@ -77,6 +102,7 @@ defmodule PukllayClubWeb.CarouselRow do
           destroyed() {
             this.el.removeEventListener("click", this.onClick)
             this.resizeObserver?.disconnect()
+            cancelAnimationFrame(this.frame)
           }
         }
       </script>

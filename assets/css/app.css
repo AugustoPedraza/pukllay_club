@@ -286,7 +286,14 @@
   display: flex;
   gap: 1rem;
   overflow-x: auto;
-  scroll-behavior: smooth;
+  /* The browser's own smooth-scroll mode is deliberately off: .CarouselScroll's
+     per-frame eased arrow scroller (sketch 023-B) assigns scrollLeft on every
+     animation frame, and if the browser's smooth-scroll mode were in force each
+     of those assignments would kick off its own competing animation toward that
+     value — the two curves fight and the rail visibly stutters instead of
+     easing. Free-momentum touch scroll is native browser behavior either way
+     and is unaffected by this declaration. */
+  scroll-behavior: auto;
   scrollbar-width: none;
   padding: 8px 0;
   /* A horizontal overscroll cannot chain out to the page or trigger the
