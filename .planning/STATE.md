@@ -4,11 +4,11 @@ milestone: v1.0
 current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
-stopped_at: "Completed quick task 260824-q8z: mobile drawer bottom block content/footer split (social CONTENT row, theme FOOTER strip)"
-last_updated: "2026-08-24T22:36:40.000Z"
+stopped_at: Phase 2 UI-SPEC approved
+last_updated: "2026-08-25T00:00:03.828Z"
 last_activity: 2026-08-24
 last_activity_desc: Completed quick task 260824-q8z - mobile drawer bottom block content/footer split
-state_head: 79b392b00b087540c5a217ac862b17830ef3797e
+state_head: 368d0b8ecb844439b469c74ede0ccab41fad8bd0
 progress:
   total_phases: 5
   completed_phases: 2
@@ -32,8 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-24 - Completed quick task 260824-q8z: mobile drawer bottom block content/footer split (social CONTENT row, theme FOOTER strip)
-structure (0-4)
+Last activity: 2026-08-24 - Completed quick task 260824-t7g: new carousel arrow layer from sketches 022-026 (edge-overlay chevrons + eased arrow scroll)
 
 Progress: [██████████] 100%
 
@@ -217,6 +216,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260824-hu1 | On mobile the expanded header search now aligns its own edges (not just its contents) to the shared gutter line, restoring the fully-rounded pill shape | 2026-08-24 | 0fcc255 | Complete | [260824-hu1-on-mobile-the-expanded-search-looks-awfu](./quick/260824-hu1-on-mobile-the-expanded-search-looks-awfu/) |
 | 260824-i8e | Removed the stale native sort `<select>` (Nombre/Duración/Complejidad/Más recientes) from the catalog page; sort machinery underneath (parse_sort/1, :sort assign, see-all/URL deep links) left fully intact | 2026-08-24 | c3b14b3 | Complete | [260824-i8e-the-select-for-nombre-duracion-etc-looks](./quick/260824-i8e-the-select-for-nombre-duracion-etc-looks/) |
 | 260824-q8z | Mobile drawer bottom block: social links reordered as a full-width, high-contrast, 44px CONTENT row; theme control centered and its "Tema" label converted to sr-only as a quiet FOOTER strip (mirrors the desktop footer's shipped pattern, applies sketch 021's Round-6 conclusion) | 2026-08-24 | 79b392b | Complete | [260824-q8z-for-mobile-the-social-links-at-the-botto](./quick/260824-q8z-for-mobile-the-social-links-at-the-botto/) |
+| 260824-t7g | New carousel arrow layer from sketches 022-026: relocated prev/next controls to Netflix-style edge-overlay chevrons gated to pointer-fine devices (022-C), replaced the browser's fixed smooth-scroll with the project's own 200ms soft ease-out curve (023-B) | 2026-08-24 | d106248 | Partial (live-smoothness sub-check needs a human eyeballing it in a foregrounded tab — see SUMMARY) | [260824-t7g-new-carousel-from-latest-sketches](./quick/260824-t7g-new-carousel-from-latest-sketches/) |
 
 ### Roadmap Evolution
 
@@ -232,6 +232,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-24T17:38:54.453Z
-Stopped at: Completed quick task 260824-jkc: sketch 020 catalog index row (desktop mega-menu + mobile chip refinement)
-Resume file: None
+Last session: 2026-08-25T00:00:03.053Z
+Stopped at: Phase 2 UI-SPEC approved
+Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/02-natural-language-spanish-search-auth/02-UI-SPEC.md
