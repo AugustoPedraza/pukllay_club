@@ -301,6 +301,23 @@
   width: 240px;
 }
 
+/* Trailing in-row-infinite-scroll skeleton placeholders (quick task
+   260824-u5d): permanent non-stream children of .pk-rail (LiveView forbids
+   removing them once a stream container exists), hidden at rest and shown
+   only while that specific rail's fetch-more request is in flight — the
+   .CarouselScroll hook sets/clears [data-loading] on .pk-rail itself, never
+   an inline style. `display: block` mirrors GameCard's own explicit
+   Tailwind `block` utility (the shared resting-card footprint) rather than
+   inventing a new display value, so a revealed placeholder occupies exactly
+   the same box a real card does and the rail does not reflow. */
+.pk-trailing-skel {
+  display: none;
+}
+
+.pk-rail[data-loading] .pk-trailing-skel {
+  display: block;
+}
+
 /* .pk-see-all reuses .pk-poster-card for width — no second width rule
    here — so the tile automatically tracks the hero and narrow-viewport
    width steps declared on that one class. Only the fields that differ

@@ -540,6 +540,43 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "trailing skeleton placeholders + hook data attributes (Task 2, quick task 260824-u5d)" do
+    test "a rendered rail carries the row-key and exhausted data attributes and trailing placeholder markup",
+         %{conn: conn} do
+      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      section_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-equipo_ganador")
+        |> LazyHTML.to_html()
+
+      assert section_html =~ ~s(data-carousel-row="equipo_ganador")
+      assert section_html =~ ~s(data-exhausted="true")
+      assert section_html =~ "pk-trailing-skel"
+      assert section_html =~ ~s(id="carousel-equipo_ganador-skel-1")
+      assert section_html =~ ~s(id="carousel-equipo_ganador-skel-2")
+    end
+
+    test "an exhausted row still carries the trailing placeholder markup — it is always in the DOM, only hidden",
+         %{conn: conn} do
+      game_fixture(%{name: "Only Duel", tags: ["#DuelosMemorables"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      section_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-duelos_memorables")
+        |> LazyHTML.to_html()
+
+      assert section_html =~ ~s(data-exhausted="true")
+      assert section_html =~ "pk-trailing-skel"
+    end
+  end
+
   describe "differentiated row headers and titled main grid (G-01-4)" do
     test "the hero row renders in the primary colour and a weight-band row renders its Vocabulary descriptor as a subtitle",
          %{conn: conn} do

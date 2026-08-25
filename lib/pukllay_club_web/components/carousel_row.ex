@@ -72,12 +72,58 @@ defmodule PukllayClubWeb.CarouselRow do
 
             this.resizeObserver = new ResizeObserver(() => this.sync())
             this.resizeObserver.observe(this.rail)
+
+            // Fetch-more trigger (quick task 260824-u5d). No horizontal
+            // equivalent of phx-viewport-bottom exists, so this rail's own
+            // scroll position drives it. `pending` is released ONLY from
+            // pushEvent's reply callback — one round trip carries both the
+            // new cards and the stop signal, so no fixed-timeout guess is
+            // needed. The loading indicator is driven here, client-side,
+            // rather than through a server assign: the handler is
+            // synchronous, so a server-driven flag would be set and cleared
+            // within the same round trip and the placeholders would never
+            // actually be visible.
+            this.pending = false
+            this.exhausted = this.el.dataset.exhausted === "true"
+            this.rowKey = this.el.dataset.carouselRow
+
+            this.maybeLoadMore = () => {
+              if (this.pending || this.exhausted) return
+              const runway = this.rail.scrollWidth - this.rail.scrollLeft - this.rail.clientWidth
+              if (runway > this.rail.clientWidth) return
+
+              this.pending = true
+              this.rail.dataset.loading = "true"
+              this.pushEvent("carousel-load-more", {row: this.rowKey}, (reply) => {
+                this.pending = false
+                delete this.rail.dataset.loading
+                if (reply && reply.exhausted) this.exhausted = true
+              })
+            }
+
+            // rAF-throttled, with its own frame handle distinct from the
+            // arrow-scroll animation above — a touch-momentum fling fires
+            // `scroll` far more often than once per frame, and the runway
+            // computation forces layout each time.
+            this.onScroll = () => {
+              if (this.scrollFrame) return
+              this.scrollFrame = requestAnimationFrame(() => {
+                this.scrollFrame = null
+                this.maybeLoadMore()
+              })
+            }
+            this.rail.addEventListener("scroll", this.onScroll, {passive: true})
           },
           updated() {
             this.sync()
+            // Re-read in case a server-driven stop (the reply above, or a
+            // future filter-triggered row reset) changed the data attribute.
+            this.exhausted = this.el.dataset.exhausted === "true"
           },
           destroyed() {
             this.el.removeEventListener("click", this.onClick)
+            this.rail.removeEventListener("scroll", this.onScroll)
+            cancelAnimationFrame(this.scrollFrame)
             this.resizeObserver?.disconnect()
           }
         }
@@ -126,6 +172,23 @@ defmodule PukllayClubWeb.CarouselRow do
             <span>Ver todo</span>
             <span>{@title}</span>
           </button>
+          <%!-- Permanent trailing skeleton placeholders (quick task
+          260824-u5d): non-stream items in a phx-update="stream" container
+          can be added/updated but never removed, so these render
+          unconditionally with stable ids and are toggled by CSS
+          (.pk-rail[data-loading], set/cleared by the hook above) rather
+          than by :if — a conditional render would put them in the DOM
+          once and strand them there permanently. Two is enough to signal
+          "more is coming"; they land trailing for free since LiveView
+          inserts at: -1 items before the first non-stream child. --%>
+          <.skeleton_card
+            id={"#{@id}-skel-1"}
+            class={["pk-poster-card pk-trailing-skel", @variant == :hero && "is-hero"]}
+          />
+          <.skeleton_card
+            id={"#{@id}-skel-2"}
+            class={["pk-poster-card pk-trailing-skel", @variant == :hero && "is-hero"]}
+          />
         </div>
       </div>
     </section>
