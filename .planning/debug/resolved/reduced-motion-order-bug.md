@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Follow-up from resolved session catalog-preview-modal-jump (commit 78642fa): the sweep's own instrumentation found that the `@media (prefers-reduced-motion: reduce)` block in assets/css/app.css (starts ~line 923) is silently inert for 8 of its 14 covered selectors. User instruction: 'Fix both using gsd-debug' (this + the carousel scroll-easing amplitude issue, filed separately as carousel-scroll-easing-jump)."
 created: 2026-08-25T12:00:00Z
-updated: 2026-08-25T12:00:00Z
+updated: 2026-08-25T13:10:00Z
 ---
 
 ## Current Focus
@@ -20,9 +20,11 @@ line vs the guard block's line 967; (2) headless Chrome `--force-prefers-reduced
 expecting: exactly the 6 selectors declared before line 967 report 1ms; the 8 declared after report
 their full 180-280ms — with no exception attributable to specificity, `!important`, longhands, a
 second reduce block, or layers.
-next_action: apply the structural fix (universal-selector reduced-motion guard with `!important`,
-replacing the enumerated list), then RE-RUN the same headless-Chrome probe and require all 14 to
-report REDUCED.
+next_action: NONE — session closed. Fix applied, self-verified, and CONFIRMED BY THE USER on
+2026-08-25 (both arms: reduced motion ON snaps instantly, reduced motion OFF still plays normal
+motion — nothing over-suppressed). The user additionally ratified the BLANKET accommodation as the
+intended shipping scope, so no per-surface follow-up exists. Session archived to
+.planning/debug/resolved/ and recorded in knowledge-base.md.
 
 reasoning_checkpoint:
   hypothesis: "The `@media (prefers-reduced-motion: reduce)` block's `transition-duration: 1ms` is
@@ -282,11 +284,19 @@ verification: >
      change, someone splitting the accommodation back into multiple blocks.
   6. Full project gate: `mix quality` passes — hex.audit, deps.audit, format (Styler), credo
      --strict, sobelow, and 466 tests, 0 failures.
+  7. HUMAN VERIFICATION — CONFIRMED (2026-08-25). The user exercised BOTH arms in a real browser,
+     which is the arm the instruments could not supply: with reduced motion ENABLED everything
+     snaps instantly (the defect is gone across surfaces, not just in computed styles), and with
+     reduced motion DISABLED normal motion still plays exactly as designed — explicitly confirming
+     nothing was over-suppressed. This closes the blind spot flagged in reasoning_checkpoint, that
+     the probe verified the CASCADE on synthetic elements rather than the lived behaviour of real
+     LiveView surfaces.
   CAVEAT, stated explicitly: the ExUnit suite did NOT verify the reduced-motion behaviour itself.
   This is a CSS-only change and ExUnit cannot observe a computed style. The suite confirms no
-  regression elsewhere and pins the guard's structural contract; the behavioural proof is items 1-3,
-  the browser measurements. Sobelow's findings are pre-existing low-confidence hits in unrelated
-  files (seed/report.ex, catalog_live/index.ex), untouched by this change.
+  regression elsewhere and pins the guard's STRUCTURE, not its BEHAVIOUR; the behavioural proof is
+  items 1-3 (the browser measurements) plus item 7 (human confirmation in a real browser).
+  Sobelow's findings are pre-existing low-confidence hits in unrelated files (seed/report.ex,
+  catalog_live/index.ex), untouched by this change.
 
 judgement_calls: >
   - `1ms`, not `0s`: a zero-duration transition generates no transition, so `transitionend` never
@@ -310,13 +320,18 @@ judgement_calls: >
     shimmer rather than remove it); the universal guard now overrides that to 1ms. Judged
     acceptable: skeleton's actual shimmer animation is already `no-preference`-gated by daisyUI so
     it never runs under reduce, leaving the 15s value vestigial.
-  - DELIBERATELY NOT DONE — per-surface accommodation. Zeroing duration is the right default, but
-    the more refined treatment for large sliding surfaces (.pk-sheet ~515px, .pk-drawer ~320px)
-    would be to keep the opacity fade, which is not vestibular, and suppress only the transform
-    travel. That is a DESIGN change to the declared intent, not a fix to the bug, and this
-    codebase's own KB establishes that sub-100ms motion judgements need real-device human
-    confirmation to close. Restoring the existing declared intent robustly is this session's scope;
-    the opacity-vs-transform refinement is recorded here as a known, deliberate non-goal.
+  - SCOPE SETTLED BY THE USER — the BLANKET accommodation is the intended shipping behaviour, not
+    a stepping stone. During this session the alternative was scoped and put to the user: a
+    per-surface treatment for the large sliding surfaces (.pk-sheet ~515px, .pk-drawer ~320px)
+    that keeps the opacity fade — which is not vestibular — and suppresses only the transform
+    travel. On real-browser review of BOTH arms the user chose the blanket guard as shipped: kill
+    all transition/animation duration under reduced motion. This is a deliberate, user-ratified
+    design decision, NOT a deferred item, follow-up, or known limitation. There is no
+    opacity-vs-transform refinement outstanding, and a future reader should not treat this
+    paragraph as an invitation to build one. Note the decision route matters as much as the
+    outcome: this codebase's own KB establishes that motion judgements are perceptual questions
+    that measurement cannot settle, so it was correctly closed by a human looking at it rather
+    than by argument from the probe.
 
 files_changed:
   - assets/css/app.css (guard replaced and relocated; breadcrumb left at old position)
