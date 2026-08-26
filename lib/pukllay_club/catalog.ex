@@ -154,24 +154,48 @@ defmodule PukllayClub.Catalog do
   Games "similar" to `game` for the detail page's Juegos similares shelf.
 
   "Similar" means: same `weight_band` as `game`, excluding `game` itself,
-  ordered by name, capped at #{@similares_limit} (01.1-03 checkpoint
-  decision — weight band is this app's primary complexity-teaching facet
-  and already backs three home-page carousel rows; the alternative
-  mechanics/themes-overlap axis was rejected as a new query shape with no
-  existing precedent). `game.weight_band` is nullable — a game with no band
-  returns `[]` explicitly rather than matching every other unbanded game
-  (which `g.weight_band == ^nil` would otherwise do silently in SQL).
+  ranked by how many mechanics and themes the candidate shares with `game`
+  (D-06) — weight band is this app's primary complexity-teaching facet and
+  already backs three home-page carousel rows, so it stays the hard filter;
+  shared mechanics/themes then answer "what else plays like this?" within
+  that band. Mechanics are weighted 2 and themes 1 in the overlap score
+  (mechanics describe how a game actually plays; themes are flavour), and
+  the overlap only ranks — it never filters, so a band-mate sharing nothing
+  is still returned, just last. Ties (including an all-zero tie) are broken
+  by `name` then `id` so the shelf order is stable across reloads. The score
+  is computed in Postgres via `fragment/2` over the `mechanics`/`themes`
+  `text[]` columns, never fetched into Elixir and sorted in memory
+  (T-01-22's LIMIT-always/no-unbounded-fetch discipline).
+  Capped at #{@similares_limit} (01.1-03 checkpoint decision). `game.weight_band`
+  is nullable — a game with no band returns `[]` explicitly rather than
+  matching every other unbanded game (which `g.weight_band == ^nil` would
+  otherwise do silently in SQL).
 
-  Anything semantic (mechanics/themes overlap, embeddings) belongs to
-  Phase 2's hybrid search (SEARCH-01..04), not here.
+  Anything semantic beyond mechanics/themes overlap (embeddings,
+  natural-language matching) belongs to Phase 2's hybrid search
+  (SEARCH-01..04), not here.
   """
   def similar_games(%Game{weight_band: nil}), do: []
 
-  def similar_games(%Game{id: id, weight_band: weight_band}) do
+  def similar_games(%Game{id: id, weight_band: weight_band, mechanics: mechanics, themes: themes}) do
     Repo.all(
       from(g in Game,
         where: g.weight_band == ^weight_band and g.id != ^id,
-        order_by: [asc: g.name],
+        order_by: [
+          desc:
+            fragment(
+              """
+              (2 * cardinality(array(select unnest(?) intersect select unnest(?)))) +
+              cardinality(array(select unnest(?) intersect select unnest(?)))
+              """,
+              g.mechanics,
+              type(^mechanics, {:array, :string}),
+              g.themes,
+              type(^themes, {:array, :string})
+            ),
+          asc: g.name,
+          asc: g.id
+        ],
         limit: ^@similares_limit
       )
     )
