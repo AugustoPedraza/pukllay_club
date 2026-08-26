@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 7/10 plans executed (5 executed, 5 superseded, 5 gap closure pending)
+**Plans:** 8/10 plans executed (5 executed, 5 superseded, 5 gap closure pending)
 
 Plans:
 **Wave 1**
@@ -229,7 +229,7 @@ Plans:
 
 **Wave 5 — gap closure** *(blocked on Wave 4 completion)*
 
-- [ ] 01.2-12-PLAN.md — G-01.2-4: removable active-filters chip row inline with the Resultados heading (sketch 029 winner); background surface settles once instead of restructuring under the open modal
+- [x] 01.2-12-PLAN.md — G-01.2-4: removable active-filters chip row inline with the Resultados heading (sketch 029 winner); background surface settles once instead of restructuring under the open modal
 - [ ] 01.2-14-PLAN.md — G-01.2-7: "Juegos similares" always fills via one widened bounded query (sketch 031 Always-Full Guarantee); title stays fixed, widening signalled by an "Ampliado" badge and a subtitle swap
 
 **Wave 6 — gap closure** *(blocked on Wave 5 completion)*

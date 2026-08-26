@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.2
 current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
 status: executing
-stopped_at: Completed 01.2-13-PLAN.md
-last_updated: "2026-08-26T22:31:06.865Z"
+stopped_at: Completed 01.2-12-PLAN.md
+last_updated: "2026-08-26T22:52:14.838Z"
 last_activity: 2026-08-26
 last_activity_desc: Phase 01.2 execution started
-state_head: 54a1ca20ec1cb057d26ee74614d4262fecac51c2
+state_head: 1ccdc6ce4784b746fbd3455891867f74a37f4105
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 28
+  completed_plans: 29
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-08-26 — Phase 01.2 execution started
 
@@ -88,6 +88,7 @@ Progress: [██████████] 100%
 | Phase 01.2 P05 | 15min | 3 tasks | 3 files |
 | Phase 01.2 P11 | 40min | 3 tasks | 5 files |
 | Phase 01.2 P13 | 35min | 3 tasks | 3 files |
+| Phase 01.2 P12 | 45min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,8 @@ Recent decisions affecting current work:
 - [Phase 01.2]: [Phase 01.2]: 01.2-13: .pk-poster-col position: static -> relative (unlayered .pk-* rule was silently defeating the layered Tailwind relative utility below 768px, G-01.2-5); cascade-layer hazard documented at top of app.css; audit of all 18 .pk-* position rules found no second instance
 - [Phase 01.2]: [Phase 01.2]: 01.2-13: buy-box panel ported sketch 027 variant B's Elevated Shadow (fill+border+shadow, per the rendered artifact, not detail-page-layout.md's fill-only prose summary); share_control/1 gained a variant attr (:panel/:bar) with two real shapes, both at the 44px floor rather than the sketch's smaller sizes
 - [Phase 01.2]: [Phase 01.2]: 01.2-13: mobile CTA bar restructured to sketch 028's stacked layout (.pk-cta-bar-inner, reserve w-full not flex-1, share as a labelled full-width pill), capped to 68.75rem; body.pk-has-cta-bar padding recomputed 9.25rem -> 12.5rem (148+44+8px, derived); .DetailChrome scroll state machine untouched
+- [Phase 01.2]: 01.2-12: :rendered_results assign now holds the SETTLED background surface (distinct from browsing_results?/1's DESIRED-surface predicate); settle_surface/1 is a no-op while @filters_open is true so the carousel/grid never restructures behind the open modal, and apply-filters/close-filters/clear-filters all now re-enter apply_filters/1 after closing the modal to settle + repopulate the reappearing container's stream in one round trip
+- [Phase 01.2]: 01.2-12: active-filters chip row (sketch 029 winner C) added to the Resultados header — .pk-active-filter-chip is deliberately distinct from filter_modal.ex's own selection-chip class (no shadow, soft accent tint); chip removal reuses toggle-facet/toggle-scalar verbatim, new parameterless clear-query handler for the query chip
 
 ### Pending Todos
 
@@ -252,6 +255,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T22:31:06.710Z
-Stopped at: Completed 01.2-13-PLAN.md
+Last session: 2026-08-26T22:52:14.687Z
+Stopped at: Completed 01.2-12-PLAN.md
 Resume file: None

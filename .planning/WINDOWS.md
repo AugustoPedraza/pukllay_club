@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 12
+open_count: 13
 waived_count: 0
 fixed_count: 0
-total_count: 12
-last_updated: 2026-08-26T22:28:47.008Z
+total_count: 13
+last_updated: 2026-08-26T22:51:30.480Z
 ---
 
 # Broken Windows Ledger
@@ -27,6 +27,7 @@ last_updated: 2026-08-26T22:28:47.008Z
 | 10 | 01.1-04 | unrun-verify | assets/css/app.css |  | Manual human-check: the mobile CTA bar's computed backgroundColor is visibly distinct from its own outlined share button's background (verify via computed style, not by eye) -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-22T20:00:32.776Z |  |
 | 11 | 01.2-13 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Task 2 human-check: buy-box reads as one bounded panel lifted off the page (not fading into the reading column) at ~390px and >=1280px in both light and dark themes, share icon anchored over the panel's top-right corner at both widths, cover art fills its frame with no letterboxing, reserve button unambiguously the page's one primary action -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-26T22:28:46.824Z |  |
 | 12 | 01.2-13 | unrun-verify | assets/css/app.css |  | Task 3 human-check: at ~390px the stacked reserve+share bar reads balanced with reserve unmistakably primary, scroll-hide/reveal timing and footer-park behavior unchanged with no new jump, last real content never hidden behind the taller bar, and past 1100px (but below 768px) the bar's controls align under the content column instead of stretching edge-to-edge -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-26T22:28:47.008Z |  |
+| 13 | 01.2 | unmet-truth | lib/pukllay_club_web/live/catalog_live/index.ex |  | Active-filters chip row's visual weight balance vs the Resultados heading (sketch 029 Round 2's 'clearly secondary' intent) is asserted only via class/no-shadow presence in tests; needs a human eyeballing a live render in both themes — no browser tool available to this executor (01.2-12 D6). | open |  | 2026-08-26T22:51:30.480Z |  |
 
 ````json
 [
@@ -172,6 +173,18 @@ last_updated: 2026-08-26T22:28:47.008Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-26T22:28:47.008Z",
+    "resolved_at": null
+  },
+  {
+    "id": 13,
+    "kind": "unmet-truth",
+    "phase": "01.2",
+    "file": "lib/pukllay_club_web/live/catalog_live/index.ex",
+    "line": null,
+    "description": "Active-filters chip row's visual weight balance vs the Resultados heading (sketch 029 Round 2's 'clearly secondary' intent) is asserted only via class/no-shadow presence in tests; needs a human eyeballing a live render in both themes — no browser tool available to this executor (01.2-12 D6).",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-26T22:51:30.480Z",
     "resolved_at": null
   }
 ]
