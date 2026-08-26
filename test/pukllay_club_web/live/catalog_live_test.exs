@@ -73,7 +73,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         name: "Un título extraordinariamente largo que debería ocupar más de dos líneas de texto"
       })
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "extraordinariamente"})
 
       assert grid_html(html) =~ "pk-card-caption"
     end
@@ -82,9 +87,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
          %{conn: conn} do
       game_fixture(%{name: "Juego Banded", weight_band: "ingenio_estratega"})
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Juego Banded"})
+
       card_html = html |> grid_html() |> strip_preview_templates()
 
+      assert card_html =~ "Juego Banded"
       refute card_html =~ "Ingenio estratega"
       refute card_html =~ "Reglas de 15-20 minutos"
     end
@@ -104,9 +116,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         weight_band: "descubre_el_hobby"
       })
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Juego Con Chips"})
+
       card_html = html |> grid_html() |> strip_preview_templates()
 
+      assert card_html =~ "Juego Con Chips"
       refute card_html =~ "badge"
       refute card_html =~ "#CreaConexiones"
       refute card_html =~ "#EquipoGanador"
@@ -135,7 +154,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         weight_band: "nivel_experto"
       })
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Juego Con Metadata"})
+
       card_html = grid_html(html)
 
       assert card_html =~ "data-game-preview"
@@ -271,11 +296,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       game_fixture(%{name: "Alfa Corto", playing_time: 20})
       game_fixture(%{name: "Zeta Largo", playing_time: 120})
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
 
       assert position(grid_html(html), "Alfa Corto") < position(grid_html(html), "Zeta Largo")
 
-      {:ok, _view, html2} = live(conn, ~p"/?sort=playtime_desc")
+      {:ok, _view, html2} =
+        live(conn, ~p"/?weight_bands=ingenio_estratega&sort=playtime_desc")
 
       assert position(grid_html(html2), "Zeta Largo") < position(grid_html(html2), "Alfa Corto")
     end
@@ -287,7 +313,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
       end
 
-      {:ok, view, html} = live(conn, ~p"/")
+      {:ok, view, html} = live(conn, ~p"/?q=Juego")
 
       assert card_count(html) == 24
       assert html =~ "Juego 01"
@@ -306,7 +332,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         game_fixture(%{name: "G#{n}", mechanics: ["Dice Rolling"]})
       end
 
-      {:ok, view, html} = live(conn, ~p"/")
+      {:ok, view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
       assert html =~ "Cargar más"
 
       view |> element("button", "Cargar más") |> render_click()
@@ -370,15 +396,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
 
     test "the result count renders in correct Spanish singular/plural form", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
       assert html =~ "0 juegos encontrados"
 
       game_fixture(%{name: "Solo Juego"})
-      {:ok, _view2, html2} = live(conn, ~p"/")
+      {:ok, _view2, html2} = live(conn, ~p"/?weight_bands=ingenio_estratega")
       assert html2 =~ "1 juego encontrado"
 
       game_fixture(%{name: "Otro Juego"})
-      {:ok, _view3, html3} = live(conn, ~p"/")
+      {:ok, _view3, html3} = live(conn, ~p"/?weight_bands=ingenio_estratega")
       assert html3 =~ "2 juegos encontrados"
     end
 
@@ -605,12 +631,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert carousel_html =~ "Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez."
     end
 
-    test "the unfiltered landing render contains the main-grid section heading", %{conn: conn} do
+    test "the unfiltered landing renders the carousel-rows container and no results grid (D-01)",
+         %{conn: conn} do
       game_fixture()
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      assert html =~ "El catálogo completo"
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+      refute html =~ "El catálogo completo"
     end
 
     test "a filtered render shows the results-wording heading and hides the carousel block", %{
@@ -629,6 +658,71 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html =~ "El catálogo completo"
       refute html =~ "id=\"carousel-rows\""
     end
+  end
+
+  describe "the two-surface contract: carousels XOR grid (D-01, D-02)" do
+    test "an unfiltered landing renders the carousel-rows container, the chip index row and the desktop mega-menu, and renders no #games container",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ ~s(id="carousel-rows")
+      assert html =~ "pk-chip-nav"
+      assert html =~ "pk-cat-trigger"
+      refute html =~ ~s(id="games")
+    end
+
+    test "pressing the filter modal's primary CTA with no facets selected renders the #games container and the full-catalog heading, and hides the carousel surface",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "apply-filters", %{})
+
+      assert html =~ ~s(id="games")
+      assert html =~ "El catálogo completo"
+      refute html =~ ~s(id="carousel-rows")
+      refute html =~ "pk-chip-nav"
+      refute html =~ "pk-cat-trigger"
+    end
+
+    test "dismissing the modal instead, with no facets selected, leaves the carousel surface rendered and renders no #games container",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "close-filters", %{})
+
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+    end
+
+    test "from the submitted state, dispatching clear-filters returns the carousel surface and removes the #games container",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "apply-filters", %{})
+
+      html = render_click(view, "clear-filters", %{})
+
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+    end
+
+    # A load failure while the carousel surface is showing was considered
+    # (D-02's must_haves list it as a state to prove) but is not reachable
+    # from this suite: every path that can put the socket into
+    # :load_error (safe_filter_games/1's rescue, exercised via the
+    # out-of-range players value in the "GET /" load-error test) also sets
+    # a real filter, which makes filters_active?/1 — and therefore
+    # browsing_results?/1 — true, landing on the grid surface instead.
+    # Recorded here rather than writing a test that would assert nothing;
+    # see the plan's SUMMARY for the same note.
   end
 
   describe "persistent, discoverable carousel scroll controls (G-01-3)" do
@@ -1203,15 +1297,20 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/")
 
+      # D-01/D-02: opening the modal alone (nothing selected yet) no longer
+      # keeps the grid — and its "N juegos encontrados" heading — rendered
+      # behind it; the live count is checked via the modal's own footer
+      # CTA label instead, which is always present whenever the modal is
+      # open, filtered or not.
       html_before = view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
-      assert html_before =~ "2 juegos encontrados"
+      assert html_before =~ "Ver 2 juegos"
 
       html_after =
         view
         |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
-      assert html_after =~ "1 juego encontrado"
+      assert html_after =~ "Ver 1 juego"
     end
 
     test "the surface closes on close-filters", %{conn: conn} do
@@ -1328,9 +1427,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       html =
         render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
 
-      grid = grid_html(html)
-      assert grid =~ "Four Player Game"
-      assert grid =~ "Big Group Game"
+      # Clearing the last active scalar returns the member to the carousel
+      # surface (D-01/D-02), not an unfiltered grid — both fixtures keep
+      # their default tags/weight_band, so they're reachable via the
+      # carousel-rows section instead.
+      assert html =~ "Four Player Game"
+      assert html =~ "Big Group Game"
+      refute html =~ ~s(id="games")
     end
 
     test "toggling max_playtime does not reset an already-active players chip", %{conn: conn} do
@@ -1372,7 +1475,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
          %{conn: conn} do
       game_fixture(%{name: "Untouched Scalar Game"})
 
-      {:ok, view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Untouched"})
+
       before_count = card_count(html)
 
       html2 =
@@ -1393,9 +1502,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       html =
         render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "abc"})
 
-      grid = grid_html(html)
-      assert grid =~ "Four Player Game"
-      assert grid =~ "Big Group Game"
+      # An unparseable choice degrades the scalar back to nil — with no
+      # filter left active, the member lands back on the carousel surface
+      # (D-01/D-02), not an unfiltered grid.
+      assert html =~ "Four Player Game"
+      assert html =~ "Big Group Game"
+      refute html =~ ~s(id="games")
     end
   end
 
@@ -1429,8 +1541,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, _view, html_unfiltered} = live(conn, ~p"/")
       {:ok, _view2, html_bogus} = live(conn, ~p"/?mechanics=NoExiste")
 
-      assert grid_html(html_unfiltered) =~ "Any Game"
-      assert grid_html(html_bogus) =~ "Any Game"
+      # CatalogFilters.from_params/1's whitelist already drops "NoExiste"
+      # down to mechanics: [] before this LiveView ever sees it, so both
+      # mounts land on the same unfiltered carousel surface (D-01/D-02),
+      # not the grid — checked on the whole page in both cases.
+      assert html_unfiltered =~ "Any Game"
+      assert html_bogus =~ "Any Game"
     end
 
     test "a 50-element param list is truncated and the page still renders", %{conn: conn} do
@@ -1446,16 +1562,18 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       game_fixture(%{name: "Zebra Game", csv_row: 9001})
       game_fixture(%{name: "Alpha Game", csv_row: 9002})
 
-      {:ok, _view, html} = live(conn, ~p"/?sort=nope")
+      {:ok, _view, html} = live(conn, ~p"/?sort=nope&weight_bands=ingenio_estratega")
 
-      assert position(html, "Alpha Game") < position(html, "Zebra Game")
+      assert position(grid_html(html), "Alpha Game") < position(grid_html(html), "Zebra Game")
     end
 
     test "?players=abc leaves the players filter unset rather than raising", %{conn: conn} do
       game_fixture(%{name: "Any Game"})
 
+      # An unset players filter with nothing else active is the unfiltered/
+      # carousel surface (D-01/D-02), not the grid.
       assert {:ok, _view, html} = live(conn, ~p"/?players=abc")
-      assert grid_html(html) =~ "Any Game"
+      assert html =~ "Any Game"
     end
   end
 
