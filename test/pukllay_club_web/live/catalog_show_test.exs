@@ -709,6 +709,41 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert cta_bar_html =~ "detail-share-ctabar"
       assert html =~ ~s(phx-hook="PukllayClubWeb.CatalogLive.Show.DetailChrome")
     end
+
+    test "the mobile CTA bar stacks the reserve button and the share control as siblings inside pk-cta-bar-inner, capped to the content column (G-01.2-6, sketch 028)",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      cta_bar_html = doc |> LazyHTML.query("#detail-cta-bar") |> LazyHTML.to_html()
+
+      # Structural assertion (not class-string matching): pk-cta-bar-inner
+      # sits between the bar and its two controls, and its own parent
+      # carries pk-gutter — the shipped shell-column recipe, reused
+      # verbatim so the bar's controls align under the content column.
+      inner_parent_class =
+        doc
+        |> LazyHTML.query("#detail-cta-bar > div")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert inner_parent_class =~ "pk-gutter"
+
+      reserve_button_class =
+        doc
+        |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert reserve_button_class =~ "w-full"
+      refute reserve_button_class =~ "flex-1"
+      refute cta_bar_html =~ "flex-1"
+
+      assert cta_bar_html =~ "pk-cta-bar-inner"
+      assert cta_bar_html =~ "Compartir"
+    end
   end
 
   describe "reservation flow (SHELL-03, T-01.1-02)" do

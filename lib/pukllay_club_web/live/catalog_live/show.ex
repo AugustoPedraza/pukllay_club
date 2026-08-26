@@ -452,10 +452,18 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         </div>
 
         <div id="detail-cta-bar" class="pk-mobile-cta-bar">
-          <button type="button" phx-click="open-reservation" class="btn btn-primary min-h-11 flex-1">
-            {reservation_cta_label()}
-          </button>
-          <.share_control id="detail-share-ctabar" game={@game} variant={:bar} />
+          <div class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="pk-cta-bar-inner">
+              <button
+                type="button"
+                phx-click="open-reservation"
+                class="btn btn-primary min-h-11 w-full"
+              >
+                {reservation_cta_label()}
+              </button>
+              <.share_control id="detail-share-ctabar" game={@game} variant={:bar} />
+            </div>
+          </div>
         </div>
 
         <div
@@ -684,9 +692,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # in the bar (sketch 028). Both call sites pass this explicitly rather
   # than relying on the default, so the second surface stays visible to
   # the next reader. `share_trigger_class/1` owns the class-per-variant
-  # mapping; the `:bar` branch keeps the panel's own treatment for now
-  # (plan 01.2-13 Task 3 replaces it with the bar's own labelled-pill
-  # class and markup in the same plan, one task later).
+  # mapping. For `:bar`, the visible "Compartir" label IS the accessible
+  # name, so `aria-label` is dropped there rather than shipping two
+  # conflicting names for one control — `:panel` stays icon-only and keeps
+  # its `aria-label`, since it renders no visible text at all.
   defp share_control(assigns) do
     assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game.id}"))
 
@@ -698,10 +707,11 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         phx-hook=".ShareButton"
         data-share-title={@game.name}
         data-share-url={@share_url}
-        aria-label="Compartir juego"
+        aria-label={if @variant == :panel, do: "Compartir juego"}
         class={share_trigger_class(@variant)}
       >
         <.icon name="hero-share" class="size-5" />
+        <span :if={@variant == :bar}>Compartir</span>
       </button>
       <script :type={Phoenix.LiveView.ColocatedHook} name=".ShareButton">
         export default {
@@ -793,8 +803,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # clamped the button to 44px). The sketch's own circle measures 40px;
   # this repo's 44px touch floor outranks it, so only the border/fill/
   # shadow treatment is ported, not the size.
+  #
+  # The `:bar` treatment ports sketch 028 variant D's quiet outline pill —
+  # full-width, labelled, `.pk-share-trigger--bar` (declared next to
+  # `.pk-cta-bar-inner` in app.css). The sketch declares `min-height: 38px`;
+  # this uses the 44px floor for the same reason as `:panel` above, and the
+  # sketch's "quieter" intent is carried by the outline treatment and the
+  # muted text colour instead of the height.
   defp share_trigger_class(:panel), do: "pk-share-trigger min-h-11 min-w-11"
-  defp share_trigger_class(:bar), do: "pk-share-trigger min-h-11 min-w-11"
+  defp share_trigger_class(:bar), do: "pk-share-trigger--bar min-h-11"
 
   # `cover_url` first so it's always the initial thumbnail/main image when
   # present; nils filtered so an absent cover never mints a broken `<img>`.

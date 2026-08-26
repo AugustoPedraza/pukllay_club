@@ -2399,11 +2399,9 @@ body.pk-drawer-open {
   right: 0;
   bottom: 0;
   z-index: 45;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem var(--pk-gutter);
+  padding: 0.75rem 0;
   background: var(--color-base-200);
+  border-top: 1px solid var(--color-base-300);
   /* --ease-standard, not --ease-out-soft — same amplitude reasoning as
      .pk-sheet/.pk-drawer, see the long note on .pk-sheet. The subtlety here is
      that ONE rule drives TWO states with very different travels, so it is
@@ -2418,6 +2416,57 @@ body.pk-drawer-open {
      together on the same footerReached flag, and giving them different curves
      desyncs the bar from the page padding it is clearing. */
   transition: transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
+}
+
+/* Stacked internal layout (Phase 01.2 gap-closure, sketch 028 variant D —
+   "Stacked", the only surviving variant after three side-by-side
+   rebalance attempts were all rejected, see the sketch's own README round
+   history). Reserve button becomes a full-width row on its own; share
+   drops to a smaller, quiet outline pill on a second row below it. The
+   horizontal gutter that used to live on `.pk-mobile-cta-bar` itself now
+   lives on the `pk-gutter` class on the middle wrapper in show.ex, and
+   this rule's own `max-width: 68.75rem` is the exact literal
+   `.pk-detail-masthead` already uses, so the bar's controls align under
+   the content column above them at every width instead of stretching
+   edge-to-edge past 1100px. */
+.pk-cta-bar-inner {
+  max-width: 68.75rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+/* Share trigger, :bar variant (Phase 01.2 gap-closure, sketch 028 variant
+   D): a quiet, full-width outline pill on the bar's second row, labelled
+   rather than icon-only — its wrapper (.pk-share-wrap) is blockified as a
+   flex item of .pk-cta-bar-inner above, so this rule's own `width: 100%`
+   fills the same column the reserve button's row occupies. The sketch
+   declares `min-height: 38px`; this uses 44px because that is this repo's
+   documented touch floor and it outranks a sketch dimension — the
+   sketch's "quieter" intent is carried by the outline treatment and the
+   muted text colour, not by the height. */
+.pk-share-trigger--bar {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: var(--radius-box);
+  border: 1px solid var(--color-base-300);
+  background: var(--color-base-100);
+  color: var(--color-neutral);
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-share-trigger--bar:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .pk-mobile-cta-bar.is-hidden {
@@ -2440,7 +2489,7 @@ body.pk-drawer-open {
    body.pk-cta-parked is declared AFTER body.pk-has-cta-bar deliberately —
    the two rules have equal specificity and resolve by source order. */
 body.pk-has-cta-bar {
-  padding-bottom: 9.25rem;
+  padding-bottom: 12.5rem;
   /* --ease-standard, not --ease-out-soft. This is the largest travel of the
      whole sweep: 9.25rem/148px collapsing to 0, which at --duration-base put
      46.7% = a measured 68.9px (3/3 reps, 69.1px predicted) into the first
@@ -2449,7 +2498,11 @@ body.pk-has-cta-bar {
      Must stay on the SAME duration and curve as .pk-mobile-cta-bar above:
      both fire on the same footerReached flag, and this padding is precisely
      the clearance the bar occupies, so any desync between them shows up as
-     the footer and the bar sliding at different rates. */
+     the footer and the bar sliding at different rates.
+     12.5rem/200px (Phase 01.2 gap-closure, sketch 028's stacked bar): derived,
+     not chosen — 148px (the original one-row clearance) + 44px (the new
+     stacked share row) + 8px (the row gap) = 200px. Recompute this number
+     again if the bar's internal row height or gap ever changes. */
   transition: padding-bottom var(--duration-base) var(--ease-standard);
 }
 
