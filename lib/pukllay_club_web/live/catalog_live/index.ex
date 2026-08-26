@@ -89,6 +89,18 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       # part in filter_opts/1, apply_filters/1, or
       # CatalogFilters.to_query/1's D-08 breadcrumb query string.
       |> assign(:browse_all, false)
+      # Bug found while implementing D-01/D-02 (Rule 1): a
+      # `phx-update="stream"` container that gets removed from the DOM
+      # (as carousel-rows now is, via the :if below, whenever
+      # browsing_results? flips true) does NOT automatically repopulate
+      # its items when the container reappears — LiveView only ever sends
+      # *new* inserts, and the per-row streams already delivered their
+      # one and only batch back at this same mount. Left unfixed, every
+      # "clear filters" / empty-submission-then-dismiss round trip would
+      # return the member to a carousel section with the right headings
+      # but zero cards. :carousel_needs_reset tracks whether the carousel
+      # was hidden since it was last populated; see sync_carousel_visibility/1.
+      |> assign(:carousel_needs_reset, false)
       |> stream(:games, [])
 
     {:ok, socket}
@@ -203,7 +215,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # only records that the member asked to see the current result set, via
   # :browse_all (see mount/3's comment on that assign).
   def handle_event("apply-filters", _params, socket) do
-    {:noreply, socket |> assign(:filters_open, false) |> assign(:browse_all, true)}
+    {:noreply,
+     socket
+     |> assign(:filters_open, false)
+     |> assign(:browse_all, true)
+     |> assign(:carousel_needs_reset, true)}
   end
 
   # The payload key is `choice`, not `value`: LiveView's client-side
@@ -363,21 +379,62 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     opts = socket.assigns |> filter_opts() |> Map.put(:offset, 0) |> Map.put(:limit, @page_size)
     socket = assign(socket, :from_query, CatalogFilters.to_query(filter_opts(socket.assigns)))
 
-    case safe_filter_games(opts) do
-      {:ok, games} ->
-        socket
-        |> assign(:offset, @page_size)
-        |> assign(:total, Catalog.count_games(opts))
-        |> assign(:load_error, false)
-        |> stream(:games, games, reset: true)
+    socket =
+      case safe_filter_games(opts) do
+        {:ok, games} ->
+          socket
+          |> assign(:offset, @page_size)
+          |> assign(:total, Catalog.count_games(opts))
+          |> assign(:load_error, false)
+          |> stream(:games, games, reset: true)
 
-      :error ->
-        socket
-        |> assign(:offset, 0)
-        |> assign(:total, 0)
-        |> assign(:load_error, true)
-        |> stream(:games, [], reset: true)
+        :error ->
+          socket
+          |> assign(:offset, 0)
+          |> assign(:total, 0)
+          |> assign(:load_error, true)
+          |> stream(:games, [], reset: true)
+      end
+
+    sync_carousel_visibility(socket)
+  end
+
+  # See mount/3's comment on :carousel_needs_reset for the bug this fixes.
+  # Every filter-changing event funnels through here (D-01/D-02's
+  # "apply-filters" handler is the one deliberate exception — it flips
+  # `:carousel_needs_reset` itself, since it never calls apply_filters/1),
+  # so this is the single place that keeps the flag and the carousel's
+  # actual DOM/stream state in sync:
+  #   - the grid is about to show (or already is) -> the carousel-rows
+  #     container will be (or stays) removed from the DOM -> mark it dirty.
+  #   - the carousel is about to show and it was marked dirty -> the
+  #     container is reappearing after being removed -> its per-row
+  #     streams need a fresh reset: true population before that happens,
+  #     or every row renders permanently empty.
+  #   - the carousel is about to show and it was NOT marked dirty -> it
+  #     never left the DOM (e.g. the very first connected handle_params
+  #     call) -> touching the streams again here would double-populate
+  #     them before the first render ever flushes (mount/3's own
+  #     accumulation warning) -> no-op.
+  defp sync_carousel_visibility(socket) do
+    cond do
+      browsing_results?(socket.assigns) -> assign(socket, :carousel_needs_reset, true)
+      socket.assigns.carousel_needs_reset -> refresh_carousel_rows(socket)
+      true -> socket
     end
+  end
+
+  defp refresh_carousel_rows(socket) do
+    rows = Catalog.list_carousel_rows()
+
+    socket =
+      Enum.reduce(rows, socket, fn row, acc ->
+        stream(acc, carousel_stream_name(row.key), row.games, reset: true)
+      end)
+
+    socket
+    |> assign(:carousel_rows, Enum.map(rows, &carousel_row_metadata/1))
+    |> assign(:carousel_needs_reset, false)
   end
 
   defp safe_filter_games(opts) do
@@ -525,10 +582,10 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           </span>
         </button>
       </:nav_search>
-      <:nav_menu :if={not filters_active?(assigns)}>
+      <:nav_menu :if={not browsing_results?(assigns)}>
         <Layouts.category_menu rows={index_rows(assigns)} />
       </:nav_menu>
-      <:subnav :if={not filters_active?(assigns)}>
+      <:subnav :if={not browsing_results?(assigns)}>
         <div class="pk-chip-nav-wrap">
           <nav class="pk-chip-nav" aria-label="Categorías">
             <span class="pk-chip-spacer" aria-hidden="true"></span>
@@ -561,7 +618,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         over a subtree containing focusable elements is itself an
         accessibility violation. --%>
         <div class={["space-y-6", "pk-dimmable", @filters_open && "is-dimmed"]}>
-          <div :if={not filters_active?(assigns)} id="carousel-rows" class="space-y-8">
+          <div :if={not browsing_results?(assigns)} id="carousel-rows" class="space-y-8">
             <%= if @loading do %>
               <CarouselRow.skeleton_row
                 :for={n <- 1..@skeleton_carousel_rows}
@@ -595,12 +652,18 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             </div>
           </div>
 
-          <div class="mx-auto w-full max-w-7xl pk-gutter space-y-1">
+          <div
+            :if={browsing_results?(assigns)}
+            class="mx-auto w-full max-w-7xl pk-gutter space-y-1"
+          >
             <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
             <p class="text-neutral text-sm">{result_count_text(@total)}</p>
           </div>
 
-          <div :if={@total == 0 and not @load_error} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div
+            :if={browsing_results?(assigns) and @total == 0 and not @load_error}
+            class="mx-auto w-full max-w-7xl pk-gutter"
+          >
             <div class="pk-state">
               <h2>No se encontraron juegos</h2>
               <p>Probá con otros filtros o términos de búsqueda.</p>
@@ -608,13 +671,19 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             </div>
           </div>
 
-          <div :if={@loading} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div
+            :if={browsing_results?(assigns) and @loading}
+            class="mx-auto w-full max-w-7xl pk-gutter"
+          >
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               <CarouselRow.skeleton_card :for={n <- 1..@page_size} id={"grid-skeleton-#{n}"} />
             </div>
           </div>
 
-          <div :if={not @loading} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div
+            :if={browsing_results?(assigns) and not @loading}
+            class="mx-auto w-full max-w-7xl pk-gutter"
+          >
             <div
               id="games"
               phx-update="stream"
@@ -632,7 +701,10 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             </div>
           </div>
 
-          <div :if={@total > 0 and @offset < @total} class="mx-auto w-full max-w-7xl pk-gutter">
+          <div
+            :if={browsing_results?(assigns) and @total > 0 and @offset < @total}
+            class="mx-auto w-full max-w-7xl pk-gutter"
+          >
             <div class="flex justify-center">
               <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
             </div>
