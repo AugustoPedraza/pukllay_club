@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.2
 current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
 status: executing
-stopped_at: Completed 01.2-02-PLAN.md
-last_updated: "2026-08-26T02:29:09.943Z"
+stopped_at: Completed 01.2-03-PLAN.md
+last_updated: "2026-08-26T11:12:32.703Z"
 last_activity: 2026-08-25
 last_activity_desc: Phase 01.2 execution started
-state_head: 16b33ed5864d108ccf255b3efe26925dc47c558b
+state_head: 54a4a8bdf8afb1f1e4f9cbf9a95ec98c108774ca
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 26
-  completed_plans: 23
+  completed_plans: 24
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-08-25 — Phase 01.2 execution started
 
@@ -83,6 +83,7 @@ Progress: [██████████] 100%
 | Phase quick-260824-jkc P01 | 40min | 3 tasks | 4 files |
 | Phase 01.2 P01 | 50min | 2 tasks | 7 files |
 | Phase 01.2 P02 | 10min | 2 tasks | 2 files |
+| Phase 01.2 P03 | 55min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,7 @@ Recent decisions affecting current work:
 - [Phase 2]: Quick task 260824-jkc: shipped sketch 020's winning design — desktop 'Explorar categorías' mega-menu (Layouts.category_menu/1, right-anchored panel, one shared derived shelf list feeding both surfaces) + refined bare-outline/soft-tint mobile chip row; scroll-spy widened to [data-chip-target] so both surfaces share one IntersectionObserver; .pk-shelf landing offset derived from --pk-header-h. Two Rule-1 auto-fixes found via live headless-Chrome CDP measurement (not caught by ExUnit): dual flex margin-left:auto competing between trigger/search (fixed via general-sibling override) and the trigger label's 48rem reveal overflowing the row at 768px (moved to a measured 50rem breakpoint).
 - [Phase 01.2]: 01.2-01: mirrored (not extracted into a shared module) the three-clause detail_path/2 helper in both GameCard and GamePreview so both routes into the detail page carry identical ?from= state; PukllayClubWeb.CatalogFilters is now the single filter-parsing/validation authority, consumed by both CatalogLive.Index (URL read) and CatalogLive.Show (breadcrumb sanitiser)
 - [Phase 01.2]: 01.2-02: D-06 similar_games/1 ranks same-weight-band candidates by a single Postgres fragment/2 set-intersection score (mechanics x2 + themes x1, desc, then name/id asc tie-break) instead of alphabetical order; overlap ranks but never filters, so a zero-overlap band-mate is still returned last
+- [Phase 01.2]: 01.2-03: browsing_results?/1 wraps filters_active?/1 (never restates it) as the single gate for carousel vs. grid; a Rule 1 bugfix (:carousel_needs_reset/sync_carousel_visibility) was required so phx-update="stream" carousel rows actually repopulate every time the member returns from the grid, since D-01/D-02 removed the grid's always-visible fallback
 
 ### Pending Todos
 
@@ -238,6 +240,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T02:29:09.851Z
-Stopped at: Completed 01.2-02-PLAN.md
+Last session: 2026-08-26T11:12:32.601Z
+Stopped at: Completed 01.2-03-PLAN.md
 Resume file: None
