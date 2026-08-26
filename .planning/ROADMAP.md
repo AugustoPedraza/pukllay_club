@@ -200,11 +200,18 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 01.2-01-PLAN.md — D-08 tracer: breadcrumb carries catalog filters forward (new shared `CatalogFilters` parse/encode/sanitise module)
 - [ ] 01.2-02-PLAN.md — D-06: rank "Juegos similares" by shared mechanics/themes within the weight band
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01.2-03-PLAN.md — D-01/D-02: grid becomes exclusively the search/filter results view; modal CTA is the explicit-submission signal
 - [ ] 01.2-04-PLAN.md — D-04/D-05/D-07: Ficha técnica cleanup, players/duration de-duplication, buy-box redesign
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01.2-05-PLAN.md — D-03: auto-loading infinite scroll replaces the manual results-grid pagination control
 
 ### Phase 2: Natural-Language Spanish Search + Auth

@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.2
-current_phase_name: Catalog & Detail Navigation Polish
+current_phase_name: catalog-detail-navigation-polish
 status: Ready to discuss
-stopped_at: Phase 01.2 context gathered
-last_updated: "2026-08-26T00:36:41.707Z"
+stopped_at: Phase 01.2 UI-SPEC approved
+last_updated: "2026-08-26T01:24:37.795Z"
 last_activity: 2026-08-24
 last_activity_desc: Completed quick task 260824-q8z - mobile drawer bottom block content/footer split
-state_head: a6eec1f6178f598e88e604d312e1a337c6f9f5f2
+state_head: b5ad1271d7681fbfad99c9f2303898f32d80d462
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 21
+  total_plans: 26
   completed_plans: 21
 milestone_name: milestone
 ---
@@ -29,7 +29,7 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.2 — Catalog & Detail Navigation Polish
+Phase: 01.2 (catalog-detail-navigation-polish) — READY TO EXECUTE
 Plan: Not started
 Status: Ready to discuss
 Last activity: 2026-08-24 - Completed quick task 260824-u5d: in-row horizontal infinite scroll for the 8 catalog carousels (30-game ceiling), Ver todo tile removed
@@ -234,6 +234,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T00:36:41.596Z
-Stopped at: Phase 01.2 context gathered
-Resume file: .planning/phases/01.2-catalog-detail-navigation-polish/01.2-CONTEXT.md
+Last session: 2026-08-26T00:51:48.642Z
+Stopped at: Phase 01.2 UI-SPEC approved
+Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/01.2-catalog-detail-navigation-polish/01.2-UI-SPEC.md
