@@ -4,11 +4,11 @@ milestone: v1.0
 current_phase: 01.2
 current_phase_name: Catalog & Detail Navigation Polish
 status: Ready to discuss
-stopped_at: Phase 01.2 inserted, not yet discussed/planned
-last_updated: "2026-08-25T23:55:01.128Z"
+stopped_at: Phase 01.2 context gathered
+last_updated: "2026-08-26T00:36:41.707Z"
 last_activity: 2026-08-24
 last_activity_desc: Completed quick task 260824-q8z - mobile drawer bottom block content/footer split
-state_head: edacb4b46bf8f730a04c453fcadf475e4839fbfc
+state_head: a6eec1f6178f598e88e604d312e1a337c6f9f5f2
 progress:
   total_phases: 6
   completed_phases: 2
@@ -234,6 +234,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-25T00:00:03.053Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/02-natural-language-spanish-search-auth/02-UI-SPEC.md
+Last session: 2026-08-26T00:36:41.596Z
+Stopped at: Phase 01.2 context gathered
+Resume file: .planning/phases/01.2-catalog-detail-navigation-polish/01.2-CONTEXT.md
