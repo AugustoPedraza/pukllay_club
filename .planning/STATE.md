@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.2
-current_phase_name: catalog-detail-navigation-polish
+current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
 status: executing
-stopped_at: Completed 01.2-05-PLAN.md
-last_updated: "2026-08-26T21:00:33.570Z"
-last_activity: 2026-08-25
+stopped_at: Completed 01.2-11-PLAN.md
+last_updated: "2026-08-26T22:15:19.103Z"
+last_activity: 2026-08-26
 last_activity_desc: Phase 01.2 execution started
-state_head: a62eb91170c366609bbe2efc0547d7a444b8d721
+state_head: f0e548c7dbbc01a35875e7176fa3d90783720b05
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 26
+  completed_plans: 27
 milestone_name: milestone
 ---
 
@@ -29,10 +29,10 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.2 (catalog-detail-navigation-polish) — READY TO EXECUTE
-Plan: 5 of 5
+Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
+Plan: 2 of 10
 Status: Ready to execute
-Last activity: 2026-08-25 — Phase 01.2 execution started
+Last activity: 2026-08-26 — Phase 01.2 execution started
 
 Progress: [██████████] 100%
 
@@ -86,6 +86,7 @@ Progress: [██████████] 100%
 | Phase 01.2 P03 | 55min | 3 tasks | 3 files |
 | Phase 01.2 P04 | 11min | 3 tasks | 2 files |
 | Phase 01.2 P05 | 15min | 3 tasks | 3 files |
+| Phase 01.2 P11 | 40min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,8 @@ Recent decisions affecting current work:
 - [Phase 01.2]: 01.2-04: Ficha técnica trimmed to Edad mínima/Año/Diseñadores/Editorial/BGG link with a new ficha_tecnica?/1 section-level guard closing the zero-one-many backstop; playtime_text/1 removed with its two sole call sites (D-04/D-05)
 - [Phase 01.2]: 01.2-04: buy-box redesigned per UI-SPEC D-07 — pk-card-poster aspect, bg-base-200/rounded-box/p-4 panel, btn-lg full-width reserve CTA, top-right-anchored btn-sm share control (also fixing the mobile CTA bar's weight split since share_control/1 is shared), and a js-cover-fallback cover-failure fallback; mobile bar's flex-1/height/padding/timing and .DetailChrome untouched
 - [Phase 01.2]: 01.2-05: .GridScroll colocated hook (vertical twin of .CarouselScroll) drives grid infinite scroll via an IntersectionObserver sentinel; data-exhausted folds in the new :more_error assign so a mid-scroll failure parks the hook instead of auto-retrying, and apply_filters/1 resets :more_error on both branches alongside :load_error
+- [Phase 01.2]: 01.2-11: search-morph open/closed state moved fully server-side (Layouts.header_inner/1 renders is-open/is-search-open/aria-expanded/tabindex from a :search_expanded assign); .CatalogNav hook reduced to focus-only management and the document-level outside-click listener deleted (fixed G-01.2-2/G-01.2-3)
+- [Phase 01.2]: 01.2-11: handle_params/3 widens :search_expanded only on a filters_active? false->true transition (not a plain OR against current state) so a same-query re-run never resurrects a box the member explicitly closed; CatalogLive.Show gained no-op open-search/close-search handlers since header_inner/1's buttons now dispatch these unconditionally on every nav_search-slot page
 
 ### Pending Todos
 
@@ -245,6 +248,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T11:41:43.565Z
-Stopped at: Completed 01.2-05-PLAN.md
+Last session: 2026-08-26T22:15:18.950Z
+Stopped at: Completed 01.2-11-PLAN.md
 Resume file: None
