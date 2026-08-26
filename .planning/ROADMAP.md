@@ -194,14 +194,18 @@ Plans:
 
 ### Phase 01.2: Catalog & Detail Navigation Polish (INSERTED)
 
-**Goal:** [Urgent work - to be planned] — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped
-**Requirements**: TBD
+**Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
+**Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 0 plans
+**Plans:** 5 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 01.2 to break down)
+- [ ] 01.2-01-PLAN.md — D-08 tracer: breadcrumb carries catalog filters forward (new shared `CatalogFilters` parse/encode/sanitise module)
+- [ ] 01.2-02-PLAN.md — D-06: rank "Juegos similares" by shared mechanics/themes within the weight band
+- [ ] 01.2-03-PLAN.md — D-01/D-02: grid becomes exclusively the search/filter results view; modal CTA is the explicit-submission signal
+- [ ] 01.2-04-PLAN.md — D-04/D-05/D-07: Ficha técnica cleanup, players/duration de-duplication, buy-box redesign
+- [ ] 01.2-05-PLAN.md — D-03: auto-loading infinite scroll replaces the manual results-grid pagination control
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
