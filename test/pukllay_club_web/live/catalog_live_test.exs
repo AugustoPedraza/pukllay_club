@@ -609,6 +609,127 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "vertical infinite scroll: .GridScroll sentinel-driven load-more (D-03)" do
+    test "the hook element's data-exhausted is false while more pages remain, and true once the offset reaches the total",
+         %{conn: conn} do
+      for n <- 1..30 do
+        game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
+      end
+
+      {:ok, view, html} = live(conn, ~p"/?q=Juego")
+
+      assert grid_scroll_html(html) =~ ~s(data-exhausted="false")
+
+      html2 = render_click(view, "load-more", %{})
+
+      assert grid_scroll_html(html2) =~ ~s(data-exhausted="true")
+    end
+
+    test "the results view renders the sentinel element and exactly four trailing skeleton placeholders with stable ids",
+         %{conn: conn} do
+      game_fixture(%{name: "Sentinel Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render_click(view, "apply-filters", %{})
+
+      section_html = grid_scroll_html(html)
+
+      assert section_html =~ "data-grid-sentinel"
+      assert section_html =~ ~s(id="grid-skel-1")
+      assert section_html =~ ~s(id="grid-skel-2")
+      assert section_html =~ ~s(id="grid-skel-3")
+      assert section_html =~ ~s(id="grid-skel-4")
+      refute section_html =~ ~s(id="grid-skel-5")
+    end
+
+    test "the rendered results view contains no inline script tag — the colocated hook is extracted at build time",
+         %{conn: conn} do
+      game_fixture(%{name: "No Script Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render_click(view, "apply-filters", %{})
+
+      refute html =~ "export default"
+    end
+
+    test "dispatching load-more appends the next page without disturbing already-rendered cards, and data-exhausted flips to true on the last page",
+         %{conn: conn} do
+      for n <- 1..30 do
+        game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
+      end
+
+      {:ok, view, html} = live(conn, ~p"/?q=Juego")
+
+      assert card_count(html) == 24
+      assert html =~ "Juego 01"
+
+      html2 = render_click(view, "load-more", %{})
+
+      assert card_count(html2) == 30
+      assert html2 =~ "Juego 01"
+      assert grid_scroll_html(html2) =~ ~s(data-exhausted="true")
+    end
+
+    test "dispatching load-more again after the result set is exhausted is a no-op: unchanged card count, no error state",
+         %{conn: conn} do
+      for n <- 1..30 do
+        game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/?q=Juego")
+      render_click(view, "load-more", %{})
+
+      html3 = render_click(view, "load-more", %{})
+
+      assert card_count(html3) == 30
+      refute html3 =~ "No pudimos cargar más juegos."
+    end
+
+    test "the manual pagination control no longer renders anywhere in the results view", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Any Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render_click(view, "apply-filters", %{})
+
+      refute html =~ "Cargar más"
+    end
+
+    test "changing a filter after loading additional pages resets the offset and clears any error state",
+         %{conn: conn} do
+      for n <- 1..30 do
+        game_fixture(%{name: "G#{n}", mechanics: ["Dice Rolling"]})
+      end
+
+      {:ok, view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
+      assert grid_scroll_html(html) =~ ~s(data-exhausted="false")
+
+      render_click(view, "load-more", %{})
+
+      html2 =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "G1"})
+
+      assert grid_scroll_html(html2) =~ ~s(data-exhausted="true")
+      refute html2 =~ "No pudimos cargar más juegos."
+    end
+
+    # A mid-scroll load-more query failure (:more_error, distinct from the
+    # existing :load_error path) is not reachable from this suite: every
+    # value that can make safe_filter_games/1's rescue fire (e.g. the
+    # out-of-Postgres-int-range players value used by the existing
+    # "when the catalog query raises" test) fails identically on the very
+    # first apply_filters/1 call — offset is never client-controlled, so
+    # there is no way to make page 1 of a filter succeed while a later
+    # load-more page of the SAME filter fails. Recorded here rather than
+    # writing a test that would assert nothing; the inline retry line's
+    # actual failure/recovery behaviour is deferred to Task 3's
+    # <human-check> item 4, the same pattern 01.2-03-SUMMARY.md's D6 used
+    # for an analogous untestable scenario.
+  end
+
   describe "differentiated row headers and titled main grid (G-01-4)" do
     test "the hero row renders in the primary colour and a weight-band row renders its Vocabulary descriptor as a subtitle",
          %{conn: conn} do
@@ -1587,6 +1708,17 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     html
     |> LazyHTML.from_document()
     |> LazyHTML.query("#games")
+    |> LazyHTML.to_html()
+  end
+
+  # Scopes assertions to the #grid-scroll hook element (D-03) — the
+  # .GridScroll wrapper, its data-exhausted attribute, the sentinel, and
+  # the trailing skeleton placeholders all live here, one level above
+  # #games itself.
+  defp grid_scroll_html(html) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("#grid-scroll")
     |> LazyHTML.to_html()
   end
 
