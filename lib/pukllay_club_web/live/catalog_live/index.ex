@@ -79,6 +79,14 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:offset, 0)
       |> assign(:total, 0)
       |> assign(:load_error, false)
+      # D-03: a second, deliberately separate error channel from
+      # :load_error. :load_error means "the catalog read that produces
+      # this page failed" and owns the full-page banner with its
+      # Reintentar action; :more_error means "one additional page failed
+      # while the member was already reading results" and owns a compact
+      # inline line under the grid instead. Merging them would blank a
+      # working grid over a transient mid-scroll failure.
+      |> assign(:more_error, false)
       |> assign(:from_query, "")
       # D-01/D-02: records that the member explicitly asked to see the
       # full-catalog grid (the filter modal's primary CTA, "apply-filters"
@@ -326,22 +334,45 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
+  # D-03 (auto-loading infinite scroll): reply-carrying on all three paths,
+  # mirroring carousel-load-more's own discipline above. The pre-query
+  # guard is the handler's first action and the AUTHORITATIVE stop
+  # (T-01.2-17) — data-exhausted on the client is only an optimisation, so
+  # a client that ignores it and keeps firing this event can never force
+  # an unbounded read past :total: once :offset has reached :total, this
+  # replies exhausted without a single query against the database, the
+  # same clamp-before-query discipline fetch_row_page/3 applies per
+  # carousel row. On success, one round trip carries both the new cards
+  # and the stop signal. On failure, :more_error is set — never
+  # :load_error, which stays scoped to the initial catalog read — so the
+  # cards already on screen are never disturbed by a mid-scroll failure.
   def handle_event("load-more", _params, socket) do
-    opts =
-      socket.assigns
-      |> filter_opts()
-      |> Map.put(:offset, socket.assigns.offset)
-      |> Map.put(:limit, @page_size)
+    %{offset: offset, total: total} = socket.assigns
 
-    case safe_filter_games(opts) do
-      {:ok, games} ->
-        {:noreply,
-         socket
-         |> assign(:offset, socket.assigns.offset + @page_size)
-         |> stream(:games, games, at: -1)}
+    if offset >= total do
+      {:reply, %{exhausted: true}, socket}
+    else
+      opts =
+        socket.assigns
+        |> filter_opts()
+        |> Map.put(:offset, offset)
+        |> Map.put(:limit, @page_size)
 
-      :error ->
-        {:noreply, assign(socket, :load_error, true)}
+      case safe_filter_games(opts) do
+        {:ok, games} ->
+          new_offset = offset + @page_size
+
+          socket =
+            socket
+            |> assign(:offset, new_offset)
+            |> assign(:more_error, false)
+            |> stream(:games, games, at: -1)
+
+          {:reply, %{exhausted: new_offset >= total}, socket}
+
+        :error ->
+          {:reply, %{error: true}, assign(socket, :more_error, true)}
+      end
     end
   end
 
@@ -379,6 +410,8 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     opts = socket.assigns |> filter_opts() |> Map.put(:offset, 0) |> Map.put(:limit, @page_size)
     socket = assign(socket, :from_query, CatalogFilters.to_query(filter_opts(socket.assigns)))
 
+    # :more_error is reset on both branches here: a filter change resets
+    # pagination (D-12), so a stale mid-scroll failure must not survive it.
     socket =
       case safe_filter_games(opts) do
         {:ok, games} ->
@@ -386,13 +419,16 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           |> assign(:offset, @page_size)
           |> assign(:total, Catalog.count_games(opts))
           |> assign(:load_error, false)
+          |> assign(:more_error, false)
           |> stream(:games, games, reset: true)
 
         :error ->
+          socket = assign(socket, :load_error, true)
+
           socket
           |> assign(:offset, 0)
           |> assign(:total, 0)
-          |> assign(:load_error, true)
+          |> assign(:more_error, false)
           |> stream(:games, [], reset: true)
       end
 
@@ -701,12 +737,19 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             </div>
           </div>
 
+          <%!-- D-03: compact inline retry for a mid-scroll load-more
+          failure — deliberately NOT a .pk-state block. Content already
+          exists above it, so the padded empty-state treatment would read
+          as the whole page having failed rather than one page having
+          failed. Gated on @more_error, the second error channel
+          mount/3 documents. --%>
           <div
-            :if={browsing_results?(assigns) and @total > 0 and @offset < @total}
+            :if={browsing_results?(assigns) and @more_error}
             class="mx-auto w-full max-w-7xl pk-gutter"
           >
-            <div class="flex justify-center">
-              <button type="button" phx-click="load-more" class="btn btn-outline">Cargar más</button>
+            <div class="flex items-center justify-center gap-2">
+              <p class="text-neutral text-sm">No pudimos cargar más juegos.</p>
+              <.button phx-click="load-more" variant="secondary">Reintentar</.button>
             </div>
           </div>
         </div>

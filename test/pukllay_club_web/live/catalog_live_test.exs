@@ -306,9 +306,8 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert position(grid_html(html2), "Zeta Largo") < position(grid_html(html2), "Alfa Corto")
     end
 
-    test "pressing Cargar más appends the next page and leaves already-rendered cards in place", %{
-      conn: conn
-    } do
+    test "dispatching load-more appends the next page and leaves already-rendered cards in place",
+         %{conn: conn} do
       for n <- 1..30 do
         game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
       end
@@ -318,10 +317,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert card_count(html) == 24
       assert html =~ "Juego 01"
 
-      html2 =
-        view
-        |> element("button", "Cargar más")
-        |> render_click()
+      html2 = render_click(view, "load-more", %{})
 
       assert card_count(html2) == 30
       assert html2 =~ "Juego 01"
@@ -333,16 +329,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       end
 
       {:ok, view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
-      assert html =~ "Cargar más"
+      assert card_count(html) == 24
 
-      view |> element("button", "Cargar más") |> render_click()
+      render_click(view, "load-more", %{})
 
       html2 =
         view
         |> form("#catalog-search-form")
         |> render_change(%{q: "G1"})
 
-      refute html2 =~ "Cargar más"
+      assert card_count(html2) == 1
     end
 
     test "a filter combination with no matches renders the empty state, and Limpiar filtros restores results",
