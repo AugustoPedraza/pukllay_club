@@ -108,8 +108,16 @@ defmodule PukllayClubWeb.GamePreview do
   editorial tag (hidden on the portal by one CSS rule), and the outlined
   `Ver detalles` CTA — a lower-commitment action than the interaction that
   revealed it, so it is never the filled primary button.
+
+  Accepts an optional `:from` (D-08) — the caller's current catalog filter
+  query string, mirrored from `GameCard`'s own `:from` attr so both routes
+  into the detail page (a resting card click and this preview's `Ver
+  detalles` CTA) carry the same forwarded filter state. Defaults to `nil`,
+  which renders the `Ver detalles` link exactly as it did before this attr
+  existed.
   """
   attr :game, Game, required: true
+  attr :from, :string, default: nil
 
   def preview_body(assigns) do
     assigns = assign(assigns, :cover, assigns.game.cover_url || assigns.game.thumbnail_url)
@@ -142,7 +150,7 @@ defmodule PukllayClubWeb.GamePreview do
         {List.first(@game.tags)}
       </span>
       <.link
-        navigate={~p"/juegos/#{@game}"}
+        navigate={detail_path(@game, @from)}
         class="pk-preview-cta btn btn-outline btn-primary btn-block min-h-11"
       >
         Ver detalles
@@ -157,11 +165,12 @@ defmodule PukllayClubWeb.GamePreview do
   clones this content on demand when a card is hovered or tapped.
   """
   attr :game, Game, required: true
+  attr :from, :string, default: nil
 
   def preview_template(assigns) do
     ~H"""
     <template data-game-preview>
-      <.preview_body game={@game} />
+      <.preview_body game={@game} from={@from} />
     </template>
     """
   end
@@ -380,4 +389,13 @@ defmodule PukllayClubWeb.GamePreview do
   defp tiempo_text(%{min_playtime: min, max_playtime: max}) when min == max, do: "#{min} min"
 
   defp tiempo_text(%{min_playtime: min, max_playtime: max}), do: "#{min}-#{max} min"
+
+  # D-08: mirrors `GameCard`'s own `detail_path/2` verbatim — three
+  # literal clauses, never a dynamic path assembled from raw strings — so
+  # both routes into the detail page (a resting card click and this
+  # preview's `Ver detalles` CTA) produce identical hrefs for identical
+  # inputs.
+  defp detail_path(game, nil), do: ~p"/juegos/#{game}"
+  defp detail_path(game, ""), do: ~p"/juegos/#{game}"
+  defp detail_path(game, from), do: ~p"/juegos/#{game}?#{[from: from]}"
 end

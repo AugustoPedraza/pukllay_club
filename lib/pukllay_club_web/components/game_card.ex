@@ -83,7 +83,7 @@ defmodule PukllayClubWeb.GameCard do
       <div class="pk-card-caption">
         <h3>{@game.name}</h3>
       </div>
-      <GamePreview.preview_template game={@game} />
+      <GamePreview.preview_template game={@game} from={@from} />
     </.link>
     """
   end
