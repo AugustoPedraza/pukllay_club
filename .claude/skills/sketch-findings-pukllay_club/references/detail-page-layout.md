@@ -76,6 +76,39 @@ detail page's "more like this" has no natural "see all" destination the way a ta
 does), and it activates `CarouselRow`'s `subtitle` prop (unused by any home-page caller today) to
 explain *why* these games are surfaced.
 
+**Buy-box panel boundary: elevated shadow, not a fill/border change (Phase 01.2 gap-closure,
+sketch 027).** UAT flagged the buy-box as not reading like "one self-contained panel distinct from
+the reading column" (root cause: `bg-base-200`/`bg-base-100` measured at 1.415:1/1.086:1 contrast
+in a prior debug session, well under this app's own 3:1 non-text floor). Three fixes were sketched
+— a stronger border, a stronger fill, and a soft shadow lift — **the shadow lift won**: it separates
+the panel on a plain background without changing `.poster-col`'s existing fill token at all, so the
+fix is purely additive (shadow + no border) on top of whatever fixes the panel's separate CSS
+cascade-layer positioning bug (unlayered `.pk-*` rules beating layered Tailwind utilities — a code
+fix, not a design decision, see the phase's own debug log).
+
+```css
+.pk-poster-col { background: var(--color-bg); border: 1px solid var(--color-border); box-shadow: var(--shadow-md); }
+```
+
+**"Juegos similares" shelf never goes sparse — the shelf itself always looks identical (Phase 01.2
+gap-closure, sketch 031).** UAT pushback: a 1-2 card rail for a thin weight-band pool "isn't
+acceptable." Rather than a distinct sparse-state layout (compact cluster, no edge-fade — tried and
+rejected as an unnecessary second visual mode), the winning direction keeps `.pk-shelf`'s layout
+completely invariant and makes the *query* responsible for always filling it (widen to adjacent
+bands / broader overlap / `bgg_weight` proximity when the same-band pool is thin — a
+`Catalog.similar_games/1` change, not covered here). The only visible signal that widening
+happened is a small pill badge next to the title plus a subtitle swap — title itself stays "Juegos
+similares" rather than switching to "Otras sugerencias" (flagged as still open: verify this reads
+as different enough from a true same-band match once built).
+
+```css
+.pk-shelf-badge { display: inline-flex; align-items: center; font-size: var(--text-xs); font-weight: 700; color: var(--color-primary); background: var(--color-accent-bg); padding: 2px 9px; border-radius: var(--radius-full); margin-left: 8px; vertical-align: middle; }
+```
+```html
+<h3>Juegos similares<span class="pk-shelf-badge" :if={@similares_widened}>Ampliado</span></h3>
+<p class="pk-shelf-subtitle">{if @similares_widened, do: "Otras opciones que te van a encantar", else: "Mismo nivel de dificultad, mecánicas y temática parecidas"}</p>
+```
+
 ## CSS Patterns
 
 ```css
@@ -107,7 +140,14 @@ explain *why* these games are surfaced.
 - Don't fake schema fields that don't exist (illustrator, BGG rank) — label the gap explicitly.
 - Don't add a `.pk-see-all` tile to a "similar games" shelf — there's no real destination for it
   the way there is for a home-page tag/weight-band shelf.
+- Don't try to fix the buy-box's "doesn't read as a panel" complaint by strengthening its fill
+  color alone — a shadow lift on the existing fill won over both a stronger border and a stronger
+  fill in sketch 027's comparison.
+- Don't give a sparse "Juegos similares" rail its own distinct compact layout — fix it at the
+  query layer (always widen the pool to fill the shelf) so the shelf's visual treatment stays one
+  invariant thing, not two.
 
 ## Origin
-Synthesized from sketch: 005
-Source file available in: sources/005-detail-page/
+Synthesized from sketches: 005, 027, 031
+Source files available in: sources/005-detail-page/, sources/027-buybox-panel-boundary/,
+sources/031-similar-games-fallback/

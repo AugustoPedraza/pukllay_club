@@ -29,7 +29,10 @@ Sketch sessions wrapped: 2026-08-19 (sketches 001–002), 2026-08-20 (sketches 0
 2026-08-20 continued (sketches 006, 007 partial, 009, 011 — the shell went through 9 real revision
 rounds; see `references/page-shell.md`, which now supersedes the original sketch 003 design entirely),
 2026-08-24 (sketches 008, 012–015, 017–026 — filter/search, header/nav/drawer, and carousel-native-
-feel groups; 016 excluded, no confirmed winner)
+feel groups; 016 excluded, no confirmed winner), 2026-08-26 (sketches 027–031 — Phase 01.2
+UAT gap-closure round: buy-box panel boundary, mobile CTA bar balance, an active-filters chip row
+that's not yet built, a replacement for the still-unbranded stock connection-lost banner, and the
+similar-games shelf's sparse-pool fallback)
 
 **Note on this wrap-up round:** most of the Filter & Search and Header/Navigation/Drawer sketches
 turned out to already be implemented in production by the time this wrap-up ran — a separate
@@ -104,11 +107,12 @@ Three more load-bearing principles emerged from the shell/detail/about sketches:
 | Card & Preview Interaction | references/card-interaction.md | Minimal resting card (poster + title only); fixed-size hover-portal (desktop) / full-screen sheet (mobile) rendered outside the scrolling rail, sharing identical CSS classes for every field |
 | Page Shell (Header + Footer) | references/page-shell.md | One header component with 3 states (nav-links / breadcrumb / nav-links, not 3 headers); crumbs reserved for genuine drill-downs only; single-row footer, no divider; "Inicio" (nav action) vs. "Ludoteca" (section name) kept deliberately distinct; every section capped to the same 1280px content width as the header |
 | About Page Content | references/about-page-content.md | Alternating tinted/untinted bands, each with a working image carousel instead of a static hero; FAQ as a closing band, not an accordion |
-| Detail Page — Layout & Content | references/detail-page-layout.md | Desktop buy-box (sticky image+CTA) beside a scrolling reading column, no accordion; ficha técnica as a 2-col grid; every field grounded in the real schema including its gaps; "Juegos similares" shelf reuses the real home-page carousel component |
-| Detail Page — Mobile & Interaction Patterns | references/detail-page-mobile-interaction.md | Mobile CTA bar hides while scrolling, parks at the footer; sticky title-echo bar with bounce-to-top — both driven by a plain `scroll` listener + `getBoundingClientRect()`, not `IntersectionObserver` (throttles in a backgrounded tab); lightbox/carousel sync; WhatsApp reservation flow |
+| Detail Page — Layout & Content | references/detail-page-layout.md | Desktop buy-box (sticky image+CTA) beside a scrolling reading column, no accordion; ficha técnica as a 2-col grid; every field grounded in the real schema including its gaps; "Juegos similares" shelf reuses the real home-page carousel component. Gap-closure additions: buy-box gets a shadow-lift boundary (not a border/fill change); the similar-games shelf's layout stays invariant, always widened to fill rather than given a distinct sparse treatment |
+| Detail Page — Mobile & Interaction Patterns | references/detail-page-mobile-interaction.md | Mobile CTA bar hides while scrolling, parks at the footer; sticky title-echo bar with bounce-to-top — both driven by a plain `scroll` listener + `getBoundingClientRect()`, not `IntersectionObserver` (throttles in a backgrounded tab); lightbox/carousel sync; WhatsApp reservation flow. Gap-closure addition: the bar's reserve/share controls stack vertically instead of sharing one row, and its content caps to the same 1100px column as the buy-box instead of stretching edge-to-edge |
 | Motion System | references/motion-system.md | Validated timing: 100/180/280ms, no-overshoot soft ease-out, `-3px` hover-lift — faster and smaller than every tested alternative, already live in the shared theme |
 | Empty / Loading / Error States | references/empty-loading-error-states.md | Flat gray skeletons (no shimmer), terse plain-Spanish copy, one action per state — illustrated/warm treatment tried and rejected as trying too hard for a low-stakes moment |
-| Filter & Search | references/filter-search.md | Already shipped: centered modal (desktop) / bottom sheet (mobile), always-visible primary chip clusters in cards, no age filter, editorial-tags group deliberately cut |
+| Filter & Search | references/filter-search.md | Already shipped: centered modal (desktop) / bottom sheet (mobile), always-visible primary chip clusters in cards, no age filter, editorial-tags group deliberately cut. Gap-closure addition (not yet built): an active-filters chip row inline with the "Resultados" heading, lighter accent-tint chips — never reuse the modal's own solid-filled `.chip.active` for this row |
+| Connection Feedback | references/connection-feedback.md | Not yet built: replaces the stock, unbranded, English `phx.new` connection-lost toast with an on-brand, centered, Spanish inline bar under the header, using the accent tint rather than danger-red |
 | Header, Navigation & Drawer | references/header-navigation-drawer.md | Already shipped: CTA lives on About-page hero only (NOT persistent — supersedes 013/017's recorded winner), bare-icon `sr-only`-labeled theme toggle, underline active-nav, search-icon-morph, category mega-menu, icon-only drawer bottom block |
 | Carousel Mechanics — Native Feel | references/carousel-mechanics.md | Free-momentum scroll + no position indicator already shipped; edge-overlay pointer-fine-gated arrows approved but not yet built (relocates from today's header-embedded circular buttons); shimmer scoped to filter-repopulation is new surface area, distinct from the flat full-page skeleton |
 
@@ -149,4 +153,9 @@ self-contained, interactive HTML mockup (no build step) that can be opened direc
 - 024-row-position-indicator
 - 025-carousel-loading-repopulation
 - 026-composed-native-carousel
+- 027-buybox-panel-boundary
+- 028-mobile-cta-balance
+- 029-active-filters-chip-row
+- 030-connection-lost-banner
+- 031-similar-games-fallback
 </metadata>

@@ -78,6 +78,43 @@ own (much taller) box instead, silently laying it out far below the fold. Revert
 `container-type`, `transform`, `filter`, `perspective`, `contain`, or `will-change` to *any*
 ancestor — that's the first thing to check.**
 
+### Mobile CTA bar internal layout: stacked, not side-by-side (Phase 01.2 gap-closure, sketch 028)
+
+UAT flagged the bar's internal balance as off — a `flex-1` reserve button next to a fixed 44px
+circular share button computed to roughly an 87%/13% width split (~7:1) at a real 390px repro
+width, compounded by a fill-vs-outline stylistic mismatch (root cause confirmed in the phase's own
+debug log — not a regression, a pre-existing condition since the bar's original build). Three
+row-rebalance attempts (capping the reserve button's width, filling the share circle solid, pairing
+both as same-shape pills) were all rejected as still not reading right. **The winning fix changes
+the internal layout instead of the width ratio**: reserve button becomes a full-width row on its
+own, share drops to a smaller, quiet outline pill on a second row below it — trading ~40px of extra
+bar height for an unambiguous primary action and a share control that still reads as reachable.
+
+```css
+.pk-mobile-cta-bar .cta-bar-inner { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+.pk-mobile-cta-bar .reserve-btn { width: 100%; }
+.pk-mobile-cta-bar .share-btn { width: 100%; min-height: 38px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); }
+```
+
+A distinct "floating contrasted circle, detached from the row" idea was tried and reverted: a
+`position: absolute` share circle overhanging above the bar's own box overlaps whatever page
+content is scrolled underneath it (the bar is `position: fixed`, so its overhang is *fixed screen
+space*, not anchored to one bounded panel the way the buy-box's own share icon is in normal
+document flow — see `detail-page-layout.md`). If a "floating/elevated" feel is wanted on an
+in-bar control, get it from a shadow + contrast ring, never from a position that spills past the
+bar's own box.
+
+**Bar content caps to the same column width as the buy-box, not edge-to-edge.** The bar's
+*background* may span the full viewport edge-to-edge, but its buttons should cap to the same
+1100px max-width as the desktop masthead/buy-box and center within it — otherwise on any viewport
+wider than that, the buttons stretch across the raw browser window instead of aligning under the
+content column above them. Below 1100px (every real mobile/tablet width) the cap is a no-op.
+
+```css
+.pk-mobile-cta-bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--color-surface); }
+.pk-mobile-cta-bar .cta-bar-inner { max-width: 1100px; margin: 0 auto; padding: 0 var(--pk-gutter); }
+```
+
 ### Color contrast on stacked controls
 
 The CTA bar's background was `--color-bg` (`#FFFFFF`) — identical to its own outlined share
@@ -189,7 +226,16 @@ app this belongs in runtime env config, not a template literal.
 - Don't read a possibly-hidden element's `getBoundingClientRect()` without guarding on
   `offsetParent !== null` first — a hidden element's rect is always `(0,0,0,0)`, which can silently
   satisfy a "scrolled past" check that isn't actually true.
+- Don't try to fix a lopsided fixed-bottom bar by rebalancing the width ratio of its existing
+  side-by-side controls alone — three width/fill variants were all rejected; switching to a
+  stacked internal layout is what actually read as balanced.
+- Don't position a control to overhang above the edge of a `position: fixed` bar — that overhang is
+  fixed screen space, not anchored to one panel, and will overlap whatever page content is
+  scrolled underneath it at some scroll position.
+- Don't let a fixed bottom bar's buttons stretch edge-to-edge past the page's own content
+  max-width — cap and center them to match the column above, same as the buy-box.
 
 ## Origin
-Synthesized from sketch: 005; sticky-title-bar mechanism corrected by sketch 011.
-Source files available in: sources/005-detail-page/, sources/011-full-shell-composition/
+Synthesized from sketches: 005, 028; sticky-title-bar mechanism corrected by sketch 011.
+Source files available in: sources/005-detail-page/, sources/011-full-shell-composition/,
+sources/028-mobile-cta-balance/

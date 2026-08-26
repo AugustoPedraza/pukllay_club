@@ -39,6 +39,39 @@ juegos" CTA.** No border/fill at rest for the ghost button — matches the app's
 from position/weight, not chrome" convention (see [[ui_design_system]] if that skill exists, or
 `header-navigation-drawer.md`'s 013-E note for the same pattern applied to nav).
 
+**Active-filters chip row: not yet built (Phase 01.2 gap-closure, sketch 029).** Unlike every other
+decision in this file, this one is still to implement — UAT found the Resultados grid header
+(`CatalogLive.Index`, heading + result count only) has no affordance at all for which filters are
+currently applied; the one existing proxy, a numeric badge on the filter trigger, is itself trapped
+inside a separate broken-collapsible-search-region bug (see the phase's own debug log). Three
+placements were sketched (a wrapping row below the heading, a horizontally-scrollable labeled row,
+chips inline with the heading itself) — **inline with the heading won**, most compact on desktop,
+wraps to its own line only when space runs out.
+
+The chip style itself went through a rebalancing round: the first pass reused the filter modal's
+own `.chip.active` contract verbatim (solid `--color-primary` fill + shadow, sketch 019) and it
+outweighed the "Resultados" heading it sat next to. Lightened to a soft `--color-accent-bg` tint
+with a thin border and no shadow — same "this filter is applied" signal, without competing with the
+heading for visual weight. This is a **different chip treatment from the filter modal's own
+chips** — don't reuse `.chip.active` verbatim for this row; a removable applied-filter chip and a
+selectable modal option chip are different affordances even though both derive from the same base
+pill shape.
+
+```css
+.pk-active-filter-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--color-accent-bg); color: var(--color-accent-text); border: 1px solid var(--color-border); font-size: var(--text-xs); font-weight: 600; padding: 4px 5px 4px 11px; border-radius: var(--radius-full); }
+.pk-active-filter-chip button { border: none; background: transparent; color: var(--color-text-muted); width: 16px; height: 16px; border-radius: 50%; }
+.pk-active-filter-chip button:hover { background: var(--color-danger); color: #fff; }
+```
+```html
+<div class="heading-row">
+  <div class="heading-block"><h2>Resultados</h2><p>{result_count_text(@total)}</p></div>
+  <div class="chip-row">
+    <span class="pk-active-filter-chip">{label} <button phx-click="clear-filter" phx-value-key={key}>×</button></span>
+    <button class="clear-link" phx-click="clear-filters">Limpiar filtros</button>
+  </div>
+</div>
+```
+
 ## CSS/Markup Patterns
 
 - Chip clusters and pill groups: `scalar_chip/1` component, one `phx-value-scalar`/
@@ -56,9 +89,13 @@ from position/weight, not chrome" convention (see [[ui_design_system]] if that s
   presentation decision)
 - A second scalar name for "6+" (breaks single-select)
 - `phx-value-value` as a value key on any filter control
+- Reusing the filter modal's solid-filled `.chip.active` style verbatim for the active-filters
+  header row — it reads too heavy next to the "Resultados" heading; use the lighter accent-tint
+  treatment instead.
 
 ## Origin
-Synthesized from sketches: 008, 012, 019
+Synthesized from sketches: 008, 012, 019, 029
 Source files available in: `sources/008-filter-search-ui/`, `sources/012-filter-modal-in-shell/`,
-`sources/019-filter-modal-finish/`
-Real implementation: `lib/pukllay_club_web/components/filter_modal.ex`
+`sources/019-filter-modal-finish/`, `sources/029-active-filters-chip-row/`
+Real implementation: `lib/pukllay_club_web/components/filter_modal.ex` (the active-filters chip row
+itself is not yet implemented — see above)

@@ -287,3 +287,72 @@ what we already have working"). This caught two real discrepancies:
 - Sketch 023's custom-eased arrow-click scroll (006-D's curve, replacing the current plain
   `scroll-behavior: smooth`) is a nice-to-have, explicitly not required for correctness — flagged as
   optional in `carousel-mechanics.md` rather than bundled into the arrow-relocation work.
+
+## Session: 2026-08-26
+
+**Sketches processed:** 5
+**Design areas:** Detail Page — Layout & Content, Detail Page — Mobile & Interaction Patterns,
+Filter & Search, Connection Feedback (new)
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
+
+Phase 01.2 UAT gap-closure round — five sketches answering the visual/copy half of five UAT gaps
+diagnosed in `.planning/debug/G-01.2-5` through `G-01.2-8` (plus the missing-affordance sub-issue
+of `G-01.2-3/4`). Three other UAT gaps in the same phase (`href-parity`, `search-input-broken`, the
+search-morph state-machine bug) were pure code fixes with no design question and are out of scope
+for this wrap-up.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 027 | buybox-panel-boundary | B (Elevated Shadow) | Detail Page — Layout & Content |
+| 028 | mobile-cta-balance | D (Stacked) | Detail Page — Mobile & Interaction Patterns |
+| 029 | active-filters-chip-row | C (Inline with Heading, rebalanced) | Filter & Search |
+| 030 | connection-lost-banner | A (Inline Bar, recolored) | Connection Feedback |
+| 031 | similar-games-fallback | C (Always-Full Guarantee) | Detail Page — Layout & Content |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — all 5 included |
+
+## Design Direction
+No new aesthetic direction — this round is gap-closure within the already-locked visual system
+(26 prior sketches), so mood/reference intake was skipped and the session went straight to
+decomposition. Each sketch answers one UAT-flagged visual defect against the existing brand tokens.
+
+## Key Decisions
+- **Buy-box boundary (027):** a soft shadow lift read as a self-contained panel better than either
+  a stronger border or a stronger fill — purely additive on top of `.poster-col`'s existing fill,
+  no token change.
+- **Mobile CTA bar (028):** the bar's ~87/13 width imbalance between the reserve button and the
+  share control isn't fixable by rebalancing that ratio (3 attempts rejected) — switching to a
+  stacked internal layout (reserve full-width, share as a quiet second row) is what read as
+  balanced. Also fixed globally: the bar's content now caps to the same 1100px column as the
+  buy-box instead of stretching edge-to-edge past it. A floating/overhanging share circle was tried
+  and reverted — a `position: fixed` bar's overhang is fixed screen space and can overlap whatever
+  page content scrolls underneath it.
+- **Active-filters chip row (029):** not yet built. Chips sit inline with the "Resultados" heading;
+  reusing the filter modal's own solid-filled chip style outweighed the heading, so this row gets a
+  lighter accent-tint treatment instead — a deliberately different chip style from the modal's.
+- **Connection-lost banner (030):** not yet built. Replaces the stock, unbranded, English `phx.new`
+  toast with an on-brand, centered, Spanish inline bar under the header. Recolored off
+  `--color-danger` (alarming for a usually self-recovering reconnect) to the app's own accent tint.
+- **Similar-games fallback (031):** the shelf's layout stays completely invariant regardless of
+  same-band pool size — the query is responsible for always widening enough to fill it (a separate,
+  not-yet-designed backend decision); an "Ampliado" badge + subtitle swap is the only visible sign
+  widening happened. Whether the title itself should also swap to "Otras sugerencias" (the user's
+  original proposal) is flagged as still open.
+
+## Open Items Carried Forward
+- 031: whether "Juegos similares" should fully retitle to "Otras sugerencias" when widened, versus
+  the winning badge-only treatment — needs a call once this is actually built and can be judged
+  against real widened results.
+- 031's actual query-layer widening strategy (adjacent-band distance / dropped band filter /
+  `bgg_weight` proximity — three candidates in the phase's debug log) is unresolved; this round only
+  covered the visual/copy layer.
+- 027's underlying cascade-layer positioning bug (unlayered `.pk-*` CSS beating layered Tailwind
+  utilities, breaking the share control's containing block below 768px) and the G-01.2-3/4
+  search-morph state-machine/grid-jump issues are still open code fixes, untouched by this round.
+- 029 and 030 are both design-approved but not yet implemented — next step is `/gsd-plan-phase`
+  (or a quick task) against `CatalogLive.Index`'s Resultados header and
+  `PukllayClubWeb.Layouts.flash_group/1` respectively.
