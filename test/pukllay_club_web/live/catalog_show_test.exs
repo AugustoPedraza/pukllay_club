@@ -619,7 +619,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute poster_html =~ "aspect-video"
     end
 
-    test "the poster column carries the panel treatment (secondary surface, rounded box, padding)",
+    test "the poster column no longer carries the fill-only utility string (elevated-shadow panel now lives in app.css, G-01.2-5/G-01.2-6)",
          %{conn: conn} do
       game = game_fixture()
 
@@ -632,9 +632,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         |> LazyHTML.attribute("class")
         |> List.first()
 
-      assert poster_col_class =~ "bg-base-200"
-      assert poster_col_class =~ "rounded-box"
-      assert poster_col_class =~ "p-4"
+      refute poster_col_class =~ "bg-base-200"
+      refute poster_col_class =~ "rounded-box"
+      refute poster_col_class =~ "p-4"
     end
 
     test "the reserve CTA carries the large size step and full width, and the share control is absolutely positioned rather than a row sibling",

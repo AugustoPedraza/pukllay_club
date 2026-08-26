@@ -2305,8 +2305,35 @@ body.pk-drawer-open {
   align-items: start;
 }
 
+/* Buy-box panel boundary: elevated shadow, not fill alone (Phase 01.2
+   gap-closure, sketch 027 variant B — "Elevated Shadow", the human-picked
+   winner over a stronger border and a stronger fill). Radius and padding
+   stay this app's own `--radius-box`/`1rem` (already what `rounded-box
+   p-4` produced on this element) rather than importing the sketch's own
+   `--radius-lg`/`--space-4` literals — one visual result, ported through
+   this file's existing tokens, not the sketch's.
+
+   Two deliberate departures from `detail-page-layout.md`'s own prose
+   summary of this fix, both resolved in favour of the rendered sketch
+   artifact a human actually looked at and picked: (1) the reference doc
+   says "purely additive (shadow + no border)" and leaves the fill alone;
+   sketch 027 variant B's own `index.html` sets background, adds a 1px
+   border, AND adds the shadow — implemented here as written in the
+   artifact, with the discrepancy flagged for the reference file to
+   correct. (2) the sketch's `--shadow-md` is theme-aware (a much heavier
+   dark-mode alpha); this file's WR-04 rule is one fixed
+   `--pk-shadow-color` at one fixed percentage for both themes, so WR-04
+   wins here too — in dark mode the lift reads lighter than the sketch's
+   dark value, and the 1px `--color-base-300` border (a real step against
+   `--color-base-100` in dark) is what carries the separation there
+   instead. Deliberate, theme-verified tradeoff, not an oversight. */
 .pk-poster-col {
   position: relative;
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  padding: 1rem;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--pk-shadow-color) 12%, transparent);
 }
 
 .pk-text-col {
@@ -2534,6 +2561,37 @@ body.pk-cta-parked {
   top: 1rem;
   right: 1rem;
   z-index: 2;
+}
+
+/* Share trigger, :panel variant (Phase 01.2 gap-closure, sketch 027): a
+   bordered circle on a plain fill with a soft lift, replacing the
+   `btn-outline btn-primary btn-sm` utility string G-01.2-6's debug
+   session measured as "barely visible" against the panel — and `btn-sm`
+   was itself a no-op, since `min-h-11 min-w-11` (kept on the element in
+   markup, not moved here) already clamped the button to 44px both before
+   and after that class existed. The sketch's own circle is 40px; this
+   repo's 44px touch floor outranks it, so the sketch's size is not
+   ported, only its border/fill/shadow treatment is. The `:bar` variant
+   (Phase 01.2 gap-closure, sketch 028) is a separate rule,
+   `.pk-share-trigger--bar`, below the mobile CTA bar block. */
+.pk-share-trigger {
+  border-radius: 9999px;
+  border: 1px solid var(--color-base-300);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--pk-shadow-color) 6%, transparent);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.pk-share-trigger:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 /* Share popover (01.1-04): the native-Web-Share-API fallback surface,

@@ -302,9 +302,9 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         <div class="space-y-4">
           <div class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
-              <div class="pk-poster-col bg-base-200 rounded-box p-4 space-y-4">
+              <div class="pk-poster-col space-y-4">
                 <div class="absolute right-2 top-2 z-10">
-                  <.share_control id="detail-share-buybox" game={@game} />
+                  <.share_control id="detail-share-buybox" game={@game} variant={:panel} />
                 </div>
 
                 <button
@@ -455,7 +455,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           <button type="button" phx-click="open-reservation" class="btn btn-primary min-h-11 flex-1">
             {reservation_cta_label()}
           </button>
-          <.share_control id="detail-share-ctabar" game={@game} />
+          <.share_control id="detail-share-ctabar" game={@game} variant={:bar} />
         </div>
 
         <div
@@ -670,12 +670,23 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   @doc false
   attr :id, :string, required: true
   attr :game, Game, required: true
+  attr :variant, :atom, default: :panel, values: [:panel, :bar]
 
   # Shared by the buy-box column and the mobile CTA bar (01.1-04) so the
   # two share controls can never drift. Native Web Share API first
   # (.ShareButton hook); the fallback popover's WhatsApp/X intent hrefs and
   # the copy-link target are built server-side in HEEx with
   # URI.encode_www_form/1 — no client-side URL assembly (T-01.1-08).
+  #
+  # `variant` (Phase 01.2 gap-closure, G-01.2-6): the buy-box panel and the
+  # mobile CTA bar need two different shapes for the same trigger — a
+  # bordered circle on the panel (sketch 027) vs a full-width labelled pill
+  # in the bar (sketch 028). Both call sites pass this explicitly rather
+  # than relying on the default, so the second surface stays visible to
+  # the next reader. `share_trigger_class/1` owns the class-per-variant
+  # mapping; the `:bar` branch keeps the panel's own treatment for now
+  # (plan 01.2-13 Task 3 replaces it with the bar's own labelled-pill
+  # class and markup in the same plan, one task later).
   defp share_control(assigns) do
     assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game.id}"))
 
@@ -688,7 +699,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         data-share-title={@game.name}
         data-share-url={@share_url}
         aria-label="Compartir juego"
-        class="btn btn-circle btn-outline btn-primary btn-sm min-h-11 min-w-11"
+        class={share_trigger_class(@variant)}
       >
         <.icon name="hero-share" class="size-5" />
       </button>
@@ -773,6 +784,17 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     </div>
     """
   end
+
+  # Phase 01.2 gap-closure (G-01.2-6): the `:panel` treatment ports sketch
+  # 027's `.pk-share-btn` — a bordered circle with a soft shadow lift,
+  # replacing `btn-outline btn-primary btn-sm` (the outline that G-01.2-6's
+  # debug session measured as "barely visible" against the panel, plus
+  # `btn-sm`, which was a complete no-op since `min-h-11 min-w-11` already
+  # clamped the button to 44px). The sketch's own circle measures 40px;
+  # this repo's 44px touch floor outranks it, so only the border/fill/
+  # shadow treatment is ported, not the size.
+  defp share_trigger_class(:panel), do: "pk-share-trigger min-h-11 min-w-11"
+  defp share_trigger_class(:bar), do: "pk-share-trigger min-h-11 min-w-11"
 
   # `cover_url` first so it's always the initial thumbnail/main image when
   # present; nils filtered so an absent cover never mints a broken `<img>`.
