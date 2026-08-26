@@ -73,6 +73,13 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     # similar-games query entirely (a skeleton shelf occupies the same
     # footprint instead), the connected mount runs it for real.
     loading? = not connected?(socket)
+    similar_games = if(loading?, do: [], else: safe_similar_games(game))
+    # G-01.2-7 / sketch 031: pure comparison over at most @similares_limit
+    # already-loaded structs — no extra query, and no change to
+    # similar_games/1's return type. A no-band game's every returned game
+    # differs from `nil`, so widened? is true — correct, since that shelf
+    # is entirely a widened pool.
+    similares_widened? = Enum.any?(similar_games, &(&1.weight_band != game.weight_band))
 
     {:ok,
      socket
@@ -83,8 +90,9 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:mechanic_labels, Vocabulary.covered_mechanics(game.mechanics))
      |> assign(:theme_labels, Vocabulary.covered_themes(game.themes))
      |> assign(:loading, loading?)
-     |> assign(:similar_games, if(loading?, do: [], else: safe_similar_games(game)))
-     |> assign(:similares_subtitle, similares_subtitle(game))
+     |> assign(:similar_games, similar_games)
+     |> assign(:similares_widened, similares_widened?)
+     |> assign(:similares_subtitle, similares_subtitle(game, similares_widened?))
      |> assign(:description_expanded, false)
      |> assign(:lightbox_open, false)
      |> assign(:reservation_number, Application.get_env(:pukllay_club, :reservation_whatsapp_number))
@@ -443,6 +451,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             :if={!@loading}
             id="similares"
             title="Juegos similares"
+            badge={if @similares_widened, do: "Ampliado"}
             games={Enum.map(@similar_games, &{"similares-#{&1.id}", &1})}
             subtitle={@similares_subtitle}
             empty={@similar_games == []}
@@ -847,8 +856,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   # Subtitle for the Juegos similares shelf — reuses Vocabulary.weight_band/1's
   # existing plain-Spanish descriptor label rather than authoring new copy
-  # (01.1-03 checkpoint decision). nil when the game has no band, matching
-  # Catalog.similar_games/1's own nil-band guard (there is nothing to name).
+  # (01.1-03 checkpoint decision).
   # 01.1-07: mirrors CatalogLive.Index's safe_filter_games/1 shape — a
   # failure in the "more like this" row must never take down a detail page
   # whose primary content already loaded fine. carousel_row/1's own
@@ -861,9 +869,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     _error -> []
   end
 
-  defp similares_subtitle(%{weight_band: nil}), do: nil
+  # G-01.2-7 / sketch 031: similares_subtitle/1 became similares_subtitle/2,
+  # taking the widened? flag alongside the game. A widened shelf (including
+  # every no-band game, which is always widened per Catalog.similar_games/1's
+  # new contract) gets sketch 031's copy; a true same-band shelf keeps
+  # exactly the copy it returned before this plan.
+  defp similares_subtitle(_game, true), do: "Otras opciones que te van a encantar"
+  defp similares_subtitle(%{weight_band: nil}, false), do: nil
 
-  defp similares_subtitle(game) do
+  defp similares_subtitle(game, false) do
     case Vocabulary.weight_band(game.weight_band) do
       nil -> nil
       band -> "Otros juegos del mismo nivel: " <> band.label

@@ -5,6 +5,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   import PukllayClub.CatalogFixtures
 
   alias PukllayClub.Catalog.Reservation
+  alias PukllayClubWeb.CarouselRow
 
   describe "GET /juegos/:id" do
     test "returns 200 for an unauthenticated visitor and renders the full title (CATALOG-08)", %{
@@ -354,6 +355,52 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       refute html =~ "Juegos similares"
       assert view.module == PukllayClubWeb.CatalogLive.Show
+    end
+
+    # G-01.2-7 / sketch 031: a same-band-filled shelf renders no "Ampliado"
+    # badge and keeps the existing weight-band subtitle — the shelf's
+    # visible chrome is unchanged when widening never happened.
+    test "a same-band-filled shelf renders no badge and the existing weight-band subtitle", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Base Same Band", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Bandmate Same Band", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      refute html =~ "Ampliado"
+      assert html =~ "Otros juegos del mismo nivel: Nivel experto"
+      refute html =~ "Otras opciones que te van a encantar"
+    end
+
+    # A widened shelf (the shelf had to reach past the viewed game's own
+    # band to fill the cap) renders the "Ampliado" badge and the swapped
+    # subtitle, while the title itself is unchanged.
+    test "a widened shelf renders the Ampliado badge and the widened subtitle", %{conn: conn} do
+      game = game_fixture(%{name: "Base Widened", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Other Band 1", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Other Band 2", weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      assert html =~ "Ampliado"
+      assert html =~ "Otras opciones que te van a encantar"
+      refute html =~ "Otros juegos del mismo nivel:"
+    end
+
+    test "a no-band game's shelf renders the Ampliado badge and the widened subtitle", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Base No Band", weight_band: nil})
+      game_fixture(%{name: "Other 1", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      assert html =~ "Ampliado"
+      assert html =~ "Otras opciones que te van a encantar"
     end
 
     test "the ficha técnica never renders the dead Ilustrador or BGG-ranking rows (D-04)", %{
@@ -1066,6 +1113,44 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         |> List.first()
 
       assert crumb_href == "/"
+    end
+  end
+
+  describe "carousel_row/1 badge attr (G-01.2-7, sketch 031)" do
+    test "badge: nil renders a header identical to today's — no badge element present" do
+      game = game_fixture(%{name: "Row Game"})
+
+      html =
+        render_component(&CarouselRow.carousel_row/1, %{
+          id: "row",
+          title: "Título",
+          games: [{"g-#{game.id}", game}],
+          row_key: "row"
+        })
+
+      header_html =
+        html |> LazyHTML.from_fragment() |> LazyHTML.query(".pk-row-header") |> LazyHTML.to_html()
+
+      refute header_html =~ "badge-accent"
+    end
+
+    test "badge: \"Ampliado\" renders that text inside the heading" do
+      game = game_fixture(%{name: "Row Game"})
+
+      html =
+        render_component(&CarouselRow.carousel_row/1, %{
+          id: "row",
+          title: "Título",
+          games: [{"g-#{game.id}", game}],
+          row_key: "row",
+          badge: "Ampliado"
+        })
+
+      header_html =
+        html |> LazyHTML.from_fragment() |> LazyHTML.query(".pk-row-header") |> LazyHTML.to_html()
+
+      assert header_html =~ "badge-accent"
+      assert header_html =~ "Ampliado"
     end
   end
 end
