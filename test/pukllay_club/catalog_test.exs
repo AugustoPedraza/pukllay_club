@@ -377,7 +377,7 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
-  describe "similar_games/1 (SHELL-03 — D-06: weight-band + shared mechanics/themes ranking, capped at 12)" do
+  describe "similar_games/1 (SHELL-03 — D-06 ranking + G-01.2-7 always-full widening, capped at 12)" do
     test "never includes the game itself" do
       game = game_fixture(%{name: "Self", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate", weight_band: "nivel_experto"})
@@ -385,29 +385,35 @@ defmodule PukllayClub.CatalogTest do
       refute game.id in Enum.map(Catalog.similar_games(game), & &1.id)
     end
 
-    test "only returns games sharing the same weight band" do
+    test "band-mates rank before other-band games — band is now a preference, not a filter (G-01.2-7)" do
       game = game_fixture(%{name: "Base", weight_band: "nivel_experto"})
       same_band = game_fixture(%{name: "Same Band", weight_band: "nivel_experto"})
       other_band = game_fixture(%{name: "Other Band", weight_band: "descubre_el_hobby"})
 
-      results = Catalog.similar_games(game)
+      result_ids = game |> Catalog.similar_games() |> Enum.map(& &1.id)
 
-      assert Enum.any?(results, &(&1.id == same_band.id))
-      refute Enum.any?(results, &(&1.id == other_band.id))
+      assert same_band.id in result_ids
+      assert other_band.id in result_ids
+      assert Enum.find_index(result_ids, &(&1 == same_band.id)) <
+               Enum.find_index(result_ids, &(&1 == other_band.id))
     end
 
-    test "a game whose band has no other members returns an empty list" do
+    test "a game whose band has no other members still returns a widened, non-empty shelf (G-01.2-7)" do
       lonely = game_fixture(%{name: "Lonely", weight_band: "descubre_el_hobby"})
-      game_fixture(%{name: "Different Band", weight_band: "nivel_experto"})
+      other = game_fixture(%{name: "Different Band", weight_band: "nivel_experto"})
 
-      assert Catalog.similar_games(lonely) == []
+      result_ids = lonely |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert other.id in result_ids
     end
 
-    test "a game with a nil weight_band returns an empty list" do
+    test "a game with a nil weight_band returns a full, overlap-ranked shelf instead of an empty list (G-01.2-7)" do
       unbanded = game_fixture(%{name: "Unbanded", weight_band: nil})
-      game_fixture(%{name: "Also Unbanded", weight_band: nil})
+      other = game_fixture(%{name: "Also Unbanded", weight_band: nil})
 
-      assert Catalog.similar_games(unbanded) == []
+      result_ids = unbanded |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert other.id in result_ids
     end
 
     test "the result never exceeds the cap when more than 12 band-mates exist" do
@@ -420,7 +426,7 @@ defmodule PukllayClub.CatalogTest do
       assert length(Catalog.similar_games(game)) == 12
     end
 
-    test "ranks band-mates by shared mechanics/themes overlap, keeps zero-overlap band-mate last, excludes other-band games" do
+    test "ranks band-mates by overlap (zero-overlap band-mate last), and ranks the other-band game after every band-mate despite its higher overlap (G-01.2-7)" do
       # Names are deliberately chosen so alphabetical order is the OPPOSITE
       # of overlap-ranked order ("Alfa..." would sort first, "Zulu..." last)
       # — this proves ranking is driven by overlap, not incidentally by name.
@@ -466,8 +472,12 @@ defmodule PukllayClub.CatalogTest do
 
       result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
 
-      assert result_ids == [candidate_high.id, candidate_mid.id, candidate_zero.id]
-      refute candidate_other_band.id in result_ids
+      assert result_ids == [
+               candidate_high.id,
+               candidate_mid.id,
+               candidate_zero.id,
+               candidate_other_band.id
+             ]
     end
 
     test "band-mates with identical overlap scores are ordered by name ascending, then id ascending" do

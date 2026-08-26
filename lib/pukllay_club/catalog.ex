@@ -153,35 +153,64 @@ defmodule PukllayClub.Catalog do
   @doc """
   Games "similar" to `game` for the detail page's Juegos similares shelf.
 
-  "Similar" means: same `weight_band` as `game`, excluding `game` itself,
-  ranked by how many mechanics and themes the candidate shares with `game`
-  (D-06) — weight band is this app's primary complexity-teaching facet and
-  already backs three home-page carousel rows, so it stays the hard filter;
-  shared mechanics/themes then answer "what else plays like this?" within
-  that band. Mechanics are weighted 2 and themes 1 in the overlap score
-  (mechanics describe how a game actually plays; themes are flavour), and
-  the overlap only ranks — it never filters, so a band-mate sharing nothing
-  is still returned, just last. Ties (including an all-zero tie) are broken
-  by `name` then `id` so the shelf order is stable across reloads. The score
-  is computed in Postgres via `fragment/2` over the `mechanics`/`themes`
-  `text[]` columns, never fetched into Elixir and sorted in memory
-  (T-01-22's LIMIT-always/no-unbounded-fetch discipline).
-  Capped at #{@similares_limit} (01.1-03 checkpoint decision). `game.weight_band`
-  is nullable — a game with no band returns `[]` explicitly rather than
-  matching every other unbanded game (which `g.weight_band == ^nil` would
-  otherwise do silently in SQL).
+  **G-01.2-7 / sketch 031 (Always-Full Guarantee) supersedes D-06's original
+  hard band filter.** Weight band is now a *ranking preference*, not a
+  filter: candidates from `game`'s own band always sort first (in D-06's
+  exact intra-band order, unchanged — see below), then candidates from
+  progressively more distant bands top up the shelf until the cap is
+  reached. The old contract — a thin band returns fewer than
+  #{@similares_limit} results, and a `weight_band: nil` game returns `[]` —
+  is gone. The new contract: the shelf fills to #{@similares_limit} whenever
+  the catalog holds that many other games, for every game, band or no band.
+
+  Band-mates are ranked among themselves exactly as D-06 shipped: by shared
+  mechanics/themes overlap (mechanics weighted 2, themes 1 — mechanics
+  describe how a game actually plays, themes are flavour), ties broken by
+  `name` then `id`. The overlap fragment below is byte-identical to the one
+  D-06 shipped; only the `where`/`order_by` band handling around it changed.
+  Out-of-band top-up candidates are ordered by band distance first (nearest
+  band before farther band), then by that same overlap score, so a
+  zero-overlap adjacent-band game can still outrank a high-overlap far-band
+  game — closeness of complexity band matters more than a raw mechanic/theme
+  match once outside the viewed game's own band.
+
+  The band-preference list is built in Elixir from
+  `Vocabulary.weight_band_level/1`'s 1..3 ordinal (three bands, negligible
+  cost) rather than hardcoding a second ordinal in SQL — this guarantees the
+  ranking can never disagree with `Vocabulary.weight_bands/0`'s declared
+  order. For a banded game, bands are ordered by ascending distance from
+  `game`'s own band level, ties (there are at most two, since only 3 bands
+  exist) broken by ascending level, so `game`'s own band always lands first
+  with distance 0. For a `nil`-band game there is no anchor to measure
+  distance from, so `Vocabulary.weight_bands/0`'s declared order is used
+  unchanged and overlap alone ranks within/across bands. The list is bound
+  as a single `^` array parameter into `array_position/2` — never
+  interpolated into the fragment string (T-01.2-14-01) — and
+  `coalesce(..., 99)` pushes a candidate with its own `nil` band to the very
+  end, after every real band.
+
+  Still one query, one `Repo.all/1`, one `limit: ^#{@similares_limit}` —
+  T-01-22's LIMIT-always/no-unbounded-fetch discipline is unchanged; the
+  overlap score is computed in Postgres, never fetched into Elixir and
+  sorted in memory.
 
   Anything semantic beyond mechanics/themes overlap (embeddings,
   natural-language matching) belongs to Phase 2's hybrid search
   (SEARCH-01..04), not here.
   """
-  def similar_games(%Game{weight_band: nil}), do: []
-
   def similar_games(%Game{id: id, weight_band: weight_band, mechanics: mechanics, themes: themes}) do
+    band_order = band_preference_order(weight_band)
+
     Repo.all(
       from(g in Game,
-        where: g.weight_band == ^weight_band and g.id != ^id,
+        where: g.id != ^id,
         order_by: [
+          asc:
+            fragment(
+              "coalesce(array_position(?, ?), 99)",
+              type(^band_order, {:array, :string}),
+              g.weight_band
+            ),
           desc:
             fragment(
               """
@@ -199,6 +228,26 @@ defmodule PukllayClub.Catalog do
         limit: ^@similares_limit
       )
     )
+  end
+
+  # G-01.2-7: nearest-band-first ordering, derived from
+  # Vocabulary.weight_band_level/1's 1..3 ordinal so it can never disagree
+  # with Vocabulary.weight_bands/0's declared order. `nil` (no anchor to
+  # measure distance from) falls back to the vocabulary's own declared
+  # order — overlap alone ranks in that case.
+  defp band_preference_order(nil) do
+    Enum.map(Vocabulary.weight_bands(), & &1.value)
+  end
+
+  defp band_preference_order(weight_band) do
+    viewed_level = Vocabulary.weight_band_level(weight_band)
+
+    Vocabulary.weight_bands()
+    |> Enum.map(& &1.value)
+    |> Enum.sort_by(fn band ->
+      level = Vocabulary.weight_band_level(band)
+      {abs(level - viewed_level), level}
+    end)
   end
 
   @doc """
