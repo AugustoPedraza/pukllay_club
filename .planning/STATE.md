@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.2
 current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
 status: executing
-stopped_at: Completed 01.2-12-PLAN.md
-last_updated: "2026-08-26T22:52:14.838Z"
+stopped_at: Completed 01.2-14-PLAN.md
+last_updated: "2026-08-26T23:07:10.455Z"
 last_activity: 2026-08-26
 last_activity_desc: Phase 01.2 execution started
-state_head: 1ccdc6ce4784b746fbd3455891867f74a37f4105
+state_head: bceb6201f28ac4eb56dc7775878df72882a64f03
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 29
+  completed_plans: 30
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-08-26 — Phase 01.2 execution started
 
@@ -89,6 +89,7 @@ Progress: [██████████] 100%
 | Phase 01.2 P11 | 40min | 3 tasks | 5 files |
 | Phase 01.2 P13 | 35min | 3 tasks | 3 files |
 | Phase 01.2 P12 | 45min | 3 tasks | 5 files |
+| Phase 01.2 P14 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -160,6 +161,8 @@ Recent decisions affecting current work:
 - [Phase 01.2]: [Phase 01.2]: 01.2-13: mobile CTA bar restructured to sketch 028's stacked layout (.pk-cta-bar-inner, reserve w-full not flex-1, share as a labelled full-width pill), capped to 68.75rem; body.pk-has-cta-bar padding recomputed 9.25rem -> 12.5rem (148+44+8px, derived); .DetailChrome scroll state machine untouched
 - [Phase 01.2]: 01.2-12: :rendered_results assign now holds the SETTLED background surface (distinct from browsing_results?/1's DESIRED-surface predicate); settle_surface/1 is a no-op while @filters_open is true so the carousel/grid never restructures behind the open modal, and apply-filters/close-filters/clear-filters all now re-enter apply_filters/1 after closing the modal to settle + repopulate the reappearing container's stream in one round trip
 - [Phase 01.2]: 01.2-12: active-filters chip row (sketch 029 winner C) added to the Resultados header — .pk-active-filter-chip is deliberately distinct from filter_modal.ex's own selection-chip class (no shadow, soft accent tint); chip removal reuses toggle-facet/toggle-scalar verbatim, new parameterless clear-query handler for the query chip
+- [Phase 01.2]: 01.2-14: Catalog.similar_games/1's weight_band hard filter replaced by a band-preference array_position order_by term (nearest-band-first, derived from Vocabulary.weight_band_level/1) — shelf always fills to 12 cards, including for no-band games; D-06's intra-band overlap order kept byte-identical (G-01.2-7)
+- [Phase 01.2]: 01.2-14: carousel_row/1 gained an optional badge attr (daisyUI badge-accent, rounded-full) defaulting nil; CatalogLive.Show derives :similares_widened by comparing returned games' bands and swaps in sketch 031's Ampliado badge + widened subtitle only when the shelf had to widen past the viewed game's own band
 
 ### Pending Todos
 
@@ -255,6 +258,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T22:52:14.687Z
-Stopped at: Completed 01.2-12-PLAN.md
+Last session: 2026-08-26T23:07:10.288Z
+Stopped at: Completed 01.2-14-PLAN.md
 Resume file: None
