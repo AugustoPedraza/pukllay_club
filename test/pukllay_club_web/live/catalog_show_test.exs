@@ -1152,5 +1152,30 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert header_html =~ "badge-accent"
       assert header_html =~ "Ampliado"
     end
+
+    # G-01.2-7 regression guard: this is the one page carousel_row/1's new
+    # badge attr does NOT otherwise touch. Rendered exactly as
+    # CatalogLive.Index calls it (no badge argument passed, matching all 8
+    # D-09 home-page rows), the emitted header must carry no badge element.
+    test "rendered exactly as CatalogLive.Index calls it (no badge arg), the header carries no badge element" do
+      game = game_fixture(%{name: "Home Page Game"})
+
+      html =
+        render_component(&CarouselRow.carousel_row/1, %{
+          id: "carousel-destacados_del_club",
+          title: "Destacados del club",
+          games: [{"g-#{game.id}", game}],
+          variant: :hero,
+          subtitle: "Los favoritos del club",
+          empty: false,
+          row_key: "destacados_del_club",
+          exhausted: true
+        })
+
+      header_html =
+        html |> LazyHTML.from_fragment() |> LazyHTML.query(".pk-row-header") |> LazyHTML.to_html()
+
+      refute header_html =~ "badge-accent"
+    end
   end
 end
