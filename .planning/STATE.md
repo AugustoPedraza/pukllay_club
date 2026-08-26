@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.2
 current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
 status: executing
-stopped_at: Completed 01.2-03-PLAN.md
-last_updated: "2026-08-26T11:12:32.703Z"
+stopped_at: Completed 01.2-04-PLAN.md
+last_updated: "2026-08-26T11:25:52.848Z"
 last_activity: 2026-08-25
 last_activity_desc: Phase 01.2 execution started
-state_head: 54a4a8bdf8afb1f1e4f9cbf9a95ec98c108774ca
+state_head: 337309a778d84370fbf616a22a556cceb7adf77d
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 26
-  completed_plans: 24
+  completed_plans: 25
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-08-25 — Phase 01.2 execution started
 
@@ -84,6 +84,7 @@ Progress: [██████████] 100%
 | Phase 01.2 P01 | 50min | 2 tasks | 7 files |
 | Phase 01.2 P02 | 10min | 2 tasks | 2 files |
 | Phase 01.2 P03 | 55min | 3 tasks | 3 files |
+| Phase 01.2 P04 | 11min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,8 @@ Recent decisions affecting current work:
 - [Phase 01.2]: 01.2-01: mirrored (not extracted into a shared module) the three-clause detail_path/2 helper in both GameCard and GamePreview so both routes into the detail page carry identical ?from= state; PukllayClubWeb.CatalogFilters is now the single filter-parsing/validation authority, consumed by both CatalogLive.Index (URL read) and CatalogLive.Show (breadcrumb sanitiser)
 - [Phase 01.2]: 01.2-02: D-06 similar_games/1 ranks same-weight-band candidates by a single Postgres fragment/2 set-intersection score (mechanics x2 + themes x1, desc, then name/id asc tie-break) instead of alphabetical order; overlap ranks but never filters, so a zero-overlap band-mate is still returned last
 - [Phase 01.2]: 01.2-03: browsing_results?/1 wraps filters_active?/1 (never restates it) as the single gate for carousel vs. grid; a Rule 1 bugfix (:carousel_needs_reset/sync_carousel_visibility) was required so phx-update="stream" carousel rows actually repopulate every time the member returns from the grid, since D-01/D-02 removed the grid's always-visible fallback
+- [Phase 01.2]: 01.2-04: Ficha técnica trimmed to Edad mínima/Año/Diseñadores/Editorial/BGG link with a new ficha_tecnica?/1 section-level guard closing the zero-one-many backstop; playtime_text/1 removed with its two sole call sites (D-04/D-05)
+- [Phase 01.2]: 01.2-04: buy-box redesigned per UI-SPEC D-07 — pk-card-poster aspect, bg-base-200/rounded-box/p-4 panel, btn-lg full-width reserve CTA, top-right-anchored btn-sm share control (also fixing the mobile CTA bar's weight split since share_control/1 is shared), and a js-cover-fallback cover-failure fallback; mobile bar's flex-1/height/padding/timing and .DetailChrome untouched
 
 ### Pending Todos
 
@@ -240,6 +243,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T11:12:32.601Z
-Stopped at: Completed 01.2-03-PLAN.md
+Last session: 2026-08-26T11:25:52.760Z
+Stopped at: Completed 01.2-04-PLAN.md
 Resume file: None

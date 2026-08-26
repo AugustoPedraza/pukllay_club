@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 **Wave 1**
@@ -208,7 +208,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 01.2-03-PLAN.md — D-01/D-02: grid becomes exclusively the search/filter results view; modal CTA is the explicit-submission signal
-- [ ] 01.2-04-PLAN.md — D-04/D-05/D-07: Ficha técnica cleanup, players/duration de-duplication, buy-box redesign
+- [x] 01.2-04-PLAN.md — D-04/D-05/D-07: Ficha técnica cleanup, players/duration de-duplication, buy-box redesign
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
