@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.2
 current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
 status: executing
-stopped_at: Completed 01.2-11-PLAN.md
-last_updated: "2026-08-26T22:15:19.103Z"
+stopped_at: Completed 01.2-13-PLAN.md
+last_updated: "2026-08-26T22:31:06.865Z"
 last_activity: 2026-08-26
 last_activity_desc: Phase 01.2 execution started
-state_head: f0e548c7dbbc01a35875e7176fa3d90783720b05
+state_head: 54a1ca20ec1cb057d26ee74614d4262fecac51c2
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 27
+  completed_plans: 28
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-08-26 — Phase 01.2 execution started
 
@@ -87,6 +87,7 @@ Progress: [██████████] 100%
 | Phase 01.2 P04 | 11min | 3 tasks | 2 files |
 | Phase 01.2 P05 | 15min | 3 tasks | 3 files |
 | Phase 01.2 P11 | 40min | 3 tasks | 5 files |
+| Phase 01.2 P13 | 35min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -153,6 +154,9 @@ Recent decisions affecting current work:
 - [Phase 01.2]: 01.2-05: .GridScroll colocated hook (vertical twin of .CarouselScroll) drives grid infinite scroll via an IntersectionObserver sentinel; data-exhausted folds in the new :more_error assign so a mid-scroll failure parks the hook instead of auto-retrying, and apply_filters/1 resets :more_error on both branches alongside :load_error
 - [Phase 01.2]: 01.2-11: search-morph open/closed state moved fully server-side (Layouts.header_inner/1 renders is-open/is-search-open/aria-expanded/tabindex from a :search_expanded assign); .CatalogNav hook reduced to focus-only management and the document-level outside-click listener deleted (fixed G-01.2-2/G-01.2-3)
 - [Phase 01.2]: 01.2-11: handle_params/3 widens :search_expanded only on a filters_active? false->true transition (not a plain OR against current state) so a same-query re-run never resurrects a box the member explicitly closed; CatalogLive.Show gained no-op open-search/close-search handlers since header_inner/1's buttons now dispatch these unconditionally on every nav_search-slot page
+- [Phase 01.2]: [Phase 01.2]: 01.2-13: .pk-poster-col position: static -> relative (unlayered .pk-* rule was silently defeating the layered Tailwind relative utility below 768px, G-01.2-5); cascade-layer hazard documented at top of app.css; audit of all 18 .pk-* position rules found no second instance
+- [Phase 01.2]: [Phase 01.2]: 01.2-13: buy-box panel ported sketch 027 variant B's Elevated Shadow (fill+border+shadow, per the rendered artifact, not detail-page-layout.md's fill-only prose summary); share_control/1 gained a variant attr (:panel/:bar) with two real shapes, both at the 44px floor rather than the sketch's smaller sizes
+- [Phase 01.2]: [Phase 01.2]: 01.2-13: mobile CTA bar restructured to sketch 028's stacked layout (.pk-cta-bar-inner, reserve w-full not flex-1, share as a labelled full-width pill), capped to 68.75rem; body.pk-has-cta-bar padding recomputed 9.25rem -> 12.5rem (148+44+8px, derived); .DetailChrome scroll state machine untouched
 
 ### Pending Todos
 
@@ -248,6 +252,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T22:15:18.950Z
-Stopped at: Completed 01.2-11-PLAN.md
+Last session: 2026-08-26T22:31:06.710Z
+Stopped at: Completed 01.2-13-PLAN.md
 Resume file: None

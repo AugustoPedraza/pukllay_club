@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 6/10 plans executed (5 executed, 5 superseded, 5 gap closure pending)
+**Plans:** 7/10 plans executed (5 executed, 5 superseded, 5 gap closure pending)
 
 Plans:
 **Wave 1**
@@ -225,7 +225,7 @@ Plans:
 **Wave 4 — gap closure** *(from 01.2-UAT.md: 8 gaps across 9 tests)*
 
 - [x] 01.2-11-PLAN.md — G-01.2-1/2/3: search-morph open state becomes server-owned so LiveView patches stop stripping it; header hook reduced to focus management and failure-isolated
-- [ ] 01.2-13-PLAN.md — G-01.2-5/6: poster column gets a containing block at every width (unlayered-CSS cascade defect); buy-box takes sketch 027's Elevated Shadow boundary; mobile CTA bar takes sketch 028's Stacked layout
+- [x] 01.2-13-PLAN.md — G-01.2-5/6: poster column gets a containing block at every width (unlayered-CSS cascade defect); buy-box takes sketch 027's Elevated Shadow boundary; mobile CTA bar takes sketch 028's Stacked layout
 
 **Wave 5 — gap closure** *(blocked on Wave 4 completion)*
 
