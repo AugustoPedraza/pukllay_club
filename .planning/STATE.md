@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.2
 current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
-status: executing
-stopped_at: Completed 01.2-04-PLAN.md
-last_updated: "2026-08-26T11:25:52.848Z"
+status: verifying
+stopped_at: Completed 01.2-05-PLAN.md
+last_updated: "2026-08-26T11:41:43.712Z"
 last_activity: 2026-08-25
 last_activity_desc: Phase 01.2 execution started
-state_head: 337309a778d84370fbf616a22a556cceb7adf77d
+state_head: a547fbe33264d36d3b112ee84cccd3411293b96c
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 26
-  completed_plans: 25
+  completed_plans: 26
 milestone_name: milestone
 ---
 
@@ -31,7 +31,7 @@ even without already knowing board-game vocabulary.
 
 Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-25 — Phase 01.2 execution started
 
 Progress: [██████████] 100%
@@ -85,6 +85,7 @@ Progress: [██████████] 100%
 | Phase 01.2 P02 | 10min | 2 tasks | 2 files |
 | Phase 01.2 P03 | 55min | 3 tasks | 3 files |
 | Phase 01.2 P04 | 11min | 3 tasks | 2 files |
+| Phase 01.2 P05 | 15min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,7 @@ Recent decisions affecting current work:
 - [Phase 01.2]: 01.2-03: browsing_results?/1 wraps filters_active?/1 (never restates it) as the single gate for carousel vs. grid; a Rule 1 bugfix (:carousel_needs_reset/sync_carousel_visibility) was required so phx-update="stream" carousel rows actually repopulate every time the member returns from the grid, since D-01/D-02 removed the grid's always-visible fallback
 - [Phase 01.2]: 01.2-04: Ficha técnica trimmed to Edad mínima/Año/Diseñadores/Editorial/BGG link with a new ficha_tecnica?/1 section-level guard closing the zero-one-many backstop; playtime_text/1 removed with its two sole call sites (D-04/D-05)
 - [Phase 01.2]: 01.2-04: buy-box redesigned per UI-SPEC D-07 — pk-card-poster aspect, bg-base-200/rounded-box/p-4 panel, btn-lg full-width reserve CTA, top-right-anchored btn-sm share control (also fixing the mobile CTA bar's weight split since share_control/1 is shared), and a js-cover-fallback cover-failure fallback; mobile bar's flex-1/height/padding/timing and .DetailChrome untouched
+- [Phase 01.2]: 01.2-05: .GridScroll colocated hook (vertical twin of .CarouselScroll) drives grid infinite scroll via an IntersectionObserver sentinel; data-exhausted folds in the new :more_error assign so a mid-scroll failure parks the hook instead of auto-retrying, and apply_filters/1 resets :more_error on both branches alongside :load_error
 
 ### Pending Todos
 
@@ -243,6 +245,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T11:25:52.760Z
-Stopped at: Completed 01.2-04-PLAN.md
+Last session: 2026-08-26T11:41:43.565Z
+Stopped at: Completed 01.2-05-PLAN.md
 Resume file: None
