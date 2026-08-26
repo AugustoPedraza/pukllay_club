@@ -289,19 +289,30 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         <div class="space-y-4">
           <div class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
-              <div class="pk-poster-col">
+              <div class="pk-poster-col bg-base-200 rounded-box p-4 space-y-4 relative">
+                <div class="absolute right-2 top-2 z-10">
+                  <.share_control id="detail-share-buybox" game={@game} />
+                </div>
+
                 <button
                   :if={@selected_image}
                   type="button"
                   phx-click="open-lightbox"
                   aria-label="Ampliar imagen del juego"
-                  class="aspect-video overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
+                  class="pk-card-poster overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
                 >
-                  <img src={@selected_image} alt={@game.name} class="h-full w-full object-cover" />
+                  <img
+                    src={@selected_image}
+                    alt={@game.name}
+                    class="h-full w-full object-cover js-cover-fallback"
+                  />
+                  <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
+                    <.icon name="hero-puzzle-piece" class="size-16" />
+                  </div>
                 </button>
                 <div
                   :if={!@selected_image}
-                  class="aspect-video overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
+                  class="pk-card-poster overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
                 >
                   <.icon name="hero-puzzle-piece" class="size-16" />
                   <span class="sr-only">{@game.name}</span>
@@ -326,16 +337,13 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   </button>
                 </div>
 
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    phx-click="open-reservation"
-                    class="btn btn-primary min-h-11 flex-1"
-                  >
-                    {reservation_cta_label()}
-                  </button>
-                  <.share_control id="detail-share-buybox" game={@game} />
-                </div>
+                <button
+                  type="button"
+                  phx-click="open-reservation"
+                  class="btn btn-primary btn-lg min-h-11 w-full"
+                >
+                  {reservation_cta_label()}
+                </button>
               </div>
 
               <div class="pk-text-col">
@@ -667,7 +675,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         data-share-title={@game.name}
         data-share-url={@share_url}
         aria-label="Compartir juego"
-        class="btn btn-circle btn-outline btn-primary min-h-11 min-w-11"
+        class="btn btn-circle btn-outline btn-primary btn-sm min-h-11 min-w-11"
       >
         <.icon name="hero-share" class="size-5" />
       </button>
