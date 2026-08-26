@@ -55,11 +55,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.CarouselRow
+  alias PukllayClubWeb.CatalogFilters
   alias PukllayClubWeb.GameChips
   alias PukllayClubWeb.GamePreview
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     game = Catalog.get_game!(id)
     # 01.1-07: the same disconnected/connected two-phase mount trick
     # CatalogLive.Index already uses. :loading is set once here and never
@@ -72,6 +73,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      socket
      |> assign(:page_title, game.name)
      |> assign(:game, game)
+     |> assign(:catalog_path, CatalogFilters.catalog_path(params["from"]))
      |> assign(:selected_image, game.cover_url)
      |> assign(:mechanic_labels, Vocabulary.covered_mechanics(game.mechanics))
      |> assign(:theme_labels, Vocabulary.covered_themes(game.themes))
@@ -171,7 +173,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     (sketch 017's own page switcher marks no drawer link active here). --%>
     <Layouts.app flash={@flash} fullbleed sticky search_expanded={false} active_nav={nil}>
       <:crumb>
-        <.link navigate={~p"/"}>Ludoteca</.link>
+        <.link navigate={@catalog_path}>Ludoteca</.link>
         <span class="pk-crumb-sep">/</span>
         <span class="pk-crumb-current">{@game.name}</span>
       </:crumb>

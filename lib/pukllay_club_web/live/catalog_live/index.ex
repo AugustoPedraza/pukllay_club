@@ -30,6 +30,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.CarouselRow
+  alias PukllayClubWeb.CatalogFilters
   alias PukllayClubWeb.FilterModal
   alias PukllayClubWeb.GameCard
   alias PukllayClubWeb.GamePreview
@@ -44,7 +45,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     socket =
       socket
       |> assign(:page_title, "Catálogo")
-      |> assign(:q, initial_q(params))
+      |> assign(:q, CatalogFilters.q(params))
       |> assign(:mechanics, [])
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
@@ -78,6 +79,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:offset, 0)
       |> assign(:total, 0)
       |> assign(:load_error, false)
+      |> assign(:from_query, "")
       |> stream(:games, [])
 
     {:ok, socket}
@@ -92,22 +94,19 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def handle_params(params, _uri, socket) do
     if connected?(socket) do
-      mechanic_set = Vocabulary.mechanic_options()
-      theme_set = Vocabulary.theme_options()
-      weight_band_set = Enum.map(Vocabulary.weight_bands(), & &1.value)
-      tag_set = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
+      filters = CatalogFilters.from_params(params)
 
       socket =
         socket
-        |> assign(:q, initial_q(params))
-        |> assign(:mechanics, parse_list_param(params["mechanics"], mechanic_set))
-        |> assign(:themes, parse_list_param(params["themes"], theme_set))
-        |> assign(:weight_bands, parse_list_param(params["weight_bands"], weight_band_set))
-        |> assign(:tags, parse_list_param(params["tags"], tag_set))
-        |> assign(:players, parse_int(params["players"]))
-        |> assign(:max_playtime, parse_int(params["max_playtime"]))
-        |> assign(:min_age, parse_int(params["min_age"]))
-        |> assign(:sort, parse_sort(params["sort"]))
+        |> assign(:q, filters.q)
+        |> assign(:mechanics, filters.mechanics)
+        |> assign(:themes, filters.themes)
+        |> assign(:weight_bands, filters.weight_bands)
+        |> assign(:tags, filters.tags)
+        |> assign(:players, filters.players)
+        |> assign(:max_playtime, filters.max_playtime)
+        |> assign(:min_age, filters.min_age)
+        |> assign(:sort, filters.sort)
         |> apply_filters()
 
       {:noreply, socket}
@@ -115,24 +114,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       {:noreply, socket}
     end
   end
-
-  # Accepts either a repeated-key list (`?mechanics[]=A&mechanics[]=B`, which
-  # Plug decodes to a list) or a single comma-separated value
-  # (`?mechanics=A,B`). Truncated to 20 elements BEFORE membership validation
-  # (T-01.1-22 — bounds the work even for a maliciously long param), then
-  # every element must be a member of the closed Vocabulary set `allowed` or
-  # it is dropped silently, never assigned, never reaching a query (T-01.1-23).
-  defp parse_list_param(nil, _allowed), do: []
-
-  defp parse_list_param(value, allowed) when is_list(value) do
-    value |> Enum.take(20) |> Enum.filter(&(&1 in allowed))
-  end
-
-  defp parse_list_param(value, allowed) when is_binary(value) do
-    value |> String.split(",", trim: true) |> Enum.take(20) |> Enum.filter(&(&1 in allowed))
-  end
-
-  defp parse_list_param(_other, _allowed), do: []
 
   defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
 
@@ -193,13 +174,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     assign(socket, :carousel_rows, rows)
   end
 
-  # A ?q= URL param reaches a catalog-wide ILIKE (T-01.1-28) — bounded at the
-  # entry point, same discipline plan 01.1-06 applies to the rest of the
-  # filter params. Any non-binary value (missing param, an array from a
-  # malformed query string) degrades to "" rather than crashing mount/3.
-  defp initial_q(%{"q" => q}) when is_binary(q), do: String.slice(q, 0, 100)
-  defp initial_q(_params), do: ""
-
   @impl true
   def handle_event("search", %{"q" => q}, socket) do
     {:noreply, socket |> assign(:q, String.slice(q, 0, 100)) |> apply_filters()}
@@ -248,7 +222,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
       key ->
         current = Map.get(socket.assigns, key)
-        parsed = parse_int(value)
+        parsed = CatalogFilters.parse_int(value)
         new_value = if parsed == current, do: nil, else: parsed
 
         {:noreply, socket |> assign(key, new_value) |> apply_filters()}
@@ -351,29 +325,6 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp scalar_assign_key("max_playtime"), do: :max_playtime
   defp scalar_assign_key(_unrecognized), do: nil
 
-  defp parse_int(nil), do: nil
-  defp parse_int(""), do: nil
-
-  defp parse_int(str) when is_binary(str) do
-    case Integer.parse(str) do
-      {n, _rest} -> n
-      :error -> nil
-    end
-  end
-
-  # A crafted `?players[]=1&players[]=2` decodes to a list, not a binary —
-  # Integer.parse/1 would raise on that (T-01.1-22). Degrade to unset rather
-  # than 500.
-  defp parse_int(_non_binary), do: nil
-
-  defp parse_sort("name_asc"), do: :name_asc
-  defp parse_sort("playtime_asc"), do: :playtime_asc
-  defp parse_sort("playtime_desc"), do: :playtime_desc
-  defp parse_sort("complexity_asc"), do: :complexity_asc
-  defp parse_sort("complexity_desc"), do: :complexity_desc
-  defp parse_sort("year_desc"), do: :year_desc
-  defp parse_sort(_unrecognized), do: :name_asc
-
   defp filter_opts(assigns) do
     %{
       q: assigns.q,
@@ -390,6 +341,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
   defp apply_filters(socket) do
     opts = socket.assigns |> filter_opts() |> Map.put(:offset, 0) |> Map.put(:limit, @page_size)
+    socket = assign(socket, :from_query, CatalogFilters.to_query(filter_opts(socket.assigns)))
 
     case safe_filter_games(opts) do
       {:ok, games} ->
@@ -637,7 +589,12 @@ defmodule PukllayClubWeb.CatalogLive.Index do
                 @total == 0 && "hidden"
               ]}
             >
-              <GameCard.game_card :for={{id, game} <- @streams.games} id={id} game={game} />
+              <GameCard.game_card
+                :for={{id, game} <- @streams.games}
+                id={id}
+                game={game}
+                from={@from_query}
+              />
             </div>
           </div>
 

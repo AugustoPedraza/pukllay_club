@@ -814,4 +814,75 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert connected_html =~ "pk-card-poster"
     end
   end
+
+  describe "breadcrumb carries forward catalog filters (D-08)" do
+    test "returning via the breadcrumb after a filtered catalog search lands back on the same filtered view",
+         %{conn: conn} do
+      game_fixture(%{name: "Catán Dice"})
+      game_fixture(%{name: "Other Dice"})
+
+      {:ok, index_view, _html} = live(conn, ~p"/")
+
+      filtered_html =
+        index_view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Catán"})
+
+      href =
+        filtered_html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("[data-game-card]")
+        |> LazyHTML.attribute("href")
+        |> List.first()
+
+      assert href =~ "from="
+
+      {:ok, _show_view, show_html} = live(conn, href)
+
+      assert show_html =~ "Catán Dice"
+
+      crumb_href =
+        show_html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-nav-crumb a")
+        |> LazyHTML.attribute("href")
+        |> List.first()
+
+      assert crumb_href == "/?q=Cat%C3%A1n"
+    end
+
+    test "a direct /juegos/:id visit (no from param) breadcrumbs back to the bare catalog root", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Direct Visit Game"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      crumb_href =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-nav-crumb a")
+        |> LazyHTML.attribute("href")
+        |> List.first()
+
+      assert crumb_href == "/"
+    end
+
+    test "a from value carrying an absolute foreign URL never becomes the breadcrumb target", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Hostile From Game"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}?from=#{"https://evil.example"}")
+
+      crumb_href =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-nav-crumb a")
+        |> LazyHTML.attribute("href")
+        |> List.first()
+
+      assert crumb_href == "/"
+    end
+  end
 end

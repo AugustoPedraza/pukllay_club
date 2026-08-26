@@ -32,6 +32,15 @@ defmodule PukllayClubWeb.GameCard do
   Accepts an optional `:class` so a caller (the grid vs. a horizontally
   -scrolling `CarouselRow` rail, 01-05) can control the card's width/shrink
   behavior without this component needing to know which context it's in.
+
+  Accepts an optional `:from` (D-08) — the caller's current catalog filter
+  query string, as produced by `PukllayClubWeb.CatalogFilters.to_query/1`.
+  When present, the detail-page link carries it as a `?from=` param so
+  `CatalogLive.Show`'s breadcrumb can return the visitor to this same
+  filtered view. Defaults to `nil`, in which case the link is unchanged
+  from before this attr existed — only the grid (an active filter/search
+  result set) passes a real value; carousel rows never do, since they only
+  render when no filter is active (nothing to forward).
   """
   use PukllayClubWeb, :html
 
@@ -40,11 +49,12 @@ defmodule PukllayClubWeb.GameCard do
   attr :id, :string, required: true
   attr :game, PukllayClub.Catalog.Game, required: true
   attr :class, :any, default: nil
+  attr :from, :string, default: nil
 
   def game_card(assigns) do
     ~H"""
     <.link
-      navigate={~p"/juegos/#{@game}"}
+      navigate={detail_path(@game, @from)}
       id={@id}
       data-game-card
       class={["pk-card block overflow-hidden rounded-box bg-base-200 shadow-sm", @class]}
@@ -77,4 +87,13 @@ defmodule PukllayClubWeb.GameCard do
     </.link>
     """
   end
+
+  # D-08: three literal clauses, never a dynamic path assembled from raw
+  # strings — `nil`/`""` (no active filter to forward, the overwhelming
+  # majority of call sites, including every carousel row) returns the
+  # plain route; a real query string appends it as `?from=`, letting
+  # Phoenix's verified-routes encoder do the percent-encoding.
+  defp detail_path(game, nil), do: ~p"/juegos/#{game}"
+  defp detail_path(game, ""), do: ~p"/juegos/#{game}"
+  defp detail_path(game, from), do: ~p"/juegos/#{game}?#{[from: from]}"
 end
