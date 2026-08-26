@@ -431,6 +431,13 @@
   display: block;
 }
 
+/* Vertical twin of the rule above: D-03's grid infinite-scroll trailing
+   skeletons share .pk-trailing-skel's `display: none` default and are
+   revealed the same way, scoped to .pk-grid instead of .pk-rail. */
+.pk-grid[data-loading] .pk-trailing-skel {
+  display: block;
+}
+
 .pk-facts-row {
   display: flex;
   align-items: center;

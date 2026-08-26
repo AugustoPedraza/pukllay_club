@@ -716,15 +716,92 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             </div>
           </div>
 
+          <%!-- D-03: the vertical twin of .CarouselScroll (carousel_row.ex),
+          adapted to a sentinel + IntersectionObserver instead of a rail
+          scroll listener. data-exhausted folds in @more_error on purpose:
+          it parks the hook while a mid-scroll failure's inline retry is on
+          screen, so a failed page never auto-retries in a loop — the
+          member's own Reintentar click (a plain phx-click, not routed
+          through this hook) is what tries again. --%>
           <div
             :if={browsing_results?(assigns) and not @loading}
+            id="grid-scroll"
+            phx-hook=".GridScroll"
+            data-exhausted={to_string(@offset >= @total or @more_error)}
             class="mx-auto w-full max-w-7xl pk-gutter"
           >
+            <script :type={Phoenix.LiveView.ColocatedHook} name=".GridScroll">
+              export default {
+                mounted() {
+                  this.grid = this.el.querySelector("[data-grid]")
+                  this.sentinel = this.el.querySelector("[data-grid-sentinel]")
+
+                  // Same pending/exhausted guard-flag pair and single
+                  // pushEvent(..., reply => ...) round trip as
+                  // .CarouselScroll (carousel_row.ex) — release pending
+                  // ONLY from the reply callback, so no fixed-timeout guess
+                  // is needed and at most one request is ever in flight.
+                  // The loading indicator is driven here, client-side,
+                  // rather than through a server assign: the handler is
+                  // synchronous, so a server-driven flag would be set and
+                  // cleared within the same round trip and the trailing
+                  // skeletons would never actually be visible.
+                  this.pending = false
+                  this.exhausted = this.el.dataset.exhausted === "true"
+
+                  this.maybeLoadMore = () => {
+                    if (this.pending || this.exhausted) return
+
+                    this.pending = true
+                    this.grid.dataset.loading = "true"
+                    this.pushEvent("load-more", {}, (reply) => {
+                      this.pending = false
+                      delete this.grid.dataset.loading
+                      if (reply && reply.exhausted) this.exhausted = true
+
+                      // An IntersectionObserver only fires on a CHANGE of
+                      // intersection state: if the sentinel is still
+                      // inside the root margin after a page lands, no
+                      // second callback would ever arrive and loading
+                      // would silently stop one page in. Force a fresh
+                      // evaluation by re-observing, unless the server has
+                      // parked us (data-exhausted, re-read by updated()
+                      // below, already ran by the time this callback
+                      // fires — it folds in @more_error, so a failed page
+                      // does not auto-retry here).
+                      if (!this.exhausted) {
+                        this.observer.unobserve(this.sentinel)
+                        this.observer.observe(this.sentinel)
+                      }
+                    })
+                  }
+
+                  this.observer = new IntersectionObserver(
+                    (entries) => {
+                      if (entries.some((entry) => entry.isIntersecting)) this.maybeLoadMore()
+                    },
+                    {rootMargin: "400px"}
+                  )
+                  this.observer.observe(this.sentinel)
+                },
+                updated() {
+                  // Re-read in case a server-driven change (a filter
+                  // reset, a recovered mid-scroll error) changed the data
+                  // attribute — same one-line resync as
+                  // .CarouselScroll.updated().
+                  this.exhausted = this.el.dataset.exhausted === "true"
+                },
+                destroyed() {
+                  this.observer?.disconnect()
+                }
+              }
+            </script>
             <div
               id="games"
               phx-update="stream"
+              data-grid
               class={[
-                "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4",
+                "pk-grid grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4",
                 @total == 0 && "hidden"
               ]}
             >
@@ -734,7 +811,21 @@ defmodule PukllayClubWeb.CatalogLive.Index do
                 game={game}
                 from={@from_query}
               />
+              <%!-- Permanent trailing skeleton placeholders, mirroring
+              carousel_row.ex's own comment verbatim: non-stream items in a
+              phx-update="stream" container can be added/updated but never
+              removed, so these render unconditionally with stable ids and
+              are toggled by CSS (.pk-grid[data-loading], set/cleared by
+              the hook above) rather than by :if — a conditional render
+              would put them in the DOM once and strand them there
+              permanently. Four covers the widest column count (lg); at
+              narrower breakpoints they wrap, which is acceptable. --%>
+              <CarouselRow.skeleton_card id="grid-skel-1" class="pk-trailing-skel" />
+              <CarouselRow.skeleton_card id="grid-skel-2" class="pk-trailing-skel" />
+              <CarouselRow.skeleton_card id="grid-skel-3" class="pk-trailing-skel" />
+              <CarouselRow.skeleton_card id="grid-skel-4" class="pk-trailing-skel" />
             </div>
+            <div data-grid-sentinel aria-hidden="true" class="h-px w-full"></div>
           </div>
 
           <%!-- D-03: compact inline retry for a mid-scroll load-more
