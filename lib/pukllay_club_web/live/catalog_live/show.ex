@@ -302,7 +302,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         <div class="space-y-4">
           <div class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
-              <div class="pk-poster-col bg-base-200 rounded-box p-4 space-y-4 relative">
+              <div class="pk-poster-col bg-base-200 rounded-box p-4 space-y-4">
                 <div class="absolute right-2 top-2 z-10">
                   <.share_control id="detail-share-buybox" game={@game} />
                 </div>

@@ -9,6 +9,35 @@
 /* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
 @source "../../_build/dev/phoenix-colocated/pukllay_club/*/";
 
+/* CASCADE-LAYER HAZARD (Phase 01.2 gap-closure, G-01.2-5): Tailwind v4
+   generates every one of its own utility classes (`.relative`, `.p-4`,
+   `.bg-base-200`, etc.) inside `@layer utilities`. Every custom `.pk-*`
+   rule in THIS file, from here down, is written with no `@layer` wrapper
+   at all — it is unlayered CSS. Per the CSS Cascading and Layers spec, an
+   unlayered rule always beats a rule in any named layer, REGARDLESS of
+   selector specificity or source order. A `.pk-*` rule here that sets a
+   property some Tailwind utility also sets will therefore silently win
+   over that utility on the same element — and the utility will look like
+   it did nothing, with no warning, no specificity fight to notice, and no
+   test that string-matches class attributes able to see it.
+
+   Concrete instance this note is written from: `.pk-poster-col`'s own
+   `position: static` base rule silently defeated the `relative` Tailwind
+   utility a template added to the same element to give an
+   absolutely-positioned child a containing block. Below the 768px detail
+   breakpoint, where no other rule overrode `.pk-poster-col`'s position,
+   the child resolved against the initial containing block instead and
+   rendered near the top of the whole page — see
+   `.planning/debug/G-01.2-5-buybox-layout.md` for the full trace.
+
+   THE RULE TO FOLLOW: when a `.pk-*` rule in this file and a Tailwind
+   utility class both want to set one property on one element, delete the
+   utility from the markup and keep the property in the `.pk-*` rule. One
+   field, one declaration, in the file that already owns that element's
+   layout. Do not add a second, competing declaration and hope specificity
+   or source order sorts it out — for unlayered-vs-layered rules, it
+   categorically will not. */
+
 /* Self-hosted brand typefaces (Bebas Neue + Inter). Both are OFL-licensed, so self-hosting
    from priv/static/fonts/ is permitted. Self-hosting avoids a runtime request to any
    third-party Google font CDN for every visitor.
@@ -2277,7 +2306,7 @@ body.pk-drawer-open {
 }
 
 .pk-poster-col {
-  position: static;
+  position: relative;
 }
 
 .pk-text-col {
