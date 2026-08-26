@@ -80,6 +80,15 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:total, 0)
       |> assign(:load_error, false)
       |> assign(:from_query, "")
+      # D-01/D-02: records that the member explicitly asked to see the
+      # full-catalog grid (the filter modal's primary CTA, "apply-filters"
+      # below) — deliberately socket-only, never a URL param. Unlike every
+      # other filter assign, it never narrows or reorders the result set;
+      # it only picks which of the two browse surfaces (carousels vs.
+      # grid) renders over an otherwise identical query, so it takes no
+      # part in filter_opts/1, apply_filters/1, or
+      # CatalogFilters.to_query/1's D-08 breadcrumb query string.
+      |> assign(:browse_all, false)
       |> stream(:games, [])
 
     {:ok, socket}
@@ -187,6 +196,16 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     {:noreply, assign(socket, :filters_open, false)}
   end
 
+  # D-02's one explicit submission signal, dispatched only by the filter
+  # modal's footer CTA (FilterModal Task 1). Deliberately does NOT call
+  # apply_filters/1: the modal is live-apply, so results are already
+  # current the instant a facet or the search box changes — this handler
+  # only records that the member asked to see the current result set, via
+  # :browse_all (see mount/3's comment on that assign).
+  def handle_event("apply-filters", _params, socket) do
+    {:noreply, socket |> assign(:filters_open, false) |> assign(:browse_all, true)}
+  end
+
   # The payload key is `choice`, not `value`: LiveView's client-side
   # `extractMeta` overwrites `payload.value` with the clicked element's
   # native `.value` DOM property (`""` for a `<button>`, `"on"` for a
@@ -249,6 +268,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:max_playtime, nil)
       |> assign(:min_age, nil)
       |> assign(:sort, :name_asc)
+      |> assign(:browse_all, false)
       |> apply_filters()
 
     {:noreply, socket}
@@ -452,6 +472,20 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       not is_nil(assigns.players) or
       not is_nil(assigns.max_playtime) or
       not is_nil(assigns.min_age)
+  end
+
+  # D-01/D-02: the single source of truth for which of the two browse
+  # surfaces renders — carousels, or the flat "El catálogo completo" grid.
+  # CALLS filters_active?/1 rather than restating its clauses, so the
+  # carousel gate and the grid gate can never drift apart:
+  # filters_active?/1 stays the narrower "is a filter actually applied"
+  # question (still used by main_grid_heading/1 and the header's
+  # search_expanded state below), while browsing_results?/1 answers
+  # "should the member be looking at the results view right now" — true
+  # whenever a filter is active OR the member explicitly submitted the
+  # empty filter modal (the :browse_all signal set by "apply-filters").
+  defp browsing_results?(assigns) do
+    filters_active?(assigns) or assigns.browse_all
   end
 
   @impl true

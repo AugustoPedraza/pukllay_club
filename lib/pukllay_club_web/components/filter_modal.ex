@@ -98,10 +98,19 @@ defmodule PukllayClubWeb.FilterModal do
   `Phoenix.LiveComponent` — no state of its own, matching `FilterDrawer`'s
   discipline before it, per 01-PATTERNS.md). Live-apply is unchanged by
   this shell: every control still applies its filter immediately on
-  click/keystroke, nothing is staged. The CTA is an exit affordance, not
-  a submit — its only effect is `phx-click="close-filters"`; it does not
-  filter or apply anything itself, since filtering already happened
-  underneath.
+  click/keystroke, nothing is staged. The footer CTA (dispatching the
+  `apply-filters` event, 01.2-03 D-02) is now the modal's one explicit
+  submission signal — pressing it, even with nothing selected, tells
+  `CatalogLive.Index` the member asked to see the current result set (its
+  `:browse_all` assign), which is what lets an empty submission land on
+  the full-catalog grid instead of being indistinguishable from a fresh
+  page load. It still does not filter or apply anything itself, since
+  filtering already happened underneath — it only records intent.
+  Dismissal and submission are deliberately two different events: the
+  backdrop button and the corner close button both still dispatch the
+  `close-filters` event and change nothing about the result set, so
+  closing the modal without pressing its CTA always returns the member to
+  wherever they were (the carousels, if nothing was active).
 
   `core_components.ex` was checked and has no modal component — this uses
   daisyUI's bundled `modal`/`modal-open`/`modal-box`/`modal-backdrop`
@@ -382,7 +391,7 @@ defmodule PukllayClubWeb.FilterModal do
           >
             Limpiar filtros
           </.button>
-          <.button class={["btn", "btn-primary", "min-h-11"]} phx-click="close-filters">
+          <.button class={["btn", "btn-primary", "min-h-11"]} phx-click="apply-filters">
             {cta_label(@total)}
           </.button>
         </div>
