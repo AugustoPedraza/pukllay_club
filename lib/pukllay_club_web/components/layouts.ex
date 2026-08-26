@@ -187,251 +187,279 @@ defmodule PukllayClubWeb.Layouts do
       <script :type={Phoenix.LiveView.ColocatedHook} name=".CatalogNav">
         export default {
           mounted() {
-            this.nav = this.el.querySelector(".pk-nav")
-
-            this.onScroll = () => {
-              this.nav.classList.toggle("is-scrolled", window.scrollY > 40)
-            }
-            window.addEventListener("scroll", this.onScroll, {passive: true})
-            this.onScroll()
-
-            // Scroll-spy: highlights whichever element (a mobile chip or a
-            // desktop category-panel row) shares data-chip-target with the
-            // shelf currently under the header. Widened from a chip-only
-            // selector so the desktop panel's items join this one observer
-            // instead of getting a second, parallel one — both surfaces
-            // light up from the same mechanism. Guarded on there being at
-            // least one target and one resolvable section so the detail
-            // page and filtered views (neither renders either surface) are
-            // unaffected.
+            // Search-morph (01.2-11): wires FIRST, ahead of every other
+            // optional block below, so a throw in one of those can never
+            // prevent the search controls from wiring (the second candidate
+            // cause debug session G-01.2-2 could not rule out — an uncaught
+            // exception earlier in mounted() silently aborting the rest of
+            // the callback). Every block here (including this one) is now
+            // wrapped in its own try/catch for the same reason: one throwing
+            // block must never take any sibling block down with it.
             //
-            // Collected from TWO roots, not from this.el alone (debug
-            // search-right-align-mobile, cycle 5). The two surfaces no longer
-            // live in the same element: .pk-cat-item is inside the header, but
-            // the mobile chips moved out to #app-subnav when the chip row was
-            // un-stuck. Scoped to this.el this would still find all 8 desktop
-            // rows and zero chips — the chips would keep rendering and silently
-            // stop highlighting, which is exactly the kind of half-working
-            // failure a DOM move produces. Named roots rather than a bare
-            // document query so the two participating surfaces stay explicit.
-            this.spyRoots = [this.el, document.getElementById("app-subnav")].filter(Boolean)
-            this.spyTargets = this.spyRoots.flatMap((root) =>
-              Array.from(root.querySelectorAll("[data-chip-target]"))
-            )
-            this.spyTargetsBySection = new Map()
-            this.spyTargets.forEach((target) => {
-              const section = target.dataset.chipTarget && document.getElementById(target.dataset.chipTarget)
-              if (section) this.spyTargetsBySection.set(section, target)
-            })
+            // State (is-open, is-search-open, aria-expanded, tabindex) is
+            // now rendered by the SERVER off @search_expanded — this hook's
+            // only remaining job is FOCUS, driven by a TRANSITION of
+            // data-search-expanded, never by the current value alone (an
+            // unconditional focus in updated() would steal it back on every
+            // unrelated round trip, and grabbing it on mount would hijack
+            // the keyboard/scroll position on a ?q= deep link that arrives
+            // already open).
+            //
+            // The pre-01.2-11 document-level outside-click listener is
+            // deliberately gone: it treated any FilterModal control as an
+            // "outside" click because the modal is never a DOM descendant
+            // of .pk-search-morph — its only trigger (.pk-filter-trigger)
+            // is nested INSIDE the morph, but the modal itself renders as a
+            // page-level sibling elsewhere in the tree. No correct
+            // inside/outside test could exist here without this hook
+            // hardcoding knowledge of another page's DOM (G-01.2-3/G-01.2-4
+            // defect A). The pill already has an always-visible 44px close
+            // control and an Escape binding, so a press outside was never
+            // its only dismissal path.
+            try {
+              this.morph = this.el.querySelector(".pk-search-morph")
+              if (this.morph) {
+                this.morphToggle = this.morph.querySelector(".pk-search-morph-toggle")
+                this.morphInput = this.morph.querySelector(".pk-nav-search input")
+                this.wasExpanded = this.morph.dataset.searchExpanded
 
-            if (this.spyTargets.length > 0 && this.spyTargetsBySection.size > 0) {
-              this.observer = new IntersectionObserver(
-                (entries) => {
-                  const topmost = entries
-                    .filter((entry) => entry.isIntersecting)
-                    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-                  if (!topmost) return
+                this.onDocumentKeydown = (e) => {
+                  if (e.key === "Escape" && this.morph.dataset.searchExpanded === "true") {
+                    this.pushEvent("close-search", {})
+                  }
+                }
+                document.addEventListener("keydown", this.onDocumentKeydown)
+              }
+            } catch (e) {
+              console.error("CatalogNav: search-morph block failed to wire", e)
+            }
 
-                  const activeTarget = this.spyTargetsBySection.get(topmost.target)
-                  if (!activeTarget) return
+            try {
+              this.nav = this.el.querySelector(".pk-nav")
 
-                  this.spyTargets.forEach((target) => target.classList.remove("is-active"))
-                  activeTarget.classList.add("is-active")
-                },
-                {rootMargin: "-20% 0px -70% 0px"}
+              this.onScroll = () => {
+                this.nav.classList.toggle("is-scrolled", window.scrollY > 40)
+              }
+              window.addEventListener("scroll", this.onScroll, {passive: true})
+              this.onScroll()
+            } catch (e) {
+              console.error("CatalogNav: scroll listener block failed to wire", e)
+            }
+
+            try {
+              // Scroll-spy: highlights whichever element (a mobile chip or a
+              // desktop category-panel row) shares data-chip-target with the
+              // shelf currently under the header. Widened from a chip-only
+              // selector so the desktop panel's items join this one observer
+              // instead of getting a second, parallel one — both surfaces
+              // light up from the same mechanism. Guarded on there being at
+              // least one target and one resolvable section so the detail
+              // page and filtered views (neither renders either surface) are
+              // unaffected.
+              //
+              // Collected from TWO roots, not from this.el alone (debug
+              // search-right-align-mobile, cycle 5). The two surfaces no longer
+              // live in the same element: .pk-cat-item is inside the header, but
+              // the mobile chips moved out to #app-subnav when the chip row was
+              // un-stuck. Scoped to this.el this would still find all 8 desktop
+              // rows and zero chips — the chips would keep rendering and silently
+              // stop highlighting, which is exactly the kind of half-working
+              // failure a DOM move produces. Named roots rather than a bare
+              // document query so the two participating surfaces stay explicit.
+              this.spyRoots = [this.el, document.getElementById("app-subnav")].filter(Boolean)
+              this.spyTargets = this.spyRoots.flatMap((root) =>
+                Array.from(root.querySelectorAll("[data-chip-target]"))
               )
-              this.spyTargetsBySection.forEach((_target, section) => this.observer.observe(section))
-            }
+              this.spyTargetsBySection = new Map()
+              this.spyTargets.forEach((target) => {
+                const section = target.dataset.chipTarget && document.getElementById(target.dataset.chipTarget)
+                if (section) this.spyTargetsBySection.set(section, target)
+              })
 
-            // Header-height publisher (01.1-08): this hook already owns the
-            // header DOM and this plan is what changes the header's real
-            // height (the CTA and the theme toggle both leave the row), so
-            // it is the one place that publishes --pk-header-h. Plans
-            // 01.1-03/01.1-04 are consumers only — never a second publisher.
-            this.publishHeaderHeight = () => {
-              const height = this.el.getBoundingClientRect().height
-              document.documentElement.style.setProperty("--pk-header-h", height + "px")
-            }
-            this.heightObserver = new ResizeObserver(() => this.publishHeaderHeight())
-            this.heightObserver.observe(this.el)
-            this.publishHeaderHeight()
+              if (this.spyTargets.length > 0 && this.spyTargetsBySection.size > 0) {
+                this.observer = new IntersectionObserver(
+                  (entries) => {
+                    const topmost = entries
+                      .filter((entry) => entry.isIntersecting)
+                      .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+                    if (!topmost) return
 
-            // Search-morph (01.1-08): guarded on this.morph existing so the
-            // Quiénes Somos header (no search slot) is unaffected.
-            this.morph = this.el.querySelector(".pk-search-morph")
-            if (this.morph) {
-              this.morphToggle = this.morph.querySelector(".pk-search-morph-toggle")
-              this.morphClose = this.morph.querySelector(".pk-search-morph-close")
-              this.morphInput = this.morph.querySelector(".pk-nav-search input")
-              this.navInner = this.el.querySelector(".pk-nav-inner")
+                    const activeTarget = this.spyTargetsBySection.get(topmost.target)
+                    if (!activeTarget) return
 
-              this.openMorph = ({focus = true} = {}) => {
-                this.morph.classList.add("is-open")
-                this.navInner?.classList.add("is-search-open")
-                this.morphToggle?.setAttribute("aria-expanded", "true")
-                this.morphToggle?.setAttribute("tabindex", "-1")
-                this.morphClose?.setAttribute("tabindex", "0")
-                if (focus) this.morphInput?.focus()
-              }
-
-              this.closeMorph = () => {
-                this.morph.classList.remove("is-open")
-                this.navInner?.classList.remove("is-search-open")
-                this.morphToggle?.setAttribute("aria-expanded", "false")
-                this.morphToggle?.setAttribute("tabindex", "0")
-                this.morphClose?.setAttribute("tabindex", "-1")
-                this.morphToggle?.focus()
-              }
-
-              this.syncMorph = () => {
-                if (this.morph.dataset.searchExpanded === "true" && !this.morph.classList.contains("is-open")) {
-                  this.openMorph({focus: false})
-                }
-              }
-
-              this.onMorphToggleClick = () => this.openMorph()
-              this.onMorphCloseClick = () => this.closeMorph()
-              this.onDocumentKeydown = (e) => {
-                if (e.key === "Escape" && this.morph.classList.contains("is-open")) this.closeMorph()
-              }
-              this.onDocumentClick = (e) => {
-                if (this.morph.classList.contains("is-open") && !this.morph.contains(e.target)) {
-                  this.closeMorph()
-                }
-              }
-
-              this.morphToggle?.addEventListener("click", this.onMorphToggleClick)
-              this.morphClose?.addEventListener("click", this.onMorphCloseClick)
-              document.addEventListener("keydown", this.onDocumentKeydown)
-              document.addEventListener("click", this.onDocumentClick)
-
-              this.syncMorph()
-            }
-
-            // Mobile nav drawer (01.1-09): guarded on this.drawer existing so
-            // this hook is a no-op everywhere the drawer markup isn't present.
-            // Extends this one hook rather than adding a second — the drawer
-            // reaches its own DOM via this.el.querySelector, never outside it
-            // except the one documented body-class scroll lock.
-            this.drawer = this.el.querySelector("#pk-nav-drawer")
-            if (this.drawer) {
-              this.drawerBackdrop = this.el.querySelector(".pk-drawer-backdrop")
-              this.hamburger = this.el.querySelector(".pk-nav-hamburger")
-              this.drawerClose = this.el.querySelector(".pk-drawer-close")
-              this.drawerReturnFocus = null
-
-              this.openDrawer = () => {
-                this.drawer.classList.add("is-open")
-                this.drawerBackdrop?.classList.add("is-open")
-                this.drawer.removeAttribute("inert")
-                this.hamburger?.setAttribute("aria-expanded", "true")
-                document.body.classList.add("pk-drawer-open")
-                this.drawerReturnFocus = document.activeElement
-                this.drawerClose?.focus()
-              }
-
-              // Idempotent: no-ops when already closed, so calling it
-              // unconditionally from updated() on every server round trip
-              // (see below) never steals focus back to the hamburger on an
-              // unrelated re-render.
-              this.closeDrawer = () => {
-                if (!this.drawer.classList.contains("is-open")) return
-                this.drawer.classList.remove("is-open")
-                this.drawerBackdrop?.classList.remove("is-open")
-                this.drawer.setAttribute("inert", "")
-                this.hamburger?.setAttribute("aria-expanded", "false")
-                document.body.classList.remove("pk-drawer-open")
-                const returnTarget = this.drawerReturnFocus || this.hamburger
-                returnTarget?.focus()
-                this.drawerReturnFocus = null
-              }
-
-              this.onHamburgerClick = () => this.openDrawer()
-              this.onDrawerCloseClick = () => this.closeDrawer()
-              this.onDrawerBackdropClick = () => this.closeDrawer()
-
-              // Escape closes unconditionally; Tab traps focus inside the
-              // panel — copied verbatim from GamePreview's onSheetKeydown
-              // focusable-elements query and first/last wrap (game_preview.ex).
-              this.onDrawerKeydown = (e) => {
-                if (e.key === "Escape") {
-                  this.closeDrawer()
-                  return
-                }
-                if (e.key !== "Tab") return
-                const focusable = this.drawer.querySelectorAll(
-                  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                    this.spyTargets.forEach((target) => target.classList.remove("is-active"))
+                    activeTarget.classList.add("is-active")
+                  },
+                  {rootMargin: "-20% 0px -70% 0px"}
                 )
-                if (focusable.length === 0) return
-                const first = focusable[0]
-                const last = focusable[focusable.length - 1]
-                if (e.shiftKey && document.activeElement === first) {
-                  e.preventDefault()
-                  last.focus()
-                } else if (!e.shiftKey && document.activeElement === last) {
-                  e.preventDefault()
-                  first.focus()
-                }
+                this.spyTargetsBySection.forEach((_target, section) => this.observer.observe(section))
               }
-
-              this.hamburger?.addEventListener("click", this.onHamburgerClick)
-              this.drawerClose?.addEventListener("click", this.onDrawerCloseClick)
-              this.drawerBackdrop?.addEventListener("click", this.onDrawerBackdropClick)
-              this.drawer.addEventListener("keydown", this.onDrawerKeydown)
+            } catch (e) {
+              console.error("CatalogNav: scroll-spy block failed to wire", e)
             }
 
-            // Desktop category mega-menu (SHELL-01, sketch 020): guarded on
-            // this.catTrigger existing so Quiénes Somos and Detalle (neither
-            // renders the nav_menu slot) are untouched no-ops. Modelled line
-            // for line on the drawer block directly above.
-            this.catTrigger = this.el.querySelector(".pk-cat-trigger")
-            if (this.catTrigger) {
-              this.catBackdrop = this.el.querySelector(".pk-cat-backdrop")
-              this.catPanel = this.el.querySelector("#pk-cat-menu")
-              this.catItems = Array.from(this.el.querySelectorAll(".pk-cat-item"))
-
-              this.openCatMenu = () => {
-                this.catTrigger.classList.add("is-open")
-                this.catPanel?.classList.add("is-open")
-                this.catBackdrop?.classList.add("is-open")
-                this.catTrigger.setAttribute("aria-expanded", "true")
-                this.catPanel?.removeAttribute("inert")
+            try {
+              // Header-height publisher (01.1-08): this hook already owns the
+              // header DOM and this plan is what changes the header's real
+              // height (the CTA and the theme toggle both leave the row), so
+              // it is the one place that publishes --pk-header-h. Plans
+              // 01.1-03/01.1-04 are consumers only — never a second publisher.
+              this.publishHeaderHeight = () => {
+                const height = this.el.getBoundingClientRect().height
+                document.documentElement.style.setProperty("--pk-header-h", height + "px")
               }
+              this.heightObserver = new ResizeObserver(() => this.publishHeaderHeight())
+              this.heightObserver.observe(this.el)
+              this.publishHeaderHeight()
+            } catch (e) {
+              console.error("CatalogNav: height publisher block failed to wire", e)
+            }
 
-              // Idempotent: no-ops when already closed, same reason
-              // closeDrawer() is above — safe to call unconditionally from
-              // updated() on every server round trip.
-              this.closeCatMenu = () => {
-                if (!this.catTrigger.classList.contains("is-open")) return
-                this.catTrigger.classList.remove("is-open")
-                this.catPanel?.classList.remove("is-open")
-                this.catBackdrop?.classList.remove("is-open")
-                this.catTrigger.setAttribute("aria-expanded", "false")
-                this.catPanel?.setAttribute("inert", "")
-              }
+            try {
+              // Mobile nav drawer (01.1-09): guarded on this.drawer existing so
+              // this hook is a no-op everywhere the drawer markup isn't present.
+              // Extends this one hook rather than adding a second — the drawer
+              // reaches its own DOM via this.el.querySelector, never outside it
+              // except the one documented body-class scroll lock.
+              this.drawer = this.el.querySelector("#pk-nav-drawer")
+              if (this.drawer) {
+                this.drawerBackdrop = this.el.querySelector(".pk-drawer-backdrop")
+                this.hamburger = this.el.querySelector(".pk-nav-hamburger")
+                this.drawerClose = this.el.querySelector(".pk-drawer-close")
+                this.drawerReturnFocus = null
 
-              this.onCatTriggerClick = () => {
-                if (this.catTrigger.classList.contains("is-open")) {
-                  this.closeCatMenu()
-                } else {
-                  this.openCatMenu()
+                this.openDrawer = () => {
+                  this.drawer.classList.add("is-open")
+                  this.drawerBackdrop?.classList.add("is-open")
+                  this.drawer.removeAttribute("inert")
+                  this.hamburger?.setAttribute("aria-expanded", "true")
+                  document.body.classList.add("pk-drawer-open")
+                  this.drawerReturnFocus = document.activeElement
+                  this.drawerClose?.focus()
                 }
-              }
-              this.onCatBackdropClick = () => this.closeCatMenu()
-              this.onCatItemClick = () => this.closeCatMenu()
-              this.onCatDocumentKeydown = (e) => {
-                if (e.key === "Escape") this.closeCatMenu()
-              }
 
-              this.catTrigger.addEventListener("click", this.onCatTriggerClick)
-              this.catBackdrop?.addEventListener("click", this.onCatBackdropClick)
-              this.catItems.forEach((item) => item.addEventListener("click", this.onCatItemClick))
-              document.addEventListener("keydown", this.onCatDocumentKeydown)
+                // Idempotent: no-ops when already closed, so calling it
+                // unconditionally from updated() on every server round trip
+                // (see below) never steals focus back to the hamburger on an
+                // unrelated re-render.
+                this.closeDrawer = () => {
+                  if (!this.drawer.classList.contains("is-open")) return
+                  this.drawer.classList.remove("is-open")
+                  this.drawerBackdrop?.classList.remove("is-open")
+                  this.drawer.setAttribute("inert", "")
+                  this.hamburger?.setAttribute("aria-expanded", "false")
+                  document.body.classList.remove("pk-drawer-open")
+                  const returnTarget = this.drawerReturnFocus || this.hamburger
+                  returnTarget?.focus()
+                  this.drawerReturnFocus = null
+                }
+
+                this.onHamburgerClick = () => this.openDrawer()
+                this.onDrawerCloseClick = () => this.closeDrawer()
+                this.onDrawerBackdropClick = () => this.closeDrawer()
+
+                // Escape closes unconditionally; Tab traps focus inside the
+                // panel — copied verbatim from GamePreview's onSheetKeydown
+                // focusable-elements query and first/last wrap (game_preview.ex).
+                this.onDrawerKeydown = (e) => {
+                  if (e.key === "Escape") {
+                    this.closeDrawer()
+                    return
+                  }
+                  if (e.key !== "Tab") return
+                  const focusable = this.drawer.querySelectorAll(
+                    'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                  )
+                  if (focusable.length === 0) return
+                  const first = focusable[0]
+                  const last = focusable[focusable.length - 1]
+                  if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault()
+                    last.focus()
+                  } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault()
+                    first.focus()
+                  }
+                }
+
+                this.hamburger?.addEventListener("click", this.onHamburgerClick)
+                this.drawerClose?.addEventListener("click", this.onDrawerCloseClick)
+                this.drawerBackdrop?.addEventListener("click", this.onDrawerBackdropClick)
+                this.drawer.addEventListener("keydown", this.onDrawerKeydown)
+              }
+            } catch (e) {
+              console.error("CatalogNav: drawer block failed to wire", e)
+            }
+
+            try {
+              // Desktop category mega-menu (SHELL-01, sketch 020): guarded on
+              // this.catTrigger existing so Quiénes Somos and Detalle (neither
+              // renders the nav_menu slot) are untouched no-ops. Modelled line
+              // for line on the drawer block above.
+              this.catTrigger = this.el.querySelector(".pk-cat-trigger")
+              if (this.catTrigger) {
+                this.catBackdrop = this.el.querySelector(".pk-cat-backdrop")
+                this.catPanel = this.el.querySelector("#pk-cat-menu")
+                this.catItems = Array.from(this.el.querySelectorAll(".pk-cat-item"))
+
+                this.openCatMenu = () => {
+                  this.catTrigger.classList.add("is-open")
+                  this.catPanel?.classList.add("is-open")
+                  this.catBackdrop?.classList.add("is-open")
+                  this.catTrigger.setAttribute("aria-expanded", "true")
+                  this.catPanel?.removeAttribute("inert")
+                }
+
+                // Idempotent: no-ops when already closed, same reason
+                // closeDrawer() is above — safe to call unconditionally from
+                // updated() on every server round trip.
+                this.closeCatMenu = () => {
+                  if (!this.catTrigger.classList.contains("is-open")) return
+                  this.catTrigger.classList.remove("is-open")
+                  this.catPanel?.classList.remove("is-open")
+                  this.catBackdrop?.classList.remove("is-open")
+                  this.catTrigger.setAttribute("aria-expanded", "false")
+                  this.catPanel?.setAttribute("inert", "")
+                }
+
+                this.onCatTriggerClick = () => {
+                  if (this.catTrigger.classList.contains("is-open")) {
+                    this.closeCatMenu()
+                  } else {
+                    this.openCatMenu()
+                  }
+                }
+                this.onCatBackdropClick = () => this.closeCatMenu()
+                this.onCatItemClick = () => this.closeCatMenu()
+                this.onCatDocumentKeydown = (e) => {
+                  if (e.key === "Escape") this.closeCatMenu()
+                }
+
+                this.catTrigger.addEventListener("click", this.onCatTriggerClick)
+                this.catBackdrop?.addEventListener("click", this.onCatBackdropClick)
+                this.catItems.forEach((item) => item.addEventListener("click", this.onCatItemClick))
+                document.addEventListener("keydown", this.onCatDocumentKeydown)
+              }
+            } catch (e) {
+              console.error("CatalogNav: category menu block failed to wire", e)
             }
           },
           updated() {
-            this.publishHeaderHeight()
-            this.syncMorph?.()
+            // Focus-transition only (01.2-11): compare the PREVIOUS
+            // data-search-expanded value against the current one and move
+            // focus only on an actual change, never on every render — see
+            // the mounted() comment above for why an unconditional focus
+            // (on every round trip, or on mount) is wrong here.
+            if (this.morph) {
+              const isExpanded = this.morph.dataset.searchExpanded
+              if (this.wasExpanded === "false" && isExpanded === "true") {
+                this.morphInput?.focus()
+              } else if (this.wasExpanded === "true" && isExpanded === "false") {
+                this.morphToggle?.focus()
+              }
+              this.wasExpanded = isExpanded
+            }
+            this.publishHeaderHeight?.()
             // A drawer-link navigation is the only way this hook's updated()
             // fires while the drawer is open; closeDrawer() is idempotent, so
             // calling it unconditionally here needs no old/new-link diffing.
@@ -442,10 +470,7 @@ defmodule PukllayClubWeb.Layouts do
             window.removeEventListener("scroll", this.onScroll)
             this.observer?.disconnect()
             this.heightObserver?.disconnect()
-            this.morphToggle?.removeEventListener("click", this.onMorphToggleClick)
-            this.morphClose?.removeEventListener("click", this.onMorphCloseClick)
             document.removeEventListener("keydown", this.onDocumentKeydown)
-            document.removeEventListener("click", this.onDocumentClick)
             this.hamburger?.removeEventListener("click", this.onHamburgerClick)
             this.drawerClose?.removeEventListener("click", this.onDrawerCloseClick)
             this.drawerBackdrop?.removeEventListener("click", this.onDrawerBackdropClick)
