@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 10 plans (5 executed, 5 gap closure pending)
+**Plans:** 15 plans (5 executed, 5 superseded, 5 gap closure pending)
 
 Plans:
 **Wave 1**
@@ -214,19 +214,27 @@ Plans:
 
 - [x] 01.2-05-PLAN.md — D-03: auto-loading infinite scroll replaces the manual results-grid pagination control
 
+**Superseded** *(planned, never executed — replanned after sketches 027-031 resolved the visual-design ambiguity in this gap set; kept as the record of what was designed first)*
+
+- [~] 01.2-06-PLAN.md — superseded by 01.2-11
+- [~] 01.2-07-PLAN.md — superseded by 01.2-12
+- [~] 01.2-08-PLAN.md — superseded by 01.2-13
+- [~] 01.2-09-PLAN.md — superseded by 01.2-14
+- [~] 01.2-10-PLAN.md — superseded by 01.2-15
+
 **Wave 4 — gap closure** *(from 01.2-UAT.md: 8 gaps across 9 tests)*
 
-- [ ] 01.2-06-PLAN.md — G-01.2-1/2/3: search-morph open state becomes server-owned so LiveView patches stop stripping it; header hook reduced to focus management
-- [ ] 01.2-08-PLAN.md — G-01.2-5/6: poster column gets a containing block at every width (unlayered-CSS cascade defect), buy-box gains a real edge, CTA bar rebalanced
+- [ ] 01.2-11-PLAN.md — G-01.2-1/2/3: search-morph open state becomes server-owned so LiveView patches stop stripping it; header hook reduced to focus management and failure-isolated
+- [ ] 01.2-13-PLAN.md — G-01.2-5/6: poster column gets a containing block at every width (unlayered-CSS cascade defect); buy-box takes sketch 027's Elevated Shadow boundary; mobile CTA bar takes sketch 028's Stacked layout
 
 **Wave 5 — gap closure** *(blocked on Wave 4 completion)*
 
-- [ ] 01.2-07-PLAN.md — G-01.2-4: removable active-filters summary on the Resultados surface; background surface settles once instead of restructuring under the open modal
-- [ ] 01.2-09-PLAN.md — G-01.2-7: "Juegos similares" widens to adjacent weight bands to fill the shelf, retitled "Otras sugerencias" when it does
+- [ ] 01.2-12-PLAN.md — G-01.2-4: removable active-filters chip row inline with the Resultados heading (sketch 029 winner); background surface settles once instead of restructuring under the open modal
+- [ ] 01.2-14-PLAN.md — G-01.2-7: "Juegos similares" always fills via one widened bounded query (sketch 031 Always-Full Guarantee); title stays fixed, widening signalled by an "Ampliado" badge and a subtitle swap
 
 **Wave 6 — gap closure** *(blocked on Wave 5 completion)*
 
-- [ ] 01.2-10-PLAN.md — G-01.2-8: LiveView connection banner rebranded and localised; UI-SPEC corrected on what the grid's inline retry line can cover
+- [ ] 01.2-15-PLAN.md — G-01.2-8: stock connection toast replaced by sketch 030's branded Spanish inline bar under the header; UI-SPEC corrected on what the grid's inline retry line can cover
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
