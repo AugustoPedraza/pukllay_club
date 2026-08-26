@@ -39,6 +39,21 @@ defmodule PukllayClubWeb.LayoutsTest do
     """
   end
 
+  # Local wrapper for exercising the :subnav slot (G-01.2-8, plan 01.2-15) —
+  # #app-subnav only renders when the slot is non-empty (`:if={@subnav !=
+  # []}`), and the connection-status bar's document-position test needs a
+  # real #app-subnav element to compare offsets against.
+  defp render_with_subnav(assigns) do
+    ~H"""
+    <Layouts.app flash={%{}}>
+      <:subnav>
+        <div id="test-subnav-content">chips</div>
+      </:subnav>
+      content
+    </Layouts.app>
+    """
+  end
+
   describe "brand_logo/1" do
     test "renders the wordmark and tagline" do
       html = render_component(&Layouts.brand_logo/1, %{})
@@ -256,6 +271,85 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert html =~ "pk-header-sticky"
       assert html =~ "phx-hook"
       assert html =~ "CatalogNav"
+    end
+  end
+
+  # G-01.2-8 gap closure (plan 01.2-15): replaces phx.new's stock
+  # #client-error/#server-error toast with an on-brand, Spanish, in-flow
+  # connection-status bar. No pre-existing test in this file ever asserted
+  # on either removed id, so there is nothing to delete here — these are all
+  # newly authored assertions.
+  describe "app/1 connection-status bar (G-01.2-8, plan 01.2-15)" do
+    test "flash_group/1 renders neither connection-state id nor the stock toast positioning classes" do
+      html = render_component(&Layouts.flash_group/1, %{flash: %{}})
+
+      refute html =~ "client-error"
+      refute html =~ "server-error"
+      refute html =~ "toast-top"
+      refute html =~ "toast-end"
+    end
+
+    test "flash_group/1 still renders an :info and an :error flash (deletion was surgical)" do
+      html =
+        render_component(&Layouts.flash_group/1, %{
+          flash: %{"info" => "Guardado con éxito", "error" => "Algo salió mal"}
+        })
+
+      assert html =~ "Guardado con éxito"
+      assert html =~ "Algo salió mal"
+    end
+
+    test "app/1 renders exactly one connection-status bar carrying hidden, role and both connection bindings" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      bar_nodes =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-conn-banner")
+
+      assert Enum.count(bar_nodes) == 1
+
+      bar_html = LazyHTML.to_html(bar_nodes)
+
+      assert bar_html =~ ~s(id="connection-status")
+      assert bar_html =~ "hidden"
+      assert bar_html =~ ~s(role="status")
+      assert bar_html =~ "phx-disconnected"
+      assert bar_html =~ "phx-connected"
+    end
+
+    test "the bar's copy is Spanish and none of the three replaced English strings remain" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ "Reconectando"
+      assert html =~ "no encontramos tu conexión a internet"
+      refute html =~ "Attempting to reconnect"
+      refute html =~ "Something went wrong"
+      refute html =~ "find the internet"
+    end
+
+    # The placement assertion compares two numeric offsets, not presence —
+    # presence alone would still pass with the bar left at the bottom of the
+    # document, which is the exact defect being fixed (the old toast was
+    # already in the right DOM position and still read as a floating card
+    # because of `position: fixed`; the fix is that this bar is now in flow
+    # *here*, between the header and #app-subnav).
+    #
+    # Mutation check performed once by hand while authoring this test
+    # (restored immediately after, per the plan's acceptance criteria):
+    # moving the bar's markup down to just before `<.footer />` in
+    # `Layouts.app/1` made this test fail (bar offset landed after the
+    # #app-subnav offset), confirming the assertion actually depends on
+    # document order rather than passing unconditionally.
+    test "the connection-status bar sits between #app-header and #app-subnav in document order" do
+      html = render_component(&render_with_subnav/1, %{})
+
+      {header_offset, _} = :binary.match(html, ~s(id="app-header"))
+      {bar_offset, _} = :binary.match(html, ~s(id="connection-status"))
+      {subnav_offset, _} = :binary.match(html, ~s(id="app-subnav"))
+
+      assert header_offset < bar_offset
+      assert bar_offset < subnav_offset
     end
   end
 
