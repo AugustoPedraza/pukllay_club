@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.2
 current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
 status: executing
-stopped_at: Completed 01.2-14-PLAN.md
-last_updated: "2026-08-26T23:07:10.455Z"
+stopped_at: Completed 01.2-15-PLAN.md
+last_updated: "2026-08-26T23:23:06.177Z"
 last_activity: 2026-08-26
 last_activity_desc: Phase 01.2 execution started
-state_head: bceb6201f28ac4eb56dc7775878df72882a64f03
+state_head: e6c4b4698ea774bd45766d0385fc9dee869b99e0
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 30
+  completed_plans: 31
 milestone_name: milestone
 ---
 
@@ -30,7 +30,7 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-08-26 — Phase 01.2 execution started
 
@@ -90,6 +90,7 @@ Progress: [██████████] 100%
 | Phase 01.2 P13 | 35min | 3 tasks | 3 files |
 | Phase 01.2 P12 | 45min | 3 tasks | 5 files |
 | Phase 01.2 P14 | 25min | 3 tasks | 5 files |
+| Phase 01.2 P15 | 15min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,9 @@ Recent decisions affecting current work:
 - [Phase 01.2]: 01.2-12: active-filters chip row (sketch 029 winner C) added to the Resultados header — .pk-active-filter-chip is deliberately distinct from filter_modal.ex's own selection-chip class (no shadow, soft accent tint); chip removal reuses toggle-facet/toggle-scalar verbatim, new parameterless clear-query handler for the query chip
 - [Phase 01.2]: 01.2-14: Catalog.similar_games/1's weight_band hard filter replaced by a band-preference array_position order_by term (nearest-band-first, derived from Vocabulary.weight_band_level/1) — shelf always fills to 12 cards, including for no-band games; D-06's intra-band overlap order kept byte-identical (G-01.2-7)
 - [Phase 01.2]: 01.2-14: carousel_row/1 gained an optional badge attr (daisyUI badge-accent, rounded-full) defaulting nil; CatalogLive.Show derives :similares_widened by comparing returned games' bands and swaps in sketch 031's Ampliado badge + widened subtitle only when the shelf had to widen past the viewed game's own band
+- [Phase 01.2]: 01.2-15: deleted flash_group/1's #client-error/#server-error toast entirely and replaced with .pk-conn-banner (element-id-targeted phx-disconnected/phx-connected bindings, accent tint, Spanish copy) as a sibling of #app-header inside the LiveView root but outside the header so it never shifts --pk-header-h
+- [Phase 01.2]: 01.2-15: reduced-motion for .pk-conn-spinner uses @media (prefers-reduced-motion: no-preference) gating the animation itself (matching .pk-scroll-top's idiom), not a new per-selector reduce-block override, since app.css already retired that pattern in favor of one universal * guard
+- [Phase 01.2]: 01.2-15: UI-SPEC's D-03 auto-load-more error row rescoped to a live query failure only (safe_filter_games/1, requires an established socket); a new connection-status row added for the transport-disconnect surface; header row-count corrected from a pre-existing 36/31 (already off-by-one against actual 37/32) to 38/33/3/2 after recounting
 
 ### Pending Todos
 
@@ -258,6 +262,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T23:07:10.288Z
-Stopped at: Completed 01.2-14-PLAN.md
+Last session: 2026-08-26T23:23:06.001Z
+Stopped at: Completed 01.2-15-PLAN.md
 Resume file: None

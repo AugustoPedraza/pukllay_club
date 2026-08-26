@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 9/10 plans executed (5 executed, 5 superseded, 5 gap closure pending)
+**Plans:** 10/10 plans executed (5 executed, 5 superseded, 5 gap closure pending)
 
 Plans:
 **Wave 1**
@@ -234,7 +234,7 @@ Plans:
 
 **Wave 6 — gap closure** *(blocked on Wave 5 completion)*
 
-- [ ] 01.2-15-PLAN.md — G-01.2-8: stock connection toast replaced by sketch 030's branded Spanish inline bar under the header; UI-SPEC corrected on what the grid's inline retry line can cover
+- [x] 01.2-15-PLAN.md — G-01.2-8: stock connection toast replaced by sketch 030's branded Spanish inline bar under the header; UI-SPEC corrected on what the grid's inline retry line can cover
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
