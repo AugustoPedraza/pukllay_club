@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 2
-current_phase_name: Natural-Language Spanish Search + Auth
-status: planning
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-08-25T00:00:03.828Z"
+current_phase: 01.2
+current_phase_name: Catalog & Detail Navigation Polish
+status: Ready to discuss
+stopped_at: Phase 01.2 inserted, not yet discussed/planned
+last_updated: "2026-08-25T23:55:01.128Z"
 last_activity: 2026-08-24
 last_activity_desc: Completed quick task 260824-q8z - mobile drawer bottom block content/footer split
-state_head: 368d0b8ecb844439b469c74ede0ccab41fad8bd0
+state_head: edacb4b46bf8f730a04c453fcadf475e4839fbfc
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 2
   total_plans: 21
   completed_plans: 21
@@ -25,13 +25,13 @@ See: .planning/PROJECT.md (updated 2026-07-24)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.1 — Site Shell & Content Pages (INSERTED)
+**Current focus:** Phase 01.2 — Catalog & Detail Navigation Polish (INSERTED)
 
 ## Current Position
 
-Phase: 2 — Natural-Language Spanish Search + Auth
+Phase: 01.2 — Catalog & Detail Navigation Polish
 Plan: Not started
-Status: Ready to plan
+Status: Ready to discuss
 Last activity: 2026-08-24 - Completed quick task 260824-u5d: in-row horizontal infinite scroll for the 8 catalog carousels (30-game ceiling), Ver todo tile removed
 
 Progress: [██████████] 100%
@@ -222,6 +222,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 ### Roadmap Evolution
 
 - Phase 01.1 edited: cleaned up title/goal/requirements/success-criteria after insertion; added SHELL-01..05 to REQUIREMENTS.md
+- Phase 01.2 inserted after Phase 1: Catalog & Detail Navigation Polish — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped (URGENT)
 
 ## Deferred Items
 

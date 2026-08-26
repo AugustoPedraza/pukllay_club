@@ -192,6 +192,17 @@ Plans:
 
 - [x] 01.1-07-PLAN.md — Empty/loading/error states and the branded 404 page (SHELL-05)
 
+### Phase 01.2: Catalog & Detail Navigation Polish (INSERTED)
+
+**Goal:** [Urgent work - to be planned] — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped
+**Requirements**: TBD
+**Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 01.2 to break down)
+
 ### Phase 2: Natural-Language Spanish Search + Auth
 
 **Goal**: Members can describe what they want in plain Spanish and get matched games — the core value of the product — then save favorites behind lightweight auth.
