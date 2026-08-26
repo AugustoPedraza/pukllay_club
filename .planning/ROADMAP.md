@@ -197,12 +197,12 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01.2-01-PLAN.md — D-08 tracer: breadcrumb carries catalog filters forward (new shared `CatalogFilters` parse/encode/sanitise module)
+- [x] 01.2-01-PLAN.md — D-08 tracer: breadcrumb carries catalog filters forward (new shared `CatalogFilters` parse/encode/sanitise module)
 - [ ] 01.2-02-PLAN.md — D-06: rank "Juegos similares" by shared mechanics/themes within the weight band
 
 **Wave 2** *(blocked on Wave 1 completion)*
