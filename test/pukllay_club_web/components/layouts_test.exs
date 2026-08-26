@@ -616,6 +616,78 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  describe "app/1 search-morph server-owned open state (01.2-11)" do
+    # Two directions, not one — a single-direction test would still pass
+    # against a rule that unconditionally emitted the class (the exact bug
+    # class Task 1 fixes: the class must be PRESENT when true and ABSENT
+    # when false, not merely present-when-true).
+    test "search_expanded=true renders is-open on the morph and is-search-open on the nav row" do
+      html = render_component(&render_with_nav_search/1, %{search_expanded: true})
+
+      morph_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-search-morph") |> LazyHTML.to_html()
+
+      nav_inner_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-nav-inner") |> LazyHTML.to_html()
+
+      assert morph_html =~ "is-open"
+      assert nav_inner_html =~ "is-search-open"
+    end
+
+    test "search_expanded=false renders neither modifier class" do
+      html = render_component(&render_with_nav_search/1, %{search_expanded: false})
+
+      morph_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-search-morph") |> LazyHTML.to_html()
+
+      nav_inner_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-nav-inner") |> LazyHTML.to_html()
+
+      refute morph_html =~ "is-open"
+      refute nav_inner_html =~ "is-search-open"
+    end
+
+    test "the toggle and close buttons carry open-search/close-search and their state-derived aria-expanded/tabindex in both directions" do
+      html_closed = render_component(&render_with_nav_search/1, %{search_expanded: false})
+      html_open = render_component(&render_with_nav_search/1, %{search_expanded: true})
+
+      toggle_closed =
+        html_closed
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-toggle")
+        |> LazyHTML.to_html()
+
+      close_closed =
+        html_closed
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-close")
+        |> LazyHTML.to_html()
+
+      toggle_open =
+        html_open
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-toggle")
+        |> LazyHTML.to_html()
+
+      close_open =
+        html_open
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-close")
+        |> LazyHTML.to_html()
+
+      assert toggle_closed =~ ~s(phx-click="open-search")
+      assert close_closed =~ ~s(phx-click="close-search")
+
+      assert toggle_closed =~ ~s(aria-expanded="false")
+      assert toggle_closed =~ ~s(tabindex="0")
+      assert close_closed =~ ~s(tabindex="-1")
+
+      assert toggle_open =~ ~s(aria-expanded="true")
+      assert toggle_open =~ ~s(tabindex="-1")
+      assert close_open =~ ~s(tabindex="0")
+    end
+  end
+
   describe "app/1 mobile nav drawer (01.1-09)" do
     test "the hamburger renders with a Spanish aria-label and aria-controls=\"pk-nav-drawer\"" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})

@@ -1190,6 +1190,108 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "search-morph server-owned open state (G-01.2-2, G-01.2-3)" do
+    # The strip regression, pinned. Pre-01.2-11, .pk-search-morph carried a
+    # literal `class="pk-search-morph"` string alongside a dynamic
+    # data-search-expanded attribute on the SAME element — the moment any
+    # of the element's dynamic inputs changed (here: @q flipping
+    # browsing_results?/1, which drops the nav_menu/subnav sibling slots),
+    # LiveView re-applied the server's attribute set and stripped the
+    # client-added `.is-open` class. syncMorph() then silently re-added it
+    # but never restored focus, so the member's next keystroke went
+    # nowhere. Now the class is rendered FROM :search_expanded on every
+    # render, so there is nothing left to strip.
+    test "opening the search then typing a query that flips browsing_results? leaves the pill open",
+         %{conn: conn} do
+      game_fixture(%{name: "Some Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "open-search", %{})
+      assert html =~ ~s(data-search-expanded="true")
+      assert html =~ "is-open"
+
+      html2 =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Some"})
+
+      assert html2 =~ ~s(data-search-expanded="true")
+      assert html2 =~ "is-open"
+    end
+
+    test "close-search removes the open state, and a subsequent handle_params for the same query does not restore it",
+         %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/?q=Catan")
+      assert html =~ ~s(data-search-expanded="true")
+
+      html2 = render_click(view, "close-search", %{})
+      assert html2 =~ ~s(data-search-expanded="false")
+
+      # Re-runs handle_params/3 on the SAME LiveView process with the
+      # identical query string — the widen-only rule must not treat this
+      # as "a URL carrying a query" reopening what the member just closed.
+      html3 = render_patch(view, ~p"/?q=Catan")
+      assert html3 =~ ~s(data-search-expanded="false")
+    end
+
+    # The assertion that the deleted document-level outside-press listener
+    # (G-01.2-3/G-01.2-4 defect A) is really gone: every filter-modal
+    # interaction below is a full LiveView round trip, and none of them
+    # touch :search_expanded server-side.
+    test "opening the filter modal, toggling a facet, and closing it leaves the open state untouched",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "open-search", %{})
+
+      html =
+        view
+        |> element(~s([aria-label="Abrir filtros"]))
+        |> render_click()
+
+      assert html =~ ~s(data-search-expanded="true")
+
+      html2 =
+        view
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
+        |> render_click()
+
+      assert html2 =~ ~s(data-search-expanded="true")
+
+      html3 = render_click(view, "close-filters", %{})
+      assert html3 =~ ~s(data-search-expanded="true")
+    end
+  end
+
+  describe "card-vs-preview href parity for the forwarded ?from= filter state (G-01.2-1)" do
+    # The debug session found no defect here — GameCard and GamePreview
+    # mirror the same three-clause detail_path/2 from the same @from_query
+    # assign — but that surface was unreachable while search was broken, so
+    # nothing had ever observed it. This is what makes the finding
+    # permanent rather than a claim: string equality, not a substring
+    # match on one side.
+    test "GameCard's own link and GamePreview's Ver detalles CTA build identical hrefs for the same game",
+         %{conn: conn} do
+      game_fixture(%{name: "Parity Game"})
+
+      {:ok, _view, html} = live(conn, ~p"/?q=Parity")
+
+      card_html = grid_html(html)
+
+      [card_tag] = Regex.run(~r/<a[^>]*data-game-card[^>]*>/, card_html)
+      [_, card_href] = Regex.run(~r/href="([^"]+)"/, card_tag)
+
+      [preview_tag] = Regex.run(~r/<a[^>]*pk-preview-cta[^>]*>/, card_html)
+      [_, preview_href] = Regex.run(~r/href="([^"]+)"/, preview_tag)
+
+      assert card_href == preview_href
+      assert card_href =~ "from="
+    end
+  end
+
   describe "no join CTA in the header (D-05 superseded, plan 01.1-08)" do
     test "the #app-header subtree contains no join-CTA label", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/")

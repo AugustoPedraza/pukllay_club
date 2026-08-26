@@ -132,6 +132,9 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def handle_params(params, _uri, socket) do
     if connected?(socket) do
+      # Captured BEFORE reassigning filters, so this reads whatever the
+      # member's session already had (including a deliberate close-search).
+      was_filtered? = filters_active?(socket.assigns)
       filters = CatalogFilters.from_params(params)
 
       socket =
@@ -146,14 +149,21 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         |> assign(:min_age, filters.min_age)
         |> assign(:sort, filters.sort)
 
-      # Widen-only: a URL that carries a query or any active filter may OPEN
-      # the search box, but nothing derived from params may ever force it
-      # closed — that's the exact contract violation that let a server
-      # round-trip strip an open box shut (G-01.2-2). Only "close-search"
-      # sets this false.
+      # Widen-only, and only on a genuine TRANSITION into "has active
+      # filters" caused by THIS params application — a URL that newly
+      # carries a query or facet may OPEN the box, but nothing derived from
+      # params may ever force it closed, and re-processing filter state
+      # that was ALREADY active before this call (e.g. a patch to the exact
+      # same query after the member explicitly closed the box) must not
+      # resurrect it either — that's the exact contract violation that let
+      # a server round-trip strip an open box shut, and its mirror image
+      # (a member's close being immediately undone), both G-01.2-2/
+      # G-01.2-3. Only the close-search event ever sets this false.
+      now_filtered? = filters_active?(socket.assigns)
+
       socket =
         socket
-        |> assign(:search_expanded, socket.assigns.search_expanded or filters_active?(socket.assigns))
+        |> assign(:search_expanded, socket.assigns.search_expanded or (now_filtered? and not was_filtered?))
         |> apply_filters()
 
       {:noreply, socket}

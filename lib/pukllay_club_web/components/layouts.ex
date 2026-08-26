@@ -146,6 +146,7 @@ defmodule PukllayClubWeb.Layouts do
         "nav_links slot — still gets a real menu)."
 
   slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
+
   slot :nav_search,
     doc:
       "the search form, rendered inside the header aligned with row content. The toggle and " <>
@@ -155,6 +156,7 @@ defmodule PukllayClubWeb.Layouts do
         "crashes that LiveView. `CatalogLive.Index` sets `:search_expanded` from them; " <>
         "`CatalogLive.Show` renders a plain native GET form here and never varies " <>
         "`search_expanded` (always `false`), so its clauses are no-ops."
+
   slot :crumb, doc: "breadcrumb content for a genuine drill-down page (Detalle only)"
 
   slot :nav_menu,
