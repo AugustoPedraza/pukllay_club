@@ -28,7 +28,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   Every field from this plan's `<planner_assumption>` omission table is
   individually conditional: an absent field removes its whole row/element,
-  never a blank placeholder.
+  never a blank placeholder. Ficha técnica applies this at two levels
+  (01.2-04, D-04/D-05): each remaining row keeps its own independent `:if`
+  guard, AND the section heading plus the list are themselves wrapped in
+  `ficha_tecnica?/1` so a game with none of the five carriable fields
+  (min_age, year_published, designers, publishers, bgg_id) shows no empty
+  heading over an empty grid.
 
   Mobile chrome (SHELL-03, plan 01.1-04): `.DetailChrome` drives the fixed
   bottom CTA bar and the sticky title-echo bar off a single passive
@@ -373,16 +378,8 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   href_fun={fn label -> ~p"/?themes=#{label}" end}
                 />
 
-                <h2 class="pk-section-heading">Ficha técnica</h2>
-                <dl class="pk-spec-list">
-                  <div :if={@game.min_players && @game.max_players} class="pk-spec-row">
-                    <dt>Jugadores</dt>
-                    <dd>{@game.min_players}-{@game.max_players}</dd>
-                  </div>
-                  <div :if={playtime_text(@game)} class="pk-spec-row">
-                    <dt>Duración</dt>
-                    <dd>{playtime_text(@game)}</dd>
-                  </div>
+                <h2 :if={ficha_tecnica?(@game)} class="pk-section-heading">Ficha técnica</h2>
+                <dl :if={ficha_tecnica?(@game)} class="pk-spec-list">
                   <div :if={@game.min_age} class="pk-spec-row">
                     <dt>Edad mínima</dt>
                     <dd>{@game.min_age}+</dd>
@@ -398,14 +395,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   <div :if={@game.publishers != []} class="pk-spec-row pk-spec-row--wide">
                     <dt>Editorial</dt>
                     <dd>{Enum.join(@game.publishers, ", ")}</dd>
-                  </div>
-                  <div class="pk-spec-row pk-spec-row--wide">
-                    <dt>Ilustrador</dt>
-                    <dd>No disponible</dd>
-                  </div>
-                  <div class="pk-spec-row pk-spec-row--wide">
-                    <dt>Puesto en el ranking BGG</dt>
-                    <dd>No disponible</dd>
                   </div>
                   <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
                     <dd>
@@ -782,14 +771,19 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     end
   end
 
-  defp playtime_text(%{playing_time: t}) when is_integer(t), do: "#{t} min"
-
-  defp playtime_text(%{min_playtime: min, max_playtime: max}) when is_integer(min) and is_integer(max) and min != max,
-    do: "#{min}-#{max} min"
-
-  defp playtime_text(%{min_playtime: min}) when is_integer(min), do: "#{min} min"
-  defp playtime_text(%{max_playtime: max}) when is_integer(max), do: "#{max} min"
-  defp playtime_text(_game), do: nil
+  # D-04/D-05 (01.2-04): the UI-SPEC `zero-one-many` backstop for Ficha
+  # técnica — the section (heading + list) renders only when at least one
+  # of the five remaining carriable fields is present, so a minimal-data
+  # game never shows a bare heading over an empty grid. Every field read
+  # here is present on every %Game{} (two integers, two array columns with
+  # `default: []`, one nullable integer) — no nil-dereference path exists.
+  defp ficha_tecnica?(game) do
+    not is_nil(game.min_age) or
+      not is_nil(game.year_published) or
+      game.designers != [] or
+      game.publishers != [] or
+      not is_nil(game.bgg_id)
+  end
 
   # Subtitle for the Juegos similares shelf — reuses Vocabulary.weight_band/1's
   # existing plain-Spanish descriptor label rather than authoring new copy
