@@ -689,6 +689,68 @@ body.pk-sheet-open {
   z-index: 50;
 }
 
+/* G-01.2-8 gap closure (01.2-15). Replaces phx.new's stock #client-error /
+   #server-error toast (`toast toast-top toast-end`, core_components.ex
+   flash/1) that used to fire on a genuine WEBSOCKET TRANSPORT DISCONNECT.
+   This is a categorically different failure mode from CatalogLive.Index's
+   `:more_error` inline retry line, which only covers a live, connected
+   query failure over an already-established channel — the two stay
+   separate surfaces (connection-feedback.md's "What to Avoid").
+
+   Sketch 030 Round 3: the accent tint, never --color-error — a brief,
+   usually self-recovering reconnect must not read as an alarm.
+
+   `display: flex` is declared outright (not switched from `none` by a body
+   class the way the sketch did it): visibility here is owned entirely by
+   the `hidden` attribute + the element's own phx-disconnected/phx-connected
+   bindings in layouts.ex, so there is no CSS-side toggle to write. */
+.pk-conn-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--color-accent);
+  color: var(--color-accent-content);
+  border-bottom: 1px solid var(--color-base-300);
+  padding: 11px 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.pk-conn-spinner {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+/* No-preference gate (matches .pk-scroll-top's established idiom above,
+   NOT a new per-selector `prefers-reduced-motion: reduce` override) — this
+   file already retired the hand-maintained reduce-block-per-selector
+   pattern (see the "REDUCED-MOTION GUARD" comment near the end of this
+   file) in favour of one universal `*` guard with !important. A local
+   `reduce` override here would be dead weight layered on top of that
+   guard, not a second line of defense: the universal rule already forces
+   `animation-duration: 1ms !important` on every element, keyframe
+   included. Gating the animation's very existence behind `no-preference`
+   (rather than declaring it unconditionally and relying solely on the
+   universal override) is the same belt-and-braces posture .pk-scroll-top
+   already uses. */
+@media (prefers-reduced-motion: no-preference) {
+  .pk-conn-spinner {
+    animation: pk-spin 0.7s linear infinite;
+  }
+}
+
+@keyframes pk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .pk-nav {
   background: var(--color-base-200);
   border-bottom: 1px solid transparent;

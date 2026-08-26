@@ -508,6 +508,49 @@ defmodule PukllayClubWeb.Layouts do
     </div>
 
     <%!--
+    G-01.2-8 gap closure (01.2-15). Replaces the stock `phx.new` `#client-error`
+    / `#server-error` toast that flash_group/1 used to render — that toast fired
+    on a genuine WEBSOCKET TRANSPORT DISCONNECT (a dropped LiveView socket, e.g.
+    real offline or a server restart), which is a categorically different
+    failure mode from CatalogLive.Index's `:more_error` inline retry line
+    (`.pk-shelf`'s load-more failure, which only fires on a live, connected
+    query failure over an already-established channel). The two surfaces stay
+    separate on purpose — see connection-feedback.md's "What to Avoid".
+
+    Placement is deliberate and both halves of it matter:
+      1. It is a sibling of the two #app-header branches above, inside the
+         LiveView root container, so LiveView's binding scan finds this
+         element's `phx-disconnected` / `phx-connected` attributes. A bar
+         rendered outside the root would never fire.
+      2. It is OUTSIDE #app-header, whose own getBoundingClientRect().height is
+         what .CatalogNav publishes as --pk-header-h. .pk-shelf's
+         scroll-margin-top and .DetailChrome's title-echo threshold both
+         consume that variable, so a bar nested inside the header would shift
+         both of them at the exact moment the socket drops. In flow beneath
+         the header instead, showing this bar only pushes content down.
+
+    Sketch 030 Round 3's deliberate colour choice: the accent tint, not
+    --color-error — a brief, usually self-recovering reconnect must not read
+    as an alarm.
+    --%>
+    <div
+      id="connection-status"
+      class="pk-conn-banner"
+      role="status"
+      aria-live="polite"
+      phx-disconnected={
+        show("#connection-status") |> JS.remove_attribute("hidden", to: "#connection-status")
+      }
+      phx-connected={
+        hide("#connection-status") |> JS.set_attribute({"hidden", ""}, to: "#connection-status")
+      }
+      hidden
+    >
+      <span class="pk-conn-spinner" aria-hidden="true"></span>
+      <span>Reconectando… no encontramos tu conexión a internet</span>
+    </div>
+
+    <%!--
     OUTSIDE #app-header, deliberately (debug search-right-align-mobile, cycle 5,
     on the user's explicit call). This slot used to render as a child of the
     header, and .pk-header-sticky is `position: sticky; top: 0` — sticky pins the
@@ -1077,36 +1120,6 @@ defmodule PukllayClubWeb.Layouts do
     <div id={@id} aria-live="polite">
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:error} flash={@flash} />
-
-      <.flash
-        id="client-error"
-        kind={:error}
-        title={gettext("We can't find the internet")}
-        phx-disconnected={
-          show(".phx-client-error #client-error")
-          |> JS.remove_attribute("hidden", to: ".phx-client-error #client-error")
-        }
-        phx-connected={hide("#client-error") |> JS.set_attribute({"hidden", ""})}
-        hidden
-      >
-        {gettext("Attempting to reconnect")}
-        <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
-      </.flash>
-
-      <.flash
-        id="server-error"
-        kind={:error}
-        title={gettext("Something went wrong!")}
-        phx-disconnected={
-          show(".phx-server-error #server-error")
-          |> JS.remove_attribute("hidden", to: ".phx-server-error #server-error")
-        }
-        phx-connected={hide("#server-error") |> JS.set_attribute({"hidden", ""})}
-        hidden
-      >
-        {gettext("Attempting to reconnect")}
-        <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
-      </.flash>
     </div>
     """
   end
