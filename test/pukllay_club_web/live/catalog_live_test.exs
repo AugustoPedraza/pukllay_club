@@ -842,6 +842,263 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     # see the plan's SUMMARY for the same note.
   end
 
+  describe "active-filters summary row (G-01.2-4, sketch 029 winner C)" do
+    test "several facets, a scalar and a query active render one chip per filter, using the modal's own labels",
+         %{conn: conn} do
+      game_fixture(%{
+        name: "Multi Filter Game",
+        weight_band: "ingenio_estratega",
+        mechanics: ["Trading"],
+        min_players: 3,
+        max_players: 3
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "weight_bands", "choice" => "ingenio_estratega"})
+      render_click(view, "toggle-facet", %{"facet" => "mechanics", "choice" => "Comercia"})
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "3"})
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Multi"})
+
+      chip_html = active_filter_chips_html(html)
+
+      assert chip_html =~ "Nivel: Ingenio estratega"
+      assert chip_html =~ "Mecánica: Comercia"
+      assert chip_html =~ "Jugadores: 3"
+      assert chip_html =~ "Búsqueda: Multi"
+    end
+
+    test "only a query active renders exactly one chip, naming the query", %{conn: conn} do
+      game_fixture(%{name: "Query Only Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Query"})
+
+      chips =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-active-filter-chip")
+
+      assert Enum.count(chips) == 1
+      assert LazyHTML.to_html(chips) =~ "Búsqueda: Query"
+    end
+
+    test "the unfiltered carousel surface renders no summary chips", %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      refute html =~ "pk-active-filter-chip"
+    end
+
+    test "clicking a facet chip drops exactly that filter and leaves the others intact", %{
+      conn: conn
+    } do
+      game_fixture(%{
+        name: "Both Match",
+        weight_band: "ingenio_estratega",
+        mechanics: ["Trading"]
+      })
+
+      game_fixture(%{name: "Only Mechanic", mechanics: ["Trading"]})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "weight_bands", "choice" => "ingenio_estratega"})
+      render_click(view, "toggle-facet", %{"facet" => "mechanics", "choice" => "Comercia"})
+
+      html =
+        view
+        |> element(~s(.pk-active-filter-chip[phx-value-facet="weight_bands"]))
+        |> render_click()
+
+      grid = grid_html(html)
+      assert grid =~ "Both Match"
+      assert grid =~ "Only Mechanic"
+      refute html =~ "Nivel: Ingenio estratega"
+      assert html =~ "Mecánica: Comercia"
+    end
+
+    test "clicking the query chip clears the query and leaves facets intact", %{conn: conn} do
+      game_fixture(%{name: "Facet And Query", mechanics: ["Trading"]})
+      game_fixture(%{name: "Facet Only", mechanics: ["Trading"]})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "mechanics", "choice" => "Comercia"})
+
+      view
+      |> form("#catalog-search-form")
+      |> render_change(%{q: "Facet And"})
+
+      html =
+        view
+        |> element(~s(.pk-active-filter-chip[phx-click="clear-query"]))
+        |> render_click()
+
+      assert html =~ "Mecánica: Comercia"
+      refute html =~ "Búsqueda:"
+
+      grid = grid_html(html)
+      assert grid =~ "Facet And Query"
+      assert grid =~ "Facet Only"
+    end
+
+    test "removing the last remaining filter chip returns the member to the carousel surface", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Solo Filter Game", weight_band: "ingenio_estratega"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "weight_bands", "choice" => "ingenio_estratega"})
+
+      html =
+        view
+        |> element(~s(.pk-active-filter-chip[phx-value-facet="weight_bands"]))
+        |> render_click()
+
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+    end
+
+    test "the clear-everything action drops every active filter at once", %{conn: conn} do
+      game_fixture(%{name: "Cleared Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "mechanics", "choice" => "Comercia"})
+
+      view
+      |> form("#catalog-search-form")
+      |> render_change(%{q: "Cleared"})
+
+      html =
+        view
+        |> element(".pk-clear-filters-link")
+        |> render_click()
+
+      refute html =~ "pk-active-filter-chip"
+      assert html =~ ~s(id="carousel-rows")
+    end
+
+    test "chips do not carry filter_modal's own selection-chip class (Round 2's separation, sketch 029)",
+         %{conn: conn} do
+      game_fixture(%{name: "Any Game", weight_band: "ingenio_estratega"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        render_click(view, "toggle-facet", %{"facet" => "weight_bands", "choice" => "ingenio_estratega"})
+
+      chip_html = active_filter_chips_html(html)
+
+      refute chip_html =~ "badge-primary"
+      refute chip_html =~ "badge-neutral"
+      refute chip_html =~ ~s(class="badge)
+    end
+  end
+
+  describe "settling the background surface once per modal close (G-01.2-4 defect C)" do
+    test "G-01.2-4: opening the modal on the carousel surface and toggling a facet leaves the rendered surface unchanged while the modal stays open",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+
+      html =
+        view
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
+        |> render_click()
+
+      # The background surface is FROZEN: still carousels, no grid heading
+      # — even though the filter is now active server-side and the modal's
+      # own live match count already reflects it. This looks like it
+      # contradicts D-01 (carousels XOR grid) but doesn't: D-01 governs the
+      # DESIRED surface (browsing_results?/1); this test is about the
+      # RENDERED one (:rendered_results), frozen deliberately while the
+      # modal covers it.
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+      refute html =~ "Resultados"
+      assert html =~ "Ver 1 juego"
+    end
+
+    test "G-01.2-4: closing that modal via the X commits the swap: the grid heading appears and the carousel container is gone",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+
+      view
+      |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
+      |> render_click()
+
+      html = view |> element("button[data-modal-close]") |> render_click()
+
+      assert html =~ "Resultados"
+      refute html =~ ~s(id="carousel-rows")
+    end
+
+    test "G-01.2-4: the repopulation test — after opening, filtering and closing via the X, the grid actually contains the matching card, not just an empty frame",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+
+      view
+      |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
+      |> render_click()
+
+      html = view |> element("button[data-modal-close]") |> render_click()
+
+      assert card_count(html) == 1
+      assert grid_html(html) =~ "Hobby Game"
+    end
+
+    test "G-01.2-4: the explicit-submission CTA with nothing selected renders a populated grid (UAT Test 4 clause 1)",
+         %{conn: conn} do
+      game_fixture(%{name: "Any Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "apply-filters", %{})
+
+      assert card_count(html) == 1
+    end
+
+    test "G-01.2-4: clear-filters returns the member to the carousels with the row actually populated (mirror-direction repopulation)",
+         %{conn: conn} do
+      game_fixture(%{name: "Crea Game", tags: ["#CreaConexiones"]})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "apply-filters", %{})
+      html = render_click(view, "clear-filters", %{})
+
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+      assert carousel_card_count(html, "crea_conexiones") == 1
+    end
+  end
+
   describe "persistent, discoverable carousel scroll controls (G-01-3)" do
     test "the landing render includes the rail marker and both scroll controls with Spanish aria-labels, and no inline script tag",
          %{conn: conn} do
@@ -1490,7 +1747,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html =~ "class=\"modal modal-open\""
     end
 
-    test "toggling a facet from inside the open surface narrows the grid and leaves the surface open",
+    # Superseded by Task 2 (G-01.2-4 defect C): this test used to assert the
+    # background grid narrowed the instant a facet was toggled inside the
+    # open modal — exactly the "jumps the UI all the time" bug this plan
+    # fixes. See the "surface unchanged while modal is open" test below
+    # (settling behaviour describe block) for the corrected contract; the
+    # live-count half of the old intent is still covered by the next test.
+    test "toggling a facet from inside the open surface leaves the modal open and its live count updated, without restructuring the page behind it",
          %{conn: conn} do
       game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
       game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
@@ -1504,10 +1767,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
-      grid = grid_html(html)
-      assert grid =~ "Hobby Game"
-      refute grid =~ "Expert Game"
       assert html =~ "modal-open"
+      assert html =~ "Ver 1 juego"
+      refute html =~ ~s(id="games")
+      assert html =~ ~s(id="carousel-rows")
     end
 
     test "the live match count in the surface changes as a facet is toggled", %{conn: conn} do
@@ -1814,6 +2077,17 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     html
     |> LazyHTML.from_document()
     |> LazyHTML.query("#games")
+    |> LazyHTML.to_html()
+  end
+
+  # Scopes assertions to the active-filters summary row's chips only
+  # (Task 1, G-01.2-4) — a plain substring search would also match a
+  # "Nivel"/"Jugadores" label rendered elsewhere on the page (e.g. inside
+  # the filter modal itself, which is always in the DOM).
+  defp active_filter_chips_html(html) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query(".pk-active-filter-chip")
     |> LazyHTML.to_html()
   end
 

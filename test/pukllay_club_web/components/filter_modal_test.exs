@@ -346,4 +346,36 @@ defmodule PukllayClubWeb.FilterModalTest do
       refute html =~ ~s(phx-value-scalar="min_age")
     end
   end
+
+  describe "footer CTA geometry (Task 2, G-01.2-4 defect C)" do
+    test "the primary action carries a Tailwind named min-width class and tabular-nums" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options,
+          total: 1
+        })
+
+      assert html =~ ~r/<button[^>]*btn-primary[^>]*min-w-\d+[^>]*tabular-nums[^>]*>/
+    end
+
+    test "the label still changes as the count changes — liveness was not traded away for the fixed width" do
+      html1 =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options,
+          total: 1
+        })
+
+      html2 =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options,
+          total: 42
+        })
+
+      assert html1 =~ "Ver 1 juego"
+      assert html2 =~ "Ver 42 juegos"
+    end
+  end
 end
