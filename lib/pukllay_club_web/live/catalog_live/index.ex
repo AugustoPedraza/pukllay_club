@@ -41,11 +41,20 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def mount(params, _session, socket) do
     loading? = not connected?(socket)
+    q = CatalogFilters.q(params)
 
     socket =
       socket
       |> assign(:page_title, "Catálogo")
-      |> assign(:q, CatalogFilters.q(params))
+      |> assign(:q, q)
+      # Member-owned, server-rendered open/closed state for the header's
+      # search-morph (01.2-11, closes G-01.2-2/G-01.2-3). Seeded true only
+      # when the mount URL already carries a query — handle_params/3 widens
+      # this (never narrows it) as more filter params arrive; only the
+      # close-search event ever sets it back to false. apply_filters/1 never
+      # reads or writes this assign — opening/closing the box changes no
+      # filter.
+      |> assign(:search_expanded, q != "")
       |> assign(:mechanics, [])
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
@@ -136,6 +145,15 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         |> assign(:max_playtime, filters.max_playtime)
         |> assign(:min_age, filters.min_age)
         |> assign(:sort, filters.sort)
+
+      # Widen-only: a URL that carries a query or any active filter may OPEN
+      # the search box, but nothing derived from params may ever force it
+      # closed — that's the exact contract violation that let a server
+      # round-trip strip an open box shut (G-01.2-2). Only "close-search"
+      # sets this false.
+      socket =
+        socket
+        |> assign(:search_expanded, socket.assigns.search_expanded or filters_active?(socket.assigns))
         |> apply_filters()
 
       {:noreply, socket}
@@ -206,6 +224,17 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   @impl true
   def handle_event("search", %{"q" => q}, socket) do
     {:noreply, socket |> assign(:q, String.slice(q, 0, 100)) |> apply_filters()}
+  end
+
+  # Server-owned search-morph open/close (01.2-11). Neither calls
+  # apply_filters/1 — opening or closing the box changes no filter, only
+  # whether it is visible.
+  def handle_event("open-search", _params, socket) do
+    {:noreply, assign(socket, :search_expanded, true)}
+  end
+
+  def handle_event("close-search", _params, socket) do
+    {:noreply, assign(socket, :search_expanded, false)}
   end
 
   def handle_event("open-filters", _params, socket) do
@@ -588,7 +617,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       flash={@flash}
       fullbleed
       sticky
-      search_expanded={@q != "" or filters_active?(assigns)}
+      search_expanded={@search_expanded}
       active_nav={:inicio}
     >
       <:nav_links>

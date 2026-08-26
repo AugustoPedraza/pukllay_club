@@ -93,6 +93,19 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:reservation_error, nil)}
   end
 
+  # header_inner/1's search-morph toggle/close buttons now dispatch
+  # open-search/close-search unconditionally on any page filling the
+  # nav_search slot (01.2-11) — this page passes a hardcoded
+  # search_expanded={false} and never varies it (its nav_search slot is a
+  # plain native GET form to "/", not the catalog's live-filtered box), so
+  # both clauses are deliberate no-ops. Without them, clicking the search
+  # icon here would crash the LiveView with no matching handle_event clause.
+  @impl true
+  def handle_event("open-search", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("close-search", _params, socket), do: {:noreply, socket}
+
   @impl true
   def handle_event("select-image", %{"url" => url}, socket) do
     if url in gallery_thumbnails(socket.assigns.game) do

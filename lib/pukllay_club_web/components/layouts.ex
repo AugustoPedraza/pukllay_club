@@ -128,9 +128,14 @@ defmodule PukllayClubWeb.Layouts do
   attr :search_expanded, :boolean,
     default: false,
     doc:
-      "when true, the search-morph opens on mount (e.g. a catalog URL carrying ?q=) instead of " <>
-        "resting as a 44px icon. syncMorph() in .CatalogNav reads this via data-search-expanded " <>
-        "and only ever opens, never closes, so a server round-trip can never yank an open box shut."
+      "single source of truth for whether the search-morph is open (01.2-11, superseding the " <>
+        "previous open-only-never-closes contract that produced G-01.2-2/G-01.2-3). The class " <>
+        "list is rendered from this value server-side — no client JS ever adds or removes " <>
+        "`.is-open`/`.is-search-open` — so a LiveView patch can neither strip an open box shut " <>
+        "nor fail to reopen one. `.CatalogNav`'s hook reads data-search-expanded (still present) " <>
+        "only to decide where to move focus on a transition; it owns no visual state. Any page " <>
+        "that fills the `nav_search` slot must handle the `open-search`/`close-search` events " <>
+        "the toggle and close buttons dispatch — see the `nav_search` slot doc."
 
   attr :active_nav, :atom,
     default: nil,
@@ -141,7 +146,15 @@ defmodule PukllayClubWeb.Layouts do
         "nav_links slot — still gets a real menu)."
 
   slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
-  slot :nav_search, doc: "the search form, rendered inside the header aligned with row content"
+  slot :nav_search,
+    doc:
+      "the search form, rendered inside the header aligned with row content. The toggle and " <>
+        "close buttons that reveal/hide this slot's content dispatch page-owned " <>
+        "`open-search`/`close-search` events (01.2-11) — any page filling this slot must " <>
+        "implement both `handle_event` clauses, even as a no-op, or a click on the search icon " <>
+        "crashes that LiveView. `CatalogLive.Index` sets `:search_expanded` from them; " <>
+        "`CatalogLive.Show` renders a plain native GET form here and never varies " <>
+        "`search_expanded` (always `false`), so its clauses are no-ops."
   slot :crumb, doc: "breadcrumb content for a genuine drill-down page (Detalle only)"
 
   slot :nav_menu,
@@ -538,7 +551,10 @@ defmodule PukllayClubWeb.Layouts do
   defp header_inner(assigns) do
     ~H"""
     <header class="navbar pk-nav px-0">
-      <div class="pk-nav-inner mx-auto w-full max-w-7xl pk-gutter">
+      <div class={[
+        "pk-nav-inner mx-auto w-full max-w-7xl pk-gutter",
+        @search_expanded && "is-search-open"
+      ]}>
         <button
           type="button"
           class="pk-nav-hamburger"
@@ -563,9 +579,15 @@ defmodule PukllayClubWeb.Layouts do
           {render_slot(@nav_links)}
         </div>
         {render_slot(@nav_menu)}
+        <%!-- Open/closed state is server-owned (01.2-11): the class list is
+        computed from @search_expanded on every render, so no LiveView patch
+        (a query flipping, a filter-badge count appearing, a nav_menu/subnav
+        sibling slot disappearing) can ever strip an open pill shut or leave
+        a closed one stuck. data-search-expanded stays for .CatalogNav's
+        focus-transition logic only — it never drives a class from JS. --%>
         <div
           :if={@nav_search != []}
-          class="pk-search-morph"
+          class={["pk-search-morph", @search_expanded && "is-open"]}
           data-search-expanded={to_string(@search_expanded)}
         >
           <button
@@ -573,8 +595,10 @@ defmodule PukllayClubWeb.Layouts do
             class="pk-search-morph-toggle"
             aria-label="Buscar"
             title="Buscar"
-            aria-expanded="false"
+            aria-expanded={to_string(@search_expanded)}
             aria-controls="pk-nav-search-region"
+            tabindex={if @search_expanded, do: "-1", else: "0"}
+            phx-click="open-search"
           >
             <.icon name="hero-magnifying-glass" class="size-5" />
           </button>
@@ -585,7 +609,8 @@ defmodule PukllayClubWeb.Layouts do
             type="button"
             class="pk-search-morph-close"
             aria-label="Cerrar búsqueda"
-            tabindex="-1"
+            tabindex={if @search_expanded, do: "0", else: "-1"}
+            phx-click="close-search"
           >
             <.icon name="hero-x-mark-micro" class="size-4" />
           </button>

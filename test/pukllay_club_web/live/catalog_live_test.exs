@@ -1439,9 +1439,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html =~ "class=\"modal modal-open\""
     end
 
-    test "with a facet active and q empty, the morph carries data-search-expanded=\"true\"", %{
-      conn: conn
-    } do
+    # 01.2-11 superseded this test's prior expectation. Toggling a facet no
+    # longer force-opens the search pill to reveal the filter badge (the
+    # collapsible-badge defect from G-01.2-4) — :search_expanded is now
+    # member-owned, only opened by open-search/a URL-carried filter at
+    # handle_params time, or closed by close-search. A facet click routes
+    # through apply_filters/1 alone, which never touches it.
+    test "toggling a facet from a closed pill does not force it open", %{conn: conn} do
       game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
 
       {:ok, view, _html} = live(conn, ~p"/")
@@ -1451,7 +1455,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
-      assert html =~ ~s(data-search-expanded="true")
+      assert html =~ ~s(data-search-expanded="false")
     end
 
     test "with no facet active and q empty, the morph carries data-search-expanded=\"false\"", %{
