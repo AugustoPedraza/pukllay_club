@@ -62,7 +62,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "+7"
     end
 
-    test "renders designers, publishers, players, playtime, age, and description when present, omitting each individually when absent",
+    test "renders designers, publishers, age, and description in Ficha técnica, and players/duration once in the facts row (D-05)",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -76,11 +76,21 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
+      doc = LazyHTML.from_document(html)
+      facts_html = doc |> LazyHTML.query(".pk-facts-row") |> LazyHTML.to_html()
+      spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
       assert html =~ "Klaus Teuber"
       assert html =~ "Devir"
-      assert html =~ "3-4"
       assert html =~ "10+"
       assert html =~ "Compite por colonizar la isla de Catán."
+
+      # D-05: players is represented exactly once, by the facts row —
+      # never restated as a Ficha técnica spec row.
+      assert facts_html =~ "3-4"
+      refute spec_html =~ "3-4"
+      refute spec_html =~ "Jugadores"
+      refute spec_html =~ "Duración"
     end
 
     test "omits designers/publishers/age/description rows individually when absent", %{
@@ -346,7 +356,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert view.module == PukllayClubWeb.CatalogLive.Show
     end
 
-    test "the ficha técnica renders Ilustrador as No disponible and no BGG rank digits", %{
+    test "the ficha técnica never renders the dead Ilustrador or BGG-ranking rows (D-04)", %{
       conn: conn
     } do
       game = game_fixture()
@@ -356,15 +366,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       doc = LazyHTML.from_document(html)
       spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
 
-      assert spec_html =~ "Ilustrador"
-      assert spec_html =~ "Puesto en el ranking BGG"
-
-      illustrator_row =
-        doc
-        |> LazyHTML.query(".pk-spec-row")
-        |> Enum.find(&(LazyHTML.text(&1) =~ "Ilustrador"))
-
-      assert LazyHTML.text(illustrator_row) =~ "No disponible"
+      refute spec_html =~ "Ilustrador"
+      refute spec_html =~ "Puesto en el ranking BGG"
+      refute spec_html =~ "No disponible"
     end
 
     test "a game with a bgg_id renders a boardgamegeek.com link in the ficha técnica, one without renders none",
@@ -390,6 +394,43 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       assert spec_html_with =~ "boardgamegeek.com/boardgame/13"
       refute spec_html_without =~ "boardgamegeek.com"
+    end
+
+    test "a minimal-data game with none of the five spec fields renders no Ficha técnica heading, and the rest of the page still renders",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Juego Minimo",
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: [],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Ficha técnica"
+      refute html =~ "pk-spec-list"
+      assert html =~ "Juego Minimo"
+      assert html =~ "Reservar para el sábado"
+    end
+
+    test "a game with only a bgg_id and none of the other four fields still renders the Ficha técnica heading and the BGG link",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: [],
+          bgg_id: 77
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Ficha técnica"
+      assert html =~ "boardgamegeek.com/boardgame/77"
     end
 
     test "clicking the description toggle expands and collapses the clamp", %{conn: conn} do
@@ -561,6 +602,113 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     #     with the reserved body padding collapsing in the same transition
     #   - the title-echo bar's fade-in once the real <h1> has scrolled past
     #     the header
+  end
+
+  describe "buy-box redesign — panel, poster aspect, CTA prominence, cover fallback (D-07)" do
+    test "the buy-box cover carries the shared poster aspect class, not the wide preview ratio class",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      poster_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-poster-col") |> LazyHTML.to_html()
+
+      assert poster_html =~ "pk-card-poster"
+      refute poster_html =~ "pk-preview-poster"
+      refute poster_html =~ "aspect-video"
+    end
+
+    test "the poster column carries the panel treatment (secondary surface, rounded box, padding)",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      poster_col_class =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-poster-col")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_col_class =~ "bg-base-200"
+      assert poster_col_class =~ "rounded-box"
+      assert poster_col_class =~ "p-4"
+    end
+
+    test "the reserve CTA carries the large size step and full width, and the share control is absolutely positioned rather than a row sibling",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      poster_html = doc |> LazyHTML.query(".pk-poster-col") |> LazyHTML.to_html()
+
+      reserve_button_class =
+        doc
+        |> LazyHTML.query(".pk-poster-col button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert reserve_button_class =~ "btn-lg"
+      assert reserve_button_class =~ "w-full"
+      refute reserve_button_class =~ "flex-1"
+
+      # Structural assertion (not class-string matching): the share
+      # control's wrapper is an absolutely positioned sibling ancestor
+      # inside the poster column, not a flex-row sibling of the reserve
+      # button.
+      share_wrap_ancestor_class =
+        doc
+        |> LazyHTML.query(".pk-poster-col > div")
+        |> Enum.map(&LazyHTML.attribute(&1, "class"))
+        |> Enum.find(fn class -> List.first(class) =~ "absolute" end)
+
+      assert share_wrap_ancestor_class
+      assert poster_html =~ "detail-share-buybox"
+    end
+
+    test "the buy-box image carries the cover-fallback class and is immediately followed by a hidden placeholder sibling",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      cover_button_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-poster-col button[phx-click='open-lightbox']")
+        |> LazyHTML.to_html()
+
+      assert cover_button_html =~ "js-cover-fallback"
+
+      # Structural check (not just presence): the hidden placeholder is the
+      # <img>'s next sibling inside the same button, mirroring GameCard's
+      # shape verbatim, so the app-wide error listener's
+      # `target.nextElementSibling` lookup actually finds it.
+      [_before, after_img] =
+        String.split(cover_button_html, ~r/<img[^>]*js-cover-fallback[^>]*>/, parts: 2)
+
+      assert after_img =~ ~r/^\s*<div class="hidden/
+      assert after_img =~ "hero-puzzle-piece"
+    end
+
+    test "the mobile CTA bar still renders with its id, reserve button, and share control alongside the .DetailChrome hook",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      cta_bar_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#detail-cta-bar") |> LazyHTML.to_html()
+
+      assert html =~ ~s(id="detail-cta-bar")
+      assert cta_bar_html =~ ~s(phx-click="open-reservation")
+      assert cta_bar_html =~ "detail-share-ctabar"
+      assert html =~ ~s(phx-hook="PukllayClubWeb.CatalogLive.Show.DetailChrome")
+    end
   end
 
   describe "reservation flow (SHELL-03, T-01.1-02)" do
