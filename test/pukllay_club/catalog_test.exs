@@ -377,7 +377,7 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
-  describe "similar_games/1 (SHELL-03 — 01.1-03 checkpoint: weight-band, capped at 12)" do
+  describe "similar_games/1 (SHELL-03 — D-06: weight-band + shared mechanics/themes ranking, capped at 12)" do
     test "never includes the game itself" do
       game = game_fixture(%{name: "Self", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate", weight_band: "nivel_experto"})
@@ -418,6 +418,169 @@ defmodule PukllayClub.CatalogTest do
       end
 
       assert length(Catalog.similar_games(game)) == 12
+    end
+
+    test "ranks band-mates by shared mechanics/themes overlap, keeps zero-overlap band-mate last, excludes other-band games" do
+      # Names are deliberately chosen so alphabetical order is the OPPOSITE
+      # of overlap-ranked order ("Alfa..." would sort first, "Zulu..." last)
+      # — this proves ranking is driven by overlap, not incidentally by name.
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      candidate_high =
+        game_fixture(%{
+          name: "Zulu High Overlap",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      candidate_mid =
+        game_fixture(%{
+          name: "Mike Mid Overlap",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      candidate_zero =
+        game_fixture(%{
+          name: "Alfa Zero Overlap",
+          weight_band: "ingenio_estratega",
+          mechanics: [],
+          themes: []
+        })
+
+      candidate_other_band =
+        game_fixture(%{
+          name: "Other Band Full Overlap",
+          weight_band: "descubre_el_hobby",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert result_ids == [candidate_high.id, candidate_mid.id, candidate_zero.id]
+      refute candidate_other_band.id in result_ids
+    end
+
+    test "band-mates with identical overlap scores are ordered by name ascending, then id ascending" do
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      zebra =
+        game_fixture(%{name: "Zebra", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      alfa =
+        game_fixture(%{name: "Alfa", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      assert base |> Catalog.similar_games() |> Enum.map(& &1.id) == [alfa.id, zebra.id]
+    end
+
+    test "a base game with empty mechanics and empty themes returns its band-mates without raising" do
+      base =
+        game_fixture(%{name: "Base", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      bandmate =
+        game_fixture(%{
+          name: "Bandmate",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: ["Fantasy"]
+        })
+
+      assert base |> Catalog.similar_games() |> Enum.map(& &1.id) == [bandmate.id]
+    end
+
+    test "the cap cannot truncate away the best matches when more than 12 band-mates exist" do
+      # Names are deliberately chosen so the low-overlap candidates sort
+      # BEFORE the high-overlap ones alphabetically ("Alfa..." < "Zeta...")
+      # — a LIMIT applied before ranking would keep the 12 "Alfa" rows and
+      # drop all 3 high-overlap "Zeta" rows entirely.
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      high_overlap =
+        for n <- 1..3 do
+          game_fixture(%{
+            name: "Zeta High #{n}",
+            weight_band: "ingenio_estratega",
+            mechanics: ["Deck Building", "Set Collection"],
+            themes: []
+          })
+        end
+
+      for n <- 1..12 do
+        game_fixture(%{
+          name: "Alfa Low #{String.pad_leading(to_string(n), 2, "0")}",
+          weight_band: "ingenio_estratega",
+          mechanics: [],
+          themes: []
+        })
+      end
+
+      result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert length(result_ids) == 12
+      assert Enum.take(result_ids, 3) == Enum.map(high_overlap, & &1.id)
+    end
+
+    test "ordering is deterministic across repeated calls" do
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      zebra =
+        game_fixture(%{name: "Zebra", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      alfa =
+        game_fixture(%{name: "Alfa", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      expected = [alfa.id, zebra.id]
+
+      for _ <- 1..3 do
+        assert base |> Catalog.similar_games() |> Enum.map(& &1.id) == expected
+      end
+    end
+
+    test "a band-mate with empty mechanics/themes is returned (score 0) when the base game has both populated" do
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: ["Fantasy"]
+        })
+
+      empty_bandmate =
+        game_fixture(%{
+          name: "Empty Bandmate",
+          weight_band: "ingenio_estratega",
+          mechanics: [],
+          themes: []
+        })
+
+      assert empty_bandmate.id in Enum.map(Catalog.similar_games(base), & &1.id)
     end
   end
 end
