@@ -120,6 +120,14 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:carousel_needs_reset, false)
       |> stream(:games, [])
 
+    # Seeds :rendered_results correctly for the very first paint (Task 2,
+    # G-01.2-4 defect C) — settle_surface/1 is a no-op only while
+    # :filters_open is true, which it never is at mount, so this always
+    # runs and computes from whatever :q the URL already supplied above
+    # (matching the disconnected-render behaviour the inline predicate call
+    # used to have, byte for byte).
+    socket = settle_surface(socket)
+
     {:ok, socket}
   end
 
@@ -251,22 +259,48 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     {:noreply, assign(socket, :filters_open, true)}
   end
 
+  # Dismissal (X/backdrop) — changes no filter, but Task 2 (G-01.2-4 defect
+  # C) now makes it re-enter apply_filters/1 once :filters_open is false,
+  # exactly like "apply-filters" below. This is what settles
+  # :rendered_results onto whatever surface was already live underneath
+  # the modal, and — if the grid is about to reappear — repopulates its
+  # stream with a reset in the same round trip the grid reappears in. The
+  # extra query this costs is identical to the one every keystroke already
+  # ran while the modal was open; it now fires once per close instead.
   def handle_event("close-filters", _params, socket) do
-    {:noreply, assign(socket, :filters_open, false)}
+    {:noreply, socket |> assign(:filters_open, false) |> apply_filters()}
   end
 
   # D-02's one explicit submission signal, dispatched only by the filter
-  # modal's footer CTA (FilterModal Task 1). Deliberately does NOT call
-  # apply_filters/1: the modal is live-apply, so results are already
-  # current the instant a facet or the search box changes — this handler
-  # only records that the member asked to see the current result set, via
-  # :browse_all (see mount/3's comment on that assign).
+  # modal's footer CTA (FilterModal Task 1). Sets :browse_all (see mount/3's
+  # comment on that assign) and closes the modal, then re-enters
+  # apply_filters/1 (Task 2, G-01.2-4 defect C) — :filters_open must
+  # already be false when apply_filters/1 runs, since settle_surface/1
+  # (called from inside apply_filters/1) is a no-op while the modal is
+  # open. This is what settles :rendered_results onto the surface
+  # :browse_all now dictates AND repopulates the grid stream with a reset
+  # in the same round trip the grid reappears in — without it, a grid
+  # frozen out of the DOM while the member filtered would come back empty,
+  # the mirror of the carousel bug sync_carousel_visibility/1 was written
+  # to fix. :carousel_needs_reset is no longer set explicitly here:
+  # sync_carousel_visibility/1 (now reached via apply_filters/1) derives it
+  # from :rendered_results itself.
   def handle_event("apply-filters", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:filters_open, false)
-     |> assign(:browse_all, true)
-     |> assign(:carousel_needs_reset, true)}
+    socket =
+      socket
+      |> assign(:browse_all, true)
+      |> assign(:filters_open, false)
+      |> apply_filters()
+
+    {:noreply, socket}
+  end
+
+  # The active-filters summary's query chip (Task 1, sketch 029) has no
+  # existing toggle to reuse — shaped like `retry` below: parameterless,
+  # reads nothing from the client, re-enters the shared apply_filters/1
+  # pipeline every other filter-changing handler uses.
+  def handle_event("clear-query", _params, socket) do
+    {:noreply, socket |> assign(:q, "") |> apply_filters()}
   end
 
   # The payload key is `choice`, not `value`: LiveView's client-side
@@ -319,6 +353,12 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     {:noreply, apply_filters(socket)}
   end
 
+  # Dispatched both from FilterModal's own footer (inside the modal — Task
+  # 2, G-01.2-4 defect C) and from the empty-state banner (outside it,
+  # :filters_open already false there). :filters_open is set false
+  # unconditionally so both call sites end up settled the same way — a
+  # no-op re-assignment when it was already false, the modal-closing half
+  # of the contract when it wasn't.
   def handle_event("clear-filters", _params, socket) do
     socket =
       socket
@@ -332,6 +372,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:min_age, nil)
       |> assign(:sort, :name_asc)
       |> assign(:browse_all, false)
+      |> assign(:filters_open, false)
       |> apply_filters()
 
     {:noreply, socket}
@@ -471,15 +512,41 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           |> stream(:games, [], reset: true)
       end
 
-    sync_carousel_visibility(socket)
+    # settle_surface/1 MUST run before sync_carousel_visibility/1: the
+    # latter reasons about what's already in the DOM, so it has to read
+    # the very value the DOM was (or is about to be) rendered from — see
+    # settle_surface/1's own comment for the full ordering rationale
+    # (Task 2, G-01.2-4 defect C).
+    socket
+    |> settle_surface()
+    |> sync_carousel_visibility()
+  end
+
+  # Freezes which of the two browse surfaces is actually RENDERED while the
+  # modal is open (Task 2, closes G-01.2-4 defect C). browsing_results?/1
+  # stays the pure DESIRED-surface predicate — this is the only remaining
+  # caller of it — and every template `:if`, both slot guards and
+  # sync_carousel_visibility/1 read `:rendered_results` instead, so they
+  # can never disagree with what the DOM actually holds. A no-op while
+  # `@filters_open` is true: the assign stays frozen no matter how many
+  # facets the member clicks behind the blur, so the background surface
+  # never restructures underneath the open modal. Called from mount/3
+  # (`:filters_open` is always false there, so this also seeds the correct
+  # first-paint value from whatever `:q` the URL supplied) and from
+  # apply_filters/1 above.
+  defp settle_surface(%{assigns: assigns} = socket) do
+    if assigns.filters_open do
+      socket
+    else
+      assign(socket, :rendered_results, browsing_results?(assigns))
+    end
   end
 
   # See mount/3's comment on :carousel_needs_reset for the bug this fixes.
-  # Every filter-changing event funnels through here (D-01/D-02's
-  # "apply-filters" handler is the one deliberate exception — it flips
-  # `:carousel_needs_reset` itself, since it never calls apply_filters/1),
-  # so this is the single place that keeps the flag and the carousel's
-  # actual DOM/stream state in sync:
+  # Every filter-changing event funnels through apply_filters/1, which
+  # (Task 2) now always calls settle_surface/1 immediately before this, so
+  # this is the single place that keeps the flag and the carousel's actual
+  # DOM/stream state in sync:
   #   - the grid is about to show (or already is) -> the carousel-rows
   #     container will be (or stays) removed from the DOM -> mark it dirty.
   #   - the carousel is about to show and it was marked dirty -> the
@@ -493,7 +560,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   #     accumulation warning) -> no-op.
   defp sync_carousel_visibility(socket) do
     cond do
-      browsing_results?(socket.assigns) -> assign(socket, :carousel_needs_reset, true)
+      socket.assigns.rendered_results -> assign(socket, :carousel_needs_reset, true)
       socket.assigns.carousel_needs_reset -> refresh_carousel_rows(socket)
       true -> socket
     end
@@ -532,6 +599,149 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     length(assigns.mechanics) + length(assigns.themes) + length(assigns.weight_bands) +
       length(assigns.tags) +
       Enum.count([assigns.players, assigns.max_playtime, assigns.min_age], &(not is_nil(&1)))
+  end
+
+  # Chip descriptors for the active-filters summary row inline with the
+  # Resultados heading (Task 1, sketch 029 winner C, gap-closure G-01.2-4).
+  # One chip per filter active_filter_count/1 already counts — each
+  # selected mechanic/theme/weight band/editorial tag, the players/
+  # max_playtime scalars — PLUS a chip for the free-text query, which that
+  # counter deliberately excludes (see its own comment above). Every
+  # chip's :event/:facet/:scalar/:choice dispatch through the
+  # already-shipped `toggle-facet`/`toggle-scalar` handlers with the value
+  # that is currently selected, which those handlers already treat as a
+  # removal — no new server-side parsing, no new dynamic-key surface.
+  # Removal for mechanics/themes/weight_bands/tags routes through
+  # `facet_assign_key/1`; players/max_playtime through
+  # `scalar_assign_key/1`; the query chip has no equivalent toggle and
+  # dispatches the new parameterless `clear-query` handler instead.
+  # `min_age` gets no chip, matching its deliberate absence from every
+  # other filter control.
+  defp active_filter_chips(assigns) do
+    facet_chips(assigns.mechanics, "mechanics", "Mecánica") ++
+      facet_chips(assigns.themes, "themes", "Temática") ++
+      weight_band_chips(assigns.weight_bands) ++
+      tag_chips(assigns.tags) ++
+      scalar_chips(assigns) ++
+      query_chip(assigns.q)
+  end
+
+  # Mechanics/themes selections are already the Spanish label the modal's
+  # own checklist renders (facet_options.mechanics/themes come from
+  # Vocabulary.mechanic_options/0 / theme_options/0 — sorted Spanish
+  # labels — and `toggle-facet` stores the clicked option's value
+  # verbatim), so no second label lookup exists here.
+  defp facet_chips(selected, facet, facet_label) do
+    Enum.map(selected, fn value ->
+      %{
+        event: "toggle-facet",
+        facet: facet,
+        scalar: nil,
+        choice: value,
+        label: "#{facet_label}: #{value}",
+        aria_label: "Quitar filtro: #{facet_label} — #{value}"
+      }
+    end)
+  end
+
+  defp weight_band_chips(selected) do
+    Enum.map(selected, fn value ->
+      label = weight_band_label(value)
+
+      %{
+        event: "toggle-facet",
+        facet: "weight_bands",
+        scalar: nil,
+        choice: value,
+        label: "Nivel: #{label}",
+        aria_label: "Quitar filtro: Nivel — #{label}"
+      }
+    end)
+  end
+
+  defp weight_band_label(value) do
+    case Vocabulary.weight_band(value) do
+      %{label: label} -> label
+      nil -> value
+    end
+  end
+
+  # Editorial hashtags render verbatim (never renamed/reframed — same
+  # convention as GameChips.editorial_tags/1). "Etiqueta" is this chip's
+  # facet-name prefix since the modal itself has no rendered section for
+  # this facet to match against (sketch 019 Round 3 cut it, still
+  # deliberately unreturned — see FilterModal's moduledoc).
+  defp tag_chips(selected) do
+    Enum.map(selected, fn tag ->
+      %{
+        event: "toggle-facet",
+        facet: "tags",
+        scalar: nil,
+        choice: tag,
+        label: "Etiqueta: #{tag}",
+        aria_label: "Quitar filtro: Etiqueta — #{tag}"
+      }
+    end)
+  end
+
+  defp scalar_chips(assigns) do
+    players_chip(assigns.players) ++ max_playtime_chip(assigns.max_playtime)
+  end
+
+  defp players_chip(nil), do: []
+
+  defp players_chip(6) do
+    [scalar_chip_descriptor("players", "6", "Jugadores: 6+", "Quitar filtro: Jugadores — 6+")]
+  end
+
+  defp players_chip(n) do
+    [
+      scalar_chip_descriptor(
+        "players",
+        to_string(n),
+        "Jugadores: #{n}",
+        "Quitar filtro: Jugadores — #{n}"
+      )
+    ]
+  end
+
+  defp max_playtime_chip(nil), do: []
+
+  defp max_playtime_chip(n) do
+    [
+      scalar_chip_descriptor(
+        "max_playtime",
+        to_string(n),
+        "Duración máx.: #{n} min",
+        "Quitar filtro: Duración máx. — #{n} min"
+      )
+    ]
+  end
+
+  defp scalar_chip_descriptor(scalar, choice, label, aria_label) do
+    %{
+      event: "toggle-scalar",
+      facet: nil,
+      scalar: scalar,
+      choice: choice,
+      label: label,
+      aria_label: aria_label
+    }
+  end
+
+  defp query_chip(q) when q in [nil, ""], do: []
+
+  defp query_chip(q) do
+    [
+      %{
+        event: "clear-query",
+        facet: nil,
+        scalar: nil,
+        choice: nil,
+        label: "Búsqueda: #{q}",
+        aria_label: "Quitar filtro: Búsqueda — #{q}"
+      }
+    ]
   end
 
   # Ranks the curated row above the other 7 by colour (G-01-4) — never by a
@@ -657,10 +867,10 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           </span>
         </button>
       </:nav_search>
-      <:nav_menu :if={not browsing_results?(assigns)}>
+      <:nav_menu :if={not @rendered_results}>
         <Layouts.category_menu rows={index_rows(assigns)} />
       </:nav_menu>
-      <:subnav :if={not browsing_results?(assigns)}>
+      <:subnav :if={not @rendered_results}>
         <div class="pk-chip-nav-wrap">
           <nav class="pk-chip-nav" aria-label="Categorías">
             <span class="pk-chip-spacer" aria-hidden="true"></span>
@@ -693,7 +903,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         over a subtree containing focusable elements is itself an
         accessibility violation. --%>
         <div class={["space-y-6", "pk-dimmable", @filters_open && "is-dimmed"]}>
-          <div :if={not browsing_results?(assigns)} id="carousel-rows" class="space-y-8">
+          <div :if={not @rendered_results} id="carousel-rows" class="space-y-8">
             <%= if @loading do %>
               <CarouselRow.skeleton_row
                 :for={n <- 1..@skeleton_carousel_rows}
@@ -727,16 +937,47 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             </div>
           </div>
 
-          <div
-            :if={browsing_results?(assigns)}
-            class="mx-auto w-full max-w-7xl pk-gutter space-y-1"
-          >
-            <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
-            <p class="text-neutral text-sm">{result_count_text(@total)}</p>
+          <div :if={@rendered_results} class="mx-auto w-full max-w-7xl pk-gutter">
+            <%!-- sketch 029 winner C ("Inline with Heading", Round 2
+            rebalanced): chips share the heading's row, right after the
+            result count. `gap-x-3.5 gap-y-2` is Tailwind's named-scale
+            translation of the sketch's `gap: 8px 14px`. The chip row is a
+            SIBLING of the heading block, not nested inside it, so it wraps
+            to its own line independently on narrow widths. --%>
+            <div class="flex flex-wrap items-baseline gap-x-3.5 gap-y-2">
+              <div class="flex flex-col">
+                <h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>
+                <p class="text-neutral text-sm">{result_count_text(@total)}</p>
+              </div>
+              <div
+                :if={active_filter_chips(assigns) != []}
+                class="flex flex-wrap items-center gap-1.5"
+              >
+                <button
+                  :for={chip <- active_filter_chips(assigns)}
+                  type="button"
+                  phx-click={chip.event}
+                  phx-value-facet={chip.facet}
+                  phx-value-scalar={chip.scalar}
+                  phx-value-choice={chip.choice}
+                  aria-label={chip.aria_label}
+                  class="pk-active-filter-chip min-h-11"
+                >
+                  {chip.label}<span class="pk-active-filter-chip-x" aria-hidden="true">×</span>
+                </button>
+                <button
+                  type="button"
+                  phx-click="clear-filters"
+                  class="pk-clear-filters-link min-h-11"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+            </div>
           </div>
 
           <div
-            :if={browsing_results?(assigns) and @total == 0 and not @load_error}
+            :if={@rendered_results and @total == 0 and not @load_error}
             class="mx-auto w-full max-w-7xl pk-gutter"
           >
             <div class="pk-state">
@@ -747,7 +988,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           </div>
 
           <div
-            :if={browsing_results?(assigns) and @loading}
+            :if={@rendered_results and @loading}
             class="mx-auto w-full max-w-7xl pk-gutter"
           >
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -763,7 +1004,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           member's own Reintentar click (a plain phx-click, not routed
           through this hook) is what tries again. --%>
           <div
-            :if={browsing_results?(assigns) and not @loading}
+            :if={@rendered_results and not @loading}
             id="grid-scroll"
             phx-hook=".GridScroll"
             data-exhausted={to_string(@offset >= @total or @more_error)}
@@ -874,7 +1115,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           failed. Gated on @more_error, the second error channel
           mount/3 documents. --%>
           <div
-            :if={browsing_results?(assigns) and @more_error}
+            :if={@rendered_results and @more_error}
             class="mx-auto w-full max-w-7xl pk-gutter"
           >
             <div class="flex items-center justify-center gap-2">

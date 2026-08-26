@@ -391,7 +391,23 @@ defmodule PukllayClubWeb.FilterModal do
           >
             Limpiar filtros
           </.button>
-          <.button class={["btn", "btn-primary", "min-h-11"]} phx-click="apply-filters">
+          <%!-- min-w-40 + tabular-nums (Task 2, G-01.2-4 defect C): the label
+          carries a live match count, so it resizes on every facet click and
+          keystroke, dragging the whole footer row with it. Sized for the
+          widest string the catalog can produce — "Ver 9999 juegos" (16
+          chars, a 4-digit ceiling one order of magnitude above today's
+          ~434-game catalog, per the plan's own sizing note), which is wider
+          than the singular "Ver 1 juego" (11 chars) — via a character-count
+          estimate (no live browser measurement tool in this environment):
+          ~8px/char average for this button's font plus its own horizontal
+          padding comfortably fits inside 10rem. tabular-nums stops the
+          digits themselves from shifting width as the count changes. The
+          count still updates on every interaction — only the box stops
+          moving. --%>
+          <.button
+            class={["btn", "btn-primary", "min-h-11", "min-w-40", "tabular-nums"]}
+            phx-click="apply-filters"
+          >
             {cta_label(@total)}
           </.button>
         </div>

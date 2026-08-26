@@ -1022,6 +1022,66 @@ body.pk-sheet-open {
   text-align: center;
 }
 
+/* Active-filters summary row (Task 1, gap-closure G-01.2-4, sketch 029
+   winner C "Inline with Heading", Round 2 rebalanced). Deliberately
+   LIGHTER than this file's `chip_class/1`-driven chips (FilterModal's own
+   selection-chip contract, `filter_modal.ex`) — Round 1 reused that
+   solid-filled contract verbatim here and it outweighed the "Resultados"
+   heading the chips sit beside. These two chip treatments must NEVER be
+   merged: a removable applied-filter chip and a selectable modal option
+   chip are different affordances, even sharing the same base pill shape.
+   No box-shadow anywhere below, unlike the modal's own selected chip. */
+.pk-active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--color-accent);
+  color: var(--color-accent-content);
+  border: 1px solid var(--color-base-300);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 5px 4px 11px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-active-filter-chip-x {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--color-neutral);
+  font-size: 12px;
+  line-height: 1;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-active-filter-chip:hover .pk-active-filter-chip-x {
+  background: var(--color-error);
+  color: var(--color-error-content);
+}
+
+.pk-clear-filters-link {
+  border: none;
+  background: none;
+  color: var(--color-neutral);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-clear-filters-link:hover {
+  color: var(--color-primary);
+}
+
 .pk-search-morph.is-open .pk-nav-search {
   width: auto;
   opacity: 1;
