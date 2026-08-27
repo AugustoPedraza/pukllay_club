@@ -593,19 +593,13 @@
   margin-bottom: 8px;
 }
 
-.pk-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  background: var(--color-base-200);
-  border: 1px solid var(--color-base-300);
-  color: var(--color-neutral);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 9px;
-  border-radius: 9999px;
-}
+/* G-01.2-26 task 3: `.pk-fact`'s declarations moved to the `.pk-pill`
+   base + the `pk-pill-neutral` tone (declared above, near the top of this
+   PK CATALOG SURFACES block) — `GamePreview.facts_row/1`'s markup now
+   carries `pk-fact pk-pill pk-pill-neutral` (plus `pk-pill-interactive` on
+   the three link branches). The `pk-fact` class survives on the markup as
+   a marker (a test selector and a semantic name for what the element is)
+   but carries no declarations here anymore. */
 
 .pk-difficulty {
   display: inline-flex;
@@ -622,6 +616,132 @@
 
 .pk-difficulty-dot.is-filled {
   background: var(--color-neutral);
+}
+
+/* Pill system (Phase 01.2 gap-closure round 3, G-01.2-26; diagnosis at
+   .planning/debug/G-01.2-15-pill-chip-design-inconsistency.md): the one
+   base pill representation UAT test 11 asked for — "why is there a kind of
+   pill for difficulty, time and # of players, but another kind of pills
+   for mecanicas, temáticas? ... We need 1 representation and its
+   variants." Five independently hand-tuned pill/chip implementations
+   existed with no shared base; three separate historical sessions each
+   hand-matched a colour or a border between some PAIR of them and left the
+   geometry untouched, which is why the rhythm kept breaking after each fix.
+
+   Framework check (required before hand-rolling anything, per
+   ui-design-system): daisyUI's `.badge` (v5.5.20, this repo's pinned
+   `mix.exs` tag) declares `border-radius: var(--radius-selector)` —
+   `0.25rem` in this app's theme (`assets/css/app.css`'s own
+   `daisyui-theme` blocks), not the full `9999px` pill the facts pills
+   already ship; a fixed height via its own `--size` custom property
+   (pinned unless released with `h-auto`, the exact trap `.pk-chip-row
+   .badge` below and `weight_band_badge/1` each separately had to work
+   around); and a `font-size` that steps per `badge-{xs,sm,md,lg,xl}`
+   modifier with no `font-weight` declared anywhere in the component (it
+   inherits the surrounding text's regular weight, never the 600 semibold
+   every hand-rolled pill family in this file uses). Three of this app's
+   five pill families — `.pk-chip-row .badge` below, `editorial_tags/1`'s
+   bare `.badge-accent`, and `filter_modal.ex`'s `chip_class/1` — already
+   start from `.badge`, and each one needed a DIFFERENT override to reach a
+   different shape. That is the confirmation `.badge` cannot carry this
+   app's whole variant set unaided, and a custom base is justified.
+
+   Governing rule: every visual property a pill can have — shape,
+   typography, padding, fill, border — is declared here, once. A call site
+   picks the base (`pk-pill`), a tone (`pk-pill-neutral` / `pk-pill-accent`
+   / `pk-pill-outline` / `pk-pill-selected`), optionally a size
+   (`pk-pill-comfortable` / `pk-pill-large` — the dense default needs no
+   size class), and optionally `pk-pill-interactive` for a tappable pill. A
+   call site that needs a property this block does not offer adds a
+   VARIANT here — never a rule of its own, and never a second declaration
+   of a property this block already owns.
+
+   Call-site inventory (this plan, 01.2-26, migrates the first three; the
+   next plan, 01.2-27, migrates the remaining two onto the same base):
+     - GamePreview.facts_row/1 (players/tiempo/dificultad) — neutral tone,
+       dense size, interactive on the three link branches only
+     - GameChips.chip_row/1 (Mecánicas/Temáticas) — neutral tone, dense size
+     - GameChips.editorial_tags/1 (club hashtags) — accent tone, dense size
+     - [01.2-27] the catalog's active-filters ("búsqueda activa") chip —
+       accent tone, comfortable size, interactive, removable
+     - [01.2-27] filter_modal.ex's facet/scalar chips — outline tone at
+       rest, selected tone when chosen, comfortable size, interactive
+   Deliberately excluded: the catalog's category-navigation chip (`.pk-chip`
+   below, `index.ex`) — a 44px navigation control, not in the UAT's list;
+   folding it in would widen a chip consolidation into a navigation change.
+   The orphaned `weight_band_badge/1` shape (below, `game_chips.ex`) has no
+   call site; its SHAPE joins the variant set as `pk-pill-large`, its
+   markup does not move. */
+.pk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 4px 9px;
+}
+
+.pk-pill-neutral {
+  background: var(--color-base-200);
+  border-color: var(--color-base-300);
+  color: var(--color-neutral);
+}
+
+.pk-pill-accent {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-content);
+}
+
+.pk-pill-outline {
+  background: transparent;
+  border-color: var(--color-base-300);
+  color: var(--color-neutral);
+}
+
+/* The modal's chosen-chip soft lift (`filter_modal.ex`'s `chip_class/1`
+   ships this today as the Tailwind utility `shadow-sm`), expressed through
+   this file's own colour-mix-for-alpha shadow idiom instead of a literal
+   rgba() value — same magnitude as `.pk-share-trigger`'s identical rule
+   below, this file's existing "soft lift at small scale" pattern. */
+.pk-pill-selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-content);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--pk-shadow-color) 6%, transparent);
+}
+
+.pk-pill-comfortable {
+  font-size: 0.75rem;
+  padding: 0 12px;
+}
+
+/* Absorbs `weight_band_badge/1`'s declared shape (`badge-lg h-auto
+   whitespace-normal py-1 text-center leading-tight`) — that component's
+   markup is untouched; this size variant only gives its SHAPE a home in
+   the variant set, so a future decision to bring it back does not
+   reinvent it. Releases the base's no-wrap and centres text because a
+   large pill is allowed to run to two lines; every other property still
+   comes from `.pk-pill`. */
+.pk-pill-large {
+  font-size: 1rem;
+  padding: 4px 14px;
+  white-space: normal;
+  text-align: center;
+}
+
+.pk-pill-interactive {
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-pill-interactive:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 /* resting card (Task 2): poster art then a plain caption block below it —
@@ -2645,28 +2765,14 @@ body.pk-drawer-open {
   margin-bottom: 0;
 }
 
-/* Mecánicas/Temáticas chip border+fill fix (Phase 01.2 gap-closure round
-   2, G-01.2-20 task 2, sketch 034 variant A). daisyUI's own badge
-   modifiers were checked first: none of them combine the padding and the
-   fill this needs without a custom rule, confirmed against this repo's
-   installed daisyUI version, not assumed from the sketch. The two colour
-   tokens below are not a new chip look — they are the exact pair
-   `.pk-fact` above already uses for the facts pills, so these chips join
-   a visual family that already exists on this page rather than
-   introducing a third one. `height: auto` is load-bearing, not optional:
-   the stock small badge pins its own height, the same trap
-   `GameChips.weight_band_badge/1`'s own `h-auto` utility already works
-   around one section up this page — without releasing that pin, the
-   declared padding has nowhere to expand into and would appear to do
-   nothing. Scoped to `.pk-chip-row .badge` only: `GameChips.chip_row/1`'s
-   wrapper carries `pk-chip-row`, `GameChips.editorial_tags/1`'s hashtag
-   row deliberately does not, so the accent hashtag chips are untouched. */
-.pk-chip-row .badge {
-  padding: 6px 14px;
-  height: auto;
-  background: var(--color-base-200);
-  border: 1px solid var(--color-base-300);
-}
+/* G-01.2-26 task 3: this rule's declarations moved to the `.pk-pill` base
+   + the `pk-pill-neutral` tone (declared above, near the top of this PK
+   CATALOG SURFACES block) — `GameChips.chip_row/1`'s chips now carry
+   `pk-pill pk-pill-neutral` (plus `pk-pill-interactive` on linked
+   branches) directly, so no descendant-selector override on
+   `.pk-chip-row .badge` is needed anymore. The `pk-chip-row` wrapper class
+   survives on the markup as a test selector and a name for the row, but
+   scopes nothing here now. */
 
 /* Buy-box panel boundary: elevated shadow, not fill alone (Phase 01.2
    gap-closure, sketch 027 variant B — "Elevated Shadow", the human-picked

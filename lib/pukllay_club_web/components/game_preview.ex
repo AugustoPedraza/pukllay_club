@@ -72,13 +72,13 @@ defmodule PukllayClubWeb.GamePreview do
       <.link
         :if={@players_text && @linked && @game.min_players && @game.max_players}
         navigate={~p"/?players=#{@game.max_players}"}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral pk-pill-interactive"
       >
         <.icon name="hero-users-micro" class="size-3" />{@players_text}
       </.link>
       <span
         :if={@players_text && (!@linked || !(@game.min_players && @game.max_players))}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral"
       >
         <.icon name="hero-users-micro" class="size-3" />{@players_text}
       </span>
@@ -86,13 +86,13 @@ defmodule PukllayClubWeb.GamePreview do
       <.link
         :if={@tiempo_text && @linked && (@game.playing_time || @game.max_playtime)}
         navigate={~p"/?max_playtime=#{@game.playing_time || @game.max_playtime}"}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral pk-pill-interactive"
       >
         <.icon name="hero-clock-micro" class="size-3" />{@tiempo_text}
       </.link>
       <span
         :if={@tiempo_text && (!@linked || !(@game.playing_time || @game.max_playtime))}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral"
       >
         <.icon name="hero-clock-micro" class="size-3" />{@tiempo_text}
       </span>
@@ -100,11 +100,11 @@ defmodule PukllayClubWeb.GamePreview do
       <.link
         :if={@band && @linked && @game.weight_band}
         navigate={~p"/?weight_bands=#{@game.weight_band}"}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral pk-pill-interactive"
       >
         <.difficulty_indicator level={@level} />{@band.label}
       </.link>
-      <span :if={@band && (!@linked || !@game.weight_band)} class="pk-fact">
+      <span :if={@band && (!@linked || !@game.weight_band)} class="pk-fact pk-pill pk-pill-neutral">
         <.difficulty_indicator level={@level} />{@band.label}
       </span>
     </div>
