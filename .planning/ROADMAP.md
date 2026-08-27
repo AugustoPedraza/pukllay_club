@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 13 plans (5 original, 5 superseded, 5 gap closure executed, 3 gap closure pending)
+**Plans:** 11/13 plans executed (5 original, 5 superseded, 5 gap closure executed, 3 gap closure pending)
 
 Plans:
 **Wave 1**
@@ -238,7 +238,7 @@ Plans:
 
 **Wave 7 — gap closure** *(from the 01.2 re-verification UAT: G-01.2-9 and G-01.2-10)*
 
-- [ ] 01.2-16-PLAN.md — G-01.2-9: search/filter gets a real in-flight affordance — LiveView's own page-loading events dim the results region and drive a brand-coloured progress bar, and cards/surface flips fade in instead of popping
+- [x] 01.2-16-PLAN.md — G-01.2-9: search/filter gets a real in-flight affordance — LiveView's own page-loading events dim the results region and drive a brand-coloured progress bar, and cards/surface flips fade in instead of popping
 
 **Wave 8 — gap closure** *(blocked on Wave 7 completion)*
 
