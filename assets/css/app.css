@@ -593,19 +593,13 @@
   margin-bottom: 8px;
 }
 
-.pk-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  background: var(--color-base-200);
-  border: 1px solid var(--color-base-300);
-  color: var(--color-neutral);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 9px;
-  border-radius: 9999px;
-}
+/* G-01.2-26 task 3: `.pk-fact`'s declarations moved to the `.pk-pill`
+   base + the `pk-pill-neutral` tone (declared above, near the top of this
+   PK CATALOG SURFACES block) — `GamePreview.facts_row/1`'s markup now
+   carries `pk-fact pk-pill pk-pill-neutral` (plus `pk-pill-interactive` on
+   the three link branches). The `pk-fact` class survives on the markup as
+   a marker (a test selector and a semantic name for what the element is)
+   but carries no declarations here anymore. */
 
 .pk-difficulty {
   display: inline-flex;
@@ -2771,28 +2765,14 @@ body.pk-drawer-open {
   margin-bottom: 0;
 }
 
-/* Mecánicas/Temáticas chip border+fill fix (Phase 01.2 gap-closure round
-   2, G-01.2-20 task 2, sketch 034 variant A). daisyUI's own badge
-   modifiers were checked first: none of them combine the padding and the
-   fill this needs without a custom rule, confirmed against this repo's
-   installed daisyUI version, not assumed from the sketch. The two colour
-   tokens below are not a new chip look — they are the exact pair
-   `.pk-fact` above already uses for the facts pills, so these chips join
-   a visual family that already exists on this page rather than
-   introducing a third one. `height: auto` is load-bearing, not optional:
-   the stock small badge pins its own height, the same trap
-   `GameChips.weight_band_badge/1`'s own `h-auto` utility already works
-   around one section up this page — without releasing that pin, the
-   declared padding has nowhere to expand into and would appear to do
-   nothing. Scoped to `.pk-chip-row .badge` only: `GameChips.chip_row/1`'s
-   wrapper carries `pk-chip-row`, `GameChips.editorial_tags/1`'s hashtag
-   row deliberately does not, so the accent hashtag chips are untouched. */
-.pk-chip-row .badge {
-  padding: 6px 14px;
-  height: auto;
-  background: var(--color-base-200);
-  border: 1px solid var(--color-base-300);
-}
+/* G-01.2-26 task 3: this rule's declarations moved to the `.pk-pill` base
+   + the `pk-pill-neutral` tone (declared above, near the top of this PK
+   CATALOG SURFACES block) — `GameChips.chip_row/1`'s chips now carry
+   `pk-pill pk-pill-neutral` (plus `pk-pill-interactive` on linked
+   branches) directly, so no descendant-selector override on
+   `.pk-chip-row .badge` is needed anymore. The `pk-chip-row` wrapper class
+   survives on the markup as a test selector and a name for the row, but
+   scopes nothing here now. */
 
 /* Buy-box panel boundary: elevated shadow, not fill alone (Phase 01.2
    gap-closure, sketch 027 variant B — "Elevated Shadow", the human-picked
