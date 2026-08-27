@@ -63,12 +63,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "+7"
     end
 
-    test "renders designers, publishers, age, and description in Ficha técnica, and players/duration once in the facts row (D-05)",
+    test "renders designers, age, and description in Ficha técnica, and players/duration once in the facts row (D-05)",
          %{conn: conn} do
       game =
         game_fixture(%{
           designers: ["Klaus Teuber"],
-          publishers: ["Devir"],
           min_players: 3,
           max_players: 4,
           min_age: 10,
@@ -82,7 +81,6 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
 
       assert html =~ "Klaus Teuber"
-      assert html =~ "Devir"
       assert html =~ "10+"
       assert html =~ "Compite por colonizar la isla de Catán."
 
@@ -94,13 +92,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute spec_html =~ "Duración"
     end
 
-    test "omits designers/publishers/age/description rows individually when absent", %{
-      conn: conn
-    } do
+    test "omits designers/age/description rows individually when absent, and Editorial never renders (G-01.2-10 task 3)",
+         %{conn: conn} do
       game =
         game_fixture(%{
           designers: [],
-          publishers: [],
           min_age: nil,
           description: nil
         })
@@ -151,7 +147,28 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html2 =
         view
-        |> element(~s(button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"]))
+        |> element(~s(#gallery-thumbnails button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"]))
+        |> render_click()
+
+      assert html2 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
+    end
+
+    # G-01.2-10 task 2, D3: the dot affordance dispatches the exact same
+    # event/param as the thumbnail it mirrors, through the same
+    # select-image whitelist.
+    test "clicking a dot swaps the main image", %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover-large.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      assert html =~ ~s(src="https://images.test.invalid/games/1/cover-large.webp")
+
+      html2 =
+        view
+        |> element(~s(#gallery-dots button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"]))
         |> render_click()
 
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
@@ -495,6 +512,118 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  describe "reading column reorder — title then description then a bounded more-info zone (G-01.2-10 task 3)" do
+    test "the description block is the element immediately following the title heading — ordered children, not a substring match",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica de mercaderes."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # Adjacent-sibling combinator: this only matches when .pk-description
+      # is literally the very next element after #detail-title-block — an
+      # element reinserted between them (the weight badge, the editorial
+      # hashtags, either chip row) makes this query return nothing.
+      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+    end
+
+    test "the mechanics/themes chip rows and editorial hashtags never render before the description block",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          description: "Una crónica de mercaderes.",
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          tags: ["#CreaConexiones"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      {description_idx, _} = :binary.match(html, "Una crónica de mercaderes.")
+      {mechanics_idx, _} = :binary.match(html, "Mecánicas")
+      {themes_idx, _} = :binary.match(html, "Temáticas")
+      {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
+
+      assert description_idx < mechanics_idx
+      assert description_idx < themes_idx
+      assert description_idx < hashtag_idx
+    end
+
+    test "a separator element exists between the description block and the first more-information heading",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica.", mechanics: ["Dice Rolling"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-description + .divider") |> Enum.count() == 1
+    end
+
+    test "the weight-band badge (D2 = kept) renders after the separator, not immediately after the title",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "ingenio_estratega", description: "Una crónica."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # After the separator: a badge-secondary element somewhere later in
+      # the document than .pk-divider.
+      assert doc |> LazyHTML.query(".pk-divider ~ a .badge-secondary") |> Enum.count() == 1
+
+      # Not immediately after the title — the description sits there
+      # instead (proven by the first test in this block); this is a
+      # negative structural check specific to the badge.
+      assert doc |> LazyHTML.query("#detail-title-block + a .badge-secondary") |> Enum.count() == 0
+    end
+
+    test "a game with publishers renders no publisher row in the spec list", %{conn: conn} do
+      game = game_fixture(%{publishers: ["Devir"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Devir"
+      refute html =~ "Editorial"
+    end
+
+    test "a game whose only populated spec field is publishers renders no Ficha técnica section at all",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: ["Devir"],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Ficha técnica"
+      refute html =~ "pk-spec-list"
+    end
+
+    test "a game with a year and publishers still renders the Ficha técnica section with the year row",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          min_age: nil,
+          year_published: 2001,
+          designers: [],
+          publishers: ["Devir"],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Ficha técnica"
+      assert html =~ "2001"
+      refute html =~ "Devir"
+    end
+  end
+
   describe "detail page mobile chrome and interaction (SHELL-03)" do
     test "the CTA bar, title-echo bar, and title block all render with their ids", %{conn: conn} do
       game = game_fixture()
@@ -705,11 +834,12 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       # Structural assertion (not class-string matching): the share
       # control's wrapper is an absolutely positioned sibling ancestor
-      # inside the poster column, not a flex-row sibling of the reserve
-      # button.
+      # inside the poster frame (G-01.2-10 task 2's positioning context,
+      # nested one level inside the poster column), not a flex-row
+      # sibling of the reserve button.
       share_wrap_ancestor_class =
         doc
-        |> LazyHTML.query(".pk-poster-col > div")
+        |> LazyHTML.query(".pk-poster-frame > div")
         |> Enum.map(&LazyHTML.attribute(&1, "class"))
         |> Enum.find(fn class -> List.first(class) =~ "absolute" end)
 
@@ -790,6 +920,124 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       assert cta_bar_html =~ "pk-cta-bar-inner"
       assert cta_bar_html =~ "Compartir"
+    end
+  end
+
+  describe "mobile masthead rework — pills over poster, one reserve control (G-01.2-10 task 2)" do
+    test "facts_row renders exactly twice, once inside the poster frame's overlay wrapper and once inside the text column's inline wrapper, with identical arguments",
+         %{conn: conn} do
+      game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      overlay_html = doc |> LazyHTML.query(".pk-facts-overlay .pk-facts-row") |> LazyHTML.to_html()
+      inline_html = doc |> LazyHTML.query(".pk-facts-inline .pk-facts-row") |> LazyHTML.to_html()
+
+      assert overlay_html != ""
+      assert inline_html != ""
+
+      # Argument-identical: linked={true} was passed at both call sites, so
+      # both render the players fact as a link into the same filter param.
+      assert overlay_html =~ "2-4"
+      assert inline_html =~ "2-4"
+      assert overlay_html =~ "?players="
+      assert inline_html =~ "?players="
+
+      facts_row_count = doc |> LazyHTML.query(".pk-facts-row") |> Enum.count()
+      assert facts_row_count == 2
+    end
+
+    test "the overlay pills wrapper is a descendant of the poster frame, not of the text column",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-poster-frame .pk-facts-overlay") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-text-col .pk-facts-overlay") |> Enum.count() == 0
+    end
+
+    test "the poster column's reserve button carries pk-poster-reserve and the mobile CTA bar's reserve button does not",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      poster_reserve_class =
+        doc
+        |> LazyHTML.query(".pk-poster-col button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      cta_bar_reserve_class =
+        doc
+        |> LazyHTML.query("#detail-cta-bar button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_reserve_class =~ "pk-poster-reserve"
+      refute cta_bar_reserve_class =~ "pk-poster-reserve"
+    end
+
+    test "the share control is a descendant of the poster frame", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-poster-frame #detail-share-buybox") |> Enum.count() == 1
+    end
+
+    test "each dot dispatches select-image with the same phx-value-url the matching thumbnail dispatches, and the dot count equals the thumbnail count",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: [
+            "https://images.test.invalid/games/1/gallery-1.webp",
+            "https://images.test.invalid/games/1/gallery-2.webp"
+          ]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      thumbnail_urls =
+        doc |> LazyHTML.query("#gallery-thumbnails button") |> LazyHTML.attribute("phx-value-url")
+
+      dot_urls = doc |> LazyHTML.query("#gallery-dots button") |> LazyHTML.attribute("phx-value-url")
+
+      assert length(thumbnail_urls) == 3
+      assert length(dot_urls) == 3
+      assert Enum.sort(thumbnail_urls) == Enum.sort(dot_urls)
+    end
+
+    test "a game with no cover and no gallery images renders the placeholder with no broken overlay or stray strip",
+         %{conn: conn} do
+      game = game_fixture(%{cover_url: nil, gallery_urls: []})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # The existing no-image placeholder still renders inside the frame.
+      assert doc |> LazyHTML.query(".pk-poster-frame .pk-card-poster") |> Enum.count() == 1
+      assert html =~ "hero-puzzle-piece"
+
+      # The overlay wrapper still renders unconditionally on image
+      # presence, with no broken markup.
+      assert doc |> LazyHTML.query(".pk-facts-overlay") |> Enum.count() == 1
+
+      refute html =~ "gallery-thumbnails"
+      refute html =~ "gallery-dots"
     end
   end
 

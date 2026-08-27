@@ -31,9 +31,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   never a blank placeholder. Ficha técnica applies this at two levels
   (01.2-04, D-04/D-05): each remaining row keeps its own independent `:if`
   guard, AND the section heading plus the list are themselves wrapped in
-  `ficha_tecnica?/1` so a game with none of the five carriable fields
-  (min_age, year_published, designers, publishers, bgg_id) shows no empty
-  heading over an empty grid.
+  `ficha_tecnica?/1` so a game with none of the four carriable fields
+  (min_age, year_published, designers, bgg_id) shows no empty heading over
+  an empty grid. The publisher-name field this section used to carry was
+  dropped entirely in the G-01.2-10 mobile masthead rework (01.2-17) — the
+  UAT called it useless information, and the removal is unconditional
+  (every viewport width), not a mobile-only cut.
 
   Mobile chrome (SHELL-03, plan 01.1-04): `.DetailChrome` drives the fixed
   bottom CTA bar and the sticky title-echo bar off a single passive
@@ -311,38 +314,57 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           <div class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
               <div class="pk-poster-col space-y-4">
-                <div class="absolute right-2 top-2 z-10">
-                  <.share_control id="detail-share-buybox" game={@game} variant={:panel} />
-                </div>
-
-                <button
-                  :if={@selected_image}
-                  type="button"
-                  phx-click="open-lightbox"
-                  aria-label="Ampliar imagen del juego"
-                  class="pk-card-poster overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
-                >
-                  <img
-                    src={@selected_image}
-                    alt={@game.name}
-                    class="h-full w-full object-cover js-cover-fallback"
-                  />
-                  <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
-                    <.icon name="hero-puzzle-piece" class="size-16" />
+                <div class="pk-poster-frame">
+                  <div class="absolute right-2 top-2 z-10">
+                    <.share_control id="detail-share-buybox" game={@game} variant={:panel} />
                   </div>
-                </button>
-                <div
-                  :if={!@selected_image}
-                  class="pk-card-poster overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
-                >
-                  <.icon name="hero-puzzle-piece" class="size-16" />
-                  <span class="sr-only">{@game.name}</span>
+
+                  <%!-- G-01.2-10 task 2, D1 (recommended: keep the trio
+                  unchanged): byte-identical arguments to .pk-facts-inline's
+                  call below, so the two copies cannot drift. Exactly one of
+                  the two is ever displayed — see the swap in app.css's
+                  single 48rem detail-layout block. --%>
+                  <div class="pk-facts-overlay">
+                    <GamePreview.facts_row game={@game} linked={true} />
+                  </div>
+
+                  <button
+                    :if={@selected_image}
+                    type="button"
+                    phx-click="open-lightbox"
+                    aria-label="Ampliar imagen del juego"
+                    class="pk-card-poster overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
+                  >
+                    <img
+                      src={@selected_image}
+                      alt={@game.name}
+                      class="h-full w-full object-cover js-cover-fallback"
+                    />
+                    <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
+                      <.icon name="hero-puzzle-piece" class="size-16" />
+                    </div>
+                  </button>
+                  <div
+                    :if={!@selected_image}
+                    class="pk-card-poster overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
+                  >
+                    <.icon name="hero-puzzle-piece" class="size-16" />
+                    <span class="sr-only">{@game.name}</span>
+                  </div>
                 </div>
 
+                <%!-- G-01.2-10 task 2, D3 (recommended: dots on mobile,
+                thumbnails on desktop). Both strips are built from the same
+                gallery_thumbnails/1 list and both dispatch select-image
+                with the same phx-value-url key, so the existing
+                membership-check whitelist (mount/handle_event above) stays
+                the single guarded image-selection path — not a second one
+                (T-01.1-16-style). Exactly one of the two renders per
+                viewport, swap declared in app.css's single 48rem block. --%>
                 <div
                   :if={@game.gallery_urls != []}
                   id="gallery-thumbnails"
-                  class="flex gap-2 overflow-x-auto"
+                  class="gap-2 overflow-x-auto pk-gallery-thumbnails"
                 >
                   <button
                     :for={url <- gallery_thumbnails(@game)}
@@ -358,28 +380,48 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   </button>
                 </div>
 
+                <div :if={@game.gallery_urls != []} id="gallery-dots" class="pk-gallery-dots">
+                  <button
+                    :for={{url, idx} <- Enum.with_index(gallery_thumbnails(@game))}
+                    type="button"
+                    phx-click="select-image"
+                    phx-value-url={url}
+                    aria-label={"Ver imagen #{idx + 1} de #{length(gallery_thumbnails(@game))}"}
+                    aria-current={(url == @selected_image && "true") || nil}
+                    class={["pk-gallery-dot", (url == @selected_image && "is-active") || nil]}
+                  >
+                    <span class="pk-gallery-dot-mark"></span>
+                  </button>
+                </div>
+
+                <%!-- G-01.2-10 task 2, ask #3: hidden below the detail
+                layout breakpoint so the phone shows exactly one Reservar
+                control (the fixed .pk-mobile-cta-bar below), revealed
+                at/above it in the same 48rem block where the bar itself
+                becomes hidden — both halves of the invariant live in one
+                place. --%>
                 <button
                   type="button"
                   phx-click="open-reservation"
-                  class="btn btn-primary btn-lg min-h-11 w-full"
+                  class="btn btn-primary btn-lg min-h-11 w-full pk-poster-reserve"
                 >
                   {reservation_cta_label()}
                 </button>
               </div>
 
               <div class="pk-text-col">
-                <GamePreview.facts_row game={@game} linked={true} />
+                <%!-- Desktop-only copy of the pills, paired with
+                .pk-facts-overlay above — see that wrapper's comment. --%>
+                <div class="pk-facts-inline">
+                  <GamePreview.facts_row game={@game} linked={true} />
+                </div>
 
                 <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
 
-                <.link :if={@game.weight_band} navigate={~p"/?weight_bands=#{@game.weight_band}"}>
-                  <GameChips.weight_band_badge game={@game} show_descriptor={true} />
-                </.link>
-                <GameChips.editorial_tags
-                  tags={@game.tags}
-                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
-                />
-
+                <%!-- G-01.2-10 task 3: the description sits immediately
+                after the title with nothing in between (ask #2) — every
+                element that used to be wedged here (weight-band badge,
+                editorial hashtags) moved below the separator. --%>
                 <div :if={@game.description} class="pk-description">
                   <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
                     {@game.description}
@@ -392,6 +434,34 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                     {(@description_expanded && "Ver menos") || "Ver más"}
                   </button>
                 </div>
+
+                <%!-- Boundary between the primary reading block (title +
+                description) and supplementary "more information" content
+                (ask #4/#6). daisyUI's own divider component checked and
+                used as-is for the line's colour/thickness (already
+                theme-aware via color-mix, no hand-rolled rule needed for
+                that); only its own default margin fought .pk-text-col's
+                already-established 1rem flex gap (doubling the visible
+                gap around the line), so .pk-divider neutralizes just that
+                one property. Reused verbatim by 01.2-18 for the boundary
+                before the recommendations shelf. --%>
+                <div class="divider pk-divider" role="separator"></div>
+
+                <GameChips.editorial_tags
+                  tags={@game.tags}
+                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
+                />
+
+                <%!-- D2 (recommended: keep the badge, relocate it here).
+                Every literal ask is satisfied: nothing sits between title
+                and description any more, the difficulty filter link
+                survives, and the teaching sentence survives — the
+                duplication with the facts row's own dificultad pill now
+                reads as "summary pill up top, explanation further down"
+                rather than the same thing twice in one block. --%>
+                <.link :if={@game.weight_band} navigate={~p"/?weight_bands=#{@game.weight_band}"}>
+                  <GameChips.weight_band_badge game={@game} show_descriptor={true} />
+                </.link>
 
                 <h2 :if={@mechanic_labels != []} class="pk-section-heading">Mecánicas</h2>
                 <GameChips.chip_row
@@ -407,6 +477,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   href_fun={fn label -> ~p"/?themes=#{label}" end}
                 />
 
+                <%!-- G-01.2-10 task 3, ask #5: the publisher row is gone
+                (unconditional, every viewport width) and ficha_tecnica?/1
+                below narrowed from five fields to four — see that
+                function's own comment. --%>
                 <h2 :if={ficha_tecnica?(@game)} class="pk-section-heading">Ficha técnica</h2>
                 <dl :if={ficha_tecnica?(@game)} class="pk-spec-list">
                   <div :if={@game.min_age} class="pk-spec-row">
@@ -420,10 +494,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   <div :if={@game.designers != []} class="pk-spec-row pk-spec-row--wide">
                     <dt>Diseñadores</dt>
                     <dd>{Enum.join(@game.designers, ", ")}</dd>
-                  </div>
-                  <div :if={@game.publishers != []} class="pk-spec-row pk-spec-row--wide">
-                    <dt>Editorial</dt>
-                    <dd>{Enum.join(@game.publishers, ", ")}</dd>
                   </div>
                   <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
                     <dd>
@@ -842,15 +912,19 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   # D-04/D-05 (01.2-04): the UI-SPEC `zero-one-many` backstop for Ficha
   # técnica — the section (heading + list) renders only when at least one
-  # of the five remaining carriable fields is present, so a minimal-data
+  # of the four remaining carriable fields is present, so a minimal-data
   # game never shows a bare heading over an empty grid. Every field read
-  # here is present on every %Game{} (two integers, two array columns with
+  # here is present on every %Game{} (two integers, one array column with
   # `default: []`, one nullable integer) — no nil-dereference path exists.
+  # Narrowed from five fields to four in the G-01.2-10 mobile masthead
+  # rework (01.2-17): the publisher-name clause was dropped in the same
+  # edit as the spec-row it guarded — the two must move together, or a
+  # game whose only remaining data was that field re-opens the exact
+  # empty-heading hole this guard exists to close.
   defp ficha_tecnica?(game) do
     not is_nil(game.min_age) or
       not is_nil(game.year_published) or
       game.designers != [] or
-      game.publishers != [] or
       not is_nil(game.bgg_id)
   end
 
