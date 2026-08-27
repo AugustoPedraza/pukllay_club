@@ -269,6 +269,22 @@
   --duration-slow: 280ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Detail-page content-column width (01.2-18 task 1): shared by the
+     masthead, the mobile CTA bar's inner wrapper, and the masthead↔shelf
+     boundary — three rules that must align to the identical width. Two of
+     those three previously wrote the same rem literal independently, tied
+     together only by a comment; a third independent copy for the boundary
+     is exactly the drift risk this file's own custom-CSS-layer rule
+     (declare a shared field once, never per call site — see the PK CATALOG
+     SURFACES intro comment above) exists to prevent. Written in px rather
+     than restating the old rem literal here: at this app's unmodified root
+     font-size (no `html { font-size }` override exists anywhere in this
+     file), 1100px is the identical computed width the three rules held
+     before this substitution (measured before/after, see
+     01.2-18-SUMMARY.md). Read by exactly three rules below:
+     .pk-detail-masthead, .pk-cta-bar-inner, and .pk-shelf-separator. */
+  --pk-detail-col-width: 1100px;
 }
 
 .pk-gutter {
@@ -2461,7 +2477,7 @@ body.pk-drawer-open {
    masthead to its two-column sticky grid AND hides the mobile CTA bar in
    one place, so the two concerns can never drift apart. */
 .pk-detail-masthead {
-  max-width: 68.75rem;
+  max-width: var(--pk-detail-col-width);
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
@@ -2654,6 +2670,24 @@ body.pk-drawer-open {
   margin: 0;
 }
 
+/* Boundary between the detail masthead and the "Juegos similares" shelf
+   below it (01.2-18 task 1) — second call site of the exact `.pk-divider`
+   declared above (01.2-17 already checked daisyUI's own .divider and
+   settled on hand-overriding only its default margin; that decision is
+   reused verbatim here, not re-litigated). What THIS call site adds is
+   only what the shared rule doesn't cover: capping/centering the line to
+   the reading column's own width (the same --pk-detail-col-width
+   .pk-detail-masthead and .pk-cta-bar-inner read), not the shelf's own
+   wider max-w-7xl/pk-gutter cap immediately below it — a line matching
+   neither width would read as an accident, so this is a stated, deliberate
+   choice, not a default. `margin: 0 auto` fully restates (not merely
+   extends) .pk-divider's own `margin: 0`, so the two rules can never
+   desync regardless of source order. */
+.pk-shelf-separator {
+  max-width: var(--pk-detail-col-width);
+  margin: 0 auto;
+}
+
 .pk-spec-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2712,55 +2746,27 @@ body.pk-drawer-open {
   transition: transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 
-/* Stacked internal layout (Phase 01.2 gap-closure, sketch 028 variant D —
-   "Stacked", the only surviving variant after three side-by-side
-   rebalance attempts were all rejected, see the sketch's own README round
-   history). Reserve button becomes a full-width row on its own; share
-   drops to a smaller, quiet outline pill on a second row below it. The
-   horizontal gutter that used to live on `.pk-mobile-cta-bar` itself now
-   lives on the `pk-gutter` class on the middle wrapper in show.ex, and
-   this rule's own `max-width: 68.75rem` is the exact literal
-   `.pk-detail-masthead` already uses, so the bar's controls align under
-   the content column above them at every width instead of stretching
-   edge-to-edge past 1100px. */
+/* Bar inner wrapper (Phase 01.2 gap-closure, sketch 028 variant D —
+   "Stacked" — originally introduced to lay out a reserve row above a
+   second, share-control row). G-01.2-18 task 2 removed that second row —
+   the bar's own corner share icon on the poster was already the page's
+   share entry point, so stacking a second one here was redundant. This
+   wrapper survives for its alignment cap, not for the stacking it was
+   introduced for: the horizontal gutter that used to live on
+   `.pk-mobile-cta-bar` itself lives on the `pk-gutter` class on the middle
+   wrapper in show.ex, and this rule's own `max-width` reads the shared
+   `--pk-detail-col-width` token `.pk-detail-masthead` also reads (01.2-18
+   task 1), so the bar's one remaining control aligns under the content
+   column above it at every width instead of stretching edge-to-edge past
+   1100px. `flex-direction: column` and `align-items: stretch` stay so the
+   single button still fills the wrapper's own width; the `gap` that used
+   to space the two rows apart has nothing left to space and is gone. */
 .pk-cta-bar-inner {
-  max-width: 68.75rem;
+  max-width: var(--pk-detail-col-width);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.5rem;
-}
-
-/* Share trigger, :bar variant (Phase 01.2 gap-closure, sketch 028 variant
-   D): a quiet, full-width outline pill on the bar's second row, labelled
-   rather than icon-only — its wrapper (.pk-share-wrap) is blockified as a
-   flex item of .pk-cta-bar-inner above, so this rule's own `width: 100%`
-   fills the same column the reserve button's row occupies. The sketch
-   declares `min-height: 38px`; this uses 44px because that is this repo's
-   documented touch floor and it outranks a sketch dimension — the
-   sketch's "quieter" intent is carried by the outline treatment and the
-   muted text colour, not by the height. */
-.pk-share-trigger--bar {
-  width: 100%;
-  min-height: 2.75rem;
-  border-radius: var(--radius-box);
-  border: 1px solid var(--color-base-300);
-  background: var(--color-base-100);
-  color: var(--color-neutral);
-  font-size: 0.875rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: border-color var(--duration-fast) var(--ease-standard),
-    color var(--duration-fast) var(--ease-standard);
-}
-
-.pk-share-trigger--bar:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
 }
 
 .pk-mobile-cta-bar.is-hidden {
@@ -2783,7 +2789,7 @@ body.pk-drawer-open {
    body.pk-cta-parked is declared AFTER body.pk-has-cta-bar deliberately —
    the two rules have equal specificity and resolve by source order. */
 body.pk-has-cta-bar {
-  padding-bottom: 12.5rem;
+  padding-bottom: 9.25rem;
   /* --ease-standard, not --ease-out-soft. This is the largest travel of the
      whole sweep: 9.25rem/148px collapsing to 0, which at --duration-base put
      46.7% = a measured 68.9px (3/3 reps, 69.1px predicted) into the first
@@ -2793,10 +2799,15 @@ body.pk-has-cta-bar {
      both fire on the same footerReached flag, and this padding is precisely
      the clearance the bar occupies, so any desync between them shows up as
      the footer and the bar sliding at different rates.
-     12.5rem/200px (Phase 01.2 gap-closure, sketch 028's stacked bar): derived,
-     not chosen — 148px (the original one-row clearance) + 44px (the new
-     stacked share row) + 8px (the row gap) = 200px. Recompute this number
-     again if the bar's internal row height or gap ever changes. */
+     9.25rem/148px (G-01.2-18 task 2): derived, not chosen — subtracts back
+     out exactly what the Phase 01.2 gap-closure stacked layout (sketch 028)
+     had added: 200px (12.5rem, the stacked bar's two-row clearance) minus
+     44px (the removed share row) minus 8px (the row gap it had) = 148px,
+     landing on the exact value this rule held before the stacked layout
+     ever shipped. This paragraph's own measured collapse-travel numbers
+     above were computed against this exact value, so they are accurate
+     again without needing to re-measure. Recompute this number again if
+     the bar's internal row height ever changes. */
   transition: padding-bottom var(--duration-base) var(--ease-standard);
 }
 
@@ -2910,17 +2921,19 @@ body.pk-cta-parked {
   z-index: 2;
 }
 
-/* Share trigger, :panel variant (Phase 01.2 gap-closure, sketch 027): a
-   bordered circle on a plain fill with a soft lift, replacing the
-   `btn-outline btn-primary btn-sm` utility string G-01.2-6's debug
-   session measured as "barely visible" against the panel — and `btn-sm`
-   was itself a no-op, since `min-h-11 min-w-11` (kept on the element in
-   markup, not moved here) already clamped the button to 44px both before
-   and after that class existed. The sketch's own circle is 40px; this
-   repo's 44px touch floor outranks it, so the sketch's size is not
-   ported, only its border/fill/shadow treatment is. The `:bar` variant
-   (Phase 01.2 gap-closure, sketch 028) is a separate rule,
-   `.pk-share-trigger--bar`, below the mobile CTA bar block. */
+/* Share trigger (Phase 01.2 gap-closure, sketch 027): a bordered circle on
+   a plain fill with a soft lift, replacing the `btn-outline btn-primary
+   btn-sm` utility string G-01.2-6's debug session measured as "barely
+   visible" against the panel — and `btn-sm` was itself a no-op, since
+   `min-h-11 min-w-11` (kept on the element in markup, not moved here)
+   already clamped the button to 44px both before and after that class
+   existed. The sketch's own circle is 40px; this repo's 44px touch floor
+   outranks it, so the sketch's size is not ported, only its border/fill/
+   shadow treatment is. This rule briefly had a sibling variant rule
+   (Phase 01.2 gap-closure, sketch 028) for the mobile CTA bar's own second
+   share control; that call site — and this rule's own variant split —
+   was removed in G-01.2-18 task 2, since the panel's corner icon is the
+   page's one share entry point now. */
 .pk-share-trigger {
   border-radius: 9999px;
   border: 1px solid var(--color-base-300);
