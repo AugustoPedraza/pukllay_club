@@ -719,6 +719,37 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html =~ ~s(id="detail-title-block")
     end
 
+    # G-01.2-22 task 1: the title-echo bar's positioning moved from a flow-
+    # occupying value to a viewport-anchored one (a layout-space fix — see
+    # app.css's own comment on .pk-title-echo). This test pins that the
+    # element itself, its scroll-to-top control, and its resting (neither
+    # state class present) first render all survive that change untouched.
+    # Whether the hook actually ADDS is-visible on scroll or is-parked at
+    # the footer is client-side scroll-driven behavior with no LiveView
+    # render-test equivalent — untested here, and said so, per the plan's
+    # own instruction; those two remain routed to the human-check below.
+    test "the title-echo bar still carries its scroll-to-top control, and neither state class is present on first render",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      title_echo_html = doc |> LazyHTML.query("#detail-title-echo") |> LazyHTML.to_html()
+
+      assert title_echo_html =~ ~s(data-scroll-top)
+      assert title_echo_html =~ "Volver arriba"
+
+      class =
+        doc
+        |> LazyHTML.query("#detail-title-echo")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      refute class =~ "is-visible"
+      refute class =~ "is-parked"
+    end
+
     test "the CTA bar's button and the buy-box button share the same phx-click and label", %{
       conn: conn
     } do

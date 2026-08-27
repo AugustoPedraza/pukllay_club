@@ -2847,13 +2847,38 @@ body.pk-cta-parked {
 /* Sticky title-echo bar (01.1-04): a condensed, title-only copy of the
    masthead's <h1> (a full facts+title+tags echo was tried and rejected as
    overloaded), fading in under the site header once the real title has
-   scrolled fully out of view. Sticky, not fixed — it has a natural
-   container boundary. Also parks on the same footerReached flag as the
-   CTA bar, even though it doesn't spatially overlap the footer, so both
-   retract together as a coherent pair. */
+   scrolled fully out of view. Also parks on the same footerReached flag as
+   the CTA bar, even though it doesn't spatially overlap the footer, so
+   both retract together as a coherent pair.
+
+   G-01.2-22 task 1: this element's positioning moved from a flow-
+   occupying value to a viewport-anchored one. The old value still put
+   this element in normal document flow even while `opacity: 0` hid it —
+   the bar's own box sat between the header and the masthead at every
+   scroll position, adding roughly its own height as dead space on top of
+   <main>'s own top padding (sketch 035's Design Question). Anchoring to
+   the viewport removes that box from flow entirely; `left: 0`/`right: 0`
+   restore the full-width span the old value gave it for free. A
+   `display` toggle was ruled out instead of this change: `display` cannot
+   be transitioned, and this bar's opacity/transform fade must survive.
+   The "un-stick at the container boundary" behaviour the old value
+   bought is not needed here either — this bar already parks explicitly on
+   the same footerReached flag the CTA bar uses (see .is-parked below), so
+   nothing is lost by anchoring to the viewport instead.
+
+   Containing-block hazard checked before trusting this (this project has
+   hit this exact bug once — see detail-page-mobile-interaction.md's
+   "Sticky title-echo bar" note): walked the ancestor chain
+   #detail-title-echo -> #detail-page -> Layouts.app's own
+   `.mx-auto.space-y-4` inner wrapper -> <main> -> <body> -> <html>, and
+   confirmed none of them declares transform, filter, perspective,
+   contain, or will-change — a viewport-anchored element only anchors
+   correctly while that chain stays clean. */
 .pk-title-echo {
-  position: sticky;
+  position: fixed;
   top: var(--pk-header-h, 4.5rem);
+  left: 0;
+  right: 0;
   z-index: 40;
   display: flex;
   align-items: center;
