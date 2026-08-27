@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 20/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
+**Plans:** 21/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -278,7 +278,7 @@ Plans:
 
 **Wave 17 — gap closure round 3** *(blocked on Wave 16 — same stylesheet)*
 
-- [ ] 01.2-26-PLAN.md — G-01.2-15 (part 1 of 2): the app's first shared pill base and its documented tone/size/interactive variants, plus the detail page's three chip families migrated onto it; opens with a blocking decision checkpoint on the base geometry and the variant set
+- [x] 01.2-26-PLAN.md — G-01.2-15 (part 1 of 2): the app's first shared pill base and its documented tone/size/interactive variants, plus the detail page's three chip families migrated onto it; opens with a blocking decision checkpoint on the base geometry and the variant set
 
 **Wave 18 — gap closure round 3** *(blocked on Wave 17 — same stylesheet)*
 
