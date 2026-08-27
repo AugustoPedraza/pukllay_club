@@ -33,10 +33,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   guard, AND the section heading plus the list are themselves wrapped in
   `ficha_tecnica?/1` so a game with none of the four carriable fields
   (min_age, year_published, designers, bgg_id) shows no empty heading over
-  an empty grid. The publishers field was dropped from this section
-  entirely in the G-01.2-10 mobile masthead rework (01.2-17) — the UAT
-  called it useless information, and the removal is unconditional (every
-  viewport width), not a mobile-only cut.
+  an empty grid. The publisher-name field this section used to carry was
+  dropped entirely in the G-01.2-10 mobile masthead rework (01.2-17) — the
+  UAT called it useless information, and the removal is unconditional
+  (every viewport width), not a mobile-only cut.
 
   Mobile chrome (SHELL-03, plan 01.1-04): `.DetailChrome` drives the fixed
   bottom CTA bar and the sticky title-echo bar off a single passive
@@ -418,14 +418,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
                 <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
 
-                <.link :if={@game.weight_band} navigate={~p"/?weight_bands=#{@game.weight_band}"}>
-                  <GameChips.weight_band_badge game={@game} show_descriptor={true} />
-                </.link>
-                <GameChips.editorial_tags
-                  tags={@game.tags}
-                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
-                />
-
+                <%!-- G-01.2-10 task 3: the description sits immediately
+                after the title with nothing in between (ask #2) — every
+                element that used to be wedged here (weight-band badge,
+                editorial hashtags) moved below the separator. --%>
                 <div :if={@game.description} class="pk-description">
                   <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
                     {@game.description}
@@ -438,6 +434,34 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                     {(@description_expanded && "Ver menos") || "Ver más"}
                   </button>
                 </div>
+
+                <%!-- Boundary between the primary reading block (title +
+                description) and supplementary "more information" content
+                (ask #4/#6). daisyUI's own divider component checked and
+                used as-is for the line's colour/thickness (already
+                theme-aware via color-mix, no hand-rolled rule needed for
+                that); only its own default margin fought .pk-text-col's
+                already-established 1rem flex gap (doubling the visible
+                gap around the line), so .pk-divider neutralizes just that
+                one property. Reused verbatim by 01.2-18 for the boundary
+                before the recommendations shelf. --%>
+                <div class="divider pk-divider" role="separator"></div>
+
+                <GameChips.editorial_tags
+                  tags={@game.tags}
+                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
+                />
+
+                <%!-- D2 (recommended: keep the badge, relocate it here).
+                Every literal ask is satisfied: nothing sits between title
+                and description any more, the difficulty filter link
+                survives, and the teaching sentence survives — the
+                duplication with the facts row's own dificultad pill now
+                reads as "summary pill up top, explanation further down"
+                rather than the same thing twice in one block. --%>
+                <.link :if={@game.weight_band} navigate={~p"/?weight_bands=#{@game.weight_band}"}>
+                  <GameChips.weight_band_badge game={@game} show_descriptor={true} />
+                </.link>
 
                 <h2 :if={@mechanic_labels != []} class="pk-section-heading">Mecánicas</h2>
                 <GameChips.chip_row
@@ -453,6 +477,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   href_fun={fn label -> ~p"/?themes=#{label}" end}
                 />
 
+                <%!-- G-01.2-10 task 3, ask #5: the publisher row is gone
+                (unconditional, every viewport width) and ficha_tecnica?/1
+                below narrowed from five fields to four — see that
+                function's own comment. --%>
                 <h2 :if={ficha_tecnica?(@game)} class="pk-section-heading">Ficha técnica</h2>
                 <dl :if={ficha_tecnica?(@game)} class="pk-spec-list">
                   <div :if={@game.min_age} class="pk-spec-row">
@@ -466,10 +494,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   <div :if={@game.designers != []} class="pk-spec-row pk-spec-row--wide">
                     <dt>Diseñadores</dt>
                     <dd>{Enum.join(@game.designers, ", ")}</dd>
-                  </div>
-                  <div :if={@game.publishers != []} class="pk-spec-row pk-spec-row--wide">
-                    <dt>Editorial</dt>
-                    <dd>{Enum.join(@game.publishers, ", ")}</dd>
                   </div>
                   <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
                     <dd>
@@ -888,15 +912,19 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   # D-04/D-05 (01.2-04): the UI-SPEC `zero-one-many` backstop for Ficha
   # técnica — the section (heading + list) renders only when at least one
-  # of the five remaining carriable fields is present, so a minimal-data
+  # of the four remaining carriable fields is present, so a minimal-data
   # game never shows a bare heading over an empty grid. Every field read
-  # here is present on every %Game{} (two integers, two array columns with
+  # here is present on every %Game{} (two integers, one array column with
   # `default: []`, one nullable integer) — no nil-dereference path exists.
+  # Narrowed from five fields to four in the G-01.2-10 mobile masthead
+  # rework (01.2-17): the publisher-name clause was dropped in the same
+  # edit as the spec-row it guarded — the two must move together, or a
+  # game whose only remaining data was that field re-opens the exact
+  # empty-heading hole this guard exists to close.
   defp ficha_tecnica?(game) do
     not is_nil(game.min_age) or
       not is_nil(game.year_published) or
       game.designers != [] or
-      game.publishers != [] or
       not is_nil(game.bgg_id)
   end
 

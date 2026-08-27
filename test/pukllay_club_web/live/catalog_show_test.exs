@@ -63,12 +63,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "+7"
     end
 
-    test "renders designers, publishers, age, and description in Ficha técnica, and players/duration once in the facts row (D-05)",
+    test "renders designers, age, and description in Ficha técnica, and players/duration once in the facts row (D-05)",
          %{conn: conn} do
       game =
         game_fixture(%{
           designers: ["Klaus Teuber"],
-          publishers: ["Devir"],
           min_players: 3,
           max_players: 4,
           min_age: 10,
@@ -82,7 +81,6 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
 
       assert html =~ "Klaus Teuber"
-      assert html =~ "Devir"
       assert html =~ "10+"
       assert html =~ "Compite por colonizar la isla de Catán."
 
@@ -94,13 +92,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute spec_html =~ "Duración"
     end
 
-    test "omits designers/publishers/age/description rows individually when absent", %{
-      conn: conn
-    } do
+    test "omits designers/age/description rows individually when absent, and Editorial never renders (G-01.2-10 task 3)",
+         %{conn: conn} do
       game =
         game_fixture(%{
           designers: [],
-          publishers: [],
           min_age: nil,
           description: nil
         })
@@ -151,9 +147,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html2 =
         view
-        |> element(
-          ~s(#gallery-thumbnails button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"])
-        )
+        |> element(~s(#gallery-thumbnails button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"]))
         |> render_click()
 
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
@@ -174,9 +168,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html2 =
         view
-        |> element(
-          ~s(#gallery-dots button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"])
-        )
+        |> element(~s(#gallery-dots button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"]))
         |> render_click()
 
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
@@ -517,6 +509,118 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html3 = render_click(view, "toggle-description", %{})
       refute html3 =~ "is-expanded"
+    end
+  end
+
+  describe "reading column reorder — title then description then a bounded more-info zone (G-01.2-10 task 3)" do
+    test "the description block is the element immediately following the title heading — ordered children, not a substring match",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica de mercaderes."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # Adjacent-sibling combinator: this only matches when .pk-description
+      # is literally the very next element after #detail-title-block — an
+      # element reinserted between them (the weight badge, the editorial
+      # hashtags, either chip row) makes this query return nothing.
+      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+    end
+
+    test "the mechanics/themes chip rows and editorial hashtags never render before the description block",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          description: "Una crónica de mercaderes.",
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          tags: ["#CreaConexiones"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      {description_idx, _} = :binary.match(html, "Una crónica de mercaderes.")
+      {mechanics_idx, _} = :binary.match(html, "Mecánicas")
+      {themes_idx, _} = :binary.match(html, "Temáticas")
+      {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
+
+      assert description_idx < mechanics_idx
+      assert description_idx < themes_idx
+      assert description_idx < hashtag_idx
+    end
+
+    test "a separator element exists between the description block and the first more-information heading",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica.", mechanics: ["Dice Rolling"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-description + .divider") |> Enum.count() == 1
+    end
+
+    test "the weight-band badge (D2 = kept) renders after the separator, not immediately after the title",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "ingenio_estratega", description: "Una crónica."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # After the separator: a badge-secondary element somewhere later in
+      # the document than .pk-divider.
+      assert doc |> LazyHTML.query(".pk-divider ~ a .badge-secondary") |> Enum.count() == 1
+
+      # Not immediately after the title — the description sits there
+      # instead (proven by the first test in this block); this is a
+      # negative structural check specific to the badge.
+      assert doc |> LazyHTML.query("#detail-title-block + a .badge-secondary") |> Enum.count() == 0
+    end
+
+    test "a game with publishers renders no publisher row in the spec list", %{conn: conn} do
+      game = game_fixture(%{publishers: ["Devir"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Devir"
+      refute html =~ "Editorial"
+    end
+
+    test "a game whose only populated spec field is publishers renders no Ficha técnica section at all",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: ["Devir"],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Ficha técnica"
+      refute html =~ "pk-spec-list"
+    end
+
+    test "a game with a year and publishers still renders the Ficha técnica section with the year row",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          min_age: nil,
+          year_published: 2001,
+          designers: [],
+          publishers: ["Devir"],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Ficha técnica"
+      assert html =~ "2001"
+      refute html =~ "Devir"
     end
   end
 

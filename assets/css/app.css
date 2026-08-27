@@ -2639,6 +2639,21 @@ body.pk-drawer-open {
   overflow: visible;
 }
 
+/* Boundary between the primary reading block (title + description) and
+   supplementary "more information" content (G-01.2-10 task 3, ask #4/#6).
+   daisyUI's own .divider component is used as-is for the line's own
+   colour/thickness — already theme-aware via color-mix, so no rule for
+   that is declared here. Only its default `margin: 1rem 0` is overridden:
+   .pk-text-col's flex `gap: 1rem` above already supplies the spacing on
+   both sides, and the two are additive (gap does not collapse against a
+   child's own margin), so leaving the daisyUI default would double the
+   visible gap around the line. Reused verbatim by 01.2-18 for the
+   boundary before the recommendations shelf — declare any future change
+   to this line's own appearance here, once, not per call site. */
+.pk-divider {
+  margin: 0;
+}
+
 .pk-spec-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
