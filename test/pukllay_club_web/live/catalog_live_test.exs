@@ -1008,6 +1008,38 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute chip_html =~ "badge-neutral"
       refute chip_html =~ ~s(class="badge)
     end
+
+    # G-01.2-27 task 1: pins the migration onto the shared pill base — a
+    # future revert to a bespoke `.pk-active-filter-chip` rule (the exact
+    # drift this consolidation ends) fails here, not just visually.
+    test "each applied-filter chip composes the shared pill base, the accent tone, the comfortable size, and the interactive variant",
+         %{conn: conn} do
+      game_fixture(%{name: "Pill Base Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Pill Base"})
+
+      chip_classes =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-active-filter-chip")
+        |> LazyHTML.attribute("class")
+
+      assert chip_classes != []
+
+      for class_list <- chip_classes do
+        tokens = String.split(class_list)
+
+        assert "pk-pill" in tokens
+        assert "pk-pill-accent" in tokens
+        assert "pk-pill-comfortable" in tokens
+        assert "pk-pill-interactive" in tokens
+      end
+    end
   end
 
   describe "settling the background surface once per modal close (G-01.2-4 defect C)" do
