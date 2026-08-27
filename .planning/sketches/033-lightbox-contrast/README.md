@@ -61,3 +61,15 @@ other overlay in this app already does.
   rest of the app's restrained motion language?
 - Do the prev/next controls read as familiar, standard lightbox navigation (placement, hover
   state, keyboard arrows)?
+
+## Open Questions
+- **Prev/next arrow horizontal position** — this sketch places `‹`/`›` at the viewport's extreme
+  left/right edges (`left: 1rem` / `right: 1rem`, `0.5rem` under 640px), matching production's own
+  `left-4`/`right-4` placement. Not confirmed as correct: at desktop widths, with the image capped
+  to `min(90vw, 42rem)`, the edge-anchored arrows can sit far from the image itself (a lot of empty
+  scrim between button and photo), which may or may not read as intentional. Left for
+  implementation to figure out per viewport — options worth trying in code: anchor the arrows to
+  the image card's own edges instead of the viewport (so they hug the photo at any width), or keep
+  viewport-edge anchoring only on mobile (where the image is closer to full-width anyway) and
+  switch to image-relative anchoring at the desktop breakpoint. Not re-sketched here since it's a
+  positioning-only question, not a new visual direction.
