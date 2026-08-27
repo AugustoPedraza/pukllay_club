@@ -2188,6 +2188,119 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  # G-01.2-27 task 3 (gap-closure round 3 cont'd, UAT gap G-01.2-15): the
+  # drift gate that closes the loop the previous plan's tone-variant gate
+  # started (catalog_show_test.exs). This exact drift — a chip- or
+  # pill-shaped element growing its own bespoke radius/padding/font-size
+  # instead of composing the shared base — has repeated at least three
+  # times in this codebase before either gate existed (`.pk-chip-row
+  # .badge`'s G-01.2-20 color-only patch, `.pk-active-filter-chip`'s own
+  # "must NEVER be merged" note, `.pk-chip`'s own "same outline-at-rest
+  # logic" note — see the diagnosis at
+  # .planning/debug/G-01.2-15-pill-chip-design-inconsistency.md), which is
+  # why a comment alone was judged insufficient here too.
+  describe "bespoke-chip drift gate (Phase 01.2 gap-closure round 3, G-01.2-27 task 3)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    defp drift_gate_css_source, do: File.read!(@css_path)
+
+    # Every top-level (column-0) CSS rule whose selector text names "chip"
+    # or "pill" — found by reading, not assumed (`grep -n "chip\|-pill"
+    # assets/css/app.css`): everything not excluded below is either the
+    # pill system itself (`.pk-pill` and its tone/size/interactive variants
+    # — already policed by catalog_show_test.exs's own gate) or a
+    # structural container/pseudo-element with no geometry to police
+    # (`.pk-chip-nav`'s scroll rail, its edge-fade pseudo-elements, its
+    # spacer, its scrollbar reset).
+    defp bespoke_chip_rules(src) do
+      ~r/(?m)^(\.[^{}]+?)\{([^{}]*)\}/
+      |> Regex.scan(src)
+      |> Enum.map(fn [_, selector, body] -> {String.trim(selector), body} end)
+      |> Enum.filter(fn {selector, _body} ->
+        (String.contains?(selector, "chip") or String.contains?(selector, "pill")) and
+          not String.contains?(selector, "pk-pill")
+      end)
+    end
+
+    # One named, reasoned exclusion per selector family that legitimately
+    # keeps a bespoke declaration — not a guess, each reason cites the exact
+    # plan/task that put it there. `pk-chip` is matched with a precise
+    # token boundary (not a bare substring) so it names ONLY the
+    # category-navigation chip itself, never `pk-chip-nav`/`pk-chip-spacer`/
+    # `pk-chip-nav-wrap` (structural containers this gate never needed to
+    # exempt in the first place).
+    # RED (G-01.2-27 task 3): intentionally empty at first commit — the
+    # exclusion list is built from what the failing run actually reports,
+    # not from a guess (see the GREEN commit for the populated map).
+    @exclusions %{}
+
+    defp excluded?(selector) do
+      Enum.any?(@exclusions, fn {marker, _reason} ->
+        Regex.match?(~r/(?<![\w-])#{Regex.escape(marker)}(?![\w-])/, selector)
+      end)
+    end
+
+    # CSS's `padding` shorthand puts the horizontal component in a
+    # position that depends on how many values are given (1: all sides: 2:
+    # vertical horizontal; 3: top horizontal bottom; 4: top right bottom
+    # left) — `.pk-chip-nav-wrap`'s own `padding: 0.75rem 0` is VERTICAL
+    # only (horizontal component is literally `0`) and must not trip this
+    # gate, which is why "declares padding at all" is not the check.
+    defp declares_horizontal_padding?(body) do
+      cond do
+        Regex.match?(~r/padding-(left|right|inline)/, body) ->
+          true
+
+        match = Regex.run(~r/(?<![-\w])padding:\s*([^;]+);/, body) ->
+          [_, value] = match
+          parts = value |> String.trim() |> String.split(~r/\s+/)
+
+          horizontal =
+            case length(parts) do
+              1 -> [Enum.at(parts, 0)]
+              2 -> [Enum.at(parts, 1)]
+              3 -> [Enum.at(parts, 1)]
+              4 -> [Enum.at(parts, 1), Enum.at(parts, 3)]
+              _ -> parts
+            end
+
+          Enum.any?(horizontal, &(&1 not in ~w(0 0px 0rem 0em)))
+
+        true ->
+          false
+      end
+    end
+
+    test "no chip- or pill-shaped rule outside the pill system declares a radius, a horizontal padding, or a type size" do
+      rules = bespoke_chip_rules(drift_gate_css_source())
+
+      assert rules != [],
+             "expected to find at least the excluded category-navigation chip's rule in " <>
+               "assets/css/app.css — 0 rules found suggests the scan regex broke, not that " <>
+               "the codebase is clean"
+
+      for {selector, body} <- rules, not excluded?(selector) do
+        refute body =~ ~r/border-radius/,
+               "`#{selector}` declares its own border-radius outside the pill system. A new " <>
+                 "chip extends `.pk-pill` with a variant; it does not get a rule of its own. " <>
+                 "This exact drift has happened at least three times in this codebase already " <>
+                 "(G-01.2-15) — a comment alone was judged insufficient, which is why this " <>
+                 "assertion exists."
+
+        refute declares_horizontal_padding?(body),
+               "`#{selector}` declares its own horizontal padding outside the pill system. A " <>
+                 "new chip extends `.pk-pill`/`.pk-pill-comfortable` with a variant; it does " <>
+                 "not get a rule of its own. If the base genuinely cannot express what this " <>
+                 "call site needs, that is a design decision to raise, not a rule to add " <>
+                 "quietly."
+
+        refute body =~ ~r/font-size/,
+               "`#{selector}` declares its own font-size outside the pill system. Type size " <>
+                 "lives on `.pk-pill` or a size variant, never on a bespoke chip rule."
+      end
+    end
+  end
+
   defp position(html, text) do
     case :binary.match(html, text) do
       {pos, _} -> pos
