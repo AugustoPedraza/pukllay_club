@@ -2,7 +2,7 @@
 sketch: 036
 name: pill-chip-unification
 question: "What single base pill/chip shape (with tone/size/interactive variants) can represent facts pills, Mecánicas/Temáticas chips, editorial hashtags, active-filter chips, and filter-modal chips consistently?"
-winner: null
+winner: "A+B Synthesis (flat info pills + always-bordered action chips with tap-press feedback)"
 tags: [detail, catalog, pills, chips, design-system, gap-closure]
 ---
 
@@ -45,26 +45,43 @@ open .planning/sketches/036-pill-chip-unification/index.html
 Toggle 🌙/☀ in the bottom-right toolbar — chip contrast is exactly the kind of thing that can look
 fine in one theme and wash out in the other (sketch 033's real lightbox bug in this codebase).
 
-## Variants
-- **A: One Universal Shape** — identical radius/border/padding/font for every role; only
-  background/border color changes by tone. Simplest mental model. Risk: the "búsqueda activa" and
-  filter-modal chips shrink to info-pill size, below the 44px touch target `chip_class/1` already
-  guarantees today — may read as a functional regression on tap-heavy surfaces.
-- **B: Two Sizes by Interactivity** — informational pills (facts, Mecánicas/Temáticas, editorial)
-  stay compact; interactive pills (removable filters, modal facets) get a real 44px touch target.
-  Same shape language (radius, border weight, font family) across both — only padding/min-height
-  differ by role.
-- **C: Three Tiers by Prominence** — info tier quietest, a distinct "topic" tier for
-  Mecánicas/Temáticas (slightly bolder, its own visible identity instead of borrowing the facts
-  pill verbatim), and an "action" tier for anything tappable (boldest, hover-lift, 44px target).
+## Winner: A+B Synthesis
+Purely informational pills (facts, Mecánicas/Temáticas, editorial) render flat — no background, no
+border, middot-separated — since nothing happens when you tap them. Interactive chips (removable
+active filters, selectable filter-modal facets) keep an **always-visible** 1px border at rest (not
+just on hover), a real 44px touch height, and a genuine `:active` tap-press feedback (scale-down +
+background flash). This is the industry pattern for signaling tappability with no hover state to
+lean on (Material Design's "filter chip", Airbnb's own filter pills) — border-only-at-rest is what
+makes something *read* as interactive on a touch device, not chrome for chrome's sake.
+
+## Round history
+- **Round 1** — three structural directions explored: **A One Universal Shape** (identical
+  geometry for every role, tone-only variation — risked shrinking interactive chips below the
+  44px touch target); **B Two Sizes by Interactivity** (compact info pills, 44px interactive
+  chips, same shape language); **C Three Tiers by Prominence** (info/topic/action as three visibly
+  distinct weights). User picked B, flagged "needs a better balance."
+- **Round 2** — closed the size gap (info padding/font bumped up, action's font brought down —
+  44px touch height kept, that's an a11y floor not a style choice), gave action chips a resting
+  background+border instead of bare transparent, gave info pills more padding, unified radius/
+  border-width across both sizes. "Looks better."
+- **Round 3** — two polish notes: pill text switched from `--color-text-muted` (read as "default
+  gray") to the theme's full `--color-text` (a genuine contrast improvement, not just a look); all
+  emoji icons and the editorial `#` hashtag prefix removed — plain label text only.
+- **Round 4** — "why does the rounded shape feel like too much padding? what else can be
+  minimalistic?" Three fresh directions against a kept Reference (round 3): **A Tight Pill** (same
+  capsule, padding roughly halved); **B Flat, No Chrome** (info pills drop all chrome, action keeps
+  a minimal outline); **C Low-Radius Chip** (small rounded-rect instead of a full capsule).
+- **Round 5** — "how do A and B combine, with real tap affordance, especially mobile — what do
+  Netflix/Airbnb do?" Answered with the industry pattern (border-only-at-rest signals tappability
+  when there's no hover state; a press/tap feedback state substitutes for the missing hover cue)
+  and built **D, the A+B synthesis**: flat info pills (B) + tightly-sized, always-bordered action
+  chips (A) + a new `:active` press-feedback. Picked directly as the winner. Reference/A/B/C
+  removed from `index.html` (winner only).
 
 ## What to Look For
-- Do the five real sections still each read correctly for what they *are* (info vs. topic vs.
-  interactive), or does unifying them make everything look the same regardless of role?
-- Does the "búsqueda activa" removable chip and the filter-modal selectable chip now look like
-  members of one family, while staying visually distinguishable from each other (✕ vs. plain
-  label) — resolving the "never merge" comment without literally merging the two affordances?
-- At the sizes shown, does anything feel too small to comfortably tap, or too heavy for a purely
-  informational pill (facts row)?
-- Which direction, if any, feeds D1/D2/D3 in plan `01.2-26` most directly — or is a synthesis of
-  two variants the real answer?
+- Do the informational pills (facts/mecánicas/temáticas/editorial) read as clearly non-interactive
+  now that they have no chrome at all?
+- Do the "búsqueda activa" and filter-modal chips read as clearly tappable at rest (not just on
+  hover), and does the tap-press feedback feel responsive rather than laggy?
+- Does the whole set still read as one family — same radius, same border weight, same font — with
+  size/chrome differing only by whether something is interactive?
