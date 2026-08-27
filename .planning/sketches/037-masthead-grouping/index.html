@@ -7,16 +7,11 @@
 <link rel="stylesheet" href="../themes/default.css">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; padding-top: 108px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+  body { margin: 0; padding-top: 84px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
 
-  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
-  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
-  .variant-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
-  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
-  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
-
-  .variant { display: none; }
-  .variant.active { display: block; }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; font-family: var(--font-sans); }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-primary); color: var(--color-primary-content); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; }
+  #variant-nav .caption { display: block; margin-top: 6px; font-size: var(--text-xs); color: var(--color-text-muted); }
 
   .cause-note { max-width: 420px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-xs); color: var(--color-accent-text); }
   .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; }
@@ -33,10 +28,10 @@
      dashed line, no exceptions. */
   .gutter-ref { border-left: 2px dashed var(--color-danger); border-right: 2px dashed var(--color-danger); padding: 0 14px; }
 
-  .facts-row { display: flex; gap: 6px; justify-content: space-between; margin-bottom: 10px; }
+  .facts-row { display: flex; gap: 6px; justify-content: space-between; margin-bottom: 8px; }
   .fact-pill { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 9999px; flex: 1; justify-content: center; }
 
-  .poster-photo { aspect-ratio: 3/4; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); position: relative; }
+  .poster-photo { aspect-ratio: 3/4; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); position: relative; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); }
   .share-corner { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.35); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; }
 
   .cta-outside { margin-top: 14px; }
@@ -46,124 +41,50 @@
   #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
   #sketch-tools:hover { opacity: 1; }
 
-  /* Compact dot row — shared fix across every variant (dot touch target
-     stays 44px for tap accessibility; only the VISIBLE mark spacing
-     tightens, via negative margin on the row + tighter per-dot width,
-     same technique app.css already uses for vertical compression). */
-  .dot-row { display: flex; align-items: center; justify-content: center; margin: 6px 0 0; }
+  /* Compact dot row — dot touch target stays 44px for tap accessibility;
+     only the VISIBLE mark spacing tightens, via negative margin on the
+     row + tighter per-dot width, same technique app.css already uses
+     for vertical compression. */
+  .dot-row { display: flex; align-items: center; justify-content: center; margin: 4px 0 0; }
   .dot-btn { width: 22px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; padding: 0; margin: -4px 0; }
   .dot-mark { width: 6px; height: 6px; border-radius: 9999px; background: var(--color-border); }
   .dot-btn.is-active .dot-mark { background: var(--color-primary); width: 16px; border-radius: 9999px; transition: width var(--duration-fast) var(--ease-standard); }
-
-  /* ============================================================
-     VARIANT A — Extended Panel
-     .pk-poster-panel's own bordered/shadowed treatment now wraps
-     the facts row too, not just the photo+gallery. One visible
-     boundary for pills+photo+dots; CTA stays outside, unchanged
-     from 032's settled decision.
-     ============================================================ */
-  .variant-a .buybox-group { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 12px; box-shadow: var(--shadow-sm); }
-  .variant-a .buybox-group .facts-row { margin-bottom: 10px; }
-  .variant-a .buybox-group .poster-photo { margin: 0; }
-
-  /* ============================================================
-     VARIANT B — Shared Background Band, No Border
-     A soft tinted band behind pills+photo+dots, no hard border or
-     shadow — a lighter-weight grouping cue than a full card.
-     ============================================================ */
-  .variant-b .buybox-group { background: var(--color-surface); border-radius: var(--radius-lg); padding: 12px; }
-  .variant-b .buybox-group .facts-row .fact-pill { background: var(--color-bg); }
-  .variant-b .buybox-group .poster-photo { margin: 0; }
-
-  /* ============================================================
-     VARIANT C — Proximity Only, No Shared Container
-     Pills/photo/dots keep their own current treatment (no shared
-     background or border) — grouping comes purely from tightened
-     vertical rhythm + aligned edges. Minimal diff from production.
-     ============================================================ */
-  .variant-c .facts-row { margin-bottom: 8px; }
-  .variant-c .poster-photo { border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); }
-  .variant-c .dot-row { margin-top: 4px; }
 </style>
 </head>
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active" onclick="showVariant('a', this)">A: Extended Panel</button>
-  <button class="variant-tab" onclick="showVariant('b', this)">B: Shared Background Band</button>
-  <button class="variant-tab" onclick="showVariant('c', this)">C: Proximity Only</button>
-  <span class="caption">390px mobile frame. Red dashed lines mark the shell gutter (14px) — every edge below should align to it, no exceptions. CTA is intentionally shown detached below the group in every variant (032's settled call — not re-opened here). Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab">Winner: C — Proximity Only ★</button>
+  <span class="caption">A (extended panel) and B (shared background band) explored and dropped — see README for the round history. Red dashed lines mark the shell gutter (14px) — every edge below aligns to it. CTA stays detached below the group (032's settled call, not re-opened here). Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
   Round-3 diagnosis found <strong>three independent causes</strong> behind "everything floats":
   dot touch-target sizing made dots read 5x wider than their visual gap; the facts row, poster
   panel, and CTA share <code>no</code> visual container; and the panel's own 1rem padding put the
-  photo 16px further from the edge than its siblings. All three fixes are applied identically in
-  every variant below — <strong>only the grouping treatment (the container question) is the
-  variant axis.</strong>
+  photo 16px further from the edge than its siblings. All three fixes are applied below. The
+  container question (A/B/C) is resolved as C: no shared background/border — grouping comes from
+  tightened vertical rhythm + aligned edges alone.
 </div>
 
 <div class="phone">
   <div class="phone-header">Ludoteca / 7 Wonders Duel</div>
   <div class="phone-body gutter-ref">
 
-    <div id="variant-a" class="variant variant-a active">
-      <div class="buybox-group">
-        <div class="facts-row">
-          <span class="fact-pill">👤 2-4</span>
-          <span class="fact-pill">⏱ 30 min</span>
-          <span class="fact-pill">🎯 Intermedio</span>
-        </div>
-        <div class="poster-photo"><span class="share-corner">🔗</span></div>
-        <div class="dot-row">
-          <button class="dot-btn is-active"><span class="dot-mark"></span></button>
-          <button class="dot-btn"><span class="dot-mark"></span></button>
-          <button class="dot-btn"><span class="dot-mark"></span></button>
-        </div>
-      </div>
-      <div class="cta-outside">
-        <button class="cta-btn">Reservar para el sábado</button>
-        <p class="cta-note">CTA stays a separate decision below the group (032)</p>
-      </div>
+    <div class="facts-row">
+      <span class="fact-pill">👤 2-4</span>
+      <span class="fact-pill">⏱ 30 min</span>
+      <span class="fact-pill">🎯 Intermedio</span>
     </div>
-
-    <div id="variant-b" class="variant variant-b">
-      <div class="buybox-group">
-        <div class="facts-row">
-          <span class="fact-pill">👤 2-4</span>
-          <span class="fact-pill">⏱ 30 min</span>
-          <span class="fact-pill">🎯 Intermedio</span>
-        </div>
-        <div class="poster-photo"><span class="share-corner">🔗</span></div>
-        <div class="dot-row">
-          <button class="dot-btn is-active"><span class="dot-mark"></span></button>
-          <button class="dot-btn"><span class="dot-mark"></span></button>
-          <button class="dot-btn"><span class="dot-mark"></span></button>
-        </div>
-      </div>
-      <div class="cta-outside">
-        <button class="cta-btn">Reservar para el sábado</button>
-        <p class="cta-note">CTA stays a separate decision below the group (032)</p>
-      </div>
+    <div class="poster-photo"><span class="share-corner">🔗</span></div>
+    <div class="dot-row">
+      <button class="dot-btn is-active"><span class="dot-mark"></span></button>
+      <button class="dot-btn"><span class="dot-mark"></span></button>
+      <button class="dot-btn"><span class="dot-mark"></span></button>
     </div>
-
-    <div id="variant-c" class="variant variant-c">
-      <div class="facts-row">
-        <span class="fact-pill">👤 2-4</span>
-        <span class="fact-pill">⏱ 30 min</span>
-        <span class="fact-pill">🎯 Intermedio</span>
-      </div>
-      <div class="poster-photo"><span class="share-corner">🔗</span></div>
-      <div class="dot-row">
-        <button class="dot-btn is-active"><span class="dot-mark"></span></button>
-        <button class="dot-btn"><span class="dot-mark"></span></button>
-        <button class="dot-btn"><span class="dot-mark"></span></button>
-      </div>
-      <div class="cta-outside">
-        <button class="cta-btn">Reservar para el sábado</button>
-        <p class="cta-note">CTA stays a separate decision below the group (032)</p>
-      </div>
+    <div class="cta-outside">
+      <button class="cta-btn">Reservar para el sábado</button>
+      <p class="cta-note">CTA stays a separate decision below the group (032)</p>
     </div>
 
   </div>
@@ -172,15 +93,6 @@
 <div id="sketch-tools">
   <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
 </div>
-
-<script>
-function showVariant(id, btn) {
-  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('variant-' + id).classList.add('active');
-  btn.classList.add('active');
-}
-</script>
 
 </body>
 </html>

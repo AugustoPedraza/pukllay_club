@@ -2,7 +2,7 @@
 sketch: 038
 name: lightbox-shell-width
 question: "Resolve 033's open question: cap the lightbox photo to the shell's content width (not a standalone 90vw/60rem cap) — where do the chevrons sit relative to a narrower image?"
-winner: null
+winner: "Shell-Width-Anchored Arrows (synthesis of round-1 A, corrected boundary)"
 tags: [detail, lightbox, desktop, arrows, gap-closure]
 ---
 
@@ -39,22 +39,24 @@ open .planning/sketches/038-lightbox-shell-width/index.html
 Each variant shows both a desktop (~1280px) and mobile (390px) frame stacked, so the arrow
 placement can be judged at both extremes at once. Toggle 🌙/☀ to check both themes.
 
-## Variants
-- **A: Viewport-Edge Arrows** — today's production behavior, kept as the comparison baseline: the
-  photo is now capped to the shell's content width, but arrows stay pinned near the viewport's own
-  edges. Shows exactly the gap 033 flagged as unconfirmed.
-- **B: Image-Relative Arrows** — arrows anchor to the photo's own bounding box, hugging it at any
-  viewport width instead of the viewport edge.
-- **C: Arrows Below the Photo** — sidesteps the edge-anchoring question entirely: a compact
-  prev / count / next control row sits just under the image, identical treatment at every
-  viewport, no left/right edge decision to make.
+## Winner: Shell-Width-Anchored Arrows
+A, corrected. Round 1's variant A pinned the arrows to the raw browser viewport edge — even after
+the photo was capped to shell width, that still looked "weird" (per user feedback) because the
+arrows and the photo were measured against two different boundaries. The fix: arrows anchor to
+the *same* shell-content-width box the photo is capped to (the dashed-line reference), not the
+viewport. At mobile widths the shell width and the viewport width are effectively the same, so
+mobile's behavior is unchanged from round 1.
+
+## Round history
+- **Round 1** — three approaches explored: **A Viewport-Edge Arrows** (arrows pinned to the raw
+  browser viewport edge); **B Image-Relative Arrows** (arrows anchor to the photo's own bounding
+  box, hugging it at any width); **C Arrows Below the Photo** (sidesteps edge-anchoring entirely
+  with a below-image prev/count/next row). User picked "A, but not viewport — should use the shell
+  width." B/C removed from `index.html` (winner only, refined).
 
 ## What to Look For
-- Now that the photo fills the shell's content width, does the scrim read as clearly obscuring the
-  page (per 033's already-picked treatment) without any further scrim changes?
-- At desktop width, does the arrow-to-photo relationship feel intentional in each variant, or does
-  A's gap still read as accidental the way 033 worried it might?
-- Does C's below-photo control row feel like a meaningfully different (simpler, more mobile-native)
-  interaction, or does it lose the "familiar lightbox chevron" recognizability 033 specifically
-  validated?
-- On mobile, does the left chevron now clearly sit on top of the image in every variant?
+- Now that the photo fills the shell's content width and the arrows are anchored to that same
+  boundary, does the arrow-to-photo relationship read as intentional rather than "weird"?
+- Does the scrim still read as clearly obscuring the page (per 033's already-picked treatment,
+  unchanged here)?
+- On mobile, does the left chevron now clearly sit on top of the image (z-index fix)?
