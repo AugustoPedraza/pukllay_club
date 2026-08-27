@@ -859,7 +859,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         nothing; `JS.push/2`'s documented `:page_loading` option (js.ex) is
         the real, correct API and is what is used here and at the two other
         annotation sites below (Rule 1 fix, see SUMMARY). --%>
-        <form phx-change={JS.push("search", page_loading: true)} id="catalog-search-form" class="pk-nav-search-form">
+        <form
+          phx-change={JS.push("search", page_loading: true)}
+          id="catalog-search-form"
+          class="pk-nav-search-form"
+        >
           <.input
             type="text"
             name="q"
