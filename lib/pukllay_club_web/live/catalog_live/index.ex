@@ -845,7 +845,25 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         <.link navigate={~p"/quienes-somos"}>Quiénes Somos</.link>
       </:nav_links>
       <:nav_search>
-        <form phx-change="search" id="catalog-search-form" class="pk-nav-search-form">
+        <%!-- G-01.2-9 (Task 2): `page_loading: true` opts this specific
+        push into LiveView's own phx:page-loading-start/phx:page-loading-stop
+        window events (the mechanism assets/js/app.js's progress bar already
+        listens to and the results-region .ResultsLoading hook below now
+        also listens to) — the ONLY practical, single in-flight signal for
+        this pipeline, since phx-change="search" alone fires no window
+        event by default (that per-element .phx-change-loading class LiveView
+        adds automatically has no equivalent window-level signal). The plan's
+        own acceptance criteria named this `phx-page-loading`, but no such
+        attribute exists in this pinned phoenix_live_view (1.2.9) — verified
+        via `grep -rln phx-page-loading deps/phoenix_live_view/` returning
+        nothing; `JS.push/2`'s documented `:page_loading` option (js.ex) is
+        the real, correct API and is what is used here and at the two other
+        annotation sites below (Rule 1 fix, see SUMMARY). --%>
+        <form
+          phx-change={JS.push("search", page_loading: true)}
+          id="catalog-search-form"
+          class="pk-nav-search-form"
+        >
           <.input
             type="text"
             name="q"
@@ -902,8 +920,63 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         hook already traps Tab focus inside the dialog, and `aria-hidden`
         over a subtree containing focusable elements is itself an
         accessibility violation. --%>
-        <div class={["space-y-6", "pk-dimmable", @filters_open && "is-dimmed"]}>
-          <div :if={not @rendered_results} id="carousel-rows" class="space-y-8">
+        <%!-- G-01.2-9 (Task 2): id + colocated hook mirror LiveView's own
+        phx:page-loading-start/stop window events (fired by the three
+        page_loading: true-annotated controls above) onto this element as a
+        `data-loading` attribute — the same idiom `.GridScroll` already uses
+        client-side for its own fetch-more state, just window-scoped instead
+        of a local pushEvent callback. This wrapper (not #carousel-rows or
+        #grid-scroll individually) is the correct hook host: it is the only
+        element present on BOTH browse surfaces and it survives every flip
+        between them, since the carousel and grid containers are each
+        `:if`-gated out of the DOM on the other surface — a hook needs a
+        stable mount point. app.css's `.pk-dimmable[data-loading]` rule
+        consumes the attribute this hook sets. --%>
+        <div
+          id="results-region"
+          phx-hook=".ResultsLoading"
+          class={["space-y-6", "pk-dimmable", @filters_open && "is-dimmed"]}
+        >
+          <script :type={Phoenix.LiveView.ColocatedHook} name=".ResultsLoading">
+            export default {
+              mounted() {
+                // T-01.2-16-01: a stop event that never arrives (a dropped
+                // response, a transport blip, a backgrounded tab) would
+                // otherwise leave this surface dimmed indefinitely. The
+                // failsafe clears the attribute a few seconds after start
+                // regardless — the one behaviour this hook adds beyond
+                // mirroring, and the reason it exists rather than a bare
+                // CSS variant. Deliberately does not filter on the event's
+                // `detail` payload: only the three annotated controls plus a
+                // live navigation away from this page can produce these
+                // events here, and a momentary dim while the page is being
+                // left is harmless — a filter that depends on an
+                // undocumented payload shape (confirmed empty/best-effort
+                // across LiveView 1.2.9's own call sites — see the
+                // SUMMARY) is a worse trade than an occasionally
+                // one-event-too-generous dim.
+                this.onStart = () => {
+                  this.el.dataset.loading = "true"
+                  clearTimeout(this.failsafeTimer)
+                  this.failsafeTimer = setTimeout(() => {
+                    delete this.el.dataset.loading
+                  }, 5000)
+                }
+                this.onStop = () => {
+                  delete this.el.dataset.loading
+                  clearTimeout(this.failsafeTimer)
+                }
+                window.addEventListener("phx:page-loading-start", this.onStart)
+                window.addEventListener("phx:page-loading-stop", this.onStop)
+              },
+              destroyed() {
+                window.removeEventListener("phx:page-loading-start", this.onStart)
+                window.removeEventListener("phx:page-loading-stop", this.onStop)
+                clearTimeout(this.failsafeTimer)
+              }
+            }
+          </script>
+          <div :if={not @rendered_results} id="carousel-rows" class="space-y-8 pk-surface-fade">
             <%= if @loading do %>
               <CarouselRow.skeleton_row
                 :for={n <- 1..@skeleton_carousel_rows}
@@ -953,10 +1026,16 @@ defmodule PukllayClubWeb.CatalogLive.Index do
                 :if={active_filter_chips(assigns) != []}
                 class="flex flex-wrap items-center gap-1.5"
               >
+                <%!-- G-01.2-9 (Task 2): `phx-value-*` still merges normally
+                alongside a JS.push-valued `phx-click` — JS.push's own
+                `value:` option is left unset here, so this chip's payload is
+                unchanged from before, only page_loading is added on top
+                (see the search form's comment above for the full
+                phx-page-loading rationale). --%>
                 <button
                   :for={chip <- active_filter_chips(assigns)}
                   type="button"
-                  phx-click={chip.event}
+                  phx-click={JS.push(chip.event, page_loading: true)}
                   phx-value-facet={chip.facet}
                   phx-value-scalar={chip.scalar}
                   phx-value-choice={chip.choice}
@@ -967,7 +1046,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
                 </button>
                 <button
                   type="button"
-                  phx-click="clear-filters"
+                  phx-click={JS.push("clear-filters", page_loading: true)}
                   class="pk-clear-filters-link min-h-11"
                 >
                   Limpiar filtros
@@ -1008,7 +1087,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
             id="grid-scroll"
             phx-hook=".GridScroll"
             data-exhausted={to_string(@offset >= @total or @more_error)}
-            class="mx-auto w-full max-w-7xl pk-gutter"
+            class="mx-auto w-full max-w-7xl pk-gutter pk-surface-fade"
           >
             <script :type={Phoenix.LiveView.ColocatedHook} name=".GridScroll">
               export default {
@@ -1127,6 +1206,15 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
         <GamePreview.preview_host />
 
+        <%!-- G-01.2-9 (Task 2) scope decision, not an omission: the modal's
+        own facet/scalar/search controls are deliberately NOT annotated with
+        `page_loading: true`. The modal already renders its own live result
+        count in its footer CTA, and the surface behind it is already
+        blurred and inert (`@filters_open`, above) while it's open — a
+        second in-flight signal on the results region here would land on a
+        surface nobody is looking at. See the SUMMARY's human-check item for
+        whether this reads as fine or needs a follow-up extending the
+        annotation into filter_modal.ex once seen on production latency. --%>
         <FilterModal.filter_modal
           id="filter-modal"
           facet_options={@facet_options}
