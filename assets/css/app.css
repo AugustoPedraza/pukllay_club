@@ -2503,9 +2503,9 @@ body.pk-drawer-open {
 }
 
 /* Three properties only, scoped to the facts row as a direct child of the
-   poster column (Phase 01.2 gap-closure round 2, G-01.2-19 task 1, sketch
-   032) — the row now renders once, above the panel, at every viewport
-   width, replacing the old two-copy overlay/inline swap entirely.
+   poster panel (Phase 01.2 gap-closure round 2, G-01.2-19 task 1, sketch
+   032) — the row now renders once, above the poster photo, at every
+   viewport width, replacing the old two-copy overlay/inline swap entirely.
    `justify-content` is deliberately NOT redeclared here: the shared
    .pk-facts-row rule above already owns `space-between`, which is exactly
    the "justified, full width of the column" behaviour the UAT asked for.
@@ -2515,10 +2515,27 @@ body.pk-drawer-open {
    as an overlay, but the smallest real viewports still leave little
    margin, and a nowrap row with `space-between` overflows silently rather
    than clipping visibly. `margin-bottom: 0` cancels the shared row's own
-   8px bottom margin, because the column's flex `gap` above already
-   supplies that spacing and the two are additive — same reasoning as
-   .pk-divider's own note on this file. */
-.pk-poster-col > .pk-facts-row {
+   8px bottom margin, because the panel's flex `gap` below already supplies
+   that spacing and the two are additive — same reasoning as .pk-divider's
+   own note on this file.
+
+   Selector re-pointed from `.pk-poster-col > .pk-facts-row` to
+   `.pk-poster-panel > .pk-facts-row` (Phase 01.2 gap-closure round 3,
+   G-01.2-23 task 2, sketch 037): the facts row and the poster photo used
+   to be siblings across a card boundary — the row sat directly in
+   `.pk-poster-col`, the photo sat inside `.pk-poster-panel` one level in.
+   `.pk-poster-panel`'s own 1rem card padding (below) therefore inset the
+   photo 16px further from the shared `--pk-gutter` line than the row,
+   which sat flush against it — the exact mismatch UAT test 8 reported
+   ("the margin left and right of the shell isn't the same for all the
+   components"). Moving the row inside the panel puts it on the same side
+   of that padding as the photo, so the two now share one inset and their
+   left/right edges coincide. The panel's own OUTER edge is untouched by
+   this move and still lands on the shared gutter line, so the card, the
+   fixed CTA bar's button and the "Juegos similares" row header below all
+   still start and end at one x-position; the photo's remaining inset from
+   that shared line is the card's own padding, and is deliberate. */
+.pk-poster-panel > .pk-facts-row {
   flex-wrap: wrap;
   row-gap: 4px;
   margin-bottom: 0;
