@@ -656,22 +656,25 @@
    VARIANT here — never a rule of its own, and never a second declaration
    of a property this block already owns.
 
-   Call-site inventory (this plan, 01.2-26, migrates the first three; the
-   next plan, 01.2-27, migrates the remaining two onto the same base):
+   Call-site inventory — COMPLETE as of 01.2-27 task 3 (01.2-26 migrated the
+   first three, 01.2-27 the remaining two; this is every one of UAT test
+   11's four named surfaces, plus the editorial hashtags it did not name):
      - GamePreview.facts_row/1 (players/tiempo/dificultad) — neutral tone,
        dense size, interactive on the three link branches only
      - GameChips.chip_row/1 (Mecánicas/Temáticas) — neutral tone, dense size
      - GameChips.editorial_tags/1 (club hashtags) — accent tone, dense size
-     - [01.2-27] the catalog's active-filters ("búsqueda activa") chip —
-       accent tone, comfortable size, interactive, removable
-     - [01.2-27] filter_modal.ex's facet/scalar chips — outline tone at
-       rest, selected tone when chosen, comfortable size, interactive
+     - CatalogLive.Index's active-filters ("búsqueda activa") chip — accent
+       tone, comfortable size, interactive, removable (01.2-27 task 1)
+     - filter_modal.ex's facet/scalar chips — outline tone at rest, selected
+       tone when chosen, comfortable size, interactive (01.2-27 task 2)
    Deliberately excluded: the catalog's category-navigation chip (`.pk-chip`
    below, `index.ex`) — a 44px navigation control, not in the UAT's list;
    folding it in would widen a chip consolidation into a navigation change.
-   The orphaned `weight_band_badge/1` shape (below, `game_chips.ex`) has no
-   call site; its SHAPE joins the variant set as `pk-pill-large`, its
-   markup does not move. */
+   Named again, verbatim, in the bespoke-chip drift gate's own exclusion
+   list (catalog_live_test.exs) so a future author reads the same reason in
+   both places. The orphaned `weight_band_badge/1` shape (below,
+   `game_chips.ex`) has no call site; its SHAPE joins the variant set as
+   `pk-pill-large`, its markup does not move. */
 .pk-pill {
   display: inline-flex;
   align-items: center;

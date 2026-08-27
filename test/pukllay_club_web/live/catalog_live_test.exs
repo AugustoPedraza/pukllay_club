@@ -2229,10 +2229,31 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     # category-navigation chip itself, never `pk-chip-nav`/`pk-chip-spacer`/
     # `pk-chip-nav-wrap` (structural containers this gate never needed to
     # exempt in the first place).
-    # RED (G-01.2-27 task 3): intentionally empty at first commit — the
-    # exclusion list is built from what the failing run actually reports,
-    # not from a guess (see the GREEN commit for the populated map).
-    @exclusions %{}
+    # Built from what the RED commit's failing run actually reported, not
+    # from a guess. One named, reasoned exclusion per selector family that
+    # legitimately keeps a bespoke declaration — each reason cites the
+    # exact plan/task that put it there. `pk-chip` is matched with a
+    # precise token boundary (not a bare substring) so it names ONLY the
+    # category-navigation chip itself, never `pk-chip-nav`/`pk-chip-spacer`/
+    # `pk-chip-nav-wrap` (structural containers this gate never needed to
+    # exempt in the first place — they don't declare radius/padding/
+    # font-size, so the RED run never flagged them).
+    @exclusions %{
+      "pk-chip" =>
+        "the catalog's category-navigation chip — deliberately excluded from " <>
+          "this whole consolidation (G-01.2-27); a 44px navigation control, " <>
+          "not one of the UAT's five chip families. Named again in the pill " <>
+          "system's own governing note (app.css) with the same reason.",
+      "pk-active-filter-chip" =>
+        "its asymmetric trailing padding (tighter on the right, where the " <>
+          "dismiss × sits) is the one property genuinely specific to this " <>
+          "chip and is not base material (G-01.2-27 task 1).",
+      "pk-active-filter-chip-x" =>
+        "the trailing dismiss affordance is a sub-element of the pill, not a " <>
+          "pill itself — its own 16px circle, 50% radius and 12px glyph size " <>
+          "are untouched by this consolidation and were never claimed to " <>
+          "derive from the shared pill's type scale (G-01.2-27 task 1)."
+    }
 
     defp excluded?(selector) do
       Enum.any?(@exclusions, fn {marker, _reason} ->
