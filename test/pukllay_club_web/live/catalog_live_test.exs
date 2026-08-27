@@ -939,10 +939,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       |> form("#catalog-search-form")
       |> render_change(%{q: "Facet And"})
 
-      html =
-        view
-        |> element(~s(.pk-active-filter-chip[phx-click="clear-query"]))
-        |> render_click()
+      # A direct render_click/3 (matching the "toggle-facet" style two
+      # events above), not an `element(view, selector) |> render_click()`
+      # DOM lookup: since G-01.2-9 (01.2-16) the chip's `phx-click` renders
+      # as a JS.push-encoded value (`page_loading: true`), not the literal
+      # event-name string a `[phx-click="clear-query"]` attribute selector
+      # depended on.
+      html = render_click(view, "clear-query", %{})
 
       assert html =~ "Mecánica: Comercia"
       refute html =~ "Búsqueda:"
@@ -2060,6 +2063,96 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       # carousel surface (D-01/D-02), not the grid.
       assert {:ok, _view, html} = live(conn, ~p"/?players=abc")
       assert html =~ "Any Game"
+    end
+  end
+
+  # G-01.2-9 gap closure (01.2-16, Task 3): pins the three connections that
+  # are invisible to the compiler and therefore the ones a future refactor
+  # would quietly break — the page-loading annotation, the results
+  # wrapper's hook mount point, and both results regions' surface-flip fade
+  # marker. Each assertion below was mutation-verified during authoring
+  # (removing the wiring it covers made that assertion fail) — see the
+  # 01.2-16-SUMMARY.md for the exact mutations and failing test names.
+  describe "G-01.2-9 search/filter transition wiring" do
+    test "G-01.2-9: the search form, the one active filter chip, and the clear-filters control are page_loading-annotated",
+         %{conn: conn} do
+      game_fixture(%{name: "Catan"})
+
+      # Exactly ONE active filter (the query, via ?q=) keeps the rendered
+      # chip count at exactly 1 — no mechanics/weight_bands/etc. selected,
+      # each of which would render its own additional chip and inflate the
+      # count below past 3. That makes the total annotated-element count
+      # predictable: the search form + one chip + the clear-filters
+      # control = 3, matching this plan's own declared annotation-site
+      # count (index.ex Task 2).
+      {:ok, _view, html} = live(conn, ~p"/?q=Catan")
+
+      form_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#catalog-search-form")
+        |> LazyHTML.to_html()
+
+      assert form_html =~ "page_loading"
+
+      # Each `Phoenix.LiveView.JS.push(event, page_loading: true)` renders
+      # exactly one `"page_loading"` JSON key in its element's attribute
+      # value, so a plain whole-page substring count is a reliable proxy
+      # for "how many elements are annotated" — the same idiom card_count/1
+      # above uses for `data-game-card`.
+      annotated_count = html |> String.split("page_loading") |> length() |> Kernel.-(1)
+
+      assert annotated_count == 3
+    end
+
+    test "the results wrapper carries a non-empty id and the .ResultsLoading phx-hook attribute",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      wrapper_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#results-region")
+        |> LazyHTML.to_html()
+
+      assert wrapper_html != ""
+      # Colocated hooks render with their fully-qualified module name
+      # (e.g. "PukllayClubWeb.CatalogLive.Index.ResultsLoading"), not the
+      # literal ".ResultsLoading" written in the template — matched by
+      # substring here so this test doesn't hardcode (and drift from) the
+      # exact qualified path.
+      assert wrapper_html =~ ~r/phx-hook="[^"]*ResultsLoading"/
+    end
+
+    test "the carousel-rows container carries the surface-flip fade marker on the unfiltered surface",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      carousel_rows_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      assert carousel_rows_html =~ "pk-surface-fade"
+    end
+
+    test "the grid-scroll wrapper carries the surface-flip fade marker once a search flips the surface to the grid",
+         %{conn: conn} do
+      game_fixture(%{name: "Catan"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Catan"})
+
+      assert grid_scroll_html(html) =~ "pk-surface-fade"
     end
   end
 
