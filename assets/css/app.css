@@ -3111,6 +3111,62 @@ body.pk-cta-parked {
   .pk-gallery-dots {
     display: none;
   }
+
+  /* G-01.2-22 task 2: the fixed bottom bar above is hidden at this same
+     breakpoint, but body.pk-has-cta-bar's reserved bottom padding
+     (declared far above, next to that class — see its own arithmetic
+     comment) was still being applied at every width, reserving clearance
+     for a bar that no longer exists here. Zeroed as a desktop-only
+     override in the one block that already owns this breakpoint's
+     detail-layout swap, alongside the bar's own display:none above, so
+     both halves of the swap live together. The mobile value, its
+     transition and its arithmetic comment are untouched by this. */
+  body.pk-has-cta-bar {
+    padding-bottom: 0;
+  }
+}
+
+/* Boundary-collapse (opt-in, Phase 01.2 gap-closure round 2, G-01.2-11/
+   G-01.2-12, sketch 035): Layouts.app's `boundary_collapse` attr (default
+   false) renders this class on <main> instead of its default vertical-
+   padding utilities (mutually exclusive, see that attr's own doc and the
+   CASCADE-LAYER HAZARD note at the top of this file). Collapses the
+   detail page's two page-boundary gaps — header to masthead, and last
+   shelf to footer — to one deliberate 24px value at each end.
+
+   Bottom boundary, before this fix, stacked four independently-reasonable
+   declarations: <main>'s own bottom padding (80px) + `.pk-shelf`'s own
+   trailing margin (48px) + `.pk-footer`'s own top margin (48px) +
+   `.pk-footer-row`'s own inner top padding (24px) = 200px combined. Three
+   of the four are cancelled below (the wrapper's own bottom padding here,
+   the shelf's trailing margin, the footer's top margin); the fourth —
+   `.pk-footer-row`'s own 24px inner top padding — is deliberately KEPT
+   UNTOUCHED and IS the resulting 24px. Do not touch that rule to "tune"
+   this boundary; it is the target being aimed at, not a contributor to
+   remove.
+
+   Top boundary, before this fix: the title-echo bar's own dead layout
+   space while hidden (removed in task 1, by taking that bar out of normal
+   document flow) plus <main>'s own top padding. This block sets the
+   wrapper's own top padding directly to the same 24px landed on below.
+
+   Equal top/bottom (24px/24px) was a developer decision made against
+   three asymmetric alternatives (sketch 035, variant D chosen over A/B/C)
+   — a uniform, minimal rhythm read better than giving the footer boundary
+   more room just because it is the page's ending. That discussion is
+   closed; if it needs reopening, that is a new sketch round, not a code
+   edit. */
+main.pk-boundary-collapse {
+  padding-top: 1.5rem;
+  padding-bottom: 0;
+}
+
+main.pk-boundary-collapse .pk-shelf:last-of-type {
+  margin-bottom: 0;
+}
+
+main.pk-boundary-collapse + .pk-footer {
+  margin-top: 0;
 }
 
 /* ─── HEADER ROW CAPACITY: the two reveal breakpoints ─────────────────────

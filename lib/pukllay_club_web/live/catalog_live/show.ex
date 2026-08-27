@@ -200,7 +200,14 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     <%!-- active_nav={nil} passed explicitly, not defaulted into: Detalle is a
     drill-down of the catalog and a peer of neither top-level nav entry
     (sketch 017's own page switcher marks no drawer link active here). --%>
-    <Layouts.app flash={@flash} fullbleed sticky search_expanded={false} active_nav={nil}>
+    <Layouts.app
+      flash={@flash}
+      fullbleed
+      sticky
+      search_expanded={false}
+      active_nav={nil}
+      boundary_collapse
+    >
       <:crumb>
         <.link navigate={@catalog_path}>Ludoteca</.link>
         <span class="pk-crumb-sep">/</span>

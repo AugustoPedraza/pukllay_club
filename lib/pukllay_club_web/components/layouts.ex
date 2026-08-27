@@ -117,6 +117,15 @@ defmodule PukllayClubWeb.Layouts do
         "edge (full-bleed carousel shelves) can opt out of the layout's gutter without " <>
         "stripping padding from pages that rely on it"
 
+  attr :boundary_collapse, :boolean,
+    default: false,
+    doc:
+      "when true, collapses this page's top and bottom boundary spacing to one deliberate " <>
+        "24px value, for a page that owns its own rhythm at both ends (01.2-22). Mutually " <>
+        "exclusive with <main>'s default vertical-padding utilities below — the two never " <>
+        "both render at once, so default false means every existing caller renders " <>
+        "byte-identically"
+
   attr :sticky, :boolean,
     default: false,
     doc:
@@ -599,8 +608,21 @@ defmodule PukllayClubWeb.Layouts do
     rather than 0 because this layer's documented page-container value is
     py-6/24px and its section rhythm is space-y-6; 32px sits just above that
     floor while cutting the reported gap by 60%.
+
+    01.2-22: `@boundary_collapse` and the default vertical-padding utility
+    string below are mutually exclusive branches of one `if`, never two
+    simultaneously-emitted classes — this file's own CASCADE-LAYER HAZARD
+    note (app.css, top of file) is exactly why: an unlayered `.pk-*` rule
+    always beats a layered Tailwind utility on the same property, so
+    letting the collapse class and the default padding utilities both
+    render and relying on that hazard to pick a winner would work by
+    accident. One field, one declaration, per state. See app.css's own
+    `main.pk-boundary-collapse` rule for what the collapsed state applies.
     --%>
-    <main class={["pb-20 pt-8 sm:pt-20", !@fullbleed && "px-4 sm:px-6 lg:px-8"]}>
+    <main class={[
+      if(@boundary_collapse, do: "pk-boundary-collapse", else: "pb-20 pt-8 sm:pt-20"),
+      !@fullbleed && "px-4 sm:px-6 lg:px-8"
+    ]}>
       <div class="mx-auto space-y-4">
         {render_slot(@inner_block)}
       </div>

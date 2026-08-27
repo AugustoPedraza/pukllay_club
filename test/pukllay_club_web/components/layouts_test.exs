@@ -3,6 +3,7 @@ defmodule PukllayClubWeb.LayoutsTest do
   use Phoenix.Component
 
   import Phoenix.LiveViewTest
+  import PukllayClub.CatalogFixtures
 
   alias PukllayClubWeb.Layouts
 
@@ -406,6 +407,85 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       refute html =~ "max-w-2xl"
       assert html =~ "mx-auto"
+    end
+
+    defp main_class(html) do
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("main")
+      |> LazyHTML.attribute("class")
+      |> List.first()
+    end
+
+    # G-01.2-22 task 2/3: `boundary_collapse` (default false) and <main>'s
+    # default vertical-padding utilities are mutually exclusive branches of
+    # one `if` — never both rendered at once (see the CASCADE-LAYER HAZARD
+    # note at the top of app.css for why that would be a landmine, not a
+    # convenience). Asserting the exact class string, not a substring, is
+    # the whole point: a future edit that retunes the shared default for
+    # every page must fail this test by name.
+    test "with boundary_collapse unset, <main> carries exactly today's default vertical-padding utilities" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert main_class(html) == "pb-20 pt-8 sm:pt-20 px-4 sm:px-6 lg:px-8"
+    end
+
+    test "with boundary_collapse set, <main> carries the collapse class and none of the default vertical-padding utilities" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          boundary_collapse: true,
+          inner_block: []
+        })
+
+      class = main_class(html)
+      assert class == "pk-boundary-collapse px-4 sm:px-6 lg:px-8"
+      refute class =~ "pb-20"
+      refute class =~ "pt-8"
+      refute class =~ "sm:pt-20"
+    end
+
+    test "fullbleed's horizontal-padding behavior is unchanged in either boundary_collapse state" do
+      unset_html =
+        render_component(&Layouts.app/1, %{flash: %{}, fullbleed: true, inner_block: []})
+
+      collapsed_html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          fullbleed: true,
+          boundary_collapse: true,
+          inner_block: []
+        })
+
+      refute main_class(unset_html) =~ "px-4"
+      refute main_class(collapsed_html) =~ "px-4"
+    end
+  end
+
+  # G-01.2-22 task 3: the three call-site assertions that make the opt-in
+  # scoping enforceable rather than a convention — the detail page passes
+  # `boundary_collapse`, the catalog index and about pages do not.
+  describe "boundary_collapse call-site contract (G-01.2-22)" do
+    test "the detail page's <main> carries pk-boundary-collapse", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert main_class(html) =~ "pk-boundary-collapse"
+    end
+
+    test "the catalog index page's <main> does not carry pk-boundary-collapse", %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      refute main_class(html) =~ "pk-boundary-collapse"
+    end
+
+    test "the about page's <main> does not carry pk-boundary-collapse", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      refute main_class(html) =~ "pk-boundary-collapse"
     end
   end
 
