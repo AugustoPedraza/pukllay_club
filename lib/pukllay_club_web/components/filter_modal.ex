@@ -511,13 +511,27 @@ defmodule PukllayClubWeb.FilterModal do
   # Single source of truth for the chip's visual contract (ui-design-system:
   # "a field that must look identical on two surfaces is declared in exactly
   # one place") — both `facet_pill/1` and `scalar_chip/1` build their class
-  # from this, so the two chip families cannot drift apart. `shadow-sm` on
-  # the selected state (sketch 019, quick-260824-eqc) is the non-arbitrary
-  # translation of the sketch's soft colored box-shadow on the active chip —
-  # a literal colored shadow would need an arbitrary Tailwind value, which is
-  # banned.
-  defp chip_class(true), do: ["badge", "min-h-11", "px-3", "badge-primary", "shadow-sm"]
-  defp chip_class(false), do: ["badge", "min-h-11", "px-3", "badge-neutral", "badge-outline"]
+  # from this, so the two chip families cannot drift apart. Both families now
+  # derive from the app-wide shared pill (`pk-pill`, assets/css/app.css PK
+  # CATALOG SURFACES block, G-01.2-26/27; diagnosis at
+  # .planning/debug/G-01.2-15-pill-chip-design-inconsistency.md), so this
+  # helper's job has narrowed from "define the chip's visual contract" to
+  # "choose which tone of the shared pill this state gets."
+  #
+  # The soft lift on the selected state (sketch 019, quick-260824-eqc) —
+  # originally shipped here as the Tailwind utility `shadow-sm`, the
+  # non-arbitrary translation of the sketch's soft colored box-shadow, since
+  # a literal colored shadow would need a banned arbitrary Tailwind value —
+  # moved with the lift: `pk-pill-selected` now declares that same
+  # `box-shadow` once, in the base's own variant block, which is why no
+  # shadow utility appears in either returned list below any more.
+  defp chip_class(true) do
+    ["pk-pill", "pk-pill-selected", "pk-pill-comfortable", "pk-pill-interactive", "min-h-11"]
+  end
+
+  defp chip_class(false) do
+    ["pk-pill", "pk-pill-outline", "pk-pill-comfortable", "pk-pill-interactive", "min-h-11"]
+  end
 
   defp cta_label(1), do: "Ver 1 juego"
   defp cta_label(n), do: "Ver #{n} juegos"
