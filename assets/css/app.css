@@ -2631,8 +2631,14 @@ body.pk-drawer-open {
   /* Centered under the poster (Phase 01.2 gap-closure round 2, G-01.2-19
      task 1, sketch 032) — was left-aligned by default flex behaviour. */
   justify-content: center;
-  gap: 0.25rem;
-  /* Each dot's own 44px touch floor (below) would otherwise push this
+  /* Gap zeroed (Phase 01.2 gap-closure round 3, G-01.2-23 task 1, UAT test
+     8 — "too much space between them, should be a default 3 dots"). The
+     4px gap this row used to declare was never the cause of the spread
+     (see .pk-gallery-dot's own comment for the real arithmetic); it is
+     zeroed here because the dot's hit box is now narrow enough that any
+     positive gap re-opens the very distance this pair of changes closes. */
+  gap: 0;
+  /* Each dot's own 44px-tall touch floor (below) would otherwise push this
      row's visual footprint to a full 44px tall; this negative margin
      compensates so only the small mark itself (plus a little breathing
      room) is visible, while the full 44px hit area still exists for
@@ -2641,11 +2647,33 @@ body.pk-drawer-open {
   margin: -0.625rem 0;
 }
 
+/* Dot hit box narrowed to 24x44 CSS px — deliberately NOT this layer's
+   usual 44x44 square (Phase 01.2 gap-closure round 3, G-01.2-23 task 1,
+   UAT test 8 / T-01.2-23-01). With an 8px mark (.pk-gallery-dot-mark
+   below) centred in a 44px square and a 4px row gap, the visible distance
+   between two adjacent marks was (44-8)/2 + 4 + (44-8)/2 = 40px — five
+   times the declared gap, and the direct cause of "too much space between
+   them, should be a default 3 dots." Narrowing to a 24px-wide box with the
+   row's gap now zero drops that same arithmetic to
+   (24-8)/2 + 0 + (24-8)/2 = 16px, a compact default-dot-row distance.
+   `height` stays 2.75rem (44px, this layer's own `min-h-11` floor, a
+   HEIGHT floor and fully honoured here) — `width` is the one dimension
+   allowed to shrink, down to 24px, the WCAG 2.5.8 AA (Enhanced) target-size
+   minimum and no further. A 44px-wide box is geometrically incompatible
+   with a compact three-dot indicator; the two requirements cannot both be
+   true, and the UAT explicitly asked for the compact one — this is a
+   named, deliberate tradeoff, not an oversight. A negative horizontal
+   margin was considered and rejected to close the remaining gap: it would
+   let one dot's hit box overlap its neighbour's, silently handing the
+   overlap area's taps to whichever dot is later in the DOM. `flex: 0 0
+   auto` pins the narrowed box so the row around it can neither shrink it
+   further nor stretch it. */
 .pk-gallery-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
+  flex: 0 0 auto;
+  width: 1.5rem;
   height: 2.75rem;
   padding: 0;
   background: transparent;

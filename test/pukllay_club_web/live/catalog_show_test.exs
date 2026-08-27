@@ -2111,4 +2111,36 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute header_html =~ "badge-accent"
     end
   end
+
+  describe "gallery dot hit-box floors (Phase 01.2 gap-closure round 3, G-01.2-23 task 1)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    # First top-level `.pk-gallery-dot {...}` block in app.css, matched on
+    # the exact selector text so a future `.pk-gallery-dot-mark` or
+    # `.pk-gallery-dots` addition can never be mistaken for this one.
+    defp gallery_dot_block do
+      src = File.read!(@css_path)
+
+      case Regex.run(~r/(?m)^\.pk-gallery-dot\s*\{([^}]*)\}/, src) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-gallery-dot {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the dot's hit box is 1.5rem wide and 2.75rem tall — a 24px width floor and a 44px height floor" do
+      body = gallery_dot_block()
+
+      assert body =~ ~r/width:\s*1\.5rem/,
+             "`.pk-gallery-dot` must declare `width: 1.5rem` (24px) — the WCAG 2.5.8 AA " <>
+               "target-size minimum. A wider box reopens the ~40px mark spacing UAT test 8 " <>
+               "flagged (a 44px-wide box is geometrically incompatible with a compact " <>
+               "three-dot indicator); a narrower box drops below the accessibility floor."
+
+      assert body =~ ~r/height:\s*2\.75rem/,
+             "`.pk-gallery-dot` must keep `height: 2.75rem` (44px) — this layer's own " <>
+               "`min-h-11` HEIGHT floor. The dot is the phone's ONLY image switcher " <>
+               "(the thumbnail strip is desktop-only); shrinking its tap height would make " <>
+               "it unreachable."
+    end
+  end
 end
