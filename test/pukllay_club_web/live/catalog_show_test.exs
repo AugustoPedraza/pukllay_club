@@ -915,7 +915,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           ]
         })
 
-      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      # G-01.2-25: the chevrons compute their target against @lightbox_image,
+      # which is only seeded once the lightbox actually opens (a visitor
+      # cannot navigate a closed lightbox) — open it first, same as a real
+      # interaction would.
+      html = render_click(view, "open-lightbox", %{})
 
       neighbor_urls = fn html ->
         doc = LazyHTML.from_document(html)
@@ -942,15 +948,167 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       # Selecting the LAST image (the other END) and re-reading the chevron
       # targets confirms the wrap holds at both ends, not just the one the
-      # page mounts on.
+      # page mounts on. Dispatched at the lightbox's OWN event
+      # (select-lightbox-image, G-01.2-25) — the chevrons no longer move
+      # the page's own select-image assign.
       html2 =
-        render_click(view, "select-image", %{
+        render_click(view, "select-lightbox-image", %{
           "url" => "https://images.test.invalid/games/1/gallery-2.webp"
         })
 
       {prev_url2, next_url2} = neighbor_urls.(html2)
       assert prev_url2 == "https://images.test.invalid/games/1/gallery-1.webp"
       assert next_url2 == "https://images.test.invalid/games/1/cover.webp"
+    end
+
+    # G-01.2-25 task 2: the lightbox's own selection (@lightbox_image) is
+    # split from the page's (@selected_image) — stepping through the
+    # lightbox must change ONLY the lightbox's own image. The poster image,
+    # the thumbnail carrying the active border and the dot carrying the
+    # active state (all readers of @selected_image) must not move.
+    test "stepping the lightbox forward changes only the lightbox's own image — the poster, active thumbnail and active dot underneath stay put",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: [
+            "https://images.test.invalid/games/1/gallery-1.webp",
+            "https://images.test.invalid/games/1/gallery-2.webp"
+          ]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      html = render_click(view, "open-lightbox", %{})
+      doc = LazyHTML.from_document(html)
+
+      poster_src_before =
+        doc
+        |> LazyHTML.query("#detail-lightbox-trigger img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      active_thumb_before =
+        doc
+        |> LazyHTML.query(~s(#gallery-thumbnails button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      active_dot_before =
+        doc
+        |> LazyHTML.query(~s(#gallery-dots button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_src_before == game.cover_url
+      assert active_thumb_before =~ "border-primary"
+      assert active_dot_before =~ "is-active"
+
+      next_url =
+        doc
+        |> LazyHTML.query("#detail-lightbox [data-lightbox-next]")
+        |> LazyHTML.attribute("phx-value-url")
+        |> List.first()
+
+      html2 = render_click(view, "select-lightbox-image", %{"url" => next_url})
+      doc2 = LazyHTML.from_document(html2)
+
+      lightbox_img_src =
+        doc2
+        |> LazyHTML.query("#detail-lightbox .pk-lightbox-img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      assert lightbox_img_src == next_url
+
+      poster_src_after =
+        doc2
+        |> LazyHTML.query("#detail-lightbox-trigger img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      active_thumb_after =
+        doc2
+        |> LazyHTML.query(~s(#gallery-thumbnails button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      active_dot_after =
+        doc2
+        |> LazyHTML.query(~s(#gallery-dots button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_src_after == poster_src_before
+      assert active_thumb_after == active_thumb_before
+      assert active_dot_after == active_dot_before
+    end
+
+    test "the page's poster, active thumbnail and active dot are still unchanged after the lightbox closes, and reopening starts from the same image again",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      render_click(view, "open-lightbox", %{})
+
+      render_click(view, "select-lightbox-image", %{
+        "url" => "https://images.test.invalid/games/1/gallery-1.webp"
+      })
+
+      html = render_click(view, "close-lightbox", %{})
+      doc = LazyHTML.from_document(html)
+
+      poster_src =
+        doc
+        |> LazyHTML.query("#detail-lightbox-trigger img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      active_thumb_class =
+        doc
+        |> LazyHTML.query(~s(#gallery-thumbnails button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_src == game.cover_url
+      assert active_thumb_class =~ "border-primary"
+
+      # G-01.2-25: close-lightbox deliberately does NOT sync @lightbox_image
+      # back onto @selected_image, so reopening re-seeds from the
+      # untouched page selection, not the lightbox's last navigated-to
+      # image.
+      html2 = render_click(view, "open-lightbox", %{})
+      doc2 = LazyHTML.from_document(html2)
+
+      lightbox_img_src =
+        doc2
+        |> LazyHTML.query("#detail-lightbox .pk-lightbox-img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      assert lightbox_img_src == game.cover_url
+    end
+
+    test "the select-lightbox-image whitelist guard rejects a url outside the gallery list and leaves the lightbox's image unchanged",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: []
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      render_click(view, "open-lightbox", %{})
+
+      html2 = render_click(view, "select-lightbox-image", %{"url" => "https://evil.example.com/x.jpg"})
+
+      refute html2 =~ "evil.example.com"
+      assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
     end
 
     test "the poster button that opens the lightbox carries the stable id the hook focuses on close",
