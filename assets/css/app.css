@@ -290,6 +290,94 @@
   padding-right: var(--pk-gutter);
 }
 
+/* Sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-14/
+   G-01.2-24 task 3): a single class on <body> (root.html.heex's only
+   change for this task) gives every page in the app a sticky-footer
+   layout — the footer's bottom edge reaches the bottom of a window taller
+   than the page's own content, with no band of plain page background
+   below it. On a window shorter than the content, the page scrolls
+   exactly as it always has.
+
+   Minimum height is declared TWICE deliberately — the older `100vh` unit
+   first, the dynamic-viewport `100dvh` unit second — so a browser without
+   `dvh` support still gets the layout via `100vh`, and one that supports
+   `dvh` does not jump as mobile browser chrome shows/hides (the later
+   declaration wins in browsers that understand it; the earlier one is the
+   fallback a browser that doesn't understand `dvh` simply keeps).
+
+   THIS RULE TARGETS <body> DIRECTLY. The flex-grow rule right below it
+   targets <main> via a DESCENDANT selector, not a direct-child one,
+   because <main> is not literally body's DOM child — every LiveView page
+   wraps its rendered output in a root container div carrying
+   `data-phx-session`, and `[data-phx-session] { display: contents }`
+   (declared near the top of this file, "Make LiveView wrapper divs
+   transparent for layout") removes that wrapper's own box entirely,
+   handing its children (the header, the connection banner, an optional
+   subnav, <main>, the footer, the flash group) directly to whatever
+   flex/grid context ITS OWN PARENT establishes — here, body's. That
+   flattening is exactly what makes a body-level flex column safe to use
+   without a second, matching rule on the wrapper: <main> ends up a real
+   flex item of body's own flex column, not nested two DOM levels deep
+   behind an un-styled intermediate box.
+
+   OTHER BODY CHILDREN keep their natural heights, unchanged: the header
+   wrapper(s), the connection banner, the optional subnav and the footer
+   are in-flow flex items with no flex-grow of their own, so they size to
+   their own content and stretch to full width (align-items' default
+   `stretch`) exactly as they already did as plain blocks. The flash
+   group's own wrapper div is the same — but its CONTENTS (each
+   `CoreComponents.flash/1`) render with daisyUI's `toast` class, which is
+   `position: fixed` (confirmed by reading daisyUI's own bundled rule, not
+   assumed) — a fixed-position box is removed from normal flow entirely,
+   so the flash group's wrapper is always a 0-height flex item and can
+   never occupy space below the footer. No extra treatment needed here.
+
+   CONTAINING-BLOCK SAFETY (T-01.2-24-01, mitigate): flex and min-height
+   are NOT among the five properties that establish a containing block for
+   a `position: fixed` descendant — transform, filter, perspective,
+   contain, will-change (see both existing containing-block audits in this
+   file, on .pk-title-echo and .pk-lightbox, both re-checked and updated
+   against this exact rule as part of this change — see their own
+   comments). Verified in a real browser (headless Chromium via CDP
+   against the running dev server, not from memory): the mobile CTA bar,
+   the title-echo bar and the lightbox all still anchor to the true
+   viewport with this rule active, not to body's own box.
+
+   RESERVED BOTTOM-CLEARANCE INTERACTION (T-01.2-24-02, mitigate):
+   body.pk-has-cta-bar's 9.25rem/148px bottom padding (declared far above,
+   next to that class) lives on the SAME element as this rule, under this
+   stylesheet's border-box model, so min-height's target includes that
+   padding. Measured live at 390px on a real detail page (game id 1,
+   Chromium headless CDP): BEFORE this rule existed, `document.
+   documentElement.scrollHeight` was 1972px with a 147.7px gap between the
+   footer's bottom edge and the document's end (matching the reserved
+   clearance almost exactly — expected, since the CTA bar's own padding IS
+   that gap on every page whose content already exceeds one viewport
+   height, which this page's does by a wide margin: 1972px content vs.
+   844px viewport). AFTER adding this rule, the same measurement is
+   unchanged (content was already far taller than 100dvh, so the min-height
+   floor was never reached and <main> never needed to grow) — see the
+   task's own commit for the confirming after-measurement. No regression:
+   a page whose content is already taller than one viewport is a no-op for
+   `min-height`, and a page shorter than one viewport is exactly the case
+   this rule exists to fix. */
+.pk-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* See .pk-app-shell's own comment above for why a DESCENDANT selector,
+   not a direct-child one, is correct here despite the rule's own name
+   ("the body's own <main> child") suggesting otherwise. flex-grow ALONE
+   (not the `flex` shorthand) is deliberate: <main> keeps its own natural
+   flex-basis (auto) and default flex-shrink (1) — grow is the one
+   property a sticky-footer layout needs added to it. */
+.pk-app-shell main {
+  flex-grow: 1;
+}
+
 /* Category-anchor scroll animation (debug category-menu-scroll-animation).
    Both category surfaces — the desktop .pk-cat-item mega-menu rows and the
    mobile .pk-chip row — are plain native anchors (href="#carousel-KEY"), and
@@ -2918,7 +3006,20 @@ body.pk-cta-parked {
    `.mx-auto.space-y-4` inner wrapper -> <main> -> <body> -> <html>, and
    confirmed none of them declares transform, filter, perspective,
    contain, or will-change — a viewport-anchored element only anchors
-   correctly while that chain stays clean. */
+   correctly while that chain stays clean.
+
+   RE-CHECKED (Phase 01.2 gap-closure round 4, G-01.2-24 task 3): <body>
+   now carries `.pk-app-shell` (flex column + min-height, see that class's
+   own comment above `.pk-gutter`). Re-walked the same chain against the
+   same five-property list with `<body>` in its new state and confirmed
+   `display: flex`/`flex-direction: column`/`min-height` are NOT among
+   them — flex and min-height do not establish a containing block for a
+   `position: fixed` descendant. Verified live in a real browser (headless
+   Chromium via CDP against the running dev server, scrolled mid-page, both
+   at a mobile width where body's natural height exceeds the viewport and
+   at a desktop width tall enough to actually stretch body via
+   min-height): this bar's `getBoundingClientRect()` still resolves
+   against the true viewport in both cases, not against body's box. */
 .pk-title-echo {
   position: fixed;
   top: var(--pk-header-h, 4.5rem);
@@ -2947,6 +3048,34 @@ body.pk-cta-parked {
 .pk-title-echo.is-parked {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Title-echo name truncation (Phase 01.2 gap-closure round 4, G-01.2-24
+   task 1). The bar's title <span> gets a real class, named for the element
+   it is, in the same pk- family as its parent, declared once here directly
+   below the bar's own rules. Four properties are required TOGETHER for a
+   flex item to truncate rather than wrap: a zero minimum width (a flex
+   item's default min-width is its own content, which is exactly what turns
+   "too narrow" into "second line" instead of "clipped"), no wrapping,
+   hidden overflow, and an ellipsis. The bar's OTHER flex item,
+   .pk-scroll-top below, is a fixed 2.75rem square with `flex: 0 0 auto`, so
+   every pixel the bar is short lands on this span — without `min-width: 0`
+   the span cannot shrink below its own content width and wraps to a second
+   line instead.
+
+   Measured fact (G-01.2-14 diagnosis, live CDP against the running dev
+   server, light theme): the bar's text and background measured at very
+   high contrast — rgb(36,18,56) text on rgb(255,255,255) background — so
+   the UAT-reported "don't have correct balance to contrast with
+   background... looks like text over two lines" complaint is the visual
+   crowding a two-line wrap produces inside a bar padded for one line, NOT
+   a colour-token defect. No colour on this bar changes here or anywhere
+   else in this fix. */
+.pk-title-echo-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pk-scroll-top {
@@ -3015,7 +3144,21 @@ body.pk-cta-parked {
    two-curve system. Opening (adding .is-open) recascades to a SHORTER
    transition list that omits visibility entirely, so visibility flips back
    to `visible` immediately when the class is added — the fade-in is
-   visible from its very first frame. */
+   visible from its very first frame.
+
+   CONTAINING-BLOCK AUDIT (recorded Phase 01.2 gap-closure round 4,
+   G-01.2-24 task 3, alongside .pk-title-echo's own audit above): walked
+   the ancestor chain #detail-lightbox-trigger's `.pk-lightbox` sibling ->
+   #detail-page -> Layouts.app's own `.mx-auto.space-y-4` inner wrapper ->
+   <main> -> the LiveView root (display: contents, so it contributes no
+   box of its own — see "Make LiveView wrapper divs transparent for
+   layout" near the top of this file) -> <body> (now `.pk-app-shell`) ->
+   <html>. None of them declares transform, filter, perspective, contain,
+   or will-change; `.pk-app-shell`'s own `display: flex`/`min-height` are
+   also not on that list (see that class's own comment). Verified live in
+   a real browser (headless Chromium via CDP against the running dev
+   server): this element's `position: fixed` still resolves against the
+   true viewport with `.pk-app-shell` active. */
 .pk-lightbox {
   display: flex;
   position: fixed;
@@ -3141,6 +3284,25 @@ body.pk-cta-parked {
     display: none;
   }
 
+  /* Title-echo bar desktop hide (Phase 01.2 gap-closure round 4, G-01.2-14/
+     G-01.2-24 task 1): placed immediately beside the mobile CTA bar's own
+     `display: none` above so the two phone-only bars are hidden in exactly
+     one place and can never drift apart again. The bar is a phone
+     affordance that echoes a title which, at and above this breakpoint, is
+     still on screen beside the sticky poster column (.pk-poster-col
+     above) — its paired sibling already got this treatment, this one was
+     simply never added when the bar was introduced.
+
+     This is a VIEWPORT-CLASS hide, not a runtime state change: at desktop
+     the bar never appears, so there is nothing to fade. The base rule's
+     opacity/transform fade and its two state classes (.is-visible/
+     .is-parked, both above) are untouched — they remain the only mechanism
+     that shows or hides the bar while a visitor scrolls BELOW this
+     breakpoint, where the bar's runtime state machine still needs them. */
+  .pk-title-echo {
+    display: none;
+  }
+
   /* Poster-column reserve button reveal — the mobile bar above is hidden
      at this same breakpoint, so exactly one Reservar control is ever on
      screen. inline-flex matches daisyUI's own .btn display value. */
@@ -3172,23 +3334,40 @@ body.pk-cta-parked {
 }
 
 /* Boundary-collapse (opt-in, Phase 01.2 gap-closure round 2, G-01.2-11/
-   G-01.2-12, sketch 035): Layouts.app's `boundary_collapse` attr (default
-   false) renders this class on <main> instead of its default vertical-
-   padding utilities (mutually exclusive, see that attr's own doc and the
-   CASCADE-LAYER HAZARD note at the top of this file). Collapses the
-   detail page's two page-boundary gaps — header to masthead, and last
+   G-01.2-12, sketch 035; bottom-boundary arithmetic CORRECTED in gap-
+   closure round 4, G-01.2-14/G-01.2-24 task 2 — see that correction below,
+   this paragraph's own original framing is kept intact above it rather
+   than silently rewritten). Layouts.app's `boundary_collapse` attr
+   (default false) renders this class on <main> instead of its default
+   vertical-padding utilities (mutually exclusive, see that attr's own doc
+   and the CASCADE-LAYER HAZARD note at the top of this file). Collapses
+   the detail page's two page-boundary gaps — header to masthead, and last
    shelf to footer — to one deliberate 24px value at each end.
 
-   Bottom boundary, before this fix, stacked four independently-reasonable
-   declarations: <main>'s own bottom padding (80px) + `.pk-shelf`'s own
-   trailing margin (48px) + `.pk-footer`'s own top margin (48px) +
-   `.pk-footer-row`'s own inner top padding (24px) = 200px combined. Three
-   of the four are cancelled below (the wrapper's own bottom padding here,
-   the shelf's trailing margin, the footer's top margin); the fourth —
-   `.pk-footer-row`'s own 24px inner top padding — is deliberately KEPT
-   UNTOUCHED and IS the resulting 24px. Do not touch that rule to "tune"
-   this boundary; it is the target being aimed at, not a contributor to
-   remove.
+   Bottom boundary, before round 2's fix, stacked four independently-
+   reasonable declarations: <main>'s own bottom padding (80px) +
+   `.pk-shelf`'s own trailing margin (48px) + `.pk-footer`'s own top
+   margin (48px) + `.pk-footer-row`'s own inner top padding (24px) = 200px
+   combined. The wrapper's own bottom padding and the shelf's trailing
+   margin are still correctly cancelled below — both are genuinely
+   redundant contributors that should not stack, and that part of round
+   2's reasoning holds.
+
+   CORRECTION (round 4): round 2 also cancelled the footer's own top
+   margin and claimed `.pk-footer-row`'s remaining 24px inner top padding
+   "IS the resulting 24px" — G-01.2-14's live measurement (real CDP
+   against the running dev server, not inferred from the stylesheet alone)
+   found the carousel's bottom edge and the footer's top edge coincide
+   exactly, a 0px external gap. That 24px inner padding sits INSIDE the
+   footer's own background and border — it is the footer's own content
+   inset, not a gap BETWEEN the carousel and the footer, and it can never
+   read as one no matter how it's tuned. The footer's own inner padding
+   was never the target and was never a contributor to this boundary; it
+   stays byte-identical below, restated with this corrected reason instead
+   of the disproven one. The bottom boundary is therefore the FOOTER'S OWN
+   TOP MARGIN, set below to the same 1.5rem/24px the top boundary uses —
+   one deliberate declaration, in one place, on the far side of the
+   footer's border from its own inner padding.
 
    Top boundary, before this fix: the title-echo bar's own dead layout
    space while hidden (removed in task 1, by taking that bar out of normal
@@ -3200,7 +3379,8 @@ body.pk-cta-parked {
    — a uniform, minimal rhythm read better than giving the footer boundary
    more room just because it is the page's ending. That discussion is
    closed; if it needs reopening, that is a new sketch round, not a code
-   edit. */
+   edit. Round 4 makes this 24px REAL rather than changing what it should
+   be. */
 main.pk-boundary-collapse {
   padding-top: 1.5rem;
   padding-bottom: 0;
@@ -3211,7 +3391,7 @@ main.pk-boundary-collapse .pk-shelf:last-of-type {
 }
 
 main.pk-boundary-collapse + .pk-footer {
-  margin-top: 0;
+  margin-top: 1.5rem;
 }
 
 /* ─── HEADER ROW CAPACITY: the two reveal breakpoints ─────────────────────

@@ -536,6 +536,95 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  # G-01.2-24 task 3: the sticky-footer app shell — a single class on
+  # <body>, the only change root.html.heex carries for this task. Pins the
+  # class is present on every route this shell serves (catalog, detail,
+  # about), not just one.
+  describe "root layout sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-24)" do
+    test "the catalog index page's <body> carries pk-app-shell", %{conn: conn} do
+      game_fixture()
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
+
+      assert body_class =~ "pk-app-shell"
+    end
+
+    test "the detail page's <body> carries pk-app-shell", %{conn: conn} do
+      game = game_fixture()
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
+
+      assert body_class =~ "pk-app-shell"
+    end
+
+    test "the about page's <body> carries pk-app-shell", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
+
+      assert body_class =~ "pk-app-shell"
+    end
+  end
+
+  # Source-level CSS facts, matching this file's existing @css_path-style
+  # assertions elsewhere in the suite: the three declarations that together
+  # push the footer down (min-height, column flex direction, and the
+  # main-child flex-grow) — any one of them alone does nothing. A sibling
+  # describe, not nested inside the one above — ExUnit forbids nested
+  # describe blocks.
+  describe "pk-app-shell CSS facts (Phase 01.2 gap-closure round 4, G-01.2-24)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    defp shell_css_source, do: File.read!(@css_path)
+
+    defp pk_app_shell_block do
+      case Regex.run(~r/(?m)^\.pk-app-shell\s*\{([^}]*)\}/, shell_css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-app-shell { ... }` rule found in app.css")
+      end
+    end
+
+    test "declares both a minimum height and a column flex direction" do
+      body = pk_app_shell_block()
+
+      assert body =~ ~r/display:\s*flex;/,
+             "`.pk-app-shell` must declare `display: flex` — without it, `flex-direction` " <>
+               "and the main-child `flex-grow` below have no flex formatting context to " <>
+               "act inside."
+
+      assert body =~ ~r/flex-direction:\s*column;/,
+             "`.pk-app-shell` must declare `flex-direction: column` — a row direction would " <>
+               "lay the header/main/footer out side by side instead of stacked."
+
+      assert body =~ ~r/min-height:\s*100vh;/,
+             "`.pk-app-shell` must declare `min-height: 100vh` as a fallback for browsers " <>
+               "without dynamic-viewport-unit support."
+
+      assert body =~ ~r/min-height:\s*100dvh;/,
+             "`.pk-app-shell` must also declare `min-height: 100dvh` — without it, mobile " <>
+               "browser chrome showing/hiding would jump the layout."
+    end
+
+    test "declares a flex-grow on the shell's <main> descendant, and no direct-child combinator" do
+      assert shell_css_source() =~ ~r/\.pk-app-shell main\s*\{\s*flex-grow:\s*1;\s*\}/,
+             "The main-child rule must declare `flex-grow: 1` on a DESCENDANT selector " <>
+               "(`.pk-app-shell main`), not a direct-child one (`.pk-app-shell > main`) — " <>
+               "<main> is not literally body's DOM child (every LiveView page wraps its " <>
+               "output in a `data-phx-session` root div, flattened by this file's own " <>
+               "`[data-phx-session] { display: contents }` rule), so a `>` combinator here " <>
+               "would silently never match."
+
+      refute shell_css_source() =~ ~r/\.pk-app-shell\s*>\s*main/,
+             "A direct-child combinator between .pk-app-shell and main would never match — " <>
+               "see the positive assertion above for why."
+    end
+  end
+
   describe "app/1 footer (SHELL-01, Task 2 checkpoint content)" do
     test "renders the shared pk-footer element with exactly three footer link labels" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})

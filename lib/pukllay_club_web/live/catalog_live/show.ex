@@ -275,6 +275,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 // should not. headerHeight is read from the real
                 // --pk-header-h custom property published by .CatalogNav —
                 // never a literal pixel value.
+                //
+                // No viewport-width check here (G-01.2-24 task 1): the
+                // stylesheet already hides #detail-title-echo at and above
+                // the 48rem detail-layout breakpoint (app.css's single
+                // block that owns every mobile-vs-desktop swap on this
+                // page). Toggling a class on an element the stylesheet is
+                // not rendering is inert — a pixel/rem literal here would
+                // just be a second declaration of a value the stylesheet
+                // already owns once.
                 const headerHeight =
                   parseFloat(
                     getComputedStyle(document.documentElement).getPropertyValue("--pk-header-h")
@@ -306,7 +315,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         </script>
 
         <div id="detail-title-echo" class="pk-title-echo">
-          <span>{@game.name}</span>
+          <span class="pk-title-echo-name">{@game.name}</span>
           <button
             type="button"
             data-scroll-top
