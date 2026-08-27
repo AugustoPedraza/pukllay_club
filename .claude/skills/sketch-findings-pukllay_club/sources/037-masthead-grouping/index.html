@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 037 — Masthead Grouping</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 84px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; font-family: var(--font-sans); }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-primary); color: var(--color-primary-content); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; }
+  #variant-nav .caption { display: block; margin-top: 6px; font-size: var(--text-xs); color: var(--color-text-muted); }
+
+  .cause-note { max-width: 420px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-xs); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; }
+
+  /* Mobile frame — a fixed 390px phone-width column, since the reported
+     bug (G-01.2-13) is mobile-only. */
+  .phone { max-width: 390px; margin: 0 auto; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); }
+  .phone-header { background: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: 10px 14px; font-family: var(--font-display); font-size: var(--text-base); color: var(--color-primary); }
+  .phone-body { padding: 14px; }
+
+  /* Shell gutter reference — every real component uses --pk-gutter. Here
+     fixed at 14px (the app's own <=480px value) so the margin-mismatch
+     defect is directly checkable: every edge below should align to this
+     dashed line, no exceptions. */
+  .gutter-ref { border-left: 2px dashed var(--color-danger); border-right: 2px dashed var(--color-danger); padding: 0 14px; }
+
+  .facts-row { display: flex; gap: 6px; justify-content: space-between; margin-bottom: 8px; }
+  .fact-pill { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 9999px; flex: 1; justify-content: center; }
+
+  .poster-photo { aspect-ratio: 3/4; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); position: relative; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); }
+  .share-corner { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.35); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+
+  .cta-outside { margin-top: 14px; }
+  .cta-btn { display: block; width: 100%; text-align: center; background: var(--color-primary); color: var(--color-primary-content); font-weight: 700; font-size: var(--text-sm); padding: 12px; border-radius: var(--radius-md); border: none; }
+  .cta-note { text-align: center; font-size: 10px; color: var(--color-text-muted); margin-top: 4px; }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+
+  /* Compact dot row — dot touch target stays 44px for tap accessibility;
+     only the VISIBLE mark spacing tightens, via negative margin on the
+     row + tighter per-dot width, same technique app.css already uses
+     for vertical compression. */
+  .dot-row { display: flex; align-items: center; justify-content: center; margin: 4px 0 0; }
+  .dot-btn { width: 22px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; padding: 0; margin: -4px 0; }
+  .dot-mark { width: 6px; height: 6px; border-radius: 9999px; background: var(--color-border); }
+  .dot-btn.is-active .dot-mark { background: var(--color-primary); width: 16px; border-radius: 9999px; transition: width var(--duration-fast) var(--ease-standard); }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab">Winner: C — Proximity Only ★</button>
+  <span class="caption">A (extended panel) and B (shared background band) explored and dropped — see README for the round history. Red dashed lines mark the shell gutter (14px) — every edge below aligns to it. CTA stays detached below the group (032's settled call, not re-opened here). Toggle 🌙/☀ to check both themes.</span>
+</div>
+
+<div class="cause-note">
+  Round-3 diagnosis found <strong>three independent causes</strong> behind "everything floats":
+  dot touch-target sizing made dots read 5x wider than their visual gap; the facts row, poster
+  panel, and CTA share <code>no</code> visual container; and the panel's own 1rem padding put the
+  photo 16px further from the edge than its siblings. All three fixes are applied below. The
+  container question (A/B/C) is resolved as C: no shared background/border — grouping comes from
+  tightened vertical rhythm + aligned edges alone.
+</div>
+
+<div class="phone">
+  <div class="phone-header">Ludoteca / 7 Wonders Duel</div>
+  <div class="phone-body gutter-ref">
+
+    <div class="facts-row">
+      <span class="fact-pill">👤 2-4</span>
+      <span class="fact-pill">⏱ 30 min</span>
+      <span class="fact-pill">🎯 Intermedio</span>
+    </div>
+    <div class="poster-photo"><span class="share-corner">🔗</span></div>
+    <div class="dot-row">
+      <button class="dot-btn is-active"><span class="dot-mark"></span></button>
+      <button class="dot-btn"><span class="dot-mark"></span></button>
+      <button class="dot-btn"><span class="dot-mark"></span></button>
+    </div>
+    <div class="cta-outside">
+      <button class="cta-btn">Reservar para el sábado</button>
+      <p class="cta-note">CTA stays a separate decision below the group (032)</p>
+    </div>
+
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+</body>
+</html>

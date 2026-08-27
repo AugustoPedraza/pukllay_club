@@ -167,6 +167,30 @@ as different enough from a true same-band match once built).
 <p class="pk-shelf-subtitle">{if @similares_widened, do: "Otras opciones que te van a encantar", else: "Mismo nivel de dificultad, mecánicas y temática parecidas"}</p>
 ```
 
+**Grouping a cluster of elements doesn't need a shared container — proximity + aligned edges is
+enough (Phase 01.2 gap-closure round 3, sketch 037).** A later UAT round found the mobile masthead
+(facts pills, poster photo, gallery dots) still read as "floating" pieces even after sketch 032's
+fix moved them into the right relative order. Two structural fixes were compared against a
+proximity-only baseline — an extended bordered/shadowed panel wrapping the facts row too, and a
+soft tinted background band with no border — **proximity-only won**: no shared background or
+border at all; grouping comes purely from tightened vertical rhythm between the three elements and
+every edge landing flush against the same shell gutter. Don't reach for a shared container as the
+default fix for "these elements feel disconnected" — check whether rhythm/alignment alone already
+solves it first, since it's the smallest possible diff and avoids inventing a new bordered surface
+the design system has to carry forward. Two smaller co-located bugs, fixed the same round: the
+carousel dot row's 44px WCAG touch-target buttons were making the *visible* mark spacing read 5x
+wider than intended (fixed via tighter negative-margin compression, keeping the full tap area); and
+the poster panel's own internal padding put the photo's visible edge 16px further from the shell
+gutter than its siblings (facts row and CTA), a mismatch invisible until measured against the
+gutter directly.
+
+```css
+.pk-facts-row { margin-bottom: 8px; } /* tightened, was --space-3 (16px) */
+.pk-poster-frame img { border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); }
+.pk-gallery-dots { margin: -0.625rem 0; } /* compensates the 44px touch button so only the ~16px visible mark row shows */
+.pk-gallery-dot { width: 1.375rem; height: 2rem; } /* touch height stays accessible; visible footprint shrinks */
+```
+
 ## CSS Patterns
 
 ```css
@@ -218,9 +242,18 @@ as different enough from a true same-band match once built).
 - Don't let independently-reasonable spacing rules stack at the same page boundary (e.g. a
   wrapper's bottom padding + the next section's own top margin + that section's own inner padding)
   — collapse to one deliberate value per boundary.
+- Don't default to a shared bordered/tinted container to make a cluster of elements "read as
+  grouped" — try tightening rhythm + aligning edges to a shared reference (gutter/grid) first; a
+  proximity-only fix won over two container variants in sketch 037.
+- Don't size a touch-target element's *visible* mark/icon the same as its actual hit-box — a 44px
+  WCAG tap target with an 8px visible mark needs the visible spacing compressed independently
+  (negative margin on the row), or the row reads far more spread out than intended.
+- Don't measure a component's margin against its own declared padding value alone — check it
+  against the shared gutter reference directly; a panel's own internal padding can silently stack
+  on top of the shared gutter and put that one element further from the edge than its siblings.
 
 ## Origin
-Synthesized from sketches: 005, 027, 031, 032, 034, 035
+Synthesized from sketches: 005, 027, 031, 032, 034, 035, 037
 Source files available in: sources/005-detail-page/, sources/027-buybox-panel-boundary/,
 sources/031-similar-games-fallback/, sources/032-masthead-facts-placement/,
-sources/034-chip-cleanup/, sources/035-detail-page-rhythm/
+sources/034-chip-cleanup/, sources/035-detail-page-rhythm/, sources/037-masthead-grouping/

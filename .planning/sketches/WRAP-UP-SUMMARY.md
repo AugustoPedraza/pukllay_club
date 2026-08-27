@@ -430,3 +430,88 @@ showed those fixes hadn't fully landed.
 - 029 and 030 (round 1) are still design-approved but not yet implemented.
 - None of 032–035 are implemented yet — all four are design-approved, ready for
   `/gsd-plan-phase` (or a gap-closure quick task) against `CatalogLive.Show`.
+
+## Session: 2026-08-27 (continued)
+
+**Sketches processed:** 3
+**Design areas added:** Component System — Pills & Chips (new)
+**Design areas updated:** Detail Page — Layout & Content, Detail Page — Mobile & Interaction
+Patterns
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
+
+**Context:** Round 3 of Phase 01.2 UAT gap-closure — a third UAT pass over 032–035's shipped fixes
+(plans 01.2-19 through 01.2-22) found they hadn't fully landed, plus one genuinely new complaint
+that hadn't surfaced before: inconsistent pill/chip styling across the whole app, not just the
+detail page. All three sketches went through real diagnosis first
+(`.planning/debug/G-01.2-13/14/16-*.md`) before sketching, so — like round 2 — several findings are
+verified code facts, not taste calls: five independently-styled pill/chip implementations with no
+shared base (036), a dot-touch-target sizing bug plus a panel-padding margin mismatch (037), and a
+lightbox width cap that never read the shell's own content width (038).
+
+**Two sketches also caught their own bugs mid-review, worth flagging generally:** both 036/037/038
+initially shipped with the exact multi-variant CSS-scoping bug 032's README had already documented
+once (a `.variant.active` wrapper carrying the tab-switching `id` but not the CSS-scoping class the
+variant-specific rules targeted, so every variant-specific style silently matched nothing) — caught
+only when the user reported "no style" / "buttons don't work" / "still looks weird" against what
+should have been three visibly different renders. Worth a standing checklist item for any future
+multi-variant sketch: verify the `id` used for JS tab-switching and the `class` used for CSS
+variant-scoping are applied to the *same element*, not assumed from the markup alone.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 036 | pill-chip-unification | A+B Synthesis (flat info pills + always-bordered action chips + tap-press feedback) | Component System — Pills & Chips |
+| 037 | masthead-grouping | C (Proximity Only, no shared container) | Detail Page — Layout & Content |
+| 038 | lightbox-shell-width | Shell-Width-Anchored Arrows (round-2 synthesis) | Detail Page — Mobile & Interaction Patterns |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — all 3 included |
+
+## Design Direction
+No new aesthetic direction — gap-closure within the already-locked visual system, same as rounds 1
+and 2. One genuinely new principle did emerge though: **unify pills/chips by interactivity role
+(does tapping this do anything?), not by content type** — the industry pattern (Material Design's
+"filter chip", Airbnb's own filter pills) for signaling tappability with no hover state on touch is
+an always-visible border at rest plus a real tap-press feedback state; purely informational
+elements need neither.
+
+## Key Decisions
+- **Pill/chip unification (036, 5 rounds):** landed on flat, chrome-free informational pills
+  (facts/mecánicas/temáticas/editorial — nothing to tap, no border) + tightly-sized, always-bordered
+  interactive chips (active filters/filter-modal — 44px touch height, `:active` press feedback).
+  Five rounds of real back-and-forth: initial three directions (one universal shape / two sizes by
+  interactivity / three tiers by prominence) → balance refinement on the picked direction → theme
+  text color + no icons/hashtags → three minimalism explorations → the final A+B synthesis,
+  explicitly grounded in how Netflix/Airbnb signal tappability without a hover state. New
+  cross-cutting reference file: `references/pills-chips.md`.
+- **Masthead grouping (037):** revises 032's masthead findings again — proximity-only (tightened
+  rhythm + aligned edges, no shared background/border) won over two container-based options. Two
+  co-located bugs fixed the same round: the gallery dots' 44px touch target was making the visible
+  mark spacing read 5x wider than intended; the poster panel's own internal padding put the photo
+  16px further from the shell gutter than its siblings.
+- **Lightbox shell width (038):** resolves 033's explicitly-left-open question. The photo now caps
+  to the shell's own content width instead of a standalone `min(90vw, 60rem)`, and — the actual fix
+  the open question was missing — the nav arrows anchor to that *same* shell-width box, not the raw
+  viewport; anchoring the photo and the arrows to two different boundaries is what made round 1's
+  "viewport-edge" variant still look wrong even after the width fix. Also fixed: mobile's left
+  chevron rendering behind the image (no explicit `z-index`, so DOM paint order lost against the
+  wide image).
+
+## Open Items Carried Forward
+- 033's original open item (viewport-edge vs. image-relative arrows) is now resolved by 038 — no
+  longer open.
+- The lightbox/carousel state-sync bug found during round-3 diagnosis (`@selected_image` shared
+  between the poster carousel and the lightbox, so lightbox navigation moves the underlying
+  carousel) is a code fix planned separately (gap-closure plan `01.2-25`) — not a sketch question,
+  so `detail-page-mobile-interaction.md`'s existing "Lightbox / carousel sync" section is
+  intentionally left as-is pending that fix landing and a future wrap-up correcting it.
+- The title-echo bar appearing on desktop (should be mobile-only) and a footer-boundary spacing
+  regression, both found during round-3 diagnosis, are pure code fixes with no design question —
+  out of scope for this wrap-up, covered by gap-closure plan `01.2-24`.
+- 031's open items (title retitle-on-widen, query-layer widening strategy) remain open, untouched.
+- 029 and 030 (round 1) are still design-approved but not yet implemented.
+- None of 036–038 are implemented yet — all three are design-approved, ready for
+  `/gsd-execute-phase 01.2 --gaps-only` against the phase's gap-closure plans (`01.2-23` through
+  `01.2-27`).

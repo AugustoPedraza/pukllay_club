@@ -218,11 +218,31 @@ already ships left/right chevron navigation — industry-standard for any multi-
 Caught in review, not by grounding the sketch in the real markup closely enough the first time.
 Fix: `‹`/`›` buttons, absolutely positioned and vertically centered at the lightbox's left/right
 edges, plus `ArrowLeft`/`ArrowRight` keyboard support alongside the existing `Escape`-to-close.
-**Open question, not yet resolved:** whether the arrows should anchor to the *viewport* edges
-(production's current behavior, and what the sketch matched) or to the *image's own* edges —
-at desktop widths, with the image capped narrower than the viewport, viewport-edge anchoring can
-leave a lot of empty scrim between the button and the photo. Left for implementation to decide per
-viewport (mobile vs. desktop may want different answers), not resolved by a sketch round.
+**Resolved (Phase 01.2 gap-closure round 3, sketch 038): arrows anchor to the shell's content-width
+box, not the raw viewport.** UAT confirmed the leftover open question above was the real bug: the
+lightbox photo caps at a standalone `min(90vw, 60rem)` instead of the page's own shell content
+width, so at wide desktop the photo sits in a small central column while the arrows stay pinned to
+the *viewport* edge — a lot of empty scrim between button and photo, which read as "the overlay
+isn't correct, it displays background" even though the scrim itself composites correctly (verified
+pixel-by-pixel across 5 viewports before concluding this). Neither "viewport edge" nor "image edge"
+alone was the right framing — the photo and the arrows need to be measured against the **same**
+boundary. Fix: cap the photo to the shell's content width (the same box the header/footer/masthead
+already share, see `detail-page-layout.md`), and anchor the arrows to that same box's edges, not
+the browser viewport. At mobile widths the shell width and the viewport width are effectively the
+same, so mobile behavior is unchanged.
+
+```css
+.pk-lightbox-img { max-width: var(--pk-shell-content-width, 1216px); } /* was: min(90vw, 60rem) */
+.pk-lightbox-bounds { position: absolute; inset: 0; max-width: var(--pk-shell-content-width, 1216px); margin: 0 auto; } /* arrows position against THIS, not the lightbox's own full-viewport wrapper */
+```
+
+**Related, separate bug from the same UAT round: mobile's left chevron rendered behind the image.**
+The prev/next buttons and the `<img>` are DOM siblings with no explicit `z-index`; with
+`z-index: auto`, paint order follows DOM order, so the image (positioned between the two chevrons
+in markup) painted over the prev button wherever their boxes overlapped — at mobile widths the
+image's near-full-width cap left only ~20px margin, putting the edge-anchored prev button directly
+under the image's edge. Fix: give both chevrons an explicit `z-index` above the image's own
+stacking level, don't rely on DOM order alone once elements can visually overlap.
 
 ### Lightbox open/close needs a soft transition, not an instant `display` toggle
 
@@ -293,8 +313,15 @@ app this belongs in runtime env config, not a template literal.
   navigation before assuming a mockup covers the standard interaction set.
 - Don't toggle an overlay's visibility with `display: none`/`flex` if it needs to transition —
   `display` can't animate; use `opacity`/`visibility`/`pointer-events` instead.
+- Don't cap a full-screen overlay's content to a standalone width value (`90vw`, a hardcoded `rem`
+  cap) independent of the page's own shell content width — measure the photo AND its navigation
+  controls against the same shared boundary, not the raw viewport, or the two will drift apart at
+  wide desktop widths even though each one looks "correct" in isolation.
+- Don't rely on DOM order alone to control paint order between elements that can visually overlap
+  (a chevron button next to a wide image) — set an explicit `z-index` once overlap is possible,
+  don't assume `z-index: auto` will do the right thing.
 
 ## Origin
-Synthesized from sketches: 005, 028, 033; sticky-title-bar mechanism corrected by sketch 011.
+Synthesized from sketches: 005, 028, 033, 038; sticky-title-bar mechanism corrected by sketch 011.
 Source files available in: sources/005-detail-page/, sources/011-full-shell-composition/,
-sources/028-mobile-cta-balance/, sources/033-lightbox-contrast/
+sources/028-mobile-cta-balance/, sources/033-lightbox-contrast/, sources/038-lightbox-shell-width/
