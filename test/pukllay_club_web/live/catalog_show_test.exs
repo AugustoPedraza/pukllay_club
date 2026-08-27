@@ -2246,4 +2246,105 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
              )
     end
   end
+
+  # G-01.2-25 task 1 (gap-closure round 5): the lightbox photo's width cap
+  # re-derived from the shell's own `max-w-7xl`/`--pk-gutter` recipe, plus
+  # an explicit stacking order on both chevrons so paint order no longer
+  # depends on DOM order relative to the image. `css_source/0` is the
+  # shared helper the two describe blocks above already established.
+  describe "lightbox shell-width photo and chevron stacking (Phase 01.2 gap-closure round 5, G-01.2-25 task 1)" do
+    # First (and only) top-level `.pk-lightbox-img {...}` rule, matched on
+    # the literal selector text, mirroring `gallery_dot_block/0`'s pattern
+    # above so a future sibling rule can never be mistaken for this one.
+    defp lightbox_img_block do
+      case Regex.run(~r/(?m)^\.pk-lightbox-img\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-lightbox-img {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the lightbox photo's max-width reads the shell's own container-7xl width, not a standalone viewport-relative literal" do
+      body = lightbox_img_block()
+
+      refute body =~ ~r/max-width:\s*min\(90vw/,
+             "`.pk-lightbox-img` must no longer cap at the old standalone `min(90vw, 60rem)` " <>
+               "literal — that value never joined the shell's own `max-w-7xl`/`--pk-gutter` " <>
+               "width recipe every other capped surface on this page uses (`.pk-nav-inner`, " <>
+               "`#detail-masthead-wrap`, `.pk-footer-row`), which is the confirmed root cause " <>
+               "of G-01.2-16's 'use same width that defined for shell' report."
+
+      assert body =~ ~r/max-width:\s*calc\(/,
+             "`.pk-lightbox-img`'s max-width must be a calc() derived from the shell's own " <>
+               "width token, not a fresh standalone literal."
+
+      assert body =~ ~r/var\(--container-7xl,\s*80rem\)/,
+             "the cap must read Tailwind's own `--container-7xl` custom property (the same " <>
+               "one `.max-w-7xl` resolves against, confirmed emitted in the built stylesheet) " <>
+               "rather than a hand-copied 80rem literal with no link back to the shell."
+
+      assert body =~ ~r/var\(--pk-gutter\)/,
+             "the cap must subtract the shared `--pk-gutter` token (not a hardcoded rem value) " <>
+               "so it stays in sync with the header/footer/masthead's own content width, " <>
+               "including the token's own narrower value below the 480px breakpoint."
+
+      assert body =~ ~r/max-height:\s*80vh/,
+             "the height cap must stay byte-identical to HEAD — only the width source changes"
+
+      assert body =~ ~r/object-fit:\s*contain/,
+             "object-fit must stay byte-identical to HEAD"
+
+      assert body =~ ~r/border-radius:\s*var\(--radius-box\)/,
+             "border-radius must stay byte-identical to HEAD"
+
+      assert body =~ ~r/transform:\s*scale\(0\.96\)/,
+             "the scale transition must stay byte-identical to HEAD"
+    end
+
+    test "both lightbox chevrons carry the shared explicit-stacking-order class", %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      prev_class =
+        doc
+        |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      next_class =
+        doc
+        |> LazyHTML.query("#detail-lightbox [data-lightbox-next]")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert prev_class =~ "pk-lightbox-chevron",
+             "the previous-image chevron must carry the shared stacking-order class — this is " <>
+               "the one that was rendering invisible behind the photo at mobile widths"
+
+      assert next_class =~ "pk-lightbox-chevron",
+             "the next-image chevron must ALSO carry the shared class, not only the " <>
+               "previously-broken one, so a future markup reorder can never silently " <>
+               "reintroduce the DOM-order accident on this side instead"
+    end
+
+    test "the .pk-lightbox-chevron class declares an explicit numeric z-index above the photo" do
+      case Regex.run(~r/\.pk-lightbox-chevron\s*\{([^}]*)\}/, css_source()) do
+        [_, body] ->
+          assert body =~ ~r/z-index:\s*\d/,
+                 "`.pk-lightbox-chevron` must declare an explicit numeric z-index so both " <>
+                   "chevrons outrank the photo regardless of DOM order — relying on " <>
+                   "`z-index: auto` and markup order is the confirmed root cause of the " <>
+                   "mobile left-chevron-behind-the-image defect."
+
+        nil ->
+          flunk("No `.pk-lightbox-chevron { ... }` rule found in assets/css/app.css")
+      end
+    end
+  end
 end

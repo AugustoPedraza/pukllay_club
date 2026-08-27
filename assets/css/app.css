@@ -233,10 +233,26 @@
 
 /* Sketch 001 (shelf-structure, variant D): the single gutter token every
    aligned surface (header, row headers, rail wraps, capped page sections)
-   shares. .pk-gutter below is the ONLY rule that reads this token — no
-   other selector in this stylesheet may set a horizontal padding on an
-   aligned surface, which is what guarantees the nav and row content can
-   never drift to two different spacing values again. */
+   shares. `.pk-gutter` below is the PRIMARY reader — the utility class
+   every `mx-auto w-full max-w-7xl pk-gutter`-recipe surface uses
+   (`.pk-nav-inner`, `#detail-masthead-wrap`, `.pk-footer-row`,
+   `#detail-shelf-separator`, the mobile CTA bar's inner wrapper). It is
+   NOT the token's only reader, and claiming otherwise stopped being true
+   some time ago — corrected here (G-01.2-25) after a read-first audit
+   found several bespoke `.pk-*` rules already reading `var(--pk-gutter)`
+   directly, without going through the `.pk-gutter` class, for their OWN
+   horizontal alignment: `.pk-cat-panel` (right offset + max-width),
+   `.pk-about-cta-bar` and `.pk-title-echo` (their own horizontal
+   padding), `.pk-chip-spacer` (a flex-basis spacer sized to the gutter),
+   `.pk-search-morph` in both its closed and open-state rules (right
+   offset + width), and now `.pk-lightbox-img` (its shell-width content
+   cap, see below). The invariant this token actually enforces is
+   narrower than "one reader": no selector anywhere in this file may
+   declare an INDEPENDENTLY-CHOSEN horizontal-alignment value — a literal
+   px/rem/vw number picked fresh for one rule — on an aligned surface;
+   every rule that needs one reads THIS token, whether via `.pk-gutter` or
+   directly, so the nav, the row content and the lightbox photo can never
+   drift to a second, silently-diverging spacing value again. */
 :root {
   --pk-gutter: 2rem;
 
@@ -3181,8 +3197,37 @@ body.pk-cta-parked {
   transition: opacity var(--duration-base) var(--ease-out-soft);
 }
 
+/* G-01.2-25 task 1 (gap-closure round 5, diagnosed in
+   .planning/debug/G-01.2-16-lightbox-scrim-width-carousel-sync.md): the
+   photo's cap re-derived from the shell's own width instead of a
+   standalone `min(90vw, 60rem)` literal. Every other capped surface on
+   this page — `.pk-nav-inner`, `#detail-masthead-wrap`, `.pk-footer-row`
+   — shares one recipe: `mx-auto w-full max-w-7xl pk-gutter`, a box capped
+   at Tailwind's own `--container-7xl` custom property (confirmed emitted
+   in the built stylesheet — `priv/static/assets/css/app.css` declares
+   `--container-7xl: 80rem` and `.max-w-7xl { max-width:
+   var(--container-7xl); }` — so this reads that property directly rather
+   than falling back to a hand-copied literal) with `--pk-gutter`
+   horizontal PADDING eating INTO that box, not adding to it. This rule
+   never joined that recipe, so the photo rendered at a standalone
+   60rem/960px cap — narrower than the shell's real content width (80rem
+   minus two gutters) at desktop — which is the direct, confirmed cause of
+   UAT test 12's "for desktop we should use same width that defined for
+   shell (header and footer)".
+
+   This is deliberately NOT a fix for the same report's "the overlay isn't
+   correct, it displays background": a five-viewport headless-Chrome
+   pixel-sampling investigation found the scrim composites correctly and
+   uniformly over every sampled region, with no stacking/positioning
+   fault — the best-evidenced explanation is that a photo capped far
+   narrower than the shell left a wide field of the scrim's own
+   deliberately-transparent 72% opacity (`--pk-overlay-scrim`, unchanged
+   here), which reads as "not obscuring enough" over that empty field.
+   `--pk-overlay-scrim` and `.pk-lightbox`'s background are NOT re-tuned
+   in this rule — see this task's own `<human-check>` for how the scrim
+   question is answered once the width alone is fixed. */
 .pk-lightbox-img {
-  max-width: min(90vw, 60rem);
+  max-width: calc(min(100vw, var(--container-7xl, 80rem)) - (2 * var(--pk-gutter)));
   max-height: 80vh;
   object-fit: contain;
   border-radius: var(--radius-box);
@@ -3204,6 +3249,26 @@ body.pk-cta-parked {
   position: absolute;
   top: 1rem;
   right: 1rem;
+  z-index: 2;
+}
+
+/* G-01.2-25 task 1: BOTH lightbox chevrons get one explicit stacking
+   order above the photo, rather than relying on `z-index: auto`'s DOM-
+   order paint rule. Diagnosed root cause: the prev button, the `<img>`
+   and the next button are DOM siblings with no explicit z-index, so
+   sibling paint order followed markup order — prev, then image, then
+   next — meaning the image painted OVER the prev button and UNDER the
+   next button wherever their boxes overlapped. At mobile widths the
+   image's cap left the left-4-anchored prev button's box directly under
+   the image's edge, which is why only the LEFT chevron went invisible
+   and not the right one — an accident of markup order, not a deliberate
+   design. Both buttons carry this class, not only the previously-broken
+   one: leaving the right chevron on that same DOM-order accident means
+   the next markup reorder would silently break it too. Value matches
+   `.pk-lightbox-close` above's own explicit z-index — none of the three
+   controls spatially overlap each other, so there is no tie to resolve,
+   only each one needing to independently outrank the photo. */
+.pk-lightbox-chevron {
   z-index: 2;
 }
 

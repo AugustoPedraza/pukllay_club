@@ -719,7 +719,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             phx-click="select-image"
             phx-value-url={lightbox_neighbor(@game, @selected_image, -1)}
             aria-label="Imagen anterior"
-            class="btn btn-circle min-h-11 min-w-11 absolute left-4 top-1/2 -translate-y-1/2"
+            class="pk-lightbox-chevron btn btn-circle min-h-11 min-w-11 absolute left-4 top-1/2 -translate-y-1/2"
           >
             <.icon name="hero-chevron-left" class="size-5" />
           </button>
@@ -736,7 +736,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             phx-click="select-image"
             phx-value-url={lightbox_neighbor(@game, @selected_image, 1)}
             aria-label="Imagen siguiente"
-            class="btn btn-circle min-h-11 min-w-11 absolute right-4 top-1/2 -translate-y-1/2"
+            class="pk-lightbox-chevron btn btn-circle min-h-11 min-w-11 absolute right-4 top-1/2 -translate-y-1/2"
           >
             <.icon name="hero-chevron-right" class="size-5" />
           </button>
