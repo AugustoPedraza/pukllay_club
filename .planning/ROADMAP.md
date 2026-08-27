@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 17/17 plans executed (5 original, 5 superseded, 8 gap closure executed, 4 gap-closure round 2 pending)
+**Plans:** 17/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -263,6 +263,26 @@ Plans:
 **Wave 13 — gap closure round 2** *(blocked on Wave 12 completion — same files)*
 
 - [x] 01.2-22-PLAN.md — G-01.2-11/12: sketch 035 rhythm — the hidden sticky title bar taken out of document flow, and both page boundaries collapsed from four and two stacked contributors to one deliberate 24px value each, behind an opt-in layout flag so no other page changes
+
+**Wave 14 — gap closure round 3** *(from the third detail-page UAT round: G-01.2-13, G-01.2-14, G-01.2-15, G-01.2-16, all diagnosed. Every plan below edits `assets/css/app.css`, so the round runs strictly sequentially — one wave per plan, not for dependency reasons but because a shared stylesheet cannot be edited in parallel worktrees)*
+
+- [ ] 01.2-23-PLAN.md — G-01.2-13: mobile masthead cohesion — the dot row compacted to a real indicator while keeping a usable tap target, and the facts pills moved inside the poster panel so the pills, the photo and the dots become one card with one edge
+
+**Wave 15 — gap closure round 3** *(blocked on Wave 14 — same stylesheet)*
+
+- [ ] 01.2-24-PLAN.md — G-01.2-14: the condensed title bar becomes phone-only and single-line, the carousel-to-footer boundary gets a real 24px gap instead of padding hidden inside the footer's own box, and the app gains its first sticky-footer layout at the root
+
+**Wave 16 — gap closure round 3** *(blocked on Wave 15 — same stylesheet)*
+
+- [ ] 01.2-25-PLAN.md — G-01.2-16: the lightbox photo takes the shell's own content width, both chevrons get an explicit stacking order, and the lightbox gains its own selection so navigating it never moves the gallery underneath
+
+**Wave 17 — gap closure round 3** *(blocked on Wave 16 — same stylesheet)*
+
+- [ ] 01.2-26-PLAN.md — G-01.2-15 (part 1 of 2): the app's first shared pill base and its documented tone/size/interactive variants, plus the detail page's three chip families migrated onto it; opens with a blocking decision checkpoint on the base geometry and the variant set
+
+**Wave 18 — gap closure round 3** *(blocked on Wave 17 — same stylesheet)*
+
+- [ ] 01.2-27-PLAN.md — G-01.2-15 (part 2 of 2): the catalog's active-filter chips and the filter modal's option chips migrated onto the same base, the superseded rules retired with forwarding notes, and a drift gate that fails when a sixth bespoke chip family appears
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
