@@ -269,6 +269,22 @@
   --duration-slow: 280ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Detail-page content-column width (01.2-18 task 1): shared by the
+     masthead, the mobile CTA bar's inner wrapper, and the masthead↔shelf
+     boundary — three rules that must align to the identical width. Two of
+     those three previously wrote the same rem literal independently, tied
+     together only by a comment; a third independent copy for the boundary
+     is exactly the drift risk this file's own custom-CSS-layer rule
+     (declare a shared field once, never per call site — see the PK CATALOG
+     SURFACES intro comment above) exists to prevent. Written in px rather
+     than restating the old rem literal here: at this app's unmodified root
+     font-size (no `html { font-size }` override exists anywhere in this
+     file), 1100px is the identical computed width the three rules held
+     before this substitution (measured before/after, see
+     01.2-18-SUMMARY.md). Read by exactly three rules below:
+     .pk-detail-masthead, .pk-cta-bar-inner, and .pk-shelf-separator. */
+  --pk-detail-col-width: 1100px;
 }
 
 .pk-gutter {
@@ -2461,7 +2477,7 @@ body.pk-drawer-open {
    masthead to its two-column sticky grid AND hides the mobile CTA bar in
    one place, so the two concerns can never drift apart. */
 .pk-detail-masthead {
-  max-width: 68.75rem;
+  max-width: var(--pk-detail-col-width);
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
@@ -2654,6 +2670,24 @@ body.pk-drawer-open {
   margin: 0;
 }
 
+/* Boundary between the detail masthead and the "Juegos similares" shelf
+   below it (01.2-18 task 1) — second call site of the exact `.pk-divider`
+   declared above (01.2-17 already checked daisyUI's own .divider and
+   settled on hand-overriding only its default margin; that decision is
+   reused verbatim here, not re-litigated). What THIS call site adds is
+   only what the shared rule doesn't cover: capping/centering the line to
+   the reading column's own width (the same --pk-detail-col-width
+   .pk-detail-masthead and .pk-cta-bar-inner read), not the shelf's own
+   wider max-w-7xl/pk-gutter cap immediately below it — a line matching
+   neither width would read as an accident, so this is a stated, deliberate
+   choice, not a default. `margin: 0 auto` fully restates (not merely
+   extends) .pk-divider's own `margin: 0`, so the two rules can never
+   desync regardless of source order. */
+.pk-shelf-separator {
+  max-width: var(--pk-detail-col-width);
+  margin: 0 auto;
+}
+
 .pk-spec-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2719,12 +2753,13 @@ body.pk-drawer-open {
    drops to a smaller, quiet outline pill on a second row below it. The
    horizontal gutter that used to live on `.pk-mobile-cta-bar` itself now
    lives on the `pk-gutter` class on the middle wrapper in show.ex, and
-   this rule's own `max-width: 68.75rem` is the exact literal
-   `.pk-detail-masthead` already uses, so the bar's controls align under
-   the content column above them at every width instead of stretching
-   edge-to-edge past 1100px. */
+   this rule's own `max-width` reads the shared `--pk-detail-col-width`
+   token `.pk-detail-masthead` also reads (01.2-18 task 1 — previously each
+   wrote the same rem literal independently), so the bar's controls align
+   under the content column above them at every width instead of
+   stretching edge-to-edge past 1100px. */
 .pk-cta-bar-inner {
-  max-width: 68.75rem;
+  max-width: var(--pk-detail-col-width);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
