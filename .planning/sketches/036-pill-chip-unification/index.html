@@ -7,11 +7,16 @@
 <link rel="stylesheet" href="../themes/default.css">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; padding-top: 84px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+  body { margin: 0; padding-top: 108px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
 
-  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; font-family: var(--font-sans); }
-  .variant-tab { border: 1px solid var(--color-border); background: var(--color-primary); color: var(--color-primary-content); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; }
-  #variant-nav .caption { display: block; margin-top: 6px; font-size: var(--text-xs); color: var(--color-text-muted); }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .variant-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
+
+  .variant { display: none; }
+  .variant.active { display: block; }
 
   .cause-note { max-width: 720px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-xs); color: var(--color-accent-text); }
   .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; }
@@ -32,62 +37,76 @@
     white-space: nowrap;
     font-family: var(--font-sans);
     cursor: default;
-    border: 1px solid transparent;
+    color: var(--color-text);
     transition: background-color var(--duration-fast) var(--ease-standard),
       border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
       box-shadow var(--duration-fast) var(--ease-standard);
   }
-  button.uni-pill { cursor: pointer; -webkit-appearance: none; appearance: none; }
+  button.uni-pill { cursor: pointer; -webkit-appearance: none; appearance: none; font-family: inherit; }
   .pill-x { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; font-size: 11px; line-height: 1; }
 
   /* ============================================================
-     ROUND 3 — theme text color + drop icons/hashtags
-     Round 2's balance fixes are unchanged (size/weight/breathing
-     room/shape). Two new fixes:
-     1. Info/topic pill text was --color-text-muted (a desaturated
-        token that read as "default gray") -> now the theme's full
-        --color-text, which also raises contrast against the pill
-        background — a genuine a11y improvement, not just a look.
-     2. Facts-pill emoji icons and the editorial "#" prefix removed
-        — plain label text only, on every pill.
+     REFERENCE — Round 3 (previous answer, kept for comparison)
      ============================================================ */
-  .uni-pill {
+  .variant-ref .uni-pill {
     border-radius: 9999px;
     padding: 5px 12px;
     font-size: 11.5px;
     font-weight: 600;
     background: var(--color-surface);
-    border-color: var(--color-border);
-    color: var(--color-text);
+    border: 1px solid var(--color-border);
   }
-  .uni-pill[data-accent="true"] {
-    background: var(--color-accent-bg);
-    color: var(--color-accent-text);
-    border-color: transparent;
-  }
-  .uni-pill[data-role="action"] {
-    min-height: 44px;
-    padding: 0 18px;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--color-text);
-    background: var(--color-surface);
-    border-color: var(--color-border);
-  }
-  .uni-pill[data-role="action"]:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-    background: var(--color-accent-bg);
-  }
-  .uni-pill[data-state="active"],
-  .uni-pill[data-state="selected"] {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: var(--color-primary-content);
-    box-shadow: var(--shadow-sm);
-  }
-  .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
-  .uni-pill[data-role="action"]:not([data-state]) .pill-x { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text-muted); }
+  .variant-ref .uni-pill[data-accent="true"] { background: var(--color-accent-bg); color: var(--color-accent-text); border-color: transparent; }
+  .variant-ref .uni-pill[data-role="action"] { min-height: 44px; padding: 0 18px; font-size: 12.5px; background: var(--color-surface); border-color: var(--color-border); }
+  .variant-ref .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .variant-ref .uni-pill[data-state] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-content); box-shadow: var(--shadow-sm); }
+  .variant-ref .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
+  .variant-ref .uni-pill[data-role="action"]:not([data-state]) .pill-x { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text-muted); }
+
+  /* ============================================================
+     A — Tight Pill
+     Same fully-rounded capsule shape, padding cut roughly in
+     half. Action chips keep the 44px TOUCH HEIGHT (a11y floor —
+     doesn't shrink) but its horizontal padding tightens too.
+     ============================================================ */
+  .variant-a .uni-pill { border-radius: 9999px; padding: 3px 8px; font-size: 11px; font-weight: 600; background: var(--color-surface); border: 1px solid var(--color-border); }
+  .variant-a .uni-pill[data-accent="true"] { background: var(--color-accent-bg); color: var(--color-accent-text); border-color: transparent; }
+  .variant-a .uni-pill[data-role="action"] { min-height: 44px; padding: 0 12px; font-size: 12px; background: var(--color-surface); border-color: var(--color-border); }
+  .variant-a .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .variant-a .uni-pill[data-state] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-content); box-shadow: var(--shadow-sm); }
+  .variant-a .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
+  .variant-a .uni-pill[data-role="action"]:not([data-state]) .pill-x { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text-muted); }
+
+  /* ============================================================
+     B — Flat, No Chrome
+     Info/topic/editorial pills drop background+border entirely —
+     just text, separated by real spacing (no visible container at
+     all). Only interactive (action) chips keep a minimal 1px
+     outline at rest — they still need to read as tappable.
+     ============================================================ */
+  .variant-b .uni-pill { padding: 2px 2px; font-size: 12px; font-weight: 600; background: transparent; border: none; }
+  .variant-b .uni-pill[data-accent="true"] { color: var(--color-accent-text); }
+  .variant-b .uni-pill[data-role="action"] { min-height: 44px; padding: 0 14px; font-size: 12.5px; border-radius: 9999px; background: transparent; border: 1px solid var(--color-border); }
+  .variant-b .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .variant-b .uni-pill[data-state] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-content); }
+  .variant-b .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
+  .variant-b .uni-pill[data-role="action"]:not([data-state]) .pill-x { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text-muted); }
+  .variant-b .pill-row[data-flat="true"] { gap: 0; }
+  .variant-b .pill-row[data-flat="true"] .uni-pill:not(:last-child)::after { content: '·'; margin-left: 10px; color: var(--color-border); font-weight: 700; }
+
+  /* ============================================================
+     C — Low-Radius Chip
+     Trades the fully-rounded capsule for a small rounded-rect —
+     tight padding, more geometric/quiet than a pill shape.
+     ============================================================ */
+  .variant-c .uni-pill { border-radius: var(--radius-sm); padding: 3px 9px; font-size: 11px; font-weight: 600; background: var(--color-surface); border: 1px solid var(--color-border); }
+  .variant-c .uni-pill[data-accent="true"] { background: var(--color-accent-bg); color: var(--color-accent-text); border-color: transparent; }
+  .variant-c .uni-pill[data-role="action"] { min-height: 44px; padding: 0 14px; font-size: 12px; border-radius: var(--radius-sm); background: var(--color-surface); border-color: var(--color-border); }
+  .variant-c .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .variant-c .uni-pill[data-state] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-content); box-shadow: var(--shadow-sm); }
+  .variant-c .pill-x { background: rgba(255,255,255,0.25); color: inherit; border-radius: 2px; }
+  .variant-c .uni-pill[data-role="action"]:not([data-state]) .pill-x { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text-muted); }
 
   #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
   #sketch-tools:hover { opacity: 1; }
@@ -96,66 +115,135 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab">Round 3 — B, refined + theme color + no icons ★</button>
-  <span class="caption">A/C dropped after round 1. Round 2 fixed the size/weight balance. Round 3 (this view): full theme text color instead of muted, and no emoji icons or "#" hashtag prefix on any pill. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab" onclick="showVariant('ref', this)">Reference (previous answer)</button>
+  <button class="variant-tab active" onclick="showVariant('a', this)">A: Tight Pill</button>
+  <button class="variant-tab" onclick="showVariant('b', this)">B: Flat, No Chrome</button>
+  <button class="variant-tab" onclick="showVariant('c', this)">C: Low-Radius Chip</button>
+  <span class="caption">Balance (round 2) and theme-color/no-icon (round 3) fixes carried into all four. Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
-  Round 2 feedback: "the refined looks better... this should use the font color of the theme and
-  not default gray. And no hashtags on the pills, neither icons." Both applied: pill text now uses
-  <code>--color-text</code> (the theme's primary text token, not the muted variant), and every
-  emoji/hashtag glyph is gone — plain label text only.
+  "Why does the rounded shape feel like too much padding? What else can be a minimalistic clean
+  variant?" Three genuinely different directions to answer that, plus the previous answer kept as
+  a reference point: <strong>A</strong> keeps the same pill shape but cuts padding roughly in half;
+  <strong>B</strong> drops the container entirely for informational pills (just text); <strong>C</strong>
+  swaps the full pill radius for a small rounded-rect, a quieter geometric alternative to "capsule."
+  All three keep the 44px action-chip touch height — that's an accessibility floor, not a padding
+  choice.
 </div>
 
 <div class="wrap">
-  <div class="demo-block">
-    <h3>Facts row — info</h3>
-    <p class="demo-caption">GamePreview.facts_row — players / tiempo / dificultad</p>
-    <div class="pill-row">
-      <span class="uni-pill" data-role="info">2-4 jugadores</span>
-      <span class="uni-pill" data-role="info">30 min</span>
-      <span class="uni-pill" data-role="info">Intermedio</span>
+  <div id="variant-ref" class="variant variant-ref">
+    <div class="demo-block">
+      <h3>Facts row — info</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="info">2-4 jugadores</span><span class="uni-pill" data-role="info">30 min</span><span class="uni-pill" data-role="info">Intermedio</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Mecánicas — topic</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="topic">Bloques de construcción</span><span class="uni-pill" data-role="topic">Draft</span><span class="uni-pill" data-role="topic">Mano a mano</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Temáticas — topic</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="topic">Civilización</span><span class="uni-pill" data-role="topic">Economía</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Editorial — info, accent</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="info" data-accent="true">PartidaDistinta</span><span class="uni-pill" data-role="info" data-accent="true">DuoIdeal</span></div>
+    </div>
+    <hr class="divider">
+    <div class="demo-block">
+      <h3>Filtros activos — action, removable</h3>
+      <div class="pill-row"><button class="uni-pill" data-role="action" data-state="active">2-4 jugadores <span class="pill-x">✕</span></button><button class="uni-pill" data-role="action" data-state="active">Intermedio <span class="pill-x">✕</span></button></div>
+    </div>
+    <div class="demo-block">
+      <h3>Modal de filtros — action, selectable</h3>
+      <div class="pill-row"><button class="uni-pill" data-role="action" data-state="selected">Estrategia</button><button class="uni-pill" data-role="action">Familiar</button><button class="uni-pill" data-role="action">Fiesta</button></div>
     </div>
   </div>
-  <div class="demo-block">
-    <h3>Mecánicas — topic</h3>
-    <div class="pill-row">
-      <span class="uni-pill" data-role="topic">Bloques de construcción</span>
-      <span class="uni-pill" data-role="topic">Draft</span>
-      <span class="uni-pill" data-role="topic">Mano a mano</span>
+
+  <div id="variant-a" class="variant variant-a active">
+    <div class="demo-block">
+      <h3>Facts row — info</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="info">2-4 jugadores</span><span class="uni-pill" data-role="info">30 min</span><span class="uni-pill" data-role="info">Intermedio</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Mecánicas — topic</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="topic">Bloques de construcción</span><span class="uni-pill" data-role="topic">Draft</span><span class="uni-pill" data-role="topic">Mano a mano</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Temáticas — topic</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="topic">Civilización</span><span class="uni-pill" data-role="topic">Economía</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Editorial — info, accent</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="info" data-accent="true">PartidaDistinta</span><span class="uni-pill" data-role="info" data-accent="true">DuoIdeal</span></div>
+    </div>
+    <hr class="divider">
+    <div class="demo-block">
+      <h3>Filtros activos — action, removable</h3>
+      <div class="pill-row"><button class="uni-pill" data-role="action" data-state="active">2-4 jugadores <span class="pill-x">✕</span></button><button class="uni-pill" data-role="action" data-state="active">Intermedio <span class="pill-x">✕</span></button></div>
+    </div>
+    <div class="demo-block">
+      <h3>Modal de filtros — action, selectable</h3>
+      <div class="pill-row"><button class="uni-pill" data-role="action" data-state="selected">Estrategia</button><button class="uni-pill" data-role="action">Familiar</button><button class="uni-pill" data-role="action">Fiesta</button></div>
     </div>
   </div>
-  <div class="demo-block">
-    <h3>Temáticas — topic</h3>
-    <div class="pill-row">
-      <span class="uni-pill" data-role="topic">Civilización</span>
-      <span class="uni-pill" data-role="topic">Economía</span>
+
+  <div id="variant-b" class="variant variant-b">
+    <div class="demo-block">
+      <h3>Facts row — info</h3>
+      <p class="demo-caption">No container at all — separated by a small middot</p>
+      <div class="pill-row" data-flat="true"><span class="uni-pill" data-role="info">2-4 jugadores</span><span class="uni-pill" data-role="info">30 min</span><span class="uni-pill" data-role="info">Intermedio</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Mecánicas — topic</h3>
+      <div class="pill-row" data-flat="true"><span class="uni-pill" data-role="topic">Bloques de construcción</span><span class="uni-pill" data-role="topic">Draft</span><span class="uni-pill" data-role="topic">Mano a mano</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Temáticas — topic</h3>
+      <div class="pill-row" data-flat="true"><span class="uni-pill" data-role="topic">Civilización</span><span class="uni-pill" data-role="topic">Economía</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Editorial — info, accent</h3>
+      <div class="pill-row" data-flat="true"><span class="uni-pill" data-role="info" data-accent="true">PartidaDistinta</span><span class="uni-pill" data-role="info" data-accent="true">DuoIdeal</span></div>
+    </div>
+    <hr class="divider">
+    <div class="demo-block">
+      <h3>Filtros activos — action, removable</h3>
+      <p class="demo-caption">Interactive chips keep a minimal outline — they still need tap affordance</p>
+      <div class="pill-row"><button class="uni-pill" data-role="action" data-state="active">2-4 jugadores <span class="pill-x">✕</span></button><button class="uni-pill" data-role="action" data-state="active">Intermedio <span class="pill-x">✕</span></button></div>
+    </div>
+    <div class="demo-block">
+      <h3>Modal de filtros — action, selectable</h3>
+      <div class="pill-row"><button class="uni-pill" data-role="action" data-state="selected">Estrategia</button><button class="uni-pill" data-role="action">Familiar</button><button class="uni-pill" data-role="action">Fiesta</button></div>
     </div>
   </div>
-  <div class="demo-block">
-    <h3>Editorial — info, accent</h3>
-    <p class="demo-caption">GameChips.editorial_tags — club hashtags, now shown without the "#"</p>
-    <div class="pill-row">
-      <span class="uni-pill" data-role="info" data-accent="true">PartidaDistinta</span>
-      <span class="uni-pill" data-role="info" data-accent="true">DuoIdeal</span>
+
+  <div id="variant-c" class="variant variant-c">
+    <div class="demo-block">
+      <h3>Facts row — info</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="info">2-4 jugadores</span><span class="uni-pill" data-role="info">30 min</span><span class="uni-pill" data-role="info">Intermedio</span></div>
     </div>
-  </div>
-  <hr class="divider">
-  <div class="demo-block">
-    <h3>Filtros activos — action, removable</h3>
-    <p class="demo-caption">Catalog "búsqueda activa" row</p>
-    <div class="pill-row">
-      <button class="uni-pill" data-role="action" data-state="active">2-4 jugadores <span class="pill-x">✕</span></button>
-      <button class="uni-pill" data-role="action" data-state="active">Intermedio <span class="pill-x">✕</span></button>
+    <div class="demo-block">
+      <h3>Mecánicas — topic</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="topic">Bloques de construcción</span><span class="uni-pill" data-role="topic">Draft</span><span class="uni-pill" data-role="topic">Mano a mano</span></div>
     </div>
-  </div>
-  <div class="demo-block">
-    <h3>Modal de filtros — action, selectable</h3>
-    <p class="demo-caption">filter_modal.ex facet/scalar pills</p>
-    <div class="pill-row">
-      <button class="uni-pill" data-role="action" data-state="selected">Estrategia</button>
-      <button class="uni-pill" data-role="action">Familiar</button>
-      <button class="uni-pill" data-role="action">Fiesta</button>
+    <div class="demo-block">
+      <h3>Temáticas — topic</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="topic">Civilización</span><span class="uni-pill" data-role="topic">Economía</span></div>
+    </div>
+    <div class="demo-block">
+      <h3>Editorial — info, accent</h3>
+      <div class="pill-row"><span class="uni-pill" data-role="info" data-accent="true">PartidaDistinta</span><span class="uni-pill" data-role="info" data-accent="true">DuoIdeal</span></div>
+    </div>
+    <hr class="divider">
+    <div class="demo-block">
+      <h3>Filtros activos — action, removable</h3>
+      <div class="pill-row"><button class="uni-pill" data-role="action" data-state="active">2-4 jugadores <span class="pill-x">✕</span></button><button class="uni-pill" data-role="action" data-state="active">Intermedio <span class="pill-x">✕</span></button></div>
+    </div>
+    <div class="demo-block">
+      <h3>Modal de filtros — action, selectable</h3>
+      <div class="pill-row"><button class="uni-pill" data-role="action" data-state="selected">Estrategia</button><button class="uni-pill" data-role="action">Familiar</button><button class="uni-pill" data-role="action">Fiesta</button></div>
     </div>
   </div>
 </div>
@@ -163,6 +251,15 @@
 <div id="sketch-tools">
   <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
 </div>
+
+<script>
+function showVariant(id, btn) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
 
 </body>
 </html>
