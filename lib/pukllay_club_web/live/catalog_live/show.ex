@@ -899,7 +899,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     """
   end
 
-
   # `cover_url` first so it's always the initial thumbnail/main image when
   # present; nils filtered so an absent cover never mints a broken `<img>`.
   defp gallery_thumbnails(game) do

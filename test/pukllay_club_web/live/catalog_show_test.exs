@@ -1102,9 +1102,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      controls =
-        doc
-        |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner button, #detail-cta-bar .pk-cta-bar-inner a")
+      controls = LazyHTML.query(doc, "#detail-cta-bar .pk-cta-bar-inner button, #detail-cta-bar .pk-cta-bar-inner a")
 
       assert Enum.count(controls) == 1
 
@@ -1156,7 +1154,167 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         |> LazyHTML.attribute("aria-label")
         |> List.first()
 
-      assert aria_label not in [nil, ""]
+      refute aria_label in [nil, ""]
+    end
+  end
+
+  # 01.2-18 task 3: every mechanical ask from G-01.2-10's UAT `missing` list
+  # gathered into one named group so a regression on any single one fails a
+  # test that names that ask, rather than failing something generic spread
+  # across other describe blocks. One assertion per ask, not one shared
+  # assertion.
+  describe "G-01.2-10 mobile detail-page contract (regression pin, 01.2-18 task 3)" do
+    test "the pills render in the poster frame's overlay wrapper and the text column's inline wrapper, both present on every render",
+         %{conn: conn} do
+      game = game_fixture(%{min_players: 2, max_players: 4})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-poster-frame .pk-facts-overlay .pk-facts-row") |> Enum.count() ==
+               1
+
+      assert doc |> LazyHTML.query(".pk-text-col .pk-facts-inline .pk-facts-row") |> Enum.count() == 1
+    end
+
+    test "the description is the element immediately after the title", %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica de mercaderes."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+    end
+
+    test "the poster column's reserve button and the bar's reserve button are separately addressable, and exactly one carries the breakpoint-toggled class",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      poster_reserve = LazyHTML.query(doc, ".pk-poster-col button[phx-click='open-reservation']")
+      bar_reserve = LazyHTML.query(doc, "#detail-cta-bar button[phx-click='open-reservation']")
+
+      assert Enum.count(poster_reserve) == 1
+      assert Enum.count(bar_reserve) == 1
+
+      poster_class = poster_reserve |> LazyHTML.attribute("class") |> List.first()
+      bar_class = bar_reserve |> LazyHTML.attribute("class") |> List.first()
+
+      assert poster_class =~ "pk-poster-reserve"
+      refute bar_class =~ "pk-poster-reserve"
+    end
+
+    test "neither chip row nor the editorial hashtags appear before the description", %{conn: conn} do
+      game =
+        game_fixture(%{
+          description: "Una crónica.",
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          tags: ["#CreaConexiones"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      {description_idx, _} = :binary.match(html, "Una crónica.")
+      {mechanics_idx, _} = :binary.match(html, "Mecánicas")
+      {themes_idx, _} = :binary.match(html, "Temáticas")
+      {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
+
+      assert description_idx < mechanics_idx
+      assert description_idx < themes_idx
+      assert description_idx < hashtag_idx
+    end
+
+    test "no publisher row renders, and a publishers-only game renders no spec section", %{
+      conn: conn
+    } do
+      with_publisher = game_fixture(%{publishers: ["Devir"]})
+      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_publisher.id}")
+      refute html_with =~ "Editorial"
+
+      publishers_only =
+        game_fixture(%{
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: ["Devir"],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html_only} = live(conn, ~p"/juegos/#{publishers_only.id}")
+      refute html_only =~ "Ficha técnica"
+    end
+
+    test "a separator sits between the masthead and the shelf", %{conn: conn} do
+      game = game_fixture(%{weight_band: "nivel_experto"})
+      game_fixture(%{weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#detail-masthead-wrap + #detail-shelf-separator") |> Enum.count() ==
+               1
+    end
+
+    test "the bar holds exactly one control", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner > *") |> Enum.count() == 1
+    end
+
+    # Checkpoint D3 (01.2-17): dots on mobile, thumbnails on desktop — both
+    # sides of the swap exist in the DOM at every render (CSS toggles which
+    # one is visible), so the developer's chosen outcome (keep the strip,
+    # add dots alongside it) stays checkable even if a later "cleanup"
+    # tries to silently remove what was chosen to keep.
+    test "the gallery renders both the thumbnail strip and the dot affordance (checkpoint D3)",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "gallery-thumbnails"
+      assert html =~ "gallery-dots"
+    end
+
+    # "Exactly one reserve control per viewport" is not testable server-side
+    # (the breakpoint that hides one of them is CSS, not markup) — this pins
+    # the DOM-level fact that CSS depends on instead: two reserve controls
+    # exist in the document and exactly one of them carries the class the
+    # 48rem detail-layout block toggles. The visual half of the invariant
+    # (only one is ever VISIBLE at a given width) is routed to the phase's
+    # human-check.
+    test "exactly two reserve controls exist in the document, and exactly one of them is breakpoint-gated",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      reserve_buttons = LazyHTML.query(doc, "button[phx-click='open-reservation']")
+      assert Enum.count(reserve_buttons) == 2
+
+      breakpoint_gated =
+        reserve_buttons
+        |> Enum.map(&LazyHTML.attribute(&1, "class"))
+        |> Enum.filter(fn class -> List.first(class) =~ "pk-poster-reserve" end)
+
+      assert Enum.count(breakpoint_gated) == 1
     end
   end
 
