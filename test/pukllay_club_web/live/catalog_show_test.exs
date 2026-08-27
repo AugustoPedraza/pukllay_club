@@ -770,7 +770,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
     end
 
-    test "both share buttons render, carry identical data-share-url matching the canonical route",
+    # G-01.2-18 task 2: the mobile CTA bar's own copy of this control was
+    # removed — the poster's corner icon is now the page's sole share entry
+    # point, so this test asserts on the one remaining control rather than
+    # comparing two.
+    test "the one remaining share button renders with a data-share-url matching the canonical route",
          %{conn: conn} do
       game = game_fixture(%{name: "Juego Compartido"})
 
@@ -781,12 +785,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       buybox_url =
         doc |> LazyHTML.query("#detail-share-buybox") |> LazyHTML.attribute("data-share-url")
 
-      ctabar_url =
-        doc |> LazyHTML.query("#detail-share-ctabar") |> LazyHTML.attribute("data-share-url")
-
       assert buybox_url != []
-      assert buybox_url == ctabar_url
       assert hd(buybox_url) =~ ~p"/juegos/#{game.id}"
+      assert doc |> LazyHTML.query("#detail-share-ctabar") |> Enum.count() == 0
     end
 
     test "the share fallback's WhatsApp and X hrefs are percent-encoded", %{conn: conn} do
@@ -806,8 +807,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         |> LazyHTML.query("a[aria-label='Compartir por X']")
         |> LazyHTML.attribute("href")
 
-      assert length(whatsapp_hrefs) == 2
-      assert length(x_hrefs) == 2
+      assert length(whatsapp_hrefs) == 1
+      assert length(x_hrefs) == 1
 
       for href <- whatsapp_hrefs ++ x_hrefs do
         query = href |> String.split("?", parts: 2) |> List.last()
@@ -919,7 +920,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert after_img =~ "hero-puzzle-piece"
     end
 
-    test "the mobile CTA bar still renders with its id, reserve button, and share control alongside the .DetailChrome hook",
+    test "the mobile CTA bar still renders with its id and reserve button alongside the .DetailChrome hook",
          %{conn: conn} do
       game = game_fixture()
 
@@ -930,11 +931,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       assert html =~ ~s(id="detail-cta-bar")
       assert cta_bar_html =~ ~s(phx-click="open-reservation")
-      assert cta_bar_html =~ "detail-share-ctabar"
       assert html =~ ~s(phx-hook="PukllayClubWeb.CatalogLive.Show.DetailChrome")
     end
 
-    test "the mobile CTA bar stacks the reserve button and the share control as siblings inside pk-cta-bar-inner, capped to the content column (G-01.2-6, sketch 028)",
+    # G-01.2-18 task 2: the bar's second (share) row is gone — this test now
+    # pins the single-control shape and the surviving alignment cap rather
+    # than the stacked two-control layout it used to assert.
+    test "the mobile CTA bar's inner wrapper holds only the reserve button, capped to the content column (G-01.2-18 task 2)",
          %{conn: conn} do
       game = game_fixture()
 
@@ -944,9 +947,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       cta_bar_html = doc |> LazyHTML.query("#detail-cta-bar") |> LazyHTML.to_html()
 
       # Structural assertion (not class-string matching): pk-cta-bar-inner
-      # sits between the bar and its two controls, and its own parent
-      # carries pk-gutter — the shipped shell-column recipe, reused
-      # verbatim so the bar's controls align under the content column.
+      # sits between the bar and its one remaining control, and its own
+      # parent carries pk-gutter — the shipped shell-column recipe, reused
+      # verbatim so the bar's control aligns under the content column.
       inner_parent_class =
         doc
         |> LazyHTML.query("#detail-cta-bar > div")
@@ -966,7 +969,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute cta_bar_html =~ "flex-1"
 
       assert cta_bar_html =~ "pk-cta-bar-inner"
-      assert cta_bar_html =~ "Compartir"
+      refute cta_bar_html =~ "Compartir"
+
+      assert doc |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner > *") |> Enum.count() == 1
     end
   end
 

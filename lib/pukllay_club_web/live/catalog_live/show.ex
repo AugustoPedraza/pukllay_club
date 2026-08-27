@@ -316,7 +316,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               <div class="pk-poster-col space-y-4">
                 <div class="pk-poster-frame">
                   <div class="absolute right-2 top-2 z-10">
-                    <.share_control id="detail-share-buybox" game={@game} variant={:panel} />
+                    <.share_control id="detail-share-buybox" game={@game} />
                   </div>
 
                   <%!-- G-01.2-10 task 2, D1 (recommended: keep the trio
@@ -553,6 +553,11 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           />
         </div>
 
+        <%!-- G-01.2-18 task 2: the bar's own second row (a stacked share
+        control duplicating the poster's corner share icon) is gone — the
+        reserve button is now the wrapper's only child. .pk-cta-bar-inner
+        itself stays (see its own comment in app.css: it survives for the
+        alignment cap, not for the stacking it was introduced for). --%>
         <div id="detail-cta-bar" class="pk-mobile-cta-bar">
           <div class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-cta-bar-inner">
@@ -563,7 +568,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               >
                 {reservation_cta_label()}
               </button>
-              <.share_control id="detail-share-ctabar" game={@game} variant={:bar} />
             </div>
           </div>
         </div>
@@ -780,24 +784,23 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   @doc false
   attr :id, :string, required: true
   attr :game, Game, required: true
-  attr :variant, :atom, default: :panel, values: [:panel, :bar]
 
-  # Shared by the buy-box column and the mobile CTA bar (01.1-04) so the
-  # two share controls can never drift. Native Web Share API first
-  # (.ShareButton hook); the fallback popover's WhatsApp/X intent hrefs and
-  # the copy-link target are built server-side in HEEx with
-  # URI.encode_www_form/1 — no client-side URL assembly (T-01.1-08).
+  # Shared by the buy-box column (the mobile CTA bar's own copy was removed
+  # in G-01.2-18 task 2) so a future second call site can never drift from
+  # this one. Native Web Share API first (.ShareButton hook); the fallback
+  # popover's WhatsApp/X intent hrefs and the copy-link target are built
+  # server-side in HEEx with URI.encode_www_form/1 — no client-side URL
+  # assembly (T-01.1-08).
   #
-  # `variant` (Phase 01.2 gap-closure, G-01.2-6): the buy-box panel and the
-  # mobile CTA bar need two different shapes for the same trigger — a
+  # G-01.2-18 task 2: this component briefly carried a `variant` attribute
+  # (Phase 01.2 gap-closure, G-01.2-6) so the buy-box panel and the mobile
+  # CTA bar could render two different shapes for the same trigger — a
   # bordered circle on the panel (sketch 027) vs a full-width labelled pill
-  # in the bar (sketch 028). Both call sites pass this explicitly rather
-  # than relying on the default, so the second surface stays visible to
-  # the next reader. `share_trigger_class/1` owns the class-per-variant
-  # mapping. For `:bar`, the visible "Compartir" label IS the accessible
-  # name, so `aria-label` is dropped there rather than shipping two
-  # conflicting names for one control — `:panel` stays icon-only and keeps
-  # its `aria-label`, since it renders no visible text at all.
+  # in the bar (sketch 028). With the bar's own copy removed, only the
+  # panel's bordered-circle shape remains: the attribute, the conditional
+  # visible "Compartir" label, the conditional `aria-label`, and the
+  # class-per-variant helper behind them all collapsed back to one shape
+  # rather than being kept "in case" a second call site returns.
   defp share_control(assigns) do
     assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game.id}"))
 
@@ -809,11 +812,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         phx-hook=".ShareButton"
         data-share-title={@game.name}
         data-share-url={@share_url}
-        aria-label={if @variant == :panel, do: "Compartir juego"}
-        class={share_trigger_class(@variant)}
+        aria-label="Compartir juego"
+        class="pk-share-trigger min-h-11 min-w-11"
       >
         <.icon name="hero-share" class="size-5" />
-        <span :if={@variant == :bar}>Compartir</span>
       </button>
       <script :type={Phoenix.LiveView.ColocatedHook} name=".ShareButton">
         export default {
@@ -897,23 +899,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     """
   end
 
-  # Phase 01.2 gap-closure (G-01.2-6): the `:panel` treatment ports sketch
-  # 027's `.pk-share-btn` — a bordered circle with a soft shadow lift,
-  # replacing `btn-outline btn-primary btn-sm` (the outline that G-01.2-6's
-  # debug session measured as "barely visible" against the panel, plus
-  # `btn-sm`, which was a complete no-op since `min-h-11 min-w-11` already
-  # clamped the button to 44px). The sketch's own circle measures 40px;
-  # this repo's 44px touch floor outranks it, so only the border/fill/
-  # shadow treatment is ported, not the size.
-  #
-  # The `:bar` treatment ports sketch 028 variant D's quiet outline pill —
-  # full-width, labelled, `.pk-share-trigger--bar` (declared next to
-  # `.pk-cta-bar-inner` in app.css). The sketch declares `min-height: 38px`;
-  # this uses the 44px floor for the same reason as `:panel` above, and the
-  # sketch's "quieter" intent is carried by the outline treatment and the
-  # muted text colour instead of the height.
-  defp share_trigger_class(:panel), do: "pk-share-trigger min-h-11 min-w-11"
-  defp share_trigger_class(:bar), do: "pk-share-trigger--bar min-h-11"
 
   # `cover_url` first so it's always the initial thumbnail/main image when
   # present; nils filtered so an absent cover never mints a broken `<img>`.
