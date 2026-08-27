@@ -2211,4 +2211,39 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "in the same block — the two phone-only bars are hidden in exactly one place."
     end
   end
+
+  # G-01.2-24 task 2: source-level CSS facts for the corrected
+  # boundary-collapse footer margin.
+  describe "boundary-collapse footer margin (Phase 01.2 gap-closure round 4, G-01.2-24 task 2)" do
+    test "the boundary-collapse following-footer rule declares a non-zero top margin" do
+      case Regex.run(~r/main\.pk-boundary-collapse \+ \.pk-footer\s*\{([^}]*)\}/, css_source()) do
+        [_, body] ->
+          refute body =~ ~r/margin-top:\s*0\b/,
+                 "A zero top margin here puts the footer's tinted box flush against the " <>
+                   "carousel — the exact defect G-01.2-14 was opened for."
+
+          assert body =~ ~r/margin-top:\s*1\.5rem/,
+                 "`main.pk-boundary-collapse + .pk-footer` must declare `margin-top: 1.5rem` " <>
+                   "(24px), matching the wrapper's own 24px top padding — the real gap this " <>
+                   "boundary is aiming at, not a value hidden inside the footer's own padding."
+
+        nil ->
+          flunk("No `main.pk-boundary-collapse + .pk-footer { ... }` rule found in app.css")
+      end
+    end
+
+    # Existing wrapper-top-padding and shelf-margin-cancel facts, kept
+    # exactly as the plan requires ("keep any existing assertions").
+    test "the boundary-collapse wrapper still declares 1.5rem top padding and cancels the last shelf's trailing margin" do
+      assert Regex.match?(
+               ~r/main\.pk-boundary-collapse\s*\{[^}]*padding-top:\s*1\.5rem;[^}]*padding-bottom:\s*0;[^}]*\}/s,
+               css_source()
+             )
+
+      assert Regex.match?(
+               ~r/main\.pk-boundary-collapse \.pk-shelf:last-of-type\s*\{[^}]*margin-bottom:\s*0;[^}]*\}/s,
+               css_source()
+             )
+    end
+  end
 end

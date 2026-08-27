@@ -3219,23 +3219,40 @@ body.pk-cta-parked {
 }
 
 /* Boundary-collapse (opt-in, Phase 01.2 gap-closure round 2, G-01.2-11/
-   G-01.2-12, sketch 035): Layouts.app's `boundary_collapse` attr (default
-   false) renders this class on <main> instead of its default vertical-
-   padding utilities (mutually exclusive, see that attr's own doc and the
-   CASCADE-LAYER HAZARD note at the top of this file). Collapses the
-   detail page's two page-boundary gaps — header to masthead, and last
+   G-01.2-12, sketch 035; bottom-boundary arithmetic CORRECTED in gap-
+   closure round 4, G-01.2-14/G-01.2-24 task 2 — see that correction below,
+   this paragraph's own original framing is kept intact above it rather
+   than silently rewritten). Layouts.app's `boundary_collapse` attr
+   (default false) renders this class on <main> instead of its default
+   vertical-padding utilities (mutually exclusive, see that attr's own doc
+   and the CASCADE-LAYER HAZARD note at the top of this file). Collapses
+   the detail page's two page-boundary gaps — header to masthead, and last
    shelf to footer — to one deliberate 24px value at each end.
 
-   Bottom boundary, before this fix, stacked four independently-reasonable
-   declarations: <main>'s own bottom padding (80px) + `.pk-shelf`'s own
-   trailing margin (48px) + `.pk-footer`'s own top margin (48px) +
-   `.pk-footer-row`'s own inner top padding (24px) = 200px combined. Three
-   of the four are cancelled below (the wrapper's own bottom padding here,
-   the shelf's trailing margin, the footer's top margin); the fourth —
-   `.pk-footer-row`'s own 24px inner top padding — is deliberately KEPT
-   UNTOUCHED and IS the resulting 24px. Do not touch that rule to "tune"
-   this boundary; it is the target being aimed at, not a contributor to
-   remove.
+   Bottom boundary, before round 2's fix, stacked four independently-
+   reasonable declarations: <main>'s own bottom padding (80px) +
+   `.pk-shelf`'s own trailing margin (48px) + `.pk-footer`'s own top
+   margin (48px) + `.pk-footer-row`'s own inner top padding (24px) = 200px
+   combined. The wrapper's own bottom padding and the shelf's trailing
+   margin are still correctly cancelled below — both are genuinely
+   redundant contributors that should not stack, and that part of round
+   2's reasoning holds.
+
+   CORRECTION (round 4): round 2 also cancelled the footer's own top
+   margin and claimed `.pk-footer-row`'s remaining 24px inner top padding
+   "IS the resulting 24px" — G-01.2-14's live measurement (real CDP
+   against the running dev server, not inferred from the stylesheet alone)
+   found the carousel's bottom edge and the footer's top edge coincide
+   exactly, a 0px external gap. That 24px inner padding sits INSIDE the
+   footer's own background and border — it is the footer's own content
+   inset, not a gap BETWEEN the carousel and the footer, and it can never
+   read as one no matter how it's tuned. The footer's own inner padding
+   was never the target and was never a contributor to this boundary; it
+   stays byte-identical below, restated with this corrected reason instead
+   of the disproven one. The bottom boundary is therefore the FOOTER'S OWN
+   TOP MARGIN, set below to the same 1.5rem/24px the top boundary uses —
+   one deliberate declaration, in one place, on the far side of the
+   footer's border from its own inner padding.
 
    Top boundary, before this fix: the title-echo bar's own dead layout
    space while hidden (removed in task 1, by taking that bar out of normal
@@ -3247,7 +3264,8 @@ body.pk-cta-parked {
    — a uniform, minimal rhythm read better than giving the footer boundary
    more room just because it is the page's ending. That discussion is
    closed; if it needs reopening, that is a new sketch round, not a code
-   edit. */
+   edit. Round 4 makes this 24px REAL rather than changing what it should
+   be. */
 main.pk-boundary-collapse {
   padding-top: 1.5rem;
   padding-bottom: 0;
@@ -3258,7 +3276,7 @@ main.pk-boundary-collapse .pk-shelf:last-of-type {
 }
 
 main.pk-boundary-collapse + .pk-footer {
-  margin-top: 0;
+  margin-top: 1.5rem;
 }
 
 /* ─── HEADER ROW CAPACITY: the two reveal breakpoints ─────────────────────
