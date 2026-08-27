@@ -656,22 +656,25 @@
    VARIANT here — never a rule of its own, and never a second declaration
    of a property this block already owns.
 
-   Call-site inventory (this plan, 01.2-26, migrates the first three; the
-   next plan, 01.2-27, migrates the remaining two onto the same base):
+   Call-site inventory — COMPLETE as of 01.2-27 task 3 (01.2-26 migrated the
+   first three, 01.2-27 the remaining two; this is every one of UAT test
+   11's four named surfaces, plus the editorial hashtags it did not name):
      - GamePreview.facts_row/1 (players/tiempo/dificultad) — neutral tone,
        dense size, interactive on the three link branches only
      - GameChips.chip_row/1 (Mecánicas/Temáticas) — neutral tone, dense size
      - GameChips.editorial_tags/1 (club hashtags) — accent tone, dense size
-     - [01.2-27] the catalog's active-filters ("búsqueda activa") chip —
-       accent tone, comfortable size, interactive, removable
-     - [01.2-27] filter_modal.ex's facet/scalar chips — outline tone at
-       rest, selected tone when chosen, comfortable size, interactive
+     - CatalogLive.Index's active-filters ("búsqueda activa") chip — accent
+       tone, comfortable size, interactive, removable (01.2-27 task 1)
+     - filter_modal.ex's facet/scalar chips — outline tone at rest, selected
+       tone when chosen, comfortable size, interactive (01.2-27 task 2)
    Deliberately excluded: the catalog's category-navigation chip (`.pk-chip`
    below, `index.ex`) — a 44px navigation control, not in the UAT's list;
    folding it in would widen a chip consolidation into a navigation change.
-   The orphaned `weight_band_badge/1` shape (below, `game_chips.ex`) has no
-   call site; its SHAPE joins the variant set as `pk-pill-large`, its
-   markup does not move. */
+   Named again, verbatim, in the bespoke-chip drift gate's own exclusion
+   list (catalog_live_test.exs) so a future author reads the same reason in
+   both places. The orphaned `weight_band_badge/1` shape (below,
+   `game_chips.ex`) has no call site; its SHAPE joins the variant set as
+   `pk-pill-large`, its markup does not move. */
 .pk-pill {
   display: inline-flex;
   align-items: center;
@@ -1368,28 +1371,42 @@ body.pk-sheet-open {
 }
 
 /* Active-filters summary row (Task 1, gap-closure G-01.2-4, sketch 029
-   winner C "Inline with Heading", Round 2 rebalanced). Deliberately
-   LIGHTER than this file's `chip_class/1`-driven chips (FilterModal's own
-   selection-chip contract, `filter_modal.ex`) — Round 1 reused that
-   solid-filled contract verbatim here and it outweighed the "Resultados"
-   heading the chips sit beside. These two chip treatments must NEVER be
-   merged: a removable applied-filter chip and a selectable modal option
-   chip are different affordances, even sharing the same base pill shape.
-   No box-shadow anywhere below, unlike the modal's own selected chip. */
+   winner C "Inline with Heading", Round 2 rebalanced; migrated onto the
+   shared pill base at G-01.2-27 task 1 — diagnosis at
+   .planning/debug/G-01.2-15-pill-chip-design-inconsistency.md). This chip
+   renders `pk-pill pk-pill-accent pk-pill-comfortable pk-pill-interactive`
+   (index.ex) — every visual property but one now comes from the base and
+   its variants; the padding below is the one property genuinely specific
+   to this chip.
+
+   Supersedes the sentence that used to stand here: "these two chip
+   treatments must NEVER be merged: a removable applied-filter chip and a
+   selectable modal option chip are different affordances, even sharing
+   the same base pill shape." That argument was right and still holds —
+   what was never true is that holding it required two independently
+   hand-maintained rule bodies. The affordances were never merged; the two
+   declarations of one shared pill shape were. This chip is
+   `pk-pill-accent`; the modal's chosen option chip (`filter_modal.ex`'s
+   `chip_class/1`) is `pk-pill-selected` — two tones of the one base, still
+   visually distinct at a glance, now enforced by the tone-variant drift
+   gate (catalog_show_test.exs) rather than by a second geometry
+   declaration.
+
+   Sketch 029's outcome survives the migration: this chip is deliberately
+   LIGHTER than the modal's `pk-pill-selected` chip so it does not outweigh
+   the "Resultados" heading it sits beside — `pk-pill-accent` declares a
+   flat `background`/`border-color` with no shadow, while `pk-pill-selected`
+   alone declares the soft-lift box-shadow; that asymmetry is exactly the
+   distinction sketch 029 asked for, and it is preserved untouched. */
 .pk-active-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--color-accent);
-  color: var(--color-accent-content);
-  border: 1px solid var(--color-base-300);
-  font-size: 0.75rem;
-  font-weight: 600;
+  /* Tighter on the trailing side because the dismiss × sits there — the
+     base's symmetric `pk-pill-comfortable` padding (0 12px) would crowd
+     the × against the label. The base's own 4px gap (`.pk-pill`) is
+     unchanged and already correct for this chip's label-to-× spacing (was
+     5px here before the migration — the 1px difference was never a
+     deliberate design choice, just an unreconciled hand-tuned value — so
+     no gap override is carried forward). */
   padding: 4px 5px 4px 11px;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-standard),
-    border-color var(--duration-fast) var(--ease-standard);
 }
 
 .pk-active-filter-chip-x {

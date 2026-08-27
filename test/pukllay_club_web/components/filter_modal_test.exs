@@ -156,9 +156,44 @@ defmodule PukllayClubWeb.FilterModalTest do
       # HEEx renders a Boolean assign on a recognized aria-* attribute as a
       # bare present/absent attribute, not a "true"/"false" string — same
       # behavior the retired FilterDrawer's identical `aria-pressed={@selected}`
-      # already relied on; badge-primary is this pill's own selected-state signal.
+      # already relied on; `pk-pill-selected` is this pill's own
+      # selected-state signal (G-01.2-27 task 2 — was `badge-primary` before
+      # the migration onto the shared pill base).
       assert html =~ "aria-pressed"
-      assert html =~ "badge-primary"
+      assert html =~ "pk-pill-selected"
+    end
+
+    # G-01.2-27 task 2: pins the two states apart so they cannot collapse
+    # into each other unnoticed — a selected chip must carry the selected
+    # tone and never the outline tone, and vice versa.
+    test "an unselected facet pill carries the outline tone, never the selected tone" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: %{
+            mechanics: [],
+            themes: [],
+            weight_bands: [%{value: "ingenio_estratega", label: "Ingenio estratega"}],
+            editorial_tags: []
+          }
+        })
+
+      doc = LazyHTML.from_document(html)
+
+      chip_classes =
+        doc
+        |> LazyHTML.query(~s(button[phx-value-facet="weight_bands"]))
+        |> LazyHTML.attribute("class")
+
+      assert chip_classes != []
+
+      for class_list <- chip_classes do
+        tokens = String.split(class_list)
+
+        assert "pk-pill" in tokens
+        assert "pk-pill-outline" in tokens
+        refute "pk-pill-selected" in tokens
+      end
     end
 
     test "Jugadores and Duración máxima render as toggle-scalar chip clusters, not number inputs" do
