@@ -516,23 +516,24 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           and the recommendations shelf below, so a reader can tell the
           page has changed subject rather than reading the shelf as more of
           the masthead's own content. Second call site of 01.2-17's
-          .pk-divider (see that rule's own comment); .pk-shelf-separator
-          here only adds the width cap, reading the same
-          --pk-detail-col-width token the masthead and the CTA bar's inner
-          wrapper both read, so the line starts and ends level with the
-          reading column above it. Renders on the loading pass too (the
-          skeleton shelf reserves the real shelf's footprint, so the
-          boundary must exist ahead of it as well, or it would pop in only
-          once the connected mount replaces the skeleton) and, on the
-          connected pass, is gated on the exact same emptiness the shelf
-          itself checks — a boundary above an empty shelf is worse than no
-          boundary at all. --%>
+          .pk-divider (see that rule's own comment). G-01.2-19 task 2
+          removed the width-cap class this line used
+          to carry — this wrapper already shares the shell's own
+          mx-auto/w-full/max-w-7xl/pk-gutter recipe with the masthead and
+          the CTA bar's inner wrapper, so no per-element width override is
+          needed for the line to start and end level with both. Renders on
+          the loading pass too (the skeleton shelf reserves the real
+          shelf's footprint, so the boundary must exist ahead of it as
+          well, or it would pop in only once the connected mount replaces
+          the skeleton) and, on the connected pass, is gated on the exact
+          same emptiness the shelf itself checks — a boundary above an
+          empty shelf is worse than no boundary at all. --%>
           <div
             :if={@loading or @similar_games != []}
             id="detail-shelf-separator"
             class="mx-auto w-full max-w-7xl pk-gutter"
           >
-            <div class="divider pk-divider pk-shelf-separator" role="separator"></div>
+            <div class="divider pk-divider" role="separator"></div>
           </div>
 
           <%!-- 01.1-07: skeleton shelf while @loading (disconnected pass) —

@@ -1151,6 +1151,54 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  describe "detail page shares the shell's own width (G-01.2-19 task 2)" do
+    test "the masthead wrapper, the shelf-separator wrapper and the CTA bar's outer wrapper all carry the same shell recipe classes",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "nivel_experto"})
+      game_fixture(%{weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      shell_recipe = "mx-auto w-full max-w-7xl pk-gutter"
+
+      masthead_wrap_class =
+        doc |> LazyHTML.query("#detail-masthead-wrap") |> LazyHTML.attribute("class") |> List.first()
+
+      shelf_separator_wrap_class =
+        doc
+        |> LazyHTML.query("#detail-shelf-separator")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      cta_bar_outer_wrap_class =
+        doc |> LazyHTML.query("#detail-cta-bar > div") |> LazyHTML.attribute("class") |> List.first()
+
+      assert masthead_wrap_class == shell_recipe
+      assert shelf_separator_wrap_class == shell_recipe
+      assert cta_bar_outer_wrap_class == shell_recipe
+    end
+
+    test "the shelf-separator divider carries only its shared divider classes, no separate width-cap class",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "nivel_experto"})
+      game_fixture(%{weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      separator_class =
+        doc
+        |> LazyHTML.query("#detail-shelf-separator .divider")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert separator_class == "divider pk-divider"
+    end
+  end
+
   describe "one control in the mobile CTA bar (G-01.2-18 task 2)" do
     test "the fixed bottom bar contains exactly one interactive control, and it is the reserve button",
          %{conn: conn} do
