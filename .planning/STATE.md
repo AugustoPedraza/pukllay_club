@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.2
-current_phase_name: catalog-detail-navigation-polish
+current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
 status: executing
 stopped_at: Completed 01.2-15-PLAN.md
-last_updated: "2026-08-27T14:19:39.784Z"
-last_activity: 2026-08-26
-last_activity_desc: Phase 01.2 execution resumed (wave continue)
-state_head: cf40f9be36208e0bfce84dcc96a3d763525dae8e
+last_updated: "2026-08-27T14:37:44.463Z"
+last_activity: 2026-08-27
+last_activity_desc: Phase 01.2 execution started
+state_head: 862a9e60e346c0a0c7a79d3032aa8a4774378446
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 38
-  completed_plans: 31
+  completed_plans: 34
 milestone_name: milestone
 ---
 
@@ -29,10 +29,10 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.2 (catalog-detail-navigation-polish) — READY TO EXECUTE
-Plan: 1 of 13
-Status: Ready to execute
-Last activity: 2026-08-26 — Phase 01.2 execution resumed (wave continue)
+Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 01.2
+Last activity: 2026-08-27 — Phase 01.2 execution started
 
 Progress: [██████████] 100%
 
