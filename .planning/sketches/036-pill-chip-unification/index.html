@@ -96,17 +96,35 @@
   .variant-b .pill-row[data-flat="true"] .uni-pill:not(:last-child)::after { content: '·'; margin-left: 10px; color: var(--color-border); font-weight: 700; }
 
   /* ============================================================
-     C — Low-Radius Chip
-     Trades the fully-rounded capsule for a small rounded-rect —
-     tight padding, more geometric/quiet than a pill shape.
+     D — A+B Synthesis: Flat Info + Bordered-Always Action
+     Answers "how do A and B combine, with real tap affordance?"
+     Informational pills (info/topic) are B's flat/no-chrome text,
+     middot-separated — nothing to tap, no border needed. Action
+     (interactive) chips use A's tighter sizing, but the border is
+     ALWAYS visible at rest (not just on hover) — the industry
+     pattern (Material "filter chip", Airbnb's own filter pills)
+     for signaling tappability with no hover state on touch. Also
+     adds a real :active press-feedback (scale + flash) since touch
+     has no hover to lean on for confirmation.
      ============================================================ */
-  .variant-c .uni-pill { border-radius: var(--radius-sm); padding: 3px 9px; font-size: 11px; font-weight: 600; background: var(--color-surface); border: 1px solid var(--color-border); }
-  .variant-c .uni-pill[data-accent="true"] { background: var(--color-accent-bg); color: var(--color-accent-text); border-color: transparent; }
-  .variant-c .uni-pill[data-role="action"] { min-height: 44px; padding: 0 14px; font-size: 12px; border-radius: var(--radius-sm); background: var(--color-surface); border-color: var(--color-border); }
-  .variant-c .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
-  .variant-c .uni-pill[data-state] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-content); box-shadow: var(--shadow-sm); }
-  .variant-c .pill-x { background: rgba(255,255,255,0.25); color: inherit; border-radius: 2px; }
-  .variant-c .uni-pill[data-role="action"]:not([data-state]) .pill-x { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text-muted); }
+  .variant-d .uni-pill { padding: 2px 2px; font-size: 12px; font-weight: 600; background: transparent; border: none; }
+  .variant-d .uni-pill[data-accent="true"] { color: var(--color-accent-text); }
+  .variant-d .uni-pill[data-role="action"] {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 12px;
+    border-radius: 9999px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+  .variant-d .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-accent-bg); }
+  .variant-d .uni-pill[data-role="action"]:active { transform: scale(0.96); background: var(--color-accent-bg); }
+  .variant-d .uni-pill[data-state] { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-content); box-shadow: var(--shadow-sm); }
+  .variant-d .uni-pill[data-state]:active { transform: scale(0.96); }
+  .variant-d .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
+  .variant-d .uni-pill[data-role="action"]:not([data-state]) .pill-x { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text-muted); }
+  .variant-d .pill-row[data-flat="true"] { gap: 0; }
+  .variant-d .pill-row[data-flat="true"] .uni-pill:not(:last-child)::after { content: '·'; margin-left: 10px; color: var(--color-border); font-weight: 700; }
 
   #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
   #sketch-tools:hover { opacity: 1; }
@@ -116,20 +134,21 @@
 
 <div id="variant-nav">
   <button class="variant-tab" onclick="showVariant('ref', this)">Reference (previous answer)</button>
-  <button class="variant-tab active" onclick="showVariant('a', this)">A: Tight Pill</button>
+  <button class="variant-tab" onclick="showVariant('a', this)">A: Tight Pill</button>
   <button class="variant-tab" onclick="showVariant('b', this)">B: Flat, No Chrome</button>
-  <button class="variant-tab" onclick="showVariant('c', this)">C: Low-Radius Chip</button>
-  <span class="caption">Balance (round 2) and theme-color/no-icon (round 3) fixes carried into all four. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active" onclick="showVariant('d', this)">D: A+B Synthesis ★</button>
+  <span class="caption">Balance (round 2) and theme-color/no-icon (round 3) fixes carried into all four. Toggle 🌙/☀ to check both themes — and try tapping/clicking the action chips in D, the press feedback only shows on real interaction.</span>
 </div>
 
 <div class="cause-note">
-  "Why does the rounded shape feel like too much padding? What else can be a minimalistic clean
-  variant?" Three genuinely different directions to answer that, plus the previous answer kept as
-  a reference point: <strong>A</strong> keeps the same pill shape but cuts padding roughly in half;
-  <strong>B</strong> drops the container entirely for informational pills (just text); <strong>C</strong>
-  swaps the full pill radius for a small rounded-rect, a quieter geometric alternative to "capsule."
-  All three keep the 44px action-chip touch height — that's an accessibility floor, not a padding
-  choice.
+  "How can A and B be combined? How does that still give a 'clickable' affordance, especially on
+  mobile? What do Netflix/Airbnb do?" <strong>D</strong> is that synthesis: purely informational
+  pills (facts/mecánicas/temáticas/editorial) use B's flat no-chrome text — nothing to tap, no
+  border needed. Interactive chips (filters) use A's tighter sizing, but with an <em>always-visible</em>
+  border at rest (not just on hover) — the real industry pattern for signaling tappability when
+  there's no hover state to lean on, plus a genuine tap-press feedback (scale + flash) on
+  <code>:active</code>. C (low-radius chip) dropped from this round to stay focused on the
+  synthesis you asked for — recoverable from the round-4 commit if you want it back.
 </div>
 
 <div class="wrap">
@@ -161,7 +180,7 @@
     </div>
   </div>
 
-  <div id="variant-a" class="variant variant-a active">
+  <div id="variant-a" class="variant variant-a">
     <div class="demo-block">
       <h3>Facts row — info</h3>
       <div class="pill-row"><span class="uni-pill" data-role="info">2-4 jugadores</span><span class="uni-pill" data-role="info">30 min</span><span class="uni-pill" data-role="info">Intermedio</span></div>
@@ -219,26 +238,28 @@
     </div>
   </div>
 
-  <div id="variant-c" class="variant variant-c">
+  <div id="variant-d" class="variant variant-d active">
     <div class="demo-block">
       <h3>Facts row — info</h3>
-      <div class="pill-row"><span class="uni-pill" data-role="info">2-4 jugadores</span><span class="uni-pill" data-role="info">30 min</span><span class="uni-pill" data-role="info">Intermedio</span></div>
+      <p class="demo-caption">Flat (B) — nothing to tap, no border</p>
+      <div class="pill-row" data-flat="true"><span class="uni-pill" data-role="info">2-4 jugadores</span><span class="uni-pill" data-role="info">30 min</span><span class="uni-pill" data-role="info">Intermedio</span></div>
     </div>
     <div class="demo-block">
       <h3>Mecánicas — topic</h3>
-      <div class="pill-row"><span class="uni-pill" data-role="topic">Bloques de construcción</span><span class="uni-pill" data-role="topic">Draft</span><span class="uni-pill" data-role="topic">Mano a mano</span></div>
+      <div class="pill-row" data-flat="true"><span class="uni-pill" data-role="topic">Bloques de construcción</span><span class="uni-pill" data-role="topic">Draft</span><span class="uni-pill" data-role="topic">Mano a mano</span></div>
     </div>
     <div class="demo-block">
       <h3>Temáticas — topic</h3>
-      <div class="pill-row"><span class="uni-pill" data-role="topic">Civilización</span><span class="uni-pill" data-role="topic">Economía</span></div>
+      <div class="pill-row" data-flat="true"><span class="uni-pill" data-role="topic">Civilización</span><span class="uni-pill" data-role="topic">Economía</span></div>
     </div>
     <div class="demo-block">
       <h3>Editorial — info, accent</h3>
-      <div class="pill-row"><span class="uni-pill" data-role="info" data-accent="true">PartidaDistinta</span><span class="uni-pill" data-role="info" data-accent="true">DuoIdeal</span></div>
+      <div class="pill-row" data-flat="true"><span class="uni-pill" data-role="info" data-accent="true">PartidaDistinta</span><span class="uni-pill" data-role="info" data-accent="true">DuoIdeal</span></div>
     </div>
     <hr class="divider">
     <div class="demo-block">
       <h3>Filtros activos — action, removable</h3>
+      <p class="demo-caption">Tight (A) + always-visible border + tap-press feedback — try clicking</p>
       <div class="pill-row"><button class="uni-pill" data-role="action" data-state="active">2-4 jugadores <span class="pill-x">✕</span></button><button class="uni-pill" data-role="action" data-state="active">Intermedio <span class="pill-x">✕</span></button></div>
     </div>
     <div class="demo-block">
