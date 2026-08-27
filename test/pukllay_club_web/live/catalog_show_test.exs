@@ -47,8 +47,12 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       matches = LazyHTML.query(doc, "a[href='/?weight_bands=ingenio_estratega']")
       assert Enum.count(matches) == 1
 
+      # G-01.2-26 task 3: the exact-equality assertion now pins the element
+      # carrying the pk-fact marker (kept as a test selector/scoping hook,
+      # zero visual declarations left on it) plus the pk-pill base, the
+      # neutral tone, and the interactive variant (this is a link branch).
       link_class = matches |> LazyHTML.attribute("class") |> List.first()
-      assert link_class == "pk-fact"
+      assert link_class == "pk-fact pk-pill pk-pill-neutral pk-pill-interactive"
     end
 
     test "renders the complete mechanic chip list with no overflow indicator", %{conn: conn} do
@@ -1616,11 +1620,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      # The hashtag chip renders (proves the row is present at all)...
-      assert doc |> LazyHTML.query(".badge-accent") |> Enum.count() == 1
+      # The hashtag chip renders (proves the row is present at all) — now
+      # the pk-pill base + accent tone (G-01.2-26 task 3), not a daisyUI
+      # badge class.
+      assert doc |> LazyHTML.query(".pk-pill-accent") |> Enum.count() == 1
 
       # ...but never as a descendant of a pk-chip-row wrapper.
-      assert doc |> LazyHTML.query("div.pk-chip-row .badge-accent") |> Enum.count() == 0
+      assert doc |> LazyHTML.query("div.pk-chip-row .pk-pill-accent") |> Enum.count() == 0
     end
 
     test "linked chips, unlinked chips, and the overflow chip all render inside the scoped wrapper",
@@ -1645,15 +1651,20 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         render_component(&GameChips.chip_row/1, terms: for(n <- 1..5, do: "Termino #{n}"), limit: 2)
 
       # All three shapes render inside chip_row/1's single wrapper div,
-      # which carries pk-chip-row unconditionally.
+      # which carries pk-chip-row unconditionally. Chip class strings now
+      # render from the pk-pill base + neutral tone (G-01.2-26 task 3) —
+      # interactive only on the linked branch, never on the static span or
+      # the overflow chip.
       assert linked_html =~ "pk-chip-row"
-      assert linked_html =~ ~r/<a[^>]*class="badge badge-sm"[^>]*>\s*Tira dados/
+
+      assert linked_html =~
+               ~r/<a[^>]*class="pk-pill pk-pill-neutral pk-pill-interactive"[^>]*>\s*Tira dados/
 
       assert unlinked_html =~ "pk-chip-row"
-      assert unlinked_html =~ ~s(<span class="badge badge-sm">Tira dados</span>)
+      assert unlinked_html =~ ~s(<span class="pk-pill pk-pill-neutral">Tira dados</span>)
 
       assert overflow_html =~ "pk-chip-row"
-      assert overflow_html =~ ~s(<span class="badge badge-sm">+3</span>)
+      assert overflow_html =~ ~s(<span class="pk-pill pk-pill-neutral">+3</span>)
 
       # Sanity check on the live page: the mechanic chip's real call site
       # (href_fun always passed) does render the linked shape inside the
@@ -1663,8 +1674,38 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       doc = LazyHTML.from_document(html)
 
       assert doc
-             |> LazyHTML.query("div.pk-chip-row a.badge[href*='mechanics=']")
+             |> LazyHTML.query("div.pk-chip-row a.pk-pill[href*='mechanics=']")
              |> Enum.count() == 1
+    end
+  end
+
+  # G-01.2-26 task 3: negative assertion pinning the migration — a future
+  # partial re-migration back onto a daisyUI badge class (on any of the
+  # three families this plan touches) must fail here.
+  describe "pk-pill migration pins no framework badge class survives (G-01.2-26 task 3)" do
+    test "the reading column (editorial hashtags, Mecánicas, Temáticas) and the facts row render from pk-pill, never a daisyUI badge class",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          tags: ["#CreaConexiones"],
+          weight_band: "ingenio_estratega"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      text_col_html = doc |> LazyHTML.query(".pk-text-col") |> LazyHTML.to_html()
+      facts_html = doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> LazyHTML.to_html()
+
+      refute text_col_html =~ ~r/class="[^"]*\bbadge\b/,
+             "the reading column (editorial hashtags, Mecánicas, Temáticas) must render from " <>
+               "the pk-pill base, not a daisyUI badge class"
+
+      refute facts_html =~ ~r/class="[^"]*\bbadge\b/,
+             "the facts row must render from the pk-pill base, not a daisyUI badge class"
     end
   end
 
