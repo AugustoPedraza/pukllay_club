@@ -18,13 +18,25 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   `rescue` degrades a failed "more like this" lookup to no shelf rather than
   taking down a detail page whose primary content already loaded fine.
 
-  `handle_event("select-image", ...)` swaps the main image only when the
-  client-supplied `url` is a member of the game's own
+  `handle_event("select-image", ...)` swaps the page's own main image only
+  when the client-supplied `url` is a member of the game's own
   `[cover_url | gallery_urls]` list — a crafted url is never echoed
   unchecked into an `img src` (T-01-26). The lightbox (`handle_event(
-  "open-lightbox"/"close-lightbox", ...)`) reuses this exact handler and
-  whitelist for its own previous/next controls, so there is a single
-  guarded image-selection path, not a second one (T-01.1-16).
+  "open-lightbox"/"close-lightbox"/"select-lightbox-image", ...)`) has its
+  OWN selection assign, `@lightbox_image`, seeded from the page's current
+  selection when it opens and never synced back when it closes —
+  navigating inside the open lightbox must never move the page's own
+  poster image, thumbnail border or dot underneath it (G-01.2-25,
+  diagnosed in
+  `.planning/debug/G-01.2-16-lightbox-scrim-width-carousel-sync.md`). This
+  supersedes the earlier "there is a single guarded image-selection path,
+  not a second one" contract (T-01.1-16, 01.1-04): that contract literally
+  shared ONE assign between the page and the lightbox, which is exactly
+  why the lightbox's own chevrons visibly dragged the underlying
+  gallery/dots along with them. What survives from T-01.1-16 is narrower
+  and still true: there is exactly one membership whitelist
+  (`valid_gallery_image?/2`), called by both `select-image` and
+  `select-lightbox-image` — two selection assigns, one shared guard.
 
   Every field from this plan's `<planner_assumption>` omission table is
   individually conditional: an absent field removes its whole row/element,
@@ -90,6 +102,11 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:game, game)
      |> assign(:catalog_path, CatalogFilters.catalog_path(params["from"]))
      |> assign(:selected_image, game.cover_url)
+     # G-01.2-25 task 2: the lightbox's own selection, initialised the same
+     # way the page's is. Never read until "open-lightbox" reseeds it from
+     # @selected_image — this default only matters for the always-rendered
+     # (but closed/hidden) lightbox's very first static render.
+     |> assign(:lightbox_image, game.cover_url)
      |> assign(:mechanic_labels, Vocabulary.covered_mechanics(game.mechanics))
      |> assign(:theme_labels, Vocabulary.covered_themes(game.themes))
      |> assign(:loading, loading?)
@@ -119,8 +136,24 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   @impl true
   def handle_event("select-image", %{"url" => url}, socket) do
-    if url in gallery_thumbnails(socket.assigns.game) do
+    if valid_gallery_image?(socket.assigns.game, url) do
       {:noreply, assign(socket, :selected_image, url)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # G-01.2-25 task 2: the lightbox's OWN selection event, distinct from the
+  # page's "select-image" above. Assigns only @lightbox_image — the page's
+  # poster, thumbnail border and dot (all readers of @selected_image) never
+  # move while the lightbox is open. Guarded by the SAME
+  # valid_gallery_image?/2 predicate "select-image" uses (T-01.2-25-01): one
+  # whitelist, two callers, never a second one written fresh for this
+  # handler.
+  @impl true
+  def handle_event("select-lightbox-image", %{"url" => url}, socket) do
+    if valid_gallery_image?(socket.assigns.game, url) do
+      {:noreply, assign(socket, :lightbox_image, url)}
     else
       {:noreply, socket}
     end
@@ -135,7 +168,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   def handle_event("open-lightbox", _params, socket) do
     socket =
       if socket.assigns.selected_image do
-        assign(socket, :lightbox_open, true)
+        # G-01.2-25 task 2: seed the lightbox's own selection from whatever
+        # the page is currently showing, so it opens on the image the
+        # visitor was looking at. Re-seeded on every open, not just the
+        # first — closing without syncing back (see close-lightbox below)
+        # means a stale @lightbox_image from a prior visit must never leak
+        # into the next open.
+        socket
+        |> assign(:lightbox_image, socket.assigns.selected_image)
+        |> assign(:lightbox_open, true)
       else
         socket
       end
@@ -145,6 +186,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   @impl true
   def handle_event("close-lightbox", _params, socket) do
+    # G-01.2-25 task 2: deliberately does NOT sync @lightbox_image back
+    # onto @selected_image. The diagnosed gap was that navigating inside
+    # the open lightbox moved the page's own selection underneath it;
+    # syncing back on close would reintroduce that exact defect, only
+    # delayed by one interaction (close). Answered conservatively as NO —
+    # see the module doc's two-selection paragraph. If a later round wants
+    # the lightbox's last-viewed image to become the page's, that is a
+    # designed decision with its own UAT item, not an implementation
+    # detail to slip in here.
     {:noreply, assign(socket, :lightbox_open, false)}
   end
 
@@ -385,11 +435,14 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   <%!-- G-01.2-10 task 2, D3 (recommended: dots on mobile,
                   thumbnails on desktop). Both strips are built from the same
                   gallery_thumbnails/1 list and both dispatch select-image
-                  with the same phx-value-url key, so the existing
-                  membership-check whitelist (mount/handle_event above) stays
-                  the single guarded image-selection path — not a second one
-                  (T-01.1-16-style). Exactly one of the two renders per
-                  viewport, swap declared in app.css's single 48rem block. --%>
+                  against the page's own @selected_image assign, sharing the
+                  same membership-check whitelist (valid_gallery_image?/2).
+                  The lightbox has since gained its OWN separate selection
+                  and event (@lightbox_image / select-lightbox-image,
+                  G-01.2-25) — but these two strips still drive one
+                  page-level assign between them, not two. Exactly one of
+                  the two renders per viewport, swap declared in app.css's
+                  single 48rem block. --%>
                   <div
                     :if={@game.gallery_urls != []}
                     id="gallery-thumbnails"
@@ -716,16 +769,16 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             :if={length(gallery_thumbnails(@game)) > 1}
             type="button"
             data-lightbox-prev
-            phx-click="select-image"
-            phx-value-url={lightbox_neighbor(@game, @selected_image, -1)}
+            phx-click="select-lightbox-image"
+            phx-value-url={lightbox_neighbor(@game, @lightbox_image, -1)}
             aria-label="Imagen anterior"
-            class="btn btn-circle min-h-11 min-w-11 absolute left-4 top-1/2 -translate-y-1/2"
+            class="pk-lightbox-chevron btn btn-circle min-h-11 min-w-11 absolute left-4 top-1/2 -translate-y-1/2"
           >
             <.icon name="hero-chevron-left" class="size-5" />
           </button>
           <img
-            :if={@selected_image}
-            src={@selected_image}
+            :if={@lightbox_image}
+            src={@lightbox_image}
             alt={@game.name}
             class="pk-lightbox-img"
           />
@@ -733,10 +786,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             :if={length(gallery_thumbnails(@game)) > 1}
             type="button"
             data-lightbox-next
-            phx-click="select-image"
-            phx-value-url={lightbox_neighbor(@game, @selected_image, 1)}
+            phx-click="select-lightbox-image"
+            phx-value-url={lightbox_neighbor(@game, @lightbox_image, 1)}
             aria-label="Imagen siguiente"
-            class="btn btn-circle min-h-11 min-w-11 absolute right-4 top-1/2 -translate-y-1/2"
+            class="pk-lightbox-chevron btn btn-circle min-h-11 min-w-11 absolute right-4 top-1/2 -translate-y-1/2"
           >
             <.icon name="hero-chevron-right" class="size-5" />
           </button>
@@ -1001,9 +1054,22 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     Enum.reject([game.cover_url | game.gallery_urls], &is_nil/1)
   end
 
-  # The lightbox's previous/next controls reuse this against the same
-  # whitelist gallery_thumbnails/1 builds — there is no second,
-  # independently-derived image list (T-01.1-16). Wraps around both ends.
+  # T-01.2-25-01: the single membership whitelist both "select-image" (the
+  # page's own selection) and "select-lightbox-image" (the lightbox's own,
+  # G-01.2-25) call before ever assigning a client-supplied url. One
+  # predicate, two callers — a client-supplied url reaching an `img src`
+  # unchecked is the exact defect this guards against, and adding the
+  # lightbox's own selection event must never add a second, independently
+  # written whitelist alongside this one.
+  defp valid_gallery_image?(game, url) do
+    url in gallery_thumbnails(game)
+  end
+
+  # The lightbox's previous/next controls compute their target url by
+  # walking gallery_thumbnails/1's own list — there is no second,
+  # independently-derived image list (T-01.1-16). Called with
+  # @lightbox_image as `current` (G-01.2-25) — the lightbox's own
+  # selection, not the page's @selected_image. Wraps around both ends.
   defp lightbox_neighbor(game, current, offset) do
     urls = gallery_thumbnails(game)
 
