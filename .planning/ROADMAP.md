@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 12/13 plans executed (5 original, 5 superseded, 5 gap closure executed, 3 gap closure pending)
+**Plans:** 13/13 plans executed (5 original, 5 superseded, 5 gap closure executed, 3 gap closure pending)
 
 Plans:
 **Wave 1**
@@ -246,7 +246,7 @@ Plans:
 
 **Wave 9 — gap closure** *(blocked on Wave 8 completion)*
 
-- [ ] 01.2-18-PLAN.md — G-01.2-10 (part 2 of 2): separator between the detail content and the "Juegos similares" shelf; stacked share pill removed from the mobile CTA bar with its dead class, dead clause and reserved body padding all recomputed together
+- [x] 01.2-18-PLAN.md — G-01.2-10 (part 2 of 2): separator between the detail content and the "Juegos similares" shelf; stacked share pill removed from the mobile CTA bar with its dead class, dead clause and reserved body padding all recomputed together
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
