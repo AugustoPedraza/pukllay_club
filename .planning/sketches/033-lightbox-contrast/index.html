@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 033 — Lightbox Contrast</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 90px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .variant-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
+  #variant-nav .caption strong { color: var(--color-text); }
+
+  /* ============================= ROOT CAUSE NOTE ============================= */
+  .cause-note { max-width: 760px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+
+  /* ============================= PAGE-BEHIND MOCKUP ============================= */
+  .page-mock { max-width: 900px; margin: 0 auto; padding: 0 var(--space-4) 80px; }
+  .page-mock h1 { font-family: var(--font-display); font-size: var(--text-2xl); margin-bottom: var(--space-2); }
+  .page-mock p { line-height: 1.6; color: var(--color-text-muted); margin-bottom: var(--space-3); }
+  .open-trigger { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: var(--radius-md); background: var(--color-primary); color: var(--color-primary-content); font-weight: 700; font-size: var(--text-base); padding: 12px 20px; cursor: pointer; margin-bottom: var(--space-4); }
+  .open-trigger:hover { filter: brightness(1.08); }
+  .poster-strip { display: flex; gap: 12px; }
+  .poster-strip .thumb { flex: 0 0 90px; aspect-ratio: 3/4; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+
+  /* ============================= LIGHTBOX SHELL =============================
+     Round 2: always rendered (no display:none/flex toggle) so open/close can
+     transition — opacity+visibility+pointer-events instead, same technique
+     this app's other floating surfaces (.pk-mobile-cta-bar.is-hidden, etc.)
+     already use for animated show/hide. Soft, subtle, no-overshoot ease
+     (sketch 006 winner D) on both the backdrop fade and the image's own
+     scale-in, per the "great rhythm" ask — --duration-base/--ease-out-soft,
+     never a hand-picked timing value (see WR-04/motion-system tokens). */
+  .pk-lightbox { position: fixed; inset: 0; z-index: 700; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--duration-base) var(--ease-out-soft), visibility 0s linear var(--duration-base); }
+  .pk-lightbox.is-open { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity var(--duration-base) var(--ease-out-soft); }
+  .pk-lightbox-img-wrap { position: relative; max-width: min(90vw, 42rem); transform: scale(0.96); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .pk-lightbox.is-open .pk-lightbox-img-wrap { transform: scale(1); }
+  .pk-lightbox-img { display: block; width: 100%; max-height: 80vh; object-fit: cover; aspect-ratio: 3/4; border-radius: var(--radius-lg); }
+  .pk-lightbox-close, .pk-lightbox-nav { border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; box-shadow: var(--shadow-md); transition: all var(--duration-fast) var(--ease-standard); }
+  .pk-lightbox-close { position: absolute; top: -14px; right: -14px; }
+  .pk-lightbox-close:hover, .pk-lightbox-nav:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .pk-lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 22px; }
+  .pk-lightbox-nav.prev { left: 1rem; }
+  .pk-lightbox-nav.next { right: 1rem; }
+  @media (max-width: 640px) {
+    .pk-lightbox-nav.prev { left: 0.5rem; }
+    .pk-lightbox-nav.next { right: 0.5rem; }
+  }
+
+  /* ============================= TOOLBAR ============================= */
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+
+  /* =========================================================================
+     WINNER: A — Fixed Dark Scrim (WR-04 pattern)
+     Production's bug: .pk-lightbox mixes --color-base-content (TEXT color,
+     near-white in dark theme) into the backdrop instead of a page/background
+     color — in dark theme this produces a pale, washed-out veil instead of a
+     dimming scrim. This reuses the same fixed --pk-shadow-color token the
+     rest of this app's floating surfaces already use for exactly this
+     reason (WR-04, see app.css :root comment) — one dark value, both
+     themes, never inverts. B (frosted blur) and C (framed card, light
+     scrim) explored and dropped — see README for the round history.
+     ========================================== */
+  .pk-lightbox { background: color-mix(in srgb, #150826 72%, transparent); }
+  .pk-lightbox-img { box-shadow: 0 28px 56px rgba(0,0,0,0.45), 0 10px 24px rgba(0,0,0,0.3); }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active">A: Fixed Dark Scrim ★ Selected</button>
+  <span class="caption">B/C explored and dropped — see README for the round history. Toggle 🌙/☀ in the bottom-right toolbar and reopen in both themes. Click "Ampliar imagen" to open the lightbox; use ‹/› to navigate, ✕ or click outside the image to close.</span>
+</div>
+
+<div class="cause-note">
+  <strong>Why this needed fixing, not just restyling:</strong> production's lightbox backdrop was
+  <code>color-mix(in srgb, var(--color-base-content) 55%, transparent)</code> — it mixes the
+  <em>text</em> color into the scrim, not a background color. In light theme that's a dark color
+  (looks fine); in dark theme <code>--color-base-content</code> is near-white
+  (<code>#F3ECFA</code>), so the "dimming" scrim was actually a pale veil over an already-dark page —
+  the opposite of what a lightbox backdrop needs. This fixes it with a fixed dark value that never
+  inverts, matching the <code>--pk-shadow-color</code> pattern this app already uses for every
+  other floating surface (sheets, drawers, popovers).
+</div>
+
+<div class="page-mock">
+  <h1>Terraforming Mars: Ares Expedition</h1>
+  <p>Terraformá Marte compitiendo con otras corporaciones: subí la temperatura, el oxígeno y el
+  agua del planeta mientras construís tu propio motor de producción de recursos.</p>
+  <button class="open-trigger" onclick="openLightbox(0)">🔍 Ampliar imagen</button>
+  <div class="poster-strip">
+    <div class="thumb" onclick="openLightbox(0)">🚀</div>
+    <div class="thumb" onclick="openLightbox(1)">🪐</div>
+    <div class="thumb" onclick="openLightbox(2)">🌡</div>
+    <div class="thumb" onclick="openLightbox(3)">📦</div>
+  </div>
+</div>
+
+<div id="lightbox-root">
+  <div class="pk-lightbox" id="pk-lightbox" role="dialog" aria-modal="true" aria-label="Imágenes del juego" onclick="if(event.target===this) closeLightbox()">
+    <button class="pk-lightbox-nav prev" onclick="cycleLightbox(-1)" aria-label="Imagen anterior">‹</button>
+    <div class="pk-lightbox-img-wrap">
+      <button class="pk-lightbox-close" onclick="closeLightbox()" aria-label="Cerrar">✕</button>
+      <div class="pk-lightbox-img" id="pk-lightbox-img" style="background:linear-gradient(135deg,var(--color-secondary),var(--color-primary));display:flex;align-items:center;justify-content:center;font-size:72px;color:var(--color-primary-content)">🚀</div>
+    </div>
+    <button class="pk-lightbox-nav next" onclick="cycleLightbox(1)" aria-label="Imagen siguiente">›</button>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+<script>
+  const IMAGES = ['🚀', '🪐', '🌡', '📦'];
+  let currentIndex = 0;
+
+  function openLightbox(idx) {
+    currentIndex = idx;
+    document.getElementById('pk-lightbox-img').textContent = IMAGES[currentIndex];
+    document.getElementById('pk-lightbox').classList.add('is-open');
+  }
+  function closeLightbox() {
+    document.getElementById('pk-lightbox').classList.remove('is-open');
+  }
+  function cycleLightbox(dir) {
+    currentIndex = (currentIndex + dir + IMAGES.length) % IMAGES.length;
+    document.getElementById('pk-lightbox-img').textContent = IMAGES[currentIndex];
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (!document.getElementById('pk-lightbox').classList.contains('is-open')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') cycleLightbox(-1);
+    if (e.key === 'ArrowRight') cycleLightbox(1);
+  });
+</script>
+
+</body>
+</html>
