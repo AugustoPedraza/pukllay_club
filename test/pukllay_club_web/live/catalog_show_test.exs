@@ -975,8 +975,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
-  describe "mobile masthead rework — pills over poster, one reserve control (G-01.2-10 task 2)" do
-    test "facts_row renders exactly twice, once inside the poster frame's overlay wrapper and once inside the text column's inline wrapper, with identical arguments",
+  describe "masthead restructure — facts row above panel, CTA detached, dots centered (G-01.2-19)" do
+    test "facts_row renders exactly once, as a direct child of the poster column, immediately followed by the poster panel",
          %{conn: conn} do
       game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
 
@@ -984,33 +984,65 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      overlay_html = doc |> LazyHTML.query(".pk-facts-overlay .pk-facts-row") |> LazyHTML.to_html()
-      inline_html = doc |> LazyHTML.query(".pk-facts-inline .pk-facts-row") |> LazyHTML.to_html()
+      # Exactly one copy exists in the whole document — the mobile overlay
+      # copy and the desktop inline copy are gone, collapsed into one.
+      assert doc |> LazyHTML.query(".pk-facts-row") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row") |> Enum.count() == 1
 
-      assert overlay_html != ""
-      assert inline_html != ""
-
-      # Argument-identical: linked={true} was passed at both call sites, so
-      # both render the players fact as a link into the same filter param.
-      assert overlay_html =~ "2-4"
-      assert inline_html =~ "2-4"
-      assert overlay_html =~ "?players="
-      assert inline_html =~ "?players="
-
-      facts_row_count = doc |> LazyHTML.query(".pk-facts-row") |> Enum.count()
-      assert facts_row_count == 2
+      # Ordered-siblings assertion (not mere presence): the row precedes
+      # the panel in document order, at every viewport width.
+      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row + .pk-poster-panel") |> Enum.count() ==
+               1
     end
 
-    test "the overlay pills wrapper is a descendant of the poster frame, not of the text column",
+    test "the players, tiempo and dificultad pills all render inside the single facts row, with the same link targets they have today",
          %{conn: conn} do
-      game = game_fixture()
+      game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query(".pk-poster-frame .pk-facts-overlay") |> Enum.count() == 1
-      assert doc |> LazyHTML.query(".pk-text-col .pk-facts-overlay") |> Enum.count() == 0
+      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row .pk-fact") |> Enum.count() == 3
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a.pk-fact[href*='?players=']")
+             |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a.pk-fact[href*='?max_playtime=']")
+             |> Enum.count() == 1
+
+      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row .pk-difficulty") |> Enum.count() ==
+               1
+    end
+
+    test "the poster panel contains the poster frame and both gallery strips, and does NOT contain the poster column's Reservar button",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-poster-panel .pk-poster-frame") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-panel #gallery-thumbnails") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-panel #gallery-dots") |> Enum.count() == 1
+
+      # Structural assertion: the button is a SIBLING of the panel, not a
+      # descendant of it.
+      assert doc
+             |> LazyHTML.query(".pk-poster-panel button[phx-click='open-reservation']")
+             |> Enum.count() == 0
+
+      assert doc
+             |> LazyHTML.query(
+               ".pk-poster-panel + button[phx-click='open-reservation'].pk-poster-reserve"
+             )
+             |> Enum.count() == 1
     end
 
     test "the poster column's reserve button carries pk-poster-reserve and the mobile CTA bar's reserve button does not",
@@ -1037,7 +1069,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute cta_bar_reserve_class =~ "pk-poster-reserve"
     end
 
-    test "the share control is a descendant of the poster frame", %{conn: conn} do
+    # Two Reservar controls exist in the document (the in-panel one and the
+    # fixed bar's one), and exactly one carries the breakpoint-toggled
+    # class — this is the DOM-level fact CSS depends on. The visual half of
+    # the invariant (only one is ever VISIBLE at a given width) is routed to
+    # the phase's human-check, not tested here.
+    test "exactly two Reservar controls exist in the document, and exactly one carries the breakpoint-toggled class",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      reserve_buttons = LazyHTML.query(doc, "button[phx-click='open-reservation']")
+      assert Enum.count(reserve_buttons) == 2
+
+      breakpoint_gated =
+        reserve_buttons
+        |> Enum.map(&LazyHTML.attribute(&1, "class"))
+        |> Enum.filter(fn class -> List.first(class) =~ "pk-poster-reserve" end)
+
+      assert Enum.count(breakpoint_gated) == 1
+    end
+
+    test "the share control is still a descendant of the poster frame, not the panel's margin",
+         %{conn: conn} do
       game = game_fixture()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
@@ -1072,7 +1129,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert Enum.sort(thumbnail_urls) == Enum.sort(dot_urls)
     end
 
-    test "a game with no cover and no gallery images renders the placeholder with no broken overlay or stray strip",
+    test "a game with no cover and no gallery images renders the placeholder with no broken panel or stray strip",
          %{conn: conn} do
       game = game_fixture(%{cover_url: nil, gallery_urls: []})
 
@@ -1080,13 +1137,14 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      # The existing no-image placeholder still renders inside the frame.
-      assert doc |> LazyHTML.query(".pk-poster-frame .pk-card-poster") |> Enum.count() == 1
+      # The existing no-image placeholder still renders inside the frame,
+      # inside the panel.
+      assert doc |> LazyHTML.query(".pk-poster-panel .pk-poster-frame .pk-card-poster") |> Enum.count() ==
+               1
       assert html =~ "hero-puzzle-piece"
 
-      # The overlay wrapper still renders unconditionally on image
-      # presence, with no broken markup.
-      assert doc |> LazyHTML.query(".pk-facts-overlay") |> Enum.count() == 1
+      # The single facts row still renders unconditionally.
+      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row") |> Enum.count() == 1
 
       refute html =~ "gallery-thumbnails"
       refute html =~ "gallery-dots"
@@ -1164,7 +1222,12 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   # across other describe blocks. One assertion per ask, not one shared
   # assertion.
   describe "G-01.2-10 mobile detail-page contract (regression pin, 01.2-18 task 3)" do
-    test "the pills render in the poster frame's overlay wrapper and the text column's inline wrapper, both present on every render",
+    # G-01.2-19 task 1 revised this invariant: the two-copy overlay/inline
+    # swap is gone, collapsed into a single facts row above the poster
+    # panel (see the "masthead restructure" describe above for the full
+    # contract). This test now pins that one row still renders on every
+    # render, rather than the two wrappers it used to assert.
+    test "the single facts row renders, as a direct child of the poster column, on every render",
          %{conn: conn} do
       game = game_fixture(%{min_players: 2, max_players: 4})
 
@@ -1172,10 +1235,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query(".pk-poster-frame .pk-facts-overlay .pk-facts-row") |> Enum.count() ==
-               1
-
-      assert doc |> LazyHTML.query(".pk-text-col .pk-facts-inline .pk-facts-row") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row") |> Enum.count() == 1
     end
 
     test "the description is the element immediately after the title", %{conn: conn} do
