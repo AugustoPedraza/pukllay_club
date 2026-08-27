@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 13/13 plans executed (5 original, 5 superseded, 5 gap closure executed, 3 gap closure pending)
+**Plans:** 13/17 plans executed (5 original, 5 superseded, 8 gap closure executed, 4 gap-closure round 2 pending)
 
 Plans:
 **Wave 1**
@@ -247,6 +247,22 @@ Plans:
 **Wave 9 — gap closure** *(blocked on Wave 8 completion)*
 
 - [x] 01.2-18-PLAN.md — G-01.2-10 (part 2 of 2): separator between the detail content and the "Juegos similares" shelf; stacked share pill removed from the mobile CTA bar with its dead class, dead clause and reserved body padding all recomputed together
+
+**Wave 10 — gap closure round 2** *(from the second detail-page UAT round: G-01.2-11 mobile and G-01.2-12 desktop, both against the same masthead; design resolved by sketches 032-035)*
+
+- [ ] 01.2-19-PLAN.md — G-01.2-11/12: masthead restructure per sketch 032 — one facts row above the poster panel (two copies collapsed into one), panel treatment moved off the column so the Reservar CTA sits outside it, dots centered, and the page's own narrower width cap dropped in favour of the header/footer shell
+
+**Wave 11 — gap closure round 2** *(blocked on Wave 10 completion — same files)*
+
+- [ ] 01.2-20-PLAN.md — G-01.2-11/12: sketch 034 chip cleanup — duplicated weight-band badge and its descriptor removed, the weight-band filter link relocated onto the surviving dificultad pill, and the Mecánicas/Temáticas chips given real padding plus a fill and border that read in both themes
+
+**Wave 12 — gap closure round 2** *(blocked on Wave 11 completion — same files)*
+
+- [ ] 01.2-21-PLAN.md — G-01.2-11/12: sketch 033 lightbox — the inverting text-token scrim replaced by one shared fixed-dark declaration read by both full-screen overlays, a token-driven fade-and-scale open/close replacing the display switch, arrow-key navigation routed through the existing guarded buttons, and the arrow-anchoring question decided and recorded
+
+**Wave 13 — gap closure round 2** *(blocked on Wave 12 completion — same files)*
+
+- [ ] 01.2-22-PLAN.md — G-01.2-11/12: sketch 035 rhythm — the hidden sticky title bar taken out of document flow, and both page boundaries collapsed from four and two stacked contributors to one deliberate 24px value each, behind an opt-in layout flag so no other page changes
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
