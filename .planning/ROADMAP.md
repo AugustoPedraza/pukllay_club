@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 11/13 plans executed (5 original, 5 superseded, 5 gap closure executed, 3 gap closure pending)
+**Plans:** 12/13 plans executed (5 original, 5 superseded, 5 gap closure executed, 3 gap closure pending)
 
 Plans:
 **Wave 1**
@@ -242,7 +242,7 @@ Plans:
 
 **Wave 8 — gap closure** *(blocked on Wave 7 completion)*
 
-- [ ] 01.2-17-PLAN.md — G-01.2-10 (part 1 of 2): mobile masthead rework — pills over the poster, description straight after the title, one Reservar on the phone, chip rows below a "más información" boundary, publisher row dropped; opens with a blocking decision checkpoint on the pills/weight-badge/thumbnail-strip questions
+- [x] 01.2-17-PLAN.md — G-01.2-10 (part 1 of 2): mobile masthead rework — pills over the poster, description straight after the title, one Reservar on the phone, chip rows below a "más información" boundary, publisher row dropped; opens with a blocking decision checkpoint on the pills/weight-badge/thumbnail-strip questions
 
 **Wave 9 — gap closure** *(blocked on Wave 8 completion)*
 
