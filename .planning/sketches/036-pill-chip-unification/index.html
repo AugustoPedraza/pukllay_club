@@ -18,6 +18,9 @@
   .variant { display: none; }
   .variant.active { display: block; }
 
+  .cause-note { max-width: 720px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-xs); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; }
+
   .wrap { max-width: 720px; margin: 0 auto; padding: var(--space-4) var(--space-4) var(--space-12); }
 
   .demo-block { margin-bottom: var(--space-6); }
@@ -27,11 +30,6 @@
 
   .divider { border: none; border-top: 1px dashed var(--color-border); margin: var(--space-6) 0; }
 
-  /* ============================================================
-     Shared base: geometry lives per-variant below (that IS the
-     design question). Here only structural/reset properties that
-     every variant needs regardless of chosen shape.
-     ============================================================ */
   .uni-pill {
     display: inline-flex;
     align-items: center;
@@ -48,12 +46,11 @@
   .pill-x { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; font-size: 11px; line-height: 1; }
 
   /* ============================================================
-     VARIANT A — One Universal Shape
-     Same radius/border/padding/font for every role. Tone (color)
-     is the only variant. Action chips get the SAME small size as
-     info pills — tests whether that reads as too dense to tap.
+     ROUND 1 — B: Two Sizes by Interactivity (as first shown)
+     Kept here only as the "before" comparison for the round-2
+     refinement — not a live option anymore (A/C already dropped).
      ============================================================ */
-  .variant-a .uni-pill {
+  .variant-r1 .uni-pill {
     border-radius: 9999px;
     padding: 4px 10px;
     font-size: 11px;
@@ -62,42 +59,12 @@
     border-color: var(--color-border);
     color: var(--color-text-muted);
   }
-  .variant-a .uni-pill[data-accent="true"] {
+  .variant-r1 .uni-pill[data-accent="true"] {
     background: var(--color-accent-bg);
     color: var(--color-accent-text);
     border-color: transparent;
   }
-  .variant-a .uni-pill[data-role="action"] { color: var(--color-text); }
-  .variant-a .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); }
-  .variant-a .uni-pill[data-state="active"],
-  .variant-a .uni-pill[data-state="selected"] {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: var(--color-primary-content);
-  }
-  .variant-a .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
-
-  /* ============================================================
-     VARIANT B — Two Sizes by Interactivity
-     Info/topic roles stay compact (facts, mecánicas/temáticas,
-     editorial). Action role (removable filters, modal facets) gets
-     a real 44px touch target — same shape language, bigger size.
-     ============================================================ */
-  .variant-b .uni-pill {
-    border-radius: 9999px;
-    padding: 4px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    background: var(--color-surface);
-    border-color: var(--color-border);
-    color: var(--color-text-muted);
-  }
-  .variant-b .uni-pill[data-accent="true"] {
-    background: var(--color-accent-bg);
-    color: var(--color-accent-text);
-    border-color: transparent;
-  }
-  .variant-b .uni-pill[data-role="action"] {
+  .variant-r1 .uni-pill[data-role="action"] {
     min-height: 44px;
     padding: 0 16px;
     font-size: 13px;
@@ -105,70 +72,70 @@
     background: transparent;
     border-color: var(--color-border);
   }
-  .variant-b .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); }
-  .variant-b .uni-pill[data-state="active"],
-  .variant-b .uni-pill[data-state="selected"] {
+  .variant-r1 .uni-pill[data-role="action"]:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .variant-r1 .uni-pill[data-state="active"],
+  .variant-r1 .uni-pill[data-state="selected"] {
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: var(--color-primary-content);
     box-shadow: var(--shadow-sm);
   }
-  .variant-b .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
+  .variant-r1 .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
 
   /* ============================================================
-     VARIANT C — Three Tiers by Prominence
-     Info tier quietest (facts, editorial). Topic tier one notch
-     bolder — Mecánicas/Temáticas get their own visible identity
-     instead of borrowing the facts-pill shape verbatim. Action
-     tier boldest, 44px touch target, hover-lift.
+     ROUND 2 — B, refined
+     Addresses all four balance notes:
+     1. Size jump too big -> info padding/font bumped up slightly,
+        action font brought down slightly, so the two sit closer
+        (44px touch height is kept — that's an accessibility floor,
+        not a style choice, so it doesn't shrink further).
+     2. Action chips too heavy/plain -> resting state now carries
+        the SAME background+border as info pills instead of bare
+        transparent, so they read as finished, not unstyled.
+     3. Info pills too cramped -> padding 4px 9px -> 5px 12px, a
+        little real breathing room without losing the compact feel.
+     4. Inconsistent shape -> both sizes now share identical
+        radius (9999px), border-width (1px) and border color at
+        rest, so the size difference reads as "same family, bigger
+        variant" rather than "two different components."
      ============================================================ */
-  .variant-c .uni-pill[data-role="info"] {
+  .variant-r2 .uni-pill {
     border-radius: 9999px;
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: 5px 12px;
+    font-size: 11.5px;
     font-weight: 600;
     background: var(--color-surface);
     border-color: var(--color-border);
     color: var(--color-text-muted);
   }
-  .variant-c .uni-pill[data-role="info"][data-accent="true"] {
+  .variant-r2 .uni-pill[data-accent="true"] {
     background: var(--color-accent-bg);
     color: var(--color-accent-text);
     border-color: transparent;
   }
-  .variant-c .uni-pill[data-role="topic"] {
-    border-radius: var(--radius-md);
-    padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 600;
-    background: var(--color-surface-2);
-    border-color: var(--color-border);
-    color: var(--color-text);
-  }
-  .variant-c .uni-pill[data-role="action"] {
-    border-radius: 9999px;
+  .variant-r2 .uni-pill[data-role="action"] {
     min-height: 44px;
-    padding: 0 16px;
-    font-size: 13px;
-    font-weight: 700;
-    background: transparent;
-    border-color: var(--color-border);
+    padding: 0 18px;
+    font-size: 12.5px;
+    font-weight: 600;
     color: var(--color-text);
+    background: var(--color-surface);
+    border-color: var(--color-border);
   }
-  .variant-c .uni-pill[data-role="action"]:hover {
+  .variant-r2 .uni-pill[data-role="action"]:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    background: var(--color-accent-bg);
   }
-  .variant-c .uni-pill[data-state="active"],
-  .variant-c .uni-pill[data-state="selected"] {
+  .variant-r2 .uni-pill[data-state="active"],
+  .variant-r2 .uni-pill[data-state="selected"] {
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: var(--color-primary-content);
     box-shadow: var(--shadow-sm);
   }
-  .variant-c .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
+  .variant-r2 .pill-x { background: rgba(255,255,255,0.25); color: inherit; }
+  .variant-r2 .uni-pill[data-role="action"]:not([data-state]) .pill-x { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text-muted); }
 
   #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
   #sketch-tools:hover { opacity: 1; }
@@ -177,14 +144,21 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active" onclick="showVariant('a', this)">A: One Universal Shape</button>
-  <button class="variant-tab" onclick="showVariant('b', this)">B: Two Sizes by Interactivity</button>
-  <button class="variant-tab" onclick="showVariant('c', this)">C: Three Tiers by Prominence</button>
-  <span class="caption">Same six real sections in every variant — only the pill CSS changes. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab" onclick="showVariant('r1', this)">Round 1 — B (before)</button>
+  <button class="variant-tab active" onclick="showVariant('r2', this)">Round 2 — B, refined ★</button>
+  <span class="caption">A (one universal shape) and C (three tiers) already dropped per your call — this round only refines B's balance. Toggle 🌙/☀ to check both themes.</span>
+</div>
+
+<div class="cause-note">
+  Round 1 feedback: "B looks nice, but I need a better balance for it." Four specific notes
+  addressed in Round 2: the size jump between info and action pills felt too big; the action chips
+  read as too heavy/plain (bare, no fill); the info pills felt cramped; and the two sizes didn't
+  share a clearly related shape. See the code comment above <code>.variant-r2</code> for exactly
+  what changed and why.
 </div>
 
 <div class="wrap">
-  <div id="variant-a" class="variant variant-a active">
+  <div id="variant-r1" class="variant variant-r1">
     <div class="demo-block">
       <h3>Facts row — info</h3>
       <p class="demo-caption">GamePreview.facts_row — players / tiempo / dificultad</p>
@@ -237,7 +211,7 @@
     </div>
   </div>
 
-  <div id="variant-b" class="variant variant-b">
+  <div id="variant-r2" class="variant variant-r2 active">
     <div class="demo-block">
       <h3>Facts row — info</h3>
       <p class="demo-caption">GamePreview.facts_row — players / tiempo / dificultad</p>
@@ -273,60 +247,7 @@
     <hr class="divider">
     <div class="demo-block">
       <h3>Filtros activos — action, removable</h3>
-      <p class="demo-caption">Catalog "búsqueda activa" row — now a real 44px target</p>
-      <div class="pill-row">
-        <button class="uni-pill" data-role="action" data-state="active">2-4 jugadores <span class="pill-x">✕</span></button>
-        <button class="uni-pill" data-role="action" data-state="active">Intermedio <span class="pill-x">✕</span></button>
-      </div>
-    </div>
-    <div class="demo-block">
-      <h3>Modal de filtros — action, selectable</h3>
-      <p class="demo-caption">filter_modal.ex facet/scalar pills</p>
-      <div class="pill-row">
-        <button class="uni-pill" data-role="action" data-state="selected">Estrategia</button>
-        <button class="uni-pill" data-role="action">Familiar</button>
-        <button class="uni-pill" data-role="action">Fiesta</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="variant-c" class="variant variant-c">
-    <div class="demo-block">
-      <h3>Facts row — info</h3>
-      <p class="demo-caption">GamePreview.facts_row — players / tiempo / dificultad</p>
-      <div class="pill-row">
-        <span class="uni-pill" data-role="info">👤 2-4</span>
-        <span class="uni-pill" data-role="info">⏱ 30 min</span>
-        <span class="uni-pill" data-role="info">🎯 Intermedio</span>
-      </div>
-    </div>
-    <div class="demo-block">
-      <h3>Mecánicas — topic</h3>
-      <div class="pill-row">
-        <span class="uni-pill" data-role="topic">Bloques de construcción</span>
-        <span class="uni-pill" data-role="topic">Draft</span>
-        <span class="uni-pill" data-role="topic">Mano a mano</span>
-      </div>
-    </div>
-    <div class="demo-block">
-      <h3>Temáticas — topic</h3>
-      <div class="pill-row">
-        <span class="uni-pill" data-role="topic">Civilización</span>
-        <span class="uni-pill" data-role="topic">Economía</span>
-      </div>
-    </div>
-    <div class="demo-block">
-      <h3>Editorial — info, accent</h3>
-      <p class="demo-caption">GameChips.editorial_tags — club hashtags</p>
-      <div class="pill-row">
-        <span class="uni-pill" data-role="info" data-accent="true">#PartidaDistinta</span>
-        <span class="uni-pill" data-role="info" data-accent="true">#DuoIdeal</span>
-      </div>
-    </div>
-    <hr class="divider">
-    <div class="demo-block">
-      <h3>Filtros activos — action, removable</h3>
-      <p class="demo-caption">Catalog "búsqueda activa" row — boldest tier, hover-lift</p>
+      <p class="demo-caption">Catalog "búsqueda activa" row — now shares info's background+border at rest</p>
       <div class="pill-row">
         <button class="uni-pill" data-role="action" data-state="active">2-4 jugadores <span class="pill-x">✕</span></button>
         <button class="uni-pill" data-role="action" data-state="active">Intermedio <span class="pill-x">✕</span></button>
