@@ -2500,6 +2500,121 @@ body.pk-drawer-open {
   box-shadow: 0 4px 12px color-mix(in srgb, var(--pk-shadow-color) 12%, transparent);
 }
 
+/* Positioning context for the pills overlay and the share control
+   (Phase 01.2 gap-closure, G-01.2-10 task 2). Declared here, in the
+   frame's own rule, not through a Tailwind `relative` utility on the
+   element — an unlayered .pk-* rule always beats a layered utility in
+   this stylesheet (see the cascade-layer hazard note at the top of this
+   file), and a layered `relative` losing to an unlayered position
+   declaration is precisely the defect G-01.2-5 was opened for. */
+.pk-poster-frame {
+  position: relative;
+}
+
+/* Mobile pills overlay vs. the desktop inline copy inside .pk-text-col
+   below (G-01.2-10 ask #1, D1 = keep the players/duration/difficulty
+   trio unchanged) — two sides of one swap, exactly one displayed per
+   viewport. Both sides of the reveal live together with every other
+   detail-layout swap in the single 48rem block near the end of this
+   file — never split across two blocks. */
+.pk-facts-inline {
+  display: none;
+}
+
+.pk-facts-overlay {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  /* Right-hand clearance so the pills can never run underneath the share
+     control: its own 0.5rem inset (right-2/top-2 in show.ex) + its
+     2.75rem (44px, min-h-11/min-w-11) footprint + a 0.5rem gap = 3.75rem. */
+  right: 3.75rem;
+  z-index: 5;
+}
+
+/* Measured live via headless Chrome CDP at a real 390px viewport (01.2-17
+   plan SUMMARY): the overlay's available width was 256px, but the pill
+   row's own natural (nowrap) content width was 279px — a 23px overflow
+   that silently bled under the share control's box rather than showing a
+   visible cutoff, since flex's default overflow:visible doesn't clip.
+   This is a wrapper-scoped override of the shared row's own line
+   behaviour ONLY (flex-wrap) — no property that controls how a pill
+   itself looks is redeclared here, so the two facts-row copies still
+   look identical. */
+.pk-facts-overlay .pk-facts-row {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.pk-facts-overlay .pk-fact {
+  /* Lift, not a scrim — each pill (.pk-fact) is already opaque with its
+     own border, so the same shadow-colour token this file's other lifted
+     surfaces use (--pk-shadow-color, see .pk-poster-col/.pk-share-trigger
+     above) is enough to separate it from a busy cover image. A new,
+     scoped property (box-shadow), not a second declaration of any
+     property .pk-fact already sets — the pills' own look still comes
+     from that one shared class. */
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--pk-shadow-color) 14%, transparent);
+}
+
+/* Poster-column reserve button, hidden below the detail layout breakpoint
+   (G-01.2-10 ask #3): the fixed .pk-mobile-cta-bar is already the mobile
+   CTA, so this in-panel copy only needs to exist at/above 48rem, where
+   the bar itself is hidden (see the swap in the single 48rem block).
+   `inline-flex`, not a generic `block`, restores exactly the display
+   value daisyUI's own .btn component declares — a button restored to the
+   wrong display value is a subtle alignment bug (icon/label centring)
+   nobody looks for until it has already shipped. */
+.pk-poster-reserve {
+  display: none;
+}
+
+/* Gallery thumbnails vs. dots (G-01.2-10 ask #8, D3 = dots on mobile,
+   thumbnails on desktop) — two sides of one swap, both built from the
+   same gallery_thumbnails/1 list in show.ex. Reveal lives with every
+   other detail-layout swap in the single 48rem block. */
+.pk-gallery-thumbnails {
+  display: none;
+}
+
+.pk-gallery-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  /* Each dot's own 44px touch floor (below) would otherwise push this
+     row's visual footprint to a full 44px tall; this negative margin
+     compensates so only the small mark itself (plus a little breathing
+     room) is visible, while the full 44px hit area still exists for
+     touch — the standard "expand the hit area without expanding what's
+     seen" technique, not a second declaration of the mark's own size. */
+  margin: -0.625rem 0;
+}
+
+.pk-gallery-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.pk-gallery-dot-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--color-base-300);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-gallery-dot:hover .pk-gallery-dot-mark,
+.pk-gallery-dot.is-active .pk-gallery-dot-mark {
+  background: var(--color-primary);
+}
+
 .pk-text-col {
   display: flex;
   flex-direction: column;
@@ -2852,6 +2967,32 @@ body.pk-cta-parked {
   }
 
   .pk-mobile-cta-bar {
+    display: none;
+  }
+
+  /* Pills swap (G-01.2-10 task 2): desktop shows the inline copy beside
+     the title, mobile's overlay copy over the poster hides. */
+  .pk-facts-inline {
+    display: block;
+  }
+
+  .pk-facts-overlay {
+    display: none;
+  }
+
+  /* Poster-column reserve button reveal — the mobile bar above is hidden
+     at this same breakpoint, so exactly one Reservar control is ever on
+     screen. inline-flex matches daisyUI's own .btn display value. */
+  .pk-poster-reserve {
+    display: inline-flex;
+  }
+
+  /* Thumbnails/dots swap (G-01.2-10 task 2, D3 = dots on mobile). */
+  .pk-gallery-thumbnails {
+    display: flex;
+  }
+
+  .pk-gallery-dots {
     display: none;
   }
 }

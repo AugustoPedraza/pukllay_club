@@ -31,9 +31,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   never a blank placeholder. Ficha técnica applies this at two levels
   (01.2-04, D-04/D-05): each remaining row keeps its own independent `:if`
   guard, AND the section heading plus the list are themselves wrapped in
-  `ficha_tecnica?/1` so a game with none of the five carriable fields
-  (min_age, year_published, designers, publishers, bgg_id) shows no empty
-  heading over an empty grid.
+  `ficha_tecnica?/1` so a game with none of the four carriable fields
+  (min_age, year_published, designers, bgg_id) shows no empty heading over
+  an empty grid. The publishers field was dropped from this section
+  entirely in the G-01.2-10 mobile masthead rework (01.2-17) — the UAT
+  called it useless information, and the removal is unconditional (every
+  viewport width), not a mobile-only cut.
 
   Mobile chrome (SHELL-03, plan 01.1-04): `.DetailChrome` drives the fixed
   bottom CTA bar and the sticky title-echo bar off a single passive
@@ -311,38 +314,57 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           <div class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
               <div class="pk-poster-col space-y-4">
-                <div class="absolute right-2 top-2 z-10">
-                  <.share_control id="detail-share-buybox" game={@game} variant={:panel} />
-                </div>
-
-                <button
-                  :if={@selected_image}
-                  type="button"
-                  phx-click="open-lightbox"
-                  aria-label="Ampliar imagen del juego"
-                  class="pk-card-poster overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
-                >
-                  <img
-                    src={@selected_image}
-                    alt={@game.name}
-                    class="h-full w-full object-cover js-cover-fallback"
-                  />
-                  <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
-                    <.icon name="hero-puzzle-piece" class="size-16" />
+                <div class="pk-poster-frame">
+                  <div class="absolute right-2 top-2 z-10">
+                    <.share_control id="detail-share-buybox" game={@game} variant={:panel} />
                   </div>
-                </button>
-                <div
-                  :if={!@selected_image}
-                  class="pk-card-poster overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
-                >
-                  <.icon name="hero-puzzle-piece" class="size-16" />
-                  <span class="sr-only">{@game.name}</span>
+
+                  <%!-- G-01.2-10 task 2, D1 (recommended: keep the trio
+                  unchanged): byte-identical arguments to .pk-facts-inline's
+                  call below, so the two copies cannot drift. Exactly one of
+                  the two is ever displayed — see the swap in app.css's
+                  single 48rem detail-layout block. --%>
+                  <div class="pk-facts-overlay">
+                    <GamePreview.facts_row game={@game} linked={true} />
+                  </div>
+
+                  <button
+                    :if={@selected_image}
+                    type="button"
+                    phx-click="open-lightbox"
+                    aria-label="Ampliar imagen del juego"
+                    class="pk-card-poster overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
+                  >
+                    <img
+                      src={@selected_image}
+                      alt={@game.name}
+                      class="h-full w-full object-cover js-cover-fallback"
+                    />
+                    <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
+                      <.icon name="hero-puzzle-piece" class="size-16" />
+                    </div>
+                  </button>
+                  <div
+                    :if={!@selected_image}
+                    class="pk-card-poster overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
+                  >
+                    <.icon name="hero-puzzle-piece" class="size-16" />
+                    <span class="sr-only">{@game.name}</span>
+                  </div>
                 </div>
 
+                <%!-- G-01.2-10 task 2, D3 (recommended: dots on mobile,
+                thumbnails on desktop). Both strips are built from the same
+                gallery_thumbnails/1 list and both dispatch select-image
+                with the same phx-value-url key, so the existing
+                membership-check whitelist (mount/handle_event above) stays
+                the single guarded image-selection path — not a second one
+                (T-01.1-16-style). Exactly one of the two renders per
+                viewport, swap declared in app.css's single 48rem block. --%>
                 <div
                   :if={@game.gallery_urls != []}
                   id="gallery-thumbnails"
-                  class="flex gap-2 overflow-x-auto"
+                  class="gap-2 overflow-x-auto pk-gallery-thumbnails"
                 >
                   <button
                     :for={url <- gallery_thumbnails(@game)}
@@ -358,17 +380,41 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   </button>
                 </div>
 
+                <div :if={@game.gallery_urls != []} id="gallery-dots" class="pk-gallery-dots">
+                  <button
+                    :for={{url, idx} <- Enum.with_index(gallery_thumbnails(@game))}
+                    type="button"
+                    phx-click="select-image"
+                    phx-value-url={url}
+                    aria-label={"Ver imagen #{idx + 1} de #{length(gallery_thumbnails(@game))}"}
+                    aria-current={(url == @selected_image && "true") || nil}
+                    class={["pk-gallery-dot", (url == @selected_image && "is-active") || nil]}
+                  >
+                    <span class="pk-gallery-dot-mark"></span>
+                  </button>
+                </div>
+
+                <%!-- G-01.2-10 task 2, ask #3: hidden below the detail
+                layout breakpoint so the phone shows exactly one Reservar
+                control (the fixed .pk-mobile-cta-bar below), revealed
+                at/above it in the same 48rem block where the bar itself
+                becomes hidden — both halves of the invariant live in one
+                place. --%>
                 <button
                   type="button"
                   phx-click="open-reservation"
-                  class="btn btn-primary btn-lg min-h-11 w-full"
+                  class="btn btn-primary btn-lg min-h-11 w-full pk-poster-reserve"
                 >
                   {reservation_cta_label()}
                 </button>
               </div>
 
               <div class="pk-text-col">
-                <GamePreview.facts_row game={@game} linked={true} />
+                <%!-- Desktop-only copy of the pills, paired with
+                .pk-facts-overlay above — see that wrapper's comment. --%>
+                <div class="pk-facts-inline">
+                  <GamePreview.facts_row game={@game} linked={true} />
+                </div>
 
                 <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
 
