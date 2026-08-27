@@ -321,17 +321,27 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           <div id="detail-masthead-wrap" class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
               <div class="pk-poster-col">
-                <%!-- G-01.2-19 task 1 (was G-01.2-10 task 2): one facts
-                row exists on the page, above the poster panel, at every
-                viewport width — the mobile absolute overlay and the
-                desktop inline copy are gone. Its own root already carries
-                pk-facts-row, so no wrapper div is added; it is addressed
-                in CSS as a direct child of .pk-poster-col
-                (.pk-poster-col > .pk-facts-row). See G-01.2-11/G-01.2-12
-                and sketch 032. --%>
-                <GamePreview.facts_row game={@game} linked={true} />
-
                 <div class="pk-poster-panel">
+                  <%!-- G-01.2-19 task 1 (was G-01.2-10 task 2): one facts
+                  row exists on the page, above the poster photo, at every
+                  viewport width — the mobile absolute overlay and the
+                  desktop inline copy are gone. Its own root already
+                  carries pk-facts-row, so no wrapper div is added.
+                  G-01.2-23 task 2 (round 3, sketch 037): moved from being
+                  the poster COLUMN's first child to being the poster
+                  PANEL's first child — the row's position relative to the
+                  photo is unchanged (the UAT approved it: "the pills are
+                  ok on the position"), only its containing box changed.
+                  Inside the panel, the pills now share the exact 1rem card
+                  padding the photo already had, so the pills and the
+                  photo's left/right edges coincide and the phone's buy-box
+                  reads as one card with one edge instead of two floating
+                  pieces. Addressed in CSS as a direct child of
+                  .pk-poster-panel (.pk-poster-panel > .pk-facts-row). See
+                  G-01.2-11/G-01.2-12 and sketch 032, and G-01.2-23 and
+                  sketch 037 for this move. --%>
+                  <GamePreview.facts_row game={@game} linked={true} />
+
                   <div class="pk-poster-frame">
                     <div class="absolute right-2 top-2 z-10">
                       <.share_control id="detail-share-buybox" game={@game} />

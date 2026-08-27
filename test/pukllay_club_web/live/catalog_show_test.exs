@@ -1174,7 +1174,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   end
 
   describe "G-01.2-11/G-01.2-12 masthead contract (facts row, panel, CTA, dots, shell width)" do
-    test "facts_row renders exactly once, as a direct child of the poster column, immediately followed by the poster panel",
+    test "facts_row renders exactly once, as the poster panel's first child, immediately followed by the poster frame",
          %{conn: conn} do
       game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
 
@@ -1185,12 +1185,21 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # Exactly one copy exists in the whole document — the mobile overlay
       # copy and the desktop inline copy are gone, collapsed into one.
       assert doc |> LazyHTML.query(".pk-facts-row") |> Enum.count() == 1
-      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> Enum.count() == 1
 
-      # Ordered-siblings assertion (not mere presence): the row precedes
-      # the panel in document order, at every viewport width.
-      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row + .pk-poster-panel") |> Enum.count() ==
+      # Ordered-siblings assertion (not mere presence): the row is the
+      # panel's FIRST child and precedes the poster frame in document
+      # order, at every viewport width (G-01.2-23 task 2, sketch 037 —
+      # moved from being the poster column's first child to being the
+      # poster panel's first child, so the pills and the photo share one
+      # inset).
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row + .pk-poster-frame") |> Enum.count() ==
                1
+
+      # Negative assertion: the row is no longer a direct child of the
+      # poster column. A future edit that moves it back out must fail
+      # here, not silently reopen the margin-mismatch bug G-01.2-23 fixed.
+      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row") |> Enum.count() == 0
     end
 
     test "the players, tiempo and dificultad pills all render inside the single facts row, with the same link targets they have today",
@@ -1201,17 +1210,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row .pk-fact") |> Enum.count() == 3
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row .pk-fact") |> Enum.count() == 3
 
       assert doc
-             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a.pk-fact[href*='?players=']")
+             |> LazyHTML.query(".pk-poster-panel > .pk-facts-row a.pk-fact[href*='?players=']")
              |> Enum.count() == 1
 
       assert doc
-             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a.pk-fact[href*='?max_playtime=']")
+             |> LazyHTML.query(".pk-poster-panel > .pk-facts-row a.pk-fact[href*='?max_playtime=']")
              |> Enum.count() == 1
 
-      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row .pk-difficulty") |> Enum.count() ==
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row .pk-difficulty") |> Enum.count() ==
                1
     end
 
@@ -1341,7 +1350,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html =~ "hero-puzzle-piece"
 
       # The single facts row still renders unconditionally.
-      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> Enum.count() == 1
 
       refute html =~ "gallery-thumbnails"
       refute html =~ "gallery-dots"
@@ -1563,7 +1572,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> Enum.count() == 1
     end
 
     test "the description is the element immediately after the title", %{conn: conn} do
@@ -1858,7 +1867,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       doc = LazyHTML.from_document(html)
 
       assert doc
-             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a.pk-fact[href='/?weight_bands=ingenio_estratega']")
+             |> LazyHTML.query(".pk-poster-panel > .pk-facts-row a.pk-fact[href='/?weight_bands=ingenio_estratega']")
              |> Enum.count() == 1
     end
 
@@ -1871,7 +1880,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       doc = LazyHTML.from_document(html)
 
       assert doc
-             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a[href*='weight_bands=']")
+             |> LazyHTML.query(".pk-poster-panel > .pk-facts-row a[href*='weight_bands=']")
              |> Enum.count() == 0
 
       refute html =~ "pk-difficulty"
@@ -2109,6 +2118,38 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         html |> LazyHTML.from_fragment() |> LazyHTML.query(".pk-row-header") |> LazyHTML.to_html()
 
       refute header_html =~ "badge-accent"
+    end
+  end
+
+  describe "gallery dot hit-box floors (Phase 01.2 gap-closure round 3, G-01.2-23 task 1)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    # First top-level `.pk-gallery-dot {...}` block in app.css, matched on
+    # the exact selector text so a future `.pk-gallery-dot-mark` or
+    # `.pk-gallery-dots` addition can never be mistaken for this one.
+    defp gallery_dot_block do
+      src = File.read!(@css_path)
+
+      case Regex.run(~r/(?m)^\.pk-gallery-dot\s*\{([^}]*)\}/, src) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-gallery-dot {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the dot's hit box is 1.5rem wide and 2.75rem tall — a 24px width floor and a 44px height floor" do
+      body = gallery_dot_block()
+
+      assert body =~ ~r/width:\s*1\.5rem/,
+             "`.pk-gallery-dot` must declare `width: 1.5rem` (24px) — the WCAG 2.5.8 AA " <>
+               "target-size minimum. A wider box reopens the ~40px mark spacing UAT test 8 " <>
+               "flagged (a 44px-wide box is geometrically incompatible with a compact " <>
+               "three-dot indicator); a narrower box drops below the accessibility floor."
+
+      assert body =~ ~r/height:\s*2\.75rem/,
+             "`.pk-gallery-dot` must keep `height: 2.75rem` (44px) — this layer's own " <>
+               "`min-h-11` HEIGHT floor. The dot is the phone's ONLY image switcher " <>
+               "(the thumbnail strip is desktop-only); shrinking its tap height would make " <>
+               "it unreachable."
     end
   end
 end

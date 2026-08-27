@@ -2503,9 +2503,9 @@ body.pk-drawer-open {
 }
 
 /* Three properties only, scoped to the facts row as a direct child of the
-   poster column (Phase 01.2 gap-closure round 2, G-01.2-19 task 1, sketch
-   032) — the row now renders once, above the panel, at every viewport
-   width, replacing the old two-copy overlay/inline swap entirely.
+   poster panel (Phase 01.2 gap-closure round 2, G-01.2-19 task 1, sketch
+   032) — the row now renders once, above the poster photo, at every
+   viewport width, replacing the old two-copy overlay/inline swap entirely.
    `justify-content` is deliberately NOT redeclared here: the shared
    .pk-facts-row rule above already owns `space-between`, which is exactly
    the "justified, full width of the column" behaviour the UAT asked for.
@@ -2515,10 +2515,27 @@ body.pk-drawer-open {
    as an overlay, but the smallest real viewports still leave little
    margin, and a nowrap row with `space-between` overflows silently rather
    than clipping visibly. `margin-bottom: 0` cancels the shared row's own
-   8px bottom margin, because the column's flex `gap` above already
-   supplies that spacing and the two are additive — same reasoning as
-   .pk-divider's own note on this file. */
-.pk-poster-col > .pk-facts-row {
+   8px bottom margin, because the panel's flex `gap` below already supplies
+   that spacing and the two are additive — same reasoning as .pk-divider's
+   own note on this file.
+
+   Selector re-pointed from `.pk-poster-col > .pk-facts-row` to
+   `.pk-poster-panel > .pk-facts-row` (Phase 01.2 gap-closure round 3,
+   G-01.2-23 task 2, sketch 037): the facts row and the poster photo used
+   to be siblings across a card boundary — the row sat directly in
+   `.pk-poster-col`, the photo sat inside `.pk-poster-panel` one level in.
+   `.pk-poster-panel`'s own 1rem card padding (below) therefore inset the
+   photo 16px further from the shared `--pk-gutter` line than the row,
+   which sat flush against it — the exact mismatch UAT test 8 reported
+   ("the margin left and right of the shell isn't the same for all the
+   components"). Moving the row inside the panel puts it on the same side
+   of that padding as the photo, so the two now share one inset and their
+   left/right edges coincide. The panel's own OUTER edge is untouched by
+   this move and still lands on the shared gutter line, so the card, the
+   fixed CTA bar's button and the "Juegos similares" row header below all
+   still start and end at one x-position; the photo's remaining inset from
+   that shared line is the card's own padding, and is deliberate. */
+.pk-poster-panel > .pk-facts-row {
   flex-wrap: wrap;
   row-gap: 4px;
   margin-bottom: 0;
@@ -2631,8 +2648,14 @@ body.pk-drawer-open {
   /* Centered under the poster (Phase 01.2 gap-closure round 2, G-01.2-19
      task 1, sketch 032) — was left-aligned by default flex behaviour. */
   justify-content: center;
-  gap: 0.25rem;
-  /* Each dot's own 44px touch floor (below) would otherwise push this
+  /* Gap zeroed (Phase 01.2 gap-closure round 3, G-01.2-23 task 1, UAT test
+     8 — "too much space between them, should be a default 3 dots"). The
+     4px gap this row used to declare was never the cause of the spread
+     (see .pk-gallery-dot's own comment for the real arithmetic); it is
+     zeroed here because the dot's hit box is now narrow enough that any
+     positive gap re-opens the very distance this pair of changes closes. */
+  gap: 0;
+  /* Each dot's own 44px-tall touch floor (below) would otherwise push this
      row's visual footprint to a full 44px tall; this negative margin
      compensates so only the small mark itself (plus a little breathing
      room) is visible, while the full 44px hit area still exists for
@@ -2641,11 +2664,33 @@ body.pk-drawer-open {
   margin: -0.625rem 0;
 }
 
+/* Dot hit box narrowed to 24x44 CSS px — deliberately NOT this layer's
+   usual 44x44 square (Phase 01.2 gap-closure round 3, G-01.2-23 task 1,
+   UAT test 8 / T-01.2-23-01). With an 8px mark (.pk-gallery-dot-mark
+   below) centred in a 44px square and a 4px row gap, the visible distance
+   between two adjacent marks was (44-8)/2 + 4 + (44-8)/2 = 40px — five
+   times the declared gap, and the direct cause of "too much space between
+   them, should be a default 3 dots." Narrowing to a 24px-wide box with the
+   row's gap now zero drops that same arithmetic to
+   (24-8)/2 + 0 + (24-8)/2 = 16px, a compact default-dot-row distance.
+   `height` stays 2.75rem (44px, this layer's own `min-h-11` floor, a
+   HEIGHT floor and fully honoured here) — `width` is the one dimension
+   allowed to shrink, down to 24px, the WCAG 2.5.8 AA (Enhanced) target-size
+   minimum and no further. A 44px-wide box is geometrically incompatible
+   with a compact three-dot indicator; the two requirements cannot both be
+   true, and the UAT explicitly asked for the compact one — this is a
+   named, deliberate tradeoff, not an oversight. A negative horizontal
+   margin was considered and rejected to close the remaining gap: it would
+   let one dot's hit box overlap its neighbour's, silently handing the
+   overlap area's taps to whichever dot is later in the DOM. `flex: 0 0
+   auto` pins the narrowed box so the row around it can neither shrink it
+   further nor stretch it. */
 .pk-gallery-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
+  flex: 0 0 auto;
+  width: 1.5rem;
   height: 2.75rem;
   padding: 0;
   background: transparent;
