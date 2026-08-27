@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 18/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
+**Plans:** 19/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -270,7 +270,7 @@ Plans:
 
 **Wave 15 — gap closure round 3** *(blocked on Wave 14 — same stylesheet)*
 
-- [ ] 01.2-24-PLAN.md — G-01.2-14: the condensed title bar becomes phone-only and single-line, the carousel-to-footer boundary gets a real 24px gap instead of padding hidden inside the footer's own box, and the app gains its first sticky-footer layout at the root
+- [x] 01.2-24-PLAN.md — G-01.2-14: the condensed title bar becomes phone-only and single-line, the carousel-to-footer boundary gets a real 24px gap instead of padding hidden inside the footer's own box, and the app gains its first sticky-footer layout at the root
 
 **Wave 16 — gap closure round 3** *(blocked on Wave 15 — same stylesheet)*
 
