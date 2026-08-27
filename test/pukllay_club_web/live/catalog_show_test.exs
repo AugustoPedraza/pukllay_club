@@ -624,6 +624,53 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  describe "masthead↔shelf boundary (G-01.2-18 task 1)" do
+    test "a separator sits between the masthead's wrapper and the shelf's section root — ordered siblings, not mere presence",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Base Boundary", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Bandmate Boundary", weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # Adjacent-sibling combinator, mirroring the #detail-title-block +
+      # .pk-description assertion style 01.2-17 already established — this
+      # only matches when the separator is literally the very next element
+      # after the masthead's own outer wrapper, and the shelf is literally
+      # the very next element after the separator.
+      assert doc |> LazyHTML.query("#detail-masthead-wrap + #detail-shelf-separator") |> Enum.count() ==
+               1
+
+      assert doc |> LazyHTML.query("#detail-shelf-separator + #similares") |> Enum.count() == 1
+    end
+
+    test "the separator renders on the loading (disconnected) pass too, ahead of the skeleton shelf",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Base Loading Boundary", weight_band: "nivel_experto"})
+
+      conn = get(conn, ~p"/juegos/#{game.id}")
+      html = html_response(conn, 200)
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#detail-shelf-separator + #similares-skeleton") |> Enum.count() ==
+               1
+    end
+
+    test "the shelf's own title, badge, and subtitle still render unchanged with the boundary in place",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Base Boundary Shelf", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Other Band Boundary", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      assert html =~ "Ampliado"
+      assert html =~ "Otras opciones que te van a encantar"
+    end
+  end
+
   describe "detail page mobile chrome and interaction (SHELL-03)" do
     test "the CTA bar, title-echo bar, and title block all render with their ids", %{conn: conn} do
       game = game_fixture()
