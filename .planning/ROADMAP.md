@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 17/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
+**Plans:** 18/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -266,7 +266,7 @@ Plans:
 
 **Wave 14 — gap closure round 3** *(from the third detail-page UAT round: G-01.2-13, G-01.2-14, G-01.2-15, G-01.2-16, all diagnosed. Every plan below edits `assets/css/app.css`, so the round runs strictly sequentially — one wave per plan, not for dependency reasons but because a shared stylesheet cannot be edited in parallel worktrees)*
 
-- [ ] 01.2-23-PLAN.md — G-01.2-13: mobile masthead cohesion — the dot row compacted to a real indicator while keeping a usable tap target, and the facts pills moved inside the poster panel so the pills, the photo and the dots become one card with one edge
+- [x] 01.2-23-PLAN.md — G-01.2-13: mobile masthead cohesion — the dot row compacted to a real indicator while keeping a usable tap target, and the facts pills moved inside the poster panel so the pills, the photo and the dots become one card with one edge
 
 **Wave 15 — gap closure round 3** *(blocked on Wave 14 — same stylesheet)*
 
