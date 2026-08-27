@@ -2923,19 +2923,49 @@ body.pk-cta-parked {
    reads, not a second value that merely happens to match it — see that
    token's own comment for why it must never be a text-color token. Reuses
    .pk-portal's exact shadow values rather than declaring a second set of
-   matching numbers. */
+   matching numbers.
+
+   G-01.2-21 task 2: this element is now ALWAYS rendered (its markup no
+   longer carries a Phoenix `:if`) — state lives in the `is-open` class, not
+   in whether the element exists, so display can no longer gate visibility
+   (display cannot be transitioned; that's the whole reason the old
+   instant display:none/flex toggle snapped instead of fading). `display:
+   flex` moves to this base rule permanently. Closed state is
+   opacity/visibility/pointer-events instead. `visibility` is a DISCRETE
+   property — per spec it flips at the point its own easing curve's output
+   crosses 50%, not at a literal duration/delay — so giving it double
+   opacity's duration (`calc(var(--duration-base) * 2)`) makes that 50%
+   crossing land at approximately the same wall-clock moment opacity
+   finishes fading to 0, holding the box "visible" (in the
+   accessibility-tree sense) for effectively the whole fade without a
+   literal delay value. This project's own motion_rhythm_test.exs bans a
+   literal duration/delay AND the `step-*`/`linear` keywords the more usual
+   version of this technique reaches for — `calc()` on the existing tokens
+   is the one construct available that stays inside both that gate and the
+   two-curve system. Opening (adding .is-open) recascades to a SHORTER
+   transition list that omits visibility entirely, so visibility flips back
+   to `visible` immediately when the class is added — the fade-in is
+   visible from its very first frame. */
 .pk-lightbox {
-  display: none;
+  display: flex;
   position: fixed;
   inset: 0;
   z-index: 700;
   align-items: center;
   justify-content: center;
   background: var(--pk-overlay-scrim);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out-soft),
+    visibility calc(var(--duration-base) * 2) var(--ease-standard);
 }
 
 .pk-lightbox.is-open {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity var(--duration-base) var(--ease-out-soft);
 }
 
 .pk-lightbox-img {
@@ -2944,6 +2974,17 @@ body.pk-cta-parked {
   object-fit: contain;
   border-radius: var(--radius-box);
   box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
+  /* Scale-in pairs with the container's own fade above, on the same
+     tokens — no wrapper element added. The sketch's own markup needed a
+     wrapper because its close button was anchored to the image's corner;
+     this app's close button is positioned against the viewport (see
+     .pk-lightbox-close below), so a wrapper here would carry no job. */
+  transform: scale(0.96);
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-lightbox.is-open .pk-lightbox-img {
+  transform: scale(1);
 }
 
 .pk-lightbox-close {
