@@ -332,6 +332,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
                     <button
                       :if={@selected_image}
+                      id="detail-lightbox-trigger"
                       type="button"
                       phx-click="open-lightbox"
                       aria-label="Ampliar imagen del juego"
@@ -574,24 +575,55 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           </div>
         </div>
 
+        <%!-- G-01.2-21 task 2: always rendered now (no `:if`) — state lives in
+        the `is-open` class + aria-hidden, not in whether this element
+        exists, which is what lets the open/close transition below actually
+        transition (there is no closed DOM state to fade from/to on a
+        conditionally-rendered element). The image itself keeps its own
+        `:if` so a game with no selected image renders an empty, hidden
+        container rather than an <img> with no src. --%>
         <div
-          :if={@lightbox_open}
           id="detail-lightbox"
-          class="pk-lightbox is-open"
+          class={["pk-lightbox", @lightbox_open && "is-open"]}
           role="dialog"
           aria-modal="true"
           aria-label="Imágenes del juego"
+          aria-hidden={to_string(!@lightbox_open)}
           phx-hook=".Lightbox"
         >
           <script :type={Phoenix.LiveView.ColocatedHook} name=".Lightbox">
             export default {
               mounted() {
-                this.closeBtn = this.el.querySelector("[data-lightbox-close]")
-                this.closeBtn?.focus()
+                // The element is always present now, so mount only ever
+                // observes the closed state (lightbox_open defaults false
+                // before first mount) — this deliberately does NOT focus
+                // anything on mount, which would otherwise steal focus on
+                // every page load.
+                this.wasOpen = false
+                this.syncFocusOnOpenChange()
 
                 this.onKeydown = (e) => {
+                  // Inert-while-closed guard: a stray key event (this
+                  // listener lives on an element that is always in the DOM)
+                  // must never act on a hidden overlay.
+                  if (!this.el.classList.contains("is-open")) return
+
                   if (e.key === "Escape") {
                     this.pushEvent("close-lightbox", {})
+                    return
+                  }
+                  // Arrow keys click the SAME chevron buttons the pointer
+                  // already uses — no url is computed here and no event is
+                  // pushed, so the keyboard route goes through the exact
+                  // same select-image handler and membership whitelist as
+                  // the buttons (T-01.2-21-01), never a second selection
+                  // path.
+                  if (e.key === "ArrowLeft") {
+                    this.el.querySelector("[data-lightbox-prev]")?.click()
+                    return
+                  }
+                  if (e.key === "ArrowRight") {
+                    this.el.querySelector("[data-lightbox-next]")?.click()
                     return
                   }
                   if (e.key !== "Tab") return
@@ -611,6 +643,22 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 }
                 this.el.addEventListener("keydown", this.onKeydown)
               },
+              updated() {
+                this.syncFocusOnOpenChange()
+              },
+              // Single routine driving focus off a state TRANSITION (not
+              // the current state alone), called from both mounted() and
+              // updated() so it never runs twice for the same transition
+              // and never runs on an unrelated re-render.
+              syncFocusOnOpenChange() {
+                const isOpen = this.el.classList.contains("is-open")
+                if (isOpen && !this.wasOpen) {
+                  this.el.querySelector("[data-lightbox-close]")?.focus()
+                } else if (!isOpen && this.wasOpen) {
+                  document.getElementById("detail-lightbox-trigger")?.focus()
+                }
+                this.wasOpen = isOpen
+              },
               destroyed() {
                 this.el.removeEventListener("keydown", this.onKeydown)
               }
@@ -625,9 +673,23 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           >
             <.icon name="hero-x-mark" class="size-5" />
           </button>
+          <%!-- Arrow-anchoring decision (G-01.2-21, sketch 033's open
+          question): kept viewport-edge anchoring (left-4/right-4) at every
+          width rather than switching to image-relative anchoring at
+          desktop. Reasons: (1) needs no new wrapper element sized to the
+          image; (2) keeps the 44px touch targets clear of the photo's own
+          tap area at phone widths; (3) this exact placement is already
+          UAT-exposed with no complaint recorded. Tradeoff, recorded
+          honestly rather than hidden: at wide desktop windows with the
+          image capped narrower than the viewport, the chevrons can sit
+          across a lot of empty scrim from the photo — if the human check
+          below reads that as accidental rather than deliberate, that is a
+          follow-up gap with a designed answer, not a silent change made
+          here. --%>
           <button
             :if={length(gallery_thumbnails(@game)) > 1}
             type="button"
+            data-lightbox-prev
             phx-click="select-image"
             phx-value-url={lightbox_neighbor(@game, @selected_image, -1)}
             aria-label="Imagen anterior"
@@ -635,10 +697,16 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           >
             <.icon name="hero-chevron-left" class="size-5" />
           </button>
-          <img src={@selected_image} alt={@game.name} class="pk-lightbox-img" />
+          <img
+            :if={@selected_image}
+            src={@selected_image}
+            alt={@game.name}
+            class="pk-lightbox-img"
+          />
           <button
             :if={length(gallery_thumbnails(@game)) > 1}
             type="button"
+            data-lightbox-next
             phx-click="select-image"
             phx-value-url={lightbox_neighbor(@game, @selected_image, 1)}
             aria-label="Imagen siguiente"

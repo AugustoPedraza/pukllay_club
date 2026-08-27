@@ -252,6 +252,20 @@
      below for a theme-token example of the same pattern). */
   --pk-shadow-color: rgb(20 8 34);
 
+  /* Overlay scrim (Phase 01.2 gap-closure round 2, sketch 033 winner A,
+     G-01.2-11): the backdrop behind EVERY full-screen overlay on this page
+     reads this one declaration. It must never be built from a semantic
+     TEXT-color token — the value it replaced mixed in the app's TEXT color
+     (base-content), which is near-black in light theme (reads as a normal
+     dimming scrim) and near-white in dark theme (a pale veil laid over an
+     already-dark page — the opposite of what a scrim is for). Derived from
+     --pk-shadow-color above (the same fixed dark value every other floating
+     surface's shadow already uses so it never inverts) rather than a new
+     literal. This token currently has exactly two readers: .pk-lightbox and
+     .pk-sheet-backdrop — so those two can never drift to two independently
+     written scrim values again. */
+  --pk-overlay-scrim: color-mix(in srgb, var(--pk-shadow-color) 72%, transparent);
+
   /* Motion system (sketch 006, variant D — Subtle/Soft): the fastest of the
      three tested options, paired with a no-overshoot soft ease-out. New
      rules added from this phase forward must reference these tokens rather
@@ -647,7 +661,10 @@
 .pk-sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--color-base-content) 55%, transparent);
+  /* Reads --pk-overlay-scrim (declared once, above the theme-token block) —
+     do not write this value independently again; see that declaration's
+     comment for why a text-color token is never the right source. */
+  background: var(--pk-overlay-scrim);
   z-index: 600;
   opacity: 0;
   pointer-events: none;
@@ -2901,21 +2918,54 @@ body.pk-cta-parked {
    client-side carouselIndex, so "gallery and lightbox share one
    selection" is structural, not something two listeners keep in sync
    (T-01.1-16 — its previous/next controls reuse the existing
-   select-image whitelist unchanged). Reuses .pk-sheet-backdrop's exact
-   background value and .pk-portal's exact shadow values rather than
-   declaring a second set of matching numbers. */
+   select-image whitelist unchanged). Reads --pk-overlay-scrim (Phase 01.2
+   gap-closure round 2, G-01.2-11): the SAME declaration .pk-sheet-backdrop
+   reads, not a second value that merely happens to match it — see that
+   token's own comment for why it must never be a text-color token. Reuses
+   .pk-portal's exact shadow values rather than declaring a second set of
+   matching numbers.
+
+   G-01.2-21 task 2: this element is now ALWAYS rendered (its markup no
+   longer carries a Phoenix `:if`) — state lives in the `is-open` class, not
+   in whether the element exists, so display can no longer gate visibility
+   (display cannot be transitioned; that's the whole reason the old
+   instant display:none/flex toggle snapped instead of fading). `display:
+   flex` moves to this base rule permanently. Closed state is
+   opacity/visibility/pointer-events instead. `visibility` is a DISCRETE
+   property — per spec it flips at the point its own easing curve's output
+   crosses 50%, not at a literal duration/delay — so giving it double
+   opacity's duration (`calc(var(--duration-base) * 2)`) makes that 50%
+   crossing land at approximately the same wall-clock moment opacity
+   finishes fading to 0, holding the box "visible" (in the
+   accessibility-tree sense) for effectively the whole fade without a
+   literal delay value. This project's own motion_rhythm_test.exs bans a
+   literal duration/delay AND the `step-*`/`linear` keywords the more usual
+   version of this technique reaches for — `calc()` on the existing tokens
+   is the one construct available that stays inside both that gate and the
+   two-curve system. Opening (adding .is-open) recascades to a SHORTER
+   transition list that omits visibility entirely, so visibility flips back
+   to `visible` immediately when the class is added — the fade-in is
+   visible from its very first frame. */
 .pk-lightbox {
-  display: none;
+  display: flex;
   position: fixed;
   inset: 0;
   z-index: 700;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--color-base-content) 55%, transparent);
+  background: var(--pk-overlay-scrim);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out-soft),
+    visibility calc(var(--duration-base) * 2) var(--ease-standard);
 }
 
 .pk-lightbox.is-open {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity var(--duration-base) var(--ease-out-soft);
 }
 
 .pk-lightbox-img {
@@ -2924,6 +2974,17 @@ body.pk-cta-parked {
   object-fit: contain;
   border-radius: var(--radius-box);
   box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
+  /* Scale-in pairs with the container's own fade above, on the same
+     tokens — no wrapper element added. The sketch's own markup needed a
+     wrapper because its close button was anchored to the image's corner;
+     this app's close button is positioned against the viewport (see
+     .pk-lightbox-close below), so a wrapper here would carry no job. */
+  transform: scale(0.96);
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-lightbox.is-open .pk-lightbox-img {
+  transform: scale(1);
 }
 
 .pk-lightbox-close {

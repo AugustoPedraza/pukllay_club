@@ -698,6 +698,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   end
 
   describe "detail page mobile chrome and interaction (SHELL-03)" do
+    # G-01.2-21 task 3: this describe pins the lightbox's SERVER-SIDE
+    # contract (its state class, its aria-hidden marking, and its guarded
+    # select-image path) with ExUnit. The other half of the contract —
+    # whether the open/close actually fades and scales, whether focus
+    # really moves between the trigger and the close button, and whether
+    # ArrowLeft/ArrowRight actually change the image — is all client-side
+    # (colocated hook JS) and is NOT exercised by these LiveView tests,
+    # which never run JavaScript. That half lives in this plan's own
+    # <human-check> blocks, harvested into 01.2-UAT.md at phase end. Naming
+    # that boundary here is deliberate: it is what stops a later reader from
+    # assuming this file already covers it.
     test "the CTA bar, title-echo bar, and title block all render with their ids", %{conn: conn} do
       game = game_fixture()
 
@@ -752,7 +763,12 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ ~r/\son[a-z]+=/
     end
 
-    test "the lightbox opens on the currently selected image and stays in sync with select-image",
+    # G-01.2-21 task 2: the lightbox is now always rendered (state lives in
+    # the is-open class + aria-hidden, not in whether the element exists —
+    # see app.css's own comment on why display can no longer gate this), so
+    # this test asserts on the CLASS and aria-hidden marking rather than on
+    # the element's presence/absence.
+    test "the lightbox is inert on first render (present, no open class, aria-hidden), opens via its is-open class, and stays in sync with select-image",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -761,10 +777,27 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         })
 
       {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
-      refute html =~ "pk-lightbox"
+
+      lightbox_state = fn html ->
+        doc = LazyHTML.from_document(html)
+
+        {
+          doc |> LazyHTML.query("#detail-lightbox") |> LazyHTML.attribute("class") |> List.first(),
+          doc
+          |> LazyHTML.query("#detail-lightbox")
+          |> LazyHTML.attribute("aria-hidden")
+          |> List.first()
+        }
+      end
+
+      {class1, hidden1} = lightbox_state.(html)
+      refute class1 =~ "is-open"
+      assert hidden1 == "true"
 
       html2 = render_click(view, "open-lightbox", %{})
-      assert html2 =~ "pk-lightbox"
+      {class2, hidden2} = lightbox_state.(html2)
+      assert class2 =~ "is-open"
+      assert hidden2 == "false"
       assert html2 =~ ~s(aria-modal="true")
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
 
@@ -776,7 +809,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html3 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
 
       html4 = render_click(view, "close-lightbox", %{})
-      refute html4 =~ "pk-lightbox"
+      {class4, hidden4} = lightbox_state.(html4)
+      refute class4 =~ "is-open"
+      assert hidden4 == "true"
     end
 
     test "the select-image whitelist guard still rejects a foreign url while the lightbox is open",
@@ -794,6 +829,86 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       refute html2 =~ "evil.example.com"
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
+    end
+
+    test "the lightbox chevrons carry the keyboard handler's stable hooks and wrap at both ends of the gallery",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: [
+            "https://images.test.invalid/games/1/gallery-1.webp",
+            "https://images.test.invalid/games/1/gallery-2.webp"
+          ]
+        })
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      neighbor_urls = fn html ->
+        doc = LazyHTML.from_document(html)
+
+        {
+          doc
+          |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]")
+          |> LazyHTML.attribute("phx-value-url")
+          |> List.first(),
+          doc
+          |> LazyHTML.query("#detail-lightbox [data-lightbox-next]")
+          |> LazyHTML.attribute("phx-value-url")
+          |> List.first()
+        }
+      end
+
+      # cover_url is first in gallery_thumbnails/1's list (the START end),
+      # so its previous neighbor wraps AROUND to the last gallery image and
+      # its next neighbor is the first gallery image — unchanged targets,
+      # only the new data-lightbox-prev/next hooks are added.
+      {prev_url, next_url} = neighbor_urls.(html)
+      assert prev_url == "https://images.test.invalid/games/1/gallery-2.webp"
+      assert next_url == "https://images.test.invalid/games/1/gallery-1.webp"
+
+      # Selecting the LAST image (the other END) and re-reading the chevron
+      # targets confirms the wrap holds at both ends, not just the one the
+      # page mounts on.
+      html2 =
+        render_click(view, "select-image", %{
+          "url" => "https://images.test.invalid/games/1/gallery-2.webp"
+        })
+
+      {prev_url2, next_url2} = neighbor_urls.(html2)
+      assert prev_url2 == "https://images.test.invalid/games/1/gallery-1.webp"
+      assert next_url2 == "https://images.test.invalid/games/1/cover.webp"
+    end
+
+    test "the poster button that opens the lightbox carries the stable id the hook focuses on close",
+         %{conn: conn} do
+      game = game_fixture(%{cover_url: "https://images.test.invalid/games/1/cover.webp"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ ~s(id="detail-lightbox-trigger")
+    end
+
+    test "a game with exactly one gallery image renders no chevrons, and a game with none renders the lightbox with no image inside",
+         %{conn: conn} do
+      one_image_game =
+        game_fixture(%{cover_url: "https://images.test.invalid/games/1/cover.webp"})
+
+      {:ok, _view, html_one} = live(conn, ~p"/juegos/#{one_image_game.id}")
+
+      doc_one = LazyHTML.from_document(html_one)
+      assert doc_one |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]") |> Enum.count() == 0
+      assert doc_one |> LazyHTML.query("#detail-lightbox [data-lightbox-next]") |> Enum.count() == 0
+
+      no_image_game = game_fixture(%{cover_url: nil, gallery_urls: []})
+
+      {:ok, _view, html_none} = live(conn, ~p"/juegos/#{no_image_game.id}")
+
+      doc_none = LazyHTML.from_document(html_none)
+      assert doc_none |> LazyHTML.query("#detail-lightbox") |> Enum.count() == 1
+      assert doc_none |> LazyHTML.query("#detail-lightbox .pk-lightbox-img") |> Enum.count() == 0
+      assert doc_none |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]") |> Enum.count() == 0
+      assert doc_none |> LazyHTML.query("#detail-lightbox [data-lightbox-next]") |> Enum.count() == 0
     end
 
     # G-01.2-18 task 2: the mobile CTA bar's own copy of this control was
