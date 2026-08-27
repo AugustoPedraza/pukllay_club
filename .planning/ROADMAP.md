@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 19/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
+**Plans:** 20/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -274,7 +274,7 @@ Plans:
 
 **Wave 16 — gap closure round 3** *(blocked on Wave 15 — same stylesheet)*
 
-- [ ] 01.2-25-PLAN.md — G-01.2-16: the lightbox photo takes the shell's own content width, both chevrons get an explicit stacking order, and the lightbox gains its own selection so navigating it never moves the gallery underneath
+- [x] 01.2-25-PLAN.md — G-01.2-16: the lightbox photo takes the shell's own content width, both chevrons get an explicit stacking order, and the lightbox gains its own selection so navigating it never moves the gallery underneath
 
 **Wave 17 — gap closure round 3** *(blocked on Wave 16 — same stylesheet)*
 
