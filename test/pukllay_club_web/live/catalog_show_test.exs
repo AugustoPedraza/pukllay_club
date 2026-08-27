@@ -1088,6 +1088,73 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  describe "one control in the mobile CTA bar (G-01.2-18 task 2)" do
+    test "the fixed bottom bar contains exactly one interactive control, and it is the reserve button",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      controls =
+        doc
+        |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner button, #detail-cta-bar .pk-cta-bar-inner a")
+
+      assert Enum.count(controls) == 1
+
+      assert doc
+             |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner button[phx-click='open-reservation']")
+             |> Enum.count() == 1
+    end
+
+    test "the page still renders exactly one share control, and it is inside the poster frame",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-share-trigger") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-frame .pk-share-trigger") |> Enum.count() == 1
+      refute html =~ "detail-share-ctabar"
+    end
+
+    test "the bar's reserve button still carries the full-width and touch-floor classes it carries today",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      reserve_button_class =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#detail-cta-bar button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert reserve_button_class =~ "w-full"
+      assert reserve_button_class =~ "min-h-11"
+    end
+
+    test "the shared share-control component renders its accessible name unconditionally now that only one shape remains",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      aria_label =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-share-trigger")
+        |> LazyHTML.attribute("aria-label")
+        |> List.first()
+
+      assert aria_label not in [nil, ""]
+    end
+  end
+
   describe "reservation flow (SHELL-03, T-01.1-02)" do
     test "the buy-box trigger opens the reservation modal", %{conn: conn} do
       game = game_fixture()
