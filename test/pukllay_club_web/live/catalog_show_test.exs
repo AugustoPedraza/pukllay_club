@@ -843,22 +843,28 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute poster_html =~ "aspect-video"
     end
 
-    test "the poster column no longer carries the fill-only utility string (elevated-shadow panel now lives in app.css, G-01.2-5/G-01.2-6)",
+    # The elevated-shadow panel treatment (fill/border/shadow, G-01.2-5/
+    # G-01.2-6, sketch 027) moved off .pk-poster-col and onto the new
+    # .pk-poster-panel element (G-01.2-19 task 1) — this assertion follows
+    # the treatment to its new home rather than being dropped, since the
+    # decision it protects (no inline utility duplicating the CSS-declared
+    # panel look) is still in force, just on a different element.
+    test "the poster panel does not carry the fill-only utility string (elevated-shadow panel lives in app.css, G-01.2-5/G-01.2-6)",
          %{conn: conn} do
       game = game_fixture()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      poster_col_class =
+      poster_panel_class =
         html
         |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-poster-col")
+        |> LazyHTML.query(".pk-poster-panel")
         |> LazyHTML.attribute("class")
         |> List.first()
 
-      refute poster_col_class =~ "bg-base-200"
-      refute poster_col_class =~ "rounded-box"
-      refute poster_col_class =~ "p-4"
+      refute poster_panel_class =~ "bg-base-200"
+      refute poster_panel_class =~ "rounded-box"
+      refute poster_panel_class =~ "p-4"
     end
 
     test "the reserve CTA carries the large size step and full width, and the share control is absolutely positioned rather than a row sibling",
@@ -975,7 +981,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
-  describe "masthead restructure — facts row above panel, CTA detached, dots centered (G-01.2-19)" do
+  describe "G-01.2-11/G-01.2-12 masthead contract (facts row, panel, CTA, dots, shell width)" do
     test "facts_row renders exactly once, as a direct child of the poster column, immediately followed by the poster panel",
          %{conn: conn} do
       game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
@@ -1039,9 +1045,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
              |> Enum.count() == 0
 
       assert doc
-             |> LazyHTML.query(
-               ".pk-poster-panel + button[phx-click='open-reservation'].pk-poster-reserve"
-             )
+             |> LazyHTML.query(".pk-poster-panel + button[phx-click='open-reservation'].pk-poster-reserve")
              |> Enum.count() == 1
     end
 
@@ -1141,6 +1145,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # inside the panel.
       assert doc |> LazyHTML.query(".pk-poster-panel .pk-poster-frame .pk-card-poster") |> Enum.count() ==
                1
+
       assert html =~ "hero-puzzle-piece"
 
       # The single facts row still renders unconditionally.
@@ -1149,9 +1154,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "gallery-thumbnails"
       refute html =~ "gallery-dots"
     end
-  end
 
-  describe "detail page shares the shell's own width (G-01.2-19 task 2)" do
+    # Task 2's ask: the three wrappers that used to carry an inner width
+    # cap (--pk-detail-col-width) now carry only the shell recipe the
+    # header/footer already use — one assertion per wrapper, named so a
+    # regression re-capping any one of them fails a test that names it.
     test "the masthead wrapper, the shelf-separator wrapper and the CTA bar's outer wrapper all carry the same shell recipe classes",
          %{conn: conn} do
       game = game_fixture(%{weight_band: "nivel_experto"})
@@ -1180,6 +1187,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert cta_bar_outer_wrap_class == shell_recipe
     end
 
+    # The removed separator-only width-cap class appears nowhere in the
+    # rendered page — asserted structurally (an exact class-list match on
+    # the divider itself) rather than by grepping for the retired class's
+    # own literal name, which this file must not reintroduce even in a
+    # test string.
     test "the shelf-separator divider carries only its shared divider classes, no separate width-cap class",
          %{conn: conn} do
       game = game_fixture(%{weight_band: "nivel_experto"})
