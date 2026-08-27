@@ -62,6 +62,12 @@ defmodule PukllayClubWeb.GameChips do
   `<.link navigate={...}>`; the overflow `+N` chip never links (it names no
   single term). `nil` (the default) renders every existing caller
   byte-identically to before this attr existed.
+
+  The wrapper carries a new scoping class (G-01.2-20), enabling a
+  border+fill CSS rule that gives these chips real contrast against the
+  page — see that rule's own comment in `app.css`. `editorial_tags/1`
+  deliberately does NOT carry this class, so the hashtag chips keep their
+  existing accent treatment untouched.
   """
   attr :terms, :list, required: true
   attr :limit, :integer, default: 4
@@ -77,7 +83,7 @@ defmodule PukllayClubWeb.GameChips do
       |> assign(:overflow, overflow)
 
     ~H"""
-    <div :if={@terms != []} class="flex flex-wrap gap-1">
+    <div :if={@terms != []} class="pk-chip-row flex flex-wrap gap-2">
       <%= for term <- @visible do %>
         <.link :if={@href_fun} navigate={@href_fun.(term)} class="badge badge-sm">{term}</.link>
         <span :if={!@href_fun} class="badge badge-sm">{term}</span>

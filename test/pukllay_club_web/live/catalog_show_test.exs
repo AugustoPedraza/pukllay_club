@@ -6,6 +6,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
   alias PukllayClub.Catalog.Reservation
   alias PukllayClubWeb.CarouselRow
+  alias PukllayClubWeb.GameChips
 
   describe "GET /juegos/:id" do
     test "returns 200 for an unauthenticated visitor and renders the full title (CATALOG-08)", %{
@@ -1233,6 +1234,82 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         |> List.first()
 
       assert separator_class == "divider pk-divider"
+    end
+  end
+
+  describe "Mecánicas/Temáticas chip contrast fix (G-01.2-20 task 2)" do
+    test "the mechanic and theme chip rows' wrapper carries the pk-chip-row scoping class",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("div.pk-chip-row") |> Enum.count() == 2
+    end
+
+    test "the editorial hashtag row does NOT carry pk-chip-row — the two rows stay separately styled",
+         %{conn: conn} do
+      game = game_fixture(%{tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # The hashtag chip renders (proves the row is present at all)...
+      assert doc |> LazyHTML.query(".badge-accent") |> Enum.count() == 1
+
+      # ...but never as a descendant of a pk-chip-row wrapper.
+      assert doc |> LazyHTML.query("div.pk-chip-row .badge-accent") |> Enum.count() == 0
+    end
+
+    test "linked chips, unlinked chips, and the overflow chip all render inside the scoped wrapper",
+         %{conn: conn} do
+      # The detail page's own call sites always pass href_fun (linked-chip
+      # shape only, real-world call sites have far fewer than the 99-limit
+      # so overflow never fires there) — exercise chip_row/1's other two
+      # shapes (unlinked span, overflow +N) directly via render_component,
+      # the same component-testing idiom this codebase already uses
+      # elsewhere, without touching game_chips_test.exs (out of scope for
+      # this plan).
+      linked_html =
+        render_component(&GameChips.chip_row/1,
+          terms: ["Tira dados"],
+          limit: 4,
+          href_fun: fn term -> "/?mechanics=#{term}" end
+        )
+
+      unlinked_html = render_component(&GameChips.chip_row/1, terms: ["Tira dados"], limit: 4)
+
+      overflow_html =
+        render_component(&GameChips.chip_row/1, terms: for(n <- 1..5, do: "Termino #{n}"), limit: 2)
+
+      # All three shapes render inside chip_row/1's single wrapper div,
+      # which carries pk-chip-row unconditionally.
+      assert linked_html =~ "pk-chip-row"
+      assert linked_html =~ ~r/<a[^>]*class="badge badge-sm"[^>]*>\s*Tira dados/
+
+      assert unlinked_html =~ "pk-chip-row"
+      assert unlinked_html =~ ~s(<span class="badge badge-sm">Tira dados</span>)
+
+      assert overflow_html =~ "pk-chip-row"
+      assert overflow_html =~ ~s(<span class="badge badge-sm">+3</span>)
+
+      # Sanity check on the live page: the mechanic chip's real call site
+      # (href_fun always passed) does render the linked shape inside the
+      # scoped wrapper.
+      game = game_fixture(%{mechanics: ["Dice Rolling"]})
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query("div.pk-chip-row a.badge[href*='mechanics=']")
+             |> Enum.count() == 1
     end
   end
 
