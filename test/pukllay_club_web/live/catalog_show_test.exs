@@ -770,6 +770,28 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute class =~ "is-parked"
     end
 
+    # G-01.2-24 task 1: the bar's title <span> gets a real class so it can
+    # be styled directly (min-width: 0 + no-wrap + ellipsis, declared in
+    # app.css) — a game name too long to fit alongside the fixed 44px
+    # scroll-to-top button must clip on one line instead of wrapping to a
+    # second one. This test pins the class exists on the span; the visual
+    # truncation itself is CSS and routed to the phase's own human-check.
+    test "the title-echo bar's title span carries pk-title-echo-name", %{conn: conn} do
+      game = game_fixture(%{name: "Through the Ages: A New Story of Civilization"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      span_html =
+        doc
+        |> LazyHTML.query("#detail-title-echo span")
+        |> LazyHTML.to_html()
+
+      assert span_html =~ ~s(class="pk-title-echo-name")
+      assert span_html =~ "Through the Ages: A New Story of Civilization"
+    end
+
     test "the CTA bar's button and the buy-box button share the same phx-click and label", %{
       conn: conn
     } do
@@ -2150,6 +2172,43 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "`min-h-11` HEIGHT floor. The dot is the phone's ONLY image switcher " <>
                "(the thumbnail strip is desktop-only); shrinking its tap height would make " <>
                "it unreachable."
+    end
+  end
+
+  # G-01.2-24 task 1: source-level CSS fact for this gap-closure round — the
+  # 48rem detail-layout block hides the title-echo bar at desktop widths.
+  # Co-located here (matching the gallery-dot-hit-box describe above)
+  # rather than in layouts_test.exs since this is specific to this page's
+  # own CSS, not shared-shell CSS.
+  describe "title-echo desktop hide (Phase 01.2 gap-closure round 4, G-01.2-24 task 1)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    defp css_source, do: File.read!(@css_path)
+
+    # Matches the single top-level `@media (min-width: 48rem) { ... }`
+    # block. The block's own closing brace is un-indented (column 0); every
+    # nested rule's closing brace inside it is indented — so a non-greedy
+    # match up to the first `\n}` finds exactly the block's own end, never
+    # a nested rule's end, regardless of how many rules live inside it.
+    defp detail_layout_breakpoint_block do
+      case Regex.run(~r/^@media \(min-width: 48rem\) \{(.*?)\n\}/ms, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `@media (min-width: 48rem) { ... }` block found in app.css")
+      end
+    end
+
+    test "the 48rem detail-layout block hides the title-echo bar, beside the mobile CTA bar's own hide" do
+      block = detail_layout_breakpoint_block()
+
+      assert block =~ ~r/\.pk-title-echo\s*\{\s*display:\s*none;\s*\}/,
+             "The single 48rem detail-layout block (the same one that already hides " <>
+               ".pk-mobile-cta-bar) must also hide .pk-title-echo — this is G-01.2-14's " <>
+               "confirmed desktop-leak defect: the condensed title bar must never render " <>
+               "at or above the detail breakpoint."
+
+      assert block =~ ~r/\.pk-mobile-cta-bar\s*\{\s*display:\s*none;\s*\}/,
+             "Sanity check: the mobile CTA bar's own pre-existing hide must still be present " <>
+               "in the same block — the two phone-only bars are hidden in exactly one place."
     end
   end
 end

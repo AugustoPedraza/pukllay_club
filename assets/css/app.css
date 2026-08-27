@@ -2949,6 +2949,34 @@ body.pk-cta-parked {
   pointer-events: none;
 }
 
+/* Title-echo name truncation (Phase 01.2 gap-closure round 4, G-01.2-24
+   task 1). The bar's title <span> gets a real class, named for the element
+   it is, in the same pk- family as its parent, declared once here directly
+   below the bar's own rules. Four properties are required TOGETHER for a
+   flex item to truncate rather than wrap: a zero minimum width (a flex
+   item's default min-width is its own content, which is exactly what turns
+   "too narrow" into "second line" instead of "clipped"), no wrapping,
+   hidden overflow, and an ellipsis. The bar's OTHER flex item,
+   .pk-scroll-top below, is a fixed 2.75rem square with `flex: 0 0 auto`, so
+   every pixel the bar is short lands on this span — without `min-width: 0`
+   the span cannot shrink below its own content width and wraps to a second
+   line instead.
+
+   Measured fact (G-01.2-14 diagnosis, live CDP against the running dev
+   server, light theme): the bar's text and background measured at very
+   high contrast — rgb(36,18,56) text on rgb(255,255,255) background — so
+   the UAT-reported "don't have correct balance to contrast with
+   background... looks like text over two lines" complaint is the visual
+   crowding a two-line wrap produces inside a bar padded for one line, NOT
+   a colour-token defect. No colour on this bar changes here or anywhere
+   else in this fix. */
+.pk-title-echo-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .pk-scroll-top {
   display: inline-flex;
   align-items: center;
@@ -3138,6 +3166,25 @@ body.pk-cta-parked {
   }
 
   .pk-mobile-cta-bar {
+    display: none;
+  }
+
+  /* Title-echo bar desktop hide (Phase 01.2 gap-closure round 4, G-01.2-14/
+     G-01.2-24 task 1): placed immediately beside the mobile CTA bar's own
+     `display: none` above so the two phone-only bars are hidden in exactly
+     one place and can never drift apart again. The bar is a phone
+     affordance that echoes a title which, at and above this breakpoint, is
+     still on screen beside the sticky poster column (.pk-poster-col
+     above) — its paired sibling already got this treatment, this one was
+     simply never added when the bar was introduced.
+
+     This is a VIEWPORT-CLASS hide, not a runtime state change: at desktop
+     the bar never appears, so there is nothing to fade. The base rule's
+     opacity/transform fade and its two state classes (.is-visible/
+     .is-parked, both above) are untouched — they remain the only mechanism
+     that shows or hides the bar while a visitor scrolls BELOW this
+     breakpoint, where the bar's runtime state machine still needs them. */
+  .pk-title-echo {
     display: none;
   }
 
