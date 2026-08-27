@@ -698,6 +698,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   end
 
   describe "detail page mobile chrome and interaction (SHELL-03)" do
+    # G-01.2-21 task 3: this describe pins the lightbox's SERVER-SIDE
+    # contract (its state class, its aria-hidden marking, and its guarded
+    # select-image path) with ExUnit. The other half of the contract —
+    # whether the open/close actually fades and scales, whether focus
+    # really moves between the trigger and the close button, and whether
+    # ArrowLeft/ArrowRight actually change the image — is all client-side
+    # (colocated hook JS) and is NOT exercised by these LiveView tests,
+    # which never run JavaScript. That half lives in this plan's own
+    # <human-check> blocks, harvested into 01.2-UAT.md at phase end. Naming
+    # that boundary here is deliberate: it is what stops a later reader from
+    # assuming this file already covers it.
     test "the CTA bar, title-echo bar, and title block all render with their ids", %{conn: conn} do
       game = game_fixture()
 
@@ -820,7 +831,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
     end
 
-    test "the lightbox chevrons carry the keyboard handler's stable hooks and unchanged neighbor targets",
+    test "the lightbox chevrons carry the keyboard handler's stable hooks and wrap at both ends of the gallery",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -831,28 +842,42 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           ]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      doc = LazyHTML.from_document(html)
+      neighbor_urls = fn html ->
+        doc = LazyHTML.from_document(html)
 
-      prev_url =
-        doc
-        |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]")
-        |> LazyHTML.attribute("phx-value-url")
-        |> List.first()
+        {
+          doc
+          |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]")
+          |> LazyHTML.attribute("phx-value-url")
+          |> List.first(),
+          doc
+          |> LazyHTML.query("#detail-lightbox [data-lightbox-next]")
+          |> LazyHTML.attribute("phx-value-url")
+          |> List.first()
+        }
+      end
 
-      next_url =
-        doc
-        |> LazyHTML.query("#detail-lightbox [data-lightbox-next]")
-        |> LazyHTML.attribute("phx-value-url")
-        |> List.first()
-
-      # cover_url is first in gallery_thumbnails/1's list, so its previous
-      # neighbor wraps around to the last gallery image and its next
-      # neighbor is the first gallery image — unchanged targets, only the
-      # new data-lightbox-prev/next hooks are added.
+      # cover_url is first in gallery_thumbnails/1's list (the START end),
+      # so its previous neighbor wraps AROUND to the last gallery image and
+      # its next neighbor is the first gallery image — unchanged targets,
+      # only the new data-lightbox-prev/next hooks are added.
+      {prev_url, next_url} = neighbor_urls.(html)
       assert prev_url == "https://images.test.invalid/games/1/gallery-2.webp"
       assert next_url == "https://images.test.invalid/games/1/gallery-1.webp"
+
+      # Selecting the LAST image (the other END) and re-reading the chevron
+      # targets confirms the wrap holds at both ends, not just the one the
+      # page mounts on.
+      html2 =
+        render_click(view, "select-image", %{
+          "url" => "https://images.test.invalid/games/1/gallery-2.webp"
+        })
+
+      {prev_url2, next_url2} = neighbor_urls.(html2)
+      assert prev_url2 == "https://images.test.invalid/games/1/gallery-1.webp"
+      assert next_url2 == "https://images.test.invalid/games/1/cover.webp"
     end
 
     test "the poster button that opens the lightbox carries the stable id the hook focuses on close",
@@ -862,6 +887,28 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       assert html =~ ~s(id="detail-lightbox-trigger")
+    end
+
+    test "a game with exactly one gallery image renders no chevrons, and a game with none renders the lightbox with no image inside",
+         %{conn: conn} do
+      one_image_game =
+        game_fixture(%{cover_url: "https://images.test.invalid/games/1/cover.webp"})
+
+      {:ok, _view, html_one} = live(conn, ~p"/juegos/#{one_image_game.id}")
+
+      doc_one = LazyHTML.from_document(html_one)
+      assert doc_one |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]") |> Enum.count() == 0
+      assert doc_one |> LazyHTML.query("#detail-lightbox [data-lightbox-next]") |> Enum.count() == 0
+
+      no_image_game = game_fixture(%{cover_url: nil, gallery_urls: []})
+
+      {:ok, _view, html_none} = live(conn, ~p"/juegos/#{no_image_game.id}")
+
+      doc_none = LazyHTML.from_document(html_none)
+      assert doc_none |> LazyHTML.query("#detail-lightbox") |> Enum.count() == 1
+      assert doc_none |> LazyHTML.query("#detail-lightbox .pk-lightbox-img") |> Enum.count() == 0
+      assert doc_none |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]") |> Enum.count() == 0
+      assert doc_none |> LazyHTML.query("#detail-lightbox [data-lightbox-next]") |> Enum.count() == 0
     end
 
     # G-01.2-18 task 2: the mobile CTA bar's own copy of this control was
