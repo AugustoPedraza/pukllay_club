@@ -697,6 +697,26 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # G-01.2-22 task 3: co-located with this page's own test suite (rather
+  # than relying solely on layouts_test.exs's call-site assertions) — the
+  # detail page IS the one call site that opts into the boundary-collapse
+  # flag, so this file should say so directly.
+  describe "detail page boundary-collapse contract (G-01.2-22)" do
+    test "the detail page's <main> carries pk-boundary-collapse, not the shared default vertical padding",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      class = doc |> LazyHTML.query("main") |> LazyHTML.attribute("class") |> List.first()
+
+      assert class =~ "pk-boundary-collapse"
+      refute class =~ "pb-20"
+      refute class =~ "pt-8"
+    end
+  end
+
   describe "detail page mobile chrome and interaction (SHELL-03)" do
     # G-01.2-21 task 3: this describe pins the lightbox's SERVER-SIDE
     # contract (its state class, its aria-hidden marking, and its guarded
