@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 15/17 plans executed (5 original, 5 superseded, 8 gap closure executed, 4 gap-closure round 2 pending)
+**Plans:** 16/17 plans executed (5 original, 5 superseded, 8 gap closure executed, 4 gap-closure round 2 pending)
 
 Plans:
 **Wave 1**
@@ -258,7 +258,7 @@ Plans:
 
 **Wave 12 — gap closure round 2** *(blocked on Wave 11 completion — same files)*
 
-- [ ] 01.2-21-PLAN.md — G-01.2-11/12: sketch 033 lightbox — the inverting text-token scrim replaced by one shared fixed-dark declaration read by both full-screen overlays, a token-driven fade-and-scale open/close replacing the display switch, arrow-key navigation routed through the existing guarded buttons, and the arrow-anchoring question decided and recorded
+- [x] 01.2-21-PLAN.md — G-01.2-11/12: sketch 033 lightbox — the inverting text-token scrim replaced by one shared fixed-dark declaration read by both full-screen overlays, a token-driven fade-and-scale open/close replacing the display switch, arrow-key navigation routed through the existing guarded buttons, and the arrow-anchoring question decided and recorded
 
 **Wave 13 — gap closure round 2** *(blocked on Wave 12 completion — same files)*
 
