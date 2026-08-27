@@ -6,6 +6,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
   alias PukllayClub.Catalog.Reservation
   alias PukllayClubWeb.CarouselRow
+  alias PukllayClubWeb.GameChips
 
   describe "GET /juegos/:id" do
     test "returns 200 for an unauthenticated visitor and renders the full title (CATALOG-08)", %{
@@ -22,13 +23,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "Un título extraordinariamente largo que no debería truncarse en la página de detalle"
     end
 
-    test "renders the weight-band label AND its one-line descriptor", %{conn: conn} do
+    test "renders the weight-band label but no badge element and no descriptor sentence (G-01.2-20)",
+         %{conn: conn} do
       game = game_fixture(%{weight_band: "ingenio_estratega"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
+      doc = LazyHTML.from_document(html)
+
       assert html =~ "Ingenio estratega"
-      assert html =~ "Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante."
+      assert doc |> LazyHTML.query(".badge-secondary") |> Enum.count() == 0
+      refute html =~ "Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante."
+    end
+
+    test "exactly one link into the weight-band filter exists on the page, and it is the dificultad pill",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      matches = LazyHTML.query(doc, "a[href='/?weight_bands=ingenio_estratega']")
+      assert Enum.count(matches) == 1
+
+      link_class = matches |> LazyHTML.attribute("class") |> List.first()
+      assert link_class == "pk-fact"
     end
 
     test "renders the complete mechanic chip list with no overflow indicator", %{conn: conn} do
@@ -561,22 +581,28 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert doc |> LazyHTML.query(".pk-description + .divider") |> Enum.count() == 1
     end
 
-    test "the weight-band badge (D2 = kept) renders after the separator, not immediately after the title",
+    test "the hashtag row flows straight into the Mecánicas heading — ordered siblings, no element (the removed badge) between them (G-01.2-20)",
          %{conn: conn} do
-      game = game_fixture(%{weight_band: "ingenio_estratega", description: "Una crónica."})
+      game =
+        game_fixture(%{
+          weight_band: "ingenio_estratega",
+          description: "Una crónica.",
+          mechanics: ["Dice Rolling"],
+          tags: ["#CreaConexiones"]
+        })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
 
-      # After the separator: a badge-secondary element somewhere later in
-      # the document than .pk-divider.
-      assert doc |> LazyHTML.query(".pk-divider ~ a .badge-secondary") |> Enum.count() == 1
-
-      # Not immediately after the title — the description sits there
-      # instead (proven by the first test in this block); this is a
-      # negative structural check specific to the badge.
-      assert doc |> LazyHTML.query("#detail-title-block + a .badge-secondary") |> Enum.count() == 0
+      # Adjacent-sibling chain: the div immediately after .pk-divider (the
+      # editorial hashtag row) must itself be immediately followed by the
+      # Mecánicas heading. A re-added element between them (the former
+      # badge block) breaks the chain and this query returns 0 instead of
+      # 1 — even with a weight band present, which is the case that used
+      # to render the badge.
+      assert doc |> LazyHTML.query(".pk-divider + div + h2.pk-section-heading") |> Enum.count() ==
+               1
     end
 
     test "a game with publishers renders no publisher row in the spec list", %{conn: conn} do
@@ -1211,6 +1237,82 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  describe "Mecánicas/Temáticas chip contrast fix (G-01.2-20 task 2)" do
+    test "the mechanic and theme chip rows' wrapper carries the pk-chip-row scoping class",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("div.pk-chip-row") |> Enum.count() == 2
+    end
+
+    test "the editorial hashtag row does NOT carry pk-chip-row — the two rows stay separately styled",
+         %{conn: conn} do
+      game = game_fixture(%{tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # The hashtag chip renders (proves the row is present at all)...
+      assert doc |> LazyHTML.query(".badge-accent") |> Enum.count() == 1
+
+      # ...but never as a descendant of a pk-chip-row wrapper.
+      assert doc |> LazyHTML.query("div.pk-chip-row .badge-accent") |> Enum.count() == 0
+    end
+
+    test "linked chips, unlinked chips, and the overflow chip all render inside the scoped wrapper",
+         %{conn: conn} do
+      # The detail page's own call sites always pass href_fun (linked-chip
+      # shape only, real-world call sites have far fewer than the 99-limit
+      # so overflow never fires there) — exercise chip_row/1's other two
+      # shapes (unlinked span, overflow +N) directly via render_component,
+      # the same component-testing idiom this codebase already uses
+      # elsewhere, without touching game_chips_test.exs (out of scope for
+      # this plan).
+      linked_html =
+        render_component(&GameChips.chip_row/1,
+          terms: ["Tira dados"],
+          limit: 4,
+          href_fun: fn term -> "/?mechanics=#{term}" end
+        )
+
+      unlinked_html = render_component(&GameChips.chip_row/1, terms: ["Tira dados"], limit: 4)
+
+      overflow_html =
+        render_component(&GameChips.chip_row/1, terms: for(n <- 1..5, do: "Termino #{n}"), limit: 2)
+
+      # All three shapes render inside chip_row/1's single wrapper div,
+      # which carries pk-chip-row unconditionally.
+      assert linked_html =~ "pk-chip-row"
+      assert linked_html =~ ~r/<a[^>]*class="badge badge-sm"[^>]*>\s*Tira dados/
+
+      assert unlinked_html =~ "pk-chip-row"
+      assert unlinked_html =~ ~s(<span class="badge badge-sm">Tira dados</span>)
+
+      assert overflow_html =~ "pk-chip-row"
+      assert overflow_html =~ ~s(<span class="badge badge-sm">+3</span>)
+
+      # Sanity check on the live page: the mechanic chip's real call site
+      # (href_fun always passed) does render the linked shape inside the
+      # scoped wrapper.
+      game = game_fixture(%{mechanics: ["Dice Rolling"]})
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query("div.pk-chip-row a.badge[href*='mechanics=']")
+             |> Enum.count() == 1
+    end
+  end
+
   describe "one control in the mobile CTA bar (G-01.2-18 task 2)" do
     test "the fixed bottom bar contains exactly one interactive control, and it is the reserve button",
          %{conn: conn} do
@@ -1581,12 +1683,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   end
 
   describe "facts pills and chips link into the catalog's filter params (SHELL-04, 01.1-06)" do
-    test "the weight-band badge links to ?weight_bands=<band>", %{conn: conn} do
+    test "the dificultad pill links to ?weight_bands=<band> — the badge's removed link target, moved here (G-01.2-20)",
+         %{conn: conn} do
       game = game_fixture(%{name: "Banded Game", weight_band: "ingenio_estratega"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      assert html =~ ~s(href="/?weight_bands=ingenio_estratega")
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a.pk-fact[href='/?weight_bands=ingenio_estratega']")
+             |> Enum.count() == 1
+    end
+
+    test "a game with no weight band renders neither a dificultad link nor a bare band label in the facts row",
+         %{conn: conn} do
+      game = game_fixture(%{name: "No Band Game", weight_band: nil})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a[href*='weight_bands=']")
+             |> Enum.count() == 0
+
+      refute html =~ "pk-difficulty"
     end
 
     test "each editorial tag links to ?tags=<tag>", %{conn: conn} do

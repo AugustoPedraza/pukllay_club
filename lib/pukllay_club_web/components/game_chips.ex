@@ -20,6 +20,19 @@ defmodule PukllayClubWeb.GameChips do
   `show_descriptor` is true, its one-line descriptor) for `game`. Renders
   nothing when `game.weight_band` has no resolved band (D-18/D-20's
   "omit the missing chip" rule) — never a bare 1-5 number.
+
+  **G-01.2-20: this component currently has no call site in `lib/`.** Its
+  only render site (the detail page's reading column) was removed by
+  01.2-20 Task 1 on direct UAT instruction ("still it shows its 'category'
+  pills with a description(remove it)") — the plain-Spanish band label
+  survives in `GamePreview.facts_row/1`'s dificultad pill, but the one-line
+  descriptor this component renders has no replacement home anywhere on
+  the page. Whether that is acceptable is an open question against
+  CATALOG-05 ("plain-Spanish weight-band + one-line complexity
+  descriptor"), routed to the developer for a REQUIREMENTS.md amendment
+  decision or a follow-up gap — not resolved here. Do not delete this
+  component or its tests as dead code, and do not silently wire it back up
+  as a bug fix: both are wrong until that decision is made.
   """
   attr :game, PukllayClub.Catalog.Game, required: true
   attr :show_descriptor, :boolean, default: true
@@ -49,6 +62,12 @@ defmodule PukllayClubWeb.GameChips do
   `<.link navigate={...}>`; the overflow `+N` chip never links (it names no
   single term). `nil` (the default) renders every existing caller
   byte-identically to before this attr existed.
+
+  The wrapper carries a new scoping class (G-01.2-20), enabling a
+  border+fill CSS rule that gives these chips real contrast against the
+  page — see that rule's own comment in `app.css`. `editorial_tags/1`
+  deliberately does NOT carry this class, so the hashtag chips keep their
+  existing accent treatment untouched.
   """
   attr :terms, :list, required: true
   attr :limit, :integer, default: 4
@@ -64,7 +83,7 @@ defmodule PukllayClubWeb.GameChips do
       |> assign(:overflow, overflow)
 
     ~H"""
-    <div :if={@terms != []} class="flex flex-wrap gap-1">
+    <div :if={@terms != []} class="pk-chip-row flex flex-wrap gap-2">
       <%= for term <- @visible do %>
         <.link :if={@href_fun} navigate={@href_fun.(term)} class="badge badge-sm">{term}</.link>
         <span :if={!@href_fun} class="badge badge-sm">{term}</span>

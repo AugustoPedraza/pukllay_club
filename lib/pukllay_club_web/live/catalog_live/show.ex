@@ -452,16 +452,17 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   href_fun={fn tag -> ~p"/?tags=#{tag}" end}
                 />
 
-                <%!-- D2 (recommended: keep the badge, relocate it here).
-                Every literal ask is satisfied: nothing sits between title
-                and description any more, the difficulty filter link
-                survives, and the teaching sentence survives — the
-                duplication with the facts row's own dificultad pill now
-                reads as "summary pill up top, explanation further down"
-                rather than the same thing twice in one block. --%>
-                <.link :if={@game.weight_band} navigate={~p"/?weight_bands=#{@game.weight_band}"}>
-                  <GameChips.weight_band_badge game={@game} show_descriptor={true} />
-                </.link>
+                <%!-- G-01.2-20 task 1 (was D2's "keep the badge, relocate it
+                here"): the badge block and its explanatory sentence are
+                gone — the next UAT pass reversed the prior round's
+                keep-decision ("still it shows its 'category' pills with a
+                description(remove it)"). The dificultad fact now appears
+                exactly once, in the facts row above the poster
+                (`GamePreview.facts_row/1`, `linked={true}`), which also
+                inherited this badge's filter-link target
+                (`?weight_bands=`). The weight-band badge component itself
+                is kept with zero call sites — see its own doc comment
+                (in `GameChips`) for why. --%>
 
                 <h2 :if={@mechanic_labels != []} class="pk-section-heading">Mecánicas</h2>
                 <GameChips.chip_row
