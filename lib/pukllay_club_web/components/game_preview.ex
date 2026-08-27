@@ -45,14 +45,16 @@ defmodule PukllayClubWeb.GamePreview do
   independently when its underlying data is absent — see the field-level
   rules in the moduledoc-referenced sketch findings.
 
-  Optional `linked` (01.1-06, default `false`): when `true`, the players
-  and tiempo facts render as `<.link navigate>` into the catalog's
-  `players`/`max_playtime` filter params. The dificultad fact is
-  deliberately never linked here — `GameChips.weight_band_badge/1`
-  (rendered separately on the detail page) already owns that link target,
-  and this component is also the browse-card hover preview, where `false`
-  (the default) renders every existing caller byte-identically to before
-  this attr existed.
+  Optional `linked` (01.1-06, default `false`): when `true`, the players,
+  tiempo, and dificultad facts all render as `<.link navigate>` into the
+  catalog's `players`/`max_playtime`/`weight_bands` filter params. The
+  dificultad fact used to be deliberately unlinked here because
+  `GameChips.weight_band_badge/1` owned that link target on the detail
+  page — G-01.2-20 removed the badge's only call site, so this pill is now
+  the page's only entry into the weight-band filter, and gained the same
+  link/span branch the other two facts already had. This component is
+  also the browse-card hover preview, where `false` (the default) renders
+  every existing caller byte-identically to before this attr existed.
   """
   attr :game, Game, required: true
   attr :linked, :boolean, default: false
@@ -95,7 +97,14 @@ defmodule PukllayClubWeb.GamePreview do
         <.icon name="hero-clock-micro" class="size-3" />{@tiempo_text}
       </span>
 
-      <span :if={@band} class="pk-fact">
+      <.link
+        :if={@band && @linked && @game.weight_band}
+        navigate={~p"/?weight_bands=#{@game.weight_band}"}
+        class="pk-fact"
+      >
+        <.difficulty_indicator level={@level} />{@band.label}
+      </.link>
+      <span :if={@band && (!@linked || !@game.weight_band)} class="pk-fact">
         <.difficulty_indicator level={@level} />{@band.label}
       </span>
     </div>

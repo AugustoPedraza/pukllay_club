@@ -98,6 +98,29 @@ defmodule PukllayClubWeb.GamePreviewTest do
     end
   end
 
+  describe "facts_row/1 — dificultad link (G-01.2-20)" do
+    test "renders no link for any fact when linked is false (default) — the browse-card hover preview is unchanged" do
+      html = render_component(&GamePreview.facts_row/1, game: @nivel_experto)
+
+      refute html =~ "<a "
+      assert html =~ "Nivel experto"
+    end
+
+    test "renders the dificultad pill as a link into the weight-band filter when linked is true" do
+      html = render_component(&GamePreview.facts_row/1, game: @nivel_experto, linked: true)
+
+      assert html =~ ~s(href="/?weight_bands=nivel_experto")
+    end
+
+    test "renders no dificultad link, and no bare band label change, when linked is true but the game has no resolved weight band" do
+      game = %{@nivel_experto | weight_band: nil}
+      html = render_component(&GamePreview.facts_row/1, game: game, linked: true)
+
+      refute html =~ "weight_bands="
+      refute html =~ "pk-difficulty"
+    end
+  end
+
   describe "preview_host/1" do
     test "emits both phx-update=\"ignore\" clone targets plus the sheet's dialog attributes" do
       html = render_component(&GamePreview.preview_host/1, %{})

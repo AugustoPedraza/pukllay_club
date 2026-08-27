@@ -22,13 +22,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "Un título extraordinariamente largo que no debería truncarse en la página de detalle"
     end
 
-    test "renders the weight-band label AND its one-line descriptor", %{conn: conn} do
+    test "renders the weight-band label but no badge element and no descriptor sentence (G-01.2-20)",
+         %{conn: conn} do
       game = game_fixture(%{weight_band: "ingenio_estratega"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
+      doc = LazyHTML.from_document(html)
+
       assert html =~ "Ingenio estratega"
-      assert html =~ "Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante."
+      assert doc |> LazyHTML.query(".badge-secondary") |> Enum.count() == 0
+      refute html =~ "Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante."
+    end
+
+    test "exactly one link into the weight-band filter exists on the page, and it is the dificultad pill",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      matches = doc |> LazyHTML.query("a[href='/?weight_bands=ingenio_estratega']")
+      assert Enum.count(matches) == 1
+
+      link_class = matches |> LazyHTML.attribute("class") |> List.first()
+      assert link_class == "pk-fact"
     end
 
     test "renders the complete mechanic chip list with no overflow indicator", %{conn: conn} do
@@ -561,22 +580,28 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert doc |> LazyHTML.query(".pk-description + .divider") |> Enum.count() == 1
     end
 
-    test "the weight-band badge (D2 = kept) renders after the separator, not immediately after the title",
+    test "the hashtag row flows straight into the Mecánicas heading — ordered siblings, no element (the removed badge) between them (G-01.2-20)",
          %{conn: conn} do
-      game = game_fixture(%{weight_band: "ingenio_estratega", description: "Una crónica."})
+      game =
+        game_fixture(%{
+          weight_band: "ingenio_estratega",
+          description: "Una crónica.",
+          mechanics: ["Dice Rolling"],
+          tags: ["#CreaConexiones"]
+        })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
 
-      # After the separator: a badge-secondary element somewhere later in
-      # the document than .pk-divider.
-      assert doc |> LazyHTML.query(".pk-divider ~ a .badge-secondary") |> Enum.count() == 1
-
-      # Not immediately after the title — the description sits there
-      # instead (proven by the first test in this block); this is a
-      # negative structural check specific to the badge.
-      assert doc |> LazyHTML.query("#detail-title-block + a .badge-secondary") |> Enum.count() == 0
+      # Adjacent-sibling chain: the div immediately after .pk-divider (the
+      # editorial hashtag row) must itself be immediately followed by the
+      # Mecánicas heading. A re-added element between them (the former
+      # badge block) breaks the chain and this query returns 0 instead of
+      # 1 — even with a weight band present, which is the case that used
+      # to render the badge.
+      assert doc |> LazyHTML.query(".pk-divider + div + h2.pk-section-heading") |> Enum.count() ==
+               1
     end
 
     test "a game with publishers renders no publisher row in the spec list", %{conn: conn} do
@@ -1581,12 +1606,34 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   end
 
   describe "facts pills and chips link into the catalog's filter params (SHELL-04, 01.1-06)" do
-    test "the weight-band badge links to ?weight_bands=<band>", %{conn: conn} do
+    test "the dificultad pill links to ?weight_bands=<band> — the badge's removed link target, moved here (G-01.2-20)",
+         %{conn: conn} do
       game = game_fixture(%{name: "Banded Game", weight_band: "ingenio_estratega"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      assert html =~ ~s(href="/?weight_bands=ingenio_estratega")
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query(
+               ".pk-poster-col > .pk-facts-row a.pk-fact[href='/?weight_bands=ingenio_estratega']"
+             )
+             |> Enum.count() == 1
+    end
+
+    test "a game with no weight band renders neither a dificultad link nor a bare band label in the facts row",
+         %{conn: conn} do
+      game = game_fixture(%{name: "No Band Game", weight_band: nil})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a[href*='weight_bands=']")
+             |> Enum.count() == 0
+
+      refute html =~ "pk-difficulty"
     end
 
     test "each editorial tag links to ?tags=<tag>", %{conn: conn} do
