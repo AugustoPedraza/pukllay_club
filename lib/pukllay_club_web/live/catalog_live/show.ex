@@ -313,93 +313,99 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         <div class="space-y-4">
           <div id="detail-masthead-wrap" class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
-              <div class="pk-poster-col space-y-4">
-                <div class="pk-poster-frame">
-                  <div class="absolute right-2 top-2 z-10">
-                    <.share_control id="detail-share-buybox" game={@game} />
-                  </div>
+              <div class="pk-poster-col">
+                <%!-- G-01.2-19 task 1 (was G-01.2-10 task 2): one facts
+                row exists on the page, above the poster panel, at every
+                viewport width — the mobile absolute overlay and the
+                desktop inline copy are gone. Its own root already carries
+                pk-facts-row, so no wrapper div is added; it is addressed
+                in CSS as a direct child of .pk-poster-col
+                (.pk-poster-col > .pk-facts-row). See G-01.2-11/G-01.2-12
+                and sketch 032. --%>
+                <GamePreview.facts_row game={@game} linked={true} />
 
-                  <%!-- G-01.2-10 task 2, D1 (recommended: keep the trio
-                  unchanged): byte-identical arguments to .pk-facts-inline's
-                  call below, so the two copies cannot drift. Exactly one of
-                  the two is ever displayed — see the swap in app.css's
-                  single 48rem detail-layout block. --%>
-                  <div class="pk-facts-overlay">
-                    <GamePreview.facts_row game={@game} linked={true} />
-                  </div>
-
-                  <button
-                    :if={@selected_image}
-                    type="button"
-                    phx-click="open-lightbox"
-                    aria-label="Ampliar imagen del juego"
-                    class="pk-card-poster overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
-                  >
-                    <img
-                      src={@selected_image}
-                      alt={@game.name}
-                      class="h-full w-full object-cover js-cover-fallback"
-                    />
-                    <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
-                      <.icon name="hero-puzzle-piece" class="size-16" />
+                <div class="pk-poster-panel">
+                  <div class="pk-poster-frame">
+                    <div class="absolute right-2 top-2 z-10">
+                      <.share_control id="detail-share-buybox" game={@game} />
                     </div>
-                  </button>
+
+                    <button
+                      :if={@selected_image}
+                      type="button"
+                      phx-click="open-lightbox"
+                      aria-label="Ampliar imagen del juego"
+                      class="pk-card-poster overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
+                    >
+                      <img
+                        src={@selected_image}
+                        alt={@game.name}
+                        class="h-full w-full object-cover js-cover-fallback"
+                      />
+                      <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
+                        <.icon name="hero-puzzle-piece" class="size-16" />
+                      </div>
+                    </button>
+                    <div
+                      :if={!@selected_image}
+                      class="pk-card-poster overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
+                    >
+                      <.icon name="hero-puzzle-piece" class="size-16" />
+                      <span class="sr-only">{@game.name}</span>
+                    </div>
+                  </div>
+
+                  <%!-- G-01.2-10 task 2, D3 (recommended: dots on mobile,
+                  thumbnails on desktop). Both strips are built from the same
+                  gallery_thumbnails/1 list and both dispatch select-image
+                  with the same phx-value-url key, so the existing
+                  membership-check whitelist (mount/handle_event above) stays
+                  the single guarded image-selection path — not a second one
+                  (T-01.1-16-style). Exactly one of the two renders per
+                  viewport, swap declared in app.css's single 48rem block. --%>
                   <div
-                    :if={!@selected_image}
-                    class="pk-card-poster overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
+                    :if={@game.gallery_urls != []}
+                    id="gallery-thumbnails"
+                    class="gap-2 overflow-x-auto pk-gallery-thumbnails"
                   >
-                    <.icon name="hero-puzzle-piece" class="size-16" />
-                    <span class="sr-only">{@game.name}</span>
+                    <button
+                      :for={url <- gallery_thumbnails(@game)}
+                      type="button"
+                      phx-click="select-image"
+                      phx-value-url={url}
+                      class={[
+                        "h-16 w-16 shrink-0 overflow-hidden rounded-box border-2",
+                        (url == @selected_image && "border-primary") || "border-transparent"
+                      ]}
+                    >
+                      <img src={url} alt={@game.name} class="h-full w-full object-cover" />
+                    </button>
+                  </div>
+
+                  <div :if={@game.gallery_urls != []} id="gallery-dots" class="pk-gallery-dots">
+                    <button
+                      :for={{url, idx} <- Enum.with_index(gallery_thumbnails(@game))}
+                      type="button"
+                      phx-click="select-image"
+                      phx-value-url={url}
+                      aria-label={"Ver imagen #{idx + 1} de #{length(gallery_thumbnails(@game))}"}
+                      aria-current={(url == @selected_image && "true") || nil}
+                      class={["pk-gallery-dot", (url == @selected_image && "is-active") || nil]}
+                    >
+                      <span class="pk-gallery-dot-mark"></span>
+                    </button>
                   </div>
                 </div>
 
-                <%!-- G-01.2-10 task 2, D3 (recommended: dots on mobile,
-                thumbnails on desktop). Both strips are built from the same
-                gallery_thumbnails/1 list and both dispatch select-image
-                with the same phx-value-url key, so the existing
-                membership-check whitelist (mount/handle_event above) stays
-                the single guarded image-selection path — not a second one
-                (T-01.1-16-style). Exactly one of the two renders per
-                viewport, swap declared in app.css's single 48rem block. --%>
-                <div
-                  :if={@game.gallery_urls != []}
-                  id="gallery-thumbnails"
-                  class="gap-2 overflow-x-auto pk-gallery-thumbnails"
-                >
-                  <button
-                    :for={url <- gallery_thumbnails(@game)}
-                    type="button"
-                    phx-click="select-image"
-                    phx-value-url={url}
-                    class={[
-                      "h-16 w-16 shrink-0 overflow-hidden rounded-box border-2",
-                      (url == @selected_image && "border-primary") || "border-transparent"
-                    ]}
-                  >
-                    <img src={url} alt={@game.name} class="h-full w-full object-cover" />
-                  </button>
-                </div>
-
-                <div :if={@game.gallery_urls != []} id="gallery-dots" class="pk-gallery-dots">
-                  <button
-                    :for={{url, idx} <- Enum.with_index(gallery_thumbnails(@game))}
-                    type="button"
-                    phx-click="select-image"
-                    phx-value-url={url}
-                    aria-label={"Ver imagen #{idx + 1} de #{length(gallery_thumbnails(@game))}"}
-                    aria-current={(url == @selected_image && "true") || nil}
-                    class={["pk-gallery-dot", (url == @selected_image && "is-active") || nil]}
-                  >
-                    <span class="pk-gallery-dot-mark"></span>
-                  </button>
-                </div>
-
-                <%!-- G-01.2-10 task 2, ask #3: hidden below the detail
-                layout breakpoint so the phone shows exactly one Reservar
-                control (the fixed .pk-mobile-cta-bar below), revealed
-                at/above it in the same 48rem block where the bar itself
-                becomes hidden — both halves of the invariant live in one
-                place. --%>
+                <%!-- G-01.2-19 task 1 (was G-01.2-10 task 2, ask #3):
+                hidden below the detail layout breakpoint so the phone
+                shows exactly one Reservar control (the fixed
+                .pk-mobile-cta-bar below), revealed at/above it in the same
+                48rem block where the bar itself becomes hidden — both
+                halves of the invariant live in one place. Now a sibling
+                AFTER the bordered/shadowed panel above, not a descendant
+                of it, so it reads as a separate decision rather than a
+                fourth carousel control. --%>
                 <button
                   type="button"
                   phx-click="open-reservation"
@@ -410,12 +416,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               </div>
 
               <div class="pk-text-col">
-                <%!-- Desktop-only copy of the pills, paired with
-                .pk-facts-overlay above — see that wrapper's comment. --%>
-                <div class="pk-facts-inline">
-                  <GamePreview.facts_row game={@game} linked={true} />
-                </div>
-
                 <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
 
                 <%!-- G-01.2-10 task 3: the description sits immediately
@@ -516,23 +516,24 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           and the recommendations shelf below, so a reader can tell the
           page has changed subject rather than reading the shelf as more of
           the masthead's own content. Second call site of 01.2-17's
-          .pk-divider (see that rule's own comment); .pk-shelf-separator
-          here only adds the width cap, reading the same
-          --pk-detail-col-width token the masthead and the CTA bar's inner
-          wrapper both read, so the line starts and ends level with the
-          reading column above it. Renders on the loading pass too (the
-          skeleton shelf reserves the real shelf's footprint, so the
-          boundary must exist ahead of it as well, or it would pop in only
-          once the connected mount replaces the skeleton) and, on the
-          connected pass, is gated on the exact same emptiness the shelf
-          itself checks — a boundary above an empty shelf is worse than no
-          boundary at all. --%>
+          .pk-divider (see that rule's own comment). G-01.2-19 task 2
+          removed the width-cap class this line used
+          to carry — this wrapper already shares the shell's own
+          mx-auto/w-full/max-w-7xl/pk-gutter recipe with the masthead and
+          the CTA bar's inner wrapper, so no per-element width override is
+          needed for the line to start and end level with both. Renders on
+          the loading pass too (the skeleton shelf reserves the real
+          shelf's footprint, so the boundary must exist ahead of it as
+          well, or it would pop in only once the connected mount replaces
+          the skeleton) and, on the connected pass, is gated on the exact
+          same emptiness the shelf itself checks — a boundary above an
+          empty shelf is worse than no boundary at all. --%>
           <div
             :if={@loading or @similar_games != []}
             id="detail-shelf-separator"
             class="mx-auto w-full max-w-7xl pk-gutter"
           >
-            <div class="divider pk-divider pk-shelf-separator" role="separator"></div>
+            <div class="divider pk-divider" role="separator"></div>
           </div>
 
           <%!-- 01.1-07: skeleton shelf while @loading (disconnected pass) —

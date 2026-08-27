@@ -269,22 +269,6 @@
   --duration-slow: 280ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
-
-  /* Detail-page content-column width (01.2-18 task 1): shared by the
-     masthead, the mobile CTA bar's inner wrapper, and the masthead↔shelf
-     boundary — three rules that must align to the identical width. Two of
-     those three previously wrote the same rem literal independently, tied
-     together only by a comment; a third independent copy for the boundary
-     is exactly the drift risk this file's own custom-CSS-layer rule
-     (declare a shared field once, never per call site — see the PK CATALOG
-     SURFACES intro comment above) exists to prevent. Written in px rather
-     than restating the old rem literal here: at this app's unmodified root
-     font-size (no `html { font-size }` override exists anywhere in this
-     file), 1100px is the identical computed width the three rules held
-     before this substitution (measured before/after, see
-     01.2-18-SUMMARY.md). Read by exactly three rules below:
-     .pk-detail-masthead, .pk-cta-bar-inner, and .pk-shelf-separator. */
-  --pk-detail-col-width: 1100px;
 }
 
 .pk-gutter {
@@ -2477,12 +2461,50 @@ body.pk-drawer-open {
    masthead to its two-column sticky grid AND hides the mobile CTA bar in
    one place, so the two concerns can never drift apart. */
 .pk-detail-masthead {
-  max-width: var(--pk-detail-col-width);
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
   gap: 3rem;
   align-items: start;
+}
+
+/* Plain flex column layout wrapper (Phase 01.2 gap-closure round 2,
+   G-01.2-19 task 1, sketch 032). Used to also carry the buy-box panel's
+   own fill/border/shadow treatment directly — that treatment now lives on
+   the new .pk-poster-panel element below so the CTA can stand outside it
+   (see that rule's own long provenance comment for the sketch-027 history,
+   carried across verbatim). This rule keeps only its own layout
+   responsibilities: the 01.2-13 cascade-layer position fix (`position:
+   relative`, see that plan's own note — G-01.2-5), and the flex column +
+   gap that used to be the `space-y-4` Tailwind utility in show.ex's
+   markup, now declared here since the utility and this gap would
+   otherwise be two declarations of one field. */
+.pk-poster-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Three properties only, scoped to the facts row as a direct child of the
+   poster column (Phase 01.2 gap-closure round 2, G-01.2-19 task 1, sketch
+   032) — the row now renders once, above the panel, at every viewport
+   width, replacing the old two-copy overlay/inline swap entirely.
+   `justify-content` is deliberately NOT redeclared here: the shared
+   .pk-facts-row rule above already owns `space-between`, which is exactly
+   the "justified, full width of the column" behaviour the UAT asked for.
+   `flex-wrap`/`row-gap` preserve the measured lesson from 01.2-17 (a real
+   390px viewport left the row's natural nowrap content width, 279px,
+   wider than its available space) — the row has more room now than it did
+   as an overlay, but the smallest real viewports still leave little
+   margin, and a nowrap row with `space-between` overflows silently rather
+   than clipping visibly. `margin-bottom: 0` cancels the shared row's own
+   8px bottom margin, because the column's flex `gap` above already
+   supplies that spacing and the two are additive — same reasoning as
+   .pk-divider's own note on this file. */
+.pk-poster-col > .pk-facts-row {
+  flex-wrap: wrap;
+  row-gap: 4px;
+  margin-bottom: 0;
 }
 
 /* Buy-box panel boundary: elevated shadow, not fill alone (Phase 01.2
@@ -2506,71 +2528,35 @@ body.pk-drawer-open {
    wins here too — in dark mode the lift reads lighter than the sketch's
    dark value, and the 1px `--color-base-300` border (a real step against
    `--color-base-100` in dark) is what carries the separation there
-   instead. Deliberate, theme-verified tradeoff, not an oversight. */
-.pk-poster-col {
-  position: relative;
+   instead. Deliberate, theme-verified tradeoff, not an oversight.
+
+   Moved off .pk-poster-col and onto this new element (Phase 01.2
+   gap-closure round 2, G-01.2-19 task 1, sketch 032) — same values,
+   different selector — so the panel wraps only the poster frame and the
+   gallery strips, and the Reservar button can step outside it as a
+   sibling rather than reading as "part of the carousel". `display: flex`
+   + the column gap below is the internal rhythm the column's own
+   `space-y-4` utility used to supply. */
+.pk-poster-panel {
   background: var(--color-base-100);
   border: 1px solid var(--color-base-300);
   border-radius: var(--radius-box);
   padding: 1rem;
   box-shadow: 0 4px 12px color-mix(in srgb, var(--pk-shadow-color) 12%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-/* Positioning context for the pills overlay and the share control
-   (Phase 01.2 gap-closure, G-01.2-10 task 2). Declared here, in the
-   frame's own rule, not through a Tailwind `relative` utility on the
-   element — an unlayered .pk-* rule always beats a layered utility in
-   this stylesheet (see the cascade-layer hazard note at the top of this
-   file), and a layered `relative` losing to an unlayered position
-   declaration is precisely the defect G-01.2-5 was opened for. */
+/* Positioning context for the share control (Phase 01.2 gap-closure,
+   G-01.2-10 task 2). Declared here, in the frame's own rule, not through a
+   Tailwind `relative` utility on the element — an unlayered .pk-* rule
+   always beats a layered utility in this stylesheet (see the
+   cascade-layer hazard note at the top of this file), and a layered
+   `relative` losing to an unlayered position declaration is precisely the
+   defect G-01.2-5 was opened for. */
 .pk-poster-frame {
   position: relative;
-}
-
-/* Mobile pills overlay vs. the desktop inline copy inside .pk-text-col
-   below (G-01.2-10 ask #1, D1 = keep the players/duration/difficulty
-   trio unchanged) — two sides of one swap, exactly one displayed per
-   viewport. Both sides of the reveal live together with every other
-   detail-layout swap in the single 48rem block near the end of this
-   file — never split across two blocks. */
-.pk-facts-inline {
-  display: none;
-}
-
-.pk-facts-overlay {
-  position: absolute;
-  top: 0.75rem;
-  left: 0.75rem;
-  /* Right-hand clearance so the pills can never run underneath the share
-     control: its own 0.5rem inset (right-2/top-2 in show.ex) + its
-     2.75rem (44px, min-h-11/min-w-11) footprint + a 0.5rem gap = 3.75rem. */
-  right: 3.75rem;
-  z-index: 5;
-}
-
-/* Measured live via headless Chrome CDP at a real 390px viewport (01.2-17
-   plan SUMMARY): the overlay's available width was 256px, but the pill
-   row's own natural (nowrap) content width was 279px — a 23px overflow
-   that silently bled under the share control's box rather than showing a
-   visible cutoff, since flex's default overflow:visible doesn't clip.
-   This is a wrapper-scoped override of the shared row's own line
-   behaviour ONLY (flex-wrap) — no property that controls how a pill
-   itself looks is redeclared here, so the two facts-row copies still
-   look identical. */
-.pk-facts-overlay .pk-facts-row {
-  flex-wrap: wrap;
-  row-gap: 4px;
-}
-
-.pk-facts-overlay .pk-fact {
-  /* Lift, not a scrim — each pill (.pk-fact) is already opaque with its
-     own border, so the same shadow-colour token this file's other lifted
-     surfaces use (--pk-shadow-color, see .pk-poster-col/.pk-share-trigger
-     above) is enough to separate it from a busy cover image. A new,
-     scoped property (box-shadow), not a second declaration of any
-     property .pk-fact already sets — the pills' own look still comes
-     from that one shared class. */
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--pk-shadow-color) 14%, transparent);
 }
 
 /* Poster-column reserve button, hidden below the detail layout breakpoint
@@ -2580,9 +2566,15 @@ body.pk-drawer-open {
    `inline-flex`, not a generic `block`, restores exactly the display
    value daisyUI's own .btn component declares — a button restored to the
    wrong display value is a subtle alignment bug (icon/label centring)
-   nobody looks for until it has already shipped. */
+   nobody looks for until it has already shipped. `margin-top: 0.5rem`
+   (Phase 01.2 gap-closure round 2, G-01.2-19 task 1, sketch 032), added
+   on top of the column's own 0.75rem gap, detaches the CTA visually: 1.25rem
+   of empty page now sits between the panel's bottom border and the
+   button, so it reads as a separate decision rather than a fourth
+   carousel control. */
 .pk-poster-reserve {
   display: none;
+  margin-top: 0.5rem;
 }
 
 /* Gallery thumbnails vs. dots (G-01.2-10 ask #8, D3 = dots on mobile,
@@ -2596,6 +2588,9 @@ body.pk-drawer-open {
 .pk-gallery-dots {
   display: flex;
   align-items: center;
+  /* Centered under the poster (Phase 01.2 gap-closure round 2, G-01.2-19
+     task 1, sketch 032) — was left-aligned by default flex behaviour. */
+  justify-content: center;
   gap: 0.25rem;
   /* Each dot's own 44px touch floor (below) would otherwise push this
      row's visual footprint to a full 44px tall; this negative margin
@@ -2674,19 +2669,15 @@ body.pk-drawer-open {
    below it (01.2-18 task 1) — second call site of the exact `.pk-divider`
    declared above (01.2-17 already checked daisyUI's own .divider and
    settled on hand-overriding only its default margin; that decision is
-   reused verbatim here, not re-litigated). What THIS call site adds is
-   only what the shared rule doesn't cover: capping/centering the line to
-   the reading column's own width (the same --pk-detail-col-width
-   .pk-detail-masthead and .pk-cta-bar-inner read), not the shelf's own
-   wider max-w-7xl/pk-gutter cap immediately below it — a line matching
-   neither width would read as an accident, so this is a stated, deliberate
-   choice, not a default. `margin: 0 auto` fully restates (not merely
-   extends) .pk-divider's own `margin: 0`, so the two rules can never
-   desync regardless of source order. */
-.pk-shelf-separator {
-  max-width: var(--pk-detail-col-width);
-  margin: 0 auto;
-}
+   reused verbatim here, not re-litigated). G-01.2-19 task 2 removed the
+   width-cap class that used to sit alongside `.pk-divider`
+   here: it existed only to cap this line to the masthead's own narrower
+   column, but UAT found that column narrower than the header/footer
+   shell — the correct width is the shell's, which every wrapper here
+   (this one included) already sits inside via `mx-auto w-full max-w-7xl
+   pk-gutter`. The line now starts and ends level with the masthead above
+   it AND the shelf below it, because all three finally share one width;
+   no per-call-site width override is declared for this line at all. */
 
 .pk-spec-list {
   display: grid;
@@ -2750,20 +2741,18 @@ body.pk-drawer-open {
    "Stacked" — originally introduced to lay out a reserve row above a
    second, share-control row). G-01.2-18 task 2 removed that second row —
    the bar's own corner share icon on the poster was already the page's
-   share entry point, so stacking a second one here was redundant. This
-   wrapper survives for its alignment cap, not for the stacking it was
-   introduced for: the horizontal gutter that used to live on
-   `.pk-mobile-cta-bar` itself lives on the `pk-gutter` class on the middle
-   wrapper in show.ex, and this rule's own `max-width` reads the shared
-   `--pk-detail-col-width` token `.pk-detail-masthead` also reads (01.2-18
-   task 1), so the bar's one remaining control aligns under the content
-   column above it at every width instead of stretching edge-to-edge past
-   1100px. `flex-direction: column` and `align-items: stretch` stay so the
-   single button still fills the wrapper's own width; the `gap` that used
-   to space the two rows apart has nothing left to space and is gone. */
+   share entry point, so stacking a second one here was redundant.
+   G-01.2-19 task 2 then removed the `max-width`/`margin: 0 auto` this
+   rule used to declare — it capped the bar's control to the masthead's
+   own narrower column, which UAT found narrower than the header/footer
+   shell; the horizontal gutter that used to live on `.pk-mobile-cta-bar`
+   itself already lives on the `pk-gutter` class on the middle wrapper in
+   show.ex, and that wrapper's own `max-w-7xl` is now the only width
+   authority in play. This wrapper survives for its `flex-direction:
+   column`/`align-items: stretch` alone now, so the single button still
+   fills the wrapper's own width; the `gap` that used to space two rows
+   apart has nothing left to space and is gone. */
 .pk-cta-bar-inner {
-  max-width: var(--pk-detail-col-width);
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -2995,16 +2984,6 @@ body.pk-cta-parked {
   }
 
   .pk-mobile-cta-bar {
-    display: none;
-  }
-
-  /* Pills swap (G-01.2-10 task 2): desktop shows the inline copy beside
-     the title, mobile's overlay copy over the poster hides. */
-  .pk-facts-inline {
-    display: block;
-  }
-
-  .pk-facts-overlay {
     display: none;
   }
 
