@@ -356,3 +356,77 @@ decomposition. Each sketch answers one UAT-flagged visual defect against the exi
 - 029 and 030 are both design-approved but not yet implemented — next step is `/gsd-plan-phase`
   (or a quick task) against `CatalogLive.Index`'s Resultados header and
   `PukllayClubWeb.Layouts.flash_group/1` respectively.
+
+## Session: 2026-08-27
+
+**Sketches processed:** 4
+**Design areas:** Detail Page — Layout & Content, Detail Page — Mobile & Interaction Patterns
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
+
+**Context:** Round 2 of Phase 01.2 UAT gap-closure. Round 1's fixes (sketches 027–031, shipped)
+didn't fully resolve the detail-page masthead complaints — a second UAT pass (gaps G-01.2-11
+mobile, G-01.2-12 desktop) reopened the same area with more specific feedback. All 4 sketches
+directly ground themselves in the shipped `CatalogLive.Show`/`app.css` code (not free-floating
+mockups), and three of the four found real, verifiable code bugs while grounding — not just taste
+questions: a lightbox backdrop built from the wrong color token (inverts in dark theme), a sticky
+element occupying invisible layout space, and three independently-reasonable spacing rules
+stacking at the footer boundary.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 032 | masthead-facts-placement | A (Pills Above, CTA Detached) | Detail Page — Layout & Content |
+| 033 | lightbox-contrast | A (Fixed Dark Scrim, refined w/ nav + transition) | Detail Page — Mobile & Interaction Patterns |
+| 034 | chip-cleanup | A (Bordered Outline, Soft Fill) | Detail Page — Layout & Content |
+| 035 | detail-page-rhythm | D (Equal, 24px/24px) | Detail Page — Layout & Content |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — all 4 included |
+
+## Design Direction
+No new aesthetic direction — gap-closure within the already-locked visual system, same as round 1.
+Each sketch answers one UAT-flagged defect against the existing brand tokens; several also revise
+decisions round 1 (or the original sketch 005) had recorded as settled, once real UAT feedback
+showed those fixes hadn't fully landed.
+
+## Key Decisions
+- **Masthead facts/CTA placement (032):** minimal-diff won over two more dramatic restructures
+  (a full-width pills bar + standalone buy panel; CTA relocated into the text column as an
+  e-commerce buy-box). Pills move from an absolute image overlay (mobile) / inline-with-title
+  (desktop) placement to a plain row above the poster panel; the Reservar CTA moves outside the
+  poster's bordered/shadowed panel instead of living inside it. Also fixed: the masthead's
+  independent 1100px width cap is gone — it now shares the header/footer's own 1280px shell width
+  (the "Juegos similares" shelf below already used the wider one correctly). Mobile gallery dots
+  centered (were left-aligned by default flex behavior).
+- **Lightbox contrast (033):** root cause found while grounding, not a taste call — the backdrop
+  mixed the app's text color into the scrim instead of a background color, which inverts in dark
+  theme (pale veil instead of a dimming scrim). Fixed with a fixed dark value matching the app's
+  existing shadow/scrim token, used consistently by every other floating surface. Refined after
+  initial approval: added prev/next chevron nav + arrow-key support (production has them, the
+  first sketch round omitted them), and a soft fade/scale-in open-close transition using the app's
+  own validated motion tokens instead of an instant `display` toggle. Open question left for
+  implementation: whether the nav arrows should anchor to the viewport edge (as sketched) or the
+  image's own edge, per viewport.
+- **Chip cleanup (034):** two bundled fixes — dropped a weight-band badge+description block a
+  prior round had deliberately kept (it duplicated the same dificultad fact already shown in the
+  facts pill row); gave the Mecánicas/Temáticas chips real padding + background contrast instead
+  of the bare unstyled default.
+- **Detail-page rhythm (035):** the "too much whitespace" complaints traced to two additive bugs —
+  an always-rendered sticky title-echo bar still occupying layout space while invisible (top), and
+  three independently-reasonable spacing rules stacking to 150px+ at the footer boundary (bottom).
+  Started with 3 asymmetric scale options; mid-review discussion (why not the same value at both
+  ends?) led to adding and picking a 4th, equal-spacing variant over the original asymmetric
+  favorite.
+
+## Open Items Carried Forward
+- 033: the lightbox's prev/next arrow horizontal position (viewport-edge vs. image-relative) is
+  unresolved — deferred to implementation, to be decided per viewport rather than re-sketched.
+- 031's open items (title retitle-on-widen, query-layer widening strategy) remain open, untouched
+  by this round.
+- 027's underlying cascade-layer positioning bug and the G-01.2-3/4 search-morph issues remain open
+  code fixes, untouched by this round.
+- 029 and 030 (round 1) are still design-approved but not yet implemented.
+- None of 032–035 are implemented yet — all four are design-approved, ready for
+  `/gsd-plan-phase` (or a gap-closure quick task) against `CatalogLive.Show`.

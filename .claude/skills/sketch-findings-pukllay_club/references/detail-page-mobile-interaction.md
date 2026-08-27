@@ -189,6 +189,58 @@ Masthead image carousel and its full-screen lightbox share one `carouselIndex` s
 lightbox opens on whichever slide the carousel is currently on, and either one's arrows keep both
 in sync (`carouselShow(index)` updates both the inline carousel *and* calls `lightboxShow(index)`).
 
+### Lightbox backdrop must use a fixed dark value, not a theme color token (Phase 01.2 gap-closure
+round 2, sketch 033)
+
+**Real bug worth remembering generally: a backdrop/scrim built from a *text* color token inverts in
+dark theme.** UAT flagged the lightbox as not contrasting against the page. Root cause: the
+backdrop was mixing the app's *text* color token into the scrim rather than a background color. In
+light theme the text color is dark, so the scrim reads fine; in dark theme the text color is
+near-white, so the "dimming" scrim was actually a pale veil laid over an already-dark page — the
+opposite of what a lightbox backdrop needs. **Any scrim/backdrop must be built from a fixed dark
+value (or an explicitly background-derived token) that never inverts across themes** — this app
+already has exactly that token (a single fixed shadow/scrim color used by every other floating
+surface: sheets, drawers, popovers) — reuse it rather than reaching for a semantic text-color
+variable that happens to look right in only one theme.
+
+```css
+.pk-lightbox { background: color-mix(in srgb, var(--pk-shadow-color, #150826) 72%, transparent); }
+```
+
+**Always check a backdrop/scrim fix in BOTH themes before calling it done** — this class of bug is
+invisible in light mode and only shows up in dark mode, so testing only the default theme will miss
+it every time.
+
+### Lightbox needs standard prev/next navigation, not just a close button
+
+A sketch round that only mocked the close (✕) control missed that production's real lightbox
+already ships left/right chevron navigation — industry-standard for any multi-image lightbox.
+Caught in review, not by grounding the sketch in the real markup closely enough the first time.
+Fix: `‹`/`›` buttons, absolutely positioned and vertically centered at the lightbox's left/right
+edges, plus `ArrowLeft`/`ArrowRight` keyboard support alongside the existing `Escape`-to-close.
+**Open question, not yet resolved:** whether the arrows should anchor to the *viewport* edges
+(production's current behavior, and what the sketch matched) or to the *image's own* edges —
+at desktop widths, with the image capped narrower than the viewport, viewport-edge anchoring can
+leave a lot of empty scrim between the button and the photo. Left for implementation to decide per
+viewport (mobile vs. desktop may want different answers), not resolved by a sketch round.
+
+### Lightbox open/close needs a soft transition, not an instant `display` toggle
+
+An instant `display: none`/`flex` toggle was flagged as feeling abrupt against this app's otherwise
+soft motion language. `display` can't be transitioned directly — switch to
+`opacity` + `visibility` + `pointer-events` (the same technique this file's other animated floating
+surfaces already use — see the mobile CTA bar's `.is-hidden`/`.is-parked` above), paired with a
+small `scale()` on the image card. Use the app's own validated motion tokens
+(`--duration-base`/`--ease-out-soft`, see `motion-system.md`) rather than a hand-picked timing
+value — no overshoot, small amplitude, consistent with every other transition in this app.
+
+```css
+.pk-lightbox { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--duration-base) var(--ease-out-soft), visibility 0s linear var(--duration-base); }
+.pk-lightbox.is-open { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity var(--duration-base) var(--ease-out-soft); }
+.pk-lightbox-img-wrap { transform: scale(0.96); transition: transform var(--duration-base) var(--ease-out-soft); }
+.pk-lightbox.is-open .pk-lightbox-img-wrap { transform: scale(1); }
+```
+
 ### Share: native Web Share API first, icon-popover fallback second
 
 ```js
@@ -234,8 +286,15 @@ app this belongs in runtime env config, not a template literal.
   scrolled underneath it at some scroll position.
 - Don't let a fixed bottom bar's buttons stretch edge-to-edge past the page's own content
   max-width — cap and center them to match the column above, same as the buy-box.
+- Don't build a modal/overlay backdrop from a semantic *text* color token — it will invert
+  (go pale instead of dark) in dark theme. Use a fixed dark value, or a token explicitly derived
+  from a background color, never a text-color token.
+- Don't ship a lightbox with only a close control — check the real production markup for prev/next
+  navigation before assuming a mockup covers the standard interaction set.
+- Don't toggle an overlay's visibility with `display: none`/`flex` if it needs to transition —
+  `display` can't animate; use `opacity`/`visibility`/`pointer-events` instead.
 
 ## Origin
-Synthesized from sketches: 005, 028; sticky-title-bar mechanism corrected by sketch 011.
+Synthesized from sketches: 005, 028, 033; sticky-title-bar mechanism corrected by sketch 011.
 Source files available in: sources/005-detail-page/, sources/011-full-shell-composition/,
-sources/028-mobile-cta-balance/
+sources/028-mobile-cta-balance/, sources/033-lightbox-contrast/

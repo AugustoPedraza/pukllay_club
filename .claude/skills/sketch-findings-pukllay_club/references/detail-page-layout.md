@@ -90,6 +90,64 @@ fix, not a design decision, see the phase's own debug log).
 .pk-poster-col { background: var(--color-bg); border: 1px solid var(--color-border); box-shadow: var(--shadow-md); }
 ```
 
+**Facts pills relocate to the poster panel, and the CTA leaves it (Phase 01.2 gap-closure round 2,
+sketch 032) — revises "Facts pills sit with the title, not the CTA" above.** A later UAT round
+flagged the masthead again: on mobile the pills had drifted to an absolute overlay *on top of* the
+poster image (not living with the title at all — an undocumented change from this file's original
+sketch 005 decision), and on both viewports the Reservar button sat *inside* the same
+bordered/shadowed panel as the poster, reading as "part of the carousel" rather than a separate
+decision. Sketch 032 compared three structural fixes — pills-above-panel/CTA-detached-below;
+a full-width pills bar + fully standalone buy panel; CTA relocated into the text column as an
+e-commerce-style buy box — **the minimal-diff option won**: pills move to a plain in-flow row
+directly above the poster panel (justified full-width on mobile, centered gallery dots), and the
+Reservar button moves *outside* the bordered/shadowed panel with a visible gap below it. The
+buy-box principle above is revised to: **image + pills live together in one panel; the CTA is a
+separate, adjacent element below it, not inside the same bordered box.**
+
+**Masthead width now matches the header/footer shell — the separate 1100px cap is gone.** UAT
+flagged that the masthead/CTA-bar/shelf-separator's own narrower content-width token read
+noticeably narrower than the header/footer's own `max-w-7xl` + `pk-gutter` box (1280px). The
+"Juegos similares" shelf below already correctly used the wider shell width, so the masthead
+needed to widen to match it, not the other way around — don't give one section of a page its own
+independent width cap when every other section shares one.
+
+```css
+.pk-detail-masthead { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
+@media (min-width: 768px) { .pk-detail-masthead { grid-template-columns: 22rem 1fr; } }
+.pk-poster-col .pk-facts-row { justify-content: space-between; } /* mobile: justified full-width */
+.pk-poster-reserve { margin-top: var(--space-2); } /* outside the bordered panel, not inside it */
+.pk-gallery-dots { justify-content: center; } /* was left-aligned by default flex behavior */
+```
+
+**Don't show the same fact twice at two different sizes (Phase 01.2 gap-closure round 2, sketch
+034).** A weight-band badge + explanatory sentence ("Nivel experto" / "Requiere varias partidas
+para dominarlo...") that an earlier round deliberately kept below the divider turned out to just
+duplicate the same dificultad fact already shown compactly in the facts pill row above the title —
+a later UAT round reversed that keep-decision and removed the badge+sentence entirely. When a fact
+already has a home in a compact summary row, don't give it a second, more verbose home lower on the
+same page.
+
+**Mecánicas/Temáticas chips need real border/background contrast, not the bare daisyUI default.**
+The chip row's default badge styling ships with no custom override — tight padding, background
+that barely reads against the page. Fix is real breathing room + a background token that actually
+contrasts, keeping the same border+fill shape:
+
+```css
+.pk-chip-row .badge { padding: 6px 14px; background: var(--color-surface); border: 1px solid var(--color-border); }
+```
+
+**Section spacing: one deliberate value at each boundary, not stacked independent declarations
+(Phase 01.2 gap-closure round 2, sketch 035).** Two additive bugs, both worth checking for
+elsewhere in this codebase: (1) the sticky title-echo bar (see `detail-page-mobile-interaction.md`)
+is unconditionally rendered and only hidden via `opacity: 0` — as `position: sticky` it still
+occupies real layout space even while invisible, silently padding out the header→masthead gap by
+~60-70px on top of the page's own top padding. (2) three independent spacing rules stacked at the
+footer boundary (the page content wrapper's own bottom padding + the footer's own top margin + the
+footer's inner row's own top padding) summed to over 150px — each reasonable alone, far too much
+together. Fix: collapse both boundaries to one deliberate value, and — after discussion — make it
+the *same* value at top and bottom (24px) rather than asymmetric: a uniform, minimal rhythm read
+better than giving the footer boundary more room just "because it's the page ending."
+
 **"Juegos similares" shelf never goes sparse — the shelf itself always looks identical (Phase 01.2
 gap-closure, sketch 031).** UAT pushback: a 1-2 card rail for a thin weight-band pool "isn't
 acceptable." Rather than a distinct sparse-state layout (compact cluster, no edge-fade — tried and
@@ -146,8 +204,23 @@ as different enough from a true same-band match once built).
 - Don't give a sparse "Juegos similares" rail its own distinct compact layout — fix it at the
   query layer (always widen the pool to fill the shelf) so the shelf's visual treatment stays one
   invariant thing, not two.
+- Don't put the CTA button inside the same bordered/shadowed panel as the poster image — it reads
+  as "part of the carousel" rather than a separate decision, even though both live in the buy-box
+  column.
+- Don't give one page section (e.g. the masthead) its own independent content-width cap when every
+  other section on the page shares one — cross-check against the header/footer's actual width, not
+  a value chosen in isolation.
+- Don't show the same fact twice at two visual weights on the same page (a compact pill, then a
+  larger badge+sentence lower down) — pick one home for it.
+- Don't leave a sticky element unconditionally rendered and only hidden via `opacity: 0` — as
+  `position: sticky` (or any non-`fixed`/non-`absolute` positioning) it still occupies real layout
+  space while invisible, silently padding out whatever comes after it.
+- Don't let independently-reasonable spacing rules stack at the same page boundary (e.g. a
+  wrapper's bottom padding + the next section's own top margin + that section's own inner padding)
+  — collapse to one deliberate value per boundary.
 
 ## Origin
-Synthesized from sketches: 005, 027, 031
+Synthesized from sketches: 005, 027, 031, 032, 034, 035
 Source files available in: sources/005-detail-page/, sources/027-buybox-panel-boundary/,
-sources/031-similar-games-fallback/
+sources/031-similar-games-fallback/, sources/032-masthead-facts-placement/,
+sources/034-chip-cleanup/, sources/035-detail-page-rhythm/

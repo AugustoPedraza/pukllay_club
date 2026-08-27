@@ -32,7 +32,10 @@ rounds; see `references/page-shell.md`, which now supersedes the original sketch
 feel groups; 016 excluded, no confirmed winner), 2026-08-26 (sketches 027–031 — Phase 01.2
 UAT gap-closure round: buy-box panel boundary, mobile CTA bar balance, an active-filters chip row
 that's not yet built, a replacement for the still-unbranded stock connection-lost banner, and the
-similar-games shelf's sparse-pool fallback)
+similar-games shelf's sparse-pool fallback), 2026-08-27 (sketches 032–035 — Phase 01.2 UAT
+gap-closure round 2, a second UAT pass over the same masthead/detail area after round 1 shipped:
+masthead facts-pill/CTA placement + shell-width fix, a dark-theme lightbox contrast bug + nav/
+motion polish, redundant weight-band info + chip contrast cleanup, and de-bugged section spacing)
 
 **Note on this wrap-up round:** most of the Filter & Search and Header/Navigation/Drawer sketches
 turned out to already be implemented in production by the time this wrap-up ran — a separate
@@ -41,6 +44,12 @@ implementation stream (quick tasks, debug sessions) had shipped and, in at least
 records as its winner. Where that happened, the reference files below document the real shipped
 state and flag the drift explicitly, rather than repeating the sketch's now-stale claim. The
 carousel group had a similar but narrower drift (arrow behavior) — see `carousel-mechanics.md`.
+
+**Note on the 032–035 round:** several of these sketches actively revise decisions this skill
+previously recorded as settled (facts-pill placement, the buy-box's CTA-inside-the-panel rule, a
+weight-band badge an earlier round had deliberately kept) — a second real UAT pass on the same
+shipped area found the first round's fixes didn't fully land. `detail-page-layout.md` flags each
+revision explicitly against the text it supersedes, rather than silently overwriting it.
 </context>
 
 <design_direction>
@@ -74,9 +83,11 @@ Three more load-bearing principles emerged from the shell/detail/about sketches:
 
 - **Cap every section of a page to the same content max-width, with padding on the same element as
   the max-width — never on a wrapper around it.** Capping only the header/footer while leaving page
-  content uncapped (or vice versa) is a real bug this project hit twice: once between the shell and
-  the catalog rail, once again inside the footer's own markup. See `page-shell.md`'s "content-width
-  alignment" note.
+  content uncapped (or vice versa) is a real bug this project hit three times: once between the
+  shell and the catalog rail, once inside the footer's own markup, and once more when the detail
+  page's masthead was given its own independent (narrower) width token instead of sharing the
+  shell's. See `page-shell.md`'s "content-width alignment" note and `detail-page-layout.md`'s
+  masthead-width fix (sketch 032).
 
 - **Prefer `position: sticky` over `position: fixed` whenever the element has a natural container
   boundary to stop at** (a sidebar beside scrolling content) — it un-sticks for free at the end of
@@ -107,8 +118,8 @@ Three more load-bearing principles emerged from the shell/detail/about sketches:
 | Card & Preview Interaction | references/card-interaction.md | Minimal resting card (poster + title only); fixed-size hover-portal (desktop) / full-screen sheet (mobile) rendered outside the scrolling rail, sharing identical CSS classes for every field |
 | Page Shell (Header + Footer) | references/page-shell.md | One header component with 3 states (nav-links / breadcrumb / nav-links, not 3 headers); crumbs reserved for genuine drill-downs only; single-row footer, no divider; "Inicio" (nav action) vs. "Ludoteca" (section name) kept deliberately distinct; every section capped to the same 1280px content width as the header |
 | About Page Content | references/about-page-content.md | Alternating tinted/untinted bands, each with a working image carousel instead of a static hero; FAQ as a closing band, not an accordion |
-| Detail Page — Layout & Content | references/detail-page-layout.md | Desktop buy-box (sticky image+CTA) beside a scrolling reading column, no accordion; ficha técnica as a 2-col grid; every field grounded in the real schema including its gaps; "Juegos similares" shelf reuses the real home-page carousel component. Gap-closure additions: buy-box gets a shadow-lift boundary (not a border/fill change); the similar-games shelf's layout stays invariant, always widened to fill rather than given a distinct sparse treatment |
-| Detail Page — Mobile & Interaction Patterns | references/detail-page-mobile-interaction.md | Mobile CTA bar hides while scrolling, parks at the footer; sticky title-echo bar with bounce-to-top — both driven by a plain `scroll` listener + `getBoundingClientRect()`, not `IntersectionObserver` (throttles in a backgrounded tab); lightbox/carousel sync; WhatsApp reservation flow. Gap-closure addition: the bar's reserve/share controls stack vertically instead of sharing one row, and its content caps to the same 1100px column as the buy-box instead of stretching edge-to-edge |
+| Detail Page — Layout & Content | references/detail-page-layout.md | Desktop buy-box (sticky image) beside a scrolling reading column, no accordion; ficha técnica as a 2-col grid; every field grounded in the real schema including its gaps; "Juegos similares" shelf reuses the real home-page carousel component. Gap-closure round 2 (sketch 032) revises the buy-box: CTA now lives *outside* the poster's bordered panel, not inside it; pills moved from an overlay/inline-with-title placement to a plain row above the poster; masthead width now matches the header/footer shell (1280px, not a separate 1100px cap). Also: redundant weight-band badge+description removed (034), chip contrast fixed (034), section spacing de-bugged to a uniform 24px (035) |
+| Detail Page — Mobile & Interaction Patterns | references/detail-page-mobile-interaction.md | Mobile CTA bar hides while scrolling, parks at the footer; sticky title-echo bar with bounce-to-top — both driven by a plain `scroll` listener + `getBoundingClientRect()`, not `IntersectionObserver` (throttles in a backgrounded tab); lightbox/carousel sync; WhatsApp reservation flow. Gap-closure round 1 (028): the bar's reserve/share controls stack vertically instead of sharing one row, content caps to the shared shell width instead of stretching edge-to-edge. Gap-closure round 2 (033): fixed a dark-theme lightbox contrast bug (backdrop was built from a text-color token, not a background one), added prev/next nav + keyboard arrows, soft fade/scale-in open-close transition |
 | Motion System | references/motion-system.md | Validated timing: 100/180/280ms, no-overshoot soft ease-out, `-3px` hover-lift — faster and smaller than every tested alternative, already live in the shared theme |
 | Empty / Loading / Error States | references/empty-loading-error-states.md | Flat gray skeletons (no shimmer), terse plain-Spanish copy, one action per state — illustrated/warm treatment tried and rejected as trying too hard for a low-stakes moment |
 | Filter & Search | references/filter-search.md | Already shipped: centered modal (desktop) / bottom sheet (mobile), always-visible primary chip clusters in cards, no age filter, editorial-tags group deliberately cut. Gap-closure addition (not yet built): an active-filters chip row inline with the "Resultados" heading, lighter accent-tint chips — never reuse the modal's own solid-filled `.chip.active` for this row |
@@ -158,4 +169,8 @@ self-contained, interactive HTML mockup (no build step) that can be opened direc
 - 029-active-filters-chip-row
 - 030-connection-lost-banner
 - 031-similar-games-fallback
+- 032-masthead-facts-placement (revises 005's original facts-pill/buy-box CTA-placement decisions)
+- 033-lightbox-contrast
+- 034-chip-cleanup
+- 035-detail-page-rhythm
 </metadata>
