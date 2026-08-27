@@ -32,9 +32,26 @@ const liveSocket = new LiveSocket("/live", Socket, {
   hooks: {...colocatedHooks},
 })
 
-// Show progress bar on live navigation and form submits
-topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
-window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
+// Show progress bar on live navigation and form submits, and on any
+// event PukllayClubWeb.CatalogLive.Index (01.2-16, G-01.2-9) marks with
+// `page_loading: true` via Phoenix.LiveView.JS.push/2 — the results-region
+// search/filter round trip. shadowColor is set once here and left
+// untouched. barColors is read fresh on every show from the theme's own
+// `--color-primary` custom property (never a hardcoded hex literal), read
+// off `document.documentElement` — the same element daisyUI's `data-theme`
+// toggle lives on — so a light/dark switch is picked up automatically with
+// no extra listener. Guarded: an empty or missing property leaves
+// whatever configuration is already active (default or the last
+// successful read) untouched, rather than passing an empty string to
+// topbar's config call.
+topbar.config({shadowColor: "rgba(0, 0, 0, .3)"})
+window.addEventListener("phx:page-loading-start", _info => {
+  const primary = getComputedStyle(document.documentElement)
+    .getPropertyValue("--color-primary")
+    .trim()
+  if (primary) topbar.config({barColors: {0: primary}})
+  topbar.show(300)
+})
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // Cover-image fallback (01-06, 01-REVIEW.md CR-01): a network/404 failure on

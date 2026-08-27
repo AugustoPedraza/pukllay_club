@@ -527,6 +527,48 @@
   text-overflow: ellipsis;
 }
 
+/* Entry fade (G-01.2-9 gap closure, Task 1): apply_filters/1's
+   `stream(:games, games, reset: true)` destroys and re-creates #games'
+   children on every search keystroke/filter change, so a `transition`
+   has nothing to animate from — a newly inserted node has no previous
+   value to transition FROM. An animation replays on insertion instead,
+   which is exactly the primitive this teardown-and-rebuild needs.
+   Opacity only, no translate: the complaint is a content pop, and travel
+   on a full-width region reopens the amplitude problem this file's
+   motion notes document at length. Scoped to `.pk-grid` (the results
+   grid, `#games`) so the carousel rails' resting cards on the unfiltered
+   home surface are untouched — this gap is about the search/filter
+   results path, not a page-wide first-paint animation. `:not(.pk-trailing-skel)`
+   excludes the grid's own permanent trailing skeleton placeholders (which
+   also carry `.pk-card`, see the data-loading rules above): those toggle
+   `display: none` -> `block` during load-more and must keep doing that
+   with no animation, unchanged from today. Covered automatically by the
+   universal reduced-motion guard at the end of this file — confirmed by
+   reading it; nothing new needed here since it targets `*`. */
+@keyframes pk-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.pk-grid .pk-card:not(.pk-trailing-skel) {
+  animation: pk-fade-in var(--duration-base) var(--ease-standard);
+}
+
+/* Surface-flip fade: shared marker Task 2 applies to BOTH results
+   regions (#carousel-rows and the #grid-scroll wrapper around .pk-grid)
+   — each is `:if`-gated, so remounting either one on a carousel<->grid
+   flip is a fresh node and this replays exactly then. Slower than the
+   card-level fade above because it fades a whole page region rather than
+   one card; same easing, same reduced-motion coverage. */
+.pk-surface-fade {
+  animation: pk-fade-in var(--duration-slow) var(--ease-standard);
+}
+
 .pk-preview-poster {
   aspect-ratio: 16 / 9;
   width: 100%;
@@ -2937,13 +2979,39 @@ body.pk-cta-parked {
    (banned by ui-design-system), which is why it lives in this block.
    `.is-dimmed` is driven entirely by the existing `@filters_open` assign
    in `CatalogLive.Index` — no new hook, no new assign. */
+/* Opacity appended to the transition shorthand ABOVE (G-01.2-9 gap
+   closure, Task 1) for the in-flight dim below — never a second
+   `transition:` shorthand on this selector: a shorthand resets every
+   longhand it doesn't mention, which is the exact multi-hour bug class
+   this file has already paid for once elsewhere. Filter keeps its
+   existing duration/curve untouched; opacity gets its own, faster pair
+   since a paint-only in-flight dim is a different kind of change than
+   the modal's blur. */
 .pk-dimmable {
-  transition: filter var(--duration-base) var(--ease-out-soft);
+  transition:
+    filter var(--duration-base) var(--ease-out-soft),
+    opacity var(--duration-fast) var(--ease-standard);
 }
 
 .pk-dimmable.is-dimmed {
   filter: blur(3px) saturate(0.7) brightness(0.94);
   pointer-events: none;
+}
+
+/* In-flight dim for the search/filter round trip (G-01.2-9): mirrors the
+   .GridScroll/.CarouselScroll `data-loading` idiom used above for
+   trailing-skeleton reveal, just scoped to the results wrapper instead
+   of one rail/grid fetch-more. Set/cleared by the wrapper's own
+   colocated hook (index.ex Task 2) via `dataset`, never an inline style.
+   An opacity below 1 here establishes a containing block for
+   `position: fixed` descendants — the SAME constraint `.is-dimmed`'s
+   blur already imposes above, just applying at a different trigger — which
+   is why `GamePreview.preview_host/1` and `FilterModal.filter_modal/1`
+   stay OUTSIDE this wrapper (see index.ex's own comment on that
+   boundary): nesting either inside would both dim it and re-anchor its
+   fixed positioning to this wrapper's box. */
+.pk-dimmable[data-loading] {
+  opacity: 0.55;
 }
 
 /* ─── HEADER ROW CAPACITY: the band that cannot fit at all ────────────────
