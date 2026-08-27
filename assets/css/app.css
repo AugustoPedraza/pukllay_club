@@ -290,6 +290,94 @@
   padding-right: var(--pk-gutter);
 }
 
+/* Sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-14/
+   G-01.2-24 task 3): a single class on <body> (root.html.heex's only
+   change for this task) gives every page in the app a sticky-footer
+   layout — the footer's bottom edge reaches the bottom of a window taller
+   than the page's own content, with no band of plain page background
+   below it. On a window shorter than the content, the page scrolls
+   exactly as it always has.
+
+   Minimum height is declared TWICE deliberately — the older `100vh` unit
+   first, the dynamic-viewport `100dvh` unit second — so a browser without
+   `dvh` support still gets the layout via `100vh`, and one that supports
+   `dvh` does not jump as mobile browser chrome shows/hides (the later
+   declaration wins in browsers that understand it; the earlier one is the
+   fallback a browser that doesn't understand `dvh` simply keeps).
+
+   THIS RULE TARGETS <body> DIRECTLY. The flex-grow rule right below it
+   targets <main> via a DESCENDANT selector, not a direct-child one,
+   because <main> is not literally body's DOM child — every LiveView page
+   wraps its rendered output in a root container div carrying
+   `data-phx-session`, and `[data-phx-session] { display: contents }`
+   (declared near the top of this file, "Make LiveView wrapper divs
+   transparent for layout") removes that wrapper's own box entirely,
+   handing its children (the header, the connection banner, an optional
+   subnav, <main>, the footer, the flash group) directly to whatever
+   flex/grid context ITS OWN PARENT establishes — here, body's. That
+   flattening is exactly what makes a body-level flex column safe to use
+   without a second, matching rule on the wrapper: <main> ends up a real
+   flex item of body's own flex column, not nested two DOM levels deep
+   behind an un-styled intermediate box.
+
+   OTHER BODY CHILDREN keep their natural heights, unchanged: the header
+   wrapper(s), the connection banner, the optional subnav and the footer
+   are in-flow flex items with no flex-grow of their own, so they size to
+   their own content and stretch to full width (align-items' default
+   `stretch`) exactly as they already did as plain blocks. The flash
+   group's own wrapper div is the same — but its CONTENTS (each
+   `CoreComponents.flash/1`) render with daisyUI's `toast` class, which is
+   `position: fixed` (confirmed by reading daisyUI's own bundled rule, not
+   assumed) — a fixed-position box is removed from normal flow entirely,
+   so the flash group's wrapper is always a 0-height flex item and can
+   never occupy space below the footer. No extra treatment needed here.
+
+   CONTAINING-BLOCK SAFETY (T-01.2-24-01, mitigate): flex and min-height
+   are NOT among the five properties that establish a containing block for
+   a `position: fixed` descendant — transform, filter, perspective,
+   contain, will-change (see both existing containing-block audits in this
+   file, on .pk-title-echo and .pk-lightbox, both re-checked and updated
+   against this exact rule as part of this change — see their own
+   comments). Verified in a real browser (headless Chromium via CDP
+   against the running dev server, not from memory): the mobile CTA bar,
+   the title-echo bar and the lightbox all still anchor to the true
+   viewport with this rule active, not to body's own box.
+
+   RESERVED BOTTOM-CLEARANCE INTERACTION (T-01.2-24-02, mitigate):
+   body.pk-has-cta-bar's 9.25rem/148px bottom padding (declared far above,
+   next to that class) lives on the SAME element as this rule, under this
+   stylesheet's border-box model, so min-height's target includes that
+   padding. Measured live at 390px on a real detail page (game id 1,
+   Chromium headless CDP): BEFORE this rule existed, `document.
+   documentElement.scrollHeight` was 1972px with a 147.7px gap between the
+   footer's bottom edge and the document's end (matching the reserved
+   clearance almost exactly — expected, since the CTA bar's own padding IS
+   that gap on every page whose content already exceeds one viewport
+   height, which this page's does by a wide margin: 1972px content vs.
+   844px viewport). AFTER adding this rule, the same measurement is
+   unchanged (content was already far taller than 100dvh, so the min-height
+   floor was never reached and <main> never needed to grow) — see the
+   task's own commit for the confirming after-measurement. No regression:
+   a page whose content is already taller than one viewport is a no-op for
+   `min-height`, and a page shorter than one viewport is exactly the case
+   this rule exists to fix. */
+.pk-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* See .pk-app-shell's own comment above for why a DESCENDANT selector,
+   not a direct-child one, is correct here despite the rule's own name
+   ("the body's own <main> child") suggesting otherwise. flex-grow ALONE
+   (not the `flex` shorthand) is deliberate: <main> keeps its own natural
+   flex-basis (auto) and default flex-shrink (1) — grow is the one
+   property a sticky-footer layout needs added to it. */
+.pk-app-shell main {
+  flex-grow: 1;
+}
+
 /* Category-anchor scroll animation (debug category-menu-scroll-animation).
    Both category surfaces — the desktop .pk-cat-item mega-menu rows and the
    mobile .pk-chip row — are plain native anchors (href="#carousel-KEY"), and
@@ -2918,7 +3006,20 @@ body.pk-cta-parked {
    `.mx-auto.space-y-4` inner wrapper -> <main> -> <body> -> <html>, and
    confirmed none of them declares transform, filter, perspective,
    contain, or will-change — a viewport-anchored element only anchors
-   correctly while that chain stays clean. */
+   correctly while that chain stays clean.
+
+   RE-CHECKED (Phase 01.2 gap-closure round 4, G-01.2-24 task 3): <body>
+   now carries `.pk-app-shell` (flex column + min-height, see that class's
+   own comment above `.pk-gutter`). Re-walked the same chain against the
+   same five-property list with `<body>` in its new state and confirmed
+   `display: flex`/`flex-direction: column`/`min-height` are NOT among
+   them — flex and min-height do not establish a containing block for a
+   `position: fixed` descendant. Verified live in a real browser (headless
+   Chromium via CDP against the running dev server, scrolled mid-page, both
+   at a mobile width where body's natural height exceeds the viewport and
+   at a desktop width tall enough to actually stretch body via
+   min-height): this bar's `getBoundingClientRect()` still resolves
+   against the true viewport in both cases, not against body's box. */
 .pk-title-echo {
   position: fixed;
   top: var(--pk-header-h, 4.5rem);
@@ -3043,7 +3144,21 @@ body.pk-cta-parked {
    two-curve system. Opening (adding .is-open) recascades to a SHORTER
    transition list that omits visibility entirely, so visibility flips back
    to `visible` immediately when the class is added — the fade-in is
-   visible from its very first frame. */
+   visible from its very first frame.
+
+   CONTAINING-BLOCK AUDIT (recorded Phase 01.2 gap-closure round 4,
+   G-01.2-24 task 3, alongside .pk-title-echo's own audit above): walked
+   the ancestor chain #detail-lightbox-trigger's `.pk-lightbox` sibling ->
+   #detail-page -> Layouts.app's own `.mx-auto.space-y-4` inner wrapper ->
+   <main> -> the LiveView root (display: contents, so it contributes no
+   box of its own — see "Make LiveView wrapper divs transparent for
+   layout" near the top of this file) -> <body> (now `.pk-app-shell`) ->
+   <html>. None of them declares transform, filter, perspective, contain,
+   or will-change; `.pk-app-shell`'s own `display: flex`/`min-height` are
+   also not on that list (see that class's own comment). Verified live in
+   a real browser (headless Chromium via CDP against the running dev
+   server): this element's `position: fixed` still resolves against the
+   true viewport with `.pk-app-shell` active. */
 .pk-lightbox {
   display: flex;
   position: fixed;
