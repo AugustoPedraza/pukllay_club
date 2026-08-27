@@ -2505,4 +2505,38 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
   end
+
+  # G-01.2-26 task 2 (gap-closure round 3, UAT gap G-01.2-15): the one base
+  # pill representation + its variants. This test is the structural defence
+  # against the exact drift that broke the pill rhythm three separate times
+  # before this consolidation — a tone variant quietly growing a geometry
+  # declaration (radius/padding/font-size) that belongs on the base alone.
+  describe "pill system tone-variant geometry gate (Phase 01.2 gap-closure round 3, G-01.2-26 task 2)" do
+    @tone_variants ~w(pk-pill-neutral pk-pill-accent pk-pill-outline pk-pill-selected)
+
+    test "no pk-pill tone variant declares border-radius, padding, or font-size — those three properties live on the base alone" do
+      src = css_source()
+
+      for tone <- @tone_variants do
+        case Regex.run(~r/(?m)^\.#{tone}\s*\{([^}]*)\}/s, src) do
+          [_, body] ->
+            refute body =~ ~r/border-radius/,
+                   "`.#{tone}` must not declare border-radius — shape lives on `.pk-pill` " <>
+                     "alone. A tone variant re-declaring geometry is the exact drift that broke " <>
+                     "the pill rhythm three separate times before this consolidation (G-01.2-15)."
+
+            refute body =~ ~r/padding/,
+                   "`.#{tone}` must not declare padding — padding lives on `.pk-pill` (the " <>
+                     "dense default) or a size variant, never on a tone."
+
+            refute body =~ ~r/font-size/,
+                   "`.#{tone}` must not declare font-size — type size lives on `.pk-pill` or a " <>
+                     "size variant, never on a tone."
+
+          nil ->
+            flunk("No top-level `.#{tone} { ... }` rule found in assets/css/app.css")
+        end
+      end
+    end
+  end
 end
