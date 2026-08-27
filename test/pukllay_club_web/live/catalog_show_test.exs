@@ -44,7 +44,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      matches = doc |> LazyHTML.query("a[href='/?weight_bands=ingenio_estratega']")
+      matches = LazyHTML.query(doc, "a[href='/?weight_bands=ingenio_estratega']")
       assert Enum.count(matches) == 1
 
       link_class = matches |> LazyHTML.attribute("class") |> List.first()
@@ -1692,9 +1692,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       doc = LazyHTML.from_document(html)
 
       assert doc
-             |> LazyHTML.query(
-               ".pk-poster-col > .pk-facts-row a.pk-fact[href='/?weight_bands=ingenio_estratega']"
-             )
+             |> LazyHTML.query(".pk-poster-col > .pk-facts-row a.pk-fact[href='/?weight_bands=ingenio_estratega']")
              |> Enum.count() == 1
     end
 
