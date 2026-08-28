@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 25/26 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4, 1 gap-closure round 5, 2 gap-closure round 6 pending)
+**Plans:** 26/26 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4, 1 gap-closure round 5, 2 gap-closure round 6 pending)
 
 Plans:
 **Wave 1**
@@ -298,7 +298,7 @@ Plans:
 
 **Wave 22 — gap closure round 6** *(G-01.2-19, the other gap from the same UAT round. Its automated diagnosis was falsified during planning — the live-reload theory is disproven, the patterns block has been in `config/runtime.exs` since the scaffold commit — and the developer chose the container-paint fix over widening the photo stage. Blocked on Wave 21 — same stylesheet region)*
 
-- [ ] 01.2-31-PLAN.md — G-01.2-19: the lightbox's own backdrop becomes fully opaque, so the overlay finally covers the whole screen instead of leaving a ~37%-of-window lavender band beside the width-capped photo stage; the stage itself is not resized, so 01.2-28's measured chevron alignment survives, and `--pk-overlay-scrim` loses a reader rather than being re-tuned since the mobile preview sheet still needs it at 72%
+- [x] 01.2-31-PLAN.md — G-01.2-19: the lightbox's own backdrop becomes fully opaque, so the overlay finally covers the whole screen instead of leaving a ~37%-of-window lavender band beside the width-capped photo stage; the stage itself is not resized, so 01.2-28's measured chevron alignment survives, and `--pk-overlay-scrim` loses a reader rather than being re-tuned since the mobile preview sheet still needs it at 72%
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
