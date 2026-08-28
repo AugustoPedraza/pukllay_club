@@ -2446,12 +2446,16 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
-  # G-01.2-25 task 1 (gap-closure round 5): the lightbox photo's width cap
-  # re-derived from the shell's own `max-w-7xl`/`--pk-gutter` recipe, plus
-  # an explicit stacking order on both chevrons so paint order no longer
-  # depends on DOM order relative to the image. `css_source/0` is the
-  # shared helper the two describe blocks above already established.
-  describe "lightbox shell-width photo and chevron stacking (Phase 01.2 gap-closure round 5, G-01.2-25 task 1)" do
+  # G-01.2-25 task 1 (gap-closure round 5), corrected by G-01.2-28 task 1
+  # (gap-closure round 6): the lightbox photo's cap-only width fix was a
+  # confirmed no-op (a `max-width` can only shrink, never grow, an element
+  # already smaller than it), so round 6 replaced the cap with a real
+  # `width`/`height`/`background` on `.pk-lightbox-img`, backed by a new
+  # `--pk-shell-content-width` token declared once in `:root`. The
+  # chevron-stacking tests below predate round 6 and are untouched by it.
+  # `css_source/0` is the shared helper the two describe blocks above
+  # already established.
+  describe "lightbox shell-width photo and chevron stacking (Phase 01.2 gap-closure round 5, G-01.2-25 task 1; round 6, G-01.2-28 task 1)" do
     # First (and only) top-level `.pk-lightbox-img {...}` rule, matched on
     # the literal selector text, mirroring `gallery_dot_block/0`'s pattern
     # above so a future sibling rule can never be mistaken for this one.
@@ -2462,32 +2466,71 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
-    test "the lightbox photo's max-width reads the shell's own container-7xl width, not a standalone viewport-relative literal" do
+    # The shared token's own `:root` declaration — round 6 moved the shell-
+    # width formula here from `.pk-lightbox-img`'s own (now-removed) cap,
+    # so the two assertions that used to match against the photo rule's
+    # brace body (the container property and the gutter token) now match
+    # here instead, per the plan's own instruction to move rather than
+    # delete them.
+    defp shell_content_width_token_declaration do
+      case Regex.run(~r/--pk-shell-content-width:\s*([^;]*);/, css_source()) do
+        [_, value] -> value
+        nil -> flunk("No `--pk-shell-content-width` token declared in assets/css/app.css")
+      end
+    end
+
+    test "the shell's content width is named once as a token, reading the container property and the shared gutter" do
+      token_value = shell_content_width_token_declaration()
+
+      assert token_value =~ ~r/var\(--container-7xl,\s*80rem\)/,
+             "`--pk-shell-content-width` must read Tailwind's own `--container-7xl` custom " <>
+               "property (the same one `.max-w-7xl` resolves against, confirmed emitted in the " <>
+               "built stylesheet) rather than a hand-copied 80rem literal with no link back to " <>
+               "the shell — this is the formula that moved here from `.pk-lightbox-img`'s own " <>
+               "cap when the cap was replaced by a real width."
+
+      assert token_value =~ ~r/var\(--pk-gutter\)/,
+             "`--pk-shell-content-width` must subtract the shared `--pk-gutter` token (not a " <>
+               "hardcoded rem value) so the token — and every rule that reads it — stays in " <>
+               "sync with the header/footer/masthead's own content width, including the " <>
+               "token's own narrower value below the 480px breakpoint."
+    end
+
+    test "the lightbox photo declares a real width and height instead of caps, plus an opaque fill" do
       body = lightbox_img_block()
 
-      refute body =~ ~r/max-width:\s*min\(90vw/,
-             "`.pk-lightbox-img` must no longer cap at the old standalone `min(90vw, 60rem)` " <>
-               "literal — that value never joined the shell's own `max-w-7xl`/`--pk-gutter` " <>
-               "width recipe every other capped surface on this page uses (`.pk-nav-inner`, " <>
-               "`#detail-masthead-wrap`, `.pk-footer-row`), which is the confirmed root cause " <>
-               "of G-01.2-16's 'use same width that defined for shell' report."
+      refute body =~ ~r/max-width/,
+             "`.pk-lightbox-img` must no longer carry a `max-width` at all. A `max-width` can " <>
+               "only ever SHRINK an element, never grow one — which is exactly why the previous " <>
+               "round's fix (widening this same cap to the shell's width) was a confirmed no-op: " <>
+               "every photo in this catalog renders at a fixed ~800px intrinsic size from the " <>
+               "seed pipeline, already smaller than any cap this rule has ever carried. Only a " <>
+               "real `width` can grow the box past that intrinsic size."
 
-      assert body =~ ~r/max-width:\s*calc\(/,
-             "`.pk-lightbox-img`'s max-width must be a calc() derived from the shell's own " <>
-               "width token, not a fresh standalone literal."
+      assert body =~ ~r/width:\s*var\(--pk-shell-content-width\)\s*;/,
+             "`.pk-lightbox-img`'s width must be a single bare read of `--pk-shell-content-width` " <>
+               "— the token the shell's own container/gutter formula now lives on — with no " <>
+               "fallback literal beside it, which would be a second, silently-diverging opinion " <>
+               "about where the shell's edge is."
 
-      assert body =~ ~r/var\(--container-7xl,\s*80rem\)/,
-             "the cap must read Tailwind's own `--container-7xl` custom property (the same " <>
-               "one `.max-w-7xl` resolves against, confirmed emitted in the built stylesheet) " <>
-               "rather than a hand-copied 80rem literal with no link back to the shell."
+      refute body =~ ~r/max-height/,
+             "the vertical cap must become a real `height` (see the next assertion), matching " <>
+               "the photo's own new real width — a mix of one real dimension and one capped " <>
+               "dimension would leave the box's height still bounded by its own intrinsic size."
 
-      assert body =~ ~r/var\(--pk-gutter\)/,
-             "the cap must subtract the shared `--pk-gutter` token (not a hardcoded rem value) " <>
-               "so it stays in sync with the header/footer/masthead's own content width, " <>
-               "including the token's own narrower value below the 480px breakpoint."
+      assert body =~ ~r/height:\s*80vh\s*;/,
+             "the height must carry forward the exact `80vh` value the previous round's " <>
+               "`max-height` already carried, now as a real size — the lightbox's vertical " <>
+               "footprint must be unchanged by this round; picking a different number here is a " <>
+               "separate design call with its own UAT item."
 
-      assert body =~ ~r/max-height:\s*80vh/,
-             "the height cap must stay byte-identical to HEAD — only the width source changes"
+      assert body =~ ~r/background:\s*var\(--pk-shadow-color\)\s*;/,
+             "`.pk-lightbox-img` must declare an OPAQUE fill reading `--pk-shadow-color` " <>
+               "directly at full strength — not mixed toward transparency like every other " <>
+               "consumer of that token — so the area the photo doesn't cover is a solid stage. " <>
+               "A box that merely reaches the shell's width without a fill of its own still lets " <>
+               "the page show through exactly as before, which is the reported symptom this " <>
+               "round exists to fix."
 
       assert body =~ ~r/object-fit:\s*contain/,
              "object-fit must stay byte-identical to HEAD"
@@ -2495,8 +2538,35 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert body =~ ~r/border-radius:\s*var\(--radius-box\)/,
              "border-radius must stay byte-identical to HEAD"
 
+      assert body =~ ~r/box-shadow:\s*0 28px 56px/,
+             "the two-layer shadow must stay byte-identical to HEAD"
+
       assert body =~ ~r/transform:\s*scale\(0\.96\)/,
              "the scale transition must stay byte-identical to HEAD"
+    end
+
+    test "the overlay scrim token and the lightbox container's own background are untouched" do
+      case Regex.run(~r/--pk-overlay-scrim:\s*([^;]*);/, css_source()) do
+        [_, value] ->
+          assert value =~ ~r/color-mix\(in srgb, var\(--pk-shadow-color\) 72%, transparent\)/,
+                 "`--pk-overlay-scrim` must keep mixing `--pk-shadow-color` at exactly 72% — " <>
+                   "this plan's own prohibition forbids re-tuning it, and the scrim's value is " <>
+                   "shared with the mobile preview sheet's own backdrop (`.pk-sheet-backdrop`)."
+
+        nil ->
+          flunk("No `--pk-overlay-scrim` token found in assets/css/app.css")
+      end
+
+      case Regex.run(~r/(?m)^\.pk-lightbox\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] ->
+          assert body =~ ~r/background:\s*var\(--pk-overlay-scrim\)/,
+                 "`.pk-lightbox` must still read `--pk-overlay-scrim` for its own background — " <>
+                   "the container's translucent scrim and the photo's new opaque stage are two " <>
+                   "different surfaces, and this plan only changes the second one."
+
+        nil ->
+          flunk("No top-level `.pk-lightbox { ... }` rule found in assets/css/app.css")
+      end
     end
 
     test "both lightbox chevrons carry the shared explicit-stacking-order class", %{conn: conn} do
