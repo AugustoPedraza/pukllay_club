@@ -2569,7 +2569,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
-    test "both lightbox chevrons carry the shared explicit-stacking-order class", %{conn: conn} do
+    test "both lightbox chevrons carry the shared class, their own side class, and kept their event bindings",
+         %{conn: conn} do
       game =
         game_fixture(%{
           cover_url: "https://images.test.invalid/games/1/cover.webp",
@@ -2580,17 +2581,19 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      prev_class =
-        doc
-        |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]")
-        |> LazyHTML.attribute("class")
-        |> List.first()
+      prev = LazyHTML.query(doc, "#detail-lightbox [data-lightbox-prev]")
+      next = LazyHTML.query(doc, "#detail-lightbox [data-lightbox-next]")
 
-      next_class =
-        doc
-        |> LazyHTML.query("#detail-lightbox [data-lightbox-next]")
-        |> LazyHTML.attribute("class")
-        |> List.first()
+      assert prev != [],
+             "must find an element carrying `data-lightbox-prev` — the attribute the " <>
+               "keyboard handler's ArrowLeft branch queries by"
+
+      assert next != [],
+             "must find an element carrying `data-lightbox-next` — the attribute the " <>
+               "keyboard handler's ArrowRight branch queries by"
+
+      prev_class = prev |> LazyHTML.attribute("class") |> List.first()
+      next_class = next |> LazyHTML.attribute("class") |> List.first()
 
       assert prev_class =~ "pk-lightbox-chevron",
              "the previous-image chevron must carry the shared stacking-order class — this is " <>
@@ -2600,6 +2603,64 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
              "the next-image chevron must ALSO carry the shared class, not only the " <>
                "previously-broken one, so a future markup reorder can never silently " <>
                "reintroduce the DOM-order accident on this side instead"
+
+      assert prev_class =~ "pk-lightbox-chevron-prev",
+             "the previous-image chevron must carry its own `pk-lightbox-chevron-prev` side " <>
+               "class (G-01.2-28 task 2) — the shared class and the side class are one " <>
+               "contract, and splitting them across two tests would invite someone to " <>
+               "satisfy one and drop the other."
+
+      assert next_class =~ "pk-lightbox-chevron-next",
+             "the next-image chevron must ALSO carry its own `pk-lightbox-chevron-next` " <>
+               "side class."
+
+      # Positional-edit guard: the class-attribute rewrite must not have taken an
+      # adjacent binding with it — cheaper and more precise than reading a diff.
+      assert prev |> LazyHTML.attribute("phx-click") |> List.first() == "select-lightbox-image",
+             "the previous chevron's class rewrite must not have taken its click event with it"
+
+      assert next |> LazyHTML.attribute("phx-click") |> List.first() == "select-lightbox-image",
+             "the next chevron's class rewrite must not have taken its click event with it"
+
+      prev_url = prev |> LazyHTML.attribute("phx-value-url") |> List.first()
+      next_url = next |> LazyHTML.attribute("phx-value-url") |> List.first()
+
+      assert prev_url not in [nil, ""],
+             "the previous chevron must still carry a non-empty neighbour URL"
+
+      assert next_url not in [nil, ""],
+             "the next chevron must still carry a non-empty neighbour URL"
+
+      assert prev |> LazyHTML.attribute("aria-label") |> List.first() == "Imagen anterior",
+             "the previous chevron must keep its accessible label"
+
+      assert next |> LazyHTML.attribute("aria-label") |> List.first() == "Imagen siguiente",
+             "the next chevron must keep its accessible label"
+    end
+
+    test "each lightbox chevron's side rule sets its own horizontal inset from the shared shell-width token" do
+      for {side, prop} <- [{"prev", "left"}, {"next", "right"}] do
+        body =
+          case Regex.run(~r/(?m)^\.pk-lightbox-chevron-#{side}\s*\{([^}]*)\}/s, css_source()) do
+            [_, body] ->
+              body
+
+            nil ->
+              flunk(
+                "No top-level `.pk-lightbox-chevron-#{side} {...}` rule found in assets/css/app.css"
+              )
+          end
+
+        assert body =~
+                 ~r/#{prop}:\s*calc\(50% - \(var\(--pk-shell-content-width\) \/ 2\)\)\s*;/,
+               "`.pk-lightbox-chevron-#{side}` must set `#{prop}` to a calculation reading " <>
+                 "`--pk-shell-content-width` directly, with no fallback literal beside it — " <>
+                 "`.pk-lightbox` is `position: fixed; inset: 0` (the full viewport), so it is " <>
+                 "the containing block this button resolves against, and a bare length here " <>
+                 "anchors the button to the BROWSER's edge no matter what the photo is doing, " <>
+                 "which is exactly the anchoring the user rejected in two consecutive UAT " <>
+                 "rounds (tests 12 and 17)."
+      end
     end
 
     test "the .pk-lightbox-chevron class declares an explicit numeric z-index above the photo" do

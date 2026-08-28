@@ -3456,6 +3456,51 @@ body.pk-cta-parked {
   z-index: 2;
 }
 
+/* G-01.2-28 task 2 (gap-closure round 6, supersedes G-01.2-21's viewport-
+   edge anchoring): each chevron's horizontal inset, one rule per side,
+   sitting BESIDE the shared stacking rule above rather than inside it —
+   the inset genuinely differs per side, the stacking order genuinely does
+   not, so neither belongs on the other's rule.
+
+   WHY: so the arrows and the photo are measured against ONE boundary
+   instead of two. `.pk-lightbox` is `position: fixed; inset: 0` (see
+   above) — the full viewport — and it is the containing block every
+   absolutely-positioned child of it, including both these buttons,
+   resolves against. That single fact is why the previous round's bare
+   `left-4`/`right-4` was a browser-edge anchor by construction, no matter
+   what the photo was doing: `.pk-lightbox-img` (above) now reaches
+   `--pk-shell-content-width`, but a plain length here would still measure
+   from the viewport's own edge, leaving the two surfaces drifted apart
+   exactly as before. The value below is therefore a CALCULATION reading
+   the shared token, never a length: half the containing block, less half
+   the token, which resolves to the exact distance from the browser's edge
+   to the stage's edge — landing each button's outer edge on the same line
+   the header's brand lockup and the footer's clusters already share. No
+   fallback literal is added beside the token for the same reason a
+   fallback is never added elsewhere in this file: it would be a second,
+   silently-diverging opinion about the shell's width.
+
+   The user asked for this exact placement twice, in two separate UAT
+   rounds (tests 12 and 17) — see the superseded markup comment in
+   `show.ex` for the fuller history of why a recorded decision was
+   reopened rather than left standing a third time.
+
+   WHAT CHANGES AT EACH WIDTH: a large inward move at desktop (the stage
+   is far narrower than the viewport there); a smaller inward move in the
+   band between the 480px breakpoint and `--container-7xl`'s own width
+   (where `--pk-gutter`'s narrower below-480px value has not yet kicked
+   in but the viewport term is also not yet capped); and, on a phone,
+   effectively no move at all — below 480px the shell's content edge and
+   the viewport edge are one narrow gutter apart, which is the same
+   distance `left-4`/`right-4` already approximated. */
+.pk-lightbox-chevron-prev {
+  left: calc(50% - (var(--pk-shell-content-width) / 2));
+}
+
+.pk-lightbox-chevron-next {
+  right: calc(50% - (var(--pk-shell-content-width) / 2));
+}
+
 /* Share trigger (Phase 01.2 gap-closure, sketch 027): a bordered circle on
    a plain fill with a soft lift, replacing the `btn-outline btn-primary
    btn-sm` utility string G-01.2-6's debug session measured as "barely
