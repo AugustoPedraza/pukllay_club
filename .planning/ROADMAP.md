@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 22/22 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3 pending)
+**Plans:** 22/23 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4 pending)
 
 Plans:
 **Wave 1**
@@ -283,6 +283,10 @@ Plans:
 **Wave 18 — gap closure round 3** *(blocked on Wave 17 — same stylesheet)*
 
 - [x] 01.2-27-PLAN.md — G-01.2-15 (part 2 of 2): the catalog's active-filter chips and the filter modal's option chips migrated onto the same base, the superseded rules retired with forwarding notes, and a drift gate that fails when a sixth bespoke chip family appears
+
+**Wave 19 — gap closure round 4** *(from the fourth detail-page UAT round: G-01.2-17, diagnosed. Blocked on Wave 18 — same stylesheet)*
+
+- [ ] 01.2-28-PLAN.md — G-01.2-17: the lightbox photo gets a real width, height and opaque stage instead of a cap it was never large enough to reach, so the overlay finally spans the shell's content width and stops showing the page behind it; the guidance that produced the no-op is corrected at its source
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
