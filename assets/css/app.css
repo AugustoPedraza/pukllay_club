@@ -3485,13 +3485,17 @@ body.pk-cta-parked {
 
    G-01.2-18 (gap-closure round 7, closed by plan 01.2-29): the single
    `height: 80vh` round 6 carried forward above was itself the remaining
-   bug, not a settled value. Four points worth keeping straight. First:
-   `.pk-lightbox` (above) is a CENTRING flex container, not a stretching
-   one, so any shortfall between this rule's own height and the viewport
-   rendered as two symmetric bands of `.pk-lightbox`'s own translucent
-   scrim, one above the stage and one below it — the entire mechanism
-   behind the user's "the background should be full screen" report.
-   Second: round 6 deferred picking a different vertical number on
+   bug, not a settled value. Four points worth keeping straight — the
+   first is now historical, not current: `.pk-lightbox` (above) was at
+   the time a CENTRING flex container over a translucent field, so any
+   shortfall between this rule's own height and the viewport rendered as
+   two symmetric bands of that translucent scrim, one above the stage and
+   one below it — the entire mechanism behind the user's "the background
+   should be full screen" report. G-01.2-19 later made `.pk-lightbox`'s
+   own field opaque, so a height shortfall today would show the SAME
+   colour above and below the stage, not a visible band; this paragraph
+   is kept for the historical reasoning, not as a description of the
+   current paint. Second: round 6 deferred picking a different vertical number on
    purpose and named the exact condition for reopening it — "a separate
    design call with its own UAT item" — and that condition fired in the
    very next UAT round, so this is the deferral resolving on schedule,
@@ -3505,11 +3509,15 @@ body.pk-cta-parked {
    ALSO have resolved correctly here, since `.pk-lightbox` is a fixed,
    full-inset overlay with a definite height — it was rejected anyway, so
    this file keeps exactly one idiom for "as tall as the viewport"
-   instead of two. One more thing worth recording so it is never reported
-   as a bug: the scale-in transform below briefly renders this stage at
-   slightly under full size during the opening transition, so a hairline
-   of scrim is visible for the length of that animation and then gone —
-   existing motion on existing tokens, unchanged by this round. */
+   instead of two. One more thing worth recording, now historical rather
+   than current: at the time this paragraph was written, the scale-in
+   transform below briefly rendered this stage at slightly under full
+   size during the opening transition, so a hairline of the (then
+   translucent) scrim was visible for the length of that animation and
+   then gone. G-01.2-19's container fix (see that gap's own comment,
+   above `.pk-lightbox`) made this stop applying: the stage still visibly
+   scales in, but since the field behind it is now the same colour as the
+   stage, the edge simply stops reading instead of showing a hairline. */
 .pk-lightbox-img {
   width: var(--pk-shell-content-width);
   height: 100vh;
