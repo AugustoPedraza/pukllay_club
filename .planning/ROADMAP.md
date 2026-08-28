@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 23/24 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4, 1 gap-closure round 5 pending)
+**Plans:** 24/24 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4, 1 gap-closure round 5 pending)
 
 Plans:
 **Wave 1**
@@ -290,7 +290,7 @@ Plans:
 
 **Wave 20 — gap closure round 5** *(from the fifth detail-page UAT round: G-01.2-18, diagnosed. Blocked on Wave 19 — same rule)*
 
-- [ ] 01.2-29-PLAN.md — G-01.2-18: the lightbox stage takes the whole screen's height instead of four fifths of it, so the two bands of translucent scrim above and below it disappear — written in this file's own static-then-dynamic viewport-unit idiom so a mobile browser's collapsing toolbar cannot leave the stage taller than the screen
+- [x] 01.2-29-PLAN.md — G-01.2-18: the lightbox stage takes the whole screen's height instead of four fifths of it, so the two bands of translucent scrim above and below it disappear — written in this file's own static-then-dynamic viewport-unit idiom so a mobile browser's collapsing toolbar cannot leave the stage taller than the screen
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
