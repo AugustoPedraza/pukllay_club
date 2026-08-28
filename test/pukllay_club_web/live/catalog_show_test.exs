@@ -2694,6 +2694,165 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # G-01.2-20, plan 01.2-30 (gap-closure round 8): the lightbox close button
+  # inherits daisyUI's unmodified `.btn` fill (`--color-base-200`) because it
+  # carries no colour modifier class. That default measures fine in light
+  # theme (near-white against the fixed dark `--pk-shadow-color` backdrop)
+  # but ~1.1:1 in dark theme (a very dark purple against a near-identical
+  # dark backdrop) — UAT test 20's "On the dark needs a little more
+  # constrant." This describe block guards the dark-theme-only fix: a rule
+  # scoped to `[data-theme="dark"]` sets `--btn-color`/`--btn-fg` from the
+  # neutral token pair, `.pk-lightbox-close`'s own rule stays untouched
+  # (pinned exhaustively, not by a negative check, since an unscoped fill
+  # added there would silently drag light theme along), and the resulting
+  # contrast is MEASURED from the file's own tokens rather than string-
+  # matched, so a future palette retune that walks `--color-neutral` back
+  # toward the backdrop fails the suite instead of shipping quietly.
+  describe "lightbox close button dark-theme contrast (Phase 01.2 gap-closure round 8, G-01.2-20, plan 01.2-30)" do
+    # The dark-scoped rule, matched on its literal selector text at the
+    # start of a line — mirrors `lightbox_img_block/0`'s idiom above so a
+    # future sibling rule (e.g. a light-theme variant) can never be mistaken
+    # for this one. `.pk-lightbox-close`'s OWN rule (no `[data-theme=...]`
+    # prefix) cannot match this pattern, since `^` anchors to the start of
+    # the selector text.
+    defp dark_lightbox_close_block do
+      case Regex.run(
+             ~r/(?m)^\[data-theme="dark"\] \.pk-lightbox-close\s*\{([^}]*)\}/s,
+             css_source()
+           ) do
+        [_, body] -> body
+        nil -> flunk("No top-level `[data-theme=\"dark\"] .pk-lightbox-close {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # `.pk-lightbox-close`'s own (unscoped) rule — same idiom, matched on its
+    # bare selector so it is never confused with the dark-scoped rule above.
+    defp lightbox_close_own_block do
+      case Regex.run(~r/(?m)^\.pk-lightbox-close\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-lightbox-close {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # Pulls the dark theme's own `@plugin "daisyui-theme"` block (`name:
+    # "dark"`) so a token lookup can be scoped to it — reading a token name
+    # against the whole file would silently return LIGHT theme's value if
+    # light theme's block happened to be matched first.
+    defp dark_theme_plugin_block do
+      case Regex.run(
+             ~r/@plugin "daisyui\/packages\/bundle\/daisyui-theme" \{\s*name: "dark";(.*?)\n\}/ms,
+             css_source()
+           ) do
+        [_, body] -> body
+        nil -> flunk("No dark-theme `@plugin \"daisyui-theme\"` block found in assets/css/app.css")
+      end
+    end
+
+    defp token_value(source, token) do
+      case Regex.run(~r/#{Regex.escape(token)}:\s*([^;]*);/, source) do
+        [_, value] -> String.trim(value)
+        nil -> flunk("No `#{token}` token found in the given source")
+      end
+    end
+
+    # Turns a colour written either as a six-digit hex literal or as a
+    # space-separated `rgb(r g b)` triple (this file's two colour formats)
+    # into a WCAG relative luminance.
+    defp relative_luminance(color) do
+      {r, g, b} =
+        case Regex.run(~r/^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/, String.trim(color)) do
+          [_, r, g, b] ->
+            {String.to_integer(r, 16), String.to_integer(g, 16), String.to_integer(b, 16)}
+
+          nil ->
+            case Regex.run(~r/rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)/, color) do
+              [_, r, g, b] -> {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
+              nil -> flunk("Could not parse colour value for contrast computation: #{inspect(color)}")
+            end
+        end
+
+      [r, g, b]
+      |> Enum.map(fn channel ->
+        c = channel / 255
+        if c <= 0.03928, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
+      end)
+      |> then(fn [rl, gl, bl] -> 0.2126 * rl + 0.7152 * gl + 0.0722 * bl end)
+    end
+
+    # Turns two relative luminances into a WCAG contrast ratio.
+    defp contrast_ratio(l1, l2) do
+      {lighter, darker} = if l1 >= l2, do: {l1, l2}, else: {l2, l1}
+      (lighter + 0.05) / (darker + 0.05)
+    end
+
+    test "the dark-theme rule sets --btn-color and --btn-fg from the neutral token pair, no literal colour" do
+      body = dark_lightbox_close_block()
+
+      assert body =~ ~r/--btn-color:\s*var\(--color-neutral\)\s*;/,
+             "`[data-theme=\"dark\"] .pk-lightbox-close` must set `--btn-color` to a read of " <>
+               "`--color-neutral` — daisyUI's `.btn` resolves its fill from `--btn-color` (falling " <>
+               "back to `--color-base-200` when unset), so this is what gives the button an " <>
+               "explicit, measured fill in dark theme instead of the unmodified default."
+
+      assert body =~ ~r/--btn-fg:\s*var\(--color-neutral-content\)\s*;/,
+             "`[data-theme=\"dark\"] .pk-lightbox-close` must ALSO set `--btn-fg` to a read of " <>
+               "`--color-neutral-content`. daisyUI's base `.btn` rule sets `--btn-fg: " <>
+               "var(--color-base-content)` INDEPENDENTLY of `--btn-bg`/`--btn-color` — see " <>
+               "`.btn-neutral` in deps/daisyui/packages/bundle/daisyui.mjs, which sets BOTH " <>
+               "`--btn-color` and `--btn-fg` together, never one alone. A rule that changed only " <>
+               "the fill would leave the icon at `--color-base-content` (near-white in dark " <>
+               "theme) on the new light-lavender chip — a second, freshly-introduced contrast " <>
+               "bug of the same family as the one this round exists to fix."
+    end
+
+    test "pk-lightbox-close's own rule declares exactly its four original properties, in order, and no fifth" do
+      body = lightbox_close_own_block()
+
+      properties =
+        ~r/([a-z-]+):/
+        |> Regex.scan(body)
+        |> Enum.map(fn [_, prop] -> prop end)
+
+      assert properties == ["position", "top", "right", "z-index"],
+             "`.pk-lightbox-close` must declare EXACTLY these four properties, in this exact " <>
+               "order, and no fifth. This is an EXHAUSTIVE positive assertion rather than a " <>
+               "negative 'does not contain a fill' check — a negative check would still pass a " <>
+               "rule that had grown some OTHER unscoped visual property, which is the whole " <>
+               "failure mode this round guards against: the button's own rule must stay neutral " <>
+               "so light theme (already correct, already signed off) cannot be dragged along by " <>
+               "a fix meant to be dark-only. This rule's anchoring (position/top/right) is a " <>
+               "recorded decision that BOTH round 6 (01.2-28) and round 7 (01.2-29) were " <>
+               "explicitly prohibited from reopening. Found: #{inspect(properties)}"
+    end
+
+    test "the dark-theme fill and its icon colour meet WCAG contrast floors, computed from this file's own tokens" do
+      dark_block = dark_theme_plugin_block()
+
+      neutral = token_value(dark_block, "--color-neutral")
+      neutral_content = token_value(dark_block, "--color-neutral-content")
+      shadow_color = token_value(css_source(), "--pk-shadow-color")
+
+      fill_ratio = contrast_ratio(relative_luminance(neutral), relative_luminance(shadow_color))
+      content_ratio = contrast_ratio(relative_luminance(neutral_content), relative_luminance(neutral))
+
+      assert fill_ratio >= 3.0,
+             "The close button's dark-theme fill (`--color-neutral`, #{neutral}) must contrast " <>
+               "at least 3.0:1 (WCAG 1.4.11's non-text-contrast floor) against `--pk-shadow-color` " <>
+               "(#{shadow_color}) — the fixed literal both the lightbox scrim and the opaque " <>
+               "stage are built from. Computed: #{Float.round(fill_ratio, 2)}:1. The failing pair " <>
+               "this round replaces — dark-theme `--color-base-200` (#22103A) against the same " <>
+               "backdrop — computed to approximately 1.1:1, a perfectly well-formed pair of token " <>
+               "reads that was simply the wrong pair; a future palette retune that quietly walks " <>
+               "`--color-neutral` back down toward that surface must fail here, not ship."
+
+      assert content_ratio >= 4.5,
+             "The icon's dark-theme colour (`--color-neutral-content`, #{neutral_content}) must " <>
+               "contrast at least 4.5:1 (WCAG 1.4.3) against its own new fill (`--color-neutral`, " <>
+               "#{neutral}) — the fix must not trade an invisible chip for an invisible glyph. " <>
+               "Computed: #{Float.round(content_ratio, 2)}:1."
+    end
+  end
+
   # G-01.2-26 task 2 (gap-closure round 3, UAT gap G-01.2-15): the one base
   # pill representation + its variants. This test is the structural defence
   # against the exact drift that broke the pill rhythm three separate times
