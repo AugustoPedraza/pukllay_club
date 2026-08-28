@@ -2563,13 +2563,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
              "the scale transition must stay byte-identical to HEAD"
     end
 
-    test "the overlay scrim token and the lightbox container's own background are untouched" do
+    test "the container paints an opaque shadow-token field; the scrim token keeps its value for its sole reader (G-01.2-19)" do
       case Regex.run(~r/--pk-overlay-scrim:\s*([^;]*);/, css_source()) do
         [_, value] ->
           assert value =~ ~r/color-mix\(in srgb, var\(--pk-shadow-color\) 72%, transparent\)/,
                  "`--pk-overlay-scrim` must keep mixing `--pk-shadow-color` at exactly 72% — " <>
-                   "this plan's own prohibition forbids re-tuning it, and the scrim's value is " <>
-                   "shared with the mobile preview sheet's own backdrop (`.pk-sheet-backdrop`)."
+                   "the lightbox leaving is a reader moving OFF this token, not a licence to " <>
+                   "retune it. After this round the mobile preview sheet's backdrop " <>
+                   "(`.pk-sheet-backdrop`) is this token's SOLE reader, so 72% is not merely a " <>
+                   "value the two surfaces happened to share anymore — it is the only thing the " <>
+                   "token exists for, and it is still exactly right there, since that sheet is " <>
+                   "meant to be seen through."
 
         nil ->
           flunk("No `--pk-overlay-scrim` token found in assets/css/app.css")
@@ -2577,14 +2581,68 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       case Regex.run(~r/(?m)^\.pk-lightbox\s*\{([^}]*)\}/s, css_source()) do
         [_, body] ->
-          assert body =~ ~r/background:\s*var\(--pk-overlay-scrim\)/,
-                 "`.pk-lightbox` must still read `--pk-overlay-scrim` for its own background — " <>
-                   "the container's translucent scrim and the photo's new opaque stage are two " <>
-                   "different surfaces, and this plan only changes the second one."
+          assert body =~ ~r/background:\s*var\(--pk-shadow-color\)\s*;/,
+                 "`.pk-lightbox` must declare a bare, full-strength read of `--pk-shadow-color` " <>
+                   "for its own background, with no `color-mix()` wrapper. This element is a " <>
+                   "full-inset fixed overlay (`position: fixed; inset: 0`) that has ALWAYS " <>
+                   "covered the whole viewport, so what showed around the stage was never " <>
+                   "uncovered page — it was this element's own translucent paint compositing " <>
+                   "over the page beneath it. A translucent paint on a full-coverage box is a " <>
+                   "coverage bug that no amount of resizing the CHILD can fix."
+
+          refute body =~ ~r/--pk-overlay-scrim/,
+                 "`.pk-lightbox` must no longer read `--pk-overlay-scrim` at all. A revert to " <>
+                   "the translucent value silently reintroduces the exact band the screenshots " <>
+                   "showed — roughly 37% of a 1920px window exposed laterally, a thin sliver at " <>
+                   "390px — and this refutation is what makes that revert fail loudly instead of " <>
+                   "quietly reproducing it."
 
         nil ->
           flunk("No top-level `.pk-lightbox { ... }` rule found in assets/css/app.css")
       end
+
+      case Regex.run(~r/(?m)^\.pk-sheet-backdrop\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] ->
+          assert body =~ ~r/background:\s*var\(--pk-overlay-scrim\)\s*;/,
+                 "`.pk-sheet-backdrop` must still read `--pk-overlay-scrim` for its own " <>
+                   "background. The token is not deleted because this sheet still needs it, and " <>
+                   "the sheet itself is not changed because nobody reported it — a frozen value " <>
+                   "with no live reader would be dead code, and this is the pairing that proves " <>
+                   "it is not."
+
+        nil ->
+          flunk("No top-level `.pk-sheet-backdrop { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the container and stage backgrounds are the identical string (G-01.2-19)" do
+      container_body =
+        case Regex.run(~r/(?m)^\.pk-lightbox\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-lightbox { ... }` rule found in assets/css/app.css")
+        end
+
+      stage_body = lightbox_img_block()
+
+      container_bg =
+        case Regex.run(~r/background:\s*([^;]+);/, container_body) do
+          [_, value] -> String.trim(value)
+          nil -> flunk("No `background` declaration found in `.pk-lightbox`")
+        end
+
+      stage_bg =
+        case Regex.run(~r/background:\s*([^;]+);/, stage_body) do
+          [_, value] -> String.trim(value)
+          nil -> flunk("No `background` declaration found in `.pk-lightbox-img`")
+        end
+
+      assert container_bg == stage_bg,
+             "`.pk-lightbox`'s background (#{inspect(container_bg)}) and " <>
+               "`.pk-lightbox-img`'s background (#{inspect(stage_bg)}) must be the EQUAL " <>
+               "string, not merely two values that both happen to match a pattern. A future " <>
+               "edit that gives the container its own slightly different dark reintroduces the " <>
+               "identical band a few percent fainter — exactly the class of defect that took " <>
+               "three UAT rounds to pin down the first time."
     end
 
     test "both lightbox chevrons carry the shared class, their own side class, and kept their event bindings",
