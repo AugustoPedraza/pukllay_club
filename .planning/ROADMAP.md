@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 24/26 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4, 1 gap-closure round 5, 2 gap-closure round 6 pending)
+**Plans:** 25/26 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4, 1 gap-closure round 5, 2 gap-closure round 6 pending)
 
 Plans:
 **Wave 1**
@@ -294,7 +294,7 @@ Plans:
 
 **Wave 21 — gap closure round 6** *(from the sixth detail-page UAT round: G-01.2-20, diagnosed. Blocked on Wave 20 — same stylesheet region)*
 
-- [ ] 01.2-30-PLAN.md — G-01.2-20: the lightbox close button gets an explicit, measured fill in dark theme only, because a theme-varying `base-200` default on the theme-invariant `--pk-shadow-color` stage measures 1.1:1 in dark and >10:1 in light; the fix sets both the fill and the foreground (daisyUI sets them independently) and is gated by a test that computes the ratio rather than matching token names
+- [x] 01.2-30-PLAN.md — G-01.2-20: the lightbox close button gets an explicit, measured fill in dark theme only, because a theme-varying `base-200` default on the theme-invariant `--pk-shadow-color` stage measures 1.1:1 in dark and >10:1 in light; the fix sets both the fill and the foreground (daisyUI sets them independently) and is gated by a test that computes the ratio rather than matching token names
 
 **Wave 22 — gap closure round 6** *(G-01.2-19, the other gap from the same UAT round. Its automated diagnosis was falsified during planning — the live-reload theory is disproven, the patterns block has been in `config/runtime.exs` since the scaffold commit — and the developer chose the container-paint fix over widening the photo stage. Blocked on Wave 21 — same stylesheet region)*
 
