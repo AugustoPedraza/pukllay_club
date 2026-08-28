@@ -2646,9 +2646,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
               body
 
             nil ->
-              flunk(
-                "No top-level `.pk-lightbox-chevron-#{side} {...}` rule found in assets/css/app.css"
-              )
+              flunk("No top-level `.pk-lightbox-chevron-#{side} {...}` rule found in assets/css/app.css")
           end
 
         assert body =~
