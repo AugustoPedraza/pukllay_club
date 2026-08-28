@@ -3394,12 +3394,11 @@ body.pk-cta-parked {
    file's `:root` block, above) directly — the identical formula this
    rule used to carry on its own `max-width`, now named once and read by
    three rules (this one, plus both lightbox chevron side rules, G-01.2-28
-   task 2) instead of independently re-derived by each. `height` carries
-   the previous round's `max-height: 80vh` forward as a real size, same
-   number — the lightbox's vertical footprint is unchanged, a human
-   already signed off on it, and picking a different number is a separate
-   design call with its own UAT item, not part of this fix. `background`
-   is new: an OPAQUE fill built from `--pk-shadow-color` at full strength
+   task 2) instead of independently re-derived by each. `height`'s round-6
+   value (a single `80vh`, carried forward unchanged from the prior cap)
+   is superseded — see the G-01.2-18 paragraph below for what shipped
+   instead and why. `background` is new: an OPAQUE fill built from
+   `--pk-shadow-color` at full strength
    (unlike every other consumer of that token, which mixes it toward
    transparency) — the half of the fix the reported symptom actually
    turns on, since a box that merely reaches the shell's width but still
@@ -3418,10 +3417,39 @@ body.pk-cta-parked {
    re-tuned by this task — see this task's own `<human-check>` for how the
    scrim question is answered now that the stage behind the photo is
    opaque; the scrim's value is shared with the mobile preview sheet
-   (`.pk-sheet-backdrop`) and stays exactly as G-01.2-25 left it. */
+   (`.pk-sheet-backdrop`) and stays exactly as G-01.2-25 left it.
+
+   G-01.2-18 (gap-closure round 7, closed by plan 01.2-29): the single
+   `height: 80vh` round 6 carried forward above was itself the remaining
+   bug, not a settled value. Four points worth keeping straight. First:
+   `.pk-lightbox` (above) is a CENTRING flex container, not a stretching
+   one, so any shortfall between this rule's own height and the viewport
+   rendered as two symmetric bands of `.pk-lightbox`'s own translucent
+   scrim, one above the stage and one below it — the entire mechanism
+   behind the user's "the background should be full screen" report.
+   Second: round 6 deferred picking a different vertical number on
+   purpose and named the exact condition for reopening it — "a separate
+   design call with its own UAT item" — and that condition fired in the
+   very next UAT round, so this is the deferral resolving on schedule,
+   not a correction of a mistake. Third: the property below is declared
+   TWICE for the same reason `.pk-app-shell` declares `min-height` twice
+   (see that rule's own comment, above in this file, for the full
+   argument) — the static `100vh` is the fallback a browser without
+   dynamic-viewport support keeps, `100dvh` is what every current browser
+   actually uses, and neither line is a leftover duplicate to clean up.
+   Fourth: a percentage of the parent's own box (`height: 100%`) would
+   ALSO have resolved correctly here, since `.pk-lightbox` is a fixed,
+   full-inset overlay with a definite height — it was rejected anyway, so
+   this file keeps exactly one idiom for "as tall as the viewport"
+   instead of two. One more thing worth recording so it is never reported
+   as a bug: the scale-in transform below briefly renders this stage at
+   slightly under full size during the opening transition, so a hairline
+   of scrim is visible for the length of that animation and then gone —
+   existing motion on existing tokens, unchanged by this round. */
 .pk-lightbox-img {
   width: var(--pk-shell-content-width);
-  height: 80vh;
+  height: 100vh;
+  height: 100dvh;
   background: var(--pk-shadow-color);
   object-fit: contain;
   border-radius: var(--radius-box);

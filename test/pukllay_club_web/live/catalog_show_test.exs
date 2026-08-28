@@ -2514,15 +2514,33 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "about where the shell's edge is."
 
       refute body =~ ~r/max-height/,
-             "the vertical cap must become a real `height` (see the next assertion), matching " <>
+             "the vertical cap must become a real `height` (see the next assertions), matching " <>
                "the photo's own new real width — a mix of one real dimension and one capped " <>
                "dimension would leave the box's height still bounded by its own intrinsic size."
 
-      assert body =~ ~r/height:\s*80vh\s*;/,
-             "the height must carry forward the exact `80vh` value the previous round's " <>
-               "`max-height` already carried, now as a real size — the lightbox's vertical " <>
-               "footprint must be unchanged by this round; picking a different number here is a " <>
-               "separate design call with its own UAT item."
+      # G-01.2-18 (gap-closure round 7, plan 01.2-29): the previous round's carried-forward
+      # `80vh` was itself the bug — `.pk-lightbox` centres rather than stretches its child, so
+      # the unclaimed 20% of viewport height rendered as two translucent scrim bands, one above
+      # and one below the stage. Round 7 replaces the single `80vh` with this file's own
+      # dual-declaration full-viewport idiom (see `.pk-app-shell`'s comment for the fuller
+      # argument): the static unit as a fallback, the dynamic-viewport unit immediately after.
+      assert body =~ ~r/height:\s*100vh;\s*height:\s*100dvh;/,
+             "`.pk-lightbox-img` must declare `height` TWICE, adjacent and in this exact order " <>
+               "— the older `100vh` unit immediately followed by the dynamic-viewport `100dvh` " <>
+               "unit, with nothing but whitespace between them. This is not a redundant " <>
+               "duplicate: the first line is the fallback a browser without `dvh` support keeps, " <>
+               "the second is what every current browser actually uses (see `.pk-app-shell`'s " <>
+               "own comment in this file for the fuller argument) — deleting either line " <>
+               "silently reintroduces the mobile-toolbar bug this pair exists to prevent."
+
+      height_declarations = Regex.scan(~r/height:\s*[^;]+;/, body)
+
+      assert length(height_declarations) == 2,
+             "`.pk-lightbox-img` must declare `height` exactly twice and no third time. CSS " <>
+               "takes the LAST declaration of a property, so a stray third `height:` anywhere " <>
+               "below the static/dynamic pair would silently restore whatever envelope it names " <>
+               "— with both correct lines still sitting above it looking right. Found " <>
+               "#{length(height_declarations)}: #{inspect(height_declarations)}"
 
       assert body =~ ~r/background:\s*var\(--pk-shadow-color\)\s*;/,
              "`.pk-lightbox-img` must declare an OPAQUE fill reading `--pk-shadow-color` " <>

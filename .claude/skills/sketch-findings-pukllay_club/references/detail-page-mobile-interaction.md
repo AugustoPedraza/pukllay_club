@@ -242,10 +242,32 @@ photo also gained an opaque `background`, not only a `width`.
 ```css
 .pk-lightbox-img {
   width: var(--pk-shell-content-width);
-  height: 80vh; /* unchanged value, now a real size instead of a max-height cap */
+  height: 100vh;
+  height: 100dvh;
   background: var(--pk-shadow-color); /* opaque, full strength — not mixed toward transparency */
 }
 ```
+
+**G-01.2-18, round 7: the carried-forward height was itself the bug.** Round 6 kept the prior
+round's `80vh` unchanged on purpose — "the lightbox keeps the exact vertical footprint a human
+already approved... picking a different number is a design decision with its own UAT item" — and
+that footprint fell 20% short of the viewport. Because `.pk-lightbox` **centres** its child rather
+than stretching it, that shortfall didn't shrink the box quietly; it rendered as two symmetric
+bands of `.pk-lightbox`'s own translucent scrim, one above the stage and one below it, at every
+viewport — and the user reported exactly that ("the background should be full screen"). The
+mechanism that replaced it: the property is declared TWICE, the older `100vh` unit as a fallback
+and the dynamic-viewport `100dvh` unit immediately after, because on a mobile browser with a
+collapsing toolbar the older unit measures the toolbar-COLLAPSED (larger) viewport, so a box
+pinned to it alone renders taller than the screen actually showing at any given scroll position.
+`.pk-app-shell` in `assets/css/app.css` is this project's original, fully-argued instance of the
+same idiom — read that rule's own comment for the complete case for keeping both lines. **General
+lesson, transferable beyond this lightbox:** a full-viewport surface is sized against the dynamic
+viewport with the static unit kept only as a fallback, and a centring full-inset parent means any
+child that falls short of that height shows the parent's own background rather than simply
+rendering smaller. One more thing worth carrying forward: the mobile letterbox around the
+near-square photo GREW when the stage reached full height — the photo kept its own size while the
+solid field around it got larger — and that is expected, not a regression to answer by narrowing
+the stage again: the stage IS the full-screen background that was asked for.
 
 **Second wrong mechanism: a bounds wrapper for the arrows.** This section's own snippet used to
 propose a separate `.pk-lightbox-bounds` element — full-inset, its own copy of the shell-width
