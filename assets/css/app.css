@@ -321,7 +321,10 @@
      writes its own dark literal — not the narrower claim that every
      consumer mixes it for alpha; a fixed value read at full strength still
      never inverts between themes, which is the property every reader
-     actually needs. */
+     actually needs. G-01.2-19 (round 9, plan 01.2-31) adds this token's
+     second full-strength consumer: `.pk-lightbox` itself now reads the
+     identical declaration, so the container and the stage are deliberately
+     the same paint rather than two darks that merely happen to match. */
   --pk-shadow-color: rgb(20 8 34);
 
   /* Overlay scrim (Phase 01.2 gap-closure round 2, sketch 033 winner A,
@@ -333,9 +336,13 @@
      already-dark page — the opposite of what a scrim is for). Derived from
      --pk-shadow-color above (the same fixed dark value every other floating
      surface's shadow already uses so it never inverts) rather than a new
-     literal. This token currently has exactly two readers: .pk-lightbox and
-     .pk-sheet-backdrop — so those two can never drift to two independently
-     written scrim values again. */
+     literal. This token now has exactly one reader, .pk-sheet-backdrop
+     (Phase 01.2 gap-closure round 9, G-01.2-19, plan 01.2-31): the lightbox
+     moved to a bare, full-strength read of --pk-shadow-color instead (see
+     .pk-lightbox's own comment for why), which needed a DIFFERENT value —
+     not a different setting of this same one — so the split is by reader.
+     The token is neither deleted nor retuned: the sheet still needs exactly
+     this 72% mix to stay a scrim you can see the page through. */
   --pk-overlay-scrim: color-mix(in srgb, var(--pk-shadow-color) 72%, transparent);
 
   /* Motion system (sketch 006, variant D — Subtle/Soft): the fastest of the
@@ -3312,12 +3319,13 @@ body.pk-cta-parked {
    client-side carouselIndex, so "gallery and lightbox share one
    selection" is structural, not something two listeners keep in sync
    (T-01.1-16 — its previous/next controls reuse the existing
-   select-image whitelist unchanged). Reads --pk-overlay-scrim (Phase 01.2
-   gap-closure round 2, G-01.2-11): the SAME declaration .pk-sheet-backdrop
-   reads, not a second value that merely happens to match it — see that
-   token's own comment for why it must never be a text-color token. Reuses
-   .pk-portal's exact shadow values rather than declaring a second set of
-   matching numbers.
+   select-image whitelist unchanged). Read --pk-overlay-scrim at the time
+   (Phase 01.2 gap-closure round 2, G-01.2-11): the SAME declaration
+   .pk-sheet-backdrop read, not a second value that merely happened to
+   match it. Superseded by G-01.2-19 below: this rule's own background now
+   points at a different token entirely — see that paragraph, and
+   --pk-overlay-scrim's own comment, for why. Reuses .pk-portal's exact
+   shadow values rather than declaring a second set of matching numbers.
 
    G-01.2-21 task 2: this element is now ALWAYS rendered (its markup no
    longer carries a Phoenix `:if`) — state lives in the `is-open` class, not
@@ -3354,6 +3362,62 @@ body.pk-cta-parked {
    a real browser (headless Chromium via CDP against the running dev
    server): this element's `position: fixed` still resolves against the
    true viewport with `.pk-app-shell` active. */
+
+/* G-01.2-19 (Phase 01.2 gap-closure round 9, plan 01.2-31): a third and
+   final report of "the background should be full screen" traced to this
+   CONTAINER's own paint, not to the photo stage. A full-inset fixed
+   element already covers the entire viewport by construction (see
+   `position: fixed; inset: 0` below) — so when something around a piece
+   of content inside it reads as uncovered, the first question is whether
+   the container's own paint is translucent, not how big the content is.
+   Rounds 6 and 7 each grew the stage instead — a real width and fill in
+   round 6, real height in round 7 — and the complaint survived both,
+   because what the two screenshots showed was never uncovered page: it
+   was this element's own 72% scrim compositing over the page beneath it.
+
+   The numbers reconcile exactly. `.pk-lightbox-img`'s width cap
+   (`--pk-shell-content-width`) resolves to roughly 1216px at a 1920px
+   window, leaving roughly 704px — about 37% of the window — of this
+   element's own background exposed laterally; at 390px the gutter
+   subtraction leaves a thin sliver per side instead. A wide band at
+   desktop and a sliver at mobile is precisely what the two screenshots
+   showed, and reconciling the diagnosis against that geometry is what
+   falsified an earlier automated diagnosis, which blamed a missing
+   dev-mode `:live_reload` `patterns` block. That block already existed in
+   `config/runtime.exs`, dated to the project's scaffold commit — the
+   earlier diagnosis read only `config/dev.exs` and never reconciled its
+   conclusion against the reported geometry at all.
+
+   Growing the stage to `100vw` was the other option and was rejected: its
+   width reads `--pk-shell-content-width`, the same boundary both
+   `.pk-lightbox-chevron-prev` and `.pk-lightbox-chevron-next` read for
+   their own horizontal insets (G-01.2-28), and that chevron/stage
+   alignment was measured and signed off at 1920px. Widening the child to
+   fix a paint problem would have silently moved a boundary two other
+   rules depend on. The stage is unchanged by this round; round 6's
+   paragraph below, immediately above `.pk-lightbox-img`, written when
+   that task deliberately left this container alone, is superseded by
+   this one, not contradicted by it — that task's own scope simply ended
+   before this question did.
+
+   `--pk-overlay-scrim` is not re-tuned and not deleted: `.pk-sheet-
+   backdrop` still needs exactly 72%, the lightbox needed 100% — a
+   DIFFERENT value, not a new setting for the same one — so the token
+   splits by reader instead. Its own `:root` comment is corrected in this
+   same commit to name the sheet as its sole surviving reader.
+
+   What this round deliberately did NOT do: the stage was not resized, so
+   G-01.2-17's letterbox decision and G-01.2-28's measured chevron/stage
+   alignment both survive untouched; the chevrons, the close button and
+   01.2-30's dark-theme fill were all left alone; and the stage's own
+   `border-radius`/`box-shadow` were KEPT even though both stop reading
+   against a same-colour field now, because deleting them is a design call
+   with its own item, not a cleanup to fold into a paint fix. One more
+   consequence worth naming: G-01.2-18's remark below, above
+   `.pk-lightbox-img`, about a hairline of scrim during the opening
+   scale-in no longer applies — the photo still visibly scales in, but the
+   stage's edge simply stops reading, since the field behind it is now the
+   same colour. */
 .pk-lightbox {
   display: flex;
   position: fixed;
@@ -3361,7 +3425,7 @@ body.pk-cta-parked {
   z-index: 700;
   align-items: center;
   justify-content: center;
-  background: var(--pk-overlay-scrim);
+  background: var(--pk-shadow-color);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
