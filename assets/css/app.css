@@ -245,8 +245,12 @@
    `.pk-about-cta-bar` and `.pk-title-echo` (their own horizontal
    padding), `.pk-chip-spacer` (a flex-basis spacer sized to the gutter),
    `.pk-search-morph` in both its closed and open-state rules (right
-   offset + width), and now `.pk-lightbox-img` (its shell-width content
-   cap, see below). The invariant this token actually enforces is
+   offset + width), and — as of G-01.2-28 — the `--pk-shell-content-width`
+   token declared just below (its own formula reads this token directly).
+   `.pk-lightbox-img` and both lightbox chevron side rules read THAT
+   derived token now, not `--pk-gutter` itself, so this token has one
+   fewer direct reader than the previous round recorded, not one more —
+   the formula moved, it did not multiply. The invariant this token actually enforces is
    narrower than "one reader": no selector anywhere in this file may
    declare an INDEPENDENTLY-CHOSEN horizontal-alignment value — a literal
    px/rem/vw number picked fresh for one rule — on an aligned surface;
@@ -255,6 +259,48 @@
    drift to a second, silently-diverging spacing value again. */
 :root {
   --pk-gutter: 2rem;
+
+  /* --pk-shell-content-width (Phase 01.2 gap-closure round 6, G-01.2-28
+     task 1): the shell's content width, named so more than one rule can
+     read it instead of each carrying its own copy of the formula. The
+     formula itself is not new — it is the exact `calc()` `.pk-lightbox-img`
+     used to carry on its own standalone `max-width` before this round,
+     moved here and given a name because two independent readers now need
+     the identical number: the lightbox photo's real box (below) and both
+     lightbox chevrons' horizontal insets (`.pk-lightbox-chevron-prev`/
+     `-next`, G-01.2-28 task 2). A second hand-written copy of this formula
+     on either reader is exactly the drift this comment's own opening
+     paragraph forbids — it would let the photo and the arrows hold two
+     independently-authored opinions about where the shell's edge is,
+     which is the original UAT-reported fault, not the fix for it.
+
+     The name is not invented here: `sketch-findings-pukllay_club`'s own
+     lightbox reference already cites `--pk-shell-content-width` as though
+     it existed, in a snippet written before this token was ever declared.
+     Adopting that exact name makes the recorded design language and this
+     stylesheet agree for the first time, instead of leaving a documented
+     token that no rule had ever backed.
+
+     This token IS the shell's content width by construction, not merely
+     near it: every capped surface on this page (`.pk-nav-inner`,
+     `#detail-masthead-wrap`, `.pk-footer-row`) is a box capped at
+     `--container-7xl` with `--pk-gutter` eating inward as padding, so this
+     token's edge and every one of those surfaces' content edges are the
+     same line at every viewport. Declared on this same element as
+     `--pk-gutter` for exactly that reason: the below-480px gutter override
+     further down this file re-declares `--pk-gutter` on `:root`, and
+     because this token's own formula reads `--pk-gutter` rather than a
+     copied value, the narrower gutter flows through to this token for
+     free — verified, not assumed.
+
+     One honest limit, recorded rather than chased: below `--container-7xl`
+     (80rem), the formula's `100vw` term includes the scrollbar's own width
+     on browsers that count it in `vw`, so this token's box can overhang
+     the shell's true content edge by a scrollbar's width in that range.
+     Above `--container-7xl`, the container term wins over the viewport
+     term and the alignment is exact — which is where every desktop check
+     in this round looks. */
+  --pk-shell-content-width: calc(min(100vw, var(--container-7xl, 80rem)) - (2 * var(--pk-gutter)));
 
   /* WR-04: the one literal color allowed in this block — every floating
      surface's drop shadow (portal/sheet/drawer/lightbox/popover) needs a
@@ -265,7 +311,17 @@
      independently copy-pasted literals — consume via
      `color-mix(in srgb, var(--pk-shadow-color) N%, transparent)`, matching
      this file's existing color-mix-for-alpha idiom (see .pk-sheet-backdrop
-     below for a theme-token example of the same pattern). */
+     below for a theme-token example of the same pattern).
+
+     G-01.2-28 task 1 added this token's first FULL-STRENGTH consumer:
+     `.pk-lightbox-img`'s own `background` reads this value directly, with
+     no `color-mix()` wrapper, because that rule needs an OPAQUE stage
+     behind the photo, not another translucent layer. The invariant this
+     token exists to preserve is the one that matters here — no rule ever
+     writes its own dark literal — not the narrower claim that every
+     consumer mixes it for alpha; a fixed value read at full strength still
+     never inverts between themes, which is the property every reader
+     actually needs. */
   --pk-shadow-color: rgb(20 8 34);
 
   /* Overlay scrim (Phase 01.2 gap-closure round 2, sketch 033 winner A,
@@ -3320,38 +3376,53 @@ body.pk-cta-parked {
   transition: opacity var(--duration-base) var(--ease-out-soft);
 }
 
-/* G-01.2-25 task 1 (gap-closure round 5, diagnosed in
-   .planning/debug/G-01.2-16-lightbox-scrim-width-carousel-sync.md): the
-   photo's cap re-derived from the shell's own width instead of a
-   standalone `min(90vw, 60rem)` literal. Every other capped surface on
-   this page — `.pk-nav-inner`, `#detail-masthead-wrap`, `.pk-footer-row`
-   — shares one recipe: `mx-auto w-full max-w-7xl pk-gutter`, a box capped
-   at Tailwind's own `--container-7xl` custom property (confirmed emitted
-   in the built stylesheet — `priv/static/assets/css/app.css` declares
-   `--container-7xl: 80rem` and `.max-w-7xl { max-width:
-   var(--container-7xl); }` — so this reads that property directly rather
-   than falling back to a hand-copied literal) with `--pk-gutter`
-   horizontal PADDING eating INTO that box, not adding to it. This rule
-   never joined that recipe, so the photo rendered at a standalone
-   60rem/960px cap — narrower than the shell's real content width (80rem
-   minus two gutters) at desktop — which is the direct, confirmed cause of
-   UAT test 12's "for desktop we should use same width that defined for
-   shell (header and footer)".
+/* G-01.2-28 task 1 (gap-closure round 6, corrects G-01.2-25 task 1 above,
+   diagnosed in .planning/debug/lightbox-width-scrim-not-shell-width.md):
+   the previous round's fix was real, compiled and served — and still a
+   no-op — because it only ever widened a CAP. A `max-width` can only ever
+   SHRINK an element, never grow one: a plain `<img>` with no `width`
+   attribute renders at its own intrinsic pixel size, and every photo in
+   this catalog is produced by `PukllayClub.Catalog.Seed.ImagePipeline`'s
+   fixed `@large_width` (800px), near-square, at seed time — well under
+   every cap this rule has ever carried, the old 60rem/960px one and the
+   widened 80rem-minus-gutters one alike. Both caps sat unused above an
+   800px image; widening a ceiling that was never the binding constraint
+   could never change what rendered.
 
-   This is deliberately NOT a fix for the same report's "the overlay isn't
-   correct, it displays background": a five-viewport headless-Chrome
-   pixel-sampling investigation found the scrim composites correctly and
-   uniformly over every sampled region, with no stacking/positioning
-   fault — the best-evidenced explanation is that a photo capped far
-   narrower than the shell left a wide field of the scrim's own
-   deliberately-transparent 72% opacity (`--pk-overlay-scrim`, unchanged
-   here), which reads as "not obscuring enough" over that empty field.
-   `--pk-overlay-scrim` and `.pk-lightbox`'s background are NOT re-tuned
-   in this rule — see this task's own `<human-check>` for how the scrim
-   question is answered once the width alone is fixed. */
+   The visible fix is therefore a real WIDTH plus a solid FILL, not a
+   larger ceiling. `width` below reads `--pk-shell-content-width` (this
+   file's `:root` block, above) directly — the identical formula this
+   rule used to carry on its own `max-width`, now named once and read by
+   three rules (this one, plus both lightbox chevron side rules, G-01.2-28
+   task 2) instead of independently re-derived by each. `height` carries
+   the previous round's `max-height: 80vh` forward as a real size, same
+   number — the lightbox's vertical footprint is unchanged, a human
+   already signed off on it, and picking a different number is a separate
+   design call with its own UAT item, not part of this fix. `background`
+   is new: an OPAQUE fill built from `--pk-shadow-color` at full strength
+   (unlike every other consumer of that token, which mixes it toward
+   transparency) — the half of the fix the reported symptom actually
+   turns on, since a box that merely reaches the shell's width but still
+   lets the page show through wherever the 800px photo doesn't cover it
+   would change nothing anyone can see, and this gap would have failed a
+   third time. Reading `--pk-shadow-color` directly keeps this fill from
+   ever inverting between themes (the lesson sketch 033 already paid for,
+   see `sketch-findings-pukllay_club`) and introduces no new literal
+   colour — the one rule this whole block is under.
+
+   Raising `@large_width` so the photo itself could reach the shell's
+   width on its own pixels is a separate pass: it needs a re-seed of every
+   image in the catalog and is deliberately not folded in here.
+
+   `--pk-overlay-scrim` and `.pk-lightbox`'s own background are NOT
+   re-tuned by this task — see this task's own `<human-check>` for how the
+   scrim question is answered now that the stage behind the photo is
+   opaque; the scrim's value is shared with the mobile preview sheet
+   (`.pk-sheet-backdrop`) and stays exactly as G-01.2-25 left it. */
 .pk-lightbox-img {
-  max-width: calc(min(100vw, var(--container-7xl, 80rem)) - (2 * var(--pk-gutter)));
-  max-height: 80vh;
+  width: var(--pk-shell-content-width);
+  height: 80vh;
+  background: var(--pk-shadow-color);
   object-fit: contain;
   border-radius: var(--radius-box);
   box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
@@ -3393,6 +3464,51 @@ body.pk-cta-parked {
    only each one needing to independently outrank the photo. */
 .pk-lightbox-chevron {
   z-index: 2;
+}
+
+/* G-01.2-28 task 2 (gap-closure round 6, supersedes G-01.2-21's viewport-
+   edge anchoring): each chevron's horizontal inset, one rule per side,
+   sitting BESIDE the shared stacking rule above rather than inside it —
+   the inset genuinely differs per side, the stacking order genuinely does
+   not, so neither belongs on the other's rule.
+
+   WHY: so the arrows and the photo are measured against ONE boundary
+   instead of two. `.pk-lightbox` is `position: fixed; inset: 0` (see
+   above) — the full viewport — and it is the containing block every
+   absolutely-positioned child of it, including both these buttons,
+   resolves against. That single fact is why the previous round's bare
+   `left-4`/`right-4` was a browser-edge anchor by construction, no matter
+   what the photo was doing: `.pk-lightbox-img` (above) now reaches
+   `--pk-shell-content-width`, but a plain length here would still measure
+   from the viewport's own edge, leaving the two surfaces drifted apart
+   exactly as before. The value below is therefore a CALCULATION reading
+   the shared token, never a length: half the containing block, less half
+   the token, which resolves to the exact distance from the browser's edge
+   to the stage's edge — landing each button's outer edge on the same line
+   the header's brand lockup and the footer's clusters already share. No
+   fallback literal is added beside the token for the same reason a
+   fallback is never added elsewhere in this file: it would be a second,
+   silently-diverging opinion about the shell's width.
+
+   The user asked for this exact placement twice, in two separate UAT
+   rounds (tests 12 and 17) — see the superseded markup comment in
+   `show.ex` for the fuller history of why a recorded decision was
+   reopened rather than left standing a third time.
+
+   WHAT CHANGES AT EACH WIDTH: a large inward move at desktop (the stage
+   is far narrower than the viewport there); a smaller inward move in the
+   band between the 480px breakpoint and `--container-7xl`'s own width
+   (where `--pk-gutter`'s narrower below-480px value has not yet kicked
+   in but the viewport term is also not yet capped); and, on a phone,
+   effectively no move at all — below 480px the shell's content edge and
+   the viewport edge are one narrow gutter apart, which is the same
+   distance `left-4`/`right-4` already approximated. */
+.pk-lightbox-chevron-prev {
+  left: calc(50% - (var(--pk-shell-content-width) / 2));
+}
+
+.pk-lightbox-chevron-next {
+  right: calc(50% - (var(--pk-shell-content-width) / 2));
 }
 
 /* Share trigger (Phase 01.2 gap-closure, sketch 027): a bordered circle on

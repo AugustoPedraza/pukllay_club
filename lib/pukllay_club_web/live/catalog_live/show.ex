@@ -752,19 +752,21 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           >
             <.icon name="hero-x-mark" class="size-5" />
           </button>
-          <%!-- Arrow-anchoring decision (G-01.2-21, sketch 033's open
-          question): kept viewport-edge anchoring (left-4/right-4) at every
-          width rather than switching to image-relative anchoring at
-          desktop. Reasons: (1) needs no new wrapper element sized to the
-          image; (2) keeps the 44px touch targets clear of the photo's own
-          tap area at phone widths; (3) this exact placement is already
-          UAT-exposed with no complaint recorded. Tradeoff, recorded
-          honestly rather than hidden: at wide desktop windows with the
-          image capped narrower than the viewport, the chevrons can sit
-          across a lot of empty scrim from the photo — if the human check
-          below reads that as accidental rather than deliberate, that is a
-          follow-up gap with a designed answer, not a silent change made
-          here. --%>
+          <%!-- Arrow-anchoring decision, SUPERSEDED (G-01.2-21 -> G-01.2-28
+          task 2): the previous round anchored both chevrons to the
+          browser's own edge (left-4/right-4) rather than the shell's
+          content edge, for three reasons. Two survive here, one does not.
+          (1) survives, differently: no wrapper element was needed then,
+          and none is needed now either — both buttons read
+          --pk-shell-content-width directly (see .pk-lightbox-chevron-prev/
+          -next in app.css) instead of sitting inside a bounds element.
+          (2) survives outright: at phone widths these buttons barely move,
+          so the 44px touch targets stay clear of the photo's own tap area
+          exactly as before. (3) did not survive: "no complaint recorded"
+          stopped being true when the user asked for shell-width arrows
+          twice, in UAT tests 12 and 17 — the original decision itself
+          named that as the condition for reopening it, and the condition
+          fired. The values themselves live in app.css, not here. --%>
           <button
             :if={length(gallery_thumbnails(@game)) > 1}
             type="button"
@@ -772,7 +774,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             phx-click="select-lightbox-image"
             phx-value-url={lightbox_neighbor(@game, @lightbox_image, -1)}
             aria-label="Imagen anterior"
-            class="pk-lightbox-chevron btn btn-circle min-h-11 min-w-11 absolute left-4 top-1/2 -translate-y-1/2"
+            class="pk-lightbox-chevron pk-lightbox-chevron-prev btn btn-circle min-h-11 min-w-11 absolute top-1/2 -translate-y-1/2"
           >
             <.icon name="hero-chevron-left" class="size-5" />
           </button>
@@ -789,7 +791,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             phx-click="select-lightbox-image"
             phx-value-url={lightbox_neighbor(@game, @lightbox_image, 1)}
             aria-label="Imagen siguiente"
-            class="pk-lightbox-chevron btn btn-circle min-h-11 min-w-11 absolute right-4 top-1/2 -translate-y-1/2"
+            class="pk-lightbox-chevron pk-lightbox-chevron-next btn btn-circle min-h-11 min-w-11 absolute top-1/2 -translate-y-1/2"
           >
             <.icon name="hero-chevron-right" class="size-5" />
           </button>

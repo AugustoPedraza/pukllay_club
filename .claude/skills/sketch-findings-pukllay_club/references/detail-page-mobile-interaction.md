@@ -218,23 +218,63 @@ already ships left/right chevron navigation — industry-standard for any multi-
 Caught in review, not by grounding the sketch in the real markup closely enough the first time.
 Fix: `‹`/`›` buttons, absolutely positioned and vertically centered at the lightbox's left/right
 edges, plus `ArrowLeft`/`ArrowRight` keyboard support alongside the existing `Escape`-to-close.
-**Resolved (Phase 01.2 gap-closure round 3, sketch 038): arrows anchor to the shell's content-width
-box, not the raw viewport.** UAT confirmed the leftover open question above was the real bug: the
-lightbox photo caps at a standalone `min(90vw, 60rem)` instead of the page's own shell content
-width, so at wide desktop the photo sits in a small central column while the arrows stay pinned to
-the *viewport* edge — a lot of empty scrim between button and photo, which read as "the overlay
-isn't correct, it displays background" even though the scrim itself composites correctly (verified
-pixel-by-pixel across 5 viewports before concluding this). Neither "viewport edge" nor "image edge"
-alone was the right framing — the photo and the arrows need to be measured against the **same**
-boundary. Fix: cap the photo to the shell's content width (the same box the header/footer/masthead
-already share, see `detail-page-layout.md`), and anchor the arrows to that same box's edges, not
-the browser viewport. At mobile widths the shell width and the viewport width are effectively the
-same, so mobile behavior is unchanged.
+**Resolved (Phase 01.2 gap-closure round 3, sketch 038), then CORRECTED (round 6, G-01.2-28): the
+diagnosis was right, the mechanism was wrong, twice.** UAT confirmed the leftover open question
+above was the real bug: the lightbox photo caps at a standalone `min(90vw, 60rem)` instead of the
+page's own shell content width, so at wide desktop the photo sits in a small central column while
+the arrows stay pinned to the *viewport* edge — a lot of empty scrim between button and photo,
+which read as "the overlay isn't correct, it displays background" even though the scrim itself
+composites correctly (verified pixel-by-pixel across 5 viewports before concluding this). Neither
+"viewport edge" nor "image edge" alone was the right framing — the photo and the arrows need to be
+measured against the **same** boundary. That diagnosis is correct and is exactly what round 6
+shipped. What round 3 got wrong was the MECHANISM, in two independent ways, both corrected below.
+
+**First wrong mechanism: widening a cap.** Round 3's fix — `max-width: var(--pk-shell-content-width,
+1216px)` — was live UAT-tested and found to change nothing visible. Root cause: a `max-width` can
+only ever SHRINK an element, never grow one, and this project's seed pipeline (see the catalog fact
+below) produces every detail-page photo at a fixed intrinsic width well under any cap this rule has
+ever carried — so both the old cap and the widened one sat unused above an image already smaller
+than either. **General lesson, transferable beyond this lightbox:** a cap only shrinks, so any
+surface whose content is already smaller than its cap needs a real size, not a wider ceiling — and a
+box widened without a fill of its own still reveals whatever is behind it, which is why round 6's
+photo also gained an opaque `background`, not only a `width`.
 
 ```css
-.pk-lightbox-img { max-width: var(--pk-shell-content-width, 1216px); } /* was: min(90vw, 60rem) */
-.pk-lightbox-bounds { position: absolute; inset: 0; max-width: var(--pk-shell-content-width, 1216px); margin: 0 auto; } /* arrows position against THIS, not the lightbox's own full-viewport wrapper */
+.pk-lightbox-img {
+  width: var(--pk-shell-content-width);
+  height: 80vh; /* unchanged value, now a real size instead of a max-height cap */
+  background: var(--pk-shadow-color); /* opaque, full strength — not mixed toward transparency */
+}
 ```
+
+**Second wrong mechanism: a bounds wrapper for the arrows.** This section's own snippet used to
+propose a separate `.pk-lightbox-bounds` element — full-inset, its own copy of the shell-width
+formula — with the arrows repositioned inside it. Round 6 considered that and rejected it: it would
+have added a second, hand-written copy of the shell-width formula (the exact drift this file's own
+opening claim about "the same boundary" argues against), an element that exists only to hold that
+copy, and a `pointer-events` dance to keep the wrapper from intercepting clicks meant for the
+overlay beneath it — three new things to get right for a number the stylesheet could already read
+directly. The wrapper was the right idea only because, when it was written, nothing in the project
+yet named the shell's content width — there was no token to read. Round 6 added one
+(`--pk-shell-content-width`, `assets/css/app.css`'s `:root` block), so what shipped instead is a
+shared token read three times — by the photo's own `width` and by one horizontal-inset rule per
+chevron — with no wrapper element at all:
+
+```css
+.pk-lightbox-img { width: var(--pk-shell-content-width); }
+.pk-lightbox-chevron-prev { left: calc(50% - (var(--pk-shell-content-width) / 2)); }
+.pk-lightbox-chevron-next { right: calc(50% - (var(--pk-shell-content-width) / 2)); }
+```
+
+The token IS real now — declared once in `:root`, formula `calc(min(100vw,
+var(--container-7xl, 80rem)) - (2 * var(--pk-gutter)))` — so a reader can no longer copy either
+snippet above and get a rule that silently resolves to nothing, the way the earlier draft of this
+paragraph did before this token existed. **Read it bare, with no fallback literal beside it**: a
+fallback is a second, silently-diverging opinion about the shell's width, and defeats the entire
+point of naming the boundary once. **Sharper general lesson:** when two elements must agree about a
+boundary, name the boundary once and have both read the name directly — don't build a box for one
+of them to sit inside, because a box is a second place the number can live, and a second place is
+exactly what re-introduces the drift a shared boundary was supposed to close.
 
 **Related, separate bug from the same UAT round: mobile's left chevron rendered behind the image.**
 The prev/next buttons and the `<img>` are DOM siblings with no explicit `z-index`; with
@@ -243,6 +283,20 @@ in markup) painted over the prev button wherever their boxes overlapped — at m
 image's near-full-width cap left only ~20px margin, putting the edge-anchored prev button directly
 under the image's edge. Fix: give both chevrons an explicit `z-index` above the image's own
 stacking level, don't rely on DOM order alone once elements can visually overlap.
+
+**This stacking-order lesson got MORE load-bearing in round 6 (G-01.2-28), not less.** Before round
+6 the chevrons only overlapped the photo incidentally, at phone widths where the image's cap left
+little margin. Round 6 moves both chevrons onto the lightbox's new opaque stage deliberately, at
+EVERY width — so the explicit `z-index` this fix added is now permanently load-bearing everywhere,
+not only in the one narrow band that originally exposed the bug. Removing or weakening it now hides
+the arrows at every viewport, not just a phone-width edge case.
+
+**Catalog-specific fact worth carrying forward: the photo can never reach the shell's width on its
+own pixels.** The seed pipeline (`PukllayClub.Catalog.Seed.ImagePipeline`) emits a fixed-width,
+near-square variant for the detail page — well below the shell's content width at every desktop
+viewport. That is exactly why round 6's fix has to be a real box around the photo (a sized, filled
+stage) rather than a bigger cap on the photo itself: raising the cap can never outrun a fixed
+intrinsic size, only a real box with its own fill can.
 
 ### Lightbox open/close needs a soft transition, not an instant `display` toggle
 
