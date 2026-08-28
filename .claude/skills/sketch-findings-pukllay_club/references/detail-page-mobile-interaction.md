@@ -317,6 +317,48 @@ near-square photo GREW when the stage reached full height — the photo kept its
 solid field around it got larger — and that is expected, not a regression to answer by narrowing
 the stage again: the stage IS the full-screen background that was asked for.
 
+**Third and final coverage fix: full-screen coverage was the CONTAINER's paint job, not the
+child's size all along (Phase 01.2 gap-closure round 9, G-01.2-19, plan 01.2-31).** A full-inset
+fixed overlay already covers the entire viewport by construction, so when "background" shows
+around its content the question to ask FIRST is whether the container's OWN paint is translucent —
+not how big the content is. Two rounds were spent growing the child instead (a real width and fill
+in round 6, real height in round 7) and the complaint survived both, because the visible surround
+was never uncovered page: it was the container's own 72% scrim (`--pk-overlay-scrim`) compositing
+over the page beneath it. This directly supersedes round 7's closing claim just above that "the
+stage IS the full-screen background" — the stage is width-capped by design and could never have
+been that; what actually reaches full screen is the container behind it.
+
+The numbers, because this project writes measured constraints down: the stage's shared width token
+(`--pk-shell-content-width`) resolves to roughly 1216px at a 1920px window, leaving roughly
+704px — about 37% of the window — of the container's own background exposed laterally; at 390px
+the gutter subtraction leaves a thin sliver per side instead. These reconciled exactly with two
+reported screenshots (a wide band at desktop, a sliver at mobile), and reconciling a diagnosis
+against the reported geometry is what separated the real cause from a plausible one: an earlier
+automated diagnosis concluded the CSS was already correct and the user was looking at a stale tab,
+because dev-mode live reload had no patterns configured. It read one config file
+(`config/dev.exs`); the patterns block lives in `config/runtime.exs` and has since the project's
+first commit. **Transferable lesson worth bolding: a diagnosis that concludes from a key's ABSENCE
+has to check every file the config is assembled from, and an environmental explanation that does
+not also account for the reported geometry is not yet a diagnosis.**
+
+Why the fix was the container and not the child, again: the stage's width reads the shared
+`--pk-shell-content-width` boundary token both chevron inset rules also read (see "Second wrong
+mechanism" below) — widening the child to chase coverage would have moved a boundary two other
+rules depend on, and discarded the chevron/stage alignment round 6 measured and signed off.
+**Transferable lesson worth bolding: when a coverage complaint and a sizing decision collide,
+change the paint, not the geometry — paint is local to one rule, geometry is a boundary other
+rules read.** The shared token itself was not retuned to fix this either: `--pk-overlay-scrim`
+keeps its exact 72% value because the mobile preview sheet's backdrop (`.pk-sheet-backdrop`) still
+needs precisely that, and the lightbox needed a genuinely different value (100%) rather than a
+different setting of the same one — so the token lost a reader instead of being retuned, and its
+own `:root` comment (which had stated its reader count in the present tense) was corrected in the
+same commit, since leaving it would have shipped a false invariant a future reader could act on.
+
+```css
+.pk-lightbox { background: var(--pk-shadow-color); } /* was --pk-overlay-scrim */
+.pk-lightbox-img { background: var(--pk-shadow-color); } /* unchanged — now the SAME declaration */
+```
+
 **Second wrong mechanism: a bounds wrapper for the arrows.** This section's own snippet used to
 propose a separate `.pk-lightbox-bounds` element — full-inset, its own copy of the shell-width
 formula — with the arrows repositioned inside it. Round 6 considered that and rejected it: it would
