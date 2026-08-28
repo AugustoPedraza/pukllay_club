@@ -211,6 +211,54 @@ variable that happens to look right in only one theme.
 invisible in light mode and only shows up in dark mode, so testing only the default theme will miss
 it every time.
 
+### A control on a theme-invariant backdrop needs its own theme-aware fill (Phase 01.2
+gap-closure round 8, G-01.2-20)
+
+The section above fixed the lightbox's BACKDROP by making it theme-invariant — a fixed dark
+literal (`--pk-shadow-color`) instead of a token that inverts with the theme. That fix was correct
+and stays. Its cost showed up one round later, on the CONTROL sitting on top of that backdrop: the
+close button had no colour of its own, so it inherited daisyUI's unmodified `.btn` default fill
+(`--color-base-200`) — a token that VARIES by theme, sitting on a surface that deliberately does
+not. Legible in one theme by construction, invisible in the other. This app now has exactly that
+surface (the fixed dark shadow/scrim literal the section above established), so this is not a
+one-off bug — it is the general cost sketch 033's fix quietly transferred onto everything placed on
+that backdrop, and the next control added to this overlay will hit it too.
+
+The numbers, because this project writes measured constraints down rather than re-deriving them by
+eye: dark-theme `--color-base-200` (#22103A) against `--pk-shadow-color` (#140822) measures ≈1.1:1
+— the reported defect (UAT test 20, "On the dark needs a little more constrant"). The identical
+unmodified default in light theme (`--color-base-200` #F3ECFA against the same backdrop) measures
+>10:1, which is why the defect was dark-only. What shipped, dark-theme `--color-neutral` (#B8A6CC)
+against the same backdrop, measures ≈8.6:1.
+
+**The fix must be theme-SCOPED, not declared once for both themes — the same token that rescues
+the broken theme measures worse in the working one.** Light-theme `--color-neutral` (#6B5B7B)
+against the same fixed backdrop measures only ≈3.1:1, well under the >10:1 the unscoped default
+already gives light theme. A single invariant rule (`--color-neutral` for both themes) would fix
+dark theme by degrading light theme's already-correct, already-signed-off result. This is the
+sentence a future round trying to "simplify" the scope away needs to read first.
+
+**Overriding only a daisyUI button's fill moves the problem to its foreground, not away.** The base
+`.btn` rule sets `--btn-fg: var(--color-base-content)` independently of `--btn-bg`/`--btn-color` —
+they are two separate custom properties, not one derived from the other. A rule that changes only
+the fill (`--btn-color`) leaves the icon at `--color-base-content`, which in dark theme is
+near-white — on the new light-lavender chip that measures ≈1.9:1, trading an invisible chip for an
+invisible glyph. Fix: set the SAME two custom properties daisyUI's own colour modifiers set together
+(e.g. `.btn-neutral` sets both `--btn-color` and `--btn-fg`), never the fill alone. This transfers to
+any button in this app, not just this one.
+
+```css
+[data-theme="dark"] .pk-lightbox-close {
+  --btn-color: var(--color-neutral);
+  --btn-fg: var(--color-neutral-content);
+}
+```
+
+**Verify a contrast fix on a control over a fixed backdrop in BOTH themes and with a COMPUTED
+ratio, never by eye** — mirroring the instruction directly above. The failing pair here (#22103A on
+#140822) was two perfectly well-formed token reads that looked deliberate in the source and
+measured 1.1:1; nothing about reading the source would have caught it without doing the arithmetic.
+
 ### Lightbox needs standard prev/next navigation, not just a close button
 
 A sketch round that only mocked the close (✕) control missed that production's real lightbox
