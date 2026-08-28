@@ -3474,6 +3474,46 @@ body.pk-cta-parked {
   z-index: 2;
 }
 
+/* G-01.2-20, plan 01.2-30 (gap-closure round 8): the close button's own
+   fill has no colour treatment of its own, so it inherits daisyUI's
+   unmodified `.btn` default — whatever `--color-base-200` is in the active
+   theme. The surface behind it, though, is theme-INVARIANT:
+   `--pk-shadow-color` is a single fixed dark literal, and both the scrim
+   and the opaque stage (`.pk-lightbox-img`, above) are built from it. A
+   theme-VARYING fill on a theme-INVARIANT backdrop is legible in one theme
+   by construction and illegible in the other — same asymmetry sketch 033
+   already paid for on the backdrop itself, opposite side of it this time.
+
+   The numbers: dark-theme `--color-base-200` (#22103A) against
+   `--pk-shadow-color` (#140822) measures ≈1.1:1 — the reported defect.
+   Light-theme `--color-base-200` (#F3ECFA) against the same backdrop
+   measures >10:1 — already correct, already signed off. What ships below,
+   dark-theme `--color-neutral` (#B8A6CC) against the same backdrop,
+   measures ≈8.6:1.
+
+   Scoped to dark only, not declared once for both themes, because
+   light-theme `--color-neutral` (#6B5B7B) against the same fixed backdrop
+   measures only ≈3.1:1 — worse than the >10:1 default it would replace. An
+   invariant rule would fix the broken theme by degrading the working one.
+
+   Two properties, not one: daisyUI's base `.btn` sets `--btn-fg:
+   var(--color-base-content)` independently of `--btn-bg`/`--btn-color`, so
+   changing only the fill would leave the icon at `--color-base-content`
+   (near-white in dark theme) on the new light-lavender chip — moving the
+   invisibility from the chip to the glyph. `--btn-color` and `--btn-fg`
+   below are the same pair daisyUI's own `.btn-neutral` sets together.
+
+   What this round deliberately did NOT do: the button did not move,
+   resize, or change shape (its anchoring is a decision rounds 6/01.2-28
+   and 7/01.2-29 were both prohibited from reopening); the markup was not
+   touched, so no daisyUI modifier class was added to it; and the chevrons
+   were left alone, since they passed UAT test 21 in both themes on this
+   same stage. */
+[data-theme="dark"] .pk-lightbox-close {
+  --btn-color: var(--color-neutral);
+  --btn-fg: var(--color-neutral-content);
+}
+
 /* G-01.2-25 task 1: BOTH lightbox chevrons get one explicit stacking
    order above the photo, rather than relying on `z-index: auto`'s DOM-
    order paint rule. Diagnosed root cause: the prev button, the `<img>`
