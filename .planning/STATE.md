@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 01.2
-current_phase_name: Catalog & Detail Navigation Polish (INSERTED)
-status: executing
-stopped_at: Completed 01.2-15-PLAN.md
-last_updated: "2026-08-29T14:45:13.515Z"
+current_phase: 02
+current_phase_name: Natural-Language Spanish Search + Auth
+status: planning
+stopped_at: Phase 01.2 complete, ready to plan Phase 02
+last_updated: "2026-08-29T15:48:23.163Z"
 last_activity: 2026-08-29
-last_activity_desc: Phase 01.2 execution resumed (wave continue)
-state_head: 4cd105f4189742aafb838bcad721597a257cd6a5
+last_activity_desc: Phase 01.2 complete, transitioned to Phase 02
+state_head: 80b815f6cd3281abbcd5b1e2fddc5621f3dadb1a
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 48
-  completed_plans: 47
+  completed_plans: 48
 milestone_name: milestone
 ---
 
@@ -21,18 +21,18 @@ milestone_name: milestone
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-24)
+See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.2 — Catalog & Detail Navigation Polish (INSERTED)
+**Current focus:** Phase 02 — Natural-Language Spanish Search + Auth
 
 ## Current Position
 
-Phase: 01.2 (Catalog & Detail Navigation Polish (INSERTED)) — EXECUTING
-Plan: 1 of 23
-Status: Executing Phase 01.2
-Last activity: 2026-08-29 — Phase 01.2 execution resumed (wave continue)
+Phase: 02 — Natural-Language Spanish Search + Auth
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-29 — Phase 01.2 complete, transitioned to Phase 02
 
 Progress: [██████████] 100%
 
@@ -40,7 +40,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 24
+- Total plans completed: 51
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -51,6 +51,7 @@ Progress: [██████████] 100%
 | 00 | 6 | - | - |
 | 01 | 9 | - | - |
 | 01.1 | 9 | - | - |
+| 01.2 | 27 | - | - |
 
 **Recent Trend:**
 
@@ -167,6 +168,7 @@ Recent decisions affecting current work:
 - [Phase 01.2]: 01.2-15: deleted flash_group/1's #client-error/#server-error toast entirely and replaced with .pk-conn-banner (element-id-targeted phx-disconnected/phx-connected bindings, accent tint, Spanish copy) as a sibling of #app-header inside the LiveView root but outside the header so it never shifts --pk-header-h
 - [Phase 01.2]: 01.2-15: reduced-motion for .pk-conn-spinner uses @media (prefers-reduced-motion: no-preference) gating the animation itself (matching .pk-scroll-top's idiom), not a new per-selector reduce-block override, since app.css already retired that pattern in favor of one universal * guard
 - [Phase 01.2]: 01.2-15: UI-SPEC's D-03 auto-load-more error row rescoped to a live query failure only (safe_filter_games/1, requires an established socket); a new connection-status row added for the transport-disconnect surface; header row-count corrected from a pre-existing 36/31 (already off-by-one against actual 37/32) to 38/33/3/2 after recounting
+- [Phase 01.2, 2026-08-29]: Phase closed after 32 plans and 10 UAT gap-closure rounds (G-01.2-9 through G-01.2-21) — the mobile detail-page masthead was rebuilt (facts pills above the poster, one buy-box card, compact dot row), a single shared pill/chip base component replaced five independently-styled chip implementations, the lightbox was rebuilt from scratch (full-screen opaque stage, shell-width photo cap, own selection state independent of the gallery carousel, unified dark/light control family), and a site-wide sticky-footer layout + mobile-only title-echo bar shipped. Final UAT gate closed 2026-08-29: 23/28 checkpoints reconfirmed via a live mobile (390px) browser spot-check; the remaining 5 desktop-only claims (shell-width alignment at 1280/1440/1920px) were accepted on existing exact-DOM-coordinate measurements already on record in the Gaps section, since this session's browser automation tool would not resize its rendering viewport past ~390px (resize_window reported success but window.innerWidth stayed pinned at 339px) — worth re-verifying live on a real desktop browser if that tool limitation is ever hit again for future UI work.
 
 ### Pending Todos
 
@@ -262,6 +264,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-26T23:23:06.001Z
-Stopped at: Completed 01.2-15-PLAN.md
+Last session: 2026-08-29
+Stopped at: Phase 01.2 complete, ready to plan Phase 02
 Resume file: None
