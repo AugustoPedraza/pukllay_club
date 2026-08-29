@@ -211,8 +211,8 @@ variable that happens to look right in only one theme.
 invisible in light mode and only shows up in dark mode, so testing only the default theme will miss
 it every time.
 
-### A control on a theme-invariant backdrop needs its own theme-aware fill (Phase 01.2
-gap-closure round 8, G-01.2-20)
+### A control on a theme-invariant backdrop needs its own theme-aware fill, and the fix must
+cover the whole control set (Phase 01.2 gap-closure rounds 8-10, G-01.2-20, G-01.2-21)
 
 The section above fixed the lightbox's BACKDROP by making it theme-invariant — a fixed dark
 literal (`--pk-shadow-color`) instead of a token that inverts with the theme. That fix was correct
@@ -247,8 +247,38 @@ invisible glyph. Fix: set the SAME two custom properties daisyUI's own colour mo
 (e.g. `.btn-neutral` sets both `--btn-color` and `--btn-fg`), never the fill alone. This transfers to
 any button in this app, not just this one.
 
+**A contrast fix on one of a set of markup-identical sibling controls is not a partial fix — it is a
+NEW defect (round 10, G-01.2-21).** Round 8 fixed only the close button, on the reasoning directly
+above; the chevrons sit on the identical backdrop, carry the identical unmodified `.btn` default, and
+were left untouched. Before the fix the three controls were uniformly dim and read as a style; after
+it, the treated close button became the reference and the two untreated chevrons read as broken. This
+is a perception claim with direct evidence behind it, not a design opinion: the same user reported the
+same overlay in two consecutive rounds — first as "the close button needs more contrast," then, once
+only the close button had been fixed, as "the close button and the rest of controls must be
+consistent." The second report is the cost of the partial fix, and it cost a full round to close.
+
+The chevrons' exclusion was rationalised on written, checkable grounds — they had "passed UAT test 21
+in both themes on this same stage." That was true when written. One round later (round 9, G-01.2-19)
+the surface underneath them changed — the lightbox's own backdrop went from a translucent scrim to
+fully opaque — and the passing check was never re-run. **A prior UAT pass is evidence about a specific
+rendered condition, not a standing property of the control — when the surface underneath changes,
+every pass measured against the old surface expires.** That sentence is the transferable part; the
+lightbox is just where it was learned.
+
+Implementation rule: fix the whole set in ONE rule, targeting the class the siblings already share,
+rather than one rule per sibling. Two rules holding the same value are two places for it to drift,
+which is how a set of controls falls out of alignment in the first place. This repo backs the rule
+with an assertion comparing the two dark-scoped rules' declarations to each other, so the family fails
+as a relationship rather than passing as two independently-correct rules — and that assertion is the
+deliberate place to make a future "these controls should differ" decision, by deleting it on purpose.
+
 ```css
 [data-theme="dark"] .pk-lightbox-close {
+  --btn-color: var(--color-neutral);
+  --btn-fg: var(--color-neutral-content);
+}
+
+[data-theme="dark"] .pk-lightbox-chevron {
   --btn-color: var(--color-neutral);
   --btn-fg: var(--color-neutral-content);
 }
