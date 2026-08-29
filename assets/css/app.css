@@ -3651,6 +3651,48 @@ body.pk-cta-parked {
   right: calc(50% - (var(--pk-shell-content-width) / 2));
 }
 
+/* G-01.2-21, plan 01.2-32 (gap-closure round 10): completes round 8's fix
+   (G-01.2-20/01.2-30, comment above) across the control set it was scoped
+   out of. Same mechanism as that fix — a theme-VARYING fill on the
+   lightbox's theme-INVARIANT `--pk-shadow-color` backdrop is legible in
+   one theme by construction and illegible in the other — applied here to
+   both chevrons instead of restated; see that comment for the full
+   derivation.
+
+   Round 8 left the chevrons alone on the stated grounds that they "passed
+   UAT test 21 in both themes on this same stage." That was true when
+   written: test 21 ran under plan 01.2-29, while `.pk-lightbox`'s own
+   field was still a translucent scrim. Plan 01.2-31 (G-01.2-19, round 9)
+   then made that field fully opaque, string-identical to the photo
+   stage — the exact condition that made the close button's identical
+   unmodified `.btn` default go from legible to ≈1.1:1 in G-01.2-20. The
+   chevrons were never re-tested after that change and carry the same
+   latent defect the close button had before round 8.
+
+   One rule on the SHARED class `.pk-lightbox-chevron`, not two per-side
+   rules: both buttons already carry that class (pinned by an existing
+   assertion above), and two rules holding the same value would be two
+   places for it to drift — the precise shape of the defect this round
+   closes.
+
+   Scoped to dark only, for the same number round 8 already recorded:
+   light-theme `--color-neutral` (#6B5B7B) measures only ≈3.1:1 against
+   this same fixed backdrop — worse than the >10:1 default it would
+   replace. An invariant rule would fix the broken theme by degrading the
+   working one, now for two more controls.
+
+   General lesson this round adds to the one above: when a set of
+   markup-identical sibling controls shares a surface, a contrast fix
+   applied to one of them is not a partial fix — it is a NEW defect,
+   because the treated sibling makes the untreated ones read as broken
+   rather than merely dim. The user reported this round's gap as
+   inconsistency, not as invisibility, which is the evidence for that
+   claim. */
+[data-theme="dark"] .pk-lightbox-chevron {
+  --btn-color: var(--color-neutral);
+  --btn-fg: var(--color-neutral-content);
+}
+
 /* Share trigger (Phase 01.2 gap-closure, sketch 027): a bordered circle on
    a plain fill with a soft lift, replacing the `btn-outline btn-primary
    btn-sm` utility string G-01.2-6's debug session measured as "barely
