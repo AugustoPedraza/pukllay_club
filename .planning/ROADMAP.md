@@ -197,7 +197,7 @@ Plans:
 **Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
 **Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
 **Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
-**Plans:** 26/27 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4, 1 gap-closure round 5, 2 gap-closure round 6, 1 gap-closure round 10 pending)
+**Plans:** 27/27 plans executed (5 original, 5 superseded, 8 gap closure round 1, 4 gap-closure round 2, 5 gap-closure round 3, 1 gap-closure round 4, 1 gap-closure round 5, 2 gap-closure round 6, 1 gap-closure round 10 pending)
 
 Plans:
 **Wave 1**
@@ -302,7 +302,7 @@ Plans:
 
 **Wave 23 — gap closure round 10** *(from the tenth detail-page UAT round: G-01.2-21, diagnosed. Blocked on Wave 22 — same stylesheet region, and 01.2-31's opaque backdrop is the environmental change that makes this gap real)*
 
-- [ ] 01.2-32-PLAN.md — G-01.2-21: the two lightbox chevrons adopt the dark-theme fill the close button got in round 8, through the class both buttons already share, so the overlay's three controls read as one family instead of one treated control beside two untreated siblings; round 8's skip rationale (a UAT pass measured against the then-translucent backdrop) expired when round 9 made that backdrop opaque, and the round is gated by an assertion comparing the two dark-scoped rules' declarations to each other rather than checking each in isolation
+- [x] 01.2-32-PLAN.md — G-01.2-21: the two lightbox chevrons adopt the dark-theme fill the close button got in round 8, through the class both buttons already share, so the overlay's three controls read as one family instead of one treated control beside two untreated siblings; round 8's skip rationale (a UAT pass measured against the then-translucent backdrop) expired when round 9 made that backdrop opaque, and the round is gated by an assertion comparing the two dark-scoped rules' declarations to each other rather than checking each in isolation
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
