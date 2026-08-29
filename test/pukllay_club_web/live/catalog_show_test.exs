@@ -2738,7 +2738,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
 
     test "the .pk-lightbox-chevron class declares an explicit numeric z-index above the photo" do
-      case Regex.run(~r/\.pk-lightbox-chevron\s*\{([^}]*)\}/, css_source()) do
+      case Regex.run(~r/(?m)^\.pk-lightbox-chevron\s*\{([^}]*)\}/, css_source()) do
         [_, body] ->
           assert body =~ ~r/z-index:\s*\d/,
                  "`.pk-lightbox-chevron` must declare an explicit numeric z-index so both " <>
@@ -2908,6 +2908,144 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "contrast at least 4.5:1 (WCAG 1.4.3) against its own new fill (`--color-neutral`, " <>
                "#{neutral}) — the fix must not trade an invisible chip for an invisible glyph. " <>
                "Computed: #{Float.round(content_ratio, 2)}:1."
+    end
+  end
+
+  # G-01.2-21, plan 01.2-32 (gap-closure round 10): round 8 (G-01.2-20/01.2-30) gave
+  # `.pk-lightbox-close` a dark-theme fill because daisyUI's unmodified `.btn` default
+  # measured ~1.1:1 against the lightbox's fixed dark backdrop. It deliberately left the
+  # chevrons alone, on the stated grounds that they "passed UAT test 21 in both themes on
+  # this same stage." That test ran while `.pk-lightbox` was still a translucent scrim.
+  # Round 9 (G-01.2-19/01.2-31) then made that field fully opaque, string-identical to the
+  # photo stage — the exact condition that made the close button's default fill invisible
+  # in dark theme, now unchanged for the chevrons too. This describe block guards the
+  # completion of round 8's fix across the whole control set: the chevrons get the SAME
+  # two declarations the close button already has, through the shared class both already
+  # carry, and a new test asserts the two dark-scoped rules' declaration SETS are equal —
+  # so the family is enforced as a relationship, not as two independently-correct rules
+  # that happen to agree today.
+  describe "lightbox chevron dark-theme contrast, consistent with the close button (Phase 01.2 gap-closure round 10, G-01.2-21, plan 01.2-32)" do
+    # The new dark-scoped chevron rule, matched on its literal selector text at the start
+    # of a line — mirrors `dark_lightbox_close_block/0`'s idiom directly above so this rule
+    # can never be mistaken for `.pk-lightbox-close`'s or `.pk-lightbox-chevron`'s own.
+    defp dark_lightbox_chevron_block do
+      case Regex.run(
+             ~r/(?m)^\[data-theme="dark"\] \.pk-lightbox-chevron\s*\{([^}]*)\}/s,
+             css_source()
+           ) do
+        [_, body] -> body
+        nil -> flunk("No top-level `[data-theme=\"dark\"] .pk-lightbox-chevron {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # `.pk-lightbox-chevron`'s own (unscoped, shared) rule — anchored at the start of a
+    # line and requiring the brace to follow immediately after "chevron", so it can never
+    # match `.pk-lightbox-chevron-prev`/`-next`'s rules, which have a dash right after the
+    # same substring.
+    defp lightbox_chevron_shared_block do
+      case Regex.run(~r/(?m)^\.pk-lightbox-chevron\s*\{([^}]*)\}/, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-lightbox-chevron {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # `.pk-lightbox-chevron-prev`/`-next`'s own per-side rule.
+    defp lightbox_chevron_side_block(side) do
+      case Regex.run(~r/(?m)^\.pk-lightbox-chevron-#{side}\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-lightbox-chevron-#{side} {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # Turns a brace body into a sorted list of {property, value} pairs, whitespace-
+    # normalised on the value side. Used only by the consistency-gate test below, which
+    # compares two rules' declarations to each other rather than to a fixed string — a
+    # rule declaring the same two PROPERTIES with two DIFFERENT tokens would be exactly
+    # the inconsistency this test exists to catch, so property names alone are not enough.
+    defp declaration_pairs(body) do
+      body
+      |> String.split(";")
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.map(fn decl ->
+        [prop, value] = String.split(decl, ":", parts: 2)
+        {String.trim(prop), value |> String.trim() |> String.replace(~r/\s+/, " ")}
+      end)
+      |> Enum.sort()
+    end
+
+    test "the dark-theme chevron rule sets --btn-color and --btn-fg from the neutral token pair, no literal colour" do
+      body = dark_lightbox_chevron_block()
+
+      assert body =~ ~r/--btn-color:\s*var\(--color-neutral\)\s*;/,
+             "`[data-theme=\"dark\"] .pk-lightbox-chevron` must set `--btn-color` to a read of " <>
+               "`--color-neutral` — daisyUI's `.btn` resolves its fill from `--btn-color` " <>
+               "(falling back to `--color-base-200` when unset), so this is what gives both " <>
+               "chevrons an explicit, measured fill in dark theme instead of the unmodified " <>
+               "default they currently inherit."
+
+      assert body =~ ~r/--btn-fg:\s*var\(--color-neutral-content\)\s*;/,
+             "`[data-theme=\"dark\"] .pk-lightbox-chevron` must ALSO set `--btn-fg` to a read " <>
+               "of `--color-neutral-content`. daisyUI's base `.btn` rule sets `--btn-fg: " <>
+               "var(--color-base-content)` INDEPENDENTLY of `--btn-bg`/`--btn-color` — see " <>
+               "`.btn-neutral` in deps/daisyui/packages/bundle/daisyui.mjs, which sets BOTH " <>
+               "`--btn-color` and `--btn-fg` together, never one alone. A rule that changed " <>
+               "only the fill would leave each chevron's icon at `--color-base-content` " <>
+               "(near-white in dark theme) on the new light-lavender chip — roughly 1.9:1, " <>
+               "moving the invisibility from the chip to the glyph on two controls this time. " <>
+               "This is the SECOND time this exact trap is documented in this file's tests (the " <>
+               "close button's own test above states it too); it is restated here rather than " <>
+               "cross-referenced because a failure message is read at the moment of failure, " <>
+               "not followed as a link."
+    end
+
+    test "the dark-theme chevron rule's declarations equal the dark-theme close button rule's declarations" do
+      chevron_pairs = declaration_pairs(dark_lightbox_chevron_block())
+      close_pairs = declaration_pairs(dark_lightbox_close_block())
+
+      assert chevron_pairs == close_pairs,
+             "The dark-scoped chevron rule and the dark-scoped close-button rule must declare " <>
+               "the SAME SET of property/value pairs — property names AND values, whitespace-" <>
+               "normalised, not just matching property names. These three controls are markup-" <>
+               "identical daisyUI circular buttons sitting on one backdrop, and the user has " <>
+               "now reported TWICE that they must read as one family — once as \"the close " <>
+               "button needs more contrast\" and once, after only the close button was fixed, " <>
+               "as \"the close button and the rest of controls must be consistent.\" Two " <>
+               "independently-correct rules that happen to agree today are not a family; a " <>
+               "family is a rule that fails when they stop agreeing. If a future round " <>
+               "genuinely needs the chevrons treated differently from the close button, that " <>
+               "is a design decision that must be made deliberately and recorded — deleting " <>
+               "this assertion is the correct way to make it. Chevron declared: " <>
+               "#{inspect(chevron_pairs)}. Close button declared: #{inspect(close_pairs)}."
+    end
+
+    test "the three unscoped chevron rules still declare exactly their stacking order and their own horizontal inset" do
+      shared_props =
+        ~r/([a-z-]+):/
+        |> Regex.scan(lightbox_chevron_shared_block())
+        |> Enum.map(fn [_, prop] -> prop end)
+
+      assert shared_props == ["z-index"],
+             "`.pk-lightbox-chevron` must declare EXACTLY `z-index` and no other property. " <>
+               "This is an EXHAUSTIVE positive assertion, not a negative \"contains no fill\" " <>
+               "check — a negative check would still pass a rule that had grown some OTHER " <>
+               "unscoped visual property, and unscoped is the failure mode that matters here " <>
+               "because it would repaint light theme too. This stacking order is a recorded " <>
+               "decision (G-01.2-25, the fix for a chevron painting behind the photo) and is " <>
+               "not this round's to touch. Found: #{inspect(shared_props)}"
+
+      for {side, prop} <- [{"prev", "left"}, {"next", "right"}] do
+        properties =
+          ~r/([a-z-]+):/
+          |> Regex.scan(lightbox_chevron_side_block(side))
+          |> Enum.map(fn [_, p] -> p end)
+
+        assert properties == [prop],
+               "`.pk-lightbox-chevron-#{side}` must declare EXACTLY `#{prop}` and no other " <>
+                 "property. This horizontal inset is the shell-width alignment the user asked " <>
+                 "for across two separate UAT rounds (01.2-28 task 2) and is not this round's " <>
+                 "to touch. Found: #{inspect(properties)}"
+      end
     end
   end
 
