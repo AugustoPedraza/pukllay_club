@@ -131,14 +131,37 @@ be pulled forward without breaking that dependency chain.
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
-**Depends on:** Phase 1
-**Plans:** 0 plans
+**Goal:** The game detail page tells the truth about a game and reads like a page instead of a
+block: descriptions are in Spanish and free of markup noise, the illustrators and BGG's weight,
+rating and overall ranking are shown (each linking back to BGG), and the reading column has real
+visual hierarchy between its sections — without reopening the masthead, buy-box or lightbox Phase
+01.2 closed.
+**Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
+**Depends on:** Phase 01.2
+**UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
+**Plans:** 5 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 01.3 to break down)
+**Wave 1**
+
+- [ ] 01.3-01-PLAN.md — TRACER: BGG rating end-to-end (xpath extraction → `artists`/`bgg_rating`/`bgg_rank` columns → rendered Ficha técnica row), plus the offline write path (`StatsEnricher`, `mix catalog.enrich_bgg_stats`, `mix catalog.backfill_artists`) (D-05, D-06)
+
+**Wave 2** *(blocked on Wave 1: needs the migration and both Mix tasks)*
+
+- [ ] 01.3-02-PLAN.md — Offline data population: artists backfill from `bgg_payload`, then the full ~400-game BGG re-enrichment pass behind a decision checkpoint (D-05, D-06)
+
+**Wave 3** *(blocked on Wave 2: the translator reads the `bgg_payload` that pass refreshes)*
+
+- [ ] 01.3-03-PLAN.md — Description cleanup + Gemini tooling: `DescriptionNormalizer` (30 confirmed character escapes), optional `gemini_api_key` credential, `instructor_lite` dep, validated response model and translator with an injectable call seam, `mix catalog.translate_descriptions` (D-01, D-02)
+
+**Wave 4** *(blocked on Wave 3: runs the task it builds)*
+
+- [ ] 01.3-04-PLAN.md — Run the Spanish translation batch: API-key human-action gate, five-game sample review, then the full run (D-01, D-02)
+
+**Wave 5** *(blocked on Wave 4: UAT needs real Spanish text and real BGG stats on the page)*
+
+- [ ] 01.3-05-PLAN.md — UI-SPEC implementation: two-tier reading-column rhythm, `.pk-reading-section` wrapping, uppercase section headings, Ilustradores row, labelled Avanzado stats group, and the rewritten Phase 01.2 drift test (D-03, D-04, D-05, D-06)
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
