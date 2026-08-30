@@ -114,6 +114,8 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
       image: ~x"./image/text()"so,
       thumbnail: ~x"./thumbnail/text()"so,
       average_weight: ~x".//statistics/ratings/averageweight/@value"fo,
+      average_rating: ~x".//statistics/ratings/average/@value"fo,
+      rank: ~x".//statistics/ratings/ranks/rank[@name='boardgame']/@value"Io,
       mechanics: ~x".//link[@type='boardgamemechanic']/@value"sl,
       categories: ~x".//link[@type='boardgamecategory']/@value"sl,
       designers: ~x".//link[@type='boardgamedesigner']/@value"sl,
@@ -128,5 +130,47 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
         languages: ~x"./link[@type='language']/@value"sl
       ]
     )
+    |> Enum.map(&normalize_item/1)
   end
+
+  # Single extraction-layer normalization point (D-05/D-06, 01.3-RESEARCH.md
+  # Pitfall 2) — every consumer of `parse_items/1`, including the
+  # already-shipped `mix catalog.seed`, inherits clean data from here rather
+  # than each caller re-deriving its own rule.
+  defp normalize_item(item) do
+    item
+    |> Map.update!(:artists, &dedup_artists/1)
+    |> Map.update!(:average_weight, &zero_to_nil/1)
+    |> Map.update!(:average_rating, &zero_to_nil/1)
+  end
+
+  @doc """
+  Deduplicates a list of BGG artist link values, preserving first-appearance
+  order.
+
+  Public on purpose: `Mix.Tasks.Catalog.BackfillArtists` must apply this
+  byte-identical rule to `artists` values already sitting in stored
+  `bgg_payload` rows, so both call sites can never drift apart. 368 of the
+  377 enriched games in the dev database carry duplicated artist entries
+  (worst observed: 367 raw entries for 15 real names), while the sibling
+  `designers` extraction — using the exact same xpath shape — has zero
+  duplicates. This is a property of BGG's artist link data, not an
+  xpath-scoping bug.
+  """
+  @spec dedup_artists(list()) :: [String.t()]
+  def dedup_artists(artists) do
+    artists
+    |> List.wrap()
+    |> Enum.uniq()
+  end
+
+  # BGG emits a numeric zero rather than omitting the element entirely when
+  # it has no rating or weight recorded for a game. Elixir treats `0.0` as
+  # truthy, and the detail page's render guards (`show.ex`) are plain
+  # truthiness checks, so an un-normalized zero would print as a
+  # fabricated-looking score ("0.0/5"). Two games already in the dev
+  # database hold `bgg_weight = 0` for exactly this reason (measured
+  # 2026-08-29) — a zero score is absence of data, never a measurement.
+  defp zero_to_nil(+0.0), do: nil
+  defp zero_to_nil(other), do: other
 end

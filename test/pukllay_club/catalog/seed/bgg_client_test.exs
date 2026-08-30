@@ -5,6 +5,7 @@ defmodule PukllayClub.Catalog.Seed.BggClientTest do
   alias PukllayClub.Catalog.Seed.Credentials
 
   @fixture File.read!("test/support/fixtures/bgg_thing_on_mars.xml")
+  @unranked_fixture File.read!("test/support/fixtures/bgg_unranked_item.xml")
 
   setup do
     {:ok, credentials} = Credentials.fetch()
@@ -42,6 +43,33 @@ defmodule PukllayClub.Catalog.Seed.BggClientTest do
       assert "Contracts" in item.mechanics
       assert item.categories != []
       assert item.designers != []
+      assert is_float(item.average_rating)
+      assert item.average_rating > 7.0
+      assert item.rank == 58
+    end
+
+    test "an unranked, unrated item normalizes rank/rating/weight to nil and dedupes artists", %{
+      credentials: credentials
+    } do
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, @unranked_fixture)
+      end)
+
+      assert {:ok, [item]} = BggClient.fetch_batch([999_999], credentials)
+
+      # Test 2: BGG's non-numeric unranked marker soft-casts to nil.
+      assert item.rank == nil
+
+      # Test 3: a numeric zero rating/weight is absence of data, not a
+      # measurement — both normalize to nil.
+      assert item.average_rating == nil
+      assert item.average_weight == nil
+
+      # Test 4: the source document repeats one artist name three times;
+      # the extraction layer dedupes it to a single entry.
+      assert item.artists == ["Duplicated Artist"]
     end
 
     test "never raises on a hostile response — DTD processing is disabled", %{

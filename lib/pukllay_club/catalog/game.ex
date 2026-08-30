@@ -27,6 +27,9 @@ defmodule PukllayClub.Catalog.Game do
     field :year_published, :integer
     field :weight_band, :string
     field :bgg_weight, :float
+    field :artists, {:array, :string}, default: []
+    field :bgg_rating, :float
+    field :bgg_rank, :integer
     field :tags, {:array, :string}, default: []
     field :mechanics, {:array, :string}, default: []
     field :themes, {:array, :string}, default: []
@@ -78,6 +81,9 @@ defmodule PukllayClub.Catalog.Game do
       :year_published,
       :weight_band,
       :bgg_weight,
+      :artists,
+      :bgg_rating,
+      :bgg_rank,
       :tags,
       :mechanics,
       :themes,
