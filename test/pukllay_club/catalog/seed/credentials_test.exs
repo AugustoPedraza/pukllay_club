@@ -6,7 +6,7 @@ defmodule PukllayClub.Catalog.Seed.CredentialsTest do
   @app :pukllay_club
   @config_key PukllayClub.Catalog.Seed
 
-  @env_vars ~w(BGG_API_TOKEN R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_CATALOG_BUCKET R2_PUBLIC_BASE_URL)
+  @env_vars ~w(BGG_API_TOKEN R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_CATALOG_BUCKET R2_PUBLIC_BASE_URL GEMINI_API_KEY)
 
   setup do
     original_config = Application.get_env(@app, @config_key)
@@ -106,6 +106,35 @@ defmodule PukllayClub.Catalog.Seed.CredentialsTest do
     end
   end
 
+  describe "gemini_api_key (optional credential, 01.3-03 D-01)" do
+    test "fetch!/0 succeeds with only the six required keys configured and returns a nil gemini_api_key" do
+      Application.put_env(@app, @config_key,
+        bgg_api_token: "bgg-token",
+        r2_account_id: "acct",
+        r2_access_key_id: "key-id",
+        r2_secret_access_key: "secret",
+        r2_catalog_bucket: "bucket",
+        r2_public_base_url: "https://example.r2.dev"
+      )
+
+      assert %Credentials{gemini_api_key: nil} = Credentials.fetch!()
+    end
+
+    test "a configured gemini_api_key resolves onto the struct" do
+      Application.put_env(@app, @config_key,
+        bgg_api_token: "bgg-token",
+        r2_account_id: "acct",
+        r2_access_key_id: "key-id",
+        r2_secret_access_key: "secret",
+        r2_catalog_bucket: "bucket",
+        r2_public_base_url: "https://example.r2.dev",
+        gemini_api_key: "gemini-key"
+      )
+
+      assert %Credentials{gemini_api_key: "gemini-key"} = Credentials.fetch!()
+    end
+  end
+
   describe "fetch/0" do
     test "returns {:error, missing_keys} instead of raising" do
       Application.delete_env(@app, @config_key)
@@ -147,6 +176,18 @@ defmodule PukllayClub.Catalog.Seed.CredentialsTest do
       assert redacted.r2_account_id == "acct"
       assert redacted.r2_catalog_bucket == "bucket"
       assert redacted.r2_public_base_url == "https://example.r2.dev"
+    end
+
+    test "masks gemini_api_key with the same mask string used for the BGG token" do
+      credentials = %Credentials{
+        bgg_api_token: "bgg-token",
+        gemini_api_key: "gemini-key"
+      }
+
+      redacted = Credentials.redacted(credentials)
+
+      assert redacted.gemini_api_key == "[REDACTED]"
+      assert redacted.gemini_api_key == redacted.bgg_api_token
     end
   end
 

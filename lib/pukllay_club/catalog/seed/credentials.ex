@@ -13,6 +13,18 @@ defmodule PukllayClub.Catalog.Seed.Credentials do
   Every seed module should log through `redacted/1`, never the raw struct —
   `inspect/1` already hides the secret fields via `@derive`, but `redacted/1`
   is what to use when building a plain map for structured logging.
+
+  ## Required vs. optional keys
+
+  Every key in `@keys` is **required** — `fetch/0` returns `{:error, _}` and
+  `fetch!/0` raises unless every one of them resolves. `gemini_api_key` is the
+  one exception: it is **optional**, resolved through the same
+  environment-variable-first-then-Application-config path via `@optional_keys`,
+  but it never contributes to the missing-key list. It powers exactly one
+  one-off translation job (01.3-03, D-01) — a Mix task a developer runs
+  manually, once, to translate every game description to Spanish. Making it
+  required would break `mix catalog.seed` and every existing
+  credential-dependent test for any developer who has no Gemini account.
   """
 
   @derive {Inspect, only: [:r2_account_id, :r2_catalog_bucket, :r2_public_base_url]}
@@ -22,7 +34,8 @@ defmodule PukllayClub.Catalog.Seed.Credentials do
     :r2_access_key_id,
     :r2_secret_access_key,
     :r2_catalog_bucket,
-    :r2_public_base_url
+    :r2_public_base_url,
+    :gemini_api_key
   ]
 
   @type t :: %__MODULE__{
@@ -31,13 +44,15 @@ defmodule PukllayClub.Catalog.Seed.Credentials do
           r2_access_key_id: String.t(),
           r2_secret_access_key: String.t(),
           r2_catalog_bucket: String.t(),
-          r2_public_base_url: String.t()
+          r2_public_base_url: String.t(),
+          gemini_api_key: String.t() | nil
         }
 
   @app :pukllay_club
   @config_key PukllayClub.Catalog.Seed
 
-  # {struct field, environment variable name}
+  # {struct field, environment variable name} — every one of these is
+  # required; fetch/0 raises/errors if any is missing.
   @keys [
     {:bgg_api_token, "BGG_API_TOKEN"},
     {:r2_account_id, "R2_ACCOUNT_ID"},
@@ -47,12 +62,19 @@ defmodule PukllayClub.Catalog.Seed.Credentials do
     {:r2_public_base_url, "R2_PUBLIC_BASE_URL"}
   ]
 
-  @secret_fields [:bgg_api_token, :r2_access_key_id, :r2_secret_access_key]
+  # {struct field, environment variable name} — resolved through the same
+  # `resolve/2` path as @keys, but never counted as missing (01.3-03, D-01).
+  @optional_keys [
+    {:gemini_api_key, "GEMINI_API_KEY"}
+  ]
+
+  @secret_fields [:bgg_api_token, :r2_access_key_id, :r2_secret_access_key, :gemini_api_key]
   @redacted_mask "[REDACTED]"
 
   @doc """
   Resolves every credential, raising a `RuntimeError` naming every missing
-  key when one or more values are absent.
+  required key when one or more values are absent. `gemini_api_key` is
+  optional and never causes this to raise.
   """
   @spec fetch!() :: t()
   def fetch! do
@@ -70,17 +92,23 @@ defmodule PukllayClub.Catalog.Seed.Credentials do
   @doc """
   Resolves every credential, returning `{:ok, credentials}` or
   `{:error, missing_env_var_names}` for callers that want to branch instead
-  of raising.
+  of raising. Only the required keys in `@keys` can produce `:error` — the
+  optional `gemini_api_key` resolves to `nil` when absent without affecting
+  the result.
   """
   @spec fetch() :: {:ok, t()} | {:error, [String.t()]}
   def fetch do
     resolved =
       Enum.map(@keys, fn {field, env_name} -> {field, env_name, resolve(field, env_name)} end)
 
+    optional_resolved =
+      Enum.map(@optional_keys, fn {field, env_name} -> {field, resolve(field, env_name)} end)
+
     missing_env_vars = for {_field, env_name, nil} <- resolved, do: env_name
 
     if missing_env_vars == [] do
-      values = Enum.map(resolved, fn {field, _env_name, value} -> {field, value} end)
+      required_values = Enum.map(resolved, fn {field, _env_name, value} -> {field, value} end)
+      values = required_values ++ optional_resolved
       {:ok, struct!(__MODULE__, values)}
     else
       {:error, missing_env_vars}
@@ -88,9 +116,9 @@ defmodule PukllayClub.Catalog.Seed.Credentials do
   end
 
   @doc """
-  Returns a plain map safe to log: `bgg_api_token`, `r2_access_key_id`, and
-  `r2_secret_access_key` are replaced by a fixed mask string; the remaining
-  fields pass through unchanged.
+  Returns a plain map safe to log: `bgg_api_token`, `r2_access_key_id`,
+  `r2_secret_access_key`, and `gemini_api_key` are replaced by a fixed mask
+  string; the remaining fields pass through unchanged.
   """
   @spec redacted(t()) :: map()
   def redacted(%__MODULE__{} = credentials) do
