@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.3
 current_phase_name: Game Detail Layout & Content Accuracy (INSERTED)
 status: executing
-stopped_at: Phase 01.3 UI-SPEC approved
-last_updated: "2026-08-30T21:42:43.532Z"
+stopped_at: Completed 01.3-02-PLAN.md
+last_updated: "2026-08-30T23:18:43.221Z"
 last_activity: 2026-08-30
 last_activity_desc: Phase 01.3 execution started
-state_head: 46bcb29e621677b78d07150274caee59640170af
+state_head: 49ccd21f293f39d09994b1d9156630971ca189ba
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 53
-  completed_plans: 48
+  completed_plans: 50
 milestone_name: milestone
 ---
 
@@ -30,8 +30,8 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.3 (Game Detail Layout & Content Accuracy (INSERTED)) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 01.3
+Plan: 2 of 5
+Status: Ready to execute
 Last activity: 2026-08-30 — Phase 01.3 execution started
 
 Progress: [██████████] 100%
@@ -92,6 +92,7 @@ Progress: [██████████] 100%
 | Phase 01.2 P12 | 45min | 3 tasks | 5 files |
 | Phase 01.2 P14 | 25min | 3 tasks | 5 files |
 | Phase 01.2 P15 | 15min | 3 tasks | 4 files |
+| Phase 01.3 P02 | 25min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,7 @@ Recent decisions affecting current work:
 - [Phase 01.2]: 01.2-15: reduced-motion for .pk-conn-spinner uses @media (prefers-reduced-motion: no-preference) gating the animation itself (matching .pk-scroll-top's idiom), not a new per-selector reduce-block override, since app.css already retired that pattern in favor of one universal * guard
 - [Phase 01.2]: 01.2-15: UI-SPEC's D-03 auto-load-more error row rescoped to a live query failure only (safe_filter_games/1, requires an established socket); a new connection-status row added for the transport-disconnect surface; header row-count corrected from a pre-existing 36/31 (already off-by-one against actual 37/32) to 38/33/3/2 after recounting
 - [Phase 01.2, 2026-08-29]: Phase closed after 32 plans and 10 UAT gap-closure rounds (G-01.2-9 through G-01.2-21) — the mobile detail-page masthead was rebuilt (facts pills above the poster, one buy-box card, compact dot row), a single shared pill/chip base component replaced five independently-styled chip implementations, the lightbox was rebuilt from scratch (full-screen opaque stage, shell-width photo cap, own selection state independent of the gallery carousel, unified dark/light control family), and a site-wide sticky-footer layout + mobile-only title-echo bar shipped. Final UAT gate closed 2026-08-29: 23/28 checkpoints reconfirmed via a live mobile (390px) browser spot-check; the remaining 5 desktop-only claims (shell-width alignment at 1280/1440/1920px) were accepted on existing exact-DOM-coordinate measurements already on record in the Gaps section, since this session's browser automation tool would not resize its rendering viewport past ~390px (resize_window reported success but window.innerWidth stayed pinned at 339px) — worth re-verifying live on a real desktop browser if that tool limitation is ever hit again for future UI work.
+- [Phase 01.3]: 01.3-02: D-06 checkpoint resolved run-now — full BGG re-enrichment ran against all 393 bgg_id-carrying games (385 updated, 8 missing from BGG, 14 unranked), plus artists backfilled/deduplicated for 385 games; Task 1's array_length(artists,1) IS NULL acceptance check has a Postgres empty-array-returns-NULL gap, verified as a false positive not a real skip (377+8=385)
 
 ### Pending Todos
 
@@ -265,6 +267,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-29T17:02:46.414Z
-Stopped at: Phase 01.3 UI-SPEC approved
-Resume file: .planning/phases/01.3-game-detail-layout-content-accuracy/01.3-UI-SPEC.md
+Last session: 2026-08-30T23:18:42.935Z
+Stopped at: Completed 01.3-02-PLAN.md
+Resume file: None

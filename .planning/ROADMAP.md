@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 
 Plans:
 
@@ -149,7 +149,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1: needs the migration and both Mix tasks)*
 
-- [ ] 01.3-02-PLAN.md — Offline data population: artists backfill from `bgg_payload`, then the full ~400-game BGG re-enrichment pass behind a decision checkpoint (D-05, D-06)
+- [x] 01.3-02-PLAN.md — Offline data population: artists backfill from `bgg_payload`, then the full ~400-game BGG re-enrichment pass behind a decision checkpoint (D-05, D-06)
 
 **Wave 3** *(blocked on Wave 2: the translator reads the `bgg_payload` that pass refreshes)*
 
