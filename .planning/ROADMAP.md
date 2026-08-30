@@ -139,13 +139,13 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 01.3-01-PLAN.md — TRACER: BGG rating end-to-end (xpath extraction → `artists`/`bgg_rating`/`bgg_rank` columns → rendered Ficha técnica row), plus the offline write path (`StatsEnricher`, `mix catalog.enrich_bgg_stats`, `mix catalog.backfill_artists`) (D-05, D-06)
+- [x] 01.3-01-PLAN.md — TRACER: BGG rating end-to-end (xpath extraction → `artists`/`bgg_rating`/`bgg_rank` columns → rendered Ficha técnica row), plus the offline write path (`StatsEnricher`, `mix catalog.enrich_bgg_stats`, `mix catalog.backfill_artists`) (D-05, D-06)
 
 **Wave 2** *(blocked on Wave 1: needs the migration and both Mix tasks)*
 
