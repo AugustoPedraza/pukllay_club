@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 2/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 
@@ -153,7 +153,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2: the translator reads the `bgg_payload` that pass refreshes)*
 
-- [ ] 01.3-03-PLAN.md — Description cleanup + Gemini tooling: `DescriptionNormalizer` (30 confirmed character escapes), optional `gemini_api_key` credential, `instructor_lite` dep, validated response model and translator with an injectable call seam, `mix catalog.translate_descriptions` (D-01, D-02)
+- [x] 01.3-03-PLAN.md — Description cleanup + Gemini tooling: `DescriptionNormalizer` (30 confirmed character escapes), optional `gemini_api_key` credential, `instructor_lite` dep, validated response model and translator with an injectable call seam, `mix catalog.translate_descriptions` (D-01, D-02)
 
 **Wave 4** *(blocked on Wave 3: runs the task it builds)*
 
