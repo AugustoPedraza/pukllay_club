@@ -84,7 +84,7 @@ defmodule PukllayClub.Catalog.Seed.DescriptionTranslatorTest do
     end
 
     test "raises a clear, actionable error naming GEMINI_API_KEY when credentials carry no Gemini key" do
-      credentials = %Credentials{Credentials.fetch!() | gemini_api_key: nil}
+      credentials = %{Credentials.fetch!() | gemini_api_key: nil}
       stub = fn _params, _opts -> flunk("the LLM call must never be invoked without a Gemini key") end
 
       error =
