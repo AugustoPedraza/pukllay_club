@@ -19,8 +19,7 @@ defmodule PukllayClub.Catalog.Seed.DescriptionNormalizerTest do
       input =
         DescriptionNormalizer.known_entities()
         |> Map.keys()
-        |> Enum.map(&"&#{&1};")
-        |> Enum.join(" ")
+        |> Enum.map_join(" ", &"&#{&1};")
 
       cleaned = DescriptionNormalizer.clean(input)
 
