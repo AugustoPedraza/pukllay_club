@@ -576,6 +576,19 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                     <dt>Diseñadores</dt>
                     <dd>{Enum.join(@game.designers, ", ")}</dd>
                   </div>
+                  <div :if={@game.bgg_rating} class="pk-spec-row">
+                    <dt>Valoración BGG</dt>
+                    <dd>
+                      <a
+                        href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="link link-primary"
+                      >
+                        {format_bgg_rating(@game.bgg_rating)}
+                      </a>
+                    </dd>
+                  </div>
                   <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
                     <dd>
                       <a
@@ -1098,6 +1111,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
       game.designers != [] or
       not is_nil(game.bgg_id)
   end
+
+  # D-06 (01.3-01 Task 1): BGG's rating is a ten-point scale — formatted via
+  # Erlang stdlib (no existing float-formatting helper in this codebase, no
+  # new dependency needed) and never renormalized to a five-point scale,
+  # which would misrepresent the source.
+  defp format_bgg_rating(rating), do: :erlang.float_to_binary(rating, decimals: 1) <> "/10"
 
   # Subtitle for the Juegos similares shelf — reuses Vocabulary.weight_band/1's
   # existing plain-Spanish descriptor label rather than authoring new copy

@@ -504,6 +504,33 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html =~ "Reservar para el sábado"
     end
 
+    test "a game with a bgg_rating renders the Valoración BGG row linking to its BGG page (D-06)",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Con Valoración", bgg_rating: 7.4, bgg_id: 13, weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      spec_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      assert spec_html =~ "Valoración BGG"
+      assert spec_html =~ "7.4/10"
+      assert spec_html =~ "boardgamegeek.com/boardgame/13"
+    end
+
+    test "a game with no bgg_rating renders no Valoración BGG row, and the rest of the ficha técnica still renders (D-06)",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Sin Valoración", bgg_rating: nil, weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      spec_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      refute spec_html =~ "Valoración BGG"
+      assert html =~ "Ficha técnica"
+    end
+
     test "a game with only a bgg_id and none of the other four fields still renders the Ficha técnica heading and the BGG link",
          %{conn: conn} do
       game =
