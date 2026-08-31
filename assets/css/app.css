@@ -3004,13 +3004,27 @@ body.pk-drawer-open {
 .pk-text-col {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 2rem; /* was 1rem — raised for the between-section rhythm, D-03/D-04 */
+}
+
+/* Spacing control only (D-03/D-04) — no border, no background, no shadow, no
+   radius. Sketch 037 already tested a shared bordered container for the
+   "these elements feel disconnected" complaint on this exact page and
+   rejected it in favour of proximity + rhythm; do not turn this into a card
+   treatment. */
+.pk-reading-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .pk-section-heading {
   font-family: var(--font-display);
   font-size: 1.25rem;
-  margin-top: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* margin-top removed — spacing is now owned entirely by the
+     .pk-text-col / .pk-reading-section gaps above, D-03/D-04 */
 }
 
 .pk-clamp {
@@ -3069,6 +3083,22 @@ body.pk-drawer-open {
   letter-spacing: 0.08em;
   color: var(--color-neutral);
   font-size: 0.75rem;
+}
+
+/* D-06 — the "Avanzado" sub-group label inside the same Ficha técnica grid.
+   Reuses the pk-spec-row dt recipe above (size, uppercase, tracking, neutral
+   text) plus a single 1px top rule to separate the group from the rows
+   above it — the one new border this phase introduces, deliberately minimal
+   (no background tint, no second bordered panel). */
+.pk-spec-group-label {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--color-base-300);
+  padding-top: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-neutral);
 }
 
 /* Mobile CTA bar (01.1-04, sketch 005/011): visible at rest below the
