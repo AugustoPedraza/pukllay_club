@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 18
+open_count: 19
 waived_count: 0
 fixed_count: 0
-total_count: 18
-last_updated: 2026-08-31T20:19:55.896Z
+total_count: 19
+last_updated: 2026-08-31T20:39:49.123Z
 ---
 
 # Broken Windows Ledger
@@ -33,6 +33,7 @@ last_updated: 2026-08-31T20:19:55.896Z
 | 16 | 01.3-04 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Human-check: open three game detail pages (short/long/unusual-title descriptions), confirm as a Spanish speaker the description reads naturally in Argentine Spanish (voseo), proper nouns/mechanic names survive untranslated, no stray escapes, and Ver mas/Ver menos still expands/collapses at mobile+desktop widths -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; text quality already reviewed by the executor against a 5-game sample (all 5 criteria incl. voseo) before the full batch ran | open |  | 2026-08-31T00:12:03.091Z |  |
 | 17 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual visual verification of the D-03/D-04 reading-column rhythm and D-06 Avanzado group at 390px/1440px against 01.3-UI-SPEC.md not run interactively (no browser tool available to this executor); deferred to end-of-phase UAT per workflow.human_verify_mode: end-of-phase. | open |  | 2026-08-31T00:35:26.436Z |  |
 | 18 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode | open |  | 2026-08-31T20:19:55.896Z |  |
+| 19 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-08 Task 3 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify description justify + mid-word-cut risk (fallback pre-decided) + chevron/ellipsis ink alignment (translateY(-2px), tuned but unverified against real Inter render) + repeated tap round-trips, across 3 real games x 2 widths (390/1440) x 2 themes; if any of the 6 combos cuts mid-word, apply this plan's pre-decided fallback CSS (real -webkit-line-clamp:3 + trailing-sibling toggle, recorded in 01.3-08-PLAN.md's planner_note) rather than re-sketching. | open |  | 2026-08-31T20:39:49.123Z |  |
 
 ````json
 [
@@ -250,6 +251,18 @@ last_updated: 2026-08-31T20:19:55.896Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-31T20:19:55.896Z",
+    "resolved_at": null
+  },
+  {
+    "id": 19,
+    "kind": "unrun-verify",
+    "phase": "01.3",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "01.3-08 Task 3 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify description justify + mid-word-cut risk (fallback pre-decided) + chevron/ellipsis ink alignment (translateY(-2px), tuned but unverified against real Inter render) + repeated tap round-trips, across 3 real games x 2 widths (390/1440) x 2 themes; if any of the 6 combos cuts mid-word, apply this plan's pre-decided fallback CSS (real -webkit-line-clamp:3 + trailing-sibling toggle, recorded in 01.3-08-PLAN.md's planner_note) rather than re-sketching.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-31T20:39:49.123Z",
     "resolved_at": null
   }
 ]

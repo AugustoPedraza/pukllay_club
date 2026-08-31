@@ -638,11 +638,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html =~ "boardgamegeek.com/boardgame/77"
     end
 
-    test "clicking the description toggle expands and collapses the clamp", %{conn: conn} do
+    test "clicking the description toggle expands and collapses the description", %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba."})
 
       {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
-      assert html =~ "pk-clamp"
+      assert html =~ "pk-desc is-clamped"
       refute html =~ "is-expanded"
 
       html2 = render_click(view, "toggle-description", %{})
@@ -650,6 +650,177 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html3 = render_click(view, "toggle-description", %{})
       refute html3 =~ "is-expanded"
+    end
+  end
+
+  # 01.3-08 (UAT gap G-01.3-1 item 6 + sketch 042's inline-chevron toggle):
+  # pins the description's justify/clamp mechanism and the icon-only
+  # toggle's collapsed/expanded contract. Reuses css_source/0 (declared
+  # below in the title-echo describe block) for the source-level pins.
+  describe "description justify + inline icon-only toggle contract (01.3-08, UAT gap G-01.3-1 item 6)" do
+    test "initial render is collapsed: the paragraph is clamped and the toggle is nested inside it",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      p = LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped")
+      assert Enum.count(p) == 1
+
+      toggle = LazyHTML.query(doc, "p#game-description button.pk-desc-toggle")
+      assert Enum.count(toggle) == 1
+
+      assert List.first(LazyHTML.attribute(toggle, "aria-expanded")) == "false"
+      assert List.first(LazyHTML.attribute(toggle, "aria-label")) == "Ver más"
+      assert List.first(LazyHTML.attribute(toggle, "aria-controls")) == "game-description"
+    end
+
+    test "after one toggle event: the paragraph is no longer clamped and the toggle is a trailing sibling",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      html = render_click(view, "toggle-description", %{})
+      doc = LazyHTML.from_document(html)
+
+      p_expanded = LazyHTML.query(doc, "p#game-description.pk-desc")
+      assert Enum.count(p_expanded) == 1
+      assert Enum.empty?(LazyHTML.query(doc, "p#game-description.is-clamped"))
+
+      # The toggle must be a SIBLING of the paragraph now, not a descendant.
+      assert Enum.empty?(LazyHTML.query(doc, "p#game-description button.pk-desc-toggle"))
+
+      trailing = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle.is-trailing")
+      assert Enum.count(trailing) == 1
+      assert List.first(LazyHTML.attribute(trailing, "aria-expanded")) == "true"
+      assert List.first(LazyHTML.attribute(trailing, "aria-label")) == "Ver menos"
+      assert List.first(LazyHTML.attribute(trailing, "aria-controls")) == "game-description"
+
+      # No ellipsis span once expanded — nothing left to truncate.
+      refute LazyHTML.to_html(trailing) =~ "pk-desc-toggle-ellipsis"
+    end
+
+    test "round trip: expand, collapse, expand, collapse, expand, collapse — three full cycles, asserting after every transition",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert_collapsed = fn html ->
+        doc = LazyHTML.from_document(html)
+        assert Enum.count(LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped")) == 1
+        assert Enum.count(LazyHTML.query(doc, "p#game-description button.pk-desc-toggle")) == 1
+      end
+
+      assert_expanded = fn html ->
+        doc = LazyHTML.from_document(html)
+        assert Enum.empty?(LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped"))
+
+        assert Enum.count(LazyHTML.query(doc, "#game-description + button.pk-desc-toggle.is-trailing")) == 1
+      end
+
+      assert_collapsed.(html)
+
+      # This is the exact regression sketch 042 hit: a version that only
+      # ever worked on the first expand, then silently no-op'd on every
+      # subsequent transition because the relocation logic branched on the
+      # button's current parent instead of the target state. Three full
+      # cycles (six transitions), asserting after each one, is the point.
+      html = render_click(view, "toggle-description", %{})
+      assert_expanded.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_collapsed.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_expanded.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_collapsed.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_expanded.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_collapsed.(html)
+    end
+
+    test "a game with a nil description renders neither the paragraph nor the toggle", %{
+      conn: conn
+    } do
+      game = game_fixture(%{description: nil})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "pk-desc-shell"
+      refute html =~ "pk-desc-toggle"
+      refute html =~ "id=\"game-description\""
+    end
+
+    test "the description declares justify and text-justify: inter-word, unconditional at every width" do
+      block =
+        case Regex.run(~r/(?m)^\.pk-desc\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-desc { ... }` rule found in assets/css/app.css")
+        end
+
+      assert block =~ ~r/text-align:\s*justify;/,
+             "`.pk-desc` must declare `text-align: justify` unconditionally (UAT item 6 — " <>
+               "the alignment must hold at every viewport width, not just desktop)."
+
+      assert block =~ ~r/text-justify:\s*inter-word;/,
+             "`.pk-desc` must declare `text-justify: inter-word` — load-bearing on the " <>
+               "clamped line per description-truncation.md (a float competes for that " <>
+               "line's width)."
+    end
+
+    test "no webkit line-clamp mechanism survives in the description family, and the clamp/toggle share one line-height multiple" do
+      desc_block =
+        case Regex.run(~r/(?m)^\.pk-desc\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-desc { ... }` rule found in assets/css/app.css")
+        end
+
+      clamped_block =
+        case Regex.run(~r/(?m)^\.pk-desc\.is-clamped\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-desc.is-clamped { ... }` rule found in assets/css/app.css")
+        end
+
+      toggle_block =
+        case Regex.run(~r/(?m)^\.pk-desc-toggle\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-desc-toggle { ... }` rule found in assets/css/app.css")
+        end
+
+      refute desc_block =~ ~r/webkit-line-clamp/
+      refute clamped_block =~ ~r/webkit-line-clamp/
+      refute toggle_block =~ ~r/webkit-line-clamp/
+
+      assert clamped_block =~ ~r/max-height:\s*calc\(3 \* 1\.5em\);/,
+             "`.pk-desc.is-clamped`'s max-height must read the same 1.5 line-height multiple " <>
+               ".pk-desc itself declares — never an independent literal."
+
+      assert toggle_block =~ ~r/margin:\s*calc\(2 \* 1\.5em\)/,
+             "`.pk-desc-toggle`'s margin-top must read the SAME 1.5 line-height multiple as " <>
+               "`.pk-desc.is-clamped`'s max-height — both derived from one declared value."
+    end
+
+    test "the toggle's hit area carries a symmetric inset of at least 13px, clearing the 44px touch floor" do
+      before_block =
+        case Regex.run(~r/(?m)^\.pk-desc-toggle::before\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-desc-toggle::before { ... }` rule found in assets/css/app.css")
+        end
+
+      assert [_, magnitude] = Regex.run(~r/inset:\s*-(\d+)px;/, before_block)
+
+      assert String.to_integer(magnitude) >= 13,
+             "`.pk-desc-toggle::before`'s inset must be at least 13px on every side so the " <>
+               "~24x18px visible box clears the 44px WCAG 2.5.5 touch floor."
     end
   end
 
