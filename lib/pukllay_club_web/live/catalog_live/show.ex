@@ -373,15 +373,17 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         </script>
 
         <div id="detail-title-echo" class="pk-title-echo">
-          <span class="pk-title-echo-name">{@game.name}</span>
-          <button
-            type="button"
-            data-scroll-top
-            aria-label="Volver arriba"
-            class="pk-scroll-top min-h-11 min-w-11"
-          >
-            <.icon name="hero-arrow-up" class="size-4" />
-          </button>
+          <div class="mx-auto w-full max-w-7xl pk-gutter pk-title-echo-inner">
+            <span class="pk-title-echo-name">{@game.name}</span>
+            <button
+              type="button"
+              data-scroll-top
+              aria-label="Volver arriba"
+              class="pk-scroll-top min-h-11 min-w-11"
+            >
+              <.icon name="hero-arrow-up" class="size-4" />
+            </button>
+          </div>
         </div>
 
         <div class="space-y-4">

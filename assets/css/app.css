@@ -3498,18 +3498,26 @@ body.pk-cta-parked {
    at a desktop width tall enough to actually stretch body via
    min-height): this bar's `getBoundingClientRect()` still resolves
    against the true viewport in both cases, not against body's box. */
+/* G-01.3-09 (UAT gap G-01.3-1 item 7): the bar's fill used to be
+   var(--color-base-100), the exact token the page body itself uses,
+   separated only by the 1px border below — the same defect
+   detail-page-mobile-interaction.md's "Color contrast on stacked
+   controls" section already diagnosed and fixed once on the mobile CTA
+   bar ("give a bar of stacked controls a background one step
+   darker/tinted than the controls sitting on it, not the same token").
+   var(--color-base-200) is that one step in BOTH themes (light #FFFFFF
+   -> #F3ECFA; dark #170A26 -> #22103A), so the two bars now share one
+   decision instead of two coincidences. The border-bottom already read
+   var(--color-base-300), one step beyond this new fill, so it needed no
+   change to keep reading as a real separator rather than blending in. */
 .pk-title-echo {
   position: fixed;
   top: var(--pk-header-h, 4.5rem);
   left: 0;
   right: 0;
   z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.5rem var(--pk-gutter);
-  background: var(--color-base-100);
+  padding: 0.5rem 0;
+  background: var(--color-base-200);
   border-bottom: 1px solid var(--color-base-300);
   opacity: 0;
   pointer-events: none;
@@ -3526,6 +3534,24 @@ body.pk-cta-parked {
 .pk-title-echo.is-parked {
   opacity: 0;
   pointer-events: none;
+}
+
+/* G-01.3-09: the bar's content box, capping to the same shared shell
+   content width every other capped surface on this page uses
+   (#detail-masthead-wrap, .pk-footer-row) instead of spanning the bar's
+   own full-viewport background. The horizontal gutter that used to live
+   on .pk-title-echo itself (padding: 0.5rem var(--pk-gutter)) moved here
+   — onto the SAME element that carries the mx-auto/w-full/max-w-7xl cap
+   in show.ex's markup (the .pk-gutter utility class supplies it there),
+   never on an outer wrapper around the cap. page-shell.md records this
+   exact double-inset bug being hit twice already; declaring an
+   independent padding value on this rule as well as on .pk-gutter would
+   be a third instance of it. */
+.pk-title-echo-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 /* Title-echo name truncation (Phase 01.2 gap-closure round 4, G-01.2-24
