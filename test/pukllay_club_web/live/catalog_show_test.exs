@@ -466,7 +466,20 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # would otherwise make "no boardgamegeek.com anywhere on the page"
       # unassertable regardless of this game's own bgg_id.
       with_id = game_fixture(%{name: "Con BGG", bgg_id: 13, weight_band: "nivel_experto"})
-      without_id = game_fixture(%{name: "Sin BGG", bgg_id: nil, weight_band: "descubre_el_hobby"})
+
+      # D-06 (01.3-05): the shared fixture default holds a weight value —
+      # override it to nil here too, or advanced_stats?/1 renders a Peso BGG
+      # row (with an empty href built from a nil bgg_id) and the
+      # "no boardgamegeek.com anywhere" assertion below would be testing an
+      # impossible weight-without-BGG-id combination rather than the real
+      # "no BGG id at all" case this test targets.
+      without_id =
+        game_fixture(%{
+          name: "Sin BGG",
+          bgg_id: nil,
+          weight_band: "descubre_el_hobby",
+          bgg_weight: nil
+        })
 
       {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_id.id}")
       {:ok, _view, html_without} = live(conn, ~p"/juegos/#{without_id.id}")
@@ -609,7 +622,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query(".pk-description + .divider") |> Enum.count() == 1
+      # D-03/D-04 (01.3-05): the title+description block is now wrapped in
+      # .pk-reading-section, so the divider directly follows that wrapper
+      # rather than .pk-description itself.
+      assert doc |> LazyHTML.query(".pk-reading-section + .divider") |> Enum.count() == 1
     end
 
     test "the hashtag row flows straight into the Mecánicas heading — ordered siblings, no element (the removed badge) between them (G-01.2-20)",
@@ -628,11 +644,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       # Adjacent-sibling chain: the div immediately after .pk-divider (the
       # editorial hashtag row) must itself be immediately followed by the
-      # Mecánicas heading. A re-added element between them (the former
-      # badge block) breaks the chain and this query returns 0 instead of
-      # 1 — even with a weight band present, which is the case that used
-      # to render the badge.
-      assert doc |> LazyHTML.query(".pk-divider + div + h2.pk-section-heading") |> Enum.count() ==
+      # Mecánicas section wrapper, whose own direct child is the heading. A
+      # re-added element between them (the former badge block) breaks the
+      # chain and this query returns 0 instead of 1 — even with a weight
+      # band present, which is the case that used to render the badge.
+      # D-03/D-04 (01.3-05): the heading is now nested one level deeper,
+      # inside its own .pk-reading-section wrapper, so the chain's last
+      # link uses a child combinator instead of matching the heading
+      # directly as a sibling.
+      assert doc
+             |> LazyHTML.query(".pk-divider + div + div.pk-reading-section > h2.pk-section-heading")
+             |> Enum.count() ==
                1
     end
 

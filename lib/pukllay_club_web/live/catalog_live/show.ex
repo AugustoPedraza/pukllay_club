@@ -496,23 +496,29 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               </div>
 
               <div class="pk-text-col">
-                <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
+                <%!-- D-03/D-04: title + description form the first reading
+                section (the spacing wrapper below). The title always
+                renders, so the wrapper itself carries no :if — only the
+                description block keeps its own guard, unchanged. --%>
+                <div class="pk-reading-section">
+                  <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
 
-                <%!-- G-01.2-10 task 3: the description sits immediately
-                after the title with nothing in between (ask #2) — every
-                element that used to be wedged here (weight-band badge,
-                editorial hashtags) moved below the separator. --%>
-                <div :if={@game.description} class="pk-description">
-                  <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
-                    {@game.description}
-                  </p>
-                  <button
-                    type="button"
-                    phx-click="toggle-description"
-                    class="link link-primary text-sm"
-                  >
-                    {(@description_expanded && "Ver menos") || "Ver más"}
-                  </button>
+                  <%!-- G-01.2-10 task 3: the description sits immediately
+                  after the title with nothing in between (ask #2) — every
+                  element that used to be wedged here (weight-band badge,
+                  editorial hashtags) moved below the separator. --%>
+                  <div :if={@game.description} class="pk-description">
+                    <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
+                      {@game.description}
+                    </p>
+                    <button
+                      type="button"
+                      phx-click="toggle-description"
+                      class="link link-primary text-sm"
+                    >
+                      {(@description_expanded && "Ver menos") || "Ver más"}
+                    </button>
+                  </div>
                 </div>
 
                 <%!-- Boundary between the primary reading block (title +
@@ -521,12 +527,19 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 used as-is for the line's colour/thickness (already
                 theme-aware via color-mix, no hand-rolled rule needed for
                 that); only its own default margin fought .pk-text-col's
-                already-established 1rem flex gap (doubling the visible
-                gap around the line), so .pk-divider neutralizes just that
-                one property. Reused verbatim by 01.2-18 for the boundary
-                before the recommendations shelf. --%>
+                flex gap (doubling the visible gap around the line), so
+                .pk-divider neutralizes just that one property. Stays a flat,
+                unwrapped child of .pk-text-col (D-03/D-04) — it simply
+                inherits the column's own between-section gap (raised to
+                2rem this phase) on both sides, reinforcing its role as a
+                deliberate boundary rather than shrinking it back down.
+                Reused verbatim by 01.2-18 for the boundary before the
+                recommendations shelf. --%>
                 <div class="divider pk-divider" role="separator"></div>
 
+                <%!-- Also a flat, unwrapped child of .pk-text-col (D-03/D-04)
+                — the editorial-tags row inherits the same between-section
+                rhythm as the divider above it, on both sides. --%>
                 <GameChips.editorial_tags
                   tags={@game.tags}
                   href_fun={fn tag -> ~p"/?tags=#{tag}" end}
@@ -544,64 +557,127 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 is kept with zero call sites — see its own doc comment
                 (in `GameChips`) for why. --%>
 
-                <h2 :if={@mechanic_labels != []} class="pk-section-heading">Mecánicas</h2>
-                <GameChips.chip_row
-                  terms={@mechanic_labels}
-                  limit={99}
-                  href_fun={fn label -> ~p"/?mechanics=#{label}" end}
-                />
+                <%!-- D-03/D-04: the guard moves from the heading onto this
+                wrapper — flex gap only applies between children that
+                actually render, so an always-present wrapper would leave
+                the dead space this change exists to remove. --%>
+                <div :if={@mechanic_labels != []} class="pk-reading-section">
+                  <h2 class="pk-section-heading">Mecánicas</h2>
+                  <GameChips.chip_row
+                    terms={@mechanic_labels}
+                    limit={99}
+                    href_fun={fn label -> ~p"/?mechanics=#{label}" end}
+                  />
+                </div>
 
-                <h2 :if={@theme_labels != []} class="pk-section-heading">Temáticas</h2>
-                <GameChips.chip_row
-                  terms={@theme_labels}
-                  limit={99}
-                  href_fun={fn label -> ~p"/?themes=#{label}" end}
-                />
+                <div :if={@theme_labels != []} class="pk-reading-section">
+                  <h2 class="pk-section-heading">Temáticas</h2>
+                  <GameChips.chip_row
+                    terms={@theme_labels}
+                    limit={99}
+                    href_fun={fn label -> ~p"/?themes=#{label}" end}
+                  />
+                </div>
 
                 <%!-- G-01.2-10 task 3, ask #5: the publisher row is gone
                 (unconditional, every viewport width) and ficha_tecnica?/1
                 below narrowed from five fields to four — see that
-                function's own comment. --%>
-                <h2 :if={ficha_tecnica?(@game)} class="pk-section-heading">Ficha técnica</h2>
-                <dl :if={ficha_tecnica?(@game)} class="pk-spec-list">
-                  <div :if={@game.min_age} class="pk-spec-row">
-                    <dt>Edad mínima</dt>
-                    <dd>{@game.min_age}+</dd>
-                  </div>
-                  <div :if={@game.year_published} class="pk-spec-row">
-                    <dt>Año</dt>
-                    <dd>{@game.year_published}</dd>
-                  </div>
-                  <div :if={@game.designers != []} class="pk-spec-row pk-spec-row--wide">
-                    <dt>Diseñadores</dt>
-                    <dd>{Enum.join(@game.designers, ", ")}</dd>
-                  </div>
-                  <div :if={@game.bgg_rating} class="pk-spec-row">
-                    <dt>Valoración BGG</dt>
-                    <dd>
-                      <a
-                        href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="link link-primary"
-                      >
-                        {format_bgg_rating(@game.bgg_rating)}
-                      </a>
-                    </dd>
-                  </div>
-                  <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
-                    <dd>
-                      <a
-                        href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="link link-primary"
-                      >
-                        Ver ficha completa en BoardGameGeek
-                      </a>
-                    </dd>
-                  </div>
-                </dl>
+                function's own comment. D-03/D-04: the guard now sits once
+                on this wrapper instead of twice, on the heading and the
+                list separately — the now-redundant second guard on the
+                <dl> is removed. --%>
+                <div :if={ficha_tecnica?(@game)} class="pk-reading-section">
+                  <h2 class="pk-section-heading">Ficha técnica</h2>
+                  <dl class="pk-spec-list">
+                    <div :if={@game.min_age} class="pk-spec-row">
+                      <dt>Edad mínima</dt>
+                      <dd>{@game.min_age}+</dd>
+                    </div>
+                    <div :if={@game.year_published} class="pk-spec-row">
+                      <dt>Año</dt>
+                      <dd>{@game.year_published}</dd>
+                    </div>
+                    <div :if={@game.designers != []} class="pk-spec-row pk-spec-row--wide">
+                      <dt>Diseñadores</dt>
+                      <dd>{Enum.join(@game.designers, ", ")}</dd>
+                    </div>
+                    <%!-- D-05: same conditional-render/comma-join mechanism
+                    as Diseñadores directly above — no new pattern. --%>
+                    <div :if={@game.artists != []} class="pk-spec-row pk-spec-row--wide">
+                      <dt>Ilustradores</dt>
+                      <dd>{Enum.join(@game.artists, ", ")}</dd>
+                    </div>
+
+                    <%!-- D-06: the "Avanzado" sub-group — a full-width label
+                    gated on advanced_stats?/1, so it can never render over
+                    zero rows, followed by three independently-gated stat
+                    rows (weight, rating, ranking). The BGG rating row
+                    shipped by the 01.3-01 tracer lives HERE now, moved
+                    (not duplicated) from its prior standalone position. --%>
+                    <div :if={advanced_stats?(@game)} class="pk-spec-group-label">Avanzado</div>
+
+                    <div :if={@game.bgg_weight} class="pk-spec-row">
+                      <dt>Peso BGG</dt>
+                      <dd>
+                        <a
+                          href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="link link-primary"
+                        >
+                          {format_bgg_weight(@game.bgg_weight)}
+                        </a>
+                      </dd>
+                    </div>
+
+                    <div :if={@game.bgg_rating} class="pk-spec-row">
+                      <dt>Valoración BGG</dt>
+                      <dd>
+                        <a
+                          href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="link link-primary"
+                        >
+                          {format_bgg_rating(@game.bgg_rating)}
+                        </a>
+                      </dd>
+                    </div>
+
+                    <%!-- D-06: a game BGG has never ranked simply omits this
+                    row via the :if guard below — no placeholder, no "no
+                    disponible", no "not ranked" text. The literal `#` is a
+                    plain character (this template sigil performs no Elixir
+                    string interpolation) immediately followed by the
+                    template engine's own `{...}` interpolation. --%>
+                    <div :if={@game.bgg_rank} class="pk-spec-row">
+                      <dt>Ranking BGG</dt>
+                      <dd>
+                        <a
+                          href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="link link-primary"
+                        >
+                          #{@game.bgg_rank}
+                        </a>
+                      </dd>
+                    </div>
+
+                    <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
+                      <dd>
+                        <a
+                          href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="link link-primary"
+                        >
+                          Ver ficha completa en BoardGameGeek
+                        </a>
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
@@ -1112,11 +1188,29 @@ defmodule PukllayClubWeb.CatalogLive.Show do
       not is_nil(game.bgg_id)
   end
 
+  # D-06 (01.3-05 Task 2): guards the "Avanzado" sub-group label — mirrors
+  # ficha_tecnica?/1's or-chain shape exactly. Deliberately does NOT also
+  # check bgg_id: any game that can carry a weight, rating or rank
+  # necessarily carries a bgg_id (BGG enrichment is keyed on it), which
+  # ficha_tecnica?/1 already covers for the outer section. Leaving
+  # ficha_tecnica?/1 itself unwidened is intentional — see its own comment.
+  defp advanced_stats?(game) do
+    not is_nil(game.bgg_weight) or
+      not is_nil(game.bgg_rating) or
+      not is_nil(game.bgg_rank)
+  end
+
   # D-06 (01.3-01 Task 1): BGG's rating is a ten-point scale — formatted via
   # Erlang stdlib (no existing float-formatting helper in this codebase, no
   # new dependency needed) and never renormalized to a five-point scale,
   # which would misrepresent the source.
   defp format_bgg_rating(rating), do: :erlang.float_to_binary(rating, decimals: 1) <> "/10"
+
+  # D-06 (01.3-05 Task 2): BGG's weight is its own 1-5 "complexity" scale —
+  # distinct from bgg_rating's 1-10 average-rating scale above. Same Erlang
+  # stdlib formatting call, one decimal, suffixed per the Copywriting
+  # Contract.
+  defp format_bgg_weight(weight), do: :erlang.float_to_binary(weight, decimals: 1) <> "/5"
 
   # Subtitle for the Juegos similares shelf — reuses Vocabulary.weight_band/1's
   # existing plain-Spanish descriptor label rather than authoring new copy
