@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: "Below Title, row layout (10px gap), text-sm (14px, stepped down from description match), no divider"
+winner: "Below Title, row (10px gap), text-sm (14px), no divider, right-aligned chevron with sketch-006 motion + tap feedback"
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -114,7 +114,14 @@ the tag row's position holds up against the description toggle in both variants.
 - **Round 14 — row, not stack:** "below looks better, but now could take full width (row) instead of
   be stacked." Reverted to the base `.pill-row`'s horizontal wrap; gap widened from 4px to 10px since
   the pill's original 6px row-gap was tuned for 11px text, not the 16px description-matched type.
-- **Round 15 — smaller than main text (current):** "better balance, less than main text." Round 12's
-  exact match with `.desc` made hashtags compete at equal weight with the title/description. Stepped
-  down one size, 16px → `text-sm` (14px), so they read as secondary/supporting content while staying
-  well above the original 11px pill-label scale.
+- **Round 15 — smaller than main text:** "better balance, less than main text." Round 12's exact
+  match with `.desc` made hashtags compete at equal weight with the title/description. Stepped down
+  one size, 16px → `text-sm` (14px), so they read as secondary/supporting content while staying well
+  above the original 11px pill-label scale.
+- **Round 16 — chevron polish (current):** "arrow better at right" + "polished subtle animation,
+  specially on mobile." Chevron: `align-self: flex-end` moves it to the column's right edge (was
+  left by default). Motion: rotation switched from the generic `--duration-fast/--ease-standard` to
+  `--duration-base/--ease-out-soft` — sketch 006's own validated "Subtle/Soft" motion pair, not a
+  default. Added a real `:active` tap state (scale + tint), since hover never fires on touch and
+  mobile needs its own feedback signal. The revealed description text now fades in on expand instead
+  of snapping into view.

@@ -35,11 +35,26 @@
   .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
   h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
   .desc { line-height: 1.5; margin: 0; color: var(--color-text); }
-  .desc-toggle { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-top: 4px; background: none; border: none; border-radius: 50%; padding: 0; color: var(--color-text-muted); cursor: pointer; }
-  .desc-toggle:hover, .desc-toggle:focus-visible { color: var(--color-primary); }
-  .desc-toggle svg { transition: transform var(--duration-fast) var(--ease-standard); }
+  /* Round 16 — "arrow better at right" + "polished subtle animation,
+     specially on mobile." align-self: flex-end pushes the chevron to the
+     column's right edge instead of the default left. Rotation now uses
+     this app's own VALIDATED motion tokens (sketch 006's winner —
+     --duration-base/--ease-out-soft, "Subtle/Soft") instead of the
+     generic --duration-fast/--ease-standard pair used everywhere else in
+     this sketch — a deliberately calmer, slightly slower feel for the one
+     control on the page that has a real state change to announce. Added
+     an explicit :active tap state (scale down) since hover never fires on
+     a touch device — mobile needs its OWN feedback signal, not just the
+     hover one desktop already gets. The revealed text also gets a brief
+     fade-in on expand so the extra lines don't just snap into view. */
+  .desc-toggle { display: inline-flex; align-items: center; justify-content: center; align-self: flex-end; width: 32px; height: 32px; margin-top: 4px; background: none; border: none; border-radius: 50%; padding: 0; color: var(--color-text-muted); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+  .desc-toggle:hover, .desc-toggle:focus-visible { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+  .desc-toggle:active { transform: scale(0.88); background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
+  .desc-toggle svg { transition: transform var(--duration-base) var(--ease-out-soft); }
   .desc-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
   .desc.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+  @keyframes descReveal { from { opacity: 0.3; } to { opacity: 1; } }
+  .desc:not(.is-clamped) { animation: descReveal var(--duration-base) var(--ease-out-soft); }
 
   .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
   /* Round 14 — back to a wrapping row instead of round 11's stack, now
@@ -85,19 +100,23 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: Below Title, Row, Smaller ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (rounds 1-14) in this sketch's README.
-  Position: below the title, wrapping row. <strong>Round 15 (this version):</strong> "better
-  balance, less than main text" — stepped the hashtag size down from a full match with the
-  description (16px) to `text-sm` (14px), so they read as clearly secondary instead of competing at
-  equal weight with the title/description. No divider. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active">Winner: Below Title, Row, Polished ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-15) in this sketch's README.
+  <strong>Round 16 (this version):</strong> chevron moved to the right edge of the column (was
+  left-aligned by default); its rotation now uses this app's own validated "Subtle/Soft" motion
+  tokens (sketch 006) instead of the generic pair everywhere else; added a real tap state
+  (scale-down) since hover never fires on touch; the revealed description text fades in on expand
+  instead of snapping. Toggle 🌙/☀ to check both themes — tap/click the chevron to feel it.</span>
 </div>
 
 <div class="cause-note">
-  <strong>What changed (round 15):</strong> round 12 matched hashtag type to the description exactly
-  — that made them compete at equal visual weight with the surrounding prose. Stepped down one size
-  (16px → 14px, <code>text-sm</code>) so they read as secondary/supporting content next to the title,
-  while staying well above the original 11px pill-label scale this whole thread moved away from.
+  <strong>What changed (round 16):</strong> "arrow better at right, right?" — <code>align-self:
+  flex-end</code> on the chevron button, no layout restructuring needed. "Polished subtle animation,
+  specially on mobile" — three changes: (1) rotation switched from
+  <code>--duration-fast/--ease-standard</code> to <code>--duration-base/--ease-out-soft</code>, the
+  actual validated motion pair from sketch 006, not a generic default; (2) a real <code>:active</code>
+  state (scale + tint) — mobile has no hover, so it needs its own tap feedback, not just desktop's
+  hover color change; (3) the revealed text fades in on expand instead of appearing instantly.
 </div>
 
 <div class="compare">
