@@ -65,6 +65,73 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
+  describe "filter_games/1 and count_games/1 — designers/artists creator filters (01.3-06, UAT gap G-01.3-1 item 3)" do
+    test "designers returns only games whose designers array contains the exact name" do
+      game_fixture(%{name: "Robinson Crusoe", designers: ["Ignacy Trzewiczek"]})
+      game_fixture(%{name: "51st State", designers: ["Ignacy Trzewiczek", "Bartłomiej Kordowski"]})
+      game_fixture(%{name: "Other", designers: ["Someone Else"]})
+
+      results =
+        [designers: ["Ignacy Trzewiczek"]]
+        |> Catalog.filter_games()
+        |> Enum.map(& &1.name)
+
+      assert Enum.sort(results) == ["51st State", "Robinson Crusoe"]
+
+      assert Catalog.count_games(designers: ["Ignacy Trzewiczek"]) == 2
+    end
+
+    test "artists returns only games whose artists array contains the exact name" do
+      game_fixture(%{name: "With Artist", artists: ["Jason Behnke"]})
+      game_fixture(%{name: "Other Artist", artists: ["Someone Else"]})
+
+      results =
+        [artists: ["Jason Behnke"]]
+        |> Catalog.filter_games()
+        |> Enum.map(& &1.name)
+
+      assert results == ["With Artist"]
+      assert Catalog.count_games(artists: ["Jason Behnke"]) == 1
+    end
+
+    test "a designer name matching no game returns an empty list" do
+      game_fixture(%{name: "Any Game", designers: ["Real Designer"]})
+
+      assert Catalog.filter_games(designers: ["Nobody At All"]) == []
+      assert Catalog.count_games(designers: ["Nobody At All"]) == 0
+    end
+
+    test "designers composes with an existing facet (AND across facets, narrows not widens)" do
+      game_fixture(%{
+        name: "Match Both",
+        designers: ["R. Eric Reuss"],
+        mechanics: ["Dice Rolling"]
+      })
+
+      game_fixture(%{
+        name: "Designer Only",
+        designers: ["R. Eric Reuss"],
+        mechanics: ["Auction / Bidding"]
+      })
+
+      game_fixture(%{
+        name: "Mechanic Only",
+        designers: ["Someone Else"],
+        mechanics: ["Dice Rolling"]
+      })
+
+      designer_only_count = length(Catalog.filter_games(designers: ["R. Eric Reuss"]))
+
+      combined_results =
+        [designers: ["R. Eric Reuss"], mechanics: ["Tira dados"]]
+        |> Catalog.filter_games()
+        |> Enum.map(& &1.name)
+
+      assert designer_only_count == 2
+      assert combined_results == ["Match Both"]
+    end
+  end
+
   describe "filter_games/1 — scalar filters" do
     test "min_players: 4 returns only games whose player range includes 4" do
       game_fixture(%{name: "Fits4", min_players: 2, max_players: 5})

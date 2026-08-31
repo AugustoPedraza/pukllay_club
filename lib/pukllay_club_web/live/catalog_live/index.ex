@@ -59,6 +59,8 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
       |> assign(:tags, [])
+      |> assign(:designers, [])
+      |> assign(:artists, [])
       |> assign(:players, nil)
       |> assign(:max_playtime, nil)
       |> assign(:min_age, nil)
@@ -152,6 +154,8 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         |> assign(:themes, filters.themes)
         |> assign(:weight_bands, filters.weight_bands)
         |> assign(:tags, filters.tags)
+        |> assign(:designers, filters.designers)
+        |> assign(:artists, filters.artists)
         |> assign(:players, filters.players)
         |> assign(:max_playtime, filters.max_playtime)
         |> assign(:min_age, filters.min_age)
@@ -367,6 +371,8 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
       |> assign(:tags, [])
+      |> assign(:designers, [])
+      |> assign(:artists, [])
       |> assign(:players, nil)
       |> assign(:max_playtime, nil)
       |> assign(:min_age, nil)
@@ -460,6 +466,12 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp facet_assign_key("themes"), do: :themes
   defp facet_assign_key("weight_bands"), do: :weight_bands
   defp facet_assign_key("tags"), do: :tags
+  # 01.3-06: literal clauses only, never a dynamic-atom conversion from
+  # client input (T-01-37) — a creator-pill chip's `toggle-facet`
+  # removal routes through the same dispatcher as every other facet, so
+  # these two keys need no new remove-creator handler.
+  defp facet_assign_key("designers"), do: :designers
+  defp facet_assign_key("artists"), do: :artists
   defp facet_assign_key(_unrecognized), do: nil
 
   # Same never-build-an-atom-from-client-input discipline as
@@ -479,6 +491,8 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       themes: assigns.themes,
       weight_bands: assigns.weight_bands,
       tags: assigns.tags,
+      designers: assigns.designers,
+      artists: assigns.artists,
       players: assigns.players,
       max_playtime: assigns.max_playtime,
       min_age: assigns.min_age,
@@ -597,7 +611,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # visitor can't otherwise see once the search control is collapsed.
   defp active_filter_count(assigns) do
     length(assigns.mechanics) + length(assigns.themes) + length(assigns.weight_bands) +
-      length(assigns.tags) +
+      length(assigns.tags) + length(assigns.designers) + length(assigns.artists) +
       Enum.count([assigns.players, assigns.max_playtime, assigns.min_age], &(not is_nil(&1)))
   end
 
@@ -622,6 +636,8 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       facet_chips(assigns.themes, "themes", "Temática") ++
       weight_band_chips(assigns.weight_bands) ++
       tag_chips(assigns.tags) ++
+      creator_chips(assigns.designers, "designers", "Diseñador") ++
+      creator_chips(assigns.artists, "artists", "Ilustrador") ++
       scalar_chips(assigns) ++
       query_chip(assigns.q)
   end
@@ -680,6 +696,26 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         choice: tag,
         label: "Etiqueta: #{tag}",
         aria_label: "Quitar filtro: Etiqueta — #{tag}"
+      }
+    end)
+  end
+
+  # Creator filter chips for the :designers/:artists socket assigns,
+  # 01.3-06 — the exit half of the detail page's navigable
+  # Diseñadores/Ilustradores pills (UAT gap G-01.3-1 item 3). Same
+  # descriptor shape as `facet_chips/3` (this is deliberately not a
+  # distinct shape); removal reuses the existing
+  # `toggle-facet` event via the two literal `facet_assign_key/1` clauses
+  # added above — no new remove-creator handler.
+  defp creator_chips(selected, facet, facet_label) do
+    Enum.map(selected, fn value ->
+      %{
+        event: "toggle-facet",
+        facet: facet,
+        scalar: nil,
+        choice: value,
+        label: "#{facet_label}: #{value}",
+        aria_label: "Quitar filtro: #{facet_label} — #{value}"
       }
     end)
   end
@@ -804,16 +840,30 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
   # A filtered view shows one authoritative result set — the curated
   # carousel rows step aside rather than competing with it (Task 3 action
-  # text).
+  # text). Split into two clauses (01.3-06) to keep Credo's cyclomatic
+  # complexity check under its threshold now that designers/artists have
+  # grown the facet list to six — any_facet_active?/1 is not otherwise
+  # reused, this is a complexity-budget split, not a new abstraction.
   defp filters_active?(assigns) do
     assigns.q not in [nil, ""] or
-      assigns.mechanics != [] or
-      assigns.themes != [] or
-      assigns.weight_bands != [] or
-      assigns.tags != [] or
+      any_facet_active?(assigns) or
       not is_nil(assigns.players) or
       not is_nil(assigns.max_playtime) or
       not is_nil(assigns.min_age)
+  end
+
+  # 01.3-06: designers/artists included alongside the five pre-existing
+  # facets — without them a `/?designers=`/`/?artists=` landing would stay
+  # on the unfiltered carousel surface (D-01/D-02) instead of the narrowed
+  # grid, the exact broken round-trip this plan exists to close (UAT gap
+  # G-01.3-1 item 3).
+  defp any_facet_active?(assigns) do
+    assigns.mechanics != [] or
+      assigns.themes != [] or
+      assigns.weight_bands != [] or
+      assigns.tags != [] or
+      assigns.designers != [] or
+      assigns.artists != []
   end
 
   # D-01/D-02: the single source of truth for which of the two browse

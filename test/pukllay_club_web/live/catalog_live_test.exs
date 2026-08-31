@@ -1042,6 +1042,66 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "?designers=/?artists= creator filters (01.3-06, UAT gap G-01.3-1 item 3)" do
+    test "?designers=<name> renders only the matching game with a removable Diseñador chip", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Agricola", designers: ["Uwe Rosenberg"]})
+      game_fixture(%{name: "Not A Match", designers: ["Someone Else"]})
+
+      {:ok, view, html} = live(conn, "/?designers=Uwe+Rosenberg")
+
+      grid = grid_html(html)
+      assert grid =~ "Agricola"
+      refute grid =~ "Not A Match"
+
+      chips =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-active-filter-chip")
+
+      assert Enum.count(chips) == 1
+
+      chip_html = LazyHTML.to_html(chips)
+      assert chip_html =~ "Diseñador: Uwe Rosenberg"
+      assert chip_html =~ "toggle-facet"
+      assert chip_html =~ ~s(phx-value-facet="designers")
+
+      # Removing the last active filter returns the member to the
+      # unfiltered carousel surface (D-01/D-02) rather than an
+      # unfiltered grid — same contract as every other facet chip
+      # (see "removing the last remaining filter chip returns the
+      # member to the carousel surface" above).
+      html = render_click(view, "toggle-facet", %{"facet" => "designers", "choice" => "Uwe Rosenberg"})
+
+      refute html =~ "Diseñador: Uwe Rosenberg"
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+    end
+
+    test "?artists=<name> renders only the matching game with a removable Ilustrador chip", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Root", artists: ["Kyle Ferrin"]})
+      game_fixture(%{name: "Not A Match", artists: ["Someone Else"]})
+
+      {:ok, view, html} = live(conn, "/?artists=Kyle+Ferrin")
+
+      grid = grid_html(html)
+      assert grid =~ "Root"
+      refute grid =~ "Not A Match"
+
+      chip_html = active_filter_chips_html(html)
+      assert chip_html =~ "Ilustrador: Kyle Ferrin"
+
+      html = render_click(view, "toggle-facet", %{"facet" => "artists", "choice" => "Kyle Ferrin"})
+
+      refute html =~ "Ilustrador: Kyle Ferrin"
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+    end
+  end
+
   describe "settling the background surface once per modal close (G-01.2-4 defect C)" do
     test "G-01.2-4: opening the modal on the carousel surface and toggling a facet leaves the rendered surface unchanged while the modal stays open",
          %{conn: conn} do
