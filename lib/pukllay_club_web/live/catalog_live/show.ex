@@ -527,21 +527,45 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   class="pk-rhythm-8"
                 />
 
-                <%!-- G-01.2-10 task 3: description content/markup
-                untouched by this restructure (01.3-08 reworks it) — only
-                its wrapper's spacing class changed, from the old shared
-                title+description section to its own pk-rhythm-16 section. --%>
+                <%!-- G-01.2-10 task 3 / 01.3-08: description wrapper's
+                spacing class is its own pk-rhythm-16 section. The two `:if`
+                branches below are the LiveView-native equivalent of sketch
+                042's JS DOM-relocation (description-truncation.md) — the
+                button's position (nested-first-child vs. trailing-sibling)
+                is simply which of two mutually exclusive assign-driven
+                templates rendered, with no client-side node move and no
+                colocated hook. Do not restore the sketch's JS relocation
+                function here; it solved a problem (no server-side state to
+                render from) that does not exist in this app. --%>
                 <div :if={@game.description} class="pk-reading-section pk-rhythm-16">
-                  <div class="pk-description">
-                    <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
+                  <div class={["pk-desc-shell", @description_expanded && "is-expanded"]}>
+                    <p :if={!@description_expanded} class="pk-desc is-clamped" id="game-description">
+                      <button
+                        type="button"
+                        phx-click="toggle-description"
+                        class="pk-desc-toggle"
+                        aria-expanded="false"
+                        aria-controls="game-description"
+                        aria-label="Ver más"
+                      >
+                        <span class="pk-desc-toggle-ellipsis" aria-hidden="true">…</span>
+                        <.icon name="hero-chevron-down" class="pk-desc-toggle-icon" />
+                      </button>
+                      {@game.description}
+                    </p>
+                    <p :if={@description_expanded} class="pk-desc" id="game-description">
                       {@game.description}
                     </p>
                     <button
+                      :if={@description_expanded}
                       type="button"
                       phx-click="toggle-description"
-                      class="link link-primary text-sm"
+                      class="pk-desc-toggle is-trailing"
+                      aria-expanded="true"
+                      aria-controls="game-description"
+                      aria-label="Ver menos"
                     >
-                      {(@description_expanded && "Ver menos") || "Ver más"}
+                      <.icon name="hero-chevron-up" class="pk-desc-toggle-icon" />
                     </button>
                   </div>
                 </div>

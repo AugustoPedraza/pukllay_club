@@ -3138,6 +3138,92 @@ body.pk-drawer-open {
   overflow: hidden;
 }
 
+/* 01.3-08: the collapsed-state toggle. Floated as the paragraph's own
+   FIRST child (sketch 042's round-22 winner) — floating right with
+   `clear: right` keeps it pinned to the right edge across the lines it
+   affects. `margin-top: calc(2 * 1.5em)` is two line-heights, the SAME 1.5
+   .pk-desc declares — this is what keeps the float clear of the first two
+   lines (they render full-width, untouched) so text only wraps around it
+   once it reaches the float's vertical position, which lands exactly on
+   the 3rd/clipped line. `border-radius: var(--radius-selector)` reuses
+   this app's smallest declared radius token (0.25rem, the same one
+   daisyUI's own `.badge` resolves to) — the plan text that originated
+   this rule named a `--radius-sm` token, but no such token is declared
+   anywhere in this file's `@theme`/`daisyui-theme` blocks; `--radius-sm`
+   would silently resolve to nothing (0) rather than fail loudly, so using
+   the actual smallest declared token here is a correctness fix, not a
+   style choice. */
+.pk-desc-toggle {
+  float: right;
+  clear: right;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: calc(2 * 1.5em) 0 0 4px;
+  padding: 1px 3px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-selector);
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+/* Expanded state: the last line's length is arbitrary (unlike the
+   collapsed state's known 2-line-height offset), so there is no fixed
+   position to float against — the button becomes a normal trailing
+   sibling of the paragraph instead, right-aligned via the shell's flex
+   column. */
+.pk-desc-toggle.is-trailing {
+  float: none;
+  margin: 0.375rem 0 0;
+  align-self: flex-end;
+}
+
+/* Touch floor (ux-responsive's 44px minimum): the visible box measures
+   roughly 24x18px (icon + ellipsis span + padding); a 13px inset on every
+   side yields ~(24+2*13) x (18+2*13) = 50x44px, clearing the floor on
+   its shorter (height) axis without changing the visible footprint. If
+   the icon size changes, recompute this inset so the resulting box still
+   clears 44px on both axes. */
+.pk-desc-toggle::before {
+  content: "";
+  position: absolute;
+  inset: -13px;
+}
+
+.pk-desc-toggle:hover,
+.pk-desc-toggle:focus-visible {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.pk-desc-toggle:active {
+  transform: scale(0.88);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.pk-desc-toggle-ellipsis {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* `translateY(-2px)` is an ink-alignment nudge, tuned against this app's
+   real Phoenix-rendered --font-sans (Inter) stack — description-
+   truncation.md flags the sketch's own `-4px` value as tuned against a
+   different font stack/screenshot pipeline and explicitly unresolved;
+   this value supersedes it and is itself only a starting point, to be
+   re-tuned during the Task 3 human visual check if the "…"/chevron ink
+   still reads as misaligned. */
+.pk-desc-toggle-icon {
+  width: 12px;
+  height: 12px;
+  transform: translateY(-2px);
+}
+
 /* Boundary between the primary reading block (title + description) and
    supplementary "more information" content (G-01.2-10 task 3, ask #4/#6).
    daisyUI's own .divider component is used as-is for the line's own
