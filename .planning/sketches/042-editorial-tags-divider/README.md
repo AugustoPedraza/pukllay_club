@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: "Ghost Chip (11px, invisible until hover), own row 24px above/below, before the divider"
+winner: null
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -15,12 +15,12 @@ Mecánicas). User's suggestion: give it a real "category section," or move it be
 Also open since sketch 040 dropped "Sobre el juego"'s own heading: does the divider still earn its
 place?
 
-## Winner
-Hashtags sit right after the description, before the divider, as **Ghost Chip** — the same pill
-shape/tap-target as every other pill on the page, but fully transparent at rest; a soft accent tint
-only appears on hover/focus. The row's own margin is 24px above/below (not the page's standard 32px
-section gap) — a deliberate exception, since an invisible-at-rest element otherwise reads as dead
-whitespace rather than deliberate rhythm.
+## Status: round 13 in progress
+Rounds 1-12 converged on placement-before-the-divider, Ghost Chip shape, stacked layout, and
+description-matched typography — but "still breaks the rhythm" persisted even after all of that.
+Round 13 (current) stops retuning the tag row's own spacing/type and instead tests moving its
+*position* in the column: closer to the title (top) vs. the very end of the section (bottom). The
+long-standing open divider question is also resolved this round — removed in both variants.
 
 ## Round History
 - **Round 1 — placement:** A (move before divider, still bare) picked over B (labelled "Categorías,"
@@ -85,15 +85,27 @@ whitespace rather than deliberate rhythm.
   stack's internal gap dropped from 4px to 0, since the matched line-height now supplies the vertical
   rhythm between lines on its own (a separate gap on top would have doubled it up). Shape, color, and
   the hover-reveal interaction are unchanged.
+- **Round 13 — reposition, not retune (current):** "still that hashtag breaks the rhythm... top? or
+  bottom?" Rather than adjust the tag row's own spacing/type again, this round moves *where it sits*:
+  - **Top:** tags move up to right after the title (8px gap, matching the reading-section's own
+    internal rhythm), before the description — introducing the game alongside its name.
+  - **Bottom:** tags move to the very end of the section, after Comunidad BGG — a closing note,
+    closer to how Instagram captions put hashtags last rather than interrupting the read.
+  - **Divider removed in both** ("since we don't have it") — resolves the open question from round 1:
+    with section headings already gone (sketch 040) and rhythm alone doing the separating work, the
+    `.pk-divider` line no longer has a clear job on this page.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html — click "Ver más"/"Ver menos" to check
-the tag row's position holds up in both description states.
+the tag row's position holds up in both description states (Top variant only, since in Bottom the
+toggle no longer neighbors the tags).
 
 ## What to Look For
-- Does the 24px gap read as a clear, deliberate beat now, or does it need to go tighter/looser still?
-- The row is invisible until hover/focus — no permanent affordance. This was accepted after round 5
-  explicitly tested (and rejected) alternatives that solved touch-discoverability (G's permanent
-  underline) — worth a final gut check on mobile specifically, where there's no hover to reveal it.
-- Divider still present here — worth a final check once this is composed with 039/040/041 together:
-  does it still earn its place, or is it now one boundary too many?
+- Top vs. Bottom: does either finally resolve "breaks the rhythm," or does the tag row need a
+  fundamentally different treatment regardless of where it sits in the column?
+- Top: do hashtags introducing the game (before its own description) read as premature, or does
+  pairing them with the title work?
+- Bottom: does ending the section on hashtags feel like a deliberate closing note, or does it read as
+  an afterthought tacked onto Comunidad BGG?
+- Now that the divider is gone in both, does the description→facts→BGG transition still read clearly
+  from rhythm alone, or is something missing without it?
