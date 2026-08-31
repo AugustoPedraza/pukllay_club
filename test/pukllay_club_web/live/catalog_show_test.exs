@@ -4,8 +4,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
 
+  alias Plug.Conn.Query
   alias PukllayClub.Catalog.Reservation
   alias PukllayClubWeb.CarouselRow
+  alias PukllayClubWeb.CatalogFilters
   alias PukllayClubWeb.GameChips
 
   describe "GET /juegos/:id" do
@@ -87,7 +89,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "+7"
     end
 
-    test "renders designers, age, and description in Ficha técnica, and players/duration once in the facts row (D-05)",
+    test "renders designers in the fact grid and description in the reading column, and players/duration once in the facts row; no minimum-age label renders (D-05, UAT gap G-01.3-1 item 2)",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -105,11 +107,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
 
       assert html =~ "Klaus Teuber"
-      assert html =~ "10+"
       assert html =~ "Compite por colonizar la isla de Catán."
 
+      # 01.3-07 (UAT gap G-01.3-1 item 2): no minimum-age row anywhere on
+      # the page, even though this game has a min_age set — the field and
+      # its ?min_age= filter param remain live, only this render site is
+      # gone.
+      refute html =~ "10+"
+      refute html =~ "Edad mínima"
+
       # D-05: players is represented exactly once, by the facts row —
-      # never restated as a Ficha técnica spec row.
+      # never restated as a fact-grid row.
       assert facts_html =~ "3-4"
       refute spec_html =~ "3-4"
       refute spec_html =~ "Jugadores"
@@ -449,13 +457,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     # gaps — never paper over an absence with a placeholder. At the time
     # this test was written the Ilustrador/BGG-ranking rows were dead
     # placeholders with no backing schema field, so the correct behaviour
-    # was "never render, ever." D-05/D-06 (01.3-05) add real
-    # artists/bgg_rank columns, so the correct behaviour is now
-    # *conditional*: present when the field is set, absent when it's nil.
-    # The assertion direction below flips accordingly — this is not a
-    # reversal of the design rule, it's the same rule applied to real data
-    # that didn't exist before.
-    test "the Ilustradores and Ranking BGG rows render conditionally on real data, never as a placeholder (D-04, D-05, D-06)",
+    # was "never render, ever." D-05/D-06 (01.3-05), carried forward by
+    # 01.3-07's fact-grid/Comunidad BGG split, add real artists/bgg_rank
+    # columns, so the correct behaviour is now *conditional*: present when
+    # the field is set, absent when it's nil.
+    test "the Ilustradores fact-grid column and the Ranking BGG stat render conditionally on real data, never as a placeholder (D-04, D-05, D-06)",
          %{conn: conn} do
       present =
         game_fixture(%{
@@ -491,13 +497,25 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         |> LazyHTML.query(".pk-spec-list")
         |> LazyHTML.to_html()
 
+      bgg_row_present =
+        html_present
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-bgg-row")
+        |> LazyHTML.to_html()
+
+      bgg_row_absent =
+        html_absent
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-bgg-row")
+        |> LazyHTML.to_html()
+
       assert spec_present =~ "Ilustradores"
       assert spec_present =~ "Klemens Franz"
-      assert spec_present =~ "Ranking BGG"
-      assert spec_present =~ "#245"
+      assert bgg_row_present =~ "Ranking"
+      assert bgg_row_present =~ "#245"
 
       refute spec_absent =~ "Ilustradores"
-      refute spec_absent =~ "Ranking BGG"
+      refute bgg_row_absent =~ "Ranking"
 
       # Kept from the original test intact: the old singular "Ilustrador"
       # placeholder label and the "No disponible" placeholder text must
@@ -510,45 +528,40 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute spec_absent =~ "No disponible"
     end
 
-    test "a game with a bgg_id renders a boardgamegeek.com link in the ficha técnica, one without renders none",
+    test "a game with a bgg_id renders a boardgamegeek.com/boardgame link in the Comunidad BGG block, one without renders none",
          %{conn: conn} do
       # weight_band differs so neither game is the other's Juegos similares
-      # bandmate — the footer's own unconditional BGG attribution link
-      # would otherwise make "no boardgamegeek.com anywhere on the page"
-      # unassertable regardless of this game's own bgg_id.
+      # bandmate. The assertion below scopes to "boardgamegeek.com/boardgame"
+      # (not the bare domain) specifically because the footer carries its
+      # own unconditional "Powered by BGG" attribution link to the bare
+      # https://boardgamegeek.com/ root on every page (layouts.ex) — without
+      # that scoping, "no boardgamegeek.com anywhere" would be unassertable
+      # regardless of this game's own bgg_id.
       with_id = game_fixture(%{name: "Con BGG", bgg_id: 13, weight_band: "nivel_experto"})
 
-      # D-06 (01.3-05): the shared fixture default holds a weight value —
-      # override it to nil here too, or advanced_stats?/1 renders a Peso BGG
-      # row (with an empty href built from a nil bgg_id) and the
-      # "no boardgamegeek.com anywhere" assertion below would be testing an
-      # impossible weight-without-BGG-id combination rather than the real
-      # "no BGG id at all" case this test targets.
+      # comunidad_bgg?/1 widens with bgg_id on top of advanced_stats?/1 —
+      # override every BGG stat AND the id to nil here, or the block still
+      # renders (Fuente line only) and the assertion below would be testing
+      # an impossible partial-data combination rather than the real "no BGG
+      # presence at all" case this test targets.
       without_id =
         game_fixture(%{
           name: "Sin BGG",
           bgg_id: nil,
           weight_band: "descubre_el_hobby",
-          bgg_weight: nil
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil
         })
 
       {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_id.id}")
       {:ok, _view, html_without} = live(conn, ~p"/juegos/#{without_id.id}")
 
-      spec_html_with =
-        html_with |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
-
-      spec_html_without =
-        html_without
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-spec-list")
-        |> LazyHTML.to_html()
-
-      assert spec_html_with =~ "boardgamegeek.com/boardgame/13"
-      refute spec_html_without =~ "boardgamegeek.com"
+      assert html_with =~ "boardgamegeek.com/boardgame/13"
+      refute html_without =~ "boardgamegeek.com/boardgame"
     end
 
-    test "a minimal-data game with none of the five spec fields renders no Ficha técnica heading, and the rest of the page still renders",
+    test "a minimal-data game with none of the five fact-grid fields and no bgg_id renders no fact grid and no Comunidad BGG block, and the rest of the page still renders",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -556,59 +569,72 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           min_age: nil,
           year_published: nil,
           designers: [],
+          artists: [],
           publishers: [],
-          bgg_id: nil
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          mechanics: [],
+          themes: []
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      refute html =~ "Ficha técnica"
       refute html =~ "pk-spec-list"
+      refute html =~ "Comunidad BGG"
       assert html =~ "Juego Minimo"
       assert html =~ "Reservar para el sábado"
     end
 
-    test "a game with a bgg_rating renders the Valoración BGG row linking to its BGG page (D-06)",
+    test "a game with a bgg_rating renders the Valoración stat linking to its BGG page (D-06)",
          %{conn: conn} do
       game = game_fixture(%{name: "Con Valoración", bgg_rating: 7.4, bgg_id: 13, weight_band: "nivel_experto"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      spec_html =
-        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      bgg_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
 
-      assert spec_html =~ "Valoración BGG"
-      assert spec_html =~ "7.4/10"
-      assert spec_html =~ "boardgamegeek.com/boardgame/13"
+      assert bgg_html =~ "Valoración"
+      assert bgg_html =~ "7.4/10"
+      assert bgg_html =~ "boardgamegeek.com/boardgame/13"
     end
 
-    test "a game with no bgg_rating renders no Valoración BGG row, and the rest of the ficha técnica still renders (D-06)",
+    test "a game with no bgg_rating renders no Valoración stat, and the rest of the Comunidad BGG block still renders (D-06)",
          %{conn: conn} do
       game = game_fixture(%{name: "Sin Valoración", bgg_rating: nil, weight_band: "descubre_el_hobby"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      spec_html =
-        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      bgg_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
 
-      refute spec_html =~ "Valoración BGG"
-      assert html =~ "Ficha técnica"
+      refute bgg_html =~ "Valoración"
+      assert html =~ "Comunidad BGG"
     end
 
-    test "a game with only a bgg_id and none of the other four fields still renders the Ficha técnica heading and the BGG link",
+    test "a game with only a bgg_id and none of the other four fields still renders no fact grid but does render the Comunidad BGG block and its BGG link",
          %{conn: conn} do
       game =
         game_fixture(%{
           min_age: nil,
           year_published: nil,
           designers: [],
+          artists: [],
           publishers: [],
+          mechanics: [],
+          themes: [],
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
           bgg_id: 77
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      assert html =~ "Ficha técnica"
+      refute html =~ "pk-spec-list"
+      assert html =~ "Comunidad BGG"
       assert html =~ "boardgamegeek.com/boardgame/77"
     end
 
@@ -627,20 +653,24 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
-  describe "Ilustradores spec row (D-05)" do
-    test "renders a single illustrator name", %{conn: conn} do
+  describe "Ilustradores fact-grid pills (D-05, 01.3-07)" do
+    test "renders a single illustrator as one filter-linked pill, not plain text", %{conn: conn} do
       game = game_fixture(%{artists: ["Klemens Franz"], weight_band: "nivel_experto"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      spec_html =
-        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      doc = LazyHTML.from_document(html)
+      anchors = LazyHTML.query(doc, ".pk-fact-col dd a[href^='/?artists=']")
 
-      assert spec_html =~ "Ilustradores"
-      assert spec_html =~ "Klemens Franz"
+      assert Enum.count(anchors) == 1
+      assert html =~ "Ilustradores"
+      assert LazyHTML.to_html(anchors) =~ "Klemens Franz"
+      assert List.first(LazyHTML.attribute(anchors, "href")) == "/?artists=Klemens+Franz"
     end
 
-    test "renders multiple illustrator names comma-joined", %{conn: conn} do
+    test "renders one pill per illustrator when there are several — never comma-joined text", %{
+      conn: conn
+    } do
       game =
         game_fixture(%{
           artists: ["Klemens Franz", "Michael Menzel"],
@@ -649,30 +679,76 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      spec_html =
-        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      doc = LazyHTML.from_document(html)
+      anchors = LazyHTML.query(doc, ".pk-fact-col dd a[href^='/?artists=']")
 
-      assert spec_html =~ "Klemens Franz, Michael Menzel"
+      assert Enum.count(anchors) == 2
+      refute html =~ "Klemens Franz, Michael Menzel"
     end
 
-    test "renders no Ilustradores row when the artists list is empty", %{conn: conn} do
+    test "renders no Ilustradores fact-grid column when the artists list is empty", %{
+      conn: conn
+    } do
       game = game_fixture(%{artists: [], weight_band: "descubre_el_hobby"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      spec_html =
-        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      refute html =~ "Ilustradores"
+    end
 
-      refute spec_html =~ "Ilustradores"
+    test "a space- and accent-bearing illustrator name round-trips through the ~p href and CatalogFilters.from_params/1 to the exact original string (T-01.3-07-01)",
+         %{conn: conn} do
+      game = game_fixture(%{artists: ["Loïc Billiau"], weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      [href] =
+        doc
+        |> LazyHTML.query(".pk-fact-col dd a[href^='/?artists=']")
+        |> LazyHTML.attribute("href")
+
+      "/?" <> query_string = href
+
+      filters =
+        query_string
+        |> Query.decode()
+        |> CatalogFilters.from_params()
+
+      assert filters.artists == ["Loïc Billiau"]
     end
   end
 
-  describe "Avanzado BGG stats group (D-06)" do
-    test "renders no group label and no stat rows when all three fields are nil, while the rest of the spec list still renders",
+  describe "Comunidad BGG stats group (D-06, retitled + moved out of the fact grid by 01.3-07)" do
+    test "renders no Comunidad BGG block at all when there is no bgg_id and no stat", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          name: "Sin BGG En Absoluto",
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          weight_band: "descubre_el_hobby"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      refute html =~ "Comunidad BGG"
+      assert doc |> LazyHTML.query(".pk-bgg-label") |> Enum.empty?()
+      assert doc |> LazyHTML.query(".pk-bgg-stat") |> Enum.empty?()
+      assert doc |> LazyHTML.query(".pk-bgg-foot") |> Enum.empty?()
+    end
+
+    test "renders the group label and the Fuente line but no stat anchors when all three stats are nil and bgg_id is present",
          %{conn: conn} do
       # D-06: the shared fixture default holds a weight value — override it
-      # (along with rating/rank) explicitly, or this "all absent" case
-      # would silently exercise the one-field-present branch instead.
+      # (along with rating/rank) explicitly, or this "all stats absent"
+      # case would silently exercise the one-stat-present branch instead.
       game =
         game_fixture(%{
           name: "Sin Avanzado",
@@ -685,17 +761,14 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      spec_html =
-        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      doc = LazyHTML.from_document(html)
 
-      refute spec_html =~ "Avanzado"
-      refute spec_html =~ "Peso BGG"
-      refute spec_html =~ "Valoración BGG"
-      refute spec_html =~ "Ranking BGG"
-      assert spec_html =~ "boardgamegeek.com/boardgame/13"
+      assert html =~ "Comunidad BGG"
+      assert doc |> LazyHTML.query(".pk-bgg-stat") |> Enum.empty?()
+      assert html =~ "boardgamegeek.com/boardgame/13"
     end
 
-    test "renders the group label and only the one populated stat row", %{conn: conn} do
+    test "renders exactly one stat anchor when only one stat is populated", %{conn: conn} do
       game =
         game_fixture(%{
           name: "Solo Peso",
@@ -708,18 +781,20 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      spec_html =
-        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      doc = LazyHTML.from_document(html)
+      stats = LazyHTML.query(doc, ".pk-bgg-stat")
+      stats_html = LazyHTML.to_html(stats)
 
-      assert spec_html =~ "Avanzado"
-      assert spec_html =~ "Peso BGG"
-      assert spec_html =~ "3.2/5"
-      refute spec_html =~ "Valoración BGG"
-      refute spec_html =~ "Ranking BGG"
+      assert Enum.count(stats) == 1
+      assert stats_html =~ "Peso"
+      assert stats_html =~ "3.2/5"
+      refute html =~ "Valoración"
+      refute html =~ "Ranking"
     end
 
-    test "renders the group label and all three stat rows, each linking to the game's own BGG page",
-         %{conn: conn} do
+    test "renders all three stat anchors, each linking to the game's own BGG page", %{
+      conn: conn
+    } do
       game =
         game_fixture(%{
           name: "Con Todo Avanzado",
@@ -733,30 +808,30 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
-      spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      stats_html = doc |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
 
-      assert spec_html =~ "Avanzado"
-      assert spec_html =~ "Peso BGG"
-      assert spec_html =~ "3.2/5"
-      assert spec_html =~ "Valoración BGG"
-      assert spec_html =~ "7.4/10"
-      assert spec_html =~ "Ranking BGG"
-      assert spec_html =~ "#245"
+      assert stats_html =~ "Peso"
+      assert stats_html =~ "3.2/5"
+      assert stats_html =~ "Valoración"
+      assert stats_html =~ "7.4/10"
+      assert stats_html =~ "Ranking"
+      assert stats_html =~ "#245"
 
-      # Peso BGG, Valoración BGG, Ranking BGG, plus the pre-existing
-      # catch-all "Ver ficha completa" row — all four link to the same BGG
-      # page.
-      bgg_links = LazyHTML.query(doc, ".pk-spec-list a[href='https://boardgamegeek.com/boardgame/13']")
+      # The three stat anchors, plus the Fuente line's own anchor — all
+      # four link to the same BGG page. No other element on the page links
+      # to this specific /boardgame/13 path (the footer's own BGG
+      # attribution link points at the bare domain root, not this path).
+      bgg_links = LazyHTML.query(doc, "a[href='https://boardgamegeek.com/boardgame/13']")
 
       assert Enum.count(bgg_links) == 4
     end
 
-    # D-06: a game BGG has never ranked renders no ranking row at all — no
+    # D-06: a game BGG has never ranked renders no ranking stat at all — no
     # placeholder text, no "N/A", no "not ranked" — covered separately from
     # the all-nil case above since bgg_rank absence is the one field
     # backed by a research-flagged normalization assumption (BGG's own
     # "Not Ranked" string must degrade to nil upstream, 01.3-UI-SPEC.md).
-    test "a game with no bgg_rank renders no Ranking BGG row and no placeholder text", %{
+    test "a game with no bgg_rank renders no Ranking stat and no placeholder text", %{
       conn: conn
     } do
       game =
@@ -769,20 +844,19 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      spec_html =
-        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      doc = LazyHTML.from_document(html)
+      bgg_html = doc |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
 
-      refute spec_html =~ "Ranking BGG"
-      refute spec_html =~ "Not Ranked"
-      refute spec_html =~ "No disponible"
-      refute spec_html =~ "N/A"
+      refute bgg_html =~ "Ranking"
+      refute html =~ "Not Ranked"
+      refute html =~ "No disponible"
+      refute html =~ "N/A"
     end
   end
 
-  describe "reading-column section wrapping (D-03, D-04)" do
-    test "a game with mechanics, themes and spec data renders four section wrappers", %{
-      conn: conn
-    } do
+  describe "reading-column section wrapping (D-03, D-04, recomposed by 01.3-07)" do
+    test "a fully-populated game renders exactly four section wrappers (title, description, fact grid, Comunidad BGG)",
+         %{conn: conn} do
       game =
         game_fixture(%{
           name: "Juego Completo",
@@ -798,40 +872,52 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert doc |> LazyHTML.query(".pk-reading-section") |> Enum.count() == 4
     end
 
-    test "a game with neither mechanics nor themes renders two section wrappers", %{conn: conn} do
+    test "a description-less, fact-less, BGG-less game renders exactly one section wrapper (title only)",
+         %{conn: conn} do
       game =
         game_fixture(%{
-          name: "Juego Sin Mecánicas Ni Temáticas",
+          name: "Juego Solo Titulo",
+          description: nil,
+          year_published: nil,
+          designers: [],
+          artists: [],
           mechanics: [],
           themes: [],
-          weight_band: "descubre_el_hobby"
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          weight_band: nil
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query(".pk-reading-section") |> Enum.count() == 2
+      assert doc |> LazyHTML.query(".pk-reading-section") |> Enum.count() == 1
     end
   end
 
-  describe "reading column reorder — title then description then a bounded more-info zone (G-01.2-10 task 3)" do
-    test "the description block is the element immediately following the title heading — ordered children, not a substring match",
+  describe "reading column reorder — title, hashtags, description, fact grid, BGG (01.3-07)" do
+    test "title's section -> hashtag row -> description's section, ordered siblings not a substring match",
          %{conn: conn} do
-      game = game_fixture(%{description: "Una crónica de mercaderes."})
+      game = game_fixture(%{description: "Una crónica de mercaderes.", tags: ["#CreaConexiones"]})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
 
-      # Adjacent-sibling combinator: this only matches when .pk-description
-      # is literally the very next element after #detail-title-block — an
-      # element reinserted between them (the weight badge, the editorial
-      # hashtags, either chip row) makes this query return nothing.
-      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+      # Adjacent-sibling chain: this only matches when the hashtag row is
+      # literally the very next element after the title's own wrapper, and
+      # the description's own wrapper is literally the very next element
+      # after the hashtag row. An element reinserted anywhere in this chain
+      # (a divider, a badge, a stray wrapper) makes this query return 0.
+      assert doc
+             |> LazyHTML.query(".pk-reading-section + div.pk-rhythm-8 + div.pk-reading-section.pk-rhythm-16")
+             |> Enum.count() == 1
     end
 
-    test "the mechanics/themes chip rows and editorial hashtags never render before the description block",
+    test "hashtags render after title, before description; Mecánicas/Temáticas still after description (sketch 042)",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -843,37 +929,43 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
+      {title_idx, _} = :binary.match(html, "detail-title-block")
       {description_idx, _} = :binary.match(html, "Una crónica de mercaderes.")
       {mechanics_idx, _} = :binary.match(html, "Mecánicas")
       {themes_idx, _} = :binary.match(html, "Temáticas")
       {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
 
+      assert title_idx < hashtag_idx
+      assert hashtag_idx < description_idx
       assert description_idx < mechanics_idx
       assert description_idx < themes_idx
-      assert description_idx < hashtag_idx
     end
 
-    test "a separator element exists between the description block and the first more-information heading",
+    test "exactly one .pk-divider renders, inside #detail-shelf-separator — the reading column has none (G-01.3-1 items 1/9)",
          %{conn: conn} do
       game = game_fixture(%{description: "Una crónica.", mechanics: ["Dice Rolling"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      # A disconnected (static) render unconditionally shows the
+      # masthead↔shelf separator regardless of whether any similar-games
+      # bandmate exists (@loading short-circuits the emptiness check) —
+      # the same technique the masthead↔shelf boundary tests below use.
+      conn = get(conn, ~p"/juegos/#{game.id}")
+      html = html_response(conn, 200)
 
       doc = LazyHTML.from_document(html)
 
-      # D-03/D-04 (01.3-05): the title+description block is now wrapped in
-      # .pk-reading-section, so the divider directly follows that wrapper
-      # rather than .pk-description itself.
-      assert doc |> LazyHTML.query(".pk-reading-section + .divider") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-divider") |> Enum.count() == 1
+      assert doc |> LazyHTML.query("#detail-shelf-separator > .pk-divider") |> Enum.count() == 1
     end
 
-    test "the hashtag row flows straight into the Mecánicas heading — ordered siblings, no element (the removed badge) between them (G-01.2-20)",
+    test "no h2.pk-section-heading renders anywhere — Mecánicas/Temáticas/Ficha técnica headings are gone (sketch 040)",
          %{conn: conn} do
       game =
         game_fixture(%{
           weight_band: "ingenio_estratega",
           description: "Una crónica.",
           mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
           tags: ["#CreaConexiones"]
         })
 
@@ -881,23 +973,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      # Adjacent-sibling chain: the div immediately after .pk-divider (the
-      # editorial hashtag row) must itself be immediately followed by the
-      # Mecánicas section wrapper, whose own direct child is the heading. A
-      # re-added element between them (the former badge block) breaks the
-      # chain and this query returns 0 instead of 1 — even with a weight
-      # band present, which is the case that used to render the badge.
-      # D-03/D-04 (01.3-05): the heading is now nested one level deeper,
-      # inside its own .pk-reading-section wrapper, so the chain's last
-      # link uses a child combinator instead of matching the heading
-      # directly as a sibling.
-      assert doc
-             |> LazyHTML.query(".pk-divider + div + div.pk-reading-section > h2.pk-section-heading")
-             |> Enum.count() ==
-               1
+      assert doc |> LazyHTML.query("h2.pk-section-heading") |> Enum.count() == 0
     end
 
-    test "a game with publishers renders no publisher row in the spec list", %{conn: conn} do
+    test "a game with publishers renders no publisher row anywhere", %{conn: conn} do
       game = game_fixture(%{publishers: ["Devir"]})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
@@ -906,39 +985,52 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "Editorial"
     end
 
-    test "a game whose only populated spec field is publishers renders no Ficha técnica section at all",
+    test "a game whose only populated field is publishers renders no fact grid and no Comunidad BGG block",
          %{conn: conn} do
       game =
         game_fixture(%{
           min_age: nil,
           year_published: nil,
           designers: [],
+          artists: [],
+          mechanics: [],
+          themes: [],
           publishers: ["Devir"],
-          bgg_id: nil
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      refute html =~ "Ficha técnica"
       refute html =~ "pk-spec-list"
+      refute html =~ "Comunidad BGG"
     end
 
-    test "a game with a year and publishers still renders the Ficha técnica section with the year row",
+    test "a game with a year and publishers still renders the fact grid with the year row, and no Comunidad BGG block",
          %{conn: conn} do
       game =
         game_fixture(%{
           min_age: nil,
           year_published: 2001,
           designers: [],
+          artists: [],
+          mechanics: [],
+          themes: [],
           publishers: ["Devir"],
-          bgg_id: nil
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      assert html =~ "Ficha técnica"
+      assert html =~ "pk-spec-list"
       assert html =~ "2001"
       refute html =~ "Devir"
+      refute html =~ "Comunidad BGG"
     end
   end
 
@@ -1884,11 +1976,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
-  describe "Mecánicas/Temáticas chip contrast fix (G-01.2-20 task 2)" do
+  describe "Mecánicas/Temáticas chip contrast fix (G-01.2-20 task 2, retoned by 01.3-07)" do
     test "the mechanic and theme chip rows' wrapper carries the pk-chip-row scoping class",
          %{conn: conn} do
+      # 01.3-07: creator_pills/1 (Diseñadores/Ilustradores) also renders a
+      # pk-chip-row wrapper now, inside the same fact grid — scope this
+      # fixture to only mechanics/themes so the count below still isolates
+      # the two rows this test names.
       game =
         game_fixture(%{
+          designers: [],
+          artists: [],
           mechanics: ["Dice Rolling"],
           themes: ["Economic"]
         })
@@ -1908,13 +2006,14 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      # The hashtag chip renders (proves the row is present at all) — now
-      # the pk-pill base + accent tone (G-01.2-26 task 3), not a daisyUI
-      # badge class.
-      assert doc |> LazyHTML.query(".pk-pill-accent") |> Enum.count() == 1
+      # The hashtag chip renders (proves the row is present at all) — the
+      # pk-pill base + tag tone (01.3-07, superseding the earlier accent
+      # tone — sketch 042's lightweight-text hashtag treatment), not a
+      # daisyUI badge class.
+      assert doc |> LazyHTML.query(".pk-pill-tag") |> Enum.count() == 1
 
       # ...but never as a descendant of a pk-chip-row wrapper.
-      assert doc |> LazyHTML.query("div.pk-chip-row .pk-pill-accent") |> Enum.count() == 0
+      assert doc |> LazyHTML.query("div.pk-chip-row .pk-pill-tag") |> Enum.count() == 0
     end
 
     test "linked chips, unlinked chips, and the overflow chip all render inside the scoped wrapper",
@@ -1940,24 +2039,24 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       # All three shapes render inside chip_row/1's single wrapper div,
       # which carries pk-chip-row unconditionally. Chip class strings now
-      # render from the pk-pill base + neutral tone (G-01.2-26 task 3) —
-      # interactive only on the linked branch, never on the static span or
-      # the overflow chip.
+      # render from the pk-pill base + outline tone (01.3-07, superseding
+      # the earlier neutral tone) — interactive only on the linked branch,
+      # never on the static span or the overflow chip.
       assert linked_html =~ "pk-chip-row"
 
       assert linked_html =~
-               ~r/<a[^>]*class="pk-pill pk-pill-neutral pk-pill-interactive"[^>]*>\s*Tira dados/
+               ~r/<a[^>]*class="pk-pill pk-pill-outline pk-pill-interactive"[^>]*>\s*Tira dados/
 
       assert unlinked_html =~ "pk-chip-row"
-      assert unlinked_html =~ ~s(<span class="pk-pill pk-pill-neutral">Tira dados</span>)
+      assert unlinked_html =~ ~s(<span class="pk-pill pk-pill-outline">Tira dados</span>)
 
       assert overflow_html =~ "pk-chip-row"
-      assert overflow_html =~ ~s(<span class="pk-pill pk-pill-neutral">+3</span>)
+      assert overflow_html =~ ~s(<span class="pk-pill pk-pill-outline">+3</span>)
 
       # Sanity check on the live page: the mechanic chip's real call site
       # (href_fun always passed) does render the linked shape inside the
       # scoped wrapper.
-      game = game_fixture(%{mechanics: ["Dice Rolling"]})
+      game = game_fixture(%{designers: [], artists: [], mechanics: ["Dice Rolling"]})
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
       doc = LazyHTML.from_document(html)
 
@@ -2084,14 +2183,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> Enum.count() == 1
     end
 
-    test "the description is the element immediately after the title", %{conn: conn} do
-      game = game_fixture(%{description: "Una crónica de mercaderes."})
+    test "the description's section immediately follows the title's section and the hashtag row (01.3-07 reorder)",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica de mercaderes.", tags: ["#CreaConexiones"]})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+      assert doc
+             |> LazyHTML.query(".pk-reading-section + div.pk-rhythm-8 + div.pk-reading-section.pk-rhythm-16")
+             |> Enum.count() == 1
     end
 
     test "the poster column's reserve button and the bar's reserve button are separately addressable, and exactly one carries the breakpoint-toggled class",
@@ -2115,7 +2217,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute bar_class =~ "pk-poster-reserve"
     end
 
-    test "neither chip row nor the editorial hashtags appear before the description", %{conn: conn} do
+    test "the chip rows still render after the description; the editorial hashtags render before it (01.3-07 reorder)",
+         %{conn: conn} do
       game =
         game_fixture(%{
           description: "Una crónica.",
@@ -2133,12 +2236,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       assert description_idx < mechanics_idx
       assert description_idx < themes_idx
-      assert description_idx < hashtag_idx
+      assert hashtag_idx < description_idx
     end
 
-    test "no publisher row renders, and a publishers-only game renders no spec section", %{
-      conn: conn
-    } do
+    test "no publisher row renders, and a publishers-only game renders no fact grid and no Comunidad BGG block",
+         %{conn: conn} do
       with_publisher = game_fixture(%{publishers: ["Devir"]})
       {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_publisher.id}")
       refute html_with =~ "Editorial"
@@ -2148,12 +2250,19 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           min_age: nil,
           year_published: nil,
           designers: [],
+          artists: [],
+          mechanics: [],
+          themes: [],
           publishers: ["Devir"],
-          bgg_id: nil
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil
         })
 
       {:ok, _view, html_only} = live(conn, ~p"/juegos/#{publishers_only.id}")
-      refute html_only =~ "Ficha técnica"
+      refute html_only =~ "pk-spec-list"
+      refute html_only =~ "Comunidad BGG"
     end
 
     test "a separator sits between the masthead and the shelf", %{conn: conn} do

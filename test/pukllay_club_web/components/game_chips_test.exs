@@ -85,11 +85,13 @@ defmodule PukllayClubWeb.GameChipsTest do
 
       for tag <- tags, do: assert(html =~ tag)
 
-      # G-01.2-26 task 3: unlinked (no href_fun passed) spans render the
-      # pk-pill base + accent tone, not a daisyUI badge class.
+      # 01.3-07: unlinked (no href_fun passed) spans render the pk-pill
+      # base + tag tone (superseding G-01.2-26 task 3's accent tone —
+      # sketch 042's lightweight-text hashtag treatment), not a daisyUI
+      # badge class.
       occurrences =
         html
-        |> String.split("pk-pill pk-pill-accent")
+        |> String.split("pk-pill pk-pill-tag")
         |> length()
         |> Kernel.-(1)
 
