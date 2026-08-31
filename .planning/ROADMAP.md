@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 9/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
+**Plans:** 9/11 plans executed (plans 06-09 close UAT gap G-01.3-1; plans 10-11 close UAT gaps G-01.3-4 and G-01.3-5)
 
 Plans:
 
@@ -180,6 +180,16 @@ Plans:
 **Wave 9** *(blocked on Wave 8: same files)*
 
 - [x] 01.3-09-PLAN.md — Mobile sticky title-echo bar: measurable separation, shared shell-width cap, enforced two-theme contrast floors — plus a decision checkpoint routing the two UAT items no sketch resolved (sticky-header brand treatment, mobile footer weight)
+
+**Gap closure — UAT gaps G-01.3-4 and G-01.3-5** *(second UAT pass over the 01.3-06..09 changes; G-01.3-1 was closed by product decision with no code change)*
+
+**Wave 10** *(blocked on Wave 9: same files, same reading column)*
+
+- [ ] 01.3-10-PLAN.md — G-01.3-4 (blocker): apply 01.3-08's pre-authored fallback — native three-line clamp with a native ellipsis, and the chevron moved out of the justified paragraph into a contained 44px trailing-sibling control, so the WebKit-divergent float geometry that pushed it outside the text column cannot recur
+
+**Wave 11** *(blocked on Wave 10: same two files)*
+
+- [ ] 01.3-11-PLAN.md — G-01.3-5 (cosmetic): give the sticky title-echo bar's title a deliberate typographic identity (brand display face, explicit size/weight/colour) alongside its existing truncation, leaving 01.3-09's deferred brand-tint and bounce questions untouched
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
