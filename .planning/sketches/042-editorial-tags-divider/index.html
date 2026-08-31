@@ -77,7 +77,11 @@
      of the previous asymmetry. Scoped to the hashtag row only (a plain
      override, not touched on the shared .pill-row used by the fact
      grid's Diseñadores/Ilustradores/Mecánicas/Temáticas pills). */
-  .tag-stack { flex-direction: column; align-items: flex-start; gap: 4px; }
+  /* Round 12: gap dropped from 4px toward 0 — with the hashtags now set at
+     the description's own font-size/line-height (below), 1.5 line-height
+     supplies the vertical rhythm between stacked lines on its own; a
+     separate list-gap on top of that would double up the spacing. */
+  .tag-stack { flex-direction: column; align-items: flex-start; gap: 0; }
   .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
   .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
 
@@ -85,8 +89,15 @@
      pill (same tap target), fully invisible at rest; the tint only appears
      on hover/focus. Round 5 tested bumping this to body-text size to read
      more like a social-network hashtag, but the original 11px ghost chip
-     was picked over all three of those — kept as-is. */
-  .tag-c { background: transparent; border-color: transparent; color: var(--color-accent-text); }
+     was picked over all three of those in that ROW-wrapped context.
+     Round 12 revisits it now that the layout is stacked, not wrapped:
+     "the font and its spacing should be similar to the description text."
+     Font-size/weight/line-height now match `.desc` exactly (16px, normal
+     weight, 1.5) instead of the pill's 11px/600 — reads as a continuation
+     of the paragraph's own typography, not a separate UI-label scale.
+     Padding trimmed to match (just enough for a tap target, not a pill's
+     worth of chrome); shape/color/hover-reveal interaction unchanged. */
+  .tag-c { font-size: var(--text-base); font-weight: 400; line-height: 1.5; padding: 0 3px; background: transparent; border-color: transparent; color: var(--color-accent-text); }
   .tag-c:hover { background: color-mix(in srgb, var(--color-accent-bg) 55%, transparent); }
 
   /* Restored (round 7 fix): dropped entirely in the round-6 rewrite, which
@@ -117,13 +128,14 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: C, Rebalanced (v6) ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (rounds 1-10) in this sketch's README.
-  Rounds 9-10 composed against the real "Ver más/Ver menos" toggle (now a rotating chevron) and made
-  tag-row spacing asymmetric. <strong>Round 11 (this version):</strong> hashtags now stack one per
-  line instead of wrapping horizontally, with a tighter 4px gap between them, and the divider below
-  pulled in from 24px to 16px — symmetric closeness on both sides of the stack now, matching the
-  16px it already had toward the description. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active">Winner: C, Rebalanced (v7) ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-11) in this sketch's README.
+  Rounds 9-11 composed against the real toggle, made spacing asymmetric then symmetric, and stacked
+  the hashtags one per line. <strong>Round 12 (this version):</strong> the hashtags' own type now
+  matches the description exactly — 16px, normal weight, 1.5 line-height, instead of the 11px/600
+  pill-label scale — so the stack reads as a continuation of the paragraph's own typography. The
+  stack's internal gap dropped to 0, since the matched line-height now supplies the vertical rhythm
+  between lines on its own. Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
@@ -145,6 +157,16 @@
   low-frequency control living next to higher-priority content. <code>aria-expanded</code> drives the
   rotation and stays the real accessible state; <code>aria-label</code> still carries "Ver más"/"Ver
   menos" for screen readers even though nothing is shown visually.
+</div>
+
+<div class="cause-note">
+  <strong>What changed (round 12):</strong> "the font and its spacing should be similar to the
+  description text." Round 5 already tested body-scale hashtags and rejected them — but that was in
+  the horizontal, wrapped-row context; stacked, the calculus is different. Hashtag type now matches
+  <code>.desc</code> exactly (16px/normal/1.5), not the 11px/600 pill-label scale. The stack's
+  internal 4px gap dropped to 0 — with matched line-height, the gap would have doubled up the
+  spacing the line-height itself already supplies. Shape, color, and hover-reveal interaction are
+  unchanged; only the type and internal gap moved.
 </div>
 
 <div class="cause-note">

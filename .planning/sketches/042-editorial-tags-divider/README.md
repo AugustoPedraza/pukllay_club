@@ -77,6 +77,14 @@ whitespace rather than deliberate rhythm.
   rather than the previous 16px/24px asymmetry. Scoped to this row only via a new `.tag-stack` class
   — the fact grid's own pill rows (Diseñadores, Ilustradores, Mecánicas, Temáticas) keep wrapping
   horizontally, unchanged.
+- **Round 12 — match the description's typography:** "the font and its spacing should be similar to
+  the description text." Round 5 tested body-scale hashtags and rejected them, but that was in the
+  horizontal wrapped-row context — worth revisiting now that the layout is stacked. Hashtag type now
+  matches `.desc` exactly: 16px, normal weight (not 600), 1.5 line-height, instead of the pill's
+  11px/600 UI-label scale — the stack reads as a continuation of the paragraph's own typography. The
+  stack's internal gap dropped from 4px to 0, since the matched line-height now supplies the vertical
+  rhythm between lines on its own (a separate gap on top would have doubled it up). Shape, color, and
+  the hover-reveal interaction are unchanged.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html — click "Ver más"/"Ver menos" to check
