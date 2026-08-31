@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 5/5 plans executed
+**Plans:** 5/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
 
 Plans:
 
@@ -162,6 +162,24 @@ Plans:
 **Wave 5** *(blocked on Wave 4: UAT needs real Spanish text and real BGG stats on the page)*
 
 - [x] 01.3-05-PLAN.md — UI-SPEC implementation: two-tier reading-column rhythm, `.pk-reading-section` wrapping, uppercase section headings, Ilustradores row, labelled Avanzado stats group, and the rewritten Phase 01.2 drift test (D-03, D-04, D-05, D-06)
+
+**Gap closure — UAT gap G-01.3-1** *(reading-column redesign; visual decisions resolved by sketches 039-043, see the `sketch-findings-pukllay_club` skill)*
+
+**Wave 6** *(blocked on Wave 5: refines what 01.3-05 shipped)*
+
+- [ ] 01.3-06-PLAN.md — Creator navigability backend: `?designers=` / `?artists=` as real bounded open-text filter params, GIN indexes, removable active-filter chips (sketch 039's flagged implementation follow-up)
+
+**Wave 7** *(blocked on Wave 6: the creator pills need their filter targets to exist)*
+
+- [ ] 01.3-07-PLAN.md — Reading-column recomposition: hashtags after the title, divider and section headings removed, minimum-age row dropped, creators/mechanics/themes merged into one responsive two-column fact grid, Comunidad BGG replaces the Avanzado label (sketches 039/040/041/042/043)
+
+**Wave 8** *(blocked on Wave 7: same files, same reading column)*
+
+- [ ] 01.3-08-PLAN.md — Justified description at every width plus sketch 042's inline icon-only chevron, rendered from `@description_expanded` instead of the sketch's JS relocation, with a pre-decided fallback for the known mid-word-cut risk
+
+**Wave 9** *(blocked on Wave 8: same files)*
+
+- [ ] 01.3-09-PLAN.md — Mobile sticky title-echo bar: measurable separation, shared shell-width cap, enforced two-theme contrast floors — plus a decision checkpoint routing the two UAT items no sketch resolved (sticky-header brand treatment, mobile footer weight)
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
