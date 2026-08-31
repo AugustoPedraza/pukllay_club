@@ -40,7 +40,8 @@ defmodule PukllayClub.Catalog.Seed.StatsEnricher do
     * `:limit` — cap the number of candidate games, ordered by `id` for a
       stable resumable order (integer, default `nil` = all candidates)
     * `:dry_run` — perform the fetch but write nothing (default `false`)
-    * `:batch_size` — games per BGG batch request (default `#{@default_batch_size}`)
+    * `:batch_size` — games per BGG batch request (default `#{@default_batch_size}`,
+      clamped to `BggClient.max_batch_size/0` — BggClient's own hard cap)
     * `:delay_ms` — sleep between batches, in ms (default `#{@default_delay_ms}`)
 
   Returns a summary map with `:candidates`, `:fetched`, `:updated`,
@@ -53,7 +54,12 @@ defmodule PukllayClub.Catalog.Seed.StatsEnricher do
   def enrich_from_bgg(%Credentials{} = credentials, opts \\ []) do
     limit = Keyword.get(opts, :limit)
     dry_run? = Keyword.get(opts, :dry_run, false)
-    batch_size = Keyword.get(opts, :batch_size, @default_batch_size)
+    # WR-03 (01.3 code review): clamped against BggClient's own hard cap —
+    # `BggClient.fetch_batch/2` raises `FunctionClauseError` (not a graceful
+    # `{:error, _}`) above that cap, which would otherwise crash the whole
+    # run and violate this module's own "a single bad batch never aborts
+    # the run" contract for any caller passing a too-large `:batch_size`.
+    batch_size = min(Keyword.get(opts, :batch_size, @default_batch_size), BggClient.max_batch_size())
     delay_ms = Keyword.get(opts, :delay_ms, @default_delay_ms)
 
     games = candidate_games(limit)

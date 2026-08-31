@@ -36,6 +36,16 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
   end
 
   @doc """
+  The hard cap `fetch_batch/2` enforces via its own function-clause guard —
+  exposed so callers with a public `:batch_size` option (e.g.
+  `StatsEnricher.enrich_from_bgg/2`) can clamp/validate against it instead
+  of hand-copying the constant (WR-03/IN-01, 01.3 code review), mirroring
+  how `dedup_artists/1` is already exposed for cross-module reuse.
+  """
+  @spec max_batch_size() :: pos_integer()
+  def max_batch_size, do: @max_batch_size
+
+  @doc """
   Req options merged into every request this client makes. Lets tests plug
   in `Req.Test` via `config :pukllay_club, :bgg_req_options, plug: {Req.Test, __MODULE__}`
   without that configuration ever reaching production.
