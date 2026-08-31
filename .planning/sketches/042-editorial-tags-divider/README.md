@@ -38,8 +38,14 @@ whitespace rather than deliberate rhythm.
   (always-underlined, `text-sm`, solves touch-discoverability). **All three rejected — the original
   11px Ghost Chip (C) was picked as "the best."**
 - **Round 6 — rhythm again:** "improve spacing (top and below)." The winning ghost chip's full 32px
-  surrounding gap read as excess dead space, since nothing is visible there at rest. Tightened to
-  24px above/below via a deliberate margin override.
+  surrounding gap read as excess dead space, since nothing is visible there at rest. Attempted fix: a
+  negative margin on the tag row, stacked on top of `.text-col`'s shared 32px flex `gap`, to fake a
+  24px result. **This broke the rendered layout** ("that last change killed the design of details").
+- **Round 7 — fix:** replaced the fragile gap-plus-negative-margin technique with a plain,
+  deterministic model. `.text-col` no longer declares a shared `gap` at all — every direct child
+  carries an explicit `.rhythm-24` or `.rhythm-32` class that sets its own `margin-top`. Same visual
+  target as round 6 intended (24px around the tag row and divider, 32px everywhere else), reached
+  with no negative numbers and no fighting the flex gap algorithm.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html

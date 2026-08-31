@@ -25,7 +25,15 @@
   .frame.mobile .surface { width: 360px; max-width: 92vw; }
   .surface { border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-4); background: var(--color-bg); }
 
-  .text-col { display: flex; flex-direction: column; gap: var(--space-6); }
+  /* Round 6 fix: a negative-margin-on-top-of-gap trick here previously
+     broke the visible layout (reported: "killed the design"). Replaced
+     with a plain, deterministic model — NO shared `gap` on .text-col at
+     all, every direct child sets its own explicit margin-top instead. No
+     negative numbers, no fighting the flex gap algorithm; each spacing
+     value is exactly what it says. */
+  .text-col { display: flex; flex-direction: column; }
+  .text-col > .rhythm-32 { margin-top: var(--space-6); }
+  .text-col > .rhythm-24 { margin-top: var(--space-4); }
   .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
   h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
   .desc { line-height: 1.5; margin: 0; color: var(--color-text); }
@@ -43,32 +51,29 @@
      was picked over all three of those — kept as-is. */
   .tag-c { background: transparent; border-color: transparent; color: var(--color-accent-text); }
   .tag-c:hover { background: color-mix(in srgb, var(--color-accent-bg) 55%, transparent); }
-
-  /* Round 6 — rhythm: an invisible-at-rest row read as too much dead
-     whitespace at the full 32px .text-col gap on both sides (the gap
-     "disappears" into nothing at rest, unlike every other section which
-     has visible content filling it). Pulled to 24px (--space-4) above and
-     below via negative margin — still its own beat, less like an accident. */
-  .tag-row-c { margin: calc(-1 * (var(--space-6) - var(--space-4))) 0; }
 </style>
 </head>
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: C, Rebalanced (v2) ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (A-G, rounds 1-5) in this sketch's README.
+  <button class="variant-tab active">Winner: C, Rebalanced (v3) ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (A-G, rounds 1-6) in this sketch's README.
   <strong>Ghost Chip</strong> won over the pill (round 4) and over three body-scale, more
-  "social-hashtag" treatments (round 5) — the original small, invisible-at-rest tap target read
-  best. <strong>Round 6 (this version):</strong> its surrounding gap tightened from 32px to 24px on
-  both sides, since an invisible element left the full section gap reading as dead space rather than
-  deliberate rhythm. Toggle 🌙/☀ to check both themes.</span>
+  "social-hashtag" treatments (round 5). <strong>Round 6</strong> tightened the tag row's surrounding
+  gap from 32px to 24px — but a negative-margin-on-top-of-gap technique broke the rendered layout
+  ("killed the design"). <strong>Round 7 (this version)</strong> fixes it with a plain, deterministic
+  spacing model instead: no shared flex `gap`, every section sets its own explicit
+  <code>margin-top</code>. Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>What changed for rhythm:</strong> the tag row keeps its own position (before the divider,
-  after the description) and its ghost-chip shape, but its margin is now 24px above/below instead of
-  the standard 32px section gap — a deliberate exception, since this is the one block on the page
-  with nothing visible at rest to fill that space.
+  <strong>What changed (round 7, the fix):</strong> round 6's approach — a shared
+  <code>.text-col { gap: 32px }</code> plus a negative margin on one child to fake a smaller gap —
+  visually broke. Replaced with an explicit, no-negative-numbers model: <code>.text-col</code> now
+  has no shared <code>gap</code> at all — each direct child carries its own
+  <code>.rhythm-24</code> or <code>.rhythm-32</code> class that sets <code>margin-top</code>
+  directly. Same visual target (24px around the tag row, 32px everywhere else), reached without
+  fighting the flex gap algorithm.
 </div>
 
 <div class="compare">
@@ -82,12 +87,12 @@
           colonización, combinando poderes elementales con las otras espíritus para expulsar a los
           invasores antes de que la isla sea devastada.</p>
         </div>
-        <div class="pill-row tag-row-c">
+        <div class="pill-row rhythm-24">
           <a class="pill tag-c" href="#">#CooperativoPuro</a>
           <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
         </div>
-        <hr class="divider">
-        <div class="reading-section">
+        <hr class="divider rhythm-24">
+        <div class="reading-section rhythm-32">
           <dl class="spec-list">
             <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
             <div class="fact-cols">
@@ -98,7 +103,7 @@
             </div>
           </dl>
         </div>
-        <div class="reading-section">
+        <div class="reading-section rhythm-32">
           <div class="bgg-label">Comunidad BGG</div>
           <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
           <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
@@ -116,12 +121,12 @@
           colonización, combinando poderes elementales con las otras espíritus para expulsar a los
           invasores antes de que la isla sea devastada.</p>
         </div>
-        <div class="pill-row tag-row-c">
+        <div class="pill-row rhythm-24">
           <a class="pill tag-c" href="#">#CooperativoPuro</a>
           <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
         </div>
-        <hr class="divider">
-        <div class="reading-section">
+        <hr class="divider rhythm-24">
+        <div class="reading-section rhythm-32">
           <dl class="spec-list">
             <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
             <div class="fact-cols">
@@ -132,7 +137,7 @@
             </div>
           </dl>
         </div>
-        <div class="reading-section">
+        <div class="reading-section rhythm-32">
           <div class="bgg-label">Comunidad BGG</div>
           <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
           <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
