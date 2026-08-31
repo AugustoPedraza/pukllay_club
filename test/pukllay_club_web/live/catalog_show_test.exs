@@ -822,6 +822,94 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
              "`.pk-desc-toggle` must position itself via `align-self: flex-end` on the shell's " <>
                "flex column — the only positioning mechanism left after this gap closure."
     end
+
+    # 01.3-10 task 2: net-new regressions pinning the OLD failure mode as
+    # un-reintroducible — not restatements of the pins above, which only
+    # assert the new mechanism is present.
+    test "the toggle is never a descendant of the paragraph, in EITHER the collapsed or the expanded state",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert_containment = fn html ->
+        doc = LazyHTML.from_document(html)
+
+        assert Enum.empty?(LazyHTML.query(doc, "p#game-description button")),
+               "An engine's float-versus-justified-line width computation can only move a " <>
+                 "control that lives INSIDE the line box — keeping the toggle outside the " <>
+                 "paragraph entirely is the structural guarantee against G-01.3-4, not a " <>
+                 "stylistic preference. G-01.3-4 could not reproduce in Blink at all (zero " <>
+                 "measured overflow), so a pixel-measurement assertion would have passed the " <>
+                 "whole time this bug shipped; this structural check would not."
+
+        assert Enum.count(LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")) ==
+                 1,
+               "Expected exactly one button.pk-desc-toggle as #game-description's adjacent " <>
+                 "sibling."
+      end
+
+      # Collapsed state.
+      assert_containment.(html)
+
+      # Expanded state — same invariant must hold after toggling.
+      html = render_click(view, "toggle-description", %{})
+      assert_containment.(html)
+    end
+
+    test "the toggle carries a real 44px box via markup utilities, not an invisible offset overlay",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
+      class = List.first(LazyHTML.attribute(toggle, "class")) || ""
+
+      assert class =~ "min-h-11",
+             "The toggle must carry `min-h-11`. The invisible `::before` offset overlay that " <>
+               "used to supply the 44px touch floor is deliberately gone — it hung 13px over " <>
+               "the paragraph above and the fact grid below, an accidental tap-hijack " <>
+               "surface, not a hit area — and must not be reintroduced."
+
+      assert class =~ "min-w-11",
+             "The toggle must carry `min-w-11`, for the same reason `min-h-11` is required " <>
+               "above: the invisible offset overlay it replaces must not come back."
+    end
+
+    test "no rule in the .pk-desc* family declares float-based positioning" do
+      family_span =
+        case Regex.run(
+               ~r/^\.pk-desc-shell\s*\{.*?(?=\n\/\* Boundary between the primary reading block)/ms,
+               css_source()
+             ) do
+          [span] ->
+            span
+
+          nil ->
+            flunk(
+              "Could not locate the .pk-desc* family span (from `.pk-desc-shell {` to the " <>
+                "boundary-divider comment) in assets/css/app.css."
+            )
+        end
+
+      # Scoped to extracted RULE BODIES only, never the whole file — this
+      # stylesheet's prose comments legitimately discuss the superseded
+      # float technique by name, and a whole-file scan would make the
+      # comment self-invalidating.
+      bodies = Regex.scan(~r/\{([^}]*)\}/s, family_span, capture: :all_but_first)
+
+      assert bodies != [],
+             "Expected at least one `{ ... }` rule body in the .pk-desc* family span."
+
+      for [body] <- bodies do
+        refute body =~ ~r/float\s*:/,
+               "Found float-based positioning inside a `.pk-desc*` family rule body:\n#{body}\n" <>
+                 "G-01.3-4's root cause was exactly this — a control positioned by a float " <>
+                 "inside a clipped, justified paragraph."
+      end
+    end
   end
 
   describe "Ilustradores fact-grid pills (D-05, 01.3-07)" do
