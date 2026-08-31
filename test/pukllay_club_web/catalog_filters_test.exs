@@ -87,6 +87,67 @@ defmodule PukllayClubWeb.CatalogFiltersTest do
     end
   end
 
+  describe "from_params/1 — designers/artists open-text bounds (01.3-06, T-01.3-06-02)" do
+    test "a comma-separated designers value splits into a list, all prior keys still present" do
+      filters = CatalogFilters.from_params(%{"designers" => "A,B"})
+
+      assert filters.designers == ["A", "B"]
+      assert Map.has_key?(filters, :q)
+      assert Map.has_key?(filters, :mechanics)
+      assert Map.has_key?(filters, :themes)
+      assert Map.has_key?(filters, :weight_bands)
+      assert Map.has_key?(filters, :tags)
+      assert Map.has_key?(filters, :players)
+      assert Map.has_key?(filters, :max_playtime)
+      assert Map.has_key?(filters, :min_age)
+      assert Map.has_key?(filters, :sort)
+    end
+
+    test "a 50-element repeated-key designers param caps at exactly 20" do
+      filters = CatalogFilters.from_params(%{"designers" => List.duplicate("X", 50)})
+
+      assert length(filters.designers) == 20
+    end
+
+    test "a 500-character artists value caps each element at exactly 120 characters" do
+      filters = CatalogFilters.from_params(%{"artists" => String.duplicate("z", 500)})
+
+      assert [name] = filters.artists
+      assert String.length(name) == 120
+    end
+
+    test "a nested array designers value drops to [] without raising" do
+      filters = CatalogFilters.from_params(%{"designers" => [["nested"]]})
+
+      assert filters.designers == []
+    end
+
+    test "an all-comma designers value drops to []" do
+      filters = CatalogFilters.from_params(%{"designers" => ",,"})
+
+      assert filters.designers == []
+    end
+
+    test "catalog_path/1 bounds a crafted javascript: designers element to a locally-rooted path" do
+      result = CatalogFilters.catalog_path("designers=javascript%3Aalert(1)")
+
+      assert result =~ ~r{\A/(\?|\z)}
+      refute String.contains?(result, ":")
+    end
+
+    test "to_query/1 and from_params/1 round-trip a designers list" do
+      filters = CatalogFilters.from_params(%{"designers" => "A,B"})
+
+      round_tripped =
+        filters
+        |> CatalogFilters.to_query()
+        |> Query.decode()
+        |> CatalogFilters.from_params()
+
+      assert round_tripped.designers == filters.designers
+    end
+  end
+
   describe "to_query/1 and from_params/1 — idempotence" do
     test "re-feeding to_query/1's output through decode + from_params produces the same map" do
       filters = %{
@@ -95,6 +156,8 @@ defmodule PukllayClubWeb.CatalogFiltersTest do
         themes: [],
         weight_bands: ["nivel_experto"],
         tags: [],
+        designers: ["Uwe Rosenberg"],
+        artists: [],
         players: 4,
         max_playtime: nil,
         min_age: nil,
