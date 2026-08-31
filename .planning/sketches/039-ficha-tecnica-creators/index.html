@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 039 — Ficha Técnica &amp; Creators</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 110px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
+  #variant-nav .caption strong { color: var(--color-text); }
+
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  .cause-note { max-width: 900px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+  .cause-note.flag { border-color: var(--color-danger); }
+  .cause-note.flag strong { color: var(--color-danger); }
+
+  .removed-row { max-width: 900px; margin: 0 auto var(--space-4); padding: 10px var(--space-3); border: 1px dashed var(--color-danger); border-radius: var(--radius-md); opacity: 0.55; font-size: var(--text-sm); display: flex; gap: 10px; align-items: center; }
+  .removed-row .tag { font-size: var(--text-xs); font-weight: 700; color: var(--color-danger); text-transform: uppercase; letter-spacing: 0.04em; }
+  .removed-row del { color: var(--color-text-muted); }
+
+  .compare { display: flex; gap: var(--space-6); align-items: flex-start; justify-content: center; flex-wrap: wrap; max-width: 1240px; margin: 0 auto; padding: 0 var(--space-4) 60px; }
+  .frame { display: flex; flex-direction: column; gap: 10px; }
+  .frame-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); text-align: center; }
+  .frame.desktop .surface { width: 700px; max-width: 78vw; }
+  .frame.mobile .surface { width: 360px; max-width: 92vw; }
+  .surface { border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-4); background: var(--color-bg); }
+
+  /* ============ Reading column, mirrors production .pk-text-col ============ */
+  .text-col { display: flex; flex-direction: column; gap: var(--space-6); /* 32px between sections, matches app.css .pk-text-col */ }
+  .reading-section { display: flex; flex-direction: column; gap: var(--space-2); /* 8px within a section */ }
+  .section-heading { font-family: var(--font-display); font-size: var(--text-xl); text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
+
+  .spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); }
+  .spec-row dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 4px; }
+  .spec-row dd { margin: 0; }
+
+  .name-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .name-pill { display: inline-flex; align-items: center; font-size: var(--text-sm); font-weight: 600; padding: 5px 12px; border-radius: var(--radius-full); background: var(--color-accent-bg); color: var(--color-accent-text); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
+  .name-pill:hover { border-color: var(--color-accent-text); transform: translateY(-1px); }
+
+  .bgg-link { color: var(--color-primary); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--color-primary) 40%, transparent); font-weight: 600; }
+  .bgg-link:hover { text-decoration-color: currentColor; }
+
+  /* Two-column creators sub-layout — desktop only, stacks on mobile */
+  .creators-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); grid-column: 1 / -1; }
+  @media (max-width: 560px) { .creators-cols { grid-template-columns: 1fr; } }
+  .frame.mobile .creators-cols { grid-template-columns: 1fr; }
+  .creator-col dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
+
+  /* Community rating row — winner, round 3: no card/border/shadow (proximity +
+     rhythm carries it, per sketch 037's own "don't default to a bordered
+     container" rule), small inline numbers instead of the earlier round's
+     big display-font tiles — reads as a quiet line, not a second data sheet. */
+  .bgg-row { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; }
+  .bgg-stat { font-size: var(--text-sm); }
+  .bgg-stat .num { font-weight: 700; color: var(--color-primary); }
+  .bgg-stat .lbl { color: var(--color-text-muted); font-size: var(--text-xs); margin-left: 3px; }
+  .bgg-foot { font-size: var(--text-xs); color: var(--color-text-muted); margin: 2px 0 0; }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active">Winner: Community Rating Row ★ Selected</button>
+  <span class="caption">Sketch 039 — Ficha técnica &amp; creators (Phase 01.3 UAT gap G-01.3-1). 3
+  rounds: <strong>A/B/C</strong> explored spec-list structure (2-col creators layout, B, picked);
+  <strong>D/E</strong> replaced "Ficha técnica"/"Estadísticas BGG" jargon with plain-Spanish framing
+  and a card-style BGG summary (E, picked); this round lightened E's card into a plain inline row —
+  "less weight" per feedback. A/B/C/D removed from this file, full round history in this sketch's
+  README. Toggle 🌙/☀ to check both themes.</span>
+</div>
+
+<div class="cause-note flag">
+  <strong>Flagged gap — not pure CSS:</strong> "Diseñadores"/"Ilustradores navigable" below link to
+  <code>/?designers=</code> / <code>/?artists=</code>, following this page's existing filter-linked-chip
+  pattern (Mecánicas → <code>?mechanics=</code>, Temáticas → <code>?themes=</code>, etc.). <strong>Neither
+  filter param is wired in <code>CatalogLive.Index</code> today</strong> — this is a real implementation
+  follow-up, not just a style change. The <code>artists</code> field itself does exist on <code>Game</code>
+  (confirmed against the schema — an earlier design note calling it "no such field" is stale).
+</div>
+
+<div class="removed-row">
+  <span class="tag">Removed</span>
+  <del>Edad mínima: 14+</del>
+  <span>— didn't add value per feedback; dropped from the grid entirely.</span>
+</div>
+
+<div class="variant active" id="variant-winner">
+  <div class="compare">
+    <div class="frame desktop">
+      <div class="frame-label">Desktop</div>
+      <div class="surface">
+        <div class="text-col">
+          <div class="reading-section">
+            <h2 class="section-heading">Sobre el juego</h2>
+            <dl class="spec-list">
+              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+              <div class="creators-cols">
+                <div class="creator-col">
+                  <dt>Diseñadores</dt>
+                  <div class="name-pills"><a class="name-pill" href="/?designers=R.+Eric+Reuss">R. Eric Reuss</a></div>
+                </div>
+                <div class="creator-col">
+                  <dt>Ilustradores</dt>
+                  <div class="name-pills">
+                    <a class="name-pill" href="/?artists=Jason+Behnke">Jason Behnke</a>
+                    <a class="name-pill" href="/?artists=Lo%C3%AFc+Billiau">Loïc Billiau</a>
+                    <a class="name-pill" href="/?artists=Kathleen+Fraser">Kathleen Fraser</a>
+                  </div>
+                </div>
+              </div>
+            </dl>
+          </div>
+          <div class="bgg-row">
+            <span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span>
+            <span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span>
+            <span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span>
+          </div>
+          <p class="bgg-foot">Según la comunidad de BoardGameGeek · <a class="bgg-link" href="#">Ver ficha completa</a></p>
+        </div>
+      </div>
+    </div>
+    <div class="frame mobile">
+      <div class="frame-label">Mobile 390px</div>
+      <div class="surface">
+        <div class="text-col">
+          <div class="reading-section">
+            <h2 class="section-heading">Sobre el juego</h2>
+            <dl class="spec-list">
+              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+              <div class="creators-cols">
+                <div class="creator-col">
+                  <dt>Diseñadores</dt>
+                  <div class="name-pills"><a class="name-pill" href="/?designers=R.+Eric+Reuss">R. Eric Reuss</a></div>
+                </div>
+                <div class="creator-col">
+                  <dt>Ilustradores</dt>
+                  <div class="name-pills">
+                    <a class="name-pill" href="/?artists=Jason+Behnke">Jason Behnke</a>
+                    <a class="name-pill" href="/?artists=Lo%C3%AFc+Billiau">Loïc Billiau</a>
+                    <a class="name-pill" href="/?artists=Kathleen+Fraser">Kathleen Fraser</a>
+                  </div>
+                </div>
+              </div>
+            </dl>
+          </div>
+          <div class="bgg-row">
+            <span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span>
+            <span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span>
+            <span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span>
+          </div>
+          <p class="bgg-foot">Según la comunidad de BoardGameGeek · <a class="bgg-link" href="#">Ver ficha completa</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+</body>
+</html>
