@@ -3479,4 +3479,84 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
   end
+
+  # 01.3-07 (task 3 net-new coverage): CSS-source pins for the fact-grid
+  # breakpoint, the .pk-text-col rhythm mechanism, and the .pk-pill-tag
+  # hashtag contrast floor — three properties this restructure introduced
+  # that nothing in the pre-existing suite protected. Reuses css_source/0,
+  # dark_theme_plugin_block/0, token_value/2, relative_luminance/1 and
+  # contrast_ratio/2 from the lightbox-close-button describe block above —
+  # no second contrast/CSS-source harness written.
+  describe "01.3-07 net-new CSS-source pins (fact-grid breakpoint, rhythm mechanism, hashtag contrast)" do
+    # Same idiom as dark_theme_plugin_block/0 above, matching the light
+    # theme's own plugin block instead.
+    defp light_theme_plugin_block do
+      case Regex.run(
+             ~r/@plugin "daisyui\/packages\/bundle\/daisyui-theme" \{\s*name: "light";(.*?)\n\}/ms,
+             css_source()
+           ) do
+        [_, body] -> body
+        nil -> flunk("No light-theme `@plugin \"daisyui-theme\"` block found in assets/css/app.css")
+      end
+    end
+
+    test ".pk-fact-cols declares a single-column base rule and a two-column override inside the one 48rem block" do
+      src = css_source()
+
+      assert Regex.match?(~r/(?m)^\.pk-fact-cols\s*\{[^}]*grid-template-columns:\s*1fr;/s, src),
+             "`.pk-fact-cols` must declare a single-column base rule " <>
+               "(`grid-template-columns: 1fr`) outside any media query — the mobile default."
+
+      assert Regex.match?(
+               ~r/@media \(min-width: 48rem\) \{.*?\.pk-fact-cols\s*\{[^}]*grid-template-columns:\s*1fr 1fr;/ms,
+               src
+             ),
+             "The two-column override (`grid-template-columns: 1fr 1fr`) must live INSIDE the " <>
+               "single 48rem detail-layout `@media` block — a second, independently-opened " <>
+               "media query for this one rule would violate that block's own single-owner " <>
+               "invariant."
+    end
+
+    test ".pk-text-col declares no gap, and the three .pk-text-col > .pk-rhythm-* margin rules all exist (the additive-boundary regression pin)" do
+      src = css_source()
+
+      case Regex.run(~r/(?m)^\.pk-text-col\s*\{([^}]*)\}/s, src) do
+        [_, body] ->
+          refute body =~ ~r/gap:/,
+                 "`.pk-text-col` must declare no `gap` — a flex `gap` and a child `margin-top` " <>
+                   "are additive, exactly the stacked-boundary bug detail-page-layout.md " <>
+                   "records twice. The three named rhythm rules below are the ONLY spacing " <>
+                   "mechanism now."
+
+        nil ->
+          flunk("No top-level `.pk-text-col { ... }` rule found in assets/css/app.css")
+      end
+
+      for tier <- ["8", "16", "32"] do
+        assert Regex.match?(
+                 ~r/(?m)^\.pk-text-col > \.pk-rhythm-#{tier}\s*\{[^}]*margin-top:/s,
+                 src
+               ),
+               "`.pk-text-col > .pk-rhythm-#{tier}` must declare a `margin-top` — the named " <>
+                 "child-margin rhythm tier that replaced the removed flex `gap`."
+      end
+    end
+
+    test ".pk-pill-tag's --color-primary text meets the 4.5:1 contrast floor against --color-base-100 in both themes" do
+      for {label, block} <- [
+            {"light", light_theme_plugin_block()},
+            {"dark", dark_theme_plugin_block()}
+          ] do
+        primary = token_value(block, "--color-primary")
+        base_100 = token_value(block, "--color-base-100")
+
+        ratio = contrast_ratio(relative_luminance(primary), relative_luminance(base_100))
+
+        assert ratio >= 4.5,
+               "#{label} theme: --color-primary (#{primary}) against --color-base-100 " <>
+                 "(#{base_100}) measured #{Float.round(ratio, 2)}:1 — .pk-pill-tag's hashtag " <>
+                 "text must clear the 4.5:1 WCAG AA text floor in both themes."
+      end
+    end
+  end
 end
