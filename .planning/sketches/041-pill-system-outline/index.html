@@ -30,12 +30,14 @@
   .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
   .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
-  /* State pill — what "selected"/"active" looks like. Two tones, swapped by
-     the top toggle: .state-solid (today's production behaviour, primary
-     fill + soft shadow) vs .state-outline (literal "outline everywhere",
-     same visual as a passive fact pill). */
-  .state-solid { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-content); box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent); }
-  .state-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
+  /* Selected/active state — stays outline-family (no fill), but reuses the
+     SAME primary border+text this pill already shows on :hover, so
+     "selected" IS the permanent version of a state the pill vocabulary
+     already has, not a new invented style. Confirmed needed: literal
+     outline-everywhere made a selected chip pixel-identical to an unchecked
+     one sitting right next to it in the same control — real signal loss,
+     not just an aesthetic nit. */
+  .pill-selected { background: transparent; border-color: var(--color-primary); color: var(--color-primary); font-weight: 700; }
   .chip-x { margin-left: 4px; opacity: 0.7; }
 
   .card-mock { width: 220px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-border); }
@@ -50,35 +52,26 @@
 <body>
 
 <div id="variant-nav">
-  <button class="toggle-btn active" id="toggle-solid" onclick="setStateTone('solid')">Selected/Active state: Keep distinct (filled) — today's production</button>
-  <button class="toggle-btn" id="toggle-outline" onclick="setStateTone('outline')">Selected/Active state: Literal outline everywhere — per your direction</button>
-  <span class="caption">Sketch 041 — spreading the outline pill tone (039/040) across every real
+  <span class="caption"><strong>Resolved</strong> — outline pill tone spreads to every real
   pill/chip call site in the codebase (verified against <code>game_chips.ex</code>,
-  <code>game_preview.ex</code>, <code>filter_modal.ex</code>, <code>catalog_live/index.ex</code> —
-  not invented). Panels 1-2 below are uncontested: pure informational/read-only pills, no state to
-  lose. Panels 3-4 carry real app state ("this filter is currently applied") — the toggle above shows
-  both what you asked for literally, and the tradeoff it carries.</span>
+  <code>game_preview.ex</code>, <code>filter_modal.ex</code>, <code>catalog_live/index.ex</code>).
+  Selected/active state ("this filter is currently applied") stays in the outline family but reuses
+  the pill's own hover treatment (primary border + primary text, still no fill) as its permanent
+  look — confirmed distinguishable from unchecked siblings in the same row after literal
+  outline-everywhere first tested as pixel-identical. Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>Uncontested — apply outline directly, no tradeoff:</strong>
-  <ul style="margin:6px 0 0; padding-left:20px;">
-    <li><code>GameChips.chip_row/1</code> (Mecánicas/Temáticas) — was <code>pk-pill-neutral</code>,
-    resolved to outline in sketch 040.</li>
-    <li><code>GamePreview.facts_row/1</code> (players/playtime/difficulty pills, browse-card hover
-    preview + masthead) — was <code>pk-pill-neutral</code>, same fix applies: pure display, no
-    selection state.</li>
-  </ul>
-</div>
-
-<div class="cause-note flag">
-  <strong>Carries real state — read before deciding:</strong> <code>filter_modal.ex</code>'s
-  <em>selected</em> chip state and <code>catalog_live/index.ex</code>'s active-filter chip both use a
-  heavier tone specifically so a user can tell "this filter IS currently applied" at a glance.
-  Literal outline everywhere makes a selected/active chip look <strong>identical</strong> to an inert
-  Mecánicas chip — the visual signal for "this is filtering your results right now" would be gone.
-  This is the risk flagged when you picked "everything, including filter/selection chips" — toggle
-  above to see the actual difference before locking it in.
+  <strong>Pure display — no state, outline applies directly:</strong>
+  <code>GameChips.chip_row/1</code> (Mecánicas/Temáticas, resolved in sketch 040) and
+  <code>GamePreview.facts_row/1</code> (players/playtime/difficulty — browse-card hover preview +
+  masthead).
+  <br><br>
+  <strong>Carries real state — selected/active gets the primary-outline treatment:</strong>
+  <code>filter_modal.ex</code>'s selected chip and <code>catalog_live/index.ex</code>'s active-filter
+  chip (Resultados header) both need "this IS currently applied" to stay legible — literal
+  outline-everywhere first tested as making a selected chip identical to its unchecked neighbors, so
+  selected/active now carries a primary border + primary text instead, still with no fill.
 </div>
 
 <div class="panels">
@@ -111,12 +104,13 @@
 
   <div class="panel">
     <div class="panel-title">3. Filter modal — unselected vs. selected</div>
-    <p class="panel-sub"><code>filter_modal.ex</code>'s <code>chip_class/1</code> — unselected is
-    <strong>already</strong> outline (no change needed); selected is the state in question.</p>
+    <p class="panel-sub"><code>filter_modal.ex</code>'s <code>chip_class/1</code> — unselected stays
+    plain outline; selected gets a primary border + primary text (its own hover state, made
+    permanent) — still no fill, but unmistakably different from its siblings.</p>
     <div class="pill-row">
       <span class="pill pill-outline">Familiar</span>
       <span class="pill pill-outline">Intermedio</span>
-      <span class="pill state-tone">Experto</span>
+      <span class="pill pill-selected">Experto</span>
       <span class="pill pill-outline">Muy difícil</span>
     </div>
   </div>
@@ -124,10 +118,11 @@
   <div class="panel">
     <div class="panel-title">4. Active-filter chips (Resultados header)</div>
     <p class="panel-sub"><code>catalog_live/index.ex</code>'s active-filter row — chips showing
-    which filters are currently applied, with a tap-to-remove ×.</p>
+    which filters are currently applied, with a tap-to-remove ×. Same primary-outline treatment as
+    panel 3's selected state, since it's the same underlying signal.</p>
     <div class="pill-row">
-      <span class="pill state-tone">Cooperativo<span class="chip-x">×</span></span>
-      <span class="pill state-tone">2-4 jugadores<span class="chip-x">×</span></span>
+      <span class="pill pill-selected">Cooperativo<span class="chip-x">×</span></span>
+      <span class="pill pill-selected">2-4 jugadores<span class="chip-x">×</span></span>
     </div>
   </div>
 
@@ -136,18 +131,6 @@
 <div id="sketch-tools">
   <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
 </div>
-
-<script>
-  function setStateTone(tone) {
-    document.querySelectorAll('.state-tone').forEach(el => {
-      el.classList.remove('state-solid', 'state-outline');
-      el.classList.add(tone === 'solid' ? 'state-solid' : 'state-outline');
-    });
-    document.getElementById('toggle-solid').classList.toggle('active', tone === 'solid');
-    document.getElementById('toggle-outline').classList.toggle('active', tone === 'outline');
-  }
-  setStateTone('solid');
-</script>
 
 </body>
 </html>

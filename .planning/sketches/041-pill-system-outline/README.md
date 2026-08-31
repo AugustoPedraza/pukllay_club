@@ -2,7 +2,7 @@
 sketch: 041
 name: pill-system-outline
 question: "How far should the outline pill tone from 039/040 spread across the site's real pill/chip call sites?"
-winner: null
+winner: "Outline everywhere; selected/active state = primary border + primary text (no fill)"
 tags: [detail, catalog, pills, chips, design-system, consistency]
 ---
 
@@ -11,7 +11,7 @@ tags: [detail, catalog, pills, chips, design-system, consistency]
 ## Design Question
 039/040 moved the detail page's informational pills (creators, Mecánicas, Temáticas) to production's
 `.pk-pill-outline` tone. Feedback: "definitely the new pills look a lot cleaner, I want to be sure we
-will update it to be consistent everywhere." Asked to confirm scope; picked "everything, including
+will update it to be consistent everywhere." Scope confirmed as "everything, including
 filter/selection chips."
 
 ## Real call-site inventory (verified against the code, not assumed)
@@ -20,27 +20,32 @@ Every place `.pk-pill*` actually renders today:
 2. `GameChips.editorial_tags/1` (hashtags) — `pk-pill-accent`, intentionally kept separate (curated
    category, not a structured fact) — not touched by this sketch.
 3. `GamePreview.facts_row/1` (players/playtime/difficulty pills — browse-card hover preview +
-   masthead) — `pk-pill-neutral`.
-4. `filter_modal.ex`'s `chip_class/1` — unselected = `pk-pill-outline` **already**; selected =
-   `pk-pill-selected` (solid primary fill + soft shadow).
-5. `catalog_live/index.ex`'s active-filter chip row (Resultados header, tap-to-remove ×) —
-   `pk-pill-accent`.
+   masthead) — `pk-pill-neutral` → resolved to outline.
+4. `filter_modal.ex`'s `chip_class/1` — unselected = `pk-pill-outline` **already**; selected was
+   `pk-pill-selected` (solid primary fill + soft shadow) → resolved below.
+5. `catalog_live/index.ex`'s active-filter chip row (Resultados header, tap-to-remove ×) — was
+   `pk-pill-accent` → resolved below.
 
-## Finding
-Items 1 and 3 are pure display — no state to lose, outline applies with no tradeoff. Items 4 and 5
-carry **real app state**: they're the only visual signal that "this filter is currently applied."
-Literal outline everywhere makes a selected/active chip render **identically** to an inert Mecánicas
-chip — the panel 3/4 toggle in this sketch shows the actual visual result of both options side by
-side, not just a description of the risk.
+## Round 1 — literal outline everywhere
+Tested making selected/active chips exactly the same outline tone as passive pills. **Feedback:
+"literal outline looks clear"** — accepted at first pass.
+
+## Round 2 — caught before finalizing
+Flagged directly: with literal outline, panel 3's selected chip ("Experto") rendered **pixel-identical**
+to the unchecked chips right next to it in the same control — no way to tell which filter option was
+chosen. Confirmed: selected/active does need a distinguishing signal.
+
+## Winner
+Selected/active stays in the outline family (no fill, no shadow) but permanently carries the pill's
+own **hover treatment** — primary-colored border + primary-colored text — instead of inventing a new
+style. Applied to both filter-modal's selected chips and the active-filter chip row, since they're the
+same underlying signal ("this is currently filtering your results").
 
 ## How to View
-open .planning/sketches/041-pill-system-outline/index.html — the top toggle swaps panels 3-4 between
-today's production behavior (filled/distinct selected state) and literal outline everywhere.
+open .planning/sketches/041-pill-system-outline/index.html
 
 ## What to Look For
-- Panels 1-2: confirm these read as clean, consistent with 039/040 — no real decision left here.
-- Panels 3-4 with the toggle on "Literal outline everywhere": can you still tell which filters are
-  currently applied at a glance, or does it blend into the rest of the page's now-uniform pill look?
-- If outline-everywhere doesn't work for 3-4, is there a middle tone worth exploring for "selected"
-  (e.g. an outline pill with a filled dot, or a primary-colored border only) rather than reverting to
-  today's full solid fill?
+- Panel 3: is "Experto" now clearly distinguishable from its unchecked siblings at a glance?
+- Panel 4: does the active-filter row read as clearly "applied, tap × to remove" against the plain
+  Resultados heading next to it?
+- Check both themes (🌙/☀ toggle) — primary-on-transparent contrast in dark mode.
