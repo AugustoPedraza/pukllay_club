@@ -64,6 +64,35 @@
   .tag-d { border-radius: 4px; background: transparent; border: none; border-bottom: 2px solid color-mix(in srgb, var(--color-accent-text) 45%, transparent); padding: 3px 3px 2px; color: var(--color-accent-text); }
   .tag-d:hover { border-bottom-color: var(--color-accent-text); }
 
+  /* Round 5 — "should them be more like a social network hashtag?" C's
+     invisible-at-rest tap target kept, but the type scale is the real gap:
+     11px is a UI/label size, not how a hashtag actually reads in a caption
+     (Instagram/Twitter hashtags run at body-text size). E/F/G all move up
+     to a body-scale size; they differ in weight/packing/always-vs-hover
+     color, since C's own hover-only reveal was flagged as undiscoverable
+     on touch (no hover on mobile). */
+  .tag-row-social { gap: 10px; }
+
+  /* E: Body-Sized Ghost — C's invisible-at-rest interaction, same type
+     scale bump as F/G, still relies on hover/focus (desktop-safe, same
+     open mobile-discoverability question as C). */
+  .tag-e { font-size: var(--text-sm); font-weight: 600; padding: 3px 4px; border-radius: 6px; background: transparent; color: var(--color-accent-text); }
+  .tag-e:hover { background: color-mix(in srgb, var(--color-accent-bg) 55%, transparent); }
+
+  /* F: Bold Caption Run — text-base (matches the description paragraph's
+     own size exactly), bold, tightly packed — reads as a continuation of
+     the caption itself, closest to how Instagram renders hashtag lines. */
+  .tag-f-row { gap: 6px; }
+  .tag-f { font-size: var(--text-base); font-weight: 700; padding: 2px; color: var(--color-accent-text); }
+  .tag-f:hover { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--color-accent-text) 50%, transparent); }
+
+  /* G: Always-Underlined — body-sm size, permanent thin underline (muted,
+     darkens on hover) instead of relying on hover/tap to reveal any
+     affordance at all — solves the touch-discoverability gap C/E leave
+     open, closest to a classic "this is a link" signal. */
+  .tag-g { font-size: var(--text-sm); font-weight: 600; padding: 2px; color: var(--color-accent-text); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--color-accent-text) 35%, transparent); text-underline-offset: 2px; }
+  .tag-g:hover { text-decoration-color: currentColor; }
+
   .spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); }
   .spec-row dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 4px; }
   .spec-row dd { margin: 0; }
@@ -88,16 +117,20 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active" onclick="showVariant('a')">A: Pill (current)</button>
+  <button class="variant-tab" onclick="showVariant('a')">A: Pill (original)</button>
   <button class="variant-tab" onclick="showVariant('b')">B: Plain Text</button>
-  <button class="variant-tab" onclick="showVariant('c')">C: Ghost Chip</button>
-  <button class="variant-tab" onclick="showVariant('d')">D: Flat Label (underline)</button>
-  <span class="caption">Round 4 — "wondering if those still should look like pills since are
-  hashtags." <strong>A</strong> is the current softened pill, kept for reference. <strong>B</strong>
-  drops the chip entirely — hashtags as plain colored link text, like a caption. <strong>C</strong>
-  keeps the pill's tap-target size/shape but hides it at rest — invisible until hover/focus.
-  <strong>D</strong> swaps the pill for a small flat label with an underline accent instead of a
-  boxed border. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab" onclick="showVariant('c')">C: Ghost Chip (picked, round 4)</button>
+  <button class="variant-tab" onclick="showVariant('d')">D: Flat Label</button>
+  <button class="variant-tab active" onclick="showVariant('e')">E: Body-Sized Ghost</button>
+  <button class="variant-tab" onclick="showVariant('f')">F: Bold Caption Run</button>
+  <button class="variant-tab" onclick="showVariant('g')">G: Always-Underlined</button>
+  <span class="caption">Round 5 — "should them be more like a social network hashtag?" C (picked
+  last round) kept the pill's tap-target but was still sized like a UI label (11px) — real social
+  hashtags run at body-text size. <strong>E</strong> is C's hover-reveal at body size.
+  <strong>F</strong> matches the description paragraph's own size exactly, bold, tightly packed —
+  reads as literally the caption continuing. <strong>G</strong> adds a permanent thin underline
+  instead of relying on hover, since C/E's hover-only reveal has no equivalent on a touch device.
+  Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
@@ -107,7 +140,7 @@
 </div>
 
 <!-- ========================= VARIANT A ========================= -->
-<div class="variant active" id="variant-a">
+<div class="variant" id="variant-a">
   <div class="compare">
     <div class="frame desktop">
       <div class="frame-label">Desktop</div>
@@ -378,6 +411,228 @@
           <div class="pill-row">
             <a class="tag-d" href="#">#CooperativoPuro</a>
             <a class="tag-d" href="#">#AltaRejugabilidad</a>
+          </div>
+          <hr class="divider">
+          <div class="reading-section">
+            <dl class="spec-list">
+              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+              <div class="fact-cols">
+                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+              </div>
+            </dl>
+          </div>
+          <div class="reading-section">
+            <div class="bgg-label">Comunidad BGG</div>
+            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= VARIANT E: BODY-SIZED GHOST ========================= -->
+<div class="variant active" id="variant-e">
+  <div class="compare">
+    <div class="frame desktop">
+      <div class="frame-label">Desktop</div>
+      <div class="surface">
+        <div class="text-col">
+          <div class="reading-section">
+            <h1 class="title">Spirit Island</h1>
+            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+            invasores antes de que la isla sea devastada.</p>
+          </div>
+          <div class="pill-row tag-row-social">
+            <a class="tag-e" href="#">#CooperativoPuro</a>
+            <a class="tag-e" href="#">#AltaRejugabilidad</a>
+          </div>
+          <hr class="divider">
+          <div class="reading-section">
+            <dl class="spec-list">
+              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+              <div class="fact-cols">
+                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+              </div>
+            </dl>
+          </div>
+          <div class="reading-section">
+            <div class="bgg-label">Comunidad BGG</div>
+            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame mobile">
+      <div class="frame-label">Mobile 390px</div>
+      <div class="surface">
+        <div class="text-col">
+          <div class="reading-section">
+            <h1 class="title">Spirit Island</h1>
+            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+            invasores antes de que la isla sea devastada.</p>
+          </div>
+          <div class="pill-row tag-row-social">
+            <a class="tag-e" href="#">#CooperativoPuro</a>
+            <a class="tag-e" href="#">#AltaRejugabilidad</a>
+          </div>
+          <hr class="divider">
+          <div class="reading-section">
+            <dl class="spec-list">
+              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+              <div class="fact-cols">
+                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+              </div>
+            </dl>
+          </div>
+          <div class="reading-section">
+            <div class="bgg-label">Comunidad BGG</div>
+            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= VARIANT F: BOLD CAPTION RUN ========================= -->
+<div class="variant" id="variant-f">
+  <div class="compare">
+    <div class="frame desktop">
+      <div class="frame-label">Desktop</div>
+      <div class="surface">
+        <div class="text-col">
+          <div class="reading-section">
+            <h1 class="title">Spirit Island</h1>
+            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+            invasores antes de que la isla sea devastada.</p>
+          </div>
+          <div class="pill-row tag-f-row">
+            <a class="tag-f" href="#">#CooperativoPuro</a>
+            <a class="tag-f" href="#">#AltaRejugabilidad</a>
+          </div>
+          <hr class="divider">
+          <div class="reading-section">
+            <dl class="spec-list">
+              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+              <div class="fact-cols">
+                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+              </div>
+            </dl>
+          </div>
+          <div class="reading-section">
+            <div class="bgg-label">Comunidad BGG</div>
+            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame mobile">
+      <div class="frame-label">Mobile 390px</div>
+      <div class="surface">
+        <div class="text-col">
+          <div class="reading-section">
+            <h1 class="title">Spirit Island</h1>
+            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+            invasores antes de que la isla sea devastada.</p>
+          </div>
+          <div class="pill-row tag-f-row">
+            <a class="tag-f" href="#">#CooperativoPuro</a>
+            <a class="tag-f" href="#">#AltaRejugabilidad</a>
+          </div>
+          <hr class="divider">
+          <div class="reading-section">
+            <dl class="spec-list">
+              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+              <div class="fact-cols">
+                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+              </div>
+            </dl>
+          </div>
+          <div class="reading-section">
+            <div class="bgg-label">Comunidad BGG</div>
+            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= VARIANT G: ALWAYS-UNDERLINED ========================= -->
+<div class="variant" id="variant-g">
+  <div class="compare">
+    <div class="frame desktop">
+      <div class="frame-label">Desktop</div>
+      <div class="surface">
+        <div class="text-col">
+          <div class="reading-section">
+            <h1 class="title">Spirit Island</h1>
+            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+            invasores antes de que la isla sea devastada.</p>
+          </div>
+          <div class="pill-row tag-row-social">
+            <a class="tag-g" href="#">#CooperativoPuro</a>
+            <a class="tag-g" href="#">#AltaRejugabilidad</a>
+          </div>
+          <hr class="divider">
+          <div class="reading-section">
+            <dl class="spec-list">
+              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+              <div class="fact-cols">
+                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+              </div>
+            </dl>
+          </div>
+          <div class="reading-section">
+            <div class="bgg-label">Comunidad BGG</div>
+            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame mobile">
+      <div class="frame-label">Mobile 390px</div>
+      <div class="surface">
+        <div class="text-col">
+          <div class="reading-section">
+            <h1 class="title">Spirit Island</h1>
+            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+            invasores antes de que la isla sea devastada.</p>
+          </div>
+          <div class="pill-row tag-row-social">
+            <a class="tag-g" href="#">#CooperativoPuro</a>
+            <a class="tag-g" href="#">#AltaRejugabilidad</a>
           </div>
           <hr class="divider">
           <div class="reading-section">

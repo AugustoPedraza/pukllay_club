@@ -52,14 +52,26 @@ and links unchanged:
 - **D: Flat Label** — small corner radius (not full pill), a thin underline-style bottom border
   instead of a boxed border, no background.
 
+**Round 5 (current) — "should them be more like a social network hashtag?"** C was picked, but its
+11px size is a UI/label scale, not how a hashtag reads on an actual social caption (body-text size).
+Three follow-ups, all keeping C's link-only decoration philosophy but bumping the type scale:
+- **E: Body-Sized Ghost** — C's hover-reveal interaction, same idea, `text-sm` size instead of 11px.
+- **F: Bold Caption Run** — `text-base`, matching the description paragraph's own size exactly, bold,
+  tightly packed (6px gap) — reads as the caption itself continuing onto a hashtag line, closest to
+  Instagram's convention.
+- **G: Always-Underlined** — `text-sm`, permanent thin underline (not hover-only) — addresses the
+  mobile-discoverability gap C/E leave open, since neither has any resting-state affordance and
+  touch devices have no hover.
+
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html
 
 ## What to Look For
 - A vs. B/C/D: does dropping the pill shape read as "more honestly a hashtag," or does it lose the
   visual consistency of "this row is one interactive group" that a pill shape gives for free?
-- C specifically: is an invisible-until-hover treatment discoverable on mobile (no hover state) —
-  does it need a permanent minimal cue (e.g. a faint underline) so touch users know it's tappable?
-- D: does the underline read as "tag" or does it read as broken/missing-border pill?
+- E/F/G: which type scale/weight reads as "hashtag" rather than either a UI label (too small) or
+  ordinary prose (indistinguishable from the description above it)?
+- G specifically: does the permanent underline solve C/E's mobile-discoverability gap without making
+  the row look over-decorated next to the divider-free page rhythm established since round 2?
 - Divider still present here — worth a final check once this is composed with 039/040/041 together:
   does it still earn its place, or is it now one boundary too many?
