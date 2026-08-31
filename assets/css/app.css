@@ -3176,9 +3176,9 @@ body.pk-drawer-open {
 
 /* 01.3-07: the "Comunidad BGG" block (sketch 039/043) — a group label, up
    to three independently-gated stat links and a Fuente line, replacing the
-   old bordered .pk-spec-group-label sub-panel. No bordered container by
-   design (sketch 039's own finding: "Comunidad BGG drops any bordered
-   container in favor of plain text"). */
+   old bordered "Avanzado" sub-panel rule that lived here before. No
+   bordered container by design (sketch 039's own finding: "Comunidad BGG
+   drops any bordered container in favor of plain text"). */
 .pk-bgg-label {
   text-transform: uppercase;
   letter-spacing: 0.08em;

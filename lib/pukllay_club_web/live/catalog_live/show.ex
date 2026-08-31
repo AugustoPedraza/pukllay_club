@@ -702,9 +702,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           <%!-- G-01.2-18 task 1: boundary between the detail content above
           and the recommendations shelf below, so a reader can tell the
           page has changed subject rather than reading the shelf as more of
-          the masthead's own content. Second call site of 01.2-17's
-          .pk-divider (see that rule's own comment). G-01.2-19 task 2
-          removed the width-cap class this line used
+          the masthead's own content. This is the ONLY divider left
+          anywhere on the detail page (01.3-07 removed the reading
+          column's own — see this plan's <planner_note> departure #1).
+          G-01.2-19 task 2 removed the width-cap class this line used
           to carry — this wrapper already shares the shell's own
           mx-auto/w-full/max-w-7xl/pk-gutter recipe with the masthead and
           the CTA bar's inner wrapper, so no per-element width override is
