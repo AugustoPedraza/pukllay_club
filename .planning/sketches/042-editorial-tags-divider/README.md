@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: "A, rebalanced — tags before the divider, own reading-section for rhythm, softened tint pill"
+winner: null
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -41,13 +41,25 @@ its own beat instead of a tacked-on line under the prose.
 (`show.ex:543`, the detail page) — this fix has no other pages to check for consistency, unlike the
 site-wide sweep sketch 041 needed for the outline pill tone.
 
+**Round 4 (current) — "wondering if those still should look like pills since are hashtags":**
+questioning the pill *shape* itself, not just its color. Four tabs, all keeping round 2/3's position
+and links unchanged:
+- **A: Pill (current)** — round 3's softened-tint pill, kept as the reference point.
+- **B: Plain Text** — no chip at all: larger, bolder colored link text, underline on hover, `#` is
+  the only visual marker. Closest to how a hashtag actually reads on social platforms.
+- **C: Ghost Chip** — same tap-target size/shape as every pill on the page, but invisible at rest
+  (no border, no fill); the tint only appears on hover/focus.
+- **D: Flat Label** — small corner radius (not full pill), a thin underline-style bottom border
+  instead of a boxed border, no background.
+
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html
 
 ## What to Look For
-- Does the tag row now read as a clear, separate beat between the description and the divider, or
-  does the 32px gap make it feel disconnected from the description it's tagging?
-- Does the softened tint still read as clearly clickable/interactive, or does it now risk blending
-  into the page too much (the opposite failure mode this whole session has repeatedly caught)?
-- Divider still present here (only B/C removed it) — worth a final check once this is composed with
-  039/040/041 together: does it still earn its place, or is it now one boundary too many?
+- A vs. B/C/D: does dropping the pill shape read as "more honestly a hashtag," or does it lose the
+  visual consistency of "this row is one interactive group" that a pill shape gives for free?
+- C specifically: is an invisible-until-hover treatment discoverable on mobile (no hover state) —
+  does it need a permanent minimal cue (e.g. a faint underline) so touch users know it's tappable?
+- D: does the underline read as "tag" or does it read as broken/missing-border pill?
+- Divider still present here — worth a final check once this is composed with 039/040/041 together:
+  does it still earn its place, or is it now one boundary too many?
