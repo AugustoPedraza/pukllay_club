@@ -653,12 +653,21 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
-  # 01.3-08 (UAT gap G-01.3-1 item 6 + sketch 042's inline-chevron toggle):
-  # pins the description's justify/clamp mechanism and the icon-only
-  # toggle's collapsed/expanded contract. Reuses css_source/0 (declared
-  # below in the title-echo describe block) for the source-level pins.
-  describe "description justify + inline icon-only toggle contract (01.3-08, UAT gap G-01.3-1 item 6)" do
-    test "initial render is collapsed: the paragraph is clamped and the toggle is nested inside it",
+  # 01.3-08 (UAT gap G-01.3-1 item 6 + sketch 042's inline-chevron toggle)
+  # / 01.3-10 (gap closure G-01.3-4): pins the description's justify/clamp
+  # mechanism and the icon-only toggle's collapsed/expanded contract. The
+  # toggle is now ALWAYS a trailing sibling of the paragraph, never a
+  # descendant, in both states — moving it out of the paragraph's line box
+  # is what fixes G-01.3-4. Reuses css_source/0 (declared below in the
+  # title-echo describe block) for the source-level pins.
+  #
+  # Describe-block name kept short deliberately: combined with the longest
+  # test name below (the round-trip test), a longer describe name pushes
+  # the generated `-inlined-test <describe> <test>/1-fun-N-` atom past
+  # Erlang's 255-character atom limit and the module fails to compile with
+  # an opaque `core_to_ssa`/`list_to_atom` system-limit error.
+  describe "description justify + inline icon-only toggle contract (01.3-08/01.3-10)" do
+    test "initial render is collapsed: the paragraph is clamped and the toggle is its sibling, never a descendant",
          %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
@@ -669,7 +678,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       p = LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped")
       assert Enum.count(p) == 1
 
-      toggle = LazyHTML.query(doc, "p#game-description button.pk-desc-toggle")
+      # The toggle must never be a descendant of the paragraph — this is
+      # the actual invariant G-01.3-4 is about.
+      assert Enum.empty?(LazyHTML.query(doc, "p#game-description button"))
+
+      toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
       assert Enum.count(toggle) == 1
 
       assert List.first(LazyHTML.attribute(toggle, "aria-expanded")) == "false"
@@ -677,7 +690,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert List.first(LazyHTML.attribute(toggle, "aria-controls")) == "game-description"
     end
 
-    test "after one toggle event: the paragraph is no longer clamped and the toggle is a trailing sibling",
+    test "after one toggle event: the paragraph is no longer clamped and the toggle stays a trailing sibling",
          %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
@@ -690,17 +703,14 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert Enum.count(p_expanded) == 1
       assert Enum.empty?(LazyHTML.query(doc, "p#game-description.is-clamped"))
 
-      # The toggle must be a SIBLING of the paragraph now, not a descendant.
-      assert Enum.empty?(LazyHTML.query(doc, "p#game-description button.pk-desc-toggle"))
+      # The toggle must still be a SIBLING of the paragraph, never a descendant.
+      assert Enum.empty?(LazyHTML.query(doc, "p#game-description button"))
 
-      trailing = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle.is-trailing")
+      trailing = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
       assert Enum.count(trailing) == 1
       assert List.first(LazyHTML.attribute(trailing, "aria-expanded")) == "true"
       assert List.first(LazyHTML.attribute(trailing, "aria-label")) == "Ver menos"
       assert List.first(LazyHTML.attribute(trailing, "aria-controls")) == "game-description"
-
-      # No ellipsis span once expanded — nothing left to truncate.
-      refute LazyHTML.to_html(trailing) =~ "pk-desc-toggle-ellipsis"
     end
 
     test "round trip: expand, collapse, expand, collapse, expand, collapse — three full cycles, asserting after every transition",
@@ -712,14 +722,15 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert_collapsed = fn html ->
         doc = LazyHTML.from_document(html)
         assert Enum.count(LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped")) == 1
-        assert Enum.count(LazyHTML.query(doc, "p#game-description button.pk-desc-toggle")) == 1
+        assert Enum.empty?(LazyHTML.query(doc, "p#game-description button"))
+        assert Enum.count(LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")) == 1
       end
 
       assert_expanded = fn html ->
         doc = LazyHTML.from_document(html)
         assert Enum.empty?(LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped"))
-
-        assert Enum.count(LazyHTML.query(doc, "#game-description + button.pk-desc-toggle.is-trailing")) == 1
+        assert Enum.empty?(LazyHTML.query(doc, "p#game-description button"))
+        assert Enum.count(LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")) == 1
       end
 
       assert_collapsed.(html)
@@ -772,55 +783,44 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "the alignment must hold at every viewport width, not just desktop)."
 
       assert block =~ ~r/text-justify:\s*inter-word;/,
-             "`.pk-desc` must declare `text-justify: inter-word` — load-bearing on the " <>
-               "clamped line per description-truncation.md (a float competes for that " <>
-               "line's width)."
+             "`.pk-desc` must declare `text-justify: inter-word` — word-based justification is " <>
+               "the right setting for Spanish prose regardless of the clip mechanism."
     end
 
-    test "no webkit line-clamp mechanism survives in the description family, and the clamp/toggle share one line-height multiple" do
-      desc_block =
-        case Regex.run(~r/(?m)^\.pk-desc\s*\{([^}]*)\}/s, css_source()) do
-          [_, body] -> body
-          nil -> flunk("No top-level `.pk-desc { ... }` rule found in assets/css/app.css")
-        end
-
+    test "the collapsed description clips via a native three-line clamp with a native ellipsis" do
       clamped_block =
         case Regex.run(~r/(?m)^\.pk-desc\.is-clamped\s*\{([^}]*)\}/s, css_source()) do
           [_, body] -> body
           nil -> flunk("No top-level `.pk-desc.is-clamped { ... }` rule found in assets/css/app.css")
         end
 
+      assert clamped_block =~ ~r/-webkit-line-clamp:\s*3;/,
+             "`.pk-desc.is-clamped` must declare the native 3-line clamp — the only clip " <>
+               "mechanism with a clean-cut guarantee (description-truncation.md)."
+
+      assert clamped_block =~ ~r/text-overflow:\s*ellipsis;/,
+             "`.pk-desc.is-clamped` must declare `text-overflow: ellipsis` — the engine-supplied " <>
+               "ellipsis this clamp mechanism exists for."
+    end
+
+    test "the toggle declares no float-based positioning and no line-height-derived margin" do
       toggle_block =
         case Regex.run(~r/(?m)^\.pk-desc-toggle\s*\{([^}]*)\}/s, css_source()) do
           [_, body] -> body
           nil -> flunk("No top-level `.pk-desc-toggle { ... }` rule found in assets/css/app.css")
         end
 
-      refute desc_block =~ ~r/webkit-line-clamp/
-      refute clamped_block =~ ~r/webkit-line-clamp/
-      refute toggle_block =~ ~r/webkit-line-clamp/
+      refute toggle_block =~ ~r/float\s*:/,
+             "`.pk-desc-toggle` must not declare float-based positioning — G-01.3-4's root cause " <>
+               "was the toggle living inside the paragraph's line box via a float."
 
-      assert clamped_block =~ ~r/max-height:\s*calc\(3 \* 1\.5em\);/,
-             "`.pk-desc.is-clamped`'s max-height must read the same 1.5 line-height multiple " <>
-               ".pk-desc itself declares — never an independent literal."
+      refute toggle_block =~ ~r/calc\(\d+ \* 1\.5em\)/,
+             "`.pk-desc-toggle` must not derive its position from a line-height multiple — it is " <>
+               "positioned purely as a flex child of `.pk-desc-shell`'s column now."
 
-      assert toggle_block =~ ~r/margin:\s*calc\(2 \* 1\.5em\)/,
-             "`.pk-desc-toggle`'s margin-top must read the SAME 1.5 line-height multiple as " <>
-               "`.pk-desc.is-clamped`'s max-height — both derived from one declared value."
-    end
-
-    test "the toggle's hit area carries a symmetric inset of at least 13px, clearing the 44px touch floor" do
-      before_block =
-        case Regex.run(~r/(?m)^\.pk-desc-toggle::before\s*\{([^}]*)\}/s, css_source()) do
-          [_, body] -> body
-          nil -> flunk("No top-level `.pk-desc-toggle::before { ... }` rule found in assets/css/app.css")
-        end
-
-      assert [_, magnitude] = Regex.run(~r/inset:\s*-(\d+)px;/, before_block)
-
-      assert String.to_integer(magnitude) >= 13,
-             "`.pk-desc-toggle::before`'s inset must be at least 13px on every side so the " <>
-               "~24x18px visible box clears the 44px WCAG 2.5.5 touch floor."
+      assert toggle_block =~ ~r/align-self:\s*flex-end;/,
+             "`.pk-desc-toggle` must position itself via `align-self: flex-end` on the shell's " <>
+               "flex column — the only positioning mechanism left after this gap closure."
     end
   end
 
