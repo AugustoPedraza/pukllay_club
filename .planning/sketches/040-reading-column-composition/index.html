@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 040 — Reading Column Composition</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 90px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 12px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
+  #variant-nav .caption strong { color: var(--color-text); }
+  .toggle-btn { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
+  .toggle-btn.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  .cause-note { max-width: 900px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+  .cause-note.flag { border-color: var(--color-danger); }
+  .cause-note.flag strong { color: var(--color-danger); }
+
+  .compare { display: flex; gap: var(--space-6); align-items: flex-start; justify-content: center; flex-wrap: wrap; max-width: 1240px; margin: 0 auto; padding: 0 var(--space-4) 60px; }
+  .frame { display: flex; flex-direction: column; gap: 10px; }
+  .frame-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); text-align: center; }
+  .frame.desktop .surface { width: 700px; max-width: 78vw; }
+  .frame.mobile .surface { width: 360px; max-width: 92vw; }
+  .surface { border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-4); background: var(--color-bg); }
+
+  /* ============ Reading column — mirrors production .pk-text-col exactly ============ */
+  .text-col { display: flex; flex-direction: column; gap: var(--space-6); }
+  .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
+  h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
+  .section-heading { font-family: var(--font-display); font-size: var(--text-xl); text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
+  .desc { line-height: 1.5; margin: 0; color: var(--color-text); }
+  .divider { height: 1px; background: var(--color-border); border: none; margin: 0; }
+
+  /* Shared pill base — production's app.css .pk-pill (11px, 4px/9px padding) */
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* .pk-pill-accent — editorial hashtags (solid fill, heaviest) */
+  .pill-accent { background: var(--color-accent-bg); border-color: var(--color-accent-bg); color: var(--color-accent-text); }
+  .pill-accent:hover { transform: translateY(-1px); }
+  /* .pk-pill-neutral — Mecánicas/Temáticas chips (soft fill, medium) — REAL production tone */
+  .pill-neutral { background: var(--color-surface); border-color: var(--color-border); color: var(--color-text-muted); }
+  .pill-neutral:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  /* .pk-pill-outline — 039's creator-pill tone (transparent, lightest) */
+  .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
+  .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+  .spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); }
+  .spec-row dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 4px; }
+  .spec-row dd { margin: 0; }
+  .creators-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); grid-column: 1 / -1; }
+  @media (max-width: 560px) { .creators-cols { grid-template-columns: 1fr; } }
+  .frame.mobile .creators-cols { grid-template-columns: 1fr; }
+  .creator-col dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
+
+  .bgg-link { color: var(--color-primary); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--color-primary) 40%, transparent); font-weight: 600; }
+  .bgg-link:hover { text-decoration-color: currentColor; }
+  .bgg-label { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
+  .bgg-row { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; }
+  .bgg-stat { font-size: var(--text-sm); }
+  .bgg-stat .num { font-weight: 600; color: var(--color-text); }
+  .bgg-stat .lbl { color: var(--color-text-muted); font-size: var(--text-xs); margin-left: 3px; }
+  .bgg-foot { font-size: var(--text-xs); color: var(--color-text-muted); margin: 2px 0 0; }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="toggle-btn active" id="toggle-outline" onclick="setCreatorTone('outline')">Creator pills: Outline (039's pick)</button>
+  <button class="toggle-btn" id="toggle-neutral" onclick="setCreatorTone('neutral')">Creator pills: Neutral (match Mecánicas/Temáticas)</button>
+  <span class="caption">Sketch 040 — consistency check, not a new design question. Composes 039's
+  "Sobre el juego"/"Comunidad BGG" into the REAL reading column order (title → description → divider →
+  editorial tags → Mecánicas → Temáticas → Sobre el juego → Comunidad BGG), using production's actual
+  chip tones for Mecánicas/Temáticas (<code>.pk-pill-neutral</code>) and editorial tags
+  (<code>.pk-pill-accent</code>) — not approximations. Toggle above swaps the creator-pill tone so you
+  can compare 039's outline pick against matching Mecánicas/Temáticas directly. Toggle 🌙/☀ to check
+  both themes.</span>
+</div>
+
+<div class="cause-note flag">
+  <strong>Found while composing:</strong> production already has <em>three</em> pill tones in this
+  column — <code>.pk-pill-accent</code> (solid fill, editorial hashtags), <code>.pk-pill-neutral</code>
+  (soft fill, Mecánicas/Temáticas), and now 039 adds <code>.pk-pill-outline</code> (fully transparent)
+  for Diseñadores/Ilustradores — a fourth, even lighter tone with no other user on the page today. Is a
+  4th tier intentional (creators are the least "primary" fact here), or should creator pills reuse the
+  existing neutral tone instead of introducing a new one? Toggle above to compare both directly.
+</div>
+
+<div class="compare">
+  <div class="frame desktop">
+    <div class="frame-label">Desktop</div>
+    <div class="surface">
+      <div class="text-col">
+        <div class="reading-section">
+          <h1 class="title">Spirit Island</h1>
+          <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+          colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+          invasores antes de que la isla sea devastada.</p>
+        </div>
+        <hr class="divider">
+        <div class="pill-row">
+          <a class="pill pill-accent" href="#">#CooperativoPuro</a>
+          <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
+        </div>
+        <div class="reading-section">
+          <h2 class="section-heading">Mecánicas</h2>
+          <div class="pill-row">
+            <a class="pill pill-neutral" href="/?mechanics=Colocaci%C3%B3n+de+losetas">Colocación de losetas</a>
+            <a class="pill pill-neutral" href="/?mechanics=Gesti%C3%B3n+de+mano">Gestión de mano</a>
+            <a class="pill pill-neutral" href="/?mechanics=Cooperativo">Cooperativo</a>
+          </div>
+        </div>
+        <div class="reading-section">
+          <h2 class="section-heading">Temáticas</h2>
+          <div class="pill-row">
+            <a class="pill pill-neutral" href="/?themes=Fantas%C3%ADa">Fantasía</a>
+            <a class="pill pill-neutral" href="/?themes=Anti-colonialismo">Anti-colonialismo</a>
+          </div>
+        </div>
+        <div class="reading-section">
+          <h2 class="section-heading">Sobre el juego</h2>
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+            <div class="creators-cols">
+              <div class="creator-col">
+                <dt>Diseñadores</dt>
+                <div class="pill-row"><a class="pill creator-pill" href="/?designers=R.+Eric+Reuss">R. Eric Reuss</a></div>
+              </div>
+              <div class="creator-col">
+                <dt>Ilustradores</dt>
+                <div class="pill-row">
+                  <a class="pill creator-pill" href="/?artists=Jason+Behnke">Jason Behnke</a>
+                  <a class="pill creator-pill" href="/?artists=Lo%C3%AFc+Billiau">Loïc Billiau</a>
+                  <a class="pill creator-pill" href="/?artists=Kathleen+Fraser">Kathleen Fraser</a>
+                </div>
+              </div>
+            </div>
+          </dl>
+        </div>
+        <div class="reading-section">
+          <div class="bgg-label">Comunidad BGG</div>
+          <div class="bgg-row">
+            <span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span>
+            <span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span>
+            <span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span>
+          </div>
+          <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame mobile">
+    <div class="frame-label">Mobile 390px</div>
+    <div class="surface">
+      <div class="text-col">
+        <div class="reading-section">
+          <h1 class="title">Spirit Island</h1>
+          <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+          colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+          invasores antes de que la isla sea devastada.</p>
+        </div>
+        <hr class="divider">
+        <div class="pill-row">
+          <a class="pill pill-accent" href="#">#CooperativoPuro</a>
+          <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
+        </div>
+        <div class="reading-section">
+          <h2 class="section-heading">Mecánicas</h2>
+          <div class="pill-row">
+            <a class="pill pill-neutral" href="/?mechanics=Colocaci%C3%B3n+de+losetas">Colocación de losetas</a>
+            <a class="pill pill-neutral" href="/?mechanics=Gesti%C3%B3n+de+mano">Gestión de mano</a>
+            <a class="pill pill-neutral" href="/?mechanics=Cooperativo">Cooperativo</a>
+          </div>
+        </div>
+        <div class="reading-section">
+          <h2 class="section-heading">Temáticas</h2>
+          <div class="pill-row">
+            <a class="pill pill-neutral" href="/?themes=Fantas%C3%ADa">Fantasía</a>
+            <a class="pill pill-neutral" href="/?themes=Anti-colonialismo">Anti-colonialismo</a>
+          </div>
+        </div>
+        <div class="reading-section">
+          <h2 class="section-heading">Sobre el juego</h2>
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+            <div class="creators-cols">
+              <div class="creator-col">
+                <dt>Diseñadores</dt>
+                <div class="pill-row"><a class="pill creator-pill" href="/?designers=R.+Eric+Reuss">R. Eric Reuss</a></div>
+              </div>
+              <div class="creator-col">
+                <dt>Ilustradores</dt>
+                <div class="pill-row">
+                  <a class="pill creator-pill" href="/?artists=Jason+Behnke">Jason Behnke</a>
+                  <a class="pill creator-pill" href="/?artists=Lo%C3%AFc+Billiau">Loïc Billiau</a>
+                  <a class="pill creator-pill" href="/?artists=Kathleen+Fraser">Kathleen Fraser</a>
+                </div>
+              </div>
+            </div>
+          </dl>
+        </div>
+        <div class="reading-section">
+          <div class="bgg-label">Comunidad BGG</div>
+          <div class="bgg-row">
+            <span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span>
+            <span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span>
+            <span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span>
+          </div>
+          <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+<script>
+  function setCreatorTone(tone) {
+    document.querySelectorAll('.creator-pill').forEach(el => {
+      el.classList.remove('pill-outline', 'pill-neutral');
+      el.classList.add(tone === 'outline' ? 'pill-outline' : 'pill-neutral');
+    });
+    document.getElementById('toggle-outline').classList.toggle('active', tone === 'outline');
+    document.getElementById('toggle-neutral').classList.toggle('active', tone === 'neutral');
+  }
+  setCreatorTone('outline');
+</script>
+
+</body>
+</html>
