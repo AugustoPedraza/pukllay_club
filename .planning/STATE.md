@@ -5,15 +5,15 @@ current_phase: 01.3
 current_phase_name: Game Detail Layout & Content Accuracy (INSERTED)
 status: executing
 stopped_at: Completed 01.3-04-PLAN.md
-last_updated: "2026-08-31T19:27:21.032Z"
+last_updated: "2026-08-31T21:06:01.935Z"
 last_activity: 2026-08-31
 last_activity_desc: Phase 01.3 execution started
-state_head: 8fef11fee2fe552be0411c53d2e3311fc2fed7c3
+state_head: 5f3115c0515f78efe7c2259b50b4105858a9ec90
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 57
-  completed_plans: 53
+  completed_plans: 57
 milestone_name: milestone
 ---
 
@@ -219,6 +219,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
   - **G-01-4 (major):** Carousel shelves on `/` read as a single vertical list with no visible affordance that there are multiple carousels, and horizontal scroll happens at the window level instead of being scoped to each carousel row. A diagnosis was opened at `.planning/debug/G-01-4-carousel-affordance.md`.
   - **G-01-3 (unresolved):** The carousel prev/next scroll-controls test was skipped by the user ("I don't understand this") — whether the originally-reported "~20 columns forcing horizontal scroll" was a carousel rail or the `#games` grid is still an open question.
   - These two remain the next manual UI/UX pass's starting point. The third item originally grouped here — the 7-item UI audit — was closed 2026-08-21 by quick task 260821-dah (see "Pending Todos" above).
+- Deferred (not a blocker): mobile footer visual weight (UAT G-01.3-1 item 8) — needs its own shell-wide phase, touches every page not just game detail. Also open: sticky title-echo bar's brand-tint/balance question (UAT item 7, partially closed — mechanical separation/contrast fix shipped in 01.3-09, brand treatment still undecided; reported twice now: G-01.2-14 and G-01.3-1).
 
 ### Quick Tasks Completed
 

@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 8/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
+**Plans:** 9/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
 
 Plans:
 
@@ -179,7 +179,7 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8: same files)*
 
-- [ ] 01.3-09-PLAN.md — Mobile sticky title-echo bar: measurable separation, shared shell-width cap, enforced two-theme contrast floors — plus a decision checkpoint routing the two UAT items no sketch resolved (sticky-header brand treatment, mobile footer weight)
+- [x] 01.3-09-PLAN.md — Mobile sticky title-echo bar: measurable separation, shared shell-width cap, enforced two-theme contrast floors — plus a decision checkpoint routing the two UAT items no sketch resolved (sticky-header brand treatment, mobile footer weight)
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
