@@ -34,9 +34,19 @@
   .text-col { display: flex; flex-direction: column; }
   .text-col > .rhythm-32 { margin-top: var(--space-6); }
   .text-col > .rhythm-24 { margin-top: var(--space-4); }
+  /* Round 9 — "hashtags look disconnected" persisted even at 24px both
+     sides. Made the rhythm asymmetric instead of tuning one shared value:
+     tags are commentary ON the description, not an independent block, so
+     they sit CLOSER to what they describe (16px) than to what follows
+     them (24px, unchanged, toward the divider). Proximity now encodes the
+     actual relationship instead of treating both neighbors the same. */
+  .text-col > .rhythm-16 { margin-top: var(--space-3); }
   .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
   h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
   .desc { line-height: 1.5; margin: 0; color: var(--color-text); }
+  .desc-toggle { background: none; border: none; padding: 0; margin-top: 4px; font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); cursor: pointer; }
+  .desc-toggle:hover { text-decoration: underline; }
+  .desc.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
   .divider { height: 1px; background: var(--color-border); border: none; margin: 0; }
 
   .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
@@ -80,24 +90,22 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: C, Rebalanced (v3) ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (A-G, rounds 1-6) in this sketch's README.
-  <strong>Ghost Chip</strong> won over the pill (round 4) and over three body-scale, more
-  "social-hashtag" treatments (round 5). <strong>Round 6</strong> tightened the tag row's surrounding
-  gap from 32px to 24px — but a negative-margin-on-top-of-gap technique broke the rendered layout
-  ("killed the design"). <strong>Round 7 (this version)</strong> fixes it with a plain, deterministic
-  spacing model instead: no shared flex `gap`, every section sets its own explicit
-  <code>margin-top</code>. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active">Winner: C, Rebalanced (v4) ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-8) in this sketch's README.
+  <strong>Round 9 (this version):</strong> composed against the real neighboring interactive element
+  — the description's "Ver más/Ver menos" clamp toggle (click it below) — since production has no
+  accordion at all (verified against the code; only the unrelated filter-modal checklist has one).
+  Spacing made asymmetric: tags sit 16px below the description (closer — they're commentary on it)
+  and keep 24px above the divider (unchanged). Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>What changed (round 7, the fix):</strong> round 6's approach — a shared
-  <code>.text-col { gap: 32px }</code> plus a negative margin on one child to fake a smaller gap —
-  visually broke. Replaced with an explicit, no-negative-numbers model: <code>.text-col</code> now
-  has no shared <code>gap</code> at all — each direct child carries its own
-  <code>.rhythm-24</code> or <code>.rhythm-32</code> class that sets <code>margin-top</code>
-  directly. Same visual target (24px around the tag row, 32px everywhere else), reached without
-  fighting the flex gap algorithm.
+  <strong>What changed (round 9):</strong> "hashtags look disconnected" persisted at a symmetric
+  24px/24px even after round 8's CSS fix. Rather than tune one shared value again, the rhythm is now
+  asymmetric — 16px to the description above (the tags describe it, so they sit closer to it) vs.
+  24px to the divider below (unchanged, they're still a separate zone from what follows). Also added
+  the real "Ver más/Ver menos" toggle so the tag row's position holds up whether the description is
+  collapsed or expanded, not just in the single static state shown before.
 </div>
 
 <div class="compare">
@@ -107,11 +115,14 @@
       <div class="text-col">
         <div class="reading-section">
           <h1 class="title">Spirit Island</h1>
-          <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
-          colonización, combinando poderes elementales con las otras espíritus para expulsar a los
-          invasores antes de que la isla sea devastada.</p>
+          <p class="desc is-clamped" id="desc-d">Encarná a un espíritu ancestral de una isla y
+          defendé tu tierra de la colonización, combinando poderes elementales con las otras
+          espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
+          plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
+          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
+          <button type="button" class="desc-toggle" onclick="toggleDesc('desc-d', this)">Ver más</button>
         </div>
-        <div class="pill-row rhythm-24">
+        <div class="pill-row rhythm-16">
           <a class="pill tag-c" href="#">#CooperativoPuro</a>
           <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
         </div>
@@ -141,11 +152,14 @@
       <div class="text-col">
         <div class="reading-section">
           <h1 class="title">Spirit Island</h1>
-          <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
-          colonización, combinando poderes elementales con las otras espíritus para expulsar a los
-          invasores antes de que la isla sea devastada.</p>
+          <p class="desc is-clamped" id="desc-m">Encarná a un espíritu ancestral de una isla y
+          defendé tu tierra de la colonización, combinando poderes elementales con las otras
+          espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
+          plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
+          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
+          <button type="button" class="desc-toggle" onclick="toggleDesc('desc-m', this)">Ver más</button>
         </div>
-        <div class="pill-row rhythm-24">
+        <div class="pill-row rhythm-16">
           <a class="pill tag-c" href="#">#CooperativoPuro</a>
           <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
         </div>
@@ -174,6 +188,14 @@
 <div id="sketch-tools">
   <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
 </div>
+
+<script>
+  function toggleDesc(id, btn) {
+    var el = document.getElementById(id);
+    var expanded = el.classList.toggle('is-clamped') === false;
+    btn.textContent = expanded ? 'Ver menos' : 'Ver más';
+  }
+</script>
 
 </body>
 </html>

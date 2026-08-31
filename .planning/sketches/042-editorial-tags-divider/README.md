@@ -51,9 +51,19 @@ whitespace rather than deliberate rhythm.
 - **Round 8 — actual fix:** restored the missing CSS block verbatim. The explicit-margin rhythm model
   from round 7 was correct and is kept; the fact grid and Comunidad BGG render with their intended
   styling again.
+- **Round 9 — composed against the real neighbor + asymmetric rhythm:** asked to check the hashtags
+  against "the accordion that today production has" — verified against the code that **no accordion
+  exists on the detail page at all** (only the unrelated filter-modal checklist has one; production's
+  own design doc explicitly retired an accordion here). The real neighboring interactive element is
+  the description's "Ver más/Ver menos" clamp toggle — added it, functional, so the tag row's
+  position can be checked in both collapsed and expanded states. Also: "hashtags look disconnected"
+  persisted at symmetric 24px/24px even after round 8's fix. Made the rhythm asymmetric instead of
+  retuning one shared value — 16px to the description above (tags are commentary ON it, so sit
+  closer) vs. 24px to the divider below (unchanged — still a separate zone from what follows).
 
 ## How to View
-open .planning/sketches/042-editorial-tags-divider/index.html
+open .planning/sketches/042-editorial-tags-divider/index.html — click "Ver más"/"Ver menos" to check
+the tag row's position holds up in both description states.
 
 ## What to Look For
 - Does the 24px gap read as a clear, deliberate beat now, or does it need to go tighter/looser still?
