@@ -70,6 +70,13 @@ whitespace rather than deliberate rhythm.
   (the footer theme-toggle, shrunk to 28px, footer-scoped). `aria-expanded` drives the rotation and
   is the real accessible state; `aria-label` carries "Ver más"/"Ver menos" for screen readers since
   the chevron alone has no text.
+- **Round 11 — stacked, tighter bottom:** "what if are stacked and with less bottom padding?"
+  Hashtags now render one per line (`flex-direction: column`) instead of wrapping horizontally, with
+  a tighter 4px internal gap (vs. the row's usual 6px wrap-gap). The divider below moved from 24px to
+  16px, so the stack sits equally close (16px) to both the description above and the divider below,
+  rather than the previous 16px/24px asymmetry. Scoped to this row only via a new `.tag-stack` class
+  — the fact grid's own pill rows (Diseñadores, Ilustradores, Mecánicas, Temáticas) keep wrapping
+  horizontally, unchanged.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html — click "Ver más"/"Ver menos" to check

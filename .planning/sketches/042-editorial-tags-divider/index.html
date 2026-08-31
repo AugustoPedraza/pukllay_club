@@ -68,6 +68,16 @@
 
   .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
   .pill-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  /* Round 11 — "what if are stacked, with less bottom padding?" One
+     hashtag per line instead of wrapping horizontally; tighter internal
+     gap (4px, tighter than the row's 6px, since a vertical stack doesn't
+     need the same breathing room a wrapped row does) and the divider
+     below pulled from 24px to 16px, matching how close the row now sits
+     to the description above it — same closeness both directions instead
+     of the previous asymmetry. Scoped to the hashtag row only (a plain
+     override, not touched on the shared .pill-row used by the fact
+     grid's Diseñadores/Ilustradores/Mecánicas/Temáticas pills). */
+  .tag-stack { flex-direction: column; align-items: flex-start; gap: 4px; }
   .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
   .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
 
@@ -107,13 +117,13 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: C, Rebalanced (v5) ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (rounds 1-9) in this sketch's README.
-  Round 9 composed against the real "Ver más/Ver menos" toggle (production has no accordion — click
-  it below) and made tag-row spacing asymmetric (16px to the description, 24px to the divider).
-  <strong>Round 10 (this version):</strong> the toggle itself is now a minimal chevron icon instead
-  of text — rotates on expand, no longer a second primary-colored text element competing with the
-  tag row for attention right below it. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active">Winner: C, Rebalanced (v6) ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-10) in this sketch's README.
+  Rounds 9-10 composed against the real "Ver más/Ver menos" toggle (now a rotating chevron) and made
+  tag-row spacing asymmetric. <strong>Round 11 (this version):</strong> hashtags now stack one per
+  line instead of wrapping horizontally, with a tighter 4px gap between them, and the divider below
+  pulled in from 24px to 16px — symmetric closeness on both sides of the stack now, matching the
+  16px it already had toward the description. Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
@@ -137,6 +147,16 @@
   menos" for screen readers even though nothing is shown visually.
 </div>
 
+<div class="cause-note">
+  <strong>What changed (round 11):</strong> "what if are stacked and with less bottom padding?"
+  Hashtags now render one per line (<code>flex-direction: column</code>) instead of wrapping
+  horizontally, with a tighter 4px internal gap — a vertical stack doesn't need the row's usual 6px
+  wrap-gap. The divider below moved from 24px to 16px, so the stack now sits equally close (16px) to
+  both the description above it and the divider below it, rather than the previous asymmetric
+  16px/24px split. Scoped to this row only — the fact grid's own pill rows (Diseñadores,
+  Ilustradores, Mecánicas, Temáticas) still wrap horizontally, unchanged.
+</div>
+
 <div class="compare">
   <div class="frame desktop">
     <div class="frame-label">Desktop</div>
@@ -153,11 +173,11 @@
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
           </button>
         </div>
-        <div class="pill-row rhythm-16">
+        <div class="pill-row tag-stack rhythm-16">
           <a class="pill tag-c" href="#">#CooperativoPuro</a>
           <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
         </div>
-        <hr class="divider rhythm-24">
+        <hr class="divider rhythm-16">
         <div class="reading-section rhythm-32">
           <dl class="spec-list">
             <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
@@ -192,11 +212,11 @@
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
           </button>
         </div>
-        <div class="pill-row rhythm-16">
+        <div class="pill-row tag-stack rhythm-16">
           <a class="pill tag-c" href="#">#CooperativoPuro</a>
           <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
         </div>
-        <hr class="divider rhythm-24">
+        <hr class="divider rhythm-16">
         <div class="reading-section rhythm-32">
           <dl class="spec-list">
             <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
