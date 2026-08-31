@@ -529,45 +529,42 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   class="pk-rhythm-8"
                 />
 
-                <%!-- G-01.2-10 task 3 / 01.3-08: description wrapper's
-                spacing class is its own pk-rhythm-16 section. The two `:if`
-                branches below are the LiveView-native equivalent of sketch
-                042's JS DOM-relocation (description-truncation.md) — the
-                button's position (nested-first-child vs. trailing-sibling)
-                is simply which of two mutually exclusive assign-driven
-                templates rendered, with no client-side node move and no
-                colocated hook. Do not restore the sketch's JS relocation
-                function here; it solved a problem (no server-side state to
-                render from) that does not exist in this app. --%>
+                <%!-- G-01.2-10 task 3 / 01.3-08 / 01.3-10 (gap closure
+                G-01.3-4): description wrapper's spacing class is its own
+                pk-rhythm-16 section. ONE paragraph and ONE sibling toggle
+                button, both driven by @description_expanded — the toggle
+                is never nested inside the paragraph, in either state,
+                which is what fixes G-01.3-4 (see .pk-desc-toggle's own
+                CSS comment for why). This is still the LiveView-native
+                equivalent of sketch 042's JS DOM-relocation
+                (description-truncation.md): server-owned state renders
+                the right markup directly, with no client-side node move
+                and no colocated hook. Do not restore the sketch's JS
+                relocation function here; it solved a problem (no
+                server-side state to render from) that does not exist in
+                this app. --%>
                 <div :if={@game.description} class="pk-reading-section pk-rhythm-16">
                   <div class={["pk-desc-shell", @description_expanded && "is-expanded"]}>
-                    <p :if={!@description_expanded} class="pk-desc is-clamped" id="game-description">
-                      <button
-                        type="button"
-                        phx-click="toggle-description"
-                        class="pk-desc-toggle"
-                        aria-expanded="false"
-                        aria-controls="game-description"
-                        aria-label="Ver más"
-                      >
-                        <span class="pk-desc-toggle-ellipsis" aria-hidden="true">…</span>
-                        <.icon name="hero-chevron-down" class="pk-desc-toggle-icon" />
-                      </button>
-                      {@game.description}
-                    </p>
-                    <p :if={@description_expanded} class="pk-desc" id="game-description">
+                    <p
+                      class={["pk-desc", !@description_expanded && "is-clamped"]}
+                      id="game-description"
+                    >
                       {@game.description}
                     </p>
                     <button
-                      :if={@description_expanded}
                       type="button"
                       phx-click="toggle-description"
-                      class="pk-desc-toggle is-trailing"
-                      aria-expanded="true"
+                      class="pk-desc-toggle min-h-11 min-w-11"
                       aria-controls="game-description"
-                      aria-label="Ver menos"
+                      aria-expanded={to_string(@description_expanded)}
+                      aria-label={if @description_expanded, do: "Ver menos", else: "Ver más"}
                     >
-                      <.icon name="hero-chevron-up" class="pk-desc-toggle-icon" />
+                      <.icon
+                        name={
+                          if @description_expanded, do: "hero-chevron-up", else: "hero-chevron-down"
+                        }
+                        class="pk-desc-toggle-icon"
+                      />
                     </button>
                   </div>
                 </div>
