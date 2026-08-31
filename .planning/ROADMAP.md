@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 7/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
+**Plans:** 8/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
 
 Plans:
 
@@ -175,7 +175,7 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7: same files, same reading column)*
 
-- [ ] 01.3-08-PLAN.md — Justified description at every width plus sketch 042's inline icon-only chevron, rendered from `@description_expanded` instead of the sketch's JS relocation, with a pre-decided fallback for the known mid-word-cut risk
+- [x] 01.3-08-PLAN.md — Justified description at every width plus sketch 042's inline icon-only chevron, rendered from `@description_expanded` instead of the sketch's JS relocation, with a pre-decided fallback for the known mid-word-cut risk
 
 **Wave 9** *(blocked on Wave 8: same files)*
 
