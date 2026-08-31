@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 5/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
+**Plans:** 6/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
 
 Plans:
 
@@ -167,7 +167,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5: refines what 01.3-05 shipped)*
 
-- [ ] 01.3-06-PLAN.md — Creator navigability backend: `?designers=` / `?artists=` as real bounded open-text filter params, GIN indexes, removable active-filter chips (sketch 039's flagged implementation follow-up)
+- [x] 01.3-06-PLAN.md — Creator navigability backend: `?designers=` / `?artists=` as real bounded open-text filter params, GIN indexes, removable active-filter chips (sketch 039's flagged implementation follow-up)
 
 **Wave 7** *(blocked on Wave 6: the creator pills need their filter targets to exist)*
 
