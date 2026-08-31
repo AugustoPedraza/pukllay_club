@@ -444,19 +444,70 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html =~ "Otras opciones que te van a encantar"
     end
 
-    test "the ficha técnica never renders the dead Ilustrador or BGG-ranking rows (D-04)", %{
-      conn: conn
-    } do
-      game = game_fixture()
+    # D-04 (01.2-04) established the rule this test still covers, under
+    # different data: ground every field in the real schema, including its
+    # gaps — never paper over an absence with a placeholder. At the time
+    # this test was written the Ilustrador/BGG-ranking rows were dead
+    # placeholders with no backing schema field, so the correct behaviour
+    # was "never render, ever." D-05/D-06 (01.3-05) add real
+    # artists/bgg_rank columns, so the correct behaviour is now
+    # *conditional*: present when the field is set, absent when it's nil.
+    # The assertion direction below flips accordingly — this is not a
+    # reversal of the design rule, it's the same rule applied to real data
+    # that didn't exist before.
+    test "the Ilustradores and Ranking BGG rows render conditionally on real data, never as a placeholder (D-04, D-05, D-06)",
+         %{conn: conn} do
+      present =
+        game_fixture(%{
+          name: "Con Datos Avanzados",
+          artists: ["Klemens Franz"],
+          bgg_rank: 245,
+          bgg_id: 13,
+          weight_band: "nivel_experto"
+        })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      absent =
+        game_fixture(%{
+          name: "Sin Datos Avanzados",
+          artists: [],
+          bgg_rank: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          weight_band: "descubre_el_hobby"
+        })
 
-      doc = LazyHTML.from_document(html)
-      spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      {:ok, _view, html_present} = live(conn, ~p"/juegos/#{present.id}")
+      {:ok, _view, html_absent} = live(conn, ~p"/juegos/#{absent.id}")
 
-      refute spec_html =~ "Ilustrador"
-      refute spec_html =~ "Puesto en el ranking BGG"
-      refute spec_html =~ "No disponible"
+      spec_present =
+        html_present
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-spec-list")
+        |> LazyHTML.to_html()
+
+      spec_absent =
+        html_absent
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-spec-list")
+        |> LazyHTML.to_html()
+
+      assert spec_present =~ "Ilustradores"
+      assert spec_present =~ "Klemens Franz"
+      assert spec_present =~ "Ranking BGG"
+      assert spec_present =~ "#245"
+
+      refute spec_absent =~ "Ilustradores"
+      refute spec_absent =~ "Ranking BGG"
+
+      # Kept from the original test intact: the old singular "Ilustrador"
+      # placeholder label and the "No disponible" placeholder text must
+      # still never appear, on either game. The rows are now plural and
+      # data-backed (D-05/D-06), not resurrected as the old dead
+      # placeholder this assertion originally guarded against.
+      refute spec_present =~ "Ilustrador:"
+      refute spec_present =~ "No disponible"
+      refute spec_absent =~ "Ilustrador:"
+      refute spec_absent =~ "No disponible"
     end
 
     test "a game with a bgg_id renders a boardgamegeek.com link in the ficha técnica, one without renders none",
@@ -573,6 +624,194 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html3 = render_click(view, "toggle-description", %{})
       refute html3 =~ "is-expanded"
+    end
+  end
+
+  describe "Ilustradores spec row (D-05)" do
+    test "renders a single illustrator name", %{conn: conn} do
+      game = game_fixture(%{artists: ["Klemens Franz"], weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      spec_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      assert spec_html =~ "Ilustradores"
+      assert spec_html =~ "Klemens Franz"
+    end
+
+    test "renders multiple illustrator names comma-joined", %{conn: conn} do
+      game =
+        game_fixture(%{
+          artists: ["Klemens Franz", "Michael Menzel"],
+          weight_band: "ingenio_estratega"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      spec_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      assert spec_html =~ "Klemens Franz, Michael Menzel"
+    end
+
+    test "renders no Ilustradores row when the artists list is empty", %{conn: conn} do
+      game = game_fixture(%{artists: [], weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      spec_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      refute spec_html =~ "Ilustradores"
+    end
+  end
+
+  describe "Avanzado BGG stats group (D-06)" do
+    test "renders no group label and no stat rows when all three fields are nil, while the rest of the spec list still renders",
+         %{conn: conn} do
+      # D-06: the shared fixture default holds a weight value — override it
+      # (along with rating/rank) explicitly, or this "all absent" case
+      # would silently exercise the one-field-present branch instead.
+      game =
+        game_fixture(%{
+          name: "Sin Avanzado",
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          bgg_id: 13,
+          weight_band: "descubre_el_hobby"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      spec_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      refute spec_html =~ "Avanzado"
+      refute spec_html =~ "Peso BGG"
+      refute spec_html =~ "Valoración BGG"
+      refute spec_html =~ "Ranking BGG"
+      assert spec_html =~ "boardgamegeek.com/boardgame/13"
+    end
+
+    test "renders the group label and only the one populated stat row", %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Solo Peso",
+          bgg_weight: 3.2,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          bgg_id: 13,
+          weight_band: "nivel_experto"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      spec_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      assert spec_html =~ "Avanzado"
+      assert spec_html =~ "Peso BGG"
+      assert spec_html =~ "3.2/5"
+      refute spec_html =~ "Valoración BGG"
+      refute spec_html =~ "Ranking BGG"
+    end
+
+    test "renders the group label and all three stat rows, each linking to the game's own BGG page",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Con Todo Avanzado",
+          bgg_weight: 3.2,
+          bgg_rating: 7.4,
+          bgg_rank: 245,
+          bgg_id: 13,
+          weight_band: "ingenio_estratega"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      assert spec_html =~ "Avanzado"
+      assert spec_html =~ "Peso BGG"
+      assert spec_html =~ "3.2/5"
+      assert spec_html =~ "Valoración BGG"
+      assert spec_html =~ "7.4/10"
+      assert spec_html =~ "Ranking BGG"
+      assert spec_html =~ "#245"
+
+      # Peso BGG, Valoración BGG, Ranking BGG, plus the pre-existing
+      # catch-all "Ver ficha completa" row — all four link to the same BGG
+      # page.
+      bgg_links = LazyHTML.query(doc, ".pk-spec-list a[href='https://boardgamegeek.com/boardgame/13']")
+
+      assert Enum.count(bgg_links) == 4
+    end
+
+    # D-06: a game BGG has never ranked renders no ranking row at all — no
+    # placeholder text, no "N/A", no "not ranked" — covered separately from
+    # the all-nil case above since bgg_rank absence is the one field
+    # backed by a research-flagged normalization assumption (BGG's own
+    # "Not Ranked" string must degrade to nil upstream, 01.3-UI-SPEC.md).
+    test "a game with no bgg_rank renders no Ranking BGG row and no placeholder text", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          name: "Sin Ranking",
+          bgg_rank: nil,
+          bgg_id: 13,
+          weight_band: "descubre_el_hobby"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      spec_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
+      refute spec_html =~ "Ranking BGG"
+      refute spec_html =~ "Not Ranked"
+      refute spec_html =~ "No disponible"
+      refute spec_html =~ "N/A"
+    end
+  end
+
+  describe "reading-column section wrapping (D-03, D-04)" do
+    test "a game with mechanics, themes and spec data renders four section wrappers", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          name: "Juego Completo",
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          weight_band: "nivel_experto"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-reading-section") |> Enum.count() == 4
+    end
+
+    test "a game with neither mechanics nor themes renders two section wrappers", %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Juego Sin Mecánicas Ni Temáticas",
+          mechanics: [],
+          themes: [],
+          weight_band: "descubre_el_hobby"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-reading-section") |> Enum.count() == 2
     end
   end
 
