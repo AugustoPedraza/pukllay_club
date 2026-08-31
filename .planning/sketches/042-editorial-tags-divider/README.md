@@ -19,7 +19,7 @@ place?
 Rounds 1-12 converged on placement-before-the-divider, Ghost Chip shape, stacked layout, and
 description-matched typography — but "still breaks the rhythm" persisted even after all of that.
 Round 13 (current) stops retuning the tag row's own spacing/type and instead tests moving its
-*position* in the column: closer to the title (top) vs. the very end of the section (bottom). The
+*position* relative to the title — above it (kicker line) vs. below it (before the description). The
 long-standing open divider question is also resolved this round — removed in both variants.
 
 ## Round History
@@ -85,27 +85,28 @@ long-standing open divider question is also resolved this round — removed in b
   stack's internal gap dropped from 4px to 0, since the matched line-height now supplies the vertical
   rhythm between lines on its own (a separate gap on top would have doubled it up). Shape, color, and
   the hover-reveal interaction are unchanged.
-- **Round 13 — reposition, not retune (current):** "still that hashtag breaks the rhythm... top? or
-  bottom?" Rather than adjust the tag row's own spacing/type again, this round moves *where it sits*:
-  - **Top:** tags move up to right after the title (8px gap, matching the reading-section's own
-    internal rhythm), before the description — introducing the game alongside its name.
-  - **Bottom:** tags move to the very end of the section, after Comunidad BGG — a closing note,
-    closer to how Instagram captions put hashtags last rather than interrupting the read.
+- **Round 13 — reposition relative to the title (current):** "still that hashtag breaks the
+  rhythm... top? or bottom?" — clarified as relative to the title itself, not top-of-page vs.
+  end-of-section (an earlier draft of this round misread it that way and built the wrong comparison;
+  corrected before finalizing). Two variants:
+  - **Above Title:** tags render first, before "Spirit Island" — a kicker line introducing the game,
+    no margin needed above it (first element in the column).
+  - **Below Title:** tags sit right after the title (8px gap, matching the reading-section's own
+    internal rhythm), before the description.
   - **Divider removed in both** ("since we don't have it") — resolves the open question from round 1:
     with section headings already gone (sketch 040) and rhythm alone doing the separating work, the
     `.pk-divider` line no longer has a clear job on this page.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html — click "Ver más"/"Ver menos" to check
-the tag row's position holds up in both description states (Top variant only, since in Bottom the
-toggle no longer neighbors the tags).
+the tag row's position holds up against the description toggle in both variants.
 
 ## What to Look For
-- Top vs. Bottom: does either finally resolve "breaks the rhythm," or does the tag row need a
-  fundamentally different treatment regardless of where it sits in the column?
-- Top: do hashtags introducing the game (before its own description) read as premature, or does
-  pairing them with the title work?
-- Bottom: does ending the section on hashtags feel like a deliberate closing note, or does it read as
-  an afterthought tacked onto Comunidad BGG?
+- Above vs. Below: does either finally resolve "breaks the rhythm," or does the tag row need a
+  fundamentally different treatment regardless of where it sits relative to the title?
+- Above: do hashtags introducing the game before its own name read as a natural kicker, or as
+  disorienting (leading with tags before you even know what game this is)?
+- Below: does pairing tags with the title (both "about this game," ahead of the prose) work better
+  than commentary-on-the-description did?
 - Now that the divider is gone in both, does the description→facts→BGG transition still read clearly
   from rhythm alone, or is something missing without it?

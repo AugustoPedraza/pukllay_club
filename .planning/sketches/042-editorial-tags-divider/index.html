@@ -81,29 +81,29 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active" onclick="showVariant('top')">Top: Closer to Title</button>
-  <button class="variant-tab" onclick="showVariant('bottom')">Bottom: End of Section</button>
-  <span class="caption">Round 13 — "still breaks the rhythm... top? or bottom?" Repositioning
-  instead of retuning spacing again. <strong>Top:</strong> hashtags move up, right after the title
-  (8px gap), before the description — the tags introduce the game alongside its name.
-  <strong>Bottom:</strong> hashtags move to the very end, after Comunidad BGG — closer to how
-  Instagram captions put hashtags last, a closing note rather than interrupting the reading flow.
-  <strong>The divider is removed in both</strong> ("since we don't have it") — full round history
-  (1-12) in this sketch's README. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab" onclick="showVariant('above')">Above Title</button>
+  <button class="variant-tab active" onclick="showVariant('below')">Below Title</button>
+  <span class="caption">Round 13 (corrected) — "top? or bottom?" meant relative to the title itself,
+  not top-of-page vs. end-of-section. <strong>Above Title:</strong> hashtags render first, before
+  "Spirit Island" — a kicker line introducing the game. <strong>Below Title:</strong> hashtags sit
+  right after the title (8px gap), before the description. <strong>The divider is removed in
+  both</strong> ("since we don't have it") — full round history (1-12) in this sketch's README.
+  Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
   <strong>What changed (round 13):</strong> stacking + type-matching (rounds 11-12) didn't resolve
   "breaks the rhythm" — so instead of tuning the tag row's own spacing/type again, this round moves
-  its *position* in the column. Both variants keep the established Ghost Chip treatment (transparent
-  at rest, description-matched typography, stacked) unchanged — only where it sits changes. The
-  `.pk-divider` this page has used since sketch 034 is dropped entirely in both: with the section
+  its *position* relative to the title. Both variants keep the established Ghost Chip treatment
+  (transparent at rest, description-matched typography, stacked) unchanged — only where it sits
+  changes. The `.pk-divider` this page has used since sketch 034 is dropped entirely in both: with
+  the section
   headings already gone (round 040) and the rhythm now doing the separating work on its own, a
   physical rule line no longer has a clear job here.
 </div>
 
 <!-- ========================= TOP ========================= -->
-<div class="variant active" id="variant-top">
+<div class="variant active" id="variant-below">
   <div class="compare">
     <div class="frame desktop">
       <div class="frame-label">Desktop — tags right after the title</div>
@@ -188,21 +188,25 @@
   </div>
 </div>
 
-<!-- ========================= BOTTOM ========================= -->
-<div class="variant" id="variant-bottom">
+<!-- ========================= ABOVE TITLE ========================= -->
+<div class="variant" id="variant-above">
   <div class="compare">
     <div class="frame desktop">
-      <div class="frame-label">Desktop — tags at the very end, after Comunidad BGG</div>
+      <div class="frame-label">Desktop — tags before the title (kicker line)</div>
       <div class="surface">
         <div class="text-col">
-          <div class="reading-section">
+          <div class="pill-row tag-stack">
+            <a class="pill tag-c" href="#">#CooperativoPuro</a>
+            <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
+          </div>
+          <div class="reading-section rhythm-8">
             <h1 class="title">Spirit Island</h1>
-            <p class="desc is-clamped" id="desc-bot-d">Encarná a un espíritu ancestral de una isla y
+            <p class="desc is-clamped" id="desc-abv-d">Encarná a un espíritu ancestral de una isla y
             defendé tu tierra de la colonización, combinando poderes elementales con las otras
             espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
             plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
             que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-            <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-bot-d', this)">
+            <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-abv-d', this)">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
             </button>
           </div>
@@ -221,10 +225,6 @@
             <div class="bgg-label">Comunidad BGG</div>
             <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
             <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
-          <div class="pill-row tag-stack rhythm-24">
-            <a class="pill tag-c" href="#">#CooperativoPuro</a>
-            <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
           </div>
         </div>
       </div>
@@ -233,14 +233,18 @@
       <div class="frame-label">Mobile 390px</div>
       <div class="surface">
         <div class="text-col">
-          <div class="reading-section">
+          <div class="pill-row tag-stack">
+            <a class="pill tag-c" href="#">#CooperativoPuro</a>
+            <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
+          </div>
+          <div class="reading-section rhythm-8">
             <h1 class="title">Spirit Island</h1>
-            <p class="desc is-clamped" id="desc-bot-m">Encarná a un espíritu ancestral de una isla y
+            <p class="desc is-clamped" id="desc-abv-m">Encarná a un espíritu ancestral de una isla y
             defendé tu tierra de la colonización, combinando poderes elementales con las otras
             espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
             plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
             que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-            <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-bot-m', this)">
+            <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-abv-m', this)">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
             </button>
           </div>
@@ -259,10 +263,6 @@
             <div class="bgg-label">Comunidad BGG</div>
             <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
             <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
-          <div class="pill-row tag-stack rhythm-24">
-            <a class="pill tag-c" href="#">#CooperativoPuro</a>
-            <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
           </div>
         </div>
       </div>
