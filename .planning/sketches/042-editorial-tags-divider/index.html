@@ -7,17 +7,13 @@
 <link rel="stylesheet" href="../themes/default.css">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; padding-top: 100px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+  body { margin: 0; padding-top: 90px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
 
   #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
-  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
-  .variant-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; }
   .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
   #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
   #variant-nav .caption strong { color: var(--color-text); }
-
-  .variant { display: none; }
-  .variant.active { display: block; }
 
   .cause-note { max-width: 900px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
   .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
@@ -35,7 +31,6 @@
   .text-col { display: flex; flex-direction: column; }
   .text-col > .rhythm-8 { margin-top: var(--space-2); }
   .text-col > .rhythm-16 { margin-top: var(--space-3); }
-  .text-col > .rhythm-24 { margin-top: var(--space-4); }
   .text-col > .rhythm-32 { margin-top: var(--space-6); }
   .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
   h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
@@ -47,8 +42,13 @@
   .desc.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 
   .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
-  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .tag-stack { flex-direction: column; align-items: flex-start; gap: 0; }
+  /* Round 14 — back to a wrapping row instead of round 11's stack, now
+     that the tags sit next to the title (round 13) rather than as
+     commentary under the description. Gap widened from the stack's 4px
+     to 10px: at the description-matched 16px type (round 12), the old
+     6px row-gap (tuned for the pill's original tiny 11px text) reads too
+     tight next to full body-size text. */
+  .pill-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
   .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
 
@@ -81,189 +81,101 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab" onclick="showVariant('above')">Above Title</button>
-  <button class="variant-tab active" onclick="showVariant('below')">Below Title</button>
-  <span class="caption">Round 13 (corrected) — "top? or bottom?" meant relative to the title itself,
-  not top-of-page vs. end-of-section. <strong>Above Title:</strong> hashtags render first, before
-  "Spirit Island" — a kicker line introducing the game. <strong>Below Title:</strong> hashtags sit
-  right after the title (8px gap), before the description. <strong>The divider is removed in
-  both</strong> ("since we don't have it") — full round history (1-12) in this sketch's README.
-  Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active">Winner: Below Title, Row Layout ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-13) in this sketch's README.
+  Round 13 settled position: hashtags right after the title, before the description ("Below" beat
+  "Above" — a kicker line before the game's own name read as disorienting). <strong>Round 14 (this
+  version):</strong> back to a wrapping row instead of round 11's vertical stack — the row shape
+  suits sitting beside the title better than a multi-line stack does. Gap widened to 10px for the
+  now-larger, description-matched type. No divider (removed round 13). Toggle 🌙/☀ to check both
+  themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>What changed (round 13):</strong> stacking + type-matching (rounds 11-12) didn't resolve
-  "breaks the rhythm" — so instead of tuning the tag row's own spacing/type again, this round moves
-  its *position* relative to the title. Both variants keep the established Ghost Chip treatment
-  (transparent at rest, description-matched typography, stacked) unchanged — only where it sits
-  changes. The `.pk-divider` this page has used since sketch 034 is dropped entirely in both: with
-  the section
-  headings already gone (round 040) and the rhythm now doing the separating work on its own, a
-  physical rule line no longer has a clear job here.
+  <strong>What changed (round 14):</strong> "below looks better, but now could take full width (row)
+  instead of be stacked." Reverted `.tag-stack`'s `flex-direction: column` back to the base
+  `.pill-row`'s horizontal wrap. The row's gap moved from the stack's tight 4px to 10px — the 6px the
+  row originally shipped with (sketch 042 round 1) was tuned for the pill's tiny 11px text; at the
+  16px description-matched type (round 12), that gap read too cramped for full-size text.
 </div>
 
-<!-- ========================= TOP ========================= -->
-<div class="variant active" id="variant-below">
-  <div class="compare">
-    <div class="frame desktop">
-      <div class="frame-label">Desktop — tags right after the title</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="reading-section">
-            <h1 class="title">Spirit Island</h1>
-          </div>
-          <div class="pill-row tag-stack rhythm-8">
-            <a class="pill tag-c" href="#">#CooperativoPuro</a>
-            <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
-          </div>
-          <div class="reading-section rhythm-16">
-            <p class="desc is-clamped" id="desc-top-d">Encarná a un espíritu ancestral de una isla y
-            defendé tu tierra de la colonización, combinando poderes elementales con las otras
-            espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
-            plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
-            que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-            <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-top-d', this)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
-            </button>
-          </div>
-          <div class="reading-section rhythm-32">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section rhythm-32">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
+<div class="compare">
+  <div class="frame desktop">
+    <div class="frame-label">Desktop</div>
+    <div class="surface">
+      <div class="text-col">
+        <div class="reading-section">
+          <h1 class="title">Spirit Island</h1>
         </div>
-      </div>
-    </div>
-    <div class="frame mobile">
-      <div class="frame-label">Mobile 390px</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="reading-section">
-            <h1 class="title">Spirit Island</h1>
-          </div>
-          <div class="pill-row tag-stack rhythm-8">
-            <a class="pill tag-c" href="#">#CooperativoPuro</a>
-            <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
-          </div>
-          <div class="reading-section rhythm-16">
-            <p class="desc is-clamped" id="desc-top-m">Encarná a un espíritu ancestral de una isla y
-            defendé tu tierra de la colonización, combinando poderes elementales con las otras
-            espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
-            plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
-            que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-            <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-top-m', this)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
-            </button>
-          </div>
-          <div class="reading-section rhythm-32">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section rhythm-32">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
+        <div class="pill-row rhythm-8">
+          <a class="pill tag-c" href="#">#CooperativoPuro</a>
+          <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
+        </div>
+        <div class="reading-section rhythm-16">
+          <p class="desc is-clamped" id="desc-d">Encarná a un espíritu ancestral de una isla y
+          defendé tu tierra de la colonización, combinando poderes elementales con las otras
+          espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
+          plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
+          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
+          <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-d', this)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
+          </button>
+        </div>
+        <div class="reading-section rhythm-32">
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+            <div class="fact-cols">
+              <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+              <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+              <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+              <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+            </div>
+          </dl>
+        </div>
+        <div class="reading-section rhythm-32">
+          <div class="bgg-label">Comunidad BGG</div>
+          <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+          <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-<!-- ========================= ABOVE TITLE ========================= -->
-<div class="variant" id="variant-above">
-  <div class="compare">
-    <div class="frame desktop">
-      <div class="frame-label">Desktop — tags before the title (kicker line)</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="pill-row tag-stack">
-            <a class="pill tag-c" href="#">#CooperativoPuro</a>
-            <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
-          </div>
-          <div class="reading-section rhythm-8">
-            <h1 class="title">Spirit Island</h1>
-            <p class="desc is-clamped" id="desc-abv-d">Encarná a un espíritu ancestral de una isla y
-            defendé tu tierra de la colonización, combinando poderes elementales con las otras
-            espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
-            plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
-            que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-            <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-abv-d', this)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
-            </button>
-          </div>
-          <div class="reading-section rhythm-32">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section rhythm-32">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
+  <div class="frame mobile">
+    <div class="frame-label">Mobile 390px</div>
+    <div class="surface">
+      <div class="text-col">
+        <div class="reading-section">
+          <h1 class="title">Spirit Island</h1>
         </div>
-      </div>
-    </div>
-    <div class="frame mobile">
-      <div class="frame-label">Mobile 390px</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="pill-row tag-stack">
-            <a class="pill tag-c" href="#">#CooperativoPuro</a>
-            <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
-          </div>
-          <div class="reading-section rhythm-8">
-            <h1 class="title">Spirit Island</h1>
-            <p class="desc is-clamped" id="desc-abv-m">Encarná a un espíritu ancestral de una isla y
-            defendé tu tierra de la colonización, combinando poderes elementales con las otras
-            espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
-            plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
-            que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-            <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-abv-m', this)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
-            </button>
-          </div>
-          <div class="reading-section rhythm-32">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section rhythm-32">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
+        <div class="pill-row rhythm-8">
+          <a class="pill tag-c" href="#">#CooperativoPuro</a>
+          <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
+        </div>
+        <div class="reading-section rhythm-16">
+          <p class="desc is-clamped" id="desc-m">Encarná a un espíritu ancestral de una isla y
+          defendé tu tierra de la colonización, combinando poderes elementales con las otras
+          espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
+          plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
+          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
+          <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-m', this)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
+          </button>
+        </div>
+        <div class="reading-section rhythm-32">
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+            <div class="fact-cols">
+              <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+              <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+              <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+              <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+            </div>
+          </dl>
+        </div>
+        <div class="reading-section rhythm-32">
+          <div class="bgg-label">Comunidad BGG</div>
+          <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+          <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
         </div>
       </div>
     </div>
@@ -275,12 +187,6 @@
 </div>
 
 <script>
-  function showVariant(id) {
-    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('variant-' + id).classList.add('active');
-    event.target.classList.add('active');
-  }
   function toggleDesc(id, btn) {
     var el = document.getElementById(id);
     var expanded = el.classList.toggle('is-clamped') === false;

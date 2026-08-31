@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: null
+winner: "Below Title, row layout (10px gap), description-matched type, no divider"
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -15,12 +15,13 @@ Mecánicas). User's suggestion: give it a real "category section," or move it be
 Also open since sketch 040 dropped "Sobre el juego"'s own heading: does the divider still earn its
 place?
 
-## Status: round 13 in progress
-Rounds 1-12 converged on placement-before-the-divider, Ghost Chip shape, stacked layout, and
-description-matched typography — but "still breaks the rhythm" persisted even after all of that.
-Round 13 (current) stops retuning the tag row's own spacing/type and instead tests moving its
-*position* relative to the title — above it (kicker line) vs. below it (before the description). The
-long-standing open divider question is also resolved this round — removed in both variants.
+## Winner
+Hashtags sit right after the title (8px gap), before the description — "Below Title" beat "Above
+Title" (a kicker line before the game's own name read as disorienting). Rendered as a wrapping row
+(reverted from round 11's vertical stack — the row shape suits sitting beside the title better),
+10px gap between pills (widened from the stack's 4px — the type is now description-scale, needs more
+air than the pill's original tiny-text gap gave it). No divider (removed round 13 — no clear job left
+once section headings were already dropped in sketch 040).
 
 ## Round History
 - **Round 1 — placement:** A (move before divider, still bare) picked over B (labelled "Categorías,"
@@ -108,5 +109,8 @@ the tag row's position holds up against the description toggle in both variants.
   disorienting (leading with tags before you even know what game this is)?
 - Below: does pairing tags with the title (both "about this game," ahead of the prose) work better
   than commentary-on-the-description did?
-- Now that the divider is gone in both, does the description→facts→BGG transition still read clearly
-  from rhythm alone, or is something missing without it?
+- Now that the divider is gone, does the description→facts→BGG transition still read clearly from
+  rhythm alone, or is something missing without it?
+- **Round 14 — row, not stack:** "below looks better, but now could take full width (row) instead of
+  be stacked." Reverted to the base `.pill-row`'s horizontal wrap; gap widened from 4px to 10px since
+  the pill's original 6px row-gap was tuned for 11px text, not the 16px description-matched type.
