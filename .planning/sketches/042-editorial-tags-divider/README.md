@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: "Below Title, row (10px gap), text-sm (14px), no divider, sibling chevron (align-self: flex-end), 16px to fact grid"
+winner: "Below Title, row (10px gap), text-sm (14px), justified, no divider, 16px to fact grid. Chevron: Variant E — icon-only, truly inline on the truncated text's last line via a float trick (not nested in the clamped <p>), real text-overflow ellipsis. Known deferred issue: '…'/chevron ink alignment not fully resolved in the static mockup — re-tune against the real font at implementation time (see round 27)."
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -99,10 +99,35 @@ once section headings were already dropped in sketch 040).
     `.pk-divider` line no longer has a clear job on this page.
 
 ## How to View
-open .planning/sketches/042-editorial-tags-divider/index.html — click "Ver más"/"Ver menos" to check
-the tag row's position holds up against the description toggle in both variants.
+open .planning/sketches/042-editorial-tags-divider/index.html — click the A/B/C/D tabs, then click
+"Ver más"/"Ver menos" in each to compare the chevron's collapsed vs. expanded position.
 
-## What to Look For
+## What to Look For (round 21)
+- **D vs. A/B/C:** does dropping the circular icon-button chrome for a plain text+chevron label
+  finally read as "part of the text," or does it now compete with the description at too-similar a
+  weight (the exact thing round 15 stepped hashtags down in size to avoid, applied to a different
+  element)?
+- This reopens round 10's icon-only decision — confirm or reject explicitly rather than letting it
+  drift; if D wins, round 10's rationale (reduce colored-text competing with the tag row) needs a
+  fresh answer for why a *muted-gray* label is fine where a *primary-colored* one wasn't.
+
+## What to Look For (round 20)
+- **A vs. B vs. C:** now that C has a real ellipsis + a plain non-overlapping trigger (the
+  researched standard), does it read as connected enough on its own, or does A's overlap-on-text
+  still earn its extra CSS complexity?
+- Open question from research, not yet decided: should the chevron gain a visible text label
+  ("Ver más ▾" instead of icon-only) and grow to a 44px visual touch target? That would reverse
+  round 10's icon-only call — flag a preference either way.
+
+## What to Look For (round 19)
+- **A vs. B:** does sitting directly on the truncated text (A) actually read as more connected than
+  proximity alone (B), or does the fade gradient feel like an extra visual trick rather than a fix?
+- Check both viewports — does the fade width in A ever clip a real word rather than trailing
+  whitespace, given the description text is fixed but line-wrap differs at 700px vs. 390px?
+- Expand and collapse a few times in each — does the button's position jump distractingly between
+  states, or does the transition feel continuous?
+
+## What to Look For (earlier rounds)
 - Above vs. Below: does either finally resolve "breaks the rhythm," or does the tag row need a
   fundamentally different treatment regardless of where it sits relative to the title?
 - Above: do hashtags introducing the game before its own name read as a natural kicker, or as
@@ -130,9 +155,166 @@ the tag row's position holds up against the description toggle in both variants.
   to the text. Moved inside the `<p>` as its last inline child (flush with the last visible word, the
   common "Read more ›" pattern). "A lot of space from the description to the next part" — the fact
   grid's margin-top dropped from 32px to 16px (kept in round 18).
-- **Round 18 — revert the nesting, real bug fix (current):** "I can't see the chevron. Also still
+- **Round 18 — revert the nesting, real bug fix:** "I can't see the chevron. Also still
   touching any part of the text makes the behaviour show/hidden." Root cause: nesting an interactive
   `<button>` inside a `-webkit-line-clamp` paragraph's `display: -webkit-box` context is a
   known-fragile combination — icon disappeared, click hit-area spread across the whole clamped block.
   Reverted to a plain sibling button (round 16's shape), `align-self: flex-end` for position, tight
   `margin-top: 0` so it still reads as connected without the broken nesting trick.
+- **Round 19 — better chevron integration (current):** the crash fix in round 18 left a new design
+  gap — `align-self: flex-end` parks the button at the *container's* right edge, which rarely lines
+  up with where the clamped text's own last visible word actually ends, so it read as disconnected
+  again, just no longer broken. Two variants, both keeping the safe sibling-button shape (neither
+  re-nests inside the `<p>`):
+  - **A — Overlay fade:** the button is absolutely positioned over a new `.desc-shell` wrapper so it
+    visually overlaps the clamped text's last line, with a gradient fade (matching the surface
+    background) standing in for a truncation ellipsis — reads as one "...text ⌄" unit, the standard
+    "Read more" pattern. Drops out of the overlay into normal right-aligned flow once expanded, since
+    there's nothing left to truncate.
+  - **B — Baseline tuck:** no absolute positioning — the sibling button is pulled up with a small
+    negative margin to overlap the last line's own line-height slack, and moved to the left edge
+    (`flex-start`) so it continues the reading direction instead of jumping to the opposite corner.
+    Simpler and more conservative than A, but doesn't sit on the actual text the way A does.
+- **Round 19.1 — post-feedback fixes (current):** "on A I can't see it" — a CSS `::after`
+  pseudo-element is generated as its host's last child for paint order, so variant A's fade
+  gradient (also absolutely positioned, no `z-index`) was painting directly on top of the chevron
+  and hiding it completely; fixed with an explicit `z-index` on the button. "the text must to
+  justified instead of be aligned to left" — added `text-align: justify` to `.desc`, which also
+  changes the geometry both variants depend on: every line but the last now stretches edge-to-edge,
+  so trailing whitespace only ever exists on the right (the last line). "on the B is aligned to
+  left" — B's original `flex-start` placement no longer related to where the text actually ends
+  once justified, so it's flipped to `flex-end` to match A's side.
+- **Round 19.2 — soften the fade (current):** "A looks better, but need softer integration of fade."
+  The 2-stop linear gradient held a flat, fully-opaque rectangle for its last third, so it read as a
+  hard-edged box dropped onto the text — visible straight edges cut across the last line's own
+  ascenders/descenders. Replaced with a radial gradient anchored at the corner (no straight edges at
+  all, fading outward in every direction — the same vignette technique mobile apps use for corner
+  "more" affordances), sized slightly larger so the falloff has more room to happen gradually.
+- **Round 20 — industry-practice research (current):** "need more standard industry practices for
+  this, research it." Researched the CSS-Tricks canonical text-fade/read-more pattern and
+  uxpatterns.dev's expandable-text guidance. Findings:
+  1. A gradient fade over a hard cutoff is the standard workaround for `max-height`-based
+     truncation, which has no native ellipsis available — it is *not* the standard companion to
+     `-webkit-line-clamp`, which already produces a real ellipsis character via
+     `text-overflow: ellipsis`. Added that property to all three variants' collapsed state, so
+     truncation now shows an actual "…" instead of a hard cut a custom fade had to compensate for.
+  2. The standard trigger placement is a clearly separate element — inline-after or its own line —
+     not overlapping the truncated text. Added **Variant C: Standard (Ellipsis + Below)**, pairing
+     the real ellipsis with a plain non-overlapping trigger positioned just below with a small
+     positive gap: the shape production sites (Medium, App Store descriptions, etc.) actually ship.
+  3. Sources recommend pairing the icon with a visible text label ("don't rely on icons alone") and
+     hitting a 44×44px touch target. Both cut directly against this project's round-10 decision to
+     go icon-only at a 26px visual size (justified there against this app's own precedent for small
+     de-emphasized controls, e.g. the 28px footer theme toggle). Not silently overridden — flagged
+     back to the user as an open decision rather than reopened unilaterally. Applied the accessibility
+     win available without touching the visual call: every variant's button keeps its 26px visible
+     size but gained an invisible `::before` hit-area expansion (`inset: -9px`, ~44px effective
+     tappable region) plus `aria-controls` linking the button to its paragraph.
+
+  Sources:
+  - [Text Fade Out / Read More Link — CSS-Tricks](https://css-tricks.com/text-fade-read-more/)
+  - [Expandable Text Pattern — UX Patterns for Developers](https://uxpatterns.dev/patterns/content-management/expandable-text)
+  - [How to use CSS line-clamp to trim lines of text — LogRocket](https://blog.logrocket.com/css-line-clamp/)
+  - [Line Clampin' (Truncating Multiple Line Text) — CSS-Tricks](https://css-tricks.com/line-clampin/)
+- **Round 21 — strip the button chrome, not the distance (current):** "still the arrow to
+  expand/collapse looks so disconnected of text" — after three straight rounds (18, 19, 20) of
+  proximity fixes (overlap-on-text, negative-margin tuck, standard ellipsis+below) that all *kept a
+  circular ghost-icon button*, the same complaint kept recurring. Diagnosis: the chrome itself — a
+  distinct circle shape with its own hover halo — reads as a separate UI widget regardless of how
+  close it sits; proximity fixes couldn't fix a visual-language mismatch. **Variant D — Inline text
+  link:** strips the circle and fixed square size entirely; renders as a small text label
+  ("Ver más"/"Ver menos") plus a shrunk chevron, set in the paragraph's own muted secondary tone, so
+  it reads as continuing the sentence instead of a bolted-on control. This directly applies round
+  20's research finding #3 (pair icon with a visible text label) and reopens round 10's icon-only
+  decision — not changed silently: A/B/C stay available in case icon-only should be kept instead.
+- **Round 22 — true inline via the float trick, verified live in Chrome (current):** "what if we
+  show the chevron after the …, with the correct alignment of the paragraph?" Built **Variant E:
+  True Inline (Float)** — a different technique from A-D, since none of them can put the trigger
+  literally inline on the truncated text's own last line: no `-webkit-line-clamp` at all, just
+  `max-height: 72px; overflow: hidden;` with the toggle **floated as the paragraph's own first
+  child**, pushed down 48px (2 line-heights) via `margin-top` so lines 1-2 render untouched and only
+  line 3 wraps around it — landing "…Ver más ⌄" literally inline after the last visible words, the
+  actual thing asked for. This is a different, decades-old technique from round 17's crash
+  (float-in-a-plain-paragraph, not an interactive flex child inside `-webkit-line-clamp`'s
+  `-webkit-box` mode), so it doesn't repeat that failure.
+
+  Given this sketch's history of "looks broken" rounds from CSS guessed without a render check
+  (rounds 6, 17), this one was opened in a real Chrome tab and iterated against actual screenshots
+  before presenting. That caught three real defects a static read of the CSS would have missed:
+  1. **Justify + float on a sparse line = huge gap.** At 360px, only two words fit beside the float
+     on the truncated line, and since more (hidden) text still follows past the visible cutoff, the
+     browser never treats that line as the paragraph's true last line — so `text-align: justify`
+     kept stretching it, producing one grotesquely wide gap between the two words. Fixed by setting
+     `text-align: left` specifically for this variant's *collapsed* state only (the expanded full
+     text, which has a real last line, keeps justify like every other variant).
+  2. **Toggling stranded the button after one round-trip.** The button needs to physically move —
+     staying inline-floated only works against a *known* 2-line offset, which doesn't exist for the
+     expanded state's arbitrary-length last line — so JS relocates it: out to a normal trailing
+     sibling on expand, back inside the `<p>` as a float on collapse. The first version of that
+     logic branched on the button's *current* parent, which only ever matched the first move and
+     silently no-op'd on the way back — leaving the button stranded as a flex child of
+     `.desc-shell` (where `float` is ignored per spec) on every subsequent collapse. Fixed by
+     branching on the *target* state instead, scoped to a `.desc-toggle-inline` marker class so it
+     can't affect A-D.
+  3. **The "…" prefix silently vanished after the first toggle.** `toggleDesc`'s shared label-update
+     line unconditionally wrote plain "Ver más"/"Ver menos", overwriting Variant E's baked-in
+     "… Ver más" the first time it ran. Fixed by branching the label text on that same marker class.
+
+  Known tradeoff, disclosed rather than hidden: unlike every other variant (all real
+  `-webkit-line-clamp`, which only activates when text actually overflows N lines), this
+  `max-height` approach always reserves line-3 space for the float regardless of length — a short
+  description that fits in 1-2 lines would still show a dangling "…Ver más" with nothing to reveal.
+  The real component would need to only render this markup when the description is known to exceed
+  3 lines (likely already necessary server-side logic, but a real constraint this technique adds
+  that A-D don't have).
+- **Round 23 — drop the label, icon-only (current):** "no usar el 'ver mas'. Use just the icon."
+  Round 22's Variant E solved the positioning problem (genuinely inline on the truncated text) but
+  still carried round 20/21's "pair icon with a text label" idea forward ("…Ver más ⌄"). This
+  settles that open question from round 21's "What to Look For": icon-only wins, once paired with
+  real inline placement rather than proximity-only fixes — the "Ver más"/"Ver menos" wording is
+  removed from Variant E, leaving just the "…" (a real truncation cue, hidden once expanded since
+  there's nothing left to hide) plus the chevron alone. Verified live in Chrome again after the
+  change: collapsed/expanded round-trip, `aria-label`, and the ellipsis's visibility toggle all
+  still behave correctly.
+- **Round 24 — justify back on, verified it no longer breaks (current):** "Be sure the E variant
+  has justified alignment, included the ... and arrow." Round 22 had forced `text-align: left` for
+  Variant E's collapsed state specifically because justify produced a huge gap on a 360px line where
+  only 1-2 real words fit beside the float. That bug came from the float's *width* (the old
+  "…Ver más ⌄" label ate most of the line), not from justify itself — round 23 already shrank the
+  float to icon-only ("…⌄"), leaving far more width for real words. Re-enabled
+  `text-align: justify` on Variant E's collapsed state and re-verified live in Chrome at both
+  viewports: enough words now fit per line for justify to read normally, no repeat of the round-22
+  gap. The expanded state was never affected (it already justified normally, having a real last
+  line). Confirmed via direct DOM inspection that both collapsed and expanded states report
+  `text-align: justify` and the toggle still round-trips correctly.
+- **Round 25 — fix the "…"/chevron vertical alignment (current):** "3 dots and chevron aren't
+  aligned" (screenshot showed the chevron sitting visibly lower than the "…"). Measured both via
+  `getBoundingClientRect()` in a live Chrome tab rather than guessing: the ellipsis span and the
+  svg were already centered on each other correctly *inside* the button (identical centerY), but
+  the whole button sat ~2-3px above the real text's own line box — floats are positioned at the top
+  of their line per CSS float rules, with no baseline alignment against surrounding inline text the
+  way a normal (non-floated) inline element gets. Nudged the float's `margin-top` from 48px to 50px
+  to close that exact measured gap; re-measured after the fix and confirmed the button's box lands
+  within 1px of the real text's box at both desktop and mobile widths.
+- **Round 26 — the actual ink still didn't line up (current):** "Alignment still is broken,"
+  with a screenshot showing the same gap. Round 25's fix only matched the *bounding boxes*
+  (`getBoundingClientRect` centerY) of the ellipsis span and the svg — not their *ink*. A period's
+  glyph sits low within its own em box, near the baseline, while the svg's chevron path is drawn
+  dead-center in its own box; centering the two boxes on each other left the visible glyphs offset
+  even though the boxes matched. Confirmed this time with cropped, upscaled screenshots (not just
+  numeric rects) showing the chevron sitting visibly below the dots. Nudged the svg with
+  `transform: translateY()` and iterated against re-cropped screenshots at -2px/-3px/-4px until the
+  two inks actually lined up visually — -4px was the closest match, confirmed at both desktop and
+  mobile widths (a screenshot mis-measurement first suggested a mobile-specific gap, but that was a
+  wrong crop region — recomputing with the tab's real viewport scale showed mobile matches desktop).
+  Re-verified the collapse/expand toggle still round-trips cleanly on both frames after the change.
+- **Round 27 — stopping here, known issue deferred to implementation (current):** "Still si [sic]
+  the same, but I don't want to expend more cycles on this (I'll do it on the final
+  implementation)." Round 26's `translateY(-4px)` nudge did not fully resolve the "…"/chevron
+  vertical-ink mismatch from the user's perspective — closing this precisely from a static HTML
+  mockup hit diminishing returns (font-rendering/glyph-metrics tuning is exactly the kind of thing
+  that's faster to eyeball directly against the real Phoenix-rendered font stack than to keep
+  iterating blind against a sketch). **Deferred, not abandoned:** when this pattern is implemented
+  for real, re-check the `.desc-toggle svg`'s `transform: translateY()` value (currently -4px)
+  against the actual shipped font rather than assuming the sketch's value transfers as-is — different
+  font metrics (weight, hinting, the real `--font-sans` stack) can shift where a period's ink sits.
