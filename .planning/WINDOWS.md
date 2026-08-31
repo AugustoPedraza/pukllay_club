@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 15
+open_count: 16
 waived_count: 0
 fixed_count: 0
-total_count: 15
-last_updated: 2026-08-30T23:17:30.601Z
+total_count: 16
+last_updated: 2026-08-31T00:12:03.091Z
 ---
 
 # Broken Windows Ledger
@@ -30,6 +30,7 @@ last_updated: 2026-08-30T23:17:30.601Z
 | 13 | 01.2 | unmet-truth | lib/pukllay_club_web/live/catalog_live/index.ex |  | Active-filters chip row's visual weight balance vs the Resultados heading (sketch 029 Round 2's 'clearly secondary' intent) is asserted only via class/no-shadow presence in tests; needs a human eyeballing a live render in both themes — no browser tool available to this executor (01.2-12 D6). | open |  | 2026-08-26T22:51:30.480Z |  |
 | 14 | 01.3-02 | unrun-verify | lib/mix/tasks/catalog.enrich_bgg_stats.ex |  | Task 3 human-check: open 2-3 real game detail pages and confirm Valoración BGG shows a plausible 10-point score and links to that game's own BGG page -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; underlying data spot-checked via SQL (Wingspan 7.99/10 rank 38, Spirit Island 8.34/10 rank 11) | open |  | 2026-08-30T23:17:30.343Z |  |
 | 15 | 01.3-02 | todo | lib/pukllay_club/catalog/seed/bgg_client.ex |  | BggClient.fetch_batch/2 raises ArgumentError (:erlang.binary_to_integer("")) when called with an empty bgg_ids list, discovered via an ad hoc verification script during 01.3-02; not reachable through StatsEnricher's normal flow (chunk_every never yields an empty chunk from a non-empty candidate list) but is a latent crash if ever called with []; pre-existing 01.3-01 code, out of scope for this plan's no-code-changes constraint | open |  | 2026-08-30T23:17:30.601Z |  |
+| 16 | 01.3-04 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Human-check: open three game detail pages (short/long/unusual-title descriptions), confirm as a Spanish speaker the description reads naturally in Argentine Spanish (voseo), proper nouns/mechanic names survive untranslated, no stray escapes, and Ver mas/Ver menos still expands/collapses at mobile+desktop widths -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; text quality already reviewed by the executor against a 5-game sample (all 5 criteria incl. voseo) before the full batch ran | open |  | 2026-08-31T00:12:03.091Z |  |
 
 ````json
 [
@@ -211,6 +212,18 @@ last_updated: 2026-08-30T23:17:30.601Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-30T23:17:30.601Z",
+    "resolved_at": null
+  },
+  {
+    "id": 16,
+    "kind": "unrun-verify",
+    "phase": "01.3-04",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "Human-check: open three game detail pages (short/long/unusual-title descriptions), confirm as a Spanish speaker the description reads naturally in Argentine Spanish (voseo), proper nouns/mechanic names survive untranslated, no stray escapes, and Ver mas/Ver menos still expands/collapses at mobile+desktop widths -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; text quality already reviewed by the executor against a 5-game sample (all 5 criteria incl. voseo) before the full batch ran",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-31T00:12:03.091Z",
     "resolved_at": null
   }
 ]

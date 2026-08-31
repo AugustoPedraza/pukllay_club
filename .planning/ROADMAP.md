@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 
@@ -157,7 +157,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3: runs the task it builds)*
 
-- [ ] 01.3-04-PLAN.md — Run the Spanish translation batch: API-key human-action gate, five-game sample review, then the full run (D-01, D-02)
+- [x] 01.3-04-PLAN.md — Run the Spanish translation batch: API-key human-action gate, five-game sample review, then the full run (D-01, D-02)
 
 **Wave 5** *(blocked on Wave 4: UAT needs real Spanish text and real BGG stats on the page)*
 
