@@ -2979,6 +2979,186 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # G-01.3-09 (UAT gap G-01.3-1 item 7): pins the sticky title-echo bar's
+  # separation from the page (a distinct fill token, not the page's own),
+  # its measured two-theme text/border contrast, and its shared-width
+  # alignment with the rest of the page's capped surfaces. Reuses the
+  # whole css_source/0 + dark_theme_plugin_block/0 + token_value/2 +
+  # relative_luminance/1 + contrast_ratio/2 harness the lightbox
+  # close-button describe block below already established — no second
+  # harness is written here. Sits beside "title-echo desktop hide" above,
+  # the existing idiom for asserting on this bar's CSS.
+  describe "sticky title-echo bar (G-01.3-09, UAT item 7)" do
+    # The bar's OWN rule, matched on its literal (unqualified) selector
+    # text anchored to the start of a line. `\s*\{` immediately after
+    # `.pk-title-echo` means `.pk-title-echo-inner {`, `.pk-title-echo.is-visible {`
+    # and `.pk-title-echo.is-parked {` can never be mistaken for it — none
+    # of those has whitespace-then-`{` directly following the bare
+    # `.pk-title-echo` token.
+    defp title_echo_block do
+      case Regex.run(~r/(?m)^\.pk-title-echo\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-title-echo {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # Same idiom, for the new inner wrapper rule.
+    defp title_echo_inner_block do
+      case Regex.run(~r/(?m)^\.pk-title-echo-inner\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-title-echo-inner {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # light_theme_plugin_block/0 is NOT redeclared here — 01.3-07's own
+    # "net-new CSS-source pins" describe block below already defines it
+    # (mirroring dark_theme_plugin_block/0), and `defp` scope is the whole
+    # module regardless of which describe block textually defines it. A
+    # second definition would fail this file's own harness-reuse
+    # discipline (see that block's comment).
+
+    test "the bar's own background token is the new base-200 step, not the page's own base-100" do
+      body = title_echo_block()
+
+      assert body =~ ~r/background:\s*var\(--color-base-200\)\s*;/,
+             "`.pk-title-echo` must declare `background: var(--color-base-200);` — the " <>
+               "one-step-darker/tinted rule detail-page-mobile-interaction.md already " <>
+               "established for the mobile CTA bar's own background fix, applied here."
+
+      refute body =~ ~r/var\(--color-base-100\)/,
+             "`.pk-title-echo` must not read `--color-base-100` anywhere in its own rule — " <>
+               "that is the exact same token the page body itself uses, and reusing it is the " <>
+               "'doesn't constrain well' defect this round exists to fix."
+    end
+
+    test "the bar declares no horizontal --pk-gutter padding of its own — that moved to the inner wrapper" do
+      body = title_echo_block()
+
+      refute body =~ ~r/padding:[^;]*--pk-gutter/,
+             "`.pk-title-echo` must not declare its own `--pk-gutter`-bearing horizontal " <>
+               "padding — that padding now lives on `.pk-title-echo-inner` (via the `pk-gutter` " <>
+               "utility class in the markup), on the SAME element as the width cap. Declaring it " <>
+               "here too would double-inset the bar's content."
+
+      assert title_echo_inner_block() =~ ~r/display:\s*flex\s*;/,
+             "`.pk-title-echo-inner` must declare `display: flex;` — the row layout that used " <>
+               "to live on `.pk-title-echo` itself moved here along with the horizontal padding."
+    end
+
+    test "text contrast (light theme): the bar's content token against its own base-200 fill meets 4.5:1" do
+      block = light_theme_plugin_block()
+      content = token_value(block, "--color-base-content")
+      fill = token_value(block, "--color-base-200")
+
+      ratio = contrast_ratio(relative_luminance(content), relative_luminance(fill))
+
+      assert ratio >= 4.5,
+             "light theme: the sticky bar's text (--color-base-content, #{content}) must " <>
+               "contrast at least 4.5:1 (WCAG 1.4.3) against the bar's own fill " <>
+               "(--color-base-200, #{fill}). Computed: #{Float.round(ratio, 2)}:1."
+    end
+
+    test "text contrast (dark theme): the bar's content token against its own base-200 fill meets 4.5:1" do
+      block = dark_theme_plugin_block()
+      content = token_value(block, "--color-base-content")
+      fill = token_value(block, "--color-base-200")
+
+      ratio = contrast_ratio(relative_luminance(content), relative_luminance(fill))
+
+      assert ratio >= 4.5,
+             "dark theme: the sticky bar's text (--color-base-content, #{content}) must " <>
+               "contrast at least 4.5:1 (WCAG 1.4.3) against the bar's own fill " <>
+               "(--color-base-200, #{fill}). Computed: #{Float.round(ratio, 2)}:1 — a future " <>
+               "palette retune that quietly walks either token toward the other must fail here, " <>
+               "not ship."
+    end
+
+    # The bar's border reads --color-neutral, not --color-base-300 — see
+    # .pk-title-echo's own comment in app.css. Measured directly against
+    # this file's tokens: --color-base-300 (the plan's original
+    # assumption) computes to only 1.41:1 light / 1.23:1 dark against
+    # --color-base-100, both far under the 3.0:1 floor these two tests
+    # enforce. This is a Rule 1 auto-fix — the base-100/200/300 family is
+    # a subtle background-stepping scale by design and cannot clear 3:1
+    # against base-100 at any of its three steps in either theme;
+    # --color-neutral is the token this codebase already reaches for when
+    # a control needs real, measured contrast while staying visually
+    # muted (see the lightbox close button's own dark-theme fix, same
+    # token, same reasoning, elsewhere in this file).
+    test "the bar's border reads --color-neutral, not --color-base-300" do
+      body = title_echo_block()
+
+      assert body =~ ~r/border-bottom:\s*1px solid var\(--color-neutral\)\s*;/,
+             "`.pk-title-echo` must declare its border-bottom from `--color-neutral`. " <>
+               "`--color-base-300` (the plan's original assumption) measures only 1.41:1 " <>
+               "light / 1.23:1 dark against `--color-base-100` — nowhere near the 3.0:1 " <>
+               "floor the two tests below enforce."
+
+      refute body =~ ~r/var\(--color-base-300\)/,
+             "`.pk-title-echo` must not read `--color-base-300` for its border — that token " <>
+               "measured under the 3.0:1 floor in both themes; see the test above."
+    end
+
+    test "non-text contrast (light theme): the bar's border token against the page background meets 3.0:1" do
+      block = light_theme_plugin_block()
+      border = token_value(block, "--color-neutral")
+      page_bg = token_value(block, "--color-base-100")
+
+      ratio = contrast_ratio(relative_luminance(border), relative_luminance(page_bg))
+
+      assert ratio >= 3.0,
+             "light theme: the sticky bar's separating border (--color-neutral, #{border}) " <>
+               "must contrast at least 3.0:1 (WCAG 1.4.11's non-text-contrast floor) against " <>
+               "the page background it separates from (--color-base-100, #{page_bg}). " <>
+               "Computed: #{Float.round(ratio, 2)}:1."
+    end
+
+    test "non-text contrast (dark theme): the bar's border token against the page background meets 3.0:1" do
+      block = dark_theme_plugin_block()
+      border = token_value(block, "--color-neutral")
+      page_bg = token_value(block, "--color-base-100")
+
+      ratio = contrast_ratio(relative_luminance(border), relative_luminance(page_bg))
+
+      assert ratio >= 3.0,
+             "dark theme: the sticky bar's separating border (--color-neutral, #{border}) " <>
+               "must contrast at least 3.0:1 (WCAG 1.4.11's non-text-contrast floor) against " <>
+               "the page background it separates from (--color-base-100, #{page_bg}). " <>
+               "Computed: #{Float.round(ratio, 2)}:1 — a separator the eye cannot find is the " <>
+               "\"doesn't constrain well\" complaint restated numerically."
+    end
+
+    test "the inner wrapper shares alignment classes with the masthead and shelf separator",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Title Echo Alignment Base", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Title Echo Alignment Sibling", weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      shared_classes = MapSet.new(~w(mx-auto w-full max-w-7xl pk-gutter))
+
+      for {label, selector} <- [
+            {"the title-echo bar's inner wrapper", "#detail-title-echo > .pk-title-echo-inner"},
+            {"the masthead wrapper", "#detail-masthead-wrap"},
+            {"the shelf separator", "#detail-shelf-separator"}
+          ] do
+        class =
+          doc
+          |> LazyHTML.query(selector)
+          |> LazyHTML.attribute("class")
+          |> List.first()
+
+        classes = class |> String.split(~r/\s+/, trim: true) |> MapSet.new()
+
+        assert MapSet.subset?(shared_classes, classes),
+               "#{label} (#{selector}) must carry all four shared alignment classes " <>
+                 "#{inspect(MapSet.to_list(shared_classes))} — found: #{inspect(class)}"
+      end
+    end
+  end
+
   # G-01.2-24 task 2: source-level CSS facts for the corrected
   # boundary-collapse footer margin.
   describe "boundary-collapse footer margin (Phase 01.2 gap-closure round 4, G-01.2-24 task 2)" do
