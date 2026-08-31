@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 19
+open_count: 20
 waived_count: 0
 fixed_count: 0
-total_count: 19
-last_updated: 2026-08-31T20:39:49.123Z
+total_count: 20
+last_updated: 2026-08-31T23:15:03.802Z
 ---
 
 # Broken Windows Ledger
@@ -34,6 +34,7 @@ last_updated: 2026-08-31T20:39:49.123Z
 | 17 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual visual verification of the D-03/D-04 reading-column rhythm and D-06 Avanzado group at 390px/1440px against 01.3-UI-SPEC.md not run interactively (no browser tool available to this executor); deferred to end-of-phase UAT per workflow.human_verify_mode: end-of-phase. | open |  | 2026-08-31T00:35:26.436Z |  |
 | 18 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode | open |  | 2026-08-31T20:19:55.896Z |  |
 | 19 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-08 Task 3 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify description justify + mid-word-cut risk (fallback pre-decided) + chevron/ellipsis ink alignment (translateY(-2px), tuned but unverified against real Inter render) + repeated tap round-trips, across 3 real games x 2 widths (390/1440) x 2 themes; if any of the 6 combos cuts mid-word, apply this plan's pre-decided fallback CSS (real -webkit-line-clamp:3 + trailing-sibling toggle, recorded in 01.3-08-PLAN.md's planner_note) rather than re-sketching. | open |  | 2026-08-31T20:39:49.123Z |  |
+| 20 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-10 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify on a real iOS/Mobile-Safari device (the engine G-01.3-4 reproduced on, not Blink) that the chevron sits inside the text column at 390px, the clipped third line ends on a whole word, tapping expands/collapses reliably across round trips, and the description stays justified at 390px/1440px, across light+dark theme and a short + long description game. | open |  | 2026-08-31T23:15:03.802Z |  |
 
 ````json
 [
@@ -263,6 +264,18 @@ last_updated: 2026-08-31T20:39:49.123Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-31T20:39:49.123Z",
+    "resolved_at": null
+  },
+  {
+    "id": 20,
+    "kind": "unrun-verify",
+    "phase": "01.3",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "01.3-10 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify on a real iOS/Mobile-Safari device (the engine G-01.3-4 reproduced on, not Blink) that the chevron sits inside the text column at 390px, the clipped third line ends on a whole word, tapping expands/collapses reliably across round trips, and the description stays justified at 390px/1440px, across light+dark theme and a short + long description game.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-31T23:15:03.802Z",
     "resolved_at": null
   }
 ]
