@@ -40,15 +40,23 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   Every field from this plan's `<planner_assumption>` omission table is
   individually conditional: an absent field removes its whole row/element,
-  never a blank placeholder. Ficha técnica applies this at two levels
-  (01.2-04, D-04/D-05): each remaining row keeps its own independent `:if`
-  guard, AND the section heading plus the list are themselves wrapped in
-  `ficha_tecnica?/1` so a game with none of the four carriable fields
-  (min_age, year_published, designers, bgg_id) shows no empty heading over
-  an empty grid. The publisher-name field this section used to carry was
-  dropped entirely in the G-01.2-10 mobile masthead rework (01.2-17) — the
-  UAT called it useless information, and the removal is unconditional
-  (every viewport width), not a mobile-only cut.
+  never a blank placeholder. The reading column's supplementary content
+  (01.3-07, closing UAT gap G-01.3-1) is split across two independently
+  guarded blocks instead of one "ficha técnica" section: a single unheaded
+  fact grid (`fact_grid?/3` — year, plus Diseñadores/Ilustradores/Mecánicas/
+  Temáticas as a two-column `.pk-fact-cols` grid, each column its own `:if`)
+  and a separate Comunidad BGG block (`comunidad_bgg?/1` — weight/rating/
+  rank, each independently gated, plus a Fuente link). Neither block ever
+  renders an empty heading over an empty grid — `fact_grid?/3` and
+  `comunidad_bgg?/1` are each the disjunction of every field their own block
+  can show, exactly as `ficha_tecnica?/1` used to guard the single merged
+  section this replaces. The publisher-name field this section used to
+  carry was dropped entirely in the G-01.2-10 mobile masthead rework
+  (01.2-17) — the UAT called it useless information, and the removal is
+  unconditional (every viewport width), not a mobile-only cut. The minimum-
+  age row was dropped in this same 01.3-07 restructure (UAT gap G-01.3-1
+  item 2) — `min_age` remains a live schema field and a live `?min_age=`
+  filter param, only its render site on this page is gone.
 
   Mobile chrome (SHELL-03, plan 01.1-04): `.DetailChrome` drives the fixed
   bottom CTA bar and the sticky title-echo bar off a single passive
@@ -496,18 +504,35 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               </div>
 
               <div class="pk-text-col">
-                <%!-- D-03/D-04: title + description form the first reading
-                section (the spacing wrapper below). The title always
-                renders, so the wrapper itself carries no :if — only the
-                description block keeps its own guard, unchanged. --%>
+                <%!-- Sketch 042 (27 rounds): the title is its own reading
+                section (always renders, no :if — the wrapper only ever
+                needs one for a conditional child). --%>
                 <div class="pk-reading-section">
                   <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
+                </div>
 
-                  <%!-- G-01.2-10 task 3: the description sits immediately
-                  after the title with nothing in between (ask #2) — every
-                  element that used to be wedged here (weight-band badge,
-                  editorial hashtags) moved below the separator. --%>
-                  <div :if={@game.description} class="pk-description">
+                <%!-- Sketch 042's winner: hashtags sit right after the
+                title, before the description — NOT between the description
+                and a divider as the UAT text itself suggested (see this
+                plan's <planner_note> departure #1). The divider sketch 042
+                removed entirely is gone from this page: once sketch 040
+                dropped every section heading, rhythm alone was already
+                doing all the separating work the line used to help with.
+                class="pk-rhythm-8" (not pk-reading-section) ties this row
+                tightly to the title via .pk-text-col's own child-margin
+                rhythm rule, not the section gap. --%>
+                <GameChips.editorial_tags
+                  tags={@game.tags}
+                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
+                  class="pk-rhythm-8"
+                />
+
+                <%!-- G-01.2-10 task 3: description content/markup
+                untouched by this restructure (01.3-08 reworks it) — only
+                its wrapper's spacing class changed, from the old shared
+                title+description section to its own pk-rhythm-16 section. --%>
+                <div :if={@game.description} class="pk-reading-section pk-rhythm-16">
+                  <div class="pk-description">
                     <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
                       {@game.description}
                     </p>
@@ -521,30 +546,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   </div>
                 </div>
 
-                <%!-- Boundary between the primary reading block (title +
-                description) and supplementary "more information" content
-                (ask #4/#6). daisyUI's own divider component checked and
-                used as-is for the line's colour/thickness (already
-                theme-aware via color-mix, no hand-rolled rule needed for
-                that); only its own default margin fought .pk-text-col's
-                flex gap (doubling the visible gap around the line), so
-                .pk-divider neutralizes just that one property. Stays a flat,
-                unwrapped child of .pk-text-col (D-03/D-04) — it simply
-                inherits the column's own between-section gap (raised to
-                2rem this phase) on both sides, reinforcing its role as a
-                deliberate boundary rather than shrinking it back down.
-                Reused verbatim by 01.2-18 for the boundary before the
-                recommendations shelf. --%>
-                <div class="divider pk-divider" role="separator"></div>
-
-                <%!-- Also a flat, unwrapped child of .pk-text-col (D-03/D-04)
-                — the editorial-tags row inherits the same between-section
-                rhythm as the divider above it, on both sides. --%>
-                <GameChips.editorial_tags
-                  tags={@game.tags}
-                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
-                />
-
                 <%!-- G-01.2-20 task 1 (was D2's "keep the badge, relocate it
                 here"): the badge block and its explanatory sentence are
                 gone — the next UAT pass reversed the prior round's
@@ -557,126 +558,142 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 is kept with zero call sites — see its own doc comment
                 (in `GameChips`) for why. --%>
 
-                <%!-- D-03/D-04: the guard moves from the heading onto this
-                wrapper — flex gap only applies between children that
-                actually render, so an always-present wrapper would leave
-                the dead space this change exists to remove. --%>
-                <div :if={@mechanic_labels != []} class="pk-reading-section">
-                  <h2 class="pk-section-heading">Mecánicas</h2>
-                  <GameChips.chip_row
-                    terms={@mechanic_labels}
-                    limit={99}
-                    href_fun={fn label -> ~p"/?mechanics=#{label}" end}
-                  />
-                </div>
-
-                <div :if={@theme_labels != []} class="pk-reading-section">
-                  <h2 class="pk-section-heading">Temáticas</h2>
-                  <GameChips.chip_row
-                    terms={@theme_labels}
-                    limit={99}
-                    href_fun={fn label -> ~p"/?themes=#{label}" end}
-                  />
-                </div>
-
-                <%!-- G-01.2-10 task 3, ask #5: the publisher row is gone
-                (unconditional, every viewport width) and ficha_tecnica?/1
-                below narrowed from five fields to four — see that
-                function's own comment. D-03/D-04: the guard now sits once
-                on this wrapper instead of twice, on the heading and the
-                list separately — the now-redundant second guard on the
-                <dl> is removed. --%>
-                <div :if={ficha_tecnica?(@game)} class="pk-reading-section">
-                  <h2 class="pk-section-heading">Ficha técnica</h2>
+                <%!-- Sketch 040: one unheaded fact grid replaces the old
+                Mecánicas/Temáticas headed sections and the creators half of
+                ficha técnica — no <h2> anywhere in this block, the grid's
+                own <dt> labels carry that job now. fact_grid?/3 gates the
+                whole block on the same zero-one-many backstop
+                ficha_tecnica?/1 used to apply, widened across two derived
+                assigns (mechanic_labels/theme_labels) as well as the
+                struct. Minimum age (UAT gap G-01.3-1 item 2) has no render
+                site anywhere in this block or this page — the field and
+                its ?min_age= filter param remain live, only the row is
+                gone. --%>
+                <div
+                  :if={fact_grid?(@game, @mechanic_labels, @theme_labels)}
+                  class="pk-reading-section pk-rhythm-16"
+                >
                   <dl class="pk-spec-list">
-                    <div :if={@game.min_age} class="pk-spec-row">
-                      <dt>Edad mínima</dt>
-                      <dd>{@game.min_age}+</dd>
-                    </div>
                     <div :if={@game.year_published} class="pk-spec-row">
                       <dt>Año</dt>
                       <dd>{@game.year_published}</dd>
                     </div>
-                    <div :if={@game.designers != []} class="pk-spec-row pk-spec-row--wide">
-                      <dt>Diseñadores</dt>
-                      <dd>{Enum.join(@game.designers, ", ")}</dd>
-                    </div>
-                    <%!-- D-05: same conditional-render/comma-join mechanism
-                    as Diseñadores directly above — no new pattern. --%>
-                    <div :if={@game.artists != []} class="pk-spec-row pk-spec-row--wide">
-                      <dt>Ilustradores</dt>
-                      <dd>{Enum.join(@game.artists, ", ")}</dd>
-                    </div>
 
-                    <%!-- D-06: the "Avanzado" sub-group — a full-width label
-                    gated on advanced_stats?/1, so it can never render over
-                    zero rows, followed by three independently-gated stat
-                    rows (weight, rating, ranking). The BGG rating row
-                    shipped by the 01.3-01 tracer lives HERE now, moved
-                    (not duplicated) from its prior standalone position. --%>
-                    <div :if={advanced_stats?(@game)} class="pk-spec-group-label">Avanzado</div>
+                    <div class="pk-fact-cols">
+                      <%!-- Sketch 039: Diseñadores/Ilustradores become
+                      filter-linked pills, matching every other structured
+                      fact on the page, instead of comma-joined plain text.
+                      creator_pills/1 (below share_control/1) renders them;
+                      the ~p sigil percent-encodes the interpolated name, so
+                      a space- or accent-bearing name never needs manual
+                      encoding. --%>
+                      <div :if={@game.designers != []} class="pk-fact-col">
+                        <dt>Diseñadores</dt>
+                        <dd>
+                          <.creator_pills
+                            names={@game.designers}
+                            href_fun={fn name -> ~p"/?designers=#{name}" end}
+                          />
+                        </dd>
+                      </div>
 
-                    <div :if={@game.bgg_weight} class="pk-spec-row">
-                      <dt>Peso BGG</dt>
-                      <dd>
-                        <a
-                          href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="link link-primary"
-                        >
-                          {format_bgg_weight(@game.bgg_weight)}
-                        </a>
-                      </dd>
-                    </div>
+                      <div :if={@game.artists != []} class="pk-fact-col">
+                        <dt>Ilustradores</dt>
+                        <dd>
+                          <.creator_pills
+                            names={@game.artists}
+                            href_fun={fn name -> ~p"/?artists=#{name}" end}
+                          />
+                        </dd>
+                      </div>
 
-                    <div :if={@game.bgg_rating} class="pk-spec-row">
-                      <dt>Valoración BGG</dt>
-                      <dd>
-                        <a
-                          href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="link link-primary"
-                        >
-                          {format_bgg_rating(@game.bgg_rating)}
-                        </a>
-                      </dd>
-                    </div>
+                      <div :if={@mechanic_labels != []} class="pk-fact-col">
+                        <dt>Mecánicas</dt>
+                        <dd>
+                          <GameChips.chip_row
+                            terms={@mechanic_labels}
+                            limit={99}
+                            href_fun={fn label -> ~p"/?mechanics=#{label}" end}
+                          />
+                        </dd>
+                      </div>
 
-                    <%!-- D-06: a game BGG has never ranked simply omits this
-                    row via the :if guard below — no placeholder, no "no
-                    disponible", no "not ranked" text. The literal `#` is a
-                    plain character (this template sigil performs no Elixir
-                    string interpolation) immediately followed by the
-                    template engine's own `{...}` interpolation. --%>
-                    <div :if={@game.bgg_rank} class="pk-spec-row">
-                      <dt>Ranking BGG</dt>
-                      <dd>
-                        <a
-                          href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="link link-primary"
-                        >
-                          #{@game.bgg_rank}
-                        </a>
-                      </dd>
-                    </div>
-
-                    <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
-                      <dd>
-                        <a
-                          href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="link link-primary"
-                        >
-                          Ver ficha completa en BoardGameGeek
-                        </a>
-                      </dd>
+                      <div :if={@theme_labels != []} class="pk-fact-col">
+                        <dt>Temáticas</dt>
+                        <dd>
+                          <GameChips.chip_row
+                            terms={@theme_labels}
+                            limit={99}
+                            href_fun={fn label -> ~p"/?themes=#{label}" end}
+                          />
+                        </dd>
+                      </div>
                     </div>
                   </dl>
+                </div>
+
+                <%!-- Sketch 039 (with departure #2/#3 from this plan's
+                <planner_note> — each stat keeps its own BGG link per D-06,
+                and the "BGG" qualifier moves to the group label instead of
+                repeating on every row). comunidad_bgg?/1 gates on the same
+                fields advanced_stats?/1 already checks plus bgg_id itself,
+                so a game with a bgg_id but no populated stat still shows
+                the group (label + Fuente line), and a game with neither
+                shows nothing. --%>
+                <div :if={comunidad_bgg?(@game)} class="pk-reading-section pk-rhythm-32">
+                  <div class="pk-bgg-label">Comunidad BGG</div>
+                  <div class="pk-bgg-row">
+                    <a
+                      :if={@game.bgg_rating}
+                      href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="pk-bgg-stat"
+                    >
+                      <span class="pk-bgg-num">{format_bgg_rating(@game.bgg_rating)}</span>
+                      <span class="pk-bgg-lbl">Valoración</span>
+                    </a>
+
+                    <a
+                      :if={@game.bgg_weight}
+                      href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="pk-bgg-stat"
+                    >
+                      <span class="pk-bgg-num">{format_bgg_weight(@game.bgg_weight)}</span>
+                      <span class="pk-bgg-lbl">Peso</span>
+                    </a>
+
+                    <%!-- D-06: a game BGG has never ranked simply omits
+                    this stat via the :if guard below — no placeholder. The
+                    literal `#` is a plain character (this template sigil
+                    performs no Elixir string interpolation) immediately
+                    followed by the template engine's own `{...}`
+                    interpolation. --%>
+                    <a
+                      :if={@game.bgg_rank}
+                      href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="pk-bgg-stat"
+                    >
+                      <span class="pk-bgg-num">#{@game.bgg_rank}</span>
+                      <span class="pk-bgg-lbl">Ranking</span>
+                    </a>
+                  </div>
+
+                  <p :if={@game.bgg_id} class="pk-bgg-foot">
+                    Fuente:
+                    <a
+                      href={"https://boardgamegeek.com/boardgame/#{@game.bgg_id}"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="link link-primary"
+                    >
+                      BoardGameGeek
+                    </a>
+                  </p>
                 </div>
               </div>
             </div>
@@ -685,9 +702,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           <%!-- G-01.2-18 task 1: boundary between the detail content above
           and the recommendations shelf below, so a reader can tell the
           page has changed subject rather than reading the shelf as more of
-          the masthead's own content. Second call site of 01.2-17's
-          .pk-divider (see that rule's own comment). G-01.2-19 task 2
-          removed the width-cap class this line used
+          the masthead's own content. This is the ONLY divider left
+          anywhere on the detail page (01.3-07 removed the reading
+          column's own — see this plan's <planner_note> departure #1).
+          G-01.2-19 task 2 removed the width-cap class this line used
           to carry — this wrapper already shares the shell's own
           mx-auto/w-full/max-w-7xl/pk-gutter recipe with the masthead and
           the CTA bar's inner wrapper, so no per-element width override is
@@ -1139,6 +1157,33 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     """
   end
 
+  # Sketch 039 (01.3-07): Diseñadores/Ilustradores render as filter-linked
+  # pills, matching every other structured fact on the page, instead of the
+  # comma-joined plain text they used to be. `href_fun` mirrors
+  # `GameChips.chip_row/1`'s own contract (a 1-arity function from the term
+  # to a navigate target) — kept as a separate component rather than
+  # reusing `chip_row/1` because these two rows carry raw creator names
+  # (not `Vocabulary`-derived labels) and the outline tone/no-overflow-cap
+  # shape is specific to this fact grid. The `~p` sigil percent-encodes the
+  # interpolated name, so a space- or accent-bearing value never needs
+  # manual encoding before it reaches the query string (T-01.3-07-01).
+  attr :names, :list, required: true
+  attr :href_fun, :any, required: true
+
+  defp creator_pills(assigns) do
+    ~H"""
+    <div class="pk-chip-row flex flex-wrap gap-2">
+      <.link
+        :for={name <- @names}
+        navigate={@href_fun.(name)}
+        class="pk-pill pk-pill-outline pk-pill-interactive"
+      >
+        {name}
+      </.link>
+    </div>
+    """
+  end
+
   # `cover_url` first so it's always the initial thumbnail/main image when
   # present; nils filtered so an absent cover never mints a broken `<img>`.
   defp gallery_thumbnails(game) do
@@ -1170,37 +1215,52 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     end
   end
 
-  # D-04/D-05 (01.2-04): the UI-SPEC `zero-one-many` backstop for Ficha
-  # técnica — the section (heading + list) renders only when at least one
-  # of the carriable fields below is present, so a minimal-data game never
-  # shows a bare heading over an empty grid. Every field read here is
-  # present on every %Game{} (two integers, two array columns with
-  # `default: []`, one nullable integer) — no nil-dereference path exists.
-  # Narrowed from five fields to four in the G-01.2-10 mobile masthead
-  # rework (01.2-17): the publisher-name clause was dropped in the same
-  # edit as the spec-row it guarded — the two must move together, or a
-  # game whose only remaining data was that field re-opens the exact
-  # empty-heading hole this guard exists to close.
-  # WR-02 (01.3 code review): widened to also check `artists` — the
-  # "Ilustradores" row (and the Avanzado sub-group, gated transitively via
-  # `bgg_id`) render inside this same section but were left out of the
-  # or-chain when they were added, so a game carrying only `artists`
-  # (no bgg_id, no designers, no min_age/year_published) silently never
-  # rendered its own populated data.
-  defp ficha_tecnica?(game) do
-    not is_nil(game.min_age) or
-      not is_nil(game.year_published) or
+  # D-04/D-05-lineage `zero-one-many` backstop, split in two by 01.3-07's
+  # restructure of the old merged "Ficha técnica" section: this predicate
+  # now guards only the unheaded fact grid (year + Diseñadores/Ilustradores/
+  # Mecánicas/Temáticas) — the block renders only when at least one of its
+  # five carriable inputs is present, so a minimal-data game never shows an
+  # empty grid. `comunidad_bgg?/1` below guards the separate BGG stats
+  # block that used to share this same or-chain via `bgg_id`; `bgg_id`
+  # itself has left this function's or-chain for exactly that reason — it
+  # no longer gates the fact grid, only the Comunidad BGG block.
+  #
+  # Five inputs across two sources: `year_published` (a nullable integer on
+  # the struct) and `designers`/`artists` (array columns with `default: []`
+  # on the struct) are read directly off `game`; `mechanic_labels`/
+  # `theme_labels` are NOT struct fields — they are `Vocabulary`-derived
+  # assigns computed once in `mount/3` and passed in here, because the
+  # fact grid's own Mecánicas/Temáticas columns render the SAME translated
+  # labels the reading column's chip rows already use, not the raw
+  # `game.mechanics`/`game.themes` codes. No nil-dereference path exists
+  # for any of the five.
+  defp fact_grid?(game, mechanic_labels, theme_labels) do
+    not is_nil(game.year_published) or
       game.designers != [] or
       game.artists != [] or
-      not is_nil(game.bgg_id)
+      mechanic_labels != [] or
+      theme_labels != []
   end
 
-  # D-06 (01.3-05 Task 2): guards the "Avanzado" sub-group label — mirrors
-  # ficha_tecnica?/1's or-chain shape exactly. Deliberately does NOT also
-  # check bgg_id: any game that can carry a weight, rating or rank
-  # necessarily carries a bgg_id (BGG enrichment is keyed on it), which
-  # ficha_tecnica?/1 already covers for the outer section. Leaving
-  # ficha_tecnica?/1 itself unwidened is intentional — see its own comment.
+  # 01.3-07: guards the separate "Comunidad BGG" block (label + up to three
+  # independently-gated stat links + a Fuente line) that this plan split out
+  # of the old merged Ficha técnica section. Widens `advanced_stats?/1`'s
+  # own or-chain with `bgg_id` itself so a game that has a `bgg_id` but no
+  # populated stat (rating/weight/rank all nil — BGG enrichment ran but
+  # returned nothing usable) still shows the group with its Fuente line,
+  # matching sketch 039/043's "Comunidad BGG" block always carrying at
+  # least the source link when a bgg_id exists.
+  defp comunidad_bgg?(game) do
+    advanced_stats?(game) or not is_nil(game.bgg_id)
+  end
+
+  # D-06 (01.3-05 Task 2, superseded label in 01.3-07 — see comunidad_bgg?/1
+  # above): the underlying or-chain (weight/rating/rank) is unchanged and
+  # still guards whether any BGG stat exists to show. Deliberately does NOT
+  # also check bgg_id: any game that can carry a weight, rating or rank
+  # necessarily carries a bgg_id (BGG enrichment is keyed on it) —
+  # `comunidad_bgg?/1` is the one that widens with `bgg_id` on top of this,
+  # for the Fuente-line-only case this predicate alone would miss.
   defp advanced_stats?(game) do
     not is_nil(game.bgg_weight) or
       not is_nil(game.bgg_rating) or

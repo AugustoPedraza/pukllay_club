@@ -719,17 +719,25 @@
    VARIANT here — never a rule of its own, and never a second declaration
    of a property this block already owns.
 
-   Call-site inventory — COMPLETE as of 01.2-27 task 3 (01.2-26 migrated the
-   first three, 01.2-27 the remaining two; this is every one of UAT test
-   11's four named surfaces, plus the editorial hashtags it did not name):
+   Call-site inventory — updated 01.3-07 (01.2-26 migrated the first three,
+   01.2-27 the remaining two, 01.3-07 retoned two of those five and added a
+   sixth tone for the detail page's fact-grid creator pills):
      - GamePreview.facts_row/1 (players/tiempo/dificultad) — neutral tone,
-       dense size, interactive on the three link branches only
-     - GameChips.chip_row/1 (Mecánicas/Temáticas) — neutral tone, dense size
-     - GameChips.editorial_tags/1 (club hashtags) — accent tone, dense size
+       dense size, interactive on the three link branches only. Deliberately
+       NOT retoned by 01.3-07 — the masthead stays closed by the Phase 01.3
+       roadmap goal, so this is a recorded, deliberate neutral-vs-outline
+       inconsistency against the reading column below, not an oversight.
+     - GameChips.chip_row/1 (detail page fact-grid Mecánicas/Temáticas
+       columns) — outline tone (01.3-07, was neutral), dense size
+     - GameChips.editorial_tags/1 (club hashtags) — tag tone (01.3-07, was
+       accent), dense size
      - CatalogLive.Index's active-filters ("búsqueda activa") chip — accent
        tone, comfortable size, interactive, removable (01.2-27 task 1)
      - filter_modal.ex's facet/scalar chips — outline tone at rest, selected
        tone when chosen, comfortable size, interactive (01.2-27 task 2)
+     - CatalogLive.Show's creator_pills/1 (detail page fact-grid
+       Diseñadores/Ilustradores columns) — outline tone, dense size,
+       interactive (01.3-07)
    Deliberately excluded: the catalog's category-navigation chip (`.pk-chip`
    below, `index.ex`) — a 44px navigation control, not in the UAT's list;
    folding it in would widen a chip consolidation into a navigation change.
@@ -766,6 +774,32 @@
   background: transparent;
   border-color: var(--color-base-300);
   color: var(--color-neutral);
+}
+
+/* 01.3-07, GameChips.editorial_tags/1's only tone: sketch 042's 27-round-
+   tested winner is accent-coloured TEXT sitting right after the detail
+   page's title, not a solid filled pill — this tone deliberately overrides
+   the base's type scale (11px -> 0.875rem) and padding (4px 9px -> 0 3px)
+   for exactly that reason, rather than looking like undocumented drift
+   from the variant set's own rules.
+
+   --color-primary is the required token here, not --color-secondary —
+   measured against --color-base-100 (this file's own daisyui-theme
+   blocks): primary is 14.4:1 in light (#3D096D on #FFFFFF) and 6.0:1 in
+   dark (#A97FD1 on #170A26), both well clear of the 4.5:1 text floor;
+   secondary (#7E4CA5) measures only 3.1:1 in dark and would FAIL that
+   floor. Recorded here as the baseline for any future palette retune. */
+.pk-pill-tag {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 400;
+  padding: 0 3px;
+}
+
+.pk-pill-tag:hover {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 /* The modal's chosen-chip soft lift (`filter_modal.ex`'s `chip_class/1`
@@ -3004,7 +3038,33 @@ body.pk-drawer-open {
 .pk-text-col {
   display: flex;
   flex-direction: column;
-  gap: 2rem; /* was 1rem — raised for the between-section rhythm, D-03/D-04 */
+}
+
+/* 01.3-07: replaces the flex `gap` this rule used to carry (removed in the
+   SAME edit that added these three rules — a flex `gap` and a child
+   `margin-top` are additive, which is exactly the stacked-boundary bug
+   detail-page-layout.md records twice, once for the title-echo bar's own
+   opacity-vs-layout-space bug and once for the footer boundary's three
+   independently-reasonable spacing rules summing past 150px). Named-tier
+   rhythm (8px/16px/32px) instead of one flat gap lets each reading-column
+   boundary declare its own weight — sketch 042/043's tight 8px hashtag-
+   to-title tie, vs. the 32px gap before the Comunidad BGG block — where a
+   single `.pk-text-col` gap could only ever pick one value for every
+   boundary at once. Only a rendered child that actually carries one of
+   these classes gets a margin; an unrendered (`:if`-false) sibling
+   contributes nothing, so no dead space accumulates behind a hidden
+   section — the same guard-on-the-child discipline `.pk-reading-section`
+   itself already relies on for its own gap. */
+.pk-text-col > .pk-rhythm-8 {
+  margin-top: 0.5rem;
+}
+
+.pk-text-col > .pk-rhythm-16 {
+  margin-top: 1rem;
+}
+
+.pk-text-col > .pk-rhythm-32 {
+  margin-top: 2rem;
 }
 
 /* Spacing control only (D-03/D-04) — no border, no background, no shadow, no
@@ -3078,6 +3138,19 @@ body.pk-drawer-open {
   grid-column: 1 / -1;
 }
 
+/* 01.3-07: the unheaded fact grid (Diseñadores/Ilustradores/Mecánicas/
+   Temáticas, sketch 040) — a nested grid inside `.pk-spec-list`'s own `<dl>`
+   so the year row above it and this 2x2 block share one list. Single-column
+   base rule; the two-column override lives INSIDE the one 48rem detail-
+   layout `@media` block below (see that block's own comment) — never a
+   second media query. */
+.pk-fact-cols {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem 1.5rem;
+}
+
 .pk-spec-row dt {
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -3085,20 +3158,68 @@ body.pk-drawer-open {
   font-size: 0.75rem;
 }
 
-/* D-06 — the "Avanzado" sub-group label inside the same Ficha técnica grid.
-   Reuses the pk-spec-row dt recipe above (size, uppercase, tracking, neutral
-   text) plus a single 1px top rule to separate the group from the rows
-   above it — the one new border this phase introduces, deliberately minimal
-   (no background tint, no second bordered panel). */
-.pk-spec-group-label {
-  grid-column: 1 / -1;
-  border-top: 1px solid var(--color-base-300);
-  padding-top: 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 600;
+/* 01.3-07: reuses .pk-spec-row dt's own recipe (uppercase, 0.08em tracking,
+   neutral color, 0.75rem) plus its own bottom margin, since a fact-grid
+   column's label sits directly above a pill row rather than a single
+   `<dd>` value. */
+.pk-fact-col dt {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-neutral);
+  font-size: 0.75rem;
+  margin: 0 0 0.375rem;
+}
+
+.pk-fact-col dd {
+  margin: 0;
+}
+
+/* 01.3-07: the "Comunidad BGG" block (sketch 039/043) — a group label, up
+   to three independently-gated stat links and a Fuente line, replacing the
+   old bordered "Avanzado" sub-panel rule that lived here before. No
+   bordered container by design (sketch 039's own finding: "Comunidad BGG
+   drops any bordered container in favor of plain text"). */
+.pk-bgg-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-neutral);
+  font-size: 0.75rem;
+  margin: 0 0 0.375rem;
+}
+
+.pk-bgg-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Each stat is an outbound BGG link (T-01.3-07-03), not the sketch's plain
+   span — it needs the pointer affordance a link implies. */
+.pk-bgg-stat {
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.pk-bgg-stat:hover {
+  color: var(--color-primary);
+}
+
+.pk-bgg-num {
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-bgg-lbl {
+  color: var(--color-neutral);
+  font-size: 0.75rem;
+  margin-left: 3px;
+}
+
+.pk-bgg-foot {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+  margin: 0.125rem 0 0;
 }
 
 /* Mobile CTA bar (01.1-04, sketch 005/011): visible at rest below the
@@ -3785,7 +3906,10 @@ body.pk-cta-parked {
    place, so the two concerns can never drift apart. Declaring the
    override here (after the base rules above) is deliberate — an
    equal-specificity base rule placed AFTER its media override would
-   silently win at every width regardless of which query matches. */
+   silently win at every width regardless of which query matches. 01.3-07
+   added the reading column's fact-grid two-column override below — it
+   pairs up at this same breakpoint rather than opening a second media
+   query for one more rule. */
 @media (min-width: 48rem) {
   .pk-detail-masthead {
     grid-template-columns: 20rem 1fr;
@@ -3798,6 +3922,10 @@ body.pk-cta-parked {
 
   .pk-mobile-cta-bar {
     display: none;
+  }
+
+  .pk-fact-cols {
+    grid-template-columns: 1fr 1fr;
   }
 
   /* Title-echo bar desktop hide (Phase 01.2 gap-closure round 4, G-01.2-14/
