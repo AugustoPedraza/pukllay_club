@@ -18,10 +18,24 @@ defmodule Mix.Tasks.Catalog.TranslateDescriptions do
   so a partial run can be resumed by re-running with a higher limit or no
   limit at all). `--dry-run` still calls Gemini and reports the outcome,
   but writes nothing to the database. `--only-english` skips any
-  candidate whose currently stored `description` already differs from its
-  cleaned English payload source — i.e. games this job (or a prior run of
-  it) has already translated — so a resumed run doesn't re-spend Gemini
-  quota re-translating games that are already done.
+  candidate whose currently stored `description` no longer looks like
+  English prose — i.e. games this job (or a prior run of it) has already
+  translated — so a resumed run doesn't re-spend Gemini quota
+  re-translating games that are already done.
+
+  This check is a heuristic (presence of at least two distinct common
+  English function words — "and", "your", "with", etc.), not an exact
+  match against the freshly-fetched `bgg_payload` description. An exact
+  match was tried first and rejected: `bgg_payload` is refreshed by the
+  separate BGG re-enrichment job (01.3-02) independently of this job, so
+  BGG's own description text for a game can legitimately change between
+  when a game's `description` column was first seeded and when this job
+  runs — an exact-match check would then treat a still-untranslated,
+  merely-stale-English description as "already translated" and skip it
+  forever. The heuristic is deliberately conservative (requires 2+
+  distinct markers, not 1) so a Spanish translation that preserves an
+  English game title verbatim (e.g. "The Gallerist") is never
+  misclassified as still-English.
 
   The English source is always read from `bgg_payload`'s `description`
   entry, never from the `description` column being written — this is what
@@ -43,11 +57,23 @@ defmodule Mix.Tasks.Catalog.TranslateDescriptions do
 
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Seed.Credentials
-  alias PukllayClub.Catalog.Seed.DescriptionNormalizer
   alias PukllayClub.Catalog.Seed.DescriptionTranslator
   alias PukllayClub.Repo
 
   @report_relative_path "priv/repo/seed_data/description_translation_report.md"
+
+  # Common English function words that essentially never appear in natural
+  # Spanish prose. Deliberately excludes "the" — it survives untranslated
+  # inside preserved English game titles (e.g. "The Gallerist", "The White
+  # Castle") often enough that a single-marker check would misclassify an
+  # already-translated description as still-English. Requiring 2+ distinct
+  # markers (see `still_english?/1`) keeps that false-positive rate at zero
+  # against this project's real translated samples while still reliably
+  # catching genuinely untranslated English paragraphs, which contain many
+  # of these words.
+  @english_markers ~w(and your you with this that are which will from have been into their)
+
+  @english_marker_threshold 2
 
   @impl Mix.Task
   def run(args) do
@@ -87,7 +113,15 @@ defmodule Mix.Tasks.Catalog.TranslateDescriptions do
   defp maybe_filter_only_english(games, false), do: games
 
   defp maybe_filter_only_english(games, true) do
-    Enum.filter(games, fn game -> DescriptionNormalizer.clean(source_text(game)) == game.description end)
+    Enum.filter(games, fn game -> still_english?(game.description) end)
+  end
+
+  defp still_english?(nil), do: true
+
+  defp still_english?(text) do
+    @english_markers
+    |> Enum.count(fn word -> Regex.match?(~r/\b#{word}\b/iu, text) end)
+    |> Kernel.>=(@english_marker_threshold)
   end
 
   defp maybe_limit(games, nil), do: games
