@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 043 — Composed Full Detail Page</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 90px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; font-family: var(--font-sans); }
+  #variant-nav .caption { font-size: var(--text-xs); color: var(--color-text-muted); }
+  #variant-nav .caption strong { color: var(--color-text); }
+
+  .cause-note { max-width: 900px; margin: var(--space-4) auto; padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+  .cause-note ul { margin: 8px 0 0; padding-left: 20px; }
+
+  .compare { display: flex; gap: var(--space-6); align-items: flex-start; justify-content: center; flex-wrap: wrap; max-width: 1280px; margin: 0 auto; padding: 0 var(--space-4) 100px; }
+  .frame { display: flex; flex-direction: column; gap: 10px; }
+  .frame-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); text-align: center; }
+  .frame.desktop .surface { width: 760px; max-width: 80vw; }
+  .frame.mobile .surface { width: 375px; max-width: 92vw; }
+  .surface { position: relative; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background: var(--color-bg); }
+  .page-body { padding: var(--space-4); }
+  .frame.mobile .page-body { padding-bottom: 84px; } /* room for the fixed mobile CTA bar */
+
+  /* ============ Masthead grid (032 A + 037 C composed) ============ */
+  .masthead-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-4); margin-bottom: var(--space-6); }
+  .frame.desktop .masthead-grid { grid-template-columns: 15rem 1fr; align-items: start; }
+
+  .pk-facts-row { display: flex; gap: 6px; justify-content: space-between; margin-bottom: 8px; }
+  .pk-fact { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); }
+  .pk-difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .pk-difficulty-dot { width: 5px; height: 5px; border-radius: 9999px; background: var(--color-border); }
+  .pk-difficulty-dot.is-filled { background: var(--color-text-muted); }
+
+  /* 027's shadow-boundary + 032/037's panel, composed */
+  .pk-poster-panel { position: relative; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: var(--space-3); }
+  .pk-poster-frame { position: relative; aspect-ratio: 3/4; border-radius: var(--radius-md); overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: zoom-in; background: var(--color-surface); font-size: 48px; transition: filter var(--duration-fast) var(--ease-standard); }
+  .pk-poster-frame:hover { filter: brightness(0.94); }
+  .share-fab { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; background: var(--color-bg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); z-index: 6; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform var(--duration-fast) var(--ease-standard); }
+  .share-fab:hover { transform: scale(1.06); }
+  .share-fab:active { transform: scale(0.94); }
+
+  /* Dot row: 037's negative-margin 44px-tap-target-on-a-small-visual-dot
+     trick, reused verbatim. */
+  .dot-row { display: flex; align-items: center; justify-content: center; gap: 2px; margin: 6px 0 0; }
+  .dot-btn { width: 22px; height: 32px; margin: -4px 0; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .dot-mark { width: 6px; height: 6px; border-radius: 9999px; background: var(--color-border); transition: all var(--duration-fast) var(--ease-standard); }
+  .dot-btn.is-active .dot-mark { background: var(--color-primary); width: 16px; }
+
+  .cta-standalone { margin-top: 14px; }
+  .reserve-btn { width: 100%; border: none; border-radius: var(--radius-md); background: var(--color-primary); color: var(--color-primary-content); font-weight: 700; min-height: 44px; cursor: pointer; transition: transform var(--duration-fast) var(--ease-standard); }
+  .reserve-btn:hover { filter: brightness(1.05); }
+  .reserve-btn:active { transform: scale(0.98); }
+  /* Composition fix: desktop shows the standalone CTA under the sticky
+     poster column (032); mobile hides it in favor of 028's fixed-bottom
+     stacked bar instead — showing BOTH would duplicate the CTA. Scoped via
+     the same .frame.desktop/.frame.mobile convention every other sketch in
+     this set already uses (side-by-side comparison, not a real viewport). */
+  .frame.mobile .cta-standalone { display: none; }
+
+  /* ============ Reading column — sketch 042's final state, verbatim ============ */
+  .text-col { display: flex; flex-direction: column; }
+  .text-col > .rhythm-8 { margin-top: var(--space-2); }
+  .text-col > .rhythm-16 { margin-top: var(--space-3); }
+  .text-col > .rhythm-32 { margin-top: var(--space-6); }
+  .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
+  h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
+  .desc { line-height: 1.5; margin: 0; color: var(--color-text); text-align: justify; text-justify: inter-word; }
+  .desc.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; text-overflow: ellipsis; }
+  @keyframes descReveal { from { opacity: 0.3; } to { opacity: 1; } }
+  .desc:not(.is-clamped) { animation: descReveal var(--duration-base) var(--ease-out-soft); }
+
+  .desc-shell { position: relative; display: flex; flex-direction: column; }
+  .desc-toggle { position: relative; display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto; border-radius: var(--radius-sm); padding: 1px 3px; gap: 2px; color: var(--color-text-muted); background: none; border: none; cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+  .desc-toggle::before { content: ''; position: absolute; inset: -9px; }
+  .desc-toggle:hover, .desc-toggle:focus-visible { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+  .desc-toggle:active { transform: scale(0.88); background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
+  .desc-toggle svg { transition: transform var(--duration-base) var(--ease-out-soft); width: 12px; height: 12px; transform: translateY(-4px); }
+  .desc-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .desc-toggle-ellipsis { font-size: var(--text-base); line-height: 1; }
+  .desc-toggle[aria-expanded="true"] .desc-toggle-ellipsis { display: none; }
+  .desc-toggle { float: right; clear: right; margin: 50px 0 0 4px; }
+  .desc-shell.is-expanded > .desc-toggle { float: none; display: inline-flex; align-self: flex-end; margin: 6px 0 0; }
+
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
+  .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .tag-c { font-size: var(--text-sm); font-weight: 400; line-height: 1.5; padding: 0 3px; background: transparent; border-color: transparent; color: var(--color-accent-text); }
+  .tag-c:hover { background: color-mix(in srgb, var(--color-accent-bg) 55%, transparent); }
+
+  .spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); }
+  .spec-row dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 4px; }
+  .spec-row dd { margin: 0; }
+  .fact-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); grid-column: 1 / -1; }
+  .frame.mobile .fact-cols { grid-template-columns: 1fr; }
+  .fact-col dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
+
+  .bgg-link { color: var(--color-primary); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--color-primary) 40%, transparent); font-weight: 600; }
+  .bgg-link:hover { text-decoration-color: currentColor; }
+  .bgg-label { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
+  .bgg-row { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; }
+  .bgg-stat { font-size: var(--text-sm); }
+  .bgg-stat .num { font-weight: 600; color: var(--color-text); }
+  .bgg-stat .lbl { color: var(--color-text-muted); font-size: var(--text-xs); margin-left: 3px; }
+  .bgg-foot { font-size: var(--text-xs); color: var(--color-text-muted); margin: 2px 0 0; }
+
+  /* ============ Mobile CTA bar (028 D, Stacked) ============ */
+  .pk-mobile-cta-bar { display: none; }
+  .frame.mobile .pk-mobile-cta-bar { display: flex; position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; padding: 12px; background: var(--color-surface); border-top: 1px solid var(--color-border); }
+  .cta-bar-inner { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+  .share-btn { width: 100%; min-height: 38px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
+  .share-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+  /* ============ Lightbox (033 A + 038 shell-width fix, composed) ============
+     Composition fix #1: 033's own CSS capped .pk-lightbox-img-wrap at a
+     standalone min(90vw, 42rem) — exactly the thing 038 diagnosed as the
+     real cause of "no contrast/looks lost": the image was narrower than
+     the page's own content column, so viewport-edge arrows (033's original
+     placement) sat far from a comparatively small image. Fixed here by
+     capping the wrap to the SAME content width as .pk-shell-wrap, not an
+     independent vw/rem guess.
+     Composition fix #2: 038's README says arrows should anchor to the
+     image's own box, not the full-viewport backdrop — but 033's shipped
+     markup still had `.pk-lightbox-nav` as a sibling of the wrap, inside
+     `.pk-lightbox` (viewport-relative). Moved them to be children of
+     `.pk-lightbox-img-wrap` instead, so `left/right` is relative to the
+     image's own edge and automatically tracks the width fix above. */
+  .pk-lightbox { position: fixed; inset: 0; z-index: 700; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--duration-base) var(--ease-out-soft), visibility 0s linear var(--duration-base); background: color-mix(in srgb, #150826 72%, transparent); }
+  .pk-lightbox.is-open { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity var(--duration-base) var(--ease-out-soft); }
+  .pk-lightbox-img-wrap { position: relative; width: min(90vw, calc(1280px - 4rem)); max-width: 42rem; transform: scale(0.96); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .pk-lightbox.is-open .pk-lightbox-img-wrap { transform: scale(1); }
+  .pk-lightbox-img { aspect-ratio: 3/4; border-radius: var(--radius-lg); box-shadow: 0 28px 56px rgba(0,0,0,.45), 0 10px 24px rgba(0,0,0,.3); background: var(--color-surface); display: flex; align-items: center; justify-content: center; font-size: 64px; margin: 0 auto; max-width: 100%; width: 20rem; }
+  .pk-lightbox-close, .pk-lightbox-nav { position: absolute; width: 40px; height: 40px; border-radius: 50%; box-shadow: var(--shadow-md); border: none; background: rgba(255,255,255,0.92); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: transform var(--duration-fast) var(--ease-standard); }
+  .pk-lightbox-close:hover, .pk-lightbox-nav:hover { transform: scale(1.08); }
+  .pk-lightbox-close { top: -14px; right: calc(50% - 10rem); }
+  .pk-lightbox-nav { top: 50%; transform: translateY(-50%); }
+  .pk-lightbox-nav.prev { left: -14px; } .pk-lightbox-nav.next { right: -14px; }
+  .frame.mobile .pk-lightbox-nav { background: rgba(255,255,255,0.85); }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="caption"><strong>Sketch 043 — consistency check</strong> (single composed view, like
+  007/011/026). Composes 6 independently-validated detail-page sketches (027, 028, 032, 033, 037,
+  038) with 039-042's reading column into one full page, in this app's own real class names
+  (<code>pk-*</code>) where documented. Found + fixed 2 real composition bugs — see the note below.
+  Toggle 🌙/☀ to check both themes; click the poster to test the lightbox.</span>
+</div>
+
+<div class="cause-note">
+  <strong>Why this sketch:</strong> the full game detail page hasn't been composed-checked since
+  sketch 011 (which predates all of 027-042 — sixteen detail-page-specific sketches layered on
+  independently since then, the same situation 007/026 existed to catch for the catalog side).
+  <strong>Real drift found while composing:</strong>
+  <ul>
+    <li><strong>Lightbox width vs. arrow anchor:</strong> 033's own CSS still capped the lightbox
+    image at a standalone <code>min(90vw, 42rem)</code> — the exact thing 038 diagnosed as the root
+    cause of "no contrast." Capped the wrap to the shell's real content width instead.</li>
+    <li><strong>Lightbox arrows anchored to the viewport, not the image:</strong> 033's shipped
+    markup kept <code>.pk-lightbox-nav</code> as a viewport-relative sibling, even though 038's own
+    README says they should track the image's box. Moved them to be children of
+    <code>.pk-lightbox-img-wrap</code> so they move with the width fix automatically instead of
+    silently drifting out of sync with it again.</li>
+    <li><strong>Desktop CTA vs. mobile CTA bar:</strong> 032 keeps a standalone CTA under the sticky
+    poster column; 028 puts a different, fixed-bottom stacked CTA bar on mobile. Composed naively
+    these would double up the reserve button on mobile — scoped the desktop CTA to
+    <code>.frame.desktop</code> only.</li>
+  </ul>
+</div>
+
+<div class="compare">
+  <div class="frame desktop">
+    <div class="frame-label">Desktop</div>
+    <div class="surface">
+      <div class="page-body">
+        <div class="masthead-grid">
+          <div class="poster-col">
+            <div class="pk-facts-row">
+              <span class="pk-fact">👥 1-4</span>
+              <span class="pk-fact">⏱ 90-120 min</span>
+              <span class="pk-fact"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot"></span></span></span>
+            </div>
+            <div class="pk-poster-panel">
+              <button class="share-fab" aria-label="Compartir" onclick="toast(this)">↗</button>
+              <div class="pk-poster-frame" onclick="openLightbox('d')">🚀</div>
+              <div class="dot-row">
+                <button class="dot-btn is-active" aria-label="Foto 1"><span class="dot-mark"></span></button>
+                <button class="dot-btn" aria-label="Foto 2"><span class="dot-mark"></span></button>
+                <button class="dot-btn" aria-label="Foto 3"><span class="dot-mark"></span></button>
+              </div>
+            </div>
+            <div class="cta-standalone">
+              <button class="reserve-btn" onclick="toast(this)">🎲 ¡Quiero Jugarlo!</button>
+            </div>
+          </div>
+          <div class="text-col">
+            <div class="reading-section">
+              <h1 class="title">Spirit Island</h1>
+            </div>
+            <div class="pill-row rhythm-8">
+              <a class="pill tag-c" href="#">#CooperativoPuro</a>
+              <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
+            </div>
+            <div class="reading-section rhythm-16">
+              <div class="desc-shell">
+                <p class="desc is-clamped" id="desc-d"><button type="button" class="desc-toggle" aria-expanded="false" aria-controls="desc-d" aria-label="Ver más" onclick="toggleDesc('desc-d', this)"><span class="desc-toggle-ellipsis" aria-hidden="true">…</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6L8 10.5L12.5 6"/></svg></button>Encarná a un espíritu ancestral de una isla y
+                defendé tu tierra de la colonización, combinando poderes elementales con las otras
+                espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
+                plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
+                que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
+              </div>
+            </div>
+            <div class="reading-section rhythm-16">
+              <dl class="spec-list">
+                <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+                <div class="fact-cols">
+                  <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+                  <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+                  <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+                  <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+                </div>
+              </dl>
+            </div>
+            <div class="reading-section rhythm-32">
+              <div class="bgg-label">Comunidad BGG</div>
+              <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+              <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame mobile">
+    <div class="frame-label">Mobile 375px</div>
+    <div class="surface">
+      <div class="page-body">
+        <div class="masthead-grid">
+          <div class="poster-col">
+            <div class="pk-facts-row">
+              <span class="pk-fact">👥 1-4</span>
+              <span class="pk-fact">⏱ 90-120 min</span>
+              <span class="pk-fact"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot"></span></span></span>
+            </div>
+            <div class="pk-poster-panel">
+              <button class="share-fab" aria-label="Compartir" onclick="toast(this)">↗</button>
+              <div class="pk-poster-frame" onclick="openLightbox('m')">🚀</div>
+              <div class="dot-row">
+                <button class="dot-btn is-active" aria-label="Foto 1"><span class="dot-mark"></span></button>
+                <button class="dot-btn" aria-label="Foto 2"><span class="dot-mark"></span></button>
+                <button class="dot-btn" aria-label="Foto 3"><span class="dot-mark"></span></button>
+              </div>
+            </div>
+            <div class="cta-standalone">
+              <button class="reserve-btn" onclick="toast(this)">🎲 ¡Quiero Jugarlo!</button>
+            </div>
+          </div>
+          <div class="text-col">
+            <div class="reading-section">
+              <h1 class="title">Spirit Island</h1>
+            </div>
+            <div class="pill-row rhythm-8">
+              <a class="pill tag-c" href="#">#CooperativoPuro</a>
+              <a class="pill tag-c" href="#">#AltaRejugabilidad</a>
+            </div>
+            <div class="reading-section rhythm-16">
+              <div class="desc-shell">
+                <p class="desc is-clamped" id="desc-m"><button type="button" class="desc-toggle" aria-expanded="false" aria-controls="desc-m" aria-label="Ver más" onclick="toggleDesc('desc-m', this)"><span class="desc-toggle-ellipsis" aria-hidden="true">…</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6L8 10.5L12.5 6"/></svg></button>Encarná a un espíritu ancestral de una isla y
+                defendé tu tierra de la colonización, combinando poderes elementales con las otras
+                espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
+                plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
+                que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
+              </div>
+            </div>
+            <div class="reading-section rhythm-16">
+              <dl class="spec-list">
+                <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+                <div class="fact-cols">
+                  <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+                  <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+                  <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+                  <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
+                </div>
+              </dl>
+            </div>
+            <div class="reading-section rhythm-32">
+              <div class="bgg-label">Comunidad BGG</div>
+              <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+              <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pk-mobile-cta-bar">
+        <div class="cta-bar-inner">
+          <button class="reserve-btn" onclick="toast(this)">Reservar para jugar</button>
+          <button class="share-btn" onclick="toast(this)">⇪ Compartir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pk-lightbox" id="lightbox" role="dialog" aria-modal="true" onclick="if(event.target===this) closeLightbox()">
+  <div class="pk-lightbox-img-wrap">
+    <button class="pk-lightbox-close" onclick="closeLightbox()" aria-label="Cerrar">✕</button>
+    <button class="pk-lightbox-nav prev" onclick="event.stopPropagation()" aria-label="Anterior">‹</button>
+    <div class="pk-lightbox-img">🚀</div>
+    <button class="pk-lightbox-nav next" onclick="event.stopPropagation()" aria-label="Siguiente">›</button>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+<script>
+  function toggleDesc(id, btn) {
+    var el = document.getElementById(id);
+    var shell = btn.closest('.desc-shell');
+    var expanded = el.classList.toggle('is-clamped') === false;
+    shell.classList.toggle('is-expanded', expanded);
+    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    btn.setAttribute('aria-label', expanded ? 'Ver menos' : 'Ver más');
+    if (btn.parentElement === el) { shell.appendChild(btn); }
+    else if (btn.parentElement === shell && !expanded) { el.insertBefore(btn, el.firstChild); }
+  }
+
+  function openLightbox(which) {
+    document.getElementById('lightbox').classList.add('is-open');
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('is-open');
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeLightbox();
+  });
+
+  function toast(btn) {
+    var prev = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(function () { btn.textContent = prev; }, 700);
+  }
+</script>
+
+</body>
+</html>
