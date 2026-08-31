@@ -1172,19 +1172,26 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   # D-04/D-05 (01.2-04): the UI-SPEC `zero-one-many` backstop for Ficha
   # técnica — the section (heading + list) renders only when at least one
-  # of the four remaining carriable fields is present, so a minimal-data
-  # game never shows a bare heading over an empty grid. Every field read
-  # here is present on every %Game{} (two integers, one array column with
+  # of the carriable fields below is present, so a minimal-data game never
+  # shows a bare heading over an empty grid. Every field read here is
+  # present on every %Game{} (two integers, two array columns with
   # `default: []`, one nullable integer) — no nil-dereference path exists.
   # Narrowed from five fields to four in the G-01.2-10 mobile masthead
   # rework (01.2-17): the publisher-name clause was dropped in the same
   # edit as the spec-row it guarded — the two must move together, or a
   # game whose only remaining data was that field re-opens the exact
   # empty-heading hole this guard exists to close.
+  # WR-02 (01.3 code review): widened to also check `artists` — the
+  # "Ilustradores" row (and the Avanzado sub-group, gated transitively via
+  # `bgg_id`) render inside this same section but were left out of the
+  # or-chain when they were added, so a game carrying only `artists`
+  # (no bgg_id, no designers, no min_age/year_published) silently never
+  # rendered its own populated data.
   defp ficha_tecnica?(game) do
     not is_nil(game.min_age) or
       not is_nil(game.year_published) or
       game.designers != [] or
+      game.artists != [] or
       not is_nil(game.bgg_id)
   end
 
