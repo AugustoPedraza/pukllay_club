@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: null
+winner: "Ghost Chip (11px, invisible until hover), own row 24px above/below, before the divider"
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -13,65 +13,41 @@ Phase 01.3 UAT gap G-01.3-1's original complaint: editorial hashtags (`#DuelosMe
 render as a bare, unlabelled pill row today, positioned *after* the divider (between it and
 Mecánicas). User's suggestion: give it a real "category section," or move it before the divider.
 Also open since sketch 040 dropped "Sobre el juego"'s own heading: does the divider still earn its
-place, now that this reading column increasingly relies on small labels + rhythm instead of dividing
-lines?
+place?
 
 ## Winner
-**Variant A, rebalanced.** Tags move up to sit right after the description, still with no label
-(closest to the user's literal suggestion, picked over B's "Categorías" label and C's fold-into-grid).
-Round 1 had the tag row crammed inside the same reading-section as title+description, only 8px from
-the description text — too tight. Promoted to its own `.reading-section`, so it now gets the full
-32px between-section rhythm both above (from the description) and below (to the divider) — reads as
-its own beat instead of a tacked-on line under the prose.
+Hashtags sit right after the description, before the divider, as **Ghost Chip** — the same pill
+shape/tap-target as every other pill on the page, but fully transparent at rest; a soft accent tint
+only appears on hover/focus. The row's own margin is 24px above/below (not the page's standard 32px
+section gap) — a deliberate exception, since an invisible-at-rest element otherwise reads as dead
+whitespace rather than deliberate rhythm.
 
 ## Round History
-- **A: Move Before Divider, Still Bare** (picked) — tags before the divider, no label.
-- B: Labelled "Categorías," No Divider — dropped.
-- C: Folded Into the Fact Grid — dropped.
-- Round 2 (spacing) — "I want to see it with a better balance": tag row promoted from sharing the
-  title/description section (8px gap) to its own section (32px gap both sides).
-- Round 3 (color) — "the colored pills... [are] too heavy": the solid `accent-bg` fill + matching
-  border was the one full-opacity, "painted" element left on a page that 039-041 had otherwise moved
-  entirely to outline/muted tones. Softened to a semi-transparent tint of `accent-bg` (`color-mix`
-  toward the page background) with no border — still reads as "a different kind of thing" via hue,
-  no longer the loudest thing on the page. Pure color change; pill shape/size/spacing untouched, so
-  round 2's rhythm fix isn't affected.
-
-`GameChips.editorial_tags/1` (the real component this replaces) has exactly one call site
-(`show.ex:543`, the detail page) — this fix has no other pages to check for consistency, unlike the
-site-wide sweep sketch 041 needed for the outline pill tone.
-
-**Round 4 (current) — "wondering if those still should look like pills since are hashtags":**
-questioning the pill *shape* itself, not just its color. Four tabs, all keeping round 2/3's position
-and links unchanged:
-- **A: Pill (current)** — round 3's softened-tint pill, kept as the reference point.
-- **B: Plain Text** — no chip at all: larger, bolder colored link text, underline on hover, `#` is
-  the only visual marker. Closest to how a hashtag actually reads on social platforms.
-- **C: Ghost Chip** — same tap-target size/shape as every pill on the page, but invisible at rest
-  (no border, no fill); the tint only appears on hover/focus.
-- **D: Flat Label** — small corner radius (not full pill), a thin underline-style bottom border
-  instead of a boxed border, no background.
-
-**Round 5 (current) — "should them be more like a social network hashtag?"** C was picked, but its
-11px size is a UI/label scale, not how a hashtag reads on an actual social caption (body-text size).
-Three follow-ups, all keeping C's link-only decoration philosophy but bumping the type scale:
-- **E: Body-Sized Ghost** — C's hover-reveal interaction, same idea, `text-sm` size instead of 11px.
-- **F: Bold Caption Run** — `text-base`, matching the description paragraph's own size exactly, bold,
-  tightly packed (6px gap) — reads as the caption itself continuing onto a hashtag line, closest to
-  Instagram's convention.
-- **G: Always-Underlined** — `text-sm`, permanent thin underline (not hover-only) — addresses the
-  mobile-discoverability gap C/E leave open, since neither has any resting-state affordance and
-  touch devices have no hover.
+- **Round 1 — placement:** A (move before divider, still bare) picked over B (labelled "Categorías,"
+  no divider) and C (folded into fact grid).
+- **Round 2 — rhythm:** tag row promoted from sharing the title/description section (8px gap) to its
+  own section (32px gap both sides).
+- **Round 3 — color:** solid accent-fill pill ("too heavy") softened to a semi-transparent tint, no
+  border.
+- **Round 4 — shape:** "wondering if those still should look like pills since are hashtags." Four
+  options — A (the round-3 pill, reference), B (plain text), **C (Ghost Chip — picked)**, D (flat
+  underline label).
+- **Round 5 — social-hashtag scale:** "should them be more like a social network hashtag?" C's 11px
+  is a UI-label size, not how a hashtag reads in a caption. Three body-scale follow-ups tested — E
+  (C's hover-reveal at `text-sm`), F (bold, `text-base`, tightly packed — closest to Instagram), G
+  (always-underlined, `text-sm`, solves touch-discoverability). **All three rejected — the original
+  11px Ghost Chip (C) was picked as "the best."**
+- **Round 6 — rhythm again:** "improve spacing (top and below)." The winning ghost chip's full 32px
+  surrounding gap read as excess dead space, since nothing is visible there at rest. Tightened to
+  24px above/below via a deliberate margin override.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html
 
 ## What to Look For
-- A vs. B/C/D: does dropping the pill shape read as "more honestly a hashtag," or does it lose the
-  visual consistency of "this row is one interactive group" that a pill shape gives for free?
-- E/F/G: which type scale/weight reads as "hashtag" rather than either a UI label (too small) or
-  ordinary prose (indistinguishable from the description above it)?
-- G specifically: does the permanent underline solve C/E's mobile-discoverability gap without making
-  the row look over-decorated next to the divider-free page rhythm established since round 2?
+- Does the 24px gap read as a clear, deliberate beat now, or does it need to go tighter/looser still?
+- The row is invisible until hover/focus — no permanent affordance. This was accepted after round 5
+  explicitly tested (and rejected) alternatives that solved touch-discoverability (G's permanent
+  underline) — worth a final gut check on mobile specifically, where there's no hover to reveal it.
 - Divider still present here — worth a final check once this is composed with 039/040/041 together:
   does it still earn its place, or is it now one boundary too many?
