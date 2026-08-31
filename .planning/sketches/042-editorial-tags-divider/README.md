@@ -60,6 +60,16 @@ whitespace rather than deliberate rhythm.
   persisted at symmetric 24px/24px even after round 8's fix. Made the rhythm asymmetric instead of
   retuning one shared value — 16px to the description above (tags are commentary ON it, so sit
   closer) vs. 24px to the divider below (unchanged — still a separate zone from what follows).
+- **Round 10 — chevron affordance:** "improve the 'accordion' affordance with a chevron (instead of
+  the text) to make it minimal and improve balance." Replaced the "Ver más"/"Ver menos" text link
+  with an icon-only chevron button that rotates 180° on expand — one less piece of primary-colored
+  text competing with the tag row directly below it. Built with a plain `margin-top`, not a negative
+  margin against `.text-col`'s flex `gap` (the exact pattern that broke round 6) — deliberately
+  avoided repeating that bug. Tap target is 32px rather than the usual 44px floor, following this
+  app's own precedent for a smaller de-emphasized icon control in a secondary, low-frequency spot
+  (the footer theme-toggle, shrunk to 28px, footer-scoped). `aria-expanded` drives the rotation and
+  is the real accessible state; `aria-label` carries "Ver más"/"Ver menos" for screen readers since
+  the chevron alone has no text.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html — click "Ver más"/"Ver menos" to check

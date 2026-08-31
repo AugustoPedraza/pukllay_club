@@ -44,8 +44,25 @@
   .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
   h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
   .desc { line-height: 1.5; margin: 0; color: var(--color-text); }
-  .desc-toggle { background: none; border: none; padding: 0; margin-top: 4px; font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); cursor: pointer; }
-  .desc-toggle:hover { text-decoration: underline; }
+  /* Round 10 — "Ver más" text swapped for a chevron-only affordance: more
+     minimal, removes a second primary-colored text element competing with
+     the tag row right below it for attention. Deliberately NOT built with
+     a negative margin against a flex `gap` (that exact pattern broke
+     round 6) — a plain, explicit `margin-top` instead, no fighting the
+     layout algorithm. Tap target: 32px, not the usual 44px floor — this
+     app already has one precedent for a smaller de-emphasized icon
+     control (the footer theme-toggle, shrunk to 28px, footer-scoped, per
+     that debug session's own note) for exactly this situation: a
+     secondary, low-frequency control next to higher-priority content.
+     Muted at rest, primary on hover/focus like every other control here.
+     aria-expanded drives the chevron rotation AND is the real accessible
+     state — a chevron alone carries no text for a screen reader, so
+     aria-label supplies "Ver más"/"Ver menos" even though it's not shown
+     visually. */
+  .desc-toggle { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-top: 4px; background: none; border: none; border-radius: 50%; padding: 0; color: var(--color-text-muted); cursor: pointer; }
+  .desc-toggle:hover, .desc-toggle:focus-visible { color: var(--color-primary); }
+  .desc-toggle svg { transition: transform var(--duration-fast) var(--ease-standard); }
+  .desc-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
   .desc.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
   .divider { height: 1px; background: var(--color-border); border: none; margin: 0; }
 
@@ -90,13 +107,13 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: C, Rebalanced (v4) ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (rounds 1-8) in this sketch's README.
-  <strong>Round 9 (this version):</strong> composed against the real neighboring interactive element
-  — the description's "Ver más/Ver menos" clamp toggle (click it below) — since production has no
-  accordion at all (verified against the code; only the unrelated filter-modal checklist has one).
-  Spacing made asymmetric: tags sit 16px below the description (closer — they're commentary on it)
-  and keep 24px above the divider (unchanged). Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active">Winner: C, Rebalanced (v5) ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-9) in this sketch's README.
+  Round 9 composed against the real "Ver más/Ver menos" toggle (production has no accordion — click
+  it below) and made tag-row spacing asymmetric (16px to the description, 24px to the divider).
+  <strong>Round 10 (this version):</strong> the toggle itself is now a minimal chevron icon instead
+  of text — rotates on expand, no longer a second primary-colored text element competing with the
+  tag row for attention right below it. Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
@@ -106,6 +123,18 @@
   24px to the divider below (unchanged, they're still a separate zone from what follows). Also added
   the real "Ver más/Ver menos" toggle so the tag row's position holds up whether the description is
   collapsed or expanded, not just in the single static state shown before.
+</div>
+
+<div class="cause-note">
+  <strong>What changed (round 10):</strong> "Ver más" text replaced with a chevron-only icon button
+  — minimal, and one less piece of colored text right above the tag row. Deliberately built with a
+  plain <code>margin-top</code>, not a negative margin against the flex <code>gap</code> (the exact
+  pattern that broke round 6) — no risk of repeating that bug. Tap target is 32px, not the usual
+  44px floor: this app already has a real precedent for a smaller de-emphasized icon control in
+  exactly this situation (the footer theme-toggle, shrunk to 28px, footer-scoped) — a secondary,
+  low-frequency control living next to higher-priority content. <code>aria-expanded</code> drives the
+  rotation and stays the real accessible state; <code>aria-label</code> still carries "Ver más"/"Ver
+  menos" for screen readers even though nothing is shown visually.
 </div>
 
 <div class="compare">
@@ -120,7 +149,9 @@
           espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
           plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
           que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-          <button type="button" class="desc-toggle" onclick="toggleDesc('desc-d', this)">Ver más</button>
+          <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-d', this)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
+          </button>
         </div>
         <div class="pill-row rhythm-16">
           <a class="pill tag-c" href="#">#CooperativoPuro</a>
@@ -157,7 +188,9 @@
           espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
           plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
           que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-          <button type="button" class="desc-toggle" onclick="toggleDesc('desc-m', this)">Ver más</button>
+          <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-m', this)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
+          </button>
         </div>
         <div class="pill-row rhythm-16">
           <a class="pill tag-c" href="#">#CooperativoPuro</a>
@@ -193,7 +226,8 @@
   function toggleDesc(id, btn) {
     var el = document.getElementById(id);
     var expanded = el.classList.toggle('is-clamped') === false;
-    btn.textContent = expanded ? 'Ver menos' : 'Ver más';
+    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    btn.setAttribute('aria-label', expanded ? 'Ver menos' : 'Ver más');
   }
 </script>
 
