@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 6/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
+**Plans:** 7/9 plans executed (plans 06-09 close UAT gap G-01.3-1)
 
 Plans:
 
@@ -171,7 +171,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6: the creator pills need their filter targets to exist)*
 
-- [ ] 01.3-07-PLAN.md — Reading-column recomposition: hashtags after the title, divider and section headings removed, minimum-age row dropped, creators/mechanics/themes merged into one responsive two-column fact grid, Comunidad BGG replaces the Avanzado label (sketches 039/040/041/042/043)
+- [x] 01.3-07-PLAN.md — Reading-column recomposition: hashtags after the title, divider and section headings removed, minimum-age row dropped, creators/mechanics/themes merged into one responsive two-column fact grid, Comunidad BGG replaces the Avanzado label (sketches 039/040/041/042/043)
 
 **Wave 8** *(blocked on Wave 7: same files, same reading column)*
 
