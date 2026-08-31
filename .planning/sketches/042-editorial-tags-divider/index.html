@@ -52,9 +52,13 @@
   .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
   .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
 
-  /* Ghost Chip, typography matched to .desc (round 12): 16px/normal/1.5
-     instead of the pill's own 11px/600 UI-label scale. */
-  .tag-c { font-size: var(--text-base); font-weight: 400; line-height: 1.5; padding: 0 3px; background: transparent; border-color: transparent; color: var(--color-accent-text); }
+  /* Ghost Chip. Round 12 matched .desc exactly (16px/1.5) — round 15:
+     "better balance, less than main text." Full match made hashtags
+     compete with the title/description at equal weight; stepped down one
+     size (text-sm, 14px) so they read as clearly secondary while staying
+     legible and still noticeably bigger than the 11px pill-label scale
+     this whole thread moved away from. */
+  .tag-c { font-size: var(--text-sm); font-weight: 400; line-height: 1.5; padding: 0 3px; background: transparent; border-color: transparent; color: var(--color-accent-text); }
   .tag-c:hover { background: color-mix(in srgb, var(--color-accent-bg) 55%, transparent); }
 
   .spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); }
@@ -81,22 +85,19 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: Below Title, Row Layout ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (rounds 1-13) in this sketch's README.
-  Round 13 settled position: hashtags right after the title, before the description ("Below" beat
-  "Above" — a kicker line before the game's own name read as disorienting). <strong>Round 14 (this
-  version):</strong> back to a wrapping row instead of round 11's vertical stack — the row shape
-  suits sitting beside the title better than a multi-line stack does. Gap widened to 10px for the
-  now-larger, description-matched type. No divider (removed round 13). Toggle 🌙/☀ to check both
-  themes.</span>
+  <button class="variant-tab active">Winner: Below Title, Row, Smaller ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-14) in this sketch's README.
+  Position: below the title, wrapping row. <strong>Round 15 (this version):</strong> "better
+  balance, less than main text" — stepped the hashtag size down from a full match with the
+  description (16px) to `text-sm` (14px), so they read as clearly secondary instead of competing at
+  equal weight with the title/description. No divider. Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>What changed (round 14):</strong> "below looks better, but now could take full width (row)
-  instead of be stacked." Reverted `.tag-stack`'s `flex-direction: column` back to the base
-  `.pill-row`'s horizontal wrap. The row's gap moved from the stack's tight 4px to 10px — the 6px the
-  row originally shipped with (sketch 042 round 1) was tuned for the pill's tiny 11px text; at the
-  16px description-matched type (round 12), that gap read too cramped for full-size text.
+  <strong>What changed (round 15):</strong> round 12 matched hashtag type to the description exactly
+  — that made them compete at equal visual weight with the surrounding prose. Stepped down one size
+  (16px → 14px, <code>text-sm</code>) so they read as secondary/supporting content next to the title,
+  while staying well above the original 11px pill-label scale this whole thread moved away from.
 </div>
 
 <div class="compare">
