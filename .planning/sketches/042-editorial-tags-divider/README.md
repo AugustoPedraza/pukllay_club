@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: "A, rebalanced — tags before the divider, in their own reading-section for full 32px rhythm"
+winner: "A, rebalanced — tags before the divider, own reading-section for rhythm, softened tint pill"
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -28,8 +28,18 @@ its own beat instead of a tacked-on line under the prose.
 - **A: Move Before Divider, Still Bare** (picked) — tags before the divider, no label.
 - B: Labelled "Categorías," No Divider — dropped.
 - C: Folded Into the Fact Grid — dropped.
-- Round 2 — "I want to see it with a better balance": tag row promoted from sharing the
+- Round 2 (spacing) — "I want to see it with a better balance": tag row promoted from sharing the
   title/description section (8px gap) to its own section (32px gap both sides).
+- Round 3 (color) — "the colored pills... [are] too heavy": the solid `accent-bg` fill + matching
+  border was the one full-opacity, "painted" element left on a page that 039-041 had otherwise moved
+  entirely to outline/muted tones. Softened to a semi-transparent tint of `accent-bg` (`color-mix`
+  toward the page background) with no border — still reads as "a different kind of thing" via hue,
+  no longer the loudest thing on the page. Pure color change; pill shape/size/spacing untouched, so
+  round 2's rhythm fix isn't affected.
+
+`GameChips.editorial_tags/1` (the real component this replaces) has exactly one call site
+(`show.ex:543`, the detail page) — this fix has no other pages to check for consistency, unlike the
+site-wide sweep sketch 041 needed for the outline pill tone.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html
@@ -37,5 +47,7 @@ open .planning/sketches/042-editorial-tags-divider/index.html
 ## What to Look For
 - Does the tag row now read as a clear, separate beat between the description and the divider, or
   does the 32px gap make it feel disconnected from the description it's tagging?
+- Does the softened tint still read as clearly clickable/interactive, or does it now risk blending
+  into the page too much (the opposite failure mode this whole session has repeatedly caught)?
 - Divider still present here (only B/C removed it) — worth a final check once this is composed with
   039/040/041 together: does it still earn its place, or is it now one boundary too many?

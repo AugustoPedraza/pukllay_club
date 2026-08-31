@@ -33,8 +33,16 @@
 
   .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
   .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pill-accent { background: var(--color-accent-bg); border-color: var(--color-accent-bg); color: var(--color-accent-text); }
-  .pill-accent:hover { transform: translateY(-1px); }
+  /* Feedback: full-opacity accent-bg + matching border read as the one
+     "loud," painted element on a page that's otherwise gone all-outline
+     (039-041) — too heavy, not a rhythm/shape problem. Softened by tinting
+     the fill toward the page background instead of dropping it outright:
+     a colored tint (not a hard border, not translateY lift) still reads as
+     "this is a different kind of thing" from the outline facts around it,
+     just quietly instead of shouting. Pure color change — shape/size/gap
+     untouched, so the established rhythm doesn't move. */
+  .pill-accent { background: color-mix(in srgb, var(--color-accent-bg) 55%, transparent); border-color: transparent; color: var(--color-accent-text); }
+  .pill-accent:hover { border-color: color-mix(in srgb, var(--color-accent-text) 35%, transparent); }
   .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
   .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
 
@@ -62,19 +70,21 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: A, Rebalanced ★ Selected</button>
+  <button class="variant-tab active">Winner: A, Rebalanced (v2) ★ Selected</button>
   <span class="caption">Sketch 042 — B/C removed, full round history in this sketch's README.
-  <strong>Rebalanced:</strong> the tag row was cramped against the description at 8px (the
-  within-section gap) — promoted to its own <code>.reading-section</code> so it gets the same 32px
-  breathing room as every other block, instead of reading like a tacked-on line under the prose.
-  Toggle 🌙/☀ to check both themes.</span>
+  <strong>Rebalanced (spacing):</strong> the tag row was cramped against the description at 8px —
+  promoted to its own <code>.reading-section</code> for the same 32px rhythm as every other block.
+  <strong>Softened (color):</strong> the solid accent-fill pill read as the one "loud" element on an
+  otherwise all-outline page — tinted toward the background instead, no hard border, no lift. Toggle
+  🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>What changed for balance:</strong> title+description keep their own section (8px gap
-  between them, as prose). The tag row is now a separate section directly below — 32px above (from
-  the description) and 32px below (to the divider), matching the rhythm every other block on this
-  page already uses. Still no label, still positioned before the divider, per the picked direction.
+  <strong>What changed for balance:</strong> spacing — title+description keep their own section (8px
+  gap); the tag row is its own section directly below (32px both sides, matching the rest of the
+  page). Color — the hashtag pill's full-opacity accent fill + matching border is now a semi-
+  transparent tint with no border, so it still reads as "a different kind of thing" via hue, but no
+  longer competes as the single heaviest element against the outline pills around it.
 </div>
 
 <div class="compare">
