@@ -3538,31 +3538,48 @@ body.pk-cta-parked {
 }
 
 /* Title-echo name truncation (Phase 01.2 gap-closure round 4, G-01.2-24
-   task 1). The bar's title <span> gets a real class, named for the element
-   it is, in the same pk- family as its parent, declared once here directly
-   below the bar's own rules. Four properties are required TOGETHER for a
-   flex item to truncate rather than wrap: a zero minimum width (a flex
-   item's default min-width is its own content, which is exactly what turns
-   "too narrow" into "second line" instead of "clipped"), no wrapping,
-   hidden overflow, and an ellipsis. The bar's OTHER flex item,
-   .pk-scroll-top below, is a fixed 2.75rem square with `flex: 0 0 auto`, so
-   every pixel the bar is short lands on this span — without `min-width: 0`
-   the span cannot shrink below its own content width and wraps to a second
-   line instead.
+   task 1), plus the title's own typographic identity (01.3-11, gap closure
+   G-01.3-5). The bar's title <span> gets a real class, named for the
+   element it is, in the same pk- family as its parent, declared once here
+   directly below the bar's own rules. Four properties are required
+   TOGETHER for a flex item to truncate rather than wrap: a zero minimum
+   width (a flex item's default min-width is its own content, which is
+   exactly what turns "too narrow" into "second line" instead of
+   "clipped"), no wrapping, hidden overflow, and an ellipsis. The bar's
+   OTHER flex item, .pk-scroll-top below, is a fixed 2.75rem square with
+   `flex: 0 0 auto`, so every pixel the bar is short lands on this span —
+   without `min-width: 0` the span cannot shrink below its own content
+   width and wraps to a second line instead.
 
-   Measured fact (G-01.2-14 diagnosis, live CDP against the running dev
-   server, light theme): the bar's text and background measured at very
-   high contrast — rgb(36,18,56) text on rgb(255,255,255) background — so
-   the UAT-reported "don't have correct balance to contrast with
-   background... looks like text over two lines" complaint is the visual
-   crowding a two-line wrap produces inside a bar padded for one line, NOT
-   a colour-token defect. No colour on this bar changes here or anywhere
-   else in this fix. */
+   G-01.3-5: before this round, the span declared none of font-family,
+   font-weight, font-size or color anywhere in its cascade, so it silently
+   inherited ambient body text next to .pk-scroll-top, a 44px solid-
+   brand-filled circle — plain undifferentiated text beside a heavy,
+   saturated button. Two other surfaces on this same page render this same
+   string and each made a deliberate, role-appropriate typographic choice:
+   the real H1 uses the display face at text-3xl, the breadcrumb echo uses
+   small muted Inter. This is that same missing decision for the bar's
+   echo role, sized one step down from the H1 (1.25rem, the same step
+   .pk-section-heading already uses) rather than against the button beside
+   it. font-weight is declared explicitly, not left implicit: Bebas Neue is
+   self-hosted at weight 400 ONLY (see the @font-face blocks above), so any
+   heavier value here would be silently synthesized into a faux bold by
+   the browser, with no build step ever flagging it. color states the
+   value this span already resolved to by inheritance, now as a decision,
+   so the existing two-theme 4.5:1 contrast pins below keep measuring the
+   token the bar actually uses. The bar's own fill, its border, and
+   .pk-scroll-top's fill and bounce are deliberately untouched here and
+   remain the brand-tint question 01.3-09 left open. */
 .pk-title-echo-name {
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--color-base-content);
 }
 
 .pk-scroll-top {

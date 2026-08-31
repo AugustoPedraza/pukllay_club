@@ -3245,6 +3245,98 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                  "#{inspect(MapSet.to_list(shared_classes))} — found: #{inspect(class)}"
       end
     end
+
+    # 01.3-11 (gap closure G-01.3-5): the title span's OWN rule, matched on
+    # its literal (unqualified) selector text anchored to the start of a
+    # line — same idiom as title_echo_block/0 and title_echo_inner_block/0
+    # above, and the same reason: `.pk-title-echo-name` must never be
+    # confused with `.pk-title-echo` or `.pk-title-echo-inner`.
+    defp title_echo_name_block do
+      case Regex.run(~r/(?m)^\.pk-title-echo-name\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-title-echo-name {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the title has a deliberate typographic identity — display font, explicit size, explicit color" do
+      body = title_echo_name_block()
+
+      assert body =~ ~r/font-family:\s*var\(--font-display\)\s*;/,
+             "`.pk-title-echo-name` must declare `font-family: var(--font-display);`. A " <>
+               "title-role element that declares no font properties anywhere in its cascade " <>
+               "inherits ambient body text by omission, which is not a decision — that was " <>
+               "the exact defect G-01.3-5 reported."
+
+      assert body =~ ~r/font-size:\s*1\.25rem\s*;/,
+             "`.pk-title-echo-name` must declare an explicit `font-size: 1.25rem;` — the same " <>
+               "display-label step `.pk-section-heading` already uses, one step below the " <>
+               "real H1's text-3xl."
+
+      assert body =~ ~r/color:\s*var\(--color-base-content\)\s*;/,
+             "`.pk-title-echo-name` must declare an explicit `color: var(--color-base-content);` " <>
+               "rather than leaving its text color to inherit."
+    end
+
+    test "no faux bold — the rule declares weight 400 and no other numeric or keyword weight" do
+      body = title_echo_name_block()
+
+      assert body =~ ~r/font-weight:\s*400\s*;/,
+             "`.pk-title-echo-name` must declare `font-weight: 400;` explicitly. Bebas Neue is " <>
+               "self-hosted at weight 400 ONLY (see the @font-face blocks in assets/css/app.css), " <>
+               "so a heavier value here is synthesized by the browser into a faux bold that no " <>
+               "build step will ever flag."
+
+      refute body =~ ~r/font-weight:\s*(?!400\s*;)[0-9]+\s*;/,
+             "`.pk-title-echo-name` must not declare any numeric font-weight other than 400 — " <>
+               "only weight 400 of Bebas Neue is self-hosted."
+
+      refute body =~ ~r/font-weight:\s*(bold|bolder|semibold)\s*;/,
+             "`.pk-title-echo-name` must not declare a keyword font-weight (bold/bolder/semibold) " <>
+               "— only weight 400 of Bebas Neue is self-hosted; any other value is " <>
+               "browser-synthesized and never flagged by a build step."
+    end
+
+    test "typography and truncation coexist in the SAME rule" do
+      body = title_echo_name_block()
+
+      truncation_hits =
+        Regex.scan(
+          ~r/min-width:\s*0\s*;|white-space:\s*nowrap\s*;|overflow:\s*hidden\s*;|text-overflow:\s*ellipsis\s*;/,
+          body
+        )
+
+      assert length(truncation_hits) == 4,
+             "`.pk-title-echo-name` must still declare all four truncation properties " <>
+               "(min-width: 0, white-space: nowrap, overflow: hidden, text-overflow: ellipsis) " <>
+               "in the SAME rule as the new typography declarations. G-01.2-24: a larger font " <>
+               "in a flex item that lost `min-width: 0` wraps to a second line — the exact " <>
+               "defect that round fixed, and this round makes the text bigger."
+
+      assert body =~ ~r/font-family:\s*var\(--font-display\)/,
+             "The typography declarations must live in the SAME `.pk-title-echo-name` rule as " <>
+               "the truncation properties above, not a separate/overriding rule."
+    end
+
+    test "the deferred scope really is untouched — bar fill, scroll-top fill, and the bounce keyframes" do
+      assert title_echo_block() =~ ~r/background:\s*var\(--color-base-200\)\s*;/,
+             "`.pk-title-echo`'s fill token must still read `--color-base-200`. 01.3-09 recorded " <>
+               "a developer decision (accept-mechanical) to leave the brand-tint question open; " <>
+               "this test is what makes 'the typography fix did not quietly answer it' checkable " <>
+               "rather than merely asserted in a SUMMARY."
+
+      scroll_top_body =
+        case Regex.run(~r/(?m)^\.pk-scroll-top\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-scroll-top {...}` rule found in assets/css/app.css")
+        end
+
+      assert scroll_top_body =~ ~r/background:\s*var\(--color-primary\)\s*;/,
+             "`.pk-scroll-top`'s fill token must still read `--color-primary` — untouched by " <>
+               "this plan, remaining part of the open brand-tint question."
+
+      assert css_source() =~ ~r/(?m)^@keyframes pk-scroll-top-bounce\b/,
+             "The `pk-scroll-top-bounce` keyframes must still exist, untouched by this plan."
+    end
   end
 
   # G-01.2-24 task 2: source-level CSS facts for the corrected
