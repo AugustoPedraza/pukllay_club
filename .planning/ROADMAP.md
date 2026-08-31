@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans executed
 
 Plans:
 
@@ -161,7 +161,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4: UAT needs real Spanish text and real BGG stats on the page)*
 
-- [ ] 01.3-05-PLAN.md — UI-SPEC implementation: two-tier reading-column rhythm, `.pk-reading-section` wrapping, uppercase section headings, Ilustradores row, labelled Avanzado stats group, and the rewritten Phase 01.2 drift test (D-03, D-04, D-05, D-06)
+- [x] 01.3-05-PLAN.md — UI-SPEC implementation: two-tier reading-column rhythm, `.pk-reading-section` wrapping, uppercase section headings, Ilustradores row, labelled Avanzado stats group, and the rewritten Phase 01.2 drift test (D-03, D-04, D-05, D-06)
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
