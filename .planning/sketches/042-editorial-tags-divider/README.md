@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: "Below Title, row (10px gap), text-sm (14px), no divider, right-aligned chevron with sketch-006 motion + tap feedback"
+winner: "Below Title, row (10px gap), text-sm (14px), no divider, inline chevron flush with text, 16px to fact grid"
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -125,3 +125,9 @@ the tag row's position holds up against the description toggle in both variants.
   default. Added a real `:active` tap state (scale + tint), since hover never fires on touch and
   mobile needs its own feedback signal. The revealed description text now fades in on expand instead
   of snapping into view.
+- **Round 17 — inline chevron + tighter fact-grid gap (current):** "chevron is totally disconnect of
+  its function" — round 16's right-aligned block button sat isolated at the far edge, nothing tying
+  it to the text. Moved inside the `<p>` as its last inline child (flush with the last visible word,
+  the common "Read more ›" pattern), shrunk to 24px/14px-icon since it's part of a text line now, not
+  a standalone block target. "A lot of space from the description to the next part" — the fact
+  grid's margin-top dropped from 32px to 16px.

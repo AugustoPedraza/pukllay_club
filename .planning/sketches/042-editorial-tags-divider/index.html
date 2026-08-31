@@ -35,22 +35,19 @@
   .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
   h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
   .desc { line-height: 1.5; margin: 0; color: var(--color-text); }
-  /* Round 16 — "arrow better at right" + "polished subtle animation,
-     specially on mobile." align-self: flex-end pushes the chevron to the
-     column's right edge instead of the default left. Rotation now uses
-     this app's own VALIDATED motion tokens (sketch 006's winner —
-     --duration-base/--ease-out-soft, "Subtle/Soft") instead of the
-     generic --duration-fast/--ease-standard pair used everywhere else in
-     this sketch — a deliberately calmer, slightly slower feel for the one
-     control on the page that has a real state change to announce. Added
-     an explicit :active tap state (scale down) since hover never fires on
-     a touch device — mobile needs its OWN feedback signal, not just the
-     hover one desktop already gets. The revealed text also gets a brief
-     fade-in on expand so the extra lines don't just snap into view. */
-  .desc-toggle { display: inline-flex; align-items: center; justify-content: center; align-self: flex-end; width: 32px; height: 32px; margin-top: 4px; background: none; border: none; border-radius: 50%; padding: 0; color: var(--color-text-muted); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+  /* Round 17 — "chevron totally disconnected from its function." Round
+     16's right-aligned BLOCK button sat isolated at the far edge of the
+     column, with nothing visually tying it to the text it toggles. Moved
+     INSIDE the paragraph as its last inline child instead — it now sits
+     flush against the last visible word, same "Read more ›" pattern most
+     real apps use, so proximity itself proves what it does. Small inline
+     size (24px) since it's part of the text line now, not a separate
+     block-level tap target; still comfortably tappable. Motion/tap-state
+     from round 16 kept as-is. */
+  .desc-toggle { display: inline-flex; align-items: center; justify-content: center; vertical-align: -6px; width: 24px; height: 24px; margin-left: 2px; background: none; border: none; border-radius: 50%; padding: 0; color: var(--color-text-muted); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
   .desc-toggle:hover, .desc-toggle:focus-visible { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
   .desc-toggle:active { transform: scale(0.88); background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
-  .desc-toggle svg { transition: transform var(--duration-base) var(--ease-out-soft); }
+  .desc-toggle svg { transition: transform var(--duration-base) var(--ease-out-soft); width: 14px; height: 14px; }
   .desc-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
   .desc.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
   @keyframes descReveal { from { opacity: 0.3; } to { opacity: 1; } }
@@ -100,13 +97,12 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: Below Title, Row, Polished ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (rounds 1-15) in this sketch's README.
-  <strong>Round 16 (this version):</strong> chevron moved to the right edge of the column (was
-  left-aligned by default); its rotation now uses this app's own validated "Subtle/Soft" motion
-  tokens (sketch 006) instead of the generic pair everywhere else; added a real tap state
-  (scale-down) since hover never fires on touch; the revealed description text fades in on expand
-  instead of snapping. Toggle 🌙/☀ to check both themes — tap/click the chevron to feel it.</span>
+  <button class="variant-tab active">Winner: Below Title, Row, Polished (v2) ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-16) in this sketch's README.
+  <strong>Round 17 (this version):</strong> round 16's right-aligned chevron sat isolated at the
+  column's far edge, disconnected from the text it toggles — moved INSIDE the paragraph as its last
+  inline word instead, flush against the visible text ("Read more ›" pattern). Fact-grid spacing
+  below the description also tightened, 32px → 16px. Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
@@ -117,6 +113,14 @@
   actual validated motion pair from sketch 006, not a generic default; (2) a real <code>:active</code>
   state (scale + tint) — mobile has no hover, so it needs its own tap feedback, not just desktop's
   hover color change; (3) the revealed text fades in on expand instead of appearing instantly.
+</div>
+
+<div class="cause-note">
+  <strong>What changed (round 17):</strong> "chevron is totally disconnect of its function" —
+  right-alignment (round 16) put it far from the text, with nothing tying the two together visually.
+  Moved to the paragraph's own last inline child; shrunk to 24px (14px icon) since it's now part of a
+  text line, not a standalone block target. "A lot of space from the description to the next part" —
+  the fact-grid section's margin-top dropped from 32px to 16px.
 </div>
 
 <div class="compare">
@@ -136,12 +140,9 @@
           defendé tu tierra de la colonización, combinando poderes elementales con las otras
           espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
           plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
-          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-          <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-d', this)">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
-          </button>
+          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.<button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-d', this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg></button></p>
         </div>
-        <div class="reading-section rhythm-32">
+        <div class="reading-section rhythm-16">
           <dl class="spec-list">
             <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
             <div class="fact-cols">
@@ -176,12 +177,9 @@
           defendé tu tierra de la colonización, combinando poderes elementales con las otras
           espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
           plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
-          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
-          <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-m', this)">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg>
-          </button>
+          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.<button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-m', this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg></button></p>
         </div>
-        <div class="reading-section rhythm-32">
+        <div class="reading-section rhythm-16">
           <dl class="spec-list">
             <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
             <div class="fact-cols">
