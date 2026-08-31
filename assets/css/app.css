@@ -3087,16 +3087,55 @@ body.pk-drawer-open {
      .pk-text-col / .pk-reading-section gaps above, D-03/D-04 */
 }
 
-.pk-clamp {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-  overflow: hidden;
+/* 01.3-08: .pk-desc-shell wraps the description paragraph and its inline
+   toggle button (which renders as one of two mutually-exclusive :if
+   branches in show.ex, never both) — the flex column keeps the collapsed
+   branch's in-paragraph float and the expanded branch's trailing sibling
+   button both stacking correctly under the paragraph. Replaces the old
+   plain .pk-description wrapper div, which carried no CSS rule of its own. */
+.pk-desc-shell {
+  display: flex;
+  flex-direction: column;
 }
 
-.pk-clamp.is-expanded {
-  -webkit-line-clamp: unset;
-  overflow: visible;
+/* 01.3-08 (UAT gap G-01.3-1 item 6): the description paragraph itself.
+   `line-height: 1.5` is declared here, once — .pk-desc.is-clamped's
+   max-height below and .pk-desc-toggle's margin-top both read this SAME
+   1.5 as a multiple, never restating it as an independent literal.
+   `text-align: justify` is unconditional (applies at every viewport width,
+   not just desktop) per the UAT's explicit "the alignment must be on
+   desktop [too]" ask. `text-justify: inter-word` is load-bearing on the
+   clamped (3rd) line specifically: that line has a float competing for its
+   width (see .pk-desc-toggle below), and word-based justification is what
+   keeps the resulting gap distribution sane — this only became safe once
+   the toggle shrank to icon-only, see .pk-desc-toggle's own comment.
+   `overflow-wrap`/`word-break: normal` are pinned explicitly so no
+   inherited or future rule introduces a break inside a word at the clip
+   edge. */
+.pk-desc {
+  line-height: 1.5;
+  margin: 0;
+  text-align: justify;
+  text-justify: inter-word;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Clip mechanism deliberately avoids the webkit box-orient line-clamp
+   property (the prior 01.3-07-era description rule used it). Sketch 042
+   hit a concrete crash (round 17) nesting an interactive <button> as a
+   flex child inside a paragraph using that box-orient clamp mode — the
+   icon disappeared and the click hit-area spread across the whole clamped
+   block. `max-height` + `overflow: hidden` is a decades-old, universally
+   supported combination that composes fine with the floated toggle
+   instead. `calc(3 * 1.5em)` is three line-heights, expressed as a
+   multiple of the SAME 1.5 .pk-desc declares above — never a literal
+   pixel height, so the clip always lands on a line boundary regardless of
+   font-size changes. */
+.pk-desc.is-clamped {
+  display: block;
+  max-height: calc(3 * 1.5em);
+  overflow: hidden;
 }
 
 /* Boundary between the primary reading block (title + description) and
@@ -4535,14 +4574,13 @@ main.pk-boundary-collapse + .pk-footer {
     content: "‹ ";
   }
 
-  /* Detail page (01.1-03/01.1-04): a shorter description clamp and a
-     single-column ficha técnica below 480px. The masthead's own column
-     count and the poster column's sticky/static toggle are now handled
-     by the 48rem detail layout breakpoint (01.1-04) — nothing to repeat
-     here, both are already single-column/static below that width. */
-  .pk-clamp {
-    -webkit-line-clamp: 2;
-  }
+  /* 01.3-08: the old shorter mobile description clamp (01.1-03/01.1-04,
+     a two-line box-orient override at this same breakpoint) is removed.
+     The description paragraph's clip is now a fixed multiple of its own
+     line-height, not a viewport-dependent line count, so the clip is
+     already identical at every width by construction — no per-breakpoint
+     override is needed or wanted. The single-column ficha técnica note
+     below is unrelated and stays as-is. */
 
   .pk-spec-list {
     grid-template-columns: 1fr;
