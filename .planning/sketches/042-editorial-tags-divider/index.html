@@ -7,17 +7,13 @@
 <link rel="stylesheet" href="../themes/default.css">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; padding-top: 100px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+  body { margin: 0; padding-top: 90px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
 
   #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
-  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
-  .variant-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; }
   .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
   #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
   #variant-nav .caption strong { color: var(--color-text); }
-
-  .variant { display: none; }
-  .variant.active { display: block; }
 
   .cause-note { max-width: 900px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
   .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
@@ -41,8 +37,6 @@
   .pill-accent:hover { transform: translateY(-1px); }
   .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
   .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
-
-  .tag-label { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
 
   .spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); }
   .spec-row dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 4px; }
@@ -68,236 +62,86 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active" onclick="showVariant('a')">A: Move Before Divider, Still Bare</button>
-  <button class="variant-tab" onclick="showVariant('b')">B: Labelled, No Divider</button>
-  <button class="variant-tab" onclick="showVariant('c')">C: Folded Into the Fact Grid</button>
-  <span class="caption">Sketch 042 — Phase 01.3 UAT gap G-01.3-1's original complaint: editorial tags
-  (#DuelosMemorables-style) render as a bare, unlabelled pill row today, positioned AFTER the divider
-  (between it and Mecánicas — now the fact grid). User's suggestion: move it before the divider, or
-  give it a real "category section." Question also open since 040: does the divider still earn its
-  place, now that headings are being dropped in favor of labels + rhythm alone? Builds on 039/040/041
-  — fact grid uses the settled outline pill tone. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active">Winner: A, Rebalanced ★ Selected</button>
+  <span class="caption">Sketch 042 — B/C removed, full round history in this sketch's README.
+  <strong>Rebalanced:</strong> the tag row was cramped against the description at 8px (the
+  within-section gap) — promoted to its own <code>.reading-section</code> so it gets the same 32px
+  breathing room as every other block, instead of reading like a tacked-on line under the prose.
+  Toggle 🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>Current production (for reference):</strong> Description → <code>.pk-divider</code> →
-  bare editorial-tags <code>&lt;div&gt;</code> (no heading, no label) → Mecánicas/Temáticas (now
-  folded into the fact grid per 040) → ficha técnica. This sketch only moves/labels/removes — it
-  doesn't touch the tags themselves or add new ones.
+  <strong>What changed for balance:</strong> title+description keep their own section (8px gap
+  between them, as prose). The tag row is now a separate section directly below — 32px above (from
+  the description) and 32px below (to the divider), matching the rhythm every other block on this
+  page already uses. Still no label, still positioned before the divider, per the picked direction.
 </div>
 
-<!-- ========================= VARIANT A ========================= -->
-<div class="variant active" id="variant-a">
-  <div class="compare">
-    <div class="frame desktop">
-      <div class="frame-label">Desktop — tags move above the divider, still no label</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="reading-section">
-            <h1 class="title">Spirit Island</h1>
-            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
-            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
-            invasores antes de que la isla sea devastada.</p>
-            <div class="pill-row">
-              <a class="pill pill-accent" href="#">#CooperativoPuro</a>
-              <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
-            </div>
-          </div>
-          <hr class="divider">
-          <div class="reading-section">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
+<div class="compare">
+  <div class="frame desktop">
+    <div class="frame-label">Desktop</div>
+    <div class="surface">
+      <div class="text-col">
+        <div class="reading-section">
+          <h1 class="title">Spirit Island</h1>
+          <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+          colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+          invasores antes de que la isla sea devastada.</p>
         </div>
-      </div>
-    </div>
-    <div class="frame mobile">
-      <div class="frame-label">Mobile 390px</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="reading-section">
-            <h1 class="title">Spirit Island</h1>
-            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
-            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
-            invasores antes de que la isla sea devastada.</p>
-            <div class="pill-row">
-              <a class="pill pill-accent" href="#">#CooperativoPuro</a>
-              <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
+        <div class="pill-row">
+          <a class="pill pill-accent" href="#">#CooperativoPuro</a>
+          <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
+        </div>
+        <hr class="divider">
+        <div class="reading-section">
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+            <div class="fact-cols">
+              <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+              <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+              <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+              <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
             </div>
-          </div>
-          <hr class="divider">
-          <div class="reading-section">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
+          </dl>
+        </div>
+        <div class="reading-section">
+          <div class="bgg-label">Comunidad BGG</div>
+          <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+          <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-<!-- ========================= VARIANT B ========================= -->
-<div class="variant" id="variant-b">
-  <div class="compare">
-    <div class="frame desktop">
-      <div class="frame-label">Desktop — labelled "Categorías," no divider</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="reading-section">
-            <h1 class="title">Spirit Island</h1>
-            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
-            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
-            invasores antes de que la isla sea devastada.</p>
-          </div>
-          <div class="reading-section">
-            <div class="tag-label">Categorías</div>
-            <div class="pill-row">
-              <a class="pill pill-accent" href="#">#CooperativoPuro</a>
-              <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
+  <div class="frame mobile">
+    <div class="frame-label">Mobile 390px</div>
+    <div class="surface">
+      <div class="text-col">
+        <div class="reading-section">
+          <h1 class="title">Spirit Island</h1>
+          <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+          colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+          invasores antes de que la isla sea devastada.</p>
+        </div>
+        <div class="pill-row">
+          <a class="pill pill-accent" href="#">#CooperativoPuro</a>
+          <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
+        </div>
+        <hr class="divider">
+        <div class="reading-section">
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+            <div class="fact-cols">
+              <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
+              <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
+              <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
+              <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
             </div>
-          </div>
-          <div class="reading-section">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
+          </dl>
         </div>
-      </div>
-    </div>
-    <div class="frame mobile">
-      <div class="frame-label">Mobile 390px</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="reading-section">
-            <h1 class="title">Spirit Island</h1>
-            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
-            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
-            invasores antes de que la isla sea devastada.</p>
-          </div>
-          <div class="reading-section">
-            <div class="tag-label">Categorías</div>
-            <div class="pill-row">
-              <a class="pill pill-accent" href="#">#CooperativoPuro</a>
-              <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
-            </div>
-          </div>
-          <div class="reading-section">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ========================= VARIANT C ========================= -->
-<div class="variant" id="variant-c">
-  <div class="compare">
-    <div class="frame desktop">
-      <div class="frame-label">Desktop — Categorías becomes another fact cell, no divider</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="reading-section">
-            <h1 class="title">Spirit Island</h1>
-            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
-            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
-            invasores antes de que la isla sea devastada.</p>
-          </div>
-          <div class="reading-section">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Categorías</dt><div class="pill-row"><a class="pill pill-accent" href="#">#CooperativoPuro</a><a class="pill pill-accent" href="#">#AltaRejugabilidad</a></div></div>
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="frame mobile">
-      <div class="frame-label">Mobile 390px</div>
-      <div class="surface">
-        <div class="text-col">
-          <div class="reading-section">
-            <h1 class="title">Spirit Island</h1>
-            <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
-            colonización, combinando poderes elementales con las otras espíritus para expulsar a los
-            invasores antes de que la isla sea devastada.</p>
-          </div>
-          <div class="reading-section">
-            <dl class="spec-list">
-              <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
-              <div class="fact-cols">
-                <div class="fact-col"><dt>Categorías</dt><div class="pill-row"><a class="pill pill-accent" href="#">#CooperativoPuro</a><a class="pill pill-accent" href="#">#AltaRejugabilidad</a></div></div>
-                <div class="fact-col"><dt>Diseñadores</dt><div class="pill-row"><a class="pill pill-outline" href="#">R. Eric Reuss</a></div></div>
-                <div class="fact-col"><dt>Ilustradores</dt><div class="pill-row"><a class="pill pill-outline" href="#">Jason Behnke</a><a class="pill pill-outline" href="#">Loïc Billiau</a></div></div>
-                <div class="fact-col"><dt>Mecánicas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Colocación de losetas</a><a class="pill pill-outline" href="#">Cooperativo</a></div></div>
-                <div class="fact-col"><dt>Temáticas</dt><div class="pill-row"><a class="pill pill-outline" href="#">Fantasía</a><a class="pill pill-outline" href="#">Anti-colonialismo</a></div></div>
-              </div>
-            </dl>
-          </div>
-          <div class="reading-section">
-            <div class="bgg-label">Comunidad BGG</div>
-            <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
-            <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
-          </div>
+        <div class="reading-section">
+          <div class="bgg-label">Comunidad BGG</div>
+          <div class="bgg-row"><span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span><span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span><span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span></div>
+          <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
         </div>
       </div>
     </div>
@@ -307,15 +151,6 @@
 <div id="sketch-tools">
   <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
 </div>
-
-<script>
-  function showVariant(id) {
-    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('variant-' + id).classList.add('active');
-    event.target.classList.add('active');
-  }
-</script>
 
 </body>
 </html>

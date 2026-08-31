@@ -2,7 +2,7 @@
 sketch: 042
 name: editorial-tags-divider
 question: "Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place?"
-winner: null
+winner: "A, rebalanced — tags before the divider, in their own reading-section for full 32px rhythm"
 tags: [detail, editorial-tags, divider, gap-closure]
 ---
 
@@ -16,29 +16,26 @@ Also open since sketch 040 dropped "Sobre el juego"'s own heading: does the divi
 place, now that this reading column increasingly relies on small labels + rhythm instead of dividing
 lines?
 
-Builds directly on 039/040/041 — the fact grid below uses the settled outline pill tone; Comunidad
-BGG is the finalized plain-text treatment.
+## Winner
+**Variant A, rebalanced.** Tags move up to sit right after the description, still with no label
+(closest to the user's literal suggestion, picked over B's "Categorías" label and C's fold-into-grid).
+Round 1 had the tag row crammed inside the same reading-section as title+description, only 8px from
+the description text — too tight. Promoted to its own `.reading-section`, so it now gets the full
+32px between-section rhythm both above (from the description) and below (to the divider) — reads as
+its own beat instead of a tacked-on line under the prose.
+
+## Round History
+- **A: Move Before Divider, Still Bare** (picked) — tags before the divider, no label.
+- B: Labelled "Categorías," No Divider — dropped.
+- C: Folded Into the Fact Grid — dropped.
+- Round 2 — "I want to see it with a better balance": tag row promoted from sharing the
+  title/description section (8px gap) to its own section (32px gap both sides).
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html
 
-## Variants
-- **A: Move Before Divider, Still Bare** — minimal diff from today: tags move up to sit right after
-  the description (matching the user's literal suggestion), divider stays where it is, tags keep no
-  label.
-- **B: Labelled "Categorías," No Divider** — tags get a small `dt`-style label (same treatment as
-  every fact in the grid below), and the divider is dropped — the label itself does the "new zone"
-  signalling.
-- **C: Folded Into the Fact Grid** — goes one step further than 040's own merge: "Categorías" becomes
-  one more fact cell inside the same grid as Diseñadores/Ilustradores/Mecánicas/Temáticas (keeping
-  its distinct accent pill tone, since it's still a curated category, not a structured fact) — no
-  divider, one section for everything about the game.
-
 ## What to Look For
-- A vs. B vs. C: does the editorial-tags row need its own visual identity (label, position) at all,
-  or does it read fine folded all the way into the fact grid?
-- Does removing the divider (B/C) lose a boundary the page actually needs, or does 040's own logic
-  ("headings/dividers are redundant once labels + rhythm do the work") hold up here too?
-- C in particular: does mixing a curated-tag cell into a grid of otherwise-structured facts
-  (Año/Diseñadores/Mecánicas) read as inconsistent, or does the accent-vs-outline tone contrast
-  already do enough to keep them distinguishable?
+- Does the tag row now read as a clear, separate beat between the description and the divider, or
+  does the 32px gap make it feel disconnected from the description it's tagging?
+- Divider still present here (only B/C removed it) — worth a final check once this is composed with
+  039/040/041 together: does it still earn its place, or is it now one boundary too many?
