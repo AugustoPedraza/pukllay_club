@@ -44,7 +44,16 @@
      size (24px) since it's part of the text line now, not a separate
      block-level tap target; still comfortably tappable. Motion/tap-state
      from round 16 kept as-is. */
-  .desc-toggle { display: inline-flex; align-items: center; justify-content: center; vertical-align: -6px; width: 24px; height: 24px; margin-left: 2px; background: none; border: none; border-radius: 50%; padding: 0; color: var(--color-text-muted); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+  /* Round 18 fix — nesting a <button> inside a -webkit-line-clamp
+     paragraph (round 17) broke rendering: the icon disappeared and the
+     hit-area spread across the whole clamped text block. That combination
+     is a known-fragile pattern (line-clamp's -webkit-box display mode
+     doesn't compose reliably with a nested interactive flex element) — not
+     something to keep patching. Reverted to a plain SIBLING button (same
+     shape as round 16), kept close to the text with a small explicit
+     margin instead of round 16's larger gap, so it still reads as
+     connected without the risk. */
+  .desc-toggle { display: inline-flex; align-items: center; justify-content: center; align-self: flex-end; width: 24px; height: 24px; margin-top: 0; background: none; border: none; border-radius: 50%; padding: 0; color: var(--color-text-muted); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
   .desc-toggle:hover, .desc-toggle:focus-visible { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
   .desc-toggle:active { transform: scale(0.88); background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
   .desc-toggle svg { transition: transform var(--duration-base) var(--ease-out-soft); width: 14px; height: 14px; }
@@ -97,30 +106,22 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active">Winner: Below Title, Row, Polished (v2) ★ Selected</button>
-  <span class="caption">Sketch 042 — full round history (rounds 1-16) in this sketch's README.
-  <strong>Round 17 (this version):</strong> round 16's right-aligned chevron sat isolated at the
-  column's far edge, disconnected from the text it toggles — moved INSIDE the paragraph as its last
-  inline word instead, flush against the visible text ("Read more ›" pattern). Fact-grid spacing
-  below the description also tightened, 32px → 16px. Toggle 🌙/☀ to check both themes.</span>
+  <button class="variant-tab active">Winner: Below Title, Row, Polished (v3) ★ Selected</button>
+  <span class="caption">Sketch 042 — full round history (rounds 1-17) in this sketch's README.
+  <strong>Round 18 (this version):</strong> round 17 nested the chevron `&lt;button&gt;` inside the
+  `-webkit-line-clamp` paragraph, which broke rendering — icon disappeared, click hit-area spread
+  across the whole clamped text block. Reverted to a plain sibling button (same shape as round 16),
+  kept close to the text with tight spacing instead of that fragile nesting trick. Toggle 🌙/☀ to
+  check both themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>What changed (round 16):</strong> "arrow better at right, right?" — <code>align-self:
-  flex-end</code> on the chevron button, no layout restructuring needed. "Polished subtle animation,
-  specially on mobile" — three changes: (1) rotation switched from
-  <code>--duration-fast/--ease-standard</code> to <code>--duration-base/--ease-out-soft</code>, the
-  actual validated motion pair from sketch 006, not a generic default; (2) a real <code>:active</code>
-  state (scale + tint) — mobile has no hover, so it needs its own tap feedback, not just desktop's
-  hover color change; (3) the revealed text fades in on expand instead of appearing instantly.
-</div>
-
-<div class="cause-note">
-  <strong>What changed (round 17):</strong> "chevron is totally disconnect of its function" —
-  right-alignment (round 16) put it far from the text, with nothing tying the two together visually.
-  Moved to the paragraph's own last inline child; shrunk to 24px (14px icon) since it's now part of a
-  text line, not a standalone block target. "A lot of space from the description to the next part" —
-  the fact-grid section's margin-top dropped from 32px to 16px.
+  <strong>What changed (round 18, the fix):</strong> "I can't see the chevron. Also still touching
+  any part of the text makes the behaviour show/hidden." Root cause: an interactive
+  <code>&lt;button&gt;</code> nested inside a <code>-webkit-line-clamp</code> paragraph's
+  <code>display: -webkit-box</code> context is a known-fragile combination — not something to keep
+  patching. Reverted to separate elements (button as a sibling again), <code>align-self: flex-end</code>
+  for position, tight <code>margin-top: 0</code> so it still reads as connected to the text above it.
 </div>
 
 <div class="compare">
@@ -140,7 +141,8 @@
           defendé tu tierra de la colonización, combinando poderes elementales con las otras
           espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
           plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
-          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.<button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-d', this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg></button></p>
+          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
+          <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-d', this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg></button>
         </div>
         <div class="reading-section rhythm-16">
           <dl class="spec-list">
@@ -177,7 +179,8 @@
           defendé tu tierra de la colonización, combinando poderes elementales con las otras
           espíritus para expulsar a los invasores antes de que la isla sea devastada. Cada partida
           plantea un desafío distinto según el invasor que enfrentes y la combinación de espíritus
-          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.<button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-m', this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg></button></p>
+          que elijas, con curva de dificultad ajustable para grupos nuevos o expertos.</p>
+          <button type="button" class="desc-toggle" aria-expanded="false" aria-label="Ver más" onclick="toggleDesc('desc-m', this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6L8 10.5L12.5 6"/></svg></button>
         </div>
         <div class="reading-section rhythm-16">
           <dl class="spec-list">
