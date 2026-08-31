@@ -41,11 +41,16 @@ whitespace rather than deliberate rhythm.
   surrounding gap read as excess dead space, since nothing is visible there at rest. Attempted fix: a
   negative margin on the tag row, stacked on top of `.text-col`'s shared 32px flex `gap`, to fake a
   24px result. **This broke the rendered layout** ("that last change killed the design of details").
-- **Round 7 — fix:** replaced the fragile gap-plus-negative-margin technique with a plain,
-  deterministic model. `.text-col` no longer declares a shared `gap` at all — every direct child
-  carries an explicit `.rhythm-24` or `.rhythm-32` class that sets its own `margin-top`. Same visual
-  target as round 6 intended (24px around the tag row and divider, 32px everywhere else), reached
-  with no negative numbers and no fighting the flex gap algorithm.
+- **Round 7 — misdiagnosed fix:** first assumed the negative-margin technique itself was the problem
+  and replaced it with an explicit-`margin-top` model (`.rhythm-24`/`.rhythm-32` classes, no shared
+  `gap`). Still reported broken — a screenshot showed the *actual* fault: the fact grid and Comunidad
+  BGG had fallen back to unstyled browser `<dl>` defaults (stacked, indented, no gaps between BGG
+  stats). The real root cause was that the round-6 rewrite (finalizing "C only") had **silently
+  dropped** `.spec-list`/`.fact-cols`/`.fact-col dt`/`.bgg-link`/`.bgg-label`/`.bgg-row`/`.bgg-stat`/
+  `.bgg-foot` from the stylesheet entirely — a copy-paste omission, not a spacing/margin bug at all.
+- **Round 8 — actual fix:** restored the missing CSS block verbatim. The explicit-margin rhythm model
+  from round 7 was correct and is kept; the fact grid and Comunidad BGG render with their intended
+  styling again.
 
 ## How to View
 open .planning/sketches/042-editorial-tags-divider/index.html
