@@ -40,32 +40,41 @@ defmodule Mix.Tasks.Catalog.EnrichBggStats do
     credentials = Credentials.fetch!()
     Mix.shell().info("Enrichment credentials: #{inspect(Credentials.redacted(credentials))}")
 
+    dry_run? = Keyword.get(opts, :dry_run, false)
+
     summary =
       StatsEnricher.enrich_from_bgg(credentials,
         limit: opts[:limit],
-        dry_run: Keyword.get(opts, :dry_run, false)
+        dry_run: dry_run?
       )
 
     Mix.shell().info(
-      "BGG stats enrichment complete: #{summary.updated}/#{summary.candidates} updated, " <>
+      "#{dry_run_prefix(dry_run?)}BGG stats enrichment complete: #{summary.updated}/#{summary.candidates} updated, " <>
         "#{length(summary.missing_from_bgg)} missing from BGG, #{length(summary.unranked)} unranked, " <>
         "#{length(summary.failed_batches)} failed batch(es)."
     )
 
-    write_report!(summary)
+    write_report!(summary, dry_run?)
   end
 
-  defp write_report!(summary) do
+  # WR-01 (01.3 code review): mirrors catalog.seed.ex's existing
+  # "[dry-run] ..." convention so a dry-run's console output and persisted
+  # report can never be mistaken for a real run's — the counters themselves
+  # are unchanged (still preview counts), only the label is added.
+  defp dry_run_prefix(true), do: "[DRY RUN] "
+  defp dry_run_prefix(false), do: ""
+
+  defp write_report!(summary, dry_run?) do
     report_path = Path.join(File.cwd!(), @report_relative_path)
     File.mkdir_p!(Path.dirname(report_path))
-    File.write!(report_path, report_content(summary))
+    File.write!(report_path, report_content(summary, dry_run?))
     Mix.shell().info("Report written to #{report_path}")
   end
 
-  defp report_content(summary) do
+  defp report_content(summary, dry_run?) do
     """
     # BGG Stats Enrichment Report
-
+    #{if dry_run?, do: "\n**[DRY RUN]** — no database writes were performed; all counts below are a preview.\n"}
     Run at: #{DateTime.to_iso8601(DateTime.utc_now())}
 
     - Candidates: #{summary.candidates}

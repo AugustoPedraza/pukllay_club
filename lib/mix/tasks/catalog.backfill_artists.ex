@@ -24,11 +24,18 @@ defmodule Mix.Tasks.Catalog.BackfillArtists do
 
     Mix.Task.run("app.start")
 
-    summary = StatsEnricher.backfill_artists_from_payload(dry_run: Keyword.get(opts, :dry_run, false))
+    dry_run? = Keyword.get(opts, :dry_run, false)
+    summary = StatsEnricher.backfill_artists_from_payload(dry_run: dry_run?)
 
     Mix.shell().info(
-      "Artists backfill complete: #{summary.updated}/#{summary.scanned} scanned, " <>
+      "#{dry_run_prefix(dry_run?)}Artists backfill complete: #{summary.updated}/#{summary.scanned} scanned, " <>
         "#{summary.deduplicated} row(s) had duplicated entries."
     )
   end
+
+  # WR-01 (01.3 code review): mirrors catalog.seed.ex's existing
+  # "[dry-run] ..." convention so a dry-run's console output can never be
+  # mistaken for a real run's.
+  defp dry_run_prefix(true), do: "[DRY RUN] "
+  defp dry_run_prefix(false), do: ""
 end
