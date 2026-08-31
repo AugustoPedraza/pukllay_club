@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 9/11 plans executed (plans 06-09 close UAT gap G-01.3-1; plans 10-11 close UAT gaps G-01.3-4 and G-01.3-5)
+**Plans:** 10/11 plans executed (plans 06-09 close UAT gap G-01.3-1; plans 10-11 close UAT gaps G-01.3-4 and G-01.3-5)
 
 Plans:
 
@@ -185,7 +185,7 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9: same files, same reading column)*
 
-- [ ] 01.3-10-PLAN.md — G-01.3-4 (blocker): apply 01.3-08's pre-authored fallback — native three-line clamp with a native ellipsis, and the chevron moved out of the justified paragraph into a contained 44px trailing-sibling control, so the WebKit-divergent float geometry that pushed it outside the text column cannot recur
+- [x] 01.3-10-PLAN.md — G-01.3-4 (blocker): apply 01.3-08's pre-authored fallback — native three-line clamp with a native ellipsis, and the chevron moved out of the justified paragraph into a contained 44px trailing-sibling control, so the WebKit-divergent float geometry that pushed it outside the text column cannot recur
 
 **Wave 11** *(blocked on Wave 10: same two files)*
 
