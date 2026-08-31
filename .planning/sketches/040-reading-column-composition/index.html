@@ -72,22 +72,21 @@
 <body>
 
 <div id="variant-nav">
-  <span class="caption"><strong>Resolved</strong> — round 2, after "definitely the balance is
-  wrong." Mecánicas and Temáticas are no longer their own top-level sections: they move INSIDE
-  "Sobre el juego" as two more fact cells, alongside Diseñadores/Ilustradores/Año, and drop their
-  <code>.pk-pill-neutral</code> soft-fill tone for the same <code>.pk-pill-outline</code> tone the
-  creator pills use. One section, one pill tone, for everything that's a structured fact about the
-  game. Editorial hashtags stay separate/solid-fill — a curated category, not a structured fact.
-  Toggle 🌙/☀ to check both themes.</span>
+  <span class="caption"><strong>Resolved</strong> — round 3. Mecánicas and Temáticas are no longer
+  their own top-level sections: they're fact cells alongside Diseñadores/Ilustradores/Año, all
+  sharing the <code>.pk-pill-outline</code> tone. The group's own "Sobre el juego" heading is now
+  <strong>dropped entirely</strong> ("sounds redundant" — the whole page is already about the game;
+  the divider + editorial tags above already signal a new zone, the fact grid speaks for itself).
+  Editorial hashtags stay separate/solid-fill — a curated category, not a structured fact. Toggle
+  🌙/☀ to check both themes.</span>
 </div>
 
 <div class="cause-note">
-  <strong>What changed from round 1:</strong> Mecánicas/Temáticas dropped their own
-  <code>.section-heading</code> + <code>.pk-pill-neutral</code> chips and became two more
-  <code>dt</code>-labelled cells inside "Sobre el juego"'s fact grid, using the same
-  <code>.pill-outline</code> tone as Diseñadores/Ilustradores. This is a real structural change from
-  today's production markup (two separate <code>&lt;h2&gt;</code> sections + a <code>.pk-pill-neutral</code>
-  tone) — flagging it explicitly since it goes beyond a style tweak.
+  <strong>Round history:</strong> R1 found a 4-tier pill inconsistency across the page (flagged
+  "definitely wrong"). R2 merged Mecánicas/Temáticas into one fact grid with Diseñadores/Ilustradores,
+  all on <code>.pill-outline</code> — a real structural change from production's current two separate
+  <code>&lt;h2&gt;</code> sections. R3 (this version) drops the "Sobre el juego" heading itself as
+  redundant — no heading now sits between the divider/tags above and the fact grid below.
 </div>
 
 <div class="compare">
@@ -107,7 +106,6 @@
           <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
         </div>
         <div class="reading-section">
-          <h2 class="section-heading">Sobre el juego</h2>
           <dl class="spec-list">
             <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
             <div class="fact-cols">
@@ -169,7 +167,6 @@
           <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
         </div>
         <div class="reading-section">
-          <h2 class="section-heading">Sobre el juego</h2>
           <dl class="spec-list">
             <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
             <div class="fact-cols">

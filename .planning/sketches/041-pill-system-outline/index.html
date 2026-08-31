@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 041 — Pill System, Site-Wide</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 100px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
+  #variant-nav .caption strong { color: var(--color-text); }
+  .toggle-btn { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
+  .toggle-btn.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  .cause-note { max-width: 960px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+  .cause-note.flag { border-color: var(--color-danger); }
+  .cause-note.flag strong { color: var(--color-danger); }
+
+  .panels { max-width: 960px; margin: 0 auto; padding: 0 var(--space-4) 60px; display: flex; flex-direction: column; gap: var(--space-8); }
+  .panel { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); background: var(--color-bg); }
+  .panel-title { font-family: var(--font-display); font-size: var(--text-lg); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; }
+  .panel-sub { font-size: var(--text-xs); color: var(--color-text-muted); margin: 0 0 var(--space-3); }
+  .panel-sub code { background: var(--color-surface); padding: 1px 5px; border-radius: 4px; }
+
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
+  .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  /* State pill — what "selected"/"active" looks like. Two tones, swapped by
+     the top toggle: .state-solid (today's production behaviour, primary
+     fill + soft shadow) vs .state-outline (literal "outline everywhere",
+     same visual as a passive fact pill). */
+  .state-solid { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-primary-content); box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent); }
+  .state-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
+  .chip-x { margin-left: 4px; opacity: 0.7; }
+
+  .card-mock { width: 220px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-border); }
+  .card-mock .poster { height: 140px; background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); }
+  .card-mock .body { padding: var(--space-2); display: flex; flex-direction: column; gap: 6px; }
+  .card-mock .name { font-weight: 700; font-size: var(--text-sm); }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="toggle-btn active" id="toggle-solid" onclick="setStateTone('solid')">Selected/Active state: Keep distinct (filled) — today's production</button>
+  <button class="toggle-btn" id="toggle-outline" onclick="setStateTone('outline')">Selected/Active state: Literal outline everywhere — per your direction</button>
+  <span class="caption">Sketch 041 — spreading the outline pill tone (039/040) across every real
+  pill/chip call site in the codebase (verified against <code>game_chips.ex</code>,
+  <code>game_preview.ex</code>, <code>filter_modal.ex</code>, <code>catalog_live/index.ex</code> —
+  not invented). Panels 1-2 below are uncontested: pure informational/read-only pills, no state to
+  lose. Panels 3-4 carry real app state ("this filter is currently applied") — the toggle above shows
+  both what you asked for literally, and the tradeoff it carries.</span>
+</div>
+
+<div class="cause-note">
+  <strong>Uncontested — apply outline directly, no tradeoff:</strong>
+  <ul style="margin:6px 0 0; padding-left:20px;">
+    <li><code>GameChips.chip_row/1</code> (Mecánicas/Temáticas) — was <code>pk-pill-neutral</code>,
+    resolved to outline in sketch 040.</li>
+    <li><code>GamePreview.facts_row/1</code> (players/playtime/difficulty pills, browse-card hover
+    preview + masthead) — was <code>pk-pill-neutral</code>, same fix applies: pure display, no
+    selection state.</li>
+  </ul>
+</div>
+
+<div class="cause-note flag">
+  <strong>Carries real state — read before deciding:</strong> <code>filter_modal.ex</code>'s
+  <em>selected</em> chip state and <code>catalog_live/index.ex</code>'s active-filter chip both use a
+  heavier tone specifically so a user can tell "this filter IS currently applied" at a glance.
+  Literal outline everywhere makes a selected/active chip look <strong>identical</strong> to an inert
+  Mecánicas chip — the visual signal for "this is filtering your results right now" would be gone.
+  This is the risk flagged when you picked "everything, including filter/selection chips" — toggle
+  above to see the actual difference before locking it in.
+</div>
+
+<div class="panels">
+
+  <div class="panel">
+    <div class="panel-title">1. Facts row (browse card hover / masthead)</div>
+    <p class="panel-sub"><code>GamePreview.facts_row/1</code> — pure display, resolved to outline.</p>
+    <div class="card-mock">
+      <div class="poster"></div>
+      <div class="body">
+        <div class="name">Spirit Island</div>
+        <div class="pill-row">
+          <span class="pill pill-outline">👥 1-4</span>
+          <span class="pill pill-outline">⏱ 90-120 min</span>
+          <span class="pill pill-outline">●●● Experto</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">2. Mecánicas / Temáticas (detail page)</div>
+    <p class="panel-sub"><code>GameChips.chip_row/1</code> — resolved to outline in sketch 040.</p>
+    <div class="pill-row">
+      <a class="pill pill-outline" href="#">Colocación de losetas</a>
+      <a class="pill pill-outline" href="#">Gestión de mano</a>
+      <a class="pill pill-outline" href="#">Cooperativo</a>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">3. Filter modal — unselected vs. selected</div>
+    <p class="panel-sub"><code>filter_modal.ex</code>'s <code>chip_class/1</code> — unselected is
+    <strong>already</strong> outline (no change needed); selected is the state in question.</p>
+    <div class="pill-row">
+      <span class="pill pill-outline">Familiar</span>
+      <span class="pill pill-outline">Intermedio</span>
+      <span class="pill state-tone">Experto</span>
+      <span class="pill pill-outline">Muy difícil</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">4. Active-filter chips (Resultados header)</div>
+    <p class="panel-sub"><code>catalog_live/index.ex</code>'s active-filter row — chips showing
+    which filters are currently applied, with a tap-to-remove ×.</p>
+    <div class="pill-row">
+      <span class="pill state-tone">Cooperativo<span class="chip-x">×</span></span>
+      <span class="pill state-tone">2-4 jugadores<span class="chip-x">×</span></span>
+    </div>
+  </div>
+
+</div>
+
+<div id="sketch-tools">
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+<script>
+  function setStateTone(tone) {
+    document.querySelectorAll('.state-tone').forEach(el => {
+      el.classList.remove('state-solid', 'state-outline');
+      el.classList.add(tone === 'solid' ? 'state-solid' : 'state-outline');
+    });
+    document.getElementById('toggle-solid').classList.toggle('active', tone === 'solid');
+    document.getElementById('toggle-outline').classList.toggle('active', tone === 'outline');
+  }
+  setStateTone('solid');
+</script>
+
+</body>
+</html>
