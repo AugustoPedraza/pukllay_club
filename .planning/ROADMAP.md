@@ -205,7 +205,7 @@ fill a fixed near-square frame — across the ~434 games already seeded, not jus
 **Requirements**: TBD (inserted urgent fix; carries no requirement IDs of its own. Keeps the
 already-Complete CATALOG-01 and CATALOG-09 actually true.)
 **Depends on:** Phase 01.3
-**Plans:** 2 plans
+**Plans:** 2/2 plans executed
 
 > **Scope constraint surfaced during planning (D-02).** Research found no reachable source for
 > BGG gameplay/component photos: the XML API v2 exposes one image per thing and one per version
@@ -221,8 +221,8 @@ Plans:
 `test/pukllay_club/**`, plan 02 owns `assets/css/**`, `lib/pukllay_club_web/**` and
 `test/pukllay_club_web/**`; zero file overlap)*
 
-- [ ] 01.3.1-01-PLAN.md — Gallery source correction + catalog-wide backfill: D-02 decision gate, corrected `ImagePipeline.process_gallery/3`, new `GalleryBackfill` module and `mix catalog.backfill_gallery` task, regression matrix, live re-run over ~434 games (D-01, D-02, D-03, D-07, D-08 · CATALOG-09)
-- [ ] 01.3.1-02-PLAN.md — Letterbox rendering: one shared `.pk-poster-img` class applied verbatim to the resting card, hover preview / mobile sheet, and detail cover, with the lightbox and the 64x64 selector chips asserted untouched (D-04, D-05, D-06 · CATALOG-01)
+- [x] 01.3.1-01-PLAN.md — Gallery source correction + catalog-wide backfill: D-02 decision gate, corrected `ImagePipeline.process_gallery/3`, new `GalleryBackfill` module and `mix catalog.backfill_gallery` task, regression matrix, live re-run over ~434 games (D-01, D-02, D-03, D-07, D-08 · CATALOG-09)
+- [x] 01.3.1-02-PLAN.md — Letterbox rendering: one shared `.pk-poster-img` class applied verbatim to the resting card, hover preview / mobile sheet, and detail cover, with the lightbox and the 64x64 selector chips asserted untouched (D-04, D-05, D-06 · CATALOG-01)
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
