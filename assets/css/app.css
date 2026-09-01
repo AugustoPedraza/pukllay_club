@@ -851,6 +851,27 @@
   aspect-ratio: 1 / 1.05;
 }
 
+/* Box art is not near-square: publishers ship tall, wide and square boxes.
+   Sizing an img to fill a fixed-ratio container crops real artwork away
+   regardless of the container's own shape. The stored WebP variants are
+   already generated aspect-ratio-preserving (Image.thumbnail/2 defaults to
+   resize-to-fit, never crop), so the full image is present and only CSS
+   was throwing it away. This is the single shared mechanism for the
+   letterbox treatment across every artwork surface (card, preview, detail
+   cover), per card-interaction.md's one-class-per-field rule: never a
+   copy-pasted utility string re-declared per template. The negative space
+   around the letterboxed image is filled by each container's own
+   bg-base-300 token showing through — not a blurred or scaled backdrop, and
+   not a second background declared here (see this file's own "one field,
+   one declaration" rule above). Wildcards in this comment are kept away
+   from the closing delimiter so a token like "object-fit" never forms an
+   accidental terminator. */
+.pk-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .pk-card-caption {
   padding: 8px 8px 12px;
 }

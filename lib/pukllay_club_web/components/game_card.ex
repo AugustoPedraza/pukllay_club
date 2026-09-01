@@ -65,7 +65,7 @@ defmodule PukllayClubWeb.GameCard do
           src={@game.thumbnail_url}
           alt=""
           loading="lazy"
-          class="h-full w-full object-cover js-cover-fallback"
+          class="pk-poster-img js-cover-fallback"
         />
         <div
           :if={@game.thumbnail_url}
