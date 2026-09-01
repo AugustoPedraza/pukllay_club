@@ -69,4 +69,13 @@ defmodule PukllayClub.Catalog.Seed.GalleryBackfillTest do
     reloaded = Repo.get!(Game, game.id)
     assert reloaded.gallery_urls == []
   end
+
+  test "corrects a game whose bgg_payload is nil — the candidate query keys on gallery_urls, not bgg_payload" do
+    game = game_fixture(%{gallery_urls: @stale_gallery, bgg_payload: nil})
+
+    GalleryBackfill.run([])
+
+    reloaded = Repo.get!(Game, game.id)
+    assert reloaded.gallery_urls == []
+  end
 end

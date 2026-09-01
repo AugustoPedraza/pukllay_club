@@ -139,6 +139,57 @@ defmodule PukllayClub.Catalog.Seed.ImagePipelineTest do
       assert {:ok, []} = ImagePipeline.process_gallery(item, "games/1", credentials)
     end
 
+    test "issues no HTTP request at all — the corrected path never downloads a version image", %{
+      credentials: credentials
+    } do
+      Req.Test.stub(ImagePipeline, fn _conn ->
+        flunk("process_gallery/3 issued an HTTP request — the removed version-image traversal has come back")
+      end)
+
+      item = %{
+        image: "https://cf.geekdo-images.com/primary.jpg",
+        versions: [
+          %{image: "https://cf.geekdo-images.com/primary.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v2.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v3.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v4.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v4.jpg", languages: []}
+        ]
+      }
+
+      assert {:ok, []} = ImagePipeline.process_gallery(item, "games/1", credentials)
+    end
+
+    test "writes nothing to storage — no object is put toward the games/1 gallery prefix", %{
+      credentials: credentials
+    } do
+      item = %{
+        image: "https://cf.geekdo-images.com/primary.jpg",
+        versions: [
+          %{image: "https://cf.geekdo-images.com/primary.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v2.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v3.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v4.jpg", languages: []},
+          %{image: "https://cf.geekdo-images.com/v4.jpg", languages: []}
+        ]
+      }
+
+      assert {:ok, []} = ImagePipeline.process_gallery(item, "games/1", credentials)
+
+      # Every one of these keys is what the removed traversal would have
+      # written. Once written, R2's head-check-and-skip plus one-year
+      # immutable Cache-Control (`R2Storage.put/4`, `@default_cache_control`)
+      # would make a wrong object at any of these keys effectively permanent
+      # to correct — so asserting none of them were ever put is the stake
+      # this test protects, not a cosmetic detail.
+      assert Process.get({:fake_storage_put, "games/1/gallery-1-thumb.webp"}) == nil
+      assert Process.get({:fake_storage_put, "games/1/gallery-1-large.webp"}) == nil
+      assert Process.get({:fake_storage_put, "games/1/gallery-2-thumb.webp"}) == nil
+      assert Process.get({:fake_storage_put, "games/1/gallery-2-large.webp"}) == nil
+      assert Process.get({:fake_storage_put, "games/1/gallery-3-thumb.webp"}) == nil
+      assert Process.get({:fake_storage_put, "games/1/gallery-3-large.webp"}) == nil
+    end
+
     test "returns an empty gallery (not padded placeholders) when there are no extra version images", %{
       credentials: credentials
     } do
