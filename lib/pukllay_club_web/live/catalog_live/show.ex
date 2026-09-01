@@ -427,7 +427,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                       <img
                         src={@selected_image}
                         alt={@game.name}
-                        class="h-full w-full object-cover js-cover-fallback"
+                        class="pk-poster-img js-cover-fallback"
                       />
                       <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
                         <.icon name="hero-puzzle-piece" class="size-16" />
