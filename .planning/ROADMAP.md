@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 11/11 plans executed (plans 06-09 close UAT gap G-01.3-1; plans 10-11 close UAT gaps G-01.3-4 and G-01.3-5)
+**Plans:** 11/12 plans executed (plans 06-09 close UAT gap G-01.3-1; plans 10-11 close UAT gaps G-01.3-4 and G-01.3-5; plan 12 closes UAT gap G-01.3-6)
 
 Plans:
 
@@ -190,6 +190,12 @@ Plans:
 **Wave 11** *(blocked on Wave 10: same two files)*
 
 - [x] 01.3-11-PLAN.md — G-01.3-5 (cosmetic): give the sticky title-echo bar's title a deliberate typographic identity (brand display face, explicit size/weight/colour) alongside its existing truncation, leaving 01.3-09's deferred brand-tint and bounce questions untouched
+
+**Gap closure — UAT gap G-01.3-6** *(third UAT pass; real-device WebKit confirmation of the 01.3-10 fix found a follow-on regression it left behind. G-01.3-1 was closed by product decision, G-01.3-4/G-01.3-5 by plans 10/11)*
+
+**Wave 12** *(blocked on Wave 10: builds on the flex-column mechanism 01.3-10 introduced — not a revert of it)*
+
+- [ ] 01.3-12-PLAN.md — G-01.3-6 (major): seat the collapsed description chevron in the clamped paragraph's third line band via a `:not(.is-expanded)`-scoped absolute overlay plus a reserved right gutter, instead of the flex-column row `align-self` alone can never lift it out of — and close the coverage gap both chevron gaps slipped through by pinning the control's geometry as a derived contract test
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
