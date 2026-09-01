@@ -23,10 +23,13 @@ defmodule PukllayClubWeb.PosterTreatmentTest do
 
   alias PukllayClub.Catalog.Game
   alias PukllayClubWeb.GameCard
+  alias PukllayClubWeb.GamePreview
 
   @css_path Path.expand("../../assets/css/app.css", __DIR__)
   @built_css_path Path.expand("../../priv/static/assets/css/app.css", __DIR__)
   @game_card_path Path.expand("../../lib/pukllay_club_web/components/game_card.ex", __DIR__)
+  @game_preview_path Path.expand("../../lib/pukllay_club_web/components/game_preview.ex", __DIR__)
+  @show_path Path.expand("../../lib/pukllay_club_web/live/catalog_live/show.ex", __DIR__)
 
   defp source, do: File.read!(@css_path)
 
@@ -57,6 +60,29 @@ defmodule PukllayClubWeb.PosterTreatmentTest do
       [_, body] -> body
       nil -> flunk("No top-level `.pk-card-poster` rule found in assets/css/app.css")
     end
+  end
+
+  defp preview_poster_block(src) do
+    case Regex.run(~r/(?m)^\.pk-preview-poster\s*\{([^}]*)\}/, strip_comments(src)) do
+      [_, body] -> body
+      nil -> flunk("No top-level `.pk-preview-poster` rule found in assets/css/app.css")
+    end
+  end
+
+  defp lightbox_img_block(src) do
+    case Regex.run(~r/\.pk-lightbox-img\s*\{([^}]*)\}/, strip_comments(src)) do
+      [_, body] -> body
+      nil -> flunk("No `.pk-lightbox-img` rule found in assets/css/app.css")
+    end
+  end
+
+  # Counts occurrences of `needle` in a comment-stripped .ex source file.
+  defp ex_occurrences(path, needle) do
+    path
+    |> File.read!()
+    |> strip_ex_comments()
+    |> then(&Regex.scan(Regex.compile!(Regex.escape(needle)), &1))
+    |> length()
   end
 
   describe "the .pk-poster-img rule (D-04/D-05)" do
@@ -151,6 +177,122 @@ defmodule PukllayClubWeb.PosterTreatmentTest do
       assert stripped =~ "pk-poster-img",
              "strip_ex_comments/1 stripped real code along with comments — the actual class " <>
                "reference on the <img> element must survive stripping."
+    end
+  end
+
+  describe "coverage: every artwork surface points at the shared class exactly once" do
+    test "game_card.ex, game_preview.ex and show.ex each reference pk-poster-img exactly once" do
+      for {path, label} <- [
+            {@game_card_path, "game_card.ex"},
+            {@game_preview_path, "game_preview.ex"},
+            {@show_path, "catalog_live/show.ex"}
+          ] do
+        count = ex_occurrences(path, "pk-poster-img")
+
+        assert count == 1,
+               "#{label} references `pk-poster-img` #{count} time(s), expected exactly 1. A " <>
+                 "second reference means a surface was pointed at the class by copy-paste rather " <>
+                 "than by replacing its own object-cover treatment (D-06)."
+      end
+    end
+  end
+
+  describe "exclusivity: the crop-to-fill utility is gone everywhere except the one permitted chip" do
+    test "game_card.ex and game_preview.ex carry zero object-cover occurrences; show.ex carries exactly one" do
+      card_count = ex_occurrences(@game_card_path, "object-cover")
+      preview_count = ex_occurrences(@game_preview_path, "object-cover")
+      show_count = ex_occurrences(@show_path, "object-cover")
+
+      assert card_count == 0,
+             "game_card.ex still has #{card_count} `object-cover` occurrence(s) — it must be " <>
+               "fully replaced by `pk-poster-img` (D-06)."
+
+      assert preview_count == 0,
+             "game_preview.ex still has #{preview_count} `object-cover` occurrence(s) — it must " <>
+               "be fully replaced by `pk-poster-img` (D-06)."
+
+      assert show_count == 1,
+             "show.ex has #{show_count} `object-cover` occurrence(s), expected exactly 1. The " <>
+               "single permitted occurrence is the 64x64 gallery selector chip (show.ex:471), " <>
+               "deliberately excluded from the letterbox treatment — a different count means " <>
+               "either the detail cover was missed or the chip itself drifted."
+    end
+  end
+
+  describe "fill guard (D-05): every poster container still carries bg-base-300" do
+    test "every line mentioning pk-card-poster or pk-preview-poster also mentions bg-base-300" do
+      for {path, label} <- [
+            {@game_card_path, "game_card.ex"},
+            {@game_preview_path, "game_preview.ex"},
+            {@show_path, "catalog_live/show.ex"}
+          ] do
+        offenders =
+          path
+          |> File.read!()
+          |> strip_ex_comments()
+          |> String.split("\n")
+          |> Enum.filter(&(&1 =~ "pk-card-poster" or &1 =~ "pk-preview-poster"))
+          |> Enum.reject(&(&1 =~ "bg-base-300"))
+
+        assert offenders == [],
+               "#{label} has a `pk-card-poster`/`pk-preview-poster` line missing `bg-base-300`: " <>
+                 inspect(offenders) <>
+                 ". Removing that token from a container silently removes the letterbox fill " <>
+                 "(D-05) without touching any rule the CSS-contract tests check."
+      end
+    end
+  end
+
+  describe "shape guard (Pitfall 3): .pk-preview-poster's ratio is unchanged" do
+    test ".pk-preview-poster still declares aspect-ratio: 16 / 9" do
+      body = preview_poster_block(source())
+
+      assert body =~ ~r/aspect-ratio:\s*16\s*\/\s*9/,
+             "`.pk-preview-poster`'s `aspect-ratio` changed from `16 / 9`. Task 1 pinned " <>
+               "`.pk-card-poster`'s ratio; this completes the pair — the resting card and the " <>
+               "expanded preview are deliberately different UI moments, not a shape to unify."
+    end
+  end
+
+  describe "the lightbox is untouched — its differing dark stage is intentional, not drift" do
+    test ".pk-lightbox-img still declares object-fit: contain and background: var(--pk-shadow-color)" do
+      body = lightbox_img_block(source())
+
+      assert body =~ ~r/object-fit:\s*contain/,
+             "`.pk-lightbox-img` no longer declares `object-fit: contain`. It already implemented " <>
+               "the letterbox treatment before this phase (a Phase 01.2 rebuild) — it must not " <>
+               "regress."
+
+      assert body =~ ~r/background:\s*var\(--pk-shadow-color\)/,
+             "`.pk-lightbox-img` no longer declares `background: var(--pk-shadow-color)`. This " <>
+               "dark photography-stage background is an intentional, approved design choice for " <>
+               "the full-screen context — DO NOT \"fix\" it toward the card surfaces' neutral " <>
+               "`bg-base-300` token; that would be a visual regression, not a correction."
+    end
+  end
+
+  describe "game_preview.ex renders through the shared class" do
+    test "preview_body/1 with a cover_url emits an <img> whose class carries pk-poster-img" do
+      game = %Game{
+        id: 1,
+        name: "Endless Winter: Paleoamericans",
+        description: "Un juego de estrategia.",
+        cover_url: "https://cf.geekdo-images.com/example-cover.webp",
+        min_players: 2,
+        max_players: 4,
+        tags: []
+      }
+
+      html = render_component(&GamePreview.preview_body/1, game: game)
+
+      [_, figure_body] =
+        Regex.run(~r/<figure[^>]*class="pk-preview-poster[^>]*>(.*?)<\/figure>/s, html)
+
+      imgs = Regex.scan(~r/<img[^>]*>/, figure_body)
+      assert length(imgs) == 1, "Expected exactly one <img> inside the preview's poster figure."
+
+      [[img]] = imgs
+      assert img =~ "pk-poster-img"
     end
   end
 end
