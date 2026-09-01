@@ -199,14 +199,30 @@ Plans:
 
 ### Phase 01.3.1: Game Image Quality & Multi-Image Gallery (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** Every image the catalog shows for a game is a correct image of that game, shown whole —
+no other-edition/other-language box covers presented as extra photos, and no box art cropped to
+fill a fixed near-square frame — across the ~434 games already seeded, not just future seeds.
+**Requirements**: TBD (inserted urgent fix; carries no requirement IDs of its own. Keeps the
+already-Complete CATALOG-01 and CATALOG-09 actually true.)
 **Depends on:** Phase 01.3
-**Plans:** 0 plans
+**Plans:** 2 plans
+
+> **Scope constraint surfaced during planning (D-02).** Research found no reachable source for
+> BGG gameplay/component photos: the XML API v2 exposes one image per thing and one per version
+> with no caption or category to select on, Phase 1's own `01-COVERAGE.md` recorded the same
+> finding, and direct probes of BGG's site returned HTTP 403. D-01's literal ask therefore cannot
+> ship this phase. Plan 01 opens with a blocking `checkpoint:decision` presenting three options
+> (empty gallery / Spanish-edition box art only / defer the gallery question) rather than reducing
+> the scope silently.
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 01.3.1 to break down)
+**Wave 1** *(both plans run in parallel — plan 01 owns `lib/pukllay_club/catalog/seed/**` and
+`test/pukllay_club/**`, plan 02 owns `assets/css/**`, `lib/pukllay_club_web/**` and
+`test/pukllay_club_web/**`; zero file overlap)*
+
+- [ ] 01.3.1-01-PLAN.md — Gallery source correction + catalog-wide backfill: D-02 decision gate, corrected `ImagePipeline.process_gallery/3`, new `GalleryBackfill` module and `mix catalog.backfill_gallery` task, regression matrix, live re-run over ~434 games (D-01, D-02, D-03, D-07, D-08 · CATALOG-09)
+- [ ] 01.3.1-02-PLAN.md — Letterbox rendering: one shared `.pk-poster-img` class applied verbatim to the resting card, hover preview / mobile sheet, and detail cover, with the lightbox and the 64x64 selector chips asserted untouched (D-04, D-05, D-06 · CATALOG-01)
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
