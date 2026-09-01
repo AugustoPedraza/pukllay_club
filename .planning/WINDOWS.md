@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 22
+open_count: 21
 waived_count: 0
-fixed_count: 0
+fixed_count: 1
 total_count: 22
-last_updated: 2026-09-01T01:54:50.616Z
+last_updated: 2026-09-01T02:15:46.887Z
 ---
 
 # Broken Windows Ledger
@@ -35,7 +35,7 @@ last_updated: 2026-09-01T01:54:50.616Z
 | 18 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode | open |  | 2026-08-31T20:19:55.896Z |  |
 | 19 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-08 Task 3 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify description justify + mid-word-cut risk (fallback pre-decided) + chevron/ellipsis ink alignment (translateY(-2px), tuned but unverified against real Inter render) + repeated tap round-trips, across 3 real games x 2 widths (390/1440) x 2 themes; if any of the 6 combos cuts mid-word, apply this plan's pre-decided fallback CSS (real -webkit-line-clamp:3 + trailing-sibling toggle, recorded in 01.3-08-PLAN.md's planner_note) rather than re-sketching. | open |  | 2026-08-31T20:39:49.123Z |  |
 | 20 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-10 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify on a real iOS/Mobile-Safari device (the engine G-01.3-4 reproduced on, not Blink) that the chevron sits inside the text column at 390px, the clipped third line ends on a whole word, tapping expands/collapses reliably across round trips, and the description stays justified at 390px/1440px, across light+dark theme and a short + long description game. | open |  | 2026-08-31T23:15:03.802Z |  |
-| 21 | 01.3-11 | unrun-verify | assets/css/app.css |  | 01.3-11 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): at 390px, both light and dark theme, on a long game name with an accented capital and one that truncates, verify the sticky bar's title reads as a deliberate title (holds its own against the scroll-to-top button), stays on ONE line ending in an ellipsis, accented capitals render complete, and the bar's fill/border/button remain visually unchanged from before this plan. | open |  | 2026-08-31T23:29:56.119Z |  |
+| 21 | 01.3-11 | unrun-verify | assets/css/app.css |  | 01.3-11 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): at 390px, both light and dark theme, on a long game name with an accented capital and one that truncates, verify the sticky bar's title reads as a deliberate title (holds its own against the scroll-to-top button), stays on ONE line ending in an ellipsis, accented capitals render complete, and the bar's fill/border/button remain visually unchanged from before this plan. | fixed |  | 2026-08-31T23:29:56.119Z | 2026-09-01T02:15:46.887Z |
 | 22 | 01.3-12 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-12 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): on a real iOS/Mobile-Safari device at 390px and 1440px, both light and dark theme, across Honey Buzz (113)/Mille Fiori (193)/Illusion (396)/a short-description game/7 Wonders Duel, verify the chevron trails the clipped third line (not a row below it), the reserved right gutter reads acceptably on lines 1-2 at 390px (else apply the planner_note's pre-decided padding-right:1.75rem + hover/active-background-neutralised fallback pair, not a hand-tuned middle value), a near-full-width third line stays clear of the chevron, repeated expand/collapse stays reliable with no jump/flicker at the absolute/in-flow position switch, and the description stays justified with the third line ending on a whole word. | open |  | 2026-09-01T01:54:50.616Z |  |
 
 ````json
@@ -287,10 +287,10 @@ last_updated: 2026-09-01T01:54:50.616Z
     "file": "assets/css/app.css",
     "line": null,
     "description": "01.3-11 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): at 390px, both light and dark theme, on a long game name with an accented capital and one that truncates, verify the sticky bar's title reads as a deliberate title (holds its own against the scroll-to-top button), stays on ONE line ending in an ellipsis, accented capitals render complete, and the bar's fill/border/button remain visually unchanged from before this plan.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-08-31T23:29:56.119Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-01T02:15:46.887Z"
   },
   {
     "id": 22,
