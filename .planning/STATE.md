@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 01.3
-current_phase_name: Game Detail Layout & Content Accuracy (INSERTED)
-status: executing
-stopped_at: Completed 01.3-04-PLAN.md
-last_updated: "2026-08-31T23:00:08.125Z"
-last_activity: 2026-08-31
-last_activity_desc: Phase 01.3 execution resumed (wave continue)
-state_head: b6015b45c00dff2472a255644f7db91b17f6f86d
+current_phase: 02
+current_phase_name: Natural-Language Spanish Search + Auth
+status: planning
+stopped_at: Phase 01.3 complete, ready to plan Phase 02
+last_updated: "2026-09-01T11:07:54.319Z"
+last_activity: 2026-09-01
+last_activity_desc: Phase 01.3 complete, transitioned to Phase 02
+state_head: 2eeffae9857d6acbccde15d1da54c8d29b22657b
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 59
-  completed_plans: 57
+  completed_phases: 4
+  total_plans: 60
+  completed_plans: 60
 milestone_name: milestone
 ---
 
@@ -21,26 +21,26 @@ milestone_name: milestone
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-29)
+See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.3 — Game Detail Layout & Content Accuracy (INSERTED)
+**Current focus:** Phase 02 — Natural-Language Spanish Search + Auth
 
 ## Current Position
 
-Phase: 01.3 (Game Detail Layout & Content Accuracy (INSERTED)) — EXECUTING
-Plan: 1 of 9
-Status: Executing Phase 01.3
-Last activity: 2026-08-31 — Phase 01.3 execution resumed (wave continue)
+Phase: 02 — Natural-Language Spanish Search + Auth
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-01 — Phase 01.3 complete, transitioned to Phase 02
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 51
+- Total plans completed: 63
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100%
 | 01 | 9 | - | - |
 | 01.1 | 9 | - | - |
 | 01.2 | 27 | - | - |
+| 01.3 | 12 | - | - |
 
 **Recent Trend:**
 
@@ -173,6 +174,9 @@ Recent decisions affecting current work:
 - [Phase 01.2, 2026-08-29]: Phase closed after 32 plans and 10 UAT gap-closure rounds (G-01.2-9 through G-01.2-21) — the mobile detail-page masthead was rebuilt (facts pills above the poster, one buy-box card, compact dot row), a single shared pill/chip base component replaced five independently-styled chip implementations, the lightbox was rebuilt from scratch (full-screen opaque stage, shell-width photo cap, own selection state independent of the gallery carousel, unified dark/light control family), and a site-wide sticky-footer layout + mobile-only title-echo bar shipped. Final UAT gate closed 2026-08-29: 23/28 checkpoints reconfirmed via a live mobile (390px) browser spot-check; the remaining 5 desktop-only claims (shell-width alignment at 1280/1440/1920px) were accepted on existing exact-DOM-coordinate measurements already on record in the Gaps section, since this session's browser automation tool would not resize its rendering viewport past ~390px (resize_window reported success but window.innerWidth stayed pinned at 339px) — worth re-verifying live on a real desktop browser if that tool limitation is ever hit again for future UI work.
 - [Phase 01.3]: 01.3-02: D-06 checkpoint resolved run-now — full BGG re-enrichment ran against all 393 bgg_id-carrying games (385 updated, 8 missing from BGG, 14 unranked), plus artists backfilled/deduplicated for 385 games; Task 1's array_length(artists,1) IS NULL acceptance check has a Postgres empty-array-returns-NULL gap, verified as a false positive not a real skip (377+8=385)
 - [Phase 01.3]: 01.3-04: Ran the real Spanish translation batch (D-01) -- 384/385 games translated to natural Argentine (Rioplatense) Spanish; found and fixed a Rule 1 bug where --only-english's exact-match resumability filter silently skipped 214/385 real candidates because bgg_payload drifts independently via 01.3-02's re-enrichment; the one legitimate failure (id 252, Mysterium) hit Gemini's deterministic RECITATION/copyright filter and correctly kept its prior English text.
+- [Phase 01.3, 2026-09-01]: Phase closed after 12 plans and a 3-round chevron/toggle CSS gap-closure chain (float-in-justified-paragraph → native -webkit-line-clamp + trailing-sibling button → position:relative + :not(.is-expanded) absolute overlay) — final failure mode only reproduced on real WebKit/Mobile-Safari, not headless Chromium, confirming this codebase's established engine-divergence risk for this exact toggle-in-clamped-paragraph pattern. 8/8 UAT checkpoints passed, including 2 real-device confirmations (G-01.3-4+6 combined, G-01.3-5). G-01.3-1 (empty hashtag row) resolved as intended — HashtagNormalizer only derives tags from 3 CSV columns, giving 26% catalog coverage; accepted rather than widening the mapping. threats_open: 0 across 58 registered threats (01.3-SECURITY.md).
+- [Phase 01.3]: designer/artist catalog filtering added (`?designers=`/`?artists=` open-text params) — first non-whitelisted list param this app accepts; parameterized via `type(^values, {:array, :string})` + `fragment("? && ?", ...)`, capped at 20 values × 120 chars each, GIN-indexed.
+- [Phase 01.3]: `gemini_api_key` added alongside `bgg_api_token` in `Credentials` (`@secret_fields` + `@derive {Inspect, only: [...]}`, gitignored `config/dev.secret.exs` only); `instructor_lite` (hex.pm) is this phase's one new dependency, manually audited and approved in `01.3-RESEARCH.md` since it falls outside the automated npm/pypi/crates package-legitimacy seam.
 
 ### Pending Todos
 
@@ -219,7 +223,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
   - **G-01-4 (major):** Carousel shelves on `/` read as a single vertical list with no visible affordance that there are multiple carousels, and horizontal scroll happens at the window level instead of being scoped to each carousel row. A diagnosis was opened at `.planning/debug/G-01-4-carousel-affordance.md`.
   - **G-01-3 (unresolved):** The carousel prev/next scroll-controls test was skipped by the user ("I don't understand this") — whether the originally-reported "~20 columns forcing horizontal scroll" was a carousel rail or the `#games` grid is still an open question.
   - These two remain the next manual UI/UX pass's starting point. The third item originally grouped here — the 7-item UI audit — was closed 2026-08-21 by quick task 260821-dah (see "Pending Todos" above).
-- Deferred (not a blocker): mobile footer visual weight (UAT G-01.3-1 item 8) — needs its own shell-wide phase, touches every page not just game detail. Also open: sticky title-echo bar's brand-tint/balance question (UAT item 7, partially closed — mechanical separation/contrast fix shipped in 01.3-09, brand treatment still undecided; reported twice now: G-01.2-14 and G-01.3-1).
+- Deferred (not a blocker): mobile footer visual weight — needs its own shell-wide phase, touches every page not just game detail. Also open: sticky title-echo bar's brand-tint/bounce question — mechanical separation/contrast/typography fixes shipped in 01.3-09 and 01.3-11 (both deliberately left the bar's own background fill and `.pk-scroll-top`'s bounce animation untouched, per each plan's own "Open design questions"); brand treatment itself still undecided, reported at least twice now (01.2 and 01.3).
 
 ### Quick Tasks Completed
 
@@ -270,6 +274,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-31T00:15:11.976Z
-Stopped at: Completed 01.3-04-PLAN.md
+Last session: 2026-09-01T11:15:00.000Z
+Stopped at: Phase 01.3 complete, ready to plan Phase 02
 Resume file: None
