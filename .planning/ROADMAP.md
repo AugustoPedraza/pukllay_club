@@ -139,7 +139,7 @@ visual hierarchy between its sections — without reopening the masthead, buy-bo
 **Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
 **Depends on:** Phase 01.2
 **UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
-**Plans:** 11/12 plans executed (plans 06-09 close UAT gap G-01.3-1; plans 10-11 close UAT gaps G-01.3-4 and G-01.3-5; plan 12 closes UAT gap G-01.3-6)
+**Plans:** 12/12 plans executed (plans 06-09 close UAT gap G-01.3-1; plans 10-11 close UAT gaps G-01.3-4 and G-01.3-5; plan 12 closes UAT gap G-01.3-6)
 
 Plans:
 
@@ -195,7 +195,7 @@ Plans:
 
 **Wave 12** *(blocked on Wave 10: builds on the flex-column mechanism 01.3-10 introduced — not a revert of it)*
 
-- [ ] 01.3-12-PLAN.md — G-01.3-6 (major): seat the collapsed description chevron in the clamped paragraph's third line band via a `:not(.is-expanded)`-scoped absolute overlay plus a reserved right gutter, instead of the flex-column row `align-self` alone can never lift it out of — and close the coverage gap both chevron gaps slipped through by pinning the control's geometry as a derived contract test
+- [x] 01.3-12-PLAN.md — G-01.3-6 (major): seat the collapsed description chevron in the clamped paragraph's third line band via a `:not(.is-expanded)`-scoped absolute overlay plus a reserved right gutter, instead of the flex-column row `align-self` alone can never lift it out of — and close the coverage gap both chevron gaps slipped through by pinning the control's geometry as a derived contract test
 
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
