@@ -197,6 +197,17 @@ Plans:
 
 - [x] 01.3-12-PLAN.md — G-01.3-6 (major): seat the collapsed description chevron in the clamped paragraph's third line band via a `:not(.is-expanded)`-scoped absolute overlay plus a reserved right gutter, instead of the flex-column row `align-self` alone can never lift it out of — and close the coverage gap both chevron gaps slipped through by pinning the control's geometry as a derived contract test
 
+### Phase 01.3.1: Game Image Quality & Multi-Image Gallery (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 01.3
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 01.3.1 to break down)
+
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
 **Goal**: The sketch-validated designs that are not yet built in real code — a shared page shell, the about page, an upgraded detail page, the filter/search modal, and empty/loading/error states — are live in the app, composed together without reintroducing the drift the sketch composition rounds (007/011/012) already found and fixed once.

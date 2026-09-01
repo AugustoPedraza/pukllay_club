@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 02
-current_phase_name: Natural-Language Spanish Search + Auth
+current_phase: 01.3.1
+current_phase_name: Game Image Quality & Multi-Image Gallery
 status: planning
-stopped_at: Phase 01.3 complete, ready to plan Phase 02
-last_updated: "2026-09-01T11:07:54.319Z"
+stopped_at: Phase 01.3.1 inserted (urgent), ready to discuss/plan
+last_updated: "2026-09-01T16:14:57.072Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 01.3 complete, transitioned to Phase 02
-state_head: 2eeffae9857d6acbccde15d1da54c8d29b22657b
+state_head: 0da2c5b399d8f39441fad9ab0e45ad2e731a2613
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 4
   total_plans: 60
   completed_plans: 60
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 02 — Natural-Language Spanish Search + Auth
+**Current focus:** Phase 01.3.1 — Game Image Quality & Multi-Image Gallery (urgent insertion before Phase 02)
 
 ## Current Position
 
-Phase: 02 — Natural-Language Spanish Search + Auth
+Phase: 01.3.1 — Game Image Quality & Multi-Image Gallery
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-01 — Phase 01.3 complete, transitioned to Phase 02
+Status: Ready to discuss/plan
+Last activity: 2026-09-01 — Phase 01.3.1 inserted after Phase 01.3, before Phase 02
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -263,6 +263,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.1 edited: cleaned up title/goal/requirements/success-criteria after insertion; added SHELL-01..05 to REQUIREMENTS.md
 - Phase 01.2 inserted after Phase 1: Catalog & Detail Navigation Polish — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped (URGENT)
 - Phase 01.3 inserted after Phase 01.2: Game detail page layout needs to be clearer/more scannable and the game information shown needs to be accurate; requested after Phase 01.2's navigation/mechanics polish shipped (URGENT)
+- Phase 01.3.1 inserted after Phase 01.3: Game Image Quality & Multi-Image Gallery (URGENT)
 
 ## Deferred Items
 
