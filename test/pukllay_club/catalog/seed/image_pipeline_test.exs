@@ -122,15 +122,9 @@ defmodule PukllayClub.Catalog.Seed.ImagePipelineTest do
   end
 
   describe "process_gallery/3" do
-    test "uploads up to 3 distinct version images, excluding whichever one is the chosen cover", %{
+    test "returns an empty gallery because other-edition version images are not photos of the game", %{
       credentials: credentials
     } do
-      Req.Test.stub(ImagePipeline, fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("image/png")
-        |> Plug.Conn.send_resp(200, @tiny_png)
-      end)
-
       item = %{
         image: "https://cf.geekdo-images.com/primary.jpg",
         versions: [
@@ -142,10 +136,7 @@ defmodule PukllayClub.Catalog.Seed.ImagePipelineTest do
         ]
       }
 
-      assert {:ok, gallery_urls} = ImagePipeline.process_gallery(item, "games/1", credentials)
-      assert length(gallery_urls) == 3
-      assert Enum.uniq(gallery_urls) == gallery_urls
-      assert Enum.all?(gallery_urls, &String.starts_with?(&1, "https://images.test.invalid/games/1/gallery-"))
+      assert {:ok, []} = ImagePipeline.process_gallery(item, "games/1", credentials)
     end
 
     test "returns an empty gallery (not padded placeholders) when there are no extra version images", %{
