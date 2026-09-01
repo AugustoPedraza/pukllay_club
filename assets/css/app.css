@@ -3088,14 +3088,41 @@ body.pk-drawer-open {
 }
 
 /* 01.3-10 (gap closure G-01.3-4): .pk-desc-shell wraps the description
-   paragraph and its always-trailing-sibling toggle button. The flex
-   column plus the toggle's own `align-self: flex-end` below is the ONLY
-   thing positioning the control now — no float, no in-paragraph nesting,
-   no per-state branch. Replaces the old plain .pk-description wrapper
-   div, which carried no CSS rule of its own. */
+   paragraph and its always-trailing-sibling toggle button. Governs the
+   EXPANDED state: the flex column plus the toggle's own `align-self:
+   flex-end` below keeps the control an in-flow block below the full
+   text — no float, no in-paragraph nesting, no per-state branch.
+   Replaces the old plain .pk-description wrapper div, which carried no
+   CSS rule of its own.
+
+   01.3-12 (gap closure G-01.3-6): `position: relative` added below so the
+   collapsed-state override two rules down (`.pk-desc-shell:not(.is-expanded)
+   .pk-desc-toggle`) has something to anchor `bottom`/`right` against.
+   Without it those values resolve against some distant positioned
+   ancestor and the toggle leaves the card entirely. A column flex
+   container can only ever give a sibling its own row — it cannot pull a
+   child up into a PRIOR sibling's last line box — which is exactly what
+   made the toggle drop below the clamped paragraph instead of trailing
+   its third line (G-01.3-6). The flex column here still governs the
+   expanded state; the absolute overlay two rules down governs the
+   collapsed state only. */
 .pk-desc-shell {
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* 01.3-12 (gap closure G-01.3-6): collapsed-state-only minimum height,
+   sized to match the toggle's own `min-h-11` markup box (show.ex). Exists
+   so a description shorter than the control (a one- or two-line
+   description) cannot let the absolute-positioned toggle below hang
+   upward past the shell's own box, over the hashtag row above it —
+   exactly the tap-hijack surface 01.3-10 deleted the invisible `::before`
+   overlay to fix. Scoped to `:not(.is-expanded)` because the expanded
+   state is unaffected: it is already tall enough (full text + in-flow
+   toggle row) and must not gain an artificial floor. */
+.pk-desc-shell:not(.is-expanded) {
+  min-height: 2.75rem;
 }
 
 /* 01.3-10 (gap closure G-01.3-4, UAT gap G-01.3-1 item 6): the
@@ -3139,23 +3166,46 @@ body.pk-drawer-open {
   -webkit-line-clamp: 3;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* 01.3-12 (gap closure G-01.3-6): reserves the collapsed-state toggle's
+     horizontal footprint so no clipped text or ellipsis ever renders
+     under the tap box below. Sized to `2.75rem`, exactly the toggle's
+     `min-w-11` markup utility (show.ex) — not the smaller 16px icon —
+     because the toggle is a real interactive 44px hit area, and reserving
+     less than that would put live description text under both an
+     interactive control and its own hover/active background wash. The two
+     values live in different files (this stylesheet vs. show.ex's HEEx
+     utility classes) and must move together; the geometry test in
+     catalog_show_test.exs binds them so drift fails `mix test`. */
+  padding-right: 2.75rem;
 }
 
-/* 01.3-10 (gap closure G-01.3-4): positions the control purely as a flex
-   child of .pk-desc-shell's column — `align-self: flex-end` is the ONLY
-   thing positioning it now. No float, no `position: relative`, no
-   line-height-derived margin-top: those all existed to make the toggle
-   sit correctly INSIDE the paragraph's line box, which is exactly the
-   dependency that produced G-01.3-4's engine-specific divergence. Width/
-   height are deliberately NOT declared here — the 44px touch floor lives
-   in the markup's min-h-11/min-w-11 utilities (show.ex, the same idiom
-   .pk-scroll-top already uses on this page), and declaring it in both
-   places would create the double-source problem this file's top-of-file
-   cascade-layer note already records being hit twice on this page.
-   `border-radius: var(--radius-selector)` (not fully circular) per
+/* 01.3-10 (gap closure G-01.3-4): governs the EXPANDED state — positions
+   the control purely as a flex child of .pk-desc-shell's column,
+   `align-self: flex-end` placing it as an in-flow block below the full
+   text. No float, no line-height-derived margin-top: those all existed to
+   make the toggle sit correctly INSIDE the paragraph's line box, which is
+   exactly the dependency that produced G-01.3-4's engine-specific
+   divergence. Width/height are deliberately NOT declared here — the 44px
+   touch floor lives in the markup's min-h-11/min-w-11 utilities (show.ex,
+   the same idiom .pk-scroll-top already uses on this page), and declaring
+   it in both places would create the double-source problem this file's
+   top-of-file cascade-layer note already records being hit twice on this
+   page. `border-radius: var(--radius-selector)` (not fully circular) per
    description-truncation.md's own "What to Avoid" list: a circular
    ghost-button with its own hover halo reads as detached from the text no
-   matter how close it sits. */
+   matter how close it sits.
+
+   01.3-12 (gap closure G-01.3-6): this base rule no longer governs the
+   COLLAPSED state — see the `.pk-desc-shell:not(.is-expanded)
+   .pk-desc-toggle` override below `.pk-desc-toggle:active`. A
+   column-direction flex container can only ever give a sibling its own
+   row; it can never pull that sibling up into a PRIOR sibling's last line
+   box, no matter what `align-self` is set to (that only affects the
+   cross/horizontal axis). That is exactly what made the collapsed toggle
+   drop below the whole clamped paragraph instead of trailing its third
+   line. `align-self: flex-end` is left declared here anyway, unchanged,
+   because it still governs the expanded state and this file's own
+   CSS-source test pins it. */
 .pk-desc-toggle {
   align-self: flex-end;
   display: inline-flex;
@@ -3184,13 +3234,46 @@ body.pk-drawer-open {
   background: color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
+/* 01.3-12 (gap closure G-01.3-6): the actual fix. Collapsed-state-only
+   override that takes the toggle OUT of `.pk-desc-shell`'s flex column —
+   `position: absolute` is what stops the column from handing it a block
+   row of its own, which is the only reason G-01.3-6 happened. Anchored on
+   `.pk-desc-shell`'s own box (via that rule's `position: relative`
+   above), `bottom: 0; right: 0` seats it flush with the paragraph's own
+   bottom-right corner. `align-items: flex-end` plus the 4px
+   `padding-bottom` inset puts the 16px icon's ink at 52-68px in the
+   72px-tall 3-line clamp box (3 x 24px line bands) — centred in the last
+   24px line band (48-72px), since (24 - 16) / 2 = 4. `0.25rem` is written
+   as a literal, matching Tailwind's own `space-1` step already used
+   elsewhere on this page — NOT a `calc()` over a line-height multiple,
+   which is forbidden by this file's own CSS-source test and was the
+   source of the pre-01.3-10 fragility. Do not reintroduce float-based
+   positioning here or anywhere in this rule family — it is the documented
+   root cause of G-01.3-4 and is pinned as un-reintroducible by the
+   tripwire test scanning this whole `.pk-desc*` span. The base
+   `.pk-desc-toggle` rule above still governs the EXPANDED state
+   unchanged. */
+.pk-desc-shell:not(.is-expanded) .pk-desc-toggle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  align-items: flex-end;
+  padding-bottom: 0.25rem;
+}
+
 /* 01.3-10 (gap closure G-01.3-4): 16px matches every other standalone
    icon-button on this page (.pk-scroll-top's size-4). The vertical
    ink-alignment nudge that used to live here is gone — it existed solely
    to align the chevron's ink against the adjacent "…" glyph's ink, and
    the native clamp above supplies its own ellipsis, so there is no glyph
    beside the icon any more; the value it was tuned to no longer has a
-   referent. */
+   referent. 01.3-12: this 16px square is also the number the collapsed
+   toggle's last-line-band geometry (see the override rule above) is
+   computed against — rescaling this icon without revisiting that rule's
+   `padding-bottom` would silently uncentre the ink in its line band; the
+   geometry test in catalog_show_test.exs reads this value from the
+   stylesheet rather than hard-coding it, precisely so that cannot happen
+   silently. */
 .pk-desc-toggle-icon {
   width: 16px;
   height: 16px;
