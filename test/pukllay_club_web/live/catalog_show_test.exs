@@ -912,6 +912,242 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # 01.3-12 (gap closure G-01.3-6): ExUnit cannot measure a rendered box, so
+  # every assertion below is a DERIVED (contract) oracle — it parses the
+  # declarations the geometry is computed from and asserts on the computed
+  # numbers, mirroring the idiom `footer_rhythm_test.exs:486-590` already
+  # established on this codebase (strip comments, anchored `Regex.run` per
+  # rule body, `flunk` with an explanation when a rule has gone missing).
+  # The real oracle — does the chevron actually trail the third line on a
+  # rendered page — was exercised via the device check deferred to
+  # end-of-phase UAT (WINDOWS.md). Values are read out of the CSS/markup
+  # wherever a rule already declares them, never hard-coded, so rescaling
+  # one side (e.g. the icon) cannot silently leave the other (the padding
+  # that centres it) behind.
+  describe "collapsed toggle geometry (01.3-12)" do
+    @base_font_px 16
+
+    # Comments are prose, not cascade — this stylesheet's own comments now
+    # discuss `padding-right`/`position`/`min-w-11` etc. by name (the doc
+    # comments Task 1 rewrote), so a whole-blob regex without stripping
+    # comments first would be satisfied by prose alone. Reused verbatim from
+    # `footer_rhythm_test.exs`.
+    defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
+
+    defp rule_body!(src, selector) do
+      pattern = ~r/(?m)^#{Regex.escape(selector)}\s*\{([^}]*)\}/s
+
+      case Regex.run(pattern, src) do
+        [_, body] ->
+          body
+
+        nil ->
+          flunk(
+            "No `#{selector} { ... }` top-level rule found in assets/css/app.css. If the " <>
+              "selector changed, update this test — it exists specifically to notice that " <>
+              "kind of drift."
+          )
+      end
+    end
+
+    defp rem_px!(block, prop, label) do
+      case Regex.run(~r/#{prop}:\s*([\d.]+)rem/, block) do
+        [_, v] ->
+          float = String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+          float * @base_font_px
+
+        nil ->
+          flunk("`#{prop}` is missing from #{label}")
+      end
+    end
+
+    defp px!(block, prop, label) do
+      case Regex.run(~r/#{prop}:\s*([\d.]+)px/, block) do
+        [_, v] -> String.to_integer(v)
+        nil -> flunk("`#{prop}` is missing from #{label}")
+      end
+    end
+
+    defp int_prop!(block, prop, label) do
+      case Regex.run(~r/#{prop}:\s*(\d+)/, block) do
+        [_, v] -> String.to_integer(v)
+        nil -> flunk("`#{prop}` is missing from #{label}")
+      end
+    end
+
+    defp float_prop!(block, prop, label) do
+      case Regex.run(~r/#{prop}:\s*([\d.]+)/, block) do
+        [_, v] -> String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+        nil -> flunk("`#{prop}` is missing from #{label}")
+      end
+    end
+
+    defp overlay_toggle_body!(src), do: rule_body!(src, ".pk-desc-shell:not(.is-expanded) .pk-desc-toggle")
+
+    test "basis: none of the reading column declares a font-size" do
+      src = strip_comments(css_source())
+
+      for selector <- [".pk-desc", ".pk-desc-shell", ".pk-reading-section", ".pk-text-col"] do
+        body = rule_body!(src, selector)
+
+        refute body =~ ~r/font-size:/,
+               "`#{selector}` declares a font-size. Every px number this describe block " <>
+                 "computes (line bands, icon centring, the reserved gutter) rests on the " <>
+                 "description computing at the #{@base_font_px}px document base declared " <>
+                 "nowhere in the reading column — if a future rule introduces a font-size " <>
+                 "here, THIS test must be the thing that notices, not a real device."
+      end
+    end
+
+    test "last line band: the collapsed icon's ink lands inside it, centred" do
+      src = strip_comments(css_source())
+
+      clamp_lines = int_prop!(rule_body!(src, ".pk-desc.is-clamped"), "-webkit-line-clamp", "`.pk-desc.is-clamped`")
+      line_height = float_prop!(rule_body!(src, ".pk-desc"), "line-height", "`.pk-desc`")
+      line_band = line_height * @base_font_px
+
+      overlay_body = overlay_toggle_body!(src)
+      padding_bottom = rem_px!(overlay_body, "padding-bottom", "the collapsed toggle override")
+      icon_height = px!(rule_body!(src, ".pk-desc-toggle-icon"), "height", "`.pk-desc-toggle-icon`")
+
+      assert padding_bottom + icon_height <= line_band,
+             "The collapsed toggle's icon (height #{icon_height}px, inset #{padding_bottom}px " <>
+               "from the paragraph's bottom edge) spans outside the #{line_band}px last line " <>
+               "band (#{clamp_lines} lines x #{line_height} x #{@base_font_px}px). A control " <>
+               "whose ink band falls entirely outside this range reads as a row of its own " <>
+               "below the paragraph — exactly what a real device showed for G-01.3-6 while " <>
+               "every DOM-structure and CSS-literal test in this file stayed green."
+
+      centring_gap = abs((line_band - icon_height) / 2 - padding_bottom)
+
+      assert centring_gap <= 1,
+             "The collapsed toggle's icon is #{centring_gap}px off-centre in its " <>
+               "#{line_band}px last line band (icon #{icon_height}px, inset " <>
+               "#{padding_bottom}px). Expected the icon to sit centred in the band it " <>
+               "trails, not merely somewhere inside it."
+    end
+
+    test "collapsed toggle is out of flow, expanded stays in flow" do
+      src = strip_comments(css_source())
+
+      overlay_body = overlay_toggle_body!(src)
+
+      assert overlay_body =~ ~r/position:\s*absolute;/,
+             "`.pk-desc-shell:not(.is-expanded) .pk-desc-toggle` must declare " <>
+               "`position: absolute` — the declaration that stops the shell's flex column " <>
+               "from handing the collapsed control a block row of its own, which is the " <>
+               "root cause of G-01.3-6."
+
+      base_toggle_body = rule_body!(src, ".pk-desc-toggle")
+
+      refute base_toggle_body =~ ~r/position\s*:/,
+             "The base `.pk-desc-toggle` rule declares its own `position`. It must stay " <>
+               "unpositioned so the collapsed-state override is the only thing that takes " <>
+               "the control out of flow — the expanded state must keep relying purely on " <>
+               "`.pk-desc-shell`'s flex column."
+
+      shell_body = rule_body!(src, ".pk-desc-shell")
+
+      assert shell_body =~ ~r/position:\s*relative;/,
+             "`.pk-desc-shell` must declare `position: relative`. Without it the collapsed " <>
+               "override's `bottom`/`right` resolve against some distant positioned " <>
+               "ancestor instead of the shell's own box, and the control leaves the card " <>
+               "entirely."
+    end
+
+    test "gutter matches the toggle's markup-declared tap width", %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
+      class = List.first(LazyHTML.attribute(toggle, "class")) || ""
+
+      min_w_px =
+        case Regex.run(~r/min-w-(\d+)/, class) do
+          [_, n] -> String.to_integer(n) * 4
+          nil -> flunk("Toggle class `#{class}` carries no `min-w-N` utility to bind the gutter to")
+        end
+
+      padding_right_px =
+        rem_px!(rule_body!(strip_comments(css_source()), ".pk-desc.is-clamped"), "padding-right", "`.pk-desc.is-clamped`")
+
+      assert padding_right_px >= min_w_px,
+             "`.pk-desc.is-clamped`'s padding-right (#{padding_right_px}px) is narrower than " <>
+               "the toggle's own markup-declared tap box (`min-w-#{div(min_w_px, 4)}` = " <>
+               "#{min_w_px}px, show.ex). This is the only thing binding a value in app.css " <>
+               "to a utility class in show.ex; anything less puts live description text " <>
+               "under an interactive box — the tap-hijack surface 01.3-10 deleted on purpose."
+    end
+
+    test "shell floor matches the toggle's markup-declared tap height", %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
+      class = List.first(LazyHTML.attribute(toggle, "class")) || ""
+
+      min_h_px =
+        case Regex.run(~r/min-h-(\d+)/, class) do
+          [_, n] -> String.to_integer(n) * 4
+          nil -> flunk("Toggle class `#{class}` carries no `min-h-N` utility to bind the floor to")
+        end
+
+      shell_min_height_px =
+        rem_px!(
+          rule_body!(strip_comments(css_source()), ".pk-desc-shell:not(.is-expanded)"),
+          "min-height",
+          "`.pk-desc-shell:not(.is-expanded)`"
+        )
+
+      assert shell_min_height_px >= min_h_px,
+             "The collapsed shell's min-height (#{shell_min_height_px}px) is shorter than " <>
+               "the toggle's own markup-declared tap box (`min-h-#{div(min_h_px, 4)}` = " <>
+               "#{min_h_px}px, show.ex). A sub-three-line description could then let the " <>
+               "absolutely positioned overlay hang upward over the hashtag row above the " <>
+               "description block."
+    end
+
+    test "no forbidden mechanism in the new rule, and the tripwire test still covers it" do
+      overlay_body = overlay_toggle_body!(strip_comments(css_source()))
+
+      refute overlay_body =~ ~r/float\s*:/,
+             "`.pk-desc-shell:not(.is-expanded) .pk-desc-toggle` must not declare " <>
+               "float-based positioning — G-01.3-4's documented root cause."
+
+      refute overlay_body =~ ~r/calc\(\d+ \* 1\.5em\)/,
+             "`.pk-desc-shell:not(.is-expanded) .pk-desc-toggle` must not derive its " <>
+               "position from a line-height multiple — the documented source of the " <>
+               "pre-01.3-10 fragility."
+
+      # Mirrors the family-span extraction the tripwire test at lines 881-912
+      # uses, so a rule placed outside that scan's bounds is caught here too.
+      family_span =
+        case Regex.run(
+               ~r/^\.pk-desc-shell\s*\{.*?(?=\n\/\* Boundary between the primary reading block)/ms,
+               css_source()
+             ) do
+          [span] ->
+            span
+
+          nil ->
+            flunk(
+              "Could not locate the .pk-desc* family span (from `.pk-desc-shell {` to the " <>
+                "boundary-divider comment) in assets/css/app.css."
+            )
+        end
+
+      assert family_span =~ ".pk-desc-shell:not(.is-expanded) .pk-desc-toggle {",
+             "The new collapsed-toggle override rule must sit inside the .pk-desc* family " <>
+               "span the tripwire test scans (from `.pk-desc-shell {` to the boundary " <>
+               "comment) — a rule placed outside those bounds silently falls out of that " <>
+               "test's float-scan coverage."
+    end
+  end
+
   describe "Ilustradores fact-grid pills (D-05, 01.3-07)" do
     test "renders a single illustrator as one filter-linked pill, not plain text", %{conn: conn} do
       game = game_fixture(%{artists: ["Klemens Franz"], weight_band: "nivel_experto"})
