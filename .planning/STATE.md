@@ -4,11 +4,11 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
-stopped_at: Phase 01.3.1 complete, ready to plan Phase 02
-last_updated: "2026-09-01T22:59:35.332Z"
-last_activity: 2026-09-01
+stopped_at: "Completed quick task 260902-glf: Remove the site-wide sticky-footer layout"
+last_updated: "2026-09-02T15:18:56.812Z"
+last_activity: 2026-09-02
 last_activity_desc: Phase 01.3.1 complete, transitioned to Phase 02
-state_head: 536d9de521288001a44a6bf257e26db5be1ed2bd
+state_head: 0e0690c2890ded4caa5cb92f7405e6883f35bf94
 progress:
   total_phases: 8
   completed_phases: 5
@@ -32,7 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 02 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-02 — Completed quick task 260902-g21: Right-align the mobile footer
+Last activity: 2026-09-02 — Completed quick task 260902-glf: Remove the site-wide sticky-footer layout
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -96,6 +96,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | Phase 01.2 P15 | 15min | 3 tasks | 4 files |
 | Phase 01.3 P02 | 25min | 3 tasks | 1 files |
 | Phase 01.3 P04 | 45min | 2 tasks | 2 files |
+| Phase quick-260902-glf P01 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,7 @@ Recent decisions affecting current work:
 - [Phase 01.3]: designer/artist catalog filtering added (`?designers=`/`?artists=` open-text params) — first non-whitelisted list param this app accepts; parameterized via `type(^values, {:array, :string})` + `fragment("? && ?", ...)`, capped at 20 values × 120 chars each, GIN-indexed.
 - [Phase 01.3]: `gemini_api_key` added alongside `bgg_api_token` in `Credentials` (`@secret_fields` + `@derive {Inspect, only: [...]}`, gitignored `config/dev.secret.exs` only); `instructor_lite` (hex.pm) is this phase's one new dependency, manually audited and approved in `01.3-RESEARCH.md` since it falls outside the automated npm/pypi/crates package-legitimacy seam.
 - [Phase 01.3.1, 2026-09-01]: Phase closed after 2 plans, both UAT checkpoints passed on first pass (letterbox rendering across catalog grid/hover/mobile-sheet/detail surfaces; motivating example BGG id 305096 confirmed showing the correct Spanish/Fantasía cover, no stray thumbnail/dot strip). D-02 checkpoint resolved BGG's XML API v2 exposing no reachable gameplay/component photos by narrowing gallery scope to Spanish-edition box art only; `GalleryBackfill` re-ran live over ~434 games; one shared `.pk-poster-img` letterbox class now applied verbatim across every artwork surface except the lightbox and 64x64 selector chips.
+- [Phase 02]: Quick task 260902-glf: reverted Phase 01.2's sticky-footer app shell (.pk-app-shell min-height/flex-grow) per developer's explicit choice; live CDP A/B measurement then found the accompanying flex column vestigial too (main carries only padding, no bottom margin, so nothing collapsed), so the entire .pk-app-shell class + its 3 presence tests + CSS-facts test contract were retired -- root.html.heex's <body> now carries no class at all
 
 ### Pending Todos
 
@@ -263,6 +265,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260901-ty6 | Reduce the mobile (<=480px) footer's visual weight: shrink .pk-footer margin-top and .pk-footer-row vertical padding on mobile, shrink the footer brand_logo, and shrink footer-links font-size/gap on mobile. Desktop untouched. | 2026-09-01 | ed51bab | Complete (764/764 tests, mix quality passes; CDP-measured mobile chrome 96px→56px; one human-judgment visual check flagged in SUMMARY) | [260901-ty6-reduce-the-mobile-480px-footer-s-visual-](./quick/260901-ty6-reduce-the-mobile-480px-footer-s-visual-/) |
 | 260902-fdm | Reduce the mobile footer to just the BGG attribution line per sketch 044 (winner H): remove brand name/tagline, FAQ/Contacto/Juntadas links, and the copyright line from the <=480px footer; keep only <.bgg_attribution />; tighten the <=480px gap further. Desktop untouched. | 2026-09-02 | 1062835 | Complete (766/766 tests, mix format/compile clean; CDP-measured mobile chrome 56px→40px; one human-judgment visual check flagged in SUMMARY, same precedent as 260901-ty6) | [260902-fdm-reduce-the-mobile-footer-to-just-the-bgg](./quick/260902-fdm-reduce-the-mobile-footer-to-just-the-bgg/) |
 | 260902-g21 | On mobile (<=480px), right-align the footer (now just the BGG attribution line) instead of centering it; retire the stale centering-rationale comment; desktop unaffected. | 2026-09-02 | c2ff6a3 | Complete (767/767 tests, mix format clean; CDP-measured 320/390px right-edge alignment confirmed, desktop byte-identical at 768/1280px; one human-judgment visual check flagged in SUMMARY, same precedent as prior footer tasks) | [260902-g21-on-mobile-480px-right-align-the-footer-i](./quick/260902-g21-on-mobile-480px-right-align-the-footer-i/) |
+| 260902-glf | Delete the site-wide sticky-footer app shell mechanism (.pk-app-shell min-height/flex-grow) so the footer follows content instead of being pushed to the viewport bottom on short pages; live CDP A/B measurement then found the accompanying flex column vestigial too, so the entire .pk-app-shell class and its tests were retired. | 2026-09-02 | 0e0690c | Complete (762/762 tests, mix format/compile clean; CDP-measured short-page/long-page/CTA-bar geometry + flex-column A/B all byte-identical; two human-judgment visual checks flagged in SUMMARY, same precedent as prior footer tasks) | [260902-glf-remove-the-site-wide-sticky-footer-layou](./quick/260902-glf-remove-the-site-wide-sticky-footer-layou/) |
 
 ### Roadmap Evolution
 
@@ -281,6 +284,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-01T22:05:00.000Z
-Stopped at: Phase 01.3.1 complete, ready to plan Phase 02
+Last session: 2026-09-02T15:18:56.202Z
+Stopped at: Completed quick task 260902-glf: Remove the site-wide sticky-footer layout
 Resume file: None
