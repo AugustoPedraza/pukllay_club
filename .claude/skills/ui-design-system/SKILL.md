@@ -99,24 +99,32 @@ table in `default.css`, checked by `check-theme-drift.sh`.
 - Numeric table columns right-align with consistent precision; identifier-like digit strings
   (IDs, phone numbers) stay left-aligned as text, not treated as numeric data.
 
-**Catalogue screen measured inventory (2026-08-21, quick task 260821-dah):** re-measured live
-computed `font-family`/`font-size`/`font-weight` triples on `CatalogLive.Index` at
-375px/768px/1440px via headless Chrome + CDP, filtered to elements with a real layout box
-(`display !== 'none'`, `visibility !== 'hidden'`) — identical **5** distinct combos at every
-breakpoint (only which elements land in which bucket shifts, not the combo count):
+**Catalogue screen measured inventory (2026-09-01, quick task 260901-ty6):** re-measured live
+computed `font-family`/`font-size`/`font-weight` triples on `CatalogLive.Index` at 390px/768px via
+headless Chrome + CDP, filtered to elements with a real layout box (`display !== 'none'`,
+`visibility !== 'hidden'`, `el.getClientRects().length > 0`, and excluding descendants of a
+currently-closed `.pk-drawer`/`.pk-sheet` — both keep `display: flex`/`block` at some widths and
+only move off-canvas via `transform`, so their closed-state content otherwise has a technically
+"real" box that a user never sees; the 2026-08-21 measurement below predates this exclusion).
+**6** distinct combos at ≤480px (one more than the 2026-08-21 measurement), **5** at ≥481px
+(byte-identical to 2026-08-21 — confirms the footer change below is mobile-only):
 
 | Combo | Tier | Source |
 |---|---|---|
-| Bebas Neue / 24px / 400 | heading | `font-display text-2xl` — brand wordmark, every carousel row title, main-grid heading, empty-state heading (one shared Tailwind utility pair, not independently-declared) |
+| Bebas Neue / 24px / 400 | heading | `font-display text-2xl` — brand wordmark (header + footer at ≥481px), every carousel row title, main-grid heading, empty-state heading (one shared Tailwind utility pair, not independently-declared) |
+| Bebas Neue / 20px / 400 — footer lockup, ≤480px only | heading, footer-scoped exception | `.pk-brand-quiet .pk-brand-name` (app.css ≤480px block, quick task 260901-ty6) — the footer wordmark demotes by SIZE as well as colour below 480px, to reduce the mobile footer's reported visual weight; the D-B "colour, not size" rule (app.css) stays unchanged at ≥481px |
 | Inter / 14px / 600 (≥481px) → 12px / 600 (≤480px) | body, semibold emphasis | `.pk-nav-links a`, `.pk-card-caption h3`, `.pk-chip`, `.pk-see-all` — one tier, one deliberate narrow-viewport density step (the single last-positioned `@media` block above), not two drifting rules |
-| Inter / 14px / 400 | body | `text-neutral text-sm` regular copy (e.g. the main-grid result-count line) |
+| Inter / 14px / 400 | body | `text-neutral text-sm` regular copy (e.g. the main-grid result-count line); also where `.pk-footer-links a`'s ≤480px 0.875rem (14px/400) lands — a retune onto this existing tier, not a new one (260901-ty6) |
 | Inter / 12px / 400 | muted | brand tagline (`text-xs text-neutral`, fixed 2026-08-21) |
-| — accepted exception — | — | native `<select>`/`<option>` render at 14px/400 via the browser/daisyUI default, coinciding with the body tier by chance — not overridden, per "prefer daisyUI" |
+| Inter / 16px / 400 (≥481px only) | body | `.pk-footer-links a` (FAQ/Contacto/Juntadas) — inherited, not independently declared. **Correction:** the prior row here ("accepted exception, native `<select>`/`<option>`") is stale — quick task 260824-i8e removed the catalog page's only native `<select>`, so no such element renders on this screen anymore; this combo's real source was always these footer links, at the exact size the ≤480px block now retunes to 14px (merging into the body row above) |
 
 Maps cleanly onto heading/body/muted with weight (600 vs 400) as the body tier's sanctioned
-emphasis lever, not a 4th size level — **already at the 3-tier cap**, no CSS changed for this
-measurement. Re-measure before adding a new type combo to this screen; this table is what makes
-the cap enforceable rather than re-litigable.
+emphasis lever. The heading tier gains a second SIZE at ≤480px only (24px header wordmark, 20px
+footer wordmark) — a documented, footer-scoped, breakpoint-scoped exception to "demotion is by
+colour, not size" (app.css D-B comment), not a 4th tier: both rows are still heading-weight Bebas
+Neue, and the exception's cost is paid by this re-measurement, per the rule below. Re-measure
+before adding a new type combo to this screen; this table is what makes the cap enforceable rather
+than re-litigable.
 
 ## Affordance
 

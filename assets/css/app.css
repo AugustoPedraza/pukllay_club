@@ -4801,13 +4801,20 @@ main.pk-boundary-collapse + .pk-footer {
     font-size: 1.25rem;
   }
 
-  /* Quick task 260901-ty6, Task 2: FAQ/Contacto/Juntadas inherit the
-     footer's 1rem (16px) today, larger than any body text on this screen —
-     no combo the ui-design-system inventory table lists. 0.875rem (14px)
-     lands on the screen's existing "body" tier (Inter/14px/600 ≥481px /
-     12px/600 ≤480px, per the inventory table) rather than inventing a
-     fourth; 12px is already the muted tier's floor and these are navigable
-     links, not muted metadata, so that floor is not the right target. */
+  /* Quick task 260901-ty6, Task 2/3: FAQ/Contacto/Juntadas inherit the
+     footer's 1rem (16px, weight 400) today, larger than any body text on
+     this screen. Task 3's live CDP measurement found the ui-design-system
+     inventory table's own "16px Inter, accepted exception, native select"
+     row was stale — quick task 260824-i8e removed the catalog page's only
+     `<select>`, so nothing renders at that combo anymore except these three
+     links, which were the row's real (mislabelled) source all along. That
+     row is corrected in the table; 0.875rem (14px, still weight 400) lands
+     these links on the screen's existing plain "body" tier (Inter/14px/400,
+     e.g. the main-grid result-count line) instead of the 600-weight
+     semibold-emphasis tier — the links carry no font-weight override, so
+     400 is what they already render at, not a new value. 12px is already
+     the muted tier's floor and these are navigable links, not muted
+     metadata, so that floor is not the right target either. */
   .pk-footer-links {
     font-size: 0.875rem;
   }

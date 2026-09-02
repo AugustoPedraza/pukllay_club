@@ -379,8 +379,10 @@ defmodule PukllayClubWeb.FooterRhythmTest do
             end
 
           nil ->
-            flunk("No ≤480px `.pk-footer-links` rule found — the links currently inherit the " <>
-                    "footer's 1rem, larger than any body text on this screen")
+            flunk(
+              "No ≤480px `.pk-footer-links` rule found — the links currently inherit the " <>
+                "footer's 1rem, larger than any body text on this screen"
+            )
         end
 
       assert links_size < 1.0,
