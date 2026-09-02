@@ -633,18 +633,51 @@ defmodule PukllayClubWeb.FooterRhythmTest do
                "problem that killed the original Mission Band design."
     end
 
-    test "the ≤480px block returns the legal band to the centred stack" do
+    test "the ≤480px block right-aligns the legal band, not a centred stack" do
       narrow = narrow_viewport_tail(source())
 
-      # The stacked footer is centred: `.pk-footer-row` keeps `align-items: center`,
-      # which flips from "centre the clusters vertically" to "centre the stack
-      # horizontally" when the direction changes. A width:100% box opts out of that
-      # and left-aligns against the gutter while everything above it stays centred.
+      # At ≤480px `.pk-footer-row` is `flex-direction: column`, so `align-items`
+      # is the HORIZONTAL control there — it flips from "centre the clusters
+      # vertically" on the base ROW to "align the stack horizontally" the moment
+      # the direction changes. Without this override the row inherits the base
+      # rule's `center` and centres the one line that still renders.
+      assert narrow =~ ~r/\.pk-footer-row\s*\{[^}]*align-items:\s*flex-end/,
+             "The ≤480px block must declare `.pk-footer-row { align-items: flex-end; }`. " <>
+               "Without it the row inherits the base rule's `align-items: center`, and since " <>
+               "`.pk-footer-legal` is the only visible child left in the column, centring it " <>
+               "reads as a centred stack instead of a right-aligned one."
+
+      # `width: 100%` makes a flex item fill the cross axis, so ANY `align-items`
+      # value on the column — center, flex-end, doesn't matter — becomes a no-op
+      # on it. `width: auto` is a precondition of right alignment exactly as it
+      # was of centring; this assertion is unchanged in shape from before, only
+      # its reasoning below is updated.
       assert narrow =~ ~r/\.pk-footer-legal\s*\{[^}]*width:\s*auto/,
-             "The ≤480px block no longer resets `.pk-footer-legal`'s width to auto. Mobile is " <>
-               "this project's primary surface and its footer is a CENTRED column — leaving " <>
-               "the band full-width left-aligns the legal line while the brand and links above " <>
-               "it stay centred (measured: x=14 instead of 39.13 at 320px)."
+             "The ≤480px block no longer resets `.pk-footer-legal`'s width to auto. A " <>
+               "`width: 100%` flex item fills the column's cross axis, making any " <>
+               "`align-items` value — right alignment included — a no-op. `width: auto` is " <>
+               "what lets the new `align-items: flex-end` override actually apply."
+    end
+
+    # Guards requirement 3 (this change is ≤480px-scoped). Green from the start
+    # by design, not a RED proof: it asserts the BASE (>480px) rule, which this
+    # task never touches — a permanent guard against a future edit leaking the
+    # ≤480px alignment change outside the media block.
+    test "the >480px .pk-footer-row rule still centres the clusters vertically" do
+      wide = wide_viewport_source(source())
+
+      row =
+        case Regex.run(~r/(?m)^\.pk-footer-row\s*\{([^}]*)\}/, wide) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-footer-row` rule found before the ≤480px block")
+        end
+
+      assert row =~ ~r/align-items:\s*center/,
+             "`.pk-footer-row`'s base (>480px) rule must still set `align-items: center`. At " <>
+               ">480px this is a ROW, where `align-items: center` vertically centres the two " <>
+               "clusters against the legal band — a different meaning entirely from the " <>
+               "≤480px override's horizontal alignment. This change is ≤480px-scoped; the " <>
+               "base rule must never be touched by it."
     end
 
     test "the emptied right cluster cannot spend a gap slot on the mobile stack" do
