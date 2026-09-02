@@ -32,7 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 02 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-01 — Phase 01.3.1 complete, transitioned to Phase 02
+Last activity: 2026-09-01 — Completed quick task 260901-ty6: Reduce the mobile footer's visual weight
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -225,7 +225,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
   - **G-01-4 (major):** Carousel shelves on `/` read as a single vertical list with no visible affordance that there are multiple carousels, and horizontal scroll happens at the window level instead of being scoped to each carousel row. A diagnosis was opened at `.planning/debug/G-01-4-carousel-affordance.md`.
   - **G-01-3 (unresolved):** The carousel prev/next scroll-controls test was skipped by the user ("I don't understand this") — whether the originally-reported "~20 columns forcing horizontal scroll" was a carousel rail or the `#games` grid is still an open question.
   - These two remain the next manual UI/UX pass's starting point. The third item originally grouped here — the 7-item UI audit — was closed 2026-08-21 by quick task 260821-dah (see "Pending Todos" above).
-- Deferred (not a blocker): mobile footer visual weight — needs its own shell-wide phase, touches every page not just game detail. Also open: sticky title-echo bar's brand-tint/bounce question — mechanical separation/contrast/typography fixes shipped in 01.3-09 and 01.3-11 (both deliberately left the bar's own background fill and `.pk-scroll-top`'s bounce animation untouched, per each plan's own "Open design questions"); brand treatment itself still undecided, reported at least twice now (01.2 and 01.3).
+- [Resolved by quick task 260901-ty6, 2026-09-01] Mobile footer visual weight — the footer (not the full shell) had its ≤480px vertical chrome (margin+padding), wordmark, and link ink/gap all retuned down (96px→56px chrome); CDP-measured, 764/764 tests pass. Deferred item closed; if visual weight concerns resurface on other shell surfaces (header, drawer), that remains its own shell-wide phase.
+- Deferred (not a blocker): sticky title-echo bar's brand-tint/bounce question — mechanical separation/contrast/typography fixes shipped in 01.3-09 and 01.3-11 (both deliberately left the bar's own background fill and `.pk-scroll-top`'s bounce animation untouched, per each plan's own "Open design questions"); brand treatment itself still undecided, reported at least twice now (01.2 and 01.3).
 
 ### Quick Tasks Completed
 
@@ -259,6 +260,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260824-i8e | Removed the stale native sort `<select>` (Nombre/Duración/Complejidad/Más recientes) from the catalog page; sort machinery underneath (parse_sort/1, :sort assign, see-all/URL deep links) left fully intact | 2026-08-24 | c3b14b3 | Complete | [260824-i8e-the-select-for-nombre-duracion-etc-looks](./quick/260824-i8e-the-select-for-nombre-duracion-etc-looks/) |
 | 260824-q8z | Mobile drawer bottom block: social links reordered as a full-width, high-contrast, 44px CONTENT row; theme control centered and its "Tema" label converted to sr-only as a quiet FOOTER strip (mirrors the desktop footer's shipped pattern, applies sketch 021's Round-6 conclusion) | 2026-08-24 | 79b392b | Complete | [260824-q8z-for-mobile-the-social-links-at-the-botto](./quick/260824-q8z-for-mobile-the-social-links-at-the-botto/) |
 | 260824-t7g | New carousel arrow layer from sketches 022-026: relocated prev/next controls to Netflix-style edge-overlay chevrons gated to pointer-fine devices (022-C), replaced the browser's fixed smooth-scroll with the project's own 200ms soft ease-out curve (023-B) | 2026-08-24 | d106248 | Partial (live-smoothness sub-check needs a human eyeballing it in a foregrounded tab — see SUMMARY) | [260824-t7g-new-carousel-from-latest-sketches](./quick/260824-t7g-new-carousel-from-latest-sketches/) |
+| 260901-ty6 | Reduce the mobile (<=480px) footer's visual weight: shrink .pk-footer margin-top and .pk-footer-row vertical padding on mobile, shrink the footer brand_logo, and shrink footer-links font-size/gap on mobile. Desktop untouched. | 2026-09-01 | ed51bab | Complete (764/764 tests, mix quality passes; CDP-measured mobile chrome 96px→56px; one human-judgment visual check flagged in SUMMARY) | [260901-ty6-reduce-the-mobile-480px-footer-s-visual-](./quick/260901-ty6-reduce-the-mobile-480px-footer-s-visual-/) |
 
 ### Roadmap Evolution
 
