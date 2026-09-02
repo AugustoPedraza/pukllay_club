@@ -4752,19 +4752,82 @@ main.pk-boundary-collapse + .pk-footer {
      page (app.css, sketch 035's closed equal-24px-boundary decision), so the
      mobile default and the detail page now coincide by intent rather than
      by accident. The post-change total is measured live in Task 3's
-     SUMMARY rather than asserted here. */
+     SUMMARY rather than asserted here.
+
+     UPDATE (2026-09-02, quick task 260902-fdm, sketch 044 winner H): the
+     mobile footer's own content just shrank to a single line (the BGG
+     attribution alone — see .pk-footer-left/.pk-footer-copyright below), so
+     260901-ty6's 1.5rem/1rem chrome — tuned for a 3-line footer — is
+     retuned once more, to 1rem/0.75rem. The boundary cue is still the
+     footer's own background/border surface change, not the margin, so the
+     margin only has to supply breathing room for what is now 12px of small
+     print. 1rem (16px) is the number sketch 044's own "What Changes in the
+     Real App" section names; 0.75rem is not a new number either — it is the
+     value this same block already carries for --pk-footer-gap-list. */
   .pk-footer {
     --pk-footer-gap-group: 1rem;
     --pk-footer-gap-cluster: 1.5rem;
-    --pk-footer-offset: 1.5rem;
-    --pk-footer-pad-block: 1rem;
+    --pk-footer-offset: 1rem;
+    --pk-footer-pad-block: 0.75rem;
     /* Quick task 260901-ty6, Task 2: list and group were both 1rem here,
        collapsing two of the four tiers onto one value — sibling links (list)
        read as spaced exactly as far apart as the brand sits from the link
        list (group), the same proximity inversion the desktop fix at the top
        of this file already closed once for .pk-footer-row/the clusters.
-       0.75rem restores item < list < group <= cluster (0.5/0.75/1/1.5rem). */
+       0.75rem restores item < list < group <= cluster (0.5/0.75/1/1.5rem).
+
+       DORMANT (quick task 260902-fdm): --pk-footer-gap-list,
+       --pk-footer-gap-group and --pk-footer-gap-cluster are kept here even
+       though their consumers (.pk-footer-left, .pk-footer-right) are now
+       hidden at this breakpoint — they are dormant rather than wrong, one
+       line each on a shared scale, and deleting them would break the
+       tier-ordering guards for no rendered benefit. They wake again the
+       moment any future rule unhides a footer cluster below 480px. */
     --pk-footer-gap-list: 0.75rem;
+  }
+
+  /* Quick task 260902-fdm (sketch 044 winner H): the left cluster's
+     FAQ/Contacto/Juntadas links relocate NOWHERE on mobile — this is a
+     deliberate, developer-accepted content removal, not a drawer-equivalent
+     hide like .pk-footer-right below. Sketch 044's "Real Tradeoff, Verified"
+     section grepped the codebase and confirmed these three anchors exist
+     nowhere else in the app; the About page itself stays reachable from the
+     header, only the direct jump to its FAQ/Contact/Meetups sections is
+     lost. Recorded here explicitly so nobody later "restores" the links
+     believing the hide was an oversight, and nobody adds a fourth concern to
+     this cluster assuming it has a drawer equivalent.
+
+     Hides the CLUSTER, not its children, for the same reason
+     .pk-footer-right's own comment gives below: a `display: none` child is
+     skipped by flex `gap`, but an empty visible parent still takes a slot in
+     the column. */
+  .pk-footer-left {
+    display: none;
+  }
+
+  /* Quick task 260902-fdm (sketch 044 winner H): the copyright notice
+     carries no compliance requirement — sketch 044's research pass
+     established that the BGG attribution does and the copyright line does
+     not (copyright subsists without a printed notice). It survives
+     untouched at >480px; the class exists solely as a stable hook so this
+     hide is not positional (see FooterRhythmTest's own reasoning for why a
+     `:first-child` selector was rejected). */
+  .pk-footer-copyright {
+    display: none;
+  }
+
+  /* Quick task 260902-fdm: a LITERAL, not var(--pk-footer-offset) — same
+     decoupling contract 260901-ty6 established for this selector (see the
+     >480px rule of the same name further up this file). Sketch 044 is the
+     sketch round that legitimately reopens sketch 035's closed 24px
+     boundary decision, but only AT ≤480px: the >480px literal is untouched
+     and sketch 035's desktop decision still stands. Placed after the
+     `.pk-footer` token rule above in source order; that ordering matters to
+     nothing in the cascade (this selector's specificity already wins on its
+     own), and FooterRhythmTest's own helper is anchored precisely so it
+     never has to care either. */
+  main.pk-boundary-collapse + .pk-footer {
+    margin-top: 1rem;
   }
 
   /* Quick task 260901-ty6, Task 2: a scoped SIZE exception to D-B's "demotion

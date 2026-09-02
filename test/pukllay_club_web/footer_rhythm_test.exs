@@ -51,8 +51,17 @@ defmodule PukllayClubWeb.FooterRhythmTest do
     tail
   end
 
+  # Anchored to horizontal whitespace only (quick task 260902-fdm), not the
+  # bare unanchored pattern this helper used before. Sketch 044 adds
+  # `main.pk-boundary-collapse + .pk-footer { ... }` to this same media
+  # block, and that selector's tail is ALSO `.pk-footer {` — an unanchored
+  # regex would happily match wherever that tail's own `.` sits, silently
+  # returning a body with no chrome tokens in it and failing every consumer
+  # of this helper for the wrong reason. `(?m)^[ \t]*` still matches the
+  # indented rule inside the media block but cannot match a rule whose
+  # selector has a combinator (`main... + `) in front of it.
   defp narrow_footer_block(src) do
-    case Regex.run(~r/\.pk-footer\s*\{([^}]*)\}/, narrow_viewport_tail(src)) do
+    case Regex.run(~r/(?m)^[ \t]*\.pk-footer\s*\{([^}]*)\}/, narrow_viewport_tail(src)) do
       [_, body] -> body
       nil -> flunk("The ≤480px block no longer re-declares `.pk-footer` spacing tokens")
     end
@@ -399,6 +408,140 @@ defmodule PukllayClubWeb.FooterRhythmTest do
                "under 44px, so this floor — not the type — is what sets the box; dropping it to " <>
                "\"gain\" footer height would push every phone user's brand link under the touch " <>
                "minimum."
+    end
+  end
+
+  # Sketch 044, winner H (quick task 260902-fdm). Real-device feedback on the
+  # already-tightened footer (260901-ty6) still read as too heavy; the user's
+  # own framing broke the stalemate — "the only thing I need there is the BGG
+  # compliance." This describe block guards the resulting ≤480px shape: the
+  # left cluster and the copyright are hidden (PARENT, not children — the
+  # same reasoning `.pk-footer-right`'s hide already carries, so an empty
+  # visible box cannot spend a gap slot), the copyright hides through a
+  # stable class hook rather than position, the chrome tightens further than
+  # 260901-ty6 shipped, and — the most important assertion in this file — the
+  # BGG attribution can never be swept away by a container-level hide.
+  #
+  # Oracle type: derived (contract), same as the rest of this file. Every
+  # assertion here was verified RED against the pre-change stylesheet/markup:
+  # no `.pk-footer-left` hide, no `.pk-footer-copyright` class or hide rule,
+  # today's chrome ratios at 0.5/0.667 (not <= 0.4/0.55), and no
+  # `main.pk-boundary-collapse + .pk-footer` rule inside the ≤480px block.
+  describe "the ≤480px footer is the BGG compliance line and nothing else" do
+    test "the ≤480px block hides .pk-footer-left itself, not its children" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      assert narrow =~ ~r/\.pk-footer-left\s*\{[^}]*display:\s*none/,
+             "The ≤480px block must hide `.pk-footer-left` itself. A `display: none` child is " <>
+               "skipped by flex `gap`, but an empty visible parent still takes a slot in the " <>
+               "column — hiding `.brand_logo` and the link list individually would leave a " <>
+               "zero-height box spending a cluster gap, the same reason `.pk-footer-right`'s " <>
+               "own comment already gives for hiding that cluster as a whole."
+    end
+
+    test "the ≤480px block hides the copyright through its own named hook" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      assert narrow =~ ~r/\.pk-footer-copyright\s*\{[^}]*display:\s*none/,
+             "The ≤480px block must hide the copyright through a `.pk-footer-copyright` class " <>
+               "hook, not a positional selector. The two `.pk-footer-meta` spans are documented " <>
+               "as load-bearing and independently ordered (debug footer-desktop-imbalance), so " <>
+               "a `:first-child` hide would silently hide the wrong one if they are ever swapped."
+
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      copyright = LazyHTML.query(doc, ".pk-footer-legal > .pk-footer-meta.pk-footer-copyright")
+
+      assert Enum.count(copyright) == 1,
+             "Expected exactly one `.pk-footer-legal > .pk-footer-meta.pk-footer-copyright` " <>
+               "element — the class hook `footer/1` adds to the copyright span."
+
+      assert LazyHTML.text(copyright) =~ "Pukllay Club",
+             "The `.pk-footer-copyright` hook landed on the wrong span — its text must contain " <>
+               "\"Pukllay Club\"."
+    end
+
+    test "the surviving piece is the attribution — no rule anywhere hides it" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      notes = LazyHTML.query(doc, ".pk-bgg-note")
+
+      assert Enum.count(notes) == 1,
+             "Expected exactly one `.pk-bgg-note` anchor in the rendered footer."
+
+      assert notes |> LazyHTML.attribute("href") |> List.first() == "https://boardgamegeek.com/",
+             "The `.pk-bgg-note` anchor's href must be exactly \"https://boardgamegeek.com/\"."
+
+      assert notes |> LazyHTML.query("img") |> Enum.count() == 1,
+             "The `.pk-bgg-note` anchor must still carry the BGG logo `<img>`."
+
+      assert notes |> LazyHTML.query("span") |> Enum.count() == 1,
+             "The `.pk-bgg-note` anchor must still carry its text `<span>`."
+
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      never_hidden = [
+        {~r/(?m)^\s*\.pk-footer-legal\s*\{[^}]*display:\s*none/, ".pk-footer-legal"},
+        {~r/(?m)^\s*\.pk-footer-meta\s*\{[^}]*display:\s*none/, "an unscoped .pk-footer-meta"},
+        {~r/\.pk-bgg-note\s*\{[^}]*display:\s*none/, ".pk-bgg-note"}
+      ]
+
+      for {pattern, name} <- never_hidden do
+        refute narrow =~ pattern,
+               "D-04 makes the BGG attribution a compliance requirement at every viewport " <>
+                 "width. A footer-reduction change is precisely where it could be swept away " <>
+                 "by a container-level hide — #{name} may never declare `display: none` in the " <>
+                 "≤480px block."
+      end
+    end
+
+    test "the chrome tightens further than 260901-ty6 shipped, expressed as ratios" do
+      base = base_footer_block(source())
+      narrow = narrow_footer_block(source())
+
+      base_offset = footer_token!(base, "offset")
+      base_pad = footer_token!(base, "pad-block")
+      mobile_offset = footer_token!(narrow, "offset")
+      mobile_pad = footer_token!(narrow, "pad-block")
+
+      assert mobile_offset / base_offset <= 0.4,
+             "The ≤480px `--pk-footer-offset` is #{Float.round(mobile_offset / base_offset, 3)}x " <>
+               "the base value. Sketch 044 needs this at 0.4x or tighter now that the footer " <>
+               "holds a single line — 260901-ty6 only reached 0.5x."
+
+      assert mobile_pad / base_pad <= 0.55,
+             "The ≤480px `--pk-footer-pad-block` is #{Float.round(mobile_pad / base_pad, 3)}x " <>
+               "the base value. Sketch 044 needs this at 0.55x or tighter now that the footer " <>
+               "holds a single line — 260901-ty6 only reached 0.667x."
+    end
+
+    test "the detail page and the catalog page open the same ≤480px footer gap" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      boundary_margin =
+        case Regex.run(
+               ~r/main\.pk-boundary-collapse \+ \.pk-footer\s*\{[^}]*margin-top:\s*([\d.]+)rem/,
+               narrow
+             ) do
+          [_, v] -> String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+          nil ->
+            flunk(
+              "No ≤480px `main.pk-boundary-collapse + .pk-footer` rule found — the detail " <>
+                "page's boundary-decoupling contract (260901-ty6) has nothing to retune."
+            )
+        end
+
+      mobile_offset = footer_token!(narrow_footer_block(source()), "offset")
+
+      assert boundary_margin == mobile_offset,
+             "The ≤480px `main.pk-boundary-collapse + .pk-footer` margin-top " <>
+               "(#{boundary_margin}rem) must equal the ≤480px `--pk-footer-offset` " <>
+               "(#{mobile_offset}rem). 260901-ty6 deliberately kept these as two independent " <>
+               "declarations that \"coincide by intent, not by a shared declaration\" — " <>
+               "retuning only the token would silently leave the detail page looser than the " <>
+               "catalog page on the project's primary surface."
     end
   end
 

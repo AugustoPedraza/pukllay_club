@@ -990,7 +990,7 @@ defmodule PukllayClubWeb.Layouts do
           </div>
         </div>
         <div class="pk-footer-legal">
-          <span class="pk-footer-meta">© {@copyright_year} Pukllay Club</span>
+          <span class="pk-footer-meta pk-footer-copyright">© {@copyright_year} Pukllay Club</span>
           <span class="pk-footer-meta"><.bgg_attribution /></span>
         </div>
       </div>
