@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 01.3.1
-current_phase_name: Game Image Quality & Multi-Image Gallery (INSERTED)
-status: executing
-stopped_at: Phase 01.3.1 inserted (urgent), ready to discuss/plan
-last_updated: "2026-09-01T20:40:33.586Z"
+current_phase: 02
+current_phase_name: Natural-Language Spanish Search + Auth
+status: planning
+stopped_at: Phase 01.3.1 complete, ready to plan Phase 02
+last_updated: "2026-09-01T22:59:35.332Z"
 last_activity: 2026-09-01
-last_activity_desc: Phase 01.3.1 execution started
-state_head: 512316b2d02de545cf900441d02887098309d736
+last_activity_desc: Phase 01.3.1 complete, transitioned to Phase 02
+state_head: 536d9de521288001a44a6bf257e26db5be1ed2bd
 progress:
   total_phases: 8
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 62
-  completed_plans: 60
+  completed_plans: 62
 milestone_name: milestone
 ---
 
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.3.1 — Game Image Quality & Multi-Image Gallery (INSERTED)
+**Current focus:** Phase 02 — Natural-Language Spanish Search + Auth
 
 ## Current Position
 
-Phase: 01.3.1 (Game Image Quality & Multi-Image Gallery (INSERTED)) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 01.3.1
-Last activity: 2026-09-01 — Phase 01.3.1 execution started
+Phase: 02 — Natural-Language Spanish Search + Auth
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-01 — Phase 01.3.1 complete, transitioned to Phase 02
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -40,7 +40,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 
 **Velocity:**
 
-- Total plans completed: 63
+- Total plans completed: 65
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | 01.1 | 9 | - | - |
 | 01.2 | 27 | - | - |
 | 01.3 | 12 | - | - |
+| 01.3.1 | 2 | - | - |
 
 **Recent Trend:**
 
@@ -177,6 +178,7 @@ Recent decisions affecting current work:
 - [Phase 01.3, 2026-09-01]: Phase closed after 12 plans and a 3-round chevron/toggle CSS gap-closure chain (float-in-justified-paragraph → native -webkit-line-clamp + trailing-sibling button → position:relative + :not(.is-expanded) absolute overlay) — final failure mode only reproduced on real WebKit/Mobile-Safari, not headless Chromium, confirming this codebase's established engine-divergence risk for this exact toggle-in-clamped-paragraph pattern. 8/8 UAT checkpoints passed, including 2 real-device confirmations (G-01.3-4+6 combined, G-01.3-5). G-01.3-1 (empty hashtag row) resolved as intended — HashtagNormalizer only derives tags from 3 CSV columns, giving 26% catalog coverage; accepted rather than widening the mapping. threats_open: 0 across 58 registered threats (01.3-SECURITY.md).
 - [Phase 01.3]: designer/artist catalog filtering added (`?designers=`/`?artists=` open-text params) — first non-whitelisted list param this app accepts; parameterized via `type(^values, {:array, :string})` + `fragment("? && ?", ...)`, capped at 20 values × 120 chars each, GIN-indexed.
 - [Phase 01.3]: `gemini_api_key` added alongside `bgg_api_token` in `Credentials` (`@secret_fields` + `@derive {Inspect, only: [...]}`, gitignored `config/dev.secret.exs` only); `instructor_lite` (hex.pm) is this phase's one new dependency, manually audited and approved in `01.3-RESEARCH.md` since it falls outside the automated npm/pypi/crates package-legitimacy seam.
+- [Phase 01.3.1, 2026-09-01]: Phase closed after 2 plans, both UAT checkpoints passed on first pass (letterbox rendering across catalog grid/hover/mobile-sheet/detail surfaces; motivating example BGG id 305096 confirmed showing the correct Spanish/Fantasía cover, no stray thumbnail/dot strip). D-02 checkpoint resolved BGG's XML API v2 exposing no reachable gameplay/component photos by narrowing gallery scope to Spanish-edition box art only; `GalleryBackfill` re-ran live over ~434 games; one shared `.pk-poster-img` letterbox class now applied verbatim across every artwork surface except the lightbox and 64x64 selector chips.
 
 ### Pending Todos
 
@@ -275,6 +277,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-01T11:15:00.000Z
-Stopped at: Phase 01.3 complete, ready to plan Phase 02
+Last session: 2026-09-01T22:05:00.000Z
+Stopped at: Phase 01.3.1 complete, ready to plan Phase 02
 Resume file: None

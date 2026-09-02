@@ -205,7 +205,7 @@ fill a fixed near-square frame — across the ~434 games already seeded, not jus
 **Requirements**: TBD (inserted urgent fix; carries no requirement IDs of its own. Keeps the
 already-Complete CATALOG-01 and CATALOG-09 actually true.)
 **Depends on:** Phase 01.3
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 
 > **Scope constraint surfaced during planning (D-02).** Research found no reachable source for
 > BGG gameplay/component photos: the XML API v2 exposes one image per thing and one per version
