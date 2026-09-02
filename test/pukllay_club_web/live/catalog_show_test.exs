@@ -3686,16 +3686,20 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # `80vh` was itself the bug — `.pk-lightbox` centres rather than stretches its child, so
       # the unclaimed 20% of viewport height rendered as two translucent scrim bands, one above
       # and one below the stage. Round 7 replaces the single `80vh` with this file's own
-      # dual-declaration full-viewport idiom (see `.pk-app-shell`'s comment for the fuller
-      # argument): the static unit as a fallback, the dynamic-viewport unit immediately after.
+      # dual-declaration full-viewport idiom (see the superseded-mechanism note above
+      # `.pk-gutter` in app.css, where `.pk-app-shell` used to live, for the fuller argument —
+      # that class is deleted outright as of 2026-09-02/260902-glf, but its former comment site
+      # keeps the idiom documented since two other places, including this one, cite it): the
+      # static unit as a fallback, the dynamic-viewport unit immediately after.
       assert body =~ ~r/height:\s*100vh;\s*height:\s*100dvh;/,
              "`.pk-lightbox-img` must declare `height` TWICE, adjacent and in this exact order " <>
                "— the older `100vh` unit immediately followed by the dynamic-viewport `100dvh` " <>
                "unit, with nothing but whitespace between them. This is not a redundant " <>
                "duplicate: the first line is the fallback a browser without `dvh` support keeps, " <>
-               "the second is what every current browser actually uses (see `.pk-app-shell`'s " <>
-               "own comment in this file for the fuller argument) — deleting either line " <>
-               "silently reintroduces the mobile-toolbar bug this pair exists to prevent."
+               "the second is what every current browser actually uses (see the superseded-" <>
+               "mechanism note above `.pk-gutter` in app.css, where `.pk-app-shell` used to " <>
+               "live, for the fuller argument) — deleting either line silently reintroduces " <>
+               "the mobile-toolbar bug this pair exists to prevent."
 
       height_declarations = Regex.scan(~r/height:\s*[^;]+;/, body)
 

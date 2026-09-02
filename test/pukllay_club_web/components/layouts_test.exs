@@ -536,136 +536,25 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  # G-01.2-24 task 3: the sticky-footer app shell — a single class on
-  # <body>, the only change root.html.heex carries for this task. Pins the
-  # class is present on every route this shell serves (catalog, detail,
-  # about), not just one.
-  describe "root layout sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-24)" do
-    test "the catalog index page's <body> carries pk-app-shell", %{conn: conn} do
-      game_fixture()
-      {:ok, _view, html} = live(conn, ~p"/")
-
-      doc = LazyHTML.from_document(html)
-      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
-
-      assert body_class =~ "pk-app-shell"
-    end
-
-    test "the detail page's <body> carries pk-app-shell", %{conn: conn} do
-      game = game_fixture()
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
-
-      doc = LazyHTML.from_document(html)
-      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
-
-      assert body_class =~ "pk-app-shell"
-    end
-
-    test "the about page's <body> carries pk-app-shell", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
-
-      doc = LazyHTML.from_document(html)
-      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
-
-      assert body_class =~ "pk-app-shell"
-    end
-  end
-
-  # Source-level CSS facts, matching this file's existing @css_path-style
-  # assertions elsewhere in the suite. INVERTED 2026-09-02 (quick task
-  # 260902-glf): this describe used to guard the PRESENCE of the three
-  # declarations that together pushed the footer to the bottom of the
-  # viewport (min-height, column flex direction, and the main-child
-  # flex-grow). A real mobile screenshot showed the opposite defect — a gap
-  # ABOVE the footer on pages shorter than the viewport — so the developer
-  # reverted the mechanism, and this describe now guards its ABSENCE
-  # instead. See app.css's own dated superseding note on `.pk-app-shell`
-  # for the full rationale.
-  #
-  # The old direct-child-combinator refute (`.pk-app-shell > main` never
-  # matches) is deleted outright, not kept: with the descendant rule gone
-  # there is no longer a correct selector for it to be the wrong variant
-  # of, so keeping it would be a test passing for a reason that no longer
-  # exists.
-  #
-  # Deliberately NOT decided here: whether `.pk-app-shell` still declares a
-  # flex formatting context (`display: flex; flex-direction: column`).
-  # Those two assertions are left exactly as they were — true today — and
-  # are PENDING Task 3's live A/B measurement of whether the flex column
-  # still buys anything (margin-collapse suppression on `.pk-footer`'s top
-  # offset) now that the height floor and growth factor are gone. Do not
-  # mistake them for a settled contract.
-  #
-  # A sibling describe, not nested inside the one above — ExUnit forbids
-  # nested describe blocks.
-  describe "pk-app-shell CSS facts (Phase 01.2 gap-closure round 4, G-01.2-24; inverted 260902-glf)" do
-    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
-
-    defp shell_css_source, do: File.read!(@css_path)
-
-    # Reused verbatim from footer_rhythm_test.exs / catalog_show_test.exs's
-    # established idiom: comments are prose, not cascade, and the
-    # superseding note this task requires will literally NAME the selector
-    # and properties these absence assertions look for — a raw-source match
-    # would be defeated by the very comment this plan requires.
-    defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
-
-    defp pk_app_shell_block do
-      case Regex.run(~r/(?m)^\.pk-app-shell\s*\{([^}]*)\}/, shell_css_source()) do
-        [_, body] -> body
-        nil -> flunk("No top-level `.pk-app-shell { ... }` rule found in app.css")
-      end
-    end
-
-    test "still declares a flex formatting context (pending Task 3's flex-column determination)" do
-      body = pk_app_shell_block()
-
-      assert body =~ ~r/display:\s*flex;/,
-             "`.pk-app-shell` must declare `display: flex` — without it `flex-direction` has " <>
-               "no flex formatting context to act inside. This assertion is PENDING Task 3's " <>
-               "A/B measurement of whether the flex column is still load-bearing now that the " <>
-               "height floor and main-child growth factor are gone."
-
-      assert body =~ ~r/flex-direction:\s*column;/,
-             "`.pk-app-shell` must declare `flex-direction: column` — a row direction would " <>
-               "lay the header/main/footer out side by side instead of stacked. Also PENDING " <>
-               "Task 3's determination — see this describe's own comment."
-    end
-
-    test "declares no minimum-height floor at any value or unit (260902-glf regression guard)" do
-      body = pk_app_shell_block()
-
-      refute body =~ ~r/min-height/,
-             "`.pk-app-shell` must declare NO `min-height`, at any value or unit. A " <>
-               "viewport-height floor on the shell is exactly what pushed the footer down on " <>
-               "pages whose real content falls short of one screen — the defect quick task " <>
-               "260902-glf removed. Its reappearance, in any form, re-opens that defect."
-    end
-
-    test "declares no rule pairing the shell class with a main descendant (260902-glf regression guard)" do
-      src = strip_comments(shell_css_source())
-
-      refute src =~ ~r/\.pk-app-shell\s+main\s*\{/,
-             "No rule may pair `.pk-app-shell` with a `main` descendant anywhere in the " <>
-               "stylesheet. This is the first half of the two-part regression guard for the " <>
-               "removed sticky-footer mechanism — see the sibling test below for the second " <>
-               "half. Matched against comment-stripped source because the required " <>
-               "superseding note names this exact selector in prose."
-    end
-
-    test "declares no growth factor on any main element under the shell class (260902-glf regression guard)" do
-      src = strip_comments(shell_css_source())
-
-      refute src =~ ~r/\.pk-app-shell[^{]*main[^{]*\{[^}]*flex-grow/,
-             "The stylesheet must declare no growth factor (`flex-grow`) on any `main` " <>
-               "element scoped under the shell class. This is the second half of the same " <>
-               "regression guard — the height floor and the growth factor are independent " <>
-               "halves of the original mechanism, and restoring either one alone would " <>
-               "re-open half the defect. Matched against comment-stripped source, same " <>
-               "reasoning as the sibling test above."
-    end
-  end
-
+  # REMOVED (2026-09-02, quick task 260902-glf, Task 3): the sticky-footer
+  # app shell's `.pk-app-shell` class and its whole CSS mechanism (min-
+  # height floor, main-child flex-grow, and — as of this task — the flex
+  # column too) are deleted outright, not commented out. This describe
+  # used to pin `<body>` carrying `pk-app-shell` on every route; the
+  # sibling `pk-app-shell CSS facts` describe (Phase 01.2 gap-closure round
+  # 4, G-01.2-24; briefly inverted into an absence guard earlier in this
+  # same task) used to assert the stylesheet contract. Both are gone
+  # because the class itself is gone: Task 3's live CDP A/B measurement
+  # (toggling `.pk-app-shell { display: block !important; }` against the
+  # running dev server at 390px, short and long pages) found EVERY
+  # geometry number byte-identical with the flex column present vs.
+  # removed — `<main>` carries only padding, never a bottom margin, so
+  # there was nothing left for `.pk-footer`'s top margin to collapse
+  # against once the height floor and growth factor were already gone.
+  # The flex column was therefore vestigial, `root.html.heex` now renders
+  # a bare `<body>` with no class, and there is no longer a stylesheet
+  # contract for this file to pin — see app.css's own dated note above
+  # `.pk-gutter` for the full history and measurement record.
   describe "app/1 footer (SHELL-01, Task 2 checkpoint content)" do
     test "renders the shared pk-footer element with exactly three footer link labels" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})

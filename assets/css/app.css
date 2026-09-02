@@ -428,16 +428,33 @@
    chrome shows/hides. Documented here because two other places in this
    repo cite this spot by name, not because a rule here still uses it.
 
-   `display: flex; flex-direction: column` remains below for now — its
-   fate is a separate, measured decision (see this file's own dated note
-   at the deletion site, if the flex column was later also retired, or the
-   describe-level comment in layouts_test.exs's `pk-app-shell CSS facts`
-   if it survives). Do not remove it on the assumption it only ever
-   existed for the mechanism withdrawn here. */
-.pk-app-shell {
-  display: flex;
-  flex-direction: column;
-}
+   `.pk-app-shell`'s `display: flex; flex-direction: column` was NOT
+   removed on the assumption above alone — its fate was settled the same
+   day by a live A/B measurement (quick task 260902-glf, Task 3), not by
+   argument: with the height floor and growth factor already gone, is
+   there anything left for the flex column to do? The one candidate
+   mechanism was real — a flex container suppresses margin collapsing
+   between its items, and `.pk-footer`'s `margin-top: var(--pk-footer-
+   offset)` is exactly such a margin. The offsetting fact, also real: this
+   layout's `<main>` carries only padding (`pb-20 pt-8 sm:pt-20`), never a
+   bottom margin, so there is nothing on the other side for the footer's
+   top margin to collapse against — collapsing `0` (main's non-existent
+   bottom margin) with `1rem`/`3rem` (footer's top margin) still resolves
+   to `1rem`/`3rem` either way. Measured live via CDP (headless Chromium,
+   scratchpad script, not committed) toggling `.pk-app-shell { display:
+   block !important; }` against the running dev server at 390px, on both a
+   short page (a no-results catalog search state, well short of a 1400px
+   viewport) and a long page (a game detail page, content far exceeding
+   the viewport): EVERY measured number — `scrollHeight`, the footer's top
+   and bottom edges, the main-to-footer gap, and the footer-to-document-end
+   gap — was byte-identical with the flex column present vs. removed. The
+   flex column was vestigial by the time this measurement ran; it is
+   therefore ALSO deleted here, along with `<body>`'s `pk-app-shell` class
+   (its only markup consumer, `root.html.heex`, now renders a bare `<body>`)
+   and the class's three presence tests plus this describe's own CSS-facts
+   contract in `layouts_test.exs` (see that file's `git log` for
+   260902-glf's removal commit). `.pk-app-shell` as a class no longer
+   exists anywhere in this codebase as of 2026-09-02. */
 
 /* Category-anchor scroll animation (debug category-menu-scroll-animation).
    Both category surfaces — the desktop .pk-cat-item mega-menu rows and the
@@ -3582,15 +3599,15 @@ body.pk-cta-parked {
    min-height): this bar's `getBoundingClientRect()` still resolves
    against the true viewport in both cases, not against body's box.
 
-   RE-CHECKED AGAIN (2026-09-02, quick task 260902-glf): `.pk-app-shell`'s
-   `min-height` floor is now deleted outright (see that class's own
-   superseded-mechanism note, above `.pk-gutter`) — `<body>` today carries
-   only `display: flex; flex-direction: column`, a strict subset of the
-   already-audited state above. Since flex/flex-direction were already
-   confirmed absent from the five containing-block-establishing properties,
-   this audit's conclusion is unaffected and gets strictly safer, not
-   riskier, by removing a property that was never on that list to begin
-   with. Re-confirmed live via the same CDP method as the original
+   RE-CHECKED AGAIN (2026-09-02, quick task 260902-glf, Task 3): the whole
+   `.pk-app-shell` class — `min-height` floor, `flex`/`flex-direction`, and
+   the class itself — is now deleted outright (see the superseded-mechanism
+   note above `.pk-gutter`, which also records the flex-column A/B
+   measurement that retired it). `<body>` today carries no class at all.
+   Since none of `.pk-app-shell`'s former declarations were ever among the
+   five containing-block-establishing properties, this audit's conclusion
+   is unaffected and gets strictly safer, not riskier, by their full
+   removal. Re-confirmed live via the same CDP method as the original
    verification. */
 /* G-01.3-09 (UAT gap G-01.3-1 item 7): the bar's fill used to be
    var(--color-base-100), the exact token the page body itself uses,
@@ -3787,13 +3804,14 @@ body.pk-cta-parked {
    running dev server): this element's `position: fixed` still resolves
    against the true viewport with `.pk-app-shell` active.
 
-   RE-CHECKED (2026-09-02, quick task 260902-glf): `.pk-app-shell`'s
-   `min-height` floor is now deleted outright (see that class's own
-   superseded-mechanism note, above `.pk-gutter`); `<body>` today carries
-   only `display: flex; flex-direction: column`, a strict subset of the
-   already-audited state above, so this audit's conclusion is unaffected
-   and gets strictly safer, not riskier. Re-confirmed live via the same
-   CDP method as the original verification. */
+   RE-CHECKED AGAIN (2026-09-02, quick task 260902-glf, Task 3): the whole
+   `.pk-app-shell` class — `min-height` floor, `flex`/`flex-direction`, and
+   the class itself — is now deleted outright (see the superseded-mechanism
+   note above `.pk-gutter`, which also records the flex-column A/B
+   measurement that retired it). `<body>` today carries no class at all,
+   so this audit's conclusion is unaffected and gets strictly safer, not
+   riskier. Re-confirmed live via the same CDP method as the original
+   verification. */
 
 /* G-01.2-19 (Phase 01.2 gap-closure round 9, plan 01.2-31): a third and
    final report of "the background should be full screen" traced to this
@@ -3933,13 +3951,14 @@ body.pk-cta-parked {
    very next UAT round, so this is the deferral resolving on schedule,
    not a correction of a mistake. Third: the property below is declared
    TWICE following this file's own dual-declaration viewport-unit idiom
-   (see `.pk-app-shell`'s superseded-mechanism note, above `.pk-gutter`,
-   for the fuller argument — that rule no longer declares `min-height`
-   itself as of 2026-09-02/260902-glf, but its comment keeps the idiom
-   documented because this is one of the two places that cite it) — the
-   static `100vh` is the fallback a browser without dynamic-viewport
-   support keeps, `100dvh` is what every current browser actually uses,
-   and neither line is a leftover duplicate to clean up.
+   (see the superseded-mechanism note above `.pk-gutter`, where `.pk-app-
+   shell` used to live, for the fuller argument — that whole class,
+   `min-height` included, is deleted outright as of 2026-09-02/260902-glf,
+   but its former comment site keeps the idiom documented because this is
+   one of the two places that cite it) — the static `100vh` is the
+   fallback a browser without dynamic-viewport support keeps, `100dvh` is
+   what every current browser actually uses, and neither line is a
+   leftover duplicate to clean up.
    Fourth: a percentage of the parent's own box (`height: 100%`) would
    ALSO have resolved correctly here, since `.pk-lightbox` is a fixed,
    full-inset overlay with a definite height — it was rejected anyway, so
