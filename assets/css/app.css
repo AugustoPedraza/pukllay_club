@@ -1869,20 +1869,30 @@ body.pk-sheet-open {
      the single-line threshold further right. 0.5/1/1.5/2rem keeps the
      one-line layout starting at ~1065px (slightly earlier than the 1073px it
      started at before this fix) while still giving the item tier a 3x contrast
-     against the group tier — enough to visibly bind "Tema" to its buttons. */
+     against the group tier — enough to visibly bind "Tema" to its buttons.
+
+     Two more tokens live in this same declare-once contract (quick task
+     260901-ty6): --pk-footer-offset (this rule's own margin-top) and
+     --pk-footer-pad-block (.pk-footer-row's padding-top/padding-bottom).
+     They exist so the ≤480px block below can retune the footer's VERTICAL
+     chrome the same way it already retunes the horizontal gap tiers —
+     declared once here, consumed by both orientations, never re-declared as
+     a literal at either width. */
   --pk-footer-gap-item: 0.5rem; /* inside ONE unit: icon set, label+control */
   --pk-footer-gap-list: 1rem; /* between sibling text links */
   --pk-footer-gap-group: 1.5rem; /* between distinct concerns in a cluster */
   --pk-footer-gap-cluster: 2rem; /* between clusters, in EITHER orientation */
+  --pk-footer-offset: 3rem; /* this rule's own margin-top; retuned ≤480px */
+  --pk-footer-pad-block: 1.5rem; /* .pk-footer-row's padding-top/-bottom; retuned ≤480px */
 
   background: var(--color-base-200);
   border-top: 1px solid var(--color-base-300);
-  margin-top: 3rem;
+  margin-top: var(--pk-footer-offset);
 }
 
 .pk-footer-row {
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
+  padding-top: var(--pk-footer-pad-block);
+  padding-bottom: var(--pk-footer-pad-block);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4289,6 +4299,13 @@ main.pk-boundary-collapse .pk-shelf:last-of-type {
   margin-bottom: 0;
 }
 
+/* Quick task 260901-ty6: deliberately left as a literal, not converted to
+   --pk-footer-offset. Sketch 035's equal-24px-boundary decision (comment
+   above) is closed; converting this to the token would let a future mobile
+   retune silently move a decision that was made independently. The 1.5rem
+   here and the ≤480px `.pk-footer` block's --pk-footer-offset value below
+   happen to coincide by intent — both trace back to the same closed
+   sketch-035 decision — not by a shared declaration. */
 main.pk-boundary-collapse + .pk-footer {
   margin-top: 1.5rem;
 }
@@ -4710,10 +4727,27 @@ main.pk-boundary-collapse + .pk-footer {
      this the mobile footer had those two backwards — 24px within, 12px
      between. Retuning values inside one shared scale keeps desktop and mobile
      one rhythm; declaring separate literals per orientation is what caused
-     the drift in the first place. */
+     the drift in the first place.
+
+     Quick task 260901-ty6 adds two more retuned tokens here:
+     --pk-footer-offset and --pk-footer-pad-block. Before this change the
+     mobile footer spent 48px (.pk-footer's own top margin) + 24px + 24px
+     (.pk-footer-row's own top/bottom inner padding) = 96px of vertical
+     chrome before any footer content — the heaviest block on the page by
+     that measure alone. The separation cue here is the footer's OWN surface
+     change (base-200 background + base-300 top border), so the margin only
+     has to supply breathing room rather than carry the boundary alone:
+     1.5rem is not a new number, it is the value
+     `main.pk-boundary-collapse + .pk-footer` already ships on the detail
+     page (app.css, sketch 035's closed equal-24px-boundary decision), so the
+     mobile default and the detail page now coincide by intent rather than
+     by accident. The post-change total is measured live in Task 3's
+     SUMMARY rather than asserted here. */
   .pk-footer {
     --pk-footer-gap-group: 1rem;
     --pk-footer-gap-cluster: 1.5rem;
+    --pk-footer-offset: 1.5rem;
+    --pk-footer-pad-block: 1rem;
   }
 
   /* Mobile/desktop swap (01.1-09 Task 2): the toggle and social cluster

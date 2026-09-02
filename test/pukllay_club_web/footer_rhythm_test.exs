@@ -81,6 +81,18 @@ defmodule PukllayClubWeb.FooterRhythmTest do
     end
   end
 
+  # Sibling to rem_token!/2 for the non-`-gap-` tokens (`--pk-footer-offset`,
+  # `--pk-footer-pad-block`) added by quick task 260901-ty6. Kept separate
+  # rather than generalizing rem_token!/2's regex, since the gap tiers and the
+  # chrome tokens are read by different describe blocks with different naming
+  # conventions (`gap-item`/`gap-list`/... vs `offset`/`pad-block`).
+  defp footer_token!(block, name) do
+    case Regex.run(~r/--pk-footer-#{name}:\s*([\d.]+)rem/, block) do
+      [_, value] -> String.to_float(if String.contains?(value, "."), do: value, else: value <> ".0")
+      nil -> flunk("Token `--pk-footer-#{name}` is missing from this block")
+    end
+  end
+
   describe "the spacing scale keeps its tiers in order" do
     test "the four tiers are strictly ordered item < list < group <= cluster" do
       block = base_footer_block(source())
@@ -153,6 +165,102 @@ defmodule PukllayClubWeb.FooterRhythmTest do
              "`.pk-footer-row` declares a two-value gap. Separate row/column gaps are exactly " <>
                "how the wrapped layout ended up with a tighter between-group gap than " <>
                "within-group gap."
+    end
+  end
+
+  # Quick task 260901-ty6. Guards the footer's VERTICAL chrome the same way
+  # the describe blocks above guard its horizontal gap tiers: two new tokens
+  # (--pk-footer-offset for .pk-footer's own margin-top, --pk-footer-pad-block
+  # for .pk-footer-row's padding-top/padding-bottom) declared once in the base
+  # rule and retuned — never re-declared as a literal — in the ≤480px block.
+  #
+  # Motivating measurement: before this change the mobile footer spent 48px
+  # (.pk-footer's own top margin) + 24px + 24px (.pk-footer-row's own
+  # top/bottom inner padding) = 96px of vertical chrome before any footer
+  # content, on this project's primary surface.
+  #
+  # Oracle type: derived (contract), same as every other describe block in
+  # this file — ExUnit cannot observe rendered geometry, so these pin the
+  # token declarations the geometry depends on. Every assertion here was
+  # verified RED against the pre-change stylesheet (a bare `margin-top: 3rem`
+  # literal on `.pk-footer`, a bare `padding-top`/`padding-bottom: 1.5rem`
+  # literal on `.pk-footer-row`, and no `--pk-footer-offset`/
+  # `--pk-footer-pad-block` token anywhere in the file) before the CSS was
+  # edited.
+  describe "the mobile footer spends less vertical chrome than the desktop one" do
+    test "the base .pk-footer rule declares both chrome tokens with a non-zero value" do
+      block = base_footer_block(source())
+
+      assert footer_token!(block, "offset") > 0,
+             "`--pk-footer-offset` must be declared on the base `.pk-footer` rule with a " <>
+               "non-zero value — it is what `margin-top` reads."
+
+      assert footer_token!(block, "pad-block") > 0,
+             "`--pk-footer-pad-block` must be declared on the base `.pk-footer` rule with a " <>
+               "non-zero value — it is what `.pk-footer-row`'s padding-top/padding-bottom read."
+    end
+
+    test "margin-top and padding-top/padding-bottom read the tokens, not bare literals" do
+      src = strip_comments(source())
+
+      footer_block =
+        case Regex.run(~r/(?m)^\.pk-footer\s*\{([^}]*)\}/, src) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-footer` rule found in assets/css/app.css")
+        end
+
+      row_block =
+        case Regex.run(~r/(?m)^\.pk-footer-row\s*\{([^}]*)\}/, src) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-footer-row` rule found in assets/css/app.css")
+        end
+
+      assert footer_block =~ ~r/margin-top:\s*var\(--pk-footer-offset\)/,
+             "`.pk-footer`'s `margin-top` must read `var(--pk-footer-offset)`, or the ≤480px " <>
+               "retune below has nothing to change."
+
+      assert row_block =~ ~r/padding-top:\s*var\(--pk-footer-pad-block\)/,
+             "`.pk-footer-row`'s `padding-top` must read `var(--pk-footer-pad-block)`."
+
+      assert row_block =~ ~r/padding-bottom:\s*var\(--pk-footer-pad-block\)/,
+             "`.pk-footer-row`'s `padding-bottom` must ALSO read `var(--pk-footer-pad-block)`. " <>
+               "Pinning only padding-top would admit a stylesheet where the bottom stayed a " <>
+               "literal and the mobile retune half-applies."
+
+      refute footer_block =~ ~r/margin-top:\s*[\d.]+rem/,
+             "`.pk-footer` still carries a bare rem literal for `margin-top` alongside the " <>
+               "token — that makes the token decorative rather than load-bearing."
+
+      refute row_block =~ ~r/padding-(top|bottom):\s*[\d.]+rem/,
+             "`.pk-footer-row` still carries a bare rem literal for `padding-top`/`padding-bottom` " <>
+               "alongside the token."
+    end
+
+    test "the ≤480px block retunes both tokens strictly downward, with a non-zero offset" do
+      base = base_footer_block(source())
+      narrow = narrow_footer_block(source())
+
+      base_offset = footer_token!(base, "offset")
+      base_pad = footer_token!(base, "pad-block")
+      mobile_offset = footer_token!(narrow, "offset")
+      mobile_pad = footer_token!(narrow, "pad-block")
+
+      # Compared numerically, not hardcoded — a future retune that keeps the
+      # direction (mobile always <= desktop) stays green, and one that
+      # inverts it fails, without needing this test edited every time.
+      assert mobile_offset < base_offset,
+             "The ≤480px `--pk-footer-offset` (#{mobile_offset}rem) must be strictly less than " <>
+               "the base value (#{base_offset}rem), or the mobile retune does nothing."
+
+      assert mobile_pad < base_pad,
+             "The ≤480px `--pk-footer-pad-block` (#{mobile_pad}rem) must be strictly less than " <>
+               "the base value (#{base_pad}rem), or the mobile retune does nothing."
+
+      assert mobile_offset > 0,
+             "The ≤480px `--pk-footer-offset` is #{mobile_offset}rem. A zero offset would butt " <>
+               "the footer against the content above it, which is the one thing this change " <>
+               "must not do — the footer must stay visibly separated by its own margin, on top " <>
+               "of its own background/border surface change."
     end
   end
 
