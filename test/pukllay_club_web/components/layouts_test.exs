@@ -460,6 +460,54 @@ defmodule PukllayClubWeb.LayoutsTest do
       refute main_class(unset_html) =~ "px-4"
       refute main_class(collapsed_html) =~ "px-4"
     end
+
+    # Quick task 260902-il3: `bottom_collapse` is a SECOND, independent axis
+    # from `boundary_collapse` (D-01/D-02) — it collapses only the bottom
+    # boundary (cancelling `pb-20`), leaving the default top-padding
+    # utilities (`pt-8 sm:pt-20`) in place, for a page whose bottom boundary
+    # double-stacks but whose top spacing is a separately-tuned, closed
+    # decision that must not move (REQ-2). Exact-string assertion, matching
+    # the discipline the two tests above already established.
+    test "with bottom_collapse set and boundary_collapse unset, <main> carries the bottom-collapse class and keeps the default top-padding utilities" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          bottom_collapse: true,
+          inner_block: []
+        })
+
+      class = main_class(html)
+      assert class == "pk-bottom-collapse pt-8 sm:pt-20 px-4 sm:px-6 lg:px-8"
+      refute class =~ "pb-20"
+      refute class =~ "pk-boundary-collapse"
+    end
+
+    # D-02: the two collapse attrs are structurally exclusive branches, not
+    # competing declarations — `boundary_collapse` wins outright when both
+    # are set, and `pk-bottom-collapse` must never appear alongside it.
+    test "with both boundary_collapse and bottom_collapse set, boundary_collapse wins outright" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          boundary_collapse: true,
+          bottom_collapse: true,
+          inner_block: []
+        })
+
+      assert main_class(html) == "pk-boundary-collapse px-4 sm:px-6 lg:px-8"
+    end
+
+    test "fullbleed's horizontal-padding behavior is unchanged in the bottom_collapse state too" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          fullbleed: true,
+          bottom_collapse: true,
+          inner_block: []
+        })
+
+      refute main_class(html) =~ "px-4"
+    end
   end
 
   # G-01.2-22 task 3: the three call-site assertions that make the opt-in
@@ -486,6 +534,43 @@ defmodule PukllayClubWeb.LayoutsTest do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       refute main_class(html) =~ "pk-boundary-collapse"
+    end
+
+    # Quick task 260902-il3: the catalog page opts into the bottom-only axis
+    # instead — D-01 forbids reusing boundary_collapse here since it would
+    # also move the catalog page's separately-closed top spacing (REQ-2).
+    test "the catalog index page's <main> carries pk-bottom-collapse and not pb-20", %{
+      conn: conn
+    } do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      class = main_class(html)
+      assert class =~ "pk-bottom-collapse"
+      refute class =~ "pb-20"
+    end
+
+    test "the about page's <main> carries neither pk-bottom-collapse nor pk-boundary-collapse, and still carries pb-20",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      class = main_class(html)
+      refute class =~ "pk-bottom-collapse"
+      refute class =~ "pk-boundary-collapse"
+      assert class =~ "pb-20"
+    end
+
+    test "the detail page's <main> carries pk-boundary-collapse and not pk-bottom-collapse", %{
+      conn: conn
+    } do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      class = main_class(html)
+      assert class =~ "pk-boundary-collapse"
+      refute class =~ "pk-bottom-collapse"
     end
   end
 

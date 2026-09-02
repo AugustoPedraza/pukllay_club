@@ -130,6 +130,17 @@ defmodule PukllayClubWeb.Layouts do
         "both render at once, so default false means every existing caller renders " <>
         "byte-identically"
 
+  attr :bottom_collapse, :boolean,
+    default: false,
+    doc:
+      "when true, collapses ONLY this page's bottom boundary spacing (cancelling <main>'s " <>
+        "own bottom padding and the last `.pk-shelf`'s trailing margin), leaving the default " <>
+        "top-padding utilities (`pt-8 sm:pt-20`) in place (260902-il3). For a page whose " <>
+        "bottom boundary double-stacks but whose top spacing is already correct and must not " <>
+        "move — unlike `boundary_collapse`, which owns both ends. It is a no-op when " <>
+        "`boundary_collapse` is true: that attr already owns both boundaries, so the two are " <>
+        "structurally exclusive branches, never competing declarations (D-02)"
+
   attr :sticky, :boolean,
     default: false,
     doc:
@@ -622,9 +633,29 @@ defmodule PukllayClubWeb.Layouts do
     render and relying on that hazard to pick a winner would work by
     accident. One field, one declaration, per state. See app.css's own
     `main.pk-boundary-collapse` rule for what the collapsed state applies.
+
+    260902-il3: `@bottom_collapse` is nested INSIDE the `else` branch above
+    — a third sibling branch alongside `@boundary_collapse` was rejected,
+    because that would let a future caller pass both attrs and get an
+    ambiguous two-class cascade-layer race (the same hazard the paragraph
+    above names) rather than a structurally guaranteed winner. Nesting
+    inside `else` means `boundary_collapse` short-circuits first: when it
+    is true, `bottom_collapse` is never even evaluated, so
+    `pk-boundary-collapse` and `pk-bottom-collapse` are incapable of both
+    rendering (D-02). The bottom token is emitted first and the unchanged
+    `pt-8 sm:pt-20` string second, so the default (both attrs false) state's
+    class list keeps its original token order and stays byte-identical to
+    the pre-existing exact-string contract test. See app.css's own
+    `main.pk-bottom-collapse` rule for what the collapsed state applies.
     --%>
     <main class={[
-      if(@boundary_collapse, do: "pk-boundary-collapse", else: "pb-20 pt-8 sm:pt-20"),
+      if(@boundary_collapse,
+        do: "pk-boundary-collapse",
+        else: [
+          if(@bottom_collapse, do: "pk-bottom-collapse", else: "pb-20"),
+          "pt-8 sm:pt-20"
+        ]
+      ),
       !@fullbleed && "px-4 sm:px-6 lg:px-8"
     ]}>
       <div class="mx-auto space-y-4">

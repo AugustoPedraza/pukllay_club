@@ -4337,13 +4337,50 @@ main.pk-boundary-collapse .pk-shelf:last-of-type {
   margin-bottom: 0;
 }
 
+/* Bottom-collapse (opt-in, quick task 260902-il3). Layouts.app's
+   `bottom_collapse` attr (default false, mutually exclusive with
+   `boundary_collapse` — see that attr's own doc) renders this class on
+   <main> instead of its default `pb-20`, leaving the default top-padding
+   utilities in place. Unlike `boundary_collapse`, this axis only owns the
+   BOTTOM boundary: the catalog page's top spacing (32px/80px at
+   390px/1280px) is a separately-tuned, closed decision (D-01) that must
+   not move, and the top-boundary problem `boundary_collapse` was built for
+   — the hidden title-echo bar's dead layout space — does not exist on the
+   catalog page at all.
+
+   Before this fix, the catalog page's bottom boundary stacked three
+   independently-reasonable declarations, live-measured: <main>'s own
+   bottom padding (80px) + `.pk-shelf`'s own trailing margin (48px at
+   1280px / 32px at 390px) + `.pk-footer`'s own top margin (48px at 1280px
+   / 16px at 390px) = 176px at 1280px / 128px at 390px combined. These two
+   declarations are deliberately the same two `main.pk-boundary-collapse`
+   applies above, minus that block's `padding-top: 1.5rem` — this axis
+   never touches the top. */
+main.pk-bottom-collapse {
+  padding-bottom: 0;
+}
+
+main.pk-bottom-collapse .pk-shelf:last-of-type {
+  margin-bottom: 0;
+}
+
 /* Quick task 260901-ty6: deliberately left as a literal, not converted to
    --pk-footer-offset. Sketch 035's equal-24px-boundary decision (comment
    above) is closed; converting this to the token would let a future mobile
    retune silently move a decision that was made independently. The 1.5rem
    here and the ≤480px `.pk-footer` block's --pk-footer-offset value below
    happen to coincide by intent — both trace back to the same closed
-   sketch-035 decision — not by a shared declaration. */
+   sketch-035 decision — not by a shared declaration.
+
+   Quick task 260902-il3 (D-04): `main.pk-bottom-collapse + .pk-footer` is
+   grouped onto this same rule rather than duplicating the 1.5rem literal —
+   "declaring separate literals per orientation is what caused the drift in
+   the first place" (app.css, ≤480px block comment below). The new selector
+   is placed FIRST so `main.pk-boundary-collapse + .pk-footer` still sits
+   immediately before the opening brace — `catalog_show_test.exs` and
+   `footer_rhythm_test.exs` both regex for that exact adjacency, and a
+   later alphabetiser must not reorder this group. */
+main.pk-bottom-collapse + .pk-footer,
 main.pk-boundary-collapse + .pk-footer {
   margin-top: 1.5rem;
 }
@@ -4853,7 +4890,21 @@ main.pk-boundary-collapse + .pk-footer {
      `.pk-footer` token rule above in source order; that ordering matters to
      nothing in the cascade (this selector's specificity already wins on its
      own), and FooterRhythmTest's own helper is anchored precisely so it
-     never has to care either. */
+     never has to care either.
+
+     Quick task 260902-il3 (D-03/D-04): `main.pk-bottom-collapse +
+     .pk-footer` is grouped onto this same ≤480px rule for the identical
+     reason the >480px rule above gives — one boundary decision, one place
+     to retune it. This grouping is MANDATORY, not optional: the >480px
+     rule sits outside any media query and outbids `.pk-footer`'s own
+     `margin-top: var(--pk-footer-offset)` by source order, so without this
+     ≤480px override the catalog page would render 24px at mobile where the
+     detail page renders 16px — reopening sketch 044's closed ≤480px
+     boundary decision by omission. `main.pk-boundary-collapse + .pk-footer`
+     stays LAST in the selector list, immediately before the opening brace,
+     matching the >480px group's ordering rule above, for the same two
+     downstream regex tests. */
+  main.pk-bottom-collapse + .pk-footer,
   main.pk-boundary-collapse + .pk-footer {
     margin-top: 1rem;
   }

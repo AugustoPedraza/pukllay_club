@@ -887,9 +887,14 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       flash={@flash}
       fullbleed
       sticky
+      bottom_collapse
       search_expanded={@search_expanded}
       active_nav={:inicio}
     >
+      <%!-- Quick task 260902-il3: only the bottom boundary is opted in
+      (`bottom_collapse`) — the top spacing is deliberately left on the
+      shared default (`pt-8 sm:pt-20`) per D-01, since it is a separately-
+      tuned, closed decision this task must not move. --%>
       <:nav_links>
         <.link navigate={~p"/"} aria-current="page">Inicio</.link>
         <.link navigate={~p"/quienes-somos"}>Quiénes Somos</.link>

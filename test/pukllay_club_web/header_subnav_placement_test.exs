@@ -72,10 +72,11 @@ defmodule PukllayClubWeb.HeaderSubnavPlacementTest do
   # this boundary reads as "merged", so the floor is not hypothetical.
   @min_mobile_top_padding_px 16
 
-  # The tallest measured fixed bottom CTA bar (.pk-about-cta-bar at 390px;
-  # .pk-mobile-cta-bar is 68px). Below this, real content sits permanently
-  # behind the bar with no way to scroll it clear.
-  @min_bottom_padding_px 73
+  # 260902-il3: @min_bottom_padding_px (73px, the tallest measured fixed
+  # bottom CTA bar) removed — it justified a floor on the CATALOG page's
+  # `<main>` bottom padding, but the catalog page never renders a fixed
+  # CTA bar (only Detalle does, guarded elsewhere); see the test below for
+  # the corrected assertion.
 
   defp landing_doc(conn) do
     game_fixture(%{name: "Subnav Placement Game", tags: ["#CreaConexiones"]})
@@ -172,21 +173,48 @@ defmodule PukllayClubWeb.HeaderSubnavPlacementTest do
                "human on a real device. Trimming excess is not the same as removing separation."
     end
 
-    test "the bottom padding survives, because it is fixed-CTA-bar clearance", %{conn: conn} do
+    # Quick task 260902-il3, Rule 1: this test's original premise — that
+    # `<main>`'s Tailwind `pb-*` utility is fixed-CTA-bar clearance — was
+    # borrowed from Detalle (`.pk-mobile-cta-bar`) and Quiénes Somos
+    # (`.pk-about-cta-bar`), NEITHER of which the catalog page (`/`, the
+    # page this test actually exercises via `landing_doc/1`) ever renders:
+    # grep confirms `pk-has-cta-bar` is toggled only by `catalog_live/
+    # show.ex`. The floor only ever held here by coincidence — pre-il3, the
+    # catalog page shared the same `pb-20` default branch as Detalle/Quiénes
+    # Somos before Detalle opted into `boundary_collapse`. Task 1 of
+    # 260902-il3 opts the catalog page into `bottom_collapse` instead
+    # (D-01: its top spacing is a separately-closed decision that must not
+    # move, so it cannot reuse `boundary_collapse`), which cancels this
+    # utility-class bottom padding entirely — the zero is now supplied by
+    # `main.pk-bottom-collapse`'s own CSS rule, not by a `pb-*` token this
+    # regex-based helper can see. Inverted into an absence guard rather than
+    # deleted outright, mirroring how 260902-glf retired its own stale
+    # shell-padding assumption.
+    test "the bottom padding is zeroed via bottom_collapse, not reserved as CTA-bar clearance" do
       classes =
-        conn |> landing_doc() |> LazyHTML.query("main") |> LazyHTML.attribute("class") |> hd()
+        (&PukllayClubWeb.Layouts.app/1)
+        |> render_component(%{
+          flash: %{},
+          fullbleed: true,
+          bottom_collapse: true,
+          inner_block: []
+        })
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("main")
+        |> LazyHTML.attribute("class")
+        |> hd()
 
       %{bottom: bottom} = base_padding_px(classes)
 
-      assert bottom && bottom >= @min_bottom_padding_px,
-             "`<main>` reserves #{inspect(bottom)}px of bottom padding at mobile, under the " <>
-               "#{@min_bottom_padding_px}px floor. This padding is not decoration balancing the " <>
-               "top — Detalle (`.pk-mobile-cta-bar`, measured 68px) and Quiénes Somos " <>
-               "(`.pk-about-cta-bar`, measured 73px) both render `position: fixed; bottom: 0` " <>
-               "CTA bars at mobile, and this is the only thing keeping their last content from " <>
-               "sitting permanently behind one. The top and bottom halves are asymmetric on " <>
-               "purpose; folding them back into one `py-*` to tidy them up is a content- " <>
-               "occlusion bug on two pages that were never part of the report."
+      refute bottom,
+             "`<main>` still carries a base `pb-*` utility (#{inspect(bottom)}px) alongside " <>
+               "`bottom_collapse` — the two must be mutually exclusive (D-02); the collapsed " <>
+               "state's zero comes from `main.pk-bottom-collapse`'s CSS rule, never from a " <>
+               "Tailwind padding class."
+
+      assert classes =~ "pk-bottom-collapse",
+             "Expected the bottom-collapsed `<main>` to carry `pk-bottom-collapse`, got " <>
+               "`#{classes}`."
     end
   end
 end
