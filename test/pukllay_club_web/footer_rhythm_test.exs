@@ -496,6 +496,156 @@ defmodule PukllayClubWeb.FooterRhythmTest do
     end
   end
 
+  # Quick task 260902-il3, Task 2. Motivating measurement: the catalog page's
+  # last carousel shelf sat 128px above the footer at 390px / 176px at
+  # 1280px, live-measured, before `bottom_collapse` shipped — three
+  # independently-reasonable declarations stacking (`<main>`'s own bottom
+  # padding, `.pk-shelf`'s own trailing margin, `.pk-footer`'s own top
+  # margin). Task 1 fixed this by adding a SECOND, independent bottom axis
+  # (`pk-bottom-collapse`, D-02) that shares one declaration with the detail
+  # page's existing `boundary_collapse` footer-margin rule rather than
+  # duplicating literals (D-04) — "declaring separate literals per
+  # orientation is what caused the drift in the first place" (app.css,
+  # ≤480px block comment).
+  #
+  # Oracle type: derived (contract), same as the rest of this file. Rendered
+  # geometry is the only oracle that can actually PROVE the fix — a class
+  # could render with no matching CSS rule and every assertion below would
+  # still pass — these assertions pin only the declarations that geometry
+  # depends on; Task 3 supplies the live-measured geometry that proves the
+  # declarations actually apply. Every assertion here was verified RED
+  # against a deliberately-broken variant (see each test's own comment).
+  describe "bottom_collapse shares its footer-margin declaration with boundary_collapse (260902-il3)" do
+    # Verified RED by temporarily splitting this rule into two separate
+    # rules (`main.pk-bottom-collapse + .pk-footer { margin-top: 1rem }` and
+    # `main.pk-boundary-collapse + .pk-footer { margin-top: 1.5rem }`) —
+    # this regex, which requires ONE rule whose selector list carries BOTH
+    # class names, stopped matching and the test flunked as expected.
+    defp bottom_collapse_footer_rule(src) do
+      case Regex.run(
+             ~r/main\.pk-bottom-collapse\s*\+\s*\.pk-footer\s*,\s*main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{([^}]*)\}/,
+             src
+           ) do
+        [_, body] -> body
+        nil -> nil
+      end
+    end
+
+    test "the >480px rule is ONE declaration shared by both selectors, at 1.5rem" do
+      body = source() |> wide_viewport_source() |> bottom_collapse_footer_rule()
+
+      refute is_nil(body),
+             "No single >480px rule found whose selector list contains both " <>
+               "`main.pk-bottom-collapse + .pk-footer` and " <>
+               "`main.pk-boundary-collapse + .pk-footer`. D-04 requires ONE shared " <>
+               "declaration, not two rules with independently-tunable literals."
+
+      assert body =~ ~r/margin-top:\s*1\.5rem/,
+             "The shared >480px `main.pk-bottom-collapse + .pk-footer, " <>
+               "main.pk-boundary-collapse + .pk-footer` rule must declare `margin-top: 1.5rem` " <>
+               "— the same value `boundary_collapse` already ships on the detail page " <>
+               "(sketch 035's closed equal-24px-boundary decision)."
+    end
+
+    # Verified RED the same way as the >480px test above, against the ≤480px
+    # block specifically.
+    test "the ≤480px rule is ONE declaration shared by both selectors, at 1rem, and matches --pk-footer-offset" do
+      body = source() |> narrow_viewport_tail() |> bottom_collapse_footer_rule()
+
+      refute is_nil(body),
+             "No single ≤480px rule found whose selector list contains both " <>
+               "`main.pk-bottom-collapse + .pk-footer` and " <>
+               "`main.pk-boundary-collapse + .pk-footer`."
+
+      assert body =~ ~r/margin-top:\s*1rem/,
+             "The shared ≤480px rule must declare `margin-top: 1rem` — the same value " <>
+               "`boundary_collapse` already ships on the detail page at this breakpoint " <>
+               "(sketch 044's reopened ≤480px boundary decision)."
+
+      mobile_offset = footer_token!(narrow_footer_block(source()), "offset")
+
+      assert mobile_offset == 1.0,
+             "The ≤480px `--pk-footer-offset` token (#{mobile_offset}rem) no longer equals " <>
+               "1rem — this test's hardcoded expectation in the shared rule above " <>
+               "(`margin-top: 1rem`) must be retuned alongside it, or the catalog page will " <>
+               "silently drift away from the detail page's boundary value."
+    end
+
+    # D-02: `bottom_collapse` cancels ONLY the bottom boundary, leaving
+    # `<main>`'s default top-padding utilities in place — this is the single
+    # assertion that makes REQ-2 (top spacing must not move) enforceable in
+    # ExUnit rather than only in Task 3's live measurement. Verified RED by
+    # temporarily adding a `padding-top` declaration to this rule.
+    defp bottom_collapse_main_block(src) do
+      case Regex.run(~r/(?m)^main\.pk-bottom-collapse\s*\{([^}]*)\}/, strip_comments(src)) do
+        [_, body] -> body
+        nil -> flunk("No `main.pk-bottom-collapse` rule found in assets/css/app.css")
+      end
+    end
+
+    test "main.pk-bottom-collapse declares padding-bottom: 0 and no padding-top" do
+      body = bottom_collapse_main_block(source())
+
+      assert body =~ ~r/padding-bottom:\s*0/,
+             "`main.pk-bottom-collapse` must declare `padding-bottom: 0` — the whole point of " <>
+               "this axis is cancelling `<main>`'s own bottom padding on the catalog page."
+
+      refute body =~ ~r/padding-top/,
+             "`main.pk-bottom-collapse` declares a `padding-top` — this axis must be bottom-" <>
+               "only (D-01). The catalog page's top spacing is a separately-tuned, closed " <>
+               "decision (REQ-2) that `boundary_collapse` (not this rule) is the one allowed " <>
+               "to touch."
+    end
+
+    # Verified RED by temporarily changing this rule's `margin-bottom: 0` to
+    # a nonzero value.
+    defp bottom_collapse_last_shelf_block(src) do
+      case Regex.run(
+             ~r/(?m)^main\.pk-bottom-collapse \.pk-shelf:last-of-type\s*\{([^}]*)\}/,
+             strip_comments(src)
+           ) do
+        [_, body] -> body
+        nil -> flunk("No `main.pk-bottom-collapse .pk-shelf:last-of-type` rule found")
+      end
+    end
+
+    test "main.pk-bottom-collapse .pk-shelf:last-of-type declares margin-bottom: 0" do
+      body = bottom_collapse_last_shelf_block(source())
+
+      assert body =~ ~r/margin-bottom:\s*0/,
+             "`main.pk-bottom-collapse .pk-shelf:last-of-type` must cancel the trailing " <>
+               "shelf's own margin — otherwise it stacks with the footer's own top margin " <>
+               "exactly as it did before this fix."
+    end
+
+    # Selector ordering is load-bearing for two EXISTING tests, not just this
+    # file's own: `catalog_show_test.exs` (~line 3582) and this file's own
+    # "the detail page and the catalog page open the same ≤480px footer gap"
+    # test (above) both regex for `main.pk-boundary-collapse + .pk-footer`
+    # sitting immediately before the opening brace. Verified RED by
+    # temporarily reversing the selector order in both grouped rules.
+    test "main.pk-boundary-collapse + .pk-footer stays immediately before the opening brace in both grouped rules" do
+      stripped = strip_comments(source())
+
+      assert Regex.match?(
+               ~r/main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{/,
+               wide_viewport_source(stripped)
+             ),
+             "The >480px grouped rule no longer has `main.pk-boundary-collapse + .pk-footer` " <>
+               "immediately before its opening brace. This breaks `catalog_show_test.exs`'s " <>
+               "and this file's own ≤480px-gap regex, both of which are anchored to that exact " <>
+               "adjacency — reordering the group (even alphabetically) is a breaking change."
+
+      assert Regex.match?(
+               ~r/main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{/,
+               narrow_viewport_tail(stripped)
+             ),
+             "The ≤480px grouped rule no longer has `main.pk-boundary-collapse + .pk-footer` " <>
+               "immediately before its opening brace — same downstream-test breakage as the " <>
+               ">480px case above."
+    end
+  end
+
   describe "the theme control renders as one unit" do
     test "the Tema label and the toggle share a single wrapper" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
