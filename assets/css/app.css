@@ -1216,7 +1216,17 @@ body.pk-sheet-open {
    Bebas Neue/24px/400 as the single heading combo, so shrinking the footer
    wordmark would add a 4th combo. Colour is the lever ui-design-system
    names for this instead. Scoped override, matching the header-scoped rule
-   above — the two surfaces are meant to differ here. */
+   above — the two surfaces are meant to differ here.
+
+   UPDATE (quick task 260901-ty6): the ≤480px block below now makes a scoped
+   SIZE exception to "demotion is by colour, not size", for the mobile
+   footer's reported visual weight on this project's primary surface. The
+   reason given above still holds at ≥481px, where this rule is unchanged —
+   the exception is breakpoint-scoped, not a reversal of the decision. Its
+   cost — a Bebas Neue size that did not previously exist on the ≤480px
+   catalogue screen — is paid explicitly by re-measuring and updating the
+   ui-design-system inventory table, which is that table's own prescribed
+   process for adding a new type combo. */
 .pk-brand-quiet .pk-brand-name {
   color: var(--color-neutral);
 }
@@ -4748,6 +4758,58 @@ main.pk-boundary-collapse + .pk-footer {
     --pk-footer-gap-cluster: 1.5rem;
     --pk-footer-offset: 1.5rem;
     --pk-footer-pad-block: 1rem;
+    /* Quick task 260901-ty6, Task 2: list and group were both 1rem here,
+       collapsing two of the four tiers onto one value — sibling links (list)
+       read as spaced exactly as far apart as the brand sits from the link
+       list (group), the same proximity inversion the desktop fix at the top
+       of this file already closed once for .pk-footer-row/the clusters.
+       0.75rem restores item < list < group <= cluster (0.5/0.75/1/1.5rem). */
+    --pk-footer-gap-list: 0.75rem;
+  }
+
+  /* Quick task 260901-ty6, Task 2: a scoped SIZE exception to D-B's "demotion
+     is by colour, not size" (app.css, .pk-brand-quiet .pk-brand-name's own
+     comment above) — that comment is not deleted or contradicted, this rule
+     narrows it to ≤480px specifically. Reason: the mobile footer's reported
+     visual weight on this project's primary surface. D-B's own reason (the
+     catalogue's 3-tier type cap) still holds at ≥481px, where that rule is
+     unchanged. The cost — a Bebas Neue size that did not previously exist on
+     the ≤480px catalogue screen — is paid explicitly by Task 3's
+     re-measurement and inventory-table update in ui-design-system/SKILL.md,
+     which is the process that table's own text prescribes ("Re-measure
+     before adding a new type combo to this screen").
+
+     CASCADE-LAYER HAZARD note (top of this file): `text-2xl` on the markup
+     is a LAYERED Tailwind utility, and this unlayered `.pk-*` rule beats it
+     regardless of specificity — that is deliberate and breakpoint-scoped
+     here, following the shipped `.pk-nav-inner .pk-brand-wordmark` precedent
+     (an unlayered rule intentionally overriding the markup's `flex` utility
+     on one surface at one breakpoint), not the silent `.pk-poster-col`
+     collision the hazard note was written from. The hazard note's default
+     remedy (delete the utility from the markup, own the property in CSS) was
+     rejected here: `.pk-brand-name` is shared by the header and the footer,
+     `text-2xl` resolves its line-height through the inherited `--tw-leading`
+     that the parent's `leading-none` sets, and moving both properties into
+     CSS to change one footer-only breakpoint would put
+     header_row_height_test.exs's pinned 64px row at risk for no footer
+     benefit. If Task 3's live measurement shows this scoped override does
+     NOT win, that rejection is what to revisit — delete `text-2xl` from the
+     span in layouts.ex, add a base `.pk-brand-name` rule declaring BOTH
+     font-size and the measured line-height, and re-verify the header's row
+     height. */
+  .pk-brand-quiet .pk-brand-name {
+    font-size: 1.25rem;
+  }
+
+  /* Quick task 260901-ty6, Task 2: FAQ/Contacto/Juntadas inherit the
+     footer's 1rem (16px) today, larger than any body text on this screen —
+     no combo the ui-design-system inventory table lists. 0.875rem (14px)
+     lands on the screen's existing "body" tier (Inter/14px/600 ≥481px /
+     12px/600 ≤480px, per the inventory table) rather than inventing a
+     fourth; 12px is already the muted tier's floor and these are navigable
+     links, not muted metadata, so that floor is not the right target. */
+  .pk-footer-links {
+    font-size: 0.875rem;
   }
 
   /* Mobile/desktop swap (01.1-09 Task 2): the toggle and social cluster

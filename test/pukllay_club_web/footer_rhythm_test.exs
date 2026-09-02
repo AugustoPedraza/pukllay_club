@@ -264,6 +264,142 @@ defmodule PukllayClubWeb.FooterRhythmTest do
     end
   end
 
+  # Quick task 260901-ty6, Task 2. Guards the ink/density half of the mobile
+  # footer weight reduction: the brand wordmark shrinks (scoped through
+  # `.pk-brand-quiet` so the header's wordmark is never reached), the nav
+  # links shrink, and the link-list gap tightens so the mobile tier scale
+  # reads item < list < group <= cluster (the base scale's own order, which
+  # the mobile block currently loses — the effective mobile scale today is
+  # 0.5/1/1/1.5rem, list and group collapsed onto one value).
+  #
+  # Oracle type: derived (contract), same as the rest of this file. Every
+  # assertion here was verified RED against the pre-change stylesheet (no
+  # `--pk-footer-gap-list` override in the ≤480px block, no
+  # `.pk-brand-quiet .pk-brand-name` font-size rule anywhere, and no
+  # `.pk-footer-links` font-size rule anywhere) before the CSS was edited.
+  describe "mobile-scoped ink and density: wordmark, links, and list gap" do
+    # Reads the EFFECTIVE mobile value for a gap tier: the ≤480px block's own
+    # override if it declares one, falling back to the base block's value
+    # otherwise. This is deliberate — the tier-ordering claim is about what
+    # actually renders at ≤480px, not only about what happens to be
+    # re-typed in the media block.
+    defp mobile_effective_gap!(name) do
+      case Regex.run(~r/--pk-footer-gap-#{name}:\s*([\d.]+)rem/, narrow_footer_block(source())) do
+        [_, value] -> String.to_float(if String.contains?(value, "."), do: value, else: value <> ".0")
+        nil -> rem_token!(base_footer_block(source()), name)
+      end
+    end
+
+    test "the effective mobile tier scale reads item < list < group <= cluster" do
+      item = mobile_effective_gap!("item")
+      list = mobile_effective_gap!("list")
+      group = mobile_effective_gap!("group")
+      cluster = mobile_effective_gap!("cluster")
+
+      # This is a strengthening of "the ≤480px override retunes values
+      # without reordering the tiers" above, not a new rule: that test only
+      # checks group <= cluster. The current effective mobile scale is
+      # 0.5/1/1/1.5rem — list and group are already collapsed onto one
+      # value — so this restores an ordering the BASE scale already has and
+      # the mobile scale had lost.
+      assert item < list,
+             "Effective mobile item (#{item}rem) must be tighter than list (#{list}rem)."
+
+      assert list < group,
+             "Effective mobile list (#{list}rem) must be tighter than group (#{group}rem) — " <>
+               "today they are both 1rem, so sibling links space out as far as the brand " <>
+               "sits from the link list, which is the same proximity inversion the desktop " <>
+               "fix above already closed once."
+
+      assert group <= cluster,
+             "Effective mobile group (#{group}rem) must not exceed cluster (#{cluster}rem)."
+    end
+
+    test "the footer wordmark's mobile font-size is scoped through .pk-brand-quiet" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      assert narrow =~ ~r/\.pk-brand-quiet \.pk-brand-name\s*\{[^}]*font-size/,
+             "The ≤480px block must declare a `font-size` on `.pk-brand-quiet .pk-brand-name` " <>
+               "— scoped through the class the footer's `mark={false}` call adds, matching the " <>
+               "existing D-B colour override on the same selector."
+    end
+
+    test "no unscoped .pk-brand-name font-size rule reaches the header's wordmark" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      refute narrow =~ ~r/(?m)^\s*\.pk-brand-name\s*\{[^}]*font-size/,
+             "The ≤480px block sets a bare `.pk-brand-name` font-size. `.pk-brand-name` is " <>
+               "shared by the header and the footer; an unscoped rule reaches the header's " <>
+               "wordmark too, which owns a different surface (`.pk-nav-inner .pk-brand-wordmark`)."
+    end
+
+    test "the mobile wordmark keeps an internal hierarchy: smaller than desktop, larger than the tagline" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      wordmark_size =
+        case Regex.run(~r/\.pk-brand-quiet \.pk-brand-name\s*\{([^}]*)\}/, narrow) do
+          [_, body] ->
+            case Regex.run(~r/font-size:\s*([\d.]+)rem/, body) do
+              [_, v] -> String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+              nil -> flunk("`.pk-brand-quiet .pk-brand-name` in the ≤480px block has no font-size")
+            end
+
+          nil ->
+            flunk("No `.pk-brand-quiet .pk-brand-name` rule found in the ≤480px block")
+        end
+
+      assert wordmark_size < 1.5,
+             "The mobile wordmark font-size (#{wordmark_size}rem) must be strictly less than " <>
+               "1.5rem, the `text-2xl` value it overrides — otherwise there is no shrink."
+
+      assert wordmark_size > 0.75,
+             "The mobile wordmark font-size (#{wordmark_size}rem) must be strictly greater than " <>
+               "0.75rem, the tagline's own size — the lockup needs an internal hierarchy, not a " <>
+               "wordmark that reads as equal to or smaller than its own tagline."
+    end
+
+    test "no rule in the ≤480px block reintroduces the banned 10px/0.625rem size" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      refute narrow =~ ~r/font-size:\s*(10px|0\.625rem)/,
+             "A rule in the ≤480px block sets `font-size: 10px`/`0.625rem`. Quick task " <>
+               "260821-dah closed exactly that value on this lockup (\"banned text-[10px]\"); " <>
+               "a mobile shrink is the natural place for it to silently come back."
+    end
+
+    test "the ≤480px block declares a .pk-footer-links font-size strictly less than 1rem" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      links_size =
+        case Regex.run(~r/\.pk-footer-links\s*\{([^}]*)\}/, narrow) do
+          [_, body] ->
+            case Regex.run(~r/font-size:\s*([\d.]+)rem/, body) do
+              [_, v] -> String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+              nil -> flunk("The ≤480px `.pk-footer-links` rule has no font-size")
+            end
+
+          nil ->
+            flunk("No ≤480px `.pk-footer-links` rule found — the links currently inherit the " <>
+                    "footer's 1rem, larger than any body text on this screen")
+        end
+
+      assert links_size < 1.0,
+             "The ≤480px `.pk-footer-links` font-size (#{links_size}rem) must be strictly less " <>
+               "than 1rem (16px) — the inherited size the FAQ/Contacto/Juntadas links render at " <>
+               "today, larger than any body text on this screen."
+    end
+
+    test "the brand anchor keeps its 44px touch floor after the wordmark shrink" do
+      html = render_component(&Layouts.brand_logo/1, %{})
+
+      assert html =~ "min-h-11",
+             "`brand_logo/1`'s anchor lost `min-h-11`. The lockup's natural height is already " <>
+               "under 44px, so this floor — not the type — is what sets the box; dropping it to " <>
+               "\"gain\" footer height would push every phone user's brand link under the touch " <>
+               "minimum."
+    end
+  end
+
   describe "the theme control renders as one unit" do
     test "the Tema label and the toggle share a single wrapper" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})

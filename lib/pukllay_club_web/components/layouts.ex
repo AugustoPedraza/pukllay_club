@@ -39,6 +39,8 @@ defmodule PukllayClubWeb.Layouts do
   on every page. The `mark` attr (default `true`) selects between the two: the header keeps the
   default and renders the full pair, the footer passes `mark={false}` and renders the wordmark +
   tagline lockup only, demoted to the muted colour tier via the `pk-brand-quiet` class (D-B).
+  Below 480px the footer lockup additionally takes a reduced wordmark size — see the
+  `.pk-brand-quiet .pk-brand-name` rule in `app.css` (quick task 260901-ty6).
   """
   attr :tagline, :string, default: "JUEGOS DE MESA MODERNOS"
 
@@ -46,8 +48,9 @@ defmodule PukllayClubWeb.Layouts do
     default: true,
     doc:
       "when false, renders the wordmark + tagline lockup with no isologo <img> at all, and " <>
-        "demotes the wordmark to the muted colour tier via pk-brand-quiet. The footer is the " <>
-        "one call site that passes false (D-A) — the header keeps the true default."
+        "demotes the wordmark to the muted colour tier via pk-brand-quiet (also a reduced size " <>
+        "below 480px — see the `.pk-brand-quiet .pk-brand-name` rule in app.css). The footer is " <>
+        "the one call site that passes false (D-A) — the header keeps the true default."
 
   # `isologo?` is deliberately not a declared `attr` — it's a test-only seam. No production call
   # site ever passes it, so `assign_new/3` always falls through to the compile-time `@isologo?`
