@@ -39,8 +39,9 @@ defmodule PukllayClubWeb.Layouts do
   on every page. The `mark` attr (default `true`) selects between the two: the header keeps the
   default and renders the full pair, the footer passes `mark={false}` and renders the wordmark +
   tagline lockup only, demoted to the muted colour tier via the `pk-brand-quiet` class (D-B).
-  Below 480px the footer lockup additionally takes a reduced wordmark size — see the
-  `.pk-brand-quiet .pk-brand-name` rule in `app.css` (quick task 260901-ty6).
+  Below 480px the footer's lockup does not render at all — the whole `.pk-footer-left` cluster is
+  hidden there (sketch 044 winner H, quick task 260902-fdm; superseding 260901-ty6's earlier
+  ≤480px wordmark SIZE exception, which is withdrawn).
   """
   attr :tagline, :string, default: "JUEGOS DE MESA MODERNOS"
 
@@ -48,9 +49,9 @@ defmodule PukllayClubWeb.Layouts do
     default: true,
     doc:
       "when false, renders the wordmark + tagline lockup with no isologo <img> at all, and " <>
-        "demotes the wordmark to the muted colour tier via pk-brand-quiet (also a reduced size " <>
-        "below 480px — see the `.pk-brand-quiet .pk-brand-name` rule in app.css). The footer is " <>
-        "the one call site that passes false (D-A) — the header keeps the true default."
+        "demotes the wordmark to the muted colour tier via pk-brand-quiet. The footer is the " <>
+        "one call site that passes false (D-A) — the header keeps the true default. Below " <>
+        "480px the footer's whole lockup is hidden in CSS (sketch 044), not resized."
 
   # `isologo?` is deliberately not a declared `attr` — it's a test-only seam. No production call
   # site ever passes it, so `assign_new/3` always falls through to the compile-time `@isologo?`
@@ -968,6 +969,19 @@ defmodule PukllayClubWeb.Layouts do
   # separation. That was this session's originally-reported defect, so it is
   # pinned by its own test rather than left to the coincidence that two boxes
   # of equal height happen to align.
+  #
+  # UPDATE (2026-09-02, quick task 260902-fdm, sketch 044 winner H): at
+  # ≤480px this footer renders as the BGG attribution line alone. The left
+  # cluster and the copyright span (`pk-footer-copyright`, added below) are
+  # hidden in CSS rather than removed from the markup, so every desktop
+  # contract documented above continues to describe the shipped DOM at every
+  # width — only the ≤480px `@media` block in app.css differs. The
+  # FAQ/Contacto/Juntadas removal at that width is a developer-accepted
+  # tradeoff (sketch 044's "Real Tradeoff, Verified" section grepped the
+  # codebase and confirmed those three anchors exist nowhere else in the
+  # app), not an oversight. The attribution rendered by `bgg_attribution/1`
+  # is the one element in this footer that may never be hidden at any width
+  # (D-04).
   defp footer(assigns) do
     assigns = assign(assigns, :copyright_year, Date.utc_today().year)
 

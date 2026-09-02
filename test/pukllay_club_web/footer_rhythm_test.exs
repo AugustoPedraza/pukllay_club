@@ -286,6 +286,13 @@ defmodule PukllayClubWeb.FooterRhythmTest do
   # `--pk-footer-gap-list` override in the ≤480px block, no
   # `.pk-brand-quiet .pk-brand-name` font-size rule anywhere, and no
   # `.pk-footer-links` font-size rule anywhere) before the CSS was edited.
+  #
+  # UPDATE (2026-09-02, quick task 260902-fdm): the ink/density half of this
+  # block — the wordmark shrink and the links shrink — was superseded by
+  # sketch 044's content reduction (the footer lockup and the links do not
+  # render at ≤480px at all anymore), so the three tests that measured that
+  # ink were removed rather than weakened into no-ops. The gap-scale and
+  # touch-floor tests below remain true and remain useful, so they stay.
   describe "mobile-scoped ink and density: wordmark, links, and list gap" do
     # Reads the EFFECTIVE mobile value for a gap tier: the ≤480px block's own
     # override if it declares one, falling back to the base block's value
@@ -324,15 +331,6 @@ defmodule PukllayClubWeb.FooterRhythmTest do
              "Effective mobile group (#{group}rem) must not exceed cluster (#{cluster}rem)."
     end
 
-    test "the footer wordmark's mobile font-size is scoped through .pk-brand-quiet" do
-      narrow = strip_comments(narrow_viewport_tail(source()))
-
-      assert narrow =~ ~r/\.pk-brand-quiet \.pk-brand-name\s*\{[^}]*font-size/,
-             "The ≤480px block must declare a `font-size` on `.pk-brand-quiet .pk-brand-name` " <>
-               "— scoped through the class the footer's `mark={false}` call adds, matching the " <>
-               "existing D-B colour override on the same selector."
-    end
-
     test "no unscoped .pk-brand-name font-size rule reaches the header's wordmark" do
       narrow = strip_comments(narrow_viewport_tail(source()))
 
@@ -340,31 +338,6 @@ defmodule PukllayClubWeb.FooterRhythmTest do
              "The ≤480px block sets a bare `.pk-brand-name` font-size. `.pk-brand-name` is " <>
                "shared by the header and the footer; an unscoped rule reaches the header's " <>
                "wordmark too, which owns a different surface (`.pk-nav-inner .pk-brand-wordmark`)."
-    end
-
-    test "the mobile wordmark keeps an internal hierarchy: smaller than desktop, larger than the tagline" do
-      narrow = strip_comments(narrow_viewport_tail(source()))
-
-      wordmark_size =
-        case Regex.run(~r/\.pk-brand-quiet \.pk-brand-name\s*\{([^}]*)\}/, narrow) do
-          [_, body] ->
-            case Regex.run(~r/font-size:\s*([\d.]+)rem/, body) do
-              [_, v] -> String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
-              nil -> flunk("`.pk-brand-quiet .pk-brand-name` in the ≤480px block has no font-size")
-            end
-
-          nil ->
-            flunk("No `.pk-brand-quiet .pk-brand-name` rule found in the ≤480px block")
-        end
-
-      assert wordmark_size < 1.5,
-             "The mobile wordmark font-size (#{wordmark_size}rem) must be strictly less than " <>
-               "1.5rem, the `text-2xl` value it overrides — otherwise there is no shrink."
-
-      assert wordmark_size > 0.75,
-             "The mobile wordmark font-size (#{wordmark_size}rem) must be strictly greater than " <>
-               "0.75rem, the tagline's own size — the lockup needs an internal hierarchy, not a " <>
-               "wordmark that reads as equal to or smaller than its own tagline."
     end
 
     test "no rule in the ≤480px block reintroduces the banned 10px/0.625rem size" do
@@ -376,38 +349,14 @@ defmodule PukllayClubWeb.FooterRhythmTest do
                "a mobile shrink is the natural place for it to silently come back."
     end
 
-    test "the ≤480px block declares a .pk-footer-links font-size strictly less than 1rem" do
-      narrow = strip_comments(narrow_viewport_tail(source()))
-
-      links_size =
-        case Regex.run(~r/\.pk-footer-links\s*\{([^}]*)\}/, narrow) do
-          [_, body] ->
-            case Regex.run(~r/font-size:\s*([\d.]+)rem/, body) do
-              [_, v] -> String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
-              nil -> flunk("The ≤480px `.pk-footer-links` rule has no font-size")
-            end
-
-          nil ->
-            flunk(
-              "No ≤480px `.pk-footer-links` rule found — the links currently inherit the " <>
-                "footer's 1rem, larger than any body text on this screen"
-            )
-        end
-
-      assert links_size < 1.0,
-             "The ≤480px `.pk-footer-links` font-size (#{links_size}rem) must be strictly less " <>
-               "than 1rem (16px) — the inherited size the FAQ/Contacto/Juntadas links render at " <>
-               "today, larger than any body text on this screen."
-    end
-
-    test "the brand anchor keeps its 44px touch floor after the wordmark shrink" do
+    test "the brand anchor keeps its 44px touch floor" do
       html = render_component(&Layouts.brand_logo/1, %{})
 
       assert html =~ "min-h-11",
              "`brand_logo/1`'s anchor lost `min-h-11`. The lockup's natural height is already " <>
-               "under 44px, so this floor — not the type — is what sets the box; dropping it to " <>
-               "\"gain\" footer height would push every phone user's brand link under the touch " <>
-               "minimum."
+               "under 44px, so this floor — not the type — is what sets the box; the header is " <>
+               "still `brand_logo/1`'s live surface (the footer's own lockup no longer renders " <>
+               "at ≤480px, sketch 044), so this floor must keep binding there regardless."
     end
   end
 
@@ -525,7 +474,9 @@ defmodule PukllayClubWeb.FooterRhythmTest do
                ~r/main\.pk-boundary-collapse \+ \.pk-footer\s*\{[^}]*margin-top:\s*([\d.]+)rem/,
                narrow
              ) do
-          [_, v] -> String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+          [_, v] ->
+            String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+
           nil ->
             flunk(
               "No ≤480px `main.pk-boundary-collapse + .pk-footer` rule found — the detail " <>

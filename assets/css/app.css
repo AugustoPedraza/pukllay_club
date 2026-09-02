@@ -1226,7 +1226,12 @@ body.pk-sheet-open {
    cost — a Bebas Neue size that did not previously exist on the ≤480px
    catalogue screen — is paid explicitly by re-measuring and updating the
    ui-design-system inventory table, which is that table's own prescribed
-   process for adding a new type combo. */
+   process for adding a new type combo.
+
+   UPDATE (2026-09-02, quick task 260902-fdm): that ≤480px SIZE exception is
+   WITHDRAWN — sketch 044 winner H hides the entire footer lockup at ≤480px,
+   so there is no wordmark left to size there. D-B ("demotion is by colour,
+   not size") once again holds at every viewport width with no exception. */
 .pk-brand-quiet .pk-brand-name {
   color: var(--color-neutral);
 }
@@ -4830,57 +4835,21 @@ main.pk-boundary-collapse + .pk-footer {
     margin-top: 1rem;
   }
 
-  /* Quick task 260901-ty6, Task 2: a scoped SIZE exception to D-B's "demotion
-     is by colour, not size" (app.css, .pk-brand-quiet .pk-brand-name's own
-     comment above) — that comment is not deleted or contradicted, this rule
-     narrows it to ≤480px specifically. Reason: the mobile footer's reported
-     visual weight on this project's primary surface. D-B's own reason (the
-     catalogue's 3-tier type cap) still holds at ≥481px, where that rule is
-     unchanged. The cost — a Bebas Neue size that did not previously exist on
-     the ≤480px catalogue screen — is paid explicitly by Task 3's
-     re-measurement and inventory-table update in ui-design-system/SKILL.md,
-     which is the process that table's own text prescribes ("Re-measure
-     before adding a new type combo to this screen").
+  /* WITHDRAWN (2026-09-02, quick task 260902-fdm, sketch 044 winner H): the
+     ≤480px SIZE exception to D-B ("demotion is by colour, not size") that
+     260901-ty6 introduced here is gone — the footer lockup does not render
+     at all at this breakpoint anymore (.pk-footer-left above is hidden), so
+     there is nothing left to size. D-B once again holds at every viewport
+     width with no exception. */
 
-     CASCADE-LAYER HAZARD note (top of this file): `text-2xl` on the markup
-     is a LAYERED Tailwind utility, and this unlayered `.pk-*` rule beats it
-     regardless of specificity — that is deliberate and breakpoint-scoped
-     here, following the shipped `.pk-nav-inner .pk-brand-wordmark` precedent
-     (an unlayered rule intentionally overriding the markup's `flex` utility
-     on one surface at one breakpoint), not the silent `.pk-poster-col`
-     collision the hazard note was written from. The hazard note's default
-     remedy (delete the utility from the markup, own the property in CSS) was
-     rejected here: `.pk-brand-name` is shared by the header and the footer,
-     `text-2xl` resolves its line-height through the inherited `--tw-leading`
-     that the parent's `leading-none` sets, and moving both properties into
-     CSS to change one footer-only breakpoint would put
-     header_row_height_test.exs's pinned 64px row at risk for no footer
-     benefit. If Task 3's live measurement shows this scoped override does
-     NOT win, that rejection is what to revisit — delete `text-2xl` from the
-     span in layouts.ex, add a base `.pk-brand-name` rule declaring BOTH
-     font-size and the measured line-height, and re-verify the header's row
-     height. */
-  .pk-brand-quiet .pk-brand-name {
-    font-size: 1.25rem;
-  }
-
-  /* Quick task 260901-ty6, Task 2/3: FAQ/Contacto/Juntadas inherit the
-     footer's 1rem (16px, weight 400) today, larger than any body text on
-     this screen. Task 3's live CDP measurement found the ui-design-system
-     inventory table's own "16px Inter, accepted exception, native select"
-     row was stale — quick task 260824-i8e removed the catalog page's only
-     `<select>`, so nothing renders at that combo anymore except these three
-     links, which were the row's real (mislabelled) source all along. That
-     row is corrected in the table; 0.875rem (14px, still weight 400) lands
-     these links on the screen's existing plain "body" tier (Inter/14px/400,
-     e.g. the main-grid result-count line) instead of the 600-weight
-     semibold-emphasis tier — the links carry no font-weight override, so
-     400 is what they already render at, not a new value. 12px is already
-     the muted tier's floor and these are navigable links, not muted
-     metadata, so that floor is not the right target either. */
-  .pk-footer-links {
-    font-size: 0.875rem;
-  }
+  /* WITHDRAWN (2026-09-02, quick task 260902-fdm, sketch 044 winner H): the
+     ≤480px `.pk-footer-links` font-size rule 260901-ty6 introduced here is
+     gone — the FAQ/Contacto/Juntadas links do not render at ≤480px anymore
+     (.pk-footer-left above is hidden). The one fact from the removed
+     comment that is still true and still useful: the ≥481px links still
+     render at the inherited 1rem, and the stale native-`<select>` row
+     260901-ty6 corrected in ui-design-system/SKILL.md's type-inventory
+     table stays corrected. */
 
   /* Mobile/desktop swap (01.1-09 Task 2): the toggle and social cluster
      move into the drawer below 480px — reaching the footer there means
