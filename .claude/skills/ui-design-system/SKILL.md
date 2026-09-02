@@ -99,32 +99,29 @@ table in `default.css`, checked by `check-theme-drift.sh`.
 - Numeric table columns right-align with consistent precision; identifier-like digit strings
   (IDs, phone numbers) stay left-aligned as text, not treated as numeric data.
 
-**Catalogue screen measured inventory (2026-09-01, quick task 260901-ty6):** re-measured live
+**Catalogue screen measured inventory (2026-09-02, quick task 260902-fdm):** re-measured live
 computed `font-family`/`font-size`/`font-weight` triples on `CatalogLive.Index` at 390px/768px via
-headless Chrome + CDP, filtered to elements with a real layout box (`display !== 'none'`,
-`visibility !== 'hidden'`, `el.getClientRects().length > 0`, and excluding descendants of a
-currently-closed `.pk-drawer`/`.pk-sheet` — both keep `display: flex`/`block` at some widths and
-only move off-canvas via `transform`, so their closed-state content otherwise has a technically
-"real" box that a user never sees; the 2026-08-21 measurement below predates this exclusion).
-**6** distinct combos at ≤480px (one more than the 2026-08-21 measurement), **5** at ≥481px
-(byte-identical to 2026-08-21 — confirms the footer change below is mobile-only):
+headless Chrome + CDP, same methodology as the 2026-09-01 measurement below (filtered to elements
+with a real layout box, excluding descendants of a currently-closed `.pk-drawer`/`.pk-sheet`).
+**4** distinct combos at ≤480px (down from 6 — sketch 044 winner H hides the footer's entire
+lockup, links, and copyright at this breakpoint, retiring both the footer-scoped Bebas Neue/20px
+row and the footer's own contribution to the Inter/12px/400 and Inter/14px/400 rows), **5** at
+≥481px (byte-identical to 2026-09-01 — confirms this footer reduction is mobile-only):
 
 | Combo | Tier | Source |
 |---|---|---|
-| Bebas Neue / 24px / 400 | heading | `font-display text-2xl` — brand wordmark (header + footer at ≥481px), every carousel row title, main-grid heading, empty-state heading (one shared Tailwind utility pair, not independently-declared) |
-| Bebas Neue / 20px / 400 — footer lockup, ≤480px only | heading, footer-scoped exception | `.pk-brand-quiet .pk-brand-name` (app.css ≤480px block, quick task 260901-ty6) — the footer wordmark demotes by SIZE as well as colour below 480px, to reduce the mobile footer's reported visual weight; the D-B "colour, not size" rule (app.css) stays unchanged at ≥481px |
-| Inter / 14px / 600 (≥481px) → 12px / 600 (≤480px) | body, semibold emphasis | `.pk-nav-links a`, `.pk-card-caption h3`, `.pk-chip`, `.pk-see-all` — one tier, one deliberate narrow-viewport density step (the single last-positioned `@media` block above), not two drifting rules |
-| Inter / 14px / 400 | body | `text-neutral text-sm` regular copy (e.g. the main-grid result-count line); also where `.pk-footer-links a`'s ≤480px 0.875rem (14px/400) lands — a retune onto this existing tier, not a new one (260901-ty6) |
-| Inter / 12px / 400 | muted | brand tagline (`text-xs text-neutral`, fixed 2026-08-21) |
-| Inter / 16px / 400 (≥481px only) | body | `.pk-footer-links a` (FAQ/Contacto/Juntadas) — inherited, not independently declared. **Correction:** the prior row here ("accepted exception, native `<select>`/`<option>`") is stale — quick task 260824-i8e removed the catalog page's only native `<select>`, so no such element renders on this screen anymore; this combo's real source was always these footer links, at the exact size the ≤480px block now retunes to 14px (merging into the body row above) |
+| Bebas Neue / 24px / 400 | heading | `font-display text-2xl` — header wordmark (every width), plus the footer wordmark at ≥481px only; every carousel row title, main-grid heading, empty-state heading (one shared Tailwind utility pair, not independently-declared). **Retired at ≤480px:** the footer-scoped Bebas Neue/20px/400 SIZE exception 260901-ty6 introduced no longer has a source — the footer lockup does not render at all below 480px (sketch 044) |
+| Inter / 14px / 600 (≥481px) → 12px / 600 (≤480px) | body, semibold emphasis | `.pk-nav-links a`, `.pk-card-caption h3`, `.pk-chip`, `.pk-see-all` — one tier, one deliberate narrow-viewport density step, unaffected by this footer change |
+| Inter / 14px / 400 | body | `text-neutral text-sm` regular copy (e.g. the main-grid result-count line). The footer links' former 14px landing here (260901-ty6) is gone at ≤480px — `.pk-footer-links a` does not render below 480px anymore (sketch 044) |
+| Inter / 12px / 400 | muted | brand tagline (`text-xs text-neutral`). At ≤480px only the header's instance renders — the footer's own tagline is hidden with the rest of its lockup (sketch 044) |
+| Inter / 16px / 400 (≥481px only) | body | `.pk-footer-links a` (FAQ/Contacto/Juntadas) — inherited, not independently declared, unchanged at ≥481px |
 
 Maps cleanly onto heading/body/muted with weight (600 vs 400) as the body tier's sanctioned
-emphasis lever. The heading tier gains a second SIZE at ≤480px only (24px header wordmark, 20px
-footer wordmark) — a documented, footer-scoped, breakpoint-scoped exception to "demotion is by
-colour, not size" (app.css D-B comment), not a 4th tier: both rows are still heading-weight Bebas
-Neue, and the exception's cost is paid by this re-measurement, per the rule below. Re-measure
-before adding a new type combo to this screen; this table is what makes the cap enforceable rather
-than re-litigable.
+emphasis lever. The heading tier is back to a single SIZE at every width — 260901-ty6's ≤480px
+footer-scoped exception to "demotion is by colour, not size" (app.css D-B comment) is withdrawn as
+of sketch 044, since the footer lockup it applied to no longer renders at that breakpoint at all.
+Re-measure before adding a new type combo to this screen; this table is what makes the cap
+enforceable rather than re-litigable.
 
 ## Affordance
 
