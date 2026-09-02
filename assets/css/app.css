@@ -4876,21 +4876,55 @@ main.pk-boundary-collapse + .pk-footer {
     display: none;
   }
 
-  /* The stacked footer is a CENTRED column — .pk-footer-row keeps the base
-     rule's `align-items: center`, which stops meaning "vertically centre the
-     clusters" and starts meaning "horizontally centre the stack" the moment
-     the direction flips. Every block in it shrink-wraps and is centred:
-     measured at 320px, .pk-footer-left sits at x=59.42 for a width of 201.14,
-     i.e. dead centre.
+  /* SUPERSEDED (2026-09-02, quick task 260902-g21): the reasoning below —
+     that the stacked footer is a CENTRED column and `.pk-footer-row` should
+     keep the base rule's `align-items: center` — is withdrawn. Its measured
+     evidence (`.pk-footer-left` at x=59.42, dead centre in a 201.14px-wide
+     box) went dead the moment quick task 260902-fdm hid `.pk-footer-left`
+     outright at this breakpoint (see the hide rule above) — there is no
+     longer a centred multi-block stack for that measurement to describe.
+     The developer asked for the one remaining line (the BGG attribution) to
+     sit flush right instead, so this override now sets `align-items:
+     flex-end`. Nobody should restore `center` believing the old x=59.42/
+     x=39.13 measurements still stand — they described a DOM shape that no
+     longer renders.
 
-     .pk-footer-legal's `width: 100%` would opt it out of exactly that — a
-     full-width box makes its content start at the left gutter while
-     everything above it stays centred. Restoring `auto` gives the legal line
-     back the same shrink-to-fit box every other block in the stack has, so
-     `align-items: center` centres it identically (verified: x returns to the
-     pre-change 39.13 at 320px). The full-width trick is only needed where the
-     row is a ROW and something has to be forced off the line; here there is
-     one item per line already. */
+     The one claim from the old comment that is STILL true and load-bearing,
+     carried forward unchanged in mechanism: `.pk-footer-legal`'s `width:
+     100%` (the >480px base value) makes the item fill the row's full
+     content box; a full-width flex item fills the CROSS axis too, so any
+     `align-items` value on the column — `center` before, `flex-end` now —
+     becomes a no-op on it. This is not centring-specific; it is a
+     precondition of right alignment exactly as much as it was of centring,
+     which is why `width: auto` survives this change unedited below.
+
+     The direction flip is what makes `align-items` the horizontal control
+     here at all: the base (>480px) rule is a ROW, where `align-items:
+     center` vertically centres the two clusters against the legal band.
+     This block sets `flex-direction: column` above, and the same property
+     governs horizontal placement of the stack once it does — a `>480px`
+     rule and a `≤480px` override of the same property mean two unrelated
+     things, and neither can be read from the other.
+
+     Right alignment is safe and simple here because of one DOM fact: at
+     this breakpoint the column has exactly one visible child.
+     `.pk-footer-left` and `.pk-footer-right` are `display: none` (removed
+     from flex layout, not merely invisible — see both hide rules in this
+     block), and inside `.pk-footer-legal` itself `.pk-footer-copyright` is
+     hidden too (see above), leaving only the shrink-wrapped BGG attribution.
+
+     `text-align` was considered and deliberately NOT added.
+     `.pk-footer-legal` at ≤480px is `display: flex` with `width: auto`, so
+     its box shrink-wraps its content; `justify-content: space-between`
+     distributes free space and there is none left to distribute in a
+     shrink-wrapped box holding one visible item; `.pk-footer-meta` is
+     `white-space: nowrap`. That chain makes `align-items: flex-end` on the
+     column sufficient by itself — a `text-align` declaration here would be
+     redundant, not merely unnecessary. */
+  .pk-footer-row {
+    align-items: flex-end;
+  }
+
   .pk-footer-legal {
     width: auto;
   }
