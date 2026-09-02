@@ -369,92 +369,74 @@
   padding-right: var(--pk-gutter);
 }
 
-/* Sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-14/
-   G-01.2-24 task 3): a single class on <body> (root.html.heex's only
-   change for this task) gives every page in the app a sticky-footer
-   layout — the footer's bottom edge reaches the bottom of a window taller
-   than the page's own content, with no band of plain page background
-   below it. On a window shorter than the content, the page scrolls
-   exactly as it always has.
+/* SUPERSEDED 2026-09-02 (quick task 260902-glf): the sticky-footer app
+   shell mechanism this comment used to document — a `min-height: 100vh;
+   min-height: 100dvh;` floor on `.pk-app-shell` plus a `flex-grow: 1` on
+   its `main` descendant — is WITHDRAWN. Both declarations are deleted
+   outright below, not commented out.
 
-   Minimum height is declared TWICE deliberately — the older `100vh` unit
-   first, the dynamic-viewport `100dvh` unit second — so a browser without
-   `dvh` support still gets the layout via `100vh`, and one that supports
-   `dvh` does not jump as mobile browser chrome shows/hides (the later
-   declaration wins in browsers that understand it; the earlier one is the
-   fallback a browser that doesn't understand `dvh` simply keeps).
+   WHY: a real mobile screenshot from the developer showed a large, empty,
+   unstyled band between the catalog page's last content row and the
+   footer. The mechanism (added Phase 01.2 gap-closure round 4, G-01.2-14/
+   G-01.2-24 task 3) had stretched `<body>` to fill at least one full
+   viewport specifically to stop the footer floating mid-page with plain
+   background below it on a short page — but on a page whose genuine
+   content can legitimately fall short of a tall viewport, that same floor
+   instead inserted the empty band ABOVE the footer, which is the worse of
+   the two defects. This was offered to the developer as an explicit
+   choice against "investigate a possible missing-content bug first," and
+   reverting the mechanism was chosen deliberately — this is a knowingly
+   accepted tradeoff, not an oversight, so do not restore the mechanism
+   without re-reading this note.
 
-   THIS RULE TARGETS <body> DIRECTLY. The flex-grow rule right below it
-   targets <main> via a DESCENDANT selector, not a direct-child one,
-   because <main> is not literally body's DOM child — every LiveView page
-   wraps its rendered output in a root container div carrying
-   `data-phx-session`, and `[data-phx-session] { display: contents }`
-   (declared near the top of this file, "Make LiveView wrapper divs
-   transparent for layout") removes that wrapper's own box entirely,
-   handing its children (the header, the connection banner, an optional
-   subnav, <main>, the footer, the flash group) directly to whatever
-   flex/grid context ITS OWN PARENT establishes — here, body's. That
-   flattening is exactly what makes a body-level flex column safe to use
-   without a second, matching rule on the wrapper: <main> ends up a real
-   flex item of body's own flex column, not nested two DOM levels deep
-   behind an un-styled intermediate box.
+   THE TRADEOFF KNOWINGLY REINTRODUCED: on a page shorter than the
+   viewport, the footer now sits immediately after its own content, with
+   plain page background below it down to the true viewport bottom —
+   exactly the defect this mechanism was originally built to prevent, now
+   deliberately re-accepted in exchange for removing the worse
+   above-footer gap.
 
-   OTHER BODY CHILDREN keep their natural heights, unchanged: the header
-   wrapper(s), the connection banner, the optional subnav and the footer
-   are in-flow flex items with no flex-grow of their own, so they size to
-   their own content and stretch to full width (align-items' default
-   `stretch`) exactly as they already did as plain blocks. The flash
-   group's own wrapper div is the same — but its CONTENTS (each
-   `CoreComponents.flash/1`) render with daisyUI's `toast` class, which is
-   `position: fixed` (confirmed by reading daisyUI's own bundled rule, not
-   assumed) — a fixed-position box is removed from normal flow entirely,
-   so the flash group's wrapper is always a 0-height flex item and can
-   never occupy space below the footer. No extra treatment needed here.
+   THE TWO THREAT FINDINGS THIS RULE ONCE MITIGATED, both now RETIRED
+   (not reopened) because the declarations that created the hazards are
+   gone:
+   - T-01.2-24-01 (containing-block safety): the removed `flex`/
+     `min-height` pair was never among the five properties that establish
+     a containing block for a `position: fixed` descendant (transform,
+     filter, perspective, contain, will-change) — so removing them cannot
+     newly break a fixed-position descendant's containing block. The
+     hazard this finding mitigated no longer exists because its premise
+     (the shell declaring those properties) no longer exists either.
+   - T-01.2-24-02 (reserved bottom-clearance interaction): the removed
+     `min-height` floor shared an element with `body.pk-has-cta-bar`'s
+     9.25rem reserved bottom padding, under this stylesheet's border-box
+     model. With the floor gone there is nothing left for that padding to
+     interact with on this rule's account — retired along with the floor,
+     re-confirmed live by quick task 260902-glf's own CTA-bar measurement
+     (see that task's SUMMARY).
 
-   CONTAINING-BLOCK SAFETY (T-01.2-24-01, mitigate): flex and min-height
-   are NOT among the five properties that establish a containing block for
-   a `position: fixed` descendant — transform, filter, perspective,
-   contain, will-change (see both existing containing-block audits in this
-   file, on .pk-title-echo and .pk-lightbox, both re-checked and updated
-   against this exact rule as part of this change — see their own
-   comments). Verified in a real browser (headless Chromium via CDP
-   against the running dev server, not from memory): the mobile CTA bar,
-   the title-echo bar and the lightbox all still anchor to the true
-   viewport with this rule active, not to body's own box.
+   THE DUAL-DECLARATION VIEWPORT-UNIT IDIOM survives here as a live,
+   citable explanation even though the rule that motivated it is gone —
+   this is load-bearing, not optional: `.pk-lightbox-img` (below in this
+   file) and a failure message in `catalog_show_test.exs` both name this
+   spot as THE canonical explanation of the idiom, and both must still
+   resolve to real prose. This file's idiom for a viewport-height envelope
+   is to declare the property TWICE, adjacent, in this order: the older
+   static unit (`100vh`) first as a fallback, then the dynamic-viewport
+   unit (`100dvh`) second. A browser without `dvh` support keeps the first
+   line; one that supports `dvh` uses the second (the later declaration
+   wins when both are understood) and does not jump as mobile browser
+   chrome shows/hides. Documented here because two other places in this
+   repo cite this spot by name, not because a rule here still uses it.
 
-   RESERVED BOTTOM-CLEARANCE INTERACTION (T-01.2-24-02, mitigate):
-   body.pk-has-cta-bar's 9.25rem/148px bottom padding (declared far above,
-   next to that class) lives on the SAME element as this rule, under this
-   stylesheet's border-box model, so min-height's target includes that
-   padding. Measured live at 390px on a real detail page (game id 1,
-   Chromium headless CDP): BEFORE this rule existed, `document.
-   documentElement.scrollHeight` was 1972px with a 147.7px gap between the
-   footer's bottom edge and the document's end (matching the reserved
-   clearance almost exactly — expected, since the CTA bar's own padding IS
-   that gap on every page whose content already exceeds one viewport
-   height, which this page's does by a wide margin: 1972px content vs.
-   844px viewport). AFTER adding this rule, the same measurement is
-   unchanged (content was already far taller than 100dvh, so the min-height
-   floor was never reached and <main> never needed to grow) — see the
-   task's own commit for the confirming after-measurement. No regression:
-   a page whose content is already taller than one viewport is a no-op for
-   `min-height`, and a page shorter than one viewport is exactly the case
-   this rule exists to fix. */
+   `display: flex; flex-direction: column` remains below for now — its
+   fate is a separate, measured decision (see this file's own dated note
+   at the deletion site, if the flex column was later also retired, or the
+   describe-level comment in layouts_test.exs's `pk-app-shell CSS facts`
+   if it survives). Do not remove it on the assumption it only ever
+   existed for the mechanism withdrawn here. */
 .pk-app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
-}
-
-/* See .pk-app-shell's own comment above for why a DESCENDANT selector,
-   not a direct-child one, is correct here despite the rule's own name
-   ("the body's own <main> child") suggesting otherwise. flex-grow ALONE
-   (not the `flex` shorthand) is deliberate: <main> keeps its own natural
-   flex-basis (auto) and default flex-shrink (1) — grow is the one
-   property a sticky-footer layout needs added to it. */
-.pk-app-shell main {
-  flex-grow: 1;
 }
 
 /* Category-anchor scroll animation (debug category-menu-scroll-animation).
@@ -3588,9 +3570,9 @@ body.pk-cta-parked {
    correctly while that chain stays clean.
 
    RE-CHECKED (Phase 01.2 gap-closure round 4, G-01.2-24 task 3): <body>
-   now carries `.pk-app-shell` (flex column + min-height, see that class's
-   own comment above `.pk-gutter`). Re-walked the same chain against the
-   same five-property list with `<body>` in its new state and confirmed
+   carried `.pk-app-shell` (flex column + min-height, see that class's own
+   comment above `.pk-gutter`). Re-walked the same chain against the same
+   five-property list with `<body>` in that state and confirmed
    `display: flex`/`flex-direction: column`/`min-height` are NOT among
    them — flex and min-height do not establish a containing block for a
    `position: fixed` descendant. Verified live in a real browser (headless
@@ -3598,7 +3580,18 @@ body.pk-cta-parked {
    at a mobile width where body's natural height exceeds the viewport and
    at a desktop width tall enough to actually stretch body via
    min-height): this bar's `getBoundingClientRect()` still resolves
-   against the true viewport in both cases, not against body's box. */
+   against the true viewport in both cases, not against body's box.
+
+   RE-CHECKED AGAIN (2026-09-02, quick task 260902-glf): `.pk-app-shell`'s
+   `min-height` floor is now deleted outright (see that class's own
+   superseded-mechanism note, above `.pk-gutter`) — `<body>` today carries
+   only `display: flex; flex-direction: column`, a strict subset of the
+   already-audited state above. Since flex/flex-direction were already
+   confirmed absent from the five containing-block-establishing properties,
+   this audit's conclusion is unaffected and gets strictly safer, not
+   riskier, by removing a property that was never on that list to begin
+   with. Re-confirmed live via the same CDP method as the original
+   verification. */
 /* G-01.3-09 (UAT gap G-01.3-1 item 7): the bar's fill used to be
    var(--color-base-100), the exact token the page body itself uses,
    separated only by the 1px border below — the same defect
@@ -3786,13 +3779,21 @@ body.pk-cta-parked {
    #detail-page -> Layouts.app's own `.mx-auto.space-y-4` inner wrapper ->
    <main> -> the LiveView root (display: contents, so it contributes no
    box of its own — see "Make LiveView wrapper divs transparent for
-   layout" near the top of this file) -> <body> (now `.pk-app-shell`) ->
+   layout" near the top of this file) -> <body> (then `.pk-app-shell`) ->
    <html>. None of them declares transform, filter, perspective, contain,
-   or will-change; `.pk-app-shell`'s own `display: flex`/`min-height` are
-   also not on that list (see that class's own comment). Verified live in
-   a real browser (headless Chromium via CDP against the running dev
-   server): this element's `position: fixed` still resolves against the
-   true viewport with `.pk-app-shell` active. */
+   or will-change; `.pk-app-shell`'s then-current `display: flex`/
+   `min-height` were also not on that list (see that class's own comment).
+   Verified live in a real browser (headless Chromium via CDP against the
+   running dev server): this element's `position: fixed` still resolves
+   against the true viewport with `.pk-app-shell` active.
+
+   RE-CHECKED (2026-09-02, quick task 260902-glf): `.pk-app-shell`'s
+   `min-height` floor is now deleted outright (see that class's own
+   superseded-mechanism note, above `.pk-gutter`); `<body>` today carries
+   only `display: flex; flex-direction: column`, a strict subset of the
+   already-audited state above, so this audit's conclusion is unaffected
+   and gets strictly safer, not riskier. Re-confirmed live via the same
+   CDP method as the original verification. */
 
 /* G-01.2-19 (Phase 01.2 gap-closure round 9, plan 01.2-31): a third and
    final report of "the background should be full screen" traced to this
@@ -3931,11 +3932,14 @@ body.pk-cta-parked {
    design call with its own UAT item" — and that condition fired in the
    very next UAT round, so this is the deferral resolving on schedule,
    not a correction of a mistake. Third: the property below is declared
-   TWICE for the same reason `.pk-app-shell` declares `min-height` twice
-   (see that rule's own comment, above in this file, for the full
-   argument) — the static `100vh` is the fallback a browser without
-   dynamic-viewport support keeps, `100dvh` is what every current browser
-   actually uses, and neither line is a leftover duplicate to clean up.
+   TWICE following this file's own dual-declaration viewport-unit idiom
+   (see `.pk-app-shell`'s superseded-mechanism note, above `.pk-gutter`,
+   for the fuller argument — that rule no longer declares `min-height`
+   itself as of 2026-09-02/260902-glf, but its comment keeps the idiom
+   documented because this is one of the two places that cite it) — the
+   static `100vh` is the fallback a browser without dynamic-viewport
+   support keeps, `100dvh` is what every current browser actually uses,
+   and neither line is a leftover duplicate to clean up.
    Fourth: a percentage of the parent's own box (`height: 100%`) would
    ALSO have resolved correctly here, since `.pk-lightbox` is a fixed,
    full-inset overlay with a definite height — it was rejected anyway, so
