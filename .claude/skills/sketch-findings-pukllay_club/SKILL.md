@@ -48,7 +48,11 @@ spread that superseded 036's flat-informational/full-fill-selected decisions aft
 pixel-indistinguishable in the real filter modal (041), editorial-tags placement + divider removal
 + a 27-round chevron/read-more journey now in its own `description-truncation.md` (042), and a
 full-page consistency check that found 2 real composition bugs but also found its own lightbox
-recomposition was stale against further real-implementation gap-closure work (043))
+recomposition was stale against further real-implementation gap-closure work (043)),
+2026-09-02 (sketch 044 — post-shipment real-device feedback on the mobile footer: two rounds of
+alignment/content-reduction variants rejected as indecisive, resolved once the BGG attribution was
+identified as the only actual compliance requirement; mobile footer now carries nothing else,
+revising `references/page-shell.md`'s mobile footer section — desktop unaffected)
 
 **Note on this wrap-up round:** most of the Filter & Search and Header/Navigation/Drawer sketches
 turned out to already be implemented in production by the time this wrap-up ran — a separate
@@ -129,7 +133,7 @@ Three more load-bearing principles emerged from the shell/detail/about sketches:
 |------|-----------|--------------|
 | Layout & Navigation | references/layout-navigation.md | Full-bleed edge-fade shelves + aligned sticky nav; mobile gets a category-chip row instead of nav links |
 | Card & Preview Interaction | references/card-interaction.md | Minimal resting card (poster + title only); fixed-size hover-portal (desktop) / full-screen sheet (mobile) rendered outside the scrolling rail, sharing identical CSS classes for every field |
-| Page Shell (Header + Footer) | references/page-shell.md | One header component with 3 states (nav-links / breadcrumb / nav-links, not 3 headers); crumbs reserved for genuine drill-downs only; single-row footer, no divider; "Inicio" (nav action) vs. "Ludoteca" (section name) kept deliberately distinct; every section capped to the same 1280px content width as the header |
+| Page Shell (Header + Footer) | references/page-shell.md | One header component with 3 states (nav-links / breadcrumb / nav-links, not 3 headers); crumbs reserved for genuine drill-downs only; single-row footer, no divider (desktop); "Inicio" (nav action) vs. "Ludoteca" (section name) kept deliberately distinct; every section capped to the same 1280px content width as the header; on mobile (≤480px) only, the footer carries nothing but the BGG compliance line (sketch 044) |
 | About Page Content | references/about-page-content.md | Alternating tinted/untinted bands, each with a working image carousel instead of a static hero; FAQ as a closing band, not an accordion |
 | Detail Page — Layout & Content | references/detail-page-layout.md | Desktop buy-box (sticky image) beside a scrolling reading column, no accordion; ficha técnica as a 2-col grid; every field grounded in the real schema including its gaps; "Juegos similares" shelf reuses the real home-page carousel component. Gap-closure round 2 (sketch 032) revises the buy-box: CTA now lives *outside* the poster's bordered panel, not inside it; pills moved from an overlay/inline-with-title placement to a plain row above the poster; masthead width now matches the header/footer shell (1280px, not a separate 1100px cap). Also: redundant weight-band badge+description removed (034), chip contrast fixed (034), section spacing de-bugged to a uniform 24px (035). Gap-closure round 3 (sketch 037): mobile grouping resolved as proximity-only (no shared container) + compacted dot spacing + fixed a panel-padding margin mismatch. Phase 01.3 gap-closure (sketches 039/040/042): creators become navigable outline pills, Edad mínima + fake "Avanzado" heading dropped (039); Mecánicas/Temáticas absorbed into the SAME fact grid, "Sobre el juego" heading dropped entirely (040); editorial hashtags moved to right after the title, the divider removed for good, description now justified (042 — its chevron/read-more pattern has its own file, see below). Consistency-checked full-page composition (sketch 043): confirmed it all holds together, scoped the desktop-standalone-CTA vs. mobile-fixed-CTA-bar so they don't double up — but its lightbox recomposition is stale, see `detail-page-mobile-interaction.md` instead |
 | Description Truncation & "Read More" | references/description-truncation.md | 27-round history of a chevron/read-more toggle for the 3-line-clamped description: why it can't nest inside a `-webkit-line-clamp` paragraph (crashes), why proximity fixes alone didn't solve "looks disconnected" (the icon-button chrome itself was the problem), the winning true-inline float technique, and two known issues deferred to real implementation (ink-alignment nudge needs re-tuning against the real font; the float technique can cut text mid-word at some widths — validate against real content before shipping) |
@@ -196,4 +200,5 @@ self-contained, interactive HTML mockup (no build step) that can be opened direc
 - 041-pill-system-outline (supersedes sketch 036's flat-informational + full-fill-selected pill decisions)
 - 042-editorial-tags-divider (27 rounds — chevron/read-more pattern synthesized separately into description-truncation.md)
 - 043-composed-full-detail-page (consistency check; its lightbox recomposition is stale — see detail-page-mobile-interaction.md instead)
+- 044-mobile-footer-balance (mobile-only footer revision, winner H; folded into page-shell.md's footer section)
 </metadata>

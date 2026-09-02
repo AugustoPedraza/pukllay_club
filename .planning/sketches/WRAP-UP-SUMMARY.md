@@ -610,3 +610,56 @@ inventory (`GameChips.chip_row/1`, `GameChips.editorial_tags/1`, `GamePreview.fa
 - None of 039-042 are implemented yet — all four are design-approved gap-closure for Phase 01.3's
   UAT gap G-01.3-1, ready for `/gsd-plan-phase` or a gap-closure quick task against
   `CatalogLive.Show`.
+
+## Session: 2026-09-02
+
+**Sketches processed:** 1
+**Design areas updated:** Page Shell (Header + Footer) — mobile footer section only
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/` (updated in place)
+
+**Context:** Post-shipment real-device feedback. Quick task 260901-ty6 had already tightened the
+mobile (≤480px) footer's chrome (shorter gap above it, smaller wordmark, smaller link text), but a
+real phone screenshot still showed it as too heavy and unbalanced against the page's left-aligned
+content. This sketch is the first in this project to be prompted directly by a production
+screenshot rather than a UAT gap or fresh design area.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 044 | mobile-footer-balance | H (BGG Only, Literally) | Page Shell (Header + Footer) |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — included |
+
+## Design Direction
+No new aesthetic direction — a scoped mobile-only revision of the existing footer. Two rounds of
+variants (A-G: alignment-only tweaks, then content-reduction tweaks that still kept the brand name
+and/or nav links) were both rejected by the user as indecisive. The breakthrough was reframing the
+question from "how should this look" to "what's actually required here" — a quick research pass
+confirmed only the BGG attribution is a real compliance requirement (the copyright line and
+everything else was convention), which the user then took to its logical conclusion.
+
+## Key Decisions
+- **Mobile footer, BGG only (044, winner H):** on `≤480px` only, the footer is reduced to nothing
+  but the "Powered by BGG" attribution line (real logo + text, linking to boardgamegeek.com). Brand
+  name, tagline, the FAQ/Contacto/Juntadas nav links, and the copyright line are all removed.
+  Desktop (`>480px`) is completely unaffected — this is a mobile-breakpoint-scoped decision, not a
+  redesign of the footer itself.
+- **Verified, not assumed, tradeoff:** grepped the codebase to confirm FAQ/Contacto/Juntadas exist
+  nowhere else in the app (they're anchor links into specific sections of the "Quiénes Somos" page;
+  header nav only links to the page as a whole). Removing them from the footer doesn't make that
+  page unreachable, but does remove the direct jump to those sections. User explicitly accepted
+  this when picking H over G (which still kept the links).
+- **A stale open item in `page-shell.md` got resolved as a side effect:** that file had flagged
+  "confirm the exact required BGG wording/format before shipping" as unresolved since sketch 011.
+  It's since been resolved in the shipped `bgg_attribution/1` component (exact wording: "Powered by
+  BGG" + logo) — this wrap-up updates that note rather than leaving it stale.
+
+## Open Items Carried Forward
+- Whether FAQ/Contacto/Juntadas need a new home (e.g. surfaced within the About page's own content
+  rather than deep-linked from outside it) is unresolved — flagged, not decided, in
+  `page-shell.md`.
+- Not yet implemented — winner H is design-approved, ready for a `/gsd-quick` task against
+  `layouts.ex`'s `footer/1` and the `≤480px` block in `app.css`.
