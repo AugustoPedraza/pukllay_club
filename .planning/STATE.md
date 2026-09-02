@@ -32,7 +32,7 @@ even without already knowing board-game vocabulary.
 Phase: 02 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-01 — Completed quick task 260901-ty6: Reduce the mobile footer's visual weight
+Last activity: 2026-09-02 — Completed quick task 260902-fdm: Reduce the mobile footer to just the BGG attribution line
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -261,6 +261,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260824-q8z | Mobile drawer bottom block: social links reordered as a full-width, high-contrast, 44px CONTENT row; theme control centered and its "Tema" label converted to sr-only as a quiet FOOTER strip (mirrors the desktop footer's shipped pattern, applies sketch 021's Round-6 conclusion) | 2026-08-24 | 79b392b | Complete | [260824-q8z-for-mobile-the-social-links-at-the-botto](./quick/260824-q8z-for-mobile-the-social-links-at-the-botto/) |
 | 260824-t7g | New carousel arrow layer from sketches 022-026: relocated prev/next controls to Netflix-style edge-overlay chevrons gated to pointer-fine devices (022-C), replaced the browser's fixed smooth-scroll with the project's own 200ms soft ease-out curve (023-B) | 2026-08-24 | d106248 | Partial (live-smoothness sub-check needs a human eyeballing it in a foregrounded tab — see SUMMARY) | [260824-t7g-new-carousel-from-latest-sketches](./quick/260824-t7g-new-carousel-from-latest-sketches/) |
 | 260901-ty6 | Reduce the mobile (<=480px) footer's visual weight: shrink .pk-footer margin-top and .pk-footer-row vertical padding on mobile, shrink the footer brand_logo, and shrink footer-links font-size/gap on mobile. Desktop untouched. | 2026-09-01 | ed51bab | Complete (764/764 tests, mix quality passes; CDP-measured mobile chrome 96px→56px; one human-judgment visual check flagged in SUMMARY) | [260901-ty6-reduce-the-mobile-480px-footer-s-visual-](./quick/260901-ty6-reduce-the-mobile-480px-footer-s-visual-/) |
+| 260902-fdm | Reduce the mobile footer to just the BGG attribution line per sketch 044 (winner H): remove brand name/tagline, FAQ/Contacto/Juntadas links, and the copyright line from the <=480px footer; keep only <.bgg_attribution />; tighten the <=480px gap further. Desktop untouched. | 2026-09-02 | 1062835 | Complete (766/766 tests, mix format/compile clean; CDP-measured mobile chrome 56px→40px; one human-judgment visual check flagged in SUMMARY, same precedent as 260901-ty6) | [260902-fdm-reduce-the-mobile-footer-to-just-the-bgg](./quick/260902-fdm-reduce-the-mobile-footer-to-just-the-bgg/) |
 
 ### Roadmap Evolution
 
