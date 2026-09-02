@@ -572,15 +572,43 @@ defmodule PukllayClubWeb.LayoutsTest do
   end
 
   # Source-level CSS facts, matching this file's existing @css_path-style
-  # assertions elsewhere in the suite: the three declarations that together
-  # push the footer down (min-height, column flex direction, and the
-  # main-child flex-grow) — any one of them alone does nothing. A sibling
-  # describe, not nested inside the one above — ExUnit forbids nested
-  # describe blocks.
-  describe "pk-app-shell CSS facts (Phase 01.2 gap-closure round 4, G-01.2-24)" do
+  # assertions elsewhere in the suite. INVERTED 2026-09-02 (quick task
+  # 260902-glf): this describe used to guard the PRESENCE of the three
+  # declarations that together pushed the footer to the bottom of the
+  # viewport (min-height, column flex direction, and the main-child
+  # flex-grow). A real mobile screenshot showed the opposite defect — a gap
+  # ABOVE the footer on pages shorter than the viewport — so the developer
+  # reverted the mechanism, and this describe now guards its ABSENCE
+  # instead. See app.css's own dated superseding note on `.pk-app-shell`
+  # for the full rationale.
+  #
+  # The old direct-child-combinator refute (`.pk-app-shell > main` never
+  # matches) is deleted outright, not kept: with the descendant rule gone
+  # there is no longer a correct selector for it to be the wrong variant
+  # of, so keeping it would be a test passing for a reason that no longer
+  # exists.
+  #
+  # Deliberately NOT decided here: whether `.pk-app-shell` still declares a
+  # flex formatting context (`display: flex; flex-direction: column`).
+  # Those two assertions are left exactly as they were — true today — and
+  # are PENDING Task 3's live A/B measurement of whether the flex column
+  # still buys anything (margin-collapse suppression on `.pk-footer`'s top
+  # offset) now that the height floor and growth factor are gone. Do not
+  # mistake them for a settled contract.
+  #
+  # A sibling describe, not nested inside the one above — ExUnit forbids
+  # nested describe blocks.
+  describe "pk-app-shell CSS facts (Phase 01.2 gap-closure round 4, G-01.2-24; inverted 260902-glf)" do
     @css_path Path.expand("../../../assets/css/app.css", __DIR__)
 
     defp shell_css_source, do: File.read!(@css_path)
+
+    # Reused verbatim from footer_rhythm_test.exs / catalog_show_test.exs's
+    # established idiom: comments are prose, not cascade, and the
+    # superseding note this task requires will literally NAME the selector
+    # and properties these absence assertions look for — a raw-source match
+    # would be defeated by the very comment this plan requires.
+    defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
 
     defp pk_app_shell_block do
       case Regex.run(~r/(?m)^\.pk-app-shell\s*\{([^}]*)\}/, shell_css_source()) do
@@ -589,39 +617,52 @@ defmodule PukllayClubWeb.LayoutsTest do
       end
     end
 
-    test "declares both a minimum height and a column flex direction" do
+    test "still declares a flex formatting context (pending Task 3's flex-column determination)" do
       body = pk_app_shell_block()
 
       assert body =~ ~r/display:\s*flex;/,
-             "`.pk-app-shell` must declare `display: flex` — without it, `flex-direction` " <>
-               "and the main-child `flex-grow` below have no flex formatting context to " <>
-               "act inside."
+             "`.pk-app-shell` must declare `display: flex` — without it `flex-direction` has " <>
+               "no flex formatting context to act inside. This assertion is PENDING Task 3's " <>
+               "A/B measurement of whether the flex column is still load-bearing now that the " <>
+               "height floor and main-child growth factor are gone."
 
       assert body =~ ~r/flex-direction:\s*column;/,
              "`.pk-app-shell` must declare `flex-direction: column` — a row direction would " <>
-               "lay the header/main/footer out side by side instead of stacked."
-
-      assert body =~ ~r/min-height:\s*100vh;/,
-             "`.pk-app-shell` must declare `min-height: 100vh` as a fallback for browsers " <>
-               "without dynamic-viewport-unit support."
-
-      assert body =~ ~r/min-height:\s*100dvh;/,
-             "`.pk-app-shell` must also declare `min-height: 100dvh` — without it, mobile " <>
-               "browser chrome showing/hiding would jump the layout."
+               "lay the header/main/footer out side by side instead of stacked. Also PENDING " <>
+               "Task 3's determination — see this describe's own comment."
     end
 
-    test "declares a flex-grow on the shell's <main> descendant, and no direct-child combinator" do
-      assert shell_css_source() =~ ~r/\.pk-app-shell main\s*\{\s*flex-grow:\s*1;\s*\}/,
-             "The main-child rule must declare `flex-grow: 1` on a DESCENDANT selector " <>
-               "(`.pk-app-shell main`), not a direct-child one (`.pk-app-shell > main`) — " <>
-               "<main> is not literally body's DOM child (every LiveView page wraps its " <>
-               "output in a `data-phx-session` root div, flattened by this file's own " <>
-               "`[data-phx-session] { display: contents }` rule), so a `>` combinator here " <>
-               "would silently never match."
+    test "declares no minimum-height floor at any value or unit (260902-glf regression guard)" do
+      body = pk_app_shell_block()
 
-      refute shell_css_source() =~ ~r/\.pk-app-shell\s*>\s*main/,
-             "A direct-child combinator between .pk-app-shell and main would never match — " <>
-               "see the positive assertion above for why."
+      refute body =~ ~r/min-height/,
+             "`.pk-app-shell` must declare NO `min-height`, at any value or unit. A " <>
+               "viewport-height floor on the shell is exactly what pushed the footer down on " <>
+               "pages whose real content falls short of one screen — the defect quick task " <>
+               "260902-glf removed. Its reappearance, in any form, re-opens that defect."
+    end
+
+    test "declares no rule pairing the shell class with a main descendant (260902-glf regression guard)" do
+      src = strip_comments(shell_css_source())
+
+      refute src =~ ~r/\.pk-app-shell\s+main\s*\{/,
+             "No rule may pair `.pk-app-shell` with a `main` descendant anywhere in the " <>
+               "stylesheet. This is the first half of the two-part regression guard for the " <>
+               "removed sticky-footer mechanism — see the sibling test below for the second " <>
+               "half. Matched against comment-stripped source because the required " <>
+               "superseding note names this exact selector in prose."
+    end
+
+    test "declares no growth factor on any main element under the shell class (260902-glf regression guard)" do
+      src = strip_comments(shell_css_source())
+
+      refute src =~ ~r/\.pk-app-shell[^{]*main[^{]*\{[^}]*flex-grow/,
+             "The stylesheet must declare no growth factor (`flex-grow`) on any `main` " <>
+               "element scoped under the shell class. This is the second half of the same " <>
+               "regression guard — the height floor and the growth factor are independent " <>
+               "halves of the original mechanism, and restoring either one alone would " <>
+               "re-open half the defect. Matched against comment-stripped source, same " <>
+               "reasoning as the sibling test above."
     end
   end
 
