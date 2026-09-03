@@ -178,13 +178,30 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "Nos juntamos todos los sábados desde las 16 hs en el Club de Emprendedores, San Salvador de Jujuy. La entrada es libre y los juegos los ponemos nosotros."
     end
 
-    test "renders the closing CTA heading, both button labels and the meta line", %{conn: conn} do
+    test "the #cierre band offers exactly one CTA (the shared Sumate component), not a duplicated WhatsApp/Instagram button pair (049)",
+         %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
-      assert html =~ "Nos vemos el sábado"
-      assert html =~ "Grupo de WhatsApp"
-      assert html =~ "Instagram"
-      assert html =~ "Pukllay Club · San Salvador de Jujuy, Argentina ·"
+      doc = LazyHTML.from_document(html)
+      cierre = LazyHTML.query(doc, "#cierre")
+      cierre_html = LazyHTML.to_html(cierre)
+
+      assert cierre_html =~ "Nos vemos el sábado"
+      assert cierre_html =~ "Pukllay Club · San Salvador de Jujuy, Argentina ·"
+
+      cta_buttons = LazyHTML.query(cierre, "a.btn")
+      assert Enum.count(cta_buttons) == 1
+      assert LazyHTML.attribute(cta_buttons, "href") == [ClubLinks.whatsapp_group_url()]
+      assert LazyHTML.to_html(cta_buttons) =~ "Sumate"
+
+      refute Enum.any?(
+               LazyHTML.attribute(cta_buttons, "href"),
+               &(&1 == ClubLinks.instagram_url())
+             )
+
+      meta_links = LazyHTML.query(cierre, "a:not(.btn)")
+      assert Enum.count(meta_links) == 1
+      assert LazyHTML.attribute(meta_links, "href") == [ClubLinks.instagram_url()]
     end
 
     test "/club and /quienes-somos render byte-identical HTML once per-connection session/CSRF tokens are normalized (D-01)",

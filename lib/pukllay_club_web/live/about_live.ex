@@ -316,27 +316,20 @@ defmodule PukllayClubWeb.AboutLive do
       trailing link instead points at Instagram (still a real, live
       channel) — same required "Pukllay Club · San Salvador de Jujuy,
       Argentina ·" prefix, honest destination. Flagged for developer
-      review. --%>
-      <section class="pk-band">
+      review.
+
+      Sketch 049: the button pair that used to sit above this meta line
+      (Grupo de WhatsApp + Instagram) was removed — by the time a reader
+      scrolls this far they've already seen both links in the rebuilt
+      Contacto card directly above, and repeating them a third time (after
+      the hero and the mobile sticky bar) was the rhythm-killer 049
+      flagged. The band now reuses the shared sumate_cta/1 component
+      instead, matching the hero's exact call shape. --%>
+      <section id="cierre" class="pk-band">
         <div class="pk-band-inner pk-gutter text-center">
           <h2 class="font-display text-2xl">Nos vemos el sábado</h2>
-          <div class="flex flex-wrap justify-center gap-3">
-            <a
-              href={ClubLinks.whatsapp_group_url()}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn btn-primary min-h-11"
-            >
-              Grupo de WhatsApp
-            </a>
-            <a
-              href={ClubLinks.instagram_url()}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn btn-outline btn-primary min-h-11"
-            >
-              Instagram
-            </a>
+          <div class="flex justify-center">
+            <Layouts.sumate_cta />
           </div>
           <p class="pk-about-eyebrow">
             Pukllay Club · San Salvador de Jujuy, Argentina ·
