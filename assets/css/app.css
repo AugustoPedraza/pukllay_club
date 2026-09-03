@@ -2796,6 +2796,85 @@ body.pk-drawer-open {
   color: var(--color-base-content);
 }
 
+/* Isologo scroll-morph (sketch 045, D-01/D-02/D-03/D-10): the hero's
+   in-flow anchor, the single floating mark it feeds, and the About-only
+   hidden/docked states .AboutHeaderMorph (about_live.ex) toggles on
+   #app-header from outside this module. Page-owned, About-scoped — D-10
+   forbids extending the shared header with a fourth state, so every rule
+   below is reached only through classes this hook adds/removes, never
+   through new markup in header_inner/1 or .CatalogNav. One value each, no
+   breakpoint branching (D-01: one mechanic on desktop and mobile). */
+.pk-about-mark-anchor {
+  display: block;
+  height: 200px;
+}
+
+.pk-about-morph-mark {
+  position: fixed;
+  z-index: 60;
+  opacity: 0;
+  transform: scale(0.75);
+  transition: opacity var(--duration-slow) var(--ease-out-soft),
+    transform var(--duration-slow) var(--ease-out-soft),
+    top var(--duration-slow) var(--ease-out-soft),
+    left var(--duration-slow) var(--ease-out-soft),
+    width var(--duration-slow) var(--ease-out-soft),
+    height var(--duration-slow) var(--ease-out-soft),
+    filter var(--duration-slow) var(--ease-out-soft);
+}
+
+.pk-about-morph-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.pk-about-morph-mark.is-entered {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@keyframes pk-about-mark-glow {
+  0% {
+    filter: drop-shadow(0 0 0 color-mix(in srgb, var(--color-primary) 0%, transparent));
+  }
+  40% {
+    filter: drop-shadow(0 0 14px color-mix(in srgb, var(--color-primary) 55%, transparent));
+  }
+  100% {
+    filter: drop-shadow(0 0 0 color-mix(in srgb, var(--color-primary) 0%, transparent));
+  }
+}
+
+.pk-about-morph-mark.is-first-play {
+  animation: pk-about-mark-glow var(--duration-slow) var(--ease-out-soft);
+}
+
+.pk-about-morph-mark.no-anim {
+  transition: none !important;
+}
+
+#app-header.pk-header-about-morph {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-slow) var(--ease-out-soft);
+}
+
+#app-header.pk-header-about-morph.is-docked {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Suppresses the header's own always-rendered isologo permanently on
+   About (RESEARCH.md Pitfall 1, open question 2 resolution) — with the
+   floating mark parked exactly on this element's rect at dock, exactly
+   one isologo is visible at every instant, so there is no flicker/pop/
+   double-mark to reconcile. */
+#app-header.pk-header-about-morph .pk-brand-mark {
+  opacity: 0;
+}
+
 /* Mobile category chip row wrapper (sketch 020 Round 2): exists solely so
    the edge-fade gradient (mirroring .pk-rail-wrap's ::before/::after pair)
    stays put while the chips scroll past it — the fade has to live on this

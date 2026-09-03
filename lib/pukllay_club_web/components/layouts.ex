@@ -67,19 +67,28 @@ defmodule PukllayClubWeb.Layouts do
       href="/"
       class={["flex-initial flex w-fit items-center gap-2 min-h-11", !@mark && "pk-brand-quiet"]}
     >
+      <%!-- Sketch 045, D-10: the two isologo images below carry a pure
+      styling-hook class (added to both, nowhere else in this file) — no
+      attr, no branch, no new state. It exists so the About page's
+      page-owned isologo scroll-morph hook (about_live.ex) can suppress and
+      locate the header's own mark from OUTSIDE this module without D-10
+      extending the shared header with a fourth state; only About-scoped
+      CSS ever selects it. The alternative was a brittle structural
+      selector reaching through `.pk-nav-inner > .shrink-0 > a > img`,
+      which breaks the moment this markup's wrapping changes. --%>
       <img
         :if={@isologo? and @mark}
         src={~p"/images/isologo-light.png"}
         width="36"
         alt=""
-        class="dark:hidden"
+        class="dark:hidden pk-brand-mark"
       />
       <img
         :if={@isologo? and @mark}
         src={~p"/images/isologo-dark.png"}
         width="36"
         alt=""
-        class="hidden dark:block"
+        class="hidden dark:block pk-brand-mark"
       />
       <span class="pk-brand-wordmark flex flex-col leading-none">
         <span class="pk-brand-name font-display text-2xl uppercase tracking-wide">
