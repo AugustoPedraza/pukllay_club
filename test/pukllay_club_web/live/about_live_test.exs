@@ -211,10 +211,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert LazyHTML.attribute(cta_buttons, "href") == [ClubLinks.whatsapp_group_url()]
       assert LazyHTML.to_html(cta_buttons) =~ "Sumate"
 
-      refute Enum.any?(
-               LazyHTML.attribute(cta_buttons, "href"),
-               &(&1 == ClubLinks.instagram_url())
-             )
+      refute ClubLinks.instagram_url() in LazyHTML.attribute(cta_buttons, "href")
 
       meta_links = LazyHTML.query(cierre, "a:not(.btn)")
       assert Enum.count(meta_links) == 1
@@ -281,7 +278,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       srcs = LazyHTML.attribute(rail_imgs, "src")
 
-      assert Enum.map(srcs, &Regex.run(~r/about-([a-z]+)\.jpg/, &1) |> List.last()) ==
+      assert Enum.map(srcs, &(~r/about-([a-z]+)\.jpg/ |> Regex.run(&1) |> List.last())) ==
                ["juego", "explicacion", "ludoteca", "comunidad", "festejo"]
 
       alts = LazyHTML.attribute(rail_imgs, "alt")
@@ -348,8 +345,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
 
     test "the venue URL literal appears only in club_links.ex, never in about_live.ex" do
-      about_live_source =
-        "lib/pukllay_club_web/live/about_live.ex" |> File.read!()
+      about_live_source = File.read!("lib/pukllay_club_web/live/about_live.ex")
 
       refute about_live_source =~ "maps.app.goo.gl"
     end
@@ -369,7 +365,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert Enum.count(links) == 2
       assert hrefs == [ClubLinks.whatsapp_group_url(), ClubLinks.instagram_url()]
 
-      refute Enum.any?(hrefs, &(&1 == ClubLinks.facebook_url()))
+      refute ClubLinks.facebook_url() in hrefs
       refute Enum.any?(hrefs, &String.starts_with?(&1, "mailto:"))
     end
 

@@ -178,7 +178,10 @@ defmodule PukllayClubWeb.AboutLive do
             <div data-rail class="pk-about-rail">
               <figure class="pk-about-slide" data-slide="juego">
                 <div class="pk-about-slide-ph">
-                  <img src={~p"/images/about-juego.jpg"} alt="Un juego de mesa en pleno desarrollo, sobre una de las mesas del club" />
+                  <img
+                    src={~p"/images/about-juego.jpg"}
+                    alt="Un juego de mesa en pleno desarrollo, sobre una de las mesas del club"
+                  />
                 </div>
               </figure>
               <figure class="pk-about-slide" data-slide="explicacion">
