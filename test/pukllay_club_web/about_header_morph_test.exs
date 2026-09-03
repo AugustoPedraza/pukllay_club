@@ -20,6 +20,21 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
   # comment is a false pass. Same idiom as footer_rhythm_test.exs.
   defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
 
+  # about_live.ex holds TWO colocated hooks (.AboutCarousel and
+  # .AboutHeaderMorph) in one file. A bare `File.read! |> String.contains?`
+  # check against the whole file is satisfied by either hook's code — it
+  # does not actually prove the assertion about THIS hook. Scoping to the
+  # hook's own <script> block is what makes these assertions meaningful
+  # (verified: an earlier unscoped version of the reduced-motion test
+  # passed unexpectedly at RED because .AboutCarousel already references
+  # prefers-reduced-motion for its own, unrelated autoplay-pause purpose).
+  defp about_header_morph_hook_source(about_live_source) do
+    case Regex.run(~r/name="\.AboutHeaderMorph">\s*(.*?)<\/script>/s, about_live_source) do
+      [_, body] -> body
+      nil -> flunk("No .AboutHeaderMorph colocated hook <script> block found in about_live.ex")
+    end
+  end
+
   describe "the morph mark and anchor render on the About page (D-01/D-03)" do
     test "exactly one #pk-about-morph-mark exists, containing exactly two <img>s for the two isologo assets",
          %{conn: conn} do
@@ -141,6 +156,105 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       # (`mix test ... test/pukllay_club_web/components/layouts_test.exs`),
       # not re-run here — this test documents the acceptance criterion.
       assert true
+    end
+  end
+
+  # Plan 01.4-05 Task 2 (TDD): deep-link first paint (D-02), resize
+  # handling, reduced-motion, and navigation cleanup. Oracle type: mixed.
+  # The deep-link/URL-fragment behavior is a client-side rect comparison —
+  # ExUnit can only prove the SERVER renders identical markup regardless of
+  # the fragment (true by construction: LiveView never receives a URL
+  # fragment server-side, so this assertion is green from the start by
+  # design, matching footer_rhythm_test.exs's own documented pattern for
+  # standing/permanent guards rather than a RED-provable behavior change).
+  # The resize-listener and reduced-motion source assertions below ARE the
+  # genuine RED/GREEN pair — verified RED against the plan 01.4-05 Task 1
+  # hook (no "resize" or "prefers-reduced-motion" reference existed).
+  describe "deep-link first paint, resize, and reduced-motion (plan 01.4-05 Task 2, D-01/D-02)" do
+    # Green from the start by design (see describe-block comment above):
+    # LiveView's server render never sees the URL fragment, so this proves
+    # D-02's "no server-side special-casing" half of the contract, not the
+    # client-side rect-comparison half (which Task 3's live Chrome pass
+    # covers). Reuses about_live_test.exs's own per-connection-field
+    # normalization helper (csrf-token/phx-session/phx-static/phx-id).
+    test "/quienes-somos#contacto and /quienes-somos render identical markup once per-connection fields are normalized",
+         %{conn: conn} do
+      {:ok, _view, anchor_html} = live(conn, ~p"/quienes-somos#contacto")
+      {:ok, _view, plain_html} = live(conn, ~p"/quienes-somos")
+
+      normalize = fn html ->
+        html
+        |> String.replace(~r/csrf-token" content="[^"]*"/, "csrf-token\" content=\"X\"")
+        |> String.replace(~r/data-phx-session="[^"]*"/, "data-phx-session=\"X\"")
+        |> String.replace(~r/data-phx-static="[^"]*"/, "data-phx-static=\"X\"")
+        |> String.replace(~r/id="phx-[^"]*"/, "id=\"phx-X\"")
+      end
+
+      assert normalize.(anchor_html) == normalize.(plain_html),
+             "A URL fragment must never change the SERVER-rendered markup — D-02's docked-vs-" <>
+               "entrance decision is made client-side from live rects, never by special-casing " <>
+               "an entry route or fragment on the server."
+    end
+
+    # The genuine RED/GREEN pair for this task: verified RED against the
+    # Task 1 hook body, which registered no "resize" listener anywhere.
+    test "the hook registers a resize listener and removes it in destroyed()" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      assert hook =~ ~r/addEventListener\("resize"/,
+             "The .AboutHeaderMorph hook must register a resize listener — both naturalRect() " <>
+               "and dockRect() are viewport-relative and the header's own height is republished " <>
+               "by .CatalogNav's ResizeObserver, so a resize invalidates both."
+
+      assert hook =~ ~r/removeEventListener\("resize"/,
+             "destroyed() must remove the resize listener it registered, or a torn-down hook " <>
+               "leaves a dangling window-level listener referencing a detached element."
+    end
+
+    # Also genuinely RED against Task 1 (no prefers-reduced-motion reference
+    # existed in THIS hook — .AboutCarousel elsewhere in the file already
+    # has its own, unrelated one, which is exactly why this must be scoped).
+    test "the hook references prefers-reduced-motion" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      assert hook =~ "prefers-reduced-motion",
+             "The hook must hold a window.matchMedia(\"(prefers-reduced-motion: reduce)\") " <>
+               "reference, mirroring .AboutCarousel's own reduced-motion guard in this same file."
+    end
+
+    # Green from the start by design (permanent guard, same footer_rhythm_
+    # test.exs pattern): D-01 requires one mechanic on desktop and mobile
+    # with no breakpoint branching, so this must never regress, in RED or
+    # GREEN.
+    test "the hook body contains no viewport-width branch (D-01)" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      refute hook =~ "innerWidth",
+             "The hook must not branch on window.innerWidth — D-01 forbids breakpoint branching."
+
+      refute hook =~ "matchMedia(\"(min-width",
+             "The hook must not use a min-width matchMedia query — D-01 forbids breakpoint " <>
+               "branching in this hook (prefers-reduced-motion is not a viewport breakpoint)."
+
+      refute hook =~ "matchMedia(\"(max-width",
+             "The hook must not use a max-width matchMedia query — D-01 forbids breakpoint " <>
+               "branching in this hook."
+    end
+
+    # Green from the start by design, same reasoning as above: D-02 is
+    # satisfied by geometry, never by route/fragment inspection.
+    test "the hook body contains no URL/pathname inspection (D-02)" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      refute hook =~ "location.hash",
+             "The hook must not read location.hash — D-02 is satisfied by comparing live rects, " <>
+               "never by inspecting the URL."
+
+      refute hook =~ "location.pathname",
+             "The hook must not read location.pathname."
+
+      refute hook =~ "window.location",
+             "The hook must not reference window.location at all."
     end
   end
 end
