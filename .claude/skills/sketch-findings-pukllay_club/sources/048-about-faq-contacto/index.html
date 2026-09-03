@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>048 — FAQ band color + Contacto rebuild</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 48px; }
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap;
+  }
+  .variant-tab {
+    font-family: var(--font-sans); font-size: var(--text-sm);
+    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
+    background: var(--color-surface); color: var(--color-text); cursor: pointer;
+  }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  .variant { display: none; }
+  .variant.active { display: block; }
+  .note {
+    max-width: 700px; margin: 24px auto; padding: 12px 16px;
+    background: var(--color-accent-bg); color: var(--color-accent-text);
+    border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
+  }
+  .flag {
+    max-width: 700px; margin: 0 auto 24px; padding: 10px 16px;
+    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg));
+    color: var(--color-danger); border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
+  }
+
+  /* Two width caps side by side, to show the bug + fix at once. */
+  .shell-wide { max-width: 80rem; margin: 0 auto; padding: 0 24px; border: 1px dashed color-mix(in srgb, var(--color-primary) 40%, transparent); }
+  .shell-narrow { max-width: 64rem; margin: 0 auto; padding: 0 24px; }
+  .width-label { text-align: center; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); padding: 8px 0; }
+
+  /* 72px = the same 4.5rem the shipped .pk-band already uses everywhere
+     else — matching it, not inventing a new value, is what keeps rhythm. */
+  .faq-band { padding: 72px 0; margin-bottom: 40px; border-radius: var(--radius-lg); }
+  .faq-band h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0 0 20px; }
+  .faq-list { display: flex; flex-direction: column; gap: 20px; max-width: 42rem; }
+  .faq-item { border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); padding-top: 14px; }
+  .faq-item dt { font-size: var(--text-lg); font-weight: 600; margin: 0 0 4px; }
+  .faq-item dd { font-size: var(--text-lg); margin: 0; }
+
+  /* Official band color — unchanged from the live --color-primary value. */
+  .tone-current { background: var(--color-primary); color: var(--color-primary-content); }
+
+  /* ---- Contacto rebuild: ONE card, not two mismatched boxes — the map
+     is a row inside the same card, matching the codebase's own
+     "proximity/shared edge, no separate floating pieces" precedent
+     (sketch 037's masthead-grouping winner). ---- */
+  .contacto-card {
+    max-width: 32rem; margin: 40px auto; padding: 24px; border-radius: var(--radius-lg);
+    background: var(--color-surface); display: flex; flex-direction: column; gap: 16px;
+  }
+  .contacto-card h3 { font-family: var(--font-display); font-size: 1.25rem; margin: 0; }
+  .contact-links { display: flex; flex-direction: column; gap: 10px; }
+  .contact-link {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-md);
+    background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-text);
+    text-decoration: none; font-size: var(--text-base); transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .contact-link:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .contact-link svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  .map-thumb {
+    aspect-ratio: 21/9; border-radius: var(--radius-md); position: relative; overflow: hidden;
+    background: linear-gradient(135deg, var(--color-surface-2), var(--color-bg));
+    display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+  .map-thumb:hover .map-pin { transform: translateY(-4px); }
+  .map-pin { width: 26px; height: 26px; color: var(--color-primary); transition: transform var(--duration-fast) var(--ease-standard); }
+  .map-thumb-label {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 12px;
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent); font-size: var(--text-xs);
+  }
+
+  h3.section-title { font-family: var(--font-sans); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); text-align: center; margin: 40px 0 8px; }
+
+  .mobile-frame { width: 375px; margin: 0 auto; border: 1px solid var(--color-border); border-radius: 20px; padding: 20px 16px; background: var(--color-bg); }
+  .mobile-frame .faq-band, .mobile-frame .contacto-card { margin: 0; max-width: none; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('width', event)">1: Width bug + fix</button>
+  <button class="variant-tab" onclick="showVariant('tone', event)">2: FAQ color treatment</button>
+  <button class="variant-tab" onclick="showVariant('contacto', event)">3: Contacto + Maps</button>
+  <button class="variant-tab" onclick="showVariant('mobile', event)">4: Mobile</button>
+</div>
+
+<!-- ============ 1: WIDTH BUG DEMO ============ -->
+<div id="width" class="variant active">
+  <div class="note">Left: today's `.pk-band-inner` (64rem/1024px) — narrower than the shell. Right: `.pk-band-inner` widened to match the shell's own `max-w-7xl` (80rem/1280px), the dashed line marking the shell's true edge. This is a shared-class fix — it corrects EVERY band on the page (Qué hacemos, FAQ, Juntadas/Contacto, closing CTA), not FAQ alone.</div>
+
+  <div class="width-label">Today (64rem cap) — narrower than the shell</div>
+  <div class="shell-narrow">
+    <section class="faq-band tone-current">
+      <div style="padding-left:24px">
+        <h2>Lo que todos preguntan</h2>
+        <dl class="faq-list">
+          <div class="faq-item"><dt>¿Cuándo y dónde?</dt><dd>Todos los sábados desde las 16 hs, en el Club de Emprendedores, San Salvador de Jujuy.</dd></div>
+        </dl>
+      </div>
+    </section>
+  </div>
+
+  <div class="width-label">Fixed (80rem cap, matches shell) — dashed line = shell edge</div>
+  <div class="shell-wide">
+    <section class="faq-band tone-current">
+      <div style="padding-left:24px">
+        <h2>Lo que todos preguntan</h2>
+        <dl class="faq-list">
+          <div class="faq-item"><dt>¿Cuándo y dónde?</dt><dd>Todos los sábados desde las 16 hs, en el Club de Emprendedores, San Salvador de Jujuy.</dd></div>
+        </dl>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ============ 2: FAQ COLOR TREATMENT ============ -->
+<div id="tone" class="variant">
+  <div class="note">Scoped to the About page only (site-wide rollout deferred). All three already use `--color-primary` — the question is whether the FLAT current treatment is the "default color" feel the developer wants, or something richer/more signature. Pricing FAQ answer updated with the real numbers, reframed.</div>
+
+  <h3 class="section-title">A: Current (flat) ★ Selected — official color, no change from the live --color-primary value</h3>
+  <div class="shell-wide">
+    <section class="faq-band tone-current" style="padding-left:24px">
+      <h2>Lo que todos preguntan</h2>
+      <dl class="faq-list">
+        <div class="faq-item"><dt>¿Cuánto cuesta?</dt><dd>Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para vos.</dd></div>
+        <div class="faq-item"><dt>¿Tengo que saber jugar?</dt><dd>No. La mayoría de los juegos se aprenden en diez minutos y siempre hay alguien para explicarte.</dd></div>
+      </dl>
+    </section>
+  </div>
+</div>
+
+<!-- ============ 3: CONTACTO + MAPS ============ -->
+<div id="contacto" class="variant">
+  <div class="flag">⚠ No real static map image available offline — the placeholder below stands in. Producing a real one is either a manual screenshot saved as an asset, or the Google Static Maps API (needs an API key + has usage cost) — implementation detail, not a sketch-level decision.</div>
+  <div class="note">Rebuilt using the same icon/link pattern the footer's `social_links/1` already ships (real SVGs, real `ClubLinks` URLs) — just laid out as a readable card instead of bare icons, plus a map thumbnail linking out to Google Maps.</div>
+
+  <div class="shell-wide">
+    <div class="contacto-card">
+      <h3>Contacto</h3>
+      <div class="contact-links">
+        <a class="contact-link" href="#" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"/></svg>
+          Grupo de WhatsApp
+        </a>
+        <a class="contact-link" href="#" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none"/></svg>
+          Instagram
+        </a>
+      </div>
+      <a class="map-thumb" href="#" target="_blank" rel="noopener noreferrer">
+        <svg class="map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        <span class="map-thumb-label">Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 4: MOBILE ============ -->
+<div id="mobile" class="variant">
+  <div class="note">Same content, 375px width — FAQ band (winning tone applied once picked) and the merged Contacto card stacked as they'd appear on a phone.</div>
+
+  <div class="mobile-frame" style="margin-bottom:24px">
+    <section class="faq-band tone-current" style="padding:32px 20px;border-radius:var(--radius-lg)">
+      <h2 style="font-size:1.25rem">Lo que todos preguntan</h2>
+      <dl class="faq-list" style="gap:16px">
+        <div class="faq-item"><dt style="font-size:var(--text-base)">¿Cuánto cuesta?</dt><dd style="font-size:var(--text-base)">Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para vos.</dd></div>
+        <div class="faq-item"><dt style="font-size:var(--text-base)">¿Tengo que saber jugar?</dt><dd style="font-size:var(--text-base)">No. La mayoría de los juegos se aprenden en diez minutos y siempre hay alguien para explicarte.</dd></div>
+      </dl>
+    </section>
+  </div>
+
+  <div class="mobile-frame">
+    <div class="contacto-card" style="padding:20px">
+      <h3>Contacto</h3>
+      <div class="contact-links">
+        <a class="contact-link" href="#" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"/></svg>
+          Grupo de WhatsApp
+        </a>
+        <a class="contact-link" href="#" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none"/></svg>
+          Instagram
+        </a>
+      </div>
+      <a class="map-thumb" href="#" target="_blank" rel="noopener noreferrer">
+        <svg class="map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        <span class="map-thumb-label">Cómo llegar ↗</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+function showVariant(id, evt) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (evt) evt.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>

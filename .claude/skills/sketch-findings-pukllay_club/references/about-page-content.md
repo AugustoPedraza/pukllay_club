@@ -75,8 +75,134 @@ width specifically, not just mobile.
 - Don't build the FAQ as a full accordion component before there's enough Q&A volume to justify
   hiding content by default on an explanatory page.
 - Don't treat the band visuals as final — they're gradient placeholders standing in for real club
-  photography that doesn't exist yet.
+  photography that doesn't exist yet (still true as of sketches 045-049 below — no real photos
+  have been sourced).
+
+---
+
+## 2026-09-02 update (sketches 045-049) — real-page revision, not greenfield
+
+Sketch 004 above designed the About page before it existed. Sketches 011 (full-shell-composition)
+and 01.1-02-PLAN.md then shipped the real version — the alternating-bands/carousel structure
+survived, but the FAQ became a dark `pk-band-dark` band (not the plain closing band 004
+described), and the section set changed. This round (045-049) is a revision of that SHIPPED page
+based on real developer feedback, not a continuation of 004's original exploration.
+
+### Header + isologo entrance (045)
+
+The About page's header behaves differently from the rest of the site: it starts fully hidden
+(transparent, `pointer-events: none`) instead of the always-visible `is-scrolled`-tinted header
+every other page uses. The brand isologo (`priv/static/images/isologo-*.png`, already shipped)
+auto-fades-in at 180px in the hero **on a timer** (~500ms after load, independent of scroll) —
+never scroll-triggered — then rides with the page exactly like normal content (1:1, no easing)
+until it's about to scroll behind where the header sits. At that precise geometric crossing point
+it snap-morphs into the header's small (32px) brand-slot mark, revealing the header's wordmark +
+a "Volver a la ludoteca" link. Scrolling back up reverses at the same crossing point, no repeat
+of the one-time entrance glow.
+
+**Implementation mechanic** (real code, not sketch-only): don't drive this off a percentage-of-
+viewport-height scroll threshold — that felt arbitrary and "jumpy." Instead compare the mark's
+natural position (read live from the hero section's own `getBoundingClientRect()`, which already
+tracks scroll 1:1 with no extra machinery) against the header's target rect on every scroll frame
+(rAF-throttled). Below the crossing point: position the mark directly from the natural rect, no
+CSS transition (must track pixel-for-pixel). At the crossing point: the ONE eased transition,
+both directions.
+
+**Real bug hit and fixed during sketching:** the first attempt created one `<img>` mark per size
+variant, all living outside their hidden tab containers — inactive variants computed position
+against a `display:none` (zero-size) hero, producing a stray fragment plus overlapping glow
+animations. Fixed by using a single reused mark element, reconfigured per active state, never
+multiple marks coexisting.
+
+### Photo rail + mobile hero (046)
+
+Auto-advance the photo rail (4s interval) by extending the *existing* shipped `.AboutCarousel`
+scroll-snap mechanism with a timer — reuse its pause-on-hover/touch/focus logic rather than
+building a second carousel implementation. Rejected: a continuous non-stop "drift" marquee (no
+discrete slides, no dots) and a Ken-Burns zoom-while-active variant — both added complexity the
+"subtle" brief didn't ask for.
+
+Mobile hero tagline replaced: "Nos juntamos todos los sábados a jugar." → **"Volvé a jugar. Volvé
+a encontrarte."** (echoes the "Conectá jugando" headline's theme; earlier drafts mentioning
+"sábados" explicitly were rejected as redundant with the FAQ's own day/time answer, and drafts
+aiming for "excited/salesy" were rejected in favor of understated-inspirational).
+
+**No real club photography exists yet** — carried forward from 004's original flag, still true.
+
+### Content-band copy (047) — includes a real factual bug fix
+
+The developer wrote the final "Qué hacemos" / "Nuestra historia" / "Juntadas" copy directly rather
+than picking between AI drafts — it's meaningfully stronger than anything drafted in this session
+(concrete: "De más de 400 juegos elegimos la selección del día"; and it surfaces a fact neither AI
+round had — the club represents the province at national events, which is *why* it draws players
+from across Argentina and international travelers).
+
+**Real bug found and must be fixed on implementation:** the shipped About page's "Nuestra
+historia" band says "Empezamos en 2024" — this is factually wrong. The real origin is **April
+2021** (5+ years running as of 2026), with the club representing the province at national events
+and hosting travelers from France, Spain, and Portugal. This correction is independent of
+everything else in this round — flag it even if the rest of the copy rewrite is deferred.
+
+Also: don't assume the reader knows what a "ludoteca" is (plain-Spanish teaching principle, same
+one CATALOG's weight-band/mechanic-chip copy already follows) — describe the concept ("una
+selección curada," not "the whole ludoteca") rather than relying on the word alone. "Qué hacemos"
+now links into the "Juntadas" section below it.
+
+### FAQ band + Contacto rebuild (048) — a real shared-class width bug, not FAQ-specific
+
+**The FAQ band's purple stays exactly as shipped** (`background: var(--color-primary); color:
+var(--color-primary-content)`) — confirmed as the official color after comparing against a
+deeper-gradient and a soft-bleed-edge alternative, both rejected. This was scoped to the About
+page only; a site-wide rollout of this purple as a more prominent brand color was explicitly
+deferred, not decided against.
+
+**Real root-cause bug: `.pk-band-inner`'s `max-width: 64rem` is narrower than the shell's own
+`max-w-7xl` (80rem)** used by the header, footer, and the hero (which sets its own width and
+never goes through `.pk-band-inner`). This affects **every** content band on the page — Qué
+hacemos/Historia, FAQ, Juntadas/Contacto, the closing band — not just the FAQ band the developer
+originally flagged. Fix: widen the shared `.pk-band-inner` class to 80rem; this corrects every
+band in one change, not a per-band patch.
+
+**Corrected pricing FAQ answer** (was wrong — said free, actually $5.000 reserved / $7.000 at the
+door): "Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para
+vos."
+
+**Contacto rebuilt as ONE merged card**, not a two-column grid of mismatched boxes (a card next to
+a separately-sized map thumbnail broke the page's rhythm) — links + map thumbnail live inside the
+same card, same "shared edge, no floating pieces" precedent detail-page-layout.md's masthead-
+grouping finding (sketch 037) already established. Icons/links reuse the exact pattern the
+footer's shipped `social_links/1` already ships (real SVGs, real `ClubLinks` URLs) — don't
+reinvent them for this card. Map thumbnail is a static image linking out to Google Maps (not an
+embedded iframe, not a bare text link) — **no real map image exists yet**; sourcing one (manual
+screenshot vs. Google Static Maps API, which needs a key and has usage cost) is implementation
+detail, not resolved here.
+
+**Vertical rhythm:** match the shipped `.pk-band`'s real `4.5rem` (72px) padding on every color
+treatment — an early draft used an invented 56px value and felt inconsistent once compared
+side-by-side with the rest of the page.
+
+### Closing CTA de-duplication (049)
+
+The closing "Nos vemos el sábado" band repeated WhatsApp + Instagram buttons that the rebuilt
+Contacto card (048) directly above it already owns — that repetition, not the band's existence,
+was the real "kills the rhythm" complaint. Fix: replace the button pair with the single "Sumate"
+CTA already used in the hero (same brand element reused, not a new one).
+
+**Real bug found and fixed:** on the mobile sticky CTA bar, the button is stretched to
+`width: 100%`, but its class only set `display: inline-flex; align-items: center` — with no
+`justify-content: center`, an `inline-flex` box left-aligns its content by default, so the label
+would sit at the left edge of the full-width pill instead of centered. Fix: add
+`justify-content: center` — this makes no visual difference on desktop (already centered via the
+parent's `text-align: center`, since `inline-flex` is still an inline-level box for outer layout)
+but is required for the full-width mobile case.
+
+**Confirmed already correct, no change needed:** the mobile CTA bar (`.pk-about-cta-bar`) is
+already `position: fixed` with no scroll-hide/retract logic — genuinely always-visible today.
+Full mobile scroll length (hero → photos → Qué hacemos/Historia → FAQ → Contacto → closing) was
+walked section-by-section and confirmed reasonable — no section needs trimming for density.
 
 ## Origin
-Synthesized from sketch: 004
-Source file available in: sources/004-about-page/
+Synthesized from sketches: 004, 045, 046, 047, 048, 049
+Source files available in: sources/004-about-page/, sources/045-about-header-scroll-isologo/,
+sources/046-about-photo-rail-mobile-hero/, sources/047-about-content-bands/,
+sources/048-about-faq-contacto/, sources/049-about-closing-cta-mobile/

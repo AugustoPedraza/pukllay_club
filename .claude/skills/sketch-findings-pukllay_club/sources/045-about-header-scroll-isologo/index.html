@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>045 — About header scroll + isologo (Round 2, fixed)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 48px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-sans);
+  }
+  .variant-tab {
+    font-family: var(--font-sans); font-size: var(--text-sm);
+    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
+    background: var(--color-surface); color: var(--color-text); cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  .variant-tab:hover { border-color: var(--color-primary); }
+
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  .note {
+    max-width: 680px; margin: 0 auto 24px; padding: 12px 16px;
+    background: var(--color-accent-bg); color: var(--color-accent-text);
+    border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
+  }
+
+  .fake-header {
+    position: fixed; top: 48px; left: 0; right: 0; z-index: 50; height: 65px;
+    background: transparent; box-shadow: none; pointer-events: none;
+    transition: background var(--duration-base) var(--ease-standard),
+                box-shadow var(--duration-base) var(--ease-standard);
+  }
+  .fake-header.is-revealed { pointer-events: auto; }
+  .fake-header.is-tinted {
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(6px);
+  }
+  .fake-header-inner {
+    position: relative; width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand-slot { display: flex; align-items: center; gap: 8px; width: 200px; }
+  .brand-text {
+    display: flex; flex-direction: column; line-height: 1;
+    opacity: 0; transform: translateX(-6px);
+    transition: opacity var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                transform var(--duration-base) var(--ease-out-soft) var(--duration-fast);
+  }
+  .is-docked .brand-text { opacity: 1; transform: translateX(0); }
+  .brand-name { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  .brand-tag { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+
+  .back-ludoteca {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--text-sm); color: var(--color-text-muted); text-decoration: none;
+    padding: 6px 10px; border-radius: var(--radius-full); border: 1px solid transparent;
+    opacity: 0; transform: translateX(6px);
+    transition: opacity var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                transform var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                color var(--duration-fast) var(--ease-standard),
+                border-color var(--duration-fast) var(--ease-standard),
+                background var(--duration-fast) var(--ease-standard);
+  }
+  .is-docked .back-ludoteca { opacity: 1; transform: translateX(0); }
+  .back-ludoteca:hover { color: var(--color-primary); border-color: var(--color-border); background: var(--color-surface); }
+  .back-ludoteca svg { width: 16px; height: 16px; }
+
+  .hero {
+    min-height: 92vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 16px; position: relative;
+  }
+  .hero-eyebrow { font-size: var(--text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted); }
+  .hero h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 8vw, 4.5rem); margin: 0; letter-spacing: 0.02em; }
+  .hero p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 32rem; margin: 0; }
+  .hero-cta {
+    margin-top: 8px; display: inline-flex; align-items: center; padding: 12px 28px;
+    border-radius: var(--radius-full); border: 1.5px solid var(--color-primary); color: var(--color-primary);
+    font-size: var(--text-base); font-weight: 600; text-decoration: none;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .hero-cta:hover { background: var(--color-primary); color: var(--color-primary-content); }
+
+  /* Single morphing mark, reused across tabs — top/left/width/height are set
+     via JS inline styles, never CSS, so there is exactly one source of truth
+     for its position at any moment. */
+  #morph-mark {
+    position: fixed; z-index: 60; top: 0; left: 0; width: 0; height: 0;
+    opacity: 0; transform: scale(0.75);
+    transition: opacity var(--duration-slow) var(--ease-out-soft),
+                transform var(--duration-slow) var(--ease-out-soft),
+                top var(--duration-slow) var(--ease-out-soft),
+                left var(--duration-slow) var(--ease-out-soft),
+                width var(--duration-slow) var(--ease-out-soft),
+                height var(--duration-slow) var(--ease-out-soft),
+                filter var(--duration-slow) var(--ease-out-soft);
+  }
+  #morph-mark.is-entered { opacity: 1; transform: scale(1); }
+  #morph-mark.is-first-play { animation: mark-glow 1600ms var(--ease-out-soft) 1; }
+  @keyframes mark-glow {
+    0% { filter: drop-shadow(0 0 0 transparent); }
+    50% { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--color-primary) 60%, transparent)); }
+    100% { filter: drop-shadow(0 0 0 transparent); }
+  }
+  #morph-mark.no-anim { transition: none !important; }
+
+  .scroll-filler { height: 160vh; padding: 48px 24px; }
+  .scroll-filler .band { max-width: 640px; margin: 0 auto 24px; padding: 32px; background: var(--color-surface); border-radius: var(--radius-lg); }
+  .scroll-hint { text-align: center; color: var(--color-text-muted); font-size: var(--text-sm); padding: 24px; }
+
+  [data-tools] {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,0.7); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.4;
+    transition: opacity 0.2s; display: flex; gap: 8px; align-items: center;
+  }
+  [data-tools]:hover { opacity: 1; }
+  [data-tools] select, [data-tools] button { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab" onclick="showVariant('a1', event)">A1: 96px hero mark</button>
+  <button class="variant-tab" onclick="showVariant('a2', event)">A2: 140px hero mark</button>
+  <button class="variant-tab active" onclick="showVariant('a3', event)">A3: 180px hero mark ★</button>
+</div>
+
+<div id="a1" class="variant">
+  <div class="note">Page loads with the isologo hidden. After a short delay it fades+grows into place at 96px (auto, not scroll-triggered). It then rides WITH the page as you scroll — real 1:1 tracking, full size — until it's about to go behind the header, where it snaps into the header's compact brand slot. Scroll back up and it un-docks and rejoins the content at the same crossing point.</div>
+  <header class="fake-header" data-header>
+    <div class="fake-header-inner">
+      <div class="brand-slot">
+        <span class="brand-text">
+          <span class="brand-name">Pukllay Club</span>
+          <span class="brand-tag">Juegos de mesa modernos</span>
+        </span>
+      </div>
+      <a class="back-ludoteca" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Volver a la ludoteca
+      </a>
+    </div>
+  </header>
+  <section class="hero" data-hero>
+    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+    <h1>Conectá jugando</h1>
+    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+    <a class="hero-cta" href="#">Sumate</a>
+  </section>
+  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
+  <div class="scroll-filler">
+    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
+    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
+  </div>
+</div>
+
+<div id="a2" class="variant">
+  <div class="note">Same live scroll-tracking mechanic as A1, hero mark at 140px.</div>
+  <header class="fake-header" data-header>
+    <div class="fake-header-inner">
+      <div class="brand-slot">
+        <span class="brand-text">
+          <span class="brand-name">Pukllay Club</span>
+          <span class="brand-tag">Juegos de mesa modernos</span>
+        </span>
+      </div>
+      <a class="back-ludoteca" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Volver a la ludoteca
+      </a>
+    </div>
+  </header>
+  <section class="hero" data-hero>
+    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+    <h1>Conectá jugando</h1>
+    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+    <a class="hero-cta" href="#">Sumate</a>
+  </section>
+  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
+  <div class="scroll-filler">
+    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
+    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
+  </div>
+</div>
+
+<div id="a3" class="variant active">
+  <div class="note">Same live scroll-tracking mechanic as A1, hero mark at 180px (current pick).</div>
+  <header class="fake-header" data-header>
+    <div class="fake-header-inner">
+      <div class="brand-slot">
+        <span class="brand-text">
+          <span class="brand-name">Pukllay Club</span>
+          <span class="brand-tag">Juegos de mesa modernos</span>
+        </span>
+      </div>
+      <a class="back-ludoteca" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Volver a la ludoteca
+      </a>
+    </div>
+  </header>
+  <section class="hero" data-hero>
+    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+    <h1>Conectá jugando</h1>
+    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+    <a class="hero-cta" href="#">Sumate</a>
+  </section>
+  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
+  <div class="scroll-filler">
+    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
+    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
+  </div>
+</div>
+
+<img id="morph-mark" src="../../../priv/static/images/isologo-light.png" alt="">
+
+<div data-tools>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+  <button onclick="setViewport(375)">📱</button>
+  <button onclick="setViewport(768)">📟</button>
+  <button onclick="setViewport(0)">🖥️</button>
+</div>
+
+<script>
+const HERO_SIZES = { a1: 96, a2: 140, a3: 180 };
+const DOCK_SIZE = 32;
+
+let currentId = 'a3';
+let docked = false;
+let hasEntered = false;
+let entranceTimer = null;
+let ticking = false;
+
+const mark = document.getElementById('morph-mark');
+
+function heroEl() { return document.querySelector('#' + currentId + ' [data-hero]'); }
+function headerEl() { return document.querySelector('#' + currentId + ' [data-header]'); }
+
+// The hero section's own top edge, live from getBoundingClientRect(), IS the
+// mark's "natural" scroll-tracked position — it needs no separate in-flow
+// placeholder because the hero itself already moves 1:1 with the page.
+function naturalRect() {
+  const size = HERO_SIZES[currentId];
+  const r = heroEl().getBoundingClientRect();
+  return { top: r.top + 8, left: r.left + r.width / 2 - size / 2, size };
+}
+function dockRect() {
+  const slot = headerEl().querySelector('.brand-slot');
+  const r = slot.getBoundingClientRect();
+  return { top: r.top + (r.height - DOCK_SIZE) / 2, left: r.left, size: DOCK_SIZE };
+}
+function place(rect, animate) {
+  if (!animate) mark.classList.add('no-anim');
+  mark.style.top = rect.top + 'px';
+  mark.style.left = rect.left + 'px';
+  mark.style.width = rect.size + 'px';
+  mark.style.height = rect.size + 'px';
+  if (!animate) {
+    void mark.offsetWidth; // force reflow before re-enabling transitions
+    mark.classList.remove('no-anim');
+  }
+}
+
+function updateHeaderChrome() {
+  document.querySelectorAll('.fake-header').forEach((h) => {
+    h.classList.remove('is-revealed', 'is-tinted', 'is-docked');
+  });
+  if (docked) headerEl().classList.add('is-revealed', 'is-tinted', 'is-docked');
+}
+
+// Called on every scroll frame once the mark has entered. Compares where the
+// mark would naturally sit (riding with the hero) against where the header
+// wants it (dockRect). Crossing that line is the ONLY moment a transition
+// plays — every other frame is live 1:1 tracking with no easing, so the mark
+// genuinely scrolls with the content instead of animating continuously.
+function syncPosition() {
+  const natural = naturalRect();
+  const dock = dockRect();
+  const shouldDock = natural.top <= dock.top;
+
+  if (shouldDock !== docked) {
+    docked = shouldDock;
+    updateHeaderChrome();
+    place(docked ? dock : natural, true); // the one animated "become the header" / "rejoin the page" snap
+  } else if (!docked) {
+    place(natural, false); // live tracking, no easing — moves exactly with scroll
+  }
+  // while docked and still shouldDock, the mark just stays pinned at dock — nothing to update
+}
+
+function activateVariant(id) {
+  clearTimeout(entranceTimer);
+  currentId = id;
+  mark.classList.remove('is-entered', 'is-first-play');
+  hasEntered = false;
+  ticking = false;
+
+  const natural = naturalRect();
+  const dock = dockRect();
+  docked = natural.top <= dock.top;
+  updateHeaderChrome();
+
+  if (docked) {
+    place(dock, false);
+    mark.classList.add('is-entered');
+    hasEntered = true;
+  } else {
+    place(natural, false);
+    entranceTimer = setTimeout(() => {
+      mark.classList.add('is-entered', 'is-first-play');
+      hasEntered = true;
+    }, 500);
+  }
+}
+
+function showVariant(id, evt) {
+  document.querySelectorAll('.variant').forEach((v) => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach((t) => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (evt) evt.target.classList.add('active');
+  activateVariant(id);
+}
+
+function setViewport(px) {
+  document.querySelectorAll('.variant').forEach((v) => {
+    v.style.maxWidth = px ? px + 'px' : 'none';
+    v.style.margin = px ? '0 auto' : '0';
+    v.style.border = px ? '1px solid var(--color-border)' : 'none';
+  });
+  activateVariant(currentId);
+}
+
+window.addEventListener('scroll', () => {
+  if (!hasEntered || ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    syncPosition();
+    ticking = false;
+  });
+}, { passive: true });
+
+window.addEventListener('resize', () => place(docked ? dockRect() : naturalRect(), false));
+
+activateVariant('a3');
+</script>
+
+</body>
+</html>
