@@ -73,6 +73,11 @@ defmodule PukllayClubWeb.AboutLive do
 
                   this.docked = false
                   this.entered = false
+                  // Mirrors .AboutCarousel's own reduced-motion guard in this
+                  // same file. Only the decorative entrance (delay + glow) is
+                  // ever skipped for it — scroll tracking and the crossing-
+                  // point dock always run regardless.
+                  this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
 
                   // Verbatim anchor rect — no derived arithmetic. The anchor
                   // is ordinary in-flow content, so this already tracks
@@ -131,12 +136,54 @@ defmodule PukllayClubWeb.AboutLive do
                   }
                   window.addEventListener("scroll", this.onScroll, {passive: true})
 
-                  // Entrance is a LOAD TIMER, never scroll-triggered.
-                  this.place(this.naturalRect(), false)
-                  this.entranceTimer = setTimeout(() => {
-                    this.mark.classList.add("is-entered", "is-first-play")
+                  // D-02 first paint: the SAME rect comparison syncPosition()
+                  // uses on every scroll frame, run once here BEFORE starting
+                  // the entrance timer — never a route/fragment/server check.
+                  // A visitor landing below the crossing point (e.g. a
+                  // #contacto deep link from the footer) sees the header
+                  // already docked, with no jump and no replayed entrance.
+                  const natural0 = this.naturalRect()
+                  const dock0 = this.dockRect()
+                  this.docked = natural0.top <= dock0.top
+
+                  if (this.docked) {
+                    this.header.classList.add("is-docked")
+                    this.place(dock0, false)
+                    this.mark.classList.add("is-entered")
                     this.entered = true
-                  }, 500)
+                  } else {
+                    this.place(natural0, false)
+                    const startEntrance = () => {
+                      this.mark.classList.add("is-entered")
+                      // The glow is decorative, dropped under reduced motion;
+                      // the entrance itself (is-entered) still applies so the
+                      // mark becomes visible either way.
+                      if (!this.reducedMotion.matches) this.mark.classList.add("is-first-play")
+                      this.entered = true
+                    }
+                    // Entrance is a LOAD TIMER, never scroll-triggered — under
+                    // reduced motion the delay itself is skipped too, not
+                    // just the glow.
+                    if (this.reducedMotion.matches) {
+                      startEntrance()
+                    } else {
+                      this.entranceTimer = setTimeout(startEntrance, 500)
+                    }
+                  }
+
+                  // Both naturalRect() and dockRect() are viewport-relative,
+                  // and the header's own height is republished by
+                  // .CatalogNav's ResizeObserver — a resize invalidates both.
+                  // No animation on a resize snap, and syncPosition() after
+                  // it so a resize that crosses the threshold settles into
+                  // the right state. D-01: no viewport-width branch anywhere
+                  // in this hook — this listener reacts to the geometry a
+                  // resize changed, it never reads the new width itself.
+                  this.onResize = () => {
+                    this.place(this.docked ? this.dockRect() : this.naturalRect(), false)
+                    this.syncPosition()
+                  }
+                  window.addEventListener("resize", this.onResize)
                 } catch (e) {
                   console.error("AboutHeaderMorph: mount block failed to wire", e)
                 }
@@ -145,6 +192,7 @@ defmodule PukllayClubWeb.AboutLive do
                 try {
                   clearTimeout(this.entranceTimer)
                   window.removeEventListener("scroll", this.onScroll)
+                  window.removeEventListener("resize", this.onResize)
                   // #app-header is rendered by the shared layout and survives
                   // LiveView navigation — state this hook adds must be state
                   // this hook removes, or every subsequent page inherits a
