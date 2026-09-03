@@ -27,6 +27,23 @@ defmodule PukllayClubWeb.AboutLiveTest do
       end
     end
 
+    test "hero renders both the mobile (sm:hidden) and desktop (hidden sm:block) taglines (sketch 046, Pitfall 6)",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      assert html =~ "Volvé a jugar. Volvé a encontrarte."
+
+      assert html =~
+               "Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica."
+
+      doc = LazyHTML.from_document(html)
+      mobile_html = doc |> LazyHTML.query("p.sm\\:hidden") |> LazyHTML.to_html()
+      desktop_html = doc |> LazyHTML.query("p.hidden.sm\\:block") |> LazyHTML.to_html()
+
+      assert mobile_html =~ "Volvé a jugar. Volvé a encontrarte."
+      assert desktop_html =~ "Nos juntamos todos los sábados a jugar"
+    end
+
     test "both routes render the shared footer shell", %{conn: conn} do
       {:ok, _view, club_html} = live(conn, ~p"/club")
       {:ok, _view, quienes_html} = live(conn, ~p"/quienes-somos")
