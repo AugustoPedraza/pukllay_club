@@ -124,7 +124,11 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert html =~ "¿Cuándo y dónde?"
       assert html =~ "Todos los sábados desde las 16 hs, en el Club de Emprendedores, San Salvador de Jujuy."
       assert html =~ "¿Cuánto cuesta?"
-      assert html =~ "Nada. La entrada es libre y los juegos los ponemos nosotros."
+
+      assert html =~
+               "Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para vos."
+
+      refute html =~ "Nada. La entrada es libre y los juegos los ponemos nosotros."
       assert html =~ "¿Tengo que saber jugar?"
 
       assert html =~
@@ -132,6 +136,14 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       assert html =~ "¿Puedo ir solo?"
       assert html =~ "Sí, mucha gente viene sola. Te sumamos a una mesa apenas llegás."
+
+      dt_count =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#faq dt")
+        |> Enum.count()
+
+      assert dt_count == 4
     end
 
     test "renders the 'Qué hacemos' and 'Nuestra historia' paragraphs verbatim", %{conn: conn} do
@@ -140,12 +152,30 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert html =~ "Qué hacemos"
 
       assert html =~
-               "Llevamos nuestra ludoteca, armamos las mesas y enseñamos las reglas. Juegos de mesa modernos, para familias, grupos de amigos y gente que viene sola."
+               "De más de 400 juegos elegimos la selección del día: esa es nuestra parte. La tuya es disfrutar."
 
       assert html =~ "Nuestra historia"
 
-      assert html =~
+      assert html =~ "Todo empezó en abril de 2021"
+      assert html =~ "Más de cinco años después nos sigue emocionando lo mismo"
+
+      refute html =~
                "Empezamos en 2024 con una mesa y unos pocos juegos. Hoy somos una comunidad que se encuentra cada semana en San Salvador de Jujuy. Pukllay significa jugar en quechua."
+    end
+
+    test "the 'Qué hacemos' jump link resolves to a live #juntadas element, and Juntadas carries the new copy",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      assert html =~ ~s(href="#juntadas")
+      assert html =~ ~s(id="juntadas")
+      assert html =~ "Dónde y cuándo jugamos"
+
+      assert html =~
+               "Nos juntamos los sábados en el Club de Emprendedores, San Salvador de Jujuy. Los juegos los llevamos nosotros; vos traé las ganas."
+
+      refute html =~
+               "Nos juntamos todos los sábados desde las 16 hs en el Club de Emprendedores, San Salvador de Jujuy. La entrada es libre y los juegos los ponemos nosotros."
     end
 
     test "renders the closing CTA heading, both button labels and the meta line", %{conn: conn} do

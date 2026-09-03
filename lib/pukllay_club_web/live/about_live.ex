@@ -212,13 +212,16 @@ defmodule PukllayClubWeb.AboutLive do
           <div>
             <h2 class="font-display text-2xl">Qué hacemos</h2>
             <p class="text-lg">
-              Llevamos nuestra ludoteca, armamos las mesas y enseñamos las reglas. Juegos de mesa modernos, para familias, grupos de amigos y gente que viene sola.
+              De más de 400 juegos elegimos la selección del día: esa es nuestra parte. La tuya es disfrutar. Si nunca jugaste a un juego de mesa moderno no importa, porque te explicamos las reglas ahí mismo y a los pocos minutos ya estás adentro de la partida, entre risas y gente que recién conocés.
+            </p>
+            <p class="text-lg">
+              <a href="#juntadas">Dónde y cuándo jugamos ↓</a>
             </p>
           </div>
           <div>
             <h2 class="font-display text-2xl">Nuestra historia</h2>
             <p class="text-lg">
-              Empezamos en 2024 con una mesa y unos pocos juegos. Hoy somos una comunidad que se encuentra cada semana en San Salvador de Jujuy. Pukllay significa jugar en quechua.
+              Todo empezó en abril de 2021, la primera vez que abrimos las mesas a la comunidad, y desde entonces no paramos. Como club representamos a la provincia en encuentros nacionales, y así terminamos haciendo jugar a personas de todo el país, y también a viajeros de Francia, España y Portugal que estaban de paso por la ciudad. Más de cinco años después nos sigue emocionando lo mismo: una mesa alcanza para que dos extraños se pongan de acuerdo, se rían y quieran volver a jugar.
             </p>
           </div>
         </div>
@@ -243,7 +246,9 @@ defmodule PukllayClubWeb.AboutLive do
             </div>
             <div class="pk-faq-item">
               <dt class="text-lg font-semibold">¿Cuánto cuesta?</dt>
-              <dd class="text-lg">Nada. La entrada es libre y los juegos los ponemos nosotros.</dd>
+              <dd class="text-lg">
+                Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para vos.
+              </dd>
             </div>
             <div class="pk-faq-item">
               <dt class="text-lg font-semibold">¿Tengo que saber jugar?</dt>
@@ -270,7 +275,7 @@ defmodule PukllayClubWeb.AboutLive do
           <div id="juntadas">
             <h2 class="font-display text-2xl">Juntadas</h2>
             <p class="text-lg">
-              Nos juntamos todos los sábados desde las 16 hs en el Club de Emprendedores, San Salvador de Jujuy. La entrada es libre y los juegos los ponemos nosotros.
+              Nos juntamos los sábados en el Club de Emprendedores, San Salvador de Jujuy. Los juegos los llevamos nosotros; vos traé las ganas.
             </p>
           </div>
           <div id="contacto">
