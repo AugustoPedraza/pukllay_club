@@ -68,7 +68,9 @@ defmodule PukllayClubWeb.AboutLive do
       driven visibility API anywhere here (01.1-RESEARCH.md Pitfall 3: that
       class of API throttles in a backgrounded tab, which would leave the
       design source's own fade-in stuck at opacity 0; that reveal is
-      deliberately not reproduced, D-08 scopes it reference-only). --%>
+      deliberately not reproduced, D-08 scopes it reference-only). Task 1
+      (plan 01.4-04) converted the first slide to a real photo, per D-08/D-09
+      — Task 2 finishes the remaining four and rewrites this comment. --%>
       <section id="fotos" class="pk-band">
         <div class="pk-band-inner pk-gutter">
           <div id="about-carousel" phx-hook=".AboutCarousel">
@@ -146,11 +148,9 @@ defmodule PukllayClubWeb.AboutLive do
               }
             </script>
             <div data-rail class="pk-about-rail">
-              <figure class="pk-about-slide">
+              <figure class="pk-about-slide" data-slide="juego">
                 <div class="pk-about-slide-ph">
-                  <span class="text-primary text-xs uppercase tracking-widest">
-                    foto — mesa llena un sábado
-                  </span>
+                  <img src={~p"/images/about-juego.jpg"} alt="Un juego de mesa en pleno desarrollo, sobre una de las mesas del club" />
                 </div>
               </figure>
               <figure class="pk-about-slide">

@@ -2646,11 +2646,24 @@ body.pk-drawer-open {
   align-items: center;
   justify-content: center;
   text-align: center;
+  overflow: hidden;
   background: repeating-linear-gradient(
     135deg,
     var(--color-base-200) 0 10px,
     var(--color-base-100) 10px 20px
   );
+}
+
+/* Photo rail crop-to-fill (sketch 046, D-08): full-bleed object-fit: cover
+   inside the slide's existing 3:2 box — explicitly NOT .pk-poster-img's
+   letterbox/contain treatment, which exists for official box art where
+   cropping the artwork is wrong. The striped placeholder background above
+   stays as a harmless loading backdrop behind the image. */
+.pk-about-slide-ph img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .pk-about-dots {

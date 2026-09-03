@@ -253,28 +253,22 @@ defmodule PukllayClubWeb.AboutLiveTest do
       refute html =~ ~s(style=")
     end
 
-    test "renders the four-slide placeholder photo rail with dot navigation and no <img> (D-12)",
+    test "renders one real photo slide plus three placeholder slides, dot navigation unchanged (sketch 046, D-08, D-09, Task 1 of 2)",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
-      assert html =~ "foto — mesa llena un sábado"
       assert html =~ "foto — explicando un juego"
       assert html =~ "foto — la ludoteca"
       assert html =~ "foto — la comunidad"
 
-      rail_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-about-rail")
-        |> LazyHTML.to_html()
+      doc = LazyHTML.from_document(html)
+      rail_imgs = LazyHTML.query(doc, ".pk-about-rail img")
 
-      refute rail_html =~ "<img"
+      assert Enum.count(rail_imgs) == 1
+      assert LazyHTML.attribute(rail_imgs, "src") |> List.first() =~ "about-juego.jpg"
+      assert LazyHTML.attribute(rail_imgs, "alt") |> List.first() != ""
 
-      dot_count =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("[data-goto]")
-        |> Enum.count()
+      dot_count = doc |> LazyHTML.query("[data-goto]") |> Enum.count()
 
       assert dot_count == 4
       assert html =~ ~s(aria-label="Foto 1")
