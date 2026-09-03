@@ -124,7 +124,11 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert html =~ "¿Cuándo y dónde?"
       assert html =~ "Todos los sábados desde las 16 hs, en el Club de Emprendedores, San Salvador de Jujuy."
       assert html =~ "¿Cuánto cuesta?"
-      assert html =~ "Nada. La entrada es libre y los juegos los ponemos nosotros."
+
+      assert html =~
+               "Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para vos."
+
+      refute html =~ "Nada. La entrada es libre y los juegos los ponemos nosotros."
       assert html =~ "¿Tengo que saber jugar?"
 
       assert html =~
@@ -132,6 +136,14 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       assert html =~ "¿Puedo ir solo?"
       assert html =~ "Sí, mucha gente viene sola. Te sumamos a una mesa apenas llegás."
+
+      dt_count =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#faq dt")
+        |> Enum.count()
+
+      assert dt_count == 4
     end
 
     test "renders the 'Qué hacemos' and 'Nuestra historia' paragraphs verbatim", %{conn: conn} do

@@ -246,7 +246,9 @@ defmodule PukllayClubWeb.AboutLive do
             </div>
             <div class="pk-faq-item">
               <dt class="text-lg font-semibold">¿Cuánto cuesta?</dt>
-              <dd class="text-lg">Nada. La entrada es libre y los juegos los ponemos nosotros.</dd>
+              <dd class="text-lg">
+                Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para vos.
+              </dd>
             </div>
             <div class="pk-faq-item">
               <dt class="text-lg font-semibold">¿Tengo que saber jugar?</dt>
