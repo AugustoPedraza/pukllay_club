@@ -1,21 +1,23 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 02
-current_phase_name: Natural-Language Spanish Search + Auth
+current_phase: 01.4
+current_phase_name: UI polish pass for About page sketches
 status: planning
-stopped_at: "Completed quick task 260902-glf: Remove the site-wide sticky-footer layout"
-last_updated: "2026-09-02T15:18:56.812Z"
+stopped_at: Phase 01.4 context gathered
+last_updated: "2026-09-03T16:13:55.570Z"
 last_activity: 2026-09-02
 last_activity_desc: Phase 01.3.1 complete, transitioned to Phase 02
-state_head: 0e0690c2890ded4caa5cb92f7405e6883f35bf94
+state_head: 6cbdf300b11b1c9b64f90740dcff0982a64e497b
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 5
   total_plans: 62
   completed_plans: 62
 milestone_name: milestone
 ---
+
+Total Phases: 7
 
 # Project State
 
@@ -25,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 02 — Natural-Language Spanish Search + Auth
+**Current focus:** Phase 01.4 — UI polish pass for About page sketches
 
 ## Current Position
 
-Phase: 02 — Natural-Language Spanish Search + Auth
+Phase: 01.4 — UI polish pass for About page sketches
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-09-02 — Completed quick task 260902-il3: Fix the catalog page's last-shelf-to-footer gap
@@ -274,6 +276,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.2 inserted after Phase 1: Catalog & Detail Navigation Polish — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped (URGENT)
 - Phase 01.3 inserted after Phase 01.2: Game detail page layout needs to be clearer/more scannable and the game information shown needs to be accurate; requested after Phase 01.2's navigation/mechanics polish shipped (URGENT)
 - Phase 01.3.1 inserted after Phase 01.3: Game Image Quality & Multi-Image Gallery (URGENT)
+- Phase 5 added: UI polish pass for About page sketches
+- Phase 01.4 inserted after Phase 1: UI polish pass for About page sketches (URGENT)
 
 ## Deferred Items
 
@@ -285,6 +289,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-02T15:18:56.202Z
-Stopped at: Completed quick task 260902-glf: Remove the site-wide sticky-footer layout
-Resume file: None
+Last session: 2026-09-03T16:13:52.795Z
+Stopped at: Phase 01.4 context gathered
+Resume file: .planning/phases/01.4-ui-polish-pass-for-about-page-sketches/01.4-CONTEXT.md
