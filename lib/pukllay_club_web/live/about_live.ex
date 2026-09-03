@@ -48,7 +48,163 @@ defmodule PukllayClubWeb.AboutLive do
       </:nav_links>
 
       <div class="mx-auto w-full max-w-7xl pk-gutter space-y-6">
-        <section class="space-y-3 py-12 text-center">
+        <%!-- Isologo scroll-morph (sketch 045, D-01/D-02/D-03/D-10): page-owned
+        second colocated hook in this file (alongside .AboutCarousel below),
+        mounted on the hero section as a STATIC phx-hook string literal —
+        layouts.ex:205-215 documents why a dynamic expression here would fail
+        at runtime with an unqualified hook name. Reaches OUTSIDE its own
+        root to #app-header (the same cross-root pattern .CatalogNav already
+        establishes, layouts.ex ~line 295) to hide the header at rest and
+        dock the floating mark into its brand slot at the crossing point —
+        never by adding hook wiring into header_inner/1 or .CatalogNav
+        itself, which is what keeps this About-only per D-10. --%>
+        <section id="about-hero" class="space-y-3 py-12 text-center" phx-hook=".AboutHeaderMorph">
+          <script :type={Phoenix.LiveView.ColocatedHook} name=".AboutHeaderMorph">
+            export default {
+              mounted() {
+                try {
+                  this.header = document.getElementById("app-header")
+                  this.anchor = this.el.querySelector("[data-morph-anchor]")
+                  this.mark = document.getElementById("pk-about-morph-mark")
+                  if (!this.header || !this.anchor || !this.mark) return
+
+                  // Hidden from first paint, not flashed visible then hidden.
+                  this.header.classList.add("pk-header-about-morph")
+
+                  this.docked = false
+                  this.entered = false
+                  // Mirrors .AboutCarousel's own reduced-motion guard in this
+                  // same file. Only the decorative entrance (delay + glow) is
+                  // ever skipped for it — scroll tracking and the crossing-
+                  // point dock always run regardless.
+                  this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
+
+                  // Verbatim anchor rect — no derived arithmetic. The anchor
+                  // is ordinary in-flow content, so this already tracks
+                  // scroll 1:1 with zero extra machinery.
+                  this.naturalRect = () => this.anchor.getBoundingClientRect()
+
+                  // The real element's rect, not a copied/forced square —
+                  // the isologo is 939x1034/939x1035, not square (RESEARCH.md
+                  // Pitfall 4). An opacity:0 element still reports a real
+                  // rect, so suppressing the header's own mark below does
+                  // not break this.
+                  this.dockRect = () => this.header.querySelector(".pk-brand-mark").getBoundingClientRect()
+
+                  // When animate is false: force an instant, untransitioned
+                  // jump (add no-anim, write the rect, force a reflow via
+                  // offsetWidth, then remove no-anim) — otherwise every
+                  // tracking frame animates and the mark lags the page
+                  // instead of riding it pixel for pixel.
+                  this.place = (rect, animate) => {
+                    if (!animate) this.mark.classList.add("no-anim")
+                    this.mark.style.top = rect.top + "px"
+                    this.mark.style.left = rect.left + "px"
+                    this.mark.style.width = rect.width + "px"
+                    this.mark.style.height = rect.height + "px"
+                    if (!animate) {
+                      void this.mark.offsetWidth
+                      this.mark.classList.remove("no-anim")
+                    }
+                  }
+
+                  // The ONE eased move, in both directions, happens only on
+                  // an actual state flip. Live 1:1 tracking (no transition)
+                  // continues every frame while not docked and unchanged;
+                  // once docked and unchanged, this is a no-op.
+                  this.syncPosition = () => {
+                    const natural = this.naturalRect()
+                    const dock = this.dockRect()
+                    const shouldDock = natural.top <= dock.top
+                    if (shouldDock !== this.docked) {
+                      this.docked = shouldDock
+                      this.header.classList.toggle("is-docked", this.docked)
+                      this.place(this.docked ? dock : natural, true)
+                    } else if (!this.docked) {
+                      this.place(natural, false)
+                    }
+                  }
+
+                  this.ticking = false
+                  this.onScroll = () => {
+                    if (!this.entered || this.ticking) return
+                    this.ticking = true
+                    requestAnimationFrame(() => {
+                      this.syncPosition()
+                      this.ticking = false
+                    })
+                  }
+                  window.addEventListener("scroll", this.onScroll, {passive: true})
+
+                  // D-02 first paint: the SAME rect comparison syncPosition()
+                  // uses on every scroll frame, run once here BEFORE starting
+                  // the entrance timer — never a route/fragment/server check.
+                  // A visitor landing below the crossing point (e.g. a
+                  // #contacto deep link from the footer) sees the header
+                  // already docked, with no jump and no replayed entrance.
+                  const natural0 = this.naturalRect()
+                  const dock0 = this.dockRect()
+                  this.docked = natural0.top <= dock0.top
+
+                  if (this.docked) {
+                    this.header.classList.add("is-docked")
+                    this.place(dock0, false)
+                    this.mark.classList.add("is-entered")
+                    this.entered = true
+                  } else {
+                    this.place(natural0, false)
+                    const startEntrance = () => {
+                      this.mark.classList.add("is-entered")
+                      // The glow is decorative, dropped under reduced motion;
+                      // the entrance itself (is-entered) still applies so the
+                      // mark becomes visible either way.
+                      if (!this.reducedMotion.matches) this.mark.classList.add("is-first-play")
+                      this.entered = true
+                    }
+                    // Entrance is a LOAD TIMER, never scroll-triggered — under
+                    // reduced motion the delay itself is skipped too, not
+                    // just the glow.
+                    if (this.reducedMotion.matches) {
+                      startEntrance()
+                    } else {
+                      this.entranceTimer = setTimeout(startEntrance, 500)
+                    }
+                  }
+
+                  // Both naturalRect() and dockRect() are viewport-relative,
+                  // and the header's own height is republished by
+                  // .CatalogNav's ResizeObserver — a resize invalidates both.
+                  // No animation on a resize snap, and syncPosition() after
+                  // it so a resize that crosses the threshold settles into
+                  // the right state. D-01: no viewport-width branch anywhere
+                  // in this hook — this listener reacts to the geometry a
+                  // resize changed, it never reads the new width itself.
+                  this.onResize = () => {
+                    this.place(this.docked ? this.dockRect() : this.naturalRect(), false)
+                    this.syncPosition()
+                  }
+                  window.addEventListener("resize", this.onResize)
+                } catch (e) {
+                  console.error("AboutHeaderMorph: mount block failed to wire", e)
+                }
+              },
+              destroyed() {
+                try {
+                  clearTimeout(this.entranceTimer)
+                  window.removeEventListener("scroll", this.onScroll)
+                  window.removeEventListener("resize", this.onResize)
+                  // #app-header is rendered by the shared layout and survives
+                  // LiveView navigation — state this hook adds must be state
+                  // this hook removes, or every subsequent page inherits a
+                  // permanently hidden header.
+                  this.header?.classList.remove("pk-header-about-morph", "is-docked")
+                } catch (e) {
+                  console.error("AboutHeaderMorph: destroy block failed to wire", e)
+                }
+              }
+            }
+          </script>
+          <div data-morph-anchor class="pk-about-mark-anchor" aria-hidden="true"></div>
           <p class="font-sans text-xs uppercase tracking-widest text-neutral">
             Club de juegos de mesa · Jujuy
           </p>
@@ -396,6 +552,23 @@ defmodule PukllayClubWeb.AboutLive do
       480px) block. --%>
       <div class="pk-about-cta-spacer" aria-hidden="true"></div>
       <div class="pk-about-cta-bar"><Layouts.sumate_cta class="w-full" /></div>
+
+      <%!-- Sketch 045 isologo scroll-morph mark: the SINGLE positioned
+      floating element .AboutHeaderMorph (mounted on the hero section above)
+      places and animates. Its two <img> children are one theme pair —
+      identical dark:hidden/hidden dark:block classes to brand_logo/1's own
+      pair, so CSS (not JS) picks the visible one — never two marks;
+      RESEARCH.md documents a real bug where one <img> per theme variant
+      produced a stray fragment and overlapping glow animations. Position,
+      size and visibility are owned entirely by the hook via inline style +
+      state classes — no Tailwind utility on this markup may also touch
+      those properties (Pitfall 2: an unlayered .pk-* rule always wins that
+      fight silently, and a utility that "does nothing" is a debugging
+      trap). --%>
+      <div id="pk-about-morph-mark" class="pk-about-morph-mark" aria-hidden="true">
+        <img src={~p"/images/isologo-light.png"} class="dark:hidden" alt="" />
+        <img src={~p"/images/isologo-dark.png"} class="hidden dark:block" alt="" />
+      </div>
     </Layouts.app>
     """
   end

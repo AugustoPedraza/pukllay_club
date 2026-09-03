@@ -85,13 +85,18 @@ defmodule PukllayClubWeb.LayoutsTest do
         |> LazyHTML.query("a img")
         |> Enum.map(&LazyHTML.to_html/1)
 
+      # Plan 01.4-05 (sketch 045, D-10) appended a `pk-brand-mark` styling
+      # hook class to both images alongside their theme-variant classes —
+      # the class-attribute assertions below now check containment rather
+      # than an exact string, since "dark:hidden"/"hidden dark:block" are
+      # no longer the ENTIRE class value.
       assert light_img_html =~ "isologo-light.png"
-      assert light_img_html =~ ~s(class="dark:hidden")
+      assert light_img_html =~ ~s(class="dark:hidden pk-brand-mark")
       assert light_img_html =~ ~s(width="36")
       assert light_img_html =~ ~s(alt="")
 
       assert dark_img_html =~ "isologo-dark.png"
-      assert dark_img_html =~ ~s(class="hidden dark:block")
+      assert dark_img_html =~ ~s(class="hidden dark:block pk-brand-mark")
       assert dark_img_html =~ ~s(width="36")
       assert dark_img_html =~ ~s(alt="")
     end
