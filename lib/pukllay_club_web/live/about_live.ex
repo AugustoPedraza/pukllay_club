@@ -70,6 +70,18 @@ defmodule PukllayClubWeb.AboutLive do
 
                   // Hidden from first paint, not flashed visible then hidden.
                   this.header.classList.add("pk-header-about-morph")
+                  // WR-02: opacity:0/pointer-events:none (the CSS this class
+                  // triggers) removes the header visually and from mouse
+                  // interaction, but NOT from the tab order or a11y tree —
+                  // a keyboard/screen-reader user could still reach the
+                  // hamburger and nav_links while the header is invisible.
+                  // `inert` is this file's own established mechanism for
+                  // pairing a visual-hidden state with real a11y removal
+                  // (see layouts.ex's drawer/cat-menu: "inert is the closed
+                  // state's a11y mechanism"). Removed below once first-paint
+                  // determines the header is already docked (visible), and
+                  // re-toggled in syncPosition() on every dock-state flip.
+                  this.header.setAttribute("inert", "")
 
                   this.docked = false
                   this.entered = false
@@ -132,6 +144,7 @@ defmodule PukllayClubWeb.AboutLive do
                     if (shouldDock !== this.docked) {
                       this.docked = shouldDock
                       this.header.classList.toggle("is-docked", this.docked)
+                      this.header.toggleAttribute("inert", !this.docked)
                       this.place(this.docked ? dock : natural, true)
                     } else if (!this.docked) {
                       this.place(natural, false)
@@ -161,6 +174,7 @@ defmodule PukllayClubWeb.AboutLive do
 
                   if (this.docked) {
                     this.header.classList.add("is-docked")
+                    this.header.removeAttribute("inert")
                     this.place(dock0, false)
                     this.mark.classList.add("is-entered")
                     this.entered = true
@@ -211,6 +225,7 @@ defmodule PukllayClubWeb.AboutLive do
                   // this hook removes, or every subsequent page inherits a
                   // permanently hidden header.
                   this.header?.classList.remove("pk-header-about-morph", "is-docked")
+                  this.header?.removeAttribute("inert")
                 } catch (e) {
                   console.error("AboutHeaderMorph: destroy block failed to wire", e)
                 }
