@@ -278,18 +278,30 @@ defmodule PukllayClubWeb.AboutLive do
               Nos juntamos los sábados en el Club de Emprendedores, San Salvador de Jujuy. Los juegos los llevamos nosotros; vos traé las ganas.
             </p>
           </div>
-          <div id="contacto">
+          <div id="contacto" class="pk-about-contact-card">
             <h2 class="font-display text-2xl">Contacto</h2>
             <p class="text-lg">
               Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.
             </p>
-            <p class="text-lg">
-              <a href={ClubLinks.whatsapp_group_url()} target="_blank" rel="noopener noreferrer">
-                WhatsApp
-              </a>
-              ·
-              <a href={ClubLinks.instagram_url()} target="_blank" rel="noopener noreferrer">Instagram</a>
-            </p>
+            <Layouts.social_links
+              class="pk-about-contact-links"
+              icons={[:whatsapp, :instagram]}
+              labels
+            />
+            <a
+              href={ClubLinks.maps_url()}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="pk-about-map-thumb"
+            >
+              <img
+                src={~p"/images/about-maps-thumb.jpg"}
+                alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
+              />
+              <span class="pk-about-map-label">
+                Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗
+              </span>
+            </a>
           </div>
         </div>
       </section>

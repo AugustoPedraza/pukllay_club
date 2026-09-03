@@ -1051,12 +1051,28 @@ defmodule PukllayClubWeb.Layouts do
   # has already been bitten by). Every href resolves through ClubLinks (one
   # source), and every external link carries target="_blank" rel="noopener
   # noreferrer" — the mailto: link keeps its existing shape with neither.
+  #
+  # Promoted to public (plan 01.4-02 Task 3): the About page's rebuilt
+  # Contacto card is now a third consumer, alongside the footer
+  # (`.pk-footer-social`) and the mobile drawer (`.pk-drawer-social`).
+  # `icons` (which channels render) and `labels` (whether each renders a
+  # visible Spanish text label after its icon) are both optional and both
+  # DEFAULT to today's exact behavior — neither the footer nor the drawer
+  # call site passes either attr, so their rendered output stays
+  # byte-identical. Only the Contacto card passes `icons={[:whatsapp,
+  # :instagram]} labels` to get the card-row treatment. Not a single SVG
+  # `d`/`viewBox`/`width`/`height`/`aria-label`/`href`/`target`/`rel` value
+  # changed in this promotion — those are the shared definition this whole
+  # exercise exists to preserve.
   attr :class, :string, required: true
+  attr :icons, :list, default: [:whatsapp, :facebook, :instagram, :email]
+  attr :labels, :boolean, default: false
 
-  defp social_links(assigns) do
+  def social_links(assigns) do
     ~H"""
     <div class={@class}>
       <a
+        :if={:whatsapp in @icons}
         href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
         target="_blank"
         rel="noopener noreferrer"
@@ -1081,8 +1097,10 @@ defmodule PukllayClubWeb.Layouts do
             d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"
           />
         </svg>
+        <span :if={@labels}>Grupo de WhatsApp</span>
       </a>
       <a
+        :if={:facebook in @icons}
         href={PukllayClubWeb.ClubLinks.facebook_url()}
         target="_blank"
         rel="noopener noreferrer"
@@ -1102,8 +1120,10 @@ defmodule PukllayClubWeb.Layouts do
             d="M14.5 8.5h2V5.5h-2c-1.93 0-3.5 1.57-3.5 3.5v2H9v3h2v6.5h3V14h2.2l.5-3H14v-1.5c0-.55.45-1 1-1Z"
           />
         </svg>
+        <span :if={@labels}>Facebook</span>
       </a>
       <a
+        :if={:instagram in @icons}
         href={PukllayClubWeb.ClubLinks.instagram_url()}
         target="_blank"
         rel="noopener noreferrer"
@@ -1121,8 +1141,13 @@ defmodule PukllayClubWeb.Layouts do
           <circle cx="12" cy="12" r="3.5" />
           <circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none" />
         </svg>
+        <span :if={@labels}>Instagram</span>
       </a>
-      <a href={"mailto:#{PukllayClubWeb.ClubLinks.contact_email()}"} aria-label="Correo">
+      <a
+        :if={:email in @icons}
+        href={"mailto:#{PukllayClubWeb.ClubLinks.contact_email()}"}
+        aria-label="Correo"
+      >
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -1134,6 +1159,7 @@ defmodule PukllayClubWeb.Layouts do
           <rect x="4" y="5.5" width="16" height="13" rx="2" />
           <path stroke-linecap="round" stroke-linejoin="round" d="m5 7 7 5.5L19 7" />
         </svg>
+        <span :if={@labels}>Correo</span>
       </a>
     </div>
     """

@@ -266,4 +266,79 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert html =~ ~s(aria-label="Foto 4")
     end
   end
+
+  # Plan 01.4-02 Task 2 (tracer): the Contacto card's Google Maps thumbnail,
+  # resolved end-to-end from ClubLinks.maps_url/0 through the rendered
+  # anchor and <img>. Task 3 adds the WhatsApp/Instagram icon links.
+  describe "Contacto card map thumbnail (D-04/D-05/D-06, plan 01.4-02 Task 2)" do
+    test "renders a link to ClubLinks.maps_url() with target=_blank and rel=noopener noreferrer",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      map_anchor = LazyHTML.query(doc, ".pk-about-map-thumb")
+      map_html = LazyHTML.to_html(map_anchor)
+
+      assert Enum.count(map_anchor) == 1
+      assert map_html =~ ClubLinks.maps_url()
+      assert map_html =~ ~s(target="_blank")
+      assert map_html =~ ~s(rel="noopener noreferrer")
+    end
+
+    test "renders an <img> whose src resolves under /images/ and ends in about-maps-thumb.jpg",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      img_src = doc |> LazyHTML.query(".pk-about-map-thumb img") |> LazyHTML.attribute("src") |> List.first()
+
+      assert img_src =~ "/images/"
+      assert img_src =~ "about-maps-thumb.jpg"
+    end
+
+    test "renders no href=\"#\" placeholder anchor anywhere on the page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      refute html =~ ~s(href="#")
+    end
+
+    test "the venue URL literal appears only in club_links.ex, never in about_live.ex" do
+      about_live_source =
+        "lib/pukllay_club_web/live/about_live.ex" |> File.read!()
+
+      refute about_live_source =~ "maps.app.goo.gl"
+    end
+  end
+
+  # Plan 01.4-02 Task 3: the Contacto card's real WhatsApp/Instagram icon
+  # links, resolved through the newly-public Layouts.social_links/1.
+  describe "Contacto card icon links (plan 01.4-02 Task 3)" do
+    test "renders exactly 2 links inside .pk-about-contact-links: WhatsApp and Instagram, in order",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      links = LazyHTML.query(doc, ".pk-about-contact-links a")
+      hrefs = LazyHTML.attribute(links, "href")
+
+      assert Enum.count(links) == 2
+      assert hrefs == [ClubLinks.whatsapp_group_url(), ClubLinks.instagram_url()]
+
+      refute Enum.any?(hrefs, &(&1 == ClubLinks.facebook_url()))
+      refute Enum.any?(hrefs, &String.starts_with?(&1, "mailto:"))
+    end
+
+    test "each Contacto card link renders an inline <svg> and a visible Spanish text label",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      links = LazyHTML.query(doc, ".pk-about-contact-links a")
+      links_html = LazyHTML.to_html(links)
+
+      assert links_html =~ "<svg"
+      assert links_html =~ "Grupo de WhatsApp"
+      assert links_html =~ "Instagram"
+    end
+  end
 end
