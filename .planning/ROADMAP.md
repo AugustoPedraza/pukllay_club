@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans executed
 
 Plans:
 **Wave 1**
@@ -162,7 +162,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 01.4-05-PLAN.md — Isologo scroll-morph: page-owned `.AboutHeaderMorph` hook, hidden-at-rest header, single reused mark (D-01, D-02, D-03, D-10)
+- [x] 01.4-05-PLAN.md — Isologo scroll-morph: page-owned `.AboutHeaderMorph` hook, hidden-at-rest header, single reused mark (D-01, D-02, D-03, D-10)
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 
