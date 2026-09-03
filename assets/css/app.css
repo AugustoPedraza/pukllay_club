@@ -2823,11 +2823,21 @@ body.pk-drawer-open {
     filter var(--duration-slow) var(--ease-out-soft);
 }
 
+/* No `display` declared here (Rule 1 fix, found live via CDP in plan
+   01.4-05 Task 3): an earlier `display: block` on this selector silently
+   defeated the `hidden`/`dark:block` Tailwind utility pair on the theme-
+   variant <img> that should stay display:none — exactly the unlayered-
+   .pk-*-beats-Tailwind-utility cascade hazard this file's own top-of-file
+   note documents (`.pk-poster-col`'s prior position:static bug). Verified
+   with the rule removed: getComputedStyle(img).display correctly reads
+   "none" for the non-matching theme variant, leaving exactly one visible
+   isologo inside the mark. width/height/object-fit still apply — <img> is
+   a replaced element, so percentage sizing works without an explicit
+   display override. */
 .pk-about-morph-mark img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  display: block;
 }
 
 .pk-about-morph-mark.is-entered {
