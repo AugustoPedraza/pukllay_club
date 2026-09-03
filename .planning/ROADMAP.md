@@ -144,11 +144,24 @@ phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`
 **Plans:** 5 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 01.4-01-PLAN.md — Content truth pass: `.pk-band-inner` 64rem→80rem, the 047 copy rewrite incl. the April-2021 factual fix, and the FAQ pricing correction (sketches 047, 048)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01.4-02-PLAN.md — Contacto rebuilt as one merged card: `ClubLinks.maps_url/0`, `social_links/1` promoted and parameterized, Maps screenshot asset (D-04, D-05, D-06)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01.4-03-PLAN.md — Closing-CTA de-duplication onto the shared `sumate_cta/1`, plus a measured verdict on the mobile CTA-bar centering claim (sketch 049)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 01.4-04-PLAN.md — Photo rail: five real photographs cropped to fill, five dots, and the mobile hero tagline split (D-08, D-09, sketch 046)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 01.4-05-PLAN.md — Isologo scroll-morph: page-owned `.AboutHeaderMorph` hook, hidden-at-rest header, single reused mark (D-01, D-02, D-03, D-10)
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
