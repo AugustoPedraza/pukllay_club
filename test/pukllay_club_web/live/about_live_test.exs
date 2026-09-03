@@ -309,4 +309,36 @@ defmodule PukllayClubWeb.AboutLiveTest do
       refute about_live_source =~ "maps.app.goo.gl"
     end
   end
+
+  # Plan 01.4-02 Task 3: the Contacto card's real WhatsApp/Instagram icon
+  # links, resolved through the newly-public Layouts.social_links/1.
+  describe "Contacto card icon links (plan 01.4-02 Task 3)" do
+    test "renders exactly 2 links inside .pk-about-contact-links: WhatsApp and Instagram, in order",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      links = LazyHTML.query(doc, ".pk-about-contact-links a")
+      hrefs = LazyHTML.attribute(links, "href")
+
+      assert Enum.count(links) == 2
+      assert hrefs == [ClubLinks.whatsapp_group_url(), ClubLinks.instagram_url()]
+
+      refute Enum.any?(hrefs, &(&1 == ClubLinks.facebook_url()))
+      refute Enum.any?(hrefs, &String.starts_with?(&1, "mailto:"))
+    end
+
+    test "each Contacto card link renders an inline <svg> and a visible Spanish text label",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      links = LazyHTML.query(doc, ".pk-about-contact-links a")
+      links_html = LazyHTML.to_html(links)
+
+      assert links_html =~ "<svg"
+      assert links_html =~ "Grupo de WhatsApp"
+      assert links_html =~ "Instagram"
+    end
+  end
 end

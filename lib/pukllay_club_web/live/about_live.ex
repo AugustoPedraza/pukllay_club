@@ -283,6 +283,11 @@ defmodule PukllayClubWeb.AboutLive do
             <p class="text-lg">
               Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.
             </p>
+            <Layouts.social_links
+              class="pk-about-contact-links"
+              icons={[:whatsapp, :instagram]}
+              labels
+            />
             <a
               href={ClubLinks.maps_url()}
               target="_blank"

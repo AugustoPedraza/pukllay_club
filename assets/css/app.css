@@ -2702,6 +2702,41 @@ body.pk-drawer-open {
   gap: 1rem;
 }
 
+/* The Contacto card's real WhatsApp/Instagram icon links (plan 01.4-02
+   Task 3, `Layouts.social_links/1` with icons/labels). The shared
+   component renders its SVGs at width="16" — right for the footer/drawer's
+   compact rows, too small for this card's row — so this scope sizes them
+   explicitly rather than editing the shared markup. */
+.pk-about-contact-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.pk-about-contact-links a {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  color: var(--color-base-content);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-about-contact-links a:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.pk-about-contact-links a svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 /* Fixed-ratio Google Maps screenshot thumbnail (D-04/D-05/D-06) — a
    committed static asset, never a runtime Static Maps API call. 21/9 keeps
    the crop landscape without a further server-side crop step (Task 1's
