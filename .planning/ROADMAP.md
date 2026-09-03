@@ -141,12 +141,12 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01.4-01-PLAN.md — Content truth pass: `.pk-band-inner` 64rem→80rem, the 047 copy rewrite incl. the April-2021 factual fix, and the FAQ pricing correction (sketches 047, 048)
+- [x] 01.4-01-PLAN.md — Content truth pass: `.pk-band-inner` 64rem→80rem, the 047 copy rewrite incl. the April-2021 factual fix, and the FAQ pricing correction (sketches 047, 048)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
