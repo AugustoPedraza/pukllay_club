@@ -17,6 +17,16 @@ that works across the catalog (master), the game detail page, and a new static "
 plus a footer that carries club mission/links/contact and a required BoardGameGeek attribution
 badge (compliance, not optional).
 
+**About-page rework (2026-09-02, sketches 045-049).** Phase 01.1 shipped the About page's first
+real version; this round revisits nearly every section based on real developer feedback: a
+scroll-linked header with a morphing isologo (045), an auto-advancing photo rail + a more
+inspirational mobile hero tagline (046), corrected content-band copy including a real factual fix
+(the club's origin is April 2021, not 2024 as currently shipped) (047), a shared-class width-bug
+fix affecting every content band plus a rebuilt Contacto card with real icons/links/Maps (048),
+and a de-duplicated closing CTA (049). Not a redesign of the brand — every sketch reuses existing
+tokens/components/patterns and fixes real bugs found along the way rather than introducing new
+visual language.
+
 ## Reference Points
 
 Airbnb-style card grid (big image, minimal chrome), Netflix web/SmartTV catalog (row-first
@@ -117,4 +127,4 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
 | 046 | about-photo-rail-mobile-hero | What should the auto-advancing photo rail feel like, and how should the mobile hero's tagline wrap/read against the headline? (real photos not sourced yet — placeholders stand in) | A (Autoplay Crossfade+Snap, extends the shipped scroll-snap hook with a 4s timer). Tagline: 3 rounds — "too excited"/drop "sábados", then "more inspirational" — landed on "Volvé a jugar. Volvé a encontrarte." B/C carousel variants removed from `index.html` (A only) | about, carousel, hero, mobile, motion |
 | 047 | about-content-bands | How should Qué hacemos / Nuestra historia / Juntadas read for someone who doesn't know board-game hobby vocabulary, and how do they cross-link? | Developer-authored final copy (2 AI rounds explored first, both superseded). Real correction found along the way: the live page's "Empezamos en 2024" is factually wrong — actual origin is April 2021, 5+ years, provincial team representing Jujuy at national events, drawing players from across Argentina plus international travelers (France/Spain/Portugal). "Qué hacemos" now links to Juntadas | about, copy, content, factual-correction |
 | 048 | about-faq-contacto | Should the FAQ band's purple read as a richer/default brand color, and how should Contacto + a Maps link get rebuilt with real icons/links? | A (Current/flat) — confirms live `--color-primary` as official, no color change. Real root-cause fix found: `.pk-band-inner`'s 64rem cap (narrower than the shell's 80rem `max-w-7xl`) affects EVERY content band, not just FAQ — shared-class fix. Contacto rebuilt as one merged card (not 2 mismatched boxes) with real WhatsApp/Instagram icons/links + a map thumbnail. Pricing FAQ: "Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para vos." Mobile layout included | about, faq, contacto, color, maps, width-bug |
-| 049 | *(planned)* | Closing CTA rhythm; mobile always-visible CTA + reduced scroll density | — | about, cta, mobile, rhythm |
+| 049 | about-closing-cta-mobile | Why does the closing band "kill the rhythm," and is the mobile CTA/scroll experience actually a problem or already solved? | A — single "Sumate" CTA replaces the duplicated WhatsApp/Instagram buttons (redundant with the rebuilt Contacto card, sketch 048). Real bug caught+fixed: `.closing-cta` needed `justify-content: center` for the full-width mobile bar variant to center its label (desktop was already fine via parent text-align). Mobile CTA bar confirmed already `position: fixed`/always-visible, and full page scroll length confirmed reasonable — no changes needed there | about, cta, mobile, rhythm |
