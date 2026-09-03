@@ -218,7 +218,7 @@ defmodule PukllayClubWeb.AboutLive do
           <div>
             <h2 class="font-display text-2xl">Nuestra historia</h2>
             <p class="text-lg">
-              Empezamos en 2024 con una mesa y unos pocos juegos. Hoy somos una comunidad que se encuentra cada semana en San Salvador de Jujuy. Pukllay significa jugar en quechua.
+              Todo empezó en abril de 2021, la primera vez que abrimos las mesas a la comunidad, y desde entonces no paramos. Como club representamos a la provincia en encuentros nacionales, y así terminamos haciendo jugar a personas de todo el país, y también a viajeros de Francia, España y Portugal que estaban de paso por la ciudad. Más de cinco años después nos sigue emocionando lo mismo: una mesa alcanza para que dos extraños se pongan de acuerdo, se rían y quieran volver a jugar.
             </p>
           </div>
         </div>

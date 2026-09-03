@@ -2573,13 +2573,18 @@ body.pk-drawer-open {
    is a full-bleed wrapper (.pk-band, vertical padding only) around a
    single capped inner (.pk-band-inner, max-width + the shared .pk-gutter
    class) — .pk-band never sets its own horizontal padding, which is
-   exactly the double-gutter bug about-page-content.md documents. */
+   exactly the double-gutter bug about-page-content.md documents.
+
+   .pk-band-inner's cap now matches the shell's own max-w-7xl edge (80rem) —
+   the same content width already shared by the header, footer and hero
+   (sketch 048: the bands were shipped 16rem narrower than the shell they
+   sit in). Single shared declaration, no per-band override. */
 .pk-band {
   padding: 4.5rem 0;
 }
 
 .pk-band-inner {
-  max-width: 64rem;
+  max-width: 80rem;
   margin: 0 auto;
 }
 

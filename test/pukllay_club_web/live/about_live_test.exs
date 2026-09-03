@@ -144,7 +144,10 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       assert html =~ "Nuestra historia"
 
-      assert html =~
+      assert html =~ "Todo empezó en abril de 2021"
+      assert html =~ "Más de cinco años después nos sigue emocionando lo mismo"
+
+      refute html =~
                "Empezamos en 2024 con una mesa y unos pocos juegos. Hoy somos una comunidad que se encuentra cada semana en San Salvador de Jujuy. Pukllay significa jugar en quechua."
     end
 
