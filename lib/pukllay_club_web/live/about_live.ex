@@ -53,7 +53,15 @@ defmodule PukllayClubWeb.AboutLive do
             Club de juegos de mesa · Jujuy
           </p>
           <h1 class="font-display pk-about-h1">Conectá jugando</h1>
-          <p class="font-sans text-base text-neutral">
+          <%!-- Mobile hero tagline split (sketch 046, RESEARCH.md Pitfall 6):
+          the "Volvé a jugar..." copy is a MOBILE-only replacement — desktop
+          keeps the original saturday-focused line (assumption A1). Tailwind's
+          default sm (640px) breakpoint, NOT the hand-picked 480px @media
+          block that governs .pk-about-cta-bar — unrelated mechanisms. --%>
+          <p class="font-sans text-base text-neutral sm:hidden">
+            Volvé a jugar. Volvé a encontrarte.
+          </p>
+          <p class="hidden font-sans text-base text-neutral sm:block">
             Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.
           </p>
           <div class="flex justify-center">
@@ -94,8 +102,20 @@ defmodule PukllayClubWeb.AboutLive do
                     return first.getBoundingClientRect().width + gap
                   }
 
+                  // The rail can't scroll past its content edge, so the last
+                  // slide's exact index*advance target routinely overshoots
+                  // the real max scrollLeft once the slide count grows
+                  // (found live during plan 01.4-04 Task 3 with 5 slides —
+                  // the browser clamps the scroll and the last dot never
+                  // highlights). Route the last index through the rail's own
+                  // max scroll distance instead of the uniform formula.
+                  this.maxScrollLeft = () => this.rail.scrollWidth - this.rail.clientWidth
+
                   this.goTo = (index) => {
-                    this.rail.scrollTo({left: index * this.slideAdvance(), behavior: "smooth"})
+                    const target = index === this.slideCount - 1
+                      ? this.maxScrollLeft()
+                      : index * this.slideAdvance()
+                    this.rail.scrollTo({left: target, behavior: "smooth"})
                   }
 
                   this.setActive = (index) => {
@@ -121,8 +141,14 @@ defmodule PukllayClubWeb.AboutLive do
                   this.onScroll = () => {
                     const advance = this.slideAdvance()
                     if (advance <= 0) return
-                    const raw = Math.round(this.rail.scrollLeft / advance)
-                    const index = Math.min(Math.max(raw, 0), this.slideCount - 1)
+                    const max = this.maxScrollLeft()
+                    let index
+                    if (max > 0 && this.rail.scrollLeft >= max - 1) {
+                      index = this.slideCount - 1
+                    } else {
+                      const raw = Math.round(this.rail.scrollLeft / advance)
+                      index = Math.min(Math.max(raw, 0), this.slideCount - 1)
+                    }
                     if (index !== this.index) this.setActive(index)
                   }
                   this.rail.addEventListener("scroll", this.onScroll, {passive: true})

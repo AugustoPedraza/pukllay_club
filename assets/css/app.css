@@ -2666,6 +2666,22 @@ body.pk-drawer-open {
   display: block;
 }
 
+/* Per-slide focal tuning for the two portrait sources (RESEARCH.md Pitfall
+   5) — checked live in headless Chrome at 375px/1280px (plan 01.4-04 Task
+   3). Both photos already read well at the CSS default (50% 50%): the
+   comunidad table's faces sit slightly above center, and the juego board's
+   subject sits slightly left-of-center, so both get a small explicit nudge
+   rather than the bare default, keeping the framing intentional if either
+   source photo is ever swapped. Landscape slides (explicacion, ludoteca,
+   festejo) need no override — their full frame already reads correctly. */
+.pk-about-slide[data-slide="comunidad"] .pk-about-slide-ph img {
+  object-position: 50% 38%;
+}
+
+.pk-about-slide[data-slide="juego"] .pk-about-slide-ph img {
+  object-position: 45% 48%;
+}
+
 .pk-about-dots {
   display: flex;
   align-items: center;
