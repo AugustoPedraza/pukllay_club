@@ -322,9 +322,30 @@ defmodule PukllayClubWeb.AboutLive do
                   }
                   this.rail.addEventListener("scroll", this.onScroll, {passive: true})
 
-                  this.onPointerDown = () => { this.paused = true }
-                  this.onMouseEnter = () => { this.paused = true }
-                  this.onMouseLeave = () => { this.paused = false }
+                  // WR-01: touch devices fire pointerdown on every swipe/dot
+                  // tap but never fire mouseenter/mouseleave, so on
+                  // mouse-only reset (the old mouseleave-only logic) a touch
+                  // interaction paused autoplay permanently for the rest of
+                  // the page's life. A short idle-resume timer gives touch
+                  // users the same "comes back after you stop interacting"
+                  // behavior mouse users already get from mouseleave, without
+                  // changing the mouse-driven UX at all (mouseleave still
+                  // resumes immediately, and clears the pending timer so it
+                  // doesn't double-fire).
+                  this.resumeTimer = null
+                  this.onPointerDown = () => {
+                    this.paused = true
+                    clearTimeout(this.resumeTimer)
+                    this.resumeTimer = setTimeout(() => { this.paused = false }, 6000)
+                  }
+                  this.onMouseEnter = () => {
+                    this.paused = true
+                    clearTimeout(this.resumeTimer)
+                  }
+                  this.onMouseLeave = () => {
+                    this.paused = false
+                    clearTimeout(this.resumeTimer)
+                  }
                   this.rail.addEventListener("pointerdown", this.onPointerDown)
                   this.rail.addEventListener("mouseenter", this.onMouseEnter)
                   this.rail.addEventListener("mouseleave", this.onMouseLeave)
@@ -336,6 +357,7 @@ defmodule PukllayClubWeb.AboutLive do
                 },
                 destroyed() {
                   clearInterval(this.timer)
+                  clearTimeout(this.resumeTimer)
                   this.el.removeEventListener("click", this.onClick)
                   this.rail?.removeEventListener("scroll", this.onScroll)
                   this.rail?.removeEventListener("pointerdown", this.onPointerDown)
