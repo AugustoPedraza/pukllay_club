@@ -88,8 +88,21 @@ defmodule PukllayClubWeb.AboutLive do
                   // the isologo is 939x1034/939x1035, not square (RESEARCH.md
                   // Pitfall 4). An opacity:0 element still reports a real
                   // rect, so suppressing the header's own mark below does
-                  // not break this.
-                  this.dockRect = () => this.header.querySelector(".pk-brand-mark").getBoundingClientRect()
+                  // not break this. brand_logo/1 renders TWO `.pk-brand-mark`
+                  // images (light/dark theme), toggled via the `dark:`
+                  // variant's `display: none` — querySelector() alone always
+                  // returns the first (light-theme) one regardless of theme,
+                  // which zeroes out in dark theme. Walk both and return the
+                  // one that actually has layout size (CR-01).
+                  this.dockRect = () => {
+                    const marks = this.header.querySelectorAll(".pk-brand-mark")
+                    for (const mark of marks) {
+                      const rect = mark.getBoundingClientRect()
+                      if (rect.width > 0 && rect.height > 0) return rect
+                    }
+                    // Fallback: neither mark has a size yet (e.g. not yet laid out).
+                    return marks[0]?.getBoundingClientRect()
+                  }
 
                   // When animate is false: force an instant, untransitioned
                   // jump (add no-anim, write the rect, force a reflow via
