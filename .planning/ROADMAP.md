@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 
 Plans:
 **Wave 1**
@@ -150,7 +150,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01.4-02-PLAN.md — Contacto rebuilt as one merged card: `ClubLinks.maps_url/0`, `social_links/1` promoted and parameterized, Maps screenshot asset (D-04, D-05, D-06)
+- [x] 01.4-02-PLAN.md — Contacto rebuilt as one merged card: `ClubLinks.maps_url/0`, `social_links/1` promoted and parameterized, Maps screenshot asset (D-04, D-05, D-06)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
