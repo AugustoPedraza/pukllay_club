@@ -62,15 +62,17 @@ defmodule PukllayClubWeb.AboutLive do
         </section>
       </div>
 
-      <%!-- Four-slide photo rail (D-07, D-12: labelled placeholders — no real
-      club photography exists yet). Hand-rolled colocated hook, same pattern
-      as CarouselRow's .CarouselScroll — deliberately no scroll-observer-
-      driven visibility API anywhere here (01.1-RESEARCH.md Pitfall 3: that
-      class of API throttles in a backgrounded tab, which would leave the
-      design source's own fade-in stuck at opacity 0; that reveal is
-      deliberately not reproduced, D-08 scopes it reference-only). Task 1
-      (plan 01.4-04) converted the first slide to a real photo, per D-08/D-09
-      — Task 2 finishes the remaining four and rewrites this comment. --%>
+      <%!-- Five-slide photo rail of real club photography (sketch 046, D-08,
+      D-09) — the "no real club photography exists yet" placeholder flag
+      carried since D-07/D-12 is retired. Every slide crops to fill its
+      frame (object-fit: cover, D-08) — explicitly NOT .pk-poster-img's
+      letterbox/contain treatment, which exists for official box art where
+      cropping the artwork would be wrong. Hand-rolled colocated hook, same
+      pattern as CarouselRow's .CarouselScroll — deliberately no scroll-
+      observer-driven visibility API anywhere here (01.1-RESEARCH.md Pitfall
+      3: that class of API throttles in a backgrounded tab, which would
+      leave the design source's own fade-in stuck at opacity 0; that reveal
+      is deliberately not reproduced, D-08 scopes it reference-only). --%>
       <section id="fotos" class="pk-band">
         <div class="pk-band-inner pk-gutter">
           <div id="about-carousel" phx-hook=".AboutCarousel">
@@ -153,25 +155,36 @@ defmodule PukllayClubWeb.AboutLive do
                   <img src={~p"/images/about-juego.jpg"} alt="Un juego de mesa en pleno desarrollo, sobre una de las mesas del club" />
                 </div>
               </figure>
-              <figure class="pk-about-slide">
+              <figure class="pk-about-slide" data-slide="explicacion">
                 <div class="pk-about-slide-ph">
-                  <span class="text-primary text-xs uppercase tracking-widest">
-                    foto — explicando un juego
-                  </span>
+                  <img
+                    src={~p"/images/about-explicacion.jpg"}
+                    alt="Un integrante del club explicando las reglas de un juego a la mesa"
+                  />
                 </div>
               </figure>
-              <figure class="pk-about-slide">
+              <figure class="pk-about-slide" data-slide="ludoteca">
                 <div class="pk-about-slide-ph">
-                  <span class="text-primary text-xs uppercase tracking-widest">
-                    foto — la ludoteca
-                  </span>
+                  <img
+                    src={~p"/images/about-ludoteca.jpg"}
+                    alt="Parte de la colección de juegos de mesa del club, la ludoteca"
+                  />
                 </div>
               </figure>
-              <figure class="pk-about-slide">
+              <figure class="pk-about-slide" data-slide="comunidad">
                 <div class="pk-about-slide-ph">
-                  <span class="text-primary text-xs uppercase tracking-widest">
-                    foto — la comunidad
-                  </span>
+                  <img
+                    src={~p"/images/about-comunidad.jpg"}
+                    alt="La comunidad del club reunida durante una juntada"
+                  />
+                </div>
+              </figure>
+              <figure class="pk-about-slide" data-slide="festejo">
+                <div class="pk-about-slide-ph">
+                  <img
+                    src={~p"/images/about-festejo.jpg"}
+                    alt="Festejo del aniversario del club con todo el equipo reunido"
+                  />
                 </div>
               </figure>
             </div>
@@ -199,6 +212,12 @@ defmodule PukllayClubWeb.AboutLive do
                 type="button"
                 data-goto="3"
                 aria-label="Foto 4"
+                class="pk-about-dot min-h-11 min-w-11"
+              ></button>
+              <button
+                type="button"
+                data-goto="4"
+                aria-label="Foto 5"
                 class="pk-about-dot min-h-11 min-w-11"
               ></button>
             </div>
