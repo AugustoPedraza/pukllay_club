@@ -27,6 +27,23 @@ defmodule PukllayClubWeb.AboutLiveTest do
       end
     end
 
+    test "hero renders both the mobile (sm:hidden) and desktop (hidden sm:block) taglines (sketch 046, Pitfall 6)",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      assert html =~ "Volvé a jugar. Volvé a encontrarte."
+
+      assert html =~
+               "Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica."
+
+      doc = LazyHTML.from_document(html)
+      mobile_html = doc |> LazyHTML.query("p.sm\\:hidden") |> LazyHTML.to_html()
+      desktop_html = doc |> LazyHTML.query("p.hidden.sm\\:block") |> LazyHTML.to_html()
+
+      assert mobile_html =~ "Volvé a jugar. Volvé a encontrarte."
+      assert desktop_html =~ "Nos juntamos todos los sábados a jugar"
+    end
+
     test "both routes render the shared footer shell", %{conn: conn} do
       {:ok, _view, club_html} = live(conn, ~p"/club")
       {:ok, _view, quienes_html} = live(conn, ~p"/quienes-somos")
@@ -194,10 +211,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert LazyHTML.attribute(cta_buttons, "href") == [ClubLinks.whatsapp_group_url()]
       assert LazyHTML.to_html(cta_buttons) =~ "Sumate"
 
-      refute Enum.any?(
-               LazyHTML.attribute(cta_buttons, "href"),
-               &(&1 == ClubLinks.instagram_url())
-             )
+      refute ClubLinks.instagram_url() in LazyHTML.attribute(cta_buttons, "href")
 
       meta_links = LazyHTML.query(cierre, "a:not(.btn)")
       assert Enum.count(meta_links) == 1
@@ -253,34 +267,45 @@ defmodule PukllayClubWeb.AboutLiveTest do
       refute html =~ ~s(style=")
     end
 
-    test "renders the four-slide placeholder photo rail with dot navigation and no <img> (D-12)",
+    test "renders five real photo slides in order with five dots, no placeholder text remains (sketch 046, D-08, D-09)",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
-      assert html =~ "foto — mesa llena un sábado"
-      assert html =~ "foto — explicando un juego"
-      assert html =~ "foto — la ludoteca"
-      assert html =~ "foto — la comunidad"
+      doc = LazyHTML.from_document(html)
+      rail_imgs = LazyHTML.query(doc, ".pk-about-rail img")
 
-      rail_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-about-rail")
-        |> LazyHTML.to_html()
+      assert Enum.count(rail_imgs) == 5
 
-      refute rail_html =~ "<img"
+      srcs = LazyHTML.attribute(rail_imgs, "src")
 
-      dot_count =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("[data-goto]")
-        |> Enum.count()
+      assert Enum.map(srcs, &(~r/about-([a-z]+)\.jpg/ |> Regex.run(&1) |> List.last())) ==
+               ["juego", "explicacion", "ludoteca", "comunidad", "festejo"]
 
-      assert dot_count == 4
+      alts = LazyHTML.attribute(rail_imgs, "alt")
+      assert Enum.all?(alts, &(&1 != ""))
+
+      slides = LazyHTML.query(doc, ".pk-about-slide[data-slide]")
+      slide_names = LazyHTML.attribute(slides, "data-slide")
+
+      assert Enum.count(slides) == 5
+      assert Enum.uniq(slide_names) == slide_names
+
+      dot_count = doc |> LazyHTML.query("[data-goto]") |> Enum.count()
+
+      assert dot_count == 5
       assert html =~ ~s(aria-label="Foto 1")
       assert html =~ ~s(aria-label="Foto 2")
       assert html =~ ~s(aria-label="Foto 3")
       assert html =~ ~s(aria-label="Foto 4")
+      assert html =~ ~s(aria-label="Foto 5")
+
+      rail_html = doc |> LazyHTML.query(".pk-about-rail") |> LazyHTML.to_html()
+
+      refute rail_html =~ "foto — mesa llena un sábado"
+      refute rail_html =~ "foto — explicando un juego"
+      refute rail_html =~ "foto — la ludoteca"
+      refute rail_html =~ "foto — la comunidad"
+      refute rail_html =~ "sabado de juegos"
     end
   end
 
@@ -320,8 +345,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
 
     test "the venue URL literal appears only in club_links.ex, never in about_live.ex" do
-      about_live_source =
-        "lib/pukllay_club_web/live/about_live.ex" |> File.read!()
+      about_live_source = File.read!("lib/pukllay_club_web/live/about_live.ex")
 
       refute about_live_source =~ "maps.app.goo.gl"
     end
@@ -341,7 +365,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert Enum.count(links) == 2
       assert hrefs == [ClubLinks.whatsapp_group_url(), ClubLinks.instagram_url()]
 
-      refute Enum.any?(hrefs, &(&1 == ClubLinks.facebook_url()))
+      refute ClubLinks.facebook_url() in hrefs
       refute Enum.any?(hrefs, &String.starts_with?(&1, "mailto:"))
     end
 

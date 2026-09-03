@@ -53,7 +53,15 @@ defmodule PukllayClubWeb.AboutLive do
             Club de juegos de mesa · Jujuy
           </p>
           <h1 class="font-display pk-about-h1">Conectá jugando</h1>
-          <p class="font-sans text-base text-neutral">
+          <%!-- Mobile hero tagline split (sketch 046, RESEARCH.md Pitfall 6):
+          the "Volvé a jugar..." copy is a MOBILE-only replacement — desktop
+          keeps the original saturday-focused line (assumption A1). Tailwind's
+          default sm (640px) breakpoint, NOT the hand-picked 480px @media
+          block that governs .pk-about-cta-bar — unrelated mechanisms. --%>
+          <p class="font-sans text-base text-neutral sm:hidden">
+            Volvé a jugar. Volvé a encontrarte.
+          </p>
+          <p class="hidden font-sans text-base text-neutral sm:block">
             Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.
           </p>
           <div class="flex justify-center">
@@ -62,13 +70,17 @@ defmodule PukllayClubWeb.AboutLive do
         </section>
       </div>
 
-      <%!-- Four-slide photo rail (D-07, D-12: labelled placeholders — no real
-      club photography exists yet). Hand-rolled colocated hook, same pattern
-      as CarouselRow's .CarouselScroll — deliberately no scroll-observer-
-      driven visibility API anywhere here (01.1-RESEARCH.md Pitfall 3: that
-      class of API throttles in a backgrounded tab, which would leave the
-      design source's own fade-in stuck at opacity 0; that reveal is
-      deliberately not reproduced, D-08 scopes it reference-only). --%>
+      <%!-- Five-slide photo rail of real club photography (sketch 046, D-08,
+      D-09) — the "no real club photography exists yet" placeholder flag
+      carried since D-07/D-12 is retired. Every slide crops to fill its
+      frame (object-fit: cover, D-08) — explicitly NOT .pk-poster-img's
+      letterbox/contain treatment, which exists for official box art where
+      cropping the artwork would be wrong. Hand-rolled colocated hook, same
+      pattern as CarouselRow's .CarouselScroll — deliberately no scroll-
+      observer-driven visibility API anywhere here (01.1-RESEARCH.md Pitfall
+      3: that class of API throttles in a backgrounded tab, which would
+      leave the design source's own fade-in stuck at opacity 0; that reveal
+      is deliberately not reproduced, D-08 scopes it reference-only). --%>
       <section id="fotos" class="pk-band">
         <div class="pk-band-inner pk-gutter">
           <div id="about-carousel" phx-hook=".AboutCarousel">
@@ -90,8 +102,20 @@ defmodule PukllayClubWeb.AboutLive do
                     return first.getBoundingClientRect().width + gap
                   }
 
+                  // The rail can't scroll past its content edge, so the last
+                  // slide's exact index*advance target routinely overshoots
+                  // the real max scrollLeft once the slide count grows
+                  // (found live during plan 01.4-04 Task 3 with 5 slides —
+                  // the browser clamps the scroll and the last dot never
+                  // highlights). Route the last index through the rail's own
+                  // max scroll distance instead of the uniform formula.
+                  this.maxScrollLeft = () => this.rail.scrollWidth - this.rail.clientWidth
+
                   this.goTo = (index) => {
-                    this.rail.scrollTo({left: index * this.slideAdvance(), behavior: "smooth"})
+                    const target = index === this.slideCount - 1
+                      ? this.maxScrollLeft()
+                      : index * this.slideAdvance()
+                    this.rail.scrollTo({left: target, behavior: "smooth"})
                   }
 
                   this.setActive = (index) => {
@@ -117,8 +141,14 @@ defmodule PukllayClubWeb.AboutLive do
                   this.onScroll = () => {
                     const advance = this.slideAdvance()
                     if (advance <= 0) return
-                    const raw = Math.round(this.rail.scrollLeft / advance)
-                    const index = Math.min(Math.max(raw, 0), this.slideCount - 1)
+                    const max = this.maxScrollLeft()
+                    let index
+                    if (max > 0 && this.rail.scrollLeft >= max - 1) {
+                      index = this.slideCount - 1
+                    } else {
+                      const raw = Math.round(this.rail.scrollLeft / advance)
+                      index = Math.min(Math.max(raw, 0), this.slideCount - 1)
+                    }
                     if (index !== this.index) this.setActive(index)
                   }
                   this.rail.addEventListener("scroll", this.onScroll, {passive: true})
@@ -146,32 +176,44 @@ defmodule PukllayClubWeb.AboutLive do
               }
             </script>
             <div data-rail class="pk-about-rail">
-              <figure class="pk-about-slide">
+              <figure class="pk-about-slide" data-slide="juego">
                 <div class="pk-about-slide-ph">
-                  <span class="text-primary text-xs uppercase tracking-widest">
-                    foto — mesa llena un sábado
-                  </span>
+                  <img
+                    src={~p"/images/about-juego.jpg"}
+                    alt="Un juego de mesa en pleno desarrollo, sobre una de las mesas del club"
+                  />
                 </div>
               </figure>
-              <figure class="pk-about-slide">
+              <figure class="pk-about-slide" data-slide="explicacion">
                 <div class="pk-about-slide-ph">
-                  <span class="text-primary text-xs uppercase tracking-widest">
-                    foto — explicando un juego
-                  </span>
+                  <img
+                    src={~p"/images/about-explicacion.jpg"}
+                    alt="Un integrante del club explicando las reglas de un juego a la mesa"
+                  />
                 </div>
               </figure>
-              <figure class="pk-about-slide">
+              <figure class="pk-about-slide" data-slide="ludoteca">
                 <div class="pk-about-slide-ph">
-                  <span class="text-primary text-xs uppercase tracking-widest">
-                    foto — la ludoteca
-                  </span>
+                  <img
+                    src={~p"/images/about-ludoteca.jpg"}
+                    alt="Parte de la colección de juegos de mesa del club, la ludoteca"
+                  />
                 </div>
               </figure>
-              <figure class="pk-about-slide">
+              <figure class="pk-about-slide" data-slide="comunidad">
                 <div class="pk-about-slide-ph">
-                  <span class="text-primary text-xs uppercase tracking-widest">
-                    foto — la comunidad
-                  </span>
+                  <img
+                    src={~p"/images/about-comunidad.jpg"}
+                    alt="La comunidad del club reunida durante una juntada"
+                  />
+                </div>
+              </figure>
+              <figure class="pk-about-slide" data-slide="festejo">
+                <div class="pk-about-slide-ph">
+                  <img
+                    src={~p"/images/about-festejo.jpg"}
+                    alt="Festejo del aniversario del club con todo el equipo reunido"
+                  />
                 </div>
               </figure>
             </div>
@@ -199,6 +241,12 @@ defmodule PukllayClubWeb.AboutLive do
                 type="button"
                 data-goto="3"
                 aria-label="Foto 4"
+                class="pk-about-dot min-h-11 min-w-11"
+              ></button>
+              <button
+                type="button"
+                data-goto="4"
+                aria-label="Foto 5"
                 class="pk-about-dot min-h-11 min-w-11"
               ></button>
             </div>
