@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 **Wave 1**
@@ -158,7 +158,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01.4-04-PLAN.md — Photo rail: five real photographs cropped to fill, five dots, and the mobile hero tagline split (D-08, D-09, sketch 046)
+- [x] 01.4-04-PLAN.md — Photo rail: five real photographs cropped to fill, five dots, and the mobile hero tagline split (D-08, D-09, sketch 046)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
