@@ -253,28 +253,45 @@ defmodule PukllayClubWeb.AboutLiveTest do
       refute html =~ ~s(style=")
     end
 
-    test "renders one real photo slide plus three placeholder slides, dot navigation unchanged (sketch 046, D-08, D-09, Task 1 of 2)",
+    test "renders five real photo slides in order with five dots, no placeholder text remains (sketch 046, D-08, D-09)",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
-
-      assert html =~ "foto — explicando un juego"
-      assert html =~ "foto — la ludoteca"
-      assert html =~ "foto — la comunidad"
 
       doc = LazyHTML.from_document(html)
       rail_imgs = LazyHTML.query(doc, ".pk-about-rail img")
 
-      assert Enum.count(rail_imgs) == 1
-      assert LazyHTML.attribute(rail_imgs, "src") |> List.first() =~ "about-juego.jpg"
-      assert LazyHTML.attribute(rail_imgs, "alt") |> List.first() != ""
+      assert Enum.count(rail_imgs) == 5
+
+      srcs = LazyHTML.attribute(rail_imgs, "src")
+
+      assert Enum.map(srcs, &Regex.run(~r/about-([a-z]+)\.jpg/, &1) |> List.last()) ==
+               ["juego", "explicacion", "ludoteca", "comunidad", "festejo"]
+
+      alts = LazyHTML.attribute(rail_imgs, "alt")
+      assert Enum.all?(alts, &(&1 != ""))
+
+      slides = LazyHTML.query(doc, ".pk-about-slide[data-slide]")
+      slide_names = LazyHTML.attribute(slides, "data-slide")
+
+      assert Enum.count(slides) == 5
+      assert Enum.uniq(slide_names) == slide_names
 
       dot_count = doc |> LazyHTML.query("[data-goto]") |> Enum.count()
 
-      assert dot_count == 4
+      assert dot_count == 5
       assert html =~ ~s(aria-label="Foto 1")
       assert html =~ ~s(aria-label="Foto 2")
       assert html =~ ~s(aria-label="Foto 3")
       assert html =~ ~s(aria-label="Foto 4")
+      assert html =~ ~s(aria-label="Foto 5")
+
+      rail_html = doc |> LazyHTML.query(".pk-about-rail") |> LazyHTML.to_html()
+
+      refute rail_html =~ "foto — mesa llena un sábado"
+      refute rail_html =~ "foto — explicando un juego"
+      refute rail_html =~ "foto — la ludoteca"
+      refute rail_html =~ "foto — la comunidad"
+      refute rail_html =~ "sabado de juegos"
     end
   end
 
