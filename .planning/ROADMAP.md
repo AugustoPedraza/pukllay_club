@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 2/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 **Wave 1**
@@ -154,7 +154,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01.4-03-PLAN.md — Closing-CTA de-duplication onto the shared `sumate_cta/1`, plus a measured verdict on the mobile CTA-bar centering claim (sketch 049)
+- [x] 01.4-03-PLAN.md — Closing-CTA de-duplication onto the shared `sumate_cta/1`, plus a measured verdict on the mobile CTA-bar centering claim (sketch 049)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
