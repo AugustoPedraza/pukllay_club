@@ -129,6 +129,28 @@ be pulled forward without breaking that dependency chain.
 
 - [x] 01-12-PLAN.md — Sticky gutter-aligned nav with shelf anchors and search, mobile category chips, design-system record (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
 
+### Phase 01.4: UI polish pass for About page sketches (INSERTED)
+
+**Goal:** The shipped About page tells the truth and looks finished: it states the club's real
+April-2021 origin and its real $5.000/$7.000 pricing, every content band shares the shell's own
+80rem edge, the photo rail shows five real photographs of the club instead of grey placeholders,
+Contacto is one card carrying real icon links and a map to the venue, the closing band asks once
+instead of repeating itself, and the club's isologo fades in and morphs into the header as you
+scroll.
+**Requirements**: none — no REQ-IDs map to this inserted UI-polish phase. CONTEXT.md's locked
+decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
+phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
+**Depends on:** Phase 1
+**Plans:** 5 plans
+
+Plans:
+
+- [ ] 01.4-01-PLAN.md — Content truth pass: `.pk-band-inner` 64rem→80rem, the 047 copy rewrite incl. the April-2021 factual fix, and the FAQ pricing correction (sketches 047, 048)
+- [ ] 01.4-02-PLAN.md — Contacto rebuilt as one merged card: `ClubLinks.maps_url/0`, `social_links/1` promoted and parameterized, Maps screenshot asset (D-04, D-05, D-06)
+- [ ] 01.4-03-PLAN.md — Closing-CTA de-duplication onto the shared `sumate_cta/1`, plus a measured verdict on the mobile CTA-bar centering claim (sketch 049)
+- [ ] 01.4-04-PLAN.md — Photo rail: five real photographs cropped to fill, five dots, and the mobile hero tagline split (D-08, D-09, sketch 046)
+- [ ] 01.4-05-PLAN.md — Isologo scroll-morph: page-owned `.AboutHeaderMorph` hook, hidden-at-rest header, single reused mark (D-01, D-02, D-03, D-10)
+
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 
 **Goal:** The game detail page tells the truth about a game and reads like a page instead of a
