@@ -18,6 +18,11 @@ defmodule PukllayClubWeb.ClubLinks do
   but the linktr.ee channel is no longer rendered anywhere, per the
   developer's explicit "remove it" instruction.
 
+  `maps_url/0` was added in plan 01.4-02 (D-06): the club's real Google Maps
+  venue location link, resolved by the About page's rebuilt Contacto card
+  map thumbnail — same public-URL, single-source-of-truth contract as every
+  other function here.
+
   **Not the reservation number.** The per-game "reserve to play at the
   club" WhatsApp deep-link (plan 01.1-05, D-09/D-10) uses a *different*,
   runtime-config-driven phone number (`RESERVATION_WHATSAPP_NUMBER`
@@ -29,6 +34,7 @@ defmodule PukllayClubWeb.ClubLinks do
   @instagram_url "https://instagram.com/pukllay_club"
   @facebook_url "https://www.facebook.com/pukllayclub/"
   @contact_email "pukllay.club@gmail.com"
+  @maps_url "https://maps.app.goo.gl/1GEBqjPDUnVkj68B6"
 
   @doc "The club's public WhatsApp group invite link (Sumate CTA, footer, About page)."
   def whatsapp_group_url, do: @whatsapp_group_url
@@ -41,4 +47,7 @@ defmodule PukllayClubWeb.ClubLinks do
 
   @doc "The club's public contact email address (footer social icon, rendered as a mailto: link)."
   def contact_email, do: @contact_email
+
+  @doc "The club's Google Maps location link (About page Contacto card map thumbnail, D-06)."
+  def maps_url, do: @maps_url
 end
