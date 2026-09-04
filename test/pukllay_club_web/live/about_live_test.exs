@@ -321,6 +321,26 @@ defmodule PukllayClubWeb.AboutLiveTest do
   # Plan 01.4-02 Task 2 (tracer): the Contacto card's Google Maps thumbnail,
   # resolved end-to-end from ClubLinks.maps_url/0 through the rendered
   # anchor and <img>. Task 3 adds the WhatsApp/Instagram icon links.
+  #
+  # Oracle boundary (plan 01.4-07 Task 2, closing G-01.4-2): ExUnit +
+  # LazyHTML see server-rendered strings, class lists, and stylesheet
+  # text — they structurally CANNOT see computed layout, wrapped line
+  # counts, rendered opacity, or any coverage ratio. G-01.4-2 was a purely
+  # geometric/perceptual defect (a translucent caption overlay that grew to
+  # 3 wrapped lines and swallowed 74.9% of the thumbnail) that the original
+  # two structural assertions below (anchor href/target/rel, img src) could
+  # not have caught — nothing here asserted the caption's text, height, or
+  # opacity. The assertions added below (both caption variants render and
+  # are gated by lg; the opaque single-source fill; the single-line
+  # ceiling; the height floor) constrain the MECHANISM that produced the
+  # bug, not the resulting APPEARANCE — the appearance still needs the
+  # human look recorded in 01.4-07-PLAN.md's <verify><human-check>. No
+  # headless-browser or screenshot test is added: this repo has an
+  # engine-divergence precedent (the Phase 01.3 chevron bug reproduced only
+  # on real WebKit, not headless Chromium), and every measurement in the
+  # G-01.4-2 diagnosis was headless Chromium — a headless gate here would
+  # encode the same blind spot it just failed to catch, at a real
+  # maintenance cost.
   describe "Contacto card map thumbnail (D-04/D-05/D-06, plan 01.4-02 Task 2)" do
     test "renders a link to ClubLinks.maps_url() with target=_blank and rel=noopener noreferrer",
          %{conn: conn} do
@@ -422,6 +442,24 @@ defmodule PukllayClubWeb.AboutLiveTest do
              "Expected .pk-about-map-thumb to declare a min-height floor — aspect-ratio alone " <>
                "lets the box collapse to 93px tall in the 640-767px two-column band " <>
                "(G-01.4-2, see .planning/debug/G-01.4-2-map-thumb-coverage.md)."
+    end
+  end
+
+  # Plan 01.4-07 Task 2: guards the invariant whose absence made G-01.4-2
+  # possible — one caption string doing both jobs (mobile brevity and
+  # desktop context). See the oracle-boundary comment above the "Contacto
+  # card map thumbnail" describe block for what this test suite can and
+  # cannot prove about this component.
+  describe "the map-thumbnail caption length invariant (plan 01.4-07 Task 2)" do
+    test "the short caption string is materially shorter than the long one" do
+      short = "Cómo llegar ↗"
+      long = "Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗"
+
+      assert String.length(short) < String.length(long) - 20,
+             "The short caption must be materially shorter than the long one — comparing " <>
+               "length (not pinning either literal string) keeps a future copy edit free while " <>
+               "guarding against the one-string-doing-both-jobs shape that made G-01.4-2 " <>
+               "possible in the first place."
     end
   end
 
