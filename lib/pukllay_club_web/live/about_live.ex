@@ -670,7 +670,15 @@ defmodule PukllayClubWeb.AboutLive do
                 src={~p"/images/about-maps-thumb.jpg"}
                 alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
               />
-              <span class="pk-about-map-label">
+              <%!-- Two caption variants (G-01.4-2 gap closure, sketch 048's own
+              short/long strings, same hero-tagline precedent above): the
+              short one below lg, the long one at/above lg. lg (1024px), NOT
+              sm, is load-bearing — the parent's sm:grid-cols-2 halves this
+              card at exactly 640px, and the long caption is worst (3 wrapped
+              lines) in the 640-767px band, not at 375px. See
+              .planning/debug/G-01.4-2-map-thumb-coverage.md. --%>
+              <span class="pk-about-map-label lg:hidden">Cómo llegar ↗</span>
+              <span class="pk-about-map-label hidden lg:block">
                 Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗
               </span>
             </a>

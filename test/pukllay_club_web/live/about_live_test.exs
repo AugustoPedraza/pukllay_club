@@ -5,6 +5,15 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
   alias PukllayClubWeb.ClubLinks
 
+  @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+  defp css_source, do: File.read!(@css_path)
+
+  # Comments are prose, not cascade — matching a selector/property name
+  # inside a comment is a false pass. Same idiom as about_header_morph_test.exs
+  # and footer_rhythm_test.exs.
+  defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
+
   describe "GET /club and GET /quienes-somos (D-01: two aliases, no redirect)" do
     test "GET /club returns 200 and renders, not a redirect", %{conn: conn} do
       assert {:ok, _view, _html} = live(conn, ~p"/club")
@@ -348,6 +357,71 @@ defmodule PukllayClubWeb.AboutLiveTest do
       about_live_source = File.read!("lib/pukllay_club_web/live/about_live.ex")
 
       refute about_live_source =~ "maps.app.goo.gl"
+    end
+
+    # G-01.4-2 gap closure (see .planning/debug/G-01.4-2-map-thumb-coverage.md):
+    # the long (desktop) caption shipped unconditionally at every viewport,
+    # wrapping to 2-3 lines and swallowing up to 74.9% of the thumbnail in
+    # the 640-767px two-column band. Sketch 048's own short mobile caption
+    # ("Cómo llegar ↗") was never ported. Fix: both variants render, gated
+    # by the lg breakpoint (not sm — sm is where the parent grid halves the
+    # card, making the long caption WORST there, not at 375px).
+    test "renders both caption variants inside .pk-about-map-thumb, gated by the lg breakpoint",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, ".pk-about-map-thumb")
+
+      short = LazyHTML.query(thumb, ".pk-about-map-label.lg\\:hidden")
+      short_html = LazyHTML.to_html(short)
+      assert Enum.count(short) == 1
+      assert short_html =~ "Cómo llegar ↗"
+      refute short_html =~ "Club de Emprendedores"
+
+      long = LazyHTML.query(thumb, ".pk-about-map-label.hidden.lg\\:block")
+      long_html = LazyHTML.to_html(long)
+      assert Enum.count(long) == 1
+      assert long_html =~ "Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗"
+    end
+
+    test ".pk-about-map-label is an opaque, single-line chip declaring no display" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-label\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-label rule in app.css."
+      [_, body] = rule
+
+      assert body =~ "background: var(--color-base-100);",
+             "Expected .pk-about-map-label's background to resolve directly from " <>
+               "var(--color-base-100) with nothing wrapping it — the prior translucent " <>
+               "color-mix(...) fill is what let the map ghost through (G-01.4-2)."
+
+      assert body =~ "white-space: nowrap;",
+             "Expected .pk-about-map-label to declare white-space: nowrap — a structural " <>
+               "ceiling on the caption's height regardless of font metrics or a future copy edit."
+
+      refute body =~ "display",
+             "An unlayered .pk-* rule declaring display would beat the hidden/lg:block " <>
+               "utility pair on the two caption spans, rendering both at once — the exact " <>
+               "cascade hazard plan 01.4-05's Rule 1 fix had to undo on the isologo theme " <>
+               "variants (this file's own top-of-file hazard note)."
+    end
+
+    test ".pk-about-map-thumb declares a min-height alongside its aspect-ratio" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-thumb\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-thumb rule in app.css."
+      [_, body] = rule
+
+      assert body =~ "aspect-ratio",
+             "Expected .pk-about-map-thumb to still declare aspect-ratio (unchanged)."
+
+      assert body =~ "min-height",
+             "Expected .pk-about-map-thumb to declare a min-height floor — aspect-ratio alone " <>
+               "lets the box collapse to 93px tall in the 640-767px two-column band " <>
+               "(G-01.4-2, see .planning/debug/G-01.4-2-map-thumb-coverage.md)."
     end
   end
 

@@ -2769,9 +2769,19 @@ body.pk-drawer-open {
 /* Fixed-ratio Google Maps screenshot thumbnail (D-04/D-05/D-06) — a
    committed static asset, never a runtime Static Maps API call. 21/9 keeps
    the crop landscape without a further server-side crop step (Task 1's
-   ~1200x514 capture matches this ratio directly). */
+   ~1200x514 capture matches this ratio directly).
+
+   min-height (G-01.4-2 gap closure) floors the box for the 640-767px
+   two-column band specifically: aspect-ratio alone lets the box collapse to
+   a measured 218x93px there (sm:grid-cols-2 halves the card at exactly
+   640px — see .planning/debug/G-01.4-2-map-thumb-coverage.md). With the
+   floor the box stays >=112px tall in that band; the <img>'s existing
+   object-fit: cover just crops a little more horizontally. Do not
+   "simplify" this away — it is load-bearing for that one band, not
+   redundant with aspect-ratio. */
 .pk-about-map-thumb {
   aspect-ratio: 21 / 9;
+  min-height: 7rem;
   overflow: hidden;
   position: relative;
   display: block;
@@ -2785,14 +2795,34 @@ body.pk-drawer-open {
   display: block;
 }
 
+/* Opaque, bordered, inset, single-line chip (G-01.4-2 gap closure — see
+   .planning/debug/G-01.4-2-map-thumb-coverage.md for the full diagnosis).
+   Was a translucent (88%-opaque color-mix) edge-to-edge band, ported from a
+   sketch variant whose thumb had no image behind it — a real dense Maps
+   screenshot ghosts through 12% transmittance. Fully opaque + inset from
+   all three edges removes both the show-through and the hard full-bleed
+   seam. white-space/overflow/text-overflow bound the caption to one line
+   structurally, regardless of font metrics or a future copy edit — the two
+   caption-length variants in about_live.ex mean the ellipsis should never
+   actually trigger; it is the ceiling, not the mechanism. Declares no
+   `display` — an unlayered .pk-* rule setting display would beat the
+   hidden/lg:block utility pair, exactly the cascade hazard this file's
+   top-of-file note documents (already hit once on the isologo theme
+   variants, plan 01.4-05). An absolutely-positioned span already
+   blockifies on its own. */
 .pk-about-map-label {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
   padding: 0.5rem 0.75rem;
   font-size: 0.75rem;
-  background: color-mix(in srgb, var(--color-base-100) 88%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
   color: var(--color-base-content);
 }
 
