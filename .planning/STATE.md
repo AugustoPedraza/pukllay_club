@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.4
 current_phase_name: UI polish pass for About page sketches
 status: executing
-stopped_at: Phase 01.4 context gathered
-last_updated: "2026-09-03T17:48:08.482Z"
+stopped_at: "Completed 01.4-06-PLAN.md (G-01.4-1 gap closure: isologo scroll-morph blink/spacing/fluidity fixes)"
+last_updated: "2026-09-04T01:43:23.971Z"
 last_activity: 2026-09-03
-last_activity_desc: Phase 01.4 execution started
-state_head: 64c2b6903adc697689a3419a50660ed6c750cadb
+last_activity_desc: Phase 01.4 execution resumed (wave continue)
+state_head: 2fce58f4b7ef370ee21c435887d0c3753c23698c
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 67
-  completed_plans: 62
+  total_plans: 69
+  completed_plans: 68
 milestone_name: milestone
 ---
 
@@ -32,9 +32,9 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.4 (UI polish pass for About page sketches) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 01.4
-Last activity: 2026-09-03 — Phase 01.4 execution started
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-09-03 — Phase 01.4 execution resumed (wave continue)
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -99,6 +99,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | Phase 01.3 P02 | 25min | 3 tasks | 1 files |
 | Phase 01.3 P04 | 45min | 2 tasks | 2 files |
 | Phase quick-260902-glf P01 | 25min | 3 tasks | 4 files |
+| Phase 01.4 P06 | 40min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -183,6 +184,8 @@ Recent decisions affecting current work:
 - [Phase 01.3]: `gemini_api_key` added alongside `bgg_api_token` in `Credentials` (`@secret_fields` + `@derive {Inspect, only: [...]}`, gitignored `config/dev.secret.exs` only); `instructor_lite` (hex.pm) is this phase's one new dependency, manually audited and approved in `01.3-RESEARCH.md` since it falls outside the automated npm/pypi/crates package-legitimacy seam.
 - [Phase 01.3.1, 2026-09-01]: Phase closed after 2 plans, both UAT checkpoints passed on first pass (letterbox rendering across catalog grid/hover/mobile-sheet/detail surfaces; motivating example BGG id 305096 confirmed showing the correct Spanish/Fantasía cover, no stray thumbnail/dot strip). D-02 checkpoint resolved BGG's XML API v2 exposing no reachable gameplay/component photos by narrowing gallery scope to Spanish-edition box art only; `GalleryBackfill` re-ran live over ~434 games; one shared `.pk-poster-img` letterbox class now applied verbatim across every artwork surface except the lightbox and 64x64 selector chips.
 - [Phase 02]: Quick task 260902-glf: reverted Phase 01.2's sticky-footer app shell (.pk-app-shell min-height/flex-grow) per developer's explicit choice; live CDP A/B measurement then found the accompanying flex column vestigial too (main carries only padding, no bottom margin, so nothing collapsed), so the entire .pk-app-shell class + its 3 presence tests + CSS-facts test contract were retired -- root.html.heex's <body> now carries no class at all
+- [Phase 01.4]: 01.4-06: S1 blink fixed via server-rendered data-morph-armed marker + body:has() CSS guard (visibility:hidden, transition:none on hide, eased only on .is-docked reveal), replacing the client-JS-applied hiding class; mb-8 gives the mark anchor its own spacing tier (S2); morph rewritten to per-frame transform interpolation (single rAF scheduler, both live rects re-read every frame, bisected cubic-bezier matching --ease-standard) replacing the CSS layout-property transition (S3)
+- [Phase 01.4]: 01.4-06: found and fixed (Rule 1) that the plan's literal <noscript><style> no-JS escape hatch is exempted from scripting-disabled-only behavior by the HTML spec's noscript child allowlist and would have permanently defeated S1 in every browser; replaced with a <noscript><div> marker (correctly parser-discarded when scripting is enabled) plus explicit hook-side removal, since LiveView's own connect-time DOM reconciliation was found to resurrect the parser-discarded marker on its own
 
 ### Pending Todos
 
@@ -289,6 +292,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-03T16:13:52.795Z
-Stopped at: Phase 01.4 context gathered
-Resume file: .planning/phases/01.4-ui-polish-pass-for-about-page-sketches/01.4-CONTEXT.md
+Last session: 2026-09-04T01:43:23.412Z
+Stopped at: Completed 01.4-06-PLAN.md (G-01.4-1 gap closure: isologo scroll-morph blink/spacing/fluidity fixes)
+Resume file: None
