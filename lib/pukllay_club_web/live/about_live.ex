@@ -58,7 +58,12 @@ defmodule PukllayClubWeb.AboutLive do
         dock the floating mark into its brand slot at the crossing point —
         never by adding hook wiring into header_inner/1 or .CatalogNav
         itself, which is what keeps this About-only per D-10. --%>
-        <section id="about-hero" class="space-y-3 py-12 text-center" phx-hook=".AboutHeaderMorph">
+        <section
+          id="about-hero"
+          data-morph-armed
+          class="space-y-3 py-12 text-center"
+          phx-hook=".AboutHeaderMorph"
+        >
           <script :type={Phoenix.LiveView.ColocatedHook} name=".AboutHeaderMorph">
             export default {
               mounted() {
@@ -66,21 +71,32 @@ defmodule PukllayClubWeb.AboutLive do
                   this.header = document.getElementById("app-header")
                   this.anchor = this.el.querySelector("[data-morph-anchor]")
                   this.mark = document.getElementById("pk-about-morph-mark")
-                  if (!this.header || !this.anchor || !this.mark) return
+                  if (!this.header || !this.anchor || !this.mark) {
+                    this.el.removeAttribute("data-morph-armed")
+                    return
+                  }
 
-                  // Hidden from first paint, not flashed visible then hidden.
-                  this.header.classList.add("pk-header-about-morph")
-                  // WR-02: opacity:0/pointer-events:none (the CSS this class
-                  // triggers) removes the header visually and from mouse
-                  // interaction, but NOT from the tab order or a11y tree —
-                  // a keyboard/screen-reader user could still reach the
-                  // hamburger and nav_links while the header is invisible.
-                  // `inert` is this file's own established mechanism for
-                  // pairing a visual-hidden state with real a11y removal
-                  // (see layouts.ex's drawer/cat-menu: "inert is the closed
-                  // state's a11y mechanism"). Removed below once first-paint
-                  // determines the header is already docked (visible), and
-                  // re-toggled in syncPosition() on every dock-state flip.
+                  // S1 fix (G-01.4-1): the header-hidden state is now
+                  // SERVER-rendered — the `data-morph-armed` marker on this
+                  // section plus the `body:has(...)` rule in app.css hide
+                  // #app-header with `visibility: hidden` and no transition
+                  // before a single line of this hook has run, so there is
+                  // no solid-header-then-fade-out blink. This hook no longer
+                  // applies (or removes) any class to hide the header — it
+                  // only handles the DOCKED reveal (is-docked, below) and
+                  // teardown. A hook that fails to wire (this guard, or the
+                  // catch block below) hands the header back by removing the
+                  // marker, rather than leaving it permanently invisible.
+                  // WR-02: `visibility: hidden` already removes the header
+                  // from the tab order and the a11y tree from first paint
+                  // (stronger than the old opacity+pointer-events pair,
+                  // which left it reachable until this hook ran). `inert` is
+                  // kept here as defence in depth, mirroring this file's own
+                  // established a11y mechanism (see layouts.ex's drawer/
+                  // cat-menu: "inert is the closed state's a11y mechanism").
+                  // Removed below once first-paint determines the header is
+                  // already docked (visible), and re-toggled in
+                  // syncPosition() on every dock-state flip.
                   this.header.setAttribute("inert", "")
 
                   this.docked = false
@@ -212,6 +228,7 @@ defmodule PukllayClubWeb.AboutLive do
                   }
                   window.addEventListener("resize", this.onResize)
                 } catch (e) {
+                  this.el.removeAttribute("data-morph-armed")
                   console.error("AboutHeaderMorph: mount block failed to wire", e)
                 }
               },
@@ -220,11 +237,15 @@ defmodule PukllayClubWeb.AboutLive do
                   clearTimeout(this.entranceTimer)
                   window.removeEventListener("scroll", this.onScroll)
                   window.removeEventListener("resize", this.onResize)
-                  // #app-header is rendered by the shared layout and survives
-                  // LiveView navigation — state this hook adds must be state
-                  // this hook removes, or every subsequent page inherits a
-                  // permanently hidden header.
-                  this.header?.classList.remove("pk-header-about-morph", "is-docked")
+                  // The header-hidden state now un-applies BY ITSELF: it is
+                  // driven by `body:has(#about-hero[data-morph-armed])`, and
+                  // `#about-hero` leaves the DOM on navigation away from
+                  // About, so the `:has()` guard simply stops matching —
+                  // there is no hiding class left over here to clean up
+                  // (S1 fix, G-01.4-1). `is-docked` and `inert` are still
+                  // this hook's own state on a shared element, so those
+                  // still need explicit teardown.
+                  this.header?.classList.remove("is-docked")
                   this.header?.removeAttribute("inert")
                 } catch (e) {
                   console.error("AboutHeaderMorph: destroy block failed to wire", e)
@@ -232,7 +253,7 @@ defmodule PukllayClubWeb.AboutLive do
               }
             }
           </script>
-          <div data-morph-anchor class="pk-about-mark-anchor" aria-hidden="true"></div>
+          <div data-morph-anchor class="pk-about-mark-anchor mb-8" aria-hidden="true"></div>
           <p class="font-sans text-xs uppercase tracking-widest text-neutral">
             Club de juegos de mesa · Jujuy
           </p>
@@ -619,6 +640,24 @@ defmodule PukllayClubWeb.AboutLive do
         <img src={~p"/images/isologo-light.png"} class="dark:hidden" alt="" />
         <img src={~p"/images/isologo-dark.png"} class="hidden dark:block" alt="" />
       </div>
+
+      <%!-- No-JS escape hatch (S1 fix, G-01.4-1, T-01.4-20): the header-hidden
+      state above is now unconditional server-rendered CSS, so a visitor with
+      scripting disabled or failed would otherwise get a page with NO header
+      at all — strictly worse than the blink being fixed. This repeats the
+      EXACT :has() selector from the About-scoped CSS block and restores the
+      header. Equal specificity, later in the document, so it wins whenever
+      scripting is off. A sibling of the mark above, deliberately NOT inside
+      #about-hero — space-y-3 counts every rendered child, and an extra one
+      there would silently add 12px above the mark (S2 fix). --%>
+      <noscript>
+        <style phx-no-curly-interpolation>
+          body:has(#about-hero[data-morph-armed]) #app-header {
+            visibility: visible;
+            opacity: 1;
+          }
+        </style>
+      </noscript>
     </Layouts.app>
     """
   end

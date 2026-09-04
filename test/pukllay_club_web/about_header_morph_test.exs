@@ -117,6 +117,54 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
     end
   end
 
+  describe "the hook un-arms the page on both failure paths (S1 fix, G-01.4-1)" do
+    test "the hook removes data-morph-armed in both the guard clause and the catch block" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      occurrences =
+        hook
+        |> String.split("this.el.removeAttribute(\"data-morph-armed\")")
+        |> length()
+        |> Kernel.-(1)
+
+      assert occurrences >= 2,
+             "Expected the hook to call this.el.removeAttribute(\"data-morph-armed\") at least " <>
+               "twice — once in the guard clause that early-returns when header/anchor/mark is " <>
+               "missing, and once in the catch block — so a hook that fails to wire hands the " <>
+               "header back visible instead of leaving it permanently hidden (found #{occurrences})."
+    end
+  end
+
+  describe "the mark anchor has its own spacing tier, not the hero's flat space-y-3 (S2 fix, G-01.4-1)" do
+    test "[data-morph-anchor]'s class list carries a spacing utility of at least the mb-6 step", %{
+      conn: conn
+    } do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      anchor = LazyHTML.query(doc, "[data-morph-anchor]")
+      [class] = LazyHTML.attribute(anchor, "class")
+
+      assert Regex.match?(~r/\bmb-(6|7|8|9|10|11|12)\b/, class),
+             "Expected [data-morph-anchor]'s class list to include a margin-bottom utility of " <>
+               "at least mb-6 (found class=\"#{class}\") — the anchor needs its own spacing " <>
+               "tier so the 200px isologo doesn't read as flush against the kicker text below it."
+    end
+
+    test ".pk-about-mark-anchor declares no margin-bottom of its own" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-mark-anchor\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-mark-anchor rule in app.css."
+      [_, body] = rule
+
+      refute body =~ "margin-bottom",
+             "An unlayered .pk-* rule declaring margin-bottom would beat the mb-6+ Tailwind " <>
+               "utility on the same element (the cascade hazard this file's own top-of-file " <>
+               "note documents) — the spacing tier must live only in the markup's utility class."
+    end
+  end
+
   describe "CSS facts the hook depends on" do
     test ".pk-about-morph-mark declares position: fixed" do
       src = strip_comments(css_source())
@@ -126,27 +174,80 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
                "viewport-relative inline top/left, which only a fixed-position element honors."
     end
 
-    test "#app-header.pk-header-about-morph .pk-brand-mark sets opacity: 0" do
+    test "body:has(#about-hero[data-morph-armed]) #app-header .pk-brand-mark sets opacity: 0" do
       src = strip_comments(css_source())
 
       assert Regex.match?(
-               ~r/#app-header\.pk-header-about-morph\s+\.pk-brand-mark\s*\{[^}]*opacity:\s*0/s,
+               ~r/body:has\(#about-hero\[data-morph-armed\]\)\s+#app-header\s+\.pk-brand-mark\s*\{[^}]*opacity:\s*0/s,
                src
              ),
-             "A rule must suppress `.pk-brand-mark`'s opacity to 0 while `.pk-header-about-morph` " <>
-               "is on `#app-header` — otherwise the header's own always-rendered isologo and the " <>
-               "floating mark are both visible at once (RESEARCH.md Pitfall 1)."
+             "A rule must suppress `.pk-brand-mark`'s opacity to 0 while the `:has()` guard " <>
+               "matches — otherwise the header's own always-rendered isologo and the floating " <>
+               "mark are both visible at once (RESEARCH.md Pitfall 1)."
     end
 
-    test "#app-header.pk-header-about-morph hides the header at rest, and .is-docked reveals it" do
+    test "the :has()-guarded rule hides the header at rest with no transition (S1 fix), and .is-docked reveals it eased" do
       src = strip_comments(css_source())
 
-      assert Regex.match?(~r/#app-header\.pk-header-about-morph\s*\{[^}]*opacity:\s*0/s, src)
+      assert Regex.match?(
+               ~r/body:has\(#about-hero\[data-morph-armed\]\)\s+#app-header\s*\{[^}]*visibility:\s*hidden[^}]*\}/s,
+               src
+             ),
+             "The base :has()-guarded rule must hide the header via visibility: hidden — " <>
+               "this is what's server-rendered before any JS has run (G-01.4-1 S1 fix)."
+
+      base_rule =
+        Regex.run(
+          ~r/body:has\(#about-hero\[data-morph-armed\]\)\s+#app-header\s*\{([^}]*)\}/s,
+          src
+        )
+
+      assert base_rule, "Expected to find the base :has()-guarded header-hidden rule."
+      [_, base_body] = base_rule
+
+      assert base_body =~ ~r/transition:\s*none/,
+             "The hide direction must be untransitioned — an eased hide is what produced the " <>
+               "reported blink (S1). transition: none makes the hide instant."
 
       assert Regex.match?(
-               ~r/#app-header\.pk-header-about-morph\.is-docked\s*\{[^}]*opacity:\s*1/s,
+               ~r/body:has\(#about-hero\[data-morph-armed\]\)\s+#app-header\.is-docked\s*\{[^}]*visibility:\s*visible[^}]*opacity:\s*1[^}]*--ease-standard/s,
                src
-             )
+             ),
+             "The .is-docked companion must reveal the header (visibility: visible, opacity: 1) " <>
+               "with an eased transition naming --ease-standard — only the REVEAL direction may " <>
+               "animate."
+    end
+
+    test "no selector in the stylesheet uses the retired pk-header-about-morph class" do
+      src = strip_comments(css_source())
+
+      refute src =~ "pk-header-about-morph",
+             "The header-hidden state moved to a server-rendered :has() guard (S1 fix, " <>
+               "G-01.4-1) — the old client-applied `pk-header-about-morph` class must not " <>
+               "appear in any selector."
+    end
+  end
+
+  describe "the dead (unconnected) render carries the hidden-header marker (S1 fix, G-01.4-1)" do
+    test "GET /quienes-somos ships data-morph-armed on #about-hero before any JS has run", %{
+      conn: conn
+    } do
+      # Deliberately the DEAD render (get/2), not live/2 — live/2's returned
+      # HTML cannot distinguish "shipped by the server" from "added by a hook
+      # after the LiveSocket join", which is precisely the distinction that
+      # failed here (the diagnosis's decisive curl evidence). A dead render
+      # is what a real first paint sees before app.js has executed at all.
+      conn = get(conn, ~p"/quienes-somos")
+      html = html_response(conn, 200)
+
+      doc = LazyHTML.from_document(html)
+      hero = LazyHTML.query(doc, "#about-hero[data-morph-armed]")
+
+      assert Enum.count(hero) == 1,
+             "Expected #about-hero to carry data-morph-armed in the DEAD (pre-JS) render — " <>
+               "this is what makes the header-hidden CSS rule match before a single line of " <>
+               "JavaScript has run. If this fails, the header is once again hidden only by " <>
+               "client JS after the join, which is the exact S1 blink defect this test guards."
     end
   end
 

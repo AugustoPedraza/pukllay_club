@@ -2865,23 +2865,46 @@ body.pk-drawer-open {
   transition: none !important;
 }
 
-#app-header.pk-header-about-morph {
+/* S1 fix (G-01.4-1): the header-hidden state is now driven by a `:has()`
+   selector keyed on `data-morph-armed`, a marker `#about-hero` renders
+   from the SERVER (about_live.ex) — not a class the client hook adds
+   after the LiveSocket join. This is what makes the hide apply before a
+   single line of JS has run, closing the "solid header, then it fades
+   away" blink the user reported. `transition: none` is deliberate: the
+   HIDE direction must be instant, because there is no state to animate
+   FROM — the header was never rendered visible in the first place.
+   `:has()` is Baseline-2023 (all evergreen browsers since ~2023); a
+   browser without it simply never matches this rule, degrading to the
+   PRE-fix behaviour (header visible at rest, exactly what plan 01.4-05
+   shipped) — never to something worse. The no-JS <noscript> override
+   below repeats this exact selector for scripting-disabled visitors. */
+body:has(#about-hero[data-morph-armed]) #app-header {
+  visibility: hidden;
   opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--duration-slow) var(--ease-out-soft);
+  transition: none;
 }
 
-#app-header.pk-header-about-morph.is-docked {
+/* The REVEAL direction is the only one allowed to ease — transitions are
+   read from the AFTER-change style, so adding `.is-docked` (the hook's
+   own state, added once the floating mark reaches the header's brand
+   slot) eases the header in, while removing it (on undock, or on the
+   `:has()` guard no longer matching at all) snaps instantly. This
+   asymmetry is intentional: the load-time animated fade-out the user
+   reported is now structurally impossible, since the header never
+   starts visible on About. */
+body:has(#about-hero[data-morph-armed]) #app-header.is-docked {
+  visibility: visible;
   opacity: 1;
-  pointer-events: auto;
+  transition: opacity var(--duration-slow) var(--ease-standard);
 }
 
 /* Suppresses the header's own always-rendered isologo permanently on
    About (RESEARCH.md Pitfall 1, open question 2 resolution) — with the
    floating mark parked exactly on this element's rect at dock, exactly
    one isologo is visible at every instant, so there is no flicker/pop/
-   double-mark to reconcile. */
-#app-header.pk-header-about-morph .pk-brand-mark {
+   double-mark to reconcile (S-045-SINGLE-MARK). Moved under the same
+   `:has()` guard as the two rules above (S1 fix). */
+body:has(#about-hero[data-morph-armed]) #app-header .pk-brand-mark {
   opacity: 0;
 }
 
