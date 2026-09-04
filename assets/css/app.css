@@ -2804,23 +2804,38 @@ body.pk-drawer-open {
    below is reached only through classes this hook adds/removes, never
    through new markup in header_inner/1 or .CatalogNav. One value each, no
    breakpoint branching (D-01: one mechanic on desktop and mobile). */
-.pk-about-mark-anchor {
-  display: block;
-  height: 200px;
+/* Single source for the mark's rest size (Task 2, G-01.4-1 S3 fix): both
+   the anchor and the floating mark read this ONE custom property, closing
+   the two-independently-declared-200px-literals surface-drift hazard this
+   file's own single-source rule forbids. */
+:root {
+  --pk-about-mark-h: 200px;
 }
 
+.pk-about-mark-anchor {
+  display: block;
+  height: var(--pk-about-mark-h);
+}
+
+/* The mark's box declares no transition and no resting opacity/transform
+   of its own (Task 2, G-01.4-1 S3 fix): the hook now owns `transform`
+   outright, writing one interpolated `translate3d(...) scale(...)` per
+   frame — there is no longer a CSS transition on top/left/width/height
+   for a scroll frame to fight, or for `.no-anim` to have to cancel.
+   `aspect-ratio` is the isologo's own real 939x1034 ratio, so the box IS
+   the glyph (object-fit has nothing left to letterbox) and a single
+   uniform scale maps it exactly onto the header's 36px-wide brand mark.
+   The entrance's own opacity/scale/glow now lives on the `-inner` child
+   below, not on this element, so the hook's transform and the entrance's
+   CSS transition never touch the same property. */
 .pk-about-morph-mark {
   position: fixed;
+  top: 0;
+  left: 0;
   z-index: 60;
-  opacity: 0;
-  transform: scale(0.75);
-  transition: opacity var(--duration-slow) var(--ease-out-soft),
-    transform var(--duration-slow) var(--ease-out-soft),
-    top var(--duration-slow) var(--ease-out-soft),
-    left var(--duration-slow) var(--ease-out-soft),
-    width var(--duration-slow) var(--ease-out-soft),
-    height var(--duration-slow) var(--ease-out-soft),
-    filter var(--duration-slow) var(--ease-out-soft);
+  height: var(--pk-about-mark-h);
+  aspect-ratio: 939 / 1034;
+  transform-origin: 0 0;
 }
 
 /* No `display` declared here (Rule 1 fix, found live via CDP in plan
@@ -2840,7 +2855,24 @@ body.pk-drawer-open {
   object-fit: contain;
 }
 
-.pk-about-morph-mark.is-entered {
+/* The entrance's own fade/scale/glow now lives on this inner wrapper, not
+   on `.pk-about-morph-mark` itself (Task 2, G-01.4-1 S3 fix) — the outer
+   element's only job is the hook's per-frame `transform`, so the
+   entrance's CSS transition and the hook's JS-driven transform never
+   compete for the same property. The entrance keeps its own eased CSS
+   transition; it just no longer shares an element with the morph. */
+.pk-about-morph-mark-inner {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transform: scale(0.75);
+  transform-origin: 50% 50%;
+  transition: opacity var(--duration-slow) var(--ease-standard),
+    transform var(--duration-slow) var(--ease-standard),
+    filter var(--duration-slow) var(--ease-standard);
+}
+
+.pk-about-morph-mark.is-entered .pk-about-morph-mark-inner {
   opacity: 1;
   transform: scale(1);
 }
@@ -2857,12 +2889,8 @@ body.pk-drawer-open {
   }
 }
 
-.pk-about-morph-mark.is-first-play {
+.pk-about-morph-mark.is-first-play .pk-about-morph-mark-inner {
   animation: pk-about-mark-glow var(--duration-slow) var(--ease-out-soft);
-}
-
-.pk-about-morph-mark.no-anim {
-  transition: none !important;
 }
 
 /* S1 fix (G-01.4-1): the header-hidden state is now driven by a `:has()`
@@ -2906,6 +2934,27 @@ body:has(#about-hero[data-morph-armed]) #app-header.is-docked {
    `:has()` guard as the two rules above (S1 fix). */
 body:has(#about-hero[data-morph-armed]) #app-header .pk-brand-mark {
   opacity: 0;
+}
+
+/* No-JS override (T-01.4-20) — restores the header for a visitor with
+   scripting disabled. `#pk-no-js-marker` is a <div> rendered inside a
+   <noscript> in about_live.ex; per the HTML parsing spec a bare element
+   like a <div> inside <noscript> is DISCARDED by the parser while
+   scripting is enabled (only base/link/meta/noframes/style survive
+   there), so this marker — and therefore this rule's `:has()` match —
+   exists ONLY when scripting is truly off (live-verified via CDP: the
+   marker is absent from the DOM with JS on, present with JS off). A
+   `<style>` placed directly inside that <noscript> does NOT have this
+   property (it is one of the exempted tags and becomes an ALWAYS-ACTIVE
+   stylesheet regardless of scripting) — that is why this rule lives
+   here instead of inline. `[data-no-js]` on the marker keeps this
+   selector's specificity identical to the hide rule above (ID + one
+   attribute inside :has()), so this rule wins by DECLARATION ORDER
+   alone — no `!important` needed, keeping this file's one reduced-
+   motion `!important` its only one. */
+body:has(#pk-no-js-marker[data-no-js]) #app-header {
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Mobile category chip row wrapper (sketch 020 Round 2): exists solely so

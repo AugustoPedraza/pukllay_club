@@ -76,6 +76,21 @@ defmodule PukllayClubWeb.AboutLive do
                     return
                   }
 
+                  // T-01.4-20: removes the no-JS <noscript><div id="pk-no-
+                  // js-marker"> escape hatch now that this hook has proven
+                  // it can actually run — this is the mechanism that makes
+                  // the marker's CSS override (app.css) JS-conditional. A
+                  // parser-level trick alone (the marker being discarded by
+                  // the HTML parser while scripting is enabled) does NOT
+                  // survive LiveView's own connect-time DOM reconciliation
+                  // (live-verified via CDP: the marker reappeared after
+                  // connect even with JS running) — this explicit removal,
+                  // which runs strictly after that reconciliation has
+                  // settled (mounted() cannot fire any earlier), is what
+                  // actually ties the override to "JS is running", not the
+                  // parsing quirk by itself.
+                  document.getElementById("pk-no-js-marker")?.remove()
+
                   // S1 fix (G-01.4-1): the header-hidden state is now
                   // SERVER-rendered — the `data-morph-armed` marker on this
                   // section plus the `body:has(...)` rule in app.css hide
@@ -100,12 +115,58 @@ defmodule PukllayClubWeb.AboutLive do
                   this.header.setAttribute("inert", "")
 
                   this.docked = false
-                  this.entered = false
                   // Mirrors .AboutCarousel's own reduced-motion guard in this
                   // same file. Only the decorative entrance (delay + glow) is
                   // ever skipped for it — scroll tracking and the crossing-
-                  // point dock always run regardless.
+                  // point dock always run regardless. Reduced motion also
+                  // collapses this.frame()'s own transform interpolation to
+                  // a single instant step (see below).
                   this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
+
+                  // Read once, from the design token, rather than a
+                  // hard-coded millisecond literal — this is the SAME
+                  // duration the stylesheet's own eased transitions use (the
+                  // header reveal, the entrance), so the JS-driven transform
+                  // and the CSS-driven transitions read as one motion
+                  // system. 280 (the token's own literal value) is used only
+                  // if the custom property fails to parse.
+                  const durationRaw = parseFloat(
+                    getComputedStyle(document.documentElement).getPropertyValue("--duration-slow")
+                  )
+                  this.duration = Number.isFinite(durationRaw) ? durationRaw : 280
+
+                  // cubic-bezier(0.4, 0, 0.2, 1) — the EXACT control points
+                  // of --ease-standard (app.css), so this hook's per-frame
+                  // transform interpolation and the stylesheet's own eased
+                  // transitions share one motion curve. Not a hand-rolled
+                  // approximation: this codebase has three recorded
+                  // incidents (see the About morph CSS block's own
+                  // --ease-standard-vs-amplitude comments) of a motion curve
+                  // chosen by feel and later measured wrong. Bisects on the
+                  // X component (which uses the curve's own 0.4/0.2 control
+                  // values) to invert the curve, then evaluates Y (which
+                  // uses the curve's fixed 0/1 start/end control values) at
+                  // the solved parameter.
+                  const bezierComponent = (t, p1, p2) => {
+                    const inv = 1 - t
+                    return 3 * inv * inv * t * p1 + 3 * inv * t * t * p2 + t * t * t
+                  }
+                  this.ease = (x) => {
+                    if (x <= 0) return 0
+                    if (x >= 1) return 1
+                    let lo = 0
+                    let hi = 1
+                    let t = x
+                    for (let i = 0; i < 20; i++) {
+                      t = (lo + hi) / 2
+                      if (bezierComponent(t, 0.4, 0.2) > x) {
+                        hi = t
+                      } else {
+                        lo = t
+                      }
+                    }
+                    return bezierComponent(t, 0, 1)
+                  }
 
                   // Verbatim anchor rect — no derived arithmetic. The anchor
                   // is ordinary in-flow content, so this already tracks
@@ -121,112 +182,147 @@ defmodule PukllayClubWeb.AboutLive do
                   // variant's `display: none` — querySelector() alone always
                   // returns the first (light-theme) one regardless of theme,
                   // which zeroes out in dark theme. Walk both and return the
-                  // one that actually has layout size (CR-01).
+                  // one that actually has layout size (CR-01). Returns null
+                  // — not a zero-height fallback rect — when neither mark
+                  // has laid out yet: a zero-height dock rect would scale
+                  // the floating mark to nothing, the "shrink-to-zero"
+                  // symptom the UAT truth explicitly forbids.
                   this.dockRect = () => {
                     const marks = this.header.querySelectorAll(".pk-brand-mark")
                     for (const mark of marks) {
                       const rect = mark.getBoundingClientRect()
                       if (rect.width > 0 && rect.height > 0) return rect
                     }
-                    // Fallback: neither mark has a size yet (e.g. not yet laid out).
-                    return marks[0]?.getBoundingClientRect()
+                    return null
                   }
 
-                  // When animate is false: force an instant, untransitioned
-                  // jump (add no-anim, write the rect, force a reflow via
-                  // offsetWidth, then remove no-anim) — otherwise every
-                  // tracking frame animates and the mark lags the page
-                  // instead of riding it pixel for pixel.
-                  this.place = (rect, animate) => {
-                    if (!animate) this.mark.classList.add("no-anim")
-                    this.mark.style.top = rect.top + "px"
-                    this.mark.style.left = rect.left + "px"
-                    this.mark.style.width = rect.width + "px"
-                    this.mark.style.height = rect.height + "px"
-                    if (!animate) {
-                      void this.mark.offsetWidth
-                      this.mark.classList.remove("no-anim")
-                    }
+                  // Writes the mark's position AND size as one `transform`,
+                  // never top/left/width/height — those are layout-inducing,
+                  // cannot be composited, and were the root cause of the
+                  // scroll-tracking jank this replaces. The untransformed
+                  // layout size is read via offsetWidth/offsetHeight, never
+                  // getBoundingClientRect(), which would include the
+                  // transform this function itself just wrote and compound
+                  // every frame. transform-origin: 0 0 (app.css) means the
+                  // box's own top-left corner lands exactly at (x, y)
+                  // regardless of scale, which is what lets one
+                  // translate3d + scale pair land the box correctly at both
+                  // ends of the move.
+                  this.write = (natural, dock) => {
+                    const markWidth = this.mark.offsetWidth
+                    const markHeight = this.mark.offsetHeight
+                    const restX = natural.left + (natural.width - markWidth) / 2
+                    const restY = natural.top
+                    const dockScale = dock.height / markHeight
+                    const x = restX + (dock.left - restX) * this.progress
+                    const y = restY + (dock.top - restY) * this.progress
+                    const scale = 1 + (dockScale - 1) * this.progress
+                    this.mark.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`
                   }
 
-                  // The ONE eased move, in both directions, happens only on
-                  // an actual state flip. Live 1:1 tracking (no transition)
-                  // continues every frame while not docked and unchanged;
-                  // once docked and unchanged, this is a no-op.
-                  this.syncPosition = () => {
+                  // The single per-frame driver, replacing syncPosition()/
+                  // onScroll(). Re-reads BOTH the anchor rect and the dock
+                  // rect every time it runs, so a scroll mid-move retargets
+                  // the interpolation continuously instead of leaving a
+                  // stale destination — this is what makes the undock
+                  // reverse cleanly instead of surviving one frame and then
+                  // hard-snapping the rest.
+                  this.frame = () => {
+                    this.rafId = null
                     const natural = this.naturalRect()
                     const dock = this.dockRect()
+                    if (!dock) {
+                      // Brand mark hasn't laid out yet — a self-terminating
+                      // poll: try again next frame, write nothing this one.
+                      this.schedule()
+                      return
+                    }
+
                     const shouldDock = natural.top <= dock.top
                     if (shouldDock !== this.docked) {
                       this.docked = shouldDock
                       this.header.classList.toggle("is-docked", this.docked)
                       this.header.toggleAttribute("inert", !this.docked)
-                      this.place(this.docked ? dock : natural, true)
-                    } else if (!this.docked) {
-                      this.place(natural, false)
+                      this.from = this.progress
+                      this.to = this.docked ? 1 : 0
+                      this.startedAt = performance.now()
                     }
+
+                    if (this.progress !== this.to) {
+                      // Under reduced motion the state change is instant —
+                      // treat elapsed as already complete.
+                      const raw = this.reducedMotion.matches
+                        ? 1
+                        : Math.min((performance.now() - this.startedAt) / this.duration, 1)
+                      this.progress =
+                        raw >= 1 ? this.to : this.from + (this.to - this.from) * this.ease(raw)
+                    }
+
+                    this.write(natural, dock)
+
+                    if (this.progress !== this.to) this.schedule()
                   }
 
-                  this.ticking = false
-                  this.onScroll = () => {
-                    if (!this.entered || this.ticking) return
-                    this.ticking = true
-                    requestAnimationFrame(() => {
-                      this.syncPosition()
-                      this.ticking = false
-                    })
+                  // Requests a frame only when none is already pending, so a
+                  // burst of scroll events still costs exactly one frame.
+                  this.rafId = null
+                  this.schedule = () => {
+                    if (this.rafId != null) return
+                    this.rafId = requestAnimationFrame(this.frame)
                   }
-                  window.addEventListener("scroll", this.onScroll, {passive: true})
 
-                  // D-02 first paint: the SAME rect comparison syncPosition()
-                  // uses on every scroll frame, run once here BEFORE starting
-                  // the entrance timer — never a route/fragment/server check.
-                  // A visitor landing below the crossing point (e.g. a
-                  // #contacto deep link from the footer) sees the header
-                  // already docked, with no jump and no replayed entrance.
+                  // Tracking is live from mount — never gated behind the
+                  // entrance timer (the S3(c) fix: the old guard dropped
+                  // every scroll event during the 500ms entrance window,
+                  // leaving the mark stale until the next tick teleported
+                  // it). Registered directly as the listener: every scroll/
+                  // resize event just asks for a frame. Both naturalRect()
+                  // and dockRect() are viewport-relative, and the header's
+                  // own height is republished by .CatalogNav's
+                  // ResizeObserver, so a resize invalidates both the same
+                  // way a scroll does — no separate resize-only logic is
+                  // needed. D-01: no viewport-width branch anywhere in this
+                  // hook — this listener reacts to the geometry a resize
+                  // changed, it never reads the new width itself.
+                  window.addEventListener("scroll", this.schedule, {passive: true})
+                  window.addEventListener("resize", this.schedule)
+
+                  // D-02 first paint: the SAME rect comparison this.frame()
+                  // uses on every scroll frame, computed once here BEFORE
+                  // starting the entrance timer — never a route/fragment/
+                  // server check. A visitor landing below the crossing
+                  // point (e.g. a #contacto deep link from the footer) sees
+                  // the header already docked, with no jump and no replayed
+                  // entrance. A null dock rect is treated as not-docked —
+                  // there is nothing yet to compare against.
                   const natural0 = this.naturalRect()
                   const dock0 = this.dockRect()
-                  this.docked = natural0.top <= dock0.top
+                  this.docked = dock0 ? natural0.top <= dock0.top : false
+                  this.progress = this.docked ? 1 : 0
+                  this.from = this.progress
+                  this.to = this.progress
+                  this.header.classList.toggle("is-docked", this.docked)
+                  this.header.toggleAttribute("inert", !this.docked)
+                  // Writes the mark's transform immediately, at whichever
+                  // state first paint resolved to.
+                  this.frame()
 
-                  if (this.docked) {
-                    this.header.classList.add("is-docked")
-                    this.header.removeAttribute("inert")
-                    this.place(dock0, false)
+                  // Entrance is a LOAD TIMER, never scroll-triggered, and it
+                  // no longer sets any position-related flag — position is
+                  // owned entirely by this.frame()/this.write() now. Fires
+                  // immediately when the page opens already docked or under
+                  // reduced motion (no decorative delay/glow to replay), and
+                  // under reduced motion the delay itself is skipped too,
+                  // not just the glow.
+                  const startEntrance = () => {
                     this.mark.classList.add("is-entered")
-                    this.entered = true
+                    if (!this.reducedMotion.matches) this.mark.classList.add("is-first-play")
+                  }
+                  if (this.docked || this.reducedMotion.matches) {
+                    startEntrance()
                   } else {
-                    this.place(natural0, false)
-                    const startEntrance = () => {
-                      this.mark.classList.add("is-entered")
-                      // The glow is decorative, dropped under reduced motion;
-                      // the entrance itself (is-entered) still applies so the
-                      // mark becomes visible either way.
-                      if (!this.reducedMotion.matches) this.mark.classList.add("is-first-play")
-                      this.entered = true
-                    }
-                    // Entrance is a LOAD TIMER, never scroll-triggered — under
-                    // reduced motion the delay itself is skipped too, not
-                    // just the glow.
-                    if (this.reducedMotion.matches) {
-                      startEntrance()
-                    } else {
-                      this.entranceTimer = setTimeout(startEntrance, 500)
-                    }
+                    this.entranceTimer = setTimeout(startEntrance, 500)
                   }
-
-                  // Both naturalRect() and dockRect() are viewport-relative,
-                  // and the header's own height is republished by
-                  // .CatalogNav's ResizeObserver — a resize invalidates both.
-                  // No animation on a resize snap, and syncPosition() after
-                  // it so a resize that crosses the threshold settles into
-                  // the right state. D-01: no viewport-width branch anywhere
-                  // in this hook — this listener reacts to the geometry a
-                  // resize changed, it never reads the new width itself.
-                  this.onResize = () => {
-                    this.place(this.docked ? this.dockRect() : this.naturalRect(), false)
-                    this.syncPosition()
-                  }
-                  window.addEventListener("resize", this.onResize)
                 } catch (e) {
                   this.el.removeAttribute("data-morph-armed")
                   console.error("AboutHeaderMorph: mount block failed to wire", e)
@@ -235,8 +331,9 @@ defmodule PukllayClubWeb.AboutLive do
               destroyed() {
                 try {
                   clearTimeout(this.entranceTimer)
-                  window.removeEventListener("scroll", this.onScroll)
-                  window.removeEventListener("resize", this.onResize)
+                  if (this.rafId != null) cancelAnimationFrame(this.rafId)
+                  window.removeEventListener("scroll", this.schedule)
+                  window.removeEventListener("resize", this.schedule)
                   // The header-hidden state now un-applies BY ITSELF: it is
                   // driven by `body:has(#about-hero[data-morph-armed])`, and
                   // `#about-hero` leaves the DOM on navigation away from
@@ -637,26 +734,49 @@ defmodule PukllayClubWeb.AboutLive do
       fight silently, and a utility that "does nothing" is a debugging
       trap). --%>
       <div id="pk-about-morph-mark" class="pk-about-morph-mark" aria-hidden="true">
-        <img src={~p"/images/isologo-light.png"} class="dark:hidden" alt="" />
-        <img src={~p"/images/isologo-dark.png"} class="hidden dark:block" alt="" />
+        <div class="pk-about-morph-mark-inner">
+          <img src={~p"/images/isologo-light.png"} class="dark:hidden" alt="" />
+          <img src={~p"/images/isologo-dark.png"} class="hidden dark:block" alt="" />
+        </div>
       </div>
 
       <%!-- No-JS escape hatch (S1 fix, G-01.4-1, T-01.4-20): the header-hidden
       state above is now unconditional server-rendered CSS, so a visitor with
       scripting disabled or failed would otherwise get a page with NO header
-      at all — strictly worse than the blink being fixed. This repeats the
-      EXACT :has() selector from the About-scoped CSS block and restores the
-      header. Equal specificity, later in the document, so it wins whenever
-      scripting is off. A sibling of the mark above, deliberately NOT inside
-      #about-hero — space-y-3 counts every rendered child, and an extra one
-      there would silently add 12px above the mark (S2 fix). --%>
+      at all — strictly worse than the blink being fixed.
+
+      Two live-verified-via-CDP findings shaped this (neither is something
+      ExUnit can catch):
+
+      1. A `<style>` placed DIRECTLY inside `<noscript>` does NOT work as a
+         JS-conditional override: per the HTML parsing spec, `<noscript>`
+         redirects to the SAME restricted child allowlist (base/link/meta/
+         noframes/style) used in `<head>`, regardless of whether scripting
+         is enabled — so that style becomes an ALWAYS-ACTIVE stylesheet and
+         would have permanently defeated the header-hidden rule in every
+         browser, JS or not (confirmed: document.styleSheets grew by one,
+         and the rule showed up as matched/origin:"regular" against a live
+         #app-header with a real LiveSocket connection running).
+
+      2. A bare element NOT on that allowlist (this <div>) IS correctly
+         discarded by the parser on a plain static HTML parse with
+         scripting enabled (confirmed against this exact markup served as
+         a static file: getElementById returns null with JS on, non-null
+         with JS off) — but that discard does NOT survive LiveView's own
+         connect-time DOM reconciliation: on the real running page, the
+         marker reappeared in the DOM after the LiveSocket connected, even
+         though app.js clearly executed. The CSS rule this marker drives
+         (app.css) is therefore only half the mechanism — see the explicit
+         `document.getElementById("pk-no-js-marker")?.remove()` call in
+         the hook below, which is what actually makes this JS-conditional
+         end to end on THIS app: it fires only once the hook has proven it
+         can run, after any connect-time reconciliation has settled.
+
+      A sibling of the mark above, deliberately NOT inside #about-hero —
+      space-y-3 counts every rendered child, and an extra one there would
+      silently add 12px above the mark (S2 fix). --%>
       <noscript>
-        <style phx-no-curly-interpolation>
-          body:has(#about-hero[data-morph-armed]) #app-header {
-            visibility: visible;
-            opacity: 1;
-          }
-        </style>
+        <div id="pk-no-js-marker" data-no-js aria-hidden="true"></div>
       </noscript>
     </Layouts.app>
     """

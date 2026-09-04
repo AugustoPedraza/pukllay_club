@@ -251,6 +251,128 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
     end
   end
 
+  # Task 2 (G-01.4-1 S3 fix): the layout-property CSS transition was
+  # replaced by per-frame transform interpolation driven from JS. These
+  # gates pin the mechanism, scoped via about_header_morph_hook_source/1
+  # so a match inside .AboutCarousel (a different hook in the same file)
+  # can never satisfy them by accident.
+  describe "the morph is driven by transform interpolation, not a CSS layout-property transition (S3 fix, G-01.4-1)" do
+    test "the hook writes only style.transform on the mark — never top, left, or width" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      assert hook =~ "style.transform",
+             "The hook must assign the mark's position/size via style.transform — the only " <>
+               "geometry write left once the layout-property transition is retired."
+
+      refute hook =~ "style.top",
+             "The hook must not write style.top on the mark — that was the layout-inducing, " <>
+               "non-compositable write this task replaces."
+
+      refute hook =~ "style.left",
+             "The hook must not write style.left on the mark."
+
+      refute hook =~ "style.width",
+             "The hook must not write style.width on the mark — its size is now driven " <>
+               "entirely by aspect-ratio + the transform's scale term."
+    end
+
+    test "the hook resolves its duration from --duration-slow, not a hard-coded literal" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      assert hook =~ "--duration-slow",
+             "The hook must read its move duration from the --duration-slow design token, so " <>
+               "the JS-driven transform and the stylesheet's own eased transitions share one " <>
+               "duration."
+    end
+
+    test "the hook's easing helper evaluates cubic-bezier's --ease-standard control values (0.4 and 0.2)" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      assert hook =~ "0.4" and hook =~ "0.2",
+             "The hook's easing helper must evaluate the exact control points of --ease-standard " <>
+               "(cubic-bezier(0.4, 0, 0.2, 1)) — a hand-rolled approximation is explicitly " <>
+               "disallowed by this plan (three prior incidents of a curve picked by feel and " <>
+               "later measured wrong)."
+    end
+
+    test "the hook requests and cancels animation frames" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      assert hook =~ "requestAnimationFrame",
+             "The hook must drive its per-frame interpolation via requestAnimationFrame."
+
+      assert hook =~ "cancelAnimationFrame",
+             "destroyed() must cancel any pending animation frame, or a torn-down hook can still " <>
+               "write to a detached mark element on the next frame."
+    end
+  end
+
+  describe "CSS facts the transform-driven mark depends on (S3 fix, G-01.4-1)" do
+    test ".pk-about-morph-mark declares aspect-ratio and transform-origin, and no transition" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/(?<!-)\.pk-about-morph-mark\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-morph-mark rule in app.css."
+      [_, body] = rule
+
+      assert body =~ "aspect-ratio",
+             "`.pk-about-morph-mark` must declare aspect-ratio — the box IS the glyph now, so " <>
+               "object-fit has nothing left to letterbox."
+
+      assert body =~ "transform-origin",
+             "`.pk-about-morph-mark` must declare transform-origin — required for the hook's " <>
+               "translate3d + scale pair to land the box correctly at both ends of the move."
+
+      refute body =~ "transition",
+             "`.pk-about-morph-mark` must declare no transition of its own — the hook now owns " <>
+               "`transform` outright, writing one interpolated value per frame; a competing CSS " <>
+               "transition on the same element is exactly what let the old undock get cancelled."
+    end
+
+    test "both .pk-about-mark-anchor and .pk-about-morph-mark read var(--pk-about-mark-h)" do
+      src = strip_comments(css_source())
+
+      anchor_rule = Regex.run(~r/\.pk-about-mark-anchor\s*\{([^}]*)\}/s, src)
+      mark_rule = Regex.run(~r/(?<!-)\.pk-about-morph-mark\s*\{([^}]*)\}/s, src)
+
+      assert anchor_rule, "Expected to find a .pk-about-mark-anchor rule in app.css."
+      assert mark_rule, "Expected to find a .pk-about-morph-mark rule in app.css."
+
+      [_, anchor_body] = anchor_rule
+      [_, mark_body] = mark_rule
+
+      assert anchor_body =~ "var(--pk-about-mark-h)",
+             "`.pk-about-mark-anchor` must read its height from var(--pk-about-mark-h) — the " <>
+               "single declared source for the mark's rest size."
+
+      assert mark_body =~ "var(--pk-about-mark-h)",
+             "`.pk-about-morph-mark` must read its height from var(--pk-about-mark-h), the SAME " <>
+               "single source `.pk-about-mark-anchor` reads — two independently-declared 200px " <>
+               "literals is the surface-drift defect this file's own single-source rule forbids."
+    end
+
+    test ".pk-about-morph-mark-inner declares a transition naming --ease-standard" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-morph-mark-inner\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-morph-mark-inner rule in app.css."
+      [_, body] = rule
+
+      assert body =~ "transition" and body =~ "--ease-standard",
+             "The entrance's own fade/scale must live on .pk-about-morph-mark-inner, with a " <>
+               "transition naming --ease-standard — it keeps its own CSS transition, it just no " <>
+               "longer shares an element with the hook's transform."
+    end
+
+    test "no rule in the stylesheet declares the retired no-anim state on the mark" do
+      src = strip_comments(css_source())
+
+      refute src =~ "no-anim",
+             "The .no-anim escape hatch (transition: none !important, forced reflow) is retired " <>
+               "— there is no longer a transition on .pk-about-morph-mark for anything to escape."
+    end
+  end
+
   describe "pre-existing layouts_test.exs suite is unaffected" do
     test "layouts_test.exs still passes unmodified" do
       # Executed as part of the plan's <verify> command
