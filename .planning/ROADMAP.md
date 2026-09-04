@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 6/7 plans executed (2 gap-closure plans added from UAT)
+**Plans:** 7/7 plans executed (2 gap-closure plans added from UAT)
 
 Plans:
 **Wave 1**
@@ -170,7 +170,7 @@ Plans:
 
 **Wave 7** *(gap closure — UAT G-01.4-2, blocked on Wave 6: same files)*
 
-- [ ] 01.4-07-PLAN.md — Maps thumbnail gap closure: sketch 048's short mobile caption ported, the caption bounded to one opaque single-line chip, and a height floor for the 640-767px two-column band (G-01.4-2)
+- [x] 01.4-07-PLAN.md — Maps thumbnail gap closure: sketch 048's short mobile caption ported, the caption bounded to one opaque single-line chip, and a height floor for the 640-767px two-column band (G-01.4-2)
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 

@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.4
-current_phase_name: UI polish pass for About page sketches
-status: executing
-stopped_at: "Completed 01.4-06-PLAN.md (G-01.4-1 gap closure: isologo scroll-morph blink/spacing/fluidity fixes)"
-last_updated: "2026-09-04T01:43:23.971Z"
+status: completed
+stopped_at: "Completed 01.4-07-PLAN.md (G-01.4-2 gap closure: map thumbnail caption/coverage fix) — Phase 01.4 complete, no remaining plans"
+last_updated: "2026-09-04T01:52:31.744Z"
 last_activity: 2026-09-03
-last_activity_desc: Phase 01.4 execution resumed (wave continue)
-state_head: 2fce58f4b7ef370ee21c435887d0c3753c23698c
+last_activity_desc: Phase 01.4 marked complete
+state_head: 150cd1d737a21cfc09997d7e4347b89d7eb52ee0
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 69
-  completed_plans: 68
+  completed_plans: 69
 milestone_name: milestone
+current_phase_name: UI polish pass for About page sketches
 ---
 
 Total Phases: 7
@@ -31,10 +31,10 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.4 (UI polish pass for About page sketches) — EXECUTING
-Plan: 2 of 5
-Status: Ready to execute
-Last activity: 2026-09-03 — Phase 01.4 execution resumed (wave continue)
+Phase: 01.4 — COMPLETE
+Plan: 7 of 7
+Status: Phase 01.4 complete
+Last activity: 2026-09-03 — Phase 01.4 marked complete
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -100,6 +100,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | Phase 01.3 P04 | 45min | 2 tasks | 2 files |
 | Phase quick-260902-glf P01 | 25min | 3 tasks | 4 files |
 | Phase 01.4 P06 | 40min | 2 tasks | 3 files |
+| Phase 01.4 P07 | 25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -186,6 +187,7 @@ Recent decisions affecting current work:
 - [Phase 02]: Quick task 260902-glf: reverted Phase 01.2's sticky-footer app shell (.pk-app-shell min-height/flex-grow) per developer's explicit choice; live CDP A/B measurement then found the accompanying flex column vestigial too (main carries only padding, no bottom margin, so nothing collapsed), so the entire .pk-app-shell class + its 3 presence tests + CSS-facts test contract were retired -- root.html.heex's <body> now carries no class at all
 - [Phase 01.4]: 01.4-06: S1 blink fixed via server-rendered data-morph-armed marker + body:has() CSS guard (visibility:hidden, transition:none on hide, eased only on .is-docked reveal), replacing the client-JS-applied hiding class; mb-8 gives the mark anchor its own spacing tier (S2); morph rewritten to per-frame transform interpolation (single rAF scheduler, both live rects re-read every frame, bisected cubic-bezier matching --ease-standard) replacing the CSS layout-property transition (S3)
 - [Phase 01.4]: 01.4-06: found and fixed (Rule 1) that the plan's literal <noscript><style> no-JS escape hatch is exempted from scripting-disabled-only behavior by the HTML spec's noscript child allowlist and would have permanently defeated S1 in every browser; replaced with a <noscript><div> marker (correctly parser-discarded when scripting is enabled) plus explicit hook-side removal, since LiveView's own connect-time DOM reconciliation was found to resurrect the parser-discarded marker on its own
+- [Phase 01.4]: 01.4-07: G-01.4-2 map thumbnail coverage gap closed via lg-breakpoint (not sm) two-caption variant pair + opaque single-line inset chip + min-height floor on the thumb — all three independently-necessary per the debug session's differential experiment; human-check for perceptual sufficiency deferred to end-of-phase UAT per this phase's human_verify_mode=end-of-phase convention
 
 ### Pending Todos
 
@@ -292,6 +294,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-04T01:43:23.412Z
-Stopped at: Completed 01.4-06-PLAN.md (G-01.4-1 gap closure: isologo scroll-morph blink/spacing/fluidity fixes)
+Last session: 2026-09-04T01:52:31.174Z
+Stopped at: Completed 01.4-07-PLAN.md (G-01.4-2 gap closure: map thumbnail caption/coverage fix) — Phase 01.4 complete, no remaining plans
 Resume file: None
