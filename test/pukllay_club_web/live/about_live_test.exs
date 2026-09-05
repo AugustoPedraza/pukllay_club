@@ -14,6 +14,58 @@ defmodule PukllayClubWeb.AboutLiveTest do
   # and footer_rhythm_test.exs.
   defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
 
+  # G-01.4-5 gap closure (plan 01.4-10 Task 3): walks a baseline JPEG's own
+  # marker chain to its Start-Of-Frame segment and returns {width, height}
+  # read directly off the file's bytes — no dependency, no trusting a
+  # comment. This is the missing wire the gap's root cause needed: one file
+  # (app.css) described another file's (the committed screenshot's) shape,
+  # and nothing checked the two agreed.
+  defp jpeg_dimensions(path) do
+    <<0xFF, 0xD8, rest::binary>> = File.read!(path)
+    walk_jpeg_segments(rest)
+  end
+
+  # RST markers (0xD0-0xD7) carry no length field — skip the marker byte
+  # only and keep walking. Not expected before a Start-Of-Frame in a real
+  # file, but guarded so a malformed/unexpected file fails loudly instead
+  # of misreading a length that isn't there.
+  defp walk_jpeg_segments(<<0xFF, marker, rest::binary>>) when marker in 0xD0..0xD7 do
+    walk_jpeg_segments(rest)
+  end
+
+  # A 0xFF fill byte before the real marker byte — re-inject the single
+  # 0xFF this clause consumed and keep walking.
+  defp walk_jpeg_segments(<<0xFF, 0xFF, rest::binary>>) do
+    walk_jpeg_segments(<<0xFF, rest::binary>>)
+  end
+
+  defp walk_jpeg_segments(<<0xFF, 0xDA, _rest::binary>>) do
+    raise "Reached Start-Of-Scan (0xFFDA) before any Start-Of-Frame marker — " <>
+            "this file is not the baseline JPEG this gate assumes."
+  end
+
+  # Start-Of-Frame: 0xC0..0xCF except 0xC4 (Huffman tables), 0xC8 (JPG
+  # reserved), 0xCC (arithmetic coding). Payload is one precision byte,
+  # then HEIGHT, then WIDTH, both big-endian 16-bit — note the order.
+  # `_length` is prefixed since it is not needed once past the header (the
+  # payload is read directly off `rest`, unbounded), keeping
+  # --warnings-as-errors clean.
+  defp walk_jpeg_segments(<<0xFF, marker, _length::16, rest::binary>>)
+       when marker in 0xC0..0xCF and marker not in [0xC4, 0xC8, 0xCC] do
+    <<_precision, height::16, width::16, _rest::binary>> = rest
+    {width, height}
+  end
+
+  defp walk_jpeg_segments(<<0xFF, _marker, length::16, rest::binary>>) do
+    skip = length - 2
+    <<_payload::binary-size(skip), remaining::binary>> = rest
+    walk_jpeg_segments(remaining)
+  end
+
+  defp walk_jpeg_segments(<<>>) do
+    raise "Reached end of file before any Start-Of-Frame marker — this file is not a baseline JPEG."
+  end
+
   describe "GET /club and GET /quienes-somos (D-01: two aliases, no redirect)" do
     test "GET /club returns 200 and renders, not a redirect", %{conn: conn} do
       assert {:ok, _view, _html} = live(conn, ~p"/club")
@@ -322,25 +374,50 @@ defmodule PukllayClubWeb.AboutLiveTest do
   # resolved end-to-end from ClubLinks.maps_url/0 through the rendered
   # anchor and <img>. Task 3 adds the WhatsApp/Instagram icon links.
   #
-  # Oracle boundary (plan 01.4-07 Task 2, closing G-01.4-2): ExUnit +
-  # LazyHTML see server-rendered strings, class lists, and stylesheet
-  # text — they structurally CANNOT see computed layout, wrapped line
-  # counts, rendered opacity, or any coverage ratio. G-01.4-2 was a purely
-  # geometric/perceptual defect (a translucent caption overlay that grew to
-  # 3 wrapped lines and swallowed 74.9% of the thumbnail) that the original
-  # two structural assertions below (anchor href/target/rel, img src) could
-  # not have caught — nothing here asserted the caption's text, height, or
-  # opacity. The assertions added below (both caption variants render and
-  # are gated by lg; the opaque single-source fill; the single-line
-  # ceiling; the height floor) constrain the MECHANISM that produced the
-  # bug, not the resulting APPEARANCE — the appearance still needs the
-  # human look recorded in 01.4-07-PLAN.md's <verify><human-check>. No
-  # headless-browser or screenshot test is added: this repo has an
-  # engine-divergence precedent (the Phase 01.3 chevron bug reproduced only
-  # on real WebKit, not headless Chromium), and every measurement in the
-  # G-01.4-2 diagnosis was headless Chromium — a headless gate here would
-  # encode the same blind spot it just failed to catch, at a real
-  # maintenance cost.
+  # Oracle boundary (plan 01.4-07 Task 2, closing G-01.4-2; revised plan
+  # 01.4-10 Task 3, closing G-01.4-5): ExUnit + LazyHTML see server-rendered
+  # strings, class lists, and stylesheet text — they structurally CANNOT see
+  # computed layout, wrapped line counts, rendered opacity, or any coverage
+  # ratio. G-01.4-2 was a purely geometric/perceptual defect (a translucent
+  # caption overlay that grew to 3 wrapped lines and swallowed 74.9% of the
+  # thumbnail) that the original two structural assertions below (anchor
+  # href/target/rel, img src) could not have caught — nothing here asserted
+  # the caption's text, height, or opacity. The assertions added for that
+  # gap (both caption variants render and are gated by lg; the opaque
+  # single-source fill; the single-line ceiling; the height floor)
+  # constrain the MECHANISM that produced the bug, not the resulting
+  # APPEARANCE.
+  #
+  # G-01.4-5 sharpened this boundary further: this suite's ORIGINAL
+  # sentence above was true about pixel CONTENT and false about pixel
+  # GEOMETRY — and geometry, not content, is what actually broke (a
+  # recaptured asset's real shape silently drifted from the `aspect-ratio`
+  # literal that crops it). Three oracles now divide this component, each
+  # owning a different question, and no reader should reach for the wrong
+  # one:
+  #   1. THIS suite (ExUnit + LazyHTML) gates the asset/CSS SHAPE
+  #      relationship and other stylesheet facts — e.g. the dimension gate
+  #      below reads the real JPEG dimensions off disk and fails the build
+  #      the moment they disagree with the custom properties that crop
+  #      them. Fast, deterministic, no browser.
+  #   2. `test/visual/about_map_attribution.mjs` (+ its Python pixel
+  #      oracle) renders the LIVE page in a real headless Chrome at all 4
+  #      breakpoints x 2 themes and gates whether Google's attribution
+  #      wordmark actually survives to the painted screen, clear of the
+  #      caption chip — the render-and-look step this suite cannot perform.
+  #      Developer-invoked only (not part of `mix quality`/CI — see
+  #      01.4-10-PLAN.md's threat register), because it needs a real
+  #      browser and a booted server.
+  #   3. A human still adjudicates whether the RESULT reads right —
+  #      legibility, framing, whether the crop still looks intentional —
+  #      per this phase's end-of-phase UAT convention. No headless-browser
+  #      screenshot-diff test is added to CI: this repo has an
+  #      engine-divergence precedent (the Phase 01.3 chevron bug reproduced
+  #      only on real WebKit, not headless Chromium), and every measurement
+  #      in both the G-01.4-2 and G-01.4-5 diagnoses was headless
+  #      Chromium — a CI-gated headless screenshot test here would encode
+  #      the same blind spot it just failed to catch, at a real maintenance
+  #      cost.
   describe "Contacto card map thumbnail (D-04/D-05/D-06, plan 01.4-02 Task 2)" do
     test "renders a link to ClubLinks.maps_url() with target=_blank and rel=noopener noreferrer",
          %{conn: conn} do
@@ -549,6 +626,130 @@ defmodule PukllayClubWeb.AboutLiveTest do
     test "both light and dark map thumbnail asset files exist on disk" do
       assert File.exists?("priv/static/images/about-maps-thumb.jpg")
       assert File.exists?("priv/static/images/about-maps-thumb-dark.jpg")
+    end
+
+    # G-01.4-5 gap closure (plan 01.4-10 Task 3): the gap's root cause,
+    # closed. 01.4-09 recaptured this asset at 1656x804 (ratio 2.0597) and
+    # left `.pk-about-map-thumb` declaring a stale `21 / 9` literal
+    # (correct for the earlier ~1200x514 capture it replaced) — nothing in
+    # the repo connected the two, so `object-fit: cover` silently discarded
+    # 5.86% off the top AND bottom of every render, taking Google's
+    # attribution wordmark (baked into the bottom edge) with it
+    # (01.4-VERIFICATION.md truth 10). This test's SUBJECT is the
+    # RELATIONSHIP between the asset's real shape and the CSS that crops
+    # it, not either side pinned to today's numbers — so it keeps working
+    # after a legitimate future recapture at a new size, as long as both
+    # custom properties are updated in the same commit.
+    test "both map assets' real JPEG dimensions match --pk-map-thumb-w/-h in app.css" do
+      {light_w, light_h} = jpeg_dimensions("priv/static/images/about-maps-thumb.jpg")
+      {dark_w, dark_h} = jpeg_dimensions("priv/static/images/about-maps-thumb-dark.jpg")
+
+      src = strip_comments(css_source())
+      rule = Regex.run(~r/\.pk-about-map-thumb\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-thumb rule in app.css."
+      [_, body] = rule
+
+      css_w =
+        Regex.run(~r/--pk-map-thumb-w:\s*(\d+)/, body) ||
+          flunk("""
+          Expected .pk-about-map-thumb to declare --pk-map-thumb-w — this custom \
+          property is the ONE place in the repo that claims to know the asset's \
+          pixel width, read by the rule's aspect-ratio to derive the crop.
+          """)
+
+      css_h =
+        Regex.run(~r/--pk-map-thumb-h:\s*(\d+)/, body) ||
+          flunk("""
+          Expected .pk-about-map-thumb to declare --pk-map-thumb-h — see \
+          --pk-map-thumb-w's failure message above; the same reasoning applies \
+          to height.
+          """)
+
+      [_, css_w] = css_w
+      [_, css_h] = css_h
+      css_w = String.to_integer(css_w)
+      css_h = String.to_integer(css_h)
+
+      failure_message = fn label, asset_w, asset_h ->
+        """
+        #{label} asset is #{asset_w}x#{asset_h} on disk, but .pk-about-map-thumb \
+        declares --pk-map-thumb-w: #{css_w} / --pk-map-thumb-h: #{css_h}.
+
+        .pk-about-map-thumb crops with object-fit: cover using an aspect-ratio \
+        derived from these two custom properties — a box shaped differently \
+        from the asset discards the difference. This is exactly how G-01.4-5 \
+        happened: 01.4-09 replaced a 1200x514 capture with a 1656x804 one and \
+        left the box declaring the old shape, silently throwing away 5.86% off \
+        the top and bottom of every render and taking Google's attribution \
+        wordmark with it (see .planning/phases/01.4-ui-polish-pass-for-about-page-sketches/01.4-VERIFICATION.md, \
+        truth 10, for the measurement). A recapture at a new size means \
+        updating BOTH custom properties in the same commit as the new asset.
+        """
+      end
+
+      assert {css_w, css_h} == {light_w, light_h},
+             failure_message.("Light", light_w, light_h)
+
+      assert {css_w, css_h} == {dark_w, dark_h},
+             failure_message.("Dark", dark_w, dark_h)
+    end
+
+    test ".pk-about-map-thumb's aspect-ratio names both custom properties, not a numeric literal" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-thumb\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-thumb rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/aspect-ratio\s*:\s*var\(--pk-map-thumb-w\)\s*\/\s*var\(--pk-map-thumb-h\)/,
+             "Expected .pk-about-map-thumb's aspect-ratio to be a ratio of " <>
+               "var(--pk-map-thumb-w) / var(--pk-map-thumb-h), not a numeric literal. " <>
+               "A literal is a SECOND, unchecked claim about the asset's shape — the " <>
+               "test above only gates the custom properties, so having exactly one " <>
+               "place in the repo that claims to know the asset's shape (the custom " <>
+               "properties) is the entire point of this gap closure."
+
+      assert body =~ "--pk-map-attrib-band",
+             "Expected .pk-about-map-thumb to declare --pk-map-attrib-band — the " <>
+               "reserve band .pk-about-map-label's bottom offset adds on top of its " <>
+               "own inset, so the caption chip can never sit on top of the now-visible " <>
+               "attribution."
+    end
+
+    test ".pk-about-map-thumb img declares object-position: 50% 100%" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-thumb img\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-thumb img rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/object-position\s*:\s*50%\s*100%/,
+             "Expected .pk-about-map-thumb img to declare object-position: 50% 100% — " <>
+               "Google always bakes Maps attribution onto the BOTTOM edge of a capture, " <>
+               "so if a vertical crop is ever reintroduced (a container change, a " <>
+               "min-height edit, a differently-shaped recapture), the bottom must be " <>
+               "the last thing discarded, never the first."
+
+      assert body =~ "object-fit",
+             "Expected .pk-about-map-thumb img to still declare object-fit (unchanged)."
+    end
+
+    test ".pk-about-map-label's bottom reserves the attribution band on top of its own inset" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-label\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-label rule in app.css."
+      [_, body] = rule
+
+      assert body =~
+               ~r/bottom\s*:\s*calc\(var\(--pk-map-label-inset\)\s*\+\s*var\(--pk-map-attrib-band\)\)/,
+             "Expected .pk-about-map-label's bottom to be " <>
+               "calc(var(--pk-map-label-inset) + var(--pk-map-attrib-band)), not the " <>
+               "inset alone. The caption chip is opaque and horizontally overlaps the " <>
+               "centred wordmark — uncropping Google's attribution and then parking " <>
+               "this chip directly on top of it would satisfy the letter of the fix " <>
+               "and none of its purpose (Google's Geo Guidelines: \"Don't remove, " <>
+               "obscure, or crop out the attribution information\")."
     end
   end
 
