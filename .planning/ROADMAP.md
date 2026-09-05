@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 7/9 plans executed (4 gap-closure plans added from UAT)
+**Plans:** 8/9 plans executed (4 gap-closure plans added from UAT)
 
 Plans:
 **Wave 1**
@@ -174,7 +174,7 @@ Plans:
 
 **Wave 8** *(gap closure — UAT G-01.4-3, blocked on Wave 7: same files)*
 
-- [ ] 01.4-08-PLAN.md — Isologo bottom-spacing gap closure: clear space derived from sketch 045 A3 into a named `--pk-about-mark-clear`, the anchor height decoupled from the mark height, the mark reconciled to the approved 180px, the hero's `py-12` rebalanced, and a ratio gate so the derivation survives the next resize (G-01.4-3)
+- [x] 01.4-08-PLAN.md — Isologo bottom-spacing gap closure: clear space derived from sketch 045 A3 into a named `--pk-about-mark-clear`, the anchor height decoupled from the mark height, the mark reconciled to the approved 180px, the hero's `py-12` rebalanced, and a ratio gate so the derivation survives the next resize (G-01.4-3)
 
 **Wave 9** *(gap closure — UAT G-01.4-4, blocked on Wave 8: same files)*
 

@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.4
-status: completed
-stopped_at: "Completed 01.4-07-PLAN.md (G-01.4-2 gap closure: map thumbnail caption/coverage fix) — Phase 01.4 complete, no remaining plans"
-last_updated: "2026-09-04T01:52:31.744Z"
-last_activity: 2026-09-03
-last_activity_desc: Phase 01.4 marked complete
-state_head: 150cd1d737a21cfc09997d7e4347b89d7eb52ee0
+current_phase_name: UI polish pass for About page sketches (INSERTED)
+status: executing
+stopped_at: "Completed 01.4-08-PLAN.md (G-01.4-3 gap closure: isologo bottom spacing derived from sketch 045 A3) — 01.4-09 remains"
+last_updated: "2026-09-05T02:59:45.669Z"
+last_activity: 2026-09-04
+last_activity_desc: Phase 01.4 execution started
+state_head: d91126f191f93a8f18e5f0d5850227a437ec4e78
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 69
-  completed_plans: 69
+  total_plans: 71
+  completed_plans: 70
 milestone_name: milestone
-current_phase_name: UI polish pass for About page sketches
 ---
 
 Total Phases: 7
@@ -27,14 +27,14 @@ See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.4 — UI polish pass for About page sketches
+**Current focus:** Phase 01.4 — UI polish pass for About page sketches (INSERTED)
 
 ## Current Position
 
-Phase: 01.4 — COMPLETE
-Plan: 7 of 7
-Status: Phase 01.4 complete
-Last activity: 2026-09-03 — Phase 01.4 marked complete
+Phase: 01.4 (UI polish pass for About page sketches (INSERTED)) — EXECUTING
+Plan: 2 of 9
+Status: Ready to execute
+Last activity: 2026-09-04 — Phase 01.4 execution started
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -101,6 +101,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | Phase quick-260902-glf P01 | 25min | 3 tasks | 4 files |
 | Phase 01.4 P06 | 40min | 2 tasks | 3 files |
 | Phase 01.4 P07 | 25min | 2 tasks | 3 files |
+| Phase 01.4 P08 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -188,6 +189,7 @@ Recent decisions affecting current work:
 - [Phase 01.4]: 01.4-06: S1 blink fixed via server-rendered data-morph-armed marker + body:has() CSS guard (visibility:hidden, transition:none on hide, eased only on .is-docked reveal), replacing the client-JS-applied hiding class; mb-8 gives the mark anchor its own spacing tier (S2); morph rewritten to per-frame transform interpolation (single rAF scheduler, both live rects re-read every frame, bisected cubic-bezier matching --ease-standard) replacing the CSS layout-property transition (S3)
 - [Phase 01.4]: 01.4-06: found and fixed (Rule 1) that the plan's literal <noscript><style> no-JS escape hatch is exempted from scripting-disabled-only behavior by the HTML spec's noscript child allowlist and would have permanently defeated S1 in every browser; replaced with a <noscript><div> marker (correctly parser-discarded when scripting is enabled) plus explicit hook-side removal, since LiveView's own connect-time DOM reconciliation was found to resurrect the parser-discarded marker on its own
 - [Phase 01.4]: 01.4-07: G-01.4-2 map thumbnail coverage gap closed via lg-breakpoint (not sm) two-caption variant pair + opaque single-line inset chip + min-height floor on the thumb — all three independently-necessary per the debug session's differential experiment; human-check for perceptual sufficiency deferred to end-of-phase UAT per this phase's human_verify_mode=end-of-phase convention
+- [Phase 01.4]: 01.4-08: --pk-about-mark-h reconciled 200px->180px (approved sketch 045 A3) and decoupled from anchor height via new --pk-about-mark-clear (80px, derived 44.4% of mark height) + calc(); #about-hero py-12 -> pt-2 pb-12 fixing inverted above/below allocation; closes G-01.4-3, human-check deferred to end-of-phase UAT
 
 ### Pending Todos
 
@@ -294,6 +296,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-04T01:52:31.174Z
-Stopped at: Completed 01.4-07-PLAN.md (G-01.4-2 gap closure: map thumbnail caption/coverage fix) — Phase 01.4 complete, no remaining plans
+Last session: 2026-09-05T02:59:45.098Z
+Stopped at: Completed 01.4-08-PLAN.md (G-01.4-3 gap closure: isologo bottom spacing derived from sketch 045 A3) — 01.4-09 remains
 Resume file: None
