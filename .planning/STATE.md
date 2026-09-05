@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.4
-current_phase_name: ui-polish-pass-for-about-page-sketches
+current_phase_name: UI polish pass for About page sketches (INSERTED)
 status: executing
-stopped_at: "Completed 01.4-09-PLAN.md (G-01.4-4 gap closure: map thumbnail chip shrink-wrap + recapture + theme-variant pair; dark-mode capture deferred, tracked as open stub) — Phase 01.4 plans complete pending end-of-phase UAT"
-last_updated: "2026-09-05T16:54:11.540Z"
-last_activity: 2026-09-04
+stopped_at: "Completed 01.4-10-PLAN.md (G-01.4-5 gap closure: Maps attribution crop fix + committed visual probe)"
+last_updated: "2026-09-05T18:16:06.771Z"
+last_activity: 2026-09-05
 last_activity_desc: Phase 01.4 execution started
-state_head: 52866bd95a75d6efc3fb3b2474b52d7f85748131
+state_head: a090a88a3d3521ee3acc90ebab5220e4de88ccbb
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 73
-  completed_plans: 71
+  completed_plans: 72
 milestone_name: milestone
 ---
 
@@ -31,10 +31,10 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.4 (ui-polish-pass-for-about-page-sketches) — READY TO EXECUTE
-Plan: 3 of 9
+Phase: 01.4 (UI polish pass for About page sketches (INSERTED)) — EXECUTING
+Plan: 2 of 11
 Status: Ready to execute
-Last activity: 2026-09-04 — Phase 01.4 execution started
+Last activity: 2026-09-05 — Phase 01.4 execution started
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
@@ -103,6 +103,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | Phase 01.4 P07 | 25min | 2 tasks | 3 files |
 | Phase 01.4 P08 | 20min | 2 tasks | 3 files |
 | Phase 01.4 P09 | 20min | 3 tasks | 5 files |
+| Phase 01.4 P10 | 55min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -193,6 +194,8 @@ Recent decisions affecting current work:
 - [Phase 01.4]: 01.4-08: --pk-about-mark-h reconciled 200px->180px (approved sketch 045 A3) and decoupled from anchor height via new --pk-about-mark-clear (80px, derived 44.4% of mark height) + calc(); #about-hero py-12 -> pt-2 pb-12 fixing inverted above/below allocation; closes G-01.4-3, human-check deferred to end-of-phase UAT
 - [Phase 01.4]: 01.4-09: Maps thumbnail chip shrink-wrap/concentric-nesting fixed (--pk-map-label-inset single-source), light asset recaptured (tighter zoom, dominant pin, attribution in frame); pin-label truncation accepted as permanent per human confirmation in Google Maps, full venue name already carried in surrounding text
 - [Phase 01.4]: 01.4-09: light/dark theme-variant <img> pair wired for the Maps thumbnail (mirrors brand_logo/1's isologo pattern, .pk-about-map-thumb img's display:block removed to avoid the 01.4-05 cascade hazard); real dark-mode capture NOT achieved (3 avenues exhausted: Maps web UI has no dark toggle, Chrome force-dark only recolors overlay text not tiles, OS dark mode leaves tiles light) — dark asset ships as an interim byte-identical copy of the light asset, tracked as an open stub (WINDOWS.md #23), deferring root cause (C) to a future pass
+- [Phase 01.4]: 01.4-10: G-01.4-5 closed — .pk-about-map-thumb's aspect-ratio now derives from --pk-map-thumb-w/-h (the asset's real 1656x804 dimensions) instead of a stale 21:9 literal that was cropping Google's Maps attribution off every render; ExUnit gate reads real JPEG dimensions off disk to prevent recurrence
+- [Phase 01.4]: 01.4-10: shipped test/visual/ — a zero-dependency Node+CDP+PIL visual probe that renders the live About page in real headless Chrome and independently confirms the crop geometry against painted pixels; deliberately excluded from mix quality/CI (needs a real browser + booted server), developer-invoked only
 
 ### Pending Todos
 
@@ -299,6 +302,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-05T14:48:37.263Z
-Stopped at: Completed 01.4-09-PLAN.md (G-01.4-4 gap closure: map thumbnail chip shrink-wrap + recapture + theme-variant pair; dark-mode capture deferred, tracked as open stub) — Phase 01.4 plans complete pending end-of-phase UAT
+Last session: 2026-09-05T18:16:06.052Z
+Stopped at: Completed 01.4-10-PLAN.md (G-01.4-5 gap closure: Maps attribution crop fix + committed visual probe)
 Resume file: None
