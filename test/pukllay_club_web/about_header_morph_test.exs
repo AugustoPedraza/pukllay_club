@@ -182,6 +182,52 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
     end
   end
 
+  # This gate proves the RATIO the design source specifies is still
+  # declared — it cannot prove the result reads as balanced to a human.
+  # G-01.4-3 is a fix that was ALREADY measured and self-verified once
+  # (01.4-06's mb-8) and still rejected on human review; perceptual
+  # sufficiency stays a human check, permanently (see this plan's own
+  # <human-check>). What this test guards against is the PROCESS root
+  # cause recorded in the debug session at 22:52: mb-8 was picked one step
+  # past the top of a text-rhythm spacing scale, and nothing in the
+  # codebase asserted the value had any relationship to anything — so a
+  # future resize of the mark could silently repeat the exact defect this
+  # plan closes (mark grows, clearance doesn't move, proportion collapses).
+  describe "the clear space below the mark is derived from the mark's own height, not a fixed literal (G-01.4-3)" do
+    test "clear space is at least 40% of the mark height" do
+      src = strip_comments(css_source())
+
+      mark_h_match = Regex.run(~r/--pk-about-mark-h:\s*(\d+)px/, src)
+      clear_match = Regex.run(~r/--pk-about-mark-clear:\s*(\d+)px/, src)
+
+      assert mark_h_match, "Expected to find --pk-about-mark-h: <N>px declared in app.css."
+      assert clear_match, "Expected to find --pk-about-mark-clear: <N>px declared in app.css."
+
+      [_, mark_h_str] = mark_h_match
+      [_, clear_str] = clear_match
+
+      mark_h = String.to_integer(mark_h_str)
+      clear = String.to_integer(clear_str)
+
+      ratio = clear / mark_h
+
+      assert ratio >= 0.40,
+             "Expected --pk-about-mark-clear (#{clear}px) to be at least 40% of " <>
+               "--pk-about-mark-h (#{mark_h}px) — got #{Float.round(ratio * 100, 1)}%. Both " <>
+               "isologo PNGs are cropped tight to their ink and donate zero clear space of " <>
+               "their own, so this CSS ratio is the WHOLE perceived separation between the " <>
+               "mark and the copy below it. The approved design source (sketch 045 variant A3) " <>
+               "measures 43.6%; ui-design-system's documented spacing scale is a text-rhythm " <>
+               "scale (max space-y-6 = 24px) with no tier for a display graphic, which is " <>
+               "exactly why an intuition-picked utility step landed at 16% (G-01.4-3's mb-8) " <>
+               "and stayed there through a whole correction ladder that topped out at 27%. A " <>
+               "ratio gate (not a literal px assertion) is deliberate: if the mark is ever " <>
+               "resized without resizing the clearance with it, this test fails instead of " <>
+               "silently repeating G-01.4-3. Full measurement: " <>
+               ".planning/debug/G-01.4-3-isologo-bottom-spacing.md."
+    end
+  end
+
   describe "CSS facts the hook depends on" do
     test ".pk-about-morph-mark declares position: fixed" do
       src = strip_comments(css_source())
