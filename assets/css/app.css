@@ -2767,20 +2767,45 @@ body.pk-drawer-open {
 }
 
 /* Fixed-ratio Google Maps screenshot thumbnail (D-04/D-05/D-06) — a
-   committed static asset, never a runtime Static Maps API call. 21/9 keeps
-   the crop landscape without a further server-side crop step (Task 1's
-   ~1200x514 capture matches this ratio directly).
+   committed static asset, never a runtime Static Maps API call.
+
+   aspect-ratio (G-01.4-5 gap closure — see 01.4-VERIFICATION.md truth 10
+   and 01.4-10-PLAN.md): this used to be a bare
+   `21 / 9` literal that "matched the capture directly" — until 01.4-09
+   recaptured the asset at 1656x804 (ratio 2.0597) and left this literal
+   unchanged. Nothing in the repo connected the two, so `object-fit: cover`
+   silently discarded 5.86% off the top AND bottom of every render, taking
+   Google's attribution wordmark (baked into the bottom edge of the
+   screenshot) with it. Now there is exactly ONE place that claims to know
+   the asset's shape — `--pk-map-thumb-w`/`--pk-map-thumb-h`, read by
+   `aspect-ratio` below — and `test/pukllay_club_web/live/about_live_test.exs`
+   (Contacto card map thumbnail describe block) gates these two numbers
+   against the real JPEG dimensions on disk. A recapture at a different
+   size means updating BOTH custom properties in the same commit, or that
+   test fails.
+
+   --pk-map-attrib-band reserves the bottom slice of the box the caption
+   chip below may never enter. Measured directly off the committed asset:
+   the attribution glyphs run from row 781 to row 799 of 804 (97.14% to
+   99.38% of the height, 2.86% of the height total) — 3.5% is that rounded
+   up. Custom properties inherit, so `.pk-about-map-label` reads this same
+   value for its own offset.
 
    min-height (G-01.4-2 gap closure) floors the box for the 640-767px
    two-column band specifically: aspect-ratio alone lets the box collapse to
    a measured 218x93px there (sm:grid-cols-2 halves the card at exactly
    640px — see .planning/debug/G-01.4-2-map-thumb-coverage.md). With the
    floor the box stays >=112px tall in that band; the <img>'s existing
-   object-fit: cover just crops a little more horizontally. Do not
+   object-fit: cover just crops a little more horizontally — and, with the
+   new `object-position` below, that crop lands on the (horizontally
+   centred) sides, never on the (bottom-anchored) attribution. Do not
    "simplify" this away — it is load-bearing for that one band, not
    redundant with aspect-ratio. */
 .pk-about-map-thumb {
-  aspect-ratio: 21 / 9;
+  --pk-map-thumb-w: 1656;
+  --pk-map-thumb-h: 804;
+  aspect-ratio: var(--pk-map-thumb-w) / var(--pk-map-thumb-h);
+  --pk-map-attrib-band: 3.5%;
   min-height: 7rem;
   overflow: hidden;
   position: relative;
@@ -2807,11 +2832,23 @@ body.pk-drawer-open {
    comment below). `<img>` is a replaced element, so width/height/object-fit
    apply without an explicit display override; the light variant carries an
    explicit `block` utility in the markup instead, since removing this
-   declaration also removes the block-formatting it used to supply. */
+   declaration also removes the block-formatting it used to supply.
+
+   object-position: 50% 100% (G-01.4-5 gap closure) bottom-anchors the
+   crop. With the ratio now matching the asset there is no vertical
+   overflow left to position at most breakpoints — this is a guard, not a
+   fix for today's numbers: Google always bakes Maps attribution onto the
+   BOTTOM edge of a capture (horizontally centred, per the measured
+   constants), so if a future container change, a min-height edit, or a
+   differently-shaped recapture ever reintroduces a vertical crop, the
+   bottom must be the last thing discarded, never the first. The
+   horizontal 50% keeps the existing centred crop for the one band
+   (640-767px, where the min-height floor binds) that still crops at all. */
 .pk-about-map-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 50% 100%;
 }
 
 /* Opaque, bordered, inset, single-line chip (G-01.4-2 gap closure — see
@@ -2848,11 +2885,22 @@ body.pk-drawer-open {
    (0.5rem) here, so the correct inner radius is 0 — expressed as the
    subtraction, not a hard-coded `0px`, so the relationship survives either
    token changing later; `max(0px, ...)` guards against `--radius-box` ever
-   dropping below the inset. */
+   dropping below the inset.
+
+   `bottom` (G-01.4-5 gap closure) adds `--pk-map-attrib-band` on top of
+   the existing inset rather than reading the inset alone. Uncropping
+   Google's attribution (the rule above) and then parking this opaque chip
+   directly on top of it would satisfy the letter of that fix and none of
+   its purpose — Google's Geo Guidelines say "Don't remove, obscure, or
+   crop out the attribution information," and at 1280px the attribution
+   occupies the bottom 7.5px of a 261px box, half a pixel below the old
+   inset-only offset. Percentages on `bottom` resolve against the
+   containing block's height, so this reserve scales with the thumbnail at
+   every breakpoint exactly as the band it protects does. */
 .pk-about-map-label {
   position: absolute;
   left: var(--pk-map-label-inset);
-  bottom: var(--pk-map-label-inset);
+  bottom: calc(var(--pk-map-label-inset) + var(--pk-map-attrib-band));
   max-width: calc(100% - var(--pk-map-label-inset) * 2);
   padding: 0.5rem 0.75rem;
   font-size: 0.75rem;
