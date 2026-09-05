@@ -672,9 +672,33 @@ defmodule PukllayClubWeb.AboutLive do
               rel="noopener noreferrer"
               class="pk-about-map-thumb"
             >
+              <%!-- Light/dark theme-variant pair (G-01.4-4 gap closure, mirrors
+              brand_logo/1's own isologo pair in layouts.ex): light first in
+              document order (an existing test takes List.first() of the srcs
+              under this selector). The light variant needs the explicit
+              `block` utility that brand_logo/1 does not, because
+              `.pk-about-map-thumb img` no longer supplies display:block
+              itself (removed in the same change, to avoid re-defeating this
+              exact utility pair — see that rule's comment in app.css). Both
+              asset files ship as an interim same-image pair: a genuine
+              dark-mode Google Maps capture was not achievable (no in-app
+              Settings > Appearance > Dark toggle found, Chrome's force-dark
+              flag only recolors DOM overlay text not canvas map tiles, OS
+              dark mode + reload left tiles unchanged) — deferred to a future
+              pass, tracked in 01.4-09-SUMMARY.md. --%>
               <img
                 src={~p"/images/about-maps-thumb.jpg"}
                 alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
+                class="block dark:hidden"
+                loading="lazy"
+                decoding="async"
+              />
+              <img
+                src={~p"/images/about-maps-thumb-dark.jpg"}
+                alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
+                class="hidden dark:block"
+                loading="lazy"
+                decoding="async"
               />
               <%!-- Two caption variants (G-01.4-2 gap closure, sketch 048's own
               short/long strings, same hero-tagline precedent above): the

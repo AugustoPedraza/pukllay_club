@@ -2795,11 +2795,23 @@ body.pk-drawer-open {
   --pk-map-label-inset: 0.5rem;
 }
 
+/* No `display` declared here (G-01.4-4 gap closure, Task 3): this rule
+   carried `display: block` until now, and Task 3 adds a light/dark <img>
+   theme-variant pair on the isologo's own `block dark:hidden` /
+   `hidden dark:block` pattern (brand_logo/1, layouts.ex). An unlayered
+   `.pk-*` rule declaring `display` always beats Tailwind's layered
+   utilities (this file's own top-of-file cascade-layer hazard note), which
+   would defeat `dark:hidden` on the light variant and render BOTH images
+   stacked in both themes — the exact Rule 1 defect plan 01.4-05 had to undo
+   on `.pk-about-morph-mark img`'s own theme variants (see that rule's
+   comment below). `<img>` is a replaced element, so width/height/object-fit
+   apply without an explicit display override; the light variant carries an
+   explicit `block` utility in the markup instead, since removing this
+   declaration also removes the block-formatting it used to supply. */
 .pk-about-map-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
 /* Opaque, bordered, inset, single-line chip (G-01.4-2 gap closure — see

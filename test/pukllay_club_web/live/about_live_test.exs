@@ -481,6 +481,75 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "lets the box collapse to 93px tall in the 640-767px two-column band " <>
                "(G-01.4-2, see .planning/debug/G-01.4-2-map-thumb-coverage.md)."
     end
+
+    # G-01.4-4 gap closure, Task 3: `.pk-about-map-thumb img` carried
+    # `display: block` until now. Task 3 wires a light/dark <img> theme-
+    # variant pair on the isologo's own `block dark:hidden` /
+    # `hidden dark:block` pattern (brand_logo/1, layouts.ex) — an unlayered
+    # `.pk-*` rule declaring `display` always beats a layered Tailwind
+    # utility (this file's own top-of-file cascade-layer hazard note),
+    # which would defeat `dark:hidden` and render BOTH images stacked in
+    # both themes. This is exactly the Rule 1 defect plan 01.4-05 had to
+    # undo on `.pk-about-morph-mark img`'s own theme variants. This is a
+    # cascade fact, not a rendered-output fact, so it is asserted against
+    # the stylesheet source rather than through a browser the test suite
+    # does not have.
+    test ".pk-about-map-thumb img declares no display property" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-thumb img\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-thumb img rule in app.css."
+      [_, body] = rule
+
+      refute body =~ "display",
+             "An unlayered .pk-* rule declaring display would beat the dark:hidden / " <>
+               "hidden dark:block utility pair on the light/dark theme-variant <img> pair, " <>
+               "rendering both at once — the exact cascade hazard plan 01.4-05's Rule 1 fix " <>
+               "had to undo on .pk-about-morph-mark img's own theme variants (this file's " <>
+               "own top-of-file hazard note)."
+    end
+
+    # G-01.4-4 gap closure, Task 3: one light-palette asset served both
+    # themes (the light and dark measurement sweeps in the debug session
+    # were identical row-for-row) — a 10.1x luminance mismatch against the
+    # dark card. Mirrors brand_logo/1's own isologo light/dark pair.
+    test "renders both light/dark theme-variant <img>s inside .pk-about-map-thumb, light first",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      imgs = LazyHTML.query(doc, ".pk-about-map-thumb img")
+
+      assert Enum.count(imgs) == 2
+
+      light = Enum.at(imgs, 0)
+      dark = Enum.at(imgs, 1)
+
+      light_src = LazyHTML.attribute(light, "src") |> List.first()
+      light_class = LazyHTML.attribute(light, "class") |> List.first()
+      assert light_src =~ "about-maps-thumb.jpg"
+      assert light_class =~ "block"
+      assert light_class =~ "dark:hidden"
+
+      dark_src = LazyHTML.attribute(dark, "src") |> List.first()
+      dark_class = LazyHTML.attribute(dark, "class") |> List.first()
+      assert dark_src =~ "about-maps-thumb-dark.jpg"
+      assert dark_class =~ "hidden"
+      assert dark_class =~ "dark:block"
+    end
+
+    # G-01.4-4 gap closure, Task 3: a presence-only check. This deliberately
+    # catches the wired-but-never-captured state — a src pointing at a path
+    # with no file behind it — which is the one failure mode of this gap
+    # closure that would otherwise ship two broken <img>s and a green suite.
+    # See the oracle-boundary comment above this describe block: image
+    # CONTENT (luminance, the pin label, competing POIs, the attribution
+    # wordmark) is not expressible as an ExUnit assertion and is adjudicated
+    # only by the human check in 01.4-09-PLAN.md Task 3's <verify>.
+    test "both light and dark map thumbnail asset files exist on disk" do
+      assert File.exists?("priv/static/images/about-maps-thumb.jpg")
+      assert File.exists?("priv/static/images/about-maps-thumb-dark.jpg")
+    end
   end
 
   # Plan 01.4-07 Task 2: guards the invariant whose absence made G-01.4-2
