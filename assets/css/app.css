@@ -2837,14 +2837,46 @@ body.pk-drawer-open {
 /* Single source for the mark's rest size (Task 2, G-01.4-1 S3 fix): both
    the anchor and the floating mark read this ONE custom property, closing
    the two-independently-declared-200px-literals surface-drift hazard this
-   file's own single-source rule forbids. */
+   file's own single-source rule forbids. 180px (not 200px) reconciles the
+   shipped mark against sketch 045 variant A3, the recorded design winner
+   (G-01.4-3): the prior 200px was never a design decision, it was the
+   residue of 01.4-05's anchor-breathing-room intent being consumed by the
+   mark's own sizing (see .pk-about-mark-anchor below for how that got
+   fixed) and then welded in by this single-source refactor. */
 :root {
-  --pk-about-mark-h: 200px;
+  --pk-about-mark-h: 180px;
+  /* DERIVED (G-01.4-3), not a text-rhythm utility step: sketch 045 A3
+     measures 78.5px of clear space below its 180px mark = 43.6% of the
+     mark's own height. 80px against the now-180px mark is 44.4%, matching
+     the design source on both the absolute figure (80 vs 78.5px) and the
+     proportional one (44.4% vs 43.6%). It has to be this large relative to
+     intuition because both isologo PNGs (priv/static/images/isologo-
+     {light,dark}.png) are cropped tight to their ink with zero transparent
+     padding on any side — this CSS value is the ENTIRE perceived
+     separation from the copy below it, where a conventionally-padded
+     lockup would have donated 50-100px of its own at this size. See
+     .planning/debug/G-01.4-3-isologo-bottom-spacing.md for the full
+     measurement. */
+  --pk-about-mark-clear: 80px;
 }
 
+/* The anchor is intentionally TALLER than the mark (G-01.4-3): its height
+   is derived from BOTH --pk-about-mark-h and --pk-about-mark-clear, not
+   from the mark's height alone — do not "simplify" this calc back into a
+   bare var(--pk-about-mark-h), that is exactly the weld that caused
+   G-01.4-3 (an oversized mark silently consuming the anchor's own
+   clearance, see the derivation comment above). This decoupling lets the
+   anchor carry real clear space below the mark's rendered ink regardless
+   of the mark's own size, while both elements still read the single
+   declared --pk-about-mark-h source for the mark's rest size. No
+   margin-bottom is declared here — the clearance belongs in the height,
+   not in a margin, because an unlayered `.pk-*` rule declaring
+   margin-bottom would beat any Tailwind margin utility on the same
+   element (this file's own top-of-file cascade-hazard note; guarded by
+   about_header_morph_test.exs). */
 .pk-about-mark-anchor {
   display: block;
-  height: var(--pk-about-mark-h);
+  height: calc(var(--pk-about-mark-h) + var(--pk-about-mark-clear));
 }
 
 /* The mark's box declares no transition and no resting opacity/transform

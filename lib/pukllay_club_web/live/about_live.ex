@@ -61,7 +61,7 @@ defmodule PukllayClubWeb.AboutLive do
         <section
           id="about-hero"
           data-morph-armed
-          class="space-y-3 py-12 text-center"
+          class="space-y-3 pt-2 pb-12 text-center"
           phx-hook=".AboutHeaderMorph"
         >
           <script :type={Phoenix.LiveView.ColocatedHook} name=".AboutHeaderMorph">
@@ -350,7 +350,13 @@ defmodule PukllayClubWeb.AboutLive do
               }
             }
           </script>
-          <div data-morph-anchor class="pk-about-mark-anchor mb-8" aria-hidden="true"></div>
+          <%!-- mb-0 is not a spacing tier — the tier now lives in
+          --pk-about-mark-clear (app.css). It exists solely to neutralize
+          the parent's `space-y-3`, which compiles under Tailwind v4 to a
+          zero-specificity `:where(& > :not(:last-child))
+          { margin-block-end: .75rem }` and would otherwise stack 12px on
+          top of the declared clearance (G-01.4-3). --%>
+          <div data-morph-anchor class="pk-about-mark-anchor mb-0" aria-hidden="true"></div>
           <p class="font-sans text-xs uppercase tracking-widest text-neutral">
             Club de juegos de mesa · Jujuy
           </p>

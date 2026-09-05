@@ -135,20 +135,37 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
     end
   end
 
-  describe "the mark anchor has its own spacing tier, not the hero's flat space-y-3 (S2 fix, G-01.4-1)" do
-    test "[data-morph-anchor]'s class list carries a spacing utility of at least the mb-6 step", %{
-      conn: conn
-    } do
+  describe "the mark anchor has its own spacing tier, not the hero's flat space-y-3 (S2 fix, G-01.4-1; superseded G-01.4-3)" do
+    test "[data-morph-anchor] carries mb-0 (neutralizing space-y-3) and its height calc derives clearance from BOTH custom properties",
+         %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       doc = LazyHTML.from_document(html)
       anchor = LazyHTML.query(doc, "[data-morph-anchor]")
       [class] = LazyHTML.attribute(anchor, "class")
 
-      assert Regex.match?(~r/\bmb-(6|7|8|9|10|11|12)\b/, class),
-             "Expected [data-morph-anchor]'s class list to include a margin-bottom utility of " <>
-               "at least mb-6 (found class=\"#{class}\") — the anchor needs its own spacing " <>
-               "tier so the 200px isologo doesn't read as flush against the kicker text below it."
+      assert Regex.match?(~r/\bmb-0\b/, class),
+             "Expected [data-morph-anchor]'s class list to include mb-0 (found " <>
+               "class=\"#{class}\") — the spacing tier moved from a text-rhythm mb- utility " <>
+               "step into the named, design-derived --pk-about-mark-clear custom property " <>
+               "(G-01.4-3); mb-0 exists solely to neutralize the parent's space-y-3 margin so " <>
+               "the declared clearance is the whole gap, not clearance-plus-12px."
+
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-mark-anchor\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-mark-anchor rule in app.css."
+      [_, body] = rule
+
+      assert Regex.match?(
+               ~r/height:\s*calc\(\s*var\(--pk-about-mark-h\)\s*\+\s*var\(--pk-about-mark-clear\)\s*\)/,
+               body
+             ),
+             "Expected .pk-about-mark-anchor's height to be a calc() naming both " <>
+               "var(--pk-about-mark-h) and var(--pk-about-mark-clear) (found: #{body}) — the " <>
+               "anchor's height is deliberately greater than the mark's own height (G-01.4-3), " <>
+               "decoupling the anchor from the mark so the anchor can carry clear space " <>
+               "independent of the mark's size."
     end
 
     test ".pk-about-mark-anchor declares no margin-bottom of its own" do
@@ -347,7 +364,7 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
 
       assert mark_body =~ "var(--pk-about-mark-h)",
              "`.pk-about-morph-mark` must read its height from var(--pk-about-mark-h), the SAME " <>
-               "single source `.pk-about-mark-anchor` reads — two independently-declared 200px " <>
+               "single source `.pk-about-mark-anchor` reads — two independently-declared 180px " <>
                "literals is the surface-drift defect this file's own single-source rule forbids."
     end
 
