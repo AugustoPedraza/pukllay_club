@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.4
 current_phase_name: UI polish pass for About page sketches (INSERTED)
 status: executing
-stopped_at: "Completed 01.4-08-PLAN.md (G-01.4-3 gap closure: isologo bottom spacing derived from sketch 045 A3) — 01.4-09 remains"
-last_updated: "2026-09-05T02:59:45.669Z"
+stopped_at: "Completed 01.4-09-PLAN.md (G-01.4-4 gap closure: map thumbnail chip shrink-wrap + recapture + theme-variant pair; dark-mode capture deferred, tracked as open stub) — Phase 01.4 plans complete pending end-of-phase UAT"
+last_updated: "2026-09-05T14:48:39.579Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 01.4 execution started
-state_head: d91126f191f93a8f18e5f0d5850227a437ec4e78
+state_head: 0195b99e17b2f6dae5eac281c65ab6702dbf2035
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 71
-  completed_plans: 70
+  completed_plans: 71
 milestone_name: milestone
 ---
 
@@ -32,7 +32,7 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.4 (UI polish pass for About page sketches (INSERTED)) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-09-04 — Phase 01.4 execution started
 
@@ -102,6 +102,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | Phase 01.4 P06 | 40min | 2 tasks | 3 files |
 | Phase 01.4 P07 | 25min | 2 tasks | 3 files |
 | Phase 01.4 P08 | 20min | 2 tasks | 3 files |
+| Phase 01.4 P09 | 20min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -190,6 +191,8 @@ Recent decisions affecting current work:
 - [Phase 01.4]: 01.4-06: found and fixed (Rule 1) that the plan's literal <noscript><style> no-JS escape hatch is exempted from scripting-disabled-only behavior by the HTML spec's noscript child allowlist and would have permanently defeated S1 in every browser; replaced with a <noscript><div> marker (correctly parser-discarded when scripting is enabled) plus explicit hook-side removal, since LiveView's own connect-time DOM reconciliation was found to resurrect the parser-discarded marker on its own
 - [Phase 01.4]: 01.4-07: G-01.4-2 map thumbnail coverage gap closed via lg-breakpoint (not sm) two-caption variant pair + opaque single-line inset chip + min-height floor on the thumb — all three independently-necessary per the debug session's differential experiment; human-check for perceptual sufficiency deferred to end-of-phase UAT per this phase's human_verify_mode=end-of-phase convention
 - [Phase 01.4]: 01.4-08: --pk-about-mark-h reconciled 200px->180px (approved sketch 045 A3) and decoupled from anchor height via new --pk-about-mark-clear (80px, derived 44.4% of mark height) + calc(); #about-hero py-12 -> pt-2 pb-12 fixing inverted above/below allocation; closes G-01.4-3, human-check deferred to end-of-phase UAT
+- [Phase 01.4]: 01.4-09: Maps thumbnail chip shrink-wrap/concentric-nesting fixed (--pk-map-label-inset single-source), light asset recaptured (tighter zoom, dominant pin, attribution in frame); pin-label truncation accepted as permanent per human confirmation in Google Maps, full venue name already carried in surrounding text
+- [Phase 01.4]: 01.4-09: light/dark theme-variant <img> pair wired for the Maps thumbnail (mirrors brand_logo/1's isologo pattern, .pk-about-map-thumb img's display:block removed to avoid the 01.4-05 cascade hazard); real dark-mode capture NOT achieved (3 avenues exhausted: Maps web UI has no dark toggle, Chrome force-dark only recolors overlay text not tiles, OS dark mode leaves tiles light) — dark asset ships as an interim byte-identical copy of the light asset, tracked as an open stub (WINDOWS.md #23), deferring root cause (C) to a future pass
 
 ### Pending Todos
 
@@ -296,6 +299,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-05T02:59:45.098Z
-Stopped at: Completed 01.4-08-PLAN.md (G-01.4-3 gap closure: isologo bottom spacing derived from sketch 045 A3) — 01.4-09 remains
+Last session: 2026-09-05T14:48:37.263Z
+Stopped at: Completed 01.4-09-PLAN.md (G-01.4-4 gap closure: map thumbnail chip shrink-wrap + recapture + theme-variant pair; dark-mode capture deferred, tracked as open stub) — Phase 01.4 plans complete pending end-of-phase UAT
 Resume file: None

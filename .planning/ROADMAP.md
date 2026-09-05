@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 8/9 plans executed (4 gap-closure plans added from UAT)
+**Plans:** 9/9 plans executed (4 gap-closure plans added from UAT)
 
 Plans:
 **Wave 1**
@@ -178,7 +178,7 @@ Plans:
 
 **Wave 9** *(gap closure — UAT G-01.4-4, blocked on Wave 8: same files)*
 
-- [ ] 01.4-09-PLAN.md — Maps thumbnail second-round gap closure: the caption chip shrink-wrapped and nested concentrically, the screenshot recaptured at a legible zoom with an untruncated pin label and Google's attribution in frame, and a dark-theme capture wired on the isologo's own light/dark variant pattern — facade kept, embed declined by the user (G-01.4-4)
+- [x] 01.4-09-PLAN.md — Maps thumbnail second-round gap closure: the caption chip shrink-wrapped and nested concentrically, the screenshot recaptured at a legible zoom with an untruncated pin label and Google's attribution in frame, and a dark-theme capture wired on the isologo's own light/dark variant pattern — facade kept, embed declined by the user (G-01.4-4)
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 

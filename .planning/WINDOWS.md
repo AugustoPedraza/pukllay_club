@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 19
+open_count: 20
 waived_count: 0
 fixed_count: 3
-total_count: 22
-last_updated: 2026-09-01T11:03:15.710Z
+total_count: 23
+last_updated: 2026-09-05T14:47:28.044Z
 ---
 
 # Broken Windows Ledger
@@ -37,6 +37,7 @@ last_updated: 2026-09-01T11:03:15.710Z
 | 20 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-10 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify on a real iOS/Mobile-Safari device (the engine G-01.3-4 reproduced on, not Blink) that the chevron sits inside the text column at 390px, the clipped third line ends on a whole word, tapping expands/collapses reliably across round trips, and the description stays justified at 390px/1440px, across light+dark theme and a short + long description game. | fixed |  | 2026-08-31T23:15:03.802Z | 2026-09-01T11:03:15.503Z |
 | 21 | 01.3-11 | unrun-verify | assets/css/app.css |  | 01.3-11 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): at 390px, both light and dark theme, on a long game name with an accented capital and one that truncates, verify the sticky bar's title reads as a deliberate title (holds its own against the scroll-to-top button), stays on ONE line ending in an ellipsis, accented capitals render complete, and the bar's fill/border/button remain visually unchanged from before this plan. | fixed |  | 2026-08-31T23:29:56.119Z | 2026-09-01T02:15:46.887Z |
 | 22 | 01.3-12 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-12 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): on a real iOS/Mobile-Safari device at 390px and 1440px, both light and dark theme, across Honey Buzz (113)/Mille Fiori (193)/Illusion (396)/a short-description game/7 Wonders Duel, verify the chevron trails the clipped third line (not a row below it), the reserved right gutter reads acceptably on lines 1-2 at 390px (else apply the planner_note's pre-decided padding-right:1.75rem + hover/active-background-neutralised fallback pair, not a hand-tuned middle value), a near-full-width third line stays clear of the chevron, repeated expand/collapse stays reliable with no jump/flicker at the absolute/in-flow position switch, and the description stays justified with the third line ending on a whole word. | fixed |  | 2026-09-01T01:54:50.616Z | 2026-09-01T11:03:15.710Z |
+| 23 | 01.4 | stub | priv/static/images/about-maps-thumb-dark.jpg |  | Dark Maps thumbnail is a byte-identical copy of the light asset — no genuine dark-mode capture achieved this session; needs a real dark-tile capture (likely via the Maps mobile app), no code change required | open |  | 2026-09-05T14:47:28.044Z |  |
 
 ````json
 [
@@ -303,6 +304,18 @@ last_updated: 2026-09-01T11:03:15.710Z
     "reason": "",
     "recorded_at": "2026-09-01T01:54:50.616Z",
     "resolved_at": "2026-09-01T11:03:15.710Z"
+  },
+  {
+    "id": 23,
+    "kind": "stub",
+    "phase": "01.4",
+    "file": "priv/static/images/about-maps-thumb-dark.jpg",
+    "line": null,
+    "description": "Dark Maps thumbnail is a byte-identical copy of the light asset — no genuine dark-mode capture achieved this session; needs a real dark-tile capture (likely via the Maps mobile app), no code change required",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-05T14:47:28.044Z",
+    "resolved_at": null
   }
 ]
 ````
