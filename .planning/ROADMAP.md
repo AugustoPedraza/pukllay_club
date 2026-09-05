@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 9/9 plans executed (4 gap-closure plans added from UAT)
+**Plans:** 11 plans (9/11 executed — 4 gap-closure plans added from UAT, 2 more from verification gap G-01.4-5)
 
 Plans:
 **Wave 1**
@@ -179,6 +179,14 @@ Plans:
 **Wave 9** *(gap closure — UAT G-01.4-4, blocked on Wave 8: same files)*
 
 - [x] 01.4-09-PLAN.md — Maps thumbnail second-round gap closure: the caption chip shrink-wrapped and nested concentrically, the screenshot recaptured at a legible zoom with an untruncated pin label and Google's attribution in frame, and a dark-theme capture wired on the isologo's own light/dark variant pattern — facade kept, embed declined by the user (G-01.4-4)
+
+**Wave 10** *(gap closure — verification G-01.4-5, blocked on Wave 9: same files)*
+
+- [ ] 01.4-10-PLAN.md — Maps attribution crop gap closure: `.pk-about-map-thumb`'s aspect-ratio rederived from the committed screenshot's real 1656x804 dimensions (it still claimed the 21:9 of an asset 01.4-09 replaced, so `object-fit: cover` was discarding 5.86% off the top and bottom and Google's wordmark with it), the image bottom-anchored, the caption chip inset above a reserved attribution band, plus a committed headless-Chrome probe that renders the live page at 375/640/768/1280px in both themes and a test gating the asset/CSS shape relationship (G-01.4-5)
+
+**Wave 11** *(gap closure — verification G-01.4-5, blocked on Wave 10: same files)*
+
+- [ ] 01.4-11-PLAN.md — Maps attribution legibility and the human re-check: a readable `Datos del mapa © Google` credit under the thumbnail on the design system's existing muted tier and structurally outside the clipping box (the baked-in wordmark survives the crop but renders 2.5-5.9 CSS px tall, below Google's Geo Guidelines' "legible to the average viewer" bar), the probe extended to gate its rendered size and contrast, and a blocking human verification of the finished component — not another end-of-phase deferral (G-01.4-5)
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 
