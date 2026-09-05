@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.4
-current_phase_name: UI polish pass for About page sketches (INSERTED)
+current_phase_name: ui-polish-pass-for-about-page-sketches
 status: executing
 stopped_at: "Completed 01.4-09-PLAN.md (G-01.4-4 gap closure: map thumbnail chip shrink-wrap + recapture + theme-variant pair; dark-mode capture deferred, tracked as open stub) — Phase 01.4 plans complete pending end-of-phase UAT"
-last_updated: "2026-09-05T14:48:39.579Z"
+last_updated: "2026-09-05T16:54:11.540Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 01.4 execution started
-state_head: 0195b99e17b2f6dae5eac281c65ab6702dbf2035
+state_head: 52866bd95a75d6efc3fb3b2474b52d7f85748131
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 71
+  total_plans: 73
   completed_plans: 71
 milestone_name: milestone
 ---
@@ -31,7 +31,7 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.4 (UI polish pass for About page sketches (INSERTED)) — EXECUTING
+Phase: 01.4 (ui-polish-pass-for-about-page-sketches) — READY TO EXECUTE
 Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-09-04 — Phase 01.4 execution started
