@@ -668,52 +668,75 @@ defmodule PukllayClubWeb.AboutLive do
               icons={[:whatsapp, :instagram]}
               labels
             />
-            <a
-              href={ClubLinks.maps_url()}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="pk-about-map-thumb"
-            >
-              <%!-- Light/dark theme-variant pair (G-01.4-4 gap closure, mirrors
-              brand_logo/1's own isologo pair in layouts.ex): light first in
-              document order (an existing test takes List.first() of the srcs
-              under this selector). The light variant needs the explicit
-              `block` utility that brand_logo/1 does not, because
-              `.pk-about-map-thumb img` no longer supplies display:block
-              itself (removed in the same change, to avoid re-defeating this
-              exact utility pair — see that rule's comment in app.css). Both
-              asset files ship as an interim same-image pair: a genuine
-              dark-mode Google Maps capture was not achievable (no in-app
-              Settings > Appearance > Dark toggle found, Chrome's force-dark
-              flag only recolors DOM overlay text not canvas map tiles, OS
-              dark mode + reload left tiles unchanged) — deferred to a future
-              pass, tracked in 01.4-09-SUMMARY.md. --%>
-              <img
-                src={~p"/images/about-maps-thumb.jpg"}
-                alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
-                class="block dark:hidden"
-                loading="lazy"
-                decoding="async"
-              />
-              <img
-                src={~p"/images/about-maps-thumb-dark.jpg"}
-                alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
-                class="hidden dark:block"
-                loading="lazy"
-                decoding="async"
-              />
-              <%!-- Two caption variants (G-01.4-2 gap closure, sketch 048's own
-              short/long strings, same hero-tagline precedent above): the
-              short one below lg, the long one at/above lg. lg (1024px), NOT
-              sm, is load-bearing — the parent's sm:grid-cols-2 halves this
-              card at exactly 640px, and the long caption is worst (3 wrapped
-              lines) in the 640-767px band, not at 375px. See
-              .planning/debug/G-01.4-2-map-thumb-coverage.md. --%>
-              <span class="pk-about-map-label lg:hidden">Cómo llegar ↗</span>
-              <span class="pk-about-map-label hidden lg:block">
-                Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗
-              </span>
-            </a>
+            <figure class="flex flex-col gap-1">
+              <a
+                href={ClubLinks.maps_url()}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="pk-about-map-thumb"
+              >
+                <%!-- Light/dark theme-variant pair (G-01.4-4 gap closure, mirrors
+                brand_logo/1's own isologo pair in layouts.ex): light first in
+                document order (an existing test takes List.first() of the srcs
+                under this selector). The light variant needs the explicit
+                `block` utility that brand_logo/1 does not, because
+                `.pk-about-map-thumb img` no longer supplies display:block
+                itself (removed in the same change, to avoid re-defeating this
+                exact utility pair — see that rule's comment in app.css). Both
+                asset files ship as an interim same-image pair: a genuine
+                dark-mode Google Maps capture was not achievable (no in-app
+                Settings > Appearance > Dark toggle found, Chrome's force-dark
+                flag only recolors DOM overlay text not canvas map tiles, OS
+                dark mode + reload left tiles unchanged) — deferred to a future
+                pass, tracked in 01.4-09-SUMMARY.md. --%>
+                <img
+                  src={~p"/images/about-maps-thumb.jpg"}
+                  alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
+                  class="block dark:hidden"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <img
+                  src={~p"/images/about-maps-thumb-dark.jpg"}
+                  alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
+                  class="hidden dark:block"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <%!-- Two caption variants (G-01.4-2 gap closure, sketch 048's own
+                short/long strings, same hero-tagline precedent above): the
+                short one below lg, the long one at/above lg. lg (1024px), NOT
+                sm, is load-bearing — the parent's sm:grid-cols-2 halves this
+                card at exactly 640px, and the long caption is worst (3 wrapped
+                lines) in the 640-767px band, not at 375px. See
+                .planning/debug/G-01.4-2-map-thumb-coverage.md. --%>
+                <span class="pk-about-map-label lg:hidden">Cómo llegar ↗</span>
+                <span class="pk-about-map-label hidden lg:block">
+                  Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗
+                </span>
+              </a>
+              <%!-- G-01.4-5 gap closure, plan 01.4-11: the baked-in "Google Maps"
+              wordmark above survives the crop as of plan 01.4-10, but at this
+              thumbnail's rendered size it arrives on screen at 2.5-5.9 CSS px
+              tall — present in the pixel buffer, not legible to a person.
+              Google's Geo Guidelines require attribution "within close
+              proximity of the content and legible to the average viewer or
+              reader," so this line is the part a person can actually read;
+              the screenshot keeps its own baked-in mark untouched. Sibling of
+              the anchor, OUTSIDE .pk-about-map-thumb — that rule declares
+              overflow: hidden, and a credit rendered inside it would be
+              clipped by the exact mechanism that discarded the baked-in
+              wordmark in the first place (01.4-VERIFICATION.md). Mirrors this
+              repo's existing third-party-credit precedent, `.pk-bgg-note`
+              (layouts.ex/app.css), which documents the same restraint about
+              not altering a trademark's presentation casually. No year: this
+              is a fixed capture, not one re-taken annually, so a
+              Date.utc_today().year here would assert something false about
+              the data's vintage every January. --%>
+              <figcaption class="pk-about-map-credit text-right text-xs text-neutral">
+                Datos del mapa © Google
+              </figcaption>
+            </figure>
           </div>
         </div>
       </section>

@@ -418,6 +418,19 @@ defmodule PukllayClubWeb.AboutLiveTest do
   #      Chromium — a CI-gated headless screenshot test here would encode
   #      the same blind spot it just failed to catch, at a real maintenance
   #      cost.
+  #
+  # Plan 01.4-11 (G-01.4-5, second half): the crop fix (01.4-10) stopped the
+  # baked-in wordmark from being discarded, but at 2.5-5.9 CSS px it still
+  # is not legible to a person — the customization clause of Google's Geo
+  # Guidelines, not an optional embellishment. This suite gates the new
+  # `.pk-about-map-credit`'s PRESENCE, TEXT, TYPE TIER, and STRUCTURAL
+  # placement (inside #contacto, outside the clipping `.pk-about-map-thumb`,
+  # no nested anchor) — all DOM facts. Whether the credit is actually big
+  # enough to read and contrasted enough to see against the card in a real
+  # browser is oracle #2's job (`test/visual/about_map_attribution.mjs`,
+  # extended in the same plan to measure the credit's rect/font-size/
+  # contrast), and whether the finished component reads right end to end is
+  # still oracle #3, the human check.
   describe "Contacto card map thumbnail (D-04/D-05/D-06, plan 01.4-02 Task 2)" do
     test "renders a link to ClubLinks.maps_url() with target=_blank and rel=noopener noreferrer",
          %{conn: conn} do
@@ -750,6 +763,67 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "this chip directly on top of it would satisfy the letter of the fix " <>
                "and none of its purpose (Google's Geo Guidelines: \"Don't remove, " <>
                "obscure, or crop out the attribution information\")."
+    end
+
+    # G-01.4-5 gap closure (plan 01.4-11 Task 1): the baked-in wordmark
+    # survives the crop (01.4-10) but renders 2.5-5.9 CSS px tall — present
+    # in the pixel buffer, not legible to a person. Google's Geo Guidelines
+    # require attribution "within close proximity of the content and
+    # legible to the average viewer or reader," so a real, legible credit
+    # is added adjacent to the thumbnail. The containment pair below is the
+    # load-bearing part: presence alone would pass for a credit nested
+    # INSIDE the clipping box, which is the exact failure mode this test
+    # exists to catch.
+    test "renders a legible Google credit inside #contacto, outside the clipping thumbnail",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+
+      credit_in_doc = LazyHTML.query(doc, ".pk-about-map-credit")
+
+      assert Enum.count(credit_in_doc) == 1,
+             "Expected exactly one element matching .pk-about-map-credit."
+
+      credit_html = LazyHTML.to_html(credit_in_doc)
+
+      assert credit_html =~ "Google",
+             "Expected the credit's text to contain the literal \"Google\"."
+
+      refute credit_html =~ "<a ", "Expected the credit to contain no anchor."
+      refute credit_html =~ "<a>", "Expected the credit to contain no anchor."
+
+      thumb = LazyHTML.query(doc, ".pk-about-map-thumb")
+      credit_inside_thumb = LazyHTML.query(thumb, ".pk-about-map-credit")
+
+      assert Enum.count(credit_inside_thumb) == 0,
+             "Expected zero elements matching .pk-about-map-credit inside " <>
+               ".pk-about-map-thumb — .pk-about-map-thumb declares overflow: hidden " <>
+               "and crops with object-fit: cover, which is what discarded Google's " <>
+               "baked-in wordmark at every breakpoint in the first place (G-01.4-5). " <>
+               "A credit placed inside it inherits the same clipping."
+
+      contacto = LazyHTML.query(doc, "#contacto")
+      credit_inside_contacto = LazyHTML.query(contacto, ".pk-about-map-credit")
+
+      assert Enum.count(credit_inside_contacto) == 1,
+             "Expected exactly one element matching .pk-about-map-credit inside #contacto."
+
+      credit_class = credit_in_doc |> LazyHTML.attribute("class") |> List.first()
+
+      assert credit_class =~ "text-xs",
+             "Expected the credit's class list to carry text-xs — this app caps its " <>
+               "distinct type combinations and enforces the cap by measurement " <>
+               "(ui-design-system, Type inventory), so a credit line reuses the " <>
+               "shipped muted tier rather than introducing a sixth combo."
+
+      assert credit_class =~ "text-neutral",
+             "Expected the credit's class list to carry text-neutral — see the " <>
+               "text-xs assertion above; both halves of the shipped muted tier."
+
+      refute credit_class =~ ~r/\[.*\]/,
+             "Expected the credit's class list to carry no bracketed arbitrary " <>
+               "Tailwind value (ui-design-system, banned list)."
     end
   end
 
