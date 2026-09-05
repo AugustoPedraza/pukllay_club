@@ -8,16 +8,18 @@
 // source-pixel box survives the live `object-fit: cover` crop and never
 // overlaps the caption chip.
 //
-// This is Task 1's version of the file: ONE path through every layer
-// (server, browser, CDP, measurement, cover-math, assertion), proven at a
-// single case (1280px, light) before Task 2 fans it out to all eight
-// (viewport, theme) combinations and delegates to the Python pixel oracle.
+// Fans out over the cross product of 4 viewports x 2 themes (8 cases),
+// captures an element-clipped screenshot of each, writes cases.json
+// recording the geometry (including the PRE-FIX crop, derived from the old
+// 21/9 ratio rather than hard-coded, for the discrimination check), then
+// delegates to test/visual/about_map_attribution_pixels.py to confirm the
+// geometry model against actual painted pixels.
 //
 // Usage: node test/visual/about_map_attribution.mjs
 // Env:   PROBE_BASE_URL=http://localhost:4000  (skip booting a dev server)
 
 import { spawn } from "node:child_process"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -40,8 +42,19 @@ const ATTRIB_ROW_END = 799
 const ATTRIB_COL_START = 801
 const ATTRIB_COL_END = 902
 
-const VIEWPORTS = [1280]
-const THEMES = ["light"]
+// Pre-fix geometry: the aspect-ratio literal this plan replaced, and the
+// object-position default the rule carried before this plan added one
+// (browsers default `object-position` to "50% 50%" when unspecified).
+const LEGACY_ASPECT_RATIO = 21 / 9
+const LEGACY_OBJECT_POSITION = { x: 50, y: 50 }
+// --pk-map-attrib-band's value, needed here (not just in app.css) so the
+// pixel oracle knows which strip of the box to isolate for its
+// attribution-strip MAD assertion.
+const ATTRIB_BAND_PCT = 3.5
+
+const VIEWPORTS = [375, 640, 768, 1280]
+const THEMES = ["light", "dark"]
+const CAPTURE_SCALE = 3
 
 const PROBE_BASE_URL = process.env.PROBE_BASE_URL
 
@@ -95,8 +108,11 @@ async function startDevServer() {
   return { baseUrl, proc }
 }
 
-function stopDevServer(proc) {
-  if (proc) proc.kill()
+async function stopDevServer(proc) {
+  if (!proc || proc.exitCode !== null || proc.killed) return
+  const exited = new Promise((resolve) => proc.once("exit", resolve))
+  proc.kill()
+  await Promise.race([exited, new Promise((r) => setTimeout(r, 5000))])
 }
 
 // ---------------------------------------------------------------------------
@@ -262,8 +278,13 @@ async function runCase({ client, baseUrl, viewport, theme }) {
     `,
   })
 
+  // `behavior: "instant"` deliberately overrides this stylesheet's
+  // `html { scroll-behavior: smooth; }` (app.css) — a fire-and-forget
+  // smooth scroll here would leave the element's rect stale (mid-animation)
+  // by the time the measurement snippet below reads it, since nothing
+  // awaits the scroll's completion.
   await client.send("Runtime.evaluate", {
-    expression: `document.querySelector('#contacto').scrollIntoView({block: "center"})`,
+    expression: `document.querySelector('#contacto').scrollIntoView({block: "center", behavior: "instant"})`,
   })
 
   await client.send("Runtime.evaluate", {
@@ -314,10 +335,23 @@ async function runCase({ client, baseUrl, viewport, theme }) {
             })()
           : null;
 
+        // Root font-size, so the Node side can reproduce the 7rem min-height
+        // floor for the pre-fix (legacy) geometry reconstruction without
+        // hard-coding a 16px assumption.
+        const rootFontSizePx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+
         return {
           thumbRect: { x: thumbRect.x, y: thumbRect.y, width: thumbRect.width, height: thumbRect.height },
+          // Page.captureScreenshot's clip is relative to the DOCUMENT
+          // (page) origin, not the current scrolled viewport --
+          // getBoundingClientRect() above is viewport-relative, so the
+          // scroll offset has to be added back on the Node side before it
+          // is used as a capture clip origin.
+          scrollX: window.scrollX,
+          scrollY: window.scrollY,
           images,
           label,
+          rootFontSizePx,
         };
       })())
     `,
@@ -325,6 +359,21 @@ async function runCase({ client, baseUrl, viewport, theme }) {
   })
 
   return JSON.parse(measureResult.result.value)
+}
+
+async function captureThumb({ client, thumbRect }) {
+  const shot = await client.send("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: false,
+    clip: {
+      x: thumbRect.x,
+      y: thumbRect.y,
+      width: thumbRect.width,
+      height: thumbRect.height,
+      scale: CAPTURE_SCALE,
+    },
+  })
+  return Buffer.from(shot.data, "base64")
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +423,37 @@ function rectsIntersect(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 }
 
+// Reconstructs the visible SOURCE rectangle the box would have shown under
+// the PRE-FIX stylesheet: aspect-ratio 21/9 (not derived from the asset),
+// the same 7rem min-height floor (unchanged by this plan), and the
+// object-position default (50% 50%, since the pre-fix rule declared none).
+// Box WIDTH is unaffected by aspect-ratio (it comes from the grid/card
+// layout), so the live-measured width is reused; only the height is
+// recomputed under the old ratio.
+function legacyVisibleSourceRect({ boxW, rootFontSizePx, naturalW, naturalH }) {
+  const minHeightPx = 7 * rootFontSizePx
+  const ratioHeight = boxW / LEGACY_ASPECT_RATIO
+  const boxH = Math.max(ratioHeight, minHeightPx)
+
+  return visibleSourceRect({
+    boxW,
+    boxH,
+    naturalW,
+    naturalH,
+    objectPositionX: LEGACY_OBJECT_POSITION.x,
+    objectPositionY: LEGACY_OBJECT_POSITION.y,
+  })
+}
+
+function rectsEqual(a, b, eps = 0.01) {
+  return (
+    Math.abs(a.x0 - b.x0) < eps &&
+    Math.abs(a.y0 - b.y0) < eps &&
+    Math.abs(a.x1 - b.x1) < eps &&
+    Math.abs(a.y1 - b.y1) < eps
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -381,11 +461,15 @@ async function main() {
   const { baseUrl, proc: serverProc } = await startDevServer()
   const chrome = await startChrome()
 
+  const runDir = await mkdtemp(join(tmpdir(), "about-map-attrib-run-"))
+  log(`Run directory (captures + cases.json): ${runDir}`)
+
   let exitCode = 0
-  let client
+  const cases = []
+
   try {
     const conn = await connectCDP(chrome.port)
-    client = conn.client
+    const client = conn.client
 
     for (const viewport of VIEWPORTS) {
       for (const theme of THEMES) {
@@ -411,6 +495,13 @@ async function main() {
             objectPositionY: pos.y,
           })
 
+          const legacySrc = legacyVisibleSourceRect({
+            boxW: measured.thumbRect.width,
+            rootFontSizePx: measured.rootFontSizePx,
+            naturalW: img.naturalWidth,
+            naturalH: img.naturalHeight,
+          })
+
           const attribInside =
             ATTRIB_ROW_START >= visSrc.y0 &&
             ATTRIB_ROW_END <= visSrc.y1 &&
@@ -433,12 +524,12 @@ async function main() {
                 `cols ${visSrc.x0.toFixed(2)}..${visSrc.x1.toFixed(2)})`,
             )
             exitCode = 1
-            continue
           }
 
           // Project the attribution box back into viewport coordinates and
           // check it does not intersect the visible caption chip.
           let overlapsChip = false
+          let chipRelative = null
           if (measured.label) {
             const scaleX = img.rect.width / img.naturalWidth
             const scaleY = img.rect.height / img.naturalHeight
@@ -452,15 +543,72 @@ async function main() {
               height: (ATTRIB_ROW_END - ATTRIB_ROW_START) * scaleY,
             }
             overlapsChip = rectsIntersect(attribViewport, measured.label)
+            chipRelative = {
+              x: measured.label.x - measured.thumbRect.x,
+              y: measured.label.y - measured.thumbRect.y,
+              width: measured.label.width,
+              height: measured.label.height,
+            }
           }
 
           if (overlapsChip) {
             log(`${label} FAIL: attribution overlaps caption chip`)
             exitCode = 1
-            continue
           }
 
-          log(`${label} PASS`)
+          // Element-clipped screenshot for the pixel oracle, taken
+          // regardless of the two DOM-geometry checks above (not gated
+          // behind `continue`): the pixel oracle is an INDEPENDENT
+          // confirmation of the geometry model, including — deliberately —
+          // when run against a broken stylesheet during the Task 2 sanity
+          // check (plan 01.4-10 Task 2, step 10), where the DOM-level
+          // checks above already fail and a `continue` here would leave
+          // nothing for the pixel oracle to independently reject. `clip` is
+          // page-relative, so the scroll offset is added back on top of
+          // the viewport-relative thumbRect used everywhere else.
+          const png = await captureThumb({
+            client,
+            thumbRect: {
+              ...measured.thumbRect,
+              x: measured.thumbRect.x + measured.scrollX,
+              y: measured.thumbRect.y + measured.scrollY,
+            },
+          })
+          const pngPath = join(runDir, `thumb-${viewport}-${theme}.png`)
+          await writeFile(pngPath, png)
+
+          cases.push({
+            viewport,
+            theme,
+            pngPath: `thumb-${viewport}-${theme}.png`,
+            // Both theme variants are byte-identical today (a tracked,
+            // accepted deviation — see this plan's frontmatter), but read
+            // the file the case's src actually names, not a hard-coded
+            // path, so this keeps working the day the dark asset diverges.
+            assetPath: img.src.includes("about-maps-thumb-dark.jpg")
+              ? "priv/static/images/about-maps-thumb-dark.jpg"
+              : ASSET_PATH,
+            src: img.src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            captureScale: CAPTURE_SCALE,
+            thumbRect: measured.thumbRect,
+            visibleSourceRect: visSrc,
+            legacyVisibleSourceRect: legacySrc,
+            legacySameAsFixed: rectsEqual(visSrc, legacySrc),
+            chipRelativeRect: chipRelative,
+            attribBox: {
+              rowStart: ATTRIB_ROW_START,
+              rowEnd: ATTRIB_ROW_END,
+              colStart: ATTRIB_COL_START,
+              colEnd: ATTRIB_COL_END,
+            },
+            attribBandPct: ATTRIB_BAND_PCT,
+            assetWidth: ASSET_W,
+            assetHeight: ASSET_H,
+          })
+
+          if (attribInside && !overlapsChip) log(`${label} PASS`)
         } catch (err) {
           log(`${label} FAIL: ${err.message}`)
           exitCode = 1
@@ -469,9 +617,37 @@ async function main() {
     }
   } finally {
     await stopChrome(chrome)
-    stopDevServer(serverProc)
+    await stopDevServer(serverProc)
   }
 
+  if (cases.length !== VIEWPORTS.length * THEMES.length) {
+    log(
+      `FAIL: expected ${VIEWPORTS.length * THEMES.length} case blocks, only ${cases.length} ` +
+        `completed far enough to be captured — a skipped viewport or theme is an unverified ` +
+        `viewport or theme.`,
+    )
+    exitCode = 1
+  }
+
+  const casesJsonPath = join(runDir, "cases.json")
+  await writeFile(casesJsonPath, JSON.stringify(cases, null, 2))
+
+  if (cases.length > 0) {
+    log(`Handing off to the pixel oracle: python3 test/visual/about_map_attribution_pixels.py ${runDir}`)
+    const pyExit = await new Promise((resolve) => {
+      const py = spawn("python3", ["test/visual/about_map_attribution_pixels.py", runDir], {
+        stdio: "inherit",
+      })
+      py.on("exit", (code) => resolve(code ?? 1))
+      py.on("error", (err) => {
+        log(`FAIL: could not spawn python3: ${err.message}`)
+        resolve(1)
+      })
+    })
+    if (pyExit !== 0) exitCode = 1
+  }
+
+  log(`Run directory (captures + cases.json): ${runDir}`)
   process.exit(exitCode)
 }
 
