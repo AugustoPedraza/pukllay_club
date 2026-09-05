@@ -340,6 +340,57 @@ async function runCase({ client, baseUrl, viewport, theme }) {
         // hard-coding a 16px assumption.
         const rootFontSizePx = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
+        // G-01.4-5, plan 01.4-11: the credit Task 1 added. "Legible" is a
+        // real-browser claim (rendered size, painted colour, whether it is
+        // actually visible) that the markup-level ExUnit suite cannot make
+        // — a zero-height box, a hidden-visibility ancestor, or a colour
+        // that vanishes into its background would all pass a DOM-presence
+        // check and fail every person looking at the page.
+        const contactoEl = document.querySelector('#contacto');
+        const contactoRectRaw = contactoEl ? contactoEl.getBoundingClientRect() : null;
+        const contactoRect = contactoRectRaw
+          ? { x: contactoRectRaw.x, y: contactoRectRaw.y, width: contactoRectRaw.width, height: contactoRectRaw.height }
+          : null;
+
+        const creditEls = document.querySelectorAll('.pk-about-map-credit');
+        let credit = null;
+        if (creditEls.length === 1) {
+          const el = creditEls[0];
+          const r = el.getBoundingClientRect();
+          const cs = getComputedStyle(el);
+
+          // Walk up from the credit to find the nearest ancestor whose
+          // OWN background-color actually paints something (not fully
+          // transparent) — the surface the credit's text is read against.
+          // .pk-about-contact-card (bg-base-200) is the expected hit.
+          let bgNode = el;
+          let backgroundColor = null;
+          while (bgNode) {
+            const bg = getComputedStyle(bgNode).backgroundColor;
+            const m = bg.match(/rgba?\(([^)]+)\)/);
+            if (m) {
+              const parts = m[1].split(',').map((s) => parseFloat(s.trim()));
+              const alpha = parts.length > 3 ? parts[3] : 1;
+              if (alpha > 0) {
+                backgroundColor = bg;
+                break;
+              }
+            }
+            bgNode = bgNode.parentElement;
+          }
+
+          credit = {
+            rect: { x: r.x, y: r.y, width: r.width, height: r.height },
+            fontSize: parseFloat(cs.fontSize),
+            color: cs.color,
+            visibility: cs.visibility,
+            opacity: parseFloat(cs.opacity),
+            textContent: el.textContent,
+            backgroundColor,
+            hasAnchor: el.querySelector('a') !== null,
+          };
+        }
+
         return {
           thumbRect: { x: thumbRect.x, y: thumbRect.y, width: thumbRect.width, height: thumbRect.height },
           // Page.captureScreenshot's clip is relative to the DOCUMENT
@@ -352,6 +403,9 @@ async function runCase({ client, baseUrl, viewport, theme }) {
           images,
           label,
           rootFontSizePx,
+          contactoRect,
+          creditCount: creditEls.length,
+          credit,
         };
       })())
     `,
@@ -421,6 +475,54 @@ function parseObjectPosition(objectPosition) {
 
 function rectsIntersect(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+}
+
+// Whether `inner` is fully inside `outer` — Google's "close proximity"
+// requirement, checked geometrically rather than assumed from DOM nesting
+// (a descendant can still be visually clipped or positioned outside its
+// ancestor's box).
+function rectContains(outer, inner) {
+  return (
+    inner.x >= outer.x - 0.5 &&
+    inner.y >= outer.y - 0.5 &&
+    inner.x + inner.width <= outer.x + outer.width + 0.5 &&
+    inner.y + inner.height <= outer.y + outer.height + 0.5
+  )
+}
+
+// ---------------------------------------------------------------------------
+// WCAG contrast (credit legibility, G-01.4-5 plan 01.4-11)
+// ---------------------------------------------------------------------------
+// Parses a computed `rgb(r, g, b)` / `rgba(r, g, b, a)` string (the only
+// shape `getComputedStyle(...).color`/`.backgroundColor` ever return) into
+// [r, g, b], 0-255 each.
+function parseRgbString(str) {
+  const m = str.match(/rgba?\(([^)]+)\)/)
+  if (!m) throw new Error(`Unexpected computed colour string: ${str}`)
+  const parts = m[1].split(",").map((s) => parseFloat(s.trim()))
+  return [parts[0], parts[1], parts[2]]
+}
+
+// sRGB relative luminance, per the WCAG 2.x formula
+// (https://www.w3.org/TR/WCAG21/#dfn-relative-luminance) — computed from
+// the LIVE computed colour values, never a hard-coded token hex, so this
+// keeps working through a theme edit rather than silently drifting from
+// what the browser actually painted.
+function relativeLuminance([r, g, b]) {
+  const channel = (c) => {
+    const s = c / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  }
+  const [rl, gl, bl] = [channel(r), channel(g), channel(b)]
+  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl
+}
+
+function contrastRatio(rgbA, rgbB) {
+  const lA = relativeLuminance(rgbA)
+  const lB = relativeLuminance(rgbB)
+  const lighter = Math.max(lA, lB)
+  const darker = Math.min(lA, lB)
+  return (lighter + 0.05) / (darker + 0.05)
 }
 
 // Reconstructs the visible SOURCE rectangle the box would have shown under
@@ -556,6 +658,116 @@ async function main() {
             exitCode = 1
           }
 
+          // -------------------------------------------------------------
+          // Plan 01.4-11 (G-01.4-5, second half): the credit Task 1 added.
+          // The markup-level ExUnit suite can see the credit exists and
+          // carries the right classes/text — it structurally cannot see
+          // whether it PAINTS: a real rendered size, a colour that
+          // actually contrasts against the card, or a rect that stays
+          // inside #contacto and clear of the clipping thumbnail. That is
+          // this real-browser probe's job.
+          // -------------------------------------------------------------
+          let creditContrast = null
+          let creditOk = true
+          if (measured.creditCount !== 1) {
+            log(
+              `${label} FAIL: no .pk-about-map-credit found ` +
+                `(expected exactly 1, found ${measured.creditCount})`,
+            )
+            exitCode = 1
+            creditOk = false
+          } else {
+            const credit = measured.credit
+
+            if (credit.rect.width <= 0 || credit.rect.height <= 0) {
+              log(
+                `${label} FAIL: credit rect is ${credit.rect.width.toFixed(2)}x` +
+                  `${credit.rect.height.toFixed(2)} — a credit that renders to nothing is not attribution`,
+              )
+              exitCode = 1
+              creditOk = false
+            }
+
+            if (credit.visibility !== "visible" || credit.opacity !== 1) {
+              log(
+                `${label} FAIL: credit visibility="${credit.visibility}" opacity=${credit.opacity} ` +
+                  `— expected visible/1`,
+              )
+              exitCode = 1
+              creditOk = false
+            }
+
+            if (credit.fontSize < 12) {
+              log(
+                `${label} FAIL: credit font-size ${credit.fontSize.toFixed(2)}px below 12px ` +
+                  `(the design system's muted tier, and the floor that distinguishes this from ` +
+                  `the 2.5-5.9 CSS px baked-in mark it exists to supplement)`,
+              )
+              exitCode = 1
+              creditOk = false
+            }
+
+            if (!credit.textContent.includes("Google")) {
+              log(`${label} FAIL: credit text does not contain "Google" (got "${credit.textContent}")`)
+              exitCode = 1
+              creditOk = false
+            }
+
+            if (credit.hasAnchor) {
+              log(`${label} FAIL: credit contains a nested anchor — must be plain text, not a link`)
+              exitCode = 1
+              creditOk = false
+            }
+
+            if (!measured.contactoRect) {
+              log(`${label} FAIL: #contacto not found — cannot check credit containment`)
+              exitCode = 1
+              creditOk = false
+            } else if (!rectContains(measured.contactoRect, credit.rect)) {
+              log(
+                `${label} FAIL: credit rect not contained in #contacto rect ` +
+                  `(credit ${JSON.stringify(credit.rect)}, #contacto ${JSON.stringify(measured.contactoRect)})`,
+              )
+              exitCode = 1
+              creditOk = false
+            }
+
+            if (rectsIntersect(credit.rect, measured.thumbRect)) {
+              log(
+                `${label} FAIL: credit rect intersects .pk-about-map-thumb rect ` +
+                  `— .pk-about-map-thumb clips with overflow: hidden, so any overlap is a ` +
+                  `credit at risk of the same fate as the baked-in wordmark`,
+              )
+              exitCode = 1
+              creditOk = false
+            }
+
+            if (!credit.backgroundColor) {
+              log(`${label} FAIL: could not resolve a non-transparent ancestor background for the credit`)
+              exitCode = 1
+              creditOk = false
+            } else {
+              const textRgb = parseRgbString(credit.color)
+              const bgRgb = parseRgbString(credit.backgroundColor)
+              creditContrast = contrastRatio(textRgb, bgRgb)
+              log(`${label} credit contrast: ${creditContrast.toFixed(2)}:1`)
+
+              if (creditContrast < 4.5) {
+                log(
+                  `${label} FAIL: credit contrast ${creditContrast.toFixed(2)}:1 below 4.5:1 ` +
+                    `(color ${credit.color} on ${credit.backgroundColor})`,
+                )
+                exitCode = 1
+                creditOk = false
+              }
+            }
+
+            log(
+              `${label} credit: rect ${JSON.stringify(credit.rect)}, font-size ` +
+                `${credit.fontSize.toFixed(2)}px, contrast ${creditContrast ? creditContrast.toFixed(2) : "n/a"}:1`,
+            )
+          }
+
           // Element-clipped screenshot for the pixel oracle, taken
           // regardless of the two DOM-geometry checks above (not gated
           // behind `continue`): the pixel oracle is an INDEPENDENT
@@ -566,6 +778,15 @@ async function main() {
           // nothing for the pixel oracle to independently reject. `clip` is
           // page-relative, so the scroll offset is added back on top of
           // the viewport-relative thumbRect used everywhere else.
+          //
+          // `clip` stays the THUMBNAIL rect ONLY — plan 01.4-11 deliberately
+          // does NOT widen it to also cover the new credit below the image.
+          // The pixel oracle's expected-crop reconstruction (below) is
+          // defined against the image box; widening the clip would break
+          // that reconstruction's own geometry assumptions. The credit's
+          // legibility is fully covered by the DOM-measured assertions
+          // above (rect, font-size, contrast) — it does not need a second,
+          // pixel-level oracle.
           const png = await captureThumb({
             client,
             thumbRect: {
@@ -608,7 +829,7 @@ async function main() {
             assetHeight: ASSET_H,
           })
 
-          if (attribInside && !overlapsChip) log(`${label} PASS`)
+          if (attribInside && !overlapsChip && creditOk) log(`${label} PASS`)
         } catch (err) {
           log(`${label} FAIL: ${err.message}`)
           exitCode = 1
@@ -648,7 +869,70 @@ async function main() {
   }
 
   log(`Run directory (captures + cases.json): ${runDir}`)
+
+  // Plan 01.4-11 Task 2, step 5: leave a live environment for the Task 3
+  // human checkpoint instead of tearing everything down. Started ONLY
+  // after a fully green run — the checkpoint rule that a verification
+  // environment must never be presented against a dead (or broken) server.
+  // This is a SEPARATE, detached process from the probe's own ephemeral
+  // `serverProc` above (already stopped in the `finally` block) — that one
+  // exists only for the duration of the CDP run.
+  if (exitCode === 0) {
+    await startCheckpointServer()
+  } else {
+    log("Probe did not pass cleanly — not starting a server for the checkpoint.")
+  }
+
   process.exit(exitCode)
+}
+
+// Starts a detached `mix phx.server`, independent of this script's own
+// process tree (so it keeps running after this script exits), polls
+// `GET /up` until it answers 200, then prints the checkpoint URL and PID.
+// If PROBE_BASE_URL was already set (an existing server the caller is
+// managing), no new process is spawned — the existing server is polled and
+// reported instead.
+async function startCheckpointServer() {
+  if (PROBE_BASE_URL) {
+    const ok = await pollUp(PROBE_BASE_URL)
+    if (!ok) {
+      log(`FAIL: ${PROBE_BASE_URL}/up did not return 200 for the checkpoint.`)
+      return
+    }
+    log(`Checkpoint server (externally managed via PROBE_BASE_URL): ${PROBE_BASE_URL}/quienes-somos#contacto`)
+    return
+  }
+
+  const baseUrl = "http://localhost:4000"
+  const proc = spawn("mix", ["phx.server"], {
+    env: { ...process.env, MIX_ENV: "dev" },
+    stdio: "ignore",
+    detached: true,
+  })
+  proc.unref()
+
+  const ok = await pollUp(baseUrl)
+  if (!ok) {
+    log(`FAIL: ${baseUrl}/up did not return 200 within 60s — checkpoint server not confirmed up.`)
+    return
+  }
+
+  log(`Checkpoint server is up. PID: ${proc.pid}`)
+  log(`Open: ${baseUrl}/quienes-somos#contacto`)
+}
+
+async function pollUp(baseUrl) {
+  const deadline = Date.now() + 60_000
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${baseUrl}/up`)
+      if (res.status === 200) return true
+    } catch {
+      // not up yet
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  return false
 }
 
 main().catch((err) => {
