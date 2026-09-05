@@ -6,13 +6,15 @@ defmodule PukllayClubWeb.AboutLive do
   and `/quienes-somos` (D-01) — both must resolve identically; neither
   route redirects to the other.
 
-  Content is the user-supplied real copy from `about-page-design-source.html`
-  (D-06), used verbatim. The club model is play-at-the-club-only (D-09):
+  Content originated as the user-supplied real copy from
+  `about-page-design-source.html` (D-06); subsequent UI-polish plans (01.4-01/02/03)
+  revised the Historia, Qué hacemos, Juntadas, FAQ-pricing and closing-CTA copy away
+  from that original verbatim text. The club model is play-at-the-club-only (D-09):
   members come play on Saturdays at a physical venue, the club brings the
   games — this page never describes borrowing or taking games home
   (D-09, prohibitions).
 
-  Structure (D-07): hero -> four-slide photo rail (`.AboutCarousel`) ->
+  Structure (D-07): hero -> five-slide photo rail (`.AboutCarousel`) ->
   "Qué hacemos"/"Nuestra historia" two-column band -> dark FAQ band
   (`#faq`) -> Juntadas (`#juntadas`) + Contacto (`#contacto`) band ->
   closing CTA band. Every band shares the `.pk-band`/`.pk-band-inner`

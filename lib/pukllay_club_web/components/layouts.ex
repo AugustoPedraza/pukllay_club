@@ -1085,7 +1085,7 @@ defmodule PukllayClubWeb.Layouts do
         href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="WhatsApp"
+        aria-label={if @labels, do: nil, else: "WhatsApp"}
       >
         <svg
           viewBox="0 0 24 24"

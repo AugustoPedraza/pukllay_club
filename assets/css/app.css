@@ -2618,8 +2618,8 @@ body.pk-drawer-open {
   padding-top: 1.125rem;
 }
 
-/* Four-slide photo rail (D-12: labelled placeholders, no real photography
-   yet). Scroll-snapping, scrollbar hidden — same treatment as .pk-rail. */
+/* Five-slide photo rail of real club photography (D-08/D-09, sketch 046).
+   Scroll-snapping, scrollbar hidden — same treatment as .pk-rail. */
 .pk-about-rail {
   display: flex;
   gap: 14px;

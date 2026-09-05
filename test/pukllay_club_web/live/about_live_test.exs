@@ -525,14 +525,14 @@ defmodule PukllayClubWeb.AboutLiveTest do
       light = Enum.at(imgs, 0)
       dark = Enum.at(imgs, 1)
 
-      light_src = LazyHTML.attribute(light, "src") |> List.first()
-      light_class = LazyHTML.attribute(light, "class") |> List.first()
+      light_src = light |> LazyHTML.attribute("src") |> List.first()
+      light_class = light |> LazyHTML.attribute("class") |> List.first()
       assert light_src =~ "about-maps-thumb.jpg"
       assert light_class =~ "block"
       assert light_class =~ "dark:hidden"
 
-      dark_src = LazyHTML.attribute(dark, "src") |> List.first()
-      dark_class = LazyHTML.attribute(dark, "class") |> List.first()
+      dark_src = dark |> LazyHTML.attribute("src") |> List.first()
+      dark_class = dark |> LazyHTML.attribute("class") |> List.first()
       assert dark_src =~ "about-maps-thumb-dark.jpg"
       assert dark_class =~ "hidden"
       assert dark_class =~ "dark:block"
