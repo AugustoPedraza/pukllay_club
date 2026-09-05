@@ -428,6 +428,44 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "variants (this file's own top-of-file hazard note)."
     end
 
+    # G-01.4-4 gap closure (see
+    # .planning/debug/G-01.4-4-maps-thumbnail-approach.md): 01.4-07 changed
+    # .pk-about-map-label's STYLING from a full-bleed band to a bordered
+    # chip but kept the band's `left`/`right` pinning, so the chip stretched
+    # to its container instead of shrink-wrapping to its own text — 177.7px
+    # of dead space at 375px, the visual signature of an empty disabled
+    # input. A chip is sized by its content; only a band spans its
+    # container. This test gates the sizing-model fix, not the caption
+    # fixes above (those measured correct at all 24 viewport/theme
+    # combinations and are untouched).
+    test ".pk-about-map-label shrink-wraps to its content and nests concentrically inside the thumb" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-label\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-label rule in app.css."
+      [_, body] = rule
+
+      refute body =~ ~r/right\s*:/,
+             "Expected .pk-about-map-label to declare no offset from the thumb's trailing " <>
+               "edge — with both `left` and `right` set, an absolutely-positioned element " <>
+               "stretches to its container instead of shrink-wrapping to its own text, which " <>
+               "is what produced 177.7px of dead space at 375px (G-01.4-4). A chip is sized " <>
+               "by its content; a band spans its container."
+
+      assert body =~ ~r/max-width\s*:\s*calc\([^)]*--pk-map-label-inset[^)]*\)/,
+             "Expected .pk-about-map-label's max-width to be a calc() naming " <>
+               "--pk-map-label-inset, so the chip can never overflow the thumb now that " <>
+               "nothing else bounds its trailing edge."
+
+      assert body =~
+               ~r/border-radius\s*:\s*max\(0px,\s*calc\(var\(--radius-box\)\s*-\s*var\(--pk-map-label-inset\)\)\)/,
+             "Expected .pk-about-map-label's border-radius to be derived by subtracting " <>
+               "--pk-map-label-inset from var(--radius-box) — an inset element only nests " <>
+               "concentrically when its own radius equals the outer radius minus the inset " <>
+               "(G-01.4-4: outer 8px, inset 8px, so the correct inner radius is 0, not the " <>
+               "bare --radius-box token that shipped before)."
+    end
+
     test ".pk-about-map-thumb declares a min-height alongside its aspect-ratio" do
       src = strip_comments(css_source())
 

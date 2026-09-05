@@ -2786,6 +2786,13 @@ body.pk-drawer-open {
   position: relative;
   display: block;
   border-radius: var(--radius-box);
+  /* Single source for the caption chip's inset (G-01.4-4 gap closure — see
+     .planning/debug/G-01.4-4-maps-thumbnail-approach.md). Custom properties
+     inherit, so .pk-about-map-label below reads the same value for its own
+     offsets and for the concentric-nesting radius calc — one declared
+     number keeps both relationships honest instead of two independently
+     hand-typed 0.5rem/8px literals drifting apart. */
+  --pk-map-label-inset: 0.5rem;
 }
 
 .pk-about-map-thumb img {
@@ -2809,12 +2816,32 @@ body.pk-drawer-open {
    hidden/lg:block utility pair, exactly the cascade hazard this file's
    top-of-file note documents (already hit once on the isologo theme
    variants, plan 01.4-05). An absolutely-positioned span already
-   blockifies on its own. */
+   blockifies on its own.
+
+   SIZING MODEL (G-01.4-4 gap closure — see
+   .planning/debug/G-01.4-4-maps-thumbnail-approach.md). The rule above
+   still pins both `left` and `right`, which stretches an absolutely-
+   positioned element to its container instead of letting it shrink-wrap —
+   the band's old sizing model, kept by mistake when this rule became a
+   chip. A chip is sized by its own content; only a band spans its
+   container. That single leftover offset was cause (A): a 283px chip
+   holding 79.3px of left-aligned text at 375px, 177.7px of dead space,
+   reading as an empty disabled input rather than a caption. Removing the
+   trailing-edge offset lets the chip size itself from its text; the
+   `max-width` below is what stops a long caption or a copy edit from ever
+   pushing past the frame now that nothing else bounds it. `border-radius`
+   is a calc(), not the bare `--radius-box` token: an inset element nests
+   concentrically only when its own radius equals the outer radius minus
+   the inset, and `--radius-box` (0.5rem) equals `--pk-map-label-inset`
+   (0.5rem) here, so the correct inner radius is 0 — expressed as the
+   subtraction, not a hard-coded `0px`, so the relationship survives either
+   token changing later; `max(0px, ...)` guards against `--radius-box` ever
+   dropping below the inset. */
 .pk-about-map-label {
   position: absolute;
-  left: 0.5rem;
-  right: 0.5rem;
-  bottom: 0.5rem;
+  left: var(--pk-map-label-inset);
+  bottom: var(--pk-map-label-inset);
+  max-width: calc(100% - var(--pk-map-label-inset) * 2);
   padding: 0.5rem 0.75rem;
   font-size: 0.75rem;
   white-space: nowrap;
@@ -2822,7 +2849,8 @@ body.pk-drawer-open {
   text-overflow: ellipsis;
   background: var(--color-base-100);
   border: 1px solid var(--color-base-300);
-  border-radius: var(--radius-box);
+  /* inner radius = outer radius minus inset (concentric nesting) */
+  border-radius: max(0px, calc(var(--radius-box) - var(--pk-map-label-inset)));
   color: var(--color-base-content);
 }
 
