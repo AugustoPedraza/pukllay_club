@@ -1,60 +1,33 @@
 #!/usr/bin/env node
-// Zero-dependency Node CDP probe for the Contacto card's Google Maps
-// thumbnail (G-01.4-5 gap closure — see 01.4-VERIFICATION.md truth 10 and
-// 01.4-10-PLAN.md). Boots the dev server and a headless Chrome, drives the
-// Chrome DevTools Protocol directly over the built-in `WebSocket`/`fetch`
-// (Node 22+, no npm dependency, no package.json in this repo's root to add
-// one to), and asserts — per (viewport, theme) — that the attribution's
-// source-pixel box survives the live `object-fit: cover` crop and never
-// overlaps the caption chip.
+// Zero-dependency Node CDP probe for the Contacto card's Google Maps embed
+// (G-01.4-5 gap closure, plan 01.4-12 — see 01.4-VERIFICATION.md and
+// .planning/debug/resolved/G-01.4-4-maps-thumbnail-approach.md). This is an
+// EMBED oracle, not an attribution-crop oracle: what it checks is whether a
+// live, keyless google.com/maps/embed?pb= iframe actually loads under this
+// app's Content-Security-Policy, in a real browser, whose whole point is
+// that the answer cannot be known by inspecting markup alone.
 //
-// Fans out over the cross product of 4 viewports x 2 themes (8 cases),
-// captures an element-clipped screenshot of each, writes cases.json
-// recording the geometry (including the PRE-FIX crop, derived from the old
-// 21/9 ratio rather than hard-coded, for the discrimination check), then
-// delegates to test/visual/about_map_attribution_pixels.py to confirm the
-// geometry model against actual painted pixels.
+// This requires NETWORK ACCESS to https://www.google.com — new, since the
+// prior (screenshot-era) probe was fully local. It stays developer-invoked
+// and out of `mix quality`/CI for two reasons: the pre-existing
+// engine-divergence risk documented in the original header (this repo has
+// a real precedent — the Phase 01.3 chevron bug reproduced only on real
+// WebKit, not headless Chromium), plus this NEW network dependency on a
+// third party. It is also the ONLY detector this repo has for the embed's
+// undocumented, unversioned `pb=` payload breaking: there is no
+// server-side signal if Google ever stops resolving it, so a red run here
+// is the first and only warning.
 //
 // Usage: node test/visual/about_map_attribution.mjs
 // Env:   PROBE_BASE_URL=http://localhost:4000  (skip booting a dev server)
 
 import { spawn } from "node:child_process"
-import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-// ---------------------------------------------------------------------------
-// Measured constants (plan 01.4-10 <measured_constants>). Every number here
-// was measured directly off the committed asset with python3 + PIL against
-// priv/static/images/about-maps-thumb.jpg at its current bytes — record them
-// once, here, and have every other consumer (the pixel oracle, in Task 2)
-// read them from cases.json rather than re-typing them in a second place.
-// ---------------------------------------------------------------------------
-const ASSET_PATH = "priv/static/images/about-maps-thumb.jpg"
-const ASSET_W = 1656
-const ASSET_H = 804
-
-// Attribution glyph box, inclusive source-pixel bounds. Obtained via a
-// neutral-dark pixel mask (luminance < 170 AND max-min channel spread < 40)
-// over rows 760-804, cols 720-1000 of the committed JPEG.
-const ATTRIB_ROW_START = 781
-const ATTRIB_ROW_END = 799
-const ATTRIB_COL_START = 801
-const ATTRIB_COL_END = 902
-
-// Pre-fix geometry: the aspect-ratio literal this plan replaced, and the
-// object-position default the rule carried before this plan added one
-// (browsers default `object-position` to "50% 50%" when unspecified).
-const LEGACY_ASPECT_RATIO = 21 / 9
-const LEGACY_OBJECT_POSITION = { x: 50, y: 50 }
-// --pk-map-attrib-band's value, needed here (not just in app.css) so the
-// pixel oracle knows which strip of the box to isolate for its
-// attribution-strip MAD assertion.
-const ATTRIB_BAND_PCT = 3.5
-
-const VIEWPORTS = [375, 640, 768, 1280]
-const THEMES = ["light", "dark"]
-const CAPTURE_SCALE = 3
+const EMBED_ORIGIN = "https://www.google.com"
+const EMBED_PATH_PREFIX = "/maps/embed"
 
 const PROBE_BASE_URL = process.env.PROBE_BASE_URL
 
@@ -138,6 +111,19 @@ async function startChrome() {
           "--disable-gpu",
           "--hide-scrollbars",
           "--no-first-run",
+          // Cross-origin iframes normally get an Out-Of-Process-iframe (OOPIF)
+          // process swap under Chrome's site isolation — CDP reports this to
+          // the top-level Page-domain session as `Page.frameDetached
+          // {reason: "swap"}`, with NO further `Page.frameNavigated` for that
+          // frameId on this session (the real navigation event lands on a
+          // separate auto-attached target this script does not attach to).
+          // Disabling site isolation keeps the embed's navigation observable
+          // on the one Page-domain session this probe already has — this is
+          // a LOCAL TESTING flag for the probe's own headless Chrome
+          // instance, not a production security relaxation (nothing here
+          // touches the app's actual CSP or sandboxing).
+          "--disable-site-isolation-trials",
+          "--disable-features=IsolateOrigins,site-per-process",
           `--user-data-dir=${userDataDir}`,
           "--remote-debugging-port=0",
         ],
@@ -240,6 +226,23 @@ class CDPClient {
       this.listeners.set(method, set)
     })
   }
+
+  // Like `once`, but resolves only for the first event matching `predicate`
+  // — needed for `Page.frameNavigated`, which fires once per frame
+  // (including the top-level document) and we need specifically the CHILD
+  // frame's navigation, not the first frameNavigated event of any kind.
+  onceMatching(method, predicate) {
+    return new Promise((resolve) => {
+      const set = this.listeners.get(method) || new Set()
+      const cb = (params) => {
+        if (!predicate(params)) return
+        set.delete(cb)
+        resolve(params)
+      }
+      set.add(cb)
+      this.listeners.set(method, set)
+    })
+  }
 }
 
 async function connectCDP(port) {
@@ -257,7 +260,51 @@ async function connectCDP(port) {
 }
 
 // ---------------------------------------------------------------------------
-// Per-case measurement
+// Geometry helpers (kept — Task 3 uses them for the D-14 hit-test and the
+// chip/attribution-strip clearance assertions across the full 8-case fan-out)
+// ---------------------------------------------------------------------------
+function rectsIntersect(a, b) {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+}
+
+// Whether `inner` is fully inside `outer` — Google's "close proximity"
+// requirement, checked geometrically rather than assumed from DOM nesting
+// (a descendant can still be visually clipped or positioned outside its
+// ancestor's box).
+function rectContains(outer, inner) {
+  return (
+    inner.x >= outer.x - 0.5 &&
+    inner.y >= outer.y - 0.5 &&
+    inner.x + inner.width <= outer.x + outer.width + 0.5 &&
+    inner.y + inner.height <= outer.y + outer.height + 0.5
+  )
+}
+
+// ---------------------------------------------------------------------------
+// WCAG-style colour parsing helpers (kept — Task 3's dark-filter assertion
+// reads computed `filter`, not colour, but these are the general-purpose
+// computed-colour-string helpers this file already had and Task 3's per-
+// case reporting reuses `parseRgbString`-shaped parsing for consistency).
+// ---------------------------------------------------------------------------
+function parseRgbString(str) {
+  const m = str.match(/rgba?\(([^)]+)\)/)
+  if (!m) throw new Error(`Unexpected computed colour string: ${str}`)
+  const parts = m[1].split(",").map((s) => parseFloat(s.trim()))
+  return [parts[0], parts[1], parts[2]]
+}
+
+function relativeLuminance([r, g, b]) {
+  const channel = (c) => {
+    const s = c / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  }
+  const [rl, gl, bl] = [channel(r), channel(g), channel(b)]
+  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl
+}
+
+// ---------------------------------------------------------------------------
+// Per-case measurement (single case: 1280px light, per Task 1's tracer
+// scope — Task 3 fans this back out to the full 4x2 matrix)
 // ---------------------------------------------------------------------------
 async function runCase({ client, baseUrl, viewport, theme }) {
   await client.send("Emulation.setDeviceMetricsOverride", {
@@ -266,6 +313,38 @@ async function runCase({ client, baseUrl, viewport, theme }) {
     deviceScaleFactor: 1,
     mobile: false,
   })
+
+  // CSP-violation capture MUST be installed via
+  // Page.addScriptToEvaluateOnNewDocument, not a post-load Runtime.evaluate
+  // — a listener attached after the frame was already refused would
+  // observe nothing and report success, which is the exact failure this
+  // assertion exists to catch. The listener runs in the page's own context
+  // on every new document (including re-navigations) and appends to a
+  // window-scoped array this script reads back after load.
+  await client.send("Page.addScriptToEvaluateOnNewDocument", {
+    source: `
+      window.__cspViolations = [];
+      document.addEventListener("securitypolicyviolation", (e) => {
+        window.__cspViolations.push({
+          blockedURI: e.blockedURI,
+          effectiveDirective: e.effectiveDirective,
+        });
+      });
+    `,
+  })
+
+  // Subscribe to Page.frameNavigated BEFORE navigating, so we cannot miss
+  // the child frame's commit event to a race. A blocked frame produces an
+  // <iframe> element in the DOM with no navigation commit, so element
+  // presence proves nothing — this is what actually separates the two.
+  const childFrameNavigated = client.onceMatching(
+    "Page.frameNavigated",
+    (params) =>
+      params.frame.parentId != null &&
+      typeof params.frame.url === "string" &&
+      params.frame.url.startsWith(EMBED_ORIGIN) &&
+      params.frame.url.includes(EMBED_PATH_PREFIX),
+  )
 
   const navigated = client.once("Page.loadEventFired")
   await client.send("Page.navigate", { url: `${baseUrl}/quienes-somos` })
@@ -287,273 +366,90 @@ async function runCase({ client, baseUrl, viewport, theme }) {
     expression: `document.querySelector('#contacto').scrollIntoView({block: "center", behavior: "instant"})`,
   })
 
-  await client.send("Runtime.evaluate", {
-    expression: `
-      (async () => {
-        const imgs = Array.from(document.querySelectorAll('.pk-about-map-thumb img'));
-        const visible = imgs.filter(img => getComputedStyle(img).display !== 'none');
-        await Promise.all(visible.map(img => {
-          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-          return new Promise(resolve => img.addEventListener('load', resolve, { once: true }));
-        }));
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-        return true;
-      })()
-    `,
-    awaitPromise: true,
+  const childFrameTimeout = new Promise((resolve) =>
+    setTimeout(() => resolve(null), 20_000),
+  )
+  const childFrame = await Promise.race([childFrameNavigated, childFrameTimeout])
+
+  const violationsResult = await client.send("Runtime.evaluate", {
+    expression: "JSON.stringify(window.__cspViolations || [])",
+    returnByValue: true,
   })
+  const allViolations = JSON.parse(violationsResult.result.value)
+
+  // Phoenix's dev-only LiveReloader plug injects a same-origin
+  // `/phoenix/live_reload/frame` iframe for its own hot-reload watcher.
+  // Before this plan, `default-src 'self'` covered same-origin framing
+  // implicitly (no frame-src existed to override the fallback); D-12's
+  // frame-src now scopes framing to exactly one third-party origin, which
+  // — as a side effect confined to LOCAL DEVELOPMENT — blocks that
+  // unrelated dev-tooling frame too. This is a real, expected consequence
+  // of "exactly one origin, derived from the embed URL" (the plan's own
+  // constraint) and is out of scope to fix by widening frame-src in
+  // csp.ex — see the SUMMARY's deviations section. It never reaches
+  // production (the LiveReloader plug is only mounted when
+  // `code_reloading?` is true). Filtered out here so this probe's
+  // assertion stays about the map embed, the thing it actually tests.
+  const violations = allViolations.filter(
+    (v) => !v.blockedURI.includes("/phoenix/live_reload"),
+  )
 
   const measureResult = await client.send("Runtime.evaluate", {
     expression: `
       JSON.stringify((() => {
         const thumb = document.querySelector('.pk-about-map-thumb');
-        const thumbRect = thumb.getBoundingClientRect();
+        const link = document.querySelector('.pk-about-map-link');
+        const embed = document.querySelector('.pk-about-map-embed');
+        // Scoped to the thumb box, not document.querySelectorAll('iframe') —
+        // Phoenix's dev-only LiveReloader plug injects its OWN unrelated
+        // iframe elsewhere in the document when this probe boots a dev
+        // server, which would make a document-wide count meaningless here.
+        // The ExUnit suite (about_live_test.exs, runs under MIX_ENV=test,
+        // no LiveReloader) is what gates "exactly one iframe on the page" —
+        // this is informational only.
+        const iframeCount = thumb ? thumb.querySelectorAll('iframe').length : 0;
 
-        const imgs = Array.from(thumb.querySelectorAll('img')).filter(
-          img => getComputedStyle(img).display !== 'none'
-        );
-        const images = imgs.map(img => {
-          const r = img.getBoundingClientRect();
-          const cs = getComputedStyle(img);
-          return {
-            rect: { x: r.x, y: r.y, width: r.width, height: r.height },
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight,
-            src: img.currentSrc || img.src,
-            objectFit: cs.objectFit,
-            objectPosition: cs.objectPosition,
-          };
-        });
+        const thumbRect = thumb ? thumb.getBoundingClientRect() : null;
+        const linkRect = link ? link.getBoundingClientRect() : null;
+        const embedRect = embed ? embed.getBoundingClientRect() : null;
+
+        const toRect = (r) => r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null;
 
         const labels = Array.from(document.querySelectorAll('.pk-about-map-label')).filter(
           el => getComputedStyle(el).display !== 'none'
         );
-        const label = labels.length
-          ? (() => {
-              const r = labels[0].getBoundingClientRect();
-              return { x: r.x, y: r.y, width: r.width, height: r.height };
-            })()
-          : null;
+        const label = labels.length ? toRect(labels[0].getBoundingClientRect()) : null;
 
-        // Root font-size, so the Node side can reproduce the 7rem min-height
-        // floor for the pre-fix (legacy) geometry reconstruction without
-        // hard-coding a 16px assumption.
-        const rootFontSizePx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const embedCs = embed ? getComputedStyle(embed) : null;
 
-        // G-01.4-5, plan 01.4-11: the credit Task 1 added. "Legible" is a
-        // real-browser claim (rendered size, painted colour, whether it is
-        // actually visible) that the markup-level ExUnit suite cannot make
-        // — a zero-height box, a hidden-visibility ancestor, or a colour
-        // that vanishes into its background would all pass a DOM-presence
-        // check and fail every person looking at the page.
-        const contactoEl = document.querySelector('#contacto');
-        const contactoRectRaw = contactoEl ? contactoEl.getBoundingClientRect() : null;
-        const contactoRect = contactoRectRaw
-          ? { x: contactoRectRaw.x, y: contactoRectRaw.y, width: contactoRectRaw.width, height: contactoRectRaw.height }
-          : null;
-
-        const creditEls = document.querySelectorAll('.pk-about-map-credit');
-        let credit = null;
-        if (creditEls.length === 1) {
-          const el = creditEls[0];
-          const r = el.getBoundingClientRect();
-          const cs = getComputedStyle(el);
-
-          // Walk up from the credit to find the nearest ancestor whose
-          // OWN background-color actually paints something (not fully
-          // transparent) — the surface the credit's text is read against.
-          // .pk-about-contact-card (bg-base-200) is the expected hit.
-          let bgNode = el;
-          let backgroundColor = null;
-          while (bgNode) {
-            const bg = getComputedStyle(bgNode).backgroundColor;
-            const m = bg.match(/rgba?\(([^)]+)\)/);
-            if (m) {
-              const parts = m[1].split(',').map((s) => parseFloat(s.trim()));
-              const alpha = parts.length > 3 ? parts[3] : 1;
-              if (alpha > 0) {
-                backgroundColor = bg;
-                break;
-              }
-            }
-            bgNode = bgNode.parentElement;
-          }
-
-          credit = {
-            rect: { x: r.x, y: r.y, width: r.width, height: r.height },
-            fontSize: parseFloat(cs.fontSize),
-            color: cs.color,
-            visibility: cs.visibility,
-            opacity: parseFloat(cs.opacity),
-            textContent: el.textContent,
-            backgroundColor,
-            hasAnchor: el.querySelector('a') !== null,
-          };
-        }
+        const centreX = thumbRect ? thumbRect.x + thumbRect.width / 2 : null;
+        const centreY = thumbRect ? thumbRect.y + thumbRect.height / 2 : null;
+        const hitEl = (centreX !== null) ? document.elementFromPoint(centreX, centreY) : null;
+        const hitIsLink = hitEl != null && link != null && (hitEl === link || link.contains(hitEl));
 
         return {
-          thumbRect: { x: thumbRect.x, y: thumbRect.y, width: thumbRect.width, height: thumbRect.height },
-          // Page.captureScreenshot's clip is relative to the DOCUMENT
-          // (page) origin, not the current scrolled viewport --
-          // getBoundingClientRect() above is viewport-relative, so the
-          // scroll offset has to be added back on the Node side before it
-          // is used as a capture clip origin.
-          scrollX: window.scrollX,
-          scrollY: window.scrollY,
-          images,
+          iframeCount,
+          thumbRect: toRect(thumbRect),
+          linkRect: toRect(linkRect),
+          embedRect: toRect(embedRect),
           label,
-          rootFontSizePx,
-          contactoRect,
-          creditCount: creditEls.length,
-          credit,
+          pointerEvents: embedCs ? embedCs.pointerEvents : null,
+          filter: embedCs ? embedCs.filter : null,
+          hitIsLink,
+          hitElementDescription: hitEl ? (hitEl.className || hitEl.tagName) : null,
         };
       })())
     `,
     returnByValue: true,
   })
 
-  return JSON.parse(measureResult.result.value)
-}
+  const measured = JSON.parse(measureResult.result.value)
 
-async function captureThumb({ client, thumbRect }) {
-  const shot = await client.send("Page.captureScreenshot", {
-    format: "png",
-    captureBeyondViewport: false,
-    clip: {
-      x: thumbRect.x,
-      y: thumbRect.y,
-      width: thumbRect.width,
-      height: thumbRect.height,
-      scale: CAPTURE_SCALE,
-    },
-  })
-  return Buffer.from(shot.data, "base64")
-}
-
-// ---------------------------------------------------------------------------
-// object-fit: cover geometry
-// ---------------------------------------------------------------------------
-// Given a box and a natural image size under `object-fit: cover`, compute
-// the visible SOURCE rectangle (in the image's own natural pixel space),
-// honouring `object-position`'s two percentages.
-function visibleSourceRect({ boxW, boxH, naturalW, naturalH, objectPositionX, objectPositionY }) {
-  const scale = Math.max(boxW / naturalW, boxH / naturalH)
-  const renderedW = naturalW * scale
-  const renderedH = naturalH * scale
-
-  const overflowX = renderedW - boxW // overflow in RENDERED px
-  const overflowY = renderedH - boxH
-
-  // object-position: 0% = image's left/top aligns with box's left/top (all
-  // overflow discarded from the right/bottom). 100% = image's right/bottom
-  // aligns with box's right/bottom (all overflow discarded from the
-  // left/top). The rendered-space offset of the image's top-left corner
-  // relative to the box's top-left corner is therefore:
-  const offsetXRendered = -overflowX * (objectPositionX / 100)
-  const offsetYRendered = -overflowY * (objectPositionY / 100)
-
-  // Convert back to source pixels: divide by scale.
-  const visX0 = -offsetXRendered / scale
-  const visY0 = -offsetYRendered / scale
-  const visX1 = visX0 + boxW / scale
-  const visY1 = visY0 + boxH / scale
-
-  return { x0: visX0, y0: visY0, x1: visX1, y1: visY1 }
-}
-
-function parseObjectPosition(objectPosition) {
-  // computed value is always two length/percentage tokens in px or %, e.g.
-  // "50% 100%" — this repo only ever uses percentages here.
-  const parts = objectPosition.trim().split(/\s+/)
-  const parse = (tok) => {
-    const m = tok.match(/^(-?[\d.]+)%$/)
-    if (!m) throw new Error(`Unexpected object-position token: ${tok}`)
-    return Number(m[1])
+  return {
+    violations,
+    childFrameUrl: childFrame ? childFrame.frame.url : null,
+    ...measured,
   }
-  return { x: parse(parts[0]), y: parse(parts[1]) }
-}
-
-function rectsIntersect(a, b) {
-  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
-}
-
-// Whether `inner` is fully inside `outer` — Google's "close proximity"
-// requirement, checked geometrically rather than assumed from DOM nesting
-// (a descendant can still be visually clipped or positioned outside its
-// ancestor's box).
-function rectContains(outer, inner) {
-  return (
-    inner.x >= outer.x - 0.5 &&
-    inner.y >= outer.y - 0.5 &&
-    inner.x + inner.width <= outer.x + outer.width + 0.5 &&
-    inner.y + inner.height <= outer.y + outer.height + 0.5
-  )
-}
-
-// ---------------------------------------------------------------------------
-// WCAG contrast (credit legibility, G-01.4-5 plan 01.4-11)
-// ---------------------------------------------------------------------------
-// Parses a computed `rgb(r, g, b)` / `rgba(r, g, b, a)` string (the only
-// shape `getComputedStyle(...).color`/`.backgroundColor` ever return) into
-// [r, g, b], 0-255 each.
-function parseRgbString(str) {
-  const m = str.match(/rgba?\(([^)]+)\)/)
-  if (!m) throw new Error(`Unexpected computed colour string: ${str}`)
-  const parts = m[1].split(",").map((s) => parseFloat(s.trim()))
-  return [parts[0], parts[1], parts[2]]
-}
-
-// sRGB relative luminance, per the WCAG 2.x formula
-// (https://www.w3.org/TR/WCAG21/#dfn-relative-luminance) — computed from
-// the LIVE computed colour values, never a hard-coded token hex, so this
-// keeps working through a theme edit rather than silently drifting from
-// what the browser actually painted.
-function relativeLuminance([r, g, b]) {
-  const channel = (c) => {
-    const s = c / 255
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
-  }
-  const [rl, gl, bl] = [channel(r), channel(g), channel(b)]
-  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl
-}
-
-function contrastRatio(rgbA, rgbB) {
-  const lA = relativeLuminance(rgbA)
-  const lB = relativeLuminance(rgbB)
-  const lighter = Math.max(lA, lB)
-  const darker = Math.min(lA, lB)
-  return (lighter + 0.05) / (darker + 0.05)
-}
-
-// Reconstructs the visible SOURCE rectangle the box would have shown under
-// the PRE-FIX stylesheet: aspect-ratio 21/9 (not derived from the asset),
-// the same 7rem min-height floor (unchanged by this plan), and the
-// object-position default (50% 50%, since the pre-fix rule declared none).
-// Box WIDTH is unaffected by aspect-ratio (it comes from the grid/card
-// layout), so the live-measured width is reused; only the height is
-// recomputed under the old ratio.
-function legacyVisibleSourceRect({ boxW, rootFontSizePx, naturalW, naturalH }) {
-  const minHeightPx = 7 * rootFontSizePx
-  const ratioHeight = boxW / LEGACY_ASPECT_RATIO
-  const boxH = Math.max(ratioHeight, minHeightPx)
-
-  return visibleSourceRect({
-    boxW,
-    boxH,
-    naturalW,
-    naturalH,
-    objectPositionX: LEGACY_OBJECT_POSITION.x,
-    objectPositionY: LEGACY_OBJECT_POSITION.y,
-  })
-}
-
-function rectsEqual(a, b, eps = 0.01) {
-  return (
-    Math.abs(a.x0 - b.x0) < eps &&
-    Math.abs(a.y0 - b.y0) < eps &&
-    Math.abs(a.x1 - b.x1) < eps &&
-    Math.abs(a.y1 - b.y1) < eps
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -563,320 +459,74 @@ async function main() {
   const { baseUrl, proc: serverProc } = await startDevServer()
   const chrome = await startChrome()
 
-  const runDir = await mkdtemp(join(tmpdir(), "about-map-attrib-run-"))
-  log(`Run directory (captures + cases.json): ${runDir}`)
-
   let exitCode = 0
-  const cases = []
 
   try {
     const conn = await connectCDP(chrome.port)
     const client = conn.client
 
-    for (const viewport of VIEWPORTS) {
-      for (const theme of THEMES) {
-        const label = `[${viewport}px, ${theme}]`
-        try {
-          const measured = await runCase({ client, baseUrl, viewport, theme })
+    const viewport = 1280
+    const theme = "light"
+    const label = `[${viewport}px, ${theme}]`
 
-          if (measured.images.length !== 1) {
-            log(`${label} FAIL: expected exactly 1 visible map <img>, found ${measured.images.length}`)
-            exitCode = 1
-            continue
-          }
+    try {
+      const measured = await runCase({ client, baseUrl, viewport, theme })
 
-          const img = measured.images[0]
-          const pos = parseObjectPosition(img.objectPosition)
-
-          const visSrc = visibleSourceRect({
-            boxW: measured.thumbRect.width,
-            boxH: measured.thumbRect.height,
-            naturalW: img.naturalWidth,
-            naturalH: img.naturalHeight,
-            objectPositionX: pos.x,
-            objectPositionY: pos.y,
-          })
-
-          const legacySrc = legacyVisibleSourceRect({
-            boxW: measured.thumbRect.width,
-            rootFontSizePx: measured.rootFontSizePx,
-            naturalW: img.naturalWidth,
-            naturalH: img.naturalHeight,
-          })
-
-          const attribInside =
-            ATTRIB_ROW_START >= visSrc.y0 &&
-            ATTRIB_ROW_END <= visSrc.y1 &&
-            ATTRIB_COL_START >= visSrc.x0 &&
-            ATTRIB_COL_END <= visSrc.x1
-
+      log(`${label} CSP violations: ${measured.violations.length}`)
+      if (measured.violations.length > 0) {
+        for (const v of measured.violations) {
           log(
-            `${label} visible source rect: rows ${visSrc.y0.toFixed(2)}..${visSrc.y1.toFixed(2)}, ` +
-              `cols ${visSrc.x0.toFixed(2)}..${visSrc.x1.toFixed(2)}`,
+            `${label} FAIL: CSP VIOLATION: effectiveDirective=${v.effectiveDirective} blockedURI=${v.blockedURI}`,
           )
-          log(
-            `${label} attribution box: rows ${ATTRIB_ROW_START}..${ATTRIB_ROW_END}, ` +
-              `cols ${ATTRIB_COL_START}..${ATTRIB_COL_END}`,
-          )
-
-          if (!attribInside) {
-            log(
-              `${label} FAIL: attribution rows/cols outside visible source rect ` +
-                `(visible rows ${visSrc.y0.toFixed(2)}..${visSrc.y1.toFixed(2)}, ` +
-                `cols ${visSrc.x0.toFixed(2)}..${visSrc.x1.toFixed(2)})`,
-            )
-            exitCode = 1
-          }
-
-          // Project the attribution box back into viewport coordinates and
-          // check it does not intersect the visible caption chip.
-          let overlapsChip = false
-          let chipRelative = null
-          if (measured.label) {
-            const scaleX = img.rect.width / img.naturalWidth
-            const scaleY = img.rect.height / img.naturalHeight
-            // visSrc is already the visible window in source px, mapped
-            // 1:1 onto the box; the attribution's position within that
-            // visible window, scaled to viewport px, plus the box origin:
-            const attribViewport = {
-              x: img.rect.x + (ATTRIB_COL_START - visSrc.x0) * scaleX,
-              y: img.rect.y + (ATTRIB_ROW_START - visSrc.y0) * scaleY,
-              width: (ATTRIB_COL_END - ATTRIB_COL_START) * scaleX,
-              height: (ATTRIB_ROW_END - ATTRIB_ROW_START) * scaleY,
-            }
-            overlapsChip = rectsIntersect(attribViewport, measured.label)
-            chipRelative = {
-              x: measured.label.x - measured.thumbRect.x,
-              y: measured.label.y - measured.thumbRect.y,
-              width: measured.label.width,
-              height: measured.label.height,
-            }
-          }
-
-          if (overlapsChip) {
-            log(`${label} FAIL: attribution overlaps caption chip`)
-            exitCode = 1
-          }
-
-          // -------------------------------------------------------------
-          // Plan 01.4-11 (G-01.4-5, second half): the credit Task 1 added.
-          // The markup-level ExUnit suite can see the credit exists and
-          // carries the right classes/text — it structurally cannot see
-          // whether it PAINTS: a real rendered size, a colour that
-          // actually contrasts against the card, or a rect that stays
-          // inside #contacto and clear of the clipping thumbnail. That is
-          // this real-browser probe's job.
-          // -------------------------------------------------------------
-          let creditContrast = null
-          let creditOk = true
-          if (measured.creditCount !== 1) {
-            log(
-              `${label} FAIL: no .pk-about-map-credit found ` +
-                `(expected exactly 1, found ${measured.creditCount})`,
-            )
-            exitCode = 1
-            creditOk = false
-          } else {
-            const credit = measured.credit
-
-            if (credit.rect.width <= 0 || credit.rect.height <= 0) {
-              log(
-                `${label} FAIL: credit rect is ${credit.rect.width.toFixed(2)}x` +
-                  `${credit.rect.height.toFixed(2)} — a credit that renders to nothing is not attribution`,
-              )
-              exitCode = 1
-              creditOk = false
-            }
-
-            if (credit.visibility !== "visible" || credit.opacity !== 1) {
-              log(
-                `${label} FAIL: credit visibility="${credit.visibility}" opacity=${credit.opacity} ` +
-                  `— expected visible/1`,
-              )
-              exitCode = 1
-              creditOk = false
-            }
-
-            if (credit.fontSize < 12) {
-              log(
-                `${label} FAIL: credit font-size ${credit.fontSize.toFixed(2)}px below 12px ` +
-                  `(the design system's muted tier, and the floor that distinguishes this from ` +
-                  `the 2.5-5.9 CSS px baked-in mark it exists to supplement)`,
-              )
-              exitCode = 1
-              creditOk = false
-            }
-
-            if (!credit.textContent.includes("Google")) {
-              log(`${label} FAIL: credit text does not contain "Google" (got "${credit.textContent}")`)
-              exitCode = 1
-              creditOk = false
-            }
-
-            if (credit.hasAnchor) {
-              log(`${label} FAIL: credit contains a nested anchor — must be plain text, not a link`)
-              exitCode = 1
-              creditOk = false
-            }
-
-            if (!measured.contactoRect) {
-              log(`${label} FAIL: #contacto not found — cannot check credit containment`)
-              exitCode = 1
-              creditOk = false
-            } else if (!rectContains(measured.contactoRect, credit.rect)) {
-              log(
-                `${label} FAIL: credit rect not contained in #contacto rect ` +
-                  `(credit ${JSON.stringify(credit.rect)}, #contacto ${JSON.stringify(measured.contactoRect)})`,
-              )
-              exitCode = 1
-              creditOk = false
-            }
-
-            if (rectsIntersect(credit.rect, measured.thumbRect)) {
-              log(
-                `${label} FAIL: credit rect intersects .pk-about-map-thumb rect ` +
-                  `— .pk-about-map-thumb clips with overflow: hidden, so any overlap is a ` +
-                  `credit at risk of the same fate as the baked-in wordmark`,
-              )
-              exitCode = 1
-              creditOk = false
-            }
-
-            if (!credit.backgroundColor) {
-              log(`${label} FAIL: could not resolve a non-transparent ancestor background for the credit`)
-              exitCode = 1
-              creditOk = false
-            } else {
-              const textRgb = parseRgbString(credit.color)
-              const bgRgb = parseRgbString(credit.backgroundColor)
-              creditContrast = contrastRatio(textRgb, bgRgb)
-              log(`${label} credit contrast: ${creditContrast.toFixed(2)}:1`)
-
-              if (creditContrast < 4.5) {
-                log(
-                  `${label} FAIL: credit contrast ${creditContrast.toFixed(2)}:1 below 4.5:1 ` +
-                    `(color ${credit.color} on ${credit.backgroundColor})`,
-                )
-                exitCode = 1
-                creditOk = false
-              }
-            }
-
-            log(
-              `${label} credit: rect ${JSON.stringify(credit.rect)}, font-size ` +
-                `${credit.fontSize.toFixed(2)}px, contrast ${creditContrast ? creditContrast.toFixed(2) : "n/a"}:1`,
-            )
-          }
-
-          // Element-clipped screenshot for the pixel oracle, taken
-          // regardless of the two DOM-geometry checks above (not gated
-          // behind `continue`): the pixel oracle is an INDEPENDENT
-          // confirmation of the geometry model, including — deliberately —
-          // when run against a broken stylesheet during the Task 2 sanity
-          // check (plan 01.4-10 Task 2, step 10), where the DOM-level
-          // checks above already fail and a `continue` here would leave
-          // nothing for the pixel oracle to independently reject. `clip` is
-          // page-relative, so the scroll offset is added back on top of
-          // the viewport-relative thumbRect used everywhere else.
-          //
-          // `clip` stays the THUMBNAIL rect ONLY — plan 01.4-11 deliberately
-          // does NOT widen it to also cover the new credit below the image.
-          // The pixel oracle's expected-crop reconstruction (below) is
-          // defined against the image box; widening the clip would break
-          // that reconstruction's own geometry assumptions. The credit's
-          // legibility is fully covered by the DOM-measured assertions
-          // above (rect, font-size, contrast) — it does not need a second,
-          // pixel-level oracle.
-          const png = await captureThumb({
-            client,
-            thumbRect: {
-              ...measured.thumbRect,
-              x: measured.thumbRect.x + measured.scrollX,
-              y: measured.thumbRect.y + measured.scrollY,
-            },
-          })
-          const pngPath = join(runDir, `thumb-${viewport}-${theme}.png`)
-          await writeFile(pngPath, png)
-
-          cases.push({
-            viewport,
-            theme,
-            pngPath: `thumb-${viewport}-${theme}.png`,
-            // Both theme variants are byte-identical today (a tracked,
-            // accepted deviation — see this plan's frontmatter), but read
-            // the file the case's src actually names, not a hard-coded
-            // path, so this keeps working the day the dark asset diverges.
-            assetPath: img.src.includes("about-maps-thumb-dark.jpg")
-              ? "priv/static/images/about-maps-thumb-dark.jpg"
-              : ASSET_PATH,
-            src: img.src,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight,
-            captureScale: CAPTURE_SCALE,
-            thumbRect: measured.thumbRect,
-            visibleSourceRect: visSrc,
-            legacyVisibleSourceRect: legacySrc,
-            legacySameAsFixed: rectsEqual(visSrc, legacySrc),
-            chipRelativeRect: chipRelative,
-            attribBox: {
-              rowStart: ATTRIB_ROW_START,
-              rowEnd: ATTRIB_ROW_END,
-              colStart: ATTRIB_COL_START,
-              colEnd: ATTRIB_COL_END,
-            },
-            attribBandPct: ATTRIB_BAND_PCT,
-            assetWidth: ASSET_W,
-            assetHeight: ASSET_H,
-          })
-
-          if (attribInside && !overlapsChip && creditOk) log(`${label} PASS`)
-        } catch (err) {
-          log(`${label} FAIL: ${err.message}`)
-          exitCode = 1
         }
+        exitCode = 1
       }
+
+      log(`${label} child frame URL: ${measured.childFrameUrl ?? "(none — no commit observed)"}`)
+      if (!measured.childFrameUrl) {
+        log(
+          `${label} FAIL: TIMEOUT waiting for child frame navigation to the embed URL ` +
+            `(expected an origin starting with ${EMBED_ORIGIN}${EMBED_PATH_PREFIX})`,
+        )
+        exitCode = 1
+      }
+
+      // Informational only (scoped to .pk-about-map-thumb) — see the
+      // measurement snippet's comment for why this probe does not gate on
+      // it. The ExUnit suite gates "exactly one iframe on the page".
+      log(`${label} iframe count (inside .pk-about-map-thumb): ${measured.iframeCount}`)
+
+      const embedRect = measured.embedRect
+      log(`${label} embed rect: ${JSON.stringify(embedRect)}`)
+      if (!embedRect || embedRect.width <= 0 || embedRect.height <= 0) {
+        log(`${label} FAIL: embed rect is ${embedRect ? `${embedRect.width}x${embedRect.height}` : "null"}`)
+        exitCode = 1
+      }
+
+      log(`${label} thumb rect: ${JSON.stringify(measured.thumbRect)}`)
+      log(`${label} link rect: ${JSON.stringify(measured.linkRect)}`)
+      log(`${label} caption chip rect: ${JSON.stringify(measured.label)}`)
+      log(`${label} embed pointer-events: ${measured.pointerEvents}`)
+      log(`${label} embed filter: ${measured.filter}`)
+      log(`${label} hit-test at box centre: ${measured.hitElementDescription} (isLink=${measured.hitIsLink})`)
+
+      if (exitCode === 0) log(`${label} PASS`)
+    } catch (err) {
+      log(`${label} FAIL: ${err.message}`)
+      exitCode = 1
     }
   } finally {
     await stopChrome(chrome)
     await stopDevServer(serverProc)
   }
 
-  if (cases.length !== VIEWPORTS.length * THEMES.length) {
-    log(
-      `FAIL: expected ${VIEWPORTS.length * THEMES.length} case blocks, only ${cases.length} ` +
-        `completed far enough to be captured — a skipped viewport or theme is an unverified ` +
-        `viewport or theme.`,
-    )
-    exitCode = 1
-  }
-
-  const casesJsonPath = join(runDir, "cases.json")
-  await writeFile(casesJsonPath, JSON.stringify(cases, null, 2))
-
-  if (cases.length > 0) {
-    log(`Handing off to the pixel oracle: python3 test/visual/about_map_attribution_pixels.py ${runDir}`)
-    const pyExit = await new Promise((resolve) => {
-      const py = spawn("python3", ["test/visual/about_map_attribution_pixels.py", runDir], {
-        stdio: "inherit",
-      })
-      py.on("exit", (code) => resolve(code ?? 1))
-      py.on("error", (err) => {
-        log(`FAIL: could not spawn python3: ${err.message}`)
-        resolve(1)
-      })
-    })
-    if (pyExit !== 0) exitCode = 1
-  }
-
-  log(`Run directory (captures + cases.json): ${runDir}`)
-
-  // Plan 01.4-11 Task 2, step 5: leave a live environment for the Task 3
-  // human checkpoint instead of tearing everything down. Started ONLY
-  // after a fully green run — the checkpoint rule that a verification
-  // environment must never be presented against a dead (or broken) server.
-  // This is a SEPARATE, detached process from the probe's own ephemeral
-  // `serverProc` above (already stopped in the `finally` block) — that one
-  // exists only for the duration of the CDP run.
+  // Plan 01.4-12 Task 1, step 7 (Task 3 restores this for the full 4x2
+  // matrix): leave a live environment for the Task 4 human checkpoint
+  // instead of tearing everything down. Started ONLY after a fully green
+  // run, per the rule that a verification environment is never presented
+  // broken. This is a SEPARATE, detached process from the probe's own
+  // ephemeral `serverProc` above (already stopped in the `finally` block)
+  // — that one exists only for the duration of the CDP run.
   if (exitCode === 0) {
     await startCheckpointServer()
   } else {

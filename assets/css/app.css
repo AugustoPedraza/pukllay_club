@@ -2766,46 +2766,32 @@ body.pk-drawer-open {
   flex-shrink: 0;
 }
 
-/* Fixed-ratio Google Maps screenshot thumbnail (D-04/D-05/D-06) — a
-   committed static asset, never a runtime Static Maps API call.
+/* Live Google Maps embed frame (G-01.4-5 gap closure, plan 01.4-12,
+   D-11/D-12/D-14) — supersedes the fixed-ratio screenshot thumbnail
+   D-04/D-05/D-06 shipped and 01.4-07/09/10/11 progressively patched. See
+   about_live.ex's HEEX comment above the frame markup for the full
+   reversal rationale.
 
-   aspect-ratio (G-01.4-5 gap closure — see 01.4-VERIFICATION.md truth 10
-   and 01.4-10-PLAN.md): this used to be a bare
-   `21 / 9` literal that "matched the capture directly" — until 01.4-09
-   recaptured the asset at 1656x804 (ratio 2.0597) and left this literal
-   unchanged. Nothing in the repo connected the two, so `object-fit: cover`
-   silently discarded 5.86% off the top AND bottom of every render, taking
-   Google's attribution wordmark (baked into the bottom edge of the
-   screenshot) with it. Now there is exactly ONE place that claims to know
-   the asset's shape — `--pk-map-thumb-w`/`--pk-map-thumb-h`, read by
-   `aspect-ratio` below — and `test/pukllay_club_web/live/about_live_test.exs`
-   (Contacto card map thumbnail describe block) gates these two numbers
-   against the real JPEG dimensions on disk. A recapture at a different
-   size means updating BOTH custom properties in the same commit, or that
-   test fails.
+   --pk-map-thumb-w, --pk-map-thumb-h and --pk-map-attrib-band are GONE:
+   all three existed only to describe a specific committed JPEG's bytes and
+   the strip of it Google's baked-in mark occupied. A live frame has no
+   source image whose shape must be matched or whose baked-in attribution
+   must be uncropped — Google renders its own tiles and its own attribution
+   at runtime, at whatever size this box gives it.
 
-   --pk-map-attrib-band reserves the bottom slice of the box the caption
-   chip below may never enter. Measured directly off the committed asset:
-   the attribution glyphs run from row 781 to row 799 of 804 (97.14% to
-   99.38% of the height, 2.86% of the height total) — 3.5% is that rounded
-   up. Custom properties inherit, so `.pk-about-map-label` reads this same
-   value for its own offset.
+   aspect-ratio: 2 / 1 is now a design choice, not a measurement: with
+   nothing to match, the box keeps the proportion a human already approved.
+   The shipped screenshot ratio was 2.0597 (1656x804) and 2/1 is within 3%
+   of it, so this is a deliberate no-visible-change, not a redesign. A
+   wider (shorter) box is also the safer direction for the 640-767px band
+   below, where the parent's sm:grid-cols-2 halves the card at exactly
+   640px and every prior round of this gap failed first.
 
-   min-height (G-01.4-2 gap closure) floors the box for the 640-767px
-   two-column band specifically: aspect-ratio alone lets the box collapse to
-   a measured 218x93px there (sm:grid-cols-2 halves the card at exactly
-   640px — see .planning/debug/G-01.4-2-map-thumb-coverage.md). With the
-   floor the box stays >=112px tall in that band; the <img>'s existing
-   object-fit: cover just crops a little more horizontally — and, with the
-   new `object-position` below, that crop lands on the (horizontally
-   centred) sides, never on the (bottom-anchored) attribution. Do not
-   "simplify" this away — it is load-bearing for that one band, not
-   redundant with aspect-ratio. */
+   min-height (G-01.4-2 gap closure, still load-bearing) floors the box for
+   that same 640-767px band: aspect-ratio alone let the box collapse to a
+   measured 218x93px there — see .planning/debug/G-01.4-2-map-thumb-coverage.md. */
 .pk-about-map-thumb {
-  --pk-map-thumb-w: 1656;
-  --pk-map-thumb-h: 804;
-  aspect-ratio: var(--pk-map-thumb-w) / var(--pk-map-thumb-h);
-  --pk-map-attrib-band: 3.5%;
+  aspect-ratio: 2 / 1;
   min-height: 7rem;
   overflow: hidden;
   position: relative;
@@ -2820,35 +2806,30 @@ body.pk-drawer-open {
   --pk-map-label-inset: 0.5rem;
 }
 
-/* No `display` declared here (G-01.4-4 gap closure, Task 3): this rule
-   carried `display: block` until now, and Task 3 adds a light/dark <img>
-   theme-variant pair on the isologo's own `block dark:hidden` /
-   `hidden dark:block` pattern (brand_logo/1, layouts.ex). An unlayered
-   `.pk-*` rule declaring `display` always beats Tailwind's layered
-   utilities (this file's own top-of-file cascade-layer hazard note), which
-   would defeat `dark:hidden` on the light variant and render BOTH images
-   stacked in both themes — the exact Rule 1 defect plan 01.4-05 had to undo
-   on `.pk-about-morph-mark img`'s own theme variants (see that rule's
-   comment below). `<img>` is a replaced element, so width/height/object-fit
-   apply without an explicit display override; the light variant carries an
-   explicit `block` utility in the markup instead, since removing this
-   declaration also removes the block-formatting it used to supply.
-
-   object-position: 50% 100% (G-01.4-5 gap closure) bottom-anchors the
-   crop. With the ratio now matching the asset there is no vertical
-   overflow left to position at most breakpoints — this is a guard, not a
-   fix for today's numbers: Google always bakes Maps attribution onto the
-   BOTTOM edge of a capture (horizontally centred, per the measured
-   constants), so if a future container change, a min-height edit, or a
-   differently-shaped recapture ever reintroduces a vertical crop, the
-   bottom must be the last thing discarded, never the first. The
-   horizontal 50% keeps the existing centred crop for the one band
-   (640-767px, where the min-height floor binds) that still crops at all. */
-.pk-about-map-thumb img {
+/* The live embed itself (plan 01.4-12, D-11/D-14). `pointer-events: none`
+   is the D-14 mechanism and does two jobs at once: it stops pan/zoom/
+   scroll-wheel inside the frame (a map that eats wheel events mid-column
+   is a scroll trap, and this project's primary target is mobile), and it
+   is what lets every click fall through to `.pk-about-map-link` below, so
+   D-06's single link-out survives the switch from screenshot to frame.
+   `border: 0` is the named replacement for the raw Google export's inline
+   `style="border:0"`, which this app's design system bans outright. */
+.pk-about-map-embed {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: 50% 100%;
+  border: 0;
+  display: block;
+  pointer-events: none;
+}
+
+/* The overlay click target (plan 01.4-12, D-14/D-06): pinned to all four
+   edges of .pk-about-map-thumb so the click-out is reachable from anywhere
+   on the map, not just the caption chip. No background — it is invisible
+   by design, same as the screenshot-era anchor it replaces. */
+.pk-about-map-link {
+  position: absolute;
+  inset: 0;
+  display: block;
 }
 
 /* Opaque, bordered, inset, single-line chip (G-01.4-2 gap closure — see
@@ -2887,20 +2868,19 @@ body.pk-drawer-open {
    token changing later; `max(0px, ...)` guards against `--radius-box` ever
    dropping below the inset.
 
-   `bottom` (G-01.4-5 gap closure) adds `--pk-map-attrib-band` on top of
-   the existing inset rather than reading the inset alone. Uncropping
-   Google's attribution (the rule above) and then parking this opaque chip
-   directly on top of it would satisfy the letter of that fix and none of
-   its purpose — Google's Geo Guidelines say "Don't remove, obscure, or
-   crop out the attribution information," and at 1280px the attribution
-   occupies the bottom 7.5px of a 261px box, half a pixel below the old
-   inset-only offset. Percentages on `bottom` resolve against the
-   containing block's height, so this reserve scales with the thumbnail at
-   every breakpoint exactly as the band it protects does. */
+   `top` (plan 01.4-12, D-13/D-14 supersede the prior `bottom` fix): the
+   chip and Google's mark used to share one flat image, so the fix was a
+   measured 3.5% reserve above the baked-in attribution strip. A live
+   frame paints its own attribution bar along its own bottom edge, at a
+   size this app does not control and cannot predict — a percentage
+   reserve is no longer a defensible bound. The chip vacates that edge
+   entirely and sits at the top instead, satisfying the same Geo
+   Guidelines clause the reserve served, more strongly: nothing this app
+   draws can ever overlap a strip whose height it does not know. */
 .pk-about-map-label {
   position: absolute;
   left: var(--pk-map-label-inset);
-  bottom: calc(var(--pk-map-label-inset) + var(--pk-map-attrib-band));
+  top: var(--pk-map-label-inset);
   max-width: calc(100% - var(--pk-map-label-inset) * 2);
   padding: 0.5rem 0.75rem;
   font-size: 0.75rem;

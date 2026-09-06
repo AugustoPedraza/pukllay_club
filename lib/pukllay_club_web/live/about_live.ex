@@ -668,41 +668,37 @@ defmodule PukllayClubWeb.AboutLive do
               icons={[:whatsapp, :instagram]}
               labels
             />
-            <figure class="flex flex-col gap-1">
+            <%!-- G-01.4-5 gap closure, plan 01.4-12, per CONTEXT.md D-11 through
+            D-14, which reopened and reversed G-01.4-4's decision to decline
+            an embed. The four preceding plans (01.4-07/09/10/11) all argued
+            for the screenshot-plus-caption approach being deleted here — a
+            future reader deserves to know they were superseded, not
+            forgotten. A live frame renders Google's own attribution at
+            Google's own native size, which is what makes the screenshot's
+            legibility problem disappear rather than get engineered around.
+            See .planning/phases/01.4-ui-polish-pass-for-about-page-sketches/01.4-VERIFICATION.md
+            for the gap and .planning/debug/resolved/G-01.4-4-maps-thumbnail-approach.md
+            for the CSP finding that made the frame look infeasible. The
+            frame is deliberately inert (D-14): the overlay anchor below is
+            the only interactive element in the box, so nobody "restores"
+            pan and zoom as a courtesy. --%>
+            <div class="pk-about-map-thumb">
+              <iframe
+                class="pk-about-map-embed"
+                src={ClubLinks.maps_embed_url()}
+                title="Mapa de la ubicación del club en Google Maps"
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+                sandbox="allow-scripts allow-same-origin"
+                tabindex="-1"
+                aria-hidden="true"
+              ></iframe>
               <a
                 href={ClubLinks.maps_url()}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="pk-about-map-thumb"
+                class="pk-about-map-link"
               >
-                <%!-- Light/dark theme-variant pair (G-01.4-4 gap closure, mirrors
-                brand_logo/1's own isologo pair in layouts.ex): light first in
-                document order (an existing test takes List.first() of the srcs
-                under this selector). The light variant needs the explicit
-                `block` utility that brand_logo/1 does not, because
-                `.pk-about-map-thumb img` no longer supplies display:block
-                itself (removed in the same change, to avoid re-defeating this
-                exact utility pair — see that rule's comment in app.css). Both
-                asset files ship as an interim same-image pair: a genuine
-                dark-mode Google Maps capture was not achievable (no in-app
-                Settings > Appearance > Dark toggle found, Chrome's force-dark
-                flag only recolors DOM overlay text not canvas map tiles, OS
-                dark mode + reload left tiles unchanged) — deferred to a future
-                pass, tracked in 01.4-09-SUMMARY.md. --%>
-                <img
-                  src={~p"/images/about-maps-thumb.jpg"}
-                  alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
-                  class="block dark:hidden"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <img
-                  src={~p"/images/about-maps-thumb-dark.jpg"}
-                  alt="Ubicación del club en Google Maps — Club de Emprendedores, San Salvador de Jujuy"
-                  class="hidden dark:block"
-                  loading="lazy"
-                  decoding="async"
-                />
                 <%!-- Two caption variants (G-01.4-2 gap closure, sketch 048's own
                 short/long strings, same hero-tagline precedent above): the
                 short one below lg, the long one at/above lg. lg (1024px), NOT
@@ -715,28 +711,7 @@ defmodule PukllayClubWeb.AboutLive do
                   Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗
                 </span>
               </a>
-              <%!-- G-01.4-5 gap closure, plan 01.4-11: the baked-in "Google Maps"
-              wordmark above survives the crop as of plan 01.4-10, but at this
-              thumbnail's rendered size it arrives on screen at 2.5-5.9 CSS px
-              tall — present in the pixel buffer, not legible to a person.
-              Google's Geo Guidelines require attribution "within close
-              proximity of the content and legible to the average viewer or
-              reader," so this line is the part a person can actually read;
-              the screenshot keeps its own baked-in mark untouched. Sibling of
-              the anchor, OUTSIDE .pk-about-map-thumb — that rule declares
-              overflow: hidden, and a credit rendered inside it would be
-              clipped by the exact mechanism that discarded the baked-in
-              wordmark in the first place (01.4-VERIFICATION.md). Mirrors this
-              repo's existing third-party-credit precedent, `.pk-bgg-note`
-              (layouts.ex/app.css), which documents the same restraint about
-              not altering a trademark's presentation casually. No year: this
-              is a fixed capture, not one re-taken annually, so a
-              Date.utc_today().year here would assert something false about
-              the data's vintage every January. --%>
-              <figcaption class="pk-about-map-credit text-right text-xs text-neutral">
-                Datos del mapa © Google
-              </figcaption>
-            </figure>
+            </div>
           </div>
         </div>
       </section>

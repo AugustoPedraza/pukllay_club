@@ -14,58 +14,6 @@ defmodule PukllayClubWeb.AboutLiveTest do
   # and footer_rhythm_test.exs.
   defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
 
-  # G-01.4-5 gap closure (plan 01.4-10 Task 3): walks a baseline JPEG's own
-  # marker chain to its Start-Of-Frame segment and returns {width, height}
-  # read directly off the file's bytes — no dependency, no trusting a
-  # comment. This is the missing wire the gap's root cause needed: one file
-  # (app.css) described another file's (the committed screenshot's) shape,
-  # and nothing checked the two agreed.
-  defp jpeg_dimensions(path) do
-    <<0xFF, 0xD8, rest::binary>> = File.read!(path)
-    walk_jpeg_segments(rest)
-  end
-
-  # RST markers (0xD0-0xD7) carry no length field — skip the marker byte
-  # only and keep walking. Not expected before a Start-Of-Frame in a real
-  # file, but guarded so a malformed/unexpected file fails loudly instead
-  # of misreading a length that isn't there.
-  defp walk_jpeg_segments(<<0xFF, marker, rest::binary>>) when marker in 0xD0..0xD7 do
-    walk_jpeg_segments(rest)
-  end
-
-  # A 0xFF fill byte before the real marker byte — re-inject the single
-  # 0xFF this clause consumed and keep walking.
-  defp walk_jpeg_segments(<<0xFF, 0xFF, rest::binary>>) do
-    walk_jpeg_segments(<<0xFF, rest::binary>>)
-  end
-
-  defp walk_jpeg_segments(<<0xFF, 0xDA, _rest::binary>>) do
-    raise "Reached Start-Of-Scan (0xFFDA) before any Start-Of-Frame marker — " <>
-            "this file is not the baseline JPEG this gate assumes."
-  end
-
-  # Start-Of-Frame: 0xC0..0xCF except 0xC4 (Huffman tables), 0xC8 (JPG
-  # reserved), 0xCC (arithmetic coding). Payload is one precision byte,
-  # then HEIGHT, then WIDTH, both big-endian 16-bit — note the order.
-  # `_length` is prefixed since it is not needed once past the header (the
-  # payload is read directly off `rest`, unbounded), keeping
-  # --warnings-as-errors clean.
-  defp walk_jpeg_segments(<<0xFF, marker, _length::16, rest::binary>>)
-       when marker in 0xC0..0xCF and marker not in [0xC4, 0xC8, 0xCC] do
-    <<_precision, height::16, width::16, _rest::binary>> = rest
-    {width, height}
-  end
-
-  defp walk_jpeg_segments(<<0xFF, _marker, length::16, rest::binary>>) do
-    skip = length - 2
-    <<_payload::binary-size(skip), remaining::binary>> = rest
-    walk_jpeg_segments(remaining)
-  end
-
-  defp walk_jpeg_segments(<<>>) do
-    raise "Reached end of file before any Start-Of-Frame marker — this file is not a baseline JPEG."
-  end
-
   describe "GET /club and GET /quienes-somos (D-01: two aliases, no redirect)" do
     test "GET /club returns 200 and renders, not a redirect", %{conn: conn} do
       assert {:ok, _view, _html} = live(conn, ~p"/club")
@@ -370,93 +318,33 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
   end
 
-  # Plan 01.4-02 Task 2 (tracer): the Contacto card's Google Maps thumbnail,
-  # resolved end-to-end from ClubLinks.maps_url/0 through the rendered
-  # anchor and <img>. Task 3 adds the WhatsApp/Instagram icon links.
+  # Plan 01.4-02 Task 2 (tracer): the Contacto card's map, resolved
+  # end-to-end from ClubLinks through the rendered markup. Task 3 adds the
+  # WhatsApp/Instagram icon links.
   #
-  # Oracle boundary (plan 01.4-07 Task 2, closing G-01.4-2; revised plan
-  # 01.4-10 Task 3, closing G-01.4-5): ExUnit + LazyHTML see server-rendered
-  # strings, class lists, and stylesheet text — they structurally CANNOT see
-  # computed layout, wrapped line counts, rendered opacity, or any coverage
-  # ratio. G-01.4-2 was a purely geometric/perceptual defect (a translucent
-  # caption overlay that grew to 3 wrapped lines and swallowed 74.9% of the
-  # thumbnail) that the original two structural assertions below (anchor
-  # href/target/rel, img src) could not have caught — nothing here asserted
-  # the caption's text, height, or opacity. The assertions added for that
-  # gap (both caption variants render and are gated by lg; the opaque
-  # single-source fill; the single-line ceiling; the height floor)
-  # constrain the MECHANISM that produced the bug, not the resulting
-  # APPEARANCE.
-  #
-  # G-01.4-5 sharpened this boundary further: this suite's ORIGINAL
-  # sentence above was true about pixel CONTENT and false about pixel
-  # GEOMETRY — and geometry, not content, is what actually broke (a
-  # recaptured asset's real shape silently drifted from the `aspect-ratio`
-  # literal that crops it). Three oracles now divide this component, each
-  # owning a different question, and no reader should reach for the wrong
-  # one:
-  #   1. THIS suite (ExUnit + LazyHTML) gates the asset/CSS SHAPE
-  #      relationship and other stylesheet facts — e.g. the dimension gate
-  #      below reads the real JPEG dimensions off disk and fails the build
-  #      the moment they disagree with the custom properties that crop
-  #      them. Fast, deterministic, no browser.
-  #   2. `test/visual/about_map_attribution.mjs` (+ its Python pixel
-  #      oracle) renders the LIVE page in a real headless Chrome at all 4
-  #      breakpoints x 2 themes and gates whether Google's attribution
-  #      wordmark actually survives to the painted screen, clear of the
-  #      caption chip — the render-and-look step this suite cannot perform.
-  #      Developer-invoked only (not part of `mix quality`/CI — see
-  #      01.4-10-PLAN.md's threat register), because it needs a real
-  #      browser and a booted server.
-  #   3. A human still adjudicates whether the RESULT reads right —
-  #      legibility, framing, whether the crop still looks intentional —
-  #      per this phase's end-of-phase UAT convention. No headless-browser
-  #      screenshot-diff test is added to CI: this repo has an
-  #      engine-divergence precedent (the Phase 01.3 chevron bug reproduced
-  #      only on real WebKit, not headless Chromium), and every measurement
-  #      in both the G-01.4-2 and G-01.4-5 diagnoses was headless
-  #      Chromium — a CI-gated headless screenshot test here would encode
-  #      the same blind spot it just failed to catch, at a real maintenance
-  #      cost.
-  #
-  # Plan 01.4-11 (G-01.4-5, second half): the crop fix (01.4-10) stopped the
-  # baked-in wordmark from being discarded, but at 2.5-5.9 CSS px it still
-  # is not legible to a person — the customization clause of Google's Geo
-  # Guidelines, not an optional embellishment. This suite gates the new
-  # `.pk-about-map-credit`'s PRESENCE, TEXT, TYPE TIER, and STRUCTURAL
-  # placement (inside #contacto, outside the clipping `.pk-about-map-thumb`,
-  # no nested anchor) — all DOM facts. Whether the credit is actually big
-  # enough to read and contrasted enough to see against the card in a real
-  # browser is oracle #2's job (`test/visual/about_map_attribution.mjs`,
-  # extended in the same plan to measure the credit's rect/font-size/
-  # contrast), and whether the finished component reads right end to end is
-  # still oracle #3, the human check.
+  # Oracle boundary (plan 01.4-07 Task 2, closing G-01.4-2; revised 01.4-10
+  # Task 3 and 01.4-12, closing G-01.4-5). Plan 01.4-12 replaced the static
+  # screenshot facade with a live Google Maps embed (D-11 through D-14),
+  # superseding plan 01.4-11's `.pk-about-map-credit` figcaption (D-15) —
+  # the live frame renders Google's own attribution at Google's own native
+  # size, retiring the crop/legibility problem this describe block spent
+  # three plans engineering around rather than solving further. This suite
+  # now owns DOM and CSS-source facts about a FRAME, not an image:
+  #   1. THIS suite (ExUnit + LazyHTML) gates markup shape and stylesheet
+  #      facts — the iframe's presence/src/attributes, the overlay anchor,
+  #      and the CSS declarations that make the frame inert. Fast,
+  #      deterministic, no browser.
+  #   2. `test/visual/about_map_attribution.mjs` owns whether the frame
+  #      ACTUALLY LOADS, stays inert, and gets themed, in a real browser.
+  #      This is a NETWORK question against a third-party service with an
+  #      undocumented, unversioned URL payload — this suite structurally
+  #      cannot ask it, and no server-side signal exists if that payload
+  #      ever breaks. Developer-invoked only (needs a real browser and a
+  #      booted server, and network access to the embed's origin).
+  #   3. A human still adjudicates whether the finished component reads
+  #      right — including, per D-13, whether the dark-theme filter
+  #      approximation is acceptable, which has no other oracle.
   describe "Contacto card map thumbnail (D-04/D-05/D-06, plan 01.4-02 Task 2)" do
-    test "renders a link to ClubLinks.maps_url() with target=_blank and rel=noopener noreferrer",
-         %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
-
-      doc = LazyHTML.from_document(html)
-      map_anchor = LazyHTML.query(doc, ".pk-about-map-thumb")
-      map_html = LazyHTML.to_html(map_anchor)
-
-      assert Enum.count(map_anchor) == 1
-      assert map_html =~ ClubLinks.maps_url()
-      assert map_html =~ ~s(target="_blank")
-      assert map_html =~ ~s(rel="noopener noreferrer")
-    end
-
-    test "renders an <img> whose src resolves under /images/ and ends in about-maps-thumb.jpg",
-         %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
-
-      doc = LazyHTML.from_document(html)
-      img_src = doc |> LazyHTML.query(".pk-about-map-thumb img") |> LazyHTML.attribute("src") |> List.first()
-
-      assert img_src =~ "/images/"
-      assert img_src =~ "about-maps-thumb.jpg"
-    end
-
     test "renders no href=\"#\" placeholder anchor anywhere on the page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
@@ -572,258 +460,97 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "(G-01.4-2, see .planning/debug/G-01.4-2-map-thumb-coverage.md)."
     end
 
-    # G-01.4-4 gap closure, Task 3: `.pk-about-map-thumb img` carried
-    # `display: block` until now. Task 3 wires a light/dark <img> theme-
-    # variant pair on the isologo's own `block dark:hidden` /
-    # `hidden dark:block` pattern (brand_logo/1, layouts.ex) — an unlayered
-    # `.pk-*` rule declaring `display` always beats a layered Tailwind
-    # utility (this file's own top-of-file cascade-layer hazard note),
-    # which would defeat `dark:hidden` and render BOTH images stacked in
-    # both themes. This is exactly the Rule 1 defect plan 01.4-05 had to
-    # undo on `.pk-about-morph-mark img`'s own theme variants. This is a
-    # cascade fact, not a rendered-output fact, so it is asserted against
-    # the stylesheet source rather than through a browser the test suite
-    # does not have.
-    test ".pk-about-map-thumb img declares no display property" do
-      src = strip_comments(css_source())
-
-      rule = Regex.run(~r/\.pk-about-map-thumb img\s*\{([^}]*)\}/s, src)
-      assert rule, "Expected to find a .pk-about-map-thumb img rule in app.css."
-      [_, body] = rule
-
-      refute body =~ "display",
-             "An unlayered .pk-* rule declaring display would beat the dark:hidden / " <>
-               "hidden dark:block utility pair on the light/dark theme-variant <img> pair, " <>
-               "rendering both at once — the exact cascade hazard plan 01.4-05's Rule 1 fix " <>
-               "had to undo on .pk-about-morph-mark img's own theme variants (this file's " <>
-               "own top-of-file hazard note)."
-    end
-
-    # G-01.4-4 gap closure, Task 3: one light-palette asset served both
-    # themes (the light and dark measurement sweeps in the debug session
-    # were identical row-for-row) — a 10.1x luminance mismatch against the
-    # dark card. Mirrors brand_logo/1's own isologo light/dark pair.
-    test "renders both light/dark theme-variant <img>s inside .pk-about-map-thumb, light first",
+    # Plan 01.4-12 (D-11/D-14): the facade's anchor was `.pk-about-map-thumb`
+    # itself; the live frame's overlay click target is a descendant,
+    # `.pk-about-map-link`, so the frame box (now a plain div wrapping an
+    # inert iframe) can sit alongside it. Retargeted from the pre-01.4-12
+    # test that queried `.pk-about-map-thumb` directly for the anchor.
+    test "renders a .pk-about-map-link overlay to ClubLinks.maps_url() with target=_blank and rel=noopener noreferrer",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       doc = LazyHTML.from_document(html)
-      imgs = LazyHTML.query(doc, ".pk-about-map-thumb img")
+      link = LazyHTML.query(doc, ".pk-about-map-link")
+      link_html = LazyHTML.to_html(link)
 
-      assert Enum.count(imgs) == 2
-
-      light = Enum.at(imgs, 0)
-      dark = Enum.at(imgs, 1)
-
-      light_src = light |> LazyHTML.attribute("src") |> List.first()
-      light_class = light |> LazyHTML.attribute("class") |> List.first()
-      assert light_src =~ "about-maps-thumb.jpg"
-      assert light_class =~ "block"
-      assert light_class =~ "dark:hidden"
-
-      dark_src = dark |> LazyHTML.attribute("src") |> List.first()
-      dark_class = dark |> LazyHTML.attribute("class") |> List.first()
-      assert dark_src =~ "about-maps-thumb-dark.jpg"
-      assert dark_class =~ "hidden"
-      assert dark_class =~ "dark:block"
+      assert Enum.count(link) == 1
+      assert link_html =~ ClubLinks.maps_url()
+      assert link_html =~ ~s(target="_blank")
+      assert link_html =~ ~s(rel="noopener noreferrer")
     end
 
-    # G-01.4-4 gap closure, Task 3: a presence-only check. This deliberately
-    # catches the wired-but-never-captured state — a src pointing at a path
-    # with no file behind it — which is the one failure mode of this gap
-    # closure that would otherwise ship two broken <img>s and a green suite.
-    # See the oracle-boundary comment above this describe block: image
-    # CONTENT (luminance, the pin label, competing POIs, the attribution
-    # wordmark) is not expressible as an ExUnit assertion and is adjudicated
-    # only by the human check in 01.4-09-PLAN.md Task 3's <verify>.
-    test "both light and dark map thumbnail asset files exist on disk" do
-      assert File.exists?("priv/static/images/about-maps-thumb.jpg")
-      assert File.exists?("priv/static/images/about-maps-thumb-dark.jpg")
+    # Plan 01.4-12 (D-11): the live embed itself. `src` is byte-equal to
+    # ClubLinks.maps_embed_url/0 — the single source the CSP's frame-src
+    # directive is also derived from (csp.ex).
+    test "renders exactly one iframe with src equal to ClubLinks.maps_embed_url()", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      iframes = LazyHTML.query(doc, "iframe")
+
+      assert Enum.count(iframes) == 1,
+             "Expected exactly one iframe on the page — this app's first third-party frame."
+
+      src = iframes |> LazyHTML.attribute("src") |> List.first()
+      assert src == ClubLinks.maps_embed_url()
     end
 
-    # G-01.4-5 gap closure (plan 01.4-10 Task 3): the gap's root cause,
-    # closed. 01.4-09 recaptured this asset at 1656x804 (ratio 2.0597) and
-    # left `.pk-about-map-thumb` declaring a stale `21 / 9` literal
-    # (correct for the earlier ~1200x514 capture it replaced) — nothing in
-    # the repo connected the two, so `object-fit: cover` silently discarded
-    # 5.86% off the top AND bottom of every render, taking Google's
-    # attribution wordmark (baked into the bottom edge) with it
-    # (01.4-VERIFICATION.md truth 10). This test's SUBJECT is the
-    # RELATIONSHIP between the asset's real shape and the CSS that crops
-    # it, not either side pinned to today's numbers — so it keeps working
-    # after a legitimate future recapture at a new size, as long as both
-    # custom properties are updated in the same commit.
-    test "both map assets' real JPEG dimensions match --pk-map-thumb-w/-h in app.css" do
-      {light_w, light_h} = jpeg_dimensions("priv/static/images/about-maps-thumb.jpg")
-      {dark_w, dark_h} = jpeg_dimensions("priv/static/images/about-maps-thumb-dark.jpg")
-
-      src = strip_comments(css_source())
-      rule = Regex.run(~r/\.pk-about-map-thumb\s*\{([^}]*)\}/s, src)
-      assert rule, "Expected to find a .pk-about-map-thumb rule in app.css."
-      [_, body] = rule
-
-      css_w =
-        Regex.run(~r/--pk-map-thumb-w:\s*(\d+)/, body) ||
-          flunk("""
-          Expected .pk-about-map-thumb to declare --pk-map-thumb-w — this custom \
-          property is the ONE place in the repo that claims to know the asset's \
-          pixel width, read by the rule's aspect-ratio to derive the crop.
-          """)
-
-      css_h =
-        Regex.run(~r/--pk-map-thumb-h:\s*(\d+)/, body) ||
-          flunk("""
-          Expected .pk-about-map-thumb to declare --pk-map-thumb-h — see \
-          --pk-map-thumb-w's failure message above; the same reasoning applies \
-          to height.
-          """)
-
-      [_, css_w] = css_w
-      [_, css_h] = css_h
-      css_w = String.to_integer(css_w)
-      css_h = String.to_integer(css_h)
-
-      failure_message = fn label, asset_w, asset_h ->
-        """
-        #{label} asset is #{asset_w}x#{asset_h} on disk, but .pk-about-map-thumb \
-        declares --pk-map-thumb-w: #{css_w} / --pk-map-thumb-h: #{css_h}.
-
-        .pk-about-map-thumb crops with object-fit: cover using an aspect-ratio \
-        derived from these two custom properties — a box shaped differently \
-        from the asset discards the difference. This is exactly how G-01.4-5 \
-        happened: 01.4-09 replaced a 1200x514 capture with a 1656x804 one and \
-        left the box declaring the old shape, silently throwing away 5.86% off \
-        the top and bottom of every render and taking Google's attribution \
-        wordmark with it (see .planning/phases/01.4-ui-polish-pass-for-about-page-sketches/01.4-VERIFICATION.md, \
-        truth 10, for the measurement). A recapture at a new size means \
-        updating BOTH custom properties in the same commit as the new asset.
-        """
-      end
-
-      assert {css_w, css_h} == {light_w, light_h},
-             failure_message.("Light", light_w, light_h)
-
-      assert {css_w, css_h} == {dark_w, dark_h},
-             failure_message.("Dark", dark_w, dark_h)
-    end
-
-    test ".pk-about-map-thumb's aspect-ratio names both custom properties, not a numeric literal" do
-      src = strip_comments(css_source())
-
-      rule = Regex.run(~r/\.pk-about-map-thumb\s*\{([^}]*)\}/s, src)
-      assert rule, "Expected to find a .pk-about-map-thumb rule in app.css."
-      [_, body] = rule
-
-      assert body =~ ~r/aspect-ratio\s*:\s*var\(--pk-map-thumb-w\)\s*\/\s*var\(--pk-map-thumb-h\)/,
-             "Expected .pk-about-map-thumb's aspect-ratio to be a ratio of " <>
-               "var(--pk-map-thumb-w) / var(--pk-map-thumb-h), not a numeric literal. " <>
-               "A literal is a SECOND, unchecked claim about the asset's shape — the " <>
-               "test above only gates the custom properties, so having exactly one " <>
-               "place in the repo that claims to know the asset's shape (the custom " <>
-               "properties) is the entire point of this gap closure."
-
-      assert body =~ "--pk-map-attrib-band",
-             "Expected .pk-about-map-thumb to declare --pk-map-attrib-band — the " <>
-               "reserve band .pk-about-map-label's bottom offset adds on top of its " <>
-               "own inset, so the caption chip can never sit on top of the now-visible " <>
-               "attribution."
-    end
-
-    test ".pk-about-map-thumb img declares object-position: 50% 100%" do
-      src = strip_comments(css_source())
-
-      rule = Regex.run(~r/\.pk-about-map-thumb img\s*\{([^}]*)\}/s, src)
-      assert rule, "Expected to find a .pk-about-map-thumb img rule in app.css."
-      [_, body] = rule
-
-      assert body =~ ~r/object-position\s*:\s*50%\s*100%/,
-             "Expected .pk-about-map-thumb img to declare object-position: 50% 100% — " <>
-               "Google always bakes Maps attribution onto the BOTTOM edge of a capture, " <>
-               "so if a vertical crop is ever reintroduced (a container change, a " <>
-               "min-height edit, a differently-shaped recapture), the bottom must be " <>
-               "the last thing discarded, never the first."
-
-      assert body =~ "object-fit",
-             "Expected .pk-about-map-thumb img to still declare object-fit (unchanged)."
-    end
-
-    test ".pk-about-map-label's bottom reserves the attribution band on top of its own inset" do
-      src = strip_comments(css_source())
-
-      rule = Regex.run(~r/\.pk-about-map-label\s*\{([^}]*)\}/s, src)
-      assert rule, "Expected to find a .pk-about-map-label rule in app.css."
-      [_, body] = rule
-
-      assert body =~
-               ~r/bottom\s*:\s*calc\(var\(--pk-map-label-inset\)\s*\+\s*var\(--pk-map-attrib-band\)\)/,
-             "Expected .pk-about-map-label's bottom to be " <>
-               "calc(var(--pk-map-label-inset) + var(--pk-map-attrib-band)), not the " <>
-               "inset alone. The caption chip is opaque and horizontally overlaps the " <>
-               "centred wordmark — uncropping Google's attribution and then parking " <>
-               "this chip directly on top of it would satisfy the letter of the fix " <>
-               "and none of its purpose (Google's Geo Guidelines: \"Don't remove, " <>
-               "obscure, or crop out the attribution information\")."
-    end
-
-    # G-01.4-5 gap closure (plan 01.4-11 Task 1): the baked-in wordmark
-    # survives the crop (01.4-10) but renders 2.5-5.9 CSS px tall — present
-    # in the pixel buffer, not legible to a person. Google's Geo Guidelines
-    # require attribution "within close proximity of the content and
-    # legible to the average viewer or reader," so a real, legible credit
-    # is added adjacent to the thumbnail. The containment pair below is the
-    # load-bearing part: presence alone would pass for a credit nested
-    # INSIDE the clipping box, which is the exact failure mode this test
-    # exists to catch.
-    test "renders a legible Google credit inside #contacto, outside the clipping thumbnail",
+    test "the iframe carries loading and referrerpolicy, and carries neither allowfullscreen nor style",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       doc = LazyHTML.from_document(html)
+      iframe_html = doc |> LazyHTML.query("iframe") |> LazyHTML.to_html()
 
-      credit_in_doc = LazyHTML.query(doc, ".pk-about-map-credit")
+      assert iframe_html =~ ~s(loading="lazy")
+      assert iframe_html =~ ~s(referrerpolicy="strict-origin-when-cross-origin")
 
-      assert Enum.count(credit_in_doc) == 1,
-             "Expected exactly one element matching .pk-about-map-credit."
+      refute iframe_html =~ "allowfullscreen",
+             "D-14 makes the frame non-interactive — no visitor can reach a fullscreen " <>
+               "control, and the sandbox denies fullscreen regardless. An attribute that can " <>
+               "never fire is a claim about behavior that is not true."
 
-      credit_html = LazyHTML.to_html(credit_in_doc)
+      refute iframe_html =~ ~s(style=),
+             "Inline style is banned outright by the ui-design-system skill; the raw Google " <>
+               "export's width/height/style are replaced by the card's own responsive sizing " <>
+               "and named CSS (D-11)."
+    end
 
-      assert credit_html =~ "Google",
-             "Expected the credit's text to contain the literal \"Google\"."
+    # Plan 01.4-12 (D-11): the facade's clipping anchor is now a plain
+    # frame box. Zero <img>, zero .pk-about-map-credit and zero <figure>
+    # are all NEGATIVE assertions proving the screenshot-era markup is
+    # actually gone, not merely superseded in source but still rendering.
+    test "renders .pk-about-map-thumb as a non-anchor div with zero <img>, zero .pk-about-map-credit, and zero <figure> in #contacto",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
-      refute credit_html =~ "<a ", "Expected the credit to contain no anchor."
-      refute credit_html =~ "<a>", "Expected the credit to contain no anchor."
+      doc = LazyHTML.from_document(html)
 
       thumb = LazyHTML.query(doc, ".pk-about-map-thumb")
-      credit_inside_thumb = LazyHTML.query(thumb, ".pk-about-map-credit")
+      assert Enum.count(thumb) == 1
+      thumb_html = LazyHTML.to_html(thumb)
+      refute thumb_html =~ ~r/^<a[\s>]/, "Expected .pk-about-map-thumb to be a div, not an anchor."
 
-      assert Enum.count(credit_inside_thumb) == 0,
-             "Expected zero elements matching .pk-about-map-credit inside " <>
-               ".pk-about-map-thumb — .pk-about-map-thumb declares overflow: hidden " <>
-               "and crops with object-fit: cover, which is what discarded Google's " <>
-               "baked-in wordmark at every breakpoint in the first place (G-01.4-5). " <>
-               "A credit placed inside it inherits the same clipping."
+      imgs = LazyHTML.query(thumb, "img")
+
+      assert Enum.count(imgs) == 0,
+             "Expected zero <img> elements inside .pk-about-map-thumb — the live frame " <>
+               "renders its own tiles, so there is no screenshot asset left to reference."
+
+      credit = LazyHTML.query(doc, ".pk-about-map-credit")
+
+      assert Enum.count(credit) == 0,
+             "Expected zero elements matching .pk-about-map-credit — plan 01.4-11's figcaption " <>
+               "is superseded by 01.4-12 (CONTEXT.md D-15): the live frame renders Google's real " <>
+               "attribution at native size, so a hand-authored credit line is now a second, " <>
+               "redundant, non-authoritative attribution."
 
       contacto = LazyHTML.query(doc, "#contacto")
-      credit_inside_contacto = LazyHTML.query(contacto, ".pk-about-map-credit")
+      figures = LazyHTML.query(contacto, "figure")
 
-      assert Enum.count(credit_inside_contacto) == 1,
-             "Expected exactly one element matching .pk-about-map-credit inside #contacto."
-
-      credit_class = credit_in_doc |> LazyHTML.attribute("class") |> List.first()
-
-      assert credit_class =~ "text-xs",
-             "Expected the credit's class list to carry text-xs — this app caps its " <>
-               "distinct type combinations and enforces the cap by measurement " <>
-               "(ui-design-system, Type inventory), so a credit line reuses the " <>
-               "shipped muted tier rather than introducing a sixth combo."
-
-      assert credit_class =~ "text-neutral",
-             "Expected the credit's class list to carry text-neutral — see the " <>
-               "text-xs assertion above; both halves of the shipped muted tier."
-
-      refute credit_class =~ ~r/\[.*\]/,
-             "Expected the credit's class list to carry no bracketed arbitrary " <>
-               "Tailwind value (ui-design-system, banned list)."
+      assert Enum.count(figures) == 0,
+             "Expected zero <figure> elements inside #contacto — the screenshot facade's " <>
+               "<figure> wrapper (and its figcaption) is gone."
     end
   end
 
