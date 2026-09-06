@@ -141,7 +141,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 10/11 plans executed (9/11 executed — 4 gap-closure plans added from UAT, 2 more from verification gap G-01.4-5)
+**Plans:** 10/11 active plans executed (12 authored, 1 superseded — 4 gap-closure plans added from UAT, 3 more from verification gap G-01.4-5)
 
 Plans:
 **Wave 1**
@@ -184,9 +184,13 @@ Plans:
 
 - [x] 01.4-10-PLAN.md — Maps attribution crop gap closure: `.pk-about-map-thumb`'s aspect-ratio rederived from the committed screenshot's real 1656x804 dimensions (it still claimed the 21:9 of an asset 01.4-09 replaced, so `object-fit: cover` was discarding 5.86% off the top and bottom and Google's wordmark with it), the image bottom-anchored, the caption chip inset above a reserved attribution band, plus a committed headless-Chrome probe that renders the live page at 375/640/768/1280px in both themes and a test gating the asset/CSS shape relationship (G-01.4-5)
 
-**Wave 11** *(gap closure — verification G-01.4-5, blocked on Wave 10: same files)*
+**Wave 11 — superseded** *(planned, partially executed — Tasks 1-2 committed as a85047c/d2b771e, the blocking human checkpoint never ran and no SUMMARY was written; replanned after D-11-D-15 reopened and reversed the "do not embed" decision, which moots the illegible-caption problem this plan targeted)*
 
-- [ ] 01.4-11-PLAN.md — Maps attribution legibility and the human re-check: a readable `Datos del mapa © Google` credit under the thumbnail on the design system's existing muted tier and structurally outside the clipping box (the baked-in wordmark survives the crop but renders 2.5-5.9 CSS px tall, below Google's Geo Guidelines' "legible to the average viewer" bar), the probe extended to gate its rendered size and contrast, and a blocking human verification of the finished component — not another end-of-phase deferral (G-01.4-5)
+- [~] 01.4-11-PLAN.md — superseded by 01.4-12
+
+**Wave 12** *(gap closure — verification G-01.4-5, blocked on Wave 10)*
+
+- [ ] 01.4-12-PLAN.md — Maps facade replaced by a live keyless Google Maps embed: a `frame-src` CSP directive derived from the embed URL itself so it can never be broader than the one frame it permits, the iframe made non-interactive behind a single full-box click-out to `ClubLinks.maps_url/0`, a `[data-theme="dark"]` filter approximation, the caption chip moved off the edge Google paints its own attribution into, both screenshot JPEGs and the pixel oracle deleted, and the visual probe rebuilt to gate the child frame's actual navigation commit (D-11, D-12, D-13, D-14; G-01.4-5)
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 
