@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.4
-current_phase_name: UI polish pass for About page sketches (INSERTED)
+current_phase_name: ui-polish-pass-for-about-page-sketches
 status: executing
 stopped_at: "Completed 01.4-10-PLAN.md (G-01.4-5 gap closure: Maps attribution crop fix + committed visual probe)"
-last_updated: "2026-09-05T18:16:06.771Z"
+last_updated: "2026-09-06T01:26:17.296Z"
 last_activity: 2026-09-05
 last_activity_desc: Phase 01.4 execution started
-state_head: a090a88a3d3521ee3acc90ebab5220e4de88ccbb
+state_head: d74843d172af71d75509aeee279abed1106bbb8e
 progress:
   total_phases: 9
   completed_phases: 5
@@ -31,7 +31,7 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.4 (UI polish pass for About page sketches (INSERTED)) — EXECUTING
+Phase: 01.4 (ui-polish-pass-for-about-page-sketches) — READY TO EXECUTE
 Plan: 2 of 11
 Status: Ready to execute
 Last activity: 2026-09-05 — Phase 01.4 execution started
