@@ -29,6 +29,17 @@ import { join } from "node:path"
 const EMBED_ORIGIN = "https://www.google.com"
 const EMBED_PATH_PREFIX = "/maps/embed"
 
+// The strip along the bottom of the embed's rect that Google's own
+// attribution bar paints into. 28px is a deliberate margin over the
+// roughly 20-24 CSS px that bar actually occupies — this assertion is not
+// here to catch today's CSS, it is here to fail the day someone moves the
+// caption chip back down toward that edge (D-13/D-14 moved it to the top
+// specifically to vacate this strip).
+const ATTRIBUTION_CLEARANCE_PX = 28
+
+const VIEWPORTS = [375, 640, 768, 1280]
+const THEMES = ["light", "dark"]
+
 const PROBE_BASE_URL = process.env.PROBE_BASE_URL
 
 function log(...args) {
@@ -256,6 +267,29 @@ async function connectCDP(port) {
   const client = new CDPClient(ws)
   await client.send("Page.enable")
   await client.send("Runtime.enable")
+
+  // CSP-violation capture MUST be installed via
+  // Page.addScriptToEvaluateOnNewDocument, not a post-load Runtime.evaluate
+  // — a listener attached after the frame was already refused would
+  // observe nothing and report success, which is the exact failure this
+  // assertion exists to catch. Registered ONCE here (not per case): this
+  // method re-runs the script at the start of EVERY future navigation on
+  // this session, so `window.__cspViolations = []` resets the array fresh
+  // for each case's own navigation without needing to re-register (and
+  // without accumulating duplicate `securitypolicyviolation` listeners
+  // across all 8 cases, which re-registering per case would do).
+  await client.send("Page.addScriptToEvaluateOnNewDocument", {
+    source: `
+      window.__cspViolations = [];
+      document.addEventListener("securitypolicyviolation", (e) => {
+        window.__cspViolations.push({
+          blockedURI: e.blockedURI,
+          effectiveDirective: e.effectiveDirective,
+        });
+      });
+    `,
+  })
+
   return { client, targetId: target.id, ws }
 }
 
@@ -303,8 +337,11 @@ function relativeLuminance([r, g, b]) {
 }
 
 // ---------------------------------------------------------------------------
-// Per-case measurement (single case: 1280px light, per Task 1's tracer
-// scope — Task 3 fans this back out to the full 4x2 matrix)
+// Per-case measurement, run across the full 4x2 (viewport, theme) matrix
+// (plan 01.4-12 Task 3, restoring the fan-out Task 1 narrowed to a single
+// tracer case). 640px is deliberately in the set: the parent's
+// sm:grid-cols-2 halves the Contacto card there, and it is where every
+// previous round of this gap (01.4-02/07/09/10/11) failed first.
 // ---------------------------------------------------------------------------
 async function runCase({ client, baseUrl, viewport, theme }) {
   await client.send("Emulation.setDeviceMetricsOverride", {
@@ -312,25 +349,6 @@ async function runCase({ client, baseUrl, viewport, theme }) {
     height: 900,
     deviceScaleFactor: 1,
     mobile: false,
-  })
-
-  // CSP-violation capture MUST be installed via
-  // Page.addScriptToEvaluateOnNewDocument, not a post-load Runtime.evaluate
-  // — a listener attached after the frame was already refused would
-  // observe nothing and report success, which is the exact failure this
-  // assertion exists to catch. The listener runs in the page's own context
-  // on every new document (including re-navigations) and appends to a
-  // window-scoped array this script reads back after load.
-  await client.send("Page.addScriptToEvaluateOnNewDocument", {
-    source: `
-      window.__cspViolations = [];
-      document.addEventListener("securitypolicyviolation", (e) => {
-        window.__cspViolations.push({
-          blockedURI: e.blockedURI,
-          effectiveDirective: e.effectiveDirective,
-        });
-      });
-    `,
   })
 
   // Subscribe to Page.frameNavigated BEFORE navigating, so we cannot miss
@@ -460,64 +478,149 @@ async function main() {
   const chrome = await startChrome()
 
   let exitCode = 0
+  let casesRun = 0
 
   try {
     const conn = await connectCDP(chrome.port)
     const client = conn.client
 
-    const viewport = 1280
-    const theme = "light"
-    const label = `[${viewport}px, ${theme}]`
+    for (const viewport of VIEWPORTS) {
+      for (const theme of THEMES) {
+        const label = `[${viewport}px, ${theme}]`
 
-    try {
-      const measured = await runCase({ client, baseUrl, viewport, theme })
+        try {
+          const measured = await runCase({ client, baseUrl, viewport, theme })
+          casesRun++
 
-      log(`${label} CSP violations: ${measured.violations.length}`)
-      if (measured.violations.length > 0) {
-        for (const v of measured.violations) {
-          log(
-            `${label} FAIL: CSP VIOLATION: effectiveDirective=${v.effectiveDirective} blockedURI=${v.blockedURI}`,
-          )
+          log(`${label} CSP violations: ${measured.violations.length}`)
+          if (measured.violations.length > 0) {
+            for (const v of measured.violations) {
+              log(
+                `${label} FAIL: CSP VIOLATION: effectiveDirective=${v.effectiveDirective} blockedURI=${v.blockedURI}`,
+              )
+            }
+            exitCode = 1
+          }
+
+          log(`${label} child frame URL: ${measured.childFrameUrl ?? "(none — no commit observed)"}`)
+          if (!measured.childFrameUrl) {
+            log(
+              `${label} FAIL: TIMEOUT waiting for child frame navigation to the embed URL ` +
+                `(expected an origin starting with ${EMBED_ORIGIN}${EMBED_PATH_PREFIX})`,
+            )
+            exitCode = 1
+          }
+
+          // Scoped to .pk-about-map-thumb, not document.querySelectorAll —
+          // Phoenix's dev-only LiveReloader plug injects its OWN unrelated
+          // iframe elsewhere in the document whenever this probe boots a
+          // dev server (never in production — see runCase's comment on
+          // `violations`). This IS a gate here (unlike Task 1's tracer,
+          // which only logged it): "exactly 1" scoped to the app's own
+          // frame box is both correct and immune to that dev-tooling
+          // false positive.
+          log(`${label} iframe count (inside .pk-about-map-thumb): ${measured.iframeCount}`)
+          if (measured.iframeCount !== 1) {
+            log(`${label} FAIL: expected 1 iframe, found ${measured.iframeCount}`)
+            exitCode = 1
+          }
+
+          const embedRect = measured.embedRect
+          const thumbRect = measured.thumbRect
+          const linkRect = measured.linkRect
+          const label_ = measured.label
+
+          log(`${label} embed rect: ${JSON.stringify(embedRect)}`)
+          log(`${label} thumb rect: ${JSON.stringify(thumbRect)}`)
+          log(`${label} link rect: ${JSON.stringify(linkRect)}`)
+          log(`${label} caption chip rect: ${JSON.stringify(label_)}`)
+          log(`${label} embed pointer-events: ${measured.pointerEvents}`)
+          log(`${label} embed filter: ${measured.filter}`)
+          log(`${label} hit-test at box centre: ${measured.hitElementDescription} (isLink=${measured.hitIsLink})`)
+
+          if (!embedRect || embedRect.width <= 0 || embedRect.height <= 0) {
+            log(`${label} FAIL: embed rect is ${embedRect ? `${embedRect.width}x${embedRect.height}` : "null"}`)
+            exitCode = 1
+          } else if (thumbRect && !rectContains(thumbRect, embedRect)) {
+            log(
+              `${label} FAIL: embed rect ${JSON.stringify(embedRect)} is not contained by ` +
+                `.pk-about-map-thumb's rect ${JSON.stringify(thumbRect)} (within 1px) — a frame ` +
+                `overflowing its clipping box would be cropped by the same overflow: hidden that ` +
+                `ran this entire gap`,
+            )
+            exitCode = 1
+          }
+
+          if (measured.pointerEvents !== "none") {
+            log(`${label} FAIL: embed pointer-events is ${measured.pointerEvents}, expected none`)
+            exitCode = 1
+          }
+
+          if (!measured.hitIsLink) {
+            log(
+              `${label} FAIL: hit test at box centre resolved to ${measured.hitElementDescription}, ` +
+                `expected .pk-about-map-link or a descendant`,
+            )
+            exitCode = 1
+          }
+
+          if (thumbRect && linkRect && !rectContains(linkRect, thumbRect)) {
+            log(
+              `${label} FAIL: overlay link rect ${JSON.stringify(linkRect)} does not cover thumb ` +
+                `rect ${JSON.stringify(thumbRect)} (within 1px) — the click-out is not reachable ` +
+                `from everywhere on the map`,
+            )
+            exitCode = 1
+          }
+
+          if (embedRect && label_) {
+            const attribStrip = {
+              x: embedRect.x,
+              y: embedRect.y + embedRect.height - ATTRIBUTION_CLEARANCE_PX,
+              width: embedRect.width,
+              height: ATTRIBUTION_CLEARANCE_PX,
+            }
+            if (rectsIntersect(label_, attribStrip)) {
+              log(
+                `${label} FAIL: caption chip intersects the bottom ${ATTRIBUTION_CLEARANCE_PX}px ` +
+                  `of the embed rect — the strip Google's own attribution bar paints into`,
+              )
+              exitCode = 1
+            }
+          }
+
+          if (theme === "light") {
+            if (measured.filter !== "none") {
+              log(`${label} FAIL: filter is ${measured.filter} in the light case, expected none`)
+              exitCode = 1
+            }
+          } else {
+            if (measured.filter === "none" || !measured.filter.includes("invert(")) {
+              log(
+                `${label} FAIL: filter is ${measured.filter} in the dark case, expected a value ` +
+                  `containing invert(`,
+              )
+              exitCode = 1
+            }
+          }
+        } catch (err) {
+          log(`${label} FAIL: ${err.message}`)
+          exitCode = 1
         }
-        exitCode = 1
       }
-
-      log(`${label} child frame URL: ${measured.childFrameUrl ?? "(none — no commit observed)"}`)
-      if (!measured.childFrameUrl) {
-        log(
-          `${label} FAIL: TIMEOUT waiting for child frame navigation to the embed URL ` +
-            `(expected an origin starting with ${EMBED_ORIGIN}${EMBED_PATH_PREFIX})`,
-        )
-        exitCode = 1
-      }
-
-      // Informational only (scoped to .pk-about-map-thumb) — see the
-      // measurement snippet's comment for why this probe does not gate on
-      // it. The ExUnit suite gates "exactly one iframe on the page".
-      log(`${label} iframe count (inside .pk-about-map-thumb): ${measured.iframeCount}`)
-
-      const embedRect = measured.embedRect
-      log(`${label} embed rect: ${JSON.stringify(embedRect)}`)
-      if (!embedRect || embedRect.width <= 0 || embedRect.height <= 0) {
-        log(`${label} FAIL: embed rect is ${embedRect ? `${embedRect.width}x${embedRect.height}` : "null"}`)
-        exitCode = 1
-      }
-
-      log(`${label} thumb rect: ${JSON.stringify(measured.thumbRect)}`)
-      log(`${label} link rect: ${JSON.stringify(measured.linkRect)}`)
-      log(`${label} caption chip rect: ${JSON.stringify(measured.label)}`)
-      log(`${label} embed pointer-events: ${measured.pointerEvents}`)
-      log(`${label} embed filter: ${measured.filter}`)
-      log(`${label} hit-test at box centre: ${measured.hitElementDescription} (isLink=${measured.hitIsLink})`)
-
-      if (exitCode === 0) log(`${label} PASS`)
-    } catch (err) {
-      log(`${label} FAIL: ${err.message}`)
-      exitCode = 1
     }
   } finally {
     await stopChrome(chrome)
     await stopDevServer(serverProc)
+  }
+
+  if (casesRun !== VIEWPORTS.length * THEMES.length) {
+    log(
+      `FAIL: expected ${VIEWPORTS.length * THEMES.length} case blocks, only ${casesRun} ` +
+        `completed far enough to be reported — a skipped viewport or theme is an unverified ` +
+        `viewport or theme.`,
+    )
+    exitCode = 1
   }
 
   // Plan 01.4-12 Task 1, step 7 (Task 3 restores this for the full 4x2
