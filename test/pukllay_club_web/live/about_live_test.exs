@@ -552,6 +552,136 @@ defmodule PukllayClubWeb.AboutLiveTest do
              "Expected zero <figure> elements inside #contacto — the screenshot facade's " <>
                "<figure> wrapper (and its figcaption) is gone."
     end
+
+    # Plan 01.4-12 Task 2 (D-14): pointer-events: none is the single
+    # declaration that both prevents the scroll trap and lets clicks reach
+    # the overlay anchor.
+    test ".pk-about-map-embed declares pointer-events: none and border: 0" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-embed\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-embed rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/pointer-events\s*:\s*none/,
+             "Expected .pk-about-map-embed to declare pointer-events: none — the D-14 " <>
+               "mechanism that both prevents the scroll trap and lets clicks reach the " <>
+               "overlay anchor."
+
+      assert body =~ ~r/border\s*:\s*0/,
+             "Expected .pk-about-map-embed to declare border: 0 — the named replacement " <>
+               "for the raw Google export's inline style=\"border:0\", which this app's " <>
+               "design system bans."
+    end
+
+    # Plan 01.4-12 Task 2 (D-06): the overlay covers the whole box, so
+    # D-06's click-out is reachable from anywhere on the map.
+    test ".pk-about-map-link declares inset: 0 and position: absolute" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-link\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-link rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/inset\s*:\s*0/,
+             "Expected .pk-about-map-link to declare inset: 0 — the overlay covers the " <>
+               "whole box, so D-06's click-out is reachable from anywhere on the map."
+
+      assert body =~ ~r/position\s*:\s*absolute/,
+             "Expected .pk-about-map-link to declare position: absolute."
+    end
+
+    # Plan 01.4-12 Task 2 (D-13): the dark-theme filter approximation.
+    test "a [data-theme=\"dark\"] .pk-about-map-embed rule declares a filter containing invert(" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\[data-theme="dark"\]\s*\.pk-about-map-embed\s*\{([^}]*)\}/s, src)
+
+      assert rule,
+             "Expected a [data-theme=\"dark\"] .pk-about-map-embed rule in app.css (D-13)."
+
+      [_, body] = rule
+
+      assert body =~ ~r/filter\s*:[^;]*invert\(/,
+             "Expected the dark-theme rule's filter to contain invert(...) (D-13)."
+    end
+
+    # Plan 01.4-12 Task 2: a filter on the wrapper would invert the caption
+    # chip and the overlay link along with the map, and would also make the
+    # wrapper a containing block for its absolutely-positioned descendants
+    # — a layout side effect of a color decision.
+    test "no [data-theme=\"dark\"] rule in app.css targets .pk-about-map-thumb" do
+      src = strip_comments(css_source())
+
+      refute src =~ ~r/\[data-theme="dark"\]\s*\.pk-about-map-thumb\s*\{/,
+             "Expected no [data-theme=\"dark\"] rule targeting .pk-about-map-thumb — a " <>
+               "filter on the wrapper would invert the caption chip and the overlay link " <>
+               "along with the map, and would make the wrapper a containing block for its " <>
+               "absolutely-positioned descendants (the chip and the link), quietly changing " <>
+               "their layout as a side effect of a color decision (D-13)."
+    end
+
+    # Plan 01.4-12 Task 2: the chip vacates the frame's bottom edge because
+    # that edge belongs to Google's own attribution bar, whose height this
+    # app does not control (D-13/D-14 supersede the prior `bottom` fix).
+    test ".pk-about-map-label declares a top offset reading --pk-map-label-inset and no bottom" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-map-label\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-map-label rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/top\s*:\s*var\(--pk-map-label-inset\)/,
+             "Expected .pk-about-map-label to declare top: var(--pk-map-label-inset)."
+
+      refute body =~ ~r/bottom\s*:/,
+             "Expected .pk-about-map-label to declare no bottom — the chip vacates the " <>
+               "frame's bottom edge because that edge belongs to Google's own attribution " <>
+               "bar, whose height this app does not control."
+    end
+
+    # G-01.4-5's root cause (01.4-10-SUMMARY.md): a dead custom property
+    # (--pk-map-thumb-w/-h/--pk-map-attrib-band) claiming to know a shape
+    # nothing renders is exactly how .pk-about-map-thumb ended up cropping
+    # against a stale ratio in the first place. Gated against the RULE
+    # BODIES the existing Regex.run helper extracts — never a whole-file
+    # grep, since the comment blocks above both rules legitimately name all
+    # three while explaining the removal, and a whole-file grep would be
+    # satisfied by its own explanation.
+    test "neither .pk-about-map-thumb nor .pk-about-map-label declares --pk-map-thumb-w/-h or --pk-map-attrib-band" do
+      src = strip_comments(css_source())
+
+      thumb_rule = Regex.run(~r/\.pk-about-map-thumb\s*\{([^}]*)\}/s, src)
+      assert thumb_rule, "Expected to find a .pk-about-map-thumb rule in app.css."
+      [_, thumb_body] = thumb_rule
+
+      label_rule = Regex.run(~r/\.pk-about-map-label\s*\{([^}]*)\}/s, src)
+      assert label_rule, "Expected to find a .pk-about-map-label rule in app.css."
+      [_, label_body] = label_rule
+
+      for prop <- ["--pk-map-thumb-w", "--pk-map-thumb-h", "--pk-map-attrib-band"] do
+        refute thumb_body =~ prop,
+               "Expected .pk-about-map-thumb's rule body to declare no #{prop} — it " <>
+                 "described a JPEG's bytes and the strip of it Google's baked-in mark " <>
+                 "occupied; a live frame has no such measurements, and a dead custom " <>
+                 "property left behind is exactly how .pk-about-map-thumb came to claim a " <>
+                 "stale ratio for an asset that had changed shape — G-01.4-5's root cause."
+
+        refute label_body =~ prop,
+               "Expected .pk-about-map-label's rule body to declare no #{prop} (see the " <>
+                 ".pk-about-map-thumb assertion above for why)."
+      end
+    end
+
+    test "neither about-maps-thumb.jpg nor about-maps-thumb-dark.jpg exists on disk" do
+      refute File.exists?("priv/static/images/about-maps-thumb.jpg"),
+             "Expected priv/static/images/about-maps-thumb.jpg to be deleted — see this " <>
+               "plan's <asset_disposition>. git retains it if the embed is ever reverted."
+
+      refute File.exists?("priv/static/images/about-maps-thumb-dark.jpg"),
+             "Expected priv/static/images/about-maps-thumb-dark.jpg to be deleted — see " <>
+               "this plan's <asset_disposition>. git retains it if the embed is ever reverted."
+    end
   end
 
   # Plan 01.4-07 Task 2: guards the invariant whose absence made G-01.4-2

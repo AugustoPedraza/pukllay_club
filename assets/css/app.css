@@ -2822,6 +2822,42 @@ body.pk-drawer-open {
   pointer-events: none;
 }
 
+/* Dark-theme approximation (plan 01.4-12, D-13). The free keyless embed
+   exposes no styling API — a real dark map needs the Maps JavaScript API
+   with a style array or a cloud-styled Map ID, both of which need an API
+   key and an enabled billing account
+   (.planning/debug/resolved/G-01.4-4-maps-thumbnail-approach.md, finding
+   (c)). A CSS filter over the whole frame is the only lever available, and
+   D-13 is explicit that there is no formula for tuning it — only "looks
+   like a dark map", settled by eye. This IS an approximation, accepted
+   knowingly: it also inverts Google's own attribution and wordmark inside
+   the frame (a CSS filter on an iframe is one compositing layer, it cannot
+   exclude part of the frame's content), which is a knowing consequence of
+   D-13, not an oversight — Task 4's checkpoint asks a human to accept or
+   reject it specifically, with "drop the dark filter entirely" as the
+   named fallback if rejected.
+
+   Started from invert(0.92) hue-rotate(180deg) brightness(0.95)
+   contrast(0.9) (the plan's own suggested starting point) and tuned
+   against this theme's real --color-base-200 (#22103A, the Contacto
+   card's own surface — see the daisyui-theme dark block above) rather
+   than an imagined black. The starting point read slightly too washed out
+   and slightly too warm against that surface at brightness(0.95); dropping
+   brightness to 0.88 and raising contrast to 0.95 reads closer to a
+   genuine dark basemap without pushing the invert past the constraints
+   below.
+
+   Two constraints, both checkable rather than aesthetic (per D-13's own
+   text): invert() stays below 1 — a full inversion would turn Google's
+   attribution text into a photographic negative of itself, more
+   aggressive than a softened one — and no saturate() above 1, since the
+   map's road colors are already saturated and inverting them tends toward
+   magenta, which fights this app's purple brand rather than reading as
+   neutral chrome. */
+[data-theme="dark"] .pk-about-map-embed {
+  filter: invert(0.92) hue-rotate(180deg) brightness(0.88) contrast(0.95);
+}
+
 /* The overlay click target (plan 01.4-12, D-14/D-06): pinned to all four
    edges of .pk-about-map-thumb so the click-out is reachable from anywhere
    on the map, not just the caption chip. No background — it is invisible
