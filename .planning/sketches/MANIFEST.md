@@ -27,6 +27,13 @@ and a de-duplicated closing CTA (049). Not a redesign of the brand — every ske
 tokens/components/patterns and fixes real bugs found along the way rather than introducing new
 visual language.
 
+**Surface the brand name (2026-09-07, sketch 050).** Backlog todo raised right after Phase 01.4's
+final UAT: the site never spells out "Pukllay Club" as plain text near the isologo. Grounding
+found the header/footer lockup already does render the name as text everywhere — the real gap is
+the About page's scroll-morphed isologo (045's mechanic), which floats alone with no text anchor
+until it docks into the header. Scoped to a companion-wordmark treatment on that float; the hero
+copy itself and meta/OG tags are separate, non-visual follow-ups outside sketch scope.
+
 ## Reference Points
 
 Airbnb-style card grid (big image, minimal chrome), Netflix web/SmartTV catalog (row-first
@@ -78,6 +85,7 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
 
 | # | Name | Design Question | Winner | Tags |
 |---|------|----------------|--------|------|
+| 050 | about-morph-companion-text | How should a "PUKLLAY CLUB" companion wordmark behave alongside the About page's floating isologo during its scroll-morph into the header, so the mark is never text-less? (todo `2026-09-07-surface-pukllay-club-brand-name-in-content.md` — investigation found the header/footer lockup already renders the name as text everywhere else; the real gap is the About hero's floating mark + copy, which never says the name) | *(pending review)* | about, header, motion, isologo, brand-name, wordmark |
 | 043 | composed-full-detail-page | Does the full game detail page (masthead, buybox, lightbox, reading column) still hold together once all of 027/028/032/033/037/038's and 039-042's independently-validated winners are composed into one real page? (frontier consistency pass — full detail page not composed-checked since 011, which predates all 16 of these sketches) | single composed view — consistency check. Found + fixed 2 real drift bugs: lightbox width cap vs. arrow-anchor point had silently diverged between 033/038; desktop CTA + mobile CTA bar would have doubled up. Found but NOT fixed (deferred, same call as 042 round 27): the float-trick chevron technique can cut mid-word at some container widths — needs validating against real content before shipping, or fall back to 042's Variant C (real `text-overflow: ellipsis`) if that's common | detail, consistency, masthead, buybox, lightbox, reading-column, gap-closure |
 | 042 | editorial-tags-divider | Where do editorial hashtag pills sit relative to the description and the ficha-técnica divider, and does that divider still earn its place? (Phase 01.3 UAT gap G-01.3-1, original complaint) | Below Title (8px gap), wrapping row (10px gap), text-sm (14px), justified, no divider, 16px to fact grid. Chevron: icon-only, truly inline on the truncated text's last line via a float trick (not nested in the clamped `<p>` — that broke rendering in round 17), real `text-overflow: ellipsis`. 27 rounds total — see README. **Deferred to implementation:** "…"/chevron ink alignment (`translateY` on the svg) needs re-tuning against the real font stack | detail, editorial-tags, divider, gap-closure |
 | 041 | pill-system-outline | How far should the outline pill tone from 039/040 spread across the site's real pill/chip call sites, including selection state (filter-modal chips, active-filter chips)? | Outline everywhere (5 real call sites verified: chip_row, editorial_tags kept separate, facts_row, filter_modal chip_class/1, active-filter chip). Selected/active state stays outline-family but permanently carries the pill's own hover look (primary border + primary text, no fill) — literal outline-everywhere first tested as making selected pixel-identical to unchecked siblings in the same control, caught before finalizing | detail, catalog, pills, chips, design-system, consistency |
