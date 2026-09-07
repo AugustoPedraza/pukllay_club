@@ -200,6 +200,24 @@ Two fixes from feedback:
 Both verified live: mobile shows the three social icons centered with even spacing; Cierre reads
 with identical, deliberate spacing at both 375px and full desktop width.
 
+## Round 10 — Cierre more prominent (desktop full-screen), no duplicate mobile CTA
+Two fixes from feedback ("I want the 'close' more prominent... full screen band... for desktop
+only" + "for mobile, remove the sumate below 'nos vemos el sábado' since it has the sticky CTA"):
+
+1. **Desktop full-screen band** — at the same `min-width: 640px` breakpoint this sketch already
+   uses for "desktop" everywhere else, `.closing-band` becomes `min-height: 100vh` with flex
+   vertical centering, replacing the shared 72px band padding every other section uses. The
+   heading also scales up (`clamp(2rem, 4vw, 3rem)`, up from the shared 1.5rem) so the section
+   fills that space meaningfully instead of just adding empty air around a small heading.
+2. **Mobile: no duplicate Sumate** — hidden at `max-width: 480px`, the SAME threshold the real
+   sticky bar actually appears at (not the 640px desktop breakpoint above) — between 480-639px
+   there's no sticky bar, so hiding the button any earlier would leave that range with no visible
+   join CTA in Cierre at all. Removing the flex child doesn't leave a gap; the column's own
+   `gap: 24px` just closes around it.
+
+Verified live: desktop shows a full-viewport closing moment; ≤480px shows the heading flowing
+directly into the meta line, no duplicate button, sticky bar visible at the bottom.
+
 ## What to Look For
 - Does the map feel more meaningful sitting with Juntadas' location description than it did in
   Contacto?

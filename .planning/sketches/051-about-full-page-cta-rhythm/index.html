@@ -233,6 +233,31 @@
   .closing-meta { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); }
   .closing-meta a { color: inherit; text-decoration: underline; }
 
+  /* Round 10a (feedback: "I want the 'close' more prominent... full
+     screen band... for desktop only"): desktop-only (matching this
+     sketch's own two-col/mobile-CTA breakpoint conventions — 640px is
+     already "desktop" everywhere else in this file) — the band becomes a
+     full-viewport moment instead of the shared 72px band padding every
+     other section uses, with the heading scaled up to actually fill that
+     space meaningfully rather than just adding empty air around a
+     1.5rem heading. */
+  @media (min-width: 640px) {
+    .closing-band { min-height: 100vh; display: flex; align-items: center; padding: 0; }
+    .closing-band h2 { font-size: clamp(2rem, 4vw, 3rem); }
+  }
+
+  /* Round 10b (feedback: "for mobile, remove the 'sumate' below 'nos
+     vemos el sábado' since it has the sticky CTA") — hidden at the SAME
+     threshold the real sticky bar actually appears (480px), not the
+     640px desktop breakpoint above: between 480-639px there is no sticky
+     bar, so hiding this button any earlier would leave that range with
+     no visible join CTA in the closing band at all. Removing a flex
+     child doesn't leave a gap — the column's own `gap: 24px` just closes
+     around it. */
+  @media (max-width: 480px) {
+    #cierre .btn-sumate { display: none; }
+  }
+
   /* Real mobile-only sticky CTA bar — SAME media query threshold as
      production (.pk-about-cta-bar / .pk-about-cta-spacer, max-width:480px),
      not the sketch toolbar's 375px viewport constrainer, so switching to
