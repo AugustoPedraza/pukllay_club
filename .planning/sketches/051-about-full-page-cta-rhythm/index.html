@@ -145,12 +145,16 @@
   .faq-item dt { font-size: 1.125rem; font-weight: 600; margin-bottom: 4px; }
   .faq-item dd { font-size: 1.125rem; margin: 0; }
 
-  /* Contacto card (real sketch 048 winner): icon links + a Maps thumbnail
-     placeholder (the real one is a live Google embed — not reproduced here,
-     just its footprint/aspect-ratio, since this sketch is about CTA rhythm
-     not the map itself). */
+  /* Round 8 (feedback: "on desktop, Juntadas and Contacto have different
+     background") — the card background/padding/radius that rounds 2/6
+     already stripped on mobile is now dropped here too, so both columns
+     share the exact same plain background at every width, not just below
+     640px. Contacto keeps its own flex-column layout (gap:16px between
+     the heading/paragraph/chips) — only the box chrome around it is
+     gone. This is the same direction rounds 2/3/4/6/7 already pushed
+     Contacto toward (progressively lighter, less like a boxed CTA card),
+     just finished on desktop too. */
   .contact-card {
-    background: var(--color-surface); border-radius: var(--radius-lg); padding: 24px;
     display: flex; flex-direction: column; gap: 16px;
   }
   /* Round 4 picked B — softer tinted chip, same accent tint this sketch's
@@ -187,31 +191,28 @@
     border-radius: var(--radius-full); font-size: 11px; color: var(--color-text);
   }
 
-  /* Round 2 fix (feedback: "on mobile, the CTA for contact breaks the
-     rhythm"): below 640px — the exact point .two-col stacks Juntadas and
-     Contacto into one column, removing the side-by-side breathing room
-     desktop has — Contacto's card chrome (background/padding/border-
-     radius/shadow) is stripped entirely. It flows as plain content like
-     Juntadas/Nuestra historia above it, so it reads as "more info" rather
-     than a second heavy CTA card sitting directly above Cierre's Sumate.
-     The Maps thumbnail itself is untouched — it's real functional content
-     (an image link), not decorative box chrome, and wasn't what made the
-     section feel heavy.
+  /* Round 6 fix (feedback: "be sure the 3 buttons fit on the same row"):
+     below 640px — the exact point .two-col stacks Juntadas and Contacto
+     into one column — the card's available width is only the viewport
+     minus its 24px gutters on each side. Measured: 3 fully-labeled soft
+     chips (WhatsApp/Instagram/Facebook, ~123/128/116px each + gaps) need
+     ~387px, more than a 375px phone has room for even BEFORE the
+     gutters, so they'd wrap to two lines. Rather than shrink the label
+     text until it clips, drop it entirely at this width and let the
+     chip go icon-only + circular — same shape/hover mechanic, still
+     on-brand (soft tint kept), just compact enough that all three always
+     fit one row down to the narrowest real phone width.
 
-     Round 6 fix (feedback: "be sure the 3 buttons fit on the same row"):
-     at this same single-column width, the card's available width is only
-     the viewport minus its 24px gutters on each side — measured, 3 fully-
-     labeled soft chips (WhatsApp/Instagram/Facebook, ~123/128/116px each
-     + gaps) need ~387px, more than a 375px phone has room for even
-     BEFORE the gutters, so they'd wrap to two lines. Rather than shrink
-     the label text until it clips, drop it entirely at this width and
-     let the chip go icon-only + circular — same shape/hover mechanic,
-     still on-brand (soft tint kept), just compact enough that all three
-     always fit one row down to the narrowest real phone width. */
+     Round 8 fix (feedback: "on mobile I want the icons well distributed
+     on all the width, not aligned to left") — space-between spreads the
+     three circles edge-to-edge across the card's full width instead of
+     clustering flush-left with the remainder as dead space. `width: 100%`
+     is explicit (not just relying on the parent's default `align-items:
+     stretch`) so this rule reads correctly on its own. */
   @media (max-width: 639px) {
-    .contact-card { background: none; padding: 0; border-radius: 0; }
     .cl-label { display: none; }
     .cl-soft { padding: 13px; border-radius: 50%; gap: 0; }
+    .contact-links { width: 100%; justify-content: space-between; }
   }
 
   .closing-band { text-align: center; }

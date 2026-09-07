@@ -162,6 +162,23 @@ continues the same direction rounds 2/3/4/6 already pushed it toward. Verified l
 in both places. **Note:** this reopens sketch 048's original decision (map lived in Contacto) —
 flagged for developer review, not a silent override.
 
+## Round 8 — mobile icon distribution + matching desktop backgrounds
+Two fixes from feedback:
+1. **"On mobile I want the icons well distributed on all the width (not aligned to left)"** — the
+   three circular chips (round 6's icon-only mobile state) were left-aligned with dead space to
+   their right. `.contact-links` now gets `justify-content: space-between` at the same ≤639px
+   breakpoint, spreading them edge-to-edge across the card's full width.
+2. **"On desktop, Juntadas and Contacto have different background"** — `.contact-card`'s
+   background/padding/border-radius (rounds 2/6 had already stripped these on mobile only) are
+   now dropped from the base rule too, so both columns share the exact same plain background at
+   every width, not just below 640px. This finishes the same direction rounds 2/3/4/6/7 were
+   already pushing Contacto toward — progressively less like a boxed CTA card, more like a plain
+   content column matching Juntadas. Only the box chrome is gone; Contacto's own `gap: 16px` flex
+   spacing between heading/paragraph/chips is untouched.
+
+Both verified live: desktop shows two visually matching plain columns; the 375px iframe shows all
+three icons spread full-width with even gaps.
+
 ## What to Look For
 - Does the map feel more meaningful sitting with Juntadas' location description than it did in
   Contacto?
