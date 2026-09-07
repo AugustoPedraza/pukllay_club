@@ -93,19 +93,34 @@ structural fix isn't being revisited.
 - **V1: Compact (~17px)** — smaller, looser tracking, closer to the eyebrow's own quiet register.
 - **V2: Balanced (~21px)** — round 3's picked size, kept here as the middle reference point.
 - **V3: Confident (~25px)** — larger, tighter tracking — more presence, still below round 2's
-  original 27px (which read as competing directly with the H1).
+  original 27px (which read as competing directly with the H1). **Picked.**
 
 All three share the exact same anchor-based grouping mechanic; only `COMPANION_STYLE`'s
 `nameScale`/`nameTracking`/`marginTop` differ per tab.
 
+## Round 5 — eyebrow hides/reveals on the same dock crossing
+Feedback: when the isologo "becomes" the header (docks), the hero's eyebrow line ("Club de
+juegos de mesa · Jujuy") should disappear — and scrolling back up should reverse it.
+
+Rather than let this happen incidentally from scroll position (which would vary by viewport
+height and could leave the eyebrow half-visible or vanish at the wrong moment), the eyebrow now
+reads the exact same `docked` boolean that already drives the header reveal and the companion
+text's hide. `updateHeaderChrome()` toggles an `.is-docked` class on the eyebrow alongside the
+header's own classes, with a matched `opacity` transition — so all three (header in, eyebrow out,
+companion out) change at the identical crossing-point instant, symmetric in both scroll
+directions for free (since `docked` already flips back on scroll-up).
+
+V3 is the default/active tab now (the round 4 pick); V1/V2 remain navigable for reference.
+
 ## What to Look For
-- Which of the three sizes reads as correctly weighted next to the mark — not lost, not
+- Does the eyebrow's disappearance read as *the same event* as the mark docking — one coordinated
+  moment — rather than two things that happen to line up?
+- Scroll back up: does the eyebrow reappear at the exact same point the mark undocks?
+- Which of the three companion sizes reads as correctly weighted next to the mark — not lost, not
   competing with the H1?
 - Does the whole hero read as one composed group at rest in all three, instead of a floating mark
   with a stray gap before the eyebrow/H1 block?
 - With the real font loading, does "PUKLLAY CLUB" finally read as the actual brand typeface —
   same weight/character as the header's own wordmark once it docks?
-- Once the header docks and reveals its own real wordmark, does the companion text's fade-out
-  feel like a handoff rather than a competing duplicate?
 - Check at 375px (mobile) — does the anchor's reserved height feel right for all three, or does
   the largest (V3) start to crowd the eyebrow?

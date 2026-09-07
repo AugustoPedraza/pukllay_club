@@ -84,7 +84,17 @@
     text-align: center; gap: 16px; position: relative;
   }
   .mark-anchor { width: 100%; height: 220px; } /* HERO_SIZE(180) + gap + companion line + a little air, covers all 3 variants */
-  .hero-eyebrow { font-size: var(--text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted); }
+  /* Tied to the exact same `docked` boolean that drives the header reveal
+     and the companion-text hide (updateHeaderChrome() toggles all three
+     together) — so the eyebrow disappearing is the SAME crossing-point
+     event, not an incidental effect of it scrolling out of view on its
+     own. Symmetric both directions for free, since `docked` already flips
+     back on scroll-up. */
+  .hero-eyebrow {
+    font-size: var(--text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted);
+    transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+  .hero-eyebrow.is-docked { opacity: 0; }
   .hero h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 8vw, 4.5rem); margin: 0; letter-spacing: 0.02em; }
   .hero p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 32rem; margin: 0; }
   .hero-cta {
@@ -153,8 +163,8 @@
 
 <div id="variant-nav">
   <button class="variant-tab" onclick="showVariant('v1', event)">V1: Compact (~17px)</button>
-  <button class="variant-tab active" onclick="showVariant('v2', event)">V2: Balanced (~21px, round 3's pick)</button>
-  <button class="variant-tab" onclick="showVariant('v3', event)">V3: Confident (~25px)</button>
+  <button class="variant-tab" onclick="showVariant('v2', event)">V2: Balanced (~21px)</button>
+  <button class="variant-tab active" onclick="showVariant('v3', event)">V3: Confident (~25px) ★</button>
 </div>
 
 <div id="v1" class="variant">
@@ -187,8 +197,8 @@
   </div>
 </div>
 
-<div id="v2" class="variant active">
-  <div class="note"><strong>V2 — Balanced (round 3's pick)</strong>El tamaño y tracking que quedaron confirmados en la ronda anterior (~21px), acá solo como punto de referencia para comparar contra V1/V3.</div>
+<div id="v2" class="variant">
+  <div class="note"><strong>V2 — Balanced</strong>El tamaño y tracking de la ronda 3 (~21px), acá como punto de referencia intermedio entre V1 y V3.</div>
   <header class="fake-header" data-header>
     <div class="fake-header-inner">
       <div class="brand-slot">
@@ -217,8 +227,8 @@
   </div>
 </div>
 
-<div id="v3" class="variant">
-  <div class="note"><strong>V3 — Confident</strong>Companion más grande (~25px) y con tracking más cerrado — más presencia, pero todavía por debajo de la ronda 2 original (27px) que se sentía en competencia directa con el H1.</div>
+<div id="v3" class="variant active">
+  <div class="note"><strong>V3 — Confident ★ Picked</strong>Companion más grande (~25px) y con tracking más cerrado — más presencia, pero todavía por debajo de la ronda 2 original (27px) que se sentía en competencia directa con el H1. También: el eyebrow "Club de juegos de mesa · Jujuy" ahora desaparece/reaparece exactamente cuando el mark se acopla/desacopla del header (mismo evento de cruce, no un scroll incidental).</div>
   <header class="fake-header" data-header>
     <div class="fake-header-inner">
       <div class="brand-slot">
@@ -275,7 +285,7 @@ const COMPANION_STYLE = {
   v3: { nameScale: 0.135, nameTracking: '0.02em', marginTop: 10 }, // ~25px
 };
 
-let currentId = 'v2';
+let currentId = 'v3';
 let docked = false;
 let hasEntered = false;
 let entranceTimer = null;
@@ -324,11 +334,19 @@ function computeProgress(natural, dock) {
   return Math.min(1, Math.max(0, traveled / totalTravel));
 }
 
+function eyebrowEl() { return document.querySelector('#' + currentId + ' .hero-eyebrow'); }
+
+// Single source of truth for everything gated on the dock crossing: the
+// header reveal, the eyebrow hide, AND (in updateCompanion) the companion
+// text hide all read the same `docked` boolean, so they change at the
+// exact same instant in both directions — dock hides eyebrow+companion
+// and reveals the header; undock is the exact reverse.
 function updateHeaderChrome() {
   document.querySelectorAll('.fake-header').forEach((h) => {
     h.classList.remove('is-revealed', 'is-tinted', 'is-docked');
   });
   if (docked) headerEl().classList.add('is-revealed', 'is-tinted', 'is-docked');
+  eyebrowEl().classList.toggle('is-docked', docked);
 }
 
 function updateCompanion(rect, progress) {
@@ -421,7 +439,7 @@ window.addEventListener('resize', () => {
   updateCompanion(rect, docked ? 1 : computeProgress(naturalRect(), dockRect()));
 });
 
-activateVariant('v2');
+activateVariant('v3');
 </script>
 
 </body>
