@@ -2,7 +2,7 @@
 sketch: 051
 name: about-full-page-cta-rhythm
 question: "Do the About page's four CTA touchpoints (hero Sumate, Contacto's WhatsApp/Instagram/Maps, closing-band Sumate, mobile sticky Sumate) read as a well-paced ask across the whole page, or does something feel redundant/crowded — on both desktop and mobile?"
-winner: "Round 1 desktop composition confirmed as-is. Round 2: strip Contacto's card chrome below 640px so it reads as supporting info, not a second CTA card, right before Cierre. Round 3: replace the WhatsApp/Instagram row treatment entirely with icon-only circular chips borrowing the real footer's own .pk-footer-social a style — one unified treatment for both viewports."
+winner: "Round 1 desktop composition confirmed as-is. Round 2: strip Contacto's card chrome below 640px. Round 3's icon-only chips were rejected (\"pure icons breaks the rhythm\"). Round 4: local A/B/C switcher pending review — A) icon+text pill matching .btn-sumate's own shape, B) softer accent-tinted chip, C) round 3's circular icon avatar with the text label restored beside it."
 tags: [about, cta, consistency, layout, desktop, mobile]
 ---
 
@@ -107,14 +107,33 @@ both viewports — round 2's separate mobile-only row override is gone; only the
 background/padding strip still varies by width. Verified live in both the full window and the
 375px iframe preview.
 
+## Round 4 — "pure icons breaks the rhythm", 3 alternatives
+Feedback on round 3: the icon-only chips break the page's CTA rhythm — too quiet/footer-like next
+to the bold, text-bearing "Sumate" buttons everywhere else. Rather than pick one direction blind,
+this round adds a small **local switcher** (A/B/C buttons above the links, scoped only to this
+component — not a full-page tab set, since everything else is settled) so all three can be
+compared directly:
+
+- **A: Icon + text pill** — same visual grammar as `.btn-sumate` (outline pill, fills solid on
+  hover), just sized down. Every CTA on the page now shares one button family.
+- **B: Soft tinted chip** — rounded rect, filled with the same accent tint this sketch's own
+  `.note` banner already uses. Reads "on brand" without borrowing Sumate's exact join-CTA shape,
+  keeping contact and join visually distinct kinds of ask.
+- **C: Icon avatar + text beside** — the most literal fix: round 3's circular icon avatar kept
+  exactly as-is, with the text label restored beside it, unboxed. Changes nothing about round 3's
+  shape/hover mechanic, just adds back what "pure icons" was missing.
+
+All three verified live (`showContactVariant('a'|'b'|'c')`).
+
 ## What to Look For
-- Do the icon chips read clearly as "WhatsApp" / "Instagram" without a visible label, given the
-  paragraph above already names both?
-- Does borrowing the footer's own icon treatment feel like welcome consistency, or does Contacto
-  need its own distinct visual language since it's a more prominent ask than footer chrome?
+- Which of A/B/C actually fixes "breaks the rhythm" — does matching Sumate's shape (A) restore
+  consistency, or does that make Contacto feel like it's asking for the same commitment as
+  joining (which 048/049 deliberately kept separate)?
+- Does B's softer treatment read as a meaningfully different (correctly de-emphasized) kind of
+  ask, or just a weaker copy of A?
+- Does C solve it with the smallest change, or does the unboxed icon+text pairing still feel too
+  quiet next to Sumate?
 - Do CTA 1 (hero) → CTA 2 (Contacto) → CTA 3 (cierre) → CTA 4 (mobile sticky) feel like a
   deliberate, escalating rhythm down the page now, on both desktop and mobile?
 - On mobile, does the sticky bar (CTA 4) ever visually compete with CTA 3 sitting right above it
   when the closing band is in view?
-- Anything that felt fine in isolation (048, 049) that reads differently now that it's composed
-  with everything else?
