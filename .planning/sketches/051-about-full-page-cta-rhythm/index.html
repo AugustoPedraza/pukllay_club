@@ -221,6 +221,7 @@
 </head>
 <body>
 
+<div id="page-root">
 <div class="note"><strong>Composed view — all 4 CTA touchpoints, real spacing</strong>
 Real content-band padding (72px/section) and 1280px content width, same as production. Each CTA
 touchpoint is flagged with a small pill so they're easy to spot while scrolling: the hero's
@@ -337,6 +338,18 @@ their own motion/behavior was already validated in sketches 046/048 and isn't th
   <img src="../../../priv/static/images/isologo-light.png" alt="">
   <span class="morph-companion-text"><span class="mct-name">PUKLLAY CLUB</span></span>
 </div>
+</div><!-- /#page-root -->
+
+<!-- Real device-width preview: the toolbar's viewport buttons used to
+just set document.body.style.maxWidth, which visually narrows the page
+but does NOT change window.innerWidth — so it can't trigger a real
+@media breakpoint (found live: a screenshot at a narrowed body still
+showed the desktop 2-column grid, squeezed into a narrow column, rather
+than actually collapsing to one). An iframe has its own independent
+viewport, so loading this exact same file inside one at a literal pixel
+width fires real media queries regardless of the outer window's size —
+this is what real responsive-design tools do, not a hack. -->
+<iframe id="device-frame" src="about:blank" style="display:none;"></iframe>
 
 <div data-tools>
   <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
@@ -446,11 +459,26 @@ function init() {
     }, 500);
   }
 }
+// Real device-width preview via an iframe (see the HTML comment above the
+// iframe element for why): #page-root's own scroll-morph script only runs
+// in the outer document, so switching to a device width hides #page-root
+// entirely and points the iframe at this exact file — a fresh, independent
+// copy of the whole page (including its own copy of this script) renders
+// at the iframe's literal width, where @media queries respond correctly
+// regardless of the real browser window's size.
 function setViewport(px) {
-  document.body.style.maxWidth = px ? px + 'px' : 'none';
-  document.body.style.margin = px ? '0 auto' : '0';
-  document.body.style.border = px ? '1px solid var(--color-border)' : 'none';
-  init();
+  const root = document.getElementById('page-root');
+  const frame = document.getElementById('device-frame');
+  if (!px) {
+    frame.style.display = 'none';
+    frame.src = 'about:blank';
+    root.style.display = '';
+    init();
+    return;
+  }
+  root.style.display = 'none';
+  frame.style.cssText = 'display:block; width:' + px + 'px; height:85vh; margin:24px auto; border:1px solid var(--color-border); box-shadow:var(--shadow-md);';
+  if (!frame.src.includes(location.pathname)) frame.src = location.href;
 }
 window.addEventListener('scroll', () => {
   if (!hasEntered || ticking) return;

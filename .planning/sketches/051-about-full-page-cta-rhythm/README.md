@@ -78,12 +78,18 @@ not decorative box chrome — it wasn't what made the section feel heavy). Verif
 Instagram now read as calm supporting rows blending with "Juntadas" text beside them, leaving
 "Nos vemos el sábado" as the page's one unambiguous final ask.
 
-**Verification note:** this sketch's own 📱 toolbar button only constrains `<body>`'s max-width
-visually — it does NOT change `window.innerWidth`, so it can't trigger a real `@media` breakpoint
-in a wide browser window. Confirmed the fix by calling `setViewport(375)` (harmless, same effect)
-and by directly inspecting computed styles / temporarily applying the same rule via JS to render
-it at full window width — both matched the CSS rule exactly. The rule itself reuses the identical
-640px breakpoint already proven by `.two-col`, so this isn't a novel/unverified threshold.
+**Toolbar fix (found from a user screenshot that showed neither the mobile Contacto fix nor
+`.two-col`'s stacking taking effect):** the 📱/📟 buttons used to just set `document.body`'s
+`max-width`, which visually narrows the page but does NOT change `window.innerWidth` — so it
+can't trigger a real `@media` breakpoint no matter how narrow the body looks. Confirmed via the
+reported screenshots (581px/731px images, yet still showing the desktop 2-column grid squeezed
+into a narrow column) and by reproducing it live. Fixed properly: the toolbar now loads this
+exact same file into a hidden `<iframe>` sized to the literal target pixel width when a device
+button is pressed (`#page-root` — everything except the toolbar — swaps out for it). An iframe
+has its own independent viewport, so `@media` queries inside it respond to the iframe's real
+width regardless of the outer browser window's actual size. Verified live:
+`iframe.contentWindow.innerWidth` reads 373px at the 375px button, `.two-col` correctly collapses
+to one column, and Contacto's chrome-stripped mobile treatment renders exactly as designed.
 
 ## What to Look For
 - Does Contacto now read as calm supporting info on mobile, rather than a second CTA card right
