@@ -153,37 +153,14 @@
     background: var(--color-surface); border-radius: var(--radius-lg); padding: 24px;
     display: flex; flex-direction: column; gap: 16px;
   }
-  /* Round 4 (feedback: round 3's icon-only chips "break the rhythm" — too
-     quiet/footer-like next to the bold text-bearing "Sumate" buttons
-     elsewhere on the page). Local A/B/C switcher, not a full-page tab set
-     — only this one component is in question, everything else (card
-     chrome, spacing, mobile behavior) is settled from rounds 1-3. */
-  .cl-switch { display: flex; gap: 6px; margin-bottom: 4px; }
-  .cl-switch button {
-    font-family: var(--font-sans); font-size: 11px; font-weight: 600; padding: 4px 10px;
-    border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg);
-    color: var(--color-text); cursor: pointer;
-  }
-  .cl-switch button.active { background: var(--color-text); color: var(--color-bg); border-color: var(--color-text); }
-  .contact-links { display: none; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .contact-links.active { display: flex; }
+  /* Round 4 picked B — softer tinted chip, same accent tint this sketch's
+     own .note banner already uses, so it reads as "on brand" without
+     borrowing Sumate's exact join-CTA shape (contact and join stay
+     visually distinct kinds of ask). A (Sumate-shaped pill) and C (icon
+     avatar + text) are retired — see README for the full A/B/C comparison
+     history. Round 5 adds a third chip (Facebook) to the same row. */
+  .contact-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .contact-links svg { width: 18px; height: 18px; flex-shrink: 0; }
-
-  /* A: icon+text pill, same visual grammar as .btn-sumate (outline pill,
-     fills on hover) — every CTA on the page now shares one button family,
-     just sized down since these are secondary to Sumate's join ask. */
-  .cl-pill {
-    display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px;
-    border-radius: var(--radius-full); border: 1.5px solid var(--color-primary); color: var(--color-primary);
-    font-size: var(--text-sm); font-weight: 600; text-decoration: none;
-    transition: all var(--duration-fast) var(--ease-standard);
-  }
-  .cl-pill:hover { background: var(--color-primary); color: var(--color-primary-content); }
-
-  /* B: softer tinted chip — same accent tint this sketch's own .note
-     banner already uses, so it reads as "on brand" without borrowing
-     Sumate's exact join-CTA shape (contact and join stay visually
-     distinct kinds of ask). */
   .cl-soft {
     display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px;
     border-radius: var(--radius-lg); background: var(--color-accent-bg); color: var(--color-accent-text);
@@ -191,23 +168,6 @@
     transition: filter var(--duration-fast) var(--ease-standard);
   }
   .cl-soft:hover { filter: brightness(1.08); }
-
-  /* C: round 3's circular icon avatar KEPT (it read fine on its own), text
-     label added back beside it, unboxed — the most literal fix to "pure
-     icons", changing nothing else about round 3's shape/hover mechanic. */
-  .cl-avatar-row { flex-direction: column; align-items: stretch; gap: 10px; }
-  .cl-avatar-row a {
-    display: flex; align-items: center; gap: 12px; color: var(--color-text); text-decoration: none;
-  }
-  .cl-avatar-row .avatar {
-    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    border: 1px solid var(--color-border); color: var(--color-text-muted);
-    transition: background-color var(--duration-fast) var(--ease-standard),
-                color var(--duration-fast) var(--ease-standard),
-                border-color var(--duration-fast) var(--ease-standard);
-  }
-  .cl-avatar-row a:hover .avatar { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
   .map-thumb {
     aspect-ratio: 2 / 1; min-height: 7rem; border-radius: var(--radius-lg); position: relative; overflow: hidden;
     background: repeating-linear-gradient(45deg, var(--color-surface-2), var(--color-surface-2) 10px, var(--color-surface) 10px, var(--color-surface) 20px);
@@ -339,25 +299,8 @@ their own motion/behavior was already validated in sketches 046/048 and isn't th
     <div id="contacto" class="contact-card cta-marker">
       <span class="cta-flag">CTA 2 · Contacto</span>
       <h2>Contacto</h2>
-      <p>Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.</p>
-      <div class="cl-switch">
-        <button class="active" onclick="showContactVariant('a', event)">A: Pill</button>
-        <button onclick="showContactVariant('b', event)">B: Soft chip</button>
-        <button onclick="showContactVariant('c', event)">C: Icon + text</button>
-      </div>
-
-      <div class="contact-links active" data-cl="a">
-        <a class="cl-pill" href="#" target="_blank" rel="noopener noreferrer">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"/></svg>
-          WhatsApp
-        </a>
-        <a class="cl-pill" href="#" target="_blank" rel="noopener noreferrer">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none"/></svg>
-          Instagram
-        </a>
-      </div>
-
-      <div class="contact-links" data-cl="b">
+      <p>Escribinos por el grupo de WhatsApp, por Instagram o por Facebook — respondemos ahí mismo.</p>
+      <div class="contact-links">
         <a class="cl-soft" href="#" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"/></svg>
           WhatsApp
@@ -366,20 +309,9 @@ their own motion/behavior was already validated in sketches 046/048 and isn't th
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none"/></svg>
           Instagram
         </a>
-      </div>
-
-      <div class="contact-links cl-avatar-row" data-cl="c">
-        <a href="#" target="_blank" rel="noopener noreferrer">
-          <span class="avatar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"/></svg>
-          </span>
-          Grupo de WhatsApp
-        </a>
-        <a href="#" target="_blank" rel="noopener noreferrer">
-          <span class="avatar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none"/></svg>
-          </span>
-          Instagram
+        <a class="cl-soft" href="https://facebook.com/PukllayClub" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.5 8.5h2V5.5h-2c-1.93 0-3.5 1.57-3.5 3.5v2H9v3h2v6.5h3V14h2.2l.5-3H14v-1.5c0-.55.45-1 1-1Z"/></svg>
+          Facebook
         </a>
       </div>
       <a class="map-thumb" href="#" target="_blank" rel="noopener noreferrer">
@@ -539,14 +471,6 @@ function init() {
 // copy of the whole page (including its own copy of this script) renders
 // at the iframe's literal width, where @media queries respond correctly
 // regardless of the real browser window's size.
-// Local A/B/C switcher for the Contacto links only — scoped to this one
-// component, independent of the page-wide morph/viewport mechanics above.
-function showContactVariant(id, evt) {
-  document.querySelectorAll('.contact-links').forEach((el) => el.classList.toggle('active', el.dataset.cl === id));
-  document.querySelectorAll('.cl-switch button').forEach((b) => b.classList.remove('active'));
-  if (evt) evt.target.classList.add('active');
-}
-
 function setViewport(px) {
   const root = document.getElementById('page-root');
   const frame = document.getElementById('device-frame');

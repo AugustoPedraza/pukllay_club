@@ -2,7 +2,7 @@
 sketch: 051
 name: about-full-page-cta-rhythm
 question: "Do the About page's four CTA touchpoints (hero Sumate, Contacto's WhatsApp/Instagram/Maps, closing-band Sumate, mobile sticky Sumate) read as a well-paced ask across the whole page, or does something feel redundant/crowded — on both desktop and mobile?"
-winner: "Round 1 desktop composition confirmed as-is. Round 2: strip Contacto's card chrome below 640px. Round 3's icon-only chips were rejected (\"pure icons breaks the rhythm\"). Round 4: local A/B/C switcher pending review — A) icon+text pill matching .btn-sumate's own shape, B) softer accent-tinted chip, C) round 3's circular icon avatar with the text label restored beside it."
+winner: "Round 1 desktop composition confirmed as-is. Round 2: strip Contacto's card chrome below 640px. Round 4 picked B — soft accent-tinted chips (icon + text) for the Contacto links, over A (Sumate-shaped pill) and C (icon avatar + text). Round 5: added Facebook as a third chip alongside WhatsApp/Instagram."
 tags: [about, cta, consistency, layout, desktop, mobile]
 ---
 
@@ -123,17 +123,24 @@ compared directly:
   exactly as-is, with the text label restored beside it, unboxed. Changes nothing about round 3's
   shape/hover mechanic, just adds back what "pure icons" was missing.
 
-All three verified live (`showContactVariant('a'|'b'|'c')`).
+All three verified live. **Picked B** (soft chip) — reads as an on-brand, correctly
+de-emphasized "different kind of ask" from Sumate without needing to borrow its exact shape. A
+and C retired, removed from `index.html`.
+
+## Round 5 — add Facebook
+Real `ClubLinks.facebook_url/0` already exists in the codebase (`https://www.facebook.com/pukllayclub/`)
+and the real `social_links/1` component already supports a `:facebook` icon — Contacto's real call
+site just never included it (`icons={[:whatsapp, :instagram]}`). Added a third `.cl-soft` chip
+using the real Facebook glyph path (same SVG the header/footer's own social icons use), and
+updated the intro copy to name all three channels. Verified live — three chips wrap cleanly.
 
 ## What to Look For
-- Which of A/B/C actually fixes "breaks the rhythm" — does matching Sumate's shape (A) restore
-  consistency, or does that make Contacto feel like it's asking for the same commitment as
-  joining (which 048/049 deliberately kept separate)?
-- Does B's softer treatment read as a meaningfully different (correctly de-emphasized) kind of
-  ask, or just a weaker copy of A?
-- Does C solve it with the smallest change, or does the unboxed icon+text pairing still feel too
-  quiet next to Sumate?
+- Do the three soft chips (WhatsApp/Instagram/Facebook) read as one coherent row, or does adding
+  a third start to feel crowded?
 - Do CTA 1 (hero) → CTA 2 (Contacto) → CTA 3 (cierre) → CTA 4 (mobile sticky) feel like a
-  deliberate, escalating rhythm down the page now, on both desktop and mobile?
+  deliberate, escalating rhythm down the page, on both desktop and mobile?
 - On mobile, does the sticky bar (CTA 4) ever visually compete with CTA 3 sitting right above it
   when the closing band is in view?
+- If this ships: the real `Contacto` call site (`about_live.ex`) would need
+  `icons={[:whatsapp, :instagram, :facebook]}` added, and the real CSS would need this soft-chip
+  treatment built as an actual class (this sketch's `.cl-soft` has no real-app equivalent yet).
