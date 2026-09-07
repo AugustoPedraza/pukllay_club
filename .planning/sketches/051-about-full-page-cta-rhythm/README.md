@@ -2,7 +2,7 @@
 sketch: 051
 name: about-full-page-cta-rhythm
 question: "Do the About page's four CTA touchpoints (hero Sumate, Contacto's WhatsApp/Instagram/Maps, closing-band Sumate, mobile sticky Sumate) read as a well-paced ask across the whole page, or does something feel redundant/crowded — on both desktop and mobile?"
-winner: "Round 1 desktop composition confirmed as-is. Round 2: strip Contacto's card chrome below 640px (background/padding/border-radius/boxed links removed, plain inline rows + border-bottom dividers) so it reads as supporting info, not a second CTA card, right before Cierre's Sumate."
+winner: "Round 1 desktop composition confirmed as-is. Round 2: strip Contacto's card chrome below 640px so it reads as supporting info, not a second CTA card, right before Cierre. Round 3: replace the WhatsApp/Instagram row treatment entirely with icon-only circular chips borrowing the real footer's own .pk-footer-social a style — one unified treatment for both viewports."
 tags: [about, cta, consistency, layout, desktop, mobile]
 ---
 
@@ -91,14 +91,30 @@ width regardless of the outer browser window's actual size. Verified live:
 `iframe.contentWindow.innerWidth` reads 373px at the 375px button, `.two-col` correctly collapses
 to one column, and Contacto's chrome-stripped mobile treatment renders exactly as designed.
 
+## Round 3 — the WhatsApp/Instagram links themselves didn't look right
+Feedback after round 2: on both desktop and mobile, the "Grupo de WhatsApp"/"Instagram" rows
+still "don't look well" — a separate complaint from round 2's card-chrome/rhythm fix, about the
+link treatment itself. Presented 3 directions (icon-only compact chips / solid-tint mini-buttons
+/ bare underline links); picked **icon-only compact chips**.
+
+Rather than invent a new component, this borrows the real footer's own `.pk-footer-social a`
+treatment verbatim (circle, 1px border, fills solid on hover) — sized 44px instead of the
+footer's quiet 28px, since these are primary content-area actions (not secondary footer chrome)
+and 44px is this app's own touch-target floor. No visible text label: the intro paragraph above
+("Escribinos por el grupo de WhatsApp o por Instagram...") already names both channels in prose,
+same reasoning the real footer relies on (`aria-label` only). One unified treatment now covers
+both viewports — round 2's separate mobile-only row override is gone; only the card's own
+background/padding strip still varies by width. Verified live in both the full window and the
+375px iframe preview.
+
 ## What to Look For
-- Does Contacto now read as calm supporting info on mobile, rather than a second CTA card right
-  before Cierre?
+- Do the icon chips read clearly as "WhatsApp" / "Instagram" without a visible label, given the
+  paragraph above already names both?
+- Does borrowing the footer's own icon treatment feel like welcome consistency, or does Contacto
+  need its own distinct visual language since it's a more prominent ask than footer chrome?
 - Do CTA 1 (hero) → CTA 2 (Contacto) → CTA 3 (cierre) → CTA 4 (mobile sticky) feel like a
   deliberate, escalating rhythm down the page now, on both desktop and mobile?
 - On mobile, does the sticky bar (CTA 4) ever visually compete with CTA 3 sitting right above it
   when the closing band is in view?
-- Does Contacto's plain-row link style (mobile) vs. desktop's boxed-card style feel like an
-  intentional adaptation, or an inconsistency worth reconciling?
 - Anything that felt fine in isolation (048, 049) that reads differently now that it's composed
   with everything else?

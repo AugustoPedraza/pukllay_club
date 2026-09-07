@@ -153,13 +153,29 @@
     background: var(--color-surface); border-radius: var(--radius-lg); padding: 24px;
     display: flex; flex-direction: column; gap: 16px;
   }
-  .contact-links { display: flex; flex-direction: column; gap: 10px; }
+  /* Round 3 fix (feedback: the boxed/row treatment "doesn't look well" on
+     either viewport): replaced with icon-only compact chips borrowing the
+     real footer's own `.pk-footer-social a` treatment (circle, 1px border,
+     fills solid on hover) instead of inventing a new component. Sized 44px
+     (not the footer's quiet 28px) since these are primary content-area
+     actions, not secondary footer chrome, and 44px is this app's own
+     touch-target floor. No visible label — the intro paragraph above
+     already names both channels in prose, same reasoning the real footer
+     icons rely on (aria-label only, no redundant visible text). One
+     unified treatment for both viewports — round 2's mobile-only row
+     override is gone; only the card's own background/padding strip
+     (below) still varies by width. */
+  .contact-links { display: flex; gap: 12px; align-items: center; }
   .contact-links a {
-    display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-lg);
-    background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-text);
-    text-decoration: none; transition: border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--color-border); color: var(--color-text-muted);
+    text-decoration: none;
+    transition: background-color var(--duration-fast) var(--ease-standard),
+                color var(--duration-fast) var(--ease-standard),
+                border-color var(--duration-fast) var(--ease-standard);
   }
-  .contact-links a:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .contact-links a:hover { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
   .contact-links svg { width: 20px; height: 20px; flex-shrink: 0; }
   .map-thumb {
     aspect-ratio: 2 / 1; min-height: 7rem; border-radius: var(--radius-lg); position: relative; overflow: hidden;
@@ -176,20 +192,14 @@
      Contacto into one column, removing the side-by-side breathing room
      desktop has — Contacto's card chrome (background/padding/border-
      radius/shadow) is stripped entirely. It flows as plain content like
-     Juntadas/Nuestra historia above it, with lighter inline icon-links
-     instead of boxed rows, so it reads as "more info" rather than a
-     second heavy CTA card sitting directly above Cierre's Sumate. The
-     Maps thumbnail itself is untouched — it's real functional content
+     Juntadas/Nuestra historia above it, so it reads as "more info" rather
+     than a second heavy CTA card sitting directly above Cierre's Sumate.
+     The Maps thumbnail itself is untouched — it's real functional content
      (an image link), not decorative box chrome, and wasn't what made the
-     section feel heavy. */
+     section feel heavy. Round 3's icon chips (above) already work at any
+     width unmodified, so this block no longer needs its own row override. */
   @media (max-width: 639px) {
     .contact-card { background: none; padding: 0; border-radius: 0; }
-    .contact-links a {
-      padding: 8px 0; background: none; border: none; color: var(--color-text);
-      border-bottom: 1px solid var(--color-border);
-    }
-    .contact-links a:last-child { border-bottom: none; }
-    .contact-links a:hover { border-color: var(--color-border); }
   }
 
   .closing-band { text-align: center; }
@@ -300,13 +310,11 @@ their own motion/behavior was already validated in sketches 046/048 and isn't th
       <h2>Contacto</h2>
       <p>Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.</p>
       <div class="contact-links">
-        <a href="#" target="_blank" rel="noopener noreferrer">
+        <a href="#" target="_blank" rel="noopener noreferrer" aria-label="Grupo de WhatsApp">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"/></svg>
-          Grupo de WhatsApp
         </a>
-        <a href="#" target="_blank" rel="noopener noreferrer">
+        <a href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none"/></svg>
-          Instagram
         </a>
       </div>
       <a class="map-thumb" href="#" target="_blank" rel="noopener noreferrer">
