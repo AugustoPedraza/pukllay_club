@@ -171,6 +171,27 @@
     border-radius: var(--radius-full); font-size: 11px; color: var(--color-text);
   }
 
+  /* Round 2 fix (feedback: "on mobile, the CTA for contact breaks the
+     rhythm"): below 640px — the exact point .two-col stacks Juntadas and
+     Contacto into one column, removing the side-by-side breathing room
+     desktop has — Contacto's card chrome (background/padding/border-
+     radius/shadow) is stripped entirely. It flows as plain content like
+     Juntadas/Nuestra historia above it, with lighter inline icon-links
+     instead of boxed rows, so it reads as "more info" rather than a
+     second heavy CTA card sitting directly above Cierre's Sumate. The
+     Maps thumbnail itself is untouched — it's real functional content
+     (an image link), not decorative box chrome, and wasn't what made the
+     section feel heavy. */
+  @media (max-width: 639px) {
+    .contact-card { background: none; padding: 0; border-radius: 0; }
+    .contact-links a {
+      padding: 8px 0; background: none; border: none; color: var(--color-text);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .contact-links a:last-child { border-bottom: none; }
+    .contact-links a:hover { border-color: var(--color-border); }
+  }
+
   .closing-band { text-align: center; }
   .closing-band .cta-row { display: flex; justify-content: center; margin: 20px 0; }
   .closing-meta { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); }

@@ -2,7 +2,7 @@
 sketch: 051
 name: about-full-page-cta-rhythm
 question: "Do the About page's four CTA touchpoints (hero Sumate, Contacto's WhatsApp/Instagram/Maps, closing-band Sumate, mobile sticky Sumate) read as a well-paced ask across the whole page, or does something feel redundant/crowded — on both desktop and mobile?"
-winner: null
+winner: "Round 1 desktop composition confirmed as-is. Round 2: strip Contacto's card chrome below 640px (background/padding/border-radius/boxed links removed, plain inline rows + border-bottom dividers) so it reads as supporting info, not a second CTA card, right before Cierre's Sumate."
 tags: [about, cta, consistency, layout, desktop, mobile]
 ---
 
@@ -64,14 +64,35 @@ clean in both directions. Mobile's sticky bar reuses the exact `max-width:480px`
 already shipped and validated (sketch 049) — not independently re-toggled in this verification
 pass, but the mechanism is unchanged from what's already confirmed working in production.
 
+## Round 2 — mobile Contacto breaks the rhythm
+Feedback after round 1: on mobile, Contacto's CTA breaks the rhythm. Real cause: below 640px
+`.two-col` stacks Juntadas and Contacto into one column, removing the side-by-side breathing room
+desktop has — Contacto's card (background + padding + boxed icon-link rows + Maps thumbnail)
+lands directly above Cierre's Sumate with nothing to separate two heavy asks.
+
+Presented 3 directions; picked **strip the card chrome**: below 640px, `.contact-card` loses its
+background/padding/border-radius, and `.contact-links a` loses its boxed background/border in
+favor of a plain row with a `border-bottom` divider (last row has none) — same treatment as a
+plain link list, not a button. The Maps thumbnail itself is untouched (real functional content,
+not decorative box chrome — it wasn't what made the section feel heavy). Verified live: WhatsApp/
+Instagram now read as calm supporting rows blending with "Juntadas" text beside them, leaving
+"Nos vemos el sábado" as the page's one unambiguous final ask.
+
+**Verification note:** this sketch's own 📱 toolbar button only constrains `<body>`'s max-width
+visually — it does NOT change `window.innerWidth`, so it can't trigger a real `@media` breakpoint
+in a wide browser window. Confirmed the fix by calling `setViewport(375)` (harmless, same effect)
+and by directly inspecting computed styles / temporarily applying the same rule via JS to render
+it at full window width — both matched the CSS rule exactly. The rule itself reuses the identical
+640px breakpoint already proven by `.two-col`, so this isn't a novel/unverified threshold.
+
 ## What to Look For
+- Does Contacto now read as calm supporting info on mobile, rather than a second CTA card right
+  before Cierre?
 - Do CTA 1 (hero) → CTA 2 (Contacto) → CTA 3 (cierre) → CTA 4 (mobile sticky) feel like a
-  deliberate, escalating rhythm down the page, or does any pair feel redundant back-to-back?
+  deliberate, escalating rhythm down the page now, on both desktop and mobile?
 - On mobile, does the sticky bar (CTA 4) ever visually compete with CTA 3 sitting right above it
   when the closing band is in view?
-- Does Contacto's icon-link style (CTA 2) read as a different *kind* of ask than the "Sumate"
-  button (CTA 1/3/4), and does that difference make sense (contact vs. join) or feel inconsistent?
-- Does the whole page's real length (with the photo rail and FAQ band at full size) make the gap
-  between CTA 1 and CTA 2 feel too long, too short, or fine?
+- Does Contacto's plain-row link style (mobile) vs. desktop's boxed-card style feel like an
+  intentional adaptation, or an inconsistency worth reconciling?
 - Anything that felt fine in isolation (048, 049) that reads differently now that it's composed
   with everything else?
