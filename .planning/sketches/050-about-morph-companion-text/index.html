@@ -2,37 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>050 — About morph companion text (Round 4)</title>
+<title>050 — About morph companion text (final)</title>
 <link rel="stylesheet" href="../themes/default.css">
 <style>
-  body { padding-top: 48px; }
-
-  #variant-nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
-    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
-    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap;
-  }
-  .variant-tab {
-    font-family: var(--font-sans); font-size: var(--text-sm);
-    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
-    background: var(--color-surface); color: var(--color-text); cursor: pointer;
-    transition: all var(--duration-fast) var(--ease-standard);
-  }
-  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
-  .variant-tab:hover { border-color: var(--color-primary); }
-
-  .variant { display: none; }
-  .variant.active { display: block; }
-
   .note {
-    max-width: 680px; margin: 0 auto 24px; padding: 12px 16px;
+    max-width: 680px; margin: 24px auto; padding: 12px 16px;
     background: var(--color-accent-bg); color: var(--color-accent-text);
     border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
   }
   .note strong { display: block; margin-bottom: 4px; }
 
   .fake-header {
-    position: fixed; top: 48px; left: 0; right: 0; z-index: 50; height: 65px;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 65px;
     background: transparent; box-shadow: none; pointer-events: none;
     transition: background var(--duration-base) var(--ease-standard),
                 box-shadow var(--duration-base) var(--ease-standard);
@@ -73,23 +54,21 @@
   .back-ludoteca:hover { color: var(--color-primary); border-color: var(--color-border); background: var(--color-surface); }
   .back-ludoteca svg { width: 16px; height: 16px; }
 
-  /* Round 3's grouping fix, kept as-is: mark anchors to an in-flow spacer
-     (first child of .hero), so mark+companion+eyebrow+H1+subtext+CTA
-     center together as one block via the flex column's own gap/centering
-     — not a separate calculation against the section edge. Round 4 only
-     varies the companion's size/spacing (per-variant constants below),
-     nothing structural. */
+  /* Round 3's grouping fix: mark anchors to an in-flow spacer (first child
+     of .hero), so mark+companion+eyebrow+H1+subtext+CTA center together as
+     one block via the flex column's own gap/centering — not a separate
+     calculation against the section edge. */
   .hero {
     min-height: 92vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; gap: 16px; position: relative;
   }
-  .mark-anchor { width: 100%; height: 220px; } /* HERO_SIZE(180) + gap + companion line + a little air, covers all 3 variants */
-  /* Tied to the exact same `docked` boolean that drives the header reveal
-     and the companion-text hide (updateHeaderChrome() toggles all three
-     together) — so the eyebrow disappearing is the SAME crossing-point
-     event, not an incidental effect of it scrolling out of view on its
-     own. Symmetric both directions for free, since `docked` already flips
-     back on scroll-up. */
+  .mark-anchor { width: 100%; height: 220px; } /* HERO_SIZE(180) + gap + companion line + a little air */
+  /* Round 5: tied to the exact same `docked` boolean that drives the header
+     reveal and the companion-text hide (updateHeaderChrome() toggles all
+     three together) — so the eyebrow disappearing is the SAME crossing-
+     point event, not an incidental effect of it scrolling out of view on
+     its own. Symmetric both directions for free, since `docked` already
+     flips back on scroll-up. */
   .hero-eyebrow {
     font-size: var(--text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted);
     transition: opacity var(--duration-slow) var(--ease-standard);
@@ -105,11 +84,11 @@
   }
   .hero-cta:hover { background: var(--color-primary); color: var(--color-primary-content); }
 
-  /* Single morphing mark, reused across tabs — top/left/width/height are
-     set via JS inline styles, never CSS, so there is exactly one source of
-     truth for its position at any moment (sketch 045's proven mechanic,
-     untouched here). Companion text lives INSIDE this element, absolutely
-     positioned below the image so it never affects the box's own size math. */
+  /* Single morphing mark — top/left/width/height set via JS inline styles,
+     never CSS, so there is exactly one source of truth for its position at
+     any moment (sketch 045's proven mechanic, untouched here). Companion
+     text lives INSIDE this element, absolutely positioned below the image
+     so it never affects the box's own size math. */
   #morph-mark {
     position: fixed; z-index: 60; top: 0; left: 0; width: 0; height: 0;
     opacity: 0; transform: scale(0.75);
@@ -133,17 +112,17 @@
 
   /* Companion text — font-weight fixed at 400 always (Bebas Neue is
      self-hosted at weight 400 ONLY in the real app; anything heavier is a
-     silent browser-faked bold the codebase avoids elsewhere). Size,
-     tracking and gap-from-mark are the only things that vary per variant
-     below (JS sets them each frame). */
+     silent browser-faked bold the codebase avoids elsewhere). Picked size:
+     ~25px at rest ("V3 — Confident", round 4), tighter tracking than the
+     earlier rounds. */
   .morph-companion-text {
     display: none;
     position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-    white-space: nowrap; text-align: center;
+    margin-top: 10px; white-space: nowrap; text-align: center;
   }
   .mct-name {
     display: block; font-family: var(--font-display); font-weight: 400;
-    text-transform: uppercase; color: var(--color-text);
+    letter-spacing: 0.02em; text-transform: uppercase; color: var(--color-text);
   }
 
   .scroll-filler { height: 160vh; padding: 48px 24px; }
@@ -161,100 +140,38 @@
 </head>
 <body>
 
-<div id="variant-nav">
-  <button class="variant-tab" onclick="showVariant('v1', event)">V1: Compact (~17px)</button>
-  <button class="variant-tab" onclick="showVariant('v2', event)">V2: Balanced (~21px)</button>
-  <button class="variant-tab active" onclick="showVariant('v3', event)">V3: Confident (~25px) ★</button>
-</div>
+<div class="note"><strong>Final — companion wordmark + coordinated eyebrow hide</strong>
+"PUKLLAY CLUB" travels baked into the isologo mark, scaling/fading with it as it docks into the
+header (real self-hosted Bebas Neue, weight 400). The whole hero — mark, companion, eyebrow, H1,
+subtext, CTA — centers as one grouped block. The eyebrow ("Club de juegos de mesa · Jujuy") hides
+the instant the mark docks and reappears the instant it undocks — same crossing-point event as
+the header reveal and the companion fade, not an incidental scroll effect.</div>
 
-<div id="v1" class="variant">
-  <div class="note"><strong>V1 — Compact</strong>Companion más chico (~17px) y con tracking un poco más suelto — se acerca al tono del eyebrow, quedando claramente como el más "callado" de las tres opciones.</div>
-  <header class="fake-header" data-header>
-    <div class="fake-header-inner">
-      <div class="brand-slot">
-        <span class="brand-text">
-          <span class="brand-name">Pukllay Club</span>
-          <span class="brand-tag">Juegos de mesa modernos</span>
-        </span>
-      </div>
-      <a class="back-ludoteca" href="#">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-        Volver a la ludoteca
-      </a>
+<header class="fake-header" data-header>
+  <div class="fake-header-inner">
+    <div class="brand-slot">
+      <span class="brand-text">
+        <span class="brand-name">Pukllay Club</span>
+        <span class="brand-tag">Juegos de mesa modernos</span>
+      </span>
     </div>
-  </header>
-  <section class="hero" data-hero>
-    <div class="mark-anchor" data-anchor aria-hidden="true"></div>
-    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
-    <h1>Conectá jugando</h1>
-    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
-    <a class="hero-cta" href="#">Sumate</a>
-  </section>
-  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
-  <div class="scroll-filler">
-    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
-    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
+    <a class="back-ludoteca" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      Volver a la ludoteca
+    </a>
   </div>
-</div>
-
-<div id="v2" class="variant">
-  <div class="note"><strong>V2 — Balanced</strong>El tamaño y tracking de la ronda 3 (~21px), acá como punto de referencia intermedio entre V1 y V3.</div>
-  <header class="fake-header" data-header>
-    <div class="fake-header-inner">
-      <div class="brand-slot">
-        <span class="brand-text">
-          <span class="brand-name">Pukllay Club</span>
-          <span class="brand-tag">Juegos de mesa modernos</span>
-        </span>
-      </div>
-      <a class="back-ludoteca" href="#">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-        Volver a la ludoteca
-      </a>
-    </div>
-  </header>
-  <section class="hero" data-hero>
-    <div class="mark-anchor" data-anchor aria-hidden="true"></div>
-    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
-    <h1>Conectá jugando</h1>
-    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
-    <a class="hero-cta" href="#">Sumate</a>
-  </section>
-  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
-  <div class="scroll-filler">
-    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
-    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
-  </div>
-</div>
-
-<div id="v3" class="variant active">
-  <div class="note"><strong>V3 — Confident ★ Picked</strong>Companion más grande (~25px) y con tracking más cerrado — más presencia, pero todavía por debajo de la ronda 2 original (27px) que se sentía en competencia directa con el H1. También: el eyebrow "Club de juegos de mesa · Jujuy" ahora desaparece/reaparece exactamente cuando el mark se acopla/desacopla del header (mismo evento de cruce, no un scroll incidental).</div>
-  <header class="fake-header" data-header>
-    <div class="fake-header-inner">
-      <div class="brand-slot">
-        <span class="brand-text">
-          <span class="brand-name">Pukllay Club</span>
-          <span class="brand-tag">Juegos de mesa modernos</span>
-        </span>
-      </div>
-      <a class="back-ludoteca" href="#">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-        Volver a la ludoteca
-      </a>
-    </div>
-  </header>
-  <section class="hero" data-hero>
-    <div class="mark-anchor" data-anchor aria-hidden="true"></div>
-    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
-    <h1>Conectá jugando</h1>
-    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
-    <a class="hero-cta" href="#">Sumate</a>
-  </section>
-  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
-  <div class="scroll-filler">
-    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
-    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
-  </div>
+</header>
+<section class="hero" data-hero>
+  <div class="mark-anchor" data-anchor aria-hidden="true"></div>
+  <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+  <h1>Conectá jugando</h1>
+  <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+  <a class="hero-cta" href="#">Sumate</a>
+</section>
+<div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
+<div class="scroll-filler">
+  <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
+  <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
 </div>
 
 <div id="morph-mark">
@@ -276,28 +193,21 @@
 <script>
 const HERO_SIZE = 180;
 const DOCK_SIZE = 32;
+const NAME_SCALE = 0.135; // -> ~25px at rest ("V3 — Confident", picked)
 
-// Only thing that differs between V1/V2/V3 — everything structural (the
-// anchor-based grouping fix) is shared and untouched.
-const COMPANION_STYLE = {
-  v1: { nameScale: 0.095, nameTracking: '0.05em', marginTop: 6 },  // ~17px
-  v2: { nameScale: 0.115, nameTracking: '0.03em', marginTop: 8 },  // ~21px, round 3's pick
-  v3: { nameScale: 0.135, nameTracking: '0.02em', marginTop: 10 }, // ~25px
-};
-
-let currentId = 'v3';
 let docked = false;
 let hasEntered = false;
 let entranceTimer = null;
 let ticking = false;
-let restTop = null; // captured fresh each activation — the mark's natural top at scroll=0
+let restTop = null; // captured fresh on load — the mark's natural top at scroll=0
 
 const markBox = document.getElementById('morph-mark');
 const mctName = markBox.querySelector('.mct-name');
 const mctWrap = markBox.querySelector('.morph-companion-text');
+const eyebrow = document.querySelector('.hero-eyebrow');
 
-function anchorEl() { return document.querySelector('#' + currentId + ' [data-anchor]'); }
-function headerEl() { return document.querySelector('#' + currentId + ' [data-header]'); }
+function anchorEl() { return document.querySelector('[data-anchor]'); }
+function headerEl() { return document.querySelector('[data-header]'); }
 
 // The anchor is ordinary in-flow content and the flex column's first
 // child, so it already tracks scroll 1:1 AND shares the same
@@ -334,29 +244,23 @@ function computeProgress(natural, dock) {
   return Math.min(1, Math.max(0, traveled / totalTravel));
 }
 
-function eyebrowEl() { return document.querySelector('#' + currentId + ' .hero-eyebrow'); }
-
 // Single source of truth for everything gated on the dock crossing: the
 // header reveal, the eyebrow hide, AND (in updateCompanion) the companion
 // text hide all read the same `docked` boolean, so they change at the
 // exact same instant in both directions — dock hides eyebrow+companion
 // and reveals the header; undock is the exact reverse.
 function updateHeaderChrome() {
-  document.querySelectorAll('.fake-header').forEach((h) => {
-    h.classList.remove('is-revealed', 'is-tinted', 'is-docked');
-  });
-  if (docked) headerEl().classList.add('is-revealed', 'is-tinted', 'is-docked');
-  eyebrowEl().classList.toggle('is-docked', docked);
+  const header = headerEl();
+  header.classList.remove('is-revealed', 'is-tinted', 'is-docked');
+  if (docked) header.classList.add('is-revealed', 'is-tinted', 'is-docked');
+  eyebrow.classList.toggle('is-docked', docked);
 }
 
 function updateCompanion(rect, progress) {
-  const style = COMPANION_STYLE[currentId];
   const show = !docked;
   mctWrap.style.display = show ? 'block' : 'none';
   if (!show) return;
-  mctWrap.style.marginTop = style.marginTop + 'px';
-  mctName.style.fontSize = Math.max(7, rect.size * style.nameScale) + 'px';
-  mctName.style.letterSpacing = style.nameTracking;
+  mctName.style.fontSize = Math.max(7, rect.size * NAME_SCALE) + 'px';
   mctName.style.opacity = String(Math.max(0, 1 - progress * 1.4));
 }
 
@@ -378,9 +282,8 @@ function syncPosition() {
   // while docked and still shouldDock, the mark just stays pinned at dock — nothing to update
 }
 
-function activateVariant(id) {
+function init() {
   clearTimeout(entranceTimer);
-  currentId = id;
   markBox.classList.remove('is-entered', 'is-first-play');
   hasEntered = false;
   ticking = false;
@@ -407,21 +310,11 @@ function activateVariant(id) {
   }
 }
 
-function showVariant(id, evt) {
-  document.querySelectorAll('.variant').forEach((v) => v.classList.remove('active'));
-  document.querySelectorAll('.variant-tab').forEach((t) => t.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if (evt) evt.target.classList.add('active');
-  activateVariant(id);
-}
-
 function setViewport(px) {
-  document.querySelectorAll('.variant').forEach((v) => {
-    v.style.maxWidth = px ? px + 'px' : 'none';
-    v.style.margin = px ? '0 auto' : '0';
-    v.style.border = px ? '1px solid var(--color-border)' : 'none';
-  });
-  activateVariant(currentId);
+  document.body.style.maxWidth = px ? px + 'px' : 'none';
+  document.body.style.margin = px ? '0 auto' : '0';
+  document.body.style.border = px ? '1px solid var(--color-border)' : 'none';
+  init();
 }
 
 window.addEventListener('scroll', () => {
@@ -439,7 +332,7 @@ window.addEventListener('resize', () => {
   updateCompanion(rect, docked ? 1 : computeProgress(naturalRect(), dockRect()));
 });
 
-activateVariant('v3');
+init();
 </script>
 
 </body>

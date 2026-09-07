@@ -2,7 +2,7 @@
 sketch: 050
 name: about-morph-companion-text
 question: "How should a 'PUKLLAY CLUB' companion wordmark behave alongside the About page's floating isologo during its scroll-morph into the header, so the mark is never text-less?"
-winner: null
+winner: "Baked-in companion (~25px, 'V3 — Confident'), mark anchored in-flow with the hero content, eyebrow hide/reveal tied to the same dock-crossing state"
 tags: [about, header, motion, isologo, brand-name, wordmark]
 ---
 
@@ -111,6 +111,17 @@ companion out) change at the identical crossing-point instant, symmetric in both
 directions for free (since `docked` already flips back on scroll-up).
 
 V3 is the default/active tab now (the round 4 pick); V1/V2 remain navigable for reference.
+
+## Final
+Confirmed working (2026-09-07). `index.html` collapsed to the single winning composition —
+V1/V2 and the tab bar removed, since there's nothing left to switch between. Winner:
+- Companion "PUKLLAY CLUB" baked into the isologo's own box, ~25px at rest, tight tracking,
+  scaling/fading in lockstep with the mark as it docks (round 1/2/4's picks).
+- Mark anchored to an in-flow spacer so mark+companion+eyebrow+H1+subtext+CTA center as one
+  block (round 3's grouping fix).
+- Hero eyebrow hides the instant the mark docks and reappears the instant it undocks — reads the
+  same `docked` boolean as the header reveal and companion fade, so all three change at the exact
+  same crossing-point instant in both scroll directions (round 5).
 
 ## What to Look For
 - Does the eyebrow's disappearance read as *the same event* as the mark docking — one coordinated
