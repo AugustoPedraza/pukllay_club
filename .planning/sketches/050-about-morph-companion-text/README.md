@@ -58,19 +58,41 @@ findings while grounding that request:
 
 Two refinements of B, replacing A/B/C in `index.html`:
 - **B1: One line, larger + tighter** — same single-line "PUKLLAY CLUB", bumped size (~30% larger
-  relative to the mark) and tighter letter-spacing for a denser, more confident read.
+  relative to the mark) and tighter letter-spacing for a denser, more confident read. **Picked.**
 - **B2: Two-line lockup (name + tagline)** — reproduces the header's own real lockup shape (name
-  atop a smaller muted tagline) instead of a lone line — more visual mass as a block, matching how
-  the header itself achieves presence without touching font-weight.
+  atop a smaller muted tagline) instead of a lone line. Not picked — retired below.
+
+## Round 3 — balancing the whole hero, not just the companion
+Feedback on B1: needs "better balance on all the fonts and lines." Clarified scope: rebalance the
+companion text together with the hero's eyebrow, H1, and subtext as one coherent stack, not the
+floating label in isolation.
+
+Grounding found the real cause wasn't font size in isolation — it was **grouping**. The mark and
+companion were positioned against the whole hero *section's* top edge
+(`heroEl().getBoundingClientRect()`), while the eyebrow/H1/subtext/CTA centered separately, lower,
+in a 92vh section. That left an arbitrary, viewport-dependent gap between the floating brand bit
+and the actual message — two disconnected clusters, not one composition.
+
+Fixed the way the real About page does it (`about_live.ex`'s `data-morph-anchor` pattern): an
+in-flow spacer as the first child of `.hero`, so the mark's "natural" position now tracks that
+spacer instead of the section edge. The flex column's existing `gap`/`justify-content: center`
+then centers mark + companion + eyebrow + H1 + subtext + CTA as **one** block with one consistent
+rhythm.
+
+On top of that structural fix, the companion text itself was sized down from round 2's 27px to
+~21px, so the vertical stack reads as a deliberate scale — companion (21px) → eyebrow (12px,
+muted) → H1 (40–72px, the one dominant element) → subtext (18px, muted) — rather than the
+companion rivaling the H1 for "biggest text" attention. B2 is dropped; only the refined single
+composition remains in `index.html` (no tab bar — nothing left to switch between).
 
 ## What to Look For
-- With the real font now loading, does the companion text finally read as "official" — same
-  weight/character as the header's own wordmark once it docks?
-- B1 vs B2: does the single larger line feel appropriately weighted, or does the two-line lockup's
-  extra mass read better against the isologo image (and does it still fit comfortably at 375px)?
-- Does the companion text ever compete with, or get orphaned from, the hero's own eyebrow/H1
-  copy directly below it?
-- Once the header docks and reveals its own real "PUKLLAY CLUB" wordmark, does the companion
-  text's fade-out feel like a handoff rather than a competing duplicate?
-- Check at 375px (mobile) — does either variant crowd the hero content or clip at the viewport
-  edge?
+- Does the whole hero now read as one composed group at rest, instead of a floating mark with a
+  stray gap before the eyebrow/H1 block?
+- Does the companion text's size sit correctly as a supporting label (next to the eyebrow) rather
+  than competing with the H1?
+- With the real font loading, does "PUKLLAY CLUB" finally read as the actual brand typeface —
+  same weight/character as the header's own wordmark once it docks?
+- Once the header docks and reveals its own real wordmark, does the companion text's fade-out
+  feel like a handoff rather than a competing duplicate?
+- Check at 375px (mobile) — does the anchor's reserved height feel right, or does it leave too
+  much/too little air before the eyebrow?
