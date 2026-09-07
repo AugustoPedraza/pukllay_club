@@ -203,20 +203,33 @@
      on-brand (soft tint kept), just compact enough that all three always
      fit one row down to the narrowest real phone width.
 
-     Round 8 fix (feedback: "on mobile I want the icons well distributed
-     on all the width, not aligned to left") — space-between spreads the
-     three circles edge-to-edge across the card's full width instead of
-     clustering flush-left with the remainder as dead space. `width: 100%`
-     is explicit (not just relying on the parent's default `align-items:
-     stretch`) so this rule reads correctly on its own. */
+     Round 9 (feedback: "for social row make it centered instead of
+     'justify'") — round 8's `space-between` anchored the two end chips to
+     the card's edges, which read as "justified" rather than a considered
+     group. Centered instead, with a deliberately generous gap (20px, up
+     from the row's own 10px) so the group still reads as spread across
+     the width rather than huddled — just anchored to the middle, not the
+     edges. */
   @media (max-width: 639px) {
     .cl-label { display: none; }
     .cl-soft { padding: 13px; border-radius: 50%; gap: 0; }
-    .contact-links { width: 100%; justify-content: space-between; }
+    .contact-links { width: 100%; justify-content: center; gap: 20px; }
   }
 
-  .closing-band { text-align: center; }
-  .closing-band .cta-row { display: flex; justify-content: center; margin: 20px 0; }
+  /* Round 9 (feedback: Cierre "needs a full re-do to have consistent
+     rhythm all its content for mobile and desktop"). Old version mixed
+     two unrelated spacing sources — .band h2's own shared 12px
+     bottom-margin, plus .cta-row's ad hoc 20px above/below — that didn't
+     relate to any scale and didn't match how the rest of the page spaces
+     things (hero uses one flex gap for its whole stack; this now does
+     the same). One `gap: 24px` on the band-inner controls every internal
+     boundary (heading -> button -> meta), overriding the shared h2
+     margin so gap is the single source of truth. Same rule works
+     unmodified at both viewports — no separate mobile override needed,
+     since the fix was the rhythm SYSTEM, not a size that differs by
+     width. */
+  .closing-band .band-inner { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+  .closing-band h2 { margin: 0; }
   .closing-meta { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); }
   .closing-meta a { color: inherit; text-decoration: underline; }
 
@@ -350,9 +363,7 @@ sketches 046/048 and isn't the point here.</div>
   <span class="cta-flag">CTA 3 · Cierre</span>
   <div class="band-inner">
     <h2>Nos vemos el sábado</h2>
-    <div class="cta-row">
-      <a class="btn-sumate" href="#">Sumate</a>
-    </div>
+    <a class="btn-sumate" href="#">Sumate</a>
     <p class="closing-meta">Pukllay Club · San Salvador de Jujuy, Argentina · <a href="#">Instagram</a></p>
   </div>
 </section>

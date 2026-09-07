@@ -179,6 +179,27 @@ Two fixes from feedback:
 Both verified live: desktop shows two visually matching plain columns; the 375px iframe shows all
 three icons spread full-width with even gaps.
 
+## Round 9 — center the social row, and a full rhythm re-do for Cierre
+Two fixes from feedback:
+1. **"For social row make it centered instead of 'justify'"** — round 8's `space-between`
+   anchored the two end chips to the card's edges, which read as "justified" text rather than a
+   considered group. Now `justify-content: center` with a deliberately generous `gap: 20px` (up
+   from the row's own 10px), so the three icons still read as spread across the width, just
+   anchored to the middle instead of the edges.
+2. **Cierre "needs a full re-do to have consistent rhythm ... for mobile and desktop"** — the old
+   version mixed two unrelated spacing sources: `.band h2`'s own shared 12px bottom-margin, plus a
+   `.cta-row` wrapper's ad hoc `margin: 20px 0`. Neither related to any scale, and neither matched
+   how the rest of the page spaces things (the hero uses one flex `gap` for its whole stack).
+   Rebuilt the same way: `.closing-band .band-inner` is now a flex column with a single
+   `gap: 24px` controlling every internal boundary (heading → button → meta line), with the
+   shared h2 margin explicitly zeroed so gap is the only source of truth. The redundant
+   `.cta-row` wrapper is gone — the button is a direct flex child. One rule, unmodified at both
+   viewports, since the actual fix was the rhythm *system*, not a size that needs to differ by
+   width.
+
+Both verified live: mobile shows the three social icons centered with even spacing; Cierre reads
+with identical, deliberate spacing at both 375px and full desktop width.
+
 ## What to Look For
 - Does the map feel more meaningful sitting with Juntadas' location description than it did in
   Contacto?
