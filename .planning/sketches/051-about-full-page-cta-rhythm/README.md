@@ -149,7 +149,24 @@ each link (added regardless of viewport) keeps the accessible name stable whethe
 label is showing or not. Verified live at 375px: three circular chips sit comfortably in one row
 with room to spare, no wrap.
 
+## Round 7 — the map belongs with Juntadas, not Contacto
+Feedback: "following the rhythm, the map should be on Juntadas, not Contacto, to make it more
+meaningful." Real reasoning: Juntadas names the real-world meeting place ("Club de Emprendedores,
+San Salvador de Jujuy"); the map showing that location is meaningful content *there*, whereas
+Contacto is about reaching out (WhatsApp/Instagram/Facebook), not about where the club physically
+is. Moved the `.map-thumb` element from inside `.contact-card` to the end of `#juntadas`. Juntadas
+has no flex container of its own (Contacto's card supplied the gap between children for free via
+`gap: 16px`), so an explicit `margin-top: 16px` on `#juntadas .map-thumb` does that job instead.
+Contacto is now lighter still — just the intro paragraph and the three chips, no map — which
+continues the same direction rounds 2/3/4/6 already pushed it toward. Verified live: clean spacing
+in both places. **Note:** this reopens sketch 048's original decision (map lived in Contacto) —
+flagged for developer review, not a silent override.
+
 ## What to Look For
+- Does the map feel more meaningful sitting with Juntadas' location description than it did in
+  Contacto?
+- Is Contacto still clearly a distinct, useful section on its own now that it's just three chips
+  and a sentence — or does it feel too thin?
 - Do the three soft chips (WhatsApp/Instagram/Facebook) read as one coherent row on desktop, or
   does adding a third start to feel crowded?
 - On mobile, do the icon-only circular chips still clearly read as WhatsApp/Instagram/Facebook

@@ -168,6 +168,15 @@
     transition: filter var(--duration-fast) var(--ease-standard);
   }
   .cl-soft:hover { filter: brightness(1.08); }
+  /* Round 7 (feedback: "following the rhythm, the map should be on
+     Juntadas, not Contacto, to make it more meaningful") — moved from
+     inside .contact-card to plain content here. Juntadas has no flex
+     container of its own (unlike .contact-card's gap:16px, which used to
+     provide the space above the map for free), so margin-top does that
+     job explicitly instead. This reopens sketch 048's original placement
+     (map lived in Contacto) — flagged for developer review, not silently
+     overriding a shipped decision. */
+  #juntadas .map-thumb { margin-top: 16px; }
   .map-thumb {
     aspect-ratio: 2 / 1; min-height: 7rem; border-radius: var(--radius-lg); position: relative; overflow: hidden;
     background: repeating-linear-gradient(45deg, var(--color-surface-2), var(--color-surface-2) 10px, var(--color-surface) 10px, var(--color-surface) 20px);
@@ -238,10 +247,12 @@
 <div class="note"><strong>Composed view — all 4 CTA touchpoints, real spacing</strong>
 Real content-band padding (72px/section) and 1280px content width, same as production. Each CTA
 touchpoint is flagged with a small pill so they're easy to spot while scrolling: the hero's
-Sumate, the Contacto card's WhatsApp/Instagram/Maps links, the closing band's Sumate, and the
+Sumate, the Contacto card's WhatsApp/Instagram/Facebook links, the closing band's Sumate, and the
 mobile-only sticky Sumate bar (toggle 📱 below — same 480px threshold as the real
-`.pk-about-cta-bar` media query). Photo rail and the live Maps embed are simplified placeholders;
-their own motion/behavior was already validated in sketches 046/048 and isn't the point here.</div>
+`.pk-about-cta-bar` media query). The Maps thumbnail lives in Juntadas now (round 7 — it names the
+real-world location, so the map belongs there, not with the reach-out links). Photo rail and the
+live Maps embed are simplified placeholders; their own motion/behavior was already validated in
+sketches 046/048 and isn't the point here.</div>
 
 <header class="fake-header" data-header>
   <div class="fake-header-inner">
@@ -307,6 +318,10 @@ their own motion/behavior was already validated in sketches 046/048 and isn't th
     <div id="juntadas">
       <h2>Juntadas</h2>
       <p>Nos juntamos los sábados en el Club de Emprendedores, San Salvador de Jujuy. Los juegos los llevamos nosotros; vos traé las ganas.</p>
+      <a class="map-thumb" href="#" target="_blank" rel="noopener noreferrer">
+        Mapa (placeholder — el real es un embed vivo de Google, sketch 048)
+        <span class="map-thumb-label">Cómo llegar ↗</span>
+      </a>
     </div>
     <div id="contacto" class="contact-card cta-marker">
       <span class="cta-flag">CTA 2 · Contacto</span>
@@ -326,10 +341,6 @@ their own motion/behavior was already validated in sketches 046/048 and isn't th
           <span class="cl-label">Facebook</span>
         </a>
       </div>
-      <a class="map-thumb" href="#" target="_blank" rel="noopener noreferrer">
-        Mapa (placeholder — el real es un embed vivo de Google, sketch 048)
-        <span class="map-thumb-label">Cómo llegar ↗</span>
-      </a>
     </div>
   </div>
 </section>
