@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 01.4
-current_phase_name: ui-polish-pass-for-about-page-sketches
-status: executing
-stopped_at: "Completed 01.4-10-PLAN.md (G-01.4-5 gap closure: Maps attribution crop fix + committed visual probe)"
-last_updated: "2026-09-06T01:26:17.296Z"
-last_activity: 2026-09-05
-last_activity_desc: Phase 01.4 execution started
-state_head: d74843d172af71d75509aeee279abed1106bbb8e
+current_phase: 02
+current_phase_name: Natural-Language Spanish Search + Auth
+status: planning
+stopped_at: Phase 01.4 complete, ready to plan Phase 02
+last_updated: "2026-09-07T19:05:24.168Z"
+last_activity: 2026-09-07
+last_activity_desc: Phase 01.4 complete, transitioned to Phase 02
+state_head: 68d16b58caeccc931c1a03f7cd0a4ad90a46bc43
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 73
-  completed_plans: 72
+  completed_plans: 73
 milestone_name: milestone
 ---
 
@@ -23,26 +23,26 @@ Total Phases: 7
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-01)
+See: .planning/PROJECT.md (updated 2026-09-07)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.4 — UI polish pass for About page sketches (INSERTED)
+**Current focus:** Phase 02 — Natural-Language Spanish Search + Auth
 
 ## Current Position
 
-Phase: 01.4 (ui-polish-pass-for-about-page-sketches) — READY TO EXECUTE
-Plan: 2 of 11
-Status: Ready to execute
-Last activity: 2026-09-05 — Phase 01.4 execution started
+Phase: 02 — Natural-Language Spanish Search + Auth
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-07 — Phase 01.4 complete, transitioned to Phase 02
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
+Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 plans (Phase 02 not yet planned)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 65
+- Total plans completed: 76
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | 01.2 | 27 | - | - |
 | 01.3 | 12 | - | - |
 | 01.3.1 | 2 | - | - |
+| 01.4 | 11 | - | - |
 
 **Recent Trend:**
 
@@ -196,6 +197,8 @@ Recent decisions affecting current work:
 - [Phase 01.4]: 01.4-09: light/dark theme-variant <img> pair wired for the Maps thumbnail (mirrors brand_logo/1's isologo pattern, .pk-about-map-thumb img's display:block removed to avoid the 01.4-05 cascade hazard); real dark-mode capture NOT achieved (3 avenues exhausted: Maps web UI has no dark toggle, Chrome force-dark only recolors overlay text not tiles, OS dark mode leaves tiles light) — dark asset ships as an interim byte-identical copy of the light asset, tracked as an open stub (WINDOWS.md #23), deferring root cause (C) to a future pass
 - [Phase 01.4]: 01.4-10: G-01.4-5 closed — .pk-about-map-thumb's aspect-ratio now derives from --pk-map-thumb-w/-h (the asset's real 1656x804 dimensions) instead of a stale 21:9 literal that was cropping Google's Maps attribution off every render; ExUnit gate reads real JPEG dimensions off disk to prevent recurrence
 - [Phase 01.4]: 01.4-10: shipped test/visual/ — a zero-dependency Node+CDP+PIL visual probe that renders the live About page in real headless Chrome and independently confirms the crop geometry against painted pixels; deliberately excluded from mix quality/CI (needs a real browser + booted server), developer-invoked only
+- [Phase 01.4]: 01.4-12: G-01.4-4/G-01.4-5 closed for good — static Maps screenshot pair (light+dark, plan 01.4-09/10) retired entirely in favor of a live keyless Google Maps embed iframe (D-11..D-15); new CSP `frame-src` directive derived from `ClubLinks.maps_embed_origin/0` (first third-party frame origin in the project), `sandbox="allow-scripts allow-same-origin"`, `pointer-events:none` + overlay click-out link, dark-theme `invert()` filter human-approved as-is (D-13); plan 01.4-11 (figcaption-legibility approach) superseded/discarded mid-flight once the embed decision reversed its premise
+- [Phase 01.4, 2026-09-07]: Phase closed after 11/11 plans (plan 01.4-11 superseded/discarded by 01.4-12, cleanly absorbed) and a 4-gap UAT closure arc (G-01.4-1..4: isologo blink/spacing/motion, Maps thumbnail coverage → live embed). 7/7 UAT checkpoints passed; 01.4-VERIFICATION.md round 3: 11/12 truths verified directly + isologo motion human-confirmed in this session's final checkpoint. Security review: 46 threats registered across all 12 plans' own threat models, threats_open: 0 (01.4-SECURITY.md, ASVS L1 short-circuit — ASVS L1 grep/read verification, no auditor subagent needed since register_authored_at_plan_time was true for every plan and all mitigations were directly confirmed in code)
 
 ### Pending Todos
 
@@ -302,6 +305,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-05T18:16:06.052Z
-Stopped at: Completed 01.4-10-PLAN.md (G-01.4-5 gap closure: Maps attribution crop fix + committed visual probe)
+Last session: 2026-09-07T19:05:24.168Z
+Stopped at: Phase 01.4 complete, ready to plan Phase 02
 Resume file: None
