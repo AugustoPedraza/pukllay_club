@@ -187,10 +187,22 @@
      than a second heavy CTA card sitting directly above Cierre's Sumate.
      The Maps thumbnail itself is untouched — it's real functional content
      (an image link), not decorative box chrome, and wasn't what made the
-     section feel heavy. Round 3's icon chips (above) already work at any
-     width unmodified, so this block no longer needs its own row override. */
+     section feel heavy.
+
+     Round 6 fix (feedback: "be sure the 3 buttons fit on the same row"):
+     at this same single-column width, the card's available width is only
+     the viewport minus its 24px gutters on each side — measured, 3 fully-
+     labeled soft chips (WhatsApp/Instagram/Facebook, ~123/128/116px each
+     + gaps) need ~387px, more than a 375px phone has room for even
+     BEFORE the gutters, so they'd wrap to two lines. Rather than shrink
+     the label text until it clips, drop it entirely at this width and
+     let the chip go icon-only + circular — same shape/hover mechanic,
+     still on-brand (soft tint kept), just compact enough that all three
+     always fit one row down to the narrowest real phone width. */
   @media (max-width: 639px) {
     .contact-card { background: none; padding: 0; border-radius: 0; }
+    .cl-label { display: none; }
+    .cl-soft { padding: 13px; border-radius: 50%; gap: 0; }
   }
 
   .closing-band { text-align: center; }
@@ -301,17 +313,17 @@ their own motion/behavior was already validated in sketches 046/048 and isn't th
       <h2>Contacto</h2>
       <p>Escribinos por el grupo de WhatsApp, por Instagram o por Facebook — respondemos ahí mismo.</p>
       <div class="contact-links">
-        <a class="cl-soft" href="#" target="_blank" rel="noopener noreferrer">
+        <a class="cl-soft" href="#" target="_blank" rel="noopener noreferrer" aria-label="Grupo de WhatsApp">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"/></svg>
-          WhatsApp
+          <span class="cl-label">WhatsApp</span>
         </a>
-        <a class="cl-soft" href="#" target="_blank" rel="noopener noreferrer">
+        <a class="cl-soft" href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none"/></svg>
-          Instagram
+          <span class="cl-label">Instagram</span>
         </a>
-        <a class="cl-soft" href="https://facebook.com/PukllayClub" target="_blank" rel="noopener noreferrer">
+        <a class="cl-soft" href="https://facebook.com/PukllayClub" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.5 8.5h2V5.5h-2c-1.93 0-3.5 1.57-3.5 3.5v2H9v3h2v6.5h3V14h2.2l.5-3H14v-1.5c0-.55.45-1 1-1Z"/></svg>
-          Facebook
+          <span class="cl-label">Facebook</span>
         </a>
       </div>
       <a class="map-thumb" href="#" target="_blank" rel="noopener noreferrer">

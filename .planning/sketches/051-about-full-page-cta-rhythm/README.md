@@ -134,13 +134,31 @@ site just never included it (`icons={[:whatsapp, :instagram]}`). Added a third `
 using the real Facebook glyph path (same SVG the header/footer's own social icons use), and
 updated the intro copy to name all three channels. Verified live — three chips wrap cleanly.
 
+## Round 6 — 3 chips must fit one row on mobile
+Feedback: make sure the 3 buttons fit on the same row on mobile, not wrap. Measured the real
+constraint: below 640px the Contacto card has no side-by-side breathing room (round 2's fix
+already strips its own padding), so its available width is just the viewport minus the page's
+24px gutters each side — at 375px that's ~327px. Three fully-labeled soft chips
+(WhatsApp/Instagram/Facebook, ~123/128/116px each plus gaps) need ~387px — more than fits, so they
+would wrap to two lines.
+
+Rather than shrink the label text until it clips, the label drops entirely at this width (inside
+the same `@media (max-width: 639px)` block round 2 already added) and the chip becomes icon-only
++ circular — same soft-tint background and hover mechanic as B, just compact. `aria-label` on
+each link (added regardless of viewport) keeps the accessible name stable whether the visible
+label is showing or not. Verified live at 375px: three circular chips sit comfortably in one row
+with room to spare, no wrap.
+
 ## What to Look For
-- Do the three soft chips (WhatsApp/Instagram/Facebook) read as one coherent row, or does adding
-  a third start to feel crowded?
+- Do the three soft chips (WhatsApp/Instagram/Facebook) read as one coherent row on desktop, or
+  does adding a third start to feel crowded?
+- On mobile, do the icon-only circular chips still clearly read as WhatsApp/Instagram/Facebook
+  (relying on icon recognition alone), or does dropping the label lose too much clarity?
 - Do CTA 1 (hero) → CTA 2 (Contacto) → CTA 3 (cierre) → CTA 4 (mobile sticky) feel like a
   deliberate, escalating rhythm down the page, on both desktop and mobile?
 - On mobile, does the sticky bar (CTA 4) ever visually compete with CTA 3 sitting right above it
   when the closing band is in view?
 - If this ships: the real `Contacto` call site (`about_live.ex`) would need
   `icons={[:whatsapp, :instagram, :facebook]}` added, and the real CSS would need this soft-chip
-  treatment built as an actual class (this sketch's `.cl-soft` has no real-app equivalent yet).
+  treatment (plus its mobile icon-only variant) built as actual classes — no real-app equivalent
+  exists yet.
