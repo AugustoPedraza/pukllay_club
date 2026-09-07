@@ -2,18 +2,37 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>050 — About morph companion text (Round 3)</title>
+<title>050 — About morph companion text (Round 4)</title>
 <link rel="stylesheet" href="../themes/default.css">
 <style>
+  body { padding-top: 48px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap;
+  }
+  .variant-tab {
+    font-family: var(--font-sans); font-size: var(--text-sm);
+    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
+    background: var(--color-surface); color: var(--color-text); cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  .variant-tab:hover { border-color: var(--color-primary); }
+
+  .variant { display: none; }
+  .variant.active { display: block; }
+
   .note {
-    max-width: 680px; margin: 24px auto; padding: 12px 16px;
+    max-width: 680px; margin: 0 auto 24px; padding: 12px 16px;
     background: var(--color-accent-bg); color: var(--color-accent-text);
     border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
   }
   .note strong { display: block; margin-bottom: 4px; }
 
   .fake-header {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 65px;
+    position: fixed; top: 48px; left: 0; right: 0; z-index: 50; height: 65px;
     background: transparent; box-shadow: none; pointer-events: none;
     transition: background var(--duration-base) var(--ease-standard),
                 box-shadow var(--duration-base) var(--ease-standard);
@@ -54,22 +73,17 @@
   .back-ludoteca:hover { color: var(--color-primary); border-color: var(--color-border); background: var(--color-surface); }
   .back-ludoteca svg { width: 16px; height: 16px; }
 
-  /* Round 3's real fix: mark + companion used to be positioned against the
-     WHOLE hero section's top edge (heroEl().getBoundingClientRect()), while
-     the eyebrow/H1/subtext/CTA were a separate cluster centered lower in a
-     92vh section — leaving an arbitrary, viewport-dependent gap between the
-     floating brand bit and the actual message. That's the imbalance: not a
-     font-size problem, a grouping problem. Fixed the way production's own
-     about_live.ex does it — a single in-flow anchor spacer as the FIRST
-     child of .hero, so the mark's "natural" position tracks THIS element,
-     and the flex column's existing gap/justify-content:center now centers
-     the mark+companion+eyebrow+H1+subtext+CTA as ONE block with one
-     consistent rhythm, not two disconnected clusters. */
+  /* Round 3's grouping fix, kept as-is: mark anchors to an in-flow spacer
+     (first child of .hero), so mark+companion+eyebrow+H1+subtext+CTA
+     center together as one block via the flex column's own gap/centering
+     — not a separate calculation against the section edge. Round 4 only
+     varies the companion's size/spacing (per-variant constants below),
+     nothing structural. */
   .hero {
     min-height: 92vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; gap: 16px; position: relative;
   }
-  .mark-anchor { width: 100%; height: 220px; } /* HERO_SIZE(180) + gap(8) + companion line(~26) + a little air */
+  .mark-anchor { width: 100%; height: 220px; } /* HERO_SIZE(180) + gap + companion line + a little air, covers all 3 variants */
   .hero-eyebrow { font-size: var(--text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted); }
   .hero h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 8vw, 4.5rem); margin: 0; letter-spacing: 0.02em; }
   .hero p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 32rem; margin: 0; }
@@ -81,11 +95,11 @@
   }
   .hero-cta:hover { background: var(--color-primary); color: var(--color-primary-content); }
 
-  /* Single morphing mark — top/left/width/height are set via JS inline
-     styles, never CSS, so there is exactly one source of truth for its
-     position at any moment (sketch 045's proven mechanic, untouched here).
-     Companion text lives INSIDE this element, absolutely positioned below
-     the image so it never affects the box's own size math. */
+  /* Single morphing mark, reused across tabs — top/left/width/height are
+     set via JS inline styles, never CSS, so there is exactly one source of
+     truth for its position at any moment (sketch 045's proven mechanic,
+     untouched here). Companion text lives INSIDE this element, absolutely
+     positioned below the image so it never affects the box's own size math. */
   #morph-mark {
     position: fixed; z-index: 60; top: 0; left: 0; width: 0; height: 0;
     opacity: 0; transform: scale(0.75);
@@ -107,22 +121,19 @@
   #morph-mark.no-anim { transition: none !important; }
   #morph-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
-  /* Companion text (round 1's picked "baked-in" direction, round 2's real
-     Bebas Neue file + weight-400-only constraint). Round 3: size pulled
-     down from round 2's 27px toward 21px so the stack down the page reads
-     as one deliberate scale — companion(21) -> eyebrow(12, muted) ->
-     H1(40-72, the one dominant element) -> subtext(18, muted) — instead of
-     companion competing head-on with H1 for "biggest text" attention.
-     margin-top gives a tight, deliberate gap off the mark, matching how
-     tightly the header's own name+tagline stack (line-height:1, no gap). */
+  /* Companion text — font-weight fixed at 400 always (Bebas Neue is
+     self-hosted at weight 400 ONLY in the real app; anything heavier is a
+     silent browser-faked bold the codebase avoids elsewhere). Size,
+     tracking and gap-from-mark are the only things that vary per variant
+     below (JS sets them each frame). */
   .morph-companion-text {
     display: none;
     position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-    margin-top: 8px; white-space: nowrap; text-align: center;
+    white-space: nowrap; text-align: center;
   }
   .mct-name {
     display: block; font-family: var(--font-display); font-weight: 400;
-    letter-spacing: 0.03em; text-transform: uppercase; color: var(--color-text);
+    text-transform: uppercase; color: var(--color-text);
   }
 
   .scroll-filler { height: 160vh; padding: 48px 24px; }
@@ -140,39 +151,100 @@
 </head>
 <body>
 
-<div class="note"><strong>Round 3 — balancing the whole hero, not just the companion label</strong>
-The real issue wasn't font size in isolation: the mark+companion were positioned against the
-whole hero section's top edge, while the eyebrow/H1/subtext/CTA centered separately lower down —
-an arbitrary gap between two disconnected clusters. Fixed by anchoring the mark to an in-flow
-spacer (same pattern the real About page uses), so everything centers as ONE block with one
-consistent rhythm. Companion text also sized down (27px → 21px) so it reads as a supporting label
-alongside the eyebrow rather than rivaling the H1 for attention.</div>
+<div id="variant-nav">
+  <button class="variant-tab" onclick="showVariant('v1', event)">V1: Compact (~17px)</button>
+  <button class="variant-tab active" onclick="showVariant('v2', event)">V2: Balanced (~21px, round 3's pick)</button>
+  <button class="variant-tab" onclick="showVariant('v3', event)">V3: Confident (~25px)</button>
+</div>
 
-<header class="fake-header" data-header>
-  <div class="fake-header-inner">
-    <div class="brand-slot">
-      <span class="brand-text">
-        <span class="brand-name">Pukllay Club</span>
-        <span class="brand-tag">Juegos de mesa modernos</span>
-      </span>
+<div id="v1" class="variant">
+  <div class="note"><strong>V1 — Compact</strong>Companion más chico (~17px) y con tracking un poco más suelto — se acerca al tono del eyebrow, quedando claramente como el más "callado" de las tres opciones.</div>
+  <header class="fake-header" data-header>
+    <div class="fake-header-inner">
+      <div class="brand-slot">
+        <span class="brand-text">
+          <span class="brand-name">Pukllay Club</span>
+          <span class="brand-tag">Juegos de mesa modernos</span>
+        </span>
+      </div>
+      <a class="back-ludoteca" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Volver a la ludoteca
+      </a>
     </div>
-    <a class="back-ludoteca" href="#">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-      Volver a la ludoteca
-    </a>
+  </header>
+  <section class="hero" data-hero>
+    <div class="mark-anchor" data-anchor aria-hidden="true"></div>
+    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+    <h1>Conectá jugando</h1>
+    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+    <a class="hero-cta" href="#">Sumate</a>
+  </section>
+  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
+  <div class="scroll-filler">
+    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
+    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
   </div>
-</header>
-<section class="hero" data-hero>
-  <div class="mark-anchor" data-anchor aria-hidden="true"></div>
-  <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
-  <h1>Conectá jugando</h1>
-  <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
-  <a class="hero-cta" href="#">Sumate</a>
-</section>
-<div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
-<div class="scroll-filler">
-  <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
-  <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
+</div>
+
+<div id="v2" class="variant active">
+  <div class="note"><strong>V2 — Balanced (round 3's pick)</strong>El tamaño y tracking que quedaron confirmados en la ronda anterior (~21px), acá solo como punto de referencia para comparar contra V1/V3.</div>
+  <header class="fake-header" data-header>
+    <div class="fake-header-inner">
+      <div class="brand-slot">
+        <span class="brand-text">
+          <span class="brand-name">Pukllay Club</span>
+          <span class="brand-tag">Juegos de mesa modernos</span>
+        </span>
+      </div>
+      <a class="back-ludoteca" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Volver a la ludoteca
+      </a>
+    </div>
+  </header>
+  <section class="hero" data-hero>
+    <div class="mark-anchor" data-anchor aria-hidden="true"></div>
+    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+    <h1>Conectá jugando</h1>
+    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+    <a class="hero-cta" href="#">Sumate</a>
+  </section>
+  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
+  <div class="scroll-filler">
+    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
+    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
+  </div>
+</div>
+
+<div id="v3" class="variant">
+  <div class="note"><strong>V3 — Confident</strong>Companion más grande (~25px) y con tracking más cerrado — más presencia, pero todavía por debajo de la ronda 2 original (27px) que se sentía en competencia directa con el H1.</div>
+  <header class="fake-header" data-header>
+    <div class="fake-header-inner">
+      <div class="brand-slot">
+        <span class="brand-text">
+          <span class="brand-name">Pukllay Club</span>
+          <span class="brand-tag">Juegos de mesa modernos</span>
+        </span>
+      </div>
+      <a class="back-ludoteca" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Volver a la ludoteca
+      </a>
+    </div>
+  </header>
+  <section class="hero" data-hero>
+    <div class="mark-anchor" data-anchor aria-hidden="true"></div>
+    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+    <h1>Conectá jugando</h1>
+    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+    <a class="hero-cta" href="#">Sumate</a>
+  </section>
+  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
+  <div class="scroll-filler">
+    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
+    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
+  </div>
 </div>
 
 <div id="morph-mark">
@@ -194,24 +266,32 @@ alongside the eyebrow rather than rivaling the H1 for attention.</div>
 <script>
 const HERO_SIZE = 180;
 const DOCK_SIZE = 32;
-const NAME_SCALE = 0.115; // -> ~21px at rest (down from round 2's 0.150 -> 27px)
 
+// Only thing that differs between V1/V2/V3 — everything structural (the
+// anchor-based grouping fix) is shared and untouched.
+const COMPANION_STYLE = {
+  v1: { nameScale: 0.095, nameTracking: '0.05em', marginTop: 6 },  // ~17px
+  v2: { nameScale: 0.115, nameTracking: '0.03em', marginTop: 8 },  // ~21px, round 3's pick
+  v3: { nameScale: 0.135, nameTracking: '0.02em', marginTop: 10 }, // ~25px
+};
+
+let currentId = 'v2';
 let docked = false;
 let hasEntered = false;
 let entranceTimer = null;
 let ticking = false;
-let restTop = null; // captured fresh on load — the mark's natural top at scroll=0
+let restTop = null; // captured fresh each activation — the mark's natural top at scroll=0
 
 const markBox = document.getElementById('morph-mark');
 const mctName = markBox.querySelector('.mct-name');
+const mctWrap = markBox.querySelector('.morph-companion-text');
 
-function anchorEl() { return document.querySelector('[data-anchor]'); }
-function headerEl() { return document.querySelector('[data-header]'); }
+function anchorEl() { return document.querySelector('#' + currentId + ' [data-anchor]'); }
+function headerEl() { return document.querySelector('#' + currentId + ' [data-header]'); }
 
-// The anchor is ordinary in-flow content, so its rect already tracks scroll
-// 1:1 with zero extra machinery, and — since it's the flex column's first
-// child — its position is now governed by the SAME centering/gap rules as
-// the eyebrow/H1/subtext beneath it, not a separate calculation.
+// The anchor is ordinary in-flow content and the flex column's first
+// child, so it already tracks scroll 1:1 AND shares the same
+// centering/gap rules as the eyebrow/H1/subtext beneath it (round 3's fix).
 function naturalRect() {
   const r = anchorEl().getBoundingClientRect();
   return { top: r.top, left: r.left + r.width / 2 - HERO_SIZE / 2, size: HERO_SIZE };
@@ -245,16 +325,20 @@ function computeProgress(natural, dock) {
 }
 
 function updateHeaderChrome() {
-  const header = headerEl();
-  header.classList.remove('is-revealed', 'is-tinted', 'is-docked');
-  if (docked) header.classList.add('is-revealed', 'is-tinted', 'is-docked');
+  document.querySelectorAll('.fake-header').forEach((h) => {
+    h.classList.remove('is-revealed', 'is-tinted', 'is-docked');
+  });
+  if (docked) headerEl().classList.add('is-revealed', 'is-tinted', 'is-docked');
 }
 
 function updateCompanion(rect, progress) {
+  const style = COMPANION_STYLE[currentId];
   const show = !docked;
-  markBox.querySelector('.morph-companion-text').style.display = show ? 'block' : 'none';
+  mctWrap.style.display = show ? 'block' : 'none';
   if (!show) return;
-  mctName.style.fontSize = Math.max(7, rect.size * NAME_SCALE) + 'px';
+  mctWrap.style.marginTop = style.marginTop + 'px';
+  mctName.style.fontSize = Math.max(7, rect.size * style.nameScale) + 'px';
+  mctName.style.letterSpacing = style.nameTracking;
   mctName.style.opacity = String(Math.max(0, 1 - progress * 1.4));
 }
 
@@ -276,8 +360,9 @@ function syncPosition() {
   // while docked and still shouldDock, the mark just stays pinned at dock — nothing to update
 }
 
-function init() {
+function activateVariant(id) {
   clearTimeout(entranceTimer);
+  currentId = id;
   markBox.classList.remove('is-entered', 'is-first-play');
   hasEntered = false;
   ticking = false;
@@ -304,11 +389,21 @@ function init() {
   }
 }
 
+function showVariant(id, evt) {
+  document.querySelectorAll('.variant').forEach((v) => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach((t) => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (evt) evt.target.classList.add('active');
+  activateVariant(id);
+}
+
 function setViewport(px) {
-  document.body.style.maxWidth = px ? px + 'px' : 'none';
-  document.body.style.margin = px ? '0 auto' : '0';
-  document.body.style.border = px ? '1px solid var(--color-border)' : 'none';
-  init();
+  document.querySelectorAll('.variant').forEach((v) => {
+    v.style.maxWidth = px ? px + 'px' : 'none';
+    v.style.margin = px ? '0 auto' : '0';
+    v.style.border = px ? '1px solid var(--color-border)' : 'none';
+  });
+  activateVariant(currentId);
 }
 
 window.addEventListener('scroll', () => {
@@ -326,7 +421,7 @@ window.addEventListener('resize', () => {
   updateCompanion(rect, docked ? 1 : computeProgress(naturalRect(), dockRect()));
 });
 
-init();
+activateVariant('v2');
 </script>
 
 </body>

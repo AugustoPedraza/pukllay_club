@@ -85,14 +85,27 @@ muted) → H1 (40–72px, the one dominant element) → subtext (18px, muted) �
 companion rivaling the H1 for "biggest text" attention. B2 is dropped; only the refined single
 composition remains in `index.html` (no tab bar — nothing left to switch between).
 
+## Round 4 — three sizes within the confirmed structure
+Round 3's grouping fix (in-flow anchor) confirmed good. Feedback: "I need some variants" — bring
+back a comparison, but only tuning what's left open (companion size/tracking/gap), since the
+structural fix isn't being revisited.
+
+- **V1: Compact (~17px)** — smaller, looser tracking, closer to the eyebrow's own quiet register.
+- **V2: Balanced (~21px)** — round 3's picked size, kept here as the middle reference point.
+- **V3: Confident (~25px)** — larger, tighter tracking — more presence, still below round 2's
+  original 27px (which read as competing directly with the H1).
+
+All three share the exact same anchor-based grouping mechanic; only `COMPANION_STYLE`'s
+`nameScale`/`nameTracking`/`marginTop` differ per tab.
+
 ## What to Look For
-- Does the whole hero now read as one composed group at rest, instead of a floating mark with a
-  stray gap before the eyebrow/H1 block?
-- Does the companion text's size sit correctly as a supporting label (next to the eyebrow) rather
-  than competing with the H1?
+- Which of the three sizes reads as correctly weighted next to the mark — not lost, not
+  competing with the H1?
+- Does the whole hero read as one composed group at rest in all three, instead of a floating mark
+  with a stray gap before the eyebrow/H1 block?
 - With the real font loading, does "PUKLLAY CLUB" finally read as the actual brand typeface —
   same weight/character as the header's own wordmark once it docks?
 - Once the header docks and reveals its own real wordmark, does the companion text's fade-out
   feel like a handoff rather than a competing duplicate?
-- Check at 375px (mobile) — does the anchor's reserved height feel right, or does it leave too
-  much/too little air before the eyebrow?
+- Check at 375px (mobile) — does the anchor's reserved height feel right for all three, or does
+  the largest (V3) start to crowd the eyebrow?
