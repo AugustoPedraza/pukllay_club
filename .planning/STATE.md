@@ -202,7 +202,12 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-0 pending. The 7-item retroactive UI audit of `CatalogLive.Index` (logged 2026-08-18 against
+1 pending: "Surface 'Pukllay Club' brand name in site content" (cosmetic, ui) —
+`.planning/todos/pending/2026-09-07-surface-pukllay-club-brand-name-in-content.md`. Raised
+2026-09-07 right after Phase 01.4's final UAT checkpoint passed — the site never spells out the
+club's name as text, only the isologo mark. User wants it sketched, not implemented ad hoc.
+
+The 7-item retroactive UI audit of `CatalogLive.Index` (logged 2026-08-18 against
 `ui-design-system`/`ux-patterns`/`ux-responsive`) was closed 2026-08-21 by quick task 260821-dah —
 all 7 moved to `.planning/todos/completed/` with dated Resolution sections; see
 `260821-dah-SUMMARY.md`. This also closes the touch-target human-verification thread from
