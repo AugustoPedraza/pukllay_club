@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>050 — About morph companion text</title>
+<title>050 — About morph companion text (Round 2)</title>
 <link rel="stylesheet" href="../themes/default.css">
 <style>
   body { padding-top: 48px; }
@@ -29,6 +29,7 @@
     background: var(--color-accent-bg); color: var(--color-accent-text);
     border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
   }
+  .note strong { display: block; margin-bottom: 4px; }
 
   .fake-header {
     position: fixed; top: 48px; left: 0; right: 0; z-index: 50; height: 65px;
@@ -89,9 +90,9 @@
 
   /* Single morphing mark, reused across tabs — top/left/width/height are set
      via JS inline styles, never CSS, so there is exactly one source of truth
-     for its position at any moment. Variant B's companion text lives INSIDE
-     this element (absolutely positioned below the image so it never affects
-     the box's own size math, which every variant shares unchanged). */
+     for its position at any moment (sketch 045's proven mechanic, untouched
+     here). The companion text lives INSIDE this element, absolutely
+     positioned below the image so it never affects the box's own size math. */
   #morph-mark {
     position: fixed; z-index: 60; top: 0; left: 0; width: 0; height: 0;
     opacity: 0; transform: scale(0.75);
@@ -113,46 +114,28 @@
   #morph-mark.no-anim { transition: none !important; }
   #morph-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
-  /* Variant B: baked into the mark's own box — scales/fades in lockstep
-     with the image because it shares the exact same transform-driving
-     size math, positioned as an overlay below it (not counted in the
-     box's height) so it never perturbs the shared placement logic. */
+  /* Companion text, baked into the mark's own box so it scales/fades in
+     lockstep with the image — one piece that visually melts into the
+     header's own real wordmark as it docks (round 1's picked direction).
+     font-weight stays 400 always: Bebas Neue is self-hosted at weight 400
+     ONLY in the real app (assets/css/app.css), same constraint applies
+     here now that this theme loads the real file (see themes/default.css)
+     — anything heavier would be a silent browser-faked bold the codebase
+     explicitly avoids elsewhere. "More weight" is achieved instead via
+     size and (B2) a second line, matching the header's own real lockup. */
   .morph-companion-text {
     display: none;
     position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-    margin-top: 8px; white-space: nowrap; text-align: center;
-    font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em;
-    color: var(--color-text);
+    white-space: nowrap; text-align: center;
   }
-
-  /* Variant A: a static-position label in the hero's own flow area,
-     repositioned each frame to trail directly under the mark while
-     undocked, fading out fast — gone well before the mark is a third
-     of the way to the header. */
-  .companion-label {
-    position: fixed; z-index: 59; text-align: center; pointer-events: none;
-    font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.08em;
+  .mct-name {
+    display: block; font-family: var(--font-display); font-weight: 400;
     text-transform: uppercase; color: var(--color-text);
   }
-  .companion-label .tag {
-    display: block; margin-top: 2px; font-family: var(--font-sans); font-size: 10px;
-    letter-spacing: 0.14em; color: var(--color-text-muted); text-transform: uppercase;
+  .mct-tag {
+    display: none; font-family: var(--font-sans); font-weight: 400;
+    text-transform: uppercase; color: var(--color-text-muted);
   }
-
-  /* Variant C: a fixed-size chip parked beside the mark. Constant size
-     regardless of the mark's own shrink — legible the whole time it's
-     on screen — then crossfades out as a single hard event past 40% of
-     the scroll travel, instead of continuously fading. */
-  .companion-chip {
-    position: fixed; z-index: 59; display: inline-flex; align-items: center;
-    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
-    background: var(--color-surface); box-shadow: var(--shadow-sm); white-space: nowrap;
-    font-family: var(--font-display); font-size: 0.85rem; letter-spacing: 0.05em;
-    text-transform: uppercase; color: var(--color-text);
-    transition: opacity var(--duration-base) var(--ease-standard),
-                transform var(--duration-base) var(--ease-standard);
-  }
-  .companion-chip.is-faded { opacity: 0; transform: translateX(10px) scale(0.9); }
 
   .scroll-filler { height: 160vh; padding: 48px 24px; }
   .scroll-filler .band { max-width: 640px; margin: 0 auto 24px; padding: 32px; background: var(--color-surface); border-radius: var(--radius-lg); }
@@ -170,13 +153,12 @@
 <body>
 
 <div id="variant-nav">
-  <button class="variant-tab active" onclick="showVariant('a', event)">A: Static label, fades early</button>
-  <button class="variant-tab" onclick="showVariant('b', event)">B: Baked-in, travels with the mark</button>
-  <button class="variant-tab" onclick="showVariant('c', event)">C: Fixed chip, crossfades at threshold</button>
+  <button class="variant-tab active" onclick="showVariant('b1', event)">B1: One line, larger + tighter</button>
+  <button class="variant-tab" onclick="showVariant('b2', event)">B2: Two-line lockup (name + tagline)</button>
 </div>
 
-<div id="a" class="variant active">
-  <div class="note">"PUKLLAY CLUB" aparece como texto fijo justo debajo del isologo apenas carga la página, y se desvanece rápido en el primer tercio del scroll — así el mark grande nunca queda solo mucho tiempo, pero tampoco compite una vez que ya se está achicando camino al header.</div>
+<div id="b1" class="variant active">
+  <div class="note"><strong>B1 — Una línea, más grande y compacta</strong>Misma idea de la ronda 1 (el texto vive dentro del mismo elemento que el isologo y se achica/desvanece con él), ahora con la tipografía real (Bebas Neue autohosteada, antes caía a la fuente del sistema) y más presencia: tamaño mayor y tracking más cerrado. El peso se mantiene en 400 — Bebas Neue solo existe en ese peso en la app real; un valor mayor sería un "bold" falso que el propio código evita.</div>
   <header class="fake-header" data-header>
     <div class="fake-header-inner">
       <div class="brand-slot">
@@ -204,37 +186,8 @@
   </div>
 </div>
 
-<div id="b" class="variant">
-  <div class="note">El texto "PUKLLAY CLUB" vive dentro del mismo elemento que el isologo: se achica y se desvanece en la misma proporción que el mark a medida que escrollás, como si fueran una sola pieza que se va fundiendo en el header real al llegar.</div>
-  <header class="fake-header" data-header>
-    <div class="fake-header-inner">
-      <div class="brand-slot">
-        <span class="brand-text">
-          <span class="brand-name">Pukllay Club</span>
-          <span class="brand-tag">Juegos de mesa modernos</span>
-        </span>
-      </div>
-      <a class="back-ludoteca" href="#">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-        Volver a la ludoteca
-      </a>
-    </div>
-  </header>
-  <section class="hero" data-hero>
-    <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
-    <h1>Conectá jugando</h1>
-    <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
-    <a class="hero-cta" href="#">Sumate</a>
-  </section>
-  <div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
-  <div class="scroll-filler">
-    <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
-    <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
-  </div>
-</div>
-
-<div id="c" class="variant">
-  <div class="note">Un chip de tamaño fijo con "PUKLLAY CLUB" acompaña al mark sin cambiar de tamaño — se mantiene legible mientras el mark se achica, y recién desaparece de golpe (con un crossfade) al cruzar el 40% del recorrido hacia el header.</div>
+<div id="b2" class="variant">
+  <div class="note"><strong>B2 — Lockup de dos líneas (nombre + tagline)</strong>En vez de una sola línea, el companion reproduce el lockup real del header/footer: "PUKLLAY CLUB" arriba y "Juegos de mesa modernos" abajo, más chica y muted. El bloque de dos líneas pesa más visualmente que una línea sola sin tocar el font-weight — es la misma vía que usa el propio header para dar presencia a la marca.</div>
   <header class="fake-header" data-header>
     <div class="fake-header-inner">
       <div class="brand-slot">
@@ -264,11 +217,11 @@
 
 <div id="morph-mark">
   <img src="../../../priv/static/images/isologo-light.png" alt="">
-  <span class="morph-companion-text">PUKLLAY CLUB</span>
+  <span class="morph-companion-text">
+    <span class="mct-name">PUKLLAY CLUB</span>
+    <span class="mct-tag">Juegos de mesa modernos</span>
+  </span>
 </div>
-
-<div class="companion-label" data-companion="a">PUKLLAY CLUB<span class="tag">Juegos de mesa modernos</span></div>
-<div class="companion-chip" data-companion="c">PUKLLAY CLUB</div>
 
 <div data-tools>
   <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
@@ -282,21 +235,27 @@
 <script>
 const HERO_SIZE = 180;
 const DOCK_SIZE = 32;
-const LABEL_GAP = 14;   // variant A: gap between mark bottom and label top
-const CHIP_OFFSET_X = 18; // variant C: gap between mark's right edge and the chip
 
-let currentId = 'a';
+// Per-variant companion sizing — the only thing that differs between B1/B2.
+const COMPANION_STYLE = {
+  b1: { nameScale: 0.150, nameTracking: '0.03em', showTag: false, tagScale: 0 },
+  b2: { nameScale: 0.120, nameTracking: '0.05em', showTag: true, tagScale: 0.052 },
+};
+
+let currentId = 'b1';
 let docked = false;
 let hasEntered = false;
 let entranceTimer = null;
 let ticking = false;
 let restTop = null; // captured fresh each activation — the mark's natural top at scroll=0
 
-// #morph-mark is a small wrapper (image + variant B's companion text) so
-// B's text can live inside the singleton without a second element to keep
-// in sync — its own size math (top/left/width/height) is untouched by the
-// companion text, which is absolutely positioned below it (see CSS).
+// #morph-mark is a small wrapper (image + companion text) so the text can
+// live inside the singleton without a second element to keep in sync — its
+// own size math (top/left/width/height) is untouched by the companion
+// text, which is absolutely positioned below it (see CSS).
 const markBox = document.getElementById('morph-mark');
+const mctName = markBox.querySelector('.mct-name');
+const mctTag = markBox.querySelector('.mct-tag');
 
 function heroEl() { return document.querySelector('#' + currentId + ' [data-hero]'); }
 function headerEl() { return document.querySelector('#' + currentId + ' [data-header]'); }
@@ -322,9 +281,9 @@ function place(rect, animate) {
   }
 }
 
-// 0 at rest, 1 exactly at the crossing point. Drives every variant's fade
-// curve; the mark's own placement stays the same binary snap-at-crossing
-// mechanic proven in sketch 045 — this is purely for the companion text.
+// 0 at rest, 1 exactly at the crossing point. Drives the companion text's
+// fade curve; the mark's own placement stays the same binary snap-at-
+// crossing mechanic proven in sketch 045 — this is purely for the text.
 function computeProgress(natural, dock) {
   if (restTop === null) restTop = natural.top;
   const totalTravel = restTop - dock.top;
@@ -341,39 +300,23 @@ function updateHeaderChrome() {
 }
 
 function updateCompanion(rect, progress) {
-  const bakedText = markBox.querySelector('.morph-companion-text');
-  const showBaked = currentId === 'b' && !docked;
-  bakedText.style.display = showBaked ? 'block' : 'none';
-  if (showBaked) {
-    bakedText.style.fontSize = Math.max(7, rect.size * 0.115) + 'px';
-    bakedText.style.opacity = String(Math.max(0, 1 - progress * 1.4));
+  const style = COMPANION_STYLE[currentId];
+  const show = !docked;
+  markBox.querySelector('.morph-companion-text').style.display = show ? 'block' : 'none';
+  if (!show) return;
+
+  mctName.style.fontSize = Math.max(7, rect.size * style.nameScale) + 'px';
+  mctName.style.letterSpacing = style.nameTracking;
+  mctTag.style.display = style.showTag ? 'block' : 'none';
+  if (style.showTag) {
+    mctTag.style.fontSize = Math.max(5, rect.size * style.tagScale) + 'px';
+    mctTag.style.letterSpacing = '0.1em';
+    mctTag.style.marginTop = Math.max(1, rect.size * 0.015) + 'px';
   }
 
-  const label = document.querySelector('.companion-label[data-companion="a"]');
-  const chip = document.querySelector('.companion-chip[data-companion="c"]');
-
-  if (currentId === 'a') {
-    label.style.display = 'block';
-    label.style.top = (rect.top + rect.size + LABEL_GAP) + 'px';
-    label.style.left = rect.left + 'px';
-    label.style.width = rect.size + 'px';
-    label.style.opacity = docked ? '0' : String(Math.max(0, 1 - progress * 3));
-  } else {
-    label.style.display = 'none';
-  }
-
-  if (currentId === 'c') {
-    chip.style.display = 'inline-flex';
-    chip.style.top = (rect.top + rect.size / 2 - chip.offsetHeight / 2) + 'px';
-    chip.style.left = (rect.left + rect.size + CHIP_OFFSET_X) + 'px';
-    if (docked) {
-      chip.classList.add('is-faded');
-    } else {
-      chip.classList.toggle('is-faded', progress > 0.4);
-    }
-  } else {
-    chip.style.display = 'none';
-  }
+  const opacity = String(Math.max(0, 1 - progress * 1.4));
+  mctName.style.opacity = opacity;
+  mctTag.style.opacity = opacity;
 }
 
 function syncPosition() {
@@ -455,7 +398,7 @@ window.addEventListener('resize', () => {
   updateCompanion(rect, docked ? 1 : computeProgress(naturalRect(), dockRect()));
 });
 
-activateVariant('a');
+activateVariant('b1');
 </script>
 
 </body>

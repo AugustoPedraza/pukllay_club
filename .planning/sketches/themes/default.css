@@ -147,8 +147,15 @@
 }
 
 @font-face {
+  /* Real self-hosted file (relative from themes/ up to the repo root),
+     not local()-only — without this, any sketch rendering "PUKLLAY CLUB"
+     or another display heading silently fell back to a generic system
+     sans on any machine without Bebas Neue installed, which reads as
+     thin/wrong-weight instead of the brand's actual condensed display
+     face (found sketch 050, round 2). local() stays first as a
+     same-machine fast path; the url() is what fixes every other machine. */
   font-family: "Bebas Neue";
-  src: local("Bebas Neue");
+  src: local("Bebas Neue"), url("../../../priv/static/fonts/bebas-neue-400-latin.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }

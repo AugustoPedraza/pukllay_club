@@ -20,8 +20,7 @@ into the header.
 
 This sketch does **not** re-litigate 045's morph mechanic (hidden-until-scroll header, live 1:1
 tracking, snap-dock at the crossing point — all kept verbatim). It only adds a companion
-"PUKLLAY CLUB" wordmark and explores three ways that text can accompany the mark through the
-scroll.
+"PUKLLAY CLUB" wordmark alongside the mark through the scroll.
 
 ## How to View
 ```
@@ -31,26 +30,47 @@ Scroll down slowly on each tab to watch the mark travel toward the header and se
 companion text behaves along the way. Reload (or switch tabs) to reset scroll position — each
 tab activation scrolls to top automatically.
 
-## Variants
-- **A: Static label, fades early** — "PUKLLAY CLUB" sits directly below the mark at rest as its
-  own separate element, then fades out fast (roughly the first third of the scroll) — gone well
-  before the mark starts noticeably shrinking.
-- **B: Baked-in, travels with the mark** — the text lives inside the same box as the isologo
-  image, so it scales and fades in the exact same proportion as the mark shrinks — one piece that
-  visually melts into the header's own wordmark as it docks.
-- **C: Fixed chip, crossfades at threshold** — a constant-size pill sits beside the mark, staying
-  fully legible no matter how small the mark gets, then disappears in one crossfade once the mark
-  has covered ~40% of its trip to the header (not a continuous fade).
+## Round 1 — three approaches (superseded)
+- **A: Static label, fades early** — text sits below the mark at rest as its own element, fades
+  out fast (first third of the scroll).
+- **B: Baked-in, travels with the mark** — text lives inside the same box as the isologo image,
+  scaling/fading in the exact same proportion as the mark shrinks. **Picked** — feels like one
+  piece melting into the header's own wordmark as it docks.
+- **C: Fixed chip, crossfades at threshold** — constant-size pill beside the mark, crossfades out
+  past ~40% of the scroll travel.
+
+A/C removed from `index.html` (B carried forward only).
+
+## Round 2 — refining B's weight/balance
+Feedback on B: render it in the real logo font, with more weight for better balance. Two real
+findings while grounding that request:
+
+1. **The shared sketch theme never actually loaded Bebas Neue** — `themes/default.css` only did
+   `src: local("Bebas Neue")`, so on any machine without that font installed it silently fell back
+   to a generic system sans, which is why the companion text looked thin/wrong. Fixed at the theme
+   level (not just this sketch) by adding the real self-hosted `.woff2` as a fallback source,
+   referenced via the same relative-path pattern the isologo image already uses. This fixes every
+   sketch that renders Bebas Neue, not only this one.
+2. **A heavier `font-weight` isn't available** — `assets/css/app.css` explicitly documents that
+   Bebas Neue is self-hosted at weight 400 ONLY, and calls out that any heavier value is a silent
+   browser-faked bold the codebase deliberately avoids elsewhere. So "more weight" is explored here
+   through size, tracking, and composition instead of a fake bold.
+
+Two refinements of B, replacing A/B/C in `index.html`:
+- **B1: One line, larger + tighter** — same single-line "PUKLLAY CLUB", bumped size (~30% larger
+  relative to the mark) and tighter letter-spacing for a denser, more confident read.
+- **B2: Two-line lockup (name + tagline)** — reproduces the header's own real lockup shape (name
+  atop a smaller muted tagline) instead of a lone line — more visual mass as a block, matching how
+  the header itself achieves presence without touching font-weight.
 
 ## What to Look For
+- With the real font now loading, does the companion text finally read as "official" — same
+  weight/character as the header's own wordmark once it docks?
+- B1 vs B2: does the single larger line feel appropriately weighted, or does the two-line lockup's
+  extra mass read better against the isologo image (and does it still fit comfortably at 375px)?
 - Does the companion text ever compete with, or get orphaned from, the hero's own eyebrow/H1
   copy directly below it?
-- Once the header docks and reveals its own real "PUKLLAY CLUB" wordmark, does any variant's
-  companion text feel like it's fighting or duplicating that reveal, rather than handing off to
-  it?
-- At small mark sizes (B), is the shrinking text still legible for long, or does it read as noise
-  before it fades — would a different curve or an earlier fade-out serve better?
-- Is a *fixed*-size chip (C) that survives the mark's shrink actually more reassuring/legible than
-  the other two, or does its independence from the mark's own scale feel disconnected from it?
-- Check at 375px (mobile) — does any companion element crowd the hero content or clip at the
-  viewport edge?
+- Once the header docks and reveals its own real "PUKLLAY CLUB" wordmark, does the companion
+  text's fade-out feel like a handoff rather than a competing duplicate?
+- Check at 375px (mobile) — does either variant crowd the hero content or clip at the viewport
+  edge?
