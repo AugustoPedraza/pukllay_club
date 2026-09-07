@@ -11,11 +11,17 @@
     border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
   }
   .note strong { display: block; margin-bottom: 4px; }
+  /* Debug-only annotation, NOT part of the real design: sits ABOVE each
+     marker (bottom:100%, its own box entirely outside the marker's box)
+     so it never overlaps the real CTA content beneath it — round 1 of
+     this sketch had it at top:8px/left:8px INSIDE the marker, which fully
+     covered the compact hero/cierre Sumate buttons (they're only 48px
+     tall, barely bigger than the flag itself). */
   .cta-flag {
-    position: absolute; left: 8px; top: 8px; z-index: 30;
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 6px; z-index: 30;
     font-family: var(--font-sans); font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
     text-transform: uppercase; color: var(--color-primary-content); background: var(--color-primary);
-    padding: 3px 8px; border-radius: var(--radius-full); pointer-events: none;
+    padding: 3px 8px; border-radius: var(--radius-full); pointer-events: none; white-space: nowrap;
   }
   .cta-marker { position: relative; }
 
@@ -36,6 +42,12 @@
     display: flex; align-items: center; justify-content: space-between;
   }
   .brand-slot { display: flex; align-items: center; gap: 8px; width: 200px; }
+  /* Reserves the docked mark's own 32x32 footprint as a real layout box
+     (not just relying on dockRect() math) — without this, the floating
+     mark docks flush against .brand-slot's own left edge, landing right
+     on top of the wordmark text's first few letters since nothing pushed
+     the text over to make room (found live while verifying sketch 051). */
+  .mark-slot { width: 32px; height: 32px; flex-shrink: 0; }
   .brand-text {
     display: flex; flex-direction: column; line-height: 1;
     opacity: 0; transform: translateX(-6px);
@@ -199,6 +211,7 @@ their own motion/behavior was already validated in sketches 046/048 and isn't th
 <header class="fake-header" data-header>
   <div class="fake-header-inner">
     <div class="brand-slot">
+      <span class="mark-slot" aria-hidden="true"></span>
       <span class="brand-text">
         <span class="brand-name">Pukllay Club</span>
         <span class="brand-tag">Juegos de mesa modernos</span>

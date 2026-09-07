@@ -37,6 +37,33 @@ Scroll the whole page top to bottom. Toggle 📱 in the toolbar to check the mob
 (it only appears ≤480px, matching the real media query) and to see how tight the rhythm feels on
 a small screen where every section is taller relative to the viewport.
 
+## Bugs found while verifying (fixed, not design changes)
+Live-verified in a real browser after the initial build surfaced two real defects — both in this
+sketch's own scaffolding, not in the four CTAs' actual design:
+
+1. **The debug "CTA N" flag pills were hiding the real buttons.** Positioned `top:8px; left:8px`
+   *inside* each marker box, they fully covered the hero/cierre Sumate buttons — those are only
+   48px tall, barely bigger than the flag itself, so the flag's opaque fill painted directly over
+   the "Sumate" label. Fixed by moving the flags to `bottom:100%` (entirely above the marker,
+   never overlapping its content).
+2. **The docked isologo mark overlapped the header's own wordmark text** ("PUKLLAY CLUB" showed
+   as "…LLAY CLUB", the "PUK" covered). The fake header's `.brand-slot` never reserved a box for
+   the mark icon before the text — production's real markup always renders an `<img>` there, but
+   this sketch's header only had the text span. Fixed by adding an empty `.mark-slot` (32×32,
+   matching `DOCK_SIZE`) as the flex item before `.brand-text`, so the docking mark lands in
+   reserved space instead of on top of the letters. **Same fix applied back to sketch 050**
+   (`about-morph-companion-text`), which has the identical header markup and the identical latent
+   bug — not previously caught because round 5's confirmation didn't zoom into the docked state
+   closely enough to notice.
+
+## Live Verification (desktop)
+Scrolled through the whole page at desktop width after the fixes above: hero → photo rail →
+Qué hacemos/Nuestra historia → dark FAQ → Juntadas/Contacto → Cierre all read as one clean,
+well-paced sequence — no visual collision between any two CTA touchpoints, header dock/undock is
+clean in both directions. Mobile's sticky bar reuses the exact `max-width:480px` media query
+already shipped and validated (sketch 049) — not independently re-toggled in this verification
+pass, but the mechanism is unchanged from what's already confirmed working in production.
+
 ## What to Look For
 - Do CTA 1 (hero) → CTA 2 (Contacto) → CTA 3 (cierre) → CTA 4 (mobile sticky) feel like a
   deliberate, escalating rhythm down the page, or does any pair feel redundant back-to-back?

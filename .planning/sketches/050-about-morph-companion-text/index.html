@@ -29,6 +29,12 @@
     display: flex; align-items: center; justify-content: space-between;
   }
   .brand-slot { display: flex; align-items: center; gap: 8px; width: 200px; }
+  /* Reserves the docked mark's own 32x32 footprint as a real layout box —
+     without this, the floating mark docks flush against .brand-slot's own
+     left edge, landing right on top of the wordmark text's first few
+     letters since nothing pushed the text over to make room (found live
+     while verifying sketch 051, same header markup as here). */
+  .mark-slot { width: 32px; height: 32px; flex-shrink: 0; }
   .brand-text {
     display: flex; flex-direction: column; line-height: 1;
     opacity: 0; transform: translateX(-6px);
@@ -150,6 +156,7 @@ the header reveal and the companion fade, not an incidental scroll effect.</div>
 <header class="fake-header" data-header>
   <div class="fake-header-inner">
     <div class="brand-slot">
+      <span class="mark-slot" aria-hidden="true"></span>
       <span class="brand-text">
         <span class="brand-name">Pukllay Club</span>
         <span class="brand-tag">Juegos de mesa modernos</span>

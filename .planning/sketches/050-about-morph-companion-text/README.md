@@ -112,6 +112,15 @@ directions for free (since `docked` already flips back on scroll-up).
 
 V3 is the default/active tab now (the round 4 pick); V1/V2 remain navigable for reference.
 
+## Post-final fix (found while building sketch 051)
+The fake header's `.brand-slot` never reserved a box for the mark icon before the wordmark text
+— production's real markup always renders an `<img>` there, this sketch's header only had the
+text span. That let the docked mark land flush on `.brand-slot`'s own left edge, overlapping the
+first few letters of "PUKLLAY CLUB" ("…LLAY CLUB" visible instead). Not caught during round 5's
+confirmation (didn't zoom into the docked state closely enough); found live-verifying sketch 051,
+which shares this exact header markup. Fixed here too: an empty `.mark-slot` (32×32, matching
+`DOCK_SIZE`) reserves the space as a flex item before `.brand-text`.
+
 ## Final
 Confirmed working (2026-09-07). `index.html` collapsed to the single winning composition —
 V1/V2 and the tab bar removed, since there's nothing left to switch between. Winner:
