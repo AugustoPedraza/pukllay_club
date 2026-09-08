@@ -688,17 +688,6 @@ defmodule PukllayClubWeb.AboutLive do
             <p class="text-lg">
               Nos juntamos los sábados en el Club de Emprendedores, San Salvador de Jujuy. Los juegos los llevamos nosotros; vos traé las ganas.
             </p>
-          </div>
-          <div id="contacto" class="pk-about-contact-card">
-            <h2 class="font-display text-2xl">Contacto</h2>
-            <p class="text-lg">
-              Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.
-            </p>
-            <Layouts.social_links
-              class="pk-about-contact-links"
-              icons={[:whatsapp, :instagram]}
-              labels
-            />
             <%!-- G-01.4-5 gap closure, plan 01.4-12, per CONTEXT.md D-11 through
             D-14, which reopened and reversed G-01.4-4's decision to decline
             an embed. The four preceding plans (01.4-07/09/10/11) all argued
@@ -712,7 +701,26 @@ defmodule PukllayClubWeb.AboutLive do
             for the CSP finding that made the frame look infeasible. The
             frame is deliberately inert (D-14): the overlay anchor below is
             the only interactive element in the box, so nobody "restores"
-            pan and zoom as a courtesy. --%>
+            pan and zoom as a courtesy.
+
+            Relocated from #contacto to #juntadas (plan 01.5-02 Task 3, D-09):
+            sketch 051 found the map names Juntadas' real-world meeting
+            location while Contacto is about reach-out channels, so it
+            belongs with Juntadas. This reopens 01.4's original Contacto
+            placement — that reopening is intentional and
+            developer-confirmed, not drift. This is a markup relocation
+            only: same page, same origin, same frame-src CSP scope, same
+            click-out-only interaction model — nothing about the embed
+            itself changed.
+
+            The lg (1024px) breakpoint on the caption pair below is now
+            load-bearing for a DIFFERENT reason than when it was written:
+            the parent's sm:grid-cols-2 still halves the column at 640px,
+            but the map now sits under Juntadas' shorter paragraph rather
+            than under Contacto's stack, so the 640-767px band the long
+            caption was tuned against still exists and the pair is still
+            correct as written — do not "simplify" it away while moving
+            it. --%>
             <div class="pk-about-map-thumb">
               <iframe
                 class="pk-about-map-embed"
@@ -743,6 +751,28 @@ defmodule PukllayClubWeb.AboutLive do
                 </span>
               </a>
             </div>
+          </div>
+          <div id="contacto" class="pk-about-contact-card">
+            <h2 class="font-display text-2xl">Contacto</h2>
+            <p class="text-lg">
+              Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.
+            </p>
+            <%!-- D-06/D-07 (plan 01.5-02): three channels, not two. Facebook
+            added alongside WhatsApp/Instagram. `social_links/1` renders its
+            four `<a>` blocks in a FIXED source order (WhatsApp, Facebook,
+            Instagram, Email) regardless of how this `icons` list is
+            ordered, so the rendered sequence here is WhatsApp -> Facebook
+            -> Instagram. Email is deliberately absent (D-07): three
+            fully-labeled chips already measure ~387px against a 375px
+            phone's ~327px of available width, which is exactly what forces
+            the mobile icon-only treatment below (Task 2) — a fourth chip
+            has no room on either side of that breakpoint. Email stays a
+            footer-only channel. --%>
+            <Layouts.social_links
+              class="pk-about-contact-links"
+              icons={[:whatsapp, :instagram, :facebook]}
+              labels
+            />
           </div>
         </div>
       </section>

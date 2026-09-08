@@ -2715,55 +2715,101 @@ body.pk-drawer-open {
   background: var(--color-primary);
 }
 
-/* Contacto card (sketch 048 winner A): the club's real icon links and its
-   Maps thumbnail merged into ONE card, replacing the previous two
-   separately-sized boxes. Surface/radius/padding match this app's card
-   convention (`ui-design-system`'s spacing scale, `--color-base-200` +
-   `--radius-box`), stacked as a vertical flex column so the heading, intro,
-   icon links (added in plan 01.4-02 Task 3) and map thumbnail share one
-   edge and one rhythm. */
+/* Contacto column (plan 01.5-02, D-05): sketch 051 found this card's
+   chrome — the `--color-base-200` + `--radius-box` + padding this app's
+   card convention gave it in sketch 048 — reading as a second heavy "ask"
+   competing with the closing CTA directly below it, and reading as a
+   differently-coloured box sitting beside Juntadas' plain column. D-05
+   drops the outer chrome only; Contacto now matches Juntadas' plain
+   background at every width, so the two columns read as one pair. The
+   internal flex/gap layout stays exactly as it was — only background,
+   border-radius and padding go away. This was a multi-round arrival in
+   sketch 051 (chrome stripped mobile-only in round 2, dropped on desktop
+   in round 8). */
 .pk-about-contact-card {
-  background: var(--color-base-200);
-  border-radius: var(--radius-box);
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-/* The Contacto card's real WhatsApp/Instagram icon links (plan 01.4-02
-   Task 3, `Layouts.social_links/1` with icons/labels). The shared
-   component renders its SVGs at width="16" — right for the footer/drawer's
-   compact rows, too small for this card's row — so this scope sizes them
-   explicitly rather than editing the shared markup. */
+/* The Contacto column's real WhatsApp/Facebook/Instagram chips (plan
+   01.4-02 Task 3, extended to 3 channels in plan 01.5-02 D-06/D-07,
+   `Layouts.social_links/1` with icons/labels). The shared component
+   renders its SVGs at width="16" — right for the footer/drawer's compact
+   rows, too small for this row — so this scope sizes them explicitly
+   rather than editing the shared markup. Row layout (D-06): wraps instead
+   of stacking, so three chips read as a row of chips rather than a
+   stacked list of buttons. */
 .pk-about-contact-links {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 0.625rem;
 }
 
+/* Accent-tint chip treatment (plan 01.5-02, D-06). Colour pairing copied
+   bare from `.pk-pill-accent` (above): `--color-accent` /
+   `--color-accent-content` is ALREADY a soft pastel pairing in both
+   themes and is already used bare as an accent surface by `.pk-pill-accent`
+   and `.pk-conn-banner` — no `color-mix()` derivation and no new custom
+   property. (The sketch's own theme named a `--color-accent-bg` token that
+   this app does not define; reaching for a derived tint here would invent
+   a second way to express a colour the app already expresses one way.)
+   Shape (D-06): chips carry icon AND text — neither icon-only circles
+   (tried and rejected in the sketch as too quiet/footer-like) nor
+   `sumate_cta`-shaped pills (which would make "reach out" read as the same
+   commitment level as "join"). */
 .pk-about-contact-links a {
   display: flex;
   align-items: center;
   gap: 0.625rem;
   padding: 0.625rem 0.875rem;
   border-radius: var(--radius-box);
-  background: var(--color-base-100);
-  border: 1px solid var(--color-base-300);
-  color: var(--color-base-content);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent-content);
   transition: border-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard);
 }
 
+/* Re-derived against the accent-tinted resting state (plan 01.5-02): the
+   prior hover swapped both border-color and color to --color-primary,
+   which was legible against the old --color-base-100 resting background
+   but not against an accent tint. Only border-color changes now; color
+   stays inherited from the resting rule so the label stays readable. */
 .pk-about-contact-links a:hover {
   border-color: var(--color-primary);
-  color: var(--color-primary);
 }
 
 .pk-about-contact-links a svg {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+/* Mobile icon-only chip row (plan 01.5-02 Task 2, D-08). Pure space-fit
+   constraint, not a style preference: three fully-labeled chips measure
+   roughly 387px, while a 375px phone offers about 327px of content width.
+   That arithmetic is also exactly why D-07 caps the row at three channels
+   - a fourth would not fit at either width, which is why Email stays
+   footer-only. The breakpoint is 639px (the width below Tailwind's `sm`),
+   matching the parent section's own `sm:grid-cols-2` collapse — deliberately
+   NOT the 480px threshold that governs `.pk-about-cta-bar` below; those are
+   unrelated mechanisms and plan 01.5-04 depends on them staying unrelated. */
+@media (max-width: 639px) {
+  .pk-about-contact-links {
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .pk-about-contact-links a span {
+    display: none;
+  }
+
+  .pk-about-contact-links a {
+    border-radius: 9999px;
+    padding: 0.75rem;
+  }
 }
 
 /* Live Google Maps embed frame (G-01.4-5 gap closure, plan 01.4-12,

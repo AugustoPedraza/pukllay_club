@@ -704,8 +704,10 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
   # Plan 01.4-02 Task 3: the Contacto card's real WhatsApp/Instagram icon
   # links, resolved through the newly-public Layouts.social_links/1.
-  describe "Contacto card icon links (plan 01.4-02 Task 3)" do
-    test "renders exactly 2 links inside .pk-about-contact-links: WhatsApp and Instagram, in order",
+  # Extended to 3 channels in plan 01.5-02 (D-06/D-07): Facebook added,
+  # Email deliberately excluded (footer-only).
+  describe "Contacto card icon links (plan 01.4-02 Task 3, extended plan 01.5-02)" do
+    test "renders exactly 3 links inside .pk-about-contact-links: WhatsApp, Facebook and Instagram, in social_links/1's fixed render order",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
@@ -713,10 +715,14 @@ defmodule PukllayClubWeb.AboutLiveTest do
       links = LazyHTML.query(doc, ".pk-about-contact-links a")
       hrefs = LazyHTML.attribute(links, "href")
 
-      assert Enum.count(links) == 2
-      assert hrefs == [ClubLinks.whatsapp_group_url(), ClubLinks.instagram_url()]
+      assert Enum.count(links) == 3
 
-      refute ClubLinks.facebook_url() in hrefs
+      assert hrefs == [
+               ClubLinks.whatsapp_group_url(),
+               ClubLinks.facebook_url(),
+               ClubLinks.instagram_url()
+             ]
+
       refute Enum.any?(hrefs, &String.starts_with?(&1, "mailto:"))
     end
 
@@ -730,7 +736,226 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       assert links_html =~ "<svg"
       assert links_html =~ "Grupo de WhatsApp"
+      assert links_html =~ "Facebook"
       assert links_html =~ "Instagram"
+    end
+  end
+
+  # Plan 01.5-02, Task 1 (D-05): the card's chrome (background, border-radius,
+  # padding) is gone, while the internal flex/gap layout is untouched.
+  describe "Contacto card de-chroming (plan 01.5-02, D-05)" do
+    test ".pk-about-contact-card keeps its flex layout but declares no background, border-radius or padding" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-contact-card\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-contact-card rule in app.css."
+      [_, body] = rule
+
+      assert Regex.scan(~r/background\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no background (D-05 removes the card chrome)."
+
+      assert Regex.scan(~r/border-radius\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no border-radius (D-05 removes the card chrome)."
+
+      assert Regex.scan(~r/padding\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no padding (D-05 removes the card chrome)."
+
+      assert body =~ ~r/display\s*:\s*flex/,
+             "Expected .pk-about-contact-card to keep display: flex (D-05 preserves internal layout)."
+
+      assert body =~ ~r/flex-direction\s*:\s*column/,
+             "Expected .pk-about-contact-card to keep flex-direction: column (D-05 preserves internal layout)."
+
+      assert body =~ ~r/gap\s*:/,
+             "Expected .pk-about-contact-card to keep its gap (D-05 preserves internal layout)."
+    end
+  end
+
+  # Plan 01.5-02, Task 1 (D-06): the chip resting state pulls its colour
+  # pairing bare from --color-accent/--color-accent-content, matching
+  # .pk-pill-accent's existing precedent.
+  describe "Contacto chip accent tint (plan 01.5-02, D-06)" do
+    test ".pk-about-contact-links a declares the accent background/content colour pairing" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-contact-links a\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-contact-links a rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/background\s*:\s*var\(--color-accent\)/,
+             "Expected .pk-about-contact-links a to set background: var(--color-accent)."
+
+      assert body =~ ~r/color\s*:\s*var\(--color-accent-content\)/,
+             "Expected .pk-about-contact-links a to set color: var(--color-accent-content)."
+    end
+  end
+
+  # Plan 01.5-02, Task 2 (D-08): at <=639px the chip row drops labels and
+  # goes icon-only + circular + centered — a pure space-fit constraint
+  # (3 labeled chips ~387px vs a 375px phone's ~327px available width).
+  describe "Contacto chip mobile treatment (plan 01.5-02, D-08)" do
+    defp media_639_body(src) do
+      case Regex.run(~r/@media\s*\(max-width:\s*639px\)\s*\{/, src, return: :index) do
+        [{start, match_len}] ->
+          body_start = start + match_len
+          extract_balanced_block(src, body_start)
+
+        nil ->
+          nil
+      end
+    end
+
+    # Balanced-brace-aware scan from just after the media query's opening
+    # `{` to its matching close, so assertions below match only within this
+    # block's own body — matching a bare property against the whole file
+    # would pass on any of the dozens of unrelated rules that declare it.
+    defp extract_balanced_block(src, start_index) do
+      src
+      |> String.slice(start_index..-1//1)
+      |> do_extract_balanced_block(1, [])
+    end
+
+    defp do_extract_balanced_block(<<>>, _depth, acc), do: acc |> Enum.reverse() |> IO.iodata_to_binary()
+
+    defp do_extract_balanced_block(<<"{", rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth + 1, ["{" | acc])
+    end
+
+    defp do_extract_balanced_block(<<"}", _rest::binary>>, 1, acc) do
+      acc |> Enum.reverse() |> IO.iodata_to_binary()
+    end
+
+    defp do_extract_balanced_block(<<"}", rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth - 1, ["}" | acc])
+    end
+
+    defp do_extract_balanced_block(<<c::utf8, rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth, [<<c::utf8>> | acc])
+    end
+
+    test "app.css contains a @media (max-width: 639px) block referencing .pk-about-contact-links" do
+      src = strip_comments(css_source())
+
+      assert src =~ ~r/@media\s*\(max-width:\s*639px\)/,
+             "Expected a @media (max-width: 639px) block in app.css."
+
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      assert body =~ ".pk-about-contact-links",
+             "Expected the @media (max-width: 639px) block to reference .pk-about-contact-links."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links a span declares display: none" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links a span\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links a span rule inside the 639px block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/display\s*:\s*none/,
+             "Expected .pk-about-contact-links a span to declare display: none."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links declares justify-content: center" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links rule inside the 639px block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/justify-content\s*:\s*center/,
+             "Expected .pk-about-contact-links to declare justify-content: center."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links a declares border-radius: 9999px" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links a\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links a rule inside the 639px block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/border-radius\s*:\s*9999px/,
+             "Expected .pk-about-contact-links a to declare border-radius: 9999px."
+    end
+
+    test "the rendered markup still contains all three label spans regardless of viewport",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      spans = LazyHTML.query(doc, ".pk-about-contact-links a span")
+
+      assert Enum.count(spans) == 3
+    end
+  end
+
+  # Plan 01.5-02, Task 3 (D-09): the live Maps embed relocated from
+  # #contacto into #juntadas, moved verbatim (every pre-existing embed
+  # test above must keep passing unchanged).
+  describe "Maps embed relocation to Juntadas (plan 01.5-02, D-09)" do
+    test "#juntadas .pk-about-map-thumb renders exactly 1 element", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, "#juntadas .pk-about-map-thumb")
+
+      assert Enum.count(thumb) == 1
+    end
+
+    test "#contacto .pk-about-map-thumb renders exactly 0 elements", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, "#contacto .pk-about-map-thumb")
+
+      assert Enum.count(thumb) == 0
+    end
+
+    test "the map thumb was moved, not copied — exactly 1 .pk-about-map-thumb page-wide",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, ".pk-about-map-thumb")
+
+      assert Enum.count(thumb) == 1
+    end
+
+    test "the relocated iframe keeps its src and every security-relevant attribute byte-identical",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      iframe = LazyHTML.query(doc, "#juntadas .pk-about-map-embed")
+
+      assert Enum.count(iframe) == 1
+      assert LazyHTML.attribute(iframe, "src") == [ClubLinks.maps_embed_url()]
+      assert LazyHTML.attribute(iframe, "loading") == ["lazy"]
+      assert LazyHTML.attribute(iframe, "referrerpolicy") == ["strict-origin-when-cross-origin"]
+      assert LazyHTML.attribute(iframe, "sandbox") == ["allow-scripts allow-same-origin"]
+      assert LazyHTML.attribute(iframe, "tabindex") == ["-1"]
+      assert LazyHTML.attribute(iframe, "aria-hidden") == ["true"]
+    end
+
+    test "#contacto a returns exactly the 3 chip anchors — the overlay map link left with the map",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      links = LazyHTML.query(doc, "#contacto a")
+      hrefs = LazyHTML.attribute(links, "href")
+
+      assert Enum.count(links) == 3
+
+      assert hrefs == [
+               ClubLinks.whatsapp_group_url(),
+               ClubLinks.facebook_url(),
+               ClubLinks.instagram_url()
+             ]
     end
   end
 end
