@@ -694,9 +694,20 @@ defmodule PukllayClubWeb.AboutLive do
             <p class="text-lg">
               Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.
             </p>
+            <%!-- D-06/D-07 (plan 01.5-02): three channels, not two. Facebook
+            added alongside WhatsApp/Instagram. `social_links/1` renders its
+            four `<a>` blocks in a FIXED source order (WhatsApp, Facebook,
+            Instagram, Email) regardless of how this `icons` list is
+            ordered, so the rendered sequence here is WhatsApp -> Facebook
+            -> Instagram. Email is deliberately absent (D-07): three
+            fully-labeled chips already measure ~387px against a 375px
+            phone's ~327px of available width, which is exactly what forces
+            the mobile icon-only treatment below (Task 2) — a fourth chip
+            has no room on either side of that breakpoint. Email stays a
+            footer-only channel. --%>
             <Layouts.social_links
               class="pk-about-contact-links"
-              icons={[:whatsapp, :instagram]}
+              icons={[:whatsapp, :instagram, :facebook]}
               labels
             />
             <%!-- G-01.4-5 gap closure, plan 01.4-12, per CONTEXT.md D-11 through

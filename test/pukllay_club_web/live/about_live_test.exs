@@ -704,8 +704,10 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
   # Plan 01.4-02 Task 3: the Contacto card's real WhatsApp/Instagram icon
   # links, resolved through the newly-public Layouts.social_links/1.
-  describe "Contacto card icon links (plan 01.4-02 Task 3)" do
-    test "renders exactly 2 links inside .pk-about-contact-links: WhatsApp and Instagram, in order",
+  # Extended to 3 channels in plan 01.5-02 (D-06/D-07): Facebook added,
+  # Email deliberately excluded (footer-only).
+  describe "Contacto card icon links (plan 01.4-02 Task 3, extended plan 01.5-02)" do
+    test "renders exactly 3 links inside .pk-about-contact-links: WhatsApp, Facebook and Instagram, in social_links/1's fixed render order",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
@@ -713,10 +715,14 @@ defmodule PukllayClubWeb.AboutLiveTest do
       links = LazyHTML.query(doc, ".pk-about-contact-links a")
       hrefs = LazyHTML.attribute(links, "href")
 
-      assert Enum.count(links) == 2
-      assert hrefs == [ClubLinks.whatsapp_group_url(), ClubLinks.instagram_url()]
+      assert Enum.count(links) == 3
 
-      refute ClubLinks.facebook_url() in hrefs
+      assert hrefs == [
+               ClubLinks.whatsapp_group_url(),
+               ClubLinks.facebook_url(),
+               ClubLinks.instagram_url()
+             ]
+
       refute Enum.any?(hrefs, &String.starts_with?(&1, "mailto:"))
     end
 
@@ -730,7 +736,57 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       assert links_html =~ "<svg"
       assert links_html =~ "Grupo de WhatsApp"
+      assert links_html =~ "Facebook"
       assert links_html =~ "Instagram"
+    end
+  end
+
+  # Plan 01.5-02, Task 1 (D-05): the card's chrome (background, border-radius,
+  # padding) is gone, while the internal flex/gap layout is untouched.
+  describe "Contacto card de-chroming (plan 01.5-02, D-05)" do
+    test ".pk-about-contact-card keeps its flex layout but declares no background, border-radius or padding" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-contact-card\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-contact-card rule in app.css."
+      [_, body] = rule
+
+      assert Regex.scan(~r/background\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no background (D-05 removes the card chrome)."
+
+      assert Regex.scan(~r/border-radius\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no border-radius (D-05 removes the card chrome)."
+
+      assert Regex.scan(~r/padding\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no padding (D-05 removes the card chrome)."
+
+      assert body =~ ~r/display\s*:\s*flex/,
+             "Expected .pk-about-contact-card to keep display: flex (D-05 preserves internal layout)."
+
+      assert body =~ ~r/flex-direction\s*:\s*column/,
+             "Expected .pk-about-contact-card to keep flex-direction: column (D-05 preserves internal layout)."
+
+      assert body =~ ~r/gap\s*:/,
+             "Expected .pk-about-contact-card to keep its gap (D-05 preserves internal layout)."
+    end
+  end
+
+  # Plan 01.5-02, Task 1 (D-06): the chip resting state pulls its colour
+  # pairing bare from --color-accent/--color-accent-content, matching
+  # .pk-pill-accent's existing precedent.
+  describe "Contacto chip accent tint (plan 01.5-02, D-06)" do
+    test ".pk-about-contact-links a declares the accent background/content colour pairing" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-contact-links a\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-contact-links a rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/background\s*:\s*var\(--color-accent\)/,
+             "Expected .pk-about-contact-links a to set background: var(--color-accent)."
+
+      assert body =~ ~r/color\s*:\s*var\(--color-accent-content\)/,
+             "Expected .pk-about-contact-links a to set color: var(--color-accent-content)."
     end
   end
 end
