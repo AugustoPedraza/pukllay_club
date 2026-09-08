@@ -230,7 +230,24 @@
      width. */
   .closing-band .band-inner { display: flex; flex-direction: column; align-items: center; gap: 24px; }
   .closing-band h2 { margin: 0; }
-  .closing-meta { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); }
+  /* Selector is `.closing-band .closing-meta`, not bare `.closing-meta` —
+     found live while checking round 12b: the shared `.band p` rule
+     (class+type = higher specificity than a single class) was silently
+     winning the font-size cascade this whole time, rendering this line
+     at 18px regardless of what `.closing-meta` declared. Two classes
+     here (specificity 0,2,0) reliably beats `.band p`'s (0,1,1). */
+  .closing-band .closing-meta { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); }
+  /* Round 12b (feedback: mobile "needs to be two centered lines with
+     small font size" for better balance) — a deliberate break at the
+     natural separator, not whatever width happens to wrap it. Hidden by
+     default (flows as one line on wider screens where it fits and
+     already reads fine); shown only at the same ≤639px "mobile" width
+     this file uses everywhere else. */
+  .closing-break { display: none; }
+  @media (max-width: 639px) {
+    .closing-break { display: block; }
+    .closing-band .closing-meta { font-size: 10px; letter-spacing: 0.04em; }
+  }
 
   /* Round 10a (feedback: "I want the 'close' more prominent... full
      screen band... for desktop only"): desktop-only (matching this
@@ -243,6 +260,21 @@
   @media (min-width: 640px) {
     .closing-band { min-height: 100vh; display: flex; align-items: center; padding: 0; }
     .closing-band h2 { font-size: clamp(2rem, 4vw, 3rem); }
+  }
+
+  /* Round 12a (feedback: "for desktop, there is too much space from
+     bottom") — pure `align-items: center` on a 100vh box splits the
+     leftover space evenly above/below by construction, but the docked
+     65px header (fixed, overlapping the section's own top edge) visually
+     eats into that top gap while nothing touches the bottom gap — so the
+     TRUE top/bottom split reads as even, but the VISIBLE split doesn't.
+     padding-top equal to the header's own height shifts the flex
+     centering point down by that same amount, shrinking the bottom gap
+     and growing the true top gap by just enough to cancel the header's
+     visual overlap — restoring what actually looks even. 65px matches
+     .fake-header's own height elsewhere in this file, not a new number. */
+  @media (min-width: 640px) {
+    .closing-band { padding-top: 65px; }
   }
 
   /* Round 10b (feedback: "for mobile, remove the 'sumate' below 'nos
@@ -388,7 +420,7 @@ sketches 046/048 and isn't the point here.</div>
   <div class="band-inner">
     <h2>Nos vemos el sábado</h2>
     <a class="btn-sumate" href="#">Sumate</a>
-    <p class="closing-meta">Pukllay Club · San Salvador de Jujuy, Argentina</p>
+    <p class="closing-meta">Pukllay Club ·<br class="closing-break"> San Salvador de Jujuy, Argentina</p>
   </div>
 </section>
 

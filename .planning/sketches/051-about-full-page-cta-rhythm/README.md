@@ -233,6 +233,29 @@ was never resolved. Picked: drop the Instagram link, keep it a plain closing sig
 `Pukllay Club · San Salvador de Jujuy, Argentina`. The now-unused `.closing-meta a` CSS rule is
 removed.
 
+## Round 12 — mobile two-line meta, desktop bottom space, and a real specificity bug
+Two fixes from feedback ("for mobile, two centered lines with small font size" + "for desktop,
+too much space from bottom"):
+
+1. **Mobile two-line meta** — a `<br class="closing-break">` forces a deliberate break at the
+   natural "·" separator (not wherever the width happens to wrap it), hidden by default and shown
+   only ≤639px. While tuning the font size down for this, found a **real bug**: `.closing-meta`
+   (a single class, specificity 0,1,0) was silently losing its `font-size` to the shared
+   `.band p` rule (class+type, specificity 0,1,1, higher) — so this line had been rendering at
+   18px this whole time, not the intended small size, in every prior round. Fixed by requalifying
+   the selector to `.closing-band .closing-meta` (0,2,0, reliably above `.band p`). Verified via
+   computed styles: now genuinely 10px/15px line-height on mobile, and exactly two lines.
+2. **Desktop: too much space from bottom** — pure `align-items: center` in a 100vh box splits
+   leftover space evenly above/below by construction, but the docked 65px header (fixed,
+   overlapping the section's own top edge) visually eats into the top gap while nothing touches
+   the bottom gap — so the *true* split is even but the *visible* one isn't. Added
+   `padding-top: 65px` (matching the fake header's own height) to shift the flex centering point
+   down by that amount, shrinking the bottom gap and growing the true top gap just enough to
+   cancel the header's visual overlap.
+
+Both verified live: desktop shows a visibly smaller bottom gap; the 375px iframe shows the meta
+line as exactly two centered lines at a small, legible size.
+
 ## What to Look For
 - Does the map feel more meaningful sitting with Juntadas' location description than it did in
   Contacto?
