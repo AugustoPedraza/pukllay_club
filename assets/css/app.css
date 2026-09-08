@@ -2931,8 +2931,20 @@ body.pk-drawer-open {
     gap: 1rem;
   }
 
+  /* sr-only, not display: none (CR-01) — WhatsApp's <a> has no aria-label
+     when `labels: true` (see Layouts.social_links/1); its only accessible
+     name is this span's text, so hiding it from the a11y tree too would
+     leave the club's primary contact channel unlabeled for screen readers. */
   .pk-about-contact-links a span {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .pk-about-contact-links a {

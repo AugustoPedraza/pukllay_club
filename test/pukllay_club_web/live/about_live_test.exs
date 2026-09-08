@@ -848,7 +848,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
              "Expected the @media (max-width: 639px) block to reference .pk-about-contact-links."
     end
 
-    test "inside the 639px block, .pk-about-contact-links a span declares display: none" do
+    test "inside the 639px block, .pk-about-contact-links a span is visually hidden via sr-only (CR-01), not display: none" do
       src = strip_comments(css_source())
       body = media_639_body(src)
 
@@ -856,8 +856,11 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert rule, "Expected a .pk-about-contact-links a span rule inside the 639px block."
       [_, rule_body] = rule
 
-      assert rule_body =~ ~r/display\s*:\s*none/,
-             "Expected .pk-about-contact-links a span to declare display: none."
+      refute rule_body =~ ~r/display\s*:\s*none/,
+             "Expected .pk-about-contact-links a span NOT to declare display: none (CR-01: WhatsApp has no aria-label with labels: true, so hiding its span from the a11y tree removes its only accessible name)."
+
+      assert rule_body =~ ~r/clip\s*:\s*rect\(0,\s*0,\s*0,\s*0\)/,
+             "Expected .pk-about-contact-links a span to use the sr-only visually-hidden technique so its text stays in the accessibility tree."
     end
 
     test "inside the 639px block, .pk-about-contact-links declares justify-content: center" do
