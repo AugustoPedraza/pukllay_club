@@ -227,7 +227,21 @@
      margin so gap is the single source of truth. Same rule works
      unmodified at both viewports — no separate mobile override needed,
      since the fix was the rhythm SYSTEM, not a size that differs by
-     width. */
+     width.
+
+     Round 13 fix (real bug, feedback: "be sure 'Pukllay club' be
+     centered together to San Salvador...") — round 9's rebuild silently
+     dropped the original `.closing-band { text-align: center; }` rule
+     when it replaced the old .cta-row block above. `align-items: center`
+     on .band-inner centers each child's own BOX, but says nothing about
+     text alignment WITHIN a box — invisible for the single-line h2/button
+     (their auto-sized box already hugs the text, so there's no slack to
+     reveal it), but round 12's two-line meta text has a box as wide as
+     its longest line ("SAN SALVADOR DE JUJUY, ARGENTINA"), and without
+     text-align the shorter first line ("PUKLLAY CLUB ·") was sitting
+     flush-left inside that box instead of centered — confirmed via
+     computed styles (`text-align: start`, not `center`, before this fix). */
+  .closing-band { text-align: center; }
   .closing-band .band-inner { display: flex; flex-direction: column; align-items: center; gap: 24px; }
   .closing-band h2 { margin: 0; }
   /* Selector is `.closing-band .closing-meta`, not bare `.closing-meta` —

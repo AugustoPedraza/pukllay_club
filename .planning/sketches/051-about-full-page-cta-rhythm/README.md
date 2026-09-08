@@ -256,6 +256,18 @@ too much space from bottom"):
 Both verified live: desktop shows a visibly smaller bottom gap; the 375px iframe shows the meta
 line as exactly two centered lines at a small, legible size.
 
+## Round 13 — real bug: text-align:center was silently missing
+Feedback: "be sure 'Pukllay club' be centered together to San Salvador...". Found the real cause:
+round 9's rebuild replaced the old `.closing-band { text-align: center; }` + `.cta-row` block with
+the new flex-gap version, and **silently dropped the text-align declaration** in the process.
+`align-items: center` on `.band-inner` centers each child's own box, but says nothing about text
+alignment *within* a box — invisible for the single-line h2/button (their auto-sized box already
+hugs the text, no slack to reveal it), but round 12's two-line meta text has a box as wide as its
+longest line, and without `text-align` the shorter first line sat flush-left inside that box.
+Confirmed via computed styles (`text-align: start`, not `center`) before restoring the rule.
+Verified live after the fix: `text-align: center` now computes correctly, and the two lines read
+as one centered block.
+
 ## What to Look For
 - Does the map feel more meaningful sitting with Juntadas' location description than it did in
   Contacto?
