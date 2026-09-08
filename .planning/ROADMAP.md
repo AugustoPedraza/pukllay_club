@@ -129,6 +129,41 @@ be pulled forward without breaking that dependency chain.
 
 - [x] 01-12-PLAN.md — Sticky gutter-aligned nav with shelf anchors and search, mobile category chips, design-system record (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
 
+### Phase 01.5: About Page CTA Rhythm & Header Morph Refinement — implement sketch-findings-pukllay_club sketches 050-051: isologo scroll-morph gets a companion wordmark baked into the mark with eyebrow synced to the dock-crossing state; full-page CTA rhythm pass across the About page (Contacto card chrome dropped, soft-chip contact links plus Facebook, Maps thumbnail moved to Juntadas, Cierre full-screen on desktop with unified gap-based rhythm, alternating plain/tint band backgrounds page-wide) (INSERTED)
+
+**Goal:** The About page's isologo says the club's name as it scrolls, and the page's four CTA
+touchpoints read as one rhythm instead of four competing asks: a "PUKLLAY CLUB" companion wordmark
+travels and shrinks with the morphing mark while the hero eyebrow yields to the header at the same
+instant; Contacto sheds its card chrome and becomes a plain column of three soft accent-tinted
+chips (WhatsApp, Facebook, Instagram) that go circular and icon-only on a phone; the venue map moves
+to Juntadas where the copy names the meeting place; the closing band becomes a full-viewport
+destination on desktop with one gap-driven rhythm and a plain link-free signature; and adjacent
+bands alternate plain and tinted backgrounds down the page while the FAQ keeps its dark band as the
+one deliberate bold stop.
+**Requirements**: none — no REQ-IDs map to this inserted UI-polish phase (same pattern as Phase
+01.4). CONTEXT.md's locked decisions D-01..D-15 are this phase's acceptance criteria instead, per
+01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
+Map. Plan frontmatter carries decision-scoped pseudo-IDs.
+**Depends on:** Phase 1, Phase 01.4
+**Plans:** 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 01.5-01-PLAN.md — Isologo companion wordmark "PUKLLAY CLUB" baked into the morph mark, with the hero eyebrow synced to the same dock-crossing boolean (D-01, D-02, D-03, D-04, D-15)
+
+**Wave 2** *(blocked on Wave 1 — shared files)*
+
+- [ ] 01.5-02-PLAN.md — Contacto de-chromed to a plain column of three accent-tinted chips that go circular on mobile, and the live Maps embed relocated to Juntadas (D-05, D-06, D-07, D-08, D-09)
+
+**Wave 3** *(blocked on Wave 2 — shared files)*
+
+- [ ] 01.5-03-PLAN.md — Closing band: trailing Instagram link removed from the signature, two-line mobile wrap, one flex gap for all internal spacing, full-viewport on desktop (D-13, D-12, D-10)
+
+**Wave 4** *(blocked on Wave 3 — shared files)*
+
+- [ ] 01.5-04-PLAN.md — Page-wide rhythm finishers: no duplicate Sumate at the 480px sticky-bar threshold, alternating plain/tint band backgrounds with the FAQ untouched, plus the phase gate (D-11, D-14)
+
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 
 **Goal:** The shipped About page tells the truth and looks finished: it states the club's real
@@ -141,7 +176,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 10/11 active plans executed (12 authored, 1 superseded — 4 gap-closure plans added from UAT, 3 more from verification gap G-01.4-5)
+**Plans:** 11/11 plans complete
 
 Plans:
 **Wave 1**
@@ -190,7 +225,7 @@ Plans:
 
 **Wave 12** *(gap closure — verification G-01.4-5, blocked on Wave 10)*
 
-- [ ] 01.4-12-PLAN.md — Maps facade replaced by a live keyless Google Maps embed: a `frame-src` CSP directive derived from the embed URL itself so it can never be broader than the one frame it permits, the iframe made non-interactive behind a single full-box click-out to `ClubLinks.maps_url/0`, a `[data-theme="dark"]` filter approximation, the caption chip moved off the edge Google paints its own attribution into, both screenshot JPEGs and the pixel oracle deleted, and the visual probe rebuilt to gate the child frame's actual navigation commit (D-11, D-12, D-13, D-14; G-01.4-5)
+- [x] 01.4-12-PLAN.md — Maps facade replaced by a live keyless Google Maps embed: a `frame-src` CSP directive derived from the embed URL itself so it can never be broader than the one frame it permits, the iframe made non-interactive behind a single full-box click-out to `ClubLinks.maps_url/0`, a `[data-theme="dark"]` filter approximation, the caption chip moved off the edge Google paints its own attribution into, both screenshot JPEGs and the pixel oracle deleted, and the visual probe rebuilt to gate the child frame's actual navigation commit (D-11, D-12, D-13, D-14; G-01.4-5)
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 
