@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 **Wave 1**
@@ -158,7 +158,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 — shared files)*
 
-- [ ] 01.5-03-PLAN.md — Closing band: trailing Instagram link removed from the signature, two-line mobile wrap, one flex gap for all internal spacing, full-viewport on desktop (D-13, D-12, D-10)
+- [x] 01.5-03-PLAN.md — Closing band: trailing Instagram link removed from the signature, two-line mobile wrap, one flex gap for all internal spacing, full-viewport on desktop (D-13, D-12, D-10)
 
 **Wave 4** *(blocked on Wave 3 — shared files)*
 
