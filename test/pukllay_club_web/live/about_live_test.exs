@@ -1313,7 +1313,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       doc = LazyHTML.from_document(html)
-      assert Enum.count(LazyHTML.query(doc, ".pk-about-cta-spacer")) == 0
+      assert Enum.empty?(LazyHTML.query(doc, ".pk-about-cta-spacer"))
     end
 
     # Plan 01.5-08 (Rule 1 bug, found via Task 3's live CDP probe): this
