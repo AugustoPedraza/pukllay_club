@@ -1256,6 +1256,7 @@ defmodule PukllayClubWeb.LayoutsTest do
       hrefs = LazyHTML.attribute(links, "href")
 
       assert Enum.count(links) == 2
+
       assert hrefs == [
                PukllayClubWeb.ClubLinks.whatsapp_group_url(),
                PukllayClubWeb.ClubLinks.instagram_url()

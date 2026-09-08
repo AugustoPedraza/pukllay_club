@@ -226,7 +226,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       # explicitly, making a fourth mention here redundant. The closing
       # band's only anchor is the Sumate button.
       meta_links = LazyHTML.query(cierre, "a:not(.btn)")
-      assert Enum.count(meta_links) == 0
+      assert Enum.empty?(meta_links)
     end
 
     test "/club and /quienes-somos render byte-identical HTML once per-connection session/CSRF tokens are normalized (D-01)",
@@ -535,13 +535,13 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       imgs = LazyHTML.query(thumb, "img")
 
-      assert Enum.count(imgs) == 0,
+      assert Enum.empty?(imgs),
              "Expected zero <img> elements inside .pk-about-map-thumb — the live frame " <>
                "renders its own tiles, so there is no screenshot asset left to reference."
 
       credit = LazyHTML.query(doc, ".pk-about-map-credit")
 
-      assert Enum.count(credit) == 0,
+      assert Enum.empty?(credit),
              "Expected zero elements matching .pk-about-map-credit — plan 01.4-11's figcaption " <>
                "is superseded by 01.4-12 (CONTEXT.md D-15): the live frame renders Google's real " <>
                "attribution at native size, so a hand-authored credit line is now a second, " <>
@@ -550,7 +550,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       contacto = LazyHTML.query(doc, "#contacto")
       figures = LazyHTML.query(contacto, "figure")
 
-      assert Enum.count(figures) == 0,
+      assert Enum.empty?(figures),
              "Expected zero <figure> elements inside #contacto — the screenshot facade's " <>
                "<figure> wrapper (and its figcaption) is gone."
     end
@@ -914,7 +914,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       doc = LazyHTML.from_document(html)
       thumb = LazyHTML.query(doc, "#contacto .pk-about-map-thumb")
 
-      assert Enum.count(thumb) == 0
+      assert Enum.empty?(thumb)
     end
 
     test "the map thumb was moved, not copied — exactly 1 .pk-about-map-thumb page-wide",
@@ -1243,6 +1243,90 @@ defmodule PukllayClubWeb.AboutLiveTest do
                  ".btn already centers; sketch 051's centering fix was for its own hand-rolled " <>
                  "button CSS, not this app's."
       end
+    end
+  end
+
+  # Plan 01.5-04, Task 2 (D-14): page-wide band background alternation —
+  # plain -> tint -> dark -> plain -> tint top to bottom, with FAQ's dark
+  # band kept as a deliberate one-off highlight outside the alternation.
+  describe "About page band background alternation (plan 01.5-04, D-14)" do
+    test "app.css declares exactly one top-level .pk-band-tint rule with background: var(--color-base-200) as its only declaration" do
+      src = strip_comments(css_source())
+
+      matches = Regex.scan(~r/(?m)^\.pk-band-tint\s*\{/, src)
+
+      assert length(matches) == 1,
+             "Expected exactly one top-level .pk-band-tint rule in app.css."
+
+      [_, body] = Regex.run(~r/\.pk-band-tint\s*\{([^}]*)\}/s, src)
+      declarations = body |> String.split(";") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+
+      assert declarations == ["background: var(--color-base-200)"],
+             "Expected .pk-band-tint to declare background: var(--color-base-200) and nothing else, got: #{inspect(declarations)}"
+    end
+
+    test "the .pk-band-dark rule still declares background: var(--color-primary) and color: var(--color-primary-content) unchanged" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-band-dark\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a .pk-band-dark rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/background\s*:\s*var\(--color-primary\)/
+      assert body =~ ~r/color\s*:\s*var\(--color-primary-content\)/
+    end
+
+    test "reading section.pk-band class attributes in document order yields the state sequence plain, tint, dark, plain, tint",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      sections = LazyHTML.query(doc, "section.pk-band")
+      classes = LazyHTML.attribute(sections, "class")
+
+      assert Enum.count(classes) == 5,
+             "Expected exactly 5 section.pk-band elements on the About page."
+
+      states =
+        Enum.map(classes, fn class ->
+          cond do
+            class =~ "pk-band-dark" -> :dark
+            class =~ "pk-band-tint" -> :tint
+            true -> :plain
+          end
+        end)
+
+      assert states == [:plain, :tint, :dark, :plain, :tint],
+             "Expected the band background sequence (document order) to be " <>
+               "plain, tint, dark, plain, tint — got: #{inspect(states)}. Asserting the ORDER " <>
+               "is the point: a correct set of classes attached to the wrong sections would " <>
+               "still satisfy a count-only assertion."
+    end
+
+    test "exactly 2 sections carry pk-band-tint and exactly 1 carries pk-band-dark, and it is #faq",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+
+      tinted = LazyHTML.query(doc, "section.pk-band-tint")
+      assert Enum.count(tinted) == 2
+
+      dark = LazyHTML.query(doc, "section.pk-band-dark")
+      assert Enum.count(dark) == 1
+      assert LazyHTML.attribute(dark, "id") == ["faq"]
+    end
+
+    test "no section carries both pk-band-tint and pk-band-dark", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      sections = LazyHTML.query(doc, "section.pk-band")
+      classes = LazyHTML.attribute(sections, "class")
+
+      refute Enum.any?(classes, fn class -> class =~ "pk-band-tint" and class =~ "pk-band-dark" end),
+             "Expected no section to carry both pk-band-tint and pk-band-dark — FAQ's dark " <>
+               "treatment stays a one-off highlight, not also tinted."
     end
   end
 end

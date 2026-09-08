@@ -2711,10 +2711,35 @@ body.pk-drawer-open {
 
 /* The dark FAQ band's token mapping (Claude's discretion, D-08): the
    brand's own measured-contrast pair (app.css's WCAG comment above), not
-   the design source's own one-off literal colour values. */
+   the design source's own one-off literal colour values. This band is
+   deliberately OUTSIDE the D-14 plain/tint alternation below (plan
+   01.5-04) — it stays a one-off bold stop, not a third repeating state;
+   see .pk-band-tint's own comment for the full rationale. No section ever
+   carries both this class and .pk-band-tint. */
 .pk-band-dark {
   background: var(--color-primary);
   color: var(--color-primary-content);
+}
+
+/* Plan 01.5-04, D-14: page-wide band background alternation. A modifier
+   class layered on top of .pk-band, changing background only, exactly
+   mirroring .pk-band-dark's own shape above — .pk-band still owns the
+   vertical padding and .pk-band-inner still owns the width cap; this is a
+   per-band background change on top of the existing recipe, not a layout
+   change. Applied to exactly two sections (Qué hacemos/Historia and
+   Cierre) so the page reads plain -> tint -> dark -> plain -> tint top to
+   bottom (about_live.ex).
+
+   --color-base-200 (not a new --color-surface token, which this app does
+   not define) is this app's own established "one step off the page
+   background" surface colour — already defined in both theme blocks
+   (light/dark) and already used this exact way throughout this file (the
+   Contacto card's own background before plan 01.5-02 removed it, the
+   footer, the drawer). Reaching for a new token or a color-mix() here
+   would invent a second way to express a colour this app already
+   expresses one way. */
+.pk-band-tint {
+  background: var(--color-base-200);
 }
 
 .pk-faq-item {
