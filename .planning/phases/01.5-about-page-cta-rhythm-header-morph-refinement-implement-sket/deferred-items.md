@@ -32,3 +32,13 @@ modified by this plan's tasks, and every task-level `<verify>` in 01.5-02's own 
 housekeeping change (or during the next plan/phase that touches either file), and confirm the
 Styler rewrite is safe per this project's own "review every Styler diff" convention before
 committing.
+
+**Resolved in plan 01.5-04 (Task 2, phase close-out):** Task 2's own `<verify>` block requires
+`mix quality` to exit 0 for the whole phase, which surfaced this drift directly (it had never
+been checked project-wide by any earlier plan in this phase, only per-touched-file). Fixed by
+running `mix format` on both named files — reviewed the diff per this project's Styler caution;
+both files' rewrites were pure pipe-first/blank-line style changes to test-only code, no behavior
+change. `mix quality` also surfaced 7 pre-existing Credo `Enum.count/1 == 0` warnings (prefer
+`Enum.empty?/1`) across `about_live_test.exs` (plans 01.5-02/03's own tests) and
+`about_header_morph_test.exs` (plan 01.5-01's own tests) — fixed the same way, same rationale.
+`mix quality` now exits 0.
