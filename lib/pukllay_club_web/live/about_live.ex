@@ -777,17 +777,25 @@ defmodule PukllayClubWeb.AboutLive do
         </div>
       </section>
 
-      <%!-- Closing CTA band. The design source's meta line links to a
-      link-aggregator site via ClubLinks.linktree_url/0 — that function no
-      longer exists: the developer explicitly removed the link-aggregator
-      channel site-wide during plan 01.1-01's footer revision ("remove it,
-      the channel is no longer rendered anywhere" — see ClubLinks'
-      moduledoc). Re-adding a link to a function that doesn't exist would
-      either fail to compile or require inventing a dead URL, so the
-      trailing link instead points at Instagram (still a real, live
-      channel) — same required "Pukllay Club · San Salvador de Jujuy,
-      Argentina ·" prefix, honest destination. Flagged for developer
-      review.
+      <%!-- Closing CTA band. The design source's meta line originally
+      linked to a link-aggregator site via ClubLinks.linktree_url/0 — that
+      function no longer exists: the developer explicitly removed the
+      link-aggregator channel site-wide during plan 01.1-01's footer
+      revision ("remove it, the channel is no longer rendered anywhere" —
+      see ClubLinks' moduledoc). Plan 049 (Phase 01.4) substituted a
+      trailing Instagram link in its place and flagged that substitution
+      "for developer review" in this comment.
+
+      That review happened in plan 01.5-03 (D-13): the trailing link is
+      removed entirely rather than re-pointed at a different channel —
+      Contacto's chip row directly above (D-06/D-07, plan 01.5-02) now
+      surfaces all three channels (WhatsApp, Facebook, Instagram)
+      explicitly, so a fourth mention of any one of them here would be
+      redundant, not helpful. The signature is now a plain "Pukllay Club ·
+      San Salvador de Jujuy, Argentina" carrying no link at all, forced
+      onto two centered lines on mobile at the "·" break point via a
+      responsive <br> (pk-about-closing-break) rather than wherever the
+      viewport happens to wrap it.
 
       Sketch 049: the button pair that used to sit above this meta line
       (Grupo de WhatsApp + Instagram) was removed — by the time a reader
@@ -802,9 +810,8 @@ defmodule PukllayClubWeb.AboutLive do
           <div class="flex justify-center">
             <Layouts.sumate_cta />
           </div>
-          <p class="pk-about-eyebrow">
-            Pukllay Club · San Salvador de Jujuy, Argentina ·
-            <a href={ClubLinks.instagram_url()} target="_blank" rel="noopener noreferrer">Instagram</a>
+          <p class="pk-about-eyebrow pk-about-closing-meta">
+            Pukllay Club ·<br class="pk-about-closing-break" /> San Salvador de Jujuy, Argentina
           </p>
         </div>
       </section>

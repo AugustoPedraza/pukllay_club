@@ -2600,9 +2600,113 @@ body.pk-drawer-open {
   color: var(--color-neutral);
 }
 
+/* Plan 01.5-03, D-13: the Cierre closing signature (the ONE consumer of
+   this class that used to carry a trailing anchor) no longer contains a
+   link at all — kept here, not deleted, because .pk-about-eyebrow remains
+   a general class and this `a` rule may style a future non-Cierre
+   consumer; deleting a rule just because its only current caller stopped
+   using it is exactly the "audit only the property the change is about"
+   mistake sketch 051's third bug documents (about-page-content.md). */
 .pk-about-eyebrow a {
   color: inherit;
   text-decoration: underline;
+}
+
+/* Plan 01.5-03, D-13: the two-line mobile wrap for the Cierre signature.
+   Hidden by default (desktop reads the signature as one line); the
+   @media (max-width: 639px) block below turns it on. display: none/block
+   (not a Tailwind sm:hidden/hidden sm:block pair) per this file's
+   top-of-file cascade-hazard note — mixing an unlayered .pk-* rule with a
+   layered Tailwind utility on the same element produces a utility that
+   silently loses and looks live when it is not. */
+.pk-about-closing-break {
+  display: none;
+}
+
+/* Plan 01.5-03, D-12: the Cierre band's ONLY internal spacing rule.
+   `.pk-band` (above) declares only its own vertical padding and
+   `.pk-band-inner` (above) only a width cap + auto margins; Tailwind's
+   preflight zeroes heading/paragraph margins and this app loads no
+   typography plugin, so the band's three children (heading, button
+   wrapper, signature) have NO spacing between them without this rule.
+   This is therefore the band's first and only internal rhythm, not a
+   tidy-up of an existing margin system — it must stay a single
+   declaration applied unconditionally at every width (D-12's "consistent
+   rhythm across mobile and desktop" means one rule, unmodified per
+   viewport, not two hand-tuned spacing systems that drift apart). Do not
+   add a per-element margin anywhere in this band, and the desktop
+   full-screen media block below must not re-declare `gap` on top of this.
+
+   align-items: center centers each child's own BOX; it says nothing about
+   text alignment WITHIN a box. The `text-center` Tailwind utility on this
+   same element (markup, about_live.ex) is what keeps the two-line
+   signature's shorter first line centered inside a box sized to its
+   longer second line — sketch 051's round 13 lost exactly that property
+   during an unrelated layout rewrite and did not notice for four rounds,
+   because single-line content auto-sizes its box tightly enough to mask a
+   missing alignment (about-page-content.md, bug 3). This rule declares no
+   text-align; do not "consolidate" it here and do not remove the utility
+   from the markup.
+
+   The button wrapper's own `flex justify-center` utilities become
+   redundant once align-items: center shrink-wraps it, but are left in
+   place — removing them would be a second, unrelated layout change inside
+   this same edit, the exact shape of mistake sketch 051's round 13
+   documents. */
+#cierre .pk-band-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Plan 01.5-03, D-10: Cierre goes full-viewport on desktop instead of
+   reading as one more shared 72px band, so the close feels like a real
+   destination (sketch 051 round 10a). Desktop-only — mobile keeps the
+   compact `.pk-band` treatment untouched. 640px matches the other
+   desktop-vs-mobile splits this phase introduced (D-08's 639px Contacto
+   breakpoint), one width below Tailwind's `sm`.
+
+   padding: var(--pk-header-h, 4.5rem) 0 0 REPLACES .pk-band's shared
+   `4.5rem 0` at this width on purpose: the section's own 100vh box
+   supplies the vertical room, so keeping the shared band padding would
+   only push the content below the fold. #cierre (specificity 1,0,0)
+   out-specifies .pk-band (0,1,0), and because this whole block is
+   media-scoped, mobile keeps the shared band padding exactly as it was.
+
+   Why the top padding reads a token, not a pixel literal (sketch 051
+   round 12a): pure `align-items: center` in a 100vh box splits the
+   leftover space evenly by construction, so the TRUE split is even — but
+   the fixed header overlaps the band's top edge and visually eats into
+   the top gap while nothing touches the bottom gap, so the VISIBLE split
+   is not. Padding equal to the header's own height shifts the flex
+   centering point down by exactly that amount and cancels the overlap.
+   The sketch used 65px, its own mockup header's height — this app must
+   not reuse that number, and must not substitute a freshly-measured one
+   either, because the real header's height already varies by viewport.
+   `--pk-header-h` is continuously republished from #app-header's real
+   rendered height by .CatalogNav's ResizeObserver (layouts.ex) and is
+   already read by 3+ other rules in this file with the same 4.5rem
+   fallback (scroll-margin-top above, .pk-title-echo's `top`) — reading it
+   here makes the compensation track the header instead of restating a
+   measurement of it.
+
+   No `gap` here: #cierre .pk-band-inner's single unconditional gap
+   (above) already governs both viewports — a desktop override would
+   recreate the two-spacing-system problem D-12 exists to prevent. No
+   `text-align` either — the text-center utility on the inner column still
+   owns that (see the #cierre .pk-band-inner comment above). */
+@media (min-width: 640px) {
+  #cierre {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: var(--pk-header-h, 4.5rem) 0 0;
+  }
+
+  #cierre h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+  }
 }
 
 /* The dark FAQ band's token mapping (Claude's discretion, D-08): the
@@ -2809,6 +2913,27 @@ body.pk-drawer-open {
   .pk-about-contact-links a {
     border-radius: 9999px;
     padding: 0.75rem;
+  }
+
+  /* Plan 01.5-03, D-13: force the Cierre signature onto two lines at the
+     "·" break point rather than wherever the viewport happens to wrap it,
+     at a smaller size than the base 0.75rem .pk-about-eyebrow rule gives
+     it. 10px is sketch 051 round 12b's own measured value — at the base
+     0.75rem the line does not reliably produce exactly two lines on a
+     narrow phone, it produces three. The selector is an id (#cierre) plus
+     a class (.pk-about-closing-meta), specificity 1,1,0: no shared
+     type+class rule anywhere in this file can reach that, which is
+     exactly what sketch 051's second bug needed (about-page-content.md,
+     bug 2) — a shared `.band p` rule silently beat a single-class
+     `.closing-meta` rule's font-size for thirteen rounds because a
+     single-class selector alone couldn't out-specify it. */
+  #cierre .pk-about-closing-break {
+    display: block;
+  }
+
+  #cierre .pk-about-closing-meta {
+    font-size: 10px;
+    letter-spacing: 0.04em;
   }
 }
 
