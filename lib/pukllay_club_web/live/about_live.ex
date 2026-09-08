@@ -30,6 +30,12 @@ defmodule PukllayClubWeb.AboutLive do
   `.pk-about-cta-spacer`/`.pk-about-cta-bar` pair (plans 01.1-08/01.1-09)
   are this club's ONLY join CTA site-wide (D-05 superseded) — every band
   this plan adds lives strictly between them, never inside or around them.**
+
+  **Sketch 050 (01.5-01, D-15):** the pending todo "Surface Pukllay Club
+  brand name in site content" is satisfied by the hero's isologo companion
+  wordmark (`.pk-about-morph-name`, D-01 through D-04) — scoped to the
+  About page only. No other page (nav, footer, home) gets brand-name text
+  added as part of this work.
   """
   use PukllayClubWeb, :live_view
 

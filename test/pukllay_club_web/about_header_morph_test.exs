@@ -238,6 +238,64 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
     end
   end
 
+  describe "regression guards for D-04's hero grouping and the real header brand-slot layout (Task 3)" do
+    test "[data-morph-anchor] is the FIRST child of #about-hero, not just present", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      first_child = LazyHTML.query(doc, "#about-hero > :first-child")
+
+      assert Enum.count(first_child) == 1
+      [attr] = LazyHTML.attribute(first_child, "data-morph-anchor")
+      assert attr == "",
+             "Expected [data-morph-anchor] to be the FIRST child of #about-hero. The hook's " <>
+               "naturalRect() reads this element's rect, and the whole hero (mark, companion " <>
+               "wordmark, eyebrow, H1, subtext, CTA) only centers as one grouped block because " <>
+               "the mark anchors to this in-flow spacer rather than to the section's own top " <>
+               "edge (D-04) — if this regresses, the anchor rect would no longer represent the " <>
+               "block's true resting position."
+    end
+
+    test "the page's only .pk-about-eyebrow lives inside #cierre, not the hero (Pitfall 3 guard)",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+
+      all_eyebrow = LazyHTML.query(doc, ".pk-about-eyebrow")
+      cierre_eyebrow = LazyHTML.query(doc, "#cierre .pk-about-eyebrow")
+
+      assert Enum.count(all_eyebrow) == 1
+      assert Enum.count(cierre_eyebrow) == 1,
+             "The Cierre band's closing signature carries an underlined-link companion rule " <>
+               "meant for that specific band (01.5-RESEARCH.md Pitfall 3) — the hero eyebrow " <>
+               "deliberately uses its own .pk-about-hero-eyebrow hook instead, never this class."
+    end
+
+    test "the shared header's brand anchor renders a real pk-brand-mark <img> (width=36) before the wordmark",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+      brand_anchor = LazyHTML.query(doc, "#app-header .shrink-0 > a")
+      assert Enum.count(brand_anchor) == 1
+
+      anchor_html = LazyHTML.to_html(brand_anchor)
+
+      mark_pos = :binary.match(anchor_html, ~s(class="dark:hidden pk-brand-mark")) |> elem(0)
+      width_pos = :binary.match(anchor_html, ~s(width="36")) |> elem(0)
+      wordmark_pos = :binary.match(anchor_html, "PUKLLAY CLUB") |> elem(0)
+
+      assert width_pos < wordmark_pos and mark_pos < wordmark_pos,
+             "Expected the pk-brand-mark <img width=\"36\"> to render before the PUKLLAY CLUB " <>
+               "wordmark text inside the brand anchor. Sketch 050's own mockup header lacked " <>
+               "this reserved image box, causing a docked mark to overlap the wordmark's first " <>
+               "letters — the real app's brand_logo/1 already reserves that space via a real " <>
+               "<img>, so no spacer fix is needed here; this test pins that fact so the " <>
+               "sketch-only bug is never re-imported as a fix."
+    end
+  end
+
   describe "the isologo suppression hook class (D-10 — a styling hook, not a fourth header state)" do
     test "pk-brand-mark appears exactly twice in layouts.ex — both isologo images, nowhere else" do
       layouts_source = File.read!("lib/pukllay_club_web/components/layouts.ex")
