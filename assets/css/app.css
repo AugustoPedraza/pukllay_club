@@ -2549,8 +2549,17 @@ body.pk-drawer-open {
    has no hook and no scroll behavior at all — it is simply pinned, unlike
    plan 01.1-04's .pk-mobile-cta-bar (the per-game reservation CTA, driven
    by .DetailChrome's scroll-retract/footer-park lifecycle). No class, rule
-   or hook is shared between the two. Both sides of the display swap live
-   in the single trailing narrow-viewport media block below, per Pitfall 5. */
+   or hook is shared between the two. Its display swap lives in the single
+   trailing narrow-viewport media block below, per Pitfall 5.
+
+   Plan 01.5-08 (G-01.5-3 item 4): this bar used to be paired with an
+   in-flow `.pk-about-cta-spacer` placed before <footer> to reserve
+   clearance for it — that spacer is gone. It sat before the footer in
+   flow, so it cleared the closing band (which needed no clearance) while
+   leaving the footer, the element this fixed bar actually overlays,
+   still covered. The replacement is a `body:has(.pk-about-cta-bar)`
+   document-end reservation in the same media block as this bar's own
+   display swap — see that rule for the full placement reasoning. */
 .pk-about-cta-bar {
   display: none;
   position: fixed;
@@ -2561,11 +2570,6 @@ body.pk-drawer-open {
   padding: 0.75rem var(--pk-gutter);
   background: var(--color-base-100);
   border-top: 1px solid var(--color-base-300);
-}
-
-.pk-about-cta-spacer {
-  display: none;
-  height: 4.5rem;
 }
 
 /* About page content bands (01.1-02, D-07 spine: hero -> photo rail ->
@@ -5781,16 +5785,52 @@ main.pk-boundary-collapse + .pk-footer {
     display: block;
   }
 
-  .pk-about-cta-spacer {
-    display: block;
+  /* Plan 01.5-08 (G-01.5-3 item 4): replaces the in-flow
+     .pk-about-cta-spacer that used to sit here. .pk-about-cta-bar above is
+     `position: fixed`, so it always covers the bottom of the viewport at
+     every scroll position — clearance for it has to be reserved at the END
+     of the document (a body padding-bottom), not in the middle of it. The
+     element this rule replaces sat in flow BEFORE <footer>, which meant it
+     cleared whatever came after it — the closing band, which needed no
+     clearance — while leaving the footer itself, the element the bar
+     actually overlays, still covered at the real page bottom. See
+     `.planning/debug/assets/cierre-band-whitespace/mobile-390-page-bottom.png`
+     for the live-measured evidence of the bar covering the footer under the
+     old spacer.
+
+     Shape follows `body.pk-has-cta-bar` (declared far above, the detail
+     page's own document-end reservation for ITS fixed bar) — that is this
+     repo's in-repo precedent for reserving clearance at the end of the
+     document for a fixed bottom bar. This rule differs in mechanism, not
+     shape: the detail page's class is applied/removed by a JS lifecycle
+     hook (.DetailChrome) because that bar retracts/parks on scroll; this
+     page's bar does neither — it is unconditionally pinned once visible, so
+     there is no lifecycle to hang a hook on and none is needed. A
+     presence-based `:has()` selector reaches the same reserved-padding
+     result with no JavaScript and no new hook, reusing the exact idiom this
+     file already established for the isologo scroll-morph
+     (`body:has(#about-hero[data-morph-armed])`, above). `.pk-about-cta-bar`
+     exists only on the About page, so this selector needs no further
+     scoping to stay page-scoped.
+
+     4.5rem is inherited unchanged from the spacer this rule replaces, not
+     freshly measured — this is a placement fix (moving the clearance to
+     where it actually clears the bar), not a height retune. Co-located in
+     this SAME @media (max-width: 480px) block as .pk-about-cta-bar's own
+     display swap above, for the identical reason the D-11 rule below is:
+     a threshold mismatch between "bar appears" and "clearance is reserved"
+     would put the bar back over the footer at some width. */
+  body:has(.pk-about-cta-bar) {
+    padding-bottom: 4.5rem;
   }
 
   /* Plan 01.5-04, D-11: suppresses the Cierre band's own Sumate button at
      the exact width where the sticky bar above takes over, so a member
      never sees the same "Sumate" ask twice on one screen. This rule MUST
-     live in this SAME @media (max-width: 480px) block as
-     .pk-about-cta-bar/.pk-about-cta-spacer above, not a second block at the
-     same threshold — a threshold mismatch between "sticky bar appears" and
+     live in this SAME @media (max-width: 480px) block as .pk-about-cta-bar
+     and the document-end clearance rule directly above it, not a second
+     block at the same threshold — a threshold mismatch between "sticky bar
+     appears" and
      "Cierre button disappears" would open a width range with NEITHER
      visible, which is worse than the duplicate-ask problem this rule
      solves. 480px is used because that is the exact width where

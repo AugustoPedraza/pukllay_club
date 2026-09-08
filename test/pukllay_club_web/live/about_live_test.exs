@@ -1250,7 +1250,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "never two separate blocks at the same value."
     end
 
-    test "inside the 480px block, .pk-about-cta-bar and .pk-about-cta-spacer declare display: block and #cierre .pk-about-cierre-cta declares display: none" do
+    test "inside the 480px block, .pk-about-cta-bar declares display: block and #cierre .pk-about-cierre-cta declares display: none" do
       src = strip_comments(css_source())
       body = media_480_body(src)
       assert body, "Expected to extract the @media (max-width: 480px) block body."
@@ -1260,15 +1260,41 @@ defmodule PukllayClubWeb.AboutLiveTest do
       [_, bar_body] = bar_rule
       assert bar_body =~ ~r/display\s*:\s*block/
 
-      spacer_rule = Regex.run(~r/\.pk-about-cta-spacer\s*\{([^}]*)\}/s, body)
-      assert spacer_rule, "Expected a .pk-about-cta-spacer rule inside the 480px block."
-      [_, spacer_body] = spacer_rule
-      assert spacer_body =~ ~r/display\s*:\s*block/
-
       cierre_rule = Regex.run(~r/#cierre \.pk-about-cierre-cta\s*\{([^}]*)\}/s, body)
       assert cierre_rule, "Expected a #cierre .pk-about-cierre-cta rule inside the 480px block."
       [_, cierre_body] = cierre_rule
       assert cierre_body =~ ~r/display\s*:\s*none/
+    end
+
+    # Plan 01.5-08 (G-01.5-3 item 4): the in-flow .pk-about-cta-spacer this
+    # test used to also assert here is gone, replaced by a page-scoped
+    # document-end clearance rule. That replacement must share the SAME
+    # 480px block as .pk-about-cta-bar's own display swap for the identical
+    # co-location reason D-11 itself exists: a threshold mismatch between
+    # "bar appears" and "clearance is reserved" would put the bar back over
+    # the footer at some width.
+    test "inside the 480px block, a body:has(.pk-about-cta-bar) rule reserves document-end padding-bottom" do
+      src = strip_comments(css_source())
+      body = media_480_body(src)
+      assert body, "Expected to extract the @media (max-width: 480px) block body."
+
+      clearance_rule = Regex.run(~r/body:has\(\.pk-about-cta-bar\)\s*\{([^}]*)\}/s, body)
+
+      assert clearance_rule,
+             "Expected a body:has(.pk-about-cta-bar) rule inside the SAME 480px block as " <>
+               ".pk-about-cta-bar's own display swap — a mismatched threshold would put the " <>
+               "fixed bar back over the footer at some width."
+
+      [_, clearance_body] = clearance_rule
+      assert clearance_body =~ ~r/padding-bottom\s*:\s*\S/
+    end
+
+    test "no .pk-about-cta-spacer selector remains anywhere in app.css" do
+      src = strip_comments(css_source())
+
+      refute src =~ "pk-about-cta-spacer",
+             "Expected .pk-about-cta-spacer to be fully removed — its clearance job moved to " <>
+               "a body:has(.pk-about-cta-bar) document-end reservation (plan 01.5-08)."
     end
 
     test "the Cierre button wrapper carries pk-about-cierre-cta and still contains the Sumate anchor",
@@ -1281,6 +1307,13 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       button = LazyHTML.query(doc, "#cierre .pk-about-cierre-cta a.btn")
       assert Enum.count(button) == 1
+    end
+
+    test "no .pk-about-cta-spacer element renders on the about page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      assert Enum.count(LazyHTML.query(doc, ".pk-about-cta-spacer")) == 0
     end
 
     test "no .pk-about-cta-bar rule anywhere in app.css declares justify-content (daisyUI's .btn already centers)" do

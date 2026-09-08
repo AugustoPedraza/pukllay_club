@@ -850,10 +850,18 @@ defmodule PukllayClubWeb.AboutLive do
       which is the whole point of the D-05 supersession — a site-wide sticky
       bar would put the join ask back on every page the header just stopped
       putting it on. Reuses the hero's own sumate_cta/1 so the two placements
-      can never drift to different labels/destinations. Both elements are
-      display:none at base, turned on only in the trailing @media (max-width:
-      480px) block. --%>
-      <div class="pk-about-cta-spacer" aria-hidden="true"></div>
+      can never drift to different labels/destinations. display:none at base,
+      turned on only in the trailing @media (max-width: 480px) block.
+
+      Plan 01.5-08 (G-01.5-3 item 4): this bar used to be paired with an
+      in-flow `.pk-about-cta-spacer` sibling div rendered here to reserve
+      clearance for it. That spacer is gone — it sat before <footer> in
+      flow, clearing the closing band above it (which needed no clearance)
+      while leaving the footer, the element this fixed bar actually
+      overlays, still covered at the real page bottom. The replacement is a
+      page-scoped `body:has(.pk-about-cta-bar)` document-end reservation in
+      app.css, co-located in the same 480px media block as this bar's own
+      display swap — see that rule for the full placement reasoning. --%>
       <div class="pk-about-cta-bar"><Layouts.sumate_cta class="w-full" /></div>
 
       <%!-- Sketch 045 isologo scroll-morph mark: the SINGLE positioned
