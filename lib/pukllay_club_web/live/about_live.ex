@@ -49,7 +49,16 @@ defmodule PukllayClubWeb.AboutLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} fullbleed sticky active_nav={:quienes_somos}>
+    <%!-- Plan 01.5-08 (G-01.5-3 item 4): `bottom_collapse`, not
+    `boundary_collapse` — this page's TOP spacing is a separately-tuned,
+    correct decision that must not move, only the bottom boundary
+    double-stacks. Both catalog callers (index.ex/show.ex) already opted
+    into one of these two attrs; About was the one caller still taking the
+    full default bottom stack (<main>'s own pb-20 + the last band's own
+    trailing margin + .pk-footer's own top margin), the exact stack
+    app.css's `main.pk-bottom-collapse` comment records as measured on the
+    catalog page before its own 260902-il3 fix. --%>
+    <Layouts.app flash={@flash} fullbleed sticky bottom_collapse active_nav={:quienes_somos}>
       <:nav_links>
         <.link navigate={~p"/"}>Inicio</.link>
         <.link navigate={~p"/quienes-somos"} aria-current="page">Quiénes Somos</.link>

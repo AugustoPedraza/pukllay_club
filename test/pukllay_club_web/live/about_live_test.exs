@@ -137,6 +137,32 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
   end
 
+  # Plan 01.5-08 (G-01.5-3 item 4): the About page opts into `bottom_collapse`
+  # (layouts.ex), which cancels <main>'s own `pb-20` while leaving the default
+  # top-padding utilities (`pt-8 sm:pt-20`) in place. Asserting BOTH halves is
+  # the point — a future "simplification" to `boundary_collapse` would also
+  # collapse the top boundary and move the hero, and would only be caught by
+  # the second half of this assertion failing.
+  describe "bottom-boundary opt-in (plan 01.5-08, G-01.5-3 item 4)" do
+    test "the about page's <main> carries the collapsed-bottom class, not pb-20, and keeps the default top-padding utilities",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      main_class =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("main")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert main_class =~ "pk-bottom-collapse"
+      refute main_class =~ "pb-20"
+      refute main_class =~ "pk-boundary-collapse"
+      assert main_class =~ "pt-8"
+      assert main_class =~ "sm:pt-20"
+    end
+  end
+
   # D-09: the club plays at the club and never lends games out — these
   # patterns catch any accidental "take it home"/lending framing creeping
   # into the page's copy.

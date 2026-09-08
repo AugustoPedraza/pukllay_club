@@ -556,14 +556,21 @@ defmodule PukllayClubWeb.LayoutsTest do
       refute class =~ "pb-20"
     end
 
-    test "the about page's <main> carries neither pk-bottom-collapse nor pk-boundary-collapse, and still carries pb-20",
+    # Plan 01.5-08 (G-01.5-3 item 4): superseded the prior assertion here
+    # (About took the full default bottom stack). The about page now opts
+    # into `bottom_collapse` — same axis as the catalog index page, since its
+    # top spacing is a separately-correct decision that must not move. See
+    # `test/pukllay_club_web/live/about_live_test.exs`'s "bottom-boundary
+    # opt-in" describe block for the top-padding-preserved half of this
+    # contract.
+    test "the about page's <main> carries pk-bottom-collapse and not pb-20 or pk-boundary-collapse",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       class = main_class(html)
-      refute class =~ "pk-bottom-collapse"
+      assert class =~ "pk-bottom-collapse"
+      refute class =~ "pb-20"
       refute class =~ "pk-boundary-collapse"
-      assert class =~ "pb-20"
     end
 
     test "the detail page's <main> carries pk-boundary-collapse and not pk-bottom-collapse", %{
@@ -576,6 +583,92 @@ defmodule PukllayClubWeb.LayoutsTest do
       class = main_class(html)
       assert class =~ "pk-boundary-collapse"
       refute class =~ "pk-bottom-collapse"
+    end
+  end
+
+  # Plan 01.5-08 (G-01.5-3 item 4, T-01.5-28): the defect this whole plan
+  # closes existed because `about_live.ex` never opted into either boundary
+  # attr and nothing surfaced that omission. This test is the surfacing
+  # mechanism for the NEXT caller that forgets: it enumerates every real
+  # `<Layouts.app` call site under `lib/` and asserts each one passes
+  # `boundary_collapse` or `bottom_collapse`.
+  describe "Layouts.app caller contract (plan 01.5-08, G-01.5-3 item 4)" do
+    # `lib/pukllay_club_web/components/layouts.ex` is the layout's OWN
+    # definition file, not a caller — its `@doc` for `app/1` includes an
+    # illustrative `<Layouts.app flash={@flash}>` usage example inside a
+    # docstring, with no boundary attr, because it is prose documentation,
+    # not a real render call. Excluded by path (the definition file), not by
+    # sniffing whether a match sits inside a docstring, which would be more
+    # fragile to a comment reflow.
+    @layouts_definition_file "lib/pukllay_club_web/components/layouts.ex"
+
+    # Callers explicitly exempted from this contract because they genuinely
+    # want <main>'s full, unmodified default top+bottom padding stack — not
+    # because nobody has looked. A caller taking that default stack
+    # accumulates THREE independently-reasonable declarations: <main>'s own
+    # bottom padding (`pb-20`, 80px) + its last child's own trailing margin +
+    # `.pk-footer`'s own top margin — the exact stack `app.css`'s
+    # `main.pk-bottom-collapse` comment records as measured live on the
+    # catalog page before quick task 260902-il3 fixed it (176px at 1280px /
+    # 128px at 390px). Empty on purpose: every current caller (the catalog
+    # index page, the game detail page, and the about page as of this plan)
+    # has a considered opt-in. Add a caller's file path here ONLY alongside a
+    # comment explaining why it genuinely wants the full default stack —
+    # never to silence this test.
+    @default_bottom_stack_exceptions []
+
+    # Matches the whole opening tag text up to its first `>` — robust to
+    # `mix format`'s attribute-per-line wrapping (unlike a regex anchored to
+    # a specific line shape) because it scans the raw source for the literal
+    # `<Layouts.app` token rather than a formatted rendering of it. This
+    # assumes no call site's attribute values themselves contain a literal
+    # `>` (e.g. a `>` inside a `{...}` expression) — none of today's three
+    # call sites do, and a future one that did would fail LOUDLY here (either
+    # by truncating the tag before a real boundary attr, which the assertion
+    # below would then correctly flag as missing) rather than silently.
+    @call_site_pattern ~r/<Layouts\.app\b.*?>/s
+
+    defp layouts_app_call_sites do
+      "lib/**/*.ex"
+      |> Path.wildcard()
+      |> Enum.reject(&(&1 == @layouts_definition_file))
+      |> Enum.flat_map(fn path ->
+        @call_site_pattern
+        |> Regex.scan(File.read!(path))
+        |> Enum.map(fn [tag] -> {path, tag} end)
+      end)
+    end
+
+    test "every Layouts.app call site under lib/ passes boundary_collapse or bottom_collapse, or is on the documented exception list" do
+      call_sites = layouts_app_call_sites()
+
+      assert call_sites != [],
+             "Expected to find at least one real <Layouts.app call site under lib/ — " <>
+               "if this fails, the scan itself is broken (wrong glob, wrong exclusion), " <>
+               "not that callers vanished."
+
+      for {path, tag} <- call_sites, path not in @default_bottom_stack_exceptions do
+        has_boundary_attr? = tag =~ ~r/\bboundary_collapse\b/ or tag =~ ~r/\bbottom_collapse\b/
+
+        assert has_boundary_attr?,
+               """
+               #{path} calls Layouts.app without boundary_collapse or bottom_collapse.
+
+               A caller that takes <main>'s full default vertical-padding stack
+               accumulates THREE independently-reasonable declarations at its bottom
+               boundary: <main>'s own bottom padding (pb-20, 80px) + its last child's
+               own trailing margin + .pk-footer's own top margin. app.css's
+               `main.pk-bottom-collapse` comment (quick task 260902-il3) records the
+               catalog page's own live-measured version of that stack before it opted
+               in: 176px at 1280px / 128px at 390px — this is the defect class plan
+               01.5-08 closed for the about page (G-01.5-3 item 4) after it went
+               unnoticed for several plans.
+
+               If this caller genuinely wants the unmodified default stack, add its
+               file path to @default_bottom_stack_exceptions above, with a comment
+               explaining why — do not let it pass this test silently.
+               """
+      end
     end
   end
 
