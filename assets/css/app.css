@@ -2559,7 +2559,27 @@ body.pk-drawer-open {
    leaving the footer, the element this fixed bar actually overlays,
    still covered. The replacement is a `body:has(.pk-about-cta-bar)`
    document-end reservation in the same media block as this bar's own
-   display swap — see that rule for the full placement reasoning. */
+   display swap — see that rule for the full placement reasoning.
+
+   `margin-block-end: 0` (Rule 1 bug, found via Task 3's live CDP probe):
+   this element is not the shell's `space-y-4` wrapper's LAST child —
+   `#pk-about-morph-mark` and the `<noscript>` marker follow it in
+   about_live.ex — and Tailwind v4's `space-y-*` utilities apply
+   `margin-block-end` to every non-last child (a different mechanism from
+   Tailwind v3's `margin-top`-on-non-first-child). Un-neutralised, that gave
+   this `position: fixed; bottom: 0` element a real 16px margin PUSHING ITS
+   RENDERED BOX 16px ABOVE the true viewport edge — live-measured: bar
+   top=815px / bottom=884px in a 900px-tall viewport, not the 831px/900px
+   its own `bottom: 0` promises. That is a visible defect on its own (a
+   16px unpainted strip below the bar) and it silently ate into this
+   plan's reserved clearance (72px inherited from the removed spacer covers
+   the bar's 69px height with margin, but not 69px height PLUS a stray
+   16px margin — the two together (85px) exceed the reservation, which is
+   exactly what Task 3's fixed-bar/footer non-intersection probe check
+   caught). Same unlayered-`.pk-*`-beats-layered-Tailwind-utility cascade
+   direction as `.pk-band`'s own `margin-block-end: 0` fix (plan 01.5-06) —
+   no `!important` needed, this file's top-of-file CASCADE-LAYER HAZARD
+   note already documents why. */
 .pk-about-cta-bar {
   display: none;
   position: fixed;
@@ -2567,6 +2587,7 @@ body.pk-drawer-open {
   right: 0;
   bottom: 0;
   z-index: 40;
+  margin-block-end: 0;
   padding: 0.75rem var(--pk-gutter);
   background: var(--color-base-100);
   border-top: 1px solid var(--color-base-300);

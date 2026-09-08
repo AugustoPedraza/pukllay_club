@@ -1316,6 +1316,31 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert Enum.count(LazyHTML.query(doc, ".pk-about-cta-spacer")) == 0
     end
 
+    # Plan 01.5-08 (Rule 1 bug, found via Task 3's live CDP probe): this
+    # element is not the shell's space-y-4 wrapper's last child
+    # (#pk-about-morph-mark and the <noscript> marker follow it), and
+    # Tailwind v4's space-y-* utilities apply margin-block-end (not
+    # margin-top, unlike v3) to every non-last child. Left un-neutralised,
+    # that gave this position:fixed;bottom:0 element a real 16px margin
+    # pushing its rendered box 16px above the true viewport edge — live-
+    # measured (390x900 viewport): bar top=815px/bottom=884px instead of the
+    # 831px/900px its own bottom:0 promises, eating directly into this
+    # plan's reserved clearance. Source-level regression guard; the live
+    # probe (test/visual/about_geometry.mjs) is the oracle that actually
+    # caught the defect.
+    test "the base .pk-about-cta-bar rule declares margin-block-end: 0" do
+      src = strip_comments(css_source())
+
+      base_rule = Regex.run(~r/(?<!:has\()\.pk-about-cta-bar\s*\{([^}]*)\}/s, src)
+      assert base_rule, "Expected a base (non-media-query) .pk-about-cta-bar rule in app.css."
+      [_, base_body] = base_rule
+
+      assert base_body =~ ~r/margin-block-end\s*:\s*0\b/,
+             "Expected the base .pk-about-cta-bar rule to zero margin-block-end — otherwise " <>
+               "the shell's space-y-4 utility (Tailwind v4: margin-block-end on every non-last " <>
+               "child) pushes this fixed, bottom:0 bar away from the true viewport edge."
+    end
+
     test "no .pk-about-cta-bar rule anywhere in app.css declares justify-content (daisyUI's .btn already centers)" do
       src = strip_comments(css_source())
 

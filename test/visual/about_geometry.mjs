@@ -35,6 +35,19 @@
 // `.pk-band-inner` content group's rects alongside the existing per-band
 // list.
 //
+// Plan 01.5-08 (G-01.5-3 item 4 — the last open piece of this phase's
+// gap-closure round) added: a 560px width to the sweep (the 481-639px
+// middle band neither of this phase's media queries governs, and exactly
+// where a regime-boundary bug would hide), a `footer` rect alongside the
+// per-band list, and two more checks — the last-band-to-footer BUDGET
+// (source-level: is there a boundary_collapse/bottom_collapse opt-in at
+// all) and the fixed-bar/footer NON-INTERSECTION oracle (the only check
+// that can confirm the relocated clearance actually lands where the bar
+// is, since a source-level check can only confirm a rule exists, not that
+// it matches). The second check needs a scrolled measurement the shared
+// per-case sweep doesn't take, so it runs its own small loop after the
+// main sweep, at the one width where the fixed bar is visible.
+//
 // Usage: node test/visual/about_geometry.mjs
 // Env:   PROBE_BASE_URL=http://localhost:4000  (skip booting a dev server)
 
@@ -46,7 +59,12 @@ import { join } from "node:path"
 // The widths the root-cause diagnosis measured at (E-06: identical 16px gap
 // at all three, ruling out a breakpoint-scoped explanation). Kept in sync
 // with that evidence rather than freshly guessed.
-const VIEWPORTS = [390, 768, 1280]
+//
+// Plan 01.5-08 adds 560: the 481-639px range this phase's two media queries
+// (the About page's own 480px CTA-bar block, and #cierre's 640px desktop
+// treatment) both leave ungoverned — the diagnosis flagged this exact gap as
+// where a regime-boundary bug would hide, and it is otherwise never swept.
+const VIEWPORTS = [390, 560, 768, 1280]
 const THEMES = ["light", "dark"]
 
 // Plan 01.5-07: viewport HEIGHTS swept alongside widths for the Cierre gap
@@ -327,7 +345,21 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
             })()
           : null;
 
-        return { bands, cierre, cierreInner };
+        // Plan 01.5-08: the footer's own rect. Unaffected by scroll position
+        // (both it and the last band shift by the same scrollY delta), so
+        // this unscrolled measurement is sufficient for the last-band-to-
+        // footer BUDGET check below — only the fixed-bar NON-INTERSECTION
+        // oracle (its own scrolled measurement pass, later in this file)
+        // needs an actual scroll.
+        const footerEl = document.querySelector('footer.pk-footer');
+        const footer = footerEl
+          ? (() => {
+              const rect = footerEl.getBoundingClientRect();
+              return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+            })()
+          : null;
+
+        return { bands, cierre, cierreInner, footer };
       })())
     `,
     returnByValue: true,
@@ -503,6 +535,58 @@ function checkCierreMobileInvariance(measured, ctx) {
   return failures
 }
 
+// Plan 01.5-08 (G-01.5-3 item 4). Budget, not a single number — the catalog
+// index and game detail pages this fix matches already render 16px at
+// <=480px and 24px at >=481px (quick task 260902-il3's own measured split,
+// the same split main.pk-bottom-collapse's shared declarations in app.css
+// produce). A 2px headroom above each measured target absorbs ordinary
+// sub-pixel layout rounding without coming anywhere near hiding a
+// regression the size of the original defect (112-200px).
+const BOTTOM_BOUNDARY_BUDGET_MOBILE_PX = 18 // 16px target + 2px rounding headroom, <=480px
+const BOTTOM_BOUNDARY_BUDGET_PX = 26 // 24px target + 2px rounding headroom, >=481px
+
+// The direct oracle for Task 1's opt-in: measures the distance from the
+// LAST section.pk-band's bottom edge to <footer>'s top edge and asserts it
+// is at or under the budget above, at every swept width — including the
+// 481-639px middle band (560, added to VIEWPORTS this plan) that neither of
+// this phase's media queries governs, which is exactly where a
+// regime-boundary bug would hide. Independent of viewport HEIGHT (the
+// boundary_collapse/bottom_collapse mechanism only touches <main>'s own
+// padding and .pk-footer's own margin, neither of which is height-
+// dependent), so this runs — and should pass — at every (width, height)
+// combination the sweep produces, not just one.
+function checkBottomBoundaryBudget(measured, ctx) {
+  const { bands, footer } = measured
+
+  if (!footer || bands.length === 0) {
+    return [
+      `bottom boundary budget: could not measure the last section.pk-band and/or <footer> at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const lastBand = bands[bands.length - 1]
+  const distance = footer.y - (lastBand.rect.y + lastBand.rect.height)
+  const budget = ctx.viewport <= 480 ? BOTTOM_BOUNDARY_BUDGET_MOBILE_PX : BOTTOM_BOUNDARY_BUDGET_PX
+
+  if (distance > budget) {
+    return [
+      `bottom boundary budget: measured ${distance.toFixed(2)}px between ` +
+        `${bandLabel(lastBand)} and <footer>, expected <= ${budget}px at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  if (distance < -CONTACT_TOLERANCE_PX) {
+    return [
+      `bottom boundary budget: ${bandLabel(lastBand)} overlaps <footer> by ` +
+        `${(-distance).toFixed(2)}px at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  return []
+}
+
 // Named list of check functions the sweep loop calls. Plans 01.5-07 and
 // 01.5-08 each add one more entry here for their own oracle.
 const CHECKS = [
@@ -510,7 +594,110 @@ const CHECKS = [
   checkCierreGapEvenness,
   checkCierreBottomBreathingRoom,
   checkCierreMobileInvariance,
+  checkBottomBoundaryBudget,
 ]
+
+// ---------------------------------------------------------------------------
+// Plan 01.5-08: fixed-bar / footer non-intersection oracle
+// ---------------------------------------------------------------------------
+// The only oracle that can confirm Task 2's actual claim. A source-level
+// test can confirm the body:has(.pk-about-cta-bar) clearance rule EXISTS;
+// it cannot confirm the reserved amount actually lands where the fixed bar
+// is once the page is scrolled to its real bottom. Runs its own small loop
+// (below, in main()) at the one width where the bar is visible, since it
+// needs an actual scroll — the shared per-case sweep above is deliberately
+// unscrolled (see the footer-rect comment in runCase).
+const CTA_BAR_VISIBLE_WIDTH = 390 // <=480px, matches app.css's own threshold
+
+async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
+  await client.send("Emulation.setDeviceMetricsOverride", {
+    width: viewport,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  })
+
+  const navigated = client.once("Page.loadEventFired")
+  await client.send("Page.navigate", { url: `${baseUrl}/quienes-somos` })
+  await navigated
+
+  await client.send("Runtime.evaluate", {
+    expression: `
+      document.documentElement.dataset.theme = ${JSON.stringify(theme)};
+      document.documentElement.dataset.themeSource = "user";
+    `,
+  })
+
+  const measureResult = await client.send("Runtime.evaluate", {
+    expression: `
+      JSON.stringify((() => {
+        // Scrolled to the real page bottom — the only scroll position
+        // where a clearance defect can be observed at all: the fixed bar
+        // always covers the same viewport-relative slice, so only once the
+        // footer has scrolled as far up as it will go does "does the bar
+        // cover it" become answerable.
+        //
+        // { behavior: 'instant' } is load-bearing, not decorative: app.css
+        // declares html { scroll-behavior: smooth } (gated on
+        // prefers-reduced-motion: no-preference, which headless Chrome
+        // reports by default), so a bare scrollTo(x, y) call ANIMATES here
+        // exactly as it does for a real visitor, and reading
+        // getBoundingClientRect() synchronously afterward would observe the
+        // pre-scroll position (scrollY still 0) rather than the settled one
+        // — this cost real debugging time working out why an early version
+        // of this check measured a ~2800px "overlap" that was actually just
+        // an unscrolled page. Per the CSSOM View spec, an explicit
+        // 'behavior' option in ScrollToOptions overrides the element's own
+        // CSS scroll-behavior, which is exactly the override needed for a
+        // synchronous measurement.
+        window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: "instant" });
+
+        const rectOf = (el) => {
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { x: r.x, y: r.y, width: r.width, height: r.height };
+        };
+
+        return {
+          bar: rectOf(document.querySelector('.pk-about-cta-bar')),
+          footer: rectOf(document.querySelector('footer.pk-footer')),
+        };
+      })())
+    `,
+    returnByValue: true,
+  })
+
+  return JSON.parse(measureResult.result.value)
+}
+
+function checkFixedBarFooterClearance(measured, ctx) {
+  const { bar, footer } = measured
+
+  if (!bar) {
+    return [`fixed-bar footer clearance: could not measure .pk-about-cta-bar at [${ctx.viewport}px, ${ctx.theme}]`]
+  }
+  if (bar.width === 0 || bar.height === 0) {
+    return [
+      `fixed-bar footer clearance: .pk-about-cta-bar has a zero-size rect at ` +
+        `[${ctx.viewport}px, ${ctx.theme}] — expected it visible (display: block) at this width`,
+    ]
+  }
+  if (!footer) {
+    return [`fixed-bar footer clearance: could not measure <footer> at [${ctx.viewport}px, ${ctx.theme}]`]
+  }
+
+  const overlap = footer.y + footer.height - bar.y
+  if (overlap > CONTACT_TOLERANCE_PX) {
+    return [
+      `fixed-bar footer clearance: the fixed bar overlaps the footer by ` +
+        `${overlap.toFixed(2)}px at [${ctx.viewport}px, ${ctx.theme}] (footer bottom=` +
+        `${(footer.y + footer.height).toFixed(2)}, bar top=${bar.y.toFixed(2)}) — the ` +
+        `document-end clearance is not reserving enough (or is not applying at all)`,
+    ]
+  }
+
+  return []
+}
 
 // ---------------------------------------------------------------------------
 // Main
@@ -558,6 +745,13 @@ async function main() {
               )
             }
 
+            if (measured.footer && measured.bands.length > 0) {
+              const lastBand = measured.bands[measured.bands.length - 1]
+              const boundaryDistance =
+                measured.footer.y - (lastBand.rect.y + lastBand.rect.height)
+              log(`${label} last-band-to-footer: ${boundaryDistance.toFixed(2)}px`)
+            }
+
             for (const check of CHECKS) {
               const failures = check(measured, { viewport, theme, height })
               for (const failure of failures) {
@@ -572,12 +766,48 @@ async function main() {
         }
       }
     }
+
+    // Plan 01.5-08: fixed-bar/footer non-intersection, its own small loop —
+    // scroll-dependent, so it cannot share the unscrolled per-case sweep
+    // above. Runs at the one width where the bar is visible (390, <=480px),
+    // in both themes for the same coverage the rest of this file gives.
+    for (const theme of THEMES) {
+      const label = `[${CTA_BAR_VISIBLE_WIDTH}px @ page-bottom, ${theme}]`
+
+      try {
+        const measured = await runBottomClearanceCase({
+          client,
+          baseUrl,
+          viewport: CTA_BAR_VISIBLE_WIDTH,
+          theme,
+        })
+        casesRun++
+
+        if (measured.bar) {
+          log(
+            `${label} bar top=${measured.bar.y.toFixed(2)} footer bottom=` +
+              `${measured.footer ? (measured.footer.y + measured.footer.height).toFixed(2) : "?"}`,
+          )
+        }
+
+        for (const failure of checkFixedBarFooterClearance(measured, {
+          viewport: CTA_BAR_VISIBLE_WIDTH,
+          theme,
+        })) {
+          log(`${label} FAIL: ${failure}`)
+          exitCode = 1
+        }
+      } catch (err) {
+        log(`${label} FAIL: ${err.message}`)
+        exitCode = 1
+      }
+    }
   } finally {
     await stopChrome(chrome)
     await stopDevServer(serverProc)
   }
 
-  const expectedCases = VIEWPORTS.length * THEMES.length * CIERRE_HEIGHTS.length
+  const expectedCases = VIEWPORTS.length * THEMES.length * CIERRE_HEIGHTS.length + THEMES.length
   if (casesRun !== expectedCases) {
     log(
       `FAIL: expected ${expectedCases} case blocks, only ${casesRun} ` +
