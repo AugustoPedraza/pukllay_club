@@ -5687,6 +5687,28 @@ main.pk-boundary-collapse + .pk-footer {
     display: block;
   }
 
+  /* Plan 01.5-04, D-11: suppresses the Cierre band's own Sumate button at
+     the exact width where the sticky bar above takes over, so a member
+     never sees the same "Sumate" ask twice on one screen. This rule MUST
+     live in this SAME @media (max-width: 480px) block as
+     .pk-about-cta-bar/.pk-about-cta-spacer above, not a second block at the
+     same threshold — a threshold mismatch between "sticky bar appears" and
+     "Cierre button disappears" would open a width range with NEITHER
+     visible, which is worse than the duplicate-ask problem this rule
+     solves. 480px is used because that is the exact width where
+     .pk-about-cta-bar pins a Sumate button to the bottom of the screen;
+     hiding the Cierre button any earlier (e.g. Tailwind's general 640px
+     `sm` breakpoint) would open a 480-639px range with no visible join CTA
+     anywhere in the lower half of the page. The #cierre prefix is a
+     deliberate, load-bearing use of the .pk-*-beats-utility cascade
+     direction this file's top-of-file note warns about elsewhere: it needs
+     to out-specify the flex/justify-center Tailwind utilities on the same
+     element (about_live.ex). Above 480px this rule does not apply at all,
+     and those utilities do their normal job. */
+  #cierre .pk-about-cierre-cta {
+    display: none;
+  }
+
   .pk-crumb-sep,
   .pk-crumb-current {
     display: none;

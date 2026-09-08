@@ -807,7 +807,15 @@ defmodule PukllayClubWeb.AboutLive do
       <section id="cierre" class="pk-band">
         <div class="pk-band-inner pk-gutter text-center">
           <h2 class="font-display text-2xl">Nos vemos el sábado</h2>
-          <div class="flex justify-center">
+          <%!-- D-11 (plan 01.5-04): pk-about-cierre-cta on the WRAPPER, not
+          the anchor inside it — hiding only the anchor would leave an empty
+          flex child in #cierre .pk-band-inner's column, and that column's
+          `gap` (plan 01.5-03, D-12) would still allocate space on both sides
+          of an empty box. Hiding the wrapper removes the flex child outright
+          so the gap closes around it. See the app.css rule beside
+          .pk-about-cta-bar/.pk-about-cta-spacer for the full D-11 rationale
+          (same 480px threshold, same media block, on purpose). --%>
+          <div class="flex justify-center pk-about-cierre-cta">
             <Layouts.sumate_cta />
           </div>
           <p class="pk-about-eyebrow pk-about-closing-meta">
