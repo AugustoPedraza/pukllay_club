@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 02
-current_phase_name: Natural-Language Spanish Search + Auth
+current_phase: 01.5
+current_phase_name: About Page CTA Rhythm & Header Morph Refinement
 status: planning
-stopped_at: Phase 01.4 complete, ready to plan Phase 02
-last_updated: "2026-09-07T19:05:24.168Z"
-last_activity: 2026-09-07
-last_activity_desc: Phase 01.4 complete, transitioned to Phase 02
-state_head: 68d16b58caeccc931c1a03f7cd0a4ad90a46bc43
+stopped_at: Phase 01.5 context gathered
+last_updated: "2026-09-08T01:32:48.682Z"
+last_activity: 2026-09-08
+last_activity_desc: Inserted Phase 01.5 (urgent) for sketch-findings-pukllay_club sketches 050-051
+state_head: fb8502934d5b8f99b79c621c0e6410f0c5844874
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 6
   total_plans: 73
   completed_plans: 73
@@ -31,10 +31,10 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 02 — Natural-Language Spanish Search + Auth
+Phase: 01.5 — About Page CTA Rhythm & Header Morph Refinement
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-07 — Phase 01.4 complete, transitioned to Phase 02
+Last activity: 2026-09-08 — Inserted Phase 01.5 (urgent) for sketch-findings-pukllay_club sketches 050-051
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 plans (Phase 02 not yet planned)
 
@@ -299,6 +299,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.3.1 inserted after Phase 01.3: Game Image Quality & Multi-Image Gallery (URGENT)
 - Phase 5 added: UI polish pass for About page sketches
 - Phase 01.4 inserted after Phase 1: UI polish pass for About page sketches (URGENT)
+- Phase 01.5 inserted after Phase 1: About Page CTA Rhythm & Header Morph Refinement — implement sketch-findings-pukllay_club sketches 050-051 (URGENT)
 
 ## Deferred Items
 
@@ -310,6 +311,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-07T19:05:24.168Z
-Stopped at: Phase 01.4 complete, ready to plan Phase 02
-Resume file: None
+Last session: 2026-09-08T01:32:48.075Z
+Stopped at: Phase 01.5 context gathered
+Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/01.5-about-page-cta-rhythm-header-morph-refinement-implement-sket/01.5-CONTEXT.md
