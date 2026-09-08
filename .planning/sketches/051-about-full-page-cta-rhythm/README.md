@@ -218,6 +218,21 @@ only" + "for mobile, remove the sumate below 'nos vemos el sábado' since it has
 Verified live: desktop shows a full-viewport closing moment; ≤480px shows the heading flowing
 directly into the meta line, no duplicate button, sticky bar visible at the bottom.
 
+## Round 11 — the meta line's content, not its styling
+Asked to "fix" the closing meta line, checked first: its current styling (uppercase, tracked,
+muted, xs size) is an exact match for the real production `.pk-about-eyebrow` class — not a
+mismatch to correct. The actual uncertainty was about the *content*: "Pukllay Club · San Salvador
+de Jujuy, Argentina · Instagram" restates the brand name (already in the header), the location
+(already in Juntadas' paragraph and now its map), and a single Instagram link that's now redundant
+with Contacto's three explicit channels right above it.
+
+This turned out to be a real, already-open question — `about_live.ex`'s own comment on this exact
+line says the original design linked a since-removed link-aggregator site, Instagram was swapped
+in as "still a real, live channel," and the whole thing was "flagged for developer review" that
+was never resolved. Picked: drop the Instagram link, keep it a plain closing signature —
+`Pukllay Club · San Salvador de Jujuy, Argentina`. The now-unused `.closing-meta a` CSS rule is
+removed.
+
 ## What to Look For
 - Does the map feel more meaningful sitting with Juntadas' location description than it did in
   Contacto?
