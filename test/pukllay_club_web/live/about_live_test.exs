@@ -1331,5 +1331,35 @@ defmodule PukllayClubWeb.AboutLiveTest do
              "Expected no section to carry both pk-band-tint and pk-band-dark — FAQ's dark " <>
                "treatment stays a one-off highlight, not also tinted."
     end
+
+    # G-01.5-2 gap closure (.planning/debug/inter-band-whitespace-gap.md,
+    # plan 01.5-06): the shared shell's `space-y-4` wrapper (layouts.ex:670)
+    # puts 16px of margin-block-end on every non-last direct child, which on
+    # the About page are these `.pk-band` sections — producing a visible
+    # whitespace strip at all four band-to-band boundaries. This is a
+    # CSS-source oracle (not geometry — see test/visual/about_geometry.mjs
+    # for the rendered-rect oracle this same gap closure adds), but it is
+    # the first test in this describe block to assert anything about
+    # SPACING rather than colour/class, since none of the four tests above
+    # could have caught a margin defect.
+    test ".pk-band declares margin-block-end: 0, cancelling the shell's space-y-4 margin at every band-to-band boundary" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/(?m)^\.pk-band\s*\{([^}]*)\}/s, src)
+
+      assert rule,
+             "Expected a top-level .pk-band rule in app.css."
+
+      [_, body] = rule
+
+      assert body =~ ~r/margin-block-end\s*:\s*0\b/,
+             "Expected .pk-band to declare margin-block-end: 0. Without it, layouts.ex's " <>
+               "shared shell wrapper (<div class=\"mx-auto space-y-4\">) puts 16px of " <>
+               "margin-block-end on every non-last direct child — on the About page those " <>
+               "children are the .pk-band sections themselves, producing a visible whitespace " <>
+               "strip at all four band-to-band boundaries (fotos->tint, tint->faq, faq->plain, " <>
+               "plain->cierre; see .planning/debug/inter-band-whitespace-gap.md). This zero is " <>
+               "load-bearing, not a redundant reset — do not delete it as dead CSS."
+    end
   end
 end

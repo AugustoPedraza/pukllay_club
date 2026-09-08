@@ -2578,9 +2578,44 @@ body.pk-drawer-open {
    .pk-band-inner's cap now matches the shell's own max-w-7xl edge (80rem) —
    the same content width already shared by the header, footer and hero
    (sketch 048: the bands were shipped 16rem narrower than the shell they
-   sit in). Single shared declaration, no per-band override. */
+   sit in). Single shared declaration, no per-band override.
+
+   G-01.5-2 gap closure (.planning/debug/inter-band-whitespace-gap.md):
+   `layouts.ex:670`'s shared shell wraps every page's inner block in
+   `<div class="mx-auto space-y-4">`. Tailwind v4's space-y-4 compiles to
+   `:where(& > :not(:last-child)) { margin-block-end: 1rem }` — 16px of
+   block-end margin on every non-last DIRECT CHILD of that wrapper. On the
+   About page those children are these `.pk-band` sections, so the bands
+   never owned their own outer spacing; the shell did, invisibly, from
+   another file. That 16px painted as a visible strip of `<html>`'s
+   background colour between every adjacent pair of bands (most visibly
+   between the tinted Qué hacemos/Historia band and the dark FAQ band,
+   where both neighbours are saturated).
+
+   The margin-block-end: 0 below reclaims that outer spacing for the band
+   itself. No `!important` is needed: this rule is UNLAYERED (see this
+   file's top-of-file cascade-layer hazard note) while space-y-4 lives
+   inside `@layer utilities` behind a zero-specificity `:where()` — an
+   unlayered rule beats a layered one regardless of specificity, so this
+   wins deterministically.
+
+   Do NOT delete or gate space-y-4 in layouts.ex instead: all three
+   Layouts.app callers pass `fullbleed`, so `fullbleed` cannot discriminate,
+   and `catalog_live/show.ex:292` documents that the catalog index and
+   detail pages deliberately depend on that exact 16px inter-child rhythm.
+   This fix is scoped to `.pk-band` specifically so those pages stay
+   byte-identical.
+
+   Deliberate scope decision: the hero `<div>` above `#fotos` is the FIRST
+   child of the shell wrapper and is not a `.pk-band`, so it keeps its 16px
+   below it — this fix does not reach that boundary. Kept, not fixed,
+   because: both sides of that boundary are transparent so the gap is
+   invisible either way; it is the only boundary on the page that is not
+   band-to-band; and reaching it would need a second, page-specific rule
+   targeting an element with no shared class, for no visible gain. */
 .pk-band {
   padding: 4.5rem 0;
+  margin-block-end: 0;
 }
 
 .pk-band-inner {
