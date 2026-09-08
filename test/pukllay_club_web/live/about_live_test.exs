@@ -1036,4 +1036,56 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert eyebrow_a_body =~ ~r/text-decoration\s*:\s*underline/
     end
   end
+
+  # Plan 01.5-03, Task 2 (D-12): every Cierre internal gap comes from ONE
+  # flex gap on the content column, never per-element margins.
+  describe "Cierre one flex gap (plan 01.5-03, D-12)" do
+    test "#cierre .pk-band-inner is a top-level rule declaring display: flex, flex-direction: column, align-items: center and exactly one gap" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/#cierre \.pk-band-inner\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a top-level #cierre .pk-band-inner rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/display\s*:\s*flex/
+      assert body =~ ~r/flex-direction\s*:\s*column/
+      assert body =~ ~r/align-items\s*:\s*center/
+
+      assert Regex.scan(~r/(?<![-\w])gap\s*:/, body) |> length() == 1,
+             "Expected exactly one gap declaration in #cierre .pk-band-inner."
+    end
+
+    test "#cierre .pk-band-inner declares no margin" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/#cierre \.pk-band-inner\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a top-level #cierre .pk-band-inner rule in app.css."
+      [_, body] = rule
+
+      assert Regex.scan(~r/margin/, body) == [],
+             "Expected #cierre .pk-band-inner to declare no margin."
+    end
+
+    test "the #cierre content column keeps the text-center utility so the two-line signature stays centered",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      inner = LazyHTML.query(doc, "#cierre .pk-band-inner")
+
+      assert Enum.count(inner) == 1
+      [class] = LazyHTML.attribute(inner, "class")
+      assert class =~ "text-center"
+    end
+
+    test "#cierre .pk-band-inner has exactly 3 element children (heading, button wrapper, signature)",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      children = LazyHTML.query(doc, "#cierre .pk-band-inner > *")
+
+      assert Enum.count(children) == 3
+    end
+  end
 end

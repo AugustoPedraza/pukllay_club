@@ -2623,6 +2623,43 @@ body.pk-drawer-open {
   display: none;
 }
 
+/* Plan 01.5-03, D-12: the Cierre band's ONLY internal spacing rule.
+   `.pk-band` (above) declares only its own vertical padding and
+   `.pk-band-inner` (above) only a width cap + auto margins; Tailwind's
+   preflight zeroes heading/paragraph margins and this app loads no
+   typography plugin, so the band's three children (heading, button
+   wrapper, signature) have NO spacing between them without this rule.
+   This is therefore the band's first and only internal rhythm, not a
+   tidy-up of an existing margin system — it must stay a single
+   declaration applied unconditionally at every width (D-12's "consistent
+   rhythm across mobile and desktop" means one rule, unmodified per
+   viewport, not two hand-tuned spacing systems that drift apart). Do not
+   add a per-element margin anywhere in this band, and the desktop
+   full-screen media block below must not re-declare `gap` on top of this.
+
+   align-items: center centers each child's own BOX; it says nothing about
+   text alignment WITHIN a box. The `text-center` Tailwind utility on this
+   same element (markup, about_live.ex) is what keeps the two-line
+   signature's shorter first line centered inside a box sized to its
+   longer second line — sketch 051's round 13 lost exactly that property
+   during an unrelated layout rewrite and did not notice for four rounds,
+   because single-line content auto-sizes its box tightly enough to mask a
+   missing alignment (about-page-content.md, bug 3). This rule declares no
+   text-align; do not "consolidate" it here and do not remove the utility
+   from the markup.
+
+   The button wrapper's own `flex justify-center` utilities become
+   redundant once align-items: center shrink-wraps it, but are left in
+   place — removing them would be a second, unrelated layout change inside
+   this same edit, the exact shape of mistake sketch 051's round 13
+   documents. */
+#cierre .pk-band-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
 /* The dark FAQ band's token mapping (Claude's discretion, D-08): the
    brand's own measured-contrast pair (app.css's WCAG comment above), not
    the design source's own one-off literal colour values. */
