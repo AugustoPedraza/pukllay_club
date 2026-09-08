@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 6/8 plans executed (4 original executed + 4 gap-closure plans pending)
+**Plans:** 7/8 plans executed (4 original executed + 4 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -176,7 +176,7 @@ have different owners, different blast radii, and one is a design decision rathe
 **Gap closure — Wave 2** *(blocked on 01.5-06 — shared `app.css`, `about_live_test.exs` and the
 geometry probe)*
 
-- [ ] 01.5-07-PLAN.md — Cierre band internal geometry: the header-height compensation whose premise D-14 invalidated is removed, the full-viewport question is decided with the developer, and the two CSS-source tests that passed on the bug are moved in lockstep (G-01.5-3 items 3a, 3b)
+- [x] 01.5-07-PLAN.md — Cierre band internal geometry: the header-height compensation whose premise D-14 invalidated is removed, the full-viewport question is decided with the developer, and the two CSS-source tests that passed on the bug are moved in lockstep (G-01.5-3 items 3a, 3b)
 
 **Gap closure — Wave 3** *(blocked on 01.5-07 — same stylesheet region; also overlaps 01.5-05 on
 `layouts_test.exs`)*
