@@ -30,6 +30,12 @@ defmodule PukllayClubWeb.AboutLive do
   `.pk-about-cta-spacer`/`.pk-about-cta-bar` pair (plans 01.1-08/01.1-09)
   are this club's ONLY join CTA site-wide (D-05 superseded) — every band
   this plan adds lives strictly between them, never inside or around them.**
+
+  **Sketch 050 (01.5-01, D-15):** the pending todo "Surface Pukllay Club
+  brand name in site content" is satisfied by the hero's isologo companion
+  wordmark (`.pk-about-morph-name`, D-01 through D-04) — scoped to the
+  About page only. No other page (nav, footer, home) gets brand-name text
+  added as part of this work.
   """
   use PukllayClubWeb, :live_view
 
@@ -244,6 +250,14 @@ defmodule PukllayClubWeb.AboutLive do
                     if (shouldDock !== this.docked) {
                       this.docked = shouldDock
                       this.header.classList.toggle("is-docked", this.docked)
+                      // D-03: same boolean, same instant, same branch as the
+                      // header reveal above — this.el is #about-hero itself
+                      // (the hook is mounted on that section), so no new DOM
+                      // lookup is needed. No second boolean, no timer, no
+                      // scroll-position/viewport-height check anywhere in
+                      // this mechanism. Drives the hero eyebrow hide/reveal
+                      // and the companion wordmark fade (app.css).
+                      this.el.classList.toggle("is-docked", this.docked)
                       this.header.toggleAttribute("inert", !this.docked)
                       this.from = this.progress
                       this.to = this.docked ? 1 : 0
@@ -296,7 +310,12 @@ defmodule PukllayClubWeb.AboutLive do
                   // point (e.g. a #contacto deep link from the footer) sees
                   // the header already docked, with no jump and no replayed
                   // entrance. A null dock rect is treated as not-docked —
-                  // there is nothing yet to compare against.
+                  // there is nothing yet to compare against. The hero
+                  // eyebrow and the companion wordmark now resolve here
+                  // too (this.el.classList.toggle below), so that same
+                  // deep-linked visitor gets the right eyebrow/wordmark
+                  // state on the first painted frame, not on the next
+                  // scroll frame.
                   const natural0 = this.naturalRect()
                   const dock0 = this.dockRect()
                   this.docked = dock0 ? natural0.top <= dock0.top : false
@@ -304,6 +323,7 @@ defmodule PukllayClubWeb.AboutLive do
                   this.from = this.progress
                   this.to = this.progress
                   this.header.classList.toggle("is-docked", this.docked)
+                  this.el.classList.toggle("is-docked", this.docked)
                   this.header.toggleAttribute("inert", !this.docked)
                   // Writes the mark's transform immediately, at whichever
                   // state first paint resolved to.
@@ -342,8 +362,14 @@ defmodule PukllayClubWeb.AboutLive do
                   // About, so the `:has()` guard simply stops matching —
                   // there is no hiding class left over here to clean up
                   // (S1 fix, G-01.4-1). `is-docked` and `inert` are still
-                  // this hook's own state on a shared element, so those
-                  // still need explicit teardown.
+                  // this hook's own state on `this.header`, a SHARED
+                  // element that outlives this page, so those still need
+                  // explicit teardown. `this.el` (#about-hero) is NOT
+                  // torn down here on purpose: it is not shared — it
+                  // leaves the DOM on navigation away from About, same as
+                  // the `:has()`-driven header-hidden state above — so its
+                  // own `is-docked` class needs no cleanup; the class
+                  // disappears with the element.
                   this.header?.classList.remove("is-docked")
                   this.header?.removeAttribute("inert")
                 } catch (e) {
@@ -359,7 +385,12 @@ defmodule PukllayClubWeb.AboutLive do
           { margin-block-end: .75rem }` and would otherwise stack 12px on
           top of the declared clearance (G-01.4-3). --%>
           <div data-morph-anchor class="pk-about-mark-anchor mb-0" aria-hidden="true"></div>
-          <p class="font-sans text-xs uppercase tracking-widest text-neutral">
+          <%!-- pk-about-hero-eyebrow (D-03) exists purely as a stable hook for the
+          docked-state rule below — every visual property is still owned by the
+          Tailwind utilities beside it. Deliberately NOT .pk-about-eyebrow (that
+          class is the Cierre band's own closing-signature styling, including an
+          underlined-link companion rule that must not reach the hero). --%>
+          <p class="pk-about-hero-eyebrow font-sans text-xs uppercase tracking-widest text-neutral">
             Club de juegos de mesa · Jujuy
           </p>
           <h1 class="font-display pk-about-h1">Conectá jugando</h1>
@@ -775,6 +806,15 @@ defmodule PukllayClubWeb.AboutLive do
         <div class="pk-about-morph-mark-inner">
           <img src={~p"/images/isologo-light.png"} class="dark:hidden" alt="" />
           <img src={~p"/images/isologo-dark.png"} class="hidden dark:block" alt="" />
+          <%!-- Companion wordmark (D-01/D-02, sketch 050): a single reused
+          element, matching the theme-pair <img>s' own precedent — it takes
+          its color from a token and needs no per-theme duplicate. No
+          Tailwind utility touches font-family/font-size/font-weight/
+          letter-spacing/position/color/opacity here — .pk-about-morph-name
+          (app.css) owns every one of those properties, and an unlayered
+          .pk-* rule silently beats a utility on the same property in this
+          codebase. --%>
+          <span class="pk-about-morph-name">PUKLLAY CLUB</span>
         </div>
       </div>
 
