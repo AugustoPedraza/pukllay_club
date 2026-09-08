@@ -145,12 +145,12 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01.5-01-PLAN.md — Isologo companion wordmark "PUKLLAY CLUB" baked into the morph mark, with the hero eyebrow synced to the same dock-crossing boolean (D-01, D-02, D-03, D-04, D-15)
+- [x] 01.5-01-PLAN.md — Isologo companion wordmark "PUKLLAY CLUB" baked into the morph mark, with the hero eyebrow synced to the same dock-crossing boolean (D-01, D-02, D-03, D-04, D-15)
 
 **Wave 2** *(blocked on Wave 1 — shared files)*
 
