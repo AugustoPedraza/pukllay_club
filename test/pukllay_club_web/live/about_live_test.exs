@@ -892,4 +892,70 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert Enum.count(spans) == 3
     end
   end
+
+  # Plan 01.5-02, Task 3 (D-09): the live Maps embed relocated from
+  # #contacto into #juntadas, moved verbatim (every pre-existing embed
+  # test above must keep passing unchanged).
+  describe "Maps embed relocation to Juntadas (plan 01.5-02, D-09)" do
+    test "#juntadas .pk-about-map-thumb renders exactly 1 element", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, "#juntadas .pk-about-map-thumb")
+
+      assert Enum.count(thumb) == 1
+    end
+
+    test "#contacto .pk-about-map-thumb renders exactly 0 elements", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, "#contacto .pk-about-map-thumb")
+
+      assert Enum.count(thumb) == 0
+    end
+
+    test "the map thumb was moved, not copied — exactly 1 .pk-about-map-thumb page-wide",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, ".pk-about-map-thumb")
+
+      assert Enum.count(thumb) == 1
+    end
+
+    test "the relocated iframe keeps its src and every security-relevant attribute byte-identical",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      iframe = LazyHTML.query(doc, "#juntadas .pk-about-map-embed")
+
+      assert Enum.count(iframe) == 1
+      assert LazyHTML.attribute(iframe, "src") == [ClubLinks.maps_embed_url()]
+      assert LazyHTML.attribute(iframe, "loading") == ["lazy"]
+      assert LazyHTML.attribute(iframe, "referrerpolicy") == ["strict-origin-when-cross-origin"]
+      assert LazyHTML.attribute(iframe, "sandbox") == ["allow-scripts allow-same-origin"]
+      assert LazyHTML.attribute(iframe, "tabindex") == ["-1"]
+      assert LazyHTML.attribute(iframe, "aria-hidden") == ["true"]
+    end
+
+    test "#contacto a returns exactly the 3 chip anchors — the overlay map link left with the map",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      links = LazyHTML.query(doc, "#contacto a")
+      hrefs = LazyHTML.attribute(links, "href")
+
+      assert Enum.count(links) == 3
+
+      assert hrefs == [
+               ClubLinks.whatsapp_group_url(),
+               ClubLinks.facebook_url(),
+               ClubLinks.instagram_url()
+             ]
+    end
+  end
 end
