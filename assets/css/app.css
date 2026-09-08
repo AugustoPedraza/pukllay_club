@@ -2695,36 +2695,62 @@ body.pk-drawer-open {
   gap: 1.5rem;
 }
 
-/* Plan 01.5-03, D-10: Cierre goes full-viewport on desktop instead of
-   reading as one more shared 72px band, so the close feels like a real
-   destination (sketch 051 round 10a). Desktop-only — mobile keeps the
-   compact `.pk-band` treatment untouched. 640px matches the other
-   desktop-vs-mobile splits this phase introduced (D-08's 639px Contacto
-   breakpoint), one width below Tailwind's `sm`.
+/* Plan 01.5-03, D-10, REVISED by 01.5-07 (G-01.5-3 items 3a/3b —
+   .planning/debug/cierre-band-whitespace.md): Cierre still reads as a
+   distinct closing moment on desktop instead of one more shared 72px band
+   (sketch 051 round 10a) — D-10 is revised here, not superseded. Desktop-
+   only — mobile keeps the compact `.pk-band` treatment untouched. 640px
+   matches the other desktop-vs-mobile splits this phase introduced (D-08's
+   639px Contacto breakpoint), one width below Tailwind's `sm`.
 
-   padding: var(--pk-header-h, 4.5rem) 0 0 REPLACES .pk-band's shared
-   `4.5rem 0` at this width on purpose: the section's own 100vh box
-   supplies the vertical room, so keeping the shared band padding would
-   only push the content below the fold. #cierre (specificity 1,0,0)
-   out-specifies .pk-band (0,1,0), and because this whole block is
-   media-scoped, mobile keeps the shared band padding exactly as it was.
+   Two things changed from what D-10 originally shipped:
 
-   Why the top padding reads a token, not a pixel literal (sketch 051
-   round 12a): pure `align-items: center` in a 100vh box splits the
-   leftover space evenly by construction, so the TRUE split is even — but
-   the fixed header overlaps the band's top edge and visually eats into
-   the top gap while nothing touches the bottom gap, so the VISIBLE split
-   is not. Padding equal to the header's own height shifts the flex
-   centering point down by exactly that amount and cancels the overlap.
-   The sketch used 65px, its own mockup header's height — this app must
-   not reuse that number, and must not substitute a freshly-measured one
-   either, because the real header's height already varies by viewport.
-   `--pk-header-h` is continuously republished from #app-header's real
-   rendered height by .CatalogNav's ResizeObserver (layouts.ex) and is
-   already read by 3+ other rules in this file with the same 4.5rem
-   fallback (scroll-margin-top above, .pk-title-echo's `top`) — reading it
-   here makes the compensation track the header instead of restating a
-   measurement of it.
+   1. The header-height top padding is GONE. D-10 added
+      `padding: var(--pk-header-h, 4.5rem) 0 0` because the band was plain
+      white and the fixed header's own tint visually ate into the band's
+      top edge while nothing touched the bottom edge — that padding shifted
+      the flex centering point down to cancel exactly that overlap, and it
+      was correct when written. Plan 01.5-04 (D-14, LATER in this same
+      phase) then painted this band the exact token `.pk-nav` already is —
+      both measure the same colour — so the header now blends into the
+      band and subtracts nothing from the top edge. The compensation
+      outlived its condition: measured, it was shifting the true (even)
+      split by exactly one header height at every width and viewport
+      height, and its padding shorthand's zeroed bottom component was ALSO
+      silently dropping `.pk-band`'s shared bottom padding, so a short
+      window left the closing signature flush against the tinted band's
+      edge. Removing the whole shorthand fixes both at once — the shared
+      `.pk-band` vertical padding (above) now applies here exactly like it
+      does at every other width and every other band. `--pk-header-h` is
+      still read by 3 OTHER rules in this file (`.pk-shelf`'s
+      scroll-margin-top, `.pk-title-echo`'s `top`, `.pk-poster-col`'s
+      sticky `top`) — this is the one place in the file that stopped
+      needing it, not the token being retired.
+
+   2. The `min-height: 100vh` floor is now `70vh`/`70dvh`, not removed.
+      Measured, the old 100vh floor put a 157px content group (heading,
+      button, signature) inside a 900px band — ~17% fill, the "huge space
+      top and bottom" the UAT report named. 01.5-07's checkpoint chose to
+      keep a reduced floor rather than drop the desktop treatment
+      entirely: the close should still feel taller and more deliberate
+      than a 72px band, just not mostly empty. 70% was the developer's
+      chosen fraction (rejected: keeping 100vh as-is, since it leaves the
+      exact proportion the UAT flagged; dropping the floor to the band's
+      natural ~220.7px content height, since that gives up D-10's
+      destination intent and supersedes a decision made earlier in this
+      same phase; adding more content to justify 100vh, since new copy is
+      out of scope for a gap-closure round — see 01.5-07-SUMMARY.md
+      "Decisions" for the full record). The floor is declared twice
+      following this file's own dual-declaration viewport-unit idiom
+      (`.pk-lightbox-img`, below, is the existing precedent): the static
+      `70vh` is the fallback a browser without dynamic-viewport support
+      keeps, `70dvh` is what every current browser actually uses. This
+      matters here specifically because the rule is media-gated no lower
+      than 640px, and a phone in landscape can be exactly that wide — a
+      static-only vh floor would size against the address-bar-collapsed
+      maximum and could exceed the visible screen once browser chrome is
+      accounted for; the dvh line is what keeps the floor inside the
+      ACTUAL visible viewport on that device.
 
    No `gap` here: #cierre .pk-band-inner's single unconditional gap
    (above) already governs both viewports — a desktop override would
@@ -2733,10 +2759,10 @@ body.pk-drawer-open {
    owns that (see the #cierre .pk-band-inner comment above). */
 @media (min-width: 640px) {
   #cierre {
-    min-height: 100vh;
+    min-height: 70vh;
+    min-height: 70dvh;
     display: flex;
     align-items: center;
-    padding: var(--pk-header-h, 4.5rem) 0 0;
   }
 
   #cierre h2 {
