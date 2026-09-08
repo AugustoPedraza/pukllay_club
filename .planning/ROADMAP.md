@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 7/8 plans executed (4 original executed + 4 gap-closure plans pending)
+**Plans:** 8/8 plans executed (4 original executed + 4 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -181,7 +181,7 @@ geometry probe)*
 **Gap closure — Wave 3** *(blocked on 01.5-07 — same stylesheet region; also overlaps 01.5-05 on
 `layouts_test.exs`)*
 
-- [ ] 01.5-08-PLAN.md — Page bottom boundary: the About page opts into the bottom-collapse mechanism built for this exact stacked-declaration defect, the non-working CTA-bar spacer is replaced by page-scoped document-end clearance, and a caller-contract test surfaces the next page to forget (G-01.5-3 item 4)
+- [x] 01.5-08-PLAN.md — Page bottom boundary: the About page opts into the bottom-collapse mechanism built for this exact stacked-declaration defect, the non-working CTA-bar spacer is replaced by page-scoped document-end clearance, and a caller-contract test surfaces the next page to forget (G-01.5-3 item 4)
 
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 

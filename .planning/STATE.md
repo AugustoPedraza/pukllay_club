@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.0
 current_phase: 01.5
 current_phase_name: About Page CTA Rhythm & Header Morph Refinement
-status: executing
-stopped_at: Completed 01.5-07-PLAN.md
-last_updated: "2026-09-08T17:30:49.111Z"
+status: verifying
+stopped_at: Completed 01.5-08-PLAN.md
+last_updated: "2026-09-08T18:16:02.015Z"
 last_activity: 2026-09-08
 last_activity_desc: Phase 01.5 execution resumed (wave continue)
-state_head: 1055a46ebcb3b67ae1a8b443f9c62507a842c8c9
+state_head: 4a6400350a70c1bb4adbebf62bc3daac9ba52d67
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 81
-  completed_plans: 80
+  completed_plans: 81
 milestone_name: milestone
 ---
 
@@ -33,7 +33,7 @@ even without already knowing board-game vocabulary.
 
 Phase: 01.5 (About Page CTA Rhythm & Header Morph Refinement) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-08 — Phase 01.5 execution resumed (wave continue)
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 plans (Phase 02 not yet planned)
@@ -108,6 +108,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 p
 | Phase 01.5 P05 | 20min | 2 tasks | 2 files |
 | Phase 01.5 P06 | 18min | 2 tasks | 3 files |
 | Phase 01.5 P07 | 25min | 3 tasks | 3 files |
+| Phase 01.5 P08 | 36min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -205,6 +206,7 @@ Recent decisions affecting current work:
 - [Phase 01.5]: 01.5-05: size-step-lg + radius-keep chosen for Layouts.sumate_cta/1 (btn-lg + min-h-11 replacing orphaned min-h-12), closing G-01.5-1 and G-01.5-3 item 5 in one component edit
 - [Phase 01.5]: 01.5-06: .pk-band gains margin-block-end: 0 (unlayered rule beating layouts.ex's layered space-y-4 utility, no !important) to close G-01.5-2's inter-band whitespace strip; hero->#fotos boundary keeps its 16px deliberately (both sides transparent, only non-band-to-band boundary); new test/visual/about_geometry.mjs is this repo's first geometric CDP adjacency oracle, structured with a CHECKS list for plans 01.5-07/08 to extend
 - [Phase 01.5]: [Phase 01.5]: 01.5-07: G-01.5-3 items 3a/3b closed -- #cierre's header-height padding compensation removed (D-14 painted the band the header's own tint, invalidating D-10's premise) and its desktop min-height floor reduced 100vh -> 70vh/70dvh (checkpoint decision, reduce-floor ~70%); D-10 revised not superseded; test/visual/about_geometry.mjs gained a HEIGHTS sweep axis + gap-evenness/breathing-room/mobile-invariance checks
+- [Phase 01.5]: [Phase 01.5]: 01.5-08: About page opted into bottom_collapse (not boundary_collapse, top spacing untouched); .pk-about-cta-spacer replaced by body:has(.pk-about-cta-bar) document-end clearance (JS-free presence selector, no lifecycle hook needed); found+fixed a Rule 1 bug where Tailwind v4's space-y-4 applies margin-block-end (not margin-top, unlike v3) to non-last children, giving the fixed CTA bar a stray 16px margin that was eating into the reserved clearance; live probe confirmed last-band-to-footer distance now exactly 16px/24px matching the catalog/detail pages, closing G-01.5-3 and this whole gap-closure round
 
 ### Pending Todos
 
@@ -317,6 +319,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-08T17:30:48.065Z
-Stopped at: Completed 01.5-07-PLAN.md
+Last session: 2026-09-08T18:16:01.009Z
+Stopped at: Completed 01.5-08-PLAN.md
 Resume file: None
