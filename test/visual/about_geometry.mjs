@@ -20,10 +20,20 @@
 //
 // Structure: `CHECKS` below is a named list of check functions, each taking
 // the same per-case `measured` payload and returning an array of failure
-// strings. The sweep loop runs every check against every (viewport, theme)
-// case. Plans 01.5-07 and 01.5-08 each extend this same file with one more
-// check function appended to `CHECKS` — neither needs to touch the sweep
-// loop, the dev-server/Chrome lifecycle, or the CDP client below.
+// strings. The sweep loop runs every check against every (viewport, theme,
+// height) case. Plans 01.5-07 and 01.5-08 each extend this same file with
+// one more check function appended to `CHECKS` — neither needs to touch the
+// sweep loop, the dev-server/Chrome lifecycle, or the CDP client below.
+//
+// Plan 01.5-07 (G-01.5-3 items 3a/3b — .planning/debug/cierre-band-
+// whitespace.md) added the HEIGHTS axis to the sweep (the width x theme
+// sweep alone, at a single fixed 900px height, cannot observe the Cierre
+// gap-evenness defect — the diagnosis proved the asymmetry is invariant to
+// HEIGHT, so a single-height sweep would under-test it) and three checks:
+// gap evenness, non-zero bottom breathing room at the short height, and
+// mobile invariance. Every case now also measures `#cierre` and its
+// `.pk-band-inner` content group's rects alongside the existing per-band
+// list.
 //
 // Usage: node test/visual/about_geometry.mjs
 // Env:   PROBE_BASE_URL=http://localhost:4000  (skip booting a dev server)
@@ -38,6 +48,16 @@ import { join } from "node:path"
 // with that evidence rather than freshly guessed.
 const VIEWPORTS = [390, 768, 1280]
 const THEMES = ["light", "dark"]
+
+// Plan 01.5-07: viewport HEIGHTS swept alongside widths for the Cierre gap
+// checks. 400 is the deliberately short case (matches the diagnosis's
+// 900x400 row, one of the four short-viewport rows that measured the
+// padding shorthand's zeroed bottom component flush against the band's
+// edge before this plan's fix); 900 is this file's existing baseline
+// height; 1200 is a tall desktop window, included so "several heights" (not
+// two) actually exercises the invariant across a spread, not just short vs.
+// baseline.
+const CIERRE_HEIGHTS = [400, 900, 1200]
 
 // Sub-pixel tolerance for fractional layout only (e.g. a viewport width
 // that does not divide evenly into rem-based paddings). This must stay far
@@ -245,10 +265,10 @@ async function connectCDP(port) {
 // ---------------------------------------------------------------------------
 // Per-case measurement
 // ---------------------------------------------------------------------------
-async function runCase({ client, baseUrl, viewport, theme }) {
+async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
   await client.send("Emulation.setDeviceMetricsOverride", {
     width: viewport,
-    height: 900,
+    height,
     deviceScaleFactor: 1,
     mobile: false,
   })
@@ -285,7 +305,29 @@ async function runCase({ client, baseUrl, viewport, theme }) {
             rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
           };
         });
-        return { bands };
+
+        // Plan 01.5-07: #cierre's own box plus its single content group
+        // (.pk-band-inner) — the two rects the gap-evenness/breathing-room/
+        // mobile-invariance checks below derive gapTop/gapBottom from.
+        // Both null at any width if the element is somehow missing, so a
+        // check can report a clear failure instead of throwing on a null
+        // deref.
+        const cierreEl = document.querySelector('#cierre');
+        const cierreInnerEl = cierreEl ? cierreEl.querySelector('.pk-band-inner') : null;
+        const cierre = cierreEl
+          ? (() => {
+              const rect = cierreEl.getBoundingClientRect();
+              return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+            })()
+          : null;
+        const cierreInner = cierreInnerEl
+          ? (() => {
+              const rect = cierreInnerEl.getBoundingClientRect();
+              return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+            })()
+          : null;
+
+        return { bands, cierre, cierreInner };
       })())
     `,
     returnByValue: true,
@@ -339,9 +381,136 @@ function checkAdjacentBandContact(measured, ctx) {
   return failures
 }
 
+// Sub-pixel tolerance for the Cierre gap checks below. The diagnosis
+// measured the shipped defect's asymmetry at exactly one header height
+// (64-65px) — anything below 1px is nowhere near that magnitude and is
+// ordinary sub-pixel layout rounding, not a regression of the defect.
+const CIERRE_GAP_TOLERANCE_PX = 1
+
+// Derives { gapTop, gapBottom } from #cierre's own box and its single
+// content group's box. Returns null if either rect is missing (the caller
+// turns that into a failure with context instead of throwing).
+function cierreGaps(measured) {
+  const { cierre, cierreInner } = measured
+  if (!cierre || !cierreInner) return null
+
+  const gapTop = cierreInner.y - cierre.y
+  const gapBottom = cierre.y + cierre.height - (cierreInner.y + cierreInner.height)
+  return { gapTop, gapBottom }
+}
+
+// Plan 01.5-07 (G-01.5-3 item 3b — the gap-evenness oracle): at every width
+// >=640px, #cierre's top and bottom gaps must be equal within a pixel, at
+// every swept viewport HEIGHT — not different by exactly one header height,
+// which is exactly what the shipped D-10 padding shorthand did before this
+// plan removed it. This is the direct oracle for the defect: the pre-fix
+// code fails this check by exactly --pk-header-h at every (width, height)
+// combination the diagnosis measured.
+function checkCierreGapEvenness(measured, ctx) {
+  if (ctx.viewport < 640) return []
+
+  const gaps = cierreGaps(measured)
+  if (!gaps) {
+    return [
+      `#cierre gap evenness: could not measure #cierre and/or its .pk-band-inner ` +
+        `content group at [${ctx.viewport}px, ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const { gapTop, gapBottom } = gaps
+  const diff = Math.abs(gapTop - gapBottom)
+  if (diff >= CIERRE_GAP_TOLERANCE_PX) {
+    return [
+      `#cierre gap evenness: gapTop=${gapTop.toFixed(2)}px gapBottom=${gapBottom.toFixed(2)}px ` +
+        `diff=${diff.toFixed(2)}px at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — ` +
+        `expected the two gaps to match within ${CIERRE_GAP_TOLERANCE_PX}px`,
+    ]
+  }
+
+  return []
+}
+
+// Plan 01.5-07 (G-01.5-3 item 3b — the latent third defect the padding
+// shorthand's zeroed bottom component created): at the deliberately short
+// viewport height, once the min-height floor is exhausted by the band's own
+// content, the closing signature must still have non-zero breathing room
+// below it — it must never sit flush against the tinted band's bottom
+// edge. Scoped to the short height only; the taller heights already have
+// ample leftover space and would pass trivially either way.
+function checkCierreBottomBreathingRoom(measured, ctx) {
+  if (ctx.viewport < 640) return []
+  if (ctx.height !== Math.min(...CIERRE_HEIGHTS)) return []
+
+  const gaps = cierreGaps(measured)
+  if (!gaps) {
+    return [
+      `#cierre bottom breathing room: could not measure #cierre and/or its .pk-band-inner ` +
+        `content group at [${ctx.viewport}px, ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  if (gaps.gapBottom <= 0) {
+    return [
+      `#cierre bottom breathing room: gapBottom=${gaps.gapBottom.toFixed(2)}px at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — the closing signature is flush ` +
+        `(or overlapping) against the band's bottom edge on this short window`,
+    ]
+  }
+
+  return []
+}
+
+// Plan 01.5-07: confirms the desktop-only gap-evenness/height change did not
+// leak below the 640px media gate. Below it, #cierre must still behave like
+// every other .pk-band: an even top/bottom split, and a height close to its
+// content plus the shared band padding (2 x 4.5rem = 144px) — NOT the
+// desktop min-height floor.
+function checkCierreMobileInvariance(measured, ctx) {
+  if (ctx.viewport >= 640) return []
+
+  const gaps = cierreGaps(measured)
+  if (!gaps || !measured.cierre || !measured.cierreInner) {
+    return [
+      `#cierre mobile invariance: could not measure #cierre and/or its .pk-band-inner ` +
+        `content group at [${ctx.viewport}px, ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const failures = []
+  const diff = Math.abs(gaps.gapTop - gaps.gapBottom)
+  if (diff >= CIERRE_GAP_TOLERANCE_PX) {
+    failures.push(
+      `#cierre mobile invariance: gapTop=${gaps.gapTop.toFixed(2)}px ` +
+        `gapBottom=${gaps.gapBottom.toFixed(2)}px diff=${diff.toFixed(2)}px at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — expected the shared .pk-band ` +
+        `even split below the 640px media gate`,
+    )
+  }
+
+  const SHARED_BAND_PADDING_PX = 144 // 2 x 4.5rem, .pk-band's own padding
+  const expectedHeight = measured.cierreInner.height + SHARED_BAND_PADDING_PX
+  const heightDiff = Math.abs(measured.cierre.height - expectedHeight)
+  if (heightDiff >= 1) {
+    failures.push(
+      `#cierre mobile invariance: band height=${measured.cierre.height.toFixed(2)}px, expected ` +
+        `~${expectedHeight.toFixed(2)}px (content ${measured.cierreInner.height.toFixed(2)}px + ` +
+        `shared band padding ${SHARED_BAND_PADDING_PX}px) at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — the desktop min-height floor must ` +
+        `not apply below the media gate`,
+    )
+  }
+
+  return failures
+}
+
 // Named list of check functions the sweep loop calls. Plans 01.5-07 and
 // 01.5-08 each add one more entry here for their own oracle.
-const CHECKS = [checkAdjacentBandContact]
+const CHECKS = [
+  checkAdjacentBandContact,
+  checkCierreGapEvenness,
+  checkCierreBottomBreathingRoom,
+  checkCierreMobileInvariance,
+]
 
 // ---------------------------------------------------------------------------
 // Main
@@ -359,37 +528,47 @@ async function main() {
 
     for (const viewport of VIEWPORTS) {
       for (const theme of THEMES) {
-        const label = `[${viewport}px, ${theme}]`
+        for (const height of CIERRE_HEIGHTS) {
+          const label = `[${viewport}px x ${height}px, ${theme}]`
 
-        try {
-          const measured = await runCase({ client, baseUrl, viewport, theme })
-          casesRun++
+          try {
+            const measured = await runCase({ client, baseUrl, viewport, theme, height })
+            casesRun++
 
-          log(
-            `${label} bands: ${measured.bands
-              .map((b) => `${bandLabel(b)}@y=${b.rect.y.toFixed(1)}`)
-              .join(", ")}`,
-          )
-
-          for (let i = 0; i < measured.bands.length - 1; i++) {
-            const prev = measured.bands[i]
-            const next = measured.bands[i + 1]
-            const distance = next.rect.y - (prev.rect.y + prev.rect.height)
             log(
-              `${label} ${bandLabel(prev)} -> ${bandLabel(next)}: ${distance.toFixed(2)}px`,
+              `${label} bands: ${measured.bands
+                .map((b) => `${bandLabel(b)}@y=${b.rect.y.toFixed(1)}`)
+                .join(", ")}`,
             )
-          }
 
-          for (const check of CHECKS) {
-            const failures = check(measured, { viewport, theme })
-            for (const failure of failures) {
-              log(`${label} FAIL: ${failure}`)
-              exitCode = 1
+            for (let i = 0; i < measured.bands.length - 1; i++) {
+              const prev = measured.bands[i]
+              const next = measured.bands[i + 1]
+              const distance = next.rect.y - (prev.rect.y + prev.rect.height)
+              log(
+                `${label} ${bandLabel(prev)} -> ${bandLabel(next)}: ${distance.toFixed(2)}px`,
+              )
             }
+
+            const gaps = cierreGaps(measured)
+            if (gaps) {
+              log(
+                `${label} #cierre: gapTop=${gaps.gapTop.toFixed(2)}px ` +
+                  `gapBottom=${gaps.gapBottom.toFixed(2)}px`,
+              )
+            }
+
+            for (const check of CHECKS) {
+              const failures = check(measured, { viewport, theme, height })
+              for (const failure of failures) {
+                log(`${label} FAIL: ${failure}`)
+                exitCode = 1
+              }
+            }
+          } catch (err) {
+            log(`${label} FAIL: ${err.message}`)
+            exitCode = 1
           }
-        } catch (err) {
-          log(`${label} FAIL: ${err.message}`)
-          exitCode = 1
         }
       }
     }
@@ -398,11 +577,12 @@ async function main() {
     await stopDevServer(serverProc)
   }
 
-  if (casesRun !== VIEWPORTS.length * THEMES.length) {
+  const expectedCases = VIEWPORTS.length * THEMES.length * CIERRE_HEIGHTS.length
+  if (casesRun !== expectedCases) {
     log(
-      `FAIL: expected ${VIEWPORTS.length * THEMES.length} case blocks, only ${casesRun} ` +
-        `completed far enough to be reported — a skipped viewport or theme is an unverified ` +
-        `viewport or theme.`,
+      `FAIL: expected ${expectedCases} case blocks, only ${casesRun} ` +
+        `completed far enough to be reported — a skipped viewport, theme or height is an ` +
+        `unverified viewport, theme or height.`,
     )
     exitCode = 1
   }

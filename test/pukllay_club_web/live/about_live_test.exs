@@ -1092,9 +1092,16 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
   end
 
-  # Plan 01.5-03, Task 3 (D-10): Cierre becomes a full-viewport moment on
+  # Plan 01.5-03, Task 3 (D-10) shipped Cierre as a full-viewport moment on
   # desktop, compensated against the header's own live published height.
-  describe "Cierre full-screen desktop treatment (plan 01.5-03, D-10)" do
+  # REVISED by plan 01.5-07 (G-01.5-3 items 3a/3b —
+  # .planning/debug/cierre-band-whitespace.md): the header-height
+  # compensation was removed (D-14 painted the band the header's own tint,
+  # so the header no longer visually eats the band's top edge and the
+  # compensation was silently shifting the gap split by one header height),
+  # and the 100vh floor was reduced to 70vh/70dvh per the 01.5-07 checkpoint
+  # decision (see 01.5-07-SUMMARY.md "Decisions").
+  describe "Cierre full-screen desktop treatment (plan 01.5-03 D-10, revised 01.5-07)" do
     defp media_640_body(src) do
       case Regex.run(~r/@media\s*\(min-width:\s*640px\)\s*\{/, src, return: :index) do
         [{start, match_len}] ->
@@ -1106,7 +1113,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       end
     end
 
-    test "the @media (min-width: 640px) block contains a #cierre rule declaring min-height: 100vh, display: flex and align-items: center" do
+    test "the @media (min-width: 640px) block contains a #cierre rule declaring the 70vh/70dvh dual-declaration floor, display: flex and align-items: center" do
       src = strip_comments(css_source())
       body = media_640_body(src)
       assert body, "Expected to extract the @media (min-width: 640px) block body."
@@ -1115,12 +1122,21 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert rule, "Expected a #cierre rule inside the @media (min-width: 640px) block."
       [_, rule_body] = rule
 
-      assert rule_body =~ ~r/min-height\s*:\s*100vh/
+      # Both declarations of the dual-declaration viewport-unit idiom
+      # (.pk-lightbox-img precedent) must be present, in this order: the
+      # static vh is the fallback a browser without dynamic-viewport
+      # support keeps, the dvh line is what every current browser actually
+      # uses. Neither line is a duplicate to "clean up" — deleting either
+      # reopens either the no-dvh-support fallback gap or, on a landscape
+      # phone at exactly 640px, a band taller than the visible screen.
+      assert rule_body =~ ~r/min-height\s*:\s*70vh\s*;[\s\S]*min-height\s*:\s*70dvh\s*;/,
+             "Expected #cierre to declare min-height: 70vh THEN min-height: 70dvh (static fallback first, dynamic-viewport unit second, per this file's documented idiom)."
+
       assert rule_body =~ ~r/display\s*:\s*flex/
       assert rule_body =~ ~r/align-items\s*:\s*center/
     end
 
-    test "that #cierre rule's padding reads var(--pk-header-h, 4.5rem) as its top component" do
+    test "the #cierre rule inside the >=640px block declares no vertical-padding override" do
       src = strip_comments(css_source())
       body = media_640_body(src)
 
@@ -1128,8 +1144,13 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert rule, "Expected a #cierre rule inside the @media (min-width: 640px) block."
       [_, rule_body] = rule
 
-      assert rule_body =~ ~r/padding\s*:\s*var\(--pk-header-h,\s*4\.5rem\)/,
-             "Expected #cierre's padding to read var(--pk-header-h, 4.5rem), not a hard-coded pixel literal."
+      refute rule_body =~ ~r/(?<![-\w])padding(?!-\w)\s*:/,
+             "The header-height top-padding compensation was removed on purpose (01.5-07, G-01.5-3): " <>
+               "D-14 later painted #cierre the header's own tint, so the header no longer eats visually " <>
+               "into the band's top edge and the padding was doing nothing but shifting the gap split by " <>
+               "one header height. Reinstating any padding override here reopens the uneven-gap defect — " <>
+               "the shared .pk-band vertical padding must govern this rule at this width, same as every " <>
+               "other band."
     end
 
     test "the block contains #cierre h2 with font-size: clamp(2rem, 4vw, 3rem)" do
@@ -1151,13 +1172,19 @@ defmodule PukllayClubWeb.AboutLiveTest do
              "Expected the desktop full-screen block to declare no gap of its own."
     end
 
-    test "--pk-header-h is republished from exactly one place and #cierre is at least the 4th consumer of it" do
+    test "--pk-header-h is republished from exactly one place and is still read by at least 3 rules in app.css" do
       src = strip_comments(css_source())
 
       consumer_count = ~r/var\(--pk-header-h/ |> Regex.scan(src) |> length()
 
-      assert consumer_count >= 4,
-             "Expected --pk-header-h to be read by at least 4 rules in app.css (regression guard against a parallel token)."
+      # 01.5-07 removed #cierre's own reads of this token (its header-height
+      # compensation was the thing being removed); .pk-shelf's
+      # scroll-margin-top, .pk-title-echo's top and .pk-poster-col's sticky
+      # top remain, so the floor drops from >=4 to >=3, not to 0 — this is
+      # still a regression guard against a parallel/duplicate token, not a
+      # weakened check.
+      assert consumer_count >= 3,
+             "Expected --pk-header-h to be read by at least 3 rules in app.css (regression guard against a parallel token)."
 
       layouts_src =
         File.read!(Path.expand("../../../lib/pukllay_club_web/components/layouts.ex", __DIR__))
