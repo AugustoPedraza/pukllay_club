@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 4/4 plans executed
+**Plans:** 4/8 plans executed (4 original executed + 4 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -163,6 +163,25 @@ Plans:
 **Wave 4** *(blocked on Wave 3 — shared files)*
 
 - [x] 01.5-04-PLAN.md — Page-wide rhythm finishers: no duplicate Sumate at the 480px sticky-bar threshold, alternating plain/tint band backgrounds with the FAQ untouched, plus the phase gate (D-11, D-14)
+
+**Gap closure — Wave 1** *(from `01.5-UAT.md`: G-01.5-1, G-01.5-2, G-01.5-3, all three diagnosed
+to root cause in `.planning/debug/`. Plans 05 and 06 own disjoint file sets and run in parallel;
+plans 07 and 08 follow because they share `assets/css/app.css` with 06 and with each other.
+G-01.5-3 is deliberately split across three plans because its own diagnosis says its three pieces
+have different owners, different blast radii, and one is a design decision rather than a bug fix)*
+
+- [ ] 01.5-05-PLAN.md — Sumate CTA proportions fixed at their single source: a real daisyUI size step composed with the 44px touch floor replaces the orphaned one-axis height utility, closing the hero AND Cierre balance reports in one component edit (G-01.5-1, G-01.5-3 item 5)
+- [ ] 01.5-06-PLAN.md — `.pk-band` reclaims ownership of its own outer spacing from the shared shell wrapper so adjacent bands sit flush, plus the repo's first geometric oracle for band adjacency (G-01.5-2)
+
+**Gap closure — Wave 2** *(blocked on 01.5-06 — shared `app.css`, `about_live_test.exs` and the
+geometry probe)*
+
+- [ ] 01.5-07-PLAN.md — Cierre band internal geometry: the header-height compensation whose premise D-14 invalidated is removed, the full-viewport question is decided with the developer, and the two CSS-source tests that passed on the bug are moved in lockstep (G-01.5-3 items 3a, 3b)
+
+**Gap closure — Wave 3** *(blocked on 01.5-07 — same stylesheet region; also overlaps 01.5-05 on
+`layouts_test.exs`)*
+
+- [ ] 01.5-08-PLAN.md — Page bottom boundary: the About page opts into the bottom-collapse mechanism built for this exact stacked-declaration defect, the non-working CTA-bar spacer is replaced by page-scoped document-end clearance, and a caller-contract test surfaces the next page to forget (G-01.5-3 item 4)
 
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 
