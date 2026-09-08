@@ -171,6 +171,71 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       weight_matches = Regex.scan(~r/font-weight:\s*(\d+)/, body)
       assert weight_matches == [["font-weight: 400", "400"]]
     end
+
+    test "the hook toggles is-docked on this.el at exactly 2 call sites (frame() and first paint)" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      matches = Regex.scan(~r/this\.el\.classList\.toggle\("is-docked"/, hook)
+      assert length(matches) == 2,
+             "Expected exactly 2 occurrences of this.el.classList.toggle(\"is-docked\" — one in " <>
+               "frame(), one in the first-paint block, so a deep-linked visitor and a scrolling " <>
+               "visitor resolve to the same state."
+    end
+
+    test "the hook toggles is-docked on this.header at exactly 2 call sites, unchanged by this plan" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      matches = Regex.scan(~r/this\.header\.classList\.toggle\("is-docked"/, hook)
+      assert length(matches) == 2,
+             "Expected the pre-existing pair of this.header.classList.toggle(\"is-docked\" call " <>
+               "sites to remain untouched — the new lines were added beside them, not in place " <>
+               "of them."
+    end
+
+    test "destroyed() removes is-docked only from this.header, never from this.el" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      matches = Regex.scan(~r/classList\.remove\("is-docked"\)/, hook)
+      assert length(matches) == 1
+
+      [line] =
+        hook
+        |> String.split("\n")
+        |> Enum.filter(&(&1 =~ ~r/classList\.remove\("is-docked"\)/))
+
+      assert line =~ "this.header",
+             "Expected the sole is-docked removal to target this.header (a shared element that " <>
+               "outlives the page) — this.el (#about-hero) leaves the DOM on navigation and needs " <>
+               "no teardown of its own."
+    end
+
+    test "app.css registers exactly two Bebas Neue @font-face blocks, both weight 400" do
+      src = strip_comments(css_source())
+
+      font_face_blocks = Regex.scan(~r/@font-face\s*\{[^}]*\}/s, src) |> Enum.map(&hd/1)
+
+      bebas_blocks =
+        Enum.filter(font_face_blocks, &Regex.match?(~r/font-family:\s*"Bebas Neue"/, &1))
+
+      assert length(bebas_blocks) == 2,
+             "Expected exactly 2 @font-face blocks for \"Bebas Neue\"."
+
+      weights =
+        bebas_blocks
+        |> Enum.flat_map(fn block -> Regex.scan(~r/font-weight:\s*(\d+)/, block) end)
+        |> Enum.map(fn [_, w] -> w end)
+
+      assert weights == ["400", "400"],
+             "Expected both Bebas Neue @font-face blocks to declare font-weight: 400 (found " <>
+               "#{inspect(weights)}) — any other weight would be a browser-synthesized fake bold."
+    end
+
+    test "--pk-about-mark-name-scale is declared exactly once at 0.135" do
+      src = strip_comments(css_source())
+
+      matches = Regex.scan(~r/--pk-about-mark-name-scale:\s*0\.135/, src)
+      assert length(matches) == 1
+    end
   end
 
   describe "the isologo suppression hook class (D-10 — a styling hook, not a fourth header state)" do

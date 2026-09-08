@@ -304,7 +304,12 @@ defmodule PukllayClubWeb.AboutLive do
                   // point (e.g. a #contacto deep link from the footer) sees
                   // the header already docked, with no jump and no replayed
                   // entrance. A null dock rect is treated as not-docked —
-                  // there is nothing yet to compare against.
+                  // there is nothing yet to compare against. The hero
+                  // eyebrow and the companion wordmark now resolve here
+                  // too (this.el.classList.toggle below), so that same
+                  // deep-linked visitor gets the right eyebrow/wordmark
+                  // state on the first painted frame, not on the next
+                  // scroll frame.
                   const natural0 = this.naturalRect()
                   const dock0 = this.dockRect()
                   this.docked = dock0 ? natural0.top <= dock0.top : false
@@ -312,6 +317,7 @@ defmodule PukllayClubWeb.AboutLive do
                   this.from = this.progress
                   this.to = this.progress
                   this.header.classList.toggle("is-docked", this.docked)
+                  this.el.classList.toggle("is-docked", this.docked)
                   this.header.toggleAttribute("inert", !this.docked)
                   // Writes the mark's transform immediately, at whichever
                   // state first paint resolved to.
@@ -350,8 +356,14 @@ defmodule PukllayClubWeb.AboutLive do
                   // About, so the `:has()` guard simply stops matching —
                   // there is no hiding class left over here to clean up
                   // (S1 fix, G-01.4-1). `is-docked` and `inert` are still
-                  // this hook's own state on a shared element, so those
-                  // still need explicit teardown.
+                  // this hook's own state on `this.header`, a SHARED
+                  // element that outlives this page, so those still need
+                  // explicit teardown. `this.el` (#about-hero) is NOT
+                  // torn down here on purpose: it is not shared — it
+                  // leaves the DOM on navigation away from About, same as
+                  // the `:has()`-driven header-hidden state above — so its
+                  // own `is-docked` class needs no cleanup; the class
+                  // disappears with the element.
                   this.header?.classList.remove("is-docked")
                   this.header?.removeAttribute("inert")
                 } catch (e) {
