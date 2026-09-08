@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -162,7 +162,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 — shared files)*
 
-- [ ] 01.5-04-PLAN.md — Page-wide rhythm finishers: no duplicate Sumate at the 480px sticky-bar threshold, alternating plain/tint band backgrounds with the FAQ untouched, plus the phase gate (D-11, D-14)
+- [x] 01.5-04-PLAN.md — Page-wide rhythm finishers: no duplicate Sumate at the 480px sticky-bar threshold, alternating plain/tint band backgrounds with the FAQ untouched, plus the phase gate (D-11, D-14)
 
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 
