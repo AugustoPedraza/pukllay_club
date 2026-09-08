@@ -660,7 +660,7 @@ async function startCheckpointServer() {
       log(`FAIL: ${PROBE_BASE_URL}/up did not return 200 for the checkpoint.`)
       return
     }
-    log(`Checkpoint server (externally managed via PROBE_BASE_URL): ${PROBE_BASE_URL}/quienes-somos#contacto`)
+    log(`Checkpoint server (externally managed via PROBE_BASE_URL): ${PROBE_BASE_URL}/quienes-somos#juntadas`)
     return
   }
 
@@ -679,7 +679,7 @@ async function startCheckpointServer() {
   }
 
   log(`Checkpoint server is up. PID: ${proc.pid}`)
-  log(`Open: ${baseUrl}/quienes-somos#contacto`)
+  log(`Open: ${baseUrl}/quienes-somos#juntadas`)
 }
 
 async function pollUp(baseUrl) {
