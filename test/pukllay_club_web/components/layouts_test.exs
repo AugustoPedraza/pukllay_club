@@ -746,13 +746,41 @@ defmodule PukllayClubWeb.LayoutsTest do
     # Sketch 013-E: outline at rest, filling on hover — the same classes as
     # CoreComponents.button/1's "secondary" variant, applied directly since
     # button/1's :rest global attr list doesn't carry target/rel through.
-    test "carries the outline-at-rest button classes and the 48px height utility" do
+    #
+    # G-01.5-1/G-01.5-3 item 5 (plan 01.5-05): the outline/primary classes
+    # stay, but the size now comes from daisyUI's btn-lg size step composed
+    # with the app's 44px touch floor (min-h-11), not a bare one-axis height
+    # utility. daisyUI couples a size step's height/padding-inline/font-size
+    # together; a bare height utility moves only the one axis it names,
+    # which is exactly what collapsed this button's padding ratio to 1.03:1
+    # (every other button in the app sits at 1.78-2.00:1). The old min-h-12
+    # must be gone, not merely outnumbered — leaving it alongside btn-lg
+    # would have the two compete on height and reproduce the same
+    # off-ratio geometry this composition fixes.
+    test "carries the outline-at-rest button classes and the btn-lg size step composed with the touch floor" do
       html = render_component(&Layouts.sumate_cta/1, %{})
 
       assert html =~ "btn-outline"
       assert html =~ "btn-primary"
-      assert html =~ "min-h-12"
+      assert html =~ "btn-lg"
+      assert html =~ "min-h-11"
+
+      refute html =~ "min-h-12",
+             "min-h-12 is the orphaned one-axis height utility this plan replaces. daisyUI " <>
+               "couples a size step's height/padding-inline/font-size together — leaving a bare " <>
+               "height utility alongside btn-lg makes the two compete on height and silently " <>
+               "reintroduces the 1.03:1 squat-label-box ratio (G-01.5-1/G-01.5-3 item 5) that " <>
+               "btn-lg + min-h-11 was chosen specifically to fix."
+
       refute html =~ "btn-sm"
+    end
+
+    test "still merges a caller-supplied class, so the mobile sticky bar keeps dictating its own width" do
+      html = render_component(&Layouts.sumate_cta/1, %{class: "w-full"})
+
+      assert html =~ "w-full"
+      assert html =~ "btn-lg"
+      assert html =~ "min-h-11"
     end
 
     test "is now public (no longer a private header-only function)" do

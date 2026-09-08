@@ -892,6 +892,21 @@ defmodule PukllayClubWeb.Layouts do
   classes directly rather than the component itself, since `button/1`'s
   `:rest` global attr list does not include `target`/`rel` (needed here for
   an external link) and would silently drop them.
+
+  **Size (G-01.5-1/G-01.5-3 item 5, plan 01.5-05).** The size comes from
+  daisyUI's `btn-lg` step, composed with the app's 44px touch-floor utility
+  (`min-h-11`) — not a bare height utility. daisyUI couples a size step's
+  height, inline padding and font-size together; this app's
+  `--size-field: 0.21875rem` puts `btn-lg` alone at 42px, 2px under the
+  documented floor, so the step and the floor utility must both be present.
+  This is the exact composition `catalog_live/show.ex`'s reserve CTA
+  (`btn btn-primary btn-lg min-h-11 w-full`) already ships — a consistency
+  repair against in-repo precedent, not a new pattern. The previous
+  `min-h-12` was a one-axis height override inherited from a desktop header
+  cluster (`.pk-nav-actions`, quick task 260822-2v9) that has since been
+  deleted from every layout; do not reinstate a bare height utility here —
+  it competes with the size step's own height and reproduces the same
+  off-ratio geometry this composition fixes.
   """
   attr :class, :string, default: nil
 
@@ -901,7 +916,7 @@ defmodule PukllayClubWeb.Layouts do
       href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
       target="_blank"
       rel="noopener noreferrer"
-      class={["btn btn-outline btn-primary min-h-12", @class]}
+      class={["btn btn-outline btn-primary btn-lg min-h-11", @class]}
     >
       Sumate
     </a>
