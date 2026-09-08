@@ -2600,9 +2600,27 @@ body.pk-drawer-open {
   color: var(--color-neutral);
 }
 
+/* Plan 01.5-03, D-13: the Cierre closing signature (the ONE consumer of
+   this class that used to carry a trailing anchor) no longer contains a
+   link at all — kept here, not deleted, because .pk-about-eyebrow remains
+   a general class and this `a` rule may style a future non-Cierre
+   consumer; deleting a rule just because its only current caller stopped
+   using it is exactly the "audit only the property the change is about"
+   mistake sketch 051's third bug documents (about-page-content.md). */
 .pk-about-eyebrow a {
   color: inherit;
   text-decoration: underline;
+}
+
+/* Plan 01.5-03, D-13: the two-line mobile wrap for the Cierre signature.
+   Hidden by default (desktop reads the signature as one line); the
+   @media (max-width: 639px) block below turns it on. display: none/block
+   (not a Tailwind sm:hidden/hidden sm:block pair) per this file's
+   top-of-file cascade-hazard note — mixing an unlayered .pk-* rule with a
+   layered Tailwind utility on the same element produces a utility that
+   silently loses and looks live when it is not. */
+.pk-about-closing-break {
+  display: none;
 }
 
 /* The dark FAQ band's token mapping (Claude's discretion, D-08): the
@@ -2809,6 +2827,27 @@ body.pk-drawer-open {
   .pk-about-contact-links a {
     border-radius: 9999px;
     padding: 0.75rem;
+  }
+
+  /* Plan 01.5-03, D-13: force the Cierre signature onto two lines at the
+     "·" break point rather than wherever the viewport happens to wrap it,
+     at a smaller size than the base 0.75rem .pk-about-eyebrow rule gives
+     it. 10px is sketch 051 round 12b's own measured value — at the base
+     0.75rem the line does not reliably produce exactly two lines on a
+     narrow phone, it produces three. The selector is an id (#cierre) plus
+     a class (.pk-about-closing-meta), specificity 1,1,0: no shared
+     type+class rule anywhere in this file can reach that, which is
+     exactly what sketch 051's second bug needed (about-page-content.md,
+     bug 2) — a shared `.band p` rule silently beat a single-class
+     `.closing-meta` rule's font-size for thirteen rounds because a
+     single-class selector alone couldn't out-specify it. */
+  #cierre .pk-about-closing-break {
+    display: block;
+  }
+
+  #cierre .pk-about-closing-meta {
+    font-size: 10px;
+    letter-spacing: 0.04em;
   }
 }
 

@@ -204,7 +204,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "Nos juntamos todos los sábados desde las 16 hs en el Club de Emprendedores, San Salvador de Jujuy. La entrada es libre y los juegos los ponemos nosotros."
     end
 
-    test "the #cierre band offers exactly one CTA (the shared Sumate component), not a duplicated WhatsApp/Instagram button pair (049)",
+    test "the #cierre band offers exactly one CTA (the shared Sumate component) and a plain signature carrying no links at all (plan 01.5-03, D-13)",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
@@ -213,18 +213,20 @@ defmodule PukllayClubWeb.AboutLiveTest do
       cierre_html = LazyHTML.to_html(cierre)
 
       assert cierre_html =~ "Nos vemos el sábado"
-      assert cierre_html =~ "Pukllay Club · San Salvador de Jujuy, Argentina ·"
+      assert cierre_html =~ "Pukllay Club ·"
+      assert cierre_html =~ "San Salvador de Jujuy, Argentina"
 
       cta_buttons = LazyHTML.query(cierre, "a.btn")
       assert Enum.count(cta_buttons) == 1
       assert LazyHTML.attribute(cta_buttons, "href") == [ClubLinks.whatsapp_group_url()]
       assert LazyHTML.to_html(cta_buttons) =~ "Sumate"
 
-      refute ClubLinks.instagram_url() in LazyHTML.attribute(cta_buttons, "href")
-
+      # D-13 (plan 01.5-03): the trailing Instagram link that shipped since
+      # plan 049 is gone — Contacto's chip row now covers all 3 channels
+      # explicitly, making a fourth mention here redundant. The closing
+      # band's only anchor is the Sumate button.
       meta_links = LazyHTML.query(cierre, "a:not(.btn)")
-      assert Enum.count(meta_links) == 1
-      assert LazyHTML.attribute(meta_links, "href") == [ClubLinks.instagram_url()]
+      assert Enum.count(meta_links) == 0
     end
 
     test "/club and /quienes-somos render byte-identical HTML once per-connection session/CSRF tokens are normalized (D-01)",
@@ -956,6 +958,82 @@ defmodule PukllayClubWeb.AboutLiveTest do
                ClubLinks.facebook_url(),
                ClubLinks.instagram_url()
              ]
+    end
+  end
+
+  # Plan 01.5-03, Task 1 (D-13): the Cierre signature's markup and the
+  # mobile size rule's specificity. The DOM half of "no trailing link" is
+  # covered above ("#cierre band offers exactly one CTA..."); these tests
+  # cover the two-line-wrap markup and the CSS-source facts that make the
+  # mobile size rule un-out-specifiable (sketch 051's second bug,
+  # about-page-content.md).
+  describe "Cierre closing signature two-line wrap (plan 01.5-03, D-13)" do
+    test "the signature paragraph carries both pk-about-eyebrow and pk-about-closing-meta, with exactly one pk-about-closing-break <br>",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      signature = LazyHTML.query(doc, "#cierre p.pk-about-eyebrow")
+
+      assert Enum.count(signature) == 1
+      [class] = LazyHTML.attribute(signature, "class")
+      assert class =~ "pk-about-eyebrow"
+      assert class =~ "pk-about-closing-meta"
+
+      breaks = LazyHTML.query(doc, "#cierre .pk-about-closing-break")
+      assert Enum.count(breaks) == 1
+      assert LazyHTML.tag(breaks) == ["br"]
+    end
+
+    test "app.css declares a top-level .pk-about-closing-break rule with display: none" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-closing-break\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a top-level .pk-about-closing-break rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/display\s*:\s*none/,
+             "Expected the top-level .pk-about-closing-break rule to declare display: none."
+    end
+
+    test "inside the 639px block, #cierre .pk-about-closing-break declares display: block and #cierre .pk-about-closing-meta declares a font-size" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      break_rule = Regex.run(~r/#cierre \.pk-about-closing-break\s*\{([^}]*)\}/s, body)
+      assert break_rule, "Expected a #cierre .pk-about-closing-break rule inside the 639px block."
+      [_, break_body] = break_rule
+
+      assert break_body =~ ~r/display\s*:\s*block/,
+             "Expected #cierre .pk-about-closing-break to declare display: block."
+
+      meta_rule = Regex.run(~r/#cierre \.pk-about-closing-meta\s*\{([^}]*)\}/s, body)
+      assert meta_rule, "Expected a #cierre .pk-about-closing-meta rule inside the 639px block."
+      [_, meta_body] = meta_rule
+
+      assert meta_body =~ ~r/font-size\s*:/,
+             "Expected #cierre .pk-about-closing-meta to declare a font-size."
+    end
+
+    test "the .pk-about-eyebrow and .pk-about-eyebrow a rules are unchanged apart from added comments" do
+      src = strip_comments(css_source())
+
+      eyebrow_rule = Regex.run(~r/\.pk-about-eyebrow\s*\{([^}]*)\}/s, src)
+      assert eyebrow_rule, "Expected a .pk-about-eyebrow rule in app.css."
+      [_, eyebrow_body] = eyebrow_rule
+
+      assert eyebrow_body =~ ~r/font-size\s*:\s*0\.75rem/
+      assert eyebrow_body =~ ~r/text-transform\s*:\s*uppercase/
+      assert eyebrow_body =~ ~r/letter-spacing\s*:\s*0\.1em/
+      assert eyebrow_body =~ ~r/color\s*:\s*var\(--color-neutral\)/
+
+      eyebrow_a_rule = Regex.run(~r/\.pk-about-eyebrow a\s*\{([^}]*)\}/s, src)
+      assert eyebrow_a_rule, "Expected a .pk-about-eyebrow a rule in app.css."
+      [_, eyebrow_a_body] = eyebrow_a_rule
+
+      assert eyebrow_a_body =~ ~r/color\s*:\s*inherit/
+      assert eyebrow_a_body =~ ~r/text-decoration\s*:\s*underline/
     end
   end
 end
