@@ -84,6 +84,93 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       refute html =~ "data-morph-anchor"
       refute html =~ "AboutHeaderMorph"
     end
+
+    test "GET / renders neither .pk-about-morph-name nor .pk-about-hero-eyebrow", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+
+      assert Enum.count(LazyHTML.query(doc, ".pk-about-morph-name")) == 0
+      assert Enum.count(LazyHTML.query(doc, ".pk-about-hero-eyebrow")) == 0
+    end
+  end
+
+  describe "the companion wordmark and hero eyebrow sync to the shared docked boolean (D-01/D-02/D-03)" do
+    test "exactly one .pk-about-morph-name renders inside #pk-about-morph-mark, reading PUKLLAY CLUB",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      name = LazyHTML.query(doc, "#pk-about-morph-mark .pk-about-morph-name")
+
+      assert Enum.count(name) == 1,
+             "Expected exactly one .pk-about-morph-name inside #pk-about-morph-mark."
+
+      assert LazyHTML.text(name) |> to_string() |> String.trim() == "PUKLLAY CLUB"
+    end
+
+    test "the hero eyebrow carries pk-about-hero-eyebrow, distinct from the Cierre signature's pk-about-eyebrow",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+
+      hero_eyebrow = LazyHTML.query(doc, "#about-hero .pk-about-hero-eyebrow")
+      assert Enum.count(hero_eyebrow) == 1
+      assert LazyHTML.text(hero_eyebrow) |> to_string() =~ "Club de juegos de mesa"
+
+      all_pk_about_eyebrow = LazyHTML.query(doc, ".pk-about-eyebrow")
+      cierre_pk_about_eyebrow = LazyHTML.query(doc, "#cierre .pk-about-eyebrow")
+
+      assert Enum.count(all_pk_about_eyebrow) == 1,
+             "The hero eyebrow must never join .pk-about-eyebrow — that class carries an " <>
+               "underlined-link companion rule meant for the Cierre band's closing signature."
+
+      assert Enum.count(cierre_pk_about_eyebrow) == 1,
+             "The page's only .pk-about-eyebrow element must live inside #cierre."
+    end
+
+    test "the .AboutHeaderMorph hook toggles is-docked on this.el (#about-hero), the same instant as the header" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      assert hook =~ ~s|this.el.classList.toggle("is-docked", this.docked)|,
+             "Expected the hook to toggle is-docked on this.el (#about-hero) — same boolean, " <>
+               "same instant as the existing header toggle, per D-03."
+    end
+
+    test "app.css declares the docked-state rules for the hero eyebrow and the companion wordmark" do
+      src = strip_comments(css_source())
+
+      assert src =~ "#about-hero.is-docked .pk-about-hero-eyebrow",
+             "Expected a docked-state rule hiding .pk-about-hero-eyebrow when #about-hero carries " <>
+               "is-docked."
+
+      assert src =~ "body:has(#about-hero.is-docked) .pk-about-morph-name",
+             "Expected a docked-state rule fading .pk-about-morph-name when #about-hero carries " <>
+               "is-docked — reached via body:has() since the wordmark is not a descendant of " <>
+               "#about-hero."
+    end
+
+    test "app.css declares exactly one top-level .pk-about-morph-name rule, absolutely positioned" do
+      src = strip_comments(css_source())
+
+      matches = Regex.scan(~r/(?m)^\.pk-about-morph-name\s*\{/, src)
+      assert length(matches) == 1
+
+      rule = Regex.run(~r/\.pk-about-morph-name\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-morph-name rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/font-weight:\s*400/
+      assert body =~ ~r/letter-spacing:\s*0\.02em/
+      assert body =~ ~r/position:\s*absolute/
+      assert body =~ ~r/top:\s*100%/
+      assert body =~ "var(--pk-about-mark-h)"
+      assert body =~ "var(--pk-about-mark-name-scale)"
+
+      weight_matches = Regex.scan(~r/font-weight:\s*(\d+)/, body)
+      assert weight_matches == [["font-weight: 400", "400"]]
+    end
   end
 
   describe "the isologo suppression hook class (D-10 — a styling hook, not a fourth header state)" do

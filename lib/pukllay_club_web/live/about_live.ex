@@ -244,6 +244,14 @@ defmodule PukllayClubWeb.AboutLive do
                     if (shouldDock !== this.docked) {
                       this.docked = shouldDock
                       this.header.classList.toggle("is-docked", this.docked)
+                      // D-03: same boolean, same instant, same branch as the
+                      // header reveal above — this.el is #about-hero itself
+                      // (the hook is mounted on that section), so no new DOM
+                      // lookup is needed. No second boolean, no timer, no
+                      // scroll-position/viewport-height check anywhere in
+                      // this mechanism. Drives the hero eyebrow hide/reveal
+                      // and the companion wordmark fade (app.css).
+                      this.el.classList.toggle("is-docked", this.docked)
                       this.header.toggleAttribute("inert", !this.docked)
                       this.from = this.progress
                       this.to = this.docked ? 1 : 0
@@ -359,7 +367,12 @@ defmodule PukllayClubWeb.AboutLive do
           { margin-block-end: .75rem }` and would otherwise stack 12px on
           top of the declared clearance (G-01.4-3). --%>
           <div data-morph-anchor class="pk-about-mark-anchor mb-0" aria-hidden="true"></div>
-          <p class="font-sans text-xs uppercase tracking-widest text-neutral">
+          <%!-- pk-about-hero-eyebrow (D-03) exists purely as a stable hook for the
+          docked-state rule below — every visual property is still owned by the
+          Tailwind utilities beside it. Deliberately NOT .pk-about-eyebrow (that
+          class is the Cierre band's own closing-signature styling, including an
+          underlined-link companion rule that must not reach the hero). --%>
+          <p class="pk-about-hero-eyebrow font-sans text-xs uppercase tracking-widest text-neutral">
             Club de juegos de mesa · Jujuy
           </p>
           <h1 class="font-display pk-about-h1">Conectá jugando</h1>
@@ -775,6 +788,15 @@ defmodule PukllayClubWeb.AboutLive do
         <div class="pk-about-morph-mark-inner">
           <img src={~p"/images/isologo-light.png"} class="dark:hidden" alt="" />
           <img src={~p"/images/isologo-dark.png"} class="hidden dark:block" alt="" />
+          <%!-- Companion wordmark (D-01/D-02, sketch 050): a single reused
+          element, matching the theme-pair <img>s' own precedent — it takes
+          its color from a token and needs no per-theme duplicate. No
+          Tailwind utility touches font-family/font-size/font-weight/
+          letter-spacing/position/color/opacity here — .pk-about-morph-name
+          (app.css) owns every one of those properties, and an unlayered
+          .pk-* rule silently beats a utility on the same property in this
+          codebase. --%>
+          <span class="pk-about-morph-name">PUKLLAY CLUB</span>
         </div>
       </div>
 

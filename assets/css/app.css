@@ -2962,6 +2962,11 @@ body.pk-drawer-open {
      .planning/debug/G-01.4-3-isologo-bottom-spacing.md for the full
      measurement. */
   --pk-about-mark-clear: 80px;
+  /* Sketch 050's picked NAME_SCALE ("V3 — Confident", round 4): against the
+     declared 180px mark this resolves to 24.3px, the "~25px at rest" D-02
+     specifies. Larger (27px+) competed with the H1 for attention in the
+     sketch; smaller (~17px) read too quiet. */
+  --pk-about-mark-name-scale: 0.135;
 }
 
 /* The anchor is intentionally TALLER than the mark (G-01.4-3): its height
@@ -3028,6 +3033,10 @@ body.pk-drawer-open {
    compete for the same property. The entrance keeps its own eased CSS
    transition; it just no longer shares an element with the morph. */
 .pk-about-morph-mark-inner {
+  /* Makes the wordmark's absolute positioning below resolve against this
+     box, not the viewport — declared explicitly rather than relying on the
+     transform below implicitly creating the containing block. */
+  position: relative;
   width: 100%;
   height: 100%;
   opacity: 0;
@@ -3036,6 +3045,35 @@ body.pk-drawer-open {
   transition: opacity var(--duration-slow) var(--ease-standard),
     transform var(--duration-slow) var(--ease-standard),
     filter var(--duration-slow) var(--ease-standard);
+}
+
+/* Companion wordmark (D-01/D-02, sketch 050): (a) absolutely positioned so
+   it never participates in .pk-about-morph-mark's own height/aspect-ratio
+   math — it rides the hook's single per-frame translate3d(...) scale(...)
+   for free; (b) font-weight is 400 because both @font-face blocks for
+   "Bebas Neue" in this file register weight 400 and only weight 400 — any
+   other declared weight would be a browser-synthesized fake bold; (c)
+   margin-top: 12px is the visual gap between the isologo's ink and the
+   wordmark's cap-height — both isologo PNGs are cropped tight to their ink
+   with zero transparent padding (see the --pk-about-mark-clear derivation
+   comment above), so this value is the entire perceived separation and is
+   the one tunable this plan expects the end-of-phase visual check to
+   confirm. */
+.pk-about-morph-name {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: calc(var(--pk-about-mark-h) * var(--pk-about-mark-name-scale));
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-base-content);
+  transition: opacity var(--duration-slow) var(--ease-standard);
 }
 
 .pk-about-morph-mark.is-entered .pk-about-morph-mark-inner {
@@ -3090,6 +3128,31 @@ body:has(#about-hero[data-morph-armed]) #app-header.is-docked {
   visibility: visible;
   opacity: 1;
   transition: opacity var(--duration-slow) var(--ease-standard);
+}
+
+/* D-03: the hero eyebrow hides the instant the mark docks and reappears
+   the instant it undocks, reading the SAME #about-hero.is-docked class the
+   hook already toggles from the same boolean that drives the header
+   reveal above — no second mechanism. opacity, not display:none/
+   visibility, so the eyebrow's box is preserved and the crossing point
+   causes no reflow of the hero column (and therefore no scroll-position
+   shift that could feed back into the hook's own rect comparison). */
+.pk-about-hero-eyebrow {
+  transition: opacity var(--duration-slow) var(--ease-standard);
+}
+
+#about-hero.is-docked .pk-about-hero-eyebrow {
+  opacity: 0;
+}
+
+/* The companion fade D-03 requires, changing at the identical crossing-
+   point instant as the header reveal and the eyebrow hide. The wordmark
+   is a child of #pk-about-morph-mark, a page-level sibling of #about-hero
+   (not a descendant of it), so a descendant selector cannot reach it —
+   body:has(...) is the precedent this file already uses for exactly this
+   cross-subtree reach. */
+body:has(#about-hero.is-docked) .pk-about-morph-name {
+  opacity: 0;
 }
 
 /* Suppresses the header's own always-rendered isologo permanently on
