@@ -2787,6 +2787,31 @@ body.pk-drawer-open {
   flex-shrink: 0;
 }
 
+/* Mobile icon-only chip row (plan 01.5-02 Task 2, D-08). Pure space-fit
+   constraint, not a style preference: three fully-labeled chips measure
+   roughly 387px, while a 375px phone offers about 327px of content width.
+   That arithmetic is also exactly why D-07 caps the row at three channels
+   - a fourth would not fit at either width, which is why Email stays
+   footer-only. The breakpoint is 639px (the width below Tailwind's `sm`),
+   matching the parent section's own `sm:grid-cols-2` collapse — deliberately
+   NOT the 480px threshold that governs `.pk-about-cta-bar` below; those are
+   unrelated mechanisms and plan 01.5-04 depends on them staying unrelated. */
+@media (max-width: 639px) {
+  .pk-about-contact-links {
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .pk-about-contact-links a span {
+    display: none;
+  }
+
+  .pk-about-contact-links a {
+    border-radius: 9999px;
+    padding: 0.75rem;
+  }
+}
+
 /* Live Google Maps embed frame (G-01.4-5 gap closure, plan 01.4-12,
    D-11/D-12/D-14) — supersedes the fixed-ratio screenshot thumbnail
    D-04/D-05/D-06 shipped and 01.4-07/09/10/11 progressively patched. See

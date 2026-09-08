@@ -789,4 +789,107 @@ defmodule PukllayClubWeb.AboutLiveTest do
              "Expected .pk-about-contact-links a to set color: var(--color-accent-content)."
     end
   end
+
+  # Plan 01.5-02, Task 2 (D-08): at <=639px the chip row drops labels and
+  # goes icon-only + circular + centered — a pure space-fit constraint
+  # (3 labeled chips ~387px vs a 375px phone's ~327px available width).
+  describe "Contacto chip mobile treatment (plan 01.5-02, D-08)" do
+    defp media_639_body(src) do
+      case Regex.run(~r/@media\s*\(max-width:\s*639px\)\s*\{/, src, return: :index) do
+        [{start, match_len}] ->
+          body_start = start + match_len
+          extract_balanced_block(src, body_start)
+
+        nil ->
+          nil
+      end
+    end
+
+    # Balanced-brace-aware scan from just after the media query's opening
+    # `{` to its matching close, so assertions below match only within this
+    # block's own body — matching a bare property against the whole file
+    # would pass on any of the dozens of unrelated rules that declare it.
+    defp extract_balanced_block(src, start_index) do
+      src
+      |> String.slice(start_index..-1//1)
+      |> do_extract_balanced_block(1, [])
+    end
+
+    defp do_extract_balanced_block(<<>>, _depth, acc), do: acc |> Enum.reverse() |> IO.iodata_to_binary()
+
+    defp do_extract_balanced_block(<<"{", rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth + 1, ["{" | acc])
+    end
+
+    defp do_extract_balanced_block(<<"}", _rest::binary>>, 1, acc) do
+      acc |> Enum.reverse() |> IO.iodata_to_binary()
+    end
+
+    defp do_extract_balanced_block(<<"}", rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth - 1, ["}" | acc])
+    end
+
+    defp do_extract_balanced_block(<<c::utf8, rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth, [<<c::utf8>> | acc])
+    end
+
+    test "app.css contains a @media (max-width: 639px) block referencing .pk-about-contact-links" do
+      src = strip_comments(css_source())
+
+      assert src =~ ~r/@media\s*\(max-width:\s*639px\)/,
+             "Expected a @media (max-width: 639px) block in app.css."
+
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      assert body =~ ".pk-about-contact-links",
+             "Expected the @media (max-width: 639px) block to reference .pk-about-contact-links."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links a span declares display: none" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links a span\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links a span rule inside the 639px block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/display\s*:\s*none/,
+             "Expected .pk-about-contact-links a span to declare display: none."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links declares justify-content: center" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links rule inside the 639px block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/justify-content\s*:\s*center/,
+             "Expected .pk-about-contact-links to declare justify-content: center."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links a declares border-radius: 9999px" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links a\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links a rule inside the 639px block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/border-radius\s*:\s*9999px/,
+             "Expected .pk-about-contact-links a to declare border-radius: 9999px."
+    end
+
+    test "the rendered markup still contains all three label spans regardless of viewport",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      spans = LazyHTML.query(doc, ".pk-about-contact-links a span")
+
+      assert Enum.count(spans) == 3
+    end
+  end
 end
