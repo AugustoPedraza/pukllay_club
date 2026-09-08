@@ -617,8 +617,20 @@ defmodule PukllayClubWeb.AboutLive do
         </div>
       </section>
 
-      <%!-- "Qué hacemos" / "Nuestra historia" — verbatim D-06 copy. --%>
-      <section class="pk-band">
+      <%!-- "Qué hacemos" / "Nuestra historia" — verbatim D-06 copy.
+
+      D-14 (plan 01.5-04), whole-page band rhythm: adjacent bands alternate
+      plain -> tint -> (dark) -> plain -> tint down the page (photo rail
+      plain, this section tint, FAQ dark, Juntadas/Contacto plain, Cierre
+      tint) so each section visibly separates from its neighbour. FAQ's
+      dark/primary treatment sits OUTSIDE this alternation on purpose — it
+      is a deliberate one-off bold stop (see .pk-band-dark's own comment
+      below), not a third repeating state; folding it in would make every
+      band compete for the same attention instead of each one simply
+      separating from the section beside it. The alternation still reads
+      correctly with the dark band in the middle precisely because it is a
+      different KIND of thing, not one more alternating step. --%>
+      <section class="pk-band pk-band-tint">
         <div class="pk-band-inner pk-gutter grid gap-11 sm:grid-cols-2">
           <div>
             <h2 class="font-display text-2xl">Qué hacemos</h2>
@@ -804,10 +816,18 @@ defmodule PukllayClubWeb.AboutLive do
       the hero and the mobile sticky bar) was the rhythm-killer 049
       flagged. The band now reuses the shared sumate_cta/1 component
       instead, matching the hero's exact call shape. --%>
-      <section id="cierre" class="pk-band">
+      <section id="cierre" class="pk-band pk-band-tint">
         <div class="pk-band-inner pk-gutter text-center">
           <h2 class="font-display text-2xl">Nos vemos el sábado</h2>
-          <div class="flex justify-center">
+          <%!-- D-11 (plan 01.5-04): pk-about-cierre-cta on the WRAPPER, not
+          the anchor inside it — hiding only the anchor would leave an empty
+          flex child in #cierre .pk-band-inner's column, and that column's
+          `gap` (plan 01.5-03, D-12) would still allocate space on both sides
+          of an empty box. Hiding the wrapper removes the flex child outright
+          so the gap closes around it. See the app.css rule beside
+          .pk-about-cta-bar/.pk-about-cta-spacer for the full D-11 rationale
+          (same 480px threshold, same media block, on purpose). --%>
+          <div class="flex justify-center pk-about-cierre-cta">
             <Layouts.sumate_cta />
           </div>
           <p class="pk-about-eyebrow pk-about-closing-meta">

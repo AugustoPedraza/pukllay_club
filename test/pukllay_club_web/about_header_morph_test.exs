@@ -90,8 +90,8 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
 
       doc = LazyHTML.from_document(html)
 
-      assert Enum.count(LazyHTML.query(doc, ".pk-about-morph-name")) == 0
-      assert Enum.count(LazyHTML.query(doc, ".pk-about-hero-eyebrow")) == 0
+      assert Enum.empty?(LazyHTML.query(doc, ".pk-about-morph-name"))
+      assert Enum.empty?(LazyHTML.query(doc, ".pk-about-hero-eyebrow"))
     end
   end
 
@@ -106,7 +106,7 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       assert Enum.count(name) == 1,
              "Expected exactly one .pk-about-morph-name inside #pk-about-morph-mark."
 
-      assert LazyHTML.text(name) |> to_string() |> String.trim() == "PUKLLAY CLUB"
+      assert name |> LazyHTML.text() |> to_string() |> String.trim() == "PUKLLAY CLUB"
     end
 
     test "the hero eyebrow carries pk-about-hero-eyebrow, distinct from the Cierre signature's pk-about-eyebrow",
@@ -117,7 +117,7 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
 
       hero_eyebrow = LazyHTML.query(doc, "#about-hero .pk-about-hero-eyebrow")
       assert Enum.count(hero_eyebrow) == 1
-      assert LazyHTML.text(hero_eyebrow) |> to_string() =~ "Club de juegos de mesa"
+      assert hero_eyebrow |> LazyHTML.text() |> to_string() =~ "Club de juegos de mesa"
 
       all_pk_about_eyebrow = LazyHTML.query(doc, ".pk-about-eyebrow")
       cierre_pk_about_eyebrow = LazyHTML.query(doc, "#cierre .pk-about-eyebrow")
@@ -176,6 +176,7 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
 
       matches = Regex.scan(~r/this\.el\.classList\.toggle\("is-docked"/, hook)
+
       assert length(matches) == 2,
              "Expected exactly 2 occurrences of this.el.classList.toggle(\"is-docked\" — one in " <>
                "frame(), one in the first-paint block, so a deep-linked visitor and a scrolling " <>
@@ -186,6 +187,7 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
 
       matches = Regex.scan(~r/this\.header\.classList\.toggle\("is-docked"/, hook)
+
       assert length(matches) == 2,
              "Expected the pre-existing pair of this.header.classList.toggle(\"is-docked\" call " <>
                "sites to remain untouched — the new lines were added beside them, not in place " <>
@@ -212,7 +214,7 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
     test "app.css registers exactly two Bebas Neue @font-face blocks, both weight 400" do
       src = strip_comments(css_source())
 
-      font_face_blocks = Regex.scan(~r/@font-face\s*\{[^}]*\}/s, src) |> Enum.map(&hd/1)
+      font_face_blocks = ~r/@font-face\s*\{[^}]*\}/s |> Regex.scan(src) |> Enum.map(&hd/1)
 
       bebas_blocks =
         Enum.filter(font_face_blocks, &Regex.match?(~r/font-family:\s*"Bebas Neue"/, &1))
@@ -247,6 +249,7 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
 
       assert Enum.count(first_child) == 1
       [attr] = LazyHTML.attribute(first_child, "data-morph-anchor")
+
       assert attr == "",
              "Expected [data-morph-anchor] to be the FIRST child of #about-hero. The hook's " <>
                "naturalRect() reads this element's rect, and the whole hero (mark, companion " <>
@@ -266,6 +269,7 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       cierre_eyebrow = LazyHTML.query(doc, "#cierre .pk-about-eyebrow")
 
       assert Enum.count(all_eyebrow) == 1
+
       assert Enum.count(cierre_eyebrow) == 1,
              "The Cierre band's closing signature carries an underlined-link companion rule " <>
                "meant for that specific band (01.5-RESEARCH.md Pitfall 3) — the hero eyebrow " <>
@@ -282,9 +286,9 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
 
       anchor_html = LazyHTML.to_html(brand_anchor)
 
-      mark_pos = :binary.match(anchor_html, ~s(class="dark:hidden pk-brand-mark")) |> elem(0)
-      width_pos = :binary.match(anchor_html, ~s(width="36")) |> elem(0)
-      wordmark_pos = :binary.match(anchor_html, "PUKLLAY CLUB") |> elem(0)
+      mark_pos = anchor_html |> :binary.match(~s(class="dark:hidden pk-brand-mark")) |> elem(0)
+      width_pos = anchor_html |> :binary.match(~s(width="36")) |> elem(0)
+      wordmark_pos = anchor_html |> :binary.match("PUKLLAY CLUB") |> elem(0)
 
       assert width_pos < wordmark_pos and mark_pos < wordmark_pos,
              "Expected the pk-brand-mark <img width=\"36\"> to render before the PUKLLAY CLUB " <>
