@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
 **Wave 1**
@@ -154,7 +154,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 — shared files)*
 
-- [ ] 01.5-02-PLAN.md — Contacto de-chromed to a plain column of three accent-tinted chips that go circular on mobile, and the live Maps embed relocated to Juntadas (D-05, D-06, D-07, D-08, D-09)
+- [x] 01.5-02-PLAN.md — Contacto de-chromed to a plain column of three accent-tinted chips that go circular on mobile, and the live Maps embed relocated to Juntadas (D-05, D-06, D-07, D-08, D-09)
 
 **Wave 3** *(blocked on Wave 2 — shared files)*
 
