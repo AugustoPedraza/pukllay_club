@@ -1051,7 +1051,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert body =~ ~r/flex-direction\s*:\s*column/
       assert body =~ ~r/align-items\s*:\s*center/
 
-      assert Regex.scan(~r/(?<![-\w])gap\s*:/, body) |> length() == 1,
+      assert ~r/(?<![-\w])gap\s*:/ |> Regex.scan(body) |> length() == 1,
              "Expected exactly one gap declaration in #cierre .pk-band-inner."
     end
 
@@ -1086,6 +1086,84 @@ defmodule PukllayClubWeb.AboutLiveTest do
       children = LazyHTML.query(doc, "#cierre .pk-band-inner > *")
 
       assert Enum.count(children) == 3
+    end
+  end
+
+  # Plan 01.5-03, Task 3 (D-10): Cierre becomes a full-viewport moment on
+  # desktop, compensated against the header's own live published height.
+  describe "Cierre full-screen desktop treatment (plan 01.5-03, D-10)" do
+    defp media_640_body(src) do
+      case Regex.run(~r/@media\s*\(min-width:\s*640px\)\s*\{/, src, return: :index) do
+        [{start, match_len}] ->
+          body_start = start + match_len
+          extract_balanced_block(src, body_start)
+
+        nil ->
+          nil
+      end
+    end
+
+    test "the @media (min-width: 640px) block contains a #cierre rule declaring min-height: 100vh, display: flex and align-items: center" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+      assert body, "Expected to extract the @media (min-width: 640px) block body."
+
+      rule = Regex.run(~r/#cierre\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a #cierre rule inside the @media (min-width: 640px) block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/min-height\s*:\s*100vh/
+      assert rule_body =~ ~r/display\s*:\s*flex/
+      assert rule_body =~ ~r/align-items\s*:\s*center/
+    end
+
+    test "that #cierre rule's padding reads var(--pk-header-h, 4.5rem) as its top component" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+
+      rule = Regex.run(~r/#cierre\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a #cierre rule inside the @media (min-width: 640px) block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/padding\s*:\s*var\(--pk-header-h,\s*4\.5rem\)/,
+             "Expected #cierre's padding to read var(--pk-header-h, 4.5rem), not a hard-coded pixel literal."
+    end
+
+    test "the block contains #cierre h2 with font-size: clamp(2rem, 4vw, 3rem)" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+
+      rule = Regex.run(~r/#cierre h2\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a #cierre h2 rule inside the @media (min-width: 640px) block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/font-size\s*:\s*clamp\(2rem,\s*4vw,\s*3rem\)/
+    end
+
+    test "the @media (min-width: 640px) block declares no gap — the one gap from D-12 governs both viewports" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+
+      assert Regex.scan(~r/(?<![-\w])gap\s*:/, body) == [],
+             "Expected the desktop full-screen block to declare no gap of its own."
+    end
+
+    test "--pk-header-h is republished from exactly one place and #cierre is at least the 4th consumer of it" do
+      src = strip_comments(css_source())
+
+      consumer_count = ~r/var\(--pk-header-h/ |> Regex.scan(src) |> length()
+
+      assert consumer_count >= 4,
+             "Expected --pk-header-h to be read by at least 4 rules in app.css (regression guard against a parallel token)."
+
+      layouts_src =
+        File.read!(Path.expand("../../../lib/pukllay_club_web/components/layouts.ex", __DIR__))
+
+      publisher_count =
+        ~r/setProperty\("--pk-header-h"/ |> Regex.scan(layouts_src) |> length()
+
+      assert publisher_count == 1,
+             "Expected --pk-header-h to be published from exactly one place in layouts.ex."
     end
   end
 end

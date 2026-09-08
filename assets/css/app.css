@@ -2660,6 +2660,55 @@ body.pk-drawer-open {
   gap: 1.5rem;
 }
 
+/* Plan 01.5-03, D-10: Cierre goes full-viewport on desktop instead of
+   reading as one more shared 72px band, so the close feels like a real
+   destination (sketch 051 round 10a). Desktop-only — mobile keeps the
+   compact `.pk-band` treatment untouched. 640px matches the other
+   desktop-vs-mobile splits this phase introduced (D-08's 639px Contacto
+   breakpoint), one width below Tailwind's `sm`.
+
+   padding: var(--pk-header-h, 4.5rem) 0 0 REPLACES .pk-band's shared
+   `4.5rem 0` at this width on purpose: the section's own 100vh box
+   supplies the vertical room, so keeping the shared band padding would
+   only push the content below the fold. #cierre (specificity 1,0,0)
+   out-specifies .pk-band (0,1,0), and because this whole block is
+   media-scoped, mobile keeps the shared band padding exactly as it was.
+
+   Why the top padding reads a token, not a pixel literal (sketch 051
+   round 12a): pure `align-items: center` in a 100vh box splits the
+   leftover space evenly by construction, so the TRUE split is even — but
+   the fixed header overlaps the band's top edge and visually eats into
+   the top gap while nothing touches the bottom gap, so the VISIBLE split
+   is not. Padding equal to the header's own height shifts the flex
+   centering point down by exactly that amount and cancels the overlap.
+   The sketch used 65px, its own mockup header's height — this app must
+   not reuse that number, and must not substitute a freshly-measured one
+   either, because the real header's height already varies by viewport.
+   `--pk-header-h` is continuously republished from #app-header's real
+   rendered height by .CatalogNav's ResizeObserver (layouts.ex) and is
+   already read by 3+ other rules in this file with the same 4.5rem
+   fallback (scroll-margin-top above, .pk-title-echo's `top`) — reading it
+   here makes the compensation track the header instead of restating a
+   measurement of it.
+
+   No `gap` here: #cierre .pk-band-inner's single unconditional gap
+   (above) already governs both viewports — a desktop override would
+   recreate the two-spacing-system problem D-12 exists to prevent. No
+   `text-align` either — the text-center utility on the inner column still
+   owns that (see the #cierre .pk-band-inner comment above). */
+@media (min-width: 640px) {
+  #cierre {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: var(--pk-header-h, 4.5rem) 0 0;
+  }
+
+  #cierre h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+  }
+}
+
 /* The dark FAQ band's token mapping (Claude's discretion, D-08): the
    brand's own measured-contrast pair (app.css's WCAG comment above), not
    the design source's own one-off literal colour values. */
