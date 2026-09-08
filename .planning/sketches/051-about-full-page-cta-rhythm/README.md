@@ -268,6 +268,17 @@ Confirmed via computed styles (`text-align: start`, not `center`) before restori
 Verified live after the fix: `text-align: center` now computes correctly, and the two lines read
 as one centered block.
 
+## Round 14 — alternating band backgrounds, page-wide
+Feedback: "I like how 'lo que todos preguntan' has a different background to separate from the
+rest of content, I want to follow a similar pattern for all that page." FAQ's bold dark band stays
+a one-off highlight (real production's `.pk-band-dark` is deliberately used only there) — making
+every band that dark would have every section fight FAQ for the same "bold stop" attention.
+Instead, everything else now alternates between plain and a quieter `--color-surface` tint (new
+`.band-tint` class), so the page reads as a stack of distinct blocks the way FAQ already did, top
+to bottom: photo rail (plain) → Qué hacemos/historia (tint) → FAQ (dark, unchanged) →
+Juntadas/Contacto (plain) → Cierre (tint). Verified live: clear separation between "Qué
+hacemos"/"Nuestra historia" and the FAQ band below it.
+
 ## What to Look For
 - Does the map feel more meaningful sitting with Juntadas' location description than it did in
   Contacto?

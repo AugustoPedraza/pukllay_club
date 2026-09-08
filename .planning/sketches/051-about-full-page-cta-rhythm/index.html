@@ -130,6 +130,17 @@
   .band { padding: 4.5rem 0; }
   .band-inner { max-width: 80rem; margin: 0 auto; padding: 0 24px; }
   .band-dark { background: var(--color-primary); color: var(--color-primary-content); }
+  /* Round 14 (feedback: "I like how 'lo que todos preguntan' has a
+     different background to separate from the rest of content, I want
+     to follow a similar pattern for all that page") — FAQ's bold dark
+     band stays a one-off highlight (real production's `.pk-band-dark` is
+     deliberately used only there); everything else alternates between
+     plain and this quieter surface tint instead, so the page reads as a
+     stack of distinct blocks the way FAQ already does, without every
+     band fighting FAQ for the same "bold stop" attention. Order top to
+     bottom: photo rail (plain) -> Qué hacemos/historia (tint) -> FAQ
+     (dark, unchanged) -> Juntadas/Contacto (plain) -> Cierre (tint). */
+  .band-tint { background: var(--color-surface); }
   .band h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0 0 12px; }
   .band p { font-size: 1.125rem; line-height: 1.5; margin: 0; }
   .two-col { display: grid; gap: 44px; grid-template-columns: 1fr; }
@@ -372,7 +383,7 @@ sketches 046/048 and isn't the point here.</div>
   </div>
 </section>
 
-<section class="band">
+<section class="band band-tint">
   <div class="band-inner two-col">
     <div>
       <h2>Qué hacemos</h2>
@@ -429,7 +440,7 @@ sketches 046/048 and isn't the point here.</div>
   </div>
 </section>
 
-<section id="cierre" class="band closing-band cta-marker">
+<section id="cierre" class="band closing-band band-tint cta-marker">
   <span class="cta-flag">CTA 3 · Cierre</span>
   <div class="band-inner">
     <h2>Nos vemos el sábado</h2>
