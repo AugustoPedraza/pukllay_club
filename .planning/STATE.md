@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01.5
 current_phase_name: About Page CTA Rhythm & Header Morph Refinement
 status: executing
-stopped_at: Phase 01.5 context gathered
-last_updated: "2026-09-08T08:19:26.672Z"
+stopped_at: Completed 01.5-05-PLAN.md
+last_updated: "2026-09-08T17:03:08.679Z"
 last_activity: 2026-09-08
-last_activity_desc: Phase 01.5 execution started
-state_head: 3853207050ae0fe8635bda427105147a4291f102
+last_activity_desc: Phase 01.5 execution resumed (wave continue)
+state_head: eaf9f76cf4e78e2af98e2f3c63fbaa1b739997a9
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 77
-  completed_plans: 73
+  total_plans: 81
+  completed_plans: 78
 milestone_name: milestone
 ---
 
@@ -32,9 +32,9 @@ even without already knowing board-game vocabulary.
 ## Current Position
 
 Phase: 01.5 (About Page CTA Rhythm & Header Morph Refinement) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 01.5
-Last activity: 2026-09-08 — Phase 01.5 execution started
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-09-08 — Phase 01.5 execution resumed (wave continue)
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 plans (Phase 02 not yet planned)
 
@@ -105,6 +105,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 p
 | Phase 01.4 P08 | 20min | 2 tasks | 3 files |
 | Phase 01.4 P09 | 20min | 3 tasks | 5 files |
 | Phase 01.4 P10 | 55min | 3 tasks | 4 files |
+| Phase 01.5 P05 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -199,6 +200,7 @@ Recent decisions affecting current work:
 - [Phase 01.4]: 01.4-10: shipped test/visual/ — a zero-dependency Node+CDP+PIL visual probe that renders the live About page in real headless Chrome and independently confirms the crop geometry against painted pixels; deliberately excluded from mix quality/CI (needs a real browser + booted server), developer-invoked only
 - [Phase 01.4]: 01.4-12: G-01.4-4/G-01.4-5 closed for good — static Maps screenshot pair (light+dark, plan 01.4-09/10) retired entirely in favor of a live keyless Google Maps embed iframe (D-11..D-15); new CSP `frame-src` directive derived from `ClubLinks.maps_embed_origin/0` (first third-party frame origin in the project), `sandbox="allow-scripts allow-same-origin"`, `pointer-events:none` + overlay click-out link, dark-theme `invert()` filter human-approved as-is (D-13); plan 01.4-11 (figcaption-legibility approach) superseded/discarded mid-flight once the embed decision reversed its premise
 - [Phase 01.4, 2026-09-07]: Phase closed after 11/11 plans (plan 01.4-11 superseded/discarded by 01.4-12, cleanly absorbed) and a 4-gap UAT closure arc (G-01.4-1..4: isologo blink/spacing/motion, Maps thumbnail coverage → live embed). 7/7 UAT checkpoints passed; 01.4-VERIFICATION.md round 3: 11/12 truths verified directly + isologo motion human-confirmed in this session's final checkpoint. Security review: 46 threats registered across all 12 plans' own threat models, threats_open: 0 (01.4-SECURITY.md, ASVS L1 short-circuit — ASVS L1 grep/read verification, no auditor subagent needed since register_authored_at_plan_time was true for every plan and all mitigations were directly confirmed in code)
+- [Phase 01.5]: 01.5-05: size-step-lg + radius-keep chosen for Layouts.sumate_cta/1 (btn-lg + min-h-11 replacing orphaned min-h-12), closing G-01.5-1 and G-01.5-3 item 5 in one component edit
 
 ### Pending Todos
 
@@ -311,6 +313,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-08T01:32:48.075Z
-Stopped at: Phase 01.5 context gathered
-Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/01.5-about-page-cta-rhythm-header-morph-refinement-implement-sket/01.5-CONTEXT.md
+Last session: 2026-09-08T17:03:07.231Z
+Stopped at: Completed 01.5-05-PLAN.md
+Resume file: None

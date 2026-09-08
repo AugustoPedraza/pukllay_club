@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 4/8 plans executed (4 original executed + 4 gap-closure plans pending)
+**Plans:** 5/8 plans executed (4 original executed + 4 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -170,7 +170,7 @@ plans 07 and 08 follow because they share `assets/css/app.css` with 06 and with 
 G-01.5-3 is deliberately split across three plans because its own diagnosis says its three pieces
 have different owners, different blast radii, and one is a design decision rather than a bug fix)*
 
-- [ ] 01.5-05-PLAN.md — Sumate CTA proportions fixed at their single source: a real daisyUI size step composed with the 44px touch floor replaces the orphaned one-axis height utility, closing the hero AND Cierre balance reports in one component edit (G-01.5-1, G-01.5-3 item 5)
+- [x] 01.5-05-PLAN.md — Sumate CTA proportions fixed at their single source: a real daisyUI size step composed with the 44px touch floor replaces the orphaned one-axis height utility, closing the hero AND Cierre balance reports in one component edit (G-01.5-1, G-01.5-3 item 5)
 - [ ] 01.5-06-PLAN.md — `.pk-band` reclaims ownership of its own outer spacing from the shared shell wrapper so adjacent bands sit flush, plus the repo's first geometric oracle for band adjacency (G-01.5-2)
 
 **Gap closure — Wave 2** *(blocked on 01.5-06 — shared `app.css`, `about_live_test.exs` and the
