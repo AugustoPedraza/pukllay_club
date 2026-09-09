@@ -865,7 +865,7 @@ const CHECKS = [
 ]
 
 // ---------------------------------------------------------------------------
-// Plan 01.5-08: fixed-bar / footer non-intersection oracle
+// Plan 01.5-08/01.5-10: fixed-bar / footer clearance oracle
 // ---------------------------------------------------------------------------
 // The only oracle that can confirm Task 2's actual claim. A source-level
 // test can confirm the body:has(.pk-about-cta-bar) clearance rule EXISTS;
@@ -874,6 +874,18 @@ const CHECKS = [
 // (below, in main()) at the one width where the bar is visible, since it
 // needs an actual scroll — the shared per-case sweep above is deliberately
 // unscrolled (see the footer-rect comment in runCase).
+//
+// Plan 01.5-10 (G-01.5-7 gap closure): the ORIGINAL check here asserted only
+// non-intersection (footer.bottom <= bar.top + tolerance), which the shipped
+// defect satisfied — a 3px strip of document background between the two was
+// "non-overlapping" and passed. Rewritten to assert a TIGHT FIT: the
+// footer's bottom edge and the bar's top edge must coincide within
+// CONTACT_TOLERANCE_PX, reporting the two failure directions distinctly
+// (SLACK — a gap is visible, the defect this task closes; OVERLAP — the bar
+// covers real footer content, the opposite failure mode plan 01.5-08
+// originally guarded against). Both the bar's real rendered height and the
+// reserved clearance are captured in the same pass so a future reader can
+// see which one moved without re-running the probe.
 const CTA_BAR_VISIBLE_WIDTH = 390 // <=480px, matches app.css's own threshold
 
 async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
@@ -928,6 +940,12 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
         return {
           bar: rectOf(document.querySelector('.pk-about-cta-bar')),
           footer: rectOf(document.querySelector('footer.pk-footer')),
+          // Plan 01.5-10: the reserved document-end clearance itself
+          // (body:has(.pk-about-cta-bar)'s computed padding-bottom),
+          // captured alongside the two rects so the SUMMARY can report the
+          // bar's real height against what was actually reserved for it,
+          // without a second probe run.
+          reservedClearance: parseFloat(getComputedStyle(document.body).paddingBottom),
         };
       })())
     `,
@@ -938,7 +956,7 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
 }
 
 function checkFixedBarFooterClearance(measured, ctx) {
-  const { bar, footer } = measured
+  const { bar, footer, reservedClearance } = measured
 
   if (!bar) {
     return [`fixed-bar footer clearance: could not measure .pk-about-cta-bar at [${ctx.viewport}px, ${ctx.theme}]`]
@@ -953,13 +971,32 @@ function checkFixedBarFooterClearance(measured, ctx) {
     return [`fixed-bar footer clearance: could not measure <footer> at [${ctx.viewport}px, ${ctx.theme}]`]
   }
 
-  const overlap = footer.y + footer.height - bar.y
-  if (overlap > CONTACT_TOLERANCE_PX) {
+  // Positive = the bar's top sits BELOW the footer's bottom edge — SLACK, a
+  // strip of document background is visible (the G-01.5-7 defect this check
+  // exists to catch; the ORIGINAL non-intersection check was satisfied by
+  // this direction of error). Negative = the bar's top sits ABOVE the
+  // footer's bottom edge — OVERLAP, the bar covers real footer content (the
+  // opposite failure mode plan 01.5-08 originally guarded against).
+  const distance = bar.y - (footer.y + footer.height)
+  const context =
+    `bar height=${bar.height.toFixed(2)}px, reserved clearance=` +
+    `${Number.isFinite(reservedClearance) ? reservedClearance.toFixed(2) : "?"}px, ` +
+    `footer bottom=${(footer.y + footer.height).toFixed(2)}, bar top=${bar.y.toFixed(2)}`
+
+  if (distance > CONTACT_TOLERANCE_PX) {
     return [
-      `fixed-bar footer clearance: the fixed bar overlaps the footer by ` +
-        `${overlap.toFixed(2)}px at [${ctx.viewport}px, ${ctx.theme}] (footer bottom=` +
-        `${(footer.y + footer.height).toFixed(2)}, bar top=${bar.y.toFixed(2)}) — the ` +
-        `document-end clearance is not reserving enough (or is not applying at all)`,
+      `fixed-bar footer clearance: SLACK of ${distance.toFixed(2)}px between the footer's bottom ` +
+        `edge and the bar's top edge at [${ctx.viewport}px, ${ctx.theme}] (${context}) — expected ` +
+        `a TIGHT FIT (within ${CONTACT_TOLERANCE_PX}px), not mere non-overlap. Non-intersection ` +
+        `alone is exactly what the shipped G-01.5-7 defect satisfied.`,
+    ]
+  }
+
+  if (distance < -CONTACT_TOLERANCE_PX) {
+    return [
+      `fixed-bar footer clearance: OVERLAP of ${(-distance).toFixed(2)}px — the fixed bar covers ` +
+        `real footer content at [${ctx.viewport}px, ${ctx.theme}] (${context}) — the document-end ` +
+        `clearance is not reserving enough`,
     ]
   }
 
@@ -1052,8 +1089,10 @@ async function main() {
 
         if (measured.bar) {
           log(
-            `${label} bar top=${measured.bar.y.toFixed(2)} footer bottom=` +
-              `${measured.footer ? (measured.footer.y + measured.footer.height).toFixed(2) : "?"}`,
+            `${label} bar top=${measured.bar.y.toFixed(2)} bar height=` +
+              `${measured.bar.height.toFixed(2)} reserved clearance=` +
+              `${Number.isFinite(measured.reservedClearance) ? measured.reservedClearance.toFixed(2) : "?"} ` +
+              `footer bottom=${measured.footer ? (measured.footer.y + measured.footer.height).toFixed(2) : "?"}`,
           )
         }
 
