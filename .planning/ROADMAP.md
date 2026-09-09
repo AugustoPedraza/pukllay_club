@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 10 plans (4 original + 4 gap-closure round 1, all 8 executed; 2 gap-closure round 2 pending)
+**Plans:** 9/10 plans executed (4 original + 4 gap-closure round 1, all 8 executed; 2 gap-closure round 2 pending)
 
 Plans:
 **Wave 1**
@@ -192,7 +192,7 @@ button the composition was approved with; the bar was opaque and correctly stack
 page's own background token. Both plans replace the gates that passed on the reported defects with
 assertions derived from measured properties rather than restatements of the CSS they test)*
 
-- [ ] 01.5-09-PLAN.md — Page bottom: the Cierre-to-footer boundary goes to zero via a page-scoped override (the shared collapse rule stays correct for the catalog pages), the closing band's padding is retuned from 8rem to 5rem against the page's own 144px content-run rhythm, and both stale oracles are replaced with surface-conditional and run-ratio assertions (G-01.5-5, G-01.5-6)
+- [x] 01.5-09-PLAN.md — Page bottom: the Cierre-to-footer boundary goes to zero via a page-scoped override (the shared collapse rule stays correct for the catalog pages), the closing band's padding is retuned from 8rem to 5rem against the page's own 144px content-run rhythm, and both stale oracles are replaced with surface-conditional and run-ratio assertions (G-01.5-5, G-01.5-6)
 
 **Gap closure round 2 — Wave 2** *(blocked on 01.5-09 — same stylesheet region, same two test files,
 and this plan's clearance oracle measures the page bottom that 01.5-09 moves)*
