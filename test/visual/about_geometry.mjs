@@ -535,6 +535,54 @@ function checkCierreMobileInvariance(measured, ctx) {
   return failures
 }
 
+// This session's gap closure (G-01.5-5/G-01.5-6, 2026-09-09): the direct
+// oracle for the "huge space top and bottom" regression that survived
+// 01.5-07's min-height:70vh/70dvh fix. checkCierreGapEvenness above proves
+// the two gaps MATCH each other — it says nothing about whether they are
+// both simply huge, which is exactly how 70vh at a ~900px viewport height
+// passed gap-evenness while still measuring ~238.67px per side. #cierre's
+// height mechanism is now a fixed padding-block: 8rem (128px), so gapTop
+// and gapBottom must land at ~128px at EVERY swept height, not just match
+// each other — and, critically, must NOT grow with viewport height the way
+// the old vh-based floor did. A generous ±2px tolerance covers ordinary
+// sub-pixel layout rounding without coming close to hiding a regression
+// back to a height-relative mechanism (which would show up as tens to
+// hundreds of pixels of drift across the HEIGHTS sweep, not 2px).
+const CIERRE_DESKTOP_GAP_TARGET_PX = 128 // 8rem, matches app.css's padding-block
+const CIERRE_DESKTOP_GAP_TOLERANCE_PX = 2
+
+function checkCierreDesktopGapBudget(measured, ctx) {
+  if (ctx.viewport < 640) return []
+
+  const gaps = cierreGaps(measured)
+  if (!gaps) {
+    return [
+      `#cierre desktop gap budget: could not measure #cierre and/or its .pk-band-inner ` +
+        `content group at [${ctx.viewport}px, ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const failures = []
+  for (const [label, value] of [
+    ["gapTop", gaps.gapTop],
+    ["gapBottom", gaps.gapBottom],
+  ]) {
+    const diff = Math.abs(value - CIERRE_DESKTOP_GAP_TARGET_PX)
+    if (diff > CIERRE_DESKTOP_GAP_TOLERANCE_PX) {
+      failures.push(
+        `#cierre desktop gap budget: ${label}=${value.toFixed(2)}px at ` +
+          `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — expected ` +
+          `${CIERRE_DESKTOP_GAP_TARGET_PX}px ± ${CIERRE_DESKTOP_GAP_TOLERANCE_PX}px (the fixed ` +
+          `padding-block, not a viewport-height-relative amount). A gap growing with ${ctx.height}px ` +
+          `viewport height is exactly the regression this check exists to catch — see the CSS ` +
+          `comment above #cierre's >=640px rule for the full incident.`,
+      )
+    }
+  }
+
+  return failures
+}
+
 // Plan 01.5-08 (G-01.5-3 item 4). Budget, not a single number — the catalog
 // index and game detail pages this fix matches already render 16px at
 // <=480px and 24px at >=481px (quick task 260902-il3's own measured split,
@@ -592,6 +640,7 @@ function checkBottomBoundaryBudget(measured, ctx) {
 const CHECKS = [
   checkAdjacentBandContact,
   checkCierreGapEvenness,
+  checkCierreDesktopGapBudget,
   checkCierreBottomBreathingRoom,
   checkCierreMobileInvariance,
   checkBottomBoundaryBudget,

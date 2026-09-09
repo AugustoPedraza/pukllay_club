@@ -1083,9 +1083,11 @@ body.pk-sheet-open {
 
 /* Sketch 001 (shelf-structure, variant D): sticky nav, padding-aligned to
    the row content below it via the same .pk-gutter rule 01-11 created —
-   never a second, independently-chosen padding value for the nav. Flat
-   translucent tint on scroll, deliberately no backdrop blur (the sketch
-   tested blur and rejected it in favour of the flat tint's clarity). */
+   never a second, independently-chosen padding value for the nav.
+   Deliberately no backdrop blur (the sketch tested blur and rejected it
+   in favour of a flat tint's clarity) — that choice still stands. The
+   scrolled state is distinguished by border + shadow (.is-scrolled,
+   below), not by transparency. */
 .pk-header-sticky {
   position: sticky;
   top: 0;
@@ -1169,8 +1171,24 @@ body.pk-sheet-open {
     box-shadow var(--duration-base) var(--ease-standard);
 }
 
+/* G-01.5-7 (about-page-cta-rhythm gap closure, 2026-09-09): background WAS
+   `color-mix(in srgb, var(--color-base-200) 94%, transparent)` — a
+   deliberate 6% see-through, chosen when this rule was first written
+   against light page content only. Plan 01.5-04 (D-14) later painted the
+   FAQ band --color-primary with bold light text; scrolled behind the
+   sticky nav, that 6% transparency was enough for the FAQ copy to read as
+   clearly visible ghost text through the header — invisible over light
+   content, legible over high-contrast dark content, so no prior visual
+   check over a plain background caught it. Made fully opaque (no
+   color-mix) rather than tuning the percentage down: a lower-but-nonzero
+   value would need re-validation against every band colour this page (and
+   any future page reusing .pk-nav) can scroll behind, which is exactly the
+   fragile-per-surface tuning this codebase's KB warns against; full
+   opacity closes the whole defect class in one step. The scrolled state
+   stays visually distinct via border-bottom + box-shadow alone — both
+   already present, neither touched here. */
 .pk-nav.is-scrolled {
-  background: color-mix(in srgb, var(--color-base-200) 94%, transparent);
+  background: var(--color-base-200);
   border-bottom-color: var(--color-base-300);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--color-base-content) 8%, transparent);
 }
@@ -2720,17 +2738,16 @@ body.pk-drawer-open {
   gap: 1.5rem;
 }
 
-/* Plan 01.5-03, D-10, REVISED by 01.5-07 (G-01.5-3 items 3a/3b —
-   .planning/debug/cierre-band-whitespace.md): Cierre still reads as a
-   distinct closing moment on desktop instead of one more shared 72px band
-   (sketch 051 round 10a) — D-10 is revised here, not superseded. Desktop-
-   only — mobile keeps the compact `.pk-band` treatment untouched. 640px
-   matches the other desktop-vs-mobile splits this phase introduced (D-08's
-   639px Contacto breakpoint), one width below Tailwind's `sm`.
+/* Plan 01.5-03, D-10, REVISED by 01.5-07, REVISED AGAIN by this session's
+   gap closure (G-01.5-5/G-01.5-6, 2026-09-09 — the UAT re-verification
+   round that followed 01.5-07/08). Cierre still reads as a distinct
+   closing moment on desktop instead of one more shared 72px band (sketch
+   051 round 10a) — D-10 is revised here, not superseded. Desktop-only —
+   mobile keeps the compact `.pk-band` treatment untouched. 640px matches
+   the other desktop-vs-mobile splits this phase introduced (D-08's 639px
+   Contacto breakpoint), one width below Tailwind's `sm`.
 
-   Two things changed from what D-10 originally shipped:
-
-   1. The header-height top padding is GONE. D-10 added
+   1. The header-height top padding is GONE (01.5-07). D-10 added
       `padding: var(--pk-header-h, 4.5rem) 0 0` because the band was plain
       white and the fixed header's own tint visually ate into the band's
       top edge while nothing touched the bottom edge — that padding shifted
@@ -2739,43 +2756,43 @@ body.pk-drawer-open {
       phase) then painted this band the exact token `.pk-nav` already is —
       both measure the same colour — so the header now blends into the
       band and subtracts nothing from the top edge. The compensation
-      outlived its condition: measured, it was shifting the true (even)
-      split by exactly one header height at every width and viewport
-      height, and its padding shorthand's zeroed bottom component was ALSO
-      silently dropping `.pk-band`'s shared bottom padding, so a short
-      window left the closing signature flush against the tinted band's
-      edge. Removing the whole shorthand fixes both at once — the shared
-      `.pk-band` vertical padding (above) now applies here exactly like it
-      does at every other width and every other band. `--pk-header-h` is
-      still read by 3 OTHER rules in this file (`.pk-shelf`'s
-      scroll-margin-top, `.pk-title-echo`'s `top`, `.pk-poster-col`'s
-      sticky `top`) — this is the one place in the file that stopped
-      needing it, not the token being retired.
+      outlived its condition; removing it fixed the uneven top/bottom split
+      (01.5-07). `--pk-header-h` is still read by 3 OTHER rules in this
+      file (`.pk-shelf`'s scroll-margin-top, `.pk-title-echo`'s `top`,
+      `.pk-poster-col`'s sticky `top`) — this is the one place in the file
+      that stopped needing it, not the token being retired.
 
-   2. The `min-height: 100vh` floor is now `70vh`/`70dvh`, not removed.
-      Measured, the old 100vh floor put a 157px content group (heading,
-      button, signature) inside a 900px band — ~17% fill, the "huge space
-      top and bottom" the UAT report named. 01.5-07's checkpoint chose to
-      keep a reduced floor rather than drop the desktop treatment
-      entirely: the close should still feel taller and more deliberate
-      than a 72px band, just not mostly empty. 70% was the developer's
-      chosen fraction (rejected: keeping 100vh as-is, since it leaves the
-      exact proportion the UAT flagged; dropping the floor to the band's
-      natural ~220.7px content height, since that gives up D-10's
-      destination intent and supersedes a decision made earlier in this
-      same phase; adding more content to justify 100vh, since new copy is
-      out of scope for a gap-closure round — see 01.5-07-SUMMARY.md
-      "Decisions" for the full record). The floor is declared twice
-      following this file's own dual-declaration viewport-unit idiom
-      (`.pk-lightbox-img`, below, is the existing precedent): the static
-      `70vh` is the fallback a browser without dynamic-viewport support
-      keeps, `70dvh` is what every current browser actually uses. This
-      matters here specifically because the rule is media-gated no lower
-      than 640px, and a phone in landscape can be exactly that wide — a
-      static-only vh floor would size against the address-bar-collapsed
-      maximum and could exceed the visible screen once browser chrome is
-      accounted for; the dvh line is what keeps the floor inside the
-      ACTUAL visible viewport on that device.
+   2. The height mechanism is now a FIXED padding increase, not a
+      viewport-height floor. 01.5-07 replaced D-10's `min-height: 100vh`
+      (measured ~17% content fill, the "huge space top and bottom" the
+      first UAT report named) with `min-height: 70vh`/`70dvh` — an
+      improvement in principle, but still viewport-HEIGHT-COUPLED: at a
+      common ~900px-tall laptop viewport that floor is 630px, and the
+      ~157-178px content group centred inside it still leaves ~226-240px
+      of empty space on EACH side (measured directly in this session,
+      02.5-07-SUMMARY.md's own table: 238.67px gaps at 768x900). The
+      second UAT round re-reported this as "not passing... big spaces" —
+      the fraction needed retuning downward every time someone measured a
+      taller screen, which is the actual defect: min-height:Nvh is
+      structurally the wrong tool for bounding an ABSOLUTE amount of
+      whitespace, because it scales with a dimension (viewport height)
+      that has nothing to do with how much empty space around a ~170px
+      content group reads as "deliberate" versus "huge". A fixed
+      `padding-block` does not have this problem — it is a constant
+      regardless of how tall the browser window is, so "distinct but not
+      empty" no longer depends on the viewer's screen. 8rem (128px) top and
+      bottom — noticeably more generous than the shared 72px `.pk-band`
+      padding every other section gets (so Cierre still reads as a
+      deliberate closing moment, D-10's original intent), but bounded: the
+      band's total height becomes ~128+128+170 = ~426px instead of a
+      viewport-relative 400-680px+, matching the "closing moment, not an
+      empty room" reading a fixed value can actually guarantee. `display:
+      flex; align-items: center` are gone too — they existed to vertically
+      centre the content group inside the min-height floor's leftover
+      space; with no floor beyond ordinary padding, normal block flow
+      already produces IDENTICAL top/bottom gaps for free (both are the
+      same `padding-block` value), which is a stronger evenness guarantee
+      than flex-centring ever was.
 
    No `gap` here: #cierre .pk-band-inner's single unconditional gap
    (above) already governs both viewports — a desktop override would
@@ -2784,10 +2801,7 @@ body.pk-drawer-open {
    owns that (see the #cierre .pk-band-inner comment above). */
 @media (min-width: 640px) {
   #cierre {
-    min-height: 70vh;
-    min-height: 70dvh;
-    display: flex;
-    align-items: center;
+    padding-block: 8rem;
   }
 
   #cierre h2 {

@@ -1127,7 +1127,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
   # compensation was silently shifting the gap split by one header height),
   # and the 100vh floor was reduced to 70vh/70dvh per the 01.5-07 checkpoint
   # decision (see 01.5-07-SUMMARY.md "Decisions").
-  describe "Cierre full-screen desktop treatment (plan 01.5-03 D-10, revised 01.5-07)" do
+  describe "Cierre full-screen desktop treatment (plan 01.5-03 D-10, revised 01.5-07, revised again G-01.5-5/6 gap closure)" do
     defp media_640_body(src) do
       case Regex.run(~r/@media\s*\(min-width:\s*640px\)\s*\{/, src, return: :index) do
         [{start, match_len}] ->
@@ -1139,7 +1139,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       end
     end
 
-    test "the @media (min-width: 640px) block contains a #cierre rule declaring the 70vh/70dvh dual-declaration floor, display: flex and align-items: center" do
+    test "the @media (min-width: 640px) block contains a #cierre rule declaring a fixed padding-block, not a viewport-height floor" do
       src = strip_comments(css_source())
       body = media_640_body(src)
       assert body, "Expected to extract the @media (min-width: 640px) block body."
@@ -1148,21 +1148,24 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert rule, "Expected a #cierre rule inside the @media (min-width: 640px) block."
       [_, rule_body] = rule
 
-      # Both declarations of the dual-declaration viewport-unit idiom
-      # (.pk-lightbox-img precedent) must be present, in this order: the
-      # static vh is the fallback a browser without dynamic-viewport
-      # support keeps, the dvh line is what every current browser actually
-      # uses. Neither line is a duplicate to "clean up" — deleting either
-      # reopens either the no-dvh-support fallback gap or, on a landscape
-      # phone at exactly 640px, a band taller than the visible screen.
-      assert rule_body =~ ~r/min-height\s*:\s*70vh\s*;[\s\S]*min-height\s*:\s*70dvh\s*;/,
-             "Expected #cierre to declare min-height: 70vh THEN min-height: 70dvh (static fallback first, dynamic-viewport unit second, per this file's documented idiom)."
+      # G-01.5-5/G-01.5-6 gap closure: min-height: 70vh/70dvh (01.5-07) was
+      # still viewport-HEIGHT-coupled and reproduced the original "huge
+      # space top and bottom" complaint on common ~900px-tall laptop
+      # screens (measured 238.67px gaps). Replaced with a fixed
+      # padding-block so the whitespace amount is a constant, never a
+      # function of the viewer's screen height. See the CSS comment above
+      # this rule for the full measurement/rationale.
+      assert rule_body =~ ~r/padding-block\s*:\s*8rem\s*;/,
+             "Expected #cierre to declare a fixed padding-block: 8rem at >=640px, not a viewport-height-relative min-height."
 
-      assert rule_body =~ ~r/display\s*:\s*flex/
-      assert rule_body =~ ~r/align-items\s*:\s*center/
+      refute rule_body =~ ~r/min-height/,
+             "#cierre must not reintroduce a min-height floor at this width — that mechanism is exactly what produced the huge-whitespace regression this test guards against."
+
+      refute rule_body =~ ~r/display\s*:\s*flex/,
+             "#cierre no longer needs flex/align-items to centre its content — a fixed padding-block produces identical top/bottom gaps via ordinary block flow, which is a stronger evenness guarantee. Reintroducing flex here is a sign the min-height mechanism crept back in."
     end
 
-    test "the #cierre rule inside the >=640px block declares no vertical-padding override" do
+    test "the #cierre rule inside the >=640px block does not reintroduce the retired header-height padding shorthand" do
       src = strip_comments(css_source())
       body = media_640_body(src)
 
@@ -1170,13 +1173,21 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert rule, "Expected a #cierre rule inside the @media (min-width: 640px) block."
       [_, rule_body] = rule
 
-      refute rule_body =~ ~r/(?<![-\w])padding(?!-\w)\s*:/,
-             "The header-height top-padding compensation was removed on purpose (01.5-07, G-01.5-3): " <>
-               "D-14 later painted #cierre the header's own tint, so the header no longer eats visually " <>
-               "into the band's top edge and the padding was doing nothing but shifting the gap split by " <>
-               "one header height. Reinstating any padding override here reopens the uneven-gap defect — " <>
-               "the shared .pk-band vertical padding must govern this rule at this width, same as every " <>
-               "other band."
+      # This asserted "no padding override at all" until this session's
+      # G-01.5-5/6 gap closure deliberately added padding-block: 8rem (see
+      # the test above) — that is now the correct, expected state, not a
+      # regression. What must still never come back is the SPECIFIC
+      # defective declaration 01.5-07 removed: the bare `padding:` shorthand
+      # keyed on --pk-header-h, which both shifted the top/bottom split by
+      # one header height (D-14 made the compensation unnecessary) and
+      # silently zeroed the shared bottom padding via its 3-value form.
+      refute rule_body =~ ~r/(?<![-\w])padding\s*:\s*var\(--pk-header-h/,
+             "The header-height top-padding compensation (`padding: var(--pk-header-h, ...) 0 0`) was " <>
+               "removed on purpose (01.5-07, G-01.5-3): D-14 painted #cierre the header's own tint, so " <>
+               "the header no longer eats visually into the band's top edge, and reinstating this " <>
+               "specific declaration reopens the uneven-gap defect it caused. This is distinct from " <>
+               "padding-block: 8rem (asserted above), which is this session's deliberate fixed-height " <>
+               "mechanism, not the retired compensation."
     end
 
     test "the block contains #cierre h2 with font-size: clamp(2rem, 4vw, 3rem)" do
@@ -1471,6 +1482,50 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "strip at all four band-to-band boundaries (fotos->tint, tint->faq, faq->plain, " <>
                "plain->cierre; see .planning/debug/inter-band-whitespace-gap.md). This zero is " <>
                "load-bearing, not a redundant reset — do not delete it as dead CSS."
+    end
+  end
+
+  # G-01.5-7 gap closure (this session, 2026-09-09): .pk-nav is a
+  # layouts.ex-shared component (every page's sticky header), not
+  # About-scoped — but the bug was only DISCOVERED via the About page,
+  # because D-14 (this same phase, plan 01.5-04, tested above) is the only
+  # place in the app with a dark, high-contrast band a scrolled visitor can
+  # land the header over. The regression guard lives here rather than in
+  # layouts_test.exs to keep it next to the D-14 test it is a direct
+  # consequence of.
+  describe "sticky header opacity when scrolled (G-01.5-7 gap closure)" do
+    test ".pk-nav.is-scrolled declares a fully opaque background, no color-mix/transparent" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/(?m)^\.pk-nav\.is-scrolled\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a top-level .pk-nav.is-scrolled rule in app.css."
+      [_, body] = rule
+
+      background = Regex.run(~r/(?<![-\w])background\s*:\s*([^;]+);/, body)
+      assert background, "Expected .pk-nav.is-scrolled to declare a background."
+      [_, background_value] = background
+
+      # Scoped to the `background` declaration alone — box-shadow (below)
+      # legitimately keeps its own color-mix() for the hairline shadow
+      # tint, which was never the bug.
+      refute background_value =~ ~r/color-mix/,
+             "Expected .pk-nav.is-scrolled's background to declare no color-mix()/transparency. " <>
+               "A 94%-opaque tint here let the FAQ band's bold light-on-dark copy (D-14) read as " <>
+               "clearly visible ghost text through the scrolled header — invisible over light page " <>
+               "content, which is why no prior visual check over a plain background caught it. See " <>
+               "the CSS comment above this rule for the full incident."
+
+      assert String.trim(background_value) == "var(--color-base-200)",
+             "Expected .pk-nav.is-scrolled to declare a plain, fully opaque background: var(--color-base-200), got: #{inspect(background_value)}"
+
+      assert body =~ ~r/border-bottom-color/,
+             "Expected .pk-nav.is-scrolled to still declare border-bottom-color — the scrolled " <>
+               "state must remain visually distinct from rest via border + shadow, not silently " <>
+               "become identical to the unscrolled .pk-nav now that the transparency is gone."
+
+      assert body =~ ~r/box-shadow/,
+             "Expected .pk-nav.is-scrolled to still declare box-shadow, for the same reason as " <>
+               "border-bottom-color above."
     end
   end
 end
