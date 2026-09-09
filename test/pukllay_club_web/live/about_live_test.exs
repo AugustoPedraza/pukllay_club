@@ -163,6 +163,86 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
   end
 
+  # G-01.5-5 gap closure (plan 01.5-09,
+  # .planning/debug/G-01.5-5-cierre-footer-gap.md): the shared
+  # `main.pk-bottom-collapse/pk-boundary-collapse + .pk-footer` rules above
+  # are correct everywhere except this one page, where #cierre's own tint
+  # paints the identical token the footer paints. Both halves of the
+  # assertion below matter: the page-scoped override must exist and zero
+  # THIS boundary, AND the shared declarations it overrides must still carry
+  # their own non-zero margin values — a future author "simplifying" by
+  # zeroing the shared rule instead would silently move the catalog index's
+  # and detail page's own closed 24px/16px boundary decisions, which have
+  # shipped unreported for two phases and were never the subject of this
+  # complaint.
+  describe "About page footer-boundary override (G-01.5-5 gap closure, plan 01.5-09)" do
+    test "a body:has(#cierre)-scoped rule zeroes the last-band-to-footer margin without touching the shared collapse declarations' own non-zero values" do
+      src = strip_comments(css_source())
+
+      override =
+        Regex.run(
+          ~r/body:has\(#cierre\)\s+main\.pk-bottom-collapse\s*\+\s*\.pk-footer\s*,\s*body:has\(#cierre\)\s+main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{([^}]*)\}/s,
+          src
+        )
+
+      assert override,
+             "Expected a body:has(#cierre)-scoped override targeting both " <>
+               "main.pk-bottom-collapse + .pk-footer and " <>
+               "main.pk-boundary-collapse + .pk-footer — the surface condition " <>
+               "(#cierre's tint matching .pk-footer's background) is unique to the " <>
+               "About page, so the override must be scoped by #cierre's presence, " <>
+               "not applied unconditionally."
+
+      [_, override_body] = override
+
+      assert override_body =~ ~r/margin-top\s*:\s*0\s*;/,
+             "Expected the page-scoped override to zero margin-top for the About page's " <>
+               "last-band-to-footer boundary."
+
+      # Both shared declarations this override outbids must still declare
+      # their own non-zero margin — proves the fix didn't "succeed" by
+      # weakening the rule every other page still depends on.
+      unmediated =
+        Regex.run(
+          ~r/(?<!body:has\(#cierre\)\s)main\.pk-bottom-collapse\s*\+\s*\.pk-footer\s*,\s*main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{([^}]*)\}/s,
+          src
+        )
+
+      assert unmediated, "Expected the shared, unmediated main.*-collapse + .pk-footer rule to still exist."
+      [_, unmediated_body] = unmediated
+
+      refute unmediated_body =~ ~r/margin-top\s*:\s*0\s*;/,
+             "The shared unmediated boundary rule must keep its own non-zero margin-top — " <>
+               "the catalog index and detail page still depend on it."
+
+      assert unmediated_body =~ ~r/margin-top\s*:\s*1\.5rem\s*;/,
+             "Expected the shared unmediated boundary rule to still declare margin-top: 1.5rem."
+
+      mobile_media =
+        case Regex.run(~r/@media\s*\(max-width:\s*480px\)\s*\{/, src, return: :index) do
+          [{start, match_len}] -> String.slice(src, (start + match_len)..-1//1)
+          nil -> nil
+        end
+
+      assert mobile_media, "Expected an @media (max-width: 480px) block."
+
+      mobile_rule =
+        Regex.run(
+          ~r/(?<!body:has\(#cierre\)\s)main\.pk-bottom-collapse\s*\+\s*\.pk-footer\s*,\s*main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{([^}]*)\}/s,
+          mobile_media
+        )
+
+      assert mobile_rule, "Expected the shared <=480px main.*-collapse + .pk-footer rule to still exist."
+      [_, mobile_rule_body] = mobile_rule
+
+      refute mobile_rule_body =~ ~r/margin-top\s*:\s*0\s*;/,
+             "The shared <=480px boundary rule must keep its own non-zero margin-top."
+
+      assert mobile_rule_body =~ ~r/margin-top\s*:\s*1rem\s*;/,
+             "Expected the shared <=480px boundary rule to still declare margin-top: 1rem."
+    end
+  end
+
   # D-09: the club plays at the club and never lends games out — these
   # patterns catch any accidental "take it home"/lending framing creeping
   # into the page's copy.
@@ -1155,8 +1235,15 @@ defmodule PukllayClubWeb.AboutLiveTest do
       # padding-block so the whitespace amount is a constant, never a
       # function of the viewer's screen height. See the CSS comment above
       # this rule for the full measurement/rationale.
-      assert rule_body =~ ~r/padding-block\s*:\s*8rem\s*;/,
-             "Expected #cierre to declare a fixed padding-block: 8rem at >=640px, not a viewport-height-relative min-height."
+      #
+      # 01.5-09 (G-01.5-6): retuned 8rem -> 5rem. This is the cheap guard
+      # that the MECHANISM stays a fixed padding rather than a
+      # height-relative floor (the refutes below); the bare value itself is
+      # expected to move whenever the value is deliberately retuned — see
+      # app.css's comment above this rule for the run-unit rationale and the
+      # recorded 6rem runner-up.
+      assert rule_body =~ ~r/padding-block\s*:\s*5rem\s*;/,
+             "Expected #cierre to declare a fixed padding-block: 5rem at >=640px, not a viewport-height-relative min-height."
 
       refute rule_body =~ ~r/min-height/,
              "#cierre must not reintroduce a min-height floor at this width — that mechanism is exactly what produced the huge-whitespace regression this test guards against."

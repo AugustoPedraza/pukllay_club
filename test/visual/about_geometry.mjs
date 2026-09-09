@@ -316,11 +316,21 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
         const nodes = Array.from(document.querySelectorAll('section.pk-band'));
         const bands = nodes.map((el, index) => {
           const rect = el.getBoundingClientRect();
+          // Plan 01.5-09 (G-01.5-6 gap closure): every .pk-band has exactly
+          // one direct-child .pk-band-inner content group (verified in
+          // about_live.ex). Captured per-band, not just for #cierre, so the
+          // run-ratio budget below can derive the page's own norm from the
+          // OTHER band-to-band content runs instead of hard-coding it.
+          const innerEl = el.querySelector('.pk-band-inner');
+          const innerRect = innerEl ? innerEl.getBoundingClientRect() : null;
           return {
             index,
             id: el.id || null,
             className: el.className,
             rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+            contentRect: innerRect
+              ? { x: innerRect.x, y: innerRect.y, width: innerRect.width, height: innerRect.height }
+              : null,
           };
         });
 
@@ -359,7 +369,20 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
             })()
           : null;
 
-        return { bands, cierre, cierreInner, footer };
+        // Plan 01.5-09 (G-01.5-5 gap closure): computed backgrounds of the
+        // LAST section.pk-band and of the footer — what
+        // checkBottomBoundaryBudget below uses to decide whether the flat
+        // pixel budget or the same-surface CONTACT rule applies. Read via
+        // getComputedStyle so the comparison is on the resolved colour
+        // (e.g. "rgb(243, 236, 250)"), not the declared CSS value, which is
+        // what actually determines whether the eye reads a boundary here.
+        const lastBandEl = nodes.length > 0 ? nodes[nodes.length - 1] : null;
+        const lastBandBackground = lastBandEl
+          ? getComputedStyle(lastBandEl).backgroundColor
+          : null;
+        const footerBackground = footerEl ? getComputedStyle(footerEl).backgroundColor : null;
+
+        return { bands, cierre, cierreInner, footer, lastBandBackground, footerBackground };
       })())
     `,
     returnByValue: true,
@@ -535,52 +558,96 @@ function checkCierreMobileInvariance(measured, ctx) {
   return failures
 }
 
-// This session's gap closure (G-01.5-5/G-01.5-6, 2026-09-09): the direct
-// oracle for the "huge space top and bottom" regression that survived
-// 01.5-07's min-height:70vh/70dvh fix. checkCierreGapEvenness above proves
-// the two gaps MATCH each other — it says nothing about whether they are
-// both simply huge, which is exactly how 70vh at a ~900px viewport height
-// passed gap-evenness while still measuring ~238.67px per side. #cierre's
-// height mechanism is now a fixed padding-block: 8rem (128px), so gapTop
-// and gapBottom must land at ~128px at EVERY swept height, not just match
-// each other — and, critically, must NOT grow with viewport height the way
-// the old vh-based floor did. A generous ±2px tolerance covers ordinary
-// sub-pixel layout rounding without coming close to hiding a regression
-// back to a height-relative mechanism (which would show up as tens to
-// hundreds of pixels of drift across the HEIGHTS sweep, not 2px).
-const CIERRE_DESKTOP_GAP_TARGET_PX = 128 // 8rem, matches app.css's padding-block
-const CIERRE_DESKTOP_GAP_TOLERANCE_PX = 2
+// Plan 01.5-09 (G-01.5-6 gap closure, 2026-09-09 —
+// .planning/debug/G-01.5-6-cierre-top-bottom-whitespace.md). The prior
+// oracle here (CIERRE_DESKTOP_GAP_TARGET_PX, deleted) hard-coded 128 —
+// "matches app.css's padding-block" was its own comment — so it asserted
+// the presence of exactly the value under complaint and failed on any
+// legitimate retune, the same class of mistake `checkBottomBoundaryBudget`
+// made before plan 01.5-09's Task 1 fixed it one level down. Replaced with
+// a DERIVED budget: the closing band's inbound CONTENT RUN (previous
+// band's content-group bottom edge to #cierre's own content-group top
+// edge — the quantity the eye actually judges, which is why the
+// box-level 0.00px gap checkAdjacentBandContact already confirms says
+// nothing about proportion) must not exceed this page's OWN measured norm
+// (the typical run at every OTHER band-to-band boundary, all ~144px per
+// the diagnosis) by more than a stated factor. Both sides are measured
+// live every run, so a future retune of either #cierre's own padding or
+// the shared .pk-band padding moves this check's baseline with it instead
+// of invalidating it.
+//
+// Budget derivation: at the shipped 5rem retune the run is ~152px against
+// a ~144px norm (a 5.6% step); the prior 8rem defect measured ~200px (a
+// 39% outlier). 1.15 (15%) sits comfortably above the retuned value's own
+// ratio while leaving no room for the old defect to sneak back through —
+// it would need the run to fall to within 15% of norm, i.e. under ~166px,
+// well short of the 200px the shipped bug produced.
+const CIERRE_RUN_RATIO_BUDGET = 1.15
 
-function checkCierreDesktopGapBudget(measured, ctx) {
+// From one band's content-group bottom edge to the next band's
+// content-group top edge. Null if either content rect is missing, so the
+// caller can report a clear failure instead of computing NaN silently.
+function bandContentRun(fromBand, toBand) {
+  if (!fromBand?.contentRect || !toBand?.contentRect) return null
+  return toBand.contentRect.y - (fromBand.contentRect.y + fromBand.contentRect.height)
+}
+
+function checkCierreRunRatioBudget(measured, ctx) {
   if (ctx.viewport < 640) return []
 
-  const gaps = cierreGaps(measured)
-  if (!gaps) {
+  const { bands } = measured
+  const cierreIndex = bands.findIndex((b) => b.id === "cierre")
+  if (cierreIndex <= 0) {
     return [
-      `#cierre desktop gap budget: could not measure #cierre and/or its .pk-band-inner ` +
-        `content group at [${ctx.viewport}px, ${ctx.height}px, ${ctx.theme}]`,
+      `#cierre run-ratio budget: could not locate #cierre with a preceding band at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
     ]
   }
 
-  const failures = []
-  for (const [label, value] of [
-    ["gapTop", gaps.gapTop],
-    ["gapBottom", gaps.gapBottom],
-  ]) {
-    const diff = Math.abs(value - CIERRE_DESKTOP_GAP_TARGET_PX)
-    if (diff > CIERRE_DESKTOP_GAP_TOLERANCE_PX) {
-      failures.push(
-        `#cierre desktop gap budget: ${label}=${value.toFixed(2)}px at ` +
-          `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — expected ` +
-          `${CIERRE_DESKTOP_GAP_TARGET_PX}px ± ${CIERRE_DESKTOP_GAP_TOLERANCE_PX}px (the fixed ` +
-          `padding-block, not a viewport-height-relative amount). A gap growing with ${ctx.height}px ` +
-          `viewport height is exactly the regression this check exists to catch — see the CSS ` +
-          `comment above #cierre's >=640px rule for the full incident.`,
-      )
-    }
+  const closingRun = bandContentRun(bands[cierreIndex - 1], bands[cierreIndex])
+
+  // The page's own norm: the OTHER band-to-band content runs, excluding the
+  // boundary into #cierre itself (that is the value under test, not part of
+  // the baseline it is judged against).
+  const otherRuns = []
+  for (let i = 0; i < bands.length - 1; i++) {
+    if (i === cierreIndex - 1) continue
+    const run = bandContentRun(bands[i], bands[i + 1])
+    if (run != null) otherRuns.push(run)
   }
 
-  return failures
+  if (closingRun == null || otherRuns.length === 0) {
+    return [
+      `#cierre run-ratio budget: could not measure the inbound content run and/or the page's ` +
+        `own comparison runs at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const sorted = [...otherRuns].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  const norm =
+    sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+
+  if (norm <= 0) {
+    return [
+      `#cierre run-ratio budget: page's own measured norm is non-positive (${norm.toFixed(2)}px) ` +
+        `at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — cannot compute a ratio`,
+    ]
+  }
+
+  const ratio = closingRun / norm
+  if (ratio > CIERRE_RUN_RATIO_BUDGET) {
+    return [
+      `#cierre run-ratio budget: inbound run=${closingRun.toFixed(2)}px, page's own norm=` +
+        `${norm.toFixed(2)}px, ratio=${ratio.toFixed(3)}, budget=${CIERRE_RUN_RATIO_BUDGET} at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — the closing band's inbound run is ` +
+        `disproportionate against this page's own established rhythm. A ratio growing with ` +
+        `${ctx.height}px viewport height is exactly the height-relative regression this budget also ` +
+        `exists to catch — see the CSS comment above #cierre's >=640px rule for the full incident.`,
+    ]
+  }
+
+  return []
 }
 
 // Plan 01.5-08 (G-01.5-3 item 4). Budget, not a single number — the catalog
@@ -593,18 +660,23 @@ function checkCierreDesktopGapBudget(measured, ctx) {
 const BOTTOM_BOUNDARY_BUDGET_MOBILE_PX = 18 // 16px target + 2px rounding headroom, <=480px
 const BOTTOM_BOUNDARY_BUDGET_PX = 26 // 24px target + 2px rounding headroom, >=481px
 
-// The direct oracle for Task 1's opt-in: measures the distance from the
-// LAST section.pk-band's bottom edge to <footer>'s top edge and asserts it
-// is at or under the budget above, at every swept width — including the
-// 481-639px middle band (560, added to VIEWPORTS this plan) that neither of
-// this phase's media queries governs, which is exactly where a
-// regime-boundary bug would hide. Independent of viewport HEIGHT (the
-// boundary_collapse/bottom_collapse mechanism only touches <main>'s own
-// padding and .pk-footer's own margin, neither of which is height-
-// dependent), so this runs — and should pass — at every (width, height)
-// combination the sweep produces, not just one.
+// Plan 01.5-09 (G-01.5-5 gap closure). The flat pixel budget above passed
+// on the reported defect: 24.00px satisfied `<= 26`, because the budget was
+// a correctly-implemented statement of a target that contradicted the UAT
+// truth sitting next to it — the real property is not "small enough gap"
+// but "no visible seam between two surfaces the eye reads as one". This
+// check is now surface-conditional: when the last band's computed
+// background equals the footer's computed background (the About page,
+// where #cierre's tint and .pk-footer paint the identical token), it
+// requires CONTACT within the same tolerance every other band-to-band
+// boundary on the page already uses (checkAdjacentBandContact's own
+// CONTACT_TOLERANCE_PX) — a same-surface sandwich is only invisible at
+// zero. When the backgrounds differ (the catalog index, the detail page —
+// where the last in-flow element never paints a background at all), the
+// flat budget behaviour is unchanged, so this check still means something
+// on a future page that has its own, different surface relationship.
 function checkBottomBoundaryBudget(measured, ctx) {
-  const { bands, footer } = measured
+  const { bands, footer, lastBandBackground, footerBackground } = measured
 
   if (!footer || bands.length === 0) {
     return [
@@ -615,13 +687,29 @@ function checkBottomBoundaryBudget(measured, ctx) {
 
   const lastBand = bands[bands.length - 1]
   const distance = footer.y - (lastBand.rect.y + lastBand.rect.height)
+  const surfacesMatch =
+    lastBandBackground != null && lastBandBackground === footerBackground
+
+  if (surfacesMatch) {
+    if (Math.abs(distance) > CONTACT_TOLERANCE_PX) {
+      return [
+        `bottom boundary budget: ${bandLabel(lastBand)} and <footer> paint the identical ` +
+          `computed background (${lastBandBackground}) — expected contact (within ` +
+          `${CONTACT_TOLERANCE_PX}px, the same rule every other boundary on this page follows), ` +
+          `measured a ${distance.toFixed(2)}px gap at [${ctx.viewport}px x ${ctx.height}px, ` +
+          `${ctx.theme}] — a same-token sandwich reads as a visible stripe at any non-zero size.`,
+      ]
+    }
+    return []
+  }
+
   const budget = ctx.viewport <= 480 ? BOTTOM_BOUNDARY_BUDGET_MOBILE_PX : BOTTOM_BOUNDARY_BUDGET_PX
 
   if (distance > budget) {
     return [
       `bottom boundary budget: measured ${distance.toFixed(2)}px between ` +
-        `${bandLabel(lastBand)} and <footer>, expected <= ${budget}px at ` +
-        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+        `${bandLabel(lastBand)} (${lastBandBackground}) and <footer> (${footerBackground}), ` +
+        `expected <= ${budget}px at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
     ]
   }
 
@@ -640,7 +728,7 @@ function checkBottomBoundaryBudget(measured, ctx) {
 const CHECKS = [
   checkAdjacentBandContact,
   checkCierreGapEvenness,
-  checkCierreDesktopGapBudget,
+  checkCierreRunRatioBudget,
   checkCierreBottomBreathingRoom,
   checkCierreMobileInvariance,
   checkBottomBoundaryBudget,

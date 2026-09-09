@@ -2705,14 +2705,14 @@ body.pk-drawer-open {
   gap: 1.5rem;
 }
 
-/* Plan 01.5-03, D-10, REVISED by 01.5-07, REVISED AGAIN by this session's
-   gap closure (G-01.5-5/G-01.5-6, 2026-09-09 — the UAT re-verification
-   round that followed 01.5-07/08). Cierre still reads as a distinct
-   closing moment on desktop instead of one more shared 72px band (sketch
-   051 round 10a) — D-10 is revised here, not superseded. Desktop-only —
-   mobile keeps the compact `.pk-band` treatment untouched. 640px matches
-   the other desktop-vs-mobile splits this phase introduced (D-08's 639px
-   Contacto breakpoint), one width below Tailwind's `sm`.
+/* Plan 01.5-03, D-10, REVISED by 01.5-07, REVISED AGAIN by 01.5-09 (G-01.5-6
+   gap closure, 2026-09-09 — .planning/debug/G-01.5-6-cierre-top-bottom-
+   whitespace.md). Cierre still reads as a distinct closing moment on
+   desktop instead of one more shared 72px band (sketch 051 round 10a) —
+   D-10 is revised here, not superseded. Desktop-only — mobile keeps the
+   compact `.pk-band` treatment untouched. 640px matches the other
+   desktop-vs-mobile splits this phase introduced (D-08's 639px Contacto
+   breakpoint), one width below Tailwind's `sm`.
 
    1. The header-height top padding is GONE (01.5-07). D-10 added
       `padding: var(--pk-header-h, 4.5rem) 0 0` because the band was plain
@@ -2729,37 +2729,41 @@ body.pk-drawer-open {
       `.pk-poster-col`'s sticky `top`) — this is the one place in the file
       that stopped needing it, not the token being retired.
 
-   2. The height mechanism is now a FIXED padding increase, not a
-      viewport-height floor. 01.5-07 replaced D-10's `min-height: 100vh`
-      (measured ~17% content fill, the "huge space top and bottom" the
-      first UAT report named) with `min-height: 70vh`/`70dvh` — an
-      improvement in principle, but still viewport-HEIGHT-COUPLED: at a
-      common ~900px-tall laptop viewport that floor is 630px, and the
-      ~157-178px content group centred inside it still leaves ~226-240px
-      of empty space on EACH side (measured directly in this session,
-      02.5-07-SUMMARY.md's own table: 238.67px gaps at 768x900). The
-      second UAT round re-reported this as "not passing... big spaces" —
-      the fraction needed retuning downward every time someone measured a
-      taller screen, which is the actual defect: min-height:Nvh is
-      structurally the wrong tool for bounding an ABSOLUTE amount of
-      whitespace, because it scales with a dimension (viewport height)
-      that has nothing to do with how much empty space around a ~170px
-      content group reads as "deliberate" versus "huge". A fixed
-      `padding-block` does not have this problem — it is a constant
-      regardless of how tall the browser window is, so "distinct but not
-      empty" no longer depends on the viewer's screen. 8rem (128px) top and
-      bottom — noticeably more generous than the shared 72px `.pk-band`
-      padding every other section gets (so Cierre still reads as a
-      deliberate closing moment, D-10's original intent), but bounded: the
-      band's total height becomes ~128+128+170 = ~426px instead of a
-      viewport-relative 400-680px+, matching the "closing moment, not an
-      empty room" reading a fixed value can actually guarantee. `display:
-      flex; align-items: center` are gone too — they existed to vertically
-      centre the content group inside the min-height floor's leftover
-      space; with no floor beyond ordinary padding, normal block flow
-      already produces IDENTICAL top/bottom gaps for free (both are the
-      same `padding-block` value), which is a stronger evenness guarantee
-      than flex-centring ever was.
+   2. The height mechanism is a FIXED padding, not a viewport-height floor
+      (01.5-07). `display: flex; align-items: center` are gone too — with
+      no floor beyond ordinary padding, normal block flow already produces
+      IDENTICAL top/bottom gaps for free (both are the same `padding-block`
+      value), a stronger evenness guarantee than flex-centring ever was.
+      This mechanism decision is unchanged by 01.5-09 below — only the
+      MAGNITUDE moves.
+
+   3. The MAGNITUDE (01.5-09, G-01.5-6): 01.5-07 shipped 8rem (128px), and
+      a live differential proved it correct-but-disproportionate — 128px is
+      1.78x the shared `.pk-band` padding (4.5rem/72px) every other section
+      on this page uses, the only band that deviates. Judged in the unit
+      the eye actually reads — the continuous inbound RUN from the previous
+      band's content to this heading, which stacks #cierre's own top
+      padding with the previous band's 72px bottom padding across a
+      contrast edge too low (1.15:1) to register as a visible delimiter —
+      8rem produced a 200px run against this page's OWN measured 144px norm
+      at all three other band-to-band boundaries: a 39% outlier. Retuned to
+      **5rem** (80px), landing the run at 152px — a 5.6% step off the
+      page's own norm, versus 6rem's 168px (still 17% off). 5rem is chosen
+      over the lower shared 4.5rem because Cierre's distinctness as a
+      closing moment is carried by its tint (D-14) and its larger heading
+      (`clamp(2rem, 4vw, 3rem)` below) rather than by padding alone — a
+      real +8px-per-side step over the shared band stays on top of those
+      two stronger signals. Recorded runner-up: **6rem** (run 168px, band
+      366px, 47.5% fill), to reach for only if an end-of-phase walkthrough
+      says 5rem reads cramped — one value, one place. Symmetric padding is
+      KEPT (not optically re-centred): the perceived-run asymmetry an
+      earlier pass flagged was measured against the OLD page, where a 24px
+      unpainted stripe still sat below the band (G-01.5-5, fixed above);
+      after that stripe closes, the band's bottom edge stops being a visual
+      boundary against the footer at all, changing the arithmetic an
+      asymmetric option would have been reasoned from — carried forward as
+      an observation for the next UAT round to judge against the fixed
+      page, not acted on here.
 
    No `gap` here: #cierre .pk-band-inner's single unconditional gap
    (above) already governs both viewports — a desktop override would
@@ -2768,7 +2772,7 @@ body.pk-drawer-open {
    owns that (see the #cierre .pk-band-inner comment above). */
 @media (min-width: 640px) {
   #cierre {
-    padding-block: 8rem;
+    padding-block: 5rem;
   }
 
   #cierre h2 {
@@ -5163,6 +5167,43 @@ main.pk-bottom-collapse .pk-shelf:last-of-type {
 main.pk-bottom-collapse + .pk-footer,
 main.pk-boundary-collapse + .pk-footer {
   margin-top: 1.5rem;
+}
+
+/* G-01.5-5 gap closure (plan 01.5-09, 2026-09-09 —
+   .planning/debug/G-01.5-5-cierre-footer-gap.md). The shared boundary
+   decision immediately above is measured CORRECT and INVISIBLE everywhere
+   else it applies: the catalog index and the game detail page carry this
+   exact 24px (>=481px) / 16px (<=480px) margin today and have shipped it
+   unreported for two phases, because the last in-flow child of their
+   <main> never paints a background (a transparent space-y-4 wrapper). The
+   About page is the one caller whose last in-flow element — #cierre,
+   D-14's tint — paints the SAME token .pk-footer paints, so the identical
+   budget renders here as a visible full-bleed stripe of a third colour
+   instead of as breathing room. A live differential (footer's own
+   margin-top zeroed alone, geometry otherwise untouched) proved the
+   footer's existing `border-top` hairline plus its own `.pk-footer-row`
+   inner padding already mark and inset this one boundary with no external
+   gap needed at all — matching every OTHER band-to-band boundary on this
+   page, which measure exactly 0.00px (plan 01.5-06).
+
+   D-14's tint on #cierre is deliberately NOT the lever: stripping it would
+   leave every pixel of this gap in place (measured, reversible) and would
+   also delete a closed design decision recorded elsewhere in this file.
+   Scoped instead to the one page where the surface-equality condition
+   holds, via the same `body:has(...)` presence-based page-scoping idiom
+   already established in this file (see the `#about-hero[data-morph-armed]`
+   rule far above) — `#cierre` exists on no other route, so `:has(#cierre)`
+   only ever matches here. `:has()` contributes ID-level specificity to the
+   compound selector, which is what lets this ONE declaration outbid BOTH
+   shared class-only rules above (the unmediated one and its
+   `@media (max-width: 480px)` sibling) regardless of source order or media
+   nesting — no `!important`, and no edit to either shared rule or its
+   selector ordering. Placed here, outside any media block, because the
+   same-token sandwich this rule corrects is unconditional across both
+   width regimes. */
+body:has(#cierre) main.pk-bottom-collapse + .pk-footer,
+body:has(#cierre) main.pk-boundary-collapse + .pk-footer {
+  margin-top: 0;
 }
 
 /* ─── HEADER ROW CAPACITY: the one remaining reveal breakpoint ────────────
