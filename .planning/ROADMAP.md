@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 8/8 plans executed (4 original executed + 4 gap-closure plans pending)
+**Plans:** 10 plans (4 original + 4 gap-closure round 1, all 8 executed; 2 gap-closure round 2 pending)
 
 Plans:
 **Wave 1**
@@ -182,6 +182,22 @@ geometry probe)*
 `layouts_test.exs`)*
 
 - [x] 01.5-08-PLAN.md — Page bottom boundary: the About page opts into the bottom-collapse mechanism built for this exact stacked-declaration defect, the non-working CTA-bar spacer is replaced by page-scoped document-end clearance, and a caller-contract test surfaces the next page to forget (G-01.5-3 item 4)
+
+**Gap closure round 2 — Wave 1** *(from the 2026-09-09 UAT re-verification round: G-01.5-4 through
+G-01.5-7, all four diagnosed to root cause in `.planning/debug/`. Every one of the four is a case
+where the prior fix's arithmetic was CORRECT and the symptom survived it — the boundary budget was
+exactly met but rendered as a stripe between two same-token surfaces; the band's gaps were exactly
+equal but both too large against the page's own rhythm; the button was proportionate but not the
+button the composition was approved with; the bar was opaque and correctly stacked but painted the
+page's own background token. Both plans replace the gates that passed on the reported defects with
+assertions derived from measured properties rather than restatements of the CSS they test)*
+
+- [ ] 01.5-09-PLAN.md — Page bottom: the Cierre-to-footer boundary goes to zero via a page-scoped override (the shared collapse rule stays correct for the catalog pages), the closing band's padding is retuned from 8rem to 5rem against the page's own 144px content-run rhythm, and both stale oracles are replaced with surface-conditional and run-ratio assertions (G-01.5-5, G-01.5-6)
+
+**Gap closure round 2 — Wave 2** *(blocked on 01.5-09 — same stylesheet region, same two test files,
+and this plan's clearance oracle measures the page bottom that 01.5-09 moves)*
+
+- [ ] 01.5-10-PLAN.md — Sumate CTA restored to its approved design-source geometry at the component's single source, the sticky bar given the edge its two migrated siblings already have, its document-end clearance re-derived from the bar's own composition, and the repo's first rendered-box oracle (G-01.5-4, G-01.5-7)
 
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 
