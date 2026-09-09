@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 9/10 plans executed (4 original + 4 gap-closure round 1, all 8 executed; 2 gap-closure round 2 pending)
+**Plans:** 10/10 plans executed (4 original + 4 gap-closure round 1, all 8 executed; 2 gap-closure round 2 pending)
 
 Plans:
 **Wave 1**
@@ -197,7 +197,7 @@ assertions derived from measured properties rather than restatements of the CSS 
 **Gap closure round 2 — Wave 2** *(blocked on 01.5-09 — same stylesheet region, same two test files,
 and this plan's clearance oracle measures the page bottom that 01.5-09 moves)*
 
-- [ ] 01.5-10-PLAN.md — Sumate CTA restored to its approved design-source geometry at the component's single source, the sticky bar given the edge its two migrated siblings already have, its document-end clearance re-derived from the bar's own composition, and the repo's first rendered-box oracle (G-01.5-4, G-01.5-7)
+- [x] 01.5-10-PLAN.md — Sumate CTA restored to its approved design-source geometry at the component's single source, the sticky bar given the edge its two migrated siblings already have, its document-end clearance re-derived from the bar's own composition, and the repo's first rendered-box oracle (G-01.5-4, G-01.5-7)
 
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 
