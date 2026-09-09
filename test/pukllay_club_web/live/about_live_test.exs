@@ -1387,6 +1387,34 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert clearance_body =~ ~r/padding-bottom\s*:\s*\S/
     end
 
+    # G-01.5-7 gap closure (plan 01.5-10 —
+    # .planning/debug/G-01.5-7-cta-bar-background-visible.md): the inherited
+    # `4.5rem` literal was 3px loose against the bar's shipped 69px height
+    # and became 1px TIGHT the moment plan 01.5-10's Task 1 grew the Sumate
+    # button to 48px — a hard literal pinned against a content-derived
+    # height is guaranteed to drift, and already had, in both directions.
+    # This asserts the replacement is a calc() expression composed from the
+    # bar's own parts (rather than a bare literal that could silently drift
+    # again the next time the button's size changes), naming the drift this
+    # guards against in its own failure message.
+    test "the body:has(.pk-about-cta-bar) clearance is composed via calc(), not a bare literal" do
+      src = strip_comments(css_source())
+      body = media_480_body(src)
+      assert body, "Expected to extract the @media (max-width: 480px) block body."
+
+      clearance_rule = Regex.run(~r/body:has\(\.pk-about-cta-bar\)\s*\{([^}]*)\}/s, body)
+      assert clearance_rule, "Expected a body:has(.pk-about-cta-bar) rule inside the 480px block."
+      [_, clearance_body] = clearance_rule
+
+      assert clearance_body =~ ~r/padding-bottom\s*:\s*calc\(/,
+             "Expected the document-end clearance to be a calc() expression derived from the " <>
+               "bar's own padding/button-height/border, not a bare px/rem literal. A bare " <>
+               "literal against a content-derived bar height is guaranteed to drift — the " <>
+               "inherited 4.5rem was 3px loose against the 69px pre-01.5-10 bar and became 1px " <>
+               "TIGHT the moment the button grew to 48px, which is exactly the recurrence this " <>
+               "guard exists to catch."
+    end
+
     test "no .pk-about-cta-spacer selector remains anywhere in app.css" do
       src = strip_comments(css_source())
 
@@ -1455,6 +1483,41 @@ defmodule PukllayClubWeb.AboutLiveTest do
                  ".btn already centers; sketch 051's centering fix was for its own hand-rolled " <>
                  "button CSS, not this app's."
       end
+    end
+
+    # G-01.5-7 gap closure (plan 01.5-10 —
+    # .planning/debug/G-01.5-7-cta-bar-background-visible.md): no gate in
+    # this repo can observe a RENDERED colour (about_geometry.mjs is a
+    # geometric oracle only, and check-theme-drift.sh is colour-scoped to a
+    # different comparison entirely), so a source-level assertion on the two
+    # token names is the only recurrence guard this fix can have. Pins BOTH
+    # the fill this bar must KEEP (base-100, deliberately different from its
+    # two siblings — the 6-arm differential proved swapping it is inert on
+    # the reported symptom and actively worse at the page bottom) and the
+    # border token it must now USE (neutral, replacing base-300).
+    test "the base .pk-about-cta-bar rule keeps base-100 fill and uses the neutral border token, not base-300" do
+      src = strip_comments(css_source())
+
+      base_rule = Regex.run(~r/(?<!:has\()\.pk-about-cta-bar\s*\{([^}]*)\}/s, src)
+      assert base_rule, "Expected a base (non-media-query) .pk-about-cta-bar rule in app.css."
+      [_, base_body] = base_rule
+
+      assert base_body =~ ~r/background\s*:\s*var\(--color-base-100\)/,
+             "Expected .pk-about-cta-bar to keep background: var(--color-base-100) — a 6-arm " <>
+               "runtime differential proved swapping the fill to base-200 (matching its two " <>
+               "siblings) is INERT on the reported symptom (1.406:1 light / 1.19:1 dark, " <>
+               "byte-identical to doing nothing) and makes the fill collapse to 1.000:1 against " <>
+               "the surface it overlays at the real page bottom — strictly worse there."
+
+      assert base_body =~ ~r/border-top\s*:\s*1px\s+solid\s+var\(--color-neutral\)/,
+             "Expected .pk-about-cta-bar's border-top to resolve through var(--color-neutral) " <>
+               "(measured 5.785:1 light / 7.128:1 dark against the bar's fill), the same token " <>
+               ".pk-title-echo already migrated to for the identical reason."
+
+      refute base_body =~ ~r/border-top\s*:\s*1px\s+solid\s+var\(--color-base-300\)/,
+             "Expected the retired border-300 pairing to be gone entirely — it measured only " <>
+               "1.406:1 light / 1.19:1 dark against the bar's own fill, under the 3:1 WCAG " <>
+               "1.4.11 non-text-contrast floor this fix exists to clear."
     end
   end
 

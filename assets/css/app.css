@@ -2529,6 +2529,57 @@ body.pk-drawer-open {
   overflow: hidden;
 }
 
+/* Sumate button design-source geometry (G-01.5-4 gap closure, plan 01.5-10 —
+   .planning/debug/G-01.5-4-hero-cierre-composition-balance.md). Restores the
+   approved sketch 051 button spec (`.btn-sumate`) at `Layouts.sumate_cta/1`'s
+   single source — the object the diagnosis proved was the ONLY channel of
+   the Cierre composition deviating from what a human approved (sketch 051
+   rounds 9/10). Rendered both in the same browser at the same widths: the
+   flat 24px gap, the heading ink, the centring and the band padding were all
+   already byte-identical to the approved sketch; the button alone measured
+   108.09x44 vs the sketch's 119.11x48, padding-inline 20px vs 28px (-28.6%),
+   radius 4px vs pill (a KIND difference), font-size 18px vs 16px (LARGER
+   type packed into a SMALLER box), padding ratio 1.74:1 vs 2.15:1, label ink
+   fill 61.1% vs 51.3% of the box. Applying only this four-property spec
+   in-browser landed production at 116.75x48 / 2.00:1 — within 2.4px and
+   0.7pp of the approved sketch, with no other channel moved (AND-gate: NO,
+   one object accounts for the entire measured delta).
+
+   All three Sumate placements (hero, closing band, sticky bar) share this
+   ONE class deliberately: sketch 051's own comment on `.btn-sumate` states
+   it is the "same class reused at all THREE Sumate call sites ... exactly
+   like production reuses one component so the three can never drift to
+   different labels/styles." A per-call-site exception would recreate, by
+   design, the exact drift both the sketch and `sumate_cta/1`'s own docstring
+   exist to prevent.
+
+   The pill radius is declared as the literal `9999px`, not a
+   `--radius-box`/`--radius-field` token: this block's own `.pk-pill` base
+   (above, "PK CATALOG SURFACES" group) already ships that exact literal on
+   more than a dozen surfaces, explicitly DISTINCT from the app's
+   `--radius-*` scale — a pill here is this repo's established way to
+   express a pill, not an exception to ui-design-system's "radius through
+   `--radius-box`/`--radius-field`, never a literal" rule (that rule attaches
+   to COLOUR; this file already ships pill literals elsewhere).
+
+   Height is declared as `min-height` (matching the design source's own
+   property, not `height`): daisyUI's `.btn`/`.btn-lg` set `height:
+   var(--size)` inside a Tailwind `@layer`, and a `min-height` floor from
+   this UNLAYERED rule wins regardless — no `!important` needed, per this
+   file's top-of-file CASCADE-LAYER HAZARD note — because an unlayered rule
+   always beats a layered one, and the browser's box model then resolves the
+   used height to the larger of the two (`min-height` wins whenever `height`
+   would compute smaller). Colour, border-width, hover and transition are
+   deliberately NOT redeclared here: the outline modifier (`btn-outline
+   btn-primary`) and the app's own border token already provide those, and
+   the diagnosis measured every other channel already at parity. */
+.pk-sumate-btn {
+  min-height: 48px;
+  padding-inline: 28px;
+  border-radius: 9999px;
+  font-size: 1rem;
+}
+
 /* About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
    Page-owned (rendered by AboutLive only, never Layouts) and deliberately
    has no hook and no scroll behavior at all — it is simply pinned, unlike
@@ -2564,7 +2615,43 @@ body.pk-drawer-open {
    caught). Same unlayered-`.pk-*`-beats-layered-Tailwind-utility cascade
    direction as `.pk-band`'s own `margin-block-end: 0` fix (plan 01.5-06) —
    no `!important` needed, this file's top-of-file CASCADE-LAYER HAZARD
-   note already documents why. */
+   note already documents why.
+
+   G-01.5-7 (plan 01.5-10 — .planning/debug/G-01.5-7-cta-bar-background-
+   visible.md): `border-top` moved from `var(--color-base-300)` to
+   `var(--color-neutral)`. Measured, both themes: the base-300 hairline was
+   1.406:1 light / 1.19:1 dark against the bar's own fill — under the 3:1
+   WCAG 1.4.11 non-text floor and under any perceptual threshold, so the bar
+   read as having neither a surface nor an edge ("background content visible
+   behind the CTA" was literally accurate: the bar paints the exact
+   `--color-base-100` token the page body itself paints, over most of the
+   scroll range at 1.000:1). `--color-neutral` reaches 5.785:1 light /
+   7.128:1 dark — the same token `.pk-title-echo` (below) already migrated
+   to for the identical reason, stated there in prose.
+
+   The fill stays on `--color-base-100`, deliberately NOT changed to match
+   `.pk-title-echo`/`.pk-mobile-cta-bar`'s `--color-base-200`: a 6-arm
+   runtime differential proved the fill swap alone is INERT on the reported
+   symptom (1.406:1/1.19:1 — byte-identical to doing nothing, since the
+   base-100/200/300 ladder's adjacent-step ceiling is only 1.155:1/1.086:1,
+   below any real threshold) AND makes the bar's fill collapse to
+   byte-identical (1.000:1) with the `#cierre`/footer surface it overlays at
+   the real page bottom — strictly worse there than leaving it alone. The
+   border is the necessary and sufficient channel; this bar is the third and
+   last in the file carrying the pre-G-01.3-09 border shape (`.pk-title-echo`
+   migrated both channels already; `.pk-mobile-cta-bar` migrated its fill
+   only, its own border stays base-300 and is out of this plan's scope).
+
+   `padding-bottom` below (the document-end clearance) is DERIVED from this
+   rule's own padding, `.pk-sumate-btn`'s `min-height` and this rule's own
+   `border-top` width — not an inherited literal — because correcting the
+   border alone made a fixed differential arm's slack newly visible: the
+   bar's real height changed from 69px to 73px the moment Task 1 grew the
+   button to 48px, so a hard-coded clearance is already 1px tight before
+   this comment is even read. If `.pk-sumate-btn`'s `min-height` or this
+   rule's own padding/border ever change again, this expression's operands
+   must be updated in lockstep — that coupling is the whole point of
+   deriving it instead of restating a number. */
 .pk-about-cta-bar {
   display: none;
   position: fixed;
@@ -2575,7 +2662,7 @@ body.pk-drawer-open {
   margin-block-end: 0;
   padding: 0.75rem var(--pk-gutter);
   background: var(--color-base-100);
-  border-top: 1px solid var(--color-base-300);
+  border-top: 1px solid var(--color-neutral);
 }
 
 /* About page content bands (01.1-02, D-07 spine: hero -> photo rail ->
@@ -5861,15 +5948,31 @@ body:has(#cierre) main.pk-boundary-collapse + .pk-footer {
      exists only on the About page, so this selector needs no further
      scoping to stay page-scoped.
 
-     4.5rem is inherited unchanged from the spacer this rule replaces, not
-     freshly measured — this is a placement fix (moving the clearance to
-     where it actually clears the bar), not a height retune. Co-located in
-     this SAME @media (max-width: 480px) block as .pk-about-cta-bar's own
-     display swap above, for the identical reason the D-11 rule below is:
-     a threshold mismatch between "bar appears" and "clearance is reserved"
-     would put the bar back over the footer at some width. */
+     Plan 01.5-10 (G-01.5-7 gap closure — .planning/debug/G-01.5-7-cta-bar-
+     background-visible.md): the flat `4.5rem` above replaced a spacer's
+     inherited value with a placement fix, but was itself never re-derived
+     from the bar's own composition — its own comment used to concede
+     exactly that. It was 3px loose against the bar's shipped 69px height
+     (12px padding-top + 44px button + 12px padding-bottom + 1px border);
+     after plan 01.5-10's Task 1 grew the button to 48px the bar is 73px and
+     the SAME literal is now 1px TIGHT — the direction of the error flipped,
+     which is the predictable result of a hard literal pinned against a
+     content-derived height. Replaced with an expression composed from the
+     same parts a human would add up by hand, in the same units
+     `.pk-about-cta-bar` itself declares them in: its own padding-top
+     (0.75rem) + padding-bottom (0.75rem) + `.pk-sumate-btn`'s `min-height`
+     (48px) + the bar's own `border-top` width (1px). `calc()` lets these
+     stay legible as one derivation rather than a pre-added, re-guessable
+     number; Task 3's probe now asserts a TIGHT FIT against the bar's real
+     measured height instead of mere non-intersection, which is the check
+     that would have caught both the original 3px-loose and this
+     newly-introduced 1px-tight state. Co-located in this SAME
+     @media (max-width: 480px) block as .pk-about-cta-bar's own display swap
+     above, for the identical reason the D-11 rule below is: a threshold
+     mismatch between "bar appears" and "clearance is reserved" would put
+     the bar back over the footer at some width. */
   body:has(.pk-about-cta-bar) {
-    padding-bottom: 4.5rem;
+    padding-bottom: calc(0.75rem + 0.75rem + 48px + 1px);
   }
 
   /* Plan 01.5-04, D-11: suppresses the Cierre band's own Sumate button at

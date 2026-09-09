@@ -369,6 +369,48 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
             })()
           : null;
 
+        // Plan 01.5-10 (G-01.5-4 gap closure): the closing band's Sumate
+        // anchor. pk-sumate-btn (app.css) declares min-height/padding-
+        // inline/border-radius/font-size, but neither it nor daisyUI's own
+        // .btn ever declares literal vertical (block) padding — both the
+        // design source (sketch 051's .btn-sumate: 'padding: 0 28px') and
+        // this app's .btn architecture centre the label vertically via
+        // flex + min-height, not via a padding-block property. That is why
+        // the diagnosis's own padding-ratio figures (1.03:1 / 1.74:1 /
+        // 2.15:1) are NOT literal CSS padding-inline/padding-block — a
+        // literal padding-block-start reads 0px in every one of those three
+        // states, which would make a ratio against it always infinite and
+        // unable to distinguish a squat box from a well-proportioned one.
+        // The diagnosis instead derived a vertical INSET from the box
+        // height minus the label's own rendered ink height, halved — this
+        // measures the SAME visual quantity a padding-block property would
+        // if one existed. Reproduced here via a Range over the anchor's
+        // text node, which is what "ink" means throughout this file's
+        // debug sessions (the rendered glyph box, not the CSS line box).
+        const sumateAnchorEl = document.querySelector('#cierre .pk-about-cierre-cta a');
+        const sumateCta = sumateAnchorEl
+          ? (() => {
+              const rect = sumateAnchorEl.getBoundingClientRect();
+              const cs = getComputedStyle(sumateAnchorEl);
+              const textNode = Array.from(sumateAnchorEl.childNodes).find(
+                (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0,
+              );
+              let inkHeight = null;
+              if (textNode) {
+                const range = document.createRange();
+                range.selectNodeContents(textNode);
+                inkHeight = range.getBoundingClientRect().height;
+              }
+              return {
+                rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+                paddingInlineStart: parseFloat(cs.paddingInlineStart),
+                borderTopLeftRadius: parseFloat(cs.borderTopLeftRadius),
+                fontSize: parseFloat(cs.fontSize),
+                inkHeight,
+              };
+            })()
+          : null;
+
         // Plan 01.5-09 (G-01.5-5 gap closure): computed backgrounds of the
         // LAST section.pk-band and of the footer — what
         // checkBottomBoundaryBudget below uses to decide whether the flat
@@ -382,7 +424,7 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
           : null;
         const footerBackground = footerEl ? getComputedStyle(footerEl).backgroundColor : null;
 
-        return { bands, cierre, cierreInner, footer, lastBandBackground, footerBackground };
+        return { bands, cierre, cierreInner, footer, lastBandBackground, footerBackground, sumateCta };
       })())
     `,
     returnByValue: true,
@@ -723,8 +765,95 @@ function checkBottomBoundaryBudget(measured, ctx) {
   return []
 }
 
-// Named list of check functions the sweep loop calls. Plans 01.5-07 and
-// 01.5-08 each add one more entry here for their own oracle.
+// Plan 01.5-10 (G-01.5-4 gap closure). This repo's first assertion that
+// observes the Sumate button's own rendered box rather than the presence of
+// a class name — no ExUnit test can (rendered geometry is invisible to a
+// string match on class attributes) and check-theme-drift.sh is colour-
+// scoped by design, so this probe is the only place these three properties
+// can be verified. All three are DERIVED so they stay meaningful if the
+// type scale or button size is ever deliberately retuned: a touch floor on
+// measured height, a ratio (not an absolute px value) for padding, and a
+// radius-vs-height comparison (not a literal radius value) for "is this a
+// pill". Thresholds and the historical progression they replace:
+//   touch floor      44px  (app-wide floor, unrelated to this button specifically)
+//   padding ratio    1.03:1 original defect -> 1.74:1 (plan 01.5-05) -> 2.15:1 design source (this plan's target)
+//   corner radius    4px original/01.5-05 (a KIND difference from a pill) -> >=half the rendered height (this plan's target)
+const SUMATE_TOUCH_FLOOR_PX = 44
+const SUMATE_DESIGN_SOURCE_PADDING_RATIO = 2.15
+// Absorbs ink-height Range-measurement/font-rendering variance across
+// widths and themes; far below the 0.41 (1.74 -> 2.15) and 1.12 (1.03 ->
+// 2.15) deltas this check exists to catch, so it cannot mask either
+// historical defect while still tolerating sub-pixel glyph metrics.
+const SUMATE_PADDING_RATIO_TOLERANCE = 0.15
+const SUMATE_MEASUREMENT_TOLERANCE_PX = 0.5
+
+function checkSumateButtonGeometry(measured, ctx) {
+  // D-11 (app.css @media max-width: 480px) hides #cierre .pk-about-cierre-cta
+  // at this width — the sticky bar's own button takes over instead, and its
+  // button is width-stretched (a padding-ratio assertion would be
+  // meaningless on it); its height is covered by Task 3's clearance oracle.
+  if (ctx.viewport <= 480) return []
+
+  const { sumateCta } = measured
+  if (!sumateCta) {
+    return [
+      `sumate button geometry: could not measure #cierre .pk-about-cierre-cta a at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const failures = []
+  const { rect, paddingInlineStart, borderTopLeftRadius, inkHeight } = sumateCta
+  const label = `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`
+
+  if (rect.height < SUMATE_TOUCH_FLOOR_PX - SUMATE_MEASUREMENT_TOLERANCE_PX) {
+    failures.push(
+      `sumate button geometry: rendered height=${rect.height.toFixed(2)}px at ${label} — ` +
+        `expected at or above the app's ${SUMATE_TOUCH_FLOOR_PX}px touch floor`,
+    )
+  }
+
+  if (inkHeight == null) {
+    failures.push(
+      `sumate button geometry: could not measure the button's label ink height at ${label}`,
+    )
+  } else {
+    const verticalInset = (rect.height - inkHeight) / 2
+    if (verticalInset <= 0) {
+      failures.push(
+        `sumate button geometry: derived vertical inset=${verticalInset.toFixed(2)}px at ${label} ` +
+          `— the label's ink (${inkHeight.toFixed(2)}px) does not fit inside the button's own ` +
+          `rendered height (${rect.height.toFixed(2)}px)`,
+      )
+    } else {
+      const ratio = paddingInlineStart / verticalInset
+      if (ratio < SUMATE_DESIGN_SOURCE_PADDING_RATIO - SUMATE_PADDING_RATIO_TOLERANCE) {
+        failures.push(
+          `sumate button geometry: padding ratio=${ratio.toFixed(2)}:1 (inline=` +
+            `${paddingInlineStart.toFixed(2)}px, derived vertical inset=${verticalInset.toFixed(2)}px) ` +
+            `at ${label} — expected at or above the design source's ` +
+            `${SUMATE_DESIGN_SOURCE_PADDING_RATIO}:1 (tolerance ${SUMATE_PADDING_RATIO_TOLERANCE}). ` +
+            `This is the exact channel G-01.5-4 diagnosed as defective (1.03:1 original, 1.74:1 ` +
+            `after plan 01.5-05, 2.15:1 at sketch 051).`,
+        )
+      }
+    }
+  }
+
+  const radiusFloor = rect.height / 2
+  if (borderTopLeftRadius < radiusFloor - SUMATE_MEASUREMENT_TOLERANCE_PX) {
+    failures.push(
+      `sumate button geometry: border-top-left-radius=${borderTopLeftRadius.toFixed(2)}px at ` +
+        `${label} — expected at or above half the rendered height (${radiusFloor.toFixed(2)}px), ` +
+        `the shape-independent definition of a pill regardless of which literal the CSS uses`,
+    )
+  }
+
+  return failures
+}
+
+// Named list of check functions the sweep loop calls. Plans 01.5-07,
+// 01.5-08 and 01.5-10 each add one more entry here for their own oracle.
 const CHECKS = [
   checkAdjacentBandContact,
   checkCierreGapEvenness,
@@ -732,10 +861,11 @@ const CHECKS = [
   checkCierreBottomBreathingRoom,
   checkCierreMobileInvariance,
   checkBottomBoundaryBudget,
+  checkSumateButtonGeometry,
 ]
 
 // ---------------------------------------------------------------------------
-// Plan 01.5-08: fixed-bar / footer non-intersection oracle
+// Plan 01.5-08/01.5-10: fixed-bar / footer clearance oracle
 // ---------------------------------------------------------------------------
 // The only oracle that can confirm Task 2's actual claim. A source-level
 // test can confirm the body:has(.pk-about-cta-bar) clearance rule EXISTS;
@@ -744,6 +874,18 @@ const CHECKS = [
 // (below, in main()) at the one width where the bar is visible, since it
 // needs an actual scroll — the shared per-case sweep above is deliberately
 // unscrolled (see the footer-rect comment in runCase).
+//
+// Plan 01.5-10 (G-01.5-7 gap closure): the ORIGINAL check here asserted only
+// non-intersection (footer.bottom <= bar.top + tolerance), which the shipped
+// defect satisfied — a 3px strip of document background between the two was
+// "non-overlapping" and passed. Rewritten to assert a TIGHT FIT: the
+// footer's bottom edge and the bar's top edge must coincide within
+// CONTACT_TOLERANCE_PX, reporting the two failure directions distinctly
+// (SLACK — a gap is visible, the defect this task closes; OVERLAP — the bar
+// covers real footer content, the opposite failure mode plan 01.5-08
+// originally guarded against). Both the bar's real rendered height and the
+// reserved clearance are captured in the same pass so a future reader can
+// see which one moved without re-running the probe.
 const CTA_BAR_VISIBLE_WIDTH = 390 // <=480px, matches app.css's own threshold
 
 async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
@@ -798,6 +940,12 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
         return {
           bar: rectOf(document.querySelector('.pk-about-cta-bar')),
           footer: rectOf(document.querySelector('footer.pk-footer')),
+          // Plan 01.5-10: the reserved document-end clearance itself
+          // (body:has(.pk-about-cta-bar)'s computed padding-bottom),
+          // captured alongside the two rects so the SUMMARY can report the
+          // bar's real height against what was actually reserved for it,
+          // without a second probe run.
+          reservedClearance: parseFloat(getComputedStyle(document.body).paddingBottom),
         };
       })())
     `,
@@ -808,7 +956,7 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
 }
 
 function checkFixedBarFooterClearance(measured, ctx) {
-  const { bar, footer } = measured
+  const { bar, footer, reservedClearance } = measured
 
   if (!bar) {
     return [`fixed-bar footer clearance: could not measure .pk-about-cta-bar at [${ctx.viewport}px, ${ctx.theme}]`]
@@ -823,13 +971,32 @@ function checkFixedBarFooterClearance(measured, ctx) {
     return [`fixed-bar footer clearance: could not measure <footer> at [${ctx.viewport}px, ${ctx.theme}]`]
   }
 
-  const overlap = footer.y + footer.height - bar.y
-  if (overlap > CONTACT_TOLERANCE_PX) {
+  // Positive = the bar's top sits BELOW the footer's bottom edge — SLACK, a
+  // strip of document background is visible (the G-01.5-7 defect this check
+  // exists to catch; the ORIGINAL non-intersection check was satisfied by
+  // this direction of error). Negative = the bar's top sits ABOVE the
+  // footer's bottom edge — OVERLAP, the bar covers real footer content (the
+  // opposite failure mode plan 01.5-08 originally guarded against).
+  const distance = bar.y - (footer.y + footer.height)
+  const context =
+    `bar height=${bar.height.toFixed(2)}px, reserved clearance=` +
+    `${Number.isFinite(reservedClearance) ? reservedClearance.toFixed(2) : "?"}px, ` +
+    `footer bottom=${(footer.y + footer.height).toFixed(2)}, bar top=${bar.y.toFixed(2)}`
+
+  if (distance > CONTACT_TOLERANCE_PX) {
     return [
-      `fixed-bar footer clearance: the fixed bar overlaps the footer by ` +
-        `${overlap.toFixed(2)}px at [${ctx.viewport}px, ${ctx.theme}] (footer bottom=` +
-        `${(footer.y + footer.height).toFixed(2)}, bar top=${bar.y.toFixed(2)}) — the ` +
-        `document-end clearance is not reserving enough (or is not applying at all)`,
+      `fixed-bar footer clearance: SLACK of ${distance.toFixed(2)}px between the footer's bottom ` +
+        `edge and the bar's top edge at [${ctx.viewport}px, ${ctx.theme}] (${context}) — expected ` +
+        `a TIGHT FIT (within ${CONTACT_TOLERANCE_PX}px), not mere non-overlap. Non-intersection ` +
+        `alone is exactly what the shipped G-01.5-7 defect satisfied.`,
+    ]
+  }
+
+  if (distance < -CONTACT_TOLERANCE_PX) {
+    return [
+      `fixed-bar footer clearance: OVERLAP of ${(-distance).toFixed(2)}px — the fixed bar covers ` +
+        `real footer content at [${ctx.viewport}px, ${ctx.theme}] (${context}) — the document-end ` +
+        `clearance is not reserving enough`,
     ]
   }
 
@@ -922,8 +1089,10 @@ async function main() {
 
         if (measured.bar) {
           log(
-            `${label} bar top=${measured.bar.y.toFixed(2)} footer bottom=` +
-              `${measured.footer ? (measured.footer.y + measured.footer.height).toFixed(2) : "?"}`,
+            `${label} bar top=${measured.bar.y.toFixed(2)} bar height=` +
+              `${measured.bar.height.toFixed(2)} reserved clearance=` +
+              `${Number.isFinite(measured.reservedClearance) ? measured.reservedClearance.toFixed(2) : "?"} ` +
+              `footer bottom=${measured.footer ? (measured.footer.y + measured.footer.height).toFixed(2) : "?"}`,
           )
         }
 

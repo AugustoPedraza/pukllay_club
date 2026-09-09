@@ -874,20 +874,41 @@ defmodule PukllayClubWeb.Layouts do
   `:rest` global attr list does not include `target`/`rel` (needed here for
   an external link) and would silently drop them.
 
-  **Size (G-01.5-1/G-01.5-3 item 5, plan 01.5-05).** The size comes from
-  daisyUI's `btn-lg` step, composed with the app's 44px touch-floor utility
-  (`min-h-11`) — not a bare height utility. daisyUI couples a size step's
-  height, inline padding and font-size together; this app's
-  `--size-field: 0.21875rem` puts `btn-lg` alone at 42px, 2px under the
-  documented floor, so the step and the floor utility must both be present.
-  This is the exact composition `catalog_live/show.ex`'s reserve CTA
-  (`btn btn-primary btn-lg min-h-11 w-full`) already ships — a consistency
-  repair against in-repo precedent, not a new pattern. The previous
-  `min-h-12` was a one-axis height override inherited from a desktop header
-  cluster (`.pk-nav-actions`, quick task 260822-2v9) that has since been
-  deleted from every layout; do not reinstate a bare height utility here —
-  it competes with the size step's own height and reproduces the same
-  off-ratio geometry this composition fixes.
+  **Size, superseded (G-01.5-1/G-01.5-3 item 5, plan 01.5-05).** The
+  composition below used to be daisyUI's `btn-lg` step composed with the
+  app's 44px touch-floor utility (`min-h-11`) — a correct fix for a real
+  proportion defect: the button had been a bare `min-h-12` one-axis height
+  override that produced a 1.03:1 squat, square-padded label box, and
+  `btn-lg` + `min-h-11` (matching `catalog_live/show.ex`'s reserve CTA)
+  repaired that mechanism, landing a healthy 1.74:1 ratio. It did NOT close
+  a separate, independent fidelity delta against sketch 051 — the human-
+  approved design source this composition's BALANCE was actually judged
+  against — because `btn-lg`'s own coupled height/padding-inline/font-size
+  (42px/16px/18px in this app's theme) never matched that source's spec
+  (48px/28px/16px). See `.planning/debug/G-01.5-4-hero-cierre-composition-
+  balance.md` for the full differential.
+
+  **Size, current (G-01.5-4, plan 01.5-10).** `pk-sumate-btn` (declared once
+  in `assets/css/app.css`, near the About page's own CSS group) now owns
+  every axis of the button's size — height, inline padding, font-size and
+  corner radius — as the sketch 051 spec measures them, restoring the
+  composition the design was approved with. `btn-lg` and `min-h-11` are both
+  gone: leaving either alongside `pk-sumate-btn` would have two rules
+  compete on height again, exactly the failure mode this composition already
+  fixed once. The 44px touch floor is met by `pk-sumate-btn`'s own 48px
+  `min-height` and is verified in `test/visual/about_geometry.mjs` by
+  measuring the RENDERED height, not by asserting a utility class is
+  present — a utility class can be silently outbid; a measured height cannot.
+
+  **Why this now diverges from the catalog page's reserve CTA
+  (`catalog_live/show.ex`'s `btn btn-primary btn-lg min-h-11 w-full`), the
+  very button plan 01.5-05 matched it to.** The reserve CTA is a different
+  surface, on a different page, with no counterpart in sketch 051, and no
+  UAT round has ever reported it — it is untouched by this plan. The Sumate
+  CTA is the object a human-approved composition (sketch 051, rounds 9/10)
+  was actually judged against, and that composition's own button geometry is
+  what this class restores. The two buttons no longer sharing a size
+  mechanism is a recorded decision, not drift.
   """
   attr :class, :string, default: nil
 
@@ -897,7 +918,7 @@ defmodule PukllayClubWeb.Layouts do
       href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
       target="_blank"
       rel="noopener noreferrer"
-      class={["btn btn-outline btn-primary btn-lg min-h-11", @class]}
+      class={["btn btn-outline btn-primary pk-sumate-btn", @class]}
     >
       Sumate
     </a>
