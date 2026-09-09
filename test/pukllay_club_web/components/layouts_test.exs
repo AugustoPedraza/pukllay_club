@@ -56,11 +56,10 @@ defmodule PukllayClubWeb.LayoutsTest do
   end
 
   describe "brand_logo/1" do
-    test "renders the wordmark and tagline" do
+    test "renders the one-line wordmark, no tagline" do
       html = render_component(&Layouts.brand_logo/1, %{})
 
       assert html =~ "PUKLLAY CLUB"
-      assert html =~ "JUEGOS DE MESA MODERNOS"
     end
   end
 
@@ -101,15 +100,23 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert dark_img_html =~ ~s(alt="")
     end
 
-    test "the footer's .pk-footer-left cluster renders no mark (D-A, 260823-snj)" do
+    test "the footer's .pk-footer-left cluster renders no mark and no brand_logo/1 call at all (this session's footer minimalism pass, 2026-09-09)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      footer_left_imgs =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-footer-left img")
+      doc = LazyHTML.from_document(html)
+      footer_left = LazyHTML.query(doc, ".pk-footer-left")
 
+      footer_left_imgs = LazyHTML.query(footer_left, "img")
       assert Enum.empty?(footer_left_imgs)
+
+      # Stronger than "no <img>" (which mark: false alone used to satisfy):
+      # the footer no longer calls brand_logo/1 at all, so it must render
+      # none of the wordmark markup either, not just no isologo.
+      footer_left_html = LazyHTML.to_html(footer_left)
+
+      refute footer_left_html =~ "pk-brand-wordmark",
+             "Expected .pk-footer-left to render no brand_logo/1 output at all — the footer " <>
+               "brand block was removed entirely, not just demoted to mark: false."
     end
 
     test "the header still renders exactly two <img> marks (header-only, not removed, 260823-snj)" do
@@ -123,7 +130,7 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert Enum.count(header_imgs) == 2
     end
 
-    test "forcing isologo? false renders no <img> and keeps the wordmark + default tagline" do
+    test "forcing isologo? false renders no <img> and keeps the wordmark" do
       html = render_component(&Layouts.brand_logo/1, %{isologo?: false})
 
       imgs =
@@ -133,7 +140,6 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       assert Enum.empty?(imgs)
       assert html =~ "PUKLLAY CLUB"
-      assert html =~ "JUEGOS DE MESA MODERNOS"
     end
 
     test "both mark paths satisfy File.exists?/1 (gate truthfulness)" do
@@ -142,40 +148,11 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  describe "brand_logo/1 mark attr (260823-snj)" do
-    test "mark: false renders no <img> but still renders the wordmark" do
-      html = render_component(&Layouts.brand_logo/1, %{mark: false})
-
-      imgs =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("img")
-
-      assert Enum.empty?(imgs)
-      assert html =~ "PUKLLAY CLUB"
-    end
-
-    test "mark: false composes with a passed tagline" do
-      html = render_component(&Layouts.brand_logo/1, %{mark: false, tagline: "Conectá jugando"})
-
-      assert html =~ "Conectá jugando"
-    end
-
-    test "mark: false emits pk-brand-quiet; the header default does not" do
-      quiet_html = render_component(&Layouts.brand_logo/1, %{mark: false})
-      default_html = render_component(&Layouts.brand_logo/1, %{})
-
-      assert quiet_html =~ "pk-brand-quiet"
-      refute default_html =~ "pk-brand-quiet"
-    end
-  end
-
   describe "app/1 header" do
-    test "shows the brand wordmark and tagline" do
+    test "shows the brand wordmark, one line, no tagline" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
       assert html =~ "PUKLLAY CLUB"
-      assert html =~ "JUEGOS DE MESA MODERNOS"
     end
 
     test "no longer contains the generated Phoenix marketing links" do
@@ -680,20 +657,6 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  # Guards the 2026-08-18 banned-Tailwind-pattern todo: text-[10px] is an
-  # arbitrary value and text-base-content/70 is an unmaintained holdover —
-  # both explicitly banned by ui-design-system in favor of the app's
-  # documented text-neutral muted-text convention.
-  describe "brand_logo/1 tagline tokens" do
-    test "renders the tagline through theme tokens, not banned arbitrary/opacity classes" do
-      html = render_component(&Layouts.brand_logo/1, %{})
-
-      refute html =~ "text-[10px]"
-      refute html =~ "text-base-content/70"
-      assert html =~ "text-neutral"
-    end
-  end
-
   describe "theme_toggle/1 accessible names and hit target" do
     test "each of the three buttons announces a distinct Spanish accessible name" do
       html = render_component(&Layouts.theme_toggle/1, %{})
@@ -764,67 +727,14 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  # Footer's left cluster reuses brand_logo/1 but must not repeat the
-  # header's brand subtitle (260821-umm). The footer overrides the tagline
-  # with the About hero's <h1> text, verbatim including the accent
-  # (Conectá, not Conecta — see the plan's Correction note).
-  describe "app/1 footer left cluster tagline (260821-umm)" do
-    test "the footer's left cluster renders the About hero tagline" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      footer_left_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-footer-left")
-        |> LazyHTML.to_html()
-
-      assert footer_left_html =~ "Conectá jugando"
-    end
-
-    test "the footer's left cluster does not repeat the header's brand subtitle" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      footer_left_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-footer-left")
-        |> LazyHTML.to_html()
-
-      refute footer_left_html =~ "JUEGOS DE MESA MODERNOS"
-    end
-
-    test "the header's brand lockup still renders its original subtitle, unchanged" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      header_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("#app-header")
-        |> LazyHTML.to_html()
-
-      assert header_html =~ "JUEGOS DE MESA MODERNOS"
-      refute header_html =~ "Conectá jugando"
-    end
-
-    test "brand_logo/1 called with no attrs still renders the header subtitle (default preserved)" do
-      html = render_component(&Layouts.brand_logo/1, %{})
-
-      assert html =~ "JUEGOS DE MESA MODERNOS"
-    end
-
-    test "the footer's left cluster renders neither theme mark filename (D-A, 260823-snj)" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      footer_left_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-footer-left")
-        |> LazyHTML.to_html()
-
-      refute footer_left_html =~ "isologo-light.png"
-      refute footer_left_html =~ "isologo-dark.png"
-    end
-  end
+  # G-01.5 footer minimalism pass (2026-09-09): the footer's left cluster
+  # used to reuse brand_logo/1 with a tagline override (260821-umm) — that
+  # whole mechanism (and this describe block's tests, which pinned its
+  # every detail: the override, the no-repeat-header-subtitle guarantee, the
+  # header's own subtitle staying put, the no-isologo-filename guard) is
+  # retired along with the footer brand block itself. The replacement
+  # coverage (no brand_logo output of any kind in .pk-footer-left) lives in
+  # the "brand_logo/1 theme-aware isologo pair" describe block above.
 
   describe "sumate_cta/1 (D-05 superseded, plan 01.1-08)" do
     test "renders the ClubLinks WhatsApp href with target=_blank and rel=noopener noreferrer" do

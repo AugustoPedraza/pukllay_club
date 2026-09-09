@@ -23,35 +23,24 @@ defmodule PukllayClubWeb.Layouts do
   @isologo? File.exists?(@isologo_light_path) and File.exists?(@isologo_dark_path)
 
   @doc """
-  Renders the PUKLLAY CLUB horizontal logo lockup (isologo + wordmark + tagline).
+  Renders the PUKLLAY CLUB horizontal logo lockup (isologo + wordmark), one line.
 
   Renders a theme-aware isologo pair — the dark-purple mark for light theme, the white mark for
   dark theme, toggled by the `dark:` custom variant — when both
   `priv/static/images/isologo-light.png` and `isologo-dark.png` exist at compile time, and
-  degrades to the wordmark + tagline lockup with no `<img>` at all when either is missing.
+  degrades to the wordmark alone with no `<img>` at all when either is missing.
 
-  The second-line tagline is overridable via the `tagline` attr — the header uses the default,
-  the footer overrides it with the About page's hero tagline so the two clusters don't repeat
-  the same copy (260821-umm).
-
-  **The mark is the header's (D-A, 260823-snj).** `brand_logo/1` renders on both the header and
-  the footer, and rendering the isologo pair unconditionally on both doubled the brand identity
-  on every page. The `mark` attr (default `true`) selects between the two: the header keeps the
-  default and renders the full pair, the footer passes `mark={false}` and renders the wordmark +
-  tagline lockup only, demoted to the muted colour tier via the `pk-brand-quiet` class (D-B).
-  Below 480px the footer's lockup does not render at all — the whole `.pk-footer-left` cluster is
-  hidden there (sketch 044 winner H, quick task 260902-fdm; superseding 260901-ty6's earlier
-  ≤480px wordmark SIZE exception, which is withdrawn).
+  **Header-only since this session's minimalism pass (2026-09-09).** Used to also render on the
+  footer (with `mark={false}` suppressing the isologo and a `tagline` attr overriding the
+  header's copy) — both the two-line name+tagline lockup and the footer's reuse of it are gone
+  (see `footer/1`'s own doc for the footer's replacement). With exactly one caller left, the
+  `mark`/`tagline`/`pk-brand-quiet` plumbing that only ever served the footer branch is removed
+  rather than kept dead. The wordmark itself is now a SINGLE line ("PUKLLAY CLUB", no tagline) —
+  previously a two-line vertical stack next to the nav's single-line links, which read as an
+  inconsistent rhythm and forced the wordmark to hide below `56rem`/896px (bare isologo only on
+  mobile/tablet, reported as "feels so empty"). One line is narrow enough to render at every
+  width instead — see `header_capacity_test.exs` for the re-derived row-capacity arithmetic.
   """
-  attr :tagline, :string, default: "JUEGOS DE MESA MODERNOS"
-
-  attr :mark, :boolean,
-    default: true,
-    doc:
-      "when false, renders the wordmark + tagline lockup with no isologo <img> at all, and " <>
-        "demotes the wordmark to the muted colour tier via pk-brand-quiet. The footer is the " <>
-        "one call site that passes false (D-A) — the header keeps the true default. Below " <>
-        "480px the footer's whole lockup is hidden in CSS (sketch 044), not resized."
 
   # `isologo?` is deliberately not a declared `attr` — it's a test-only seam. No production call
   # site ever passes it, so `assign_new/3` always falls through to the compile-time `@isologo?`
@@ -63,10 +52,7 @@ defmodule PukllayClubWeb.Layouts do
     assigns = assign_new(assigns, :isologo?, fn -> @isologo? end)
 
     ~H"""
-    <a
-      href="/"
-      class={["flex-initial flex w-fit items-center gap-2 min-h-11", !@mark && "pk-brand-quiet"]}
-    >
+    <a href="/" class="flex-initial flex w-fit items-center gap-2 min-h-11">
       <%!-- Sketch 045, D-10: the two isologo images below carry a pure
       styling-hook class (added to both, nowhere else in this file) — no
       attr, no branch, no new state. It exists so the About page's
@@ -77,26 +63,21 @@ defmodule PukllayClubWeb.Layouts do
       selector reaching through `.pk-nav-inner > .shrink-0 > a > img`,
       which breaks the moment this markup's wrapping changes. --%>
       <img
-        :if={@isologo? and @mark}
+        :if={@isologo?}
         src={~p"/images/isologo-light.png"}
         width="36"
         alt=""
         class="dark:hidden pk-brand-mark"
       />
       <img
-        :if={@isologo? and @mark}
+        :if={@isologo?}
         src={~p"/images/isologo-dark.png"}
         width="36"
         alt=""
         class="hidden dark:block pk-brand-mark"
       />
-      <span class="pk-brand-wordmark flex flex-col leading-none">
-        <span class="pk-brand-name font-display text-2xl uppercase tracking-wide">
-          PUKLLAY CLUB
-        </span>
-        <span class="font-sans text-xs uppercase tracking-widest text-neutral">
-          {@tagline}
-        </span>
+      <span class="pk-brand-wordmark pk-brand-name font-display text-2xl uppercase tracking-wide leading-none">
+        PUKLLAY CLUB
       </span>
     </a>
     """
@@ -934,13 +915,23 @@ defmodule PukllayClubWeb.Layouts do
   # linktr.ee menu), and the BGG attribution is "Powered by BGG" + the
   # BGG logo mark, rendered by `bgg_attribution/1` below.
   #
-  # The left cluster overrides brand_logo/1's tagline with the About page's
-  # hero tagline ("Conectá jugando", verbatim from about_live.ex) instead of
-  # the header's default subtitle, so the footer doesn't just repeat the
-  # header's copy (260821-umm). It also passes mark={false} (D-A, 260823-snj):
-  # the isologo belongs to the header alone — see brand_logo/1's @doc for the
-  # full contract. The footer's wordmark is demoted to the muted colour tier
-  # by the pk-brand-quiet class mark={false} adds, not by shrinking it (D-B).
+  # REMOVED (this session's header/footer minimalism pass, 2026-09-09): the
+  # left cluster used to open with `<.brand_logo tagline="Conectá jugando"
+  # mark={false} />` — a wordmark-only, muted-colour repeat of the header's
+  # own brand identity (D-A/D-B, 260823-snj). The header already establishes
+  # brand identity on every page; repeating it in the footer read as visual
+  # weight with no new information, and this footer specifically has an
+  # unusually long history of "feels overloaded"/"feels imbalanced" reports
+  # (debug sessions footer-desktop-overloaded, footer-desktop-imbalance,
+  # footer-theme-toggle-balance — all fixed by retuning SPACING, none by
+  # removing an ELEMENT) — see `.planning/debug/knowledge-base.md`'s own
+  # generalizable lesson from that history: "hierarchy has three channels —
+  # proximity, weight/contrast, colour — fixing one and declaring victory is
+  # how 'still overloaded' survives a correct spacing fix." Dropping the
+  # brand block is the first fix to this footer that touches WEIGHT (an
+  # element's own footprint) rather than only proximity. The left cluster is
+  # now just the links list — a single navigational concern, not two
+  # different KINDS of concern (identity + navigation) sharing one cluster.
   #
   # The right cluster's "Tema" label and the toggle it labels are wrapped
   # together in `.pk-footer-theme` (debug footer-desktop-overloaded). They are
@@ -1044,7 +1035,6 @@ defmodule PukllayClubWeb.Layouts do
     <footer class="pk-footer">
       <div class="pk-footer-row mx-auto w-full max-w-7xl pk-gutter">
         <div class="pk-footer-left">
-          <.brand_logo tagline="Conectá jugando" mark={false} />
           <ul class="pk-footer-links">
             <li><a href="/quienes-somos#faq">FAQ</a></li>
             <li><a href="/quienes-somos#contacto">Contacto</a></li>

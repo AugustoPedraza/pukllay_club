@@ -31,9 +31,22 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
   # that comes out. Retune `--pk-gutter`, the row gap or the pill's width and
   # these assertions move with it and name the new number.
   #
+  # UPDATE (2026-09-09, this session's header minimalism pass, G-01.5 gap
+  # closure follow-on): the brand lockup used to be a two-line "PUKLLAY CLUB" /
+  # tagline stack, hidden below 56rem/896px and revealed as a THIRD cliff
+  # alongside the two above. It is now a single line ("PUKLLAY CLUB", no
+  # tagline), unconditionally visible at every width — narrow enough (155.3px
+  # vs the old 250px) that there is no width left where the row cannot seat it.
+  # The wordmark-reveal cliff and its test are retired entirely, not just
+  # re-derived; every `required/1` sum below now uses the one-line width in
+  # place of what used to be a width-dependent isologo-alone-vs-full-lockup
+  # split.
+  #
   # Oracle type: derived (contract). The real proof is rendered geometry, which
-  # ExUnit cannot observe — it was a 47-width CDP sweep across four header
-  # shapes. These assertions pin the arithmetic that geometry depends on.
+  # ExUnit cannot observe — it was a live CDP sweep across dozens of widths on
+  # both the catalog and About headers (this session) plus the original
+  # 47-width sweep across four header shapes (search-pill-tablet-squeeze).
+  # These assertions pin the arithmetic that geometry depends on.
   use ExUnit.Case, async: true
 
   @css_path Path.expand("../../assets/css/app.css", __DIR__)
@@ -43,19 +56,19 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
 
   # ── The measured half of the model ────────────────────────────────────────
   #
-  # These five are RENDERED TEXT WIDTHS. They cannot be derived from CSS, so
+  # These four are RENDERED TEXT WIDTHS. They cannot be derived from CSS, so
   # they are recorded here with their provenance and fenced by the copy
   # tripwire below: change any of the strings they were measured against and
   # that test fails, demanding a re-measurement instead of silently invalidating
   # every number in this file.
   #
-  # Provenance: headless Chrome, --force-device-scale-factor=1, catalog header,
-  # max-content widths, debug search-pill-tablet-squeeze (2026-08-25). Each one
-  # is independently corroborated by a step in the measured `fixedDemand`
-  # function: 382.3 -> 596.3 is the wordmark's +214, and 596.3 -> 751.0 is the
-  # trigger label's +154.7.
-  @isologo_w 36.0
-  @brand_lockup_w 250.0
+  # Provenance: `brand_lockup_w` — headless Chrome, --force-device-scale-factor=1,
+  # catalog header, max-content width of `.pk-nav-inner > .shrink-0` (the
+  # isologo + gap-2 + one-line "PUKLLAY CLUB" wordmark), this session
+  # (2026-09-09), after the header's two-line-lockup-to-one-line change. The
+  # other three are unchanged from the original search-pill-tablet-squeeze
+  # sweep (2026-08-25) — the wordmark change touched only the brand cluster.
+  @brand_lockup_w 155.3
   @nav_links_w 166.3
   @trigger_icon_w 44.0
   @trigger_label_w 154.7
@@ -69,7 +82,6 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
     {"catalog nav links", @catalog_path, ["Inicio", "Quiénes Somos"]},
     {"about nav links", @about_path, ["Inicio", "Quiénes Somos"]},
     {"brand name", @layouts_path, ["PUKLLAY CLUB"]},
-    {"brand tagline", @layouts_path, ["JUEGOS DE MESA MODERNOS"]},
     {"category trigger label", @layouts_path, ["Explorar categorías"]}
   ]
 
@@ -78,9 +90,15 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
   defp extract_copy("catalog nav links", src), do: nav_link_labels(src)
   defp extract_copy("about nav links", src), do: nav_link_labels(src)
 
-  defp extract_copy("brand name", src), do: captures(src, ~r/<span class="pk-brand-name[^"]*">\s*([^<]*?)\s*<\/span>/)
-
-  defp extract_copy("brand tagline", src), do: captures(src, ~r/attr :tagline, :string, default: "([^"]*)"/)
+  # Order-independent on the class attribute (`pk-brand-wordmark pk-brand-name
+  # ...` since this session merged the two classes onto one element, not
+  # `pk-brand-name pk-brand-wordmark` or `pk-brand-name` alone) — matches
+  # `pk-brand-name` as a whole class token anywhere in the attribute rather
+  # than requiring it to open the string, so a future class-order edit cannot
+  # silently break this extractor the way it would a `class="pk-brand-name`
+  # anchored match.
+  defp extract_copy("brand name", src),
+    do: captures(src, ~r/<span class="[^"]*\bpk-brand-name\b[^"]*">\s*([^<]*?)\s*<\/span>/)
 
   defp extract_copy("category trigger label", src),
     do: captures(src, ~r/<span class="pk-cat-trigger-label">\s*([^<]*?)\s*<\/span>/)
@@ -144,9 +162,11 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
     Enum.sum(items) + length(items) * row_gap() + open_pill() + 2 * gutter()
   end
 
-  defp overlay_required, do: required([@isologo_w, @nav_links_w, @trigger_icon_w])
-
-  defp wordmark_required, do: required([@brand_lockup_w, @nav_links_w, @trigger_icon_w])
+  # The brand lockup is now a single unconditional width at every viewport —
+  # there is no more "isologo alone" state to compute separately (that was
+  # the pre-2026-09-09 wordmark-hidden case). Both the overlay-band ceiling
+  # and the trigger-label reveal use this same brand width.
+  defp content_required, do: required([@brand_lockup_w, @nav_links_w, @trigger_icon_w])
 
   defp label_required, do: required([@brand_lockup_w, @nav_links_w, @trigger_icon_w + @trigger_label_w])
 
@@ -188,7 +208,7 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
   end
 
   describe "the content the arithmetic was measured against has not drifted" do
-    # THE TRIPWIRE. Everything else in this file is a sum over five measured
+    # THE TRIPWIRE. Everything else in this file is a sum over four measured
     # text widths, and text widths are a function of copy. Silently keeping the
     # numbers while the strings change is how a derived breakpoint decays back
     # into a guessed one — which is this bug's entire recurrence path (KB branch
@@ -209,67 +229,21 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
 
              #{Enum.map_join(drifted, "\n", &("  - " <> &1))}
 
-             Every breakpoint in this suite is a sum over those widths (isologo #{@isologo_w},
-             brand lockup #{@brand_lockup_w}, nav links #{@nav_links_w}, trigger icon
-             #{@trigger_icon_w}, trigger label #{@trigger_label_w}), so changing the copy
-             invalidates all of them — silently, and only at viewport widths nobody is
-             looking at.
+             Every breakpoint in this suite is a sum over those widths (brand lockup
+             #{@brand_lockup_w}, nav links #{@nav_links_w}, trigger icon #{@trigger_icon_w},
+             trigger label #{@trigger_label_w}), so changing the copy invalidates all of
+             them — silently, and only at viewport widths nobody is looking at.
 
              RE-MEASURE, don't re-guess: render the header, read the max-content width of
-             `.pk-brand-wordmark`'s lockup, `.pk-nav-links` and `.pk-cat-trigger` (icon-only
-             and with its label), update the module attributes at the top of this file with
-             the new numbers, and let the assertions below tell you where the breakpoints
-             move to.
+             `.pk-nav-inner > .shrink-0` (the brand lockup), `.pk-nav-links` and
+             `.pk-cat-trigger` (icon-only and with its label), update the module
+             attributes at the top of this file with the new numbers, and let the
+             assertions below tell you where the breakpoints move to.
              """
     end
   end
 
   describe "the breakpoints are derived from the row's arithmetic" do
-    test "the wordmark is revealed only once the row can seat it plus a full pill" do
-      required = wordmark_required()
-      widths = reveal_widths(~r/\.pk-nav-inner \.pk-brand-wordmark\s*\{[^}]*display:\s*flex/)
-
-      assert widths != [],
-             "No `@media (min-width: ...)` block restores `display: flex` on " <>
-               "`.pk-nav-inner .pk-brand-wordmark`, so the wordmark never appears at any width."
-
-      for w <- widths do
-        assert w >= required,
-               """
-               The header wordmark is revealed at #{trunc(w)}px, but the row needs
-               #{Float.round(required, 1)}px to seat the brand lockup, the nav links, the
-               category trigger and a FULL #{trunc(open_pill())}px pill:
-
-                 #{@brand_lockup_w} + #{trunc(row_gap())} + #{@nav_links_w} + #{trunc(row_gap())} +
-                 #{@trigger_icon_w} + #{trunc(row_gap())} + #{trunc(open_pill())} + #{trunc(2 * gutter())}
-                 = #{Float.round(required, 1)}px
-
-               A reveal is a CLIFF, not a ramp: the wordmark's whole width lands on the row in
-               one pixel of viewport, and the open pill is the row's only yielder, so all of it
-               lands on the search box. Revealing early is what made 768px WORSE than 767px
-               (pill 280 -> 171.7).
-               """
-
-        assert w >= required + 16,
-               """
-               The header wordmark is revealed at #{trunc(w)}px, which clears the
-               #{Float.round(required, 1)}px requirement by only #{Float.round(w - required, 1)}px.
-               These sums are rendered TEXT widths measured in headless Chrome; a real device's
-               font metrics will not reproduce them to the pixel, and a reveal that lands short
-               does not degrade gracefully — it drops the whole revealed item onto the pill at
-               once. Keep at least 1rem of headroom.
-               """
-
-        assert w < required + 32,
-               """
-               The header wordmark is revealed at #{trunc(w)}px, which is more than 2rem above
-               the #{Float.round(required, 1)}px it needs. Headroom is deliberate; drift is not.
-               The wordmark is hidden on every viewport below this width, on every page — pushing
-               it out further costs the brand lockup on real tablets for nothing.
-               """
-      end
-    end
-
     test "the trigger label is revealed only once the row can seat it plus a full pill" do
       required = label_required()
       widths = reveal_widths(~r/\.pk-cat-trigger-label\s*\{[^}]*display:\s*inline/)
@@ -282,8 +256,8 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
                """
                `.pk-cat-trigger-label` is revealed at #{trunc(w)}px, but with the label showing
                the row needs #{Float.round(required, 1)}px to still seat a full
-               #{trunc(open_pill())}px pill (the wordmark requirement,
-               #{Float.round(wordmark_required(), 1)}px, plus the label's own #{@trigger_label_w}px).
+               #{trunc(open_pill())}px pill (brand lockup #{@brand_lockup_w} + nav links
+               #{@nav_links_w} + trigger icon+label #{@trigger_icon_w + @trigger_label_w}).
 
                This is the assertion that fails on the original defect. 50rem/800px was chosen by
                bisecting the CLOSED row's scrollWidth, which clears at 780px — but the OPEN row is
@@ -294,8 +268,9 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
         assert w >= required + 16,
                "`.pk-cat-trigger-label` is revealed at #{trunc(w)}px, only " <>
                  "#{Float.round(w - required, 1)}px above its #{Float.round(required, 1)}px " <>
-                 "requirement. Same reason as the wordmark: a cliff derived from measured text " <>
-                 "widths needs at least 1rem of headroom for real-device font metrics."
+                 "requirement. Same reason as the overlay band below: a cliff derived from " <>
+                 "measured text widths needs at least 1rem of headroom for real-device font " <>
+                 "metrics."
 
         assert w < required + 32,
                "`.pk-cat-trigger-label` is revealed at #{trunc(w)}px, more than 2rem above its " <>
@@ -308,25 +283,25 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
   describe "the overlay band covers exactly the widths that cannot fit" do
     test "the band's ceiling is the last width at which the row cannot seat a full pill" do
       {ceiling, _body} = overlay_band()
-      required = overlay_required()
+      required = content_required()
       expected = ceil(required) - 1
 
       assert ceiling == expected,
              """
-             The search overlay band ends at #{ceiling}px, but the row cannot seat the isologo,
-             the nav links, the icon-only trigger and a full #{trunc(open_pill())}px pill until
-             #{Float.round(required, 1)}px:
+             The search overlay band ends at #{ceiling}px, but the row cannot seat the brand
+             lockup, the nav links, the icon-only trigger and a full #{trunc(open_pill())}px
+             pill until #{Float.round(required, 1)}px:
 
-               #{@isologo_w} + #{trunc(row_gap())} + #{@nav_links_w} + #{trunc(row_gap())} +
+               #{@brand_lockup_w} + #{trunc(row_gap())} + #{@nav_links_w} + #{trunc(row_gap())} +
                #{@trigger_icon_w} + #{trunc(row_gap())} + #{trunc(open_pill())} + #{trunc(2 * gutter())}
                = #{Float.round(required, 1)}px
 
              So the band must end at #{expected}px — the last integer width that still cannot
-             fit. Ending it lower leaves the pill squeezed in the gap (at 481px it measured
-             98.7px, 5px of usable input); ending it higher overlays the row at widths where the
-             pill fits in flow, covering the category trigger for no reason.
+             fit. Ending it lower leaves the pill squeezed in the gap; ending it higher overlays
+             the row at widths where the pill fits in flow, covering the category trigger for no
+             reason.
 
-             Unlike the two reveals above, this boundary takes NO headroom on purpose. A reveal
+             Unlike the reveal above, this boundary takes NO headroom on purpose. A reveal
              is a cliff; this is a ramp — one pixel past it the in-flow pill is 280px, then 279,
              then 278, so a few px of content drift costs a few px of input width and nothing
              else.

@@ -1193,64 +1193,31 @@ body.pk-sheet-open {
   box-shadow: 0 1px 0 color-mix(in srgb, var(--color-base-content) 8%, transparent);
 }
 
-/* Header brand lockup. The header row (.pk-nav-inner) is a single-line,
-   auto-height flex row with align-items:center, so ANY text inside it that is
-   free to reflow silently becomes the row's height — and the .CatalogNav
-   ResizeObserver then publishes that height as --pk-header-h, shifting every
-   sticky-offset element on the page. Two rules make that structurally
-   impossible rather than merely unlikely:
+/* Header brand lockup (this session's minimalism pass, 2026-09-09 —
+   supersedes the two-line reveal-at-56rem mechanism this comment used to
+   document). The header row (.pk-nav-inner) is a single-line, auto-height
+   flex row with align-items:center, so ANY text inside it that is free to
+   reflow silently becomes the row's height — and the .CatalogNav
+   ResizeObserver then publishes that height as --pk-header-h, shifting
+   every sticky-offset element on the page (debug
+   header-height-wordmark-wrap). `nowrap` is still what makes that
+   structurally impossible; it is now the ONLY rule needed to do so.
 
-   1. nowrap, header-scoped. The lockup is a two-line composition by design
-      (name over tagline — flex-col + leading-none in brand_logo/1); a third
-      line is always a bug, never a narrow-viewport adaptation. Scoped to
-      .pk-nav-inner because the footer shares brand_logo/1 and has no
-      fixed-height contract of its own.
-   2. Hidden by default, revealed only at 56rem (see the HEADER ROW CAPACITY
-      block near the end of this file, which carries the full inventory and
-      both reveal sums). Seating the lockup, the nav links, the category
-      trigger AND a full 17.5rem pill needs 876.3px.
-
-      This used to read 48rem and "808.3px", and that sum was wrong by a
-      provable 68px (debug search-pill-tablet-squeeze): it counted three items
-      and two gaps, omitting `.pk-cat-trigger` (44px) and its 24px gap
-      entirely. Because the open pill is the row's only yielder, the whole
-      68px landed on the search box — the comment predicted a 239.7px pill at
-      768px and it measured 171.7px. Do not re-derive this number here; the
-      capacity block owns it and header_capacity_test.exs recomputes it.
-
-   The tagline is the widest line in the lockup (206px vs 111.3px for
-   "PUKLLAY CLUB"), so it is always the first thing to reflow — which is why
-   this failed as a growing header rather than as a clipped brand. */
+   The lockup used to be a two-line "PUKLLAY CLUB" / tagline stack, hidden
+   below 56rem/896px because at its 250px measured width it did not fit the
+   row below that point (see header_capacity_test.exs, and the retired
+   `wordmark reveal` comment near the end of this file for the full
+   arithmetic this superseded). `brand_logo/1` now renders ONE line, no
+   tagline — isologo (36px) + gap (8px) + "PUKLLAY CLUB" (111.3px) ≈ 155px,
+   comfortably narrower than every other item this row seats even on the
+   narrowest supported viewport (re-derived, not assumed —
+   header_capacity_test.exs's `required/1` sum covers this width at every
+   swept breakpoint). No `display: none` base rule and no reveal media
+   query are needed any more: the lockup is simply always visible, at every
+   width, which is also what closes the "mobile feels empty with just a
+   bare mark" report this session's gap closure addressed. */
 .pk-nav-inner .pk-brand-wordmark {
-  display: none;
   white-space: nowrap;
-}
-
-/* D-B (260823-snj): the footer's brand_logo/1 call passes mark={false},
-   which drops the isologo (D-A — the mark is the header's alone) and adds
-   pk-brand-quiet to the anchor. Demotion is by colour, not size: the
-   catalogue's measured type inventory is already at its 3-tier cap with
-   Bebas Neue/24px/400 as the single heading combo, so shrinking the footer
-   wordmark would add a 4th combo. Colour is the lever ui-design-system
-   names for this instead. Scoped override, matching the header-scoped rule
-   above — the two surfaces are meant to differ here.
-
-   UPDATE (quick task 260901-ty6): the ≤480px block below now makes a scoped
-   SIZE exception to "demotion is by colour, not size", for the mobile
-   footer's reported visual weight on this project's primary surface. The
-   reason given above still holds at ≥481px, where this rule is unchanged —
-   the exception is breakpoint-scoped, not a reversal of the decision. Its
-   cost — a Bebas Neue size that did not previously exist on the ≤480px
-   catalogue screen — is paid explicitly by re-measuring and updating the
-   ui-design-system inventory table, which is that table's own prescribed
-   process for adding a new type combo.
-
-   UPDATE (2026-09-02, quick task 260902-fdm): that ≤480px SIZE exception is
-   WITHDRAWN — sketch 044 winner H hides the entire footer lockup at ≤480px,
-   so there is no wordmark left to size there. D-B ("demotion is by colour,
-   not size") once again holds at every viewport width with no exception. */
-.pk-brand-quiet .pk-brand-name {
-  color: var(--color-neutral);
 }
 
 .pk-nav-links {
@@ -5198,84 +5165,76 @@ main.pk-boundary-collapse + .pk-footer {
   margin-top: 1.5rem;
 }
 
-/* ─── HEADER ROW CAPACITY: the two reveal breakpoints ─────────────────────
-   Both blocks below reveal a piece of header content, so both are CLIFFS in
-   the row's width demand — the revealed item's whole width appears in a single
-   pixel of viewport. `.pk-search-morph.is-open` is the row's only yielder
-   (`min-width: 0; flex-shrink: 1`, while the brand and nav links are pinned
-   `flex-shrink: 0` by debug header-height-wordmark-wrap and the trigger is
-   `flex: 0 0 auto`), so 100% of every cliff lands on the search box, with no
-   floor. Both widths are therefore DERIVED FROM THE ROW'S OWN ARITHMETIC,
-   never from the nearest convenient breakpoint.
+/* ─── HEADER ROW CAPACITY: the one remaining reveal breakpoint ────────────
+   Used to be TWO reveal cliffs (wordmark at 56rem, cat-trigger label at
+   66rem) — this session's minimalism pass (2026-09-09, G-01.5 header
+   simplification) made the brand lockup a single line and ALWAYS visible
+   (see the brand-lockup comment far above), which retired the wordmark
+   reveal entirely: there is no longer a "brand is 36px" state to switch out
+   of. Only the cat-trigger label reveal remains, and its own requirement
+   shrank along with the brand (see below).
+
+   The block below is a CLIFF in the row's width demand — the revealed
+   item's whole width appears in a single pixel of viewport.
+   `.pk-search-morph.is-open` is the row's only yielder (`min-width: 0;
+   flex-shrink: 1`, while the brand and nav links are pinned `flex-shrink: 0`
+   by debug header-height-wordmark-wrap and the trigger is `flex: 0 0 auto`),
+   so 100% of the cliff lands on the search box, with no floor. The width is
+   therefore DERIVED FROM THE ROW'S OWN ARITHMETIC, never from the nearest
+   convenient breakpoint.
 
    The shared inventory — max-content widths measured live on the catalog
-   header (debug search-pill-tablet-squeeze, CDP sweep over 24 widths):
+   header (debug search-pill-tablet-squeeze's original sweep for everything
+   except the brand lockup, re-measured 2026-09-09 for the one-line lockup):
 
-     isologo alone ........  36px   brand lockup (isologo+8+wordmark 206) 250px
-     nav links ............ 166.3px  cat-trigger, icon only .............. 44px
-     cat-trigger label .... 154.7px  open pill (17.5rem) ................ 280px
-     row gap (.pk-nav-inner) 24px    gutters (2 x --pk-gutter) ........... 64px
+     brand lockup (isologo+8+"PUKLLAY CLUB") 155.3px  nav links ...... 166.3px
+     cat-trigger, icon only ............ 44px  cat-trigger label .. 154.7px
+     open pill (17.5rem) ............... 280px  row gap (.pk-nav-inner) 24px
+     gutters (2 x --pk-gutter) .......... 64px
 
-   Each requirement is `content + gaps + gutters + a FULL 280px pill`, and the
+   Requirement is `content + gaps + gutters + a FULL 280px pill`, and the
    declared breakpoint is the smallest whole rem at least 1rem above it. That
-   1rem is deliberate headroom, not slack: both sums depend on RENDERED TEXT
-   (the tagline, the link labels, the trigger's Spanish label), so they drift
-   with copy and with font metrics headless Chrome does not reproduce exactly,
-   and a reveal that lands a few px short does not degrade gracefully — it
-   drops the entire revealed item's width onto the pill at once.
-   header_capacity_test.exs RECOMPUTES both sums from this stylesheet's own
+   1rem is deliberate headroom, not slack: the sum depends on RENDERED TEXT
+   (the link labels, the trigger's Spanish label), so it drifts with copy and
+   with font metrics headless Chrome does not reproduce exactly, and a reveal
+   that lands a few px short does not degrade gracefully — it drops the
+   entire revealed item's width onto the pill at once.
+   header_capacity_test.exs RECOMPUTES the sum from this stylesheet's own
    declared values instead of pinning these literals, and fails with the new
-   number if the copy moves.
+   number if the copy (or the brand lockup) moves again.
 
-   THREE separate blocks (this pair plus the detail-layout block above), never
-   merged even where a width would coincide: retuning the detail masthead must
-   not silently move the header, and the two reveals are independent decisions
-   with independent arithmetic. */
+   TWO separate blocks (this one plus the detail-layout block above), never
+   merged even where a width would coincide: retuning the detail masthead
+   must not silently move the header. */
 
-/* Wordmark reveal — the other half of the `.pk-nav-inner .pk-brand-wordmark`
-   base rule far above, positioned here (after every base rule it overrides)
-   for the ordering reason spelled out on the detail-layout block above.
+/* Cat-trigger label reveal. Requirement: 155.3 + 166.3 + 44 + 154.7 = 520.3,
+   + 3 row gaps (72) + a full pill (280) + 2 gutters (64) = 936.3px.
+   Declared: 60rem / 960px (23.7px headroom, inside the 16-32px band the
+   comment above requires).
 
-   Requirement: 250 + 24 + 166.3 + 24 + 44 + 24 + 280 + 64 = 876.3px.
-   Declared:    56rem / 896px.
+   WAS 66rem/1056px, sized against the OLD two-line brand lockup (250px) —
+   1056px cleared that 1031.0px requirement by only 25px, but with the new
+   155.3px lockup the true requirement dropped to 936.3px, leaving 1056px
+   119.7px of slack: well past this file's own "< required + 32px" ceiling
+   (drift, not deliberate headroom — a reveal breakpoint sized for a bigger
+   brand than the row actually carries hides the label later than it needs
+   to, for no reason). Re-derived to 60rem/960px against the new sum, not
+   left at the old literal.
 
-   WAS 48rem/768px, and that number was wrong by a provable 68px (debug
-   search-pill-tablet-squeeze). Its sum read `250 + 24 + 166.3 + 24 + 280 + 64
-   = 808.3` — three items and two gaps. It OMITTED `.pk-cat-trigger` entirely:
-   both the control's 44px and its 24px gap. The comment predicted the pill
-   would land at 239.7px at 768px; measured, it landed at 171.7px — short by
-   exactly the omitted 68px. The breakpoint was derived from a row inventory
-   that was missing a row item. 640px/sm was rejected when this rule was
-   written and stays rejected: it leaves the pill 111.7px, narrower than its
-   own 44px toggle plus 44px close control together. */
-@media (min-width: 56rem) {
-  .pk-nav-inner .pk-brand-wordmark {
-    display: flex;
-  }
-}
-
-/* Cat-trigger label reveal. Requirement: the wordmark sum above plus this
-   label's own 154.7px = 1031.0px. Declared: 66rem / 1056px.
-
-   WAS 50rem/800px, and that block's own comment recorded, without recognising
-   it, the reason it had to move. Verbatim: "measured live at 48rem/768px with
-   the label forced visible, the closed row overflowed the viewport by 10px
-   (documentElement.scrollWidth 763 vs clientWidth 753) and the open search
-   pill was squeezed down to a functionally useless 2px ... Measured the real
-   threshold by bisection: overflow persisted through 775px and cleared at
-   780px."
-
-   That is THIS defect, already seen once at 2px. But the bisection ran on the
-   CLOSED row's `scrollWidth` alone, and the open pill was never re-measured at
-   the breakpoint it moved to — so 50rem RELOCATED the cliff from 768px to
-   800px rather than removing it. Measured after that change: 202.7px of pill
-   at 799px, 49px at 800px — five pixels wider than the closed icon it morphed
-   from. One extra pixel of viewport destroyed the search box.
-
-   The open state is the binding constraint and it is 251px wider than the
-   closed one, so no amount of bisecting on the closed row can find this
-   number. Compute it, don't probe for it. */
-@media (min-width: 66rem) {
+   History predating the brand-lockup change, kept for provenance: WAS
+   50rem/800px before that, and that block's own comment recorded, without
+   recognising it, the reason it had to move. Verbatim: "measured live at
+   48rem/768px with the label forced visible, the closed row overflowed the
+   viewport by 10px (documentElement.scrollWidth 763 vs clientWidth 753) and
+   the open search pill was squeezed down to a functionally useless 2px ...
+   Measured the real threshold by bisection: overflow persisted through
+   775px and cleared at 780px." That bisection ran on the CLOSED row's
+   `scrollWidth` alone, and the open pill was never re-measured at the
+   breakpoint it moved to — so 50rem RELOCATED the cliff from 768px to 800px
+   rather than removing it. The open state is the binding constraint and it
+   is 251px wider than the closed one, so no amount of bisecting on the
+   closed row can find this number. Compute it, don't probe for it. */
+@media (min-width: 60rem) {
   .pk-cat-trigger-label {
     display: inline;
   }
@@ -5357,12 +5316,25 @@ main.pk-boundary-collapse + .pk-footer {
 }
 
 /* ─── HEADER ROW CAPACITY: the band that cannot fit at all ────────────────
-   The two reveal breakpoints above give the row a full 280px pill everywhere
-   the row can HOLD one. Below 662.3px it cannot, at any breakpoint setting:
+   The reveal breakpoint above gives the row a full 280px pill everywhere it
+   can HOLD one. Below 781.6px it cannot, at any breakpoint setting:
 
-     36 (isologo, wordmark already hidden here) + 24 + 166.3 (nav links)
-        + 24 + 44 (icon-only trigger) + 24 + 280 (open pill) + 64 (gutters)
-        = 662.3px
+     155.3 (one-line brand lockup, always visible — see the brand-lockup
+        comment far above) + 24 + 166.3 (nav links) + 24 + 44 (icon-only
+        trigger) + 24 + 280 (open pill) + 64 (gutters) = 781.6px
+
+   WAS 662.3px (isologo alone, 36px, since the old two-line brand lockup
+   was still hidden in this range). This session's minimalism pass made the
+   brand lockup a single line and unconditionally visible — see the
+   brand-lockup comment far above — so the row's fixed-content minimum in
+   this band grew from 36px to 155.3px, and the ceiling below which search
+   must overlay grew with it by the same 119.3px. This is a WIDER overlay
+   band, not a regression: the fixed items (brand + nav links + trigger)
+   were never at risk in isolation, since the ceiling is defined to include
+   a full in-flow pill on top of them; without that pill (which is always
+   absolutely positioned throughout this whole band), the fixed items alone
+   need only 477.6px (155.3 + 166.3 + 44 + 2 gaps 48 + 2 gutters 64) — well
+   under even the narrowest live width in this band.
 
    Nothing above may be retuned to fix that — the two obvious moves are both
    pre-blocked by resolved sessions. Letting the brand or the nav links shrink
@@ -5380,9 +5352,9 @@ main.pk-boundary-collapse + .pk-footer {
    (`.pk-nav-inner.is-search-open` far above), so what the pill covers reads as
    backgrounded rather than clipped.
 
-   662px, with NO headroom added, deliberately unlike the two reveals above.
-   Those are cliffs; this is a ramp. One pixel above this ceiling the in-flow
-   pill is 280px, then 279, then 278 — so if the copy drifts a few px, a few px
+   781px, with NO headroom added, deliberately unlike the reveal above. That
+   is a cliff; this is a ramp. One pixel above this ceiling the in-flow pill
+   is 280px, then 279, then 278 — so if the copy drifts a few px, a few px
    of input width is the entire cost. Adding headroom here would instead push
    the overlay into widths that fit, covering the category glyph for no reason.
 
@@ -5397,7 +5369,7 @@ main.pk-boundary-collapse + .pk-footer {
    `var(--pk-gutter)` in both states by declaration, so the closed-vs-open
    right-edge invariant holds by construction instead of by compensation.
 
-   `max-width: 662px` OVERLAPS the <=480px block below rather than starting at
+   `max-width: 781px` OVERLAPS the <=480px block below rather than starting at
    `min-width: 481px`, and that is the debug search-right-align-mobile lesson
    applied: a `min-width: N+1` complement leaves a sub-pixel band (480.5px)
    matching NEITHER rule, and this particular gap would render the squeezed
@@ -5408,7 +5380,7 @@ main.pk-boundary-collapse + .pk-footer {
    (0-2-0) it would silently outrank that block on the catalog page and freeze
    the mobile overlay at these values — a rule two thousand lines away quietly
    deciding what phones get. */
-@media (max-width: 662px) {
+@media (max-width: 781px) {
   /* Scoped to headers carrying `.pk-nav-links`, which is the catalog index in
      both its filter states and nothing else. NOT unscoped: Detalle's
      `.pk-nav-crumb` is `flex: 1`, so taking the morph out of flow there would
