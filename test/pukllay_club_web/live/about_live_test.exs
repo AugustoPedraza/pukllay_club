@@ -1235,8 +1235,15 @@ defmodule PukllayClubWeb.AboutLiveTest do
       # padding-block so the whitespace amount is a constant, never a
       # function of the viewer's screen height. See the CSS comment above
       # this rule for the full measurement/rationale.
-      assert rule_body =~ ~r/padding-block\s*:\s*8rem\s*;/,
-             "Expected #cierre to declare a fixed padding-block: 8rem at >=640px, not a viewport-height-relative min-height."
+      #
+      # 01.5-09 (G-01.5-6): retuned 8rem -> 5rem. This is the cheap guard
+      # that the MECHANISM stays a fixed padding rather than a
+      # height-relative floor (the refutes below); the bare value itself is
+      # expected to move whenever the value is deliberately retuned — see
+      # app.css's comment above this rule for the run-unit rationale and the
+      # recorded 6rem runner-up.
+      assert rule_body =~ ~r/padding-block\s*:\s*5rem\s*;/,
+             "Expected #cierre to declare a fixed padding-block: 5rem at >=640px, not a viewport-height-relative min-height."
 
       refute rule_body =~ ~r/min-height/,
              "#cierre must not reintroduce a min-height floor at this width — that mechanism is exactly what produced the huge-whitespace regression this test guards against."
