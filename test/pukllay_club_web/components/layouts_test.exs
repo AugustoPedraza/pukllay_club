@@ -750,31 +750,43 @@ defmodule PukllayClubWeb.LayoutsTest do
     # CoreComponents.button/1's "secondary" variant, applied directly since
     # button/1's :rest global attr list doesn't carry target/rel through.
     #
-    # G-01.5-1/G-01.5-3 item 5 (plan 01.5-05): the outline/primary classes
-    # stay, but the size now comes from daisyUI's btn-lg size step composed
-    # with the app's 44px touch floor (min-h-11), not a bare one-axis height
-    # utility. daisyUI couples a size step's height/padding-inline/font-size
-    # together; a bare height utility moves only the one axis it names,
-    # which is exactly what collapsed this button's padding ratio to 1.03:1
-    # (every other button in the app sits at 1.78-2.00:1). The old min-h-12
-    # must be gone, not merely outnumbered — leaving it alongside btn-lg
-    # would have the two compete on height and reproduce the same
-    # off-ratio geometry this composition fixes.
-    test "carries the outline-at-rest button classes and the btn-lg size step composed with the touch floor" do
+    # G-01.5-4 (plan 01.5-10): the outline/primary classes stay, but the
+    # size now comes from ONE class — pk-sumate-btn (app.css) — that owns
+    # every size axis (height, inline padding, font-size, radius) per sketch
+    # 051's approved design source. daisyUI's btn-lg size step and the app's
+    # min-h-11 touch-floor utility (plan 01.5-05's fix) are BOTH gone: this
+    # plan's own diagnosis (.planning/debug/G-01.5-4-hero-cierre-composition-
+    # balance.md) found that composition correctly fixed a real proportion
+    # defect (1.03:1 -> 1.74:1) but never matched the sketch the composition
+    # was actually approved against (2.15:1, pill radius, 28px padding,
+    # 16px font, 48px height) — restoring that fidelity means one class now
+    # owns the whole axis, so leaving btn-lg or min-h-11 alongside
+    # pk-sumate-btn would recreate the exact competing-declaration failure
+    # this same component has already been fixed for once. The 44px touch
+    # floor is met by pk-sumate-btn's own 48px min-height and is verified by
+    # MEASURED height in test/visual/about_geometry.mjs, not by a utility
+    # class name here.
+    test "carries the outline-at-rest button classes and the single pk-sumate-btn geometry class" do
       html = render_component(&Layouts.sumate_cta/1, %{})
 
       assert html =~ "btn-outline"
       assert html =~ "btn-primary"
-      assert html =~ "btn-lg"
-      assert html =~ "min-h-11"
+      assert html =~ "pk-sumate-btn"
 
-      refute html =~ "min-h-12",
-             "min-h-12 is the orphaned one-axis height utility this plan replaces. daisyUI " <>
-               "couples a size step's height/padding-inline/font-size together — leaving a bare " <>
-               "height utility alongside btn-lg makes the two compete on height and silently " <>
-               "reintroduces the 1.03:1 squat-label-box ratio (G-01.5-1/G-01.5-3 item 5) that " <>
-               "btn-lg + min-h-11 was chosen specifically to fix."
+      refute html =~ "btn-lg",
+             "btn-lg is the daisyUI size step plan 01.5-10 retires. It couples a size step's " <>
+               "own height/padding-inline/font-size to values sketch 051 never specified (42px/" <>
+               "16px/18px in this app's theme) — leaving it alongside pk-sumate-btn makes the " <>
+               "two compete on every one of those axes and silently reintroduces a geometry the " <>
+               "design source was never approved with."
 
+      refute html =~ "min-h-11",
+             "min-h-11 is the one-axis touch-floor utility plan 01.5-05 added and plan 01.5-10 " <>
+               "retires. pk-sumate-btn's own 48px min-height already clears the 44px floor as a " <>
+               "measured property (see test/visual/about_geometry.mjs) — leaving this utility " <>
+               "alongside it would have two declarations compete on the same height axis again."
+
+      refute html =~ "min-h-12"
       refute html =~ "btn-sm"
     end
 
@@ -782,8 +794,7 @@ defmodule PukllayClubWeb.LayoutsTest do
       html = render_component(&Layouts.sumate_cta/1, %{class: "w-full"})
 
       assert html =~ "w-full"
-      assert html =~ "btn-lg"
-      assert html =~ "min-h-11"
+      assert html =~ "pk-sumate-btn"
     end
 
     test "is now public (no longer a private header-only function)" do
