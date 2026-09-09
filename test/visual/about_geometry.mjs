@@ -359,7 +359,20 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
             })()
           : null;
 
-        return { bands, cierre, cierreInner, footer };
+        // Plan 01.5-09 (G-01.5-5 gap closure): computed backgrounds of the
+        // LAST section.pk-band and of the footer — what
+        // checkBottomBoundaryBudget below uses to decide whether the flat
+        // pixel budget or the same-surface CONTACT rule applies. Read via
+        // getComputedStyle so the comparison is on the resolved colour
+        // (e.g. "rgb(243, 236, 250)"), not the declared CSS value, which is
+        // what actually determines whether the eye reads a boundary here.
+        const lastBandEl = nodes.length > 0 ? nodes[nodes.length - 1] : null;
+        const lastBandBackground = lastBandEl
+          ? getComputedStyle(lastBandEl).backgroundColor
+          : null;
+        const footerBackground = footerEl ? getComputedStyle(footerEl).backgroundColor : null;
+
+        return { bands, cierre, cierreInner, footer, lastBandBackground, footerBackground };
       })())
     `,
     returnByValue: true,
@@ -593,18 +606,23 @@ function checkCierreDesktopGapBudget(measured, ctx) {
 const BOTTOM_BOUNDARY_BUDGET_MOBILE_PX = 18 // 16px target + 2px rounding headroom, <=480px
 const BOTTOM_BOUNDARY_BUDGET_PX = 26 // 24px target + 2px rounding headroom, >=481px
 
-// The direct oracle for Task 1's opt-in: measures the distance from the
-// LAST section.pk-band's bottom edge to <footer>'s top edge and asserts it
-// is at or under the budget above, at every swept width — including the
-// 481-639px middle band (560, added to VIEWPORTS this plan) that neither of
-// this phase's media queries governs, which is exactly where a
-// regime-boundary bug would hide. Independent of viewport HEIGHT (the
-// boundary_collapse/bottom_collapse mechanism only touches <main>'s own
-// padding and .pk-footer's own margin, neither of which is height-
-// dependent), so this runs — and should pass — at every (width, height)
-// combination the sweep produces, not just one.
+// Plan 01.5-09 (G-01.5-5 gap closure). The flat pixel budget above passed
+// on the reported defect: 24.00px satisfied `<= 26`, because the budget was
+// a correctly-implemented statement of a target that contradicted the UAT
+// truth sitting next to it — the real property is not "small enough gap"
+// but "no visible seam between two surfaces the eye reads as one". This
+// check is now surface-conditional: when the last band's computed
+// background equals the footer's computed background (the About page,
+// where #cierre's tint and .pk-footer paint the identical token), it
+// requires CONTACT within the same tolerance every other band-to-band
+// boundary on the page already uses (checkAdjacentBandContact's own
+// CONTACT_TOLERANCE_PX) — a same-surface sandwich is only invisible at
+// zero. When the backgrounds differ (the catalog index, the detail page —
+// where the last in-flow element never paints a background at all), the
+// flat budget behaviour is unchanged, so this check still means something
+// on a future page that has its own, different surface relationship.
 function checkBottomBoundaryBudget(measured, ctx) {
-  const { bands, footer } = measured
+  const { bands, footer, lastBandBackground, footerBackground } = measured
 
   if (!footer || bands.length === 0) {
     return [
@@ -615,13 +633,29 @@ function checkBottomBoundaryBudget(measured, ctx) {
 
   const lastBand = bands[bands.length - 1]
   const distance = footer.y - (lastBand.rect.y + lastBand.rect.height)
+  const surfacesMatch =
+    lastBandBackground != null && lastBandBackground === footerBackground
+
+  if (surfacesMatch) {
+    if (Math.abs(distance) > CONTACT_TOLERANCE_PX) {
+      return [
+        `bottom boundary budget: ${bandLabel(lastBand)} and <footer> paint the identical ` +
+          `computed background (${lastBandBackground}) — expected contact (within ` +
+          `${CONTACT_TOLERANCE_PX}px, the same rule every other boundary on this page follows), ` +
+          `measured a ${distance.toFixed(2)}px gap at [${ctx.viewport}px x ${ctx.height}px, ` +
+          `${ctx.theme}] — a same-token sandwich reads as a visible stripe at any non-zero size.`,
+      ]
+    }
+    return []
+  }
+
   const budget = ctx.viewport <= 480 ? BOTTOM_BOUNDARY_BUDGET_MOBILE_PX : BOTTOM_BOUNDARY_BUDGET_PX
 
   if (distance > budget) {
     return [
       `bottom boundary budget: measured ${distance.toFixed(2)}px between ` +
-        `${bandLabel(lastBand)} and <footer>, expected <= ${budget}px at ` +
-        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+        `${bandLabel(lastBand)} (${lastBandBackground}) and <footer> (${footerBackground}), ` +
+        `expected <= ${budget}px at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
     ]
   }
 

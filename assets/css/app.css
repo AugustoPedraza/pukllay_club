@@ -5165,6 +5165,43 @@ main.pk-boundary-collapse + .pk-footer {
   margin-top: 1.5rem;
 }
 
+/* G-01.5-5 gap closure (plan 01.5-09, 2026-09-09 —
+   .planning/debug/G-01.5-5-cierre-footer-gap.md). The shared boundary
+   decision immediately above is measured CORRECT and INVISIBLE everywhere
+   else it applies: the catalog index and the game detail page carry this
+   exact 24px (>=481px) / 16px (<=480px) margin today and have shipped it
+   unreported for two phases, because the last in-flow child of their
+   <main> never paints a background (a transparent space-y-4 wrapper). The
+   About page is the one caller whose last in-flow element — #cierre,
+   D-14's tint — paints the SAME token .pk-footer paints, so the identical
+   budget renders here as a visible full-bleed stripe of a third colour
+   instead of as breathing room. A live differential (footer's own
+   margin-top zeroed alone, geometry otherwise untouched) proved the
+   footer's existing `border-top` hairline plus its own `.pk-footer-row`
+   inner padding already mark and inset this one boundary with no external
+   gap needed at all — matching every OTHER band-to-band boundary on this
+   page, which measure exactly 0.00px (plan 01.5-06).
+
+   D-14's tint on #cierre is deliberately NOT the lever: stripping it would
+   leave every pixel of this gap in place (measured, reversible) and would
+   also delete a closed design decision recorded elsewhere in this file.
+   Scoped instead to the one page where the surface-equality condition
+   holds, via the same `body:has(...)` presence-based page-scoping idiom
+   already established in this file (see the `#about-hero[data-morph-armed]`
+   rule far above) — `#cierre` exists on no other route, so `:has(#cierre)`
+   only ever matches here. `:has()` contributes ID-level specificity to the
+   compound selector, which is what lets this ONE declaration outbid BOTH
+   shared class-only rules above (the unmediated one and its
+   `@media (max-width: 480px)` sibling) regardless of source order or media
+   nesting — no `!important`, and no edit to either shared rule or its
+   selector ordering. Placed here, outside any media block, because the
+   same-token sandwich this rule corrects is unconditional across both
+   width regimes. */
+body:has(#cierre) main.pk-bottom-collapse + .pk-footer,
+body:has(#cierre) main.pk-boundary-collapse + .pk-footer {
+  margin-top: 0;
+}
+
 /* ─── HEADER ROW CAPACITY: the one remaining reveal breakpoint ────────────
    Used to be TWO reveal cliffs (wordmark at 56rem, cat-trigger label at
    66rem) — this session's minimalism pass (2026-09-09, G-01.5 header
