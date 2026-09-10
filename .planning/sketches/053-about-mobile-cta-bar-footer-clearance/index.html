@@ -173,9 +173,13 @@
     flex: none;
   }
 
-  .beyond-footer {
-    /* the empty page canvas below the real footer, on a short/tall-viewport load */
-    height: 90px;
+  .footer-clearance {
+    /* Reserved space below the footer, sized to the bar's own height — this is what keeps
+       "Powered by BGG" clear of an ALWAYS-VISIBLE bar, replacing the earlier auto-hide-at-footer
+       approach. Mirrors the real production mechanism (body:has(.pk-about-cta-bar) document-end
+       padding) rather than a generic "empty canvas below a short page" filler — the real
+       /quienes-somos page is proven taller than the viewport at every width (G-01.5-9), so this
+       is the ONLY extra space that belongs below its footer. */
     background: var(--color-bg);
   }
 
@@ -198,12 +202,16 @@
   .sumate:active { filter: brightness(1.08); }
 
   /* =========================================================
-     Winner — Hero-Synced Full-Width Bar (D)
+     Winner — Hero-Synced Full-Width Bar (D, refined)
      Appears once the hero's own Sumate scrolls out of view (the
      same "docked" scroll-trigger mechanism the isologo/header morph
      already uses on this page), disappears on scroll-up past the
-     hero, and hides again near the footer so it never covers
-     "Powered by BGG" — the defect this sketch exists to close.
+     hero — and then STAYS visible for the rest of the scroll,
+     including at the real page bottom. It never covers "Powered by
+     BGG" because the footer gets reserved clearance sized to the
+     bar's own height (.footer-clearance, live-measured), the same
+     shape as the real production body:has(.pk-about-cta-bar)
+     mechanism — not because the bar disappears.
      ========================================================= */
   .bar-d {
     position: absolute;
@@ -236,25 +244,24 @@
 </style>
 
 <div class="intro">
-  <b>Winner — Hero-Synced Full-Width Bar.</b> Reuses the page's own <b>docked-state</b> scroll
-  trigger — the same boolean already driving the isologo-into-header morph and the hero eyebrow's
-  hide/reveal (D-03) — instead of a footer-proximity check. The bar is <b>not present at all</b>
-  while the hero's own "Sumate" button is still on screen. The instant that button scrolls out of
-  view, the bar slides in from the bottom (full width, solid). Scroll back up past the hero and it
-  slides back out — symmetric with how the header morph itself reverses.
+  <b>Winner — Hero-Synced Full-Width Bar, refined: always visible once shown.</b> Reuses the
+  page's own <b>docked-state</b> scroll trigger — the same boolean already driving the
+  isologo-into-header morph and the hero eyebrow's hide/reveal (D-03) — instead of a
+  footer-proximity check. The bar is <b>not present at all</b> while the hero's own "Sumate"
+  button is still on screen. The instant that button scrolls out of view, the bar slides in from
+  the bottom (full width, solid) and <b>stays there for the rest of the scroll</b> — including at
+  the real page bottom. Scroll back up past the hero and it slides back out.
   <br><br>
-  <b>Footer clearance, made exact:</b> the footer-hide trigger no longer waits until the footer is
-  already peeking out — it fires the instant the footer's top edge reaches the bar's own height
-  from the bottom of the screen (an <code>IntersectionObserver</code> with a negative
-  <code>rootMargin</code> equal to the bar's live-measured height), so the slide-out animation
-  finishes clearing the space <i>before</i> the footer's "Powered by BGG" line would ever be
-  reached — not merely "not overlapping" but the footer fully uncovered, with room to spare, the
-  moment it comes into view.
+  <b>Footer clearance without hiding:</b> the bar no longer disappears near the footer. Instead
+  the page reserves real space below the footer, sized to the bar's own live-measured height
+  (mirroring the real production <code>body:has(.pk-about-cta-bar)</code> mechanism) — so
+  "Powered by BGG" always has clearance above the bottom edge, and the bar keeps doing its job the
+  whole way down.
 </div>
 
 <div class="frames">
   <div class="frame-col">
-    <div class="frame-label">Scroll down past the hero — bar slides in. Scroll back to top — bar slides back out. Scroll to the footer — bar clears out of the way with room to spare.</div>
+    <div class="frame-label">Scroll down past the hero — bar slides in and stays. Scroll to the very bottom — bar is still visible, footer has room to breathe above it. Scroll back to top — bar slides back out.</div>
     <div class="phone">
       <div class="status-chip" data-status="d">bar: hidden (hero visible)</div>
       <div class="scroller" data-scroller="d">
@@ -271,11 +278,11 @@
           <a class="cierre-btn" href="#" onclick="return false">Sumate</a>
           <div class="cierre-sig">PUKLLAY CLUB · SAN SALVADOR DE JUJUY, ARGENTINA</div>
         </div>
-        <div class="about-footer" data-footer-sentinel="d">
+        <div class="about-footer">
           <div class="bgg-line"><span class="swatch"></span>Powered by BGG</div>
           <div class="footer-flag" id="footer-flag-d">FOOTER LIBRE ✓</div>
         </div>
-        <div class="beyond-footer"></div>
+        <div class="footer-clearance" data-clearance="d"></div>
       </div>
       <div class="bar-d" data-bar="d">
         <a class="sumate" href="#" onclick="return false">Sumate</a>
@@ -289,12 +296,11 @@
   <ul>
     <li>Scroll down slowly from the very top: the bar should stay absent for the whole hero, then
       slide in cleanly the moment the hero's own "Sumate" scrolls past the top of the frame.</li>
-    <li>Scroll all the way to the bottom: watch the green "FOOTER LIBRE ✓" badge — it lights up the
-      instant the footer starts entering view, confirming the bar has already cleared out before
-      any part of the footer could be covered (not just "not overlapping right now").</li>
+    <li>Scroll all the way to the bottom: the bar stays visible the whole time — no gap, no
+      disappearing. Watch the green "FOOTER LIBRE ✓" badge confirm the footer still has clearance
+      above the bar even at the true scroll end.</li>
     <li>Scroll back up from the bottom, then past the hero again — the bar should reappear and
-      disappear symmetrically in both directions, matching the real header-morph's own reversible
-      behavior.</li>
+      disappear only at the hero threshold, not anywhere near the footer.</li>
   </ul>
 </div>
 
@@ -325,46 +331,31 @@ function setTheme(v) {
   } catch (e) {}
 })();
 
-/* ---- Dual-trigger: visible once past the hero's own Sumate, hidden again near the footer.
-   The footer trigger uses a negative bottom rootMargin equal to the bar's own live height, so
-   "near footer" fires exactly when the footer's top edge reaches the strip the bar occupies —
-   the hide animation is already running (and finishes) before the footer could ever be covered,
-   not merely reacting after it's already visible underneath the bar. ---- */
+/* ---- Single trigger: visible once past the hero's own Sumate, then stays visible for the rest
+   of the scroll (no footer auto-hide). Clearance below the footer is reserved space, not a
+   disappearing act — sized live to the bar's own rendered height, the same shape as the real
+   production body:has(.pk-about-cta-bar) document-end padding. ---- */
 (function () {
   const scroller = document.querySelector('[data-scroller="d"]');
   const heroSentinel = document.querySelector('[data-hero-sumate="d"]');
-  const footerSentinel = document.querySelector('[data-footer-sentinel="d"]');
   const bar = document.querySelector('[data-bar="d"]');
   const status = document.querySelector('[data-status="d"]');
+  const clearance = document.querySelector('[data-clearance="d"]');
   const footerFlag = document.getElementById('footer-flag-d');
-  let heroPassed = false;
-  let nearFooter = false;
 
-  function render() {
-    const visible = heroPassed && !nearFooter;
-    bar.classList.toggle('is-visible', visible);
-    status.textContent = visible
-      ? 'bar: visible'
-      : (nearFooter ? 'bar: hidden (near footer)' : 'bar: hidden (hero visible)');
-  }
+  // Bar height is measured live (not hard-coded) so the reserved clearance always matches the
+  // real rendered bar, even if padding/button size ever changes.
+  const barHeight = Math.ceil(bar.getBoundingClientRect().height);
+  clearance.style.height = barHeight + 'px';
+  footerFlag.classList.add('show');
 
   new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       // hero's Sumate has scrolled OUT of view once it's no longer intersecting
-      heroPassed = !entry.isIntersecting;
-      render();
+      const visible = !entry.isIntersecting;
+      bar.classList.toggle('is-visible', visible);
+      status.textContent = visible ? 'bar: visible' : 'bar: hidden (hero visible)';
     });
   }, { root: scroller, threshold: 0 }).observe(heroSentinel);
-
-  // Bar height is measured live (not hard-coded) so the clearance always matches the real
-  // rendered bar, even if padding/button size ever changes.
-  const barHeight = Math.ceil(bar.getBoundingClientRect().height);
-  new IntersectionObserver(function (entries) {
-    entries.forEach(function (entry) {
-      nearFooter = entry.isIntersecting;
-      footerFlag.classList.toggle('show', entry.isIntersecting);
-      render();
-    });
-  }, { root: scroller, rootMargin: `0px 0px -${barHeight}px 0px`, threshold: 0 }).observe(footerSentinel);
 })();
 </script>
