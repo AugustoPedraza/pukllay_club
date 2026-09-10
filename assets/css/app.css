@@ -135,22 +135,42 @@
     #7E4CA5 on white ......... 6.06:1  AA   -> safe for links / secondary text
     #3D096D vs #7E4CA5 ....... 2.38:1  FAIL -> NEVER adjacent as surfaces or
                                                as two levels of one hierarchy
-    #3D096D on dark bg ....... FAIL         -> dark mode lifts primary to L=66% */
+    #3D096D on dark bg ....... FAIL         -> dark mode does NOT reuse the
+                                               light primary; it ships its own
+                                               deep, saturated magenta-violet
+                                               with white ink (see sketch 054
+                                               provenance comment below) */
+/* Sketch 054 (2026-09-10), winner "A (Lifted Ladder) + W2 (Deep Jewel)".
+   Base ladder raised (bg/surface/surface-2 all lifted together, same
+   hue/chroma relationship); primary shifted deeper and more saturated
+   (270°->282° hue, higher saturation) with white ink, mirroring the light
+   theme's own deep-primary/white-ink convention. Only the dark theme was
+   revised — light mode below is untouched.
+
+   MEASURED CONSTRAINTS (WCAG 2.1, verified via contrast-check.mjs — do not
+   "improve" these by eye):
+     text (#F3ECFA) on bg (#2F154E) ............. 13.59:1
+     muted (#B8A6CC) on bg (#2F154E) .............  7.00:1
+     text (#F3ECFA) on surface (#391B62) ......... 12.07:1
+     primary-content (#FFFFFF) on primary (#8C2BB6) 6.70:1
+
+   See .planning/sketches/054-dark-mode-color-composition/README.md for the
+   full round-1/round-2 hypothesis set and decision record. */
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "dark";
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: #170A26;
-  --color-base-200: #22103A;
-  --color-base-300: #2F1750;
+  --color-base-100: #2F154E;
+  --color-base-200: #391B62;
+  --color-base-300: #462278;
   --color-base-content: #F3ECFA;
-  --color-primary: #A97FD1;
-  --color-primary-content: #170A26;
-  --color-secondary: #7E4CA5;
+  --color-primary: #8C2BB6;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #642C77;
   --color-secondary-content: #FFFFFF;
-  --color-accent: #3D2A56;
-  --color-accent-content: #E4D3F5;
+  --color-accent: #3A1F47;
+  --color-accent-content: #EBD7F4;
   --color-neutral: #B8A6CC;
   --color-neutral-content: #170A26;
   --color-info: #7C9AD1;
@@ -3550,7 +3570,7 @@ body:has(#about-hero.is-docked) .pk-about-cta-bar {
 
    Started from invert(0.92) hue-rotate(180deg) brightness(0.95)
    contrast(0.9) (the plan's own suggested starting point) and tuned
-   against this theme's real --color-base-200 (#22103A, the Contacto
+   against this theme's real --color-base-200 (#391B62, the Contacto
    card's own surface — see the daisyui-theme dark block above) rather
    than an imagined black. The starting point read slightly too washed out
    and slightly too warm against that surface at brightness(0.95); dropping
@@ -4833,7 +4853,7 @@ body.pk-cta-parked {
    bar ("give a bar of stacked controls a background one step
    darker/tinted than the controls sitting on it, not the same token").
    var(--color-base-200) is that one step in BOTH themes (light #FFFFFF
-   -> #F3ECFA; dark #170A26 -> #22103A), so the two bars now share one
+   -> #F3ECFA; dark #2F154E -> #391B62), so the two bars now share one
    decision instead of two coincidences.
 
    The border-bottom does NOT stay on var(--color-base-300) — measured
@@ -5226,8 +5246,8 @@ body.pk-cta-parked {
    by construction and illegible in the other — same asymmetry sketch 033
    already paid for on the backdrop itself, opposite side of it this time.
 
-   The numbers: dark-theme `--color-base-200` (#22103A) against
-   `--pk-shadow-color` (#140822) measures ≈1.1:1 — the reported defect.
+   The numbers: dark-theme `--color-base-200` (#391B62) against
+   `--pk-shadow-color` (#140822) measures ≈1.39:1 — the reported defect.
    Light-theme `--color-base-200` (#F3ECFA) against the same backdrop
    measures >10:1 — already correct, already signed off. What ships below,
    dark-theme `--color-neutral` (#B8A6CC) against the same backdrop,
