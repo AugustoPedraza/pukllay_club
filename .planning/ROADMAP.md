@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 13/14 plans executed (4 original + 4 gap-closure round 1 + 2 gap-closure round 2, all 10 executed; 4 gap-closure round 3 pending)
+**Plans:** 14/14 plans executed (4 original + 4 gap-closure round 1 + 2 gap-closure round 2, all 10 executed; 4 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -223,7 +223,7 @@ and `about_live_test.exs`)*
 **Gap closure round 3 — Wave 4** *(blocked on 01.5-12/01.5-13 — shared files, and its document-end
 clearance is body padding that interacts with whatever 01.5-12's checkpoint lands on the body)*
 
-- [ ] 01.5-14-PLAN.md — Mobile CTA rebuilt as sketch 052 winner B: the bar's chrome dropped for a content-sized solid pill floating with elevation, its document-end clearance re-derived from the pill's real footprint, the flush-bar clearance oracle rewritten, and plan 01.5-10's one-round-old contrast guard superseded with its evidence preserved (G-01.5-11)
+- [x] 01.5-14-PLAN.md — Mobile CTA rebuilt as sketch 052 winner B: the bar's chrome dropped for a content-sized solid pill floating with elevation, its document-end clearance re-derived from the pill's real footprint, the flush-bar clearance oracle rewritten, and plan 01.5-10's one-round-old contrast guard superseded with its evidence preserved (G-01.5-11)
 
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 
