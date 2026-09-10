@@ -878,8 +878,68 @@ defmodule PukllayClubWeb.AboutLive do
       this call, `sumate_cta/1` itself, or the hero/closing-band placements
       changes: those two stay outline on purpose — this is a mobile-overlay
       treatment for the sticky bar alone, not a new button style for the
-      page. --%>
-      <div class="pk-about-cta-bar">
+      page.
+
+      Task 2 (G-01.5-12): a second page-owned colocated hook,
+      `.AboutCtaBarMeasure`, mounted here (a STATIC phx-hook string
+      literal — layouts.ex:205-215's note on why a dynamic expression fails
+      at runtime applies to every hook in this file, not just
+      `.AboutHeaderMorph`). `id="pk-about-cta-bar"` exists solely because
+      LiveView requires a DOM id for `phx-hook` to attach to. Mirrors
+      `.CatalogNav`'s own `--pk-header-h` publisher (layouts.ex) verbatim: a
+      `ResizeObserver` on this element publishes its real rendered height as
+      `--pk-about-cta-bar-h` on `documentElement`, consumed by app.css's
+      `body:has(.pk-about-cta-bar)` document-end clearance rule (below, in
+      the 480px block) so the reserved footer clearance is always derived
+      from the bar's LIVE height, never a stale literal. A
+      `translateY`/`opacity`/`visibility` hidden state does not affect the
+      measured height, so this measures correctly even while the bar is
+      hidden at page top. --%>
+      <div id="pk-about-cta-bar" class="pk-about-cta-bar" phx-hook=".AboutCtaBarMeasure">
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".AboutCtaBarMeasure">
+          export default {
+            mounted() {
+              try {
+                // Load-bearing guards, not defensive noise (T-QUICK-01/
+                // T-QUICK-02). (1) height > 0 — a display:none measurement
+                // (every width above 480px) would otherwise publish a 0
+                // that collapses the document-end reservation during a
+                // resize down through the 480px threshold. (2) height !==
+                // this.lastHeight — the ResizeObserver feedback-loop
+                // mitigation: the published var feeds body's
+                // padding-bottom, and an unconditional write on every
+                // callback is how RO loops start. This bar's own height
+                // (padding + button min-height + border) is not affected
+                // by the property it publishes, so a real change only
+                // ever fires once per genuine resize.
+                this.lastHeight = null
+                this.publish = () => {
+                  const height = Math.ceil(this.el.getBoundingClientRect().height)
+                  if (height > 0 && height !== this.lastHeight) {
+                    this.lastHeight = height
+                    document.documentElement.style.setProperty(
+                      "--pk-about-cta-bar-h",
+                      height + "px"
+                    )
+                  }
+                }
+                this.observer = new ResizeObserver(this.publish)
+                this.observer.observe(this.el)
+                this.publish()
+              } catch (e) {
+                console.error("AboutCtaBarMeasure: mount block failed to wire", e)
+              }
+            },
+            destroyed() {
+              try {
+                this.observer?.disconnect()
+                document.documentElement.style.removeProperty("--pk-about-cta-bar-h")
+              } catch (e) {
+                console.error("AboutCtaBarMeasure: destroy block failed to wire", e)
+              }
+            }
+          }
+        </script>
         <Layouts.sumate_cta class="pk-sumate-btn-solid w-full" />
       </div>
 

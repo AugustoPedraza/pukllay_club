@@ -1844,6 +1844,77 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
   end
 
+  # Quick task 260910-av6, Task 2 (sketch 053 winner D, G-01.5-12): live-
+  # measured document-end clearance. .AboutCtaBarMeasure (a colocated hook,
+  # about_live.ex) mirrors .CatalogNav's own --pk-header-h publisher
+  # (layouts.ex) verbatim — a ResizeObserver on the bar's own element,
+  # publishing its real rendered height to documentElement for app.css's
+  # body:has(.pk-about-cta-bar) rule to consume. Only a pre-connect fallback
+  # may be a hardcoded literal; the real reservation must be driven by the
+  # bar's LIVE height.
+  describe "live-measured document-end clearance (quick task 260910-av6 Task 2, sketch 053 winner D)" do
+    test "the rendered bar carries a DOM id and phx-hook=\".AboutCtaBarMeasure\", and still carries pk-about-cta-bar",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      bar = LazyHTML.query(doc, ".pk-about-cta-bar")
+      assert Enum.count(bar) == 1, "Expected exactly one .pk-about-cta-bar element."
+
+      [id] = LazyHTML.attribute(bar, "id")
+
+      assert id != "" and id != nil,
+             "Expected .pk-about-cta-bar to carry a non-empty DOM id — LiveView requires one " <>
+               "for phx-hook to attach."
+
+      [hook] = LazyHTML.attribute(bar, "phx-hook")
+
+      # Phoenix resolves a colocated hook's leading-dot name to its fully
+      # qualified module-relative form at render time (layouts.ex:196-201's
+      # note on this file's own .CatalogNav hook) — ".AboutCtaBarMeasure" in
+      # the template renders as "PukllayClubWeb.AboutLive.AboutCtaBarMeasure".
+      assert hook == "PukllayClubWeb.AboutLive.AboutCtaBarMeasure",
+             "Expected .pk-about-cta-bar to carry the resolved " <>
+               "\".AboutCtaBarMeasure\" hook name, got: " <> inspect(hook)
+    end
+
+    test "the .AboutCtaBarMeasure hook's source contains ResizeObserver and does NOT contain IntersectionObserver" do
+      live_src = File.read!(Path.expand("../../../lib/pukllay_club_web/live/about_live.ex", __DIR__))
+
+      hook_match = Regex.run(~r/name="\.AboutCtaBarMeasure">([\s\S]*?)<\/script>/, live_src)
+      assert hook_match, "Expected an .AboutCtaBarMeasure colocated hook script in about_live.ex."
+      [_, hook_src] = hook_match
+
+      assert hook_src =~ "ResizeObserver",
+             "Expected .AboutCtaBarMeasure to use a ResizeObserver, mirroring .CatalogNav's own " <>
+               "--pk-header-h publisher (layouts.ex)."
+
+      refute hook_src =~ "IntersectionObserver",
+             "Expected .AboutCtaBarMeasure to contain no IntersectionObserver — the measurement " <>
+               "hook must never grow into a footer-proximity auto-hide, which is the exact " <>
+               "behavior sketch 053's second refinement pass removed."
+    end
+
+    test "inside the 480px block, body:has(.pk-about-cta-bar)'s padding-bottom reads var(--pk-about-cta-bar-h" do
+      src = strip_comments(css_source())
+      # media_480_body/1 is defined once, module-private, inside the
+      # "Cierre CTA suppression" describe block above — describe/2 does not
+      # create a new module scope, so the defp is reachable from here too.
+      body = media_480_body(src)
+
+      assert body, "Expected to extract the @media (max-width: 480px) block body."
+
+      clearance_rule = Regex.run(~r/body:has\(\.pk-about-cta-bar\)\s*\{([^}]*)\}/s, body)
+      assert clearance_rule, "Expected a body:has(.pk-about-cta-bar) rule inside the 480px block."
+      [_, clearance_body] = clearance_rule
+
+      assert clearance_body =~ ~r/padding-bottom\s*:\s*calc\([^;]*var\(--pk-about-cta-bar-h/,
+             "Expected the document-end clearance to be a calc() that reads " <>
+               "var(--pk-about-cta-bar-h — pinning the JS-publishes/CSS-consumes seam itself, " <>
+               "not just \"some calc()\". Got: #{clearance_body}"
+    end
+  end
+
   # Plan 01.5-04, Task 2 (D-14): page-wide band background alternation —
   # plain -> tint -> dark -> plain -> tint top to bottom, with FAQ's dark
   # band kept as a deliberate one-off highlight outside the alternation.

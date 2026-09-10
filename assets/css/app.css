@@ -6366,22 +6366,33 @@ body:has(#cierre) .pk-footer {
      restate) is why this stays a `calc()` below rather than a fresh
      literal, even though every one of THOSE operands is now gone.
 
-     RE-DERIVED (plan 01.5-14, G-01.5-11 gap closure, sketch 052 winner
-     B): the element this reservation is FOR is no longer a bar flush to
-     the viewport edge — it is a pill floating `bottom: 20px` above it
-     (`.pk-about-cta-bar`, above), with no padding or border left on that
-     rule to compose from (both are gone). The reservation now covers an
-     OFFSET as well as a height: the pill's own `bottom` offset (20px) +
-     `.pk-sumate-btn`'s `min-height` (48px) + a deliberate breathing step
-     (1rem) above the footer so the pill doesn't read as pasted flush
-     against it. This is no longer a TIGHT fit the way the flush bar's
-     reservation was — a floating pill's whole design premise is a
-     visible gap below it, so some bare background between the footer and
-     the pill's top edge is the correct, intended state, not a defect.
-     `checkFixedBarFooterClearance` (test/visual/about_geometry.mjs) still
-     reports two directions, but its SLACK bound is now the pill's own
-     footprint (offset + height, measured live) rather than a near-zero
-     tolerance — see that function's own comment for the full shape.
+     RE-DERIVED-THEN-SUPERSEDED (plan 01.5-14, G-01.5-11 gap closure,
+     sketch 052 winner B): briefly covered an OFFSET as well as a height,
+     since that version of the bar floated `bottom: 20px` above the
+     viewport edge instead of sitting flush. Sketch 053 winner D (quick
+     task 260910-av6, G-01.5-12) restores a flush bar, so the offset
+     operand is gone again — but the mechanism itself has changed more
+     fundamentally: this is no longer a composed-from-literals `calc()` at
+     all.
+
+     LIVE-MEASURED (sketch 053 winner D, quick task 260910-av6, G-01.5-12):
+     the reservation now reads `--pk-about-cta-bar-h`, a CSS custom
+     property published by `.AboutCtaBarMeasure` (about_live.ex, Task 2) —
+     a `ResizeObserver` on the bar's own element, mirroring `.CatalogNav`'s
+     `--pk-header-h` publisher (layouts.ex) verbatim. This is winner D's own
+     explicit requirement: the document reserves clearance sized to the
+     bar's LIVE-measured height, not a hardcoded literal, so a future change
+     to the bar's padding/button size/border-width can never silently drift
+     this reservation the way DRIFT HISTORY (above) already happened once.
+     The var's fallback — `calc(10px + 48px + 10px + 1px)` — covers ONLY the
+     pre-connect first paint (before the hook has run, or if JS fails to
+     wire): 10px top padding + `.pk-sumate-btn`'s 48px `min-height` + 10px
+     bottom padding + the bar's 1px `border-top`, composed from the bar's
+     own real declared parts (never a pre-added literal), matching plan
+     01.5-10's own "derive, don't restate" discipline. The `+ 1rem` outside
+     the var() is the deliberate breathing step between the footer's last
+     line and the bar's top edge — this is not part of the bar's own
+     footprint, so it stays outside the fallback's parenthesization.
 
      Plan 01.5-12 landed branch A for the site-wide sticky-footer question
      (leave it withdrawn, no shell change): `body` carries no viewport-
@@ -6391,11 +6402,11 @@ body:has(#cierre) .pk-footer {
 
      Co-located in this SAME @media (max-width: 480px) block as
      .pk-about-cta-bar's own display swap above, for the identical reason
-     the D-11 rule below is: a threshold mismatch between "bar appears"
-     and "clearance is reserved" would put the bar back over the footer
-     at some width. */
+     the D-11 rule below is: co-location is load-bearing — a threshold
+     mismatch between "bar appears" and "clearance is reserved" puts the
+     bar back over the footer at some width. */
   body:has(.pk-about-cta-bar) {
-    padding-bottom: calc(20px + 48px + 1rem);
+    padding-bottom: calc(var(--pk-about-cta-bar-h, calc(10px + 48px + 10px + 1px)) + 1rem);
   }
 
   /* Plan 01.5-04, D-11: suppresses the Cierre band's own Sumate button at
