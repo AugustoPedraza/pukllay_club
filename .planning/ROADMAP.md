@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 10/10 plans executed (4 original + 4 gap-closure round 1, all 8 executed; 2 gap-closure round 2 pending)
+**Plans:** 10/14 plans executed (4 original + 4 gap-closure round 1 + 2 gap-closure round 2, all 10 executed; 4 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -198,6 +198,32 @@ assertions derived from measured properties rather than restatements of the CSS 
 and this plan's clearance oracle measures the page bottom that 01.5-09 moves)*
 
 - [x] 01.5-10-PLAN.md — Sumate CTA restored to its approved design-source geometry at the component's single source, the sticky bar given the edge its two migrated siblings already have, its document-end clearance re-derived from the bar's own composition, and the repo's first rendered-box oracle (G-01.5-4, G-01.5-7)
+
+**Gap closure round 3 — Wave 1** *(from the 2026-09-09 end-of-phase walkthrough, test 18: G-01.5-8
+through G-01.5-11. Three were diagnosed to root cause in `.planning/debug/`; G-01.5-11 needed no
+diagnosis and carries its resolution pre-filled — it is a design decision the user made directly
+from sketch 052. The round's shape is set by two findings the diagnoses produced: the Cierre/footer
+boundary is an OSCILLATION on a two-state channel where both states have now been reported, and the
+sticky-footer mechanism G-01.5-9 asks to restore was DELETED seven days earlier at the developer's
+explicit request — so one plan in this round is a decision, not a fix. Every plan is strictly
+sequential: all four touch `app.css`)*
+
+- [ ] 01.5-11-PLAN.md — The Cierre/footer boundary: the band/footer token equality is broken from the FOOTER's side (page-scoped, since that fill is the only thing marking the footer on the catalog pages), the closing signature's desktop colour is taken out of the footer's type register, and the oracle that literally asserted this defect becomes the three-way rule the design needs (G-01.5-8; also closes G-01.5-9's Cause B)
+
+**Gap closure round 3 — Wave 2** *(blocked on 01.5-11 — shared `app.css`. NOT AUTONOMOUS: carries the
+round's one decision checkpoint)*
+
+- [ ] 01.5-12-PLAN.md — The site-wide sticky footer: a decision checkpoint on whether the mechanism the developer had removed on 2026-09-02 comes back, given that the 2026-09-09 report was measured incapable of being about it on the page it was filed against; then the chosen branch, an honest dated amendment to the stylesheet's superseding note, and a guard protecting whichever state was chosen (G-01.5-9)
+
+**Gap closure round 3 — Wave 3** *(blocked on 01.5-11/01.5-12 — shared `app.css`, `about_geometry.mjs`
+and `about_live_test.exs`)*
+
+- [ ] 01.5-13-PLAN.md — Mobile Cierre balance: the closing band finally gets a mobile counterpart to the `min-width: 640px` block that has held BOTH of its distinguishing treatments, plus the mobile-invariance oracle re-derived off its hard-coded padding literal and two new checks for the two properties the user actually reported (G-01.5-10)
+
+**Gap closure round 3 — Wave 4** *(blocked on 01.5-12/01.5-13 — shared files, and its document-end
+clearance is body padding that interacts with whatever 01.5-12's checkpoint lands on the body)*
+
+- [ ] 01.5-14-PLAN.md — Mobile CTA rebuilt as sketch 052 winner B: the bar's chrome dropped for a content-sized solid pill floating with elevation, its document-end clearance re-derived from the pill's real footprint, the flush-bar clearance oracle rewritten, and plan 01.5-10's one-round-old contrast guard superseded with its evidence preserved (G-01.5-11)
 
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 
