@@ -3974,6 +3974,19 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
+    # Pulls the `:root[data-theme="dark"]` rule (quick task 260910-hdc) so
+    # token_value/2 can read `--pk-ink-brand`'s dark declaration out of it —
+    # same scoping reason as dark_theme_plugin_block/0 above: this token is
+    # ALSO declared under plain `:root` (light, a variable read of
+    # `--color-primary`), so reading the token name against the whole file
+    # would risk matching the wrong scope.
+    defp dark_pk_ink_brand_root_block do
+      case Regex.run(~r/:root\[data-theme="dark"\]\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No `:root[data-theme=\"dark\"] { ... }` rule found in assets/css/app.css")
+      end
+    end
+
     defp token_value(source, token) do
       case Regex.run(~r/#{Regex.escape(token)}:\s*([^;]*);/, source) do
         [_, value] -> String.trim(value)
@@ -3983,25 +3996,35 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     # Turns a colour written either as a six-digit hex literal or as a
     # space-separated `rgb(r g b)` triple (this file's two colour formats)
-    # into a WCAG relative luminance.
-    defp relative_luminance(color) do
-      {r, g, b} =
-        case Regex.run(~r/^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/, String.trim(color)) do
-          [_, r, g, b] ->
-            {String.to_integer(r, 16), String.to_integer(g, 16), String.to_integer(b, 16)}
+    # into an {r, g, b} 0-255 integer triple. Shared by relative_luminance/1
+    # (WCAG contrast) and oklab/1 (quick task 260910-hdc, OKLCh chroma/hue) —
+    # both need the same raw channels, just different downstream math.
+    defp parse_rgb(color) do
+      case Regex.run(~r/^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/, String.trim(color)) do
+        [_, r, g, b] ->
+          {String.to_integer(r, 16), String.to_integer(g, 16), String.to_integer(b, 16)}
 
-          nil ->
-            case Regex.run(~r/rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)/, color) do
-              [_, r, g, b] -> {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
-              nil -> flunk("Could not parse colour value for contrast computation: #{inspect(color)}")
-            end
-        end
+        nil ->
+          case Regex.run(~r/rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)/, color) do
+            [_, r, g, b] -> {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
+            nil -> flunk("Could not parse colour value for contrast computation: #{inspect(color)}")
+          end
+      end
+    end
+
+    # sRGB (0-255) -> linear-light single channel, the standard EOTF used by
+    # both the WCAG relative-luminance formula and the OKLab conversion.
+    defp srgb_channel_to_linear(channel) do
+      c = channel / 255
+      if c <= 0.03928, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
+    end
+
+    # Turns a colour into a WCAG relative luminance.
+    defp relative_luminance(color) do
+      {r, g, b} = parse_rgb(color)
 
       [r, g, b]
-      |> Enum.map(fn channel ->
-        c = channel / 255
-        if c <= 0.03928, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
-      end)
+      |> Enum.map(&srgb_channel_to_linear/1)
       |> then(fn [rl, gl, bl] -> 0.2126 * rl + 0.7152 * gl + 0.0722 * bl end)
     end
 
@@ -4009,6 +4032,50 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     defp contrast_ratio(l1, l2) do
       {lighter, darker} = if l1 >= l2, do: {l1, l2}, else: {l2, l1}
       (lighter + 0.05) / (darker + 0.05)
+    end
+
+    # sRGB -> linear -> OKLab (Björn Ottosson's published matrices — the
+    # same conversion this plan's `measured_root_cause` table and
+    # `contrast-check.mjs`'s methodology comment cite). Returns {l, a, b} in
+    # OKLab space; oklch_chroma/1 and oklch_hue/1 below derive the polar
+    # (chroma, hue) form from it. Added for quick task 260910-hdc: the
+    # tripwire that encodes "reads as brand purple, not disabled grey" is a
+    # CHROMA floor, which relative_luminance/1's WCAG math cannot express.
+    defp oklab(color) do
+      {r, g, b} = parse_rgb(color)
+      [rl, gl, bl] = Enum.map([r, g, b], &srgb_channel_to_linear/1)
+
+      l = 0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl
+      m = 0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl
+      s = 0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl
+
+      cbrt = fn v -> if v < 0, do: -:math.pow(-v, 1 / 3), else: :math.pow(v, 1 / 3) end
+      l_ = cbrt.(l)
+      m_ = cbrt.(m)
+      s_ = cbrt.(s)
+
+      lab_l = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
+      lab_a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_
+      lab_b = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+
+      {lab_l, lab_a, lab_b}
+    end
+
+    # OKLCh chroma magnitude — "how saturated", the axis this task's fix
+    # actually turns on (a contrast-only fix can pass WCAG while still
+    # reading as grey; chroma is what distinguishes "brand purple" from
+    # "disabled grey" at the same lightness/contrast).
+    defp oklch_chroma(color) do
+      {_l, a, b} = oklab(color)
+      :math.sqrt(a * a + b * b)
+    end
+
+    # OKLCh hue angle in degrees [0, 360) — the axis "one hue, three chroma
+    # tiers" (this task's stated goal) is actually about.
+    defp oklch_hue(color) do
+      {_l, a, b} = oklab(color)
+      degrees = :math.atan2(b, a) * 180 / :math.pi()
+      if degrees < 0, do: degrees + 360, else: degrees
     end
 
     test "the dark-theme rule sets --btn-color and --btn-fg from the neutral token pair, no literal colour" do
@@ -4316,13 +4383,18 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     # Mirrors dark_lightbox_close_block/0's idiom above (lightbox close
     # button dark-theme contrast describe block): sketch 055 (Option A,
     # 2026-09-10) resolved the dark-mode primary-as-text regression via a
-    # dark-scoped override shared by 17 selectors (including .pk-pill-tag)
+    # dark-scoped override shared by 24 selectors (including .pk-pill-tag)
     # rather than by changing a theme token, so the actual dark-mode ink
     # for .pk-pill-tag is no longer --color-primary — it's whatever this
     # override sets. Matching on the literal `[data-theme="dark"] ` +
     # `.pk-pill-tag` selector text (guaranteed followed by a comma, since
     # it is not the last selector in the list) pulls the real shared
     # declaration body rather than assuming a hardcoded token name.
+    #
+    # UPDATED (quick task 260910-hdc, 2026-09-10): sketch 055's shared
+    # override now resolves `color` from `--pk-ink-brand`, not
+    # `--color-neutral` directly — see that token's provenance comment near
+    # the top of app.css and the amended comment above the CSS block itself.
     defp dark_pill_tag_text_override_block do
       case Regex.run(~r/\[data-theme="dark"\] \.pk-pill-tag\b.*?\{([^}]*)\}/s, css_source()) do
         [_, body] ->
@@ -4333,7 +4405,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
-    test ".pk-pill-tag's text meets the 4.5:1 contrast floor in both themes (sketch 055 dark-scoped override)" do
+    test ".pk-pill-tag's text meets the 4.5:1 contrast floor in both themes and clears the brand-chroma floor in dark (260910-hdc)" do
       light_block = light_theme_plugin_block()
       light_primary = token_value(light_block, "--color-primary")
       light_base_100 = token_value(light_block, "--color-base-100")
@@ -4344,22 +4416,59 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "(#{light_base_100}) measured #{Float.round(light_ratio, 2)}:1 — .pk-pill-tag's " <>
                "hashtag text must clear the 4.5:1 WCAG AA text floor in both themes."
 
+      # Light's `--pk-ink-brand` declaration must be a variable READ of
+      # `--color-primary`, not a copied literal — so a future author cannot
+      # quietly replace it with a hex and let light silently drift from the
+      # brand manual.
+      root_body =
+        case Regex.run(~r/(?m)^:root\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `:root { ... }` rule found in assets/css/app.css")
+        end
+
+      assert root_body =~ ~r/--pk-ink-brand:\s*var\(--color-primary\)\s*;/,
+             "`:root`'s `--pk-ink-brand` declaration must be `var(--color-primary)`, a variable " <>
+               "read — not a copied hex literal — found: #{inspect(root_body)}"
+
       dark_override_body = dark_pill_tag_text_override_block()
 
-      assert dark_override_body =~ ~r/color:\s*var\(--color-neutral\)\s*;/,
+      assert dark_override_body =~ ~r/color:\s*var\(--pk-ink-brand\)\s*;/,
              "The dark-scoped override covering `.pk-pill-tag` must set `color` to a read of " <>
-               "`--color-neutral` (sketch 055, Option A) — found: #{inspect(dark_override_body)}"
+               "`--pk-ink-brand` (quick task 260910-hdc) — found: #{inspect(dark_override_body)}"
+
+      dark_ink_brand_body = dark_pk_ink_brand_root_block()
+      dark_ink_brand = token_value(dark_ink_brand_body, "--pk-ink-brand")
 
       dark_block = dark_theme_plugin_block()
-      dark_text_color = token_value(dark_block, "--color-neutral")
       dark_base_100 = token_value(dark_block, "--color-base-100")
-      dark_ratio = contrast_ratio(relative_luminance(dark_text_color), relative_luminance(dark_base_100))
+      dark_base_200 = token_value(dark_block, "--color-base-200")
+      dark_base_300 = token_value(dark_block, "--color-base-300")
 
-      assert dark_ratio >= 4.5,
-             "dark theme: --color-neutral (#{dark_text_color}) against --color-base-100 " <>
-               "(#{dark_base_100}) measured #{Float.round(dark_ratio, 2)}:1 — .pk-pill-tag's " <>
-               "hashtag text (dark-scoped to --color-neutral, sketch 055 Option A) must clear " <>
-               "the 4.5:1 WCAG AA text floor in both themes."
+      for {ground_name, ground_hex} <- [
+            {"base-100", dark_base_100},
+            {"base-200", dark_base_200},
+            {"base-300", dark_base_300}
+          ] do
+        ratio = contrast_ratio(relative_luminance(dark_ink_brand), relative_luminance(ground_hex))
+
+        assert ratio >= 4.5,
+               "dark theme: --pk-ink-brand (#{dark_ink_brand}) against --color-#{ground_name} " <>
+                 "(#{ground_hex}) measured #{Float.round(ratio, 2)}:1 — .pk-pill-tag's hashtag " <>
+                 "text (dark-scoped to --pk-ink-brand) must clear the 4.5:1 WCAG AA text floor " <>
+                 "on every dark ground."
+      end
+
+      # The chroma floor is the actual fix: a value can clear every contrast
+      # ratio above while still being a de-saturated grey-lavender that
+      # reads as "disabled" rather than "brand purple". A future retune
+      # that walks --pk-ink-brand back toward --color-neutral's C0.057 must
+      # fail here rather than ship silently.
+      chroma = oklch_chroma(dark_ink_brand)
+
+      assert chroma >= 0.11,
+             "dark theme: --pk-ink-brand (#{dark_ink_brand}) measured OKLCh chroma " <>
+               "#{Float.round(chroma, 3)}, below the 0.11 floor that distinguishes a saturated " <>
+               "brand purple from a desaturated 'disabled' grey-lavender."
     end
 
     # Sketch 056 (2026-09-10), developer-chosen Option D ("split-by-role")
@@ -4390,6 +4499,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
+    # UPDATED (quick task 260910-hdc, 2026-09-10): this block's ink-swap
+    # target moved from `--color-neutral` to `--pk-ink-brand` — see that
+    # token's provenance comment near the top of app.css and the amended
+    # sketch 056 comment above the CSS block itself.
     defp dark_secondary_cta_ink_swap_block do
       case Regex.run(
              ~r/\[data-theme="dark"\] \.pk-preview-cta,\s*\[data-theme="dark"\] \.pk-btn-secondary\s*\{([^}]*)\}/s,
@@ -4448,44 +4561,53 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "declares unscoped."
     end
 
-    test "dark-mode secondary CTAs ink-swap to --color-neutral, clearing both floors (260910-gck)" do
+    test "dark-mode secondary CTAs ink-swap to --pk-ink-brand, clearing both floors (260910-hdc)" do
       ink_body = dark_secondary_cta_ink_swap_block()
 
-      assert ink_body =~ ~r/color:\s*var\(--color-neutral\)\s*;/,
+      assert ink_body =~ ~r/color:\s*var\(--pk-ink-brand\)\s*;/,
              "The dark-scoped secondary-CTA override must set `color` to a read of " <>
-               "`--color-neutral` — found: #{inspect(ink_body)}"
+               "`--pk-ink-brand` (quick task 260910-hdc) — found: #{inspect(ink_body)}"
 
-      assert ink_body =~ ~r/border-color:\s*var\(--color-neutral\)\s*;/,
+      assert ink_body =~ ~r/border-color:\s*var\(--pk-ink-brand\)\s*;/,
              "The dark-scoped secondary-CTA override must set `border-color` to a read of " <>
-               "`--color-neutral` — found: #{inspect(ink_body)}"
+               "`--pk-ink-brand` (quick task 260910-hdc) — found: #{inspect(ink_body)}"
+
+      dark_ink_brand_body = dark_pk_ink_brand_root_block()
+      ink_brand = token_value(dark_ink_brand_body, "--pk-ink-brand")
 
       dark_block = dark_theme_plugin_block()
-      neutral = token_value(dark_block, "--color-neutral")
       base_100 = token_value(dark_block, "--color-base-100")
       base_200 = token_value(dark_block, "--color-base-200")
 
-      ratio_100 = contrast_ratio(relative_luminance(neutral), relative_luminance(base_100))
-      ratio_200 = contrast_ratio(relative_luminance(neutral), relative_luminance(base_200))
+      ratio_100 = contrast_ratio(relative_luminance(ink_brand), relative_luminance(base_100))
+      ratio_200 = contrast_ratio(relative_luminance(ink_brand), relative_luminance(base_200))
 
       assert ratio_100 >= 4.5,
-             "dark theme: --color-neutral (#{neutral}) against --color-base-100 (#{base_100}) " <>
+             "dark theme: --pk-ink-brand (#{ink_brand}) against --color-base-100 (#{base_100}) " <>
                "measured #{Float.round(ratio_100, 2)}:1 — the preview CTA and secondary button " <>
                "must clear the 4.5:1 WCAG AA text floor on base-100."
 
       assert ratio_100 >= 3.0,
-             "dark theme: --color-neutral (#{neutral}) against --color-base-100 (#{base_100}) " <>
+             "dark theme: --pk-ink-brand (#{ink_brand}) against --color-base-100 (#{base_100}) " <>
                "measured #{Float.round(ratio_100, 2)}:1 — the outline border must clear the " <>
                "3:1 WCAG 1.4.11 non-text floor on base-100."
 
       assert ratio_200 >= 4.5,
-             "dark theme: --color-neutral (#{neutral}) against --color-base-200 (#{base_200}) " <>
+             "dark theme: --pk-ink-brand (#{ink_brand}) against --color-base-200 (#{base_200}) " <>
                "measured #{Float.round(ratio_200, 2)}:1 — the closing-band ground must also " <>
                "clear the 4.5:1 WCAG AA text floor."
 
       assert ratio_200 >= 3.0,
-             "dark theme: --color-neutral (#{neutral}) against --color-base-200 (#{base_200}) " <>
+             "dark theme: --pk-ink-brand (#{ink_brand}) against --color-base-200 (#{base_200}) " <>
                "measured #{Float.round(ratio_200, 2)}:1 — the outline border must clear the " <>
                "3:1 WCAG 1.4.11 non-text floor on base-200."
+
+      chroma = oklch_chroma(ink_brand)
+
+      assert chroma >= 0.11,
+             "dark theme: --pk-ink-brand (#{ink_brand}) measured OKLCh chroma " <>
+               "#{Float.round(chroma, 3)}, below the 0.11 floor that distinguishes a saturated " <>
+               "brand purple from a desaturated 'disabled' grey-lavender."
     end
 
     test "light theme's outline-primary CTAs are untouched by the dark-mode fix (260910-gck)" do

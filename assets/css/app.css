@@ -382,6 +382,58 @@
   --duration-slow: 280ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --pk-ink-brand (quick task 260910-hdc): this file's first theme-scoped
+     `--pk-*` token — every other `--pk-*` declared in this `:root` block
+     resolves the same in both themes, this one deliberately does not (see
+     the paired `:root[data-theme="dark"]` rule immediately below).
+
+     Defect this closes: sketch 055/056 (2026-09-10, quick tasks 260910-efe/
+     -gck) re-pointed dark's branded-interactive TEXT and BORDER role
+     (nav links, the outline `Ver detalles` CTA, editorial hashtag pills,
+     pill/chip hover states — the 17+2 selectors that used to read
+     `--color-primary` as text/border) onto `--color-neutral` to fix a
+     contrast failure (dark primary #8C2BB6 measures only 2.34:1 as text).
+     That fix was correct on contrast but wrong on HUE: `--color-neutral`
+     is this file's genuinely muted/quiet ink (OKLCh C0.057 H306.5), never
+     a brand ink, and overloading it for the branded-interactive role
+     collapsed that role's saturation to 38% of light theme's own branded
+     ink (C0.151) — on dark's own saturated ground (base-200 C0.119) a
+     C0.057 ink reads as grey-on-purple, i.e. "disabled." It also put two
+     purples in one theme: dark's `--color-primary` sits at H313.1 (the
+     developer-named correct brand hue, from the solid Sumate CTA fill)
+     while `--color-neutral` sits at H306.5 — 6.6 degrees apart at a 3.7x
+     chroma ratio.
+
+     This token is dark's brand hue (H313.1) at a saturation matched to
+     light's own branded-ink role, so the branded-interactive role reads as
+     brand purple again instead of a second, greyer purple. It is an INK
+     role only — never a background fill, and it has no `-content`
+     counterpart (nothing paints solid with it).
+
+     Light: a variable READ of `--color-primary`, not a copied hex, so
+     light stays single-sourced from the brand manual (#3D096D, 14.4:1 as
+     text) and this token can never quietly drift out of sync with it. */
+  --pk-ink-brand: var(--color-primary);
+}
+
+/* --pk-ink-brand, dark (quick task 260910-hdc): #C791E5, OKLCh L74% C0.13
+   H313.1 — dark's brand hue taken exactly from the developer-locked
+   `--color-primary` (#8C2BB6, H313.1), at C0.13 (2.3x today's C0.057
+   `--color-neutral` ink, comparable to light's own branded-ink chroma of
+   C0.151). MEASURED CONSTRAINTS (WCAG 2.1, do not "improve" by eye):
+     #C791E5 on base-100 (#2F154E) ... 6.43:1
+     #C791E5 on base-200 (#391B62) ... 5.71:1
+     #C791E5 on base-300 (#462278) ... 4.89:1
+   All three clear the 4.5:1 text floor (WCAG 1.4.3) and the 3:1 border
+   floor (WCAG 1.4.11) with margin. `:root[data-theme="dark"]`, not a bare
+   `[data-theme="dark"]`: `data-theme` is set on `<html>` by
+   `assets/js/theme.js`, so a bare attribute selector ties with `:root` on
+   specificity and would depend on source order, while the compound form
+   wins outright — the same idiom `.planning/sketches/themes/default.css`
+   already uses for its own dark region. */
+:root[data-theme="dark"] {
+  --pk-ink-brand: #C791E5;
 }
 
 .pk-gutter {
@@ -936,9 +988,25 @@
    doesn't matter). Rules that also use --color-primary for a BORDER or
    BACKGROUND fill (e.g. .pk-drawer-links' active-link accent bar/tint,
    .pk-pill-selected's background) are untouched — only the TEXT role was
-   ever broken. */
+   ever broken.
+
+   UPDATED (quick task 260910-hdc, 2026-09-10): `--color-neutral` was the
+   right contrast fix but the wrong HUE — it is this file's genuinely
+   muted/quiet ink (C0.057 H306.5), never a brand ink, and reusing it here
+   for this entire branded-interactive-ink role collapsed its saturation
+   to 38% of light's own branded ink and put it 6.6 degrees off dark's
+   actual brand hue (H313.1, from `--color-primary`), which is why nav
+   links, the editorial hashtag pills, and every other selector below read
+   as "disabled" rather than interactive. This shared block's ONE `color`
+   declaration now reads the new `--pk-ink-brand` token instead (see that
+   token's own provenance comment near the top of this file) — dark's
+   brand hue at the branded-interactive-ink chroma tier, distinct from the
+   muted tier `--color-neutral` still carries for backgrounds/labels/stats
+   (Task 2 of this same quick task). `.pk-pill-interactive:hover` alone is
+   removed from this list below: its equivalent moves to its own
+   (unscoped) base rule instead, since it also needs a `border-color` this
+   shared block was never able to express. */
 [data-theme="dark"] .pk-pill-tag,
-[data-theme="dark"] .pk-pill-interactive:hover,
 [data-theme="dark"] .pk-nav-links a:hover,
 [data-theme="dark"] .pk-nav-links a:focus-visible,
 [data-theme="dark"] .pk-nav-links a[aria-current="page"],
@@ -962,7 +1030,7 @@
 [data-theme="dark"] .pk-desc-toggle:focus-visible,
 [data-theme="dark"] .pk-bgg-stat:hover,
 [data-theme="dark"] .pk-share-trigger:hover {
-  color: var(--color-neutral);
+  color: var(--pk-ink-brand);
 }
 
 /* The modal's chosen-chip soft lift (`filter_modal.ex`'s `chip_class/1`
@@ -1002,9 +1070,20 @@
     color var(--duration-fast) var(--ease-standard);
 }
 
+/* Quick task 260910-hdc (2026-09-10): reads `--pk-ink-brand` (not
+   `--color-primary` directly) so dark theme resolves the chroma-lifted
+   brand ink instead of `--color-primary` at 2.08:1 as a border / 2.34:1
+   as text — under both the WCAG 1.4.11 3:1 border floor and the 1.4.3
+   4.5:1 text floor (this was one of the 9 further `--color-primary`
+   border-role sites never dark-scoped by sketch 055's text-only fix).
+   Light resolves `--pk-ink-brand` to `--color-primary` byte-identically,
+   so this is a no-op change in light. No dark-scoped override is needed
+   here (unlike sketch 055's other 24 selectors): the token itself already
+   carries the per-theme split, so ONE unscoped rule covers both
+   themes. */
 .pk-pill-interactive:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--pk-ink-brand);
+  color: var(--pk-ink-brand);
 }
 
 /* resting card (Task 2): poster art then a plain caption block below it —
@@ -1156,11 +1235,25 @@
    theme is untouched: light's own outline-primary treatment already clears
    14.4:1 as text (#3D096D on #FFFFFF). Validated via sketch 056 against
    all 4 real affected elements (hero, closing band, preview card, retry
-   banner) before this pick. */
+   banner) before this pick.
+
+   UPDATED (quick task 260910-hdc, 2026-09-10): `--color-neutral` cleared
+   both contrast floors but put this CTA's ink 6.6 degrees off dark's own
+   brand hue at roughly a third of light's branded-ink saturation, which is
+   why "Ver detalles" read as a disabled/quiet control rather than an
+   interactive one — even though the site's Sumate CTA right beside it, on
+   the same hue, reads unmistakably as brand purple. Both `color` and
+   `border-color` now read the new `--pk-ink-brand` token instead (see its
+   provenance comment near the top of this file): dark's own brand hue
+   (H313.1, from `--color-primary`) at the branded-interactive-ink chroma
+   tier, still clearing the same 4.5:1/3:1 floors (6.43:1/4.89:1 measured
+   against base-100/base-300). `--color-neutral` remains this file's
+   correct token for the genuinely muted/quiet ink role — see Task 2 of
+   this same quick task for that token's own dark-mode retune. */
 [data-theme="dark"] .pk-preview-cta,
 [data-theme="dark"] .pk-btn-secondary {
-  color: var(--color-neutral);
-  border-color: var(--color-neutral);
+  color: var(--pk-ink-brand);
+  border-color: var(--pk-ink-brand);
 }
 
 /* position: fixed and appended once, outside every scrolling rail — the
