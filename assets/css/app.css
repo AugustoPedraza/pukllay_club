@@ -454,7 +454,76 @@
    and the class's three presence tests plus this describe's own CSS-facts
    contract in `layouts_test.exs` (see that file's `git log` for
    260902-glf's removal commit). `.pk-app-shell` as a class no longer
-   exists anywhere in this codebase as of 2026-09-02. */
+   exists anywhere in this codebase as of 2026-09-02.
+
+   RE-REPORTED 2026-09-09 (G-01.5-9, "the foother still isn't a the very
+   bottom of the page") AND DECIDED AGAIN — same withdrawal, second time,
+   this time with both states of the tradeoff in front of the developer at
+   once. The debug session opened for this report (`.planning/debug/
+   G-01.5-9-footer-not-pinned-bottom.md`) measured the defect this note
+   already documents as real and reachable: on a page shorter than the
+   viewport, plain page background shows below the footer down to the true
+   viewport bottom. Its exact figures, both themes, identical numbers in
+   each: `/?q=<no results>` at 1280x900 -> 298.00px; at 1280x1080 ->
+   478.00px; at 390x844 -> 309.00px (a zero-result filter is one tap from
+   the home page); `/juegos/1` at 1280x1080 -> 32.31px (any 1080p-or-taller
+   desktop); at 1280x1440 -> 392.31px; `/` at 1280x4000 -> 963.50px.
+
+   But the page the 2026-09-09 screenshot was actually taken on,
+   /quienes-somos, was measured ARITHMETICALLY INCAPABLE of exhibiting that
+   defect: its `document.scrollHeight` is 3434px at every width from 1280
+   to 3440, and 3434px again with every `img`/`iframe` suppressed — the
+   footer's bottom edge sits at exactly `document.scrollHeight` (0.00px
+   residual) at every measured viewport and in both themes, with a pixel
+   row-scan showing the footer's own tint painting every row down to the
+   last one. What the report was actually about, on that specific page, is
+   this note's OWN mechanism from a different angle: `#cierre` and
+   `.pk-footer` painting the byte-identical token and sitting flush at
+   0.00px gave the footer no legible top edge, so it never read as a
+   bounded object "at the bottom of the page" even though it already was
+   one. Plan 01.5-11 fixed that half (a page-scoped `body:has(#cierre)
+   .pk-footer` fill change, zero geometry moved) before this chapter was
+   written.
+
+   This is one channel with two states — the mechanism does not remove the
+   empty space below a short page's footer, it relocates it to ABOVE the
+   footer, inside `<main>`, which is the exact band the developer rejected
+   on 2026-09-02 ("a large, empty, unstyled band between the catalog page's
+   last content row and the footer"). The developer has now reported both
+   states of that one switch, one week apart, and the correct sequence is
+   to decide with both reports on the table rather than let either one, in
+   isolation, look like an unambiguous "restore it."
+
+   CORRECTION to the debug session's one wrong claim: it states the
+   sticky-footer mechanism "is an ABSENCE in the shell... present since the
+   shell was written." That is incorrect. The mechanism EXISTED — it was
+   added in Phase 01.2 gap-closure round 4 (G-01.2-14/G-01.2-24 task 3,
+   directly above in this same comment's earlier paragraphs) — and was
+   DELETED on 2026-09-02 by quick task 260902-glf as the explicit developer
+   choice this whole note exists to record, offered against "investigate a
+   possible missing-content bug first." The session's own measurements are
+   unaffected by this correction; only its framing of the fix as filling a
+   gap nobody ever chose is wrong, and that framing is exactly what would
+   make an automated pass silently re-revert a decision the developer had
+   already made once.
+
+   DECISION, 2026-09-09 (plan 01.5-12, checkpoint Task 1, options as
+   presented — A "leave it withdrawn", B "restore it (the measured
+   mechanism)", C "paint the void instead of moving the footer
+   (unmeasured)"): **A — leave the mechanism withdrawn.** The 2026-09-02
+   decision stands a second time. Nothing that renders correctly today
+   changes, on any page, at any width. G-01.5-9 is closed on the half of
+   the report that was actually reachable on the reported page (cause B,
+   the surface equality, fixed by plan 01.5-11); the site-wide void below a
+   short page's footer (cause A, this note's subject) remains the
+   knowingly accepted tradeoff described above. A source-level test in
+   `layouts_test.exs` (see its "root layout sticky-footer decision"
+   describe block) now fails if a future pass ever reintroduces a viewport-
+   height floor or flex column on `body`, or a flex-grow factor on `main`,
+   without a new decision being recorded here first — this is a twice-made
+   decision, and the guard's job is to make a third silent reversal
+   impossible. B and C remain available later as a one-rule follow-up with
+   every measurement already on record in the debug session above. */
 
 /* Category-anchor scroll animation (debug category-menu-scroll-animation).
    Both category surfaces — the desktop .pk-cat-item mega-menu rows and the
