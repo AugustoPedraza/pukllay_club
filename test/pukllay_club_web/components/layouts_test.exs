@@ -701,6 +701,100 @@ defmodule PukllayClubWeb.LayoutsTest do
   # a bare `<body>` with no class, and there is no longer a stylesheet
   # contract for this file to pin — see app.css's own dated note above
   # `.pk-gutter` for the full history and measurement record.
+
+  # G-01.5-9 (re-reported 2026-09-09) asked, a second time, whether the
+  # mechanism removed above should come back. Plan 01.5-12's checkpoint
+  # Task 1 decided A — leave it withdrawn — a second time, with both
+  # reported states in front of the developer. This describe block is the
+  # GUARD for that decision, not a restoration of the presence tests
+  # removed above: it asserts the shell declares NO such mechanism, and it
+  # is written to survive the very source it is guarding, because the
+  # SUPERSEDED note above `.pk-gutter` in app.css necessarily quotes these
+  # same declarations as PROSE while explaining why they were removed (e.g.
+  # the literal text "min-height: 100vh" inside that comment's backticks).
+  # A check against the raw file source would risk matching that prose
+  # instead of real CSS — the specific hazard this describe exists to
+  # avoid — so every assertion below first strips CSS comments, then
+  # further requires the declaration to sit inside an actual bare `body {`
+  # or `main {` rule block (not a comment, not `body.pk-has-cta-bar {`,
+  # not `body:has(#cierre) ... {`), which the prose never is.
+  describe "root layout sticky-footer decision (G-01.5-9, plan 01.5-12 — decided A: leave withdrawn, 2026-09-09)" do
+    @app_css_path "assets/css/app.css"
+
+    # Strips every `/* ... */` CSS comment (non-greedy, DOTALL) before any
+    # assertion runs. This is what keeps the SUPERSEDED note's own prose —
+    # which quotes `min-height: 100vh`, `min-height: 100dvh`, `flex-grow: 1`
+    # and `flex-direction: column` by name, in backticks, as part of the
+    # historical record — from ever being read as a live declaration.
+    defp app_css_without_comments do
+      @app_css_path
+      |> File.read!()
+      |> then(&Regex.replace(~r/\/\*.*?\*\//s, &1, ""))
+    end
+
+    # Matches a real, uncommented, BARE `body { ... }` or `main { ... }`
+    # rule — `body` or `main` as the entire selector, not `body.pk-foo`,
+    # not `body:has(...)`, not a comma-joined group. The negative lookbehind
+    # rejects a preceding word/dot/hyphen character so `.pk-app-shell` (a
+    # class, not this element) and `body.pk-sheet-open` (a compound
+    # selector, not this element alone) can never match.
+    defp bare_element_rule_blocks(css, element) do
+      ~r/(?<![\w.-])#{element}\s*\{([^}]*)\}/s
+      |> Regex.scan(css, capture: :all_but_first)
+      |> Enum.map(fn [block] -> block end)
+    end
+
+    @failure_message """
+    The shell just declared a site-wide sticky-footer mechanism on `body` \
+    or `main` — a viewport-height floor, a flex column, or a flex-grow \
+    factor. This is a TWICE-MADE decision, not an oversight: the mechanism \
+    was added in Phase 01.2 gap-closure round 4, deleted on 2026-09-02 by \
+    quick task 260902-glf as an explicit developer choice, re-reported on \
+    2026-09-09 as G-01.5-9, and decided AGAIN — still withdrawn — by plan \
+    01.5-12's checkpoint Task 1, with both reported states of the tradeoff \
+    (below-footer void on short pages vs. above-footer void on short \
+    pages, since this mechanism RELOCATES the empty space rather than \
+    removing it) in front of the developer both times.
+
+    The G-01.5-9 debug session
+    (.planning/debug/G-01.5-9-footer-not-pinned-bottom.md) got one thing \
+    wrong: it describes this mechanism as "an ABSENCE in the shell... \
+    present since the shell was written." It was not an absence — it \
+    EXISTED and was deliberately removed. Read the whole story, both \
+    dates, in app.css's own dated note above `.pk-gutter` (search for \
+    "SUPERSEDED 2026-09-02") before restoring anything here. If restoring \
+    it is truly the right call now, that is a NEW decision for a NEW plan \
+    to make explicitly, with its own checkpoint and its own dated chapter \
+    in that note — not a silent side effect of an automated pass reading \
+    the diagnosis this test's own history had to correct once already.
+    """
+
+    test "body declares no viewport-height sticky-footer floor" do
+      css = app_css_without_comments()
+
+      for block <- bare_element_rule_blocks(css, "body") do
+        refute block =~ ~r/min-height:\s*100d?vh/, @failure_message
+      end
+    end
+
+    test "body declares no flex column" do
+      css = app_css_without_comments()
+
+      for block <- bare_element_rule_blocks(css, "body") do
+        is_flex_column? = block =~ ~r/display:\s*flex\b/ and block =~ ~r/flex-direction:\s*column\b/
+        refute is_flex_column?, @failure_message
+      end
+    end
+
+    test "main declares no flex-grow factor" do
+      css = app_css_without_comments()
+
+      for block <- bare_element_rule_blocks(css, "main") do
+        refute block =~ ~r/flex(-grow)?:\s*[1-9]/, @failure_message
+      end
+    end
+  end
+
   describe "app/1 footer (SHELL-01, Task 2 checkpoint content)" do
     test "renders the shared pk-footer element with exactly three footer link labels" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
