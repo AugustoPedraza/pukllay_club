@@ -4799,14 +4799,24 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "fill (--color-base-200) measured 14.6° from it (260910-if9 AUDIT.md, finding F1)."
     end
 
-    test "light theme's --color-base-100/200/300 are unchanged by the dark-only C2 rotation" do
+    test "light theme's --color-base-100/300 are unchanged by the dark-only C2 rotation, and --color-base-200 is unchanged by C2 specifically" do
       light_block = light_theme_plugin_block()
 
       assert token_value(light_block, "--color-base-100") == "#FFFFFF",
              "light theme: --color-base-100 must stay byte-identical -- C2 is dark-scoped only."
 
-      assert token_value(light_block, "--color-base-200") == "#F3ECFA",
-             "light theme: --color-base-200 must stay byte-identical -- C2 is dark-scoped only."
+      # UPDATED (quick task 260910-l7q): light `--color-base-200` legitimately
+      # moved off its pre-l7q byte-identical value (#F3ECFA) when it JOINed
+      # the shared `--pk-ramp-*` ramp under the FLAT envelope (dE 0.0085,
+      # per ramp-audit.mjs) -- this is a DIFFERENT, LATER task's deliberate
+      # change, not a 260910-if9 C2 regression. token_value/2's one-hop
+      # `var(--pk-ramp-*)` dereference (also added by 260910-l7q) resolves
+      # this to the ramp's real hex, so this assertion still proves "C2
+      # itself never touched light" even though light's OWN value has since
+      # moved for an unrelated, later, developer-approved reason.
+      assert token_value(light_block, "--color-base-200") == "#F6EAFD",
+             "light theme: --color-base-200 must resolve to the shared ramp's --pk-ramp-100 " <>
+               "stop (260910-l7q) -- C2 itself never touched this value."
 
       assert token_value(light_block, "--color-base-300") == "#E3D3F0",
              "light theme: --color-base-300 must stay byte-identical -- C2 is dark-scoped only."
