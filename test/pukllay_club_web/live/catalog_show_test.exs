@@ -4674,4 +4674,162 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "retune was to lift chroma onto the brand hue, not merely relabel the old value."
     end
   end
+
+  # Quick task 260910-if9, Task 3 (developer decision: Pick 1 = C2 -- rotate
+  # dark's --color-base-100/200/300 onto the brand hue (H313.1), holding L
+  # and C; Pick 2 = W1 -- no label-ink change). Reuses
+  # dark_theme_plugin_block/0, light_theme_plugin_block/0, token_value/2,
+  # oklch_hue/1, oklch_chroma/1, relative_luminance/1 and contrast_ratio/2
+  # from the describe blocks above -- no second CSS-source or OKLCh harness
+  # declared here. C1 and C3 were costed in AUDIT.md but not picked (C1 --
+  # narrower blast radius but caps out around a 10-degree residual spread
+  # before the WCAG floor breaks; C3 -- structurally symmetric across themes
+  # but does not close dark's own internal split) and are not tested here.
+  # W2/W3 (new/split label-ink token) are not written either -- W1 was
+  # picked, so `.pk-fact-col dt` / `.pk-bgg-label` / `.pk-bgg-lbl` /
+  # `.pk-bgg-foot` are asserted UNCHANGED below, not given a new token.
+  describe "quick task 260910-if9: dark base ladder rotated onto the brand hue (C2)" do
+    # Task 1's oklch-audit.mjs proposed 8 degrees as a starting threshold
+    # (light's own worst intra-tone spread, .pk-pill-accent, measures 9.8
+    # degrees) -- Task 2's decision did not contest this number, so it is
+    # taken as confirmed. C2's rotation lands the whole ladder within ~1
+    # degree of the ink hue, well under this threshold regardless.
+    @if9_hue_family_threshold_deg 8.0
+
+    # Sketch 054's own four pinned WCAG ratios (assets/css/app.css's dark
+    # `daisyui-theme` block comment, displayed there rounded to 2 decimals
+    # as 13.59/6.85/12.07/6.70:1). These module attributes hold the true
+    # unrounded floor truncated to 3 decimals (never rounded UP) so this
+    # test cannot fail purely from the source comment's own display
+    # rounding -- primary-content-on-primary in particular is untouched by
+    # C2 and its precise value (6.696172) sits just BELOW the comment's
+    # rounded-up "6.70:1", which a naive 6.70 floor would fail on a value
+    # C2 never touched.
+    @sketch_054_text_on_bg_floor 13.593
+    @sketch_054_muted_on_bg_floor 6.847
+    @sketch_054_text_on_surface_floor 12.069
+    @sketch_054_primary_content_on_primary_floor 6.696
+
+    test "dark's --color-base-100/200/300 sit within the hue-family threshold of dark's ink (--color-neutral), closing the F1 split (260910-if9 AUDIT.md)" do
+      dark_block = dark_theme_plugin_block()
+
+      base_100 = token_value(dark_block, "--color-base-100")
+      base_200 = token_value(dark_block, "--color-base-200")
+      base_300 = token_value(dark_block, "--color-base-300")
+      neutral = token_value(dark_block, "--color-neutral")
+
+      hues = %{
+        "base-100" => oklch_hue(base_100),
+        "base-200" => oklch_hue(base_200),
+        "base-300" => oklch_hue(base_300),
+        "neutral" => oklch_hue(neutral)
+      }
+
+      {min_name, min_hue} = Enum.min_by(hues, fn {_, h} -> h end)
+      {max_name, max_hue} = Enum.max_by(hues, fn {_, h} -> h end)
+      spread = max_hue - min_hue
+
+      assert spread <= @if9_hue_family_threshold_deg,
+             "dark theme: max hue spread across --color-base-100/200/300 and --color-neutral " <>
+               "is #{Float.round(spread, 1)}° (#{min_name} #{Float.round(min_hue, 1)}° to " <>
+               "#{max_name} #{Float.round(max_hue, 1)}°) -- must be at or below the " <>
+               "#{@if9_hue_family_threshold_deg}° hue-family threshold Task 1's audit proposed " <>
+               "and Task 2's C2 pick (rotate the base ladder onto the brand hue) commits to " <>
+               "closing. Before this fix, `.pk-pill-outline`/`.pk-chip`'s border " <>
+               "(--color-base-300) measured 15.0° from --color-neutral and `.pk-pill-neutral`'s " <>
+               "fill (--color-base-200) measured 14.6° from it (260910-if9 AUDIT.md, finding F1)."
+    end
+
+    test "light theme's --color-base-100/200/300 are unchanged by the dark-only C2 rotation" do
+      light_block = light_theme_plugin_block()
+
+      assert token_value(light_block, "--color-base-100") == "#FFFFFF",
+             "light theme: --color-base-100 must stay byte-identical -- C2 is dark-scoped only."
+
+      assert token_value(light_block, "--color-base-200") == "#F3ECFA",
+             "light theme: --color-base-200 must stay byte-identical -- C2 is dark-scoped only."
+
+      assert token_value(light_block, "--color-base-300") == "#E3D3F0",
+             "light theme: --color-base-300 must stay byte-identical -- C2 is dark-scoped only."
+    end
+
+    test "dark's --color-neutral ink still clears the WCAG 4.5:1 text floor against --color-base-200 (pill fill) and --color-base-100 (the ground transparent-fill tones render against)" do
+      dark_block = dark_theme_plugin_block()
+      neutral = token_value(dark_block, "--color-neutral")
+      base_100 = token_value(dark_block, "--color-base-100")
+      base_200 = token_value(dark_block, "--color-base-200")
+
+      ratio_on_fill = contrast_ratio(relative_luminance(neutral), relative_luminance(base_200))
+      ratio_on_page = contrast_ratio(relative_luminance(neutral), relative_luminance(base_100))
+
+      assert ratio_on_fill >= 4.5,
+             "dark theme: --color-neutral (#{neutral}) on --color-base-200 (#{base_200}, " <>
+               "`.pk-pill-neutral`'s fill after the C2 rotation) measured " <>
+               "#{Float.round(ratio_on_fill, 2)}:1 -- must clear the 4.5:1 WCAG text floor."
+
+      assert ratio_on_page >= 4.5,
+             "dark theme: --color-neutral (#{neutral}) on --color-base-100 (#{base_100}, the " <>
+               "page ground `.pk-pill-outline`/`.pk-chip` render against with a transparent " <>
+               "fill) measured #{Float.round(ratio_on_page, 2)}:1 -- must clear the 4.5:1 WCAG " <>
+               "text floor."
+    end
+
+    test "sketch 054's four pinned dark-mode contrast assertions hold at or above their recorded ratios after the C2 rotation" do
+      dark_block = dark_theme_plugin_block()
+
+      base_100 = token_value(dark_block, "--color-base-100")
+      base_200 = token_value(dark_block, "--color-base-200")
+      base_content = token_value(dark_block, "--color-base-content")
+      neutral = token_value(dark_block, "--color-neutral")
+      primary = token_value(dark_block, "--color-primary")
+      primary_content = token_value(dark_block, "--color-primary-content")
+
+      text_on_bg = contrast_ratio(relative_luminance(base_content), relative_luminance(base_100))
+      muted_on_bg = contrast_ratio(relative_luminance(neutral), relative_luminance(base_100))
+      text_on_surface = contrast_ratio(relative_luminance(base_content), relative_luminance(base_200))
+
+      primary_content_on_primary =
+        contrast_ratio(relative_luminance(primary_content), relative_luminance(primary))
+
+      assert text_on_bg >= @sketch_054_text_on_bg_floor,
+             "dark theme: text (#{base_content}) on bg (#{base_100}) measured " <>
+               "#{Float.round(text_on_bg, 4)}:1 -- must stay at or above sketch 054's recorded " <>
+               "#{@sketch_054_text_on_bg_floor}:1. A C2 base-ladder rotation must never silently " <>
+               "degrade sketch 054's pinned dark-mode contrast."
+
+      assert muted_on_bg >= @sketch_054_muted_on_bg_floor,
+             "dark theme: muted (#{neutral}) on bg (#{base_100}) measured " <>
+               "#{Float.round(muted_on_bg, 4)}:1 -- must stay at or above sketch 054's recorded " <>
+               "#{@sketch_054_muted_on_bg_floor}:1."
+
+      assert text_on_surface >= @sketch_054_text_on_surface_floor,
+             "dark theme: text (#{base_content}) on surface (#{base_200}) measured " <>
+               "#{Float.round(text_on_surface, 4)}:1 -- must stay at or above sketch 054's " <>
+               "recorded #{@sketch_054_text_on_surface_floor}:1."
+
+      assert primary_content_on_primary >= @sketch_054_primary_content_on_primary_floor,
+             "dark theme: primary-content (#{primary_content}) on primary (#{primary}) measured " <>
+               "#{Float.round(primary_content_on_primary, 4)}:1 -- must stay at or above sketch " <>
+               "054's recorded #{@sketch_054_primary_content_on_primary_floor}:1 (--color-primary " <>
+               "and --color-primary-content are untouched by C2 -- this pins that fact)."
+    end
+
+    test "dark's uppercase/inline label ink rules still read var(--color-neutral) -- W1 (no change) leaves the label tier untouched" do
+      src = css_source()
+
+      for selector <- [".pk-fact-col dt", ".pk-bgg-label", ".pk-bgg-lbl", ".pk-bgg-foot"] do
+        case Regex.run(~r/(?m)^#{Regex.escape(selector)}\s*\{([^}]*)\}/s, src) do
+          [_, body] ->
+            assert body =~ ~r/color:\s*var\(--color-neutral\)\s*;/,
+                   "`#{selector}` must still read `color: var(--color-neutral)` -- Task 2's Pick " <>
+                     "2 was W1 (no change): dark's label-to-body lightness gap (ΔL 20.1) is " <>
+                     "already tighter than light's (ΔL 26.9) and clears 6.85:1 contrast, so this " <>
+                     "task deliberately does not introduce a --pk-ink-label token."
+
+          nil ->
+            flunk("No top-level `#{selector} { ... }` rule found in assets/css/app.css")
+        end
+      end
+    end
+  end
 end

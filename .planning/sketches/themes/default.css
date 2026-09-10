@@ -117,12 +117,21 @@
    (mapped to --color-text-muted here) moved #B8A6CC -> #C59CDC, same
    lightness, chroma lifted onto dark's own brand hue (H313.1) instead of
    sitting 6.6 degrees off it. See app.css's own dark daisyui-theme block
-   comment for the full measured rationale. */
+   comment for the full measured rationale.
+
+   Re-derived a fourth time (quick task 260910-if9, 2026-09-10): --color-bg /
+   --color-surface / --color-surface-2 (and --color-border, fed by the same
+   base-300 source) rotated onto dark's brand hue (H313.1), holding each
+   value's own lightness and chroma: --color-bg #2F154E -> #361148,
+   --color-surface #391B62 -> #441659, --color-surface-2/--color-border
+   #462278 -> #531B6D. See app.css's own dark daisyui-theme block comment
+   for the full measured before/after OKLCh figures and the C1/C2/C3
+   decision record. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #2F154E;
-    --color-surface: #391B62;
-    --color-surface-2: #462278;
+    --color-bg: #361148;
+    --color-surface: #441659;
+    --color-surface-2: #531B6D;
     --color-text: #F3ECFA;
     --color-text-muted: #C59CDC;
     --color-primary: #8C2BB6;
@@ -130,7 +139,7 @@
     --color-secondary: #642C77;
     --color-accent-bg: #3A1F47;
     --color-accent-text: #EBD7F4;
-    --color-border: #462278;
+    --color-border: #531B6D;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -139,9 +148,9 @@
   }
 }
 :root[data-theme="dark"] {
-  --color-bg: #2F154E;
-  --color-surface: #391B62;
-  --color-surface-2: #462278;
+  --color-bg: #361148;
+  --color-surface: #441659;
+  --color-surface-2: #531B6D;
   --color-text: #F3ECFA;
   --color-text-muted: #C59CDC;
   --color-primary: #8C2BB6;
@@ -149,7 +158,7 @@
   --color-secondary: #642C77;
   --color-accent-bg: #3A1F47;
   --color-accent-text: #EBD7F4;
-  --color-border: #462278;
+  --color-border: #531B6D;
   --color-danger: #E06B90;
   --color-success: #5FBE95;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);

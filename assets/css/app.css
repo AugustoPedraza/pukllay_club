@@ -171,15 +171,67 @@
    old muted value and `--pk-ink-brand`'s C0.13 (see that token's own
    provenance comment above this block), giving the theme one hue in three
    deliberate tiers: fill (--color-primary, C0.21) > interactive ink
-   (--pk-ink-brand, C0.13) > muted ink (--color-neutral, C0.10). */
+   (--pk-ink-brand, C0.13) > muted ink (--color-neutral, C0.10).
+
+   UPDATED (quick task 260910-if9, 2026-09-10): `--color-base-100/200/300`
+   rotated onto the brand hue, holding each token's own L and C. 260910-hdc
+   (above) fixed dark's INK family (`--color-neutral`, `--pk-ink-brand`) but
+   left the BASE LADDER at sketch 054's original hue — every pill/chip whose
+   surface reads from the ladder (`.pk-pill-neutral`, `.pk-pill-outline`,
+   `.pk-chip`) inherited a 14.6-15.0 degree fill/border-vs-ink split that
+   light theme never had (light's own worst spread is 2.8 degrees). This is
+   Task 1's finding F1 in `.planning/quick/260910-if9-.../AUDIT.md`.
+
+     --color-base-100: #2F154E (L26.8 C0.100 H300.7) -> #361148 (L26.7
+                        C0.101 H312.4)
+     --color-base-200: #391B62 (L30.7 C0.119 H298.5) -> #441659 (L30.8
+                        C0.118 H313.1)
+     --color-base-300: #462278 (L35.2 C0.139 H298.1) -> #531B6D (L35.2
+                        C0.139 H312.7)
+
+   Developer picked C2 ("rotate dark's base ladder onto the brand hue") over
+   two costed alternatives (AUDIT.md's Options section):
+     - REJECTED C1 ("retone the pill surface only" via
+       `color-mix(in oklab, --pk-ink-brand, --color-base-100)` scoped to the
+       pill rules) — narrower blast radius, but the hue gap only closes to
+       ~8-10 degrees before the mix's own contrast margin against
+       `--color-neutral` drops below the 4.5:1 WCAG floor; does not reach
+       root cause.
+     - REJECTED C3 ("equalise the cross-theme relationship, leave hues
+       alone" via one shared `color-mix` recipe in both themes) — makes the
+       two themes structurally symmetric but does NOT close dark's own
+       internal 14.6/15.0-degree split, which is the actual reported defect.
+
+   C2 was picked because it fixes the root cause (root ladder now on the
+   same hue as the ink it sits under, in every dark surface, not just
+   pills) and RE-VERIFIES clean against this same comment's own four pinned
+   WCAG assertions above — re-measured post-rotation:
+     text (#F3ECFA) on bg (#361148) .............. 13.67:1 (was 13.59:1)
+     muted (#C59CDC) on bg (#361148) ..............  6.89:1 (was  6.85:1)
+     text (#F3ECFA) on surface (#441659) .......... 12.09:1 (was 12.07:1)
+     primary-content (#FFFFFF) on primary (#8C2BB6)  6.70:1 (unchanged —
+       --color-primary/-content are not touched by this rotation)
+   All four hold at or above their pre-rotation margin; this rotation does
+   not reopen sketch 054's contrast decision, only its hue.
+
+   Pick 2 (label ink, `.pk-fact-col dt` / `.pk-bgg-label` / `.pk-bgg-lbl` /
+   `.pk-bgg-foot`) was W1 — NO CHANGE. Measured: dark's label-to-body
+   lightness gap (ΔL 20.1, `--color-neutral` L75.2 -> `--color-base-content`
+   L95.3) is already TIGHTER than light's own gap (ΔL 26.9), and the label
+   ink clears 6.85:1 against `--color-base-100` — not a contrast failure.
+   The reported "reads as disabled" perception may resolve once this C2
+   rotation is visible on the real page; the developer deferred any further
+   label-ink change until after viewing it. See
+   `.planning/quick/260910-if9-.../AUDIT.md` for the full costed option set
+   and `260910-if9-SUMMARY.md` for the recorded decision. */
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "dark";
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: #2F154E;
-  --color-base-200: #391B62;
-  --color-base-300: #462278;
+  --color-base-100: #361148;
+  --color-base-200: #441659;
+  --color-base-300: #531B6D;
   --color-base-content: #F3ECFA;
   --color-primary: #8C2BB6;
   --color-primary-content: #FFFFFF;
