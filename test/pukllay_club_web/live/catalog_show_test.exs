@@ -3987,10 +3987,57 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
+    # Pulls the single plain `:root { ... }` block that declares at least
+    # one `--pk-ramp-*` stop (quick task 260910-l7q, Task 1 tracer) —
+    # disambiguated from the file's OTHER plain `:root { ... }` block (the
+    # one carrying `--pk-ink-brand`, see dark_pk_ink_brand_root_block/0's
+    # sibling above) by CONTENT rather than by match order, the same idiom
+    # `oklch-audit.mjs`'s `parsePlainRootPkInkBrand` already uses.
+    defp ramp_root_block do
+      css_source()
+      |> then(&Regex.scan(~r/(?m)^:root\s*\{([^}]*)\}/, &1, capture: :all_but_first))
+      |> List.flatten()
+      |> Enum.find(&(&1 =~ ~r/--pk-ramp-/))
+      |> case do
+        nil -> flunk("No plain `:root { ... }` block declaring a `--pk-ramp-` stop found in assets/css/app.css")
+        body -> body
+      end
+    end
+
     defp token_value(source, token) do
       case Regex.run(~r/#{Regex.escape(token)}:\s*([^;]*);/, source) do
-        [_, value] -> String.trim(value)
+        [_, value] -> value |> String.trim() |> deref_ramp_value()
         nil -> flunk("No `#{token}` token found in the given source")
+      end
+    end
+
+    # One-hop dereference (quick task 260910-l7q, Task 1 tracer):
+    # `token_value/2` is the single choke point ~30 existing colour
+    # assertions already funnel through, so teaching the dereference here
+    # keeps every call site working unedited. Only a value that IS a
+    # `var()` read of a `--pk-ramp-` stop is dereferenced; every other value
+    # (hex literals, the `rgb(...)` triple `--pk-shadow-color` carries)
+    # passes through untouched. An unresolvable stop is a hard failure
+    # (`flunk`), never a silent pass-through of the raw `var(...)` string —
+    # that would turn every colour comparison funnelled through here into a
+    # string compare that happens to pass for the wrong reason (see the
+    # plan's threat model, T-l7q-01).
+    defp deref_ramp_value(value) do
+      case Regex.run(~r/^var\((--pk-ramp-[0-9]+)\)$/, value) do
+        [_, stop] ->
+          case Regex.run(~r/#{Regex.escape(stop)}:\s*([^;]*);/, ramp_root_block()) do
+            [_, resolved] ->
+              String.trim(resolved)
+
+            nil ->
+              flunk(
+                "Could not resolve `#{stop}` (referenced via `#{value}`) in the --pk-ramp-* " <>
+                  "root block — a role points at a ramp stop that does not exist."
+              )
+          end
+
+        nil ->
+          value
       end
     end
 
@@ -4420,10 +4467,22 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # `--color-primary`, not a copied literal — so a future author cannot
       # quietly replace it with a hex and let light silently drift from the
       # brand manual.
+      #
+      # UPDATED (quick task 260910-l7q, Task 1 tracer): app.css now
+      # declares a SECOND plain `:root { ... }` block (the `--pk-ramp-*`
+      # ramp, ordered before this one) — `Regex.run/2` would silently match
+      # that one first and break this assertion, so this scans every plain
+      # `:root` block and picks the one containing `--pk-ink-brand`, the
+      # same disambiguation-by-content idiom `ramp_root_block/0` uses for
+      # its own sibling block.
       root_body =
-        case Regex.run(~r/(?m)^:root\s*\{([^}]*)\}/s, css_source()) do
-          [_, body] -> body
-          nil -> flunk("No top-level `:root { ... }` rule found in assets/css/app.css")
+        css_source()
+        |> then(&Regex.scan(~r/(?m)^:root\s*\{([^}]*)\}/, &1, capture: :all_but_first))
+        |> List.flatten()
+        |> Enum.find(&(&1 =~ ~r/--pk-ink-brand:/))
+        |> case do
+          nil -> flunk("No plain `:root { ... }` block declaring `--pk-ink-brand` found in assets/css/app.css")
+          body -> body
         end
 
       assert root_body =~ ~r/--pk-ink-brand:\s*var\(--color-primary\)\s*;/,

@@ -224,6 +224,25 @@
    label-ink change until after viewing it. See
    `.planning/quick/260910-if9-.../AUDIT.md` for the full costed option set
    and `260910-if9-SUMMARY.md` for the recorded decision. */
+
+/* --pk-ramp-* (quick task 260910-l7q, Task 1 tracer): the single shared
+   OKLCh colour ramp both themes read from — a role's colour becomes a
+   POSITION on this ramp rather than an independently-typed hex. Declared
+   once, in a plain unlayered `:root` block (matching `--pk-ink-brand`'s own
+   shape above), immediately above the theme blocks that consume it, so
+   this is the file's single upstream palette source, not a per-theme copy.
+
+   This task wires exactly ONE stop through the whole stack — CSS
+   declaration, compiled output, and all three verification gates — while
+   changing no rendered colour, to prove the architecture before any other
+   value moves. `--pk-ramp-600` carries dark's current `--color-primary`
+   value unchanged. Task 2 measures the full 11-stop ramp and Task 4 fills
+   this block in; see `.planning/quick/260910-l7q-.../` for the generator
+   and audit. */
+:root {
+  --pk-ramp-600: #8C2BB6;
+}
+
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "dark";
   default: false;
@@ -233,7 +252,7 @@
   --color-base-200: #441659;
   --color-base-300: #531B6D;
   --color-base-content: #F3ECFA;
-  --color-primary: #8C2BB6;
+  --color-primary: var(--pk-ramp-600);
   --color-primary-content: #FFFFFF;
   --color-secondary: #642C77;
   --color-secondary-content: #FFFFFF;
