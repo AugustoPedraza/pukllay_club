@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 10/14 plans executed (4 original + 4 gap-closure round 1 + 2 gap-closure round 2, all 10 executed; 4 gap-closure round 3 pending)
+**Plans:** 12/14 plans executed (4 original + 4 gap-closure round 1 + 2 gap-closure round 2, all 10 executed; 4 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -208,12 +208,12 @@ sticky-footer mechanism G-01.5-9 asks to restore was DELETED seven days earlier 
 explicit request — so one plan in this round is a decision, not a fix. Every plan is strictly
 sequential: all four touch `app.css`)*
 
-- [ ] 01.5-11-PLAN.md — The Cierre/footer boundary: the band/footer token equality is broken from the FOOTER's side (page-scoped, since that fill is the only thing marking the footer on the catalog pages), the closing signature's desktop colour is taken out of the footer's type register, and the oracle that literally asserted this defect becomes the three-way rule the design needs (G-01.5-8; also closes G-01.5-9's Cause B)
+- [x] 01.5-11-PLAN.md — The Cierre/footer boundary: the band/footer token equality is broken from the FOOTER's side (page-scoped, since that fill is the only thing marking the footer on the catalog pages), the closing signature's desktop colour is taken out of the footer's type register, and the oracle that literally asserted this defect becomes the three-way rule the design needs (G-01.5-8; also closes G-01.5-9's Cause B)
 
 **Gap closure round 3 — Wave 2** *(blocked on 01.5-11 — shared `app.css`. NOT AUTONOMOUS: carries the
 round's one decision checkpoint)*
 
-- [ ] 01.5-12-PLAN.md — The site-wide sticky footer: a decision checkpoint on whether the mechanism the developer had removed on 2026-09-02 comes back, given that the 2026-09-09 report was measured incapable of being about it on the page it was filed against; then the chosen branch, an honest dated amendment to the stylesheet's superseding note, and a guard protecting whichever state was chosen (G-01.5-9)
+- [x] 01.5-12-PLAN.md — The site-wide sticky footer: a decision checkpoint on whether the mechanism the developer had removed on 2026-09-02 comes back, given that the 2026-09-09 report was measured incapable of being about it on the page it was filed against; then the chosen branch, an honest dated amendment to the stylesheet's superseding note, and a guard protecting whichever state was chosen (G-01.5-9)
 
 **Gap closure round 3 — Wave 3** *(blocked on 01.5-11/01.5-12 — shared `app.css`, `about_geometry.mjs`
 and `about_live_test.exs`)*
