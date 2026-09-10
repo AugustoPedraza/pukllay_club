@@ -5,15 +5,15 @@
 // straight out of this sketch's own index.html (single source — the page's
 // on-screen readout and this CLI therefore can never disagree about what a
 // variant's values are), then asserts:
-//   1. Exactly 4 variant blocks exist (round 2: "a" reference + 3 warm
-//      primary/secondary/accent candidates layered on Variant A's ladder,
-//      which the developer already picked in round 1 — see README).
-//   2. Each block declares all 13 mapped color tokens.
-//   3. For every block, the 4 measured WCAG ratios are each >= 4.5:1.
-//   4. Each of the 3 warm proposals (w1/w2/w3) differs from "a" in at least
-//      one declared token value, so no proposal is a silent no-op.
+//   1. Exactly 1 variant block exists — the final developer-picked winner
+//      (round 1's Variant A ladder + round 2's Warm 2 "Deep Jewel" primary/
+//      secondary/accent set). Every other variant tried across both rounds
+//      was removed from index.html once the decision landed; their hex
+//      values and hypotheses are preserved in README.md.
+//   2. That block declares all 13 mapped color tokens.
+//   3. The 4 measured WCAG ratios are each >= 4.5:1.
 //
-// Exit 0 + a per-variant table on success. Exit 1 + the specific failures
+// Exit 0 + the winner's table on success. Exit 1 + the specific failures
 // otherwise.
 
 import { readFileSync } from "node:fs";
@@ -40,8 +40,7 @@ const REQUIRED_TOKENS = [
 ];
 
 const CONTRAST_FLOOR = 4.5;
-const EXPECTED_VARIANT_COUNT = 4;
-const CONTROL_ID = "a";
+const EXPECTED_VARIANT_COUNT = 1;
 
 function hexToRgb(hex) {
   const h = hex.trim().replace("#", "");
@@ -102,11 +101,6 @@ function main() {
     );
   }
 
-  const control = variants.find((v) => v.id === CONTROL_ID);
-  if (!control) {
-    failures.push(`No "${CONTROL_ID}" variant block found — cannot compare proposals against it`);
-  }
-
   const rows = [];
 
   for (const variant of variants) {
@@ -135,13 +129,6 @@ function main() {
         failures.push(
           `Variant "${variant.id}": ${label} ratio ${ratio.toFixed(2)}:1 is below the ${CONTRAST_FLOOR}:1 floor`,
         );
-      }
-    }
-
-    if (variant.id !== CONTROL_ID && control) {
-      const isDistinct = REQUIRED_TOKENS.some((t) => variant.tokens[t] !== control.tokens[t]);
-      if (!isDistinct) {
-        failures.push(`Variant "${variant.id}" is a silent no-op — identical to "${CONTROL_ID}" on every token`);
       }
     }
 
@@ -187,7 +174,7 @@ function main() {
   }
 
   console.log(
-    `\nOK: ${rows.length} variants x ${REQUIRED_TOKENS.length} tokens, every ratio >= ${CONTRAST_FLOOR}:1, every warm proposal distinct from "${CONTROL_ID}".`,
+    `\nOK: ${rows.length} variant x ${REQUIRED_TOKENS.length} tokens, every ratio >= ${CONTRAST_FLOOR}:1.`,
   );
   process.exit(0);
 }
