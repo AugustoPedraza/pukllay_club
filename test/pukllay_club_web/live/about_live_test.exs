@@ -1616,8 +1616,8 @@ defmodule PukllayClubWeb.AboutLiveTest do
     test "the base .pk-about-cta-bar rule declares margin-block-end: 0" do
       src = strip_comments(css_source())
 
-      base_rule = Regex.run(~r/(?<!:has\()\.pk-about-cta-bar\s*\{([^}]*)\}/s, src)
-      assert base_rule, "Expected a base (non-media-query) .pk-about-cta-bar rule in app.css."
+      base_rule = Regex.run(~r/(?m)^\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+      assert base_rule, "Expected a top-level (line-anchored) .pk-about-cta-bar rule in app.css."
       [_, base_body] = base_rule
 
       assert base_body =~ ~r/margin-block-end\s*:\s*0\b/,
@@ -1626,28 +1626,39 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "child) pushes this fixed, bottom:0 bar away from the true viewport edge."
     end
 
-    # SUPERSEDED (G-01.5-11 gap closure, plan 01.5-14, sketch 052 winner B).
-    # This test used to REFUSE any justify-content declaration on
-    # .pk-about-cta-bar — its premise was that the button spanned the full
-    # width (w-full), so daisyUI's own .btn centring sufficed and the
-    # wrapper needed no centring rule of its own. Winner B renders a
-    # content-sized pill instead (no more w-full), so the wrapper itself
-    # must place it — the exact reversal of the old premise. Implemented as
-    # text-align: center (not justify-content/flex) so the media-query
-    # display swap stays "display: block" and the sibling test asserting
-    # that value is untouched by this plan.
-    test "the base .pk-about-cta-bar rule centres its content-sized child (sketch 052 winner B, plan 01.5-14)" do
+    # SUPERSEDED (sketch 053 winner D, quick task 260910-av6, G-01.5-12).
+    # This test used to assert `text-align: center` on the base rule,
+    # because sketch 052 winner B's wrapper held a content-sized pill that
+    # needed its own centring rule. Winner D's wrapper is full-width again
+    # (no more content-sized child to centre), so the base rule no longer
+    # needs — and no longer declares — text-align: center. What replaces it
+    # is the RENDERED fact that the bar's Sumate anchor spans the bar's
+    # full inner width.
+    test "the base .pk-about-cta-bar rule no longer centres a content-sized child; the bar's Sumate anchor is full-width instead (sketch 053 winner D)",
+         %{conn: conn} do
       src = strip_comments(css_source())
 
-      base_rule = Regex.run(~r/(?<!:has\()\.pk-about-cta-bar\s*\{([^}]*)\}/s, src)
-      assert base_rule, "Expected a base (non-media-query) .pk-about-cta-bar rule in app.css."
+      base_rule = Regex.run(~r/(?m)^\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+      assert base_rule, "Expected a top-level (line-anchored) .pk-about-cta-bar rule in app.css."
       [_, base_body] = base_rule
 
-      assert base_body =~ ~r/text-align\s*:\s*center/,
-             "Expected .pk-about-cta-bar to centre its child. The superseded test refused any " <>
-               "justify-content declaration because the button spanned the full width and " <>
-               "daisyUI's own .btn centring sufficed; sketch 052 winner B renders a " <>
-               "content-sized pill instead, so the wrapper itself must place it."
+      refute base_body =~ ~r/text-align\s*:\s*center/,
+             "Expected .pk-about-cta-bar to declare no text-align: center. Sketch 052 winner B " <>
+               "needed this to centre a content-sized pill; winner D's wrapper is full-width " <>
+               "again, so the bar's Sumate anchor now positions itself (w-full) rather than " <>
+               "being centred by the wrapper."
+
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+      doc = LazyHTML.from_document(html)
+      anchor = LazyHTML.query(doc, ".pk-about-cta-bar a")
+      assert Enum.count(anchor) == 1, "Expected exactly one anchor inside .pk-about-cta-bar."
+
+      [class] = LazyHTML.attribute(anchor, "class")
+
+      assert class =~ ~r/\bw-full\b/,
+             "Expected the bar's Sumate anchor to carry w-full — winner D's full-width bar " <>
+               "requires the button itself to span the bar's inner width edge-to-edge at the " <>
+               "page gutter, not just the wrapper's own box."
     end
 
     # G-01.5-7 gap closure (plan 01.5-10 —
@@ -1660,40 +1671,157 @@ defmodule PukllayClubWeb.AboutLiveTest do
     # two siblings — the 6-arm differential proved swapping it is inert on
     # the reported symptom and actively worse at the page bottom) and the
     # border token it must now USE (neutral, replacing base-300).
-    # SUPERSEDED (G-01.5-11 gap closure, plan 01.5-14, sketch 052 winner B).
-    # This test used to pin the base-100 fill and the var(--color-neutral)
-    # border-top plan 01.5-10 gave this bar to close G-01.5-7 (measured
-    # 1.406:1 light / 1.19:1 dark against the retired base-300 border, under
-    # the 3:1 WCAG 1.4.11 non-text floor). Winner B removes the fill AND the
-    # border together — this DISSOLVES G-01.5-7's mechanism rather than
-    # regressing it (a bar with no surface has no faint boundary to
-    # misread), so the two successor tests below assert what now carries
-    # figure/ground instead: no surface on the wrapper, and a solid fill
-    # resolved from the primary/primary-content pair on the button — an
-    # audited theme pair, stronger than the retired border ever was (no
-    # step of the base-100/200/300 ladder the superseded guard measured
-    # against clears 3:1 in either theme).
-    test "the base .pk-about-cta-bar rule declares no background and no border" do
+    #
+    # SUPERSEDED-THEN-RESTORED: plan 01.5-14 (sketch 052 winner B) removed
+    # the fill AND the border together, dissolving this fix's mechanism
+    # rather than regressing it (a bar with no surface has no faint
+    # boundary to misread) — figure/ground moved to the button's own solid
+    # primary fill instead. Sketch 053 winner D (quick task 260910-av6,
+    # G-01.5-12) restores a full surface to the bar, so this fix's ORIGINAL
+    # mechanism must come back with it, not be re-lost a second time: the
+    # base rule must once again declare background: var(--color-base-100)
+    # and a border-top resolving var(--color-neutral) — never
+    # var(--color-base-300), which plan 01.5-10 measured at 1.406:1 light /
+    # 1.19:1 dark, under the 3:1 WCAG 1.4.11 non-text floor (neutral
+    # measures 5.785:1 / 7.128:1).
+    test "the base .pk-about-cta-bar rule restores a background and a border-top (sketch 053 winner D restores plan 01.5-10's G-01.5-7 fix)" do
       src = strip_comments(css_source())
 
-      base_rule = Regex.run(~r/(?<!:has\()\.pk-about-cta-bar\s*\{([^}]*)\}/s, src)
-      assert base_rule, "Expected a base (non-media-query) .pk-about-cta-bar rule in app.css."
+      base_rule = Regex.run(~r/(?m)^\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+      assert base_rule, "Expected a top-level (line-anchored) .pk-about-cta-bar rule in app.css."
       [_, base_body] = base_rule
 
-      refute base_body =~ ~r/background\s*:/,
-             "Expected .pk-about-cta-bar to declare no background — sketch 052 winner B removes " <>
-               "the bar's surface entirely. Plan 01.5-10 had measured this bar's prior base-100 " <>
-               "fill/base-300 border edge at 1.406:1 light / 1.19:1 dark (below the 3:1 WCAG " <>
-               "1.4.11 non-text floor) and fixed it by moving the border to " <>
-               "var(--color-neutral) (5.785:1/7.128:1). Winner B dissolves that concern rather " <>
-               "than regressing it: a bar with no surface has no faint boundary to misread, and " <>
-               "figure/ground now comes from the button's own solid primary fill plus " <>
-               "elevation instead."
+      assert base_body =~ ~r/background\s*:\s*var\(--color-base-100\)/,
+             "Expected .pk-about-cta-bar to declare background: var(--color-base-100). Winner D " <>
+               "restores a surface to this bar (superseding sketch 052 winner B, which removed " <>
+               "it entirely) — this is the SAME fill plan 01.5-10's 6-arm differential proved " <>
+               "correct for this bar (base-200 was inert on the reported symptom and worse at " <>
+               "the real page bottom)."
 
-      refute base_body =~ ~r/border(-top)?\s*:/,
-             "Expected .pk-about-cta-bar to declare no border — see the background assertion " <>
-               "above for why this is a supersession of plan 01.5-10's G-01.5-7 fix, not a " <>
-               "regression of it."
+      assert base_body =~ ~r/border-top\s*:\s*1px\s+solid\s+var\(--color-neutral\)/,
+             "Expected .pk-about-cta-bar to declare border-top: 1px solid var(--color-neutral) " <>
+               "— NOT var(--color-base-300). Plan 01.5-10 measured base-300 at 1.406:1 light / " <>
+               "1.19:1 dark, under the 3:1 WCAG 1.4.11 non-text floor, and moved it to neutral " <>
+               "(5.785:1 / 7.128:1) to close G-01.5-7. Winner D restores the surface this border " <>
+               "was originally attached to, so that fix must come back with it, not be re-lost."
+    end
+
+    # NEW (sketch 053 winner D): the bar is ABSENT, not merely transparent,
+    # before the reveal trigger below fires. T-QUICK-03: visibility, not
+    # opacity alone, removes the anchor from the tab order and the a11y
+    # tree — matching this file's existing header-hide mechanism (WR-02,
+    # body:has(#about-hero[data-morph-armed]) #app-header).
+    test "the base .pk-about-cta-bar rule declares a translated-out, invisible hidden state" do
+      src = strip_comments(css_source())
+
+      base_rule = Regex.run(~r/(?m)^\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+      assert base_rule, "Expected a top-level (line-anchored) .pk-about-cta-bar rule in app.css."
+      [_, base_body] = base_rule
+
+      assert base_body =~ ~r/transform\s*:\s*translateY\(110%\)/,
+             "Expected .pk-about-cta-bar to declare transform: translateY(110%) at rest — the " <>
+               "bar must be translated fully out of the viewport before the docked-state reveal."
+
+      assert base_body =~ ~r/opacity\s*:\s*0\b/,
+             "Expected .pk-about-cta-bar to declare opacity: 0 at rest."
+
+      assert base_body =~ ~r/visibility\s*:\s*hidden\b/,
+             "Expected .pk-about-cta-bar to declare visibility: hidden at rest (T-QUICK-03) — " <>
+               "the bar must be absent from the tab order and the a11y tree before the trigger " <>
+               "fires, not merely painted transparent."
+    end
+
+    # NEW (sketch 053 winner D): the ONE entry trigger for this bar,
+    # reusing the D-03 boolean .AboutHeaderMorph already computes and
+    # toggles on #about-hero (about_live.ex) — the same class the hero
+    # eyebrow hide and the .pk-about-morph-name fade already read (both
+    # below, and above in this file's own describe blocks). No new scroll
+    # mechanism, no timer, no second boolean anywhere in this plan.
+    test "a body:has(#about-hero.is-docked) .pk-about-cta-bar rule reveals the bar (D-03 reuse, no second scroll mechanism)" do
+      src = strip_comments(css_source())
+
+      reveal_rule =
+        Regex.run(~r/body:has\(#about-hero\.is-docked\)\s*\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+
+      assert reveal_rule,
+             "Expected a body:has(#about-hero.is-docked) .pk-about-cta-bar rule in app.css — " <>
+               "this is a REUSE of the D-03 boolean .AboutHeaderMorph already toggles (the same " <>
+               "class the hero eyebrow hide and the .pk-about-morph-name fade already read), " <>
+               "never a new scroll mechanism."
+
+      [_, reveal_body] = reveal_rule
+
+      assert reveal_body =~ ~r/transform\s*:\s*translateY\(0\)/,
+             "Expected the reveal rule to declare transform: translateY(0)."
+
+      assert reveal_body =~ ~r/opacity\s*:\s*1\b/,
+             "Expected the reveal rule to declare opacity: 1."
+
+      assert reveal_body =~ ~r/visibility\s*:\s*visible\b/,
+             "Expected the reveal rule to declare visibility: visible."
+    end
+
+    # NEW (sketch 053 winner D, second refinement pass): once shown, the
+    # bar stays visible for the rest of the scroll in BOTH directions —
+    # there is no footer-proximity auto-hide anywhere in this mechanism,
+    # unlike the per-game detail-page bar's .DetailChrome scroll-retract/
+    # footer-park lifecycle (see this bar's own top-of-rule comment for why
+    # the two are deliberately unrelated mechanisms).
+    test "no footer-proximity auto-hide exists for .pk-about-cta-bar, in CSS or JS" do
+      css_src = strip_comments(css_source())
+
+      # Isolate each rule's SELECTOR text (everything before its own `{`)
+      # rather than scanning raw proximity in the stripped source — the
+      # word "footer" appears legitimately elsewhere near this bar's own
+      # media-query display swap (e.g. .pk-footer-legal's sibling rules),
+      # and a bare character-window proximity check would false-positive
+      # on that coincidental adjacency. A footer-proximity auto-hide rule
+      # would combine both tokens in ONE selector (e.g. a :has(+ footer)
+      # combinator) — no such selector should exist anywhere in app.css.
+      offending_selectors =
+        ~r/([^{}]+)\{/
+        |> Regex.scan(css_src)
+        |> Enum.map(fn [_, selector] -> selector end)
+        |> Enum.filter(fn selector ->
+          selector =~ "pk-about-cta-bar" and selector =~ ~r/footer/i
+        end)
+
+      assert offending_selectors == [],
+             "Expected no CSS selector combining .pk-about-cta-bar with any footer reference " <>
+               "(got: #{inspect(offending_selectors)}) — sketch 053's second refinement pass " <>
+               "removed footer-proximity auto-hide in favor of a live-measured document-end " <>
+               "clearance reservation instead."
+
+      live_src = File.read!(Path.expand("../../../lib/pukllay_club_web/live/about_live.ex", __DIR__))
+
+      refute live_src =~ "IntersectionObserver",
+             "Expected about_live.ex to contain no IntersectionObserver — the measurement hook " <>
+               "(Task 2) must never grow into a footer-proximity auto-hide, which is the exact " <>
+               "behavior sketch 053's second refinement pass removed."
+    end
+
+    # NEW (sketch 053 winner D): elevation moved to the bar's own surface
+    # (box-shadow, above); pointer-events: auto has nothing left to punch
+    # through, since the transparent, pointer-events: none wrapper it
+    # overrode is gone. The primary/primary-content assertions this test
+    # used to share a block with (background/color) are unchanged and
+    # still covered by the next test below.
+    test "the bar's Sumate button modifier declares no box-shadow and no pointer-events (elevation moved to the bar's own surface)" do
+      src = strip_comments(css_source())
+
+      modifier_rule = Regex.run(~r/\.pk-sumate-btn-solid\s*\{([^}]*)\}/s, src)
+      assert modifier_rule, "Expected a .pk-sumate-btn-solid modifier rule in app.css."
+      [_, modifier_body] = modifier_rule
+
+      refute modifier_body =~ ~r/box-shadow\s*:/,
+             "Expected .pk-sumate-btn-solid to declare no box-shadow — winner D's full-width " <>
+               "bar carries its own elevation (.pk-about-cta-bar's box-shadow), matching the " <>
+               "sketch's in-bar button, which itself carries none."
+
+      refute modifier_body =~ ~r/pointer-events\s*:/,
+             "Expected .pk-sumate-btn-solid to declare no pointer-events — it existed solely to " <>
+               "punch through the old transparent wrapper's pointer-events: none, which is gone " <>
+               "now that the wrapper is an opaque surface."
     end
 
     test "the bar's Sumate button resolves a solid fill from the primary token pair" do

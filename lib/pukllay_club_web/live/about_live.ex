@@ -845,36 +845,43 @@ defmodule PukllayClubWeb.AboutLive do
         </div>
       </section>
 
-      <%!-- About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
-      Page-owned, not shell-owned: no other route can accidentally inherit it,
-      which is the whole point of the D-05 supersession — a site-wide sticky
-      bar would put the join ask back on every page the header just stopped
-      putting it on. Reuses the hero's own sumate_cta/1 so the two placements
-      can never drift to different labels/destinations. display:none at base,
-      turned on only in the trailing @media (max-width: 480px) block.
+      <%!-- About-scoped mobile sticky join-CTA bar (01.1-09, D-05
+      superseded; rebuilt sketch 053 winner D, quick task 260910-av6,
+      G-01.5-12). Page-owned, not shell-owned: no other route can
+      accidentally inherit it, which is the whole point of the D-05
+      supersession — a site-wide sticky bar would put the join ask back on
+      every page the header just stopped putting it on. Reuses the hero's
+      own sumate_cta/1 so the two placements can never drift to different
+      labels/destinations. display:none at base, turned on only in the
+      trailing @media (max-width: 480px) block.
 
-      Plan 01.5-08 (G-01.5-3 item 4): this bar used to be paired with an
-      in-flow `.pk-about-cta-spacer` sibling div rendered here to reserve
-      clearance for it. That spacer is gone — it sat before <footer> in
-      flow, clearing the closing band above it (which needed no clearance)
-      while leaving the footer, the element this fixed bar actually
-      overlays, still covered at the real page bottom. The replacement is a
-      page-scoped `body:has(.pk-about-cta-bar)` document-end reservation in
-      app.css, co-located in the same 480px media block as this bar's own
-      display swap — see that rule for the full placement reasoning.
+      Winner D (app.css, .pk-about-cta-bar): a full-width surfaced bar,
+      hidden (translated out + invisible) until the page's own docked state
+      turns on — reusing the SAME `#about-hero.is-docked` boolean
+      `.AboutHeaderMorph` (above) already computes, no second scroll
+      mechanism — and then visible for the rest of the scroll, with no
+      footer-proximity auto-hide in either direction. Supersedes plan
+      01.5-14's sketch 052 winner B "floating compact pill", rejected at
+      round-3 UAT for covering the footer's "Powered by BGG" line; footer
+      clearance is now RESERVED (Task 2's live-measured
+      `--pk-about-cta-bar-h`, consumed by app.css's document-end
+      `body:has(.pk-about-cta-bar)` rule) instead of solved by auto-hiding
+      the bar.
 
-      Plan 01.5-14 (G-01.5-11 gap closure, sketch 052 winner B "floating
-      compact pill", picked directly with no revision round after UAT
-      flagged this bar as "weird, alternatives?"): the wrapper's surface is
-      gone — the `pk-sumate-btn-solid` class passed here is the only change
-      to this call, swapping the old `w-full` stretch for the modifier that
-      fills the button solid and elevates it, through the exact same
-      caller-class merge seam `w-full` used. Nothing else about this call,
-      `sumate_cta/1` itself, or the hero/closing-band placements changes:
-      those two stay outline on purpose — this is a mobile-overlay
+      `pk-sumate-btn-solid w-full` passed here through `sumate_cta/1`'s
+      existing caller-class merge seam: `pk-sumate-btn-solid` fills the
+      button solid from the audited primary/primary-content token pair
+      (unchanged from plan 01.5-14); `w-full` is restored (it was removed
+      by 01.5-14 when the wrapper became a content-sized pill) so the
+      button spans the bar's full inner width edge-to-edge at the page
+      gutter, matching winner D's full-width premise. Nothing else about
+      this call, `sumate_cta/1` itself, or the hero/closing-band placements
+      changes: those two stay outline on purpose — this is a mobile-overlay
       treatment for the sticky bar alone, not a new button style for the
       page. --%>
-      <div class="pk-about-cta-bar"><Layouts.sumate_cta class="pk-sumate-btn-solid" /></div>
+      <div class="pk-about-cta-bar">
+        <Layouts.sumate_cta class="pk-sumate-btn-solid w-full" />
+      </div>
 
       <%!-- Sketch 045 isologo scroll-morph mark: the SINGLE positioned
       floating element .AboutHeaderMorph (mounted on the hero section above)

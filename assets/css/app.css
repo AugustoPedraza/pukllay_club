@@ -2688,16 +2688,27 @@ body.pk-drawer-open {
    keep `.pk-sumate-btn`'s pill radius a literal instead of inventing a
    radius token this theme doesn't have.
 
-   `pointer-events: auto` overrides `.pk-about-cta-bar`'s own
-   `pointer-events: none` below (T-01.5-59): the wrapper is transparent to
-   taps so page content beside the floating pill stays reachable, and this
-   is the one declaration that keeps the pill itself tappable. */
+   `pointer-events: auto` overrode `.pk-about-cta-bar`'s own
+   `pointer-events: none` (T-01.5-59): the wrapper was transparent to taps
+   so page content beside the floating pill stayed reachable, and this was
+   the one declaration that kept the pill itself tappable.
+
+   SUPERSEDED (sketch 053 winner D, quick task 260910-av6, G-01.5-12): both
+   `box-shadow` and `pointer-events: auto` are dropped. Winner D restores a
+   full-width surfaced bar (`.pk-about-cta-bar`, below) — elevation now
+   belongs to that bar's own `box-shadow` (matching the sketch's in-bar
+   button, which itself carries none), and `pointer-events: auto` has
+   nothing left to punch through: the transparent, `pointer-events: none`
+   wrapper it was overriding is gone, replaced by an opaque surface with no
+   `pointer-events` declaration of its own (the default `auto` already
+   makes every descendant tappable). Kept, unchanged: `background`/`color`/
+   `border-color` (the audited primary/primary-content pair) and the
+   `:hover` brightness filter below — neither is affected by the surface
+   change. */
 .pk-sumate-btn-solid {
   background: var(--color-primary);
   color: var(--color-primary-content);
   border-color: var(--color-primary);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
-  pointer-events: auto;
 }
 
 .pk-sumate-btn-solid:hover {
@@ -2705,12 +2716,9 @@ body.pk-drawer-open {
 }
 
 /* About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
-   Page-owned (rendered by AboutLive only, never Layouts) and deliberately
-   has no hook and no scroll behavior at all — it is simply pinned, unlike
-   plan 01.1-04's .pk-mobile-cta-bar (the per-game reservation CTA, driven
-   by .DetailChrome's scroll-retract/footer-park lifecycle). No class, rule
-   or hook is shared between the two. Its display swap lives in the single
-   trailing narrow-viewport media block below, per Pitfall 5.
+   Page-owned (rendered by AboutLive only, never Layouts) — its display
+   swap lives in the single trailing narrow-viewport media block below, per
+   Pitfall 5.
 
    Plan 01.5-08 (G-01.5-3 item 4): this bar used to be paired with an
    in-flow `.pk-about-cta-spacer` placed before <footer> to reserve
@@ -2719,64 +2727,130 @@ body.pk-drawer-open {
    leaving the footer, the element this fixed bar actually overlays,
    still covered. The replacement is a `body:has(.pk-about-cta-bar)`
    document-end reservation in the same media block as this bar's own
-   display swap — see that rule for the full placement reasoning and (as
-   of plan 01.5-14) the pill footprint it is now derived from.
+   display swap, now driven by Task 2's live-measured `--pk-about-cta-bar-h`
+   rather than any bar-footprint literal — see that rule for the full
+   placement reasoning.
 
-   `margin-block-end: 0` (Rule 1 bug, found via Task 3's live CDP probe):
-   this element is not the shell's `space-y-4` wrapper's LAST child —
-   `#pk-about-morph-mark` and the `<noscript>` marker follow it in
+   `margin-block-end: 0` (Rule 1 bug, found via plan 01.5-08's Task 3 live
+   CDP probe): this element is not the shell's `space-y-4` wrapper's LAST
+   child — `#pk-about-morph-mark` and the `<noscript>` marker follow it in
    about_live.ex — and Tailwind v4's `space-y-*` utilities apply
    `margin-block-end` to every non-last child (a different mechanism from
    Tailwind v3's `margin-top`-on-non-first-child). Un-neutralised, that gave
    this `position: fixed; bottom: 0` element a real 16px margin PUSHING ITS
-   RENDERED BOX 16px ABOVE the true viewport edge — live-measured: bar
-   top=815px / bottom=884px in a 900px-tall viewport, not the 831px/900px
-   its own `bottom: 0` promises. That is a visible defect on its own (a
-   16px unpainted strip below the bar) and it silently ate into this
-   plan's reserved clearance (72px inherited from the removed spacer covers
-   the bar's 69px height with margin, but not 69px height PLUS a stray
-   16px margin — the two together (85px) exceed the reservation, which is
-   exactly what Task 3's fixed-bar/footer non-intersection probe check
-   caught). Same unlayered-`.pk-*`-beats-layered-Tailwind-utility cascade
-   direction as `.pk-band`'s own `margin-block-end: 0` fix (plan 01.5-06) —
-   no `!important` needed, this file's top-of-file CASCADE-LAYER HAZARD
-   note already documents why. Plan 01.5-14's deliberate `bottom` offset
-   (below) makes a stray extra margin on top of it HARDER to spot, not
-   easier — a flush bar's stray 16px reads as an obviously wrong gap
-   against the viewport edge, while a floating pill's own intentional gap
-   can silently absorb a few more stray pixels without looking wrong at a
-   glance. This declaration stays non-optional.
+   RENDERED BOX 16px ABOVE the true viewport edge. Same unlayered-`.pk-*`-
+   beats-layered-Tailwind-utility cascade direction as `.pk-band`'s own
+   `margin-block-end: 0` fix (plan 01.5-06) — no `!important` needed, this
+   file's top-of-file CASCADE-LAYER HAZARD note already documents why. This
+   declaration stays non-optional now that the bar is flush again (winner D
+   restores `bottom: 0`) — a stray 16px margin on a flush bar reads as an
+   obviously wrong unpainted strip against the viewport edge.
 
-   SUPERSEDED (plan 01.5-14, G-01.5-11 gap closure — sketch 052, winner B
-   "floating compact pill", picked directly by the user with no revision
-   round after UAT flagged this bar as "weird, alternatives?"). Plan
-   01.5-10 closed G-01.5-7 one round earlier by moving this rule's
-   `border-top` from `var(--color-base-300)` (1.406:1 light / 1.19:1 dark,
-   under the 3:1 WCAG 1.4.11 non-text floor) to `var(--color-neutral)`
-   (5.785:1/7.128:1), and deliberately kept the fill on `--color-base-100`
-   (a 6-arm differential had proved swapping it to base-200 inert on the
-   symptom and worse at the real page bottom). Winner B removes the surface
-   AND the edge together — no background, no border, no padding — which
-   DISSOLVES that fix's mechanism rather than regressing it: a bar with no
-   surface has no faint boundary to misread in the first place. Figure/
-   ground for the join ask now comes from the button's own solid primary
-   fill (`.pk-sumate-btn-solid`, above) plus elevation instead of a
-   hairline edge — the primary/primary-content pair is an audited theme
-   token pair, where no step of the base-100/200/300 ladder the superseded
-   border guard measured against ever clears the 3:1 floor in either theme.
-   The superseded guard's own measured numbers are preserved above and in
-   the successor source test's failure message so this reads as a
-   supersession, not a quiet retreat from G-01.5-7. */
+   SKETCH 053 WINNER D (quick task 260910-av6, G-01.5-12, refined —
+   .planning/sketches/053-about-mobile-cta-bar-footer-clearance/): supersedes
+   plan 01.5-14's sketch 052 winner B "floating compact pill", which was
+   rejected at round-3 UAT for covering the footer's "Powered by BGG" line
+   (the exact defect T-QUICK-04 in this plan's threat register exists to
+   prevent from recurring). Winner D is a full-width, flush, SURFACED bar
+   that stays hidden until the page's own docked state turns on (reusing
+   the boolean `.AboutHeaderMorph` already computes, D-03 below) and then
+   stays visible for the rest of the scroll — no footer-proximity auto-hide
+   in either direction, per sketch 053's second refinement pass.
+
+   Token mapping (sketch source -> this app, following plan 01.5-14's own
+   precedent of substituting repo tokens for sketch tokens):
+   - sketch `--color-bg` -> `--color-base-100` — plan 01.5-10's 6-arm
+     differential proved this fill correct for this bar (swapping to
+     base-200 was inert on the reported symptom and worse at the real page
+     bottom); winner D restores it along with the surface it was originally
+     attached to.
+   - sketch `--color-border` -> `--color-neutral`, deliberately NOT
+     `--color-base-300` — restores plan 01.5-10's G-01.5-7 contrast fix
+     (base-300 measured 1.406:1 light / 1.19:1 dark, under the 3:1 WCAG
+     1.4.11 non-text floor; neutral measures 5.785:1 / 7.128:1) alongside
+     the surface it was attached to, rather than re-losing it a second time.
+   - sketch's `color-mix(in srgb, var(--color-text) 10%, transparent)` ->
+     this repo's `--pk-shadow-color` at the same 10% ratio (the app has no
+     `--color-text` token; `--pk-shadow-color` is this file's own shadow
+     idiom, used elsewhere at 28%/10% depending on elevation weight).
+   - sketch's literal 16px inline padding -> `var(--pk-gutter)`, so the
+     full-width button's edges land on the page's own gutter line (0.875rem
+     inside this 480px block) instead of 2px off it.
+   - Deliberate non-goal: no `env(safe-area-inset-bottom)` padding —
+     `root.html.heex`'s viewport meta has no `viewport-fit=cover`, so
+     `env()` resolves to 0 here. Revisit only if that meta ever changes.
+
+   Hidden/reveal mechanism: `transform: translateY(110%)` + `opacity: 0` +
+   `visibility: hidden` at rest — the bar is ABSENT, not merely
+   transparent, before the trigger (T-QUICK-03: `visibility: hidden`
+   removes the anchor from the tab order and the a11y tree, matching this
+   file's existing header-hide mechanism, WR-02, rather than opacity
+   alone). The reveal rule immediately below flips all three under
+   `body:has(#about-hero.is-docked)` — the identical cross-subtree reach
+   `.pk-about-morph-name`'s own fade already uses (below), reading the ONE
+   boolean `.AboutHeaderMorph`'s per-frame driver already computes (D-03).
+   No second scroll mechanism, no IntersectionObserver, no footer-proximity
+   check, and deliberately no auto-hide in either direction. The
+   The visibility transition carries a `--duration-slow` delay on the way
+   OUT (this rule, below) so the element only goes non-visible AFTER the
+   slide-out transform finishes; the reveal rule immediately below has no
+   such delay — visibility flips instantly the moment the docked state
+   turns on, matching every other eased-in/instant-out asymmetry this file
+   already established for the header reveal (above, `.pk-nav-search`'s own
+   `transition-delay` longhand is this file's precedent for staging one
+   property's transition behind another's). Declared as the four
+   `transition-*` LONGHANDS, never the `transition:` shorthand — the
+   longhand form is what lets `visibility` carry its own delay independent
+   of `transform`/`opacity`, and (per `.pk-nav-search`'s own comment) this
+   file's `motion_rhythm_test.exs` only audits the shorthand for hardcoded
+   timing, so the longhand form is also the established way to keep every
+   duration/curve token-driven while giving one property a delay the
+   others don't share. */
 .pk-about-cta-bar {
   display: none;
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 20px;
+  bottom: 0;
   z-index: 40;
   margin-block-end: 0;
-  text-align: center;
-  pointer-events: none;
+  background: var(--color-base-100);
+  border-top: 1px solid var(--color-neutral);
+  box-shadow: 0 -6px 16px color-mix(in srgb, var(--pk-shadow-color) 10%, transparent);
+  padding: 10px var(--pk-gutter);
+  transform: translateY(110%);
+  opacity: 0;
+  visibility: hidden;
+  transition-property: transform, opacity, visibility;
+  transition-duration: var(--duration-slow), var(--duration-base), var(--duration-slow);
+  transition-timing-function: var(--ease-out-soft), var(--ease-standard), linear;
+  transition-delay: 0s, 0s, var(--duration-slow);
+}
+
+/* The reveal: D-03 reuse of the identical `body:has(#about-hero.is-docked)`
+   reach `.pk-about-morph-name`'s fade already uses (below) — the ONE
+   boolean `.AboutHeaderMorph`'s per-frame driver already computes, no new
+   listener, no IntersectionObserver, no footer-proximity check anywhere in
+   this mechanism. Source order matters here: this rule must follow the
+   base `.pk-about-cta-bar` rule directly above so a plain (non-`:has()`)
+   base-rule regex binds to the correct match first. `transition-delay: 0s`
+   (uniform, no per-property stagger) on the way in, unlike the base rule's
+   delayed-out `visibility` — the bar should appear the instant the
+   transform/opacity transition starts, not wait for it to finish; this
+   explicit `0s` is required because, absent it, the higher-specificity
+   reveal rule would otherwise inherit the base rule's own
+   `transition-delay` list for the properties it doesn't re-declare.
+   Deliberately no auto-hide rule anywhere in this file for this bar, in
+   either scroll direction — sketch 053's second refinement pass removed
+   that behavior on purpose. */
+body:has(#about-hero.is-docked) .pk-about-cta-bar {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition-property: transform, opacity, visibility;
+  transition-duration: var(--duration-slow), var(--duration-base), 0s;
+  transition-timing-function: var(--ease-out-soft), var(--ease-standard), linear;
+  transition-delay: 0s;
 }
 
 /* About page content bands (01.1-02, D-07 spine: hero -> photo rail ->
