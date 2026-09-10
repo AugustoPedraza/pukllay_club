@@ -1552,11 +1552,25 @@ defmodule PukllayClubWeb.AboutLiveTest do
     # and became 1px TIGHT the moment plan 01.5-10's Task 1 grew the Sumate
     # button to 48px — a hard literal pinned against a content-derived
     # height is guaranteed to drift, and already had, in both directions.
-    # This asserts the replacement is a calc() expression composed from the
-    # bar's own parts (rather than a bare literal that could silently drift
-    # again the next time the button's size changes), naming the drift this
-    # guards against in its own failure message.
-    test "the body:has(.pk-about-cta-bar) clearance is composed via calc(), not a bare literal" do
+    # This asserts the replacement is derived from the bar's own parts (rather
+    # than a bare literal that could silently drift again the next time the
+    # button's size changes), naming the drift this guards against in its own
+    # failure message.
+    #
+    # RETARGETED (debug cta-bar-footer-gap-uncolored), NOT relaxed. This test
+    # used to assert `padding-bottom: calc(` on the whole value. That shape was
+    # incidental to its intent and has since become WRONG: a top-level calc()
+    # is the only way to add a term to this reservation, and an additive term
+    # here is itself the bug that debug session fixed (any space reserved
+    # beyond the bar's height is `body` padding the bar cannot cover, so it
+    # paints page background as an uncoloured band between the footer and the
+    # bar). The anti-drift intent is unchanged and still fully enforced — the
+    # derivation simply moved INSIDE the var()'s fallback, which is where it
+    # belongs now that the live-measured var is the primary value. The
+    # complementary "no top-level calc()" assertion lives in
+    # about_cta_bar_clearance_test.exs; the two are deliberately opposite
+    # boundary neighbours around the same declaration.
+    test "the body:has(.pk-about-cta-bar) clearance is derived, not a bare literal" do
       src = strip_comments(css_source())
       body = media_480_body(src)
       assert body, "Expected to extract the @media (max-width: 480px) block body."
@@ -1565,13 +1579,20 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert clearance_rule, "Expected a body:has(.pk-about-cta-bar) rule inside the 480px block."
       [_, clearance_body] = clearance_rule
 
-      assert clearance_body =~ ~r/padding-bottom\s*:\s*calc\(/,
-             "Expected the document-end clearance to be a calc() expression derived from the " <>
-               "bar's own padding/button-height/border, not a bare px/rem literal. A bare " <>
-               "literal against a content-derived bar height is guaranteed to drift — the " <>
-               "inherited 4.5rem was 3px loose against the 69px pre-01.5-10 bar and became 1px " <>
-               "TIGHT the moment the button grew to 48px, which is exactly the recurrence this " <>
-               "guard exists to catch."
+      assert clearance_body =~ ~r/padding-bottom\s*:\s*var\(/,
+             "Expected the document-end clearance to be driven by a custom property, not a " <>
+               "bare px/rem literal. A bare literal against a content-derived bar height is " <>
+               "guaranteed to drift — the inherited 4.5rem was 3px loose against the 69px " <>
+               "pre-01.5-10 bar and became 1px TIGHT the moment the button grew to 48px, which " <>
+               "is exactly the recurrence this guard exists to catch. Got: #{clearance_body}"
+
+      assert clearance_body =~ ~r/calc\(\s*10px\s*\+\s*48px\s*\+\s*10px\s*\+\s*1px\s*\)/,
+             "Expected the var()'s pre-connect FALLBACK to stay composed from the bar's own " <>
+               "declared parts (top padding + .pk-sumate-btn min-height + bottom padding + " <>
+               "border-top), not collapsed to a pre-added literal. The fallback is the value " <>
+               "that renders before .AboutCtaBarMeasure has published a height, so it is " <>
+               "subject to the identical drift the primary value was rescued from. " <>
+               "Got: #{clearance_body}"
     end
 
     test "no .pk-about-cta-spacer selector remains anywhere in app.css" do
@@ -1908,10 +1929,18 @@ defmodule PukllayClubWeb.AboutLiveTest do
       assert clearance_rule, "Expected a body:has(.pk-about-cta-bar) rule inside the 480px block."
       [_, clearance_body] = clearance_rule
 
-      assert clearance_body =~ ~r/padding-bottom\s*:\s*calc\([^;]*var\(--pk-about-cta-bar-h/,
-             "Expected the document-end clearance to be a calc() that reads " <>
-               "var(--pk-about-cta-bar-h — pinning the JS-publishes/CSS-consumes seam itself, " <>
-               "not just \"some calc()\". Got: #{clearance_body}"
+      # RETARGETED (debug cta-bar-footer-gap-uncolored): the seam this test
+      # exists to pin — CSS consumes the height JS publishes — is unchanged and
+      # still asserted. Only the surrounding `calc(...)` wrapper it used to
+      # require is gone, because that wrapper existed solely to hold an
+      # additive `+ 1rem` term, and that term WAS the bug: the reservation must
+      # be the bar's height and nothing more, or the excess renders as an
+      # uncoloured band between the footer and the bar. Requiring the wrapper
+      # here would now mandate the defect.
+      assert clearance_body =~ ~r/padding-bottom\s*:\s*var\(--pk-about-cta-bar-h/,
+             "Expected the document-end clearance's padding-bottom to read " <>
+               "var(--pk-about-cta-bar-h directly — pinning the JS-publishes/CSS-consumes seam " <>
+               "itself. Got: #{clearance_body}"
     end
   end
 

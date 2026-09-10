@@ -6389,10 +6389,57 @@ body:has(#cierre) .pk-footer {
      wire): 10px top padding + `.pk-sumate-btn`'s 48px `min-height` + 10px
      bottom padding + the bar's 1px `border-top`, composed from the bar's
      own real declared parts (never a pre-added literal), matching plan
-     01.5-10's own "derive, don't restate" discipline. The `+ 1rem` outside
-     the var() is the deliberate breathing step between the footer's last
-     line and the bar's top edge — this is not part of the bar's own
-     footprint, so it stays outside the fallback's parenthesization.
+     01.5-10's own "derive, don't restate" discipline.
+
+     NO ADDITIVE BREATHING TERM — this reservation is the bar's height and
+     NOTHING else (debug cta-bar-footer-gap-uncolored). The first port of
+     winner D carried a `+ 1rem` here, described as "the deliberate
+     breathing step between the footer's last line and the bar's top edge".
+     It was a port artifact — sketch 053's own clearance is
+     `clearance.style.height = barHeight + 'px'`, the measured bar height
+     EXACTLY, with no additive term anywhere, and its README promises "no
+     overlap, no vanishing bar, no leftover empty gap".
+
+     WHY THE TERM WAS A BUG, not merely unfaithful: this is `body` padding,
+     which lies OUTSIDE `.pk-footer`'s border-box, so every pixel of it
+     paints the PAGE background (`--color-base-100`) and not the footer's
+     page-scoped `--color-base-300` fill (`body:has(#cierre) .pk-footer`,
+     far above). The bar covers exactly `--pk-about-cta-bar-h` of the
+     reservation, so an additive term is by construction the one part that
+     can never be covered — it is permanently visible, and it is the only
+     surface on this page painted in a token neither of its neighbours
+     uses. Measured at 390x844: footer bottom 759.39, bar top 775.00, a
+     15.61px band of page background between two lavender/white surfaces.
+     Two things made it read even worse than 16px: this bar's own fill is
+     `--color-base-100` too, so the band merged with the bar's 10px top
+     padding into ONE ~27px pale field whose only internal marker is the
+     1px border (in dark theme those two measure rgb(22,9,37) and
+     rgb(23,10,38) — indistinguishable); and the bar's upward `box-shadow`
+     graded that field 252 -> 237, which is why it was reported as a "grey
+     area" rather than a white gap. Neither is the cause: a live patch that
+     changed ONLY this term, leaving fill and shadow byte-identical,
+     removed the band completely in both themes.
+
+     The breathing step itself was never missing — it was double-counted
+     across a surface boundary. `.pk-footer-row`'s own `--pk-footer-pad-block`
+     supplies 12px below the BGG line at this breakpoint, INSIDE the
+     footer's fill where it paints correctly; measured clearance from that
+     line to the bar's border is 11.61px, against sketch 053's own 16px
+     (its `.about-footer` padding). Do not re-add an additive term here to
+     buy more room — it will land outside the footer's box again and
+     reproduce this bug verbatim. If this boundary ever reads cramped, the
+     lever is `body:has(.pk-about-cta-bar) .pk-footer { padding-bottom }`,
+     which grows the footer's OWN lavender box; that option was measured
+     and deliberately not taken now only because it overshoots the sketch
+     (12 + 16 = 28px vs 16px).
+
+     Safe with no slack because `.AboutCtaBarMeasure` publishes
+     `Math.ceil(getBoundingClientRect().height)` (about_live.ex) — the
+     published value is always >= the real height, so this reservation can
+     never come up SHORT. Measured, the footer's edge lands 0.39px PAST the
+     bar's top edge, and that sub-pixel is spent inside the footer's 12px
+     padding, never on the "Powered by BGG" text — T-QUICK-04 does not
+     recur.
 
      Plan 01.5-12 landed branch A for the site-wide sticky-footer question
      (leave it withdrawn, no shell change): `body` carries no viewport-
@@ -6406,7 +6453,7 @@ body:has(#cierre) .pk-footer {
      mismatch between "bar appears" and "clearance is reserved" puts the
      bar back over the footer at some width. */
   body:has(.pk-about-cta-bar) {
-    padding-bottom: calc(var(--pk-about-cta-bar-h, calc(10px + 48px + 10px + 1px)) + 1rem);
+    padding-bottom: var(--pk-about-cta-bar-h, calc(10px + 48px + 10px + 1px));
   }
 
   /* Plan 01.5-04, D-11: suppresses the Cierre band's own Sumate button at
