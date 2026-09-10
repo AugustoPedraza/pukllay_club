@@ -49,18 +49,72 @@ lower() {
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
+# extract_ramp_block FILE
+# Prints the single plain `:root { ... }` block that declares at least one
+# `--pk-ramp-*` stop (quick task 260910-l7q). Scanning every plain `:root`
+# block and filtering by content — rather than matching the first `:root {`
+# line, the way extract_block does for every other caller — is required
+# because `app.css` also declares a SECOND, unrelated plain `:root { ... }`
+# block (the one carrying `--pk-ink-brand` and friends). The same
+# disambiguation-by-content idiom `oklch-audit.mjs`'s `parsePlainRootPkInkBrand`
+# already uses for that other block.
+extract_ramp_block() {
+  awk '
+    /^:root[[:space:]]*\{/ { buf = $0; capturing = 1; has_ramp = 0; next }
+    capturing {
+      buf = buf "\n" $0
+      if ($0 ~ /--pk-ramp-/) has_ramp = 1
+      if ($0 ~ /^\}/) {
+        capturing = 0
+        if (has_ramp) { print buf; exit }
+      }
+    }
+  ' "$1"
+}
+
 extract_block "$APP_CSS" 'name: "light";' >"$TMP/app-light"
 extract_block "$APP_CSS" 'name: "dark";' >"$TMP/app-dark"
 extract_block "$DEFAULT_CSS" '^:root \{' >"$TMP/sketch-light"
 extract_block "$DEFAULT_CSS" '^@media \(prefers-color-scheme: dark\)' >"$TMP/sketch-dark-media"
 extract_block "$DEFAULT_CSS" '^:root\[data-theme="dark"\]' >"$TMP/sketch-dark-explicit"
+extract_ramp_block "$APP_CSS" >"$TMP/app-ramp"
 
 DRIFT=0
 
+# deref VALUE
+# One-hop dereference (quick task 260910-l7q): if VALUE is a `var()` read of
+# a `--pk-ramp-*` stop, look that stop up in the ramp block extracted above
+# and print its hex; otherwise print VALUE unchanged (a plain hex literal,
+# or `rgb(...)`, passes straight through). On an unresolvable stop, prints
+# an explicit error to stderr, sets DRIFT=1, and prints a sentinel that can
+# never accidentally equal a legitimate sketch value — never the raw
+# `var(...)` string, which would silently turn the caller's hex compare
+# into a string compare that passes for the wrong reason.
+deref() {
+  val="$1"
+  case "$val" in
+    var\(--pk-ramp-*\))
+      stop=$(printf '%s' "$val" | sed -E 's/^var\((--pk-ramp-[0-9]+)\)$/\1/')
+      resolved=$(value_of "$TMP/app-ramp" "$stop")
+      if [ -z "$resolved" ]; then
+        echo "UNRESOLVED RAMP STOP: $stop (referenced via $val) has no declaration in the" \
+          "--pk-ramp-* root block — a role cannot point at a stop that does not exist." >&2
+        DRIFT=1
+        printf 'UNRESOLVED-RAMP-STOP:%s' "$stop"
+        return
+      fi
+      printf '%s' "$resolved"
+      ;;
+    *)
+      printf '%s' "$val"
+      ;;
+  esac
+}
+
 check_pair() {
   # $1=label $2=upstream_prop $3=upstream_block $4=sketch_prop $5=sketch_block
-  upstream_val=$(value_of "$3" "$2")
-  sketch_val=$(value_of "$5" "$4")
+  upstream_val=$(deref "$(value_of "$3" "$2")")
+  sketch_val=$(deref "$(value_of "$5" "$4")")
   if [ "$(lower "$upstream_val")" = "$(lower "$sketch_val")" ]; then
     echo "$1 OK ($upstream_val)"
   else

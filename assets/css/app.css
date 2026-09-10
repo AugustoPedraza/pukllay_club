@@ -224,23 +224,90 @@
    label-ink change until after viewing it. See
    `.planning/quick/260910-if9-.../AUDIT.md` for the full costed option set
    and `260910-if9-SUMMARY.md` for the recorded decision. */
+
+/* --pk-ramp-* (quick task 260910-l7q): the single shared OKLCh colour ramp
+   both themes read from — a role's colour is a POSITION on this ramp
+   rather than an independently-typed hex. Declared once, in this plain
+   unlayered `:root` block (matching `--pk-ink-brand`'s own shape above),
+   immediately above the theme blocks that consume it — this IS the
+   file's single upstream palette source, not a per-theme copy.
+
+   Envelope: FLAT (Task 3 Decision 1, option B) — one fixed hue (H313.1)
+   and one safety factor `k=0.85` across all 11 stops:
+   `C = k · maxC(L, H313.1)`, where `maxC` is the maximum in-gamut sRGB
+   chroma at that lightness/hue (a bisection search — see `ramp-audit.mjs`).
+   The developer picked FLAT over the plan's recommended ANCHORED envelope
+   specifically because it is the only one of the two that delivers the
+   headline result below — ANCHORED's merged L30 stop misses that same
+   join by ΔE 0.0168, just over the 0.012 JOIN threshold. Every one of
+   these 11 values is PURE GENERATOR OUTPUT — none hand-nudged to hold a
+   prior value (hand-nudging anchor stops is ANCHORED's mechanism, not
+   FLAT's).
+
+   THE HEADLINE RESULT (the developer's own motivating example, now
+   structurally realised): light `--color-primary`, light
+   `--color-accent-content` and dark `--color-base-200` ALL resolve to
+   `--pk-ramp-900` (#45105C) — one physical swatch worn as a light-theme
+   button fill AND a dark-theme card surface. This is the "Reservar para
+   el sábado" example from `260910-l7q-CONTEXT.md`, closed by construction
+   rather than coincidence.
+
+   Cost the developer explicitly accepted: FLAT nudges several
+   already-approved values off the exact hexes signed off in
+   260910-efe/gck/hdc/if9 (dark `base-200`/`base-300`/`base-content`,
+   light `base-200`, and dark `primary` itself moves by ΔE 0.0021 — see
+   the per-role annotations below for every OFF-RAMP role's own nearest
+   stop and reason).
+
+   Regenerate and re-audit with:
+     node .planning/quick/260910-l7q-redesign-the-light-dark-color-palette-as/ramp-audit.mjs
+   Full JOIN/OFF-RAMP audit, ΔE, and WCAG floor recheck for both the FLAT
+   and ANCHORED candidates live in that script's own output; the
+   developer's Task 3 answers and the reuse counts they were shown against
+   are recorded verbatim in `260910-l7q-SUMMARY.md`
+   (`.planning/quick/260910-l7q-redesign-the-light-dark-color-palette-as/`). */
+:root {
+  --pk-ramp-50: #FAF5FE;
+  --pk-ramp-100: #F6EAFD;
+  --pk-ramp-200: #EACEFA;
+  --pk-ramp-300: #DCADF6;
+  --pk-ramp-400: #CE89F3;
+  --pk-ramp-500: #B739ED;
+  --pk-ramp-600: #8C2AB7;
+  --pk-ramp-700: #702093;
+  --pk-ramp-800: #551670;
+  --pk-ramp-900: #45105C;
+  --pk-ramp-950: #380B4C;
+}
+
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "dark";
   default: false;
   prefersdark: true;
   color-scheme: "dark";
+  /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0132 > 0.012) */
   --color-base-100: #361148;
-  --color-base-200: #441659;
-  --color-base-300: #531B6D;
-  --color-base-content: #F3ECFA;
-  --color-primary: #8C2BB6;
+  --color-base-200: var(--pk-ramp-900);
+  --color-base-300: var(--pk-ramp-800);
+  --color-base-content: var(--pk-ramp-100);
+  --color-primary: var(--pk-ramp-600);
+  /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-primary-content: #FFFFFF;
+  /* off-ramp: nearest --pk-ramp-700 (#702093), chroma tier (dE 0.0549 > 0.012) */
   --color-secondary: #642C77;
+  /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-secondary-content: #FFFFFF;
+  /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0465 > 0.012) */
   --color-accent: #3A1F47;
+  /* off-ramp: nearest --pk-ramp-200 (#EACEFA), chroma tier (dE 0.0271 > 0.012) */
   --color-accent-content: #EBD7F4;
+  /* off-ramp: nearest --pk-ramp-300 (#DCADF6), chroma tier (dE 0.0635 > 0.012) */
   --color-neutral: #C59CDC;
+  /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.1041 > 0.012) */
   --color-neutral-content: #170A26;
+  /* off-ramp (D-Semantics): info/success/warning/error and their -content
+     slots are other hues (H258/H162/H77/H7) -- they never join the brand
+     ramp at H313.1 regardless of ΔE; carry no ramp reference at all. */
   --color-info: #7C9AD1;
   --color-info-content: #170A26;
   --color-success: #5FBE95;
@@ -264,18 +331,36 @@
   default: true;
   prefersdark: false;
   color-scheme: "light";
+  /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-base-100: #FFFFFF;
-  --color-base-200: #F3ECFA;
+  --color-base-200: var(--pk-ramp-100);
+  /* off-ramp: nearest --pk-ramp-200 (#EACEFA), chroma tier (dE 0.0239 > 0.012) */
   --color-base-300: #E3D3F0;
+  /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0581 > 0.012) */
   --color-base-content: #241238;
-  --color-primary: #3D096D;
+  /* D-HueMove: moves ~13deg off its shipped H300.1 onto the ramp's H313.1 --
+     confirmed, not a checkpoint. Joins regardless of ΔE (forced JOIN). This
+     is the SAME stop dark's --color-base-200 joins below -- see the ramp
+     block's own header comment for the headline result this is. */
+  --color-primary: var(--pk-ramp-900);
+  /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-primary-content: #FFFFFF;
+  /* off-ramp: nearest --pk-ramp-600 (#8C2AB7), chroma tier (dE 0.0720 > 0.012) */
   --color-secondary: #7E4CA5;
+  /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-secondary-content: #FFFFFF;
+  /* off-ramp: nearest --pk-ramp-100 (#F6EAFD), chroma tier (dE 0.0266 > 0.012) */
   --color-accent: #EDE1F7;
-  --color-accent-content: #3D096D;
+  /* D-HueMove: same forced JOIN and same stop as --color-primary above --
+     both roles carry the identical shipped hex (#3D096D) today. */
+  --color-accent-content: var(--pk-ramp-900);
+  /* off-ramp: nearest --pk-ramp-700 (#702093), chroma tier (dE 0.1462 > 0.012) */
   --color-neutral: #6B5B7B;
+  /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-neutral-content: #FFFFFF;
+  /* off-ramp (D-Semantics): info/success/warning/error and their -content
+     slots are other hues -- they never join the brand ramp at H313.1
+     regardless of ΔE; carry no ramp reference at all. */
   --color-info: #4C6FA5;
   --color-info-content: #FFFFFF;
   --color-success: #3F8F6B;
@@ -490,16 +575,28 @@
    `--color-primary` (#8C2BB6, H313.1), at C0.13 (2.3x today's C0.057
    `--color-neutral` ink, comparable to light's own branded-ink chroma of
    C0.151). MEASURED CONSTRAINTS (WCAG 2.1, do not "improve" by eye):
-     #C791E5 on base-100 (#2F154E) ... 6.43:1
-     #C791E5 on base-200 (#391B62) ... 5.71:1
-     #C791E5 on base-300 (#462278) ... 4.89:1
+     #C791E5 on base-100 (#361148) ... 6.47:1
+     #C791E5 on base-200 (#45105C) ... 5.81:1
+     #C791E5 on base-300 (#551670) ... 4.96:1
    All three clear the 4.5:1 text floor (WCAG 1.4.3) and the 3:1 border
-   floor (WCAG 1.4.11) with margin. `:root[data-theme="dark"]`, not a bare
-   `[data-theme="dark"]`: `data-theme` is set on `<html>` by
-   `assets/js/theme.js`, so a bare attribute selector ties with `:root` on
-   specificity and would depend on source order, while the compound form
-   wins outright — the same idiom `.planning/sketches/themes/default.css`
-   already uses for its own dark region. */
+   floor (WCAG 1.4.11) with margin. CORRECTED (quick task 260910-l7q): the
+   above three figures now match the FLAT-ramp base ladder actually shipping
+   (`--color-base-100/200/300` above) -- the previous text here quoted the
+   pre-260910-if9 dark ladder (#2F154E/#391B62/#462278), stale since that
+   quick task rotated the ladder onto this same hue. Comment-only fix, no
+   value change.
+
+   D-InkBrand (260910-l7q): this token's own OWN value stays standing --
+   its nearest ramp stop is `--pk-ramp-400` (#CE89F3), but folding in would
+   move the already-approved #C791E5 (a hue-only rotation is not available
+   here since this token IS the hue-canonical reference other roles rotate
+   onto), so per CONTEXT.md's own default rule it does NOT fold in. `:root
+   [data-theme="dark"]`, not a bare `[data-theme="dark"]`: `data-theme` is
+   set on `<html>` by `assets/js/theme.js`, so a bare attribute selector
+   ties with `:root` on specificity and would depend on source order, while
+   the compound form wins outright — the same idiom
+   `.planning/sketches/themes/default.css` already uses for its own dark
+   region. */
 :root[data-theme="dark"] {
   --pk-ink-brand: #C791E5;
 }

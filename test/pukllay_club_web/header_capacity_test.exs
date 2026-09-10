@@ -150,7 +150,29 @@ defmodule PukllayClubWeb.HeaderCapacityTest do
   end
 
   # ── The declared half of the model, read out of the stylesheet ────────────
-  defp gutter, do: px(decl!(":root", "--pk-gutter"))
+
+  # UPDATED (quick task 260910-l7q): app.css now declares a SECOND plain
+  # `:root { ... }` block (the `--pk-ramp-*` shared colour ramp, ordered
+  # BEFORE this one) -- `decl!/2`'s first-match `:root` lookup would
+  # silently grab that one instead, which declares no `--pk-gutter`.
+  # Disambiguate by scanning every plain `:root` block for the one that
+  # actually declares the property, the same idiom this stylesheet's other
+  # multi-`:root`-block tests already use.
+  defp decl_in_matching_root!(property) do
+    src = strip_comments(source())
+
+    ~r/(?m)^:root\s*\{([^}]*)\}/
+    |> Regex.scan(src, capture: :all_but_first)
+    |> List.flatten()
+    |> Enum.find_value(fn body ->
+      case Regex.run(Regex.compile!("(?<![-\\w])#{property}:\\s*([^;]+);"), body) do
+        [_, value] -> String.trim(value)
+        nil -> nil
+      end
+    end) || flunk("No top-level `:root` block declares `#{property}` in assets/css/app.css")
+  end
+
+  defp gutter, do: px(decl_in_matching_root!("--pk-gutter"))
   defp row_gap, do: px(decl!(".pk-nav-inner", "gap"))
   defp open_pill, do: px(decl!(".pk-search-morph.is-open", "width"))
   defp closed_morph, do: px(decl!(".pk-search-morph", "width"))

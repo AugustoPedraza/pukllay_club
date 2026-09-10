@@ -3987,10 +3987,57 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
+    # Pulls the single plain `:root { ... }` block that declares at least
+    # one `--pk-ramp-*` stop (quick task 260910-l7q, Task 1 tracer) —
+    # disambiguated from the file's OTHER plain `:root { ... }` block (the
+    # one carrying `--pk-ink-brand`, see dark_pk_ink_brand_root_block/0's
+    # sibling above) by CONTENT rather than by match order, the same idiom
+    # `oklch-audit.mjs`'s `parsePlainRootPkInkBrand` already uses.
+    defp ramp_root_block do
+      css_source()
+      |> then(&Regex.scan(~r/(?m)^:root\s*\{([^}]*)\}/, &1, capture: :all_but_first))
+      |> List.flatten()
+      |> Enum.find(&(&1 =~ ~r/--pk-ramp-/))
+      |> case do
+        nil -> flunk("No plain `:root { ... }` block declaring a `--pk-ramp-` stop found in assets/css/app.css")
+        body -> body
+      end
+    end
+
     defp token_value(source, token) do
       case Regex.run(~r/#{Regex.escape(token)}:\s*([^;]*);/, source) do
-        [_, value] -> String.trim(value)
+        [_, value] -> value |> String.trim() |> deref_ramp_value()
         nil -> flunk("No `#{token}` token found in the given source")
+      end
+    end
+
+    # One-hop dereference (quick task 260910-l7q, Task 1 tracer):
+    # `token_value/2` is the single choke point ~30 existing colour
+    # assertions already funnel through, so teaching the dereference here
+    # keeps every call site working unedited. Only a value that IS a
+    # `var()` read of a `--pk-ramp-` stop is dereferenced; every other value
+    # (hex literals, the `rgb(...)` triple `--pk-shadow-color` carries)
+    # passes through untouched. An unresolvable stop is a hard failure
+    # (`flunk`), never a silent pass-through of the raw `var(...)` string —
+    # that would turn every colour comparison funnelled through here into a
+    # string compare that happens to pass for the wrong reason (see the
+    # plan's threat model, T-l7q-01).
+    defp deref_ramp_value(value) do
+      case Regex.run(~r/^var\((--pk-ramp-[0-9]+)\)$/, value) do
+        [_, stop] ->
+          case Regex.run(~r/#{Regex.escape(stop)}:\s*([^;]*);/, ramp_root_block()) do
+            [_, resolved] ->
+              String.trim(resolved)
+
+            nil ->
+              flunk(
+                "Could not resolve `#{stop}` (referenced via `#{value}`) in the --pk-ramp-* " <>
+                  "root block — a role points at a ramp stop that does not exist."
+              )
+          end
+
+        nil ->
+          value
       end
     end
 
@@ -4420,10 +4467,22 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # `--color-primary`, not a copied literal — so a future author cannot
       # quietly replace it with a hex and let light silently drift from the
       # brand manual.
+      #
+      # UPDATED (quick task 260910-l7q, Task 1 tracer): app.css now
+      # declares a SECOND plain `:root { ... }` block (the `--pk-ramp-*`
+      # ramp, ordered before this one) — `Regex.run/2` would silently match
+      # that one first and break this assertion, so this scans every plain
+      # `:root` block and picks the one containing `--pk-ink-brand`, the
+      # same disambiguation-by-content idiom `ramp_root_block/0` uses for
+      # its own sibling block.
       root_body =
-        case Regex.run(~r/(?m)^:root\s*\{([^}]*)\}/s, css_source()) do
-          [_, body] -> body
-          nil -> flunk("No top-level `:root { ... }` rule found in assets/css/app.css")
+        css_source()
+        |> then(&Regex.scan(~r/(?m)^:root\s*\{([^}]*)\}/, &1, capture: :all_but_first))
+        |> List.flatten()
+        |> Enum.find(&(&1 =~ ~r/--pk-ink-brand:/))
+        |> case do
+          nil -> flunk("No plain `:root { ... }` block declaring `--pk-ink-brand` found in assets/css/app.css")
+          body -> body
         end
 
       assert root_body =~ ~r/--pk-ink-brand:\s*var\(--color-primary\)\s*;/,
@@ -4740,14 +4799,24 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "fill (--color-base-200) measured 14.6° from it (260910-if9 AUDIT.md, finding F1)."
     end
 
-    test "light theme's --color-base-100/200/300 are unchanged by the dark-only C2 rotation" do
+    test "light theme's --color-base-100/300 are unchanged by the dark-only C2 rotation, and --color-base-200 is unchanged by C2 specifically" do
       light_block = light_theme_plugin_block()
 
       assert token_value(light_block, "--color-base-100") == "#FFFFFF",
              "light theme: --color-base-100 must stay byte-identical -- C2 is dark-scoped only."
 
-      assert token_value(light_block, "--color-base-200") == "#F3ECFA",
-             "light theme: --color-base-200 must stay byte-identical -- C2 is dark-scoped only."
+      # UPDATED (quick task 260910-l7q): light `--color-base-200` legitimately
+      # moved off its pre-l7q byte-identical value (#F3ECFA) when it JOINed
+      # the shared `--pk-ramp-*` ramp under the FLAT envelope (dE 0.0085,
+      # per ramp-audit.mjs) -- this is a DIFFERENT, LATER task's deliberate
+      # change, not a 260910-if9 C2 regression. token_value/2's one-hop
+      # `var(--pk-ramp-*)` dereference (also added by 260910-l7q) resolves
+      # this to the ramp's real hex, so this assertion still proves "C2
+      # itself never touched light" even though light's OWN value has since
+      # moved for an unrelated, later, developer-approved reason.
+      assert token_value(light_block, "--color-base-200") == "#F6EAFD",
+             "light theme: --color-base-200 must resolve to the shared ramp's --pk-ramp-100 " <>
+               "stop (260910-l7q) -- C2 itself never touched this value."
 
       assert token_value(light_block, "--color-base-300") == "#E3D3F0",
              "light theme: --color-base-300 must stay byte-identical -- C2 is dark-scoped only."
@@ -4829,6 +4898,244 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           nil ->
             flunk("No top-level `#{selector} { ... }` rule found in assets/css/app.css")
         end
+      end
+    end
+  end
+
+  # Quick task 260910-l7q, Task 5: the invariant that is the entire reason
+  # approach (b) -- daisyUI's `--color-*` slots as `var()` reads into a
+  # shared `--pk-ramp-*` ramp -- was worth its blast radius. Reuses
+  # dark_theme_plugin_block/0, light_theme_plugin_block/0, token_value/2,
+  # ramp_root_block/0, css_source/0, oklab/1, oklch_chroma/1 and
+  # oklch_hue/1 from the describe blocks above -- no second CSS-source or
+  # OKLCh harness declared here. This exact describe name is the string
+  # the Task 5 red proof (below, in this plan) greps ExUnit's failure
+  # output for -- a different name would make that proof vacuous.
+  describe "quick task 260910-l7q: shared OKLCh ramp invariants" do
+    # Envelope constants as committed to the ramp block's own header
+    # comment in app.css (Task 3 Decision 1: FLAT, k=0.85, H313.1). A
+    # future change to either value must update both the CSS comment and
+    # these two module attributes together.
+    @l7q_ramp_hue 313.1
+    @l7q_ramp_k 0.85
+
+    # Roles DELIBERATELY off the ramp under the FLAT envelope Task 3 picked
+    # -- either categorically (D-Semantics' four semantic hues + their
+    # -content slots; pure achromatic white) or because Task 2's
+    # role-by-role audit put them in the blocked set (chroma tier or
+    # contrast -- see the per-role annotation directly above each
+    # declaration in app.css, and 260910-l7q-SUMMARY.md for the full
+    # table). A role in a theme's `--color-*` list that is NEITHER a
+    # `var(--pk-ramp-*)` read NOR on that theme's allow-list here is
+    # exactly the silent drift T-l7q-03 exists to catch.
+    @l7q_light_off_ramp ~w(
+      base-100 base-300 base-content primary-content secondary secondary-content
+      accent neutral neutral-content
+      info info-content success success-content warning warning-content error error-content
+    )
+    @l7q_dark_off_ramp ~w(
+      base-100 primary-content secondary secondary-content accent accent-content
+      neutral neutral-content
+      info info-content success success-content warning warning-content error error-content
+    )
+
+    # Every `--color-<role>: <value>;` declaration in a theme block, as
+    # {role, trimmed value} pairs -- shared by both invariant tests below.
+    defp l7q_color_declarations(body) do
+      ~r/--color-([a-z0-9-]+):\s*([^;]+);/
+      |> Regex.scan(body)
+      |> Enum.map(fn [_, role, value] -> {role, String.trim(value)} end)
+    end
+
+    # The 11 committed ramp stops, in the order they appear in
+    # `ramp_root_block/0`'s body -- which IS descending-lightness order by
+    # construction (the block is hand-authored top-to-bottom that way and
+    # test 1 below separately proves nothing else shares the block), so no
+    # re-sort is needed here.
+    defp l7q_ramp_stops do
+      ~r/--pk-ramp-([0-9]+):\s*(#[0-9A-Fa-f]{6});/
+      |> Regex.scan(ramp_root_block())
+      |> Enum.map(fn [_, stop, hex] -> {stop, hex} end)
+    end
+
+    # OKLCh -> linear sRGB (the exact inverse of oklab/1's forward
+    # matrices, mirroring ramp-audit.mjs's own `oklchToLab`/
+    # `labToLinearRgb` -- ported here, not re-derived, per D-NoFourthCopy's
+    # spirit: one canonical derivation, now in two languages because the
+    # gate needs to run in both, never three+ independent copies).
+    defp l7q_oklch_to_lab(l_pct, c, h_deg) do
+      l = l_pct / 100
+      h_rad = h_deg * :math.pi() / 180
+      {l, c * :math.cos(h_rad), c * :math.sin(h_rad)}
+    end
+
+    defp l7q_lab_to_linear_rgb({l, a, b}) do
+      l_ = l + 0.3963377774 * a + 0.2158037573 * b
+      m_ = l - 0.1055613458 * a - 0.0638541728 * b
+      s_ = l - 0.0894841775 * a - 1.291485548 * b
+
+      ll = l_ * l_ * l_
+      mm = m_ * m_ * m_
+      ss = s_ * s_ * s_
+
+      r = 4.0767416621 * ll - 3.3077115913 * mm + 0.2309699292 * ss
+      g = -1.2684380046 * ll + 2.6097574011 * mm - 0.3413193965 * ss
+      b_out = -0.0041960863 * ll - 0.7034186147 * mm + 1.707614701 * ss
+
+      {r, g, b_out}
+    end
+
+    defp l7q_in_gamut?(l_pct, c, h_deg) do
+      eps = 1.0e-6
+      {r, g, b} = l7q_lab_to_linear_rgb(l7q_oklch_to_lab(l_pct, c, h_deg))
+      r >= -eps and r <= 1 + eps and g >= -eps and g <= 1 + eps and b >= -eps and b <= 1 + eps
+    end
+
+    # Ports ramp-audit.mjs's own `maxChroma` bisection -- the maximum
+    # in-gamut sRGB chroma at a given OKLCh lightness/hue. Used ONLY to
+    # check that no committed stop exceeds the declared k times this
+    # ceiling, never to regenerate the ramp (that stays ramp-audit.mjs's
+    # job).
+    defp l7q_max_chroma(l_pct, h_deg) do
+      {lo, _hi} =
+        Enum.reduce(1..40, {0.0, 0.5}, fn _, {lo, hi} ->
+          mid = (lo + hi) / 2
+          if l7q_in_gamut?(l_pct, mid, h_deg), do: {mid, hi}, else: {lo, mid}
+        end)
+
+      lo
+    end
+
+    defp l7q_oklch_lightness(hex) do
+      {l, _a, _b} = oklab(hex)
+      l * 100
+    end
+
+    test "single source: --pk-ramp-* stops are declared exactly 11 times, all inside one plain :root block, and no theme block redeclares one" do
+      src = css_source()
+      full_declaration = ~r/(?m)^\s*--pk-ramp-[0-9]{2,3}:\s*#[0-9A-Fa-f]{6};\s*$/
+
+      all_declarations = Regex.scan(full_declaration, src)
+
+      assert length(all_declarations) == 11,
+             "Expected exactly 11 `--pk-ramp-*` stop declarations (a full `token: #hex;` " <>
+               "line) across the whole stylesheet, found #{length(all_declarations)}. A " <>
+               "second declaration -- especially inside a daisyui-theme block -- would " <>
+               "restore per-theme divergence while still looking shared (plan threat " <>
+               "T-l7q-02)."
+
+      in_ramp_block = Regex.scan(full_declaration, ramp_root_block())
+
+      assert length(in_ramp_block) == 11,
+             "All 11 --pk-ramp-* stops must live inside the ONE plain `:root` block that " <>
+               "declares them -- found #{length(in_ramp_block)} inside it against 11 total " <>
+               "in the whole file, meaning at least one stop is declared somewhere else."
+
+      for {block_name, block_body} <- [
+            {"dark theme", dark_theme_plugin_block()},
+            {"light theme", light_theme_plugin_block()}
+          ] do
+        refute Regex.match?(~r/(?m)^\s*--pk-ramp-[0-9]+:/, block_body),
+               "The #{block_name} block must never declare its own --pk-ramp-* token -- it " <>
+                 "may only READ one via var(--pk-ramp-NNN)."
+      end
+    end
+
+    test "no silent drift off-ramp: every --color-* role is either a ramp read or an explicitly allow-listed off-ramp role" do
+      for {theme_name, block, allow_list} <- [
+            {"light", light_theme_plugin_block(), @l7q_light_off_ramp},
+            {"dark", dark_theme_plugin_block(), @l7q_dark_off_ramp}
+          ] do
+        for {role, value} <- l7q_color_declarations(block) do
+          on_ramp = Regex.match?(~r/^var\(--pk-ramp-[0-9]+\)$/, value)
+          allow_listed = role in allow_list
+
+          assert on_ramp or allow_listed,
+                 "#{theme_name} theme: --color-#{role} is #{inspect(value)} -- neither a " <>
+                   "var(--pk-ramp-*) read nor on the explicit off-ramp allow-list above. " <>
+                   "Either this role must join the ramp, or its name must be added to the " <>
+                   "allow-list with a recorded reason -- this is the exact drift the " <>
+                   "260910-efe -> gck -> hdc -> if9 chain is a record of (plan threat T-l7q-03)."
+        end
+      end
+    end
+
+    test "the shared swatch holds: light primary, light accent-content and dark base-200 resolve to the identical hex at the brand hue" do
+      light_block = light_theme_plugin_block()
+      dark_block = dark_theme_plugin_block()
+
+      light_primary = token_value(light_block, "--color-primary")
+      light_accent_content = token_value(light_block, "--color-accent-content")
+      dark_base_200 = token_value(dark_block, "--color-base-200")
+
+      assert light_primary == light_accent_content,
+             "light --color-primary (#{light_primary}) and --color-accent-content " <>
+               "(#{light_accent_content}) must resolve to the identical hex -- both are the " <>
+               "same forced D-HueMove join onto the same ramp stop."
+
+      assert light_primary == dark_base_200,
+             "light --color-primary/--color-accent-content (#{light_primary}) and dark " <>
+               "--color-base-200 (#{dark_base_200}) must resolve to the identical hex -- " <>
+               "this is the developer's own 'Reservar para el sábado' motivating example " <>
+               "(260910-l7q-CONTEXT.md), closed by construction. A future palette edit that " <>
+               "quietly un-shares this swatch must fail here."
+
+      hue = oklch_hue(light_primary)
+      raw_delta = abs(hue - @l7q_ramp_hue)
+      hue_delta = min(raw_delta, 360 - raw_delta)
+
+      assert hue_delta <= 2.0,
+             "The shared swatch (#{light_primary}) measured OKLCh hue " <>
+               "#{Float.round(hue, 1)}°, #{Float.round(hue_delta, 1)}° from the ramp's " <>
+               "brand hue H#{@l7q_ramp_hue} -- must stay within the same 2° tolerance the " <>
+               "260910-hdc tripwire already uses."
+    end
+
+    test "the ramp is a ramp: strictly monotone lightness, every stop within 2 degrees of H313.1, and no stop exceeds k * gamut-max chroma" do
+      stops = l7q_ramp_stops()
+
+      assert length(stops) == 11, "Expected 11 ramp stops, found #{length(stops)}"
+
+      stops_with_l = Enum.map(stops, fn {stop, hex} -> {stop, l7q_oklch_lightness(hex)} end)
+
+      for [{prev_stop, prev_l}, {stop, l}] <- Enum.chunk_every(stops_with_l, 2, 1, :discard) do
+        assert l < prev_l,
+               "Ramp stop --pk-ramp-#{stop} (L#{Float.round(l, 1)}) must be strictly darker " <>
+                 "than the preceding declared stop --pk-ramp-#{prev_stop} (L#{Float.round(prev_l, 1)}) " <>
+                 "-- the ladder must read as a ladder, in the order the stops are declared."
+      end
+
+      for {stop, hex} <- stops do
+        c = oklch_chroma(hex)
+
+        # Hue is numerically undefined at C=0 and increasingly noisy as C
+        # approaches it -- atan2(b, a) amplifies the same 8-bit hex
+        # quantization step into a proportionally larger angle at low
+        # chroma. Measured directly against this ramp's own near-white
+        # stop (--pk-ramp-50, C≈0.013): 2.6° off H313.1, purely from hex
+        # rounding, not a real hue drift. Every OTHER stop (C >= 0.028)
+        # measures within 0.4° of H313.1. 0.02 sits between the two, so it
+        # exempts only the one stop where hue is genuinely unmeasurable at
+        # hex precision, not a general escape hatch.
+        if c >= 0.02 do
+          hue = oklch_hue(hex)
+          raw_delta = abs(hue - @l7q_ramp_hue)
+          hue_delta = min(raw_delta, 360 - raw_delta)
+
+          assert hue_delta <= 2.0,
+                 "--pk-ramp-#{stop} (#{hex}) measured OKLCh hue #{Float.round(hue, 1)}°, " <>
+                   "#{Float.round(hue_delta, 1)}° from H#{@l7q_ramp_hue} -- every stop must " <>
+                   "sit on the ramp's single fixed hue."
+        end
+
+        l = l7q_oklch_lightness(hex)
+        ceiling = @l7q_ramp_k * l7q_max_chroma(l, @l7q_ramp_hue)
+
+        assert c <= ceiling + 0.005,
+               "--pk-ramp-#{stop} (#{hex}) measured OKLCh chroma #{Float.round(c, 4)}, above " <>
+                 "the declared envelope's ceiling #{Float.round(ceiling, 4)} " <>
+                 "(k=#{@l7q_ramp_k} * gamut-max at L#{Float.round(l, 1)}/H#{@l7q_ramp_hue}) -- " <>
+                 "no stop may be pinned to (or past) the sRGB gamut wall."
       end
     end
   end
