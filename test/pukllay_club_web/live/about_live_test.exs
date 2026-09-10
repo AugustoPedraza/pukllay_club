@@ -1210,6 +1210,101 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
   end
 
+  # Plan 01.5-13 (G-01.5-10 gap closure —
+  # .planning/debug/G-01.5-10-mobile-cierre-heading-tagline-balance.md):
+  # source guard for #cierre's mobile COUNTERPART to the >=640px block above
+  # (padding-block: 5rem; #cierre h2's clamp(2rem, 4vw, 3rem)).
+  # test/visual/about_geometry.mjs has its own runtime checks for the
+  # RENDERED effect (checkCierreProportionBudget, checkCierreHierarchy,
+  # checkCierreNoWrap), but that probe needs a booted dev server and is not
+  # part of `mix test`; this is the source-level guard that runs in the
+  # normal suite, pinning the STRUCTURE the plan's own decision insists on:
+  # "both levers ship in one media block, or neither."
+  describe "Cierre mobile counterpart to the 640px block (G-01.5-10 gap closure, plan 01.5-13)" do
+    test "the @media (max-width: 639px) block contains BOTH #cierre's own padding-block AND #cierre h2's own font-size/line-height" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      padding_rule = Regex.run(~r/#cierre\s*\{([^}]*)\}/s, body)
+
+      assert padding_rule,
+             "Expected a bare #cierre rule inside the @media (max-width: 639px) block declaring " <>
+               "its own padding-block. Without it, mobile Cierre falls back to the shared " <>
+               ".pk-band padding (4.5rem/72px, sized for content-rich bands) — the G-01.5-10 " <>
+               "diagnosis measured that as pad/content 1.67 against this page's own 0.19-0.53 " <>
+               "band norm and this band's own accepted 0.90-1.02 desktop state, with 64.3% of " <>
+               "the band rendering as empty ink."
+
+      [_, padding_body] = padding_rule
+
+      assert padding_body =~ ~r/padding-block\s*:/,
+             "Expected the mobile #cierre rule to declare its own padding-block."
+
+      h2_rule = Regex.run(~r/#cierre h2\s*\{([^}]*)\}/s, body)
+
+      assert h2_rule,
+             "Expected a #cierre h2 rule inside the @media (max-width: 639px) block declaring " <>
+               "its own font-size. Without it, the mobile heading keeps the page-wide " <>
+               "font-display text-2xl size with no Cierre-specific step at all (1.00x the page's " <>
+               "own h2 norm at 375px, vs 1.33x at 640px and 2.00x at 1280px — G-01.5-10's E-08) " <>
+               "and the closing signature (204.4px) keeps out-measuring the heading (163.7px), " <>
+               "24.8% wider — the exact inversion the user called unbalanced."
+
+      [_, h2_body] = h2_rule
+
+      assert h2_body =~ ~r/font-size\s*:/,
+             "Expected the mobile #cierre h2 rule to declare its own font-size."
+
+      assert h2_body =~ ~r/line-height\s*:/,
+             "Expected the mobile #cierre h2 rule to declare its own line-height — left to " <>
+               "inherit, the rendered clear gap above the signature (declared 24px, rendered " <>
+               "36px per the all-caps face's empty descent) becomes unpredictable, since the " <>
+               "heading's line box is an operand in that arithmetic."
+    end
+
+    test "neither new #cierre rule declares a gap of its own — D-12's one flex gap still governs both viewports" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      # Scoped to the two NEW #cierre/#cierre h2 rule bodies specifically,
+      # not the whole 639px block — that block also legitimately contains
+      # .pk-about-contact-links's own unrelated `gap: 1rem` (D-08), which a
+      # whole-block scan would wrongly trip on.
+      padding_rule = Regex.run(~r/#cierre\s*\{([^}]*)\}/s, body)
+      assert padding_rule, "Expected a bare #cierre rule inside the @media (max-width: 639px) block."
+      [_, padding_body] = padding_rule
+
+      h2_rule = Regex.run(~r/#cierre h2\s*\{([^}]*)\}/s, body)
+      assert h2_rule, "Expected a #cierre h2 rule inside the @media (max-width: 639px) block."
+      [_, h2_body] = h2_rule
+
+      failure_message =
+        "Expected the mobile counterpart rules to declare no gap of their own. G-01.5-10's own " <>
+          "diagnosis measured tightening #cierre's gap as making the 'too much space' " <>
+          "complaint objectively WORSE (16px -> pad/content 1.85, 12px -> 1.95, both " <>
+          "backwards) — the fix lever here is padding and heading size, never the gap."
+
+      assert Regex.scan(~r/(?<![-\w])gap\s*:/, padding_body) == [], failure_message
+      assert Regex.scan(~r/(?<![-\w])gap\s*:/, h2_body) == [], failure_message
+    end
+
+    test "#cierre .pk-band-inner's gap is declared exactly once in the whole stylesheet, with no per-viewport override" do
+      src = strip_comments(css_source())
+
+      selector_occurrences = ~r/#cierre \.pk-band-inner\s*\{/ |> Regex.scan(src) |> length()
+
+      assert selector_occurrences == 1,
+             "Expected exactly one #cierre .pk-band-inner rule in the whole stylesheet, found " <>
+               "#{selector_occurrences}. D-12 requires the band's one internal spacing rule to " <>
+               "stay a single declaration, unconditional at every width — a second, viewport-" <>
+               "scoped declaration would reintroduce the two-spacing-system problem D-12 exists " <>
+               "to prevent, and would be exactly the kind of scattered override this plan was " <>
+               "structured to avoid ('both levers in one media block, or neither')."
+    end
+  end
+
   # Plan 01.5-03, Task 2 (D-12): every Cierre internal gap comes from ONE
   # flex gap on the content column, never per-element margins.
   describe "Cierre one flex gap (plan 01.5-03, D-12)" do

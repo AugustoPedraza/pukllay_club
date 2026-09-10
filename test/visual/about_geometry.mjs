@@ -64,7 +64,16 @@ import { join } from "node:path"
 // (the About page's own 480px CTA-bar block, and #cierre's 640px desktop
 // treatment) both leave ungoverned — the diagnosis flagged this exact gap as
 // where a regime-boundary bug would hide, and it is otherwise never swept.
-const VIEWPORTS = [390, 560, 768, 1280]
+//
+// Plan 01.5-13 (G-01.5-10 gap closure) adds 320: this phase's narrowest
+// supported width, and the one landmine 4 of that plan's debug session
+// flagged by name — at 375px a 32px heading measures 218.3px in a ~347px
+// content box (63% fill), but the box shrinks to ~292px at 320px, so the
+// margin against a wrap shrinks too. Every check in CHECKS below now also
+// runs at this width for the first time it is swept; per that plan's own
+// SUMMARY, any pre-existing failure that surfaces here for a reason
+// unrelated to G-01.5-10 is recorded as a finding, not silently excluded.
+const VIEWPORTS = [320, 390, 560, 768, 1280]
 const THEMES = ["light", "dark"]
 
 // Plan 01.5-07: viewport HEIGHTS swept alongside widths for the Cierre gap
@@ -371,6 +380,34 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
             })()
           : null;
 
+        // Plan 01.5-13: the closing heading's own rendered box (width — the
+        // #cierre .pk-band-inner column is display:flex with
+        // align-items:center, so a block-level h2 with no explicit width
+        // shrink-wraps to its own ink width rather than stretching to the
+        // column's full cross-axis size, the same reasoning E-02 already
+        // relied on measuring the pre-fix 163.73px heading box) plus its
+        // rendered LINE COUNT, measured via a Range over its own text
+        // node's getClientRects() — one ClientRect per wrapped line — so
+        // the no-wrap check below can distinguish "one line, wide" from
+        // "wrapped onto two lines" even if both report a similar box width
+        // (the box itself is capped by the column, not by the text).
+        const cierreH2El = cierreEl ? cierreEl.querySelector('h2') : null;
+        const cierreHeading = cierreH2El
+          ? (() => {
+              const rect = cierreH2El.getBoundingClientRect();
+              const textNode = Array.from(cierreH2El.childNodes).find(
+                (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0,
+              );
+              let lineCount = null;
+              if (textNode) {
+                const range = document.createRange();
+                range.selectNodeContents(textNode);
+                lineCount = range.getClientRects().length;
+              }
+              return { width: rect.width, height: rect.height, lineCount };
+            })()
+          : null;
+
         // Plan 01.5-08: the footer's own rect. Unaffected by scroll position
         // (both it and the last band shift by the same scrollY delta), so
         // this unscrolled measurement is sufficient for the last-band-to-
@@ -474,6 +511,7 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
           cierre,
           cierreInner,
           cierrePadding,
+          cierreHeading,
           footer,
           lastBandBackground,
           footerBackground,
@@ -691,6 +729,177 @@ function checkCierreMobileInvariance(measured, ctx) {
   }
 
   return failures
+}
+
+// Plan 01.5-13 (G-01.5-10 gap closure), first of three NEW checks —
+// PROPORTION, the "it has too much space" clause. `checkCierreRunRatioBudget`
+// below already derives a budget live from this page's OTHER bands; this
+// check applies the same derived-not-literal shape one axis over: THIS
+// band's own mobile padding-to-content ratio, judged against THIS SAME
+// band's own DESKTOP padding-to-content ratio, measured live in this same
+// run (`collectCierreDesktopPadContentRatio`, called once near the top of
+// main() before the sweep, below). Deriving the budget this way is what
+// lets it survive plan 01.5-09's desktop retune already on record and any
+// future one — both sides move together, unlike a hard-coded 0.90-1.02.
+//
+// Ratio computed the same way the diagnosis's own norms.mjs script did:
+// (padTop + padBottom) / contentHeight, recovered from rects alone
+// (`cierre.height - cierreInner.height`, over `cierreInner.height`) since
+// the gap-evenness assertions above already guard the padding being read
+// correctly from the box. Pre-fix this measured 1.67 against a 0.19-0.53
+// page-wide norm and a 0.90-1.02 desktop-accepted range (E-05); this
+// check's budget IS that accepted range, read live instead of copied.
+const CIERRE_PROPORTION_BUDGET_MULTIPLIER = 1.15 // same headroom checkCierreRunRatioBudget uses one band over
+
+let cierreDesktopPadContentRatio = null
+
+function cierrePadContentRatio(measured) {
+  const { cierre, cierreInner } = measured
+  if (!cierre || !cierreInner || cierreInner.height <= 0) return null
+  return (cierre.height - cierreInner.height) / cierreInner.height
+}
+
+// Runs ONE extra, dedicated measurement (not part of the width x theme x
+// height sweep's own case accounting) at a representative desktop width
+// before the main loop starts. Geometry here is invariant to theme (colour
+// does not move a box) and to viewport height (no vh floor since 01.5-07),
+// which is WHY one measurement suffices as this run's live desktop
+// reference rather than needing its own sweep — confirmed by this file's
+// existing dark-theme control (E-09) and the mobile-invariance check above,
+// both of which already rely on that same invariance.
+async function collectCierreDesktopPadContentRatio({ client, baseUrl }) {
+  const measured = await runCase({ client, baseUrl, viewport: 1280, theme: "light", height: 900 })
+  const ratio = cierrePadContentRatio(measured)
+  if (ratio == null) {
+    throw new Error(
+      "collectCierreDesktopPadContentRatio: could not derive #cierre's desktop pad/content ratio " +
+        "at 1280px — checkCierreProportionBudget has no live budget to compare mobile widths " +
+        "against for the rest of this run",
+    )
+  }
+  return ratio
+}
+
+function checkCierreProportionBudget(measured, ctx) {
+  if (ctx.viewport >= 640) return []
+
+  if (cierreDesktopPadContentRatio == null) {
+    return [
+      `#cierre proportion budget: no live desktop pad/content ratio was captured for this run ` +
+        `(collectCierreDesktopPadContentRatio must run before the sweep) — cannot judge ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] against it`,
+    ]
+  }
+
+  const ratio = cierrePadContentRatio(measured)
+  if (ratio == null) {
+    return [
+      `#cierre proportion budget: could not measure #cierre and/or its .pk-band-inner content ` +
+        `group at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const budget = cierreDesktopPadContentRatio * CIERRE_PROPORTION_BUDGET_MULTIPLIER
+  if (ratio > budget) {
+    return [
+      `#cierre proportion budget: mobile pad/content=${ratio.toFixed(3)}, this run's OWN live ` +
+        `desktop pad/content=${cierreDesktopPadContentRatio.toFixed(3)}, budget=` +
+        `${budget.toFixed(3)} (desktop x ${CIERRE_PROPORTION_BUDGET_MULTIPLIER}) at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — the closing band's mobile padding-` +
+        `to-content ratio is disproportionate against THIS SAME band's own desktop state, not a ` +
+        `fixed literal. G-01.5-10's diagnosis measured the pre-fix mobile ratio at 1.67 against a ` +
+        `0.19-0.53 page-wide norm and a 0.90-1.02 desktop-accepted range; this run's own live ` +
+        `desktop ratio (${cierreDesktopPadContentRatio.toFixed(3)}) IS that accepted range.`,
+    ]
+  }
+
+  return []
+}
+
+// Plan 01.5-13, second new check — HIERARCHY, the "needs better balance"
+// clause. The band's three rendered lines measured 163.7 / 85.9 / 204.4px
+// pre-fix (E-02/E-03): the widest object in the band was its smallest,
+// greyest, most subordinate one — the 10px uppercase signature 24.8%
+// WIDER than the 24px heading it sits under, the exact inversion the user
+// called unbalanced. Compares `cierreHeading.width` (runCase, above — a
+// shrink-to-fit box in this flex column, the same reasoning E-02 relied on
+// for the pre-fix 163.73px measurement) against `signatureType.width`
+// (already captured by plan 01.5-11) at mobile widths only; the desktop
+// signature and desktop heading are a different, larger-margin pair this
+// check does not need to re-litigate.
+function checkCierreHierarchy(measured, ctx) {
+  if (ctx.viewport >= 640) return []
+
+  const { cierreHeading, signatureType } = measured
+  if (!cierreHeading || cierreHeading.width == null) {
+    return [
+      `#cierre hierarchy: could not measure #cierre h2's rendered width at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+  if (!signatureType || signatureType.width == null) {
+    return [
+      `#cierre hierarchy: could not measure #cierre .pk-about-closing-meta's rendered width at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const headingWidth = cierreHeading.width
+  const signatureWidth = signatureType.width
+
+  if (signatureWidth > headingWidth) {
+    const ratio = signatureWidth / headingWidth
+    return [
+      `#cierre hierarchy: signature width=${signatureWidth.toFixed(2)}px is WIDER than heading ` +
+        `width=${headingWidth.toFixed(2)}px (ratio ${ratio.toFixed(3)}) at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — the widest object in the band is ` +
+        `its smallest, greyest, most subordinate line. G-01.5-10's pre-fix diagnosis measured this ` +
+        `inversion at 163.7px (heading) vs 204.4px (signature), a 24.8% overshoot; the signature ` +
+        `must never out-measure the heading it is subordinate to.`,
+    ]
+  }
+
+  return []
+}
+
+// Plan 01.5-13, third new check — NO-WRAP, landmine 4 of both the debug
+// session's Resolution block and this plan's own read_first: a 32px
+// heading measures 218.3px in #cierre's ~347px content box at 375px (63%
+// fill), but the box shrinks to ~292px at the narrowest swept width — a
+// two-line heading there would introduce a NEW defect while fixing this
+// one. Scoped to exactly the sweep's narrowest width (not "< 640px") so
+// this check runs exactly once per (theme, height) rather than redundantly
+// at every mobile width already covered by the wider-margin cases.
+//
+// Line count is measured via a Range over the heading's own text node
+// (this file's established definition of "ink," the same idiom
+// sumateCta.inkHeight already uses) rather than trusted from a bare box
+// width — the column's own width cap means a wrapped two-line heading and
+// a one-line heading can report similar-looking boxes; only the ink itself
+// tells them apart.
+const CIERRE_NARROWEST_WIDTH = Math.min(...VIEWPORTS)
+
+function checkCierreNoWrap(measured, ctx) {
+  if (ctx.viewport !== CIERRE_NARROWEST_WIDTH) return []
+
+  const { cierreHeading } = measured
+  if (!cierreHeading || cierreHeading.lineCount == null) {
+    return [
+      `#cierre no-wrap: could not measure #cierre h2's rendered line count at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  if (cierreHeading.lineCount !== 1) {
+    return [
+      `#cierre no-wrap: heading rendered on ${cierreHeading.lineCount} lines (width=` +
+        `${cierreHeading.width.toFixed(2)}px) at [${ctx.viewport}px x ${ctx.height}px, ` +
+        `${ctx.theme}] — expected exactly 1 line box at this phase's narrowest supported width. ` +
+        `A mobile heading size step must never wrap "Nos vemos el sábado" onto two lines.`,
+    ]
+  }
+
+  return []
 }
 
 // Plan 01.5-09 (G-01.5-6 gap closure, 2026-09-09 —
@@ -1061,6 +1270,9 @@ const CHECKS = [
   checkCierreRunRatioBudget,
   checkCierreBottomBreathingRoom,
   checkCierreMobileInvariance,
+  checkCierreProportionBudget,
+  checkCierreHierarchy,
+  checkCierreNoWrap,
   checkBottomBoundaryBudget,
   checkSignatureFooterTypeCollision,
   checkSumateButtonGeometry,
@@ -1219,6 +1431,20 @@ async function main() {
     const conn = await connectCDP(chrome.port)
     const client = conn.client
 
+    // Plan 01.5-13: this run's own live desktop pad/content reference,
+    // captured ONCE before the sweep starts — checkCierreProportionBudget
+    // (mobile-only) reads this module-scope value via closure rather than
+    // needing the sweep loop reordered so a desktop case runs before a
+    // mobile one (VIEWPORTS stays ascending, matching this file's own
+    // evidence-ordering convention). Counted in casesRun/expectedCases
+    // below the same way the fixed-bar loop's own extra cases already are.
+    cierreDesktopPadContentRatio = await collectCierreDesktopPadContentRatio({ client, baseUrl })
+    casesRun++
+    log(
+      `[1280px x 900px, light] #cierre desktop pad/content reference: ` +
+        `${cierreDesktopPadContentRatio.toFixed(3)} (checkCierreProportionBudget's live budget input)`,
+    )
+
     for (const viewport of VIEWPORTS) {
       for (const theme of THEMES) {
         for (const height of CIERRE_HEIGHTS) {
@@ -1315,7 +1541,10 @@ async function main() {
     await stopDevServer(serverProc)
   }
 
-  const expectedCases = VIEWPORTS.length * THEMES.length * CIERRE_HEIGHTS.length + THEMES.length
+  // +1: the single collectCierreDesktopPadContentRatio reference case above
+  // (plan 01.5-13), not part of the viewport x theme x height sweep's own
+  // matrix but still a real case that must not silently fail to run.
+  const expectedCases = VIEWPORTS.length * THEMES.length * CIERRE_HEIGHTS.length + THEMES.length + 1
   if (casesRun !== expectedCases) {
     log(
       `FAIL: expected ${expectedCases} case blocks, only ${casesRun} ` +
