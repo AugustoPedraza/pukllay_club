@@ -1626,22 +1626,28 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "child) pushes this fixed, bottom:0 bar away from the true viewport edge."
     end
 
-    test "no .pk-about-cta-bar rule anywhere in app.css declares justify-content (daisyUI's .btn already centers)" do
+    # SUPERSEDED (G-01.5-11 gap closure, plan 01.5-14, sketch 052 winner B).
+    # This test used to REFUSE any justify-content declaration on
+    # .pk-about-cta-bar — its premise was that the button spanned the full
+    # width (w-full), so daisyUI's own .btn centring sufficed and the
+    # wrapper needed no centring rule of its own. Winner B renders a
+    # content-sized pill instead (no more w-full), so the wrapper itself
+    # must place it — the exact reversal of the old premise. Implemented as
+    # text-align: center (not justify-content/flex) so the media-query
+    # display swap stays "display: block" and the sibling test asserting
+    # that value is untouched by this plan.
+    test "the base .pk-about-cta-bar rule centres its content-sized child (sketch 052 winner B, plan 01.5-14)" do
       src = strip_comments(css_source())
 
-      rule_bodies =
-        ~r/\.pk-about-cta-bar\s*\{([^}]*)\}/s
-        |> Regex.scan(src)
-        |> Enum.map(fn [_, body] -> body end)
+      base_rule = Regex.run(~r/(?<!:has\()\.pk-about-cta-bar\s*\{([^}]*)\}/s, src)
+      assert base_rule, "Expected a base (non-media-query) .pk-about-cta-bar rule in app.css."
+      [_, base_body] = base_rule
 
-      assert rule_bodies != [], "Expected at least one .pk-about-cta-bar rule in app.css."
-
-      for body <- rule_bodies do
-        assert Regex.scan(~r/justify-content/, body) == [],
-               "Expected no .pk-about-cta-bar rule to declare justify-content — daisyUI's " <>
-                 ".btn already centers; sketch 051's centering fix was for its own hand-rolled " <>
-                 "button CSS, not this app's."
-      end
+      assert base_body =~ ~r/text-align\s*:\s*center/,
+             "Expected .pk-about-cta-bar to centre its child. The superseded test refused any " <>
+               "justify-content declaration because the button spanned the full width and " <>
+               "daisyUI's own .btn centring sufficed; sketch 052 winner B renders a " <>
+               "content-sized pill instead, so the wrapper itself must place it."
     end
 
     # G-01.5-7 gap closure (plan 01.5-10 —
@@ -1654,29 +1660,59 @@ defmodule PukllayClubWeb.AboutLiveTest do
     # two siblings — the 6-arm differential proved swapping it is inert on
     # the reported symptom and actively worse at the page bottom) and the
     # border token it must now USE (neutral, replacing base-300).
-    test "the base .pk-about-cta-bar rule keeps base-100 fill and uses the neutral border token, not base-300" do
+    # SUPERSEDED (G-01.5-11 gap closure, plan 01.5-14, sketch 052 winner B).
+    # This test used to pin the base-100 fill and the var(--color-neutral)
+    # border-top plan 01.5-10 gave this bar to close G-01.5-7 (measured
+    # 1.406:1 light / 1.19:1 dark against the retired base-300 border, under
+    # the 3:1 WCAG 1.4.11 non-text floor). Winner B removes the fill AND the
+    # border together — this DISSOLVES G-01.5-7's mechanism rather than
+    # regressing it (a bar with no surface has no faint boundary to
+    # misread), so the two successor tests below assert what now carries
+    # figure/ground instead: no surface on the wrapper, and a solid fill
+    # resolved from the primary/primary-content pair on the button — an
+    # audited theme pair, stronger than the retired border ever was (no
+    # step of the base-100/200/300 ladder the superseded guard measured
+    # against clears 3:1 in either theme).
+    test "the base .pk-about-cta-bar rule declares no background and no border" do
       src = strip_comments(css_source())
 
       base_rule = Regex.run(~r/(?<!:has\()\.pk-about-cta-bar\s*\{([^}]*)\}/s, src)
       assert base_rule, "Expected a base (non-media-query) .pk-about-cta-bar rule in app.css."
       [_, base_body] = base_rule
 
-      assert base_body =~ ~r/background\s*:\s*var\(--color-base-100\)/,
-             "Expected .pk-about-cta-bar to keep background: var(--color-base-100) — a 6-arm " <>
-               "runtime differential proved swapping the fill to base-200 (matching its two " <>
-               "siblings) is INERT on the reported symptom (1.406:1 light / 1.19:1 dark, " <>
-               "byte-identical to doing nothing) and makes the fill collapse to 1.000:1 against " <>
-               "the surface it overlays at the real page bottom — strictly worse there."
+      refute base_body =~ ~r/background\s*:/,
+             "Expected .pk-about-cta-bar to declare no background — sketch 052 winner B removes " <>
+               "the bar's surface entirely. Plan 01.5-10 had measured this bar's prior base-100 " <>
+               "fill/base-300 border edge at 1.406:1 light / 1.19:1 dark (below the 3:1 WCAG " <>
+               "1.4.11 non-text floor) and fixed it by moving the border to " <>
+               "var(--color-neutral) (5.785:1/7.128:1). Winner B dissolves that concern rather " <>
+               "than regressing it: a bar with no surface has no faint boundary to misread, and " <>
+               "figure/ground now comes from the button's own solid primary fill plus " <>
+               "elevation instead."
 
-      assert base_body =~ ~r/border-top\s*:\s*1px\s+solid\s+var\(--color-neutral\)/,
-             "Expected .pk-about-cta-bar's border-top to resolve through var(--color-neutral) " <>
-               "(measured 5.785:1 light / 7.128:1 dark against the bar's fill), the same token " <>
-               ".pk-title-echo already migrated to for the identical reason."
+      refute base_body =~ ~r/border(-top)?\s*:/,
+             "Expected .pk-about-cta-bar to declare no border — see the background assertion " <>
+               "above for why this is a supersession of plan 01.5-10's G-01.5-7 fix, not a " <>
+               "regression of it."
+    end
 
-      refute base_body =~ ~r/border-top\s*:\s*1px\s+solid\s+var\(--color-base-300\)/,
-             "Expected the retired border-300 pairing to be gone entirely — it measured only " <>
-               "1.406:1 light / 1.19:1 dark against the bar's own fill, under the 3:1 WCAG " <>
-               "1.4.11 non-text-contrast floor this fix exists to clear."
+    test "the bar's Sumate button resolves a solid fill from the primary token pair" do
+      src = strip_comments(css_source())
+
+      modifier_rule = Regex.run(~r/\.pk-sumate-btn-solid\s*\{([^}]*)\}/s, src)
+      assert modifier_rule, "Expected a .pk-sumate-btn-solid modifier rule in app.css."
+      [_, modifier_body] = modifier_rule
+
+      assert modifier_body =~ ~r/background\s*:\s*var\(--color-primary\)/,
+             "Expected the bar's button to resolve background: var(--color-primary) — a " <>
+               "stronger contrast position than the superseded border guard: the " <>
+               "primary/primary-content pair is an audited theme pair, whereas no step in the " <>
+               "base ladder clears the 3:1 non-text floor in either theme (plan 01.5-10 " <>
+               "measured base-300 at 1.406:1 light / 1.19:1 dark)."
+
+      assert modifier_body =~ ~r/color\s*:\s*var\(--color-primary-content\)/,
+             "Expected the bar's button label colour to resolve var(--color-primary-content), " <>
+               "matching the solid fill's own paired ink colour."
     end
   end
 

@@ -861,8 +861,20 @@ defmodule PukllayClubWeb.AboutLive do
       overlays, still covered at the real page bottom. The replacement is a
       page-scoped `body:has(.pk-about-cta-bar)` document-end reservation in
       app.css, co-located in the same 480px media block as this bar's own
-      display swap — see that rule for the full placement reasoning. --%>
-      <div class="pk-about-cta-bar"><Layouts.sumate_cta class="w-full" /></div>
+      display swap — see that rule for the full placement reasoning.
+
+      Plan 01.5-14 (G-01.5-11 gap closure, sketch 052 winner B "floating
+      compact pill", picked directly with no revision round after UAT
+      flagged this bar as "weird, alternatives?"): the wrapper's surface is
+      gone — the `pk-sumate-btn-solid` class passed here is the only change
+      to this call, swapping the old `w-full` stretch for the modifier that
+      fills the button solid and elevates it, through the exact same
+      caller-class merge seam `w-full` used. Nothing else about this call,
+      `sumate_cta/1` itself, or the hero/closing-band placements changes:
+      those two stay outline on purpose — this is a mobile-overlay
+      treatment for the sticky bar alone, not a new button style for the
+      page. --%>
+      <div class="pk-about-cta-bar"><Layouts.sumate_cta class="pk-sumate-btn-solid" /></div>
 
       <%!-- Sketch 045 isologo scroll-morph mark: the SINGLE positioned
       floating element .AboutHeaderMorph (mounted on the hero section above)

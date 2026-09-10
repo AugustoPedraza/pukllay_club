@@ -2649,6 +2649,61 @@ body.pk-drawer-open {
   font-size: 1rem;
 }
 
+/* Solid-fill modifier for .pk-sumate-btn (sketch 052 winner B, G-01.5-11
+   gap closure, plan 01.5-14 — .planning/sketches/052-about-mobile-cta-
+   alternatives/index.html:43-44 is the source: `.sumate-btn.solid {
+   background: var(--color-primary); color: var(--color-primary-content);
+   border-color: var(--color-primary); }`, `.sumate-btn.solid:hover {
+   filter: brightness(1.08); }`). Ships as a MODIFIER class applied through
+   `Layouts.sumate_cta/1`'s existing caller-class merge (`class={["btn
+   btn-outline btn-primary pk-sumate-btn", @class]}`) rather than as a new
+   component attribute or a swap of the base `btn-outline` class: a caller
+   can ADD a class through that merge but cannot REMOVE one already in the
+   list, and the design source expresses the fill the identical way — a
+   `.solid` modifier layered on top of the shared `.sumate-btn` geometry
+   class, not a second competing button class. Currently applied only to
+   the About page's sticky mobile CTA bar (.pk-about-cta-bar, below); the
+   hero and closing-band placements stay outline on purpose — winner B is a
+   mobile-overlay treatment for THIS placement, not a new button style for
+   the whole page.
+
+   Declares NO geometry: height, inline padding, radius and font-size all
+   stay owned by `.pk-sumate-btn` alone (above), so the three Sumate
+   placements can never drift to different sizes even though only one of
+   them is now filled.
+
+   Out-specifies daisyUI's layered `btn-outline`/`btn-primary` utilities
+   with no `!important` — the same unlayered-`.pk-*`-beats-layered-Tailwind
+   cascade direction `.pk-sumate-btn` itself already depends on (this
+   file's top-of-file CASCADE-LAYER HAZARD note). The hover treatment is
+   declared explicitly rather than inherited: `btn-outline`'s own hover
+   inverts an outline to a filled state, which means nothing once the rest
+   state is already filled.
+
+   Elevation reuses this file's existing mid-elevation shadow idiom
+   (`.pk-drawer`, `.pk-search-morph.is-open`: `0 8px 24px` against
+   `color-mix(in srgb, var(--pk-shadow-color) 28%, transparent)`) rather
+   than the sketch's own theme token (`var(--shadow-lg)`, which this app's
+   theme never defines) — the same reasoning plan 01.5-10 already used to
+   keep `.pk-sumate-btn`'s pill radius a literal instead of inventing a
+   radius token this theme doesn't have.
+
+   `pointer-events: auto` overrides `.pk-about-cta-bar`'s own
+   `pointer-events: none` below (T-01.5-59): the wrapper is transparent to
+   taps so page content beside the floating pill stays reachable, and this
+   is the one declaration that keeps the pill itself tappable. */
+.pk-sumate-btn-solid {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
+  pointer-events: auto;
+}
+
+.pk-sumate-btn-solid:hover {
+  filter: brightness(1.08);
+}
+
 /* About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
    Page-owned (rendered by AboutLive only, never Layouts) and deliberately
    has no hook and no scroll behavior at all — it is simply pinned, unlike
@@ -2664,7 +2719,8 @@ body.pk-drawer-open {
    leaving the footer, the element this fixed bar actually overlays,
    still covered. The replacement is a `body:has(.pk-about-cta-bar)`
    document-end reservation in the same media block as this bar's own
-   display swap — see that rule for the full placement reasoning.
+   display swap — see that rule for the full placement reasoning and (as
+   of plan 01.5-14) the pill footprint it is now derived from.
 
    `margin-block-end: 0` (Rule 1 bug, found via Task 3's live CDP probe):
    this element is not the shell's `space-y-4` wrapper's LAST child —
@@ -2684,54 +2740,43 @@ body.pk-drawer-open {
    caught). Same unlayered-`.pk-*`-beats-layered-Tailwind-utility cascade
    direction as `.pk-band`'s own `margin-block-end: 0` fix (plan 01.5-06) —
    no `!important` needed, this file's top-of-file CASCADE-LAYER HAZARD
-   note already documents why.
+   note already documents why. Plan 01.5-14's deliberate `bottom` offset
+   (below) makes a stray extra margin on top of it HARDER to spot, not
+   easier — a flush bar's stray 16px reads as an obviously wrong gap
+   against the viewport edge, while a floating pill's own intentional gap
+   can silently absorb a few more stray pixels without looking wrong at a
+   glance. This declaration stays non-optional.
 
-   G-01.5-7 (plan 01.5-10 — .planning/debug/G-01.5-7-cta-bar-background-
-   visible.md): `border-top` moved from `var(--color-base-300)` to
-   `var(--color-neutral)`. Measured, both themes: the base-300 hairline was
-   1.406:1 light / 1.19:1 dark against the bar's own fill — under the 3:1
-   WCAG 1.4.11 non-text floor and under any perceptual threshold, so the bar
-   read as having neither a surface nor an edge ("background content visible
-   behind the CTA" was literally accurate: the bar paints the exact
-   `--color-base-100` token the page body itself paints, over most of the
-   scroll range at 1.000:1). `--color-neutral` reaches 5.785:1 light /
-   7.128:1 dark — the same token `.pk-title-echo` (below) already migrated
-   to for the identical reason, stated there in prose.
-
-   The fill stays on `--color-base-100`, deliberately NOT changed to match
-   `.pk-title-echo`/`.pk-mobile-cta-bar`'s `--color-base-200`: a 6-arm
-   runtime differential proved the fill swap alone is INERT on the reported
-   symptom (1.406:1/1.19:1 — byte-identical to doing nothing, since the
-   base-100/200/300 ladder's adjacent-step ceiling is only 1.155:1/1.086:1,
-   below any real threshold) AND makes the bar's fill collapse to
-   byte-identical (1.000:1) with the `#cierre`/footer surface it overlays at
-   the real page bottom — strictly worse there than leaving it alone. The
-   border is the necessary and sufficient channel; this bar is the third and
-   last in the file carrying the pre-G-01.3-09 border shape (`.pk-title-echo`
-   migrated both channels already; `.pk-mobile-cta-bar` migrated its fill
-   only, its own border stays base-300 and is out of this plan's scope).
-
-   `padding-bottom` below (the document-end clearance) is DERIVED from this
-   rule's own padding, `.pk-sumate-btn`'s `min-height` and this rule's own
-   `border-top` width — not an inherited literal — because correcting the
-   border alone made a fixed differential arm's slack newly visible: the
-   bar's real height changed from 69px to 73px the moment Task 1 grew the
-   button to 48px, so a hard-coded clearance is already 1px tight before
-   this comment is even read. If `.pk-sumate-btn`'s `min-height` or this
-   rule's own padding/border ever change again, this expression's operands
-   must be updated in lockstep — that coupling is the whole point of
-   deriving it instead of restating a number. */
+   SUPERSEDED (plan 01.5-14, G-01.5-11 gap closure — sketch 052, winner B
+   "floating compact pill", picked directly by the user with no revision
+   round after UAT flagged this bar as "weird, alternatives?"). Plan
+   01.5-10 closed G-01.5-7 one round earlier by moving this rule's
+   `border-top` from `var(--color-base-300)` (1.406:1 light / 1.19:1 dark,
+   under the 3:1 WCAG 1.4.11 non-text floor) to `var(--color-neutral)`
+   (5.785:1/7.128:1), and deliberately kept the fill on `--color-base-100`
+   (a 6-arm differential had proved swapping it to base-200 inert on the
+   symptom and worse at the real page bottom). Winner B removes the surface
+   AND the edge together — no background, no border, no padding — which
+   DISSOLVES that fix's mechanism rather than regressing it: a bar with no
+   surface has no faint boundary to misread in the first place. Figure/
+   ground for the join ask now comes from the button's own solid primary
+   fill (`.pk-sumate-btn-solid`, above) plus elevation instead of a
+   hairline edge — the primary/primary-content pair is an audited theme
+   token pair, where no step of the base-100/200/300 ladder the superseded
+   border guard measured against ever clears the 3:1 floor in either theme.
+   The superseded guard's own measured numbers are preserved above and in
+   the successor source test's failure message so this reads as a
+   supersession, not a quiet retreat from G-01.5-7. */
 .pk-about-cta-bar {
   display: none;
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 20px;
   z-index: 40;
   margin-block-end: 0;
-  padding: 0.75rem var(--pk-gutter);
-  background: var(--color-base-100);
-  border-top: 1px solid var(--color-neutral);
+  text-align: center;
+  pointer-events: none;
 }
 
 /* About page content bands (01.1-02, D-07 spine: hero -> photo rail ->
