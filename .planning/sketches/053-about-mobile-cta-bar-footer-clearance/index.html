@@ -1,0 +1,370 @@
+<title>Sketch 053 — Mobile CTA Bar / Footer Clearance</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--color-surface-2);
+    font-family: var(--font-sans);
+    color: var(--color-text);
+    padding: 24px 16px 64px;
+  }
+
+  .intro {
+    max-width: 640px;
+    margin: 0 auto 20px;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    line-height: 1.5;
+  }
+  .intro b { color: var(--color-text); }
+  .intro code {
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    padding: 1px 5px;
+    font-size: 0.9em;
+  }
+
+  /* ---- Phone frame ---- */
+  .frames {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .frame-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .frame-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-align: center;
+    max-width: 320px;
+  }
+  .phone {
+    position: relative;
+    width: 320px;
+    height: 620px;
+    border-radius: 28px;
+    background: var(--color-bg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+  }
+  .scroller {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .status-chip {
+    position: absolute;
+    top: 8px; left: 8px;
+    z-index: 50;
+    font-size: 10px;
+    font-family: var(--font-sans);
+    background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    pointer-events: none;
+  }
+  .footer-flag {
+    position: absolute;
+    z-index: 60;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--color-success);
+    color: white;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .footer-flag.show { opacity: 1; }
+
+  /* ---- Reproduced About-page hero + tail content ---- */
+  .hero-d {
+    padding: 28px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .hero-d .isologo {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary-content);
+    font-family: var(--font-display);
+    font-size: 15px;
+  }
+  .hero-d h1 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 1.15;
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  .cierre {
+    background: var(--color-surface);
+    padding: 40px 20px 32px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .cierre h2 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    margin: 0;
+    color: var(--color-text);
+  }
+  .cierre-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding-inline: 24px;
+    border-radius: var(--radius-full);
+    border: 1.5px solid var(--color-primary);
+    color: var(--color-primary);
+    background: transparent;
+    font-size: var(--text-base);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .cierre-sig {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    letter-spacing: 0.02em;
+  }
+
+  .about-footer {
+    background: color-mix(in srgb, var(--color-surface) 88%, var(--color-text) 6%);
+    border-top: 1px solid var(--color-border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .bgg-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-text-muted);
+  }
+  .bgg-line .swatch {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--color-secondary);
+    flex: none;
+  }
+
+  .beyond-footer {
+    /* the empty page canvas below the real footer, on a short/tall-viewport load */
+    height: 90px;
+    background: var(--color-bg);
+  }
+
+  /* ---- Sumate button geometry (real tokens: 48px / 28px / pill) ---- */
+  .sumate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding-inline: 28px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-base);
+    font-weight: 600;
+    background: var(--color-primary);
+    color: var(--color-primary-content);
+    border: none;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .sumate:active { filter: brightness(1.08); }
+
+  /* =========================================================
+     Winner — Hero-Synced Full-Width Bar (D)
+     Appears once the hero's own Sumate scrolls out of view (the
+     same "docked" scroll-trigger mechanism the isologo/header morph
+     already uses on this page), disappears on scroll-up past the
+     hero, and hides again near the footer so it never covers
+     "Powered by BGG" — the defect this sketch exists to close.
+     ========================================================= */
+  .bar-d {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    z-index: 40;
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -6px 16px color-mix(in srgb, var(--color-text) 10%, transparent);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: center;
+    transform: translateY(110%);
+    opacity: 0;
+    transition: transform var(--duration-slow) var(--ease-out-soft), opacity var(--duration-base) var(--ease-standard);
+  }
+  .bar-d .sumate { width: 100%; }
+  .bar-d.is-visible { transform: translateY(0); opacity: 1; }
+
+  .legend {
+    max-width: 640px;
+    margin: 28px auto 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+  .legend h3 { color: var(--color-text); font-size: var(--text-base); margin: 0 0 6px; }
+  .legend ul { margin: 0; padding-left: 18px; }
+
+  #sketch-tools select { font-family: system-ui; font-size: 12px; }
+</style>
+
+<div class="intro">
+  <b>Winner — Hero-Synced Full-Width Bar.</b> Reuses the page's own <b>docked-state</b> scroll
+  trigger — the same boolean already driving the isologo-into-header morph and the hero eyebrow's
+  hide/reveal (D-03) — instead of a footer-proximity check. The bar is <b>not present at all</b>
+  while the hero's own "Sumate" button is still on screen. The instant that button scrolls out of
+  view, the bar slides in from the bottom (full width, solid). Scroll back up past the hero and it
+  slides back out — symmetric with how the header morph itself reverses.
+  <br><br>
+  <b>Footer clearance, made exact:</b> the footer-hide trigger no longer waits until the footer is
+  already peeking out — it fires the instant the footer's top edge reaches the bar's own height
+  from the bottom of the screen (an <code>IntersectionObserver</code> with a negative
+  <code>rootMargin</code> equal to the bar's live-measured height), so the slide-out animation
+  finishes clearing the space <i>before</i> the footer's "Powered by BGG" line would ever be
+  reached — not merely "not overlapping" but the footer fully uncovered, with room to spare, the
+  moment it comes into view.
+</div>
+
+<div class="frames">
+  <div class="frame-col">
+    <div class="frame-label">Scroll down past the hero — bar slides in. Scroll back to top — bar slides back out. Scroll to the footer — bar clears out of the way with room to spare.</div>
+    <div class="phone">
+      <div class="status-chip" data-status="d">bar: hidden (hero visible)</div>
+      <div class="scroller" data-scroller="d">
+        <div class="hero-d">
+          <div class="isologo">PK</div>
+          <h1>VOLVÉ A JUGAR.<br>VOLVÉ A ENCONTRARTE.</h1>
+          <a class="cierre-btn" href="#" onclick="return false" data-hero-sumate="d">Sumate</a>
+        </div>
+        <div style="height:420px; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted); font-size:13px; padding:0 24px; text-align:center;">
+          (rest of /quienes-somos — photo rail, bands, FAQ, Contacto/Juntadas)
+        </div>
+        <div class="cierre">
+          <h2>NOS VEMOS<br>EL SÁBADO</h2>
+          <a class="cierre-btn" href="#" onclick="return false">Sumate</a>
+          <div class="cierre-sig">PUKLLAY CLUB · SAN SALVADOR DE JUJUY, ARGENTINA</div>
+        </div>
+        <div class="about-footer" data-footer-sentinel="d">
+          <div class="bgg-line"><span class="swatch"></span>Powered by BGG</div>
+          <div class="footer-flag" id="footer-flag-d">FOOTER LIBRE ✓</div>
+        </div>
+        <div class="beyond-footer"></div>
+      </div>
+      <div class="bar-d" data-bar="d">
+        <a class="sumate" href="#" onclick="return false">Sumate</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <h3>What to confirm</h3>
+  <ul>
+    <li>Scroll down slowly from the very top: the bar should stay absent for the whole hero, then
+      slide in cleanly the moment the hero's own "Sumate" scrolls past the top of the frame.</li>
+    <li>Scroll all the way to the bottom: watch the green "FOOTER LIBRE ✓" badge — it lights up the
+      instant the footer starts entering view, confirming the bar has already cleared out before
+      any part of the footer could be covered (not just "not overlapping right now").</li>
+    <li>Scroll back up from the bottom, then past the hero again — the bar should reappear and
+      disappear symmetrically in both directions, matching the real header-morph's own reversible
+      behavior.</li>
+  </ul>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  <div style="display:flex; align-items:center; gap:8px;">
+    <span>Theme:</span>
+    <select id="theme-select" onchange="setTheme(this.value)">
+      <option value="system">System</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </div>
+</div>
+
+<script>
+function setTheme(v) {
+  if (v === 'system') {
+    document.documentElement.removeAttribute('data-theme');
+  } else {
+    document.documentElement.setAttribute('data-theme', v);
+  }
+  try { localStorage.setItem('sketch-053-theme', v); } catch (e) {}
+}
+(function initTheme() {
+  try {
+    const saved = localStorage.getItem('sketch-053-theme');
+    if (saved) { document.getElementById('theme-select').value = saved; setTheme(saved); }
+  } catch (e) {}
+})();
+
+/* ---- Dual-trigger: visible once past the hero's own Sumate, hidden again near the footer.
+   The footer trigger uses a negative bottom rootMargin equal to the bar's own live height, so
+   "near footer" fires exactly when the footer's top edge reaches the strip the bar occupies —
+   the hide animation is already running (and finishes) before the footer could ever be covered,
+   not merely reacting after it's already visible underneath the bar. ---- */
+(function () {
+  const scroller = document.querySelector('[data-scroller="d"]');
+  const heroSentinel = document.querySelector('[data-hero-sumate="d"]');
+  const footerSentinel = document.querySelector('[data-footer-sentinel="d"]');
+  const bar = document.querySelector('[data-bar="d"]');
+  const status = document.querySelector('[data-status="d"]');
+  const footerFlag = document.getElementById('footer-flag-d');
+  let heroPassed = false;
+  let nearFooter = false;
+
+  function render() {
+    const visible = heroPassed && !nearFooter;
+    bar.classList.toggle('is-visible', visible);
+    status.textContent = visible
+      ? 'bar: visible'
+      : (nearFooter ? 'bar: hidden (near footer)' : 'bar: hidden (hero visible)');
+  }
+
+  new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      // hero's Sumate has scrolled OUT of view once it's no longer intersecting
+      heroPassed = !entry.isIntersecting;
+      render();
+    });
+  }, { root: scroller, threshold: 0 }).observe(heroSentinel);
+
+  // Bar height is measured live (not hard-coded) so the clearance always matches the real
+  // rendered bar, even if padding/button size ever changes.
+  const barHeight = Math.ceil(bar.getBoundingClientRect().height);
+  new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      nearFooter = entry.isIntersecting;
+      footerFlag.classList.toggle('show', entry.isIntersecting);
+      render();
+    });
+  }, { root: scroller, rootMargin: `0px 0px -${barHeight}px 0px`, threshold: 0 }).observe(footerSentinel);
+})();
+</script>
