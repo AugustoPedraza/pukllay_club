@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 054 — Dark Mode Color Composition</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* ============ page chrome (not part of any frame's measured composition) ============ */
+  body { padding: 0; }
+  .pk-sk-page-header { padding: var(--space-6) var(--space-6) var(--space-4); max-width: 900px; margin: 0 auto; }
+  .pk-sk-page-header h1 { font-family: var(--font-display); font-size: var(--text-display); margin: 0 0 var(--space-2); color: var(--color-primary); }
+  .pk-sk-page-header p { color: var(--color-text-muted); line-height: 1.5; margin: 0 0 var(--space-2); }
+  .pk-sk-page-header code { background: var(--color-surface); padding: 2px 6px; border-radius: var(--radius-sm); }
+
+  .pk-sk-frames { display: flex; flex-wrap: wrap; gap: var(--space-6); padding: 0 var(--space-6) var(--space-12); justify-content: center; align-items: flex-start; }
+  .pk-sk-frame-col { display: flex; flex-direction: column; gap: var(--space-2); width: 375px; max-width: 100%; }
+
+  .pk-sk-frame-label { font-family: var(--font-sans); }
+  .pk-sk-frame-label .pk-sk-badge-name {
+    display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display);
+    font-size: 1.1rem; letter-spacing: 0.02em; color: var(--color-text);
+  }
+  .pk-sk-frame-label .pk-sk-hypothesis { font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.4; margin: 2px 0 0; }
+
+  /* ============ frame — the actual measured composition. Every custom
+     property below is declared directly on THIS element, so it shadows
+     themes/default.css's :root[data-theme="dark"] values for everything
+     inside via normal CSS custom-property inheritance (nearest declaring
+     ancestor wins) — no specificity battle, no shared-file edit. ============ */
+  .pk-sk-frame {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    display: flex; flex-direction: column;
+  }
+
+  /* ===== the 5 variants — each declares the FULL 13-token mapped set,
+     including "control" which restates today's shipped values verbatim.
+     contrast-check.mjs parses these blocks directly from this file. ===== */
+  .pk-sk-frame[data-variant="control"] {
+    --color-bg: #170A26;
+    --color-surface: #22103A;
+    --color-surface-2: #2F1750;
+    --color-border: #2F1750;
+    --color-text: #F3ECFA;
+    --color-text-muted: #B8A6CC;
+    --color-primary: #A97FD1;
+    --color-primary-content: #170A26;
+    --color-secondary: #7E4CA5;
+    --color-accent-bg: #3D2A56;
+    --color-accent-text: #E4D3F5;
+    --color-danger: #E06B90;
+    --color-success: #5FBE95;
+  }
+  .pk-sk-frame[data-variant="a"] {
+    --color-bg: #2F154E;
+    --color-surface: #391B62;
+    --color-surface-2: #462278;
+    --color-border: #462278;
+    --color-text: #F3ECFA;
+    --color-text-muted: #B8A6CC;
+    --color-primary: #A97FD1;
+    --color-primary-content: #2F154E;
+    --color-secondary: #7E4CA5;
+    --color-accent-bg: #3D2A56;
+    --color-accent-text: #E4D3F5;
+    --color-danger: #E06B90;
+    --color-success: #5FBE95;
+  }
+  .pk-sk-frame[data-variant="b"] {
+    --color-bg: #170A26;
+    --color-surface: #3D2163;
+    --color-surface-2: #58358D;
+    --color-border: #58358D;
+    --color-text: #F3ECFA;
+    --color-text-muted: #B8A6CC;
+    --color-primary: #A97FD1;
+    --color-primary-content: #170A26;
+    --color-secondary: #7E4CA5;
+    --color-accent-bg: #3D2A56;
+    --color-accent-text: #E4D3F5;
+    --color-danger: #E06B90;
+    --color-success: #5FBE95;
+  }
+  .pk-sk-frame[data-variant="c"] {
+    --color-bg: #211B27;
+    --color-surface: #2D2735;
+    --color-surface-2: #3C3546;
+    --color-border: #3C3546;
+    --color-text: #F3ECFA;
+    --color-text-muted: #B8A6CC;
+    --color-primary: #A97FD1;
+    --color-primary-content: #211B27;
+    --color-secondary: #7E4CA5;
+    --color-accent-bg: #3D2A56;
+    --color-accent-text: #E4D3F5;
+    --color-danger: #E06B90;
+    --color-success: #5FBE95;
+  }
+  .pk-sk-frame[data-variant="d"] {
+    --color-bg: #170A26;
+    --color-surface: #22103A;
+    --color-surface-2: #2F1750;
+    --color-border: #2F1750;
+    --color-text: #E0D7EA;
+    --color-text-muted: #C6BCD2;
+    --color-primary: #A97FD1;
+    --color-primary-content: #170A26;
+    --color-secondary: #7E4CA5;
+    --color-accent-bg: #4E376C;
+    --color-accent-text: #D1BCE6;
+    --color-danger: #E06B90;
+    --color-success: #5FBE95;
+  }
+
+  /* ============ substrate — identical markup/classes in every frame,
+     stamped from one shared JS template so it provably cannot drift. ============ */
+  .pk-sk-header {
+    background: var(--color-surface);
+    padding: var(--space-3) var(--space-3);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .pk-sk-brand { font-family: var(--font-display); font-size: 1rem; letter-spacing: 0.02em; color: var(--color-primary); }
+  .pk-sk-icon-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); }
+
+  .pk-sk-photo { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: var(--color-surface-2); }
+
+  .pk-sk-shelf { padding: var(--space-3); }
+  .pk-sk-shelf h4 { font-family: var(--font-display); font-size: 1rem; margin: 0 0 var(--space-2); color: var(--color-text); letter-spacing: 0.01em; }
+  .pk-sk-cards { display: flex; gap: var(--space-2); }
+  .pk-sk-card { flex: 1 1 0; min-width: 0; background: var(--color-surface); border-radius: var(--radius-md); overflow: hidden; }
+  .pk-sk-card-poster { aspect-ratio: 1 / 1.05; background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); }
+  .pk-sk-card-poster-alt { background: linear-gradient(135deg, var(--color-primary), var(--color-accent-bg)); }
+  .pk-sk-card-body { padding: 6px 8px 8px; }
+  .pk-sk-card-body h5 { font-size: 0.8rem; margin: 0 0 4px; color: var(--color-text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pk-sk-badge {
+    display: inline-block; font-size: 0.625rem; font-weight: 600; padding: 2px 7px; border-radius: var(--radius-full);
+    background: var(--color-surface-2); color: var(--color-text-muted); border: 1px solid var(--color-border);
+  }
+  .pk-sk-chip {
+    display: inline-block; font-size: 0.625rem; font-weight: 600; padding: 2px 7px; border-radius: var(--radius-full);
+    background: var(--color-accent-bg); color: var(--color-accent-text); margin-left: 4px;
+  }
+
+  .pk-sk-band { background: var(--color-accent-bg); color: var(--color-accent-text); padding: var(--space-3); }
+  .pk-sk-band p { margin: 0; font-size: 0.8rem; line-height: 1.45; }
+
+  .pk-sk-cta-row { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+  .pk-sk-cta-btn {
+    background: var(--color-primary); color: var(--color-primary-content); border: none; border-radius: var(--radius-full);
+    padding: 10px 20px; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: var(--font-sans);
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+  .pk-sk-cta-btn:hover { transform: translateY(-1px); }
+  .pk-sk-cta-btn:active { transform: translateY(0); }
+  .pk-sk-muted-line { color: var(--color-text-muted); font-size: 0.75rem; }
+
+  .pk-sk-footer { background: var(--color-surface); padding: var(--space-2) var(--space-3); font-size: 0.65rem; color: var(--color-text-muted); text-align: center; }
+
+  /* ============ per-frame live contrast readout ============ */
+  .pk-sk-contrast {
+    background: var(--color-bg); border-top: 1px solid var(--color-border);
+    padding: var(--space-3); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.7rem; color: var(--color-text-muted);
+  }
+  .pk-sk-contrast .pk-sk-lum { margin: 0 0 6px; color: var(--color-text-muted); }
+  .pk-sk-contrast .pk-sk-row { display: flex; justify-content: space-between; gap: var(--space-2); padding: 2px 0; }
+  .pk-sk-contrast .pk-sk-ratio-pass { color: var(--color-success); font-weight: 700; }
+  .pk-sk-contrast .pk-sk-ratio-fail { color: var(--color-danger); font-weight: 700; }
+
+  /* ============ sketch toolbar (per sketch-tooling.md) ============ */
+  #sketch-tools {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5;
+    transition: opacity 0.2s; display: flex; gap: 10px; align-items: center;
+  }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools select { font-size: 12px; }
+
+  @media (max-width: 480px) {
+    .pk-sk-frames { padding: 0 14px var(--space-8); gap: var(--space-4); }
+    .pk-sk-frame-col { width: 100%; max-width: 375px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="pk-sk-page-header">
+  <h1>Sketch 054 — Composición de color en modo oscuro</h1>
+  <p>El tema oscuro que ya está en producción se lee "demasiado oscuro". Cinco lecturas del mismo
+    diseño real — una réplica exacta de hoy (<code>Control</code>) y cuatro hipótesis distintas —
+    lado a lado, cada una con su propio contraste WCAG medido en vivo (no a ojo).</p>
+  <p>Usá el selector de tema de la barra inferior derecha solo para confirmar que el tema claro
+    sigue intacto — no está bajo revisión acá, cada tarjeta declara sus propios 13 tokens de color
+    y no depende de ese selector.</p>
+</div>
+
+<div class="pk-sk-frames" id="frames"></div>
+
+<div id="sketch-tools">
+  <label>Tema (control de cordura, no bajo revisión):
+    <select id="theme-select" onchange="document.documentElement.dataset.theme = this.value">
+      <option value="dark" selected>dark</option>
+      <option value="light">light</option>
+    </select>
+  </label>
+</div>
+
+<script>
+// ============ shared substrate template — identical for every frame, so
+// the markup provably cannot drift between variants. Only the wrapping
+// data-variant attribute (which selects the CSS token block above) and the
+// label copy differ per frame. ============
+const SUBSTRATE_HTML = `
+  <div class="pk-sk-header">
+    <span class="pk-sk-brand">PUKLLAY CLUB</span>
+    <span class="pk-sk-icon-dot" aria-hidden="true"></span>
+  </div>
+  <img class="pk-sk-photo" src="../../../priv/static/images/about-juego.jpg"
+       alt="Grupo de personas jugando un juego de mesa en una mesa de madera" loading="lazy">
+  <div class="pk-sk-shelf">
+    <h4>Destacados del club</h4>
+    <div class="pk-sk-cards">
+      <div class="pk-sk-card">
+        <div class="pk-sk-card-poster" aria-hidden="true"></div>
+        <div class="pk-sk-card-body">
+          <h5>Catán</h5>
+          <span class="pk-sk-badge">●●○ Ingenio estratega</span>
+          <span class="pk-sk-chip">#CreaConexiones</span>
+        </div>
+      </div>
+      <div class="pk-sk-card">
+        <div class="pk-sk-card-poster pk-sk-card-poster-alt" aria-hidden="true"></div>
+        <div class="pk-sk-card-body">
+          <h5>Wingspan</h5>
+          <span class="pk-sk-badge">●●○ Ingenio estratega</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pk-sk-band">
+    <p>Enseñamos jugando: sin jerga, sin presión de ya "saber" de juegos.</p>
+  </div>
+  <div class="pk-sk-cta-row">
+    <button class="pk-sk-cta-btn" type="button" onclick="this.textContent = this.textContent === 'Sumate al club' ? '¡Listo! Te contactamos ✓' : 'Sumate al club'">Sumate al club</button>
+    <span class="pk-sk-muted-line">Próxima junta: sábado 20:00hs</span>
+  </div>
+  <div class="pk-sk-footer">Powered by BoardGameGeek</div>
+  <div class="pk-sk-contrast" data-contrast-slot></div>
+`;
+
+const VARIANTS = [
+  { id: 'control', name: 'Control — "Hoy"', hypothesis: 'Valores tal cual están hoy en producción, reproducidos solo para comparar en vivo.' },
+  { id: 'a', name: 'A — Lifted Ladder', hypothesis: 'El piso es directamente demasiado oscuro: se sube toda la escalera de 3 pasos manteniendo el tono/croma y el espaciado relativo entre pasos.' },
+  { id: 'b', name: 'B — Elevated Surfaces', hypothesis: 'El piso está bien, la escalera es plana: se mantiene --color-bg cerca de hoy y se separan/elevan los pasos de superficie (header, card, footer).' },
+  { id: 'c', name: 'C — Quieter Ground', hypothesis: 'Las bases son demasiado cromáticas y se leen pesadas/turbias: se retira croma hacia un carbón casi neutro, dejando que los acentos violeta suenen más fuerte.' },
+  { id: 'd', name: 'D — Softened Ink', hypothesis: 'El piso está bien, el problema es el salto casi-negro a casi-blanco: se baja el texto desde blanco puro y se sube muted/accent para varios niveles legibles de jerarquía.' },
+];
+
+const framesEl = document.getElementById('frames');
+framesEl.innerHTML = VARIANTS.map(v => `
+  <div class="pk-sk-frame-col">
+    <div class="pk-sk-frame-label">
+      <div class="pk-sk-badge-name">${v.name}</div>
+      <p class="pk-sk-hypothesis">${v.hypothesis}</p>
+    </div>
+    <div class="pk-sk-frame" data-variant="${v.id}">${SUBSTRATE_HTML}</div>
+  </div>
+`).join('');
+
+// ============ live WCAG contrast readout — reads resolved values via
+// getComputedStyle (not hardcoded), same source of truth every substrate
+// element actually renders with. ============
+function hexToRgb(hex) {
+  const h = hex.trim().replace('#', '');
+  return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16));
+}
+function relLuminance([r, g, b]) {
+  const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+function contrastRatio(hexA, hexB) {
+  const lA = relLuminance(hexToRgb(hexA));
+  const lB = relLuminance(hexToRgb(hexB));
+  const lighter = Math.max(lA, lB), darker = Math.min(lA, lB);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+function ratioRowHTML(label, ratio) {
+  const pass = ratio >= 4.5;
+  const cls = pass ? 'pk-sk-ratio-pass' : 'pk-sk-ratio-fail';
+  const mark = pass ? '✓' : '✗';
+  return `<div class="pk-sk-row"><span>${label}</span><span class="${cls}">${ratio.toFixed(2)}:1 ${mark}</span></div>`;
+}
+
+document.querySelectorAll('.pk-sk-frame').forEach(frameEl => {
+  const cs = getComputedStyle(frameEl);
+  const bg = cs.getPropertyValue('--color-bg').trim();
+  const surface = cs.getPropertyValue('--color-surface').trim();
+  const text = cs.getPropertyValue('--color-text').trim();
+  const muted = cs.getPropertyValue('--color-text-muted').trim();
+  const primary = cs.getPropertyValue('--color-primary').trim();
+  const primaryContent = cs.getPropertyValue('--color-primary-content').trim();
+
+  const bgLum = relLuminance(hexToRgb(bg));
+  const textOnBg = contrastRatio(text, bg);
+  const mutedOnBg = contrastRatio(muted, bg);
+  const textOnSurface = contrastRatio(text, surface);
+  const primaryContentOnPrimary = contrastRatio(primaryContent, primary);
+
+  const slot = frameEl.querySelector('[data-contrast-slot]');
+  slot.innerHTML = `
+    <p class="pk-sk-lum">--color-bg luminancia: ${bgLum.toFixed(4)} (${bg})</p>
+    ${ratioRowHTML('texto / fondo', textOnBg)}
+    ${ratioRowHTML('muted / fondo', mutedOnBg)}
+    ${ratioRowHTML('texto / superficie', textOnSurface)}
+    ${ratioRowHTML('primary-content / primary', primaryContentOnPrimary)}
+  `;
+});
+</script>
+
+</body>
+</html>
