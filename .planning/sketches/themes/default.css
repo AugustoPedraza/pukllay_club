@@ -111,14 +111,20 @@
    Re-derived AGAIN (2026-09-10) from sketch 054's winner "A (Lifted Ladder)
    + W2 (Deep Jewel)" — base ladder lifted, primary deepened to a saturated
    magenta-violet with white ink. See app.css's own dark daisyui-theme block
-   for the full provenance comment and measured contrast ratios. */
+   for the full provenance comment and measured contrast ratios.
+
+   Re-derived a third time (quick task 260910-hdc, 2026-09-10): --color-neutral
+   (mapped to --color-text-muted here) moved #B8A6CC -> #C59CDC, same
+   lightness, chroma lifted onto dark's own brand hue (H313.1) instead of
+   sitting 6.6 degrees off it. See app.css's own dark daisyui-theme block
+   comment for the full measured rationale. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-bg: #2F154E;
     --color-surface: #391B62;
     --color-surface-2: #462278;
     --color-text: #F3ECFA;
-    --color-text-muted: #B8A6CC;
+    --color-text-muted: #C59CDC;
     --color-primary: #8C2BB6;
     --color-primary-content: #FFFFFF;
     --color-secondary: #642C77;
@@ -137,7 +143,7 @@
   --color-surface: #391B62;
   --color-surface-2: #462278;
   --color-text: #F3ECFA;
-  --color-text-muted: #B8A6CC;
+  --color-text-muted: #C59CDC;
   --color-primary: #8C2BB6;
   --color-primary-content: #FFFFFF;
   --color-secondary: #642C77;

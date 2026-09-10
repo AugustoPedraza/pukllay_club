@@ -4633,5 +4633,45 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           flunk("No top-level `.pk-sumate-btn { ... }` rule found in assets/css/app.css")
       end
     end
+
+    # Quick task 260910-hdc, Task 2: the tripwire that encodes "one hue per
+    # theme" — the actual thing this task fixes, distinct from Task 1's
+    # contrast/chroma-floor tests above. A future palette retune that
+    # re-splits the muted ink away from dark's brand hue must fail here
+    # rather than ship silently.
+    test "dark's muted ink sits within 2 degrees of dark's brand hue, at a chroma between the old muted value and --pk-ink-brand (260910-hdc)" do
+      dark_block = dark_theme_plugin_block()
+      neutral = token_value(dark_block, "--color-neutral")
+      primary = token_value(dark_block, "--color-primary")
+
+      neutral_hue = oklch_hue(neutral)
+      primary_hue = oklch_hue(primary)
+      hue_delta = abs(neutral_hue - primary_hue)
+
+      assert hue_delta <= 2.0,
+             "dark theme: --color-neutral (#{neutral}, hue #{Float.round(neutral_hue, 1)}°) must " <>
+               "sit within 2 degrees of --color-primary's hue (#{primary}, hue " <>
+               "#{Float.round(primary_hue, 1)}°) — measured delta #{Float.round(hue_delta, 1)}° — " <>
+               "so dark theme carries one purple hue, not two families 6.6 degrees apart."
+
+      neutral_chroma = oklch_chroma(neutral)
+
+      dark_ink_brand_body = dark_pk_ink_brand_root_block()
+      ink_brand = token_value(dark_ink_brand_body, "--pk-ink-brand")
+      ink_brand_chroma = oklch_chroma(ink_brand)
+
+      assert neutral_chroma < ink_brand_chroma,
+             "dark theme: --color-neutral's chroma (#{Float.round(neutral_chroma, 3)}) must stay " <>
+               "strictly below --pk-ink-brand's chroma (#{Float.round(ink_brand_chroma, 3)}), so " <>
+               "the muted tier can never overtake the interactive-ink tier."
+
+      old_muted_chroma = oklch_chroma("#B8A6CC")
+
+      assert neutral_chroma > old_muted_chroma,
+             "dark theme: --color-neutral's chroma (#{Float.round(neutral_chroma, 3)}) must be " <>
+               "strictly above the superseded muted value's chroma " <>
+               "(#{Float.round(old_muted_chroma, 3)}, #B8A6CC) — the whole point of this task's " <>
+               "retune was to lift chroma onto the brand hue, not merely relabel the old value."
+    end
   end
 end

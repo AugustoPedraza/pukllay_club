@@ -150,12 +150,28 @@
    MEASURED CONSTRAINTS (WCAG 2.1, verified via contrast-check.mjs — do not
    "improve" these by eye):
      text (#F3ECFA) on bg (#2F154E) ............. 13.59:1
-     muted (#B8A6CC) on bg (#2F154E) .............  7.00:1
+     muted (#C59CDC) on bg (#2F154E) .............  6.85:1
      text (#F3ECFA) on surface (#391B62) ......... 12.07:1
      primary-content (#FFFFFF) on primary (#8C2BB6) 6.70:1
 
    See .planning/sketches/054-dark-mode-color-composition/README.md for the
-   full round-1/round-2 hypothesis set and decision record. */
+   full round-1/round-2 hypothesis set and decision record.
+
+   UPDATED (quick task 260910-hdc, 2026-09-10): `--color-neutral` moved
+   #B8A6CC -> #C59CDC. The muted ink sat 6.6 degrees off dark's own brand
+   hue (H306.5 vs. `--color-primary`'s H313.1) at roughly a third of its
+   chroma (OKLCh C0.057 vs. C0.210) — the reason the mechanics/theme pills,
+   the AÑO/DISEÑADORES/MECÁNICAS uppercase labels, and the Comunidad BGG
+   stats read as a second, greyer purple instead of the same brand family
+   as the pills' interactive ink or the solid Reserva CTA. #C59CDC holds
+   the SAME lightness as the superseded value (L75.3% -> L75.2%,
+   effectively unchanged) so every contrast assertion that already gates
+   this token keeps its measured margin — only chroma moved, 0.057 -> 0.10,
+   landing on dark's brand hue (H313.1) at a chroma strictly between the
+   old muted value and `--pk-ink-brand`'s C0.13 (see that token's own
+   provenance comment above this block), giving the theme one hue in three
+   deliberate tiers: fill (--color-primary, C0.21) > interactive ink
+   (--pk-ink-brand, C0.13) > muted ink (--color-neutral, C0.10). */
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "dark";
   default: false;
@@ -171,7 +187,7 @@
   --color-secondary-content: #FFFFFF;
   --color-accent: #3A1F47;
   --color-accent-content: #EBD7F4;
-  --color-neutral: #B8A6CC;
+  --color-neutral: #C59CDC;
   --color-neutral-content: #170A26;
   --color-info: #7C9AD1;
   --color-info-content: #170A26;
