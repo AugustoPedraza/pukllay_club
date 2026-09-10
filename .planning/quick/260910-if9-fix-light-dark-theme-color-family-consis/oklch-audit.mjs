@@ -34,7 +34,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const APP_CSS_PATH = join(__dirname, "../../../assets/css/app.css");
+export const APP_CSS_PATH = join(__dirname, "../../../assets/css/app.css");
 
 // Proposal, not a settled rule (plan `<measured_baseline>`, Task 1 step 4):
 // light's own worst intra-tone spread is `.pk-pill-accent` at 9.8 degrees,
@@ -50,23 +50,23 @@ const CROSS_THEME_CHROMA_RATIO_FLAG = 3;
 // oklch_hue/1, relative_luminance/1 and contrast_ratio/2 exactly)
 // ---------------------------------------------------------------------
 
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   const h = hex.trim().replace("#", "");
   return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16));
 }
 
-function srgbChannelToLinear(channel) {
+export function srgbChannelToLinear(channel) {
   const c = channel / 255;
   return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
-function relativeLuminance(hex) {
+export function relativeLuminance(hex) {
   const [r, g, b] = hexToRgb(hex);
   const [rl, gl, bl] = [r, g, b].map(srgbChannelToLinear);
   return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
 }
 
-function contrastRatio(hexA, hexB) {
+export function contrastRatio(hexA, hexB) {
   const lA = relativeLuminance(hexA);
   const lB = relativeLuminance(hexB);
   const lighter = Math.max(lA, lB);
@@ -74,7 +74,7 @@ function contrastRatio(hexA, hexB) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function oklab(hex) {
+export function oklab(hex) {
   const [r, g, b] = hexToRgb(hex);
   const [rl, gl, bl] = [r, g, b].map(srgbChannelToLinear);
 
@@ -94,22 +94,22 @@ function oklab(hex) {
   return { l: labL, a: labA, b: labB };
 }
 
-function oklchLightness(hex) {
+export function oklchLightness(hex) {
   return oklab(hex).l * 100;
 }
 
-function oklchChroma(hex) {
+export function oklchChroma(hex) {
   const { a, b } = oklab(hex);
   return Math.sqrt(a * a + b * b);
 }
 
-function oklchHue(hex) {
+export function oklchHue(hex) {
   const { a, b } = oklab(hex);
   const degrees = (Math.atan2(b, a) * 180) / Math.PI;
   return degrees < 0 ? degrees + 360 : degrees;
 }
 
-function toOklch(hex) {
+export function toOklch(hex) {
   return {
     hex: hex.toUpperCase(),
     l: oklchLightness(hex),
@@ -214,7 +214,7 @@ function derefRamp(value, ramp) {
   return resolved;
 }
 
-function buildPalette(css) {
+export function buildPalette(css) {
   const ramp = parseRamp(css);
   const rawLight = parseThemeBlock(css, "light");
   const rawDark = parseThemeBlock(css, "dark");
@@ -248,7 +248,7 @@ function buildPalette(css) {
 // for that tone (e.g. .pk-pill-interactive:hover has no fill role).
 // ---------------------------------------------------------------------
 
-const ROLE_TABLE = [
+export const ROLE_TABLE = [
   { tone: ".pk-pill-neutral", fill: "base-200", border: "base-300", ink: "neutral" },
   { tone: ".pk-pill-outline", fill: "transparent", border: "base-300", ink: "neutral" },
   { tone: ".pk-pill-accent", fill: "accent", border: "accent", ink: "accent-content" },
@@ -264,13 +264,13 @@ const ROLE_TABLE = [
   { tone: ".pk-chip.is-active", fill: "accent", border: "primary", ink: "accent-content" },
 ];
 
-function resolveRoleToken(roleSpec, themeName) {
+export function resolveRoleToken(roleSpec, themeName) {
   if (roleSpec === null || roleSpec === "transparent") return roleSpec;
   if (typeof roleSpec === "object") return roleSpec[themeName];
   return roleSpec;
 }
 
-function hueDelta(hA, hB) {
+export function hueDelta(hA, hB) {
   const diff = Math.abs(hA - hB) % 360;
   return diff > 180 ? 360 - diff : diff;
 }
@@ -430,4 +430,11 @@ function main() {
   process.exit(0);
 }
 
-main();
+// Guarded entry point: run main() only when this file is executed
+// directly (`node oklch-audit.mjs`), not when quick task 260910-l7q's
+// `ramp-audit.mjs` imports its exported functions above — importing
+// this module must never have the side effect of running ITS OWN
+// report and calling `process.exit(0)` out from under the importer.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
