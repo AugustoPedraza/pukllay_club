@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketch 056 — Dark CTA contrast fix</title>
+<style>
+  :root {
+    --color-base-100: #2F154E;
+    --color-base-200: #391B62;
+    --color-base-300: #462278;
+    --color-base-content: #F3ECFA;
+    --color-neutral: #B8A6CC;
+    --color-accent-content: #EBD7F4;
+    --color-primary: #8C2BB6;
+    --color-primary-content: #FFFFFF;
+
+    --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--color-base-100);
+    color: var(--color-base-content);
+    font-family: var(--font-sans);
+    padding-top: 56px;
+  }
+
+  #variant-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 9998;
+    background: var(--color-base-200);
+    border-bottom: 1px solid var(--color-base-300);
+    padding: 8px 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .variant-tab {
+    background: transparent;
+    border: 1px solid var(--color-base-300);
+    color: var(--color-neutral);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s ease;
+  }
+  .variant-tab:hover { border-color: var(--color-neutral); color: var(--color-base-content); }
+  .variant-tab.active {
+    background: var(--color-base-300);
+    color: var(--color-base-content);
+    border-color: var(--color-base-300);
+    font-weight: 600;
+  }
+
+  .variant { display: none; padding: 24px; max-width: 1100px; margin: 0 auto; }
+  .variant.active { display: block; }
+
+  h1 { font-size: 1.15rem; margin: 0 0 4px; }
+  .sub { color: var(--color-neutral); font-size: 0.875rem; margin: 0 0 24px; line-height: 1.5; }
+
+  .ratio-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .ratio-pass { background: #1e5c3f; color: #b8f5d0; }
+  .ratio-fail { background: #5c1e2e; color: #ffc9d4; }
+
+  .demo-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--color-neutral);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  /* ---- Hero replica ---- */
+  .fake-hero {
+    background: var(--color-base-100);
+    border: 1px solid var(--color-base-300);
+    border-radius: 12px;
+    padding: 40px 24px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .fake-eyebrow { font-size: 0.75rem; letter-spacing: .08em; color: var(--color-neutral); margin-bottom: 8px; }
+  .fake-h1 { font-family: "Arial Narrow", Impact, sans-serif; font-weight: 900; font-size: 2rem; letter-spacing: .01em; margin: 0 0 12px; }
+  .fake-sub { font-size: 0.9rem; color: var(--color-base-content); opacity: .85; margin-bottom: 20px; }
+
+  /* ---- Closing band replica ---- */
+  .fake-closing {
+    background: var(--color-base-200);
+    border-radius: 12px;
+    padding: 40px 24px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  /* ---- Preview card replica ---- */
+  .fake-card {
+    background: var(--color-base-100);
+    border: 1px solid var(--color-base-300);
+    border-radius: 12px;
+    padding: 16px;
+    max-width: 280px;
+    margin-bottom: 16px;
+  }
+  .fake-card-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+  .fake-card-text { font-size: 0.8rem; color: var(--color-neutral); margin-bottom: 12px; }
+
+  /* ---- Retry banner replica ---- */
+  .fake-retry-banner {
+    background: var(--color-base-100);
+    border: 1px solid var(--color-base-300);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .fake-retry-text { font-size: 0.85rem; color: var(--color-neutral); margin-bottom: 12px; }
+
+  /* ---- Button shapes: outline (default daisyUI shape) vs solid ---- */
+  .btn-shape {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding-inline: 24px;
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: 1.5px solid;
+    background: transparent;
+    cursor: default;
+    text-decoration: none;
+  }
+  .btn-block { display: flex; width: 100%; min-height: 44px; }
+
+  .swatch {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 6px;
+    border: 1px solid rgba(255,255,255,.15);
+  }
+  table.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin-top: 8px;
+  }
+  table.matrix th, table.matrix td {
+    border: 1px solid var(--color-base-300);
+    padding: 8px 10px;
+    text-align: left;
+  }
+  table.matrix th { background: var(--color-base-200); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('overview')">Overview</button>
+  <button class="variant-tab" onclick="showVariant('a')">A: Solid fill everywhere</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: Split by role</button>
+  <button class="variant-tab" onclick="showVariant('c1')">C1: Ink swap → neutral</button>
+  <button class="variant-tab" onclick="showVariant('c2')">C2: Ink swap → accent-content</button>
+</div>
+
+<!-- ============ OVERVIEW ============ -->
+<div id="variant-overview" class="variant active">
+  <h1>Sketch 056 — dark-mode CTA contrast fix</h1>
+  <p class="sub">
+    Quick task 260910-gck, Task 2 checkpoint. The outline-primary CTA buttons (Sumate hero, Sumate
+    closing band, catalog preview card CTA, "Reintentar" retry) all render <code>--color-primary</code>
+    as text+border with a transparent fill — 2.34:1 on base-100, 2.08:1 on base-200, both failing
+    the 4.5:1 WCAG floor. The mobile sticky Sumate already solved this with a solid fill
+    (white on <code>#8C2BB6</code>, 6.70:1) — the question is whether that treatment should extend
+    everywhere, only to Sumate, or whether an ink-swap (same mechanism as the 17 rules fixed
+    earlier today) is the better fit.
+  </p>
+
+  <table class="matrix">
+    <thead>
+      <tr><th>Candidate</th><th>vs base-100 #2F154E</th><th>vs base-200 #391B62</th><th>Applies to</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="swatch" style="background:#8C2BB6"></span>Current outline (#8C2BB6 text/border)</td>
+        <td>2.34:1 <span class="ratio-badge ratio-fail">FAIL</span></td>
+        <td>2.08:1 <span class="ratio-badge ratio-fail">FAIL</span></td>
+        <td>all 4 (broken today)</td>
+      </tr>
+      <tr>
+        <td><span class="swatch" style="background:#FFFFFF;border-color:#8C2BB6"></span>A/B solid fill (white on #8C2BB6)</td>
+        <td>6.70:1 <span class="ratio-badge ratio-pass">PASS</span></td>
+        <td>6.70:1 <span class="ratio-badge ratio-pass">PASS</span></td>
+        <td>A: all 4 &nbsp;·&nbsp; B: Sumate only</td>
+      </tr>
+      <tr>
+        <td><span class="swatch" style="background:#B8A6CC"></span>C1 ink swap → neutral #B8A6CC</td>
+        <td>7.00:1 <span class="ratio-badge ratio-pass">PASS</span></td>
+        <td>6.21:1 <span class="ratio-badge ratio-pass">PASS</span></td>
+        <td>C1: all 4 &nbsp;·&nbsp; B: preview/retry only</td>
+      </tr>
+      <tr>
+        <td><span class="swatch" style="background:#EBD7F4"></span>C2 ink swap → accent-content #EBD7F4</td>
+        <td>11.63:1 <span class="ratio-badge ratio-pass">PASS</span></td>
+        <td>10.32:1 <span class="ratio-badge ratio-pass">PASS</span></td>
+        <td>C2: all 4</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="sub" style="margin-top:20px;">Use the tabs to see each candidate on the real hero, closing band, preview card, and retry banner.</p>
+</div>
+
+<!-- ============ A: solid fill everywhere ============ -->
+<div id="variant-a" class="variant">
+  <h1>A — Solid fill everywhere <span class="ratio-badge ratio-pass">6.70:1</span></h1>
+  <p class="sub">All 4 buttons filled: background <code>--color-primary</code>, text <code>--color-primary-content</code> (white). Same pair already live on the mobile sticky Sumate.</p>
+
+  <div class="demo-label">Hero (on base-100)</div>
+  <div class="fake-hero">
+    <div class="fake-eyebrow">CLUB DE JUEGOS DE MESA · JUJUY</div>
+    <div class="fake-h1">CONECTÁ JUGANDO</div>
+    <div class="fake-sub">Nos juntamos todos los sábados a jugar.</div>
+    <span class="btn-shape" style="background:#8C2BB6; border-color:#8C2BB6; color:#FFFFFF;">Sumate</span>
+  </div>
+
+  <div class="demo-label">Closing band (on base-200)</div>
+  <div class="fake-closing">
+    <div class="fake-h1" style="font-size:1.4rem;">NOS VEMOS EL SÁBADO</div>
+    <span class="btn-shape" style="background:#8C2BB6; border-color:#8C2BB6; color:#FFFFFF; margin-top:8px;">Sumate</span>
+  </div>
+
+  <div class="demo-label">Catalog preview card CTA (on base-100)</div>
+  <div class="fake-card">
+    <div class="fake-card-title">Catan</div>
+    <div class="fake-card-text">4 jugadores · 90 min · Peso medio</div>
+    <span class="btn-shape btn-block" style="background:#8C2BB6; border-color:#8C2BB6; color:#FFFFFF;">Ver más</span>
+  </div>
+
+  <div class="demo-label">Retry banner (on base-100)</div>
+  <div class="fake-retry-banner">
+    <div class="fake-retry-text">No pudimos cargar más juegos.</div>
+    <span class="btn-shape" style="background:#8C2BB6; border-color:#8C2BB6; color:#FFFFFF;">Reintentar</span>
+  </div>
+</div>
+
+<!-- ============ B: split by role ============ -->
+<div id="variant-b" class="variant">
+  <h1>B — Split by role <span class="ratio-badge ratio-pass">Sumate: 6.70:1</span> <span class="ratio-badge ratio-pass">secondary: 7.00:1</span></h1>
+  <p class="sub">The two Sumate CTAs get the solid fill (primary treatment); the preview card and Reintentar (genuinely secondary) get the quieter neutral ink-swap instead.</p>
+
+  <div class="demo-label">Hero (on base-100) — SOLID</div>
+  <div class="fake-hero">
+    <div class="fake-eyebrow">CLUB DE JUEGOS DE MESA · JUJUY</div>
+    <div class="fake-h1">CONECTÁ JUGANDO</div>
+    <div class="fake-sub">Nos juntamos todos los sábados a jugar.</div>
+    <span class="btn-shape" style="background:#8C2BB6; border-color:#8C2BB6; color:#FFFFFF;">Sumate</span>
+  </div>
+
+  <div class="demo-label">Closing band (on base-200) — SOLID</div>
+  <div class="fake-closing">
+    <div class="fake-h1" style="font-size:1.4rem;">NOS VEMOS EL SÁBADO</div>
+    <span class="btn-shape" style="background:#8C2BB6; border-color:#8C2BB6; color:#FFFFFF; margin-top:8px;">Sumate</span>
+  </div>
+
+  <div class="demo-label">Catalog preview card CTA (on base-100) — INK SWAP</div>
+  <div class="fake-card">
+    <div class="fake-card-title">Catan</div>
+    <div class="fake-card-text">4 jugadores · 90 min · Peso medio</div>
+    <span class="btn-shape btn-block" style="color:#B8A6CC; border-color:#B8A6CC;">Ver más</span>
+  </div>
+
+  <div class="demo-label">Retry banner (on base-100) — INK SWAP</div>
+  <div class="fake-retry-banner">
+    <div class="fake-retry-text">No pudimos cargar más juegos.</div>
+    <span class="btn-shape" style="color:#B8A6CC; border-color:#B8A6CC;">Reintentar</span>
+  </div>
+</div>
+
+<!-- ============ C1: ink swap neutral ============ -->
+<div id="variant-c1" class="variant">
+  <h1>C1 — Ink swap everywhere → <code>--color-neutral</code> <span class="ratio-badge ratio-pass">7.00:1 / 6.21:1</span></h1>
+  <p class="sub">All 4 buttons stay outline/transparent, text+border swap to the same muted ink used for the 17 rules fixed earlier today.</p>
+
+  <div class="demo-label">Hero (on base-100)</div>
+  <div class="fake-hero">
+    <div class="fake-eyebrow">CLUB DE JUEGOS DE MESA · JUJUY</div>
+    <div class="fake-h1">CONECTÁ JUGANDO</div>
+    <div class="fake-sub">Nos juntamos todos los sábados a jugar.</div>
+    <span class="btn-shape" style="color:#B8A6CC; border-color:#B8A6CC;">Sumate</span>
+  </div>
+
+  <div class="demo-label">Closing band (on base-200)</div>
+  <div class="fake-closing">
+    <div class="fake-h1" style="font-size:1.4rem;">NOS VEMOS EL SÁBADO</div>
+    <span class="btn-shape" style="color:#B8A6CC; border-color:#B8A6CC; margin-top:8px;">Sumate</span>
+  </div>
+
+  <div class="demo-label">Catalog preview card CTA (on base-100)</div>
+  <div class="fake-card">
+    <div class="fake-card-title">Catan</div>
+    <div class="fake-card-text">4 jugadores · 90 min · Peso medio</div>
+    <span class="btn-shape btn-block" style="color:#B8A6CC; border-color:#B8A6CC;">Ver más</span>
+  </div>
+
+  <div class="demo-label">Retry banner (on base-100)</div>
+  <div class="fake-retry-banner">
+    <div class="fake-retry-text">No pudimos cargar más juegos.</div>
+    <span class="btn-shape" style="color:#B8A6CC; border-color:#B8A6CC;">Reintentar</span>
+  </div>
+</div>
+
+<!-- ============ C2: ink swap accent-content ============ -->
+<div id="variant-c2" class="variant">
+  <h1>C2 — Ink swap everywhere → <code>--color-accent-content</code> <span class="ratio-badge ratio-pass">11.63:1 / 10.32:1</span></h1>
+  <p class="sub">Same mechanism as C1, brighter near-white ink instead of the muted neutral.</p>
+
+  <div class="demo-label">Hero (on base-100)</div>
+  <div class="fake-hero">
+    <div class="fake-eyebrow">CLUB DE JUEGOS DE MESA · JUJUY</div>
+    <div class="fake-h1">CONECTÁ JUGANDO</div>
+    <div class="fake-sub">Nos juntamos todos los sábados a jugar.</div>
+    <span class="btn-shape" style="color:#EBD7F4; border-color:#EBD7F4;">Sumate</span>
+  </div>
+
+  <div class="demo-label">Closing band (on base-200)</div>
+  <div class="fake-closing">
+    <div class="fake-h1" style="font-size:1.4rem;">NOS VEMOS EL SÁBADO</div>
+    <span class="btn-shape" style="color:#EBD7F4; border-color:#EBD7F4; margin-top:8px;">Sumate</span>
+  </div>
+
+  <div class="demo-label">Catalog preview card CTA (on base-100)</div>
+  <div class="fake-card">
+    <div class="fake-card-title">Catan</div>
+    <div class="fake-card-text">4 jugadores · 90 min · Peso medio</div>
+    <span class="btn-shape btn-block" style="color:#EBD7F4; border-color:#EBD7F4;">Ver más</span>
+  </div>
+
+  <div class="demo-label">Retry banner (on base-100)</div>
+  <div class="fake-retry-banner">
+    <div class="fake-retry-text">No pudimos cargar más juegos.</div>
+    <span class="btn-shape" style="color:#EBD7F4; border-color:#EBD7F4;">Reintentar</span>
+  </div>
+</div>
+
+<div id="sketch-tools" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-family:system-ui;font-size:12px;background:rgba(0,0,0,0.7);color:white;padding:8px 12px;border-radius:8px;opacity:0.4;transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'">
+  sketch 056 — dark-only CTA fix, no theme switcher
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>
