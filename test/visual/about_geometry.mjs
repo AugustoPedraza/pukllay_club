@@ -355,6 +355,22 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
             })()
           : null;
 
+        // Plan 01.5-13 (G-01.5-10 gap closure): #cierre's own COMPUTED
+        // vertical padding, read live via getComputedStyle rather than
+        // assumed from the stylesheet's declared literal — this is the
+        // operand checkCierreMobileInvariance below re-derives its
+        // expectation from, replacing the SHARED_BAND_PADDING_PX=144
+        // literal that pinned the check to exactly the value this plan
+        // changes (the same class of mistake CIERRE_DESKTOP_GAP_TARGET_PX
+        // made one level up, which plan 01.5-09 had to replace with a
+        // derived budget before it could ship a legitimate retune).
+        const cierrePadding = cierreEl
+          ? (() => {
+              const cs = getComputedStyle(cierreEl);
+              return { top: parseFloat(cs.paddingTop), bottom: parseFloat(cs.paddingBottom) };
+            })()
+          : null;
+
         // Plan 01.5-08: the footer's own rect. Unaffected by scroll position
         // (both it and the last band shift by the same scrollY delta), so
         // this unscrolled measurement is sufficient for the last-band-to-
@@ -457,6 +473,7 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
           bands,
           cierre,
           cierreInner,
+          cierrePadding,
           footer,
           lastBandBackground,
           footerBackground,
@@ -598,17 +615,42 @@ function checkCierreBottomBreathingRoom(measured, ctx) {
 
 // Plan 01.5-07: confirms the desktop-only gap-evenness/height change did not
 // leak below the 640px media gate. Below it, #cierre must still behave like
-// every other .pk-band: an even top/bottom split, and a height close to its
-// content plus the shared band padding (2 x 4.5rem = 144px) — NOT the
-// desktop min-height floor.
+// every other .pk-band: an even top/bottom split, and a height that is
+// exactly its own content plus its OWN declared padding — NOT the desktop
+// min-height floor.
+//
+// Plan 01.5-13 (G-01.5-10 gap closure) RE-DERIVES the height half of this
+// check rather than re-pinning it. The original body here hard-coded
+// `SHARED_BAND_PADDING_PX = 144` (2 x the shared `.pk-band` padding) and
+// asserted the mobile band's height equals its content plus that literal —
+// i.e. it pinned the mobile band to EXACTLY the padding value this plan's
+// own gap closure changes (2.5rem/40px per side, not 4.5rem/72px). Left
+// alone it would fail this plan's own correct fix; nudged to a new literal
+// it would re-arm the identical trap for the next retune — the same class
+// of mistake `CIERRE_DESKTOP_GAP_TARGET_PX` made one level up, which plan
+// 01.5-09 had to replace with a derived budget before it could ship a
+// legitimate retune (see checkCierreRunRatioBudget's own comment above for
+// that precedent). A check that restates the CSS it tests fails every
+// legitimate retune and catches no defect.
+//
+// Re-derived: the expected height is now #cierre's own content-group height
+// PLUS its own COMPUTED padding (`cierrePadding`, captured live in runCase
+// via getComputedStyle — not a literal anywhere in this function), and a
+// second assertion confirms that computed padding is itself symmetric
+// top/bottom. Written this way the check still catches exactly what it was
+// built to catch — a desktop-only treatment leaking below the gate (the
+// band's rendered height would then diverge from content + ITS OWN padding
+// by the min-height floor's slack) or an accidental asymmetric padding —
+// while surviving every future deliberate retune of the mobile padding
+// value, including this one.
 function checkCierreMobileInvariance(measured, ctx) {
   if (ctx.viewport >= 640) return []
 
   const gaps = cierreGaps(measured)
-  if (!gaps || !measured.cierre || !measured.cierreInner) {
+  if (!gaps || !measured.cierre || !measured.cierreInner || !measured.cierrePadding) {
     return [
-      `#cierre mobile invariance: could not measure #cierre and/or its .pk-band-inner ` +
-        `content group at [${ctx.viewport}px, ${ctx.height}px, ${ctx.theme}]`,
+      `#cierre mobile invariance: could not measure #cierre, its .pk-band-inner content group ` +
+        `and/or its computed padding at [${ctx.viewport}px, ${ctx.height}px, ${ctx.theme}]`,
     ]
   }
 
@@ -618,21 +660,33 @@ function checkCierreMobileInvariance(measured, ctx) {
     failures.push(
       `#cierre mobile invariance: gapTop=${gaps.gapTop.toFixed(2)}px ` +
         `gapBottom=${gaps.gapBottom.toFixed(2)}px diff=${diff.toFixed(2)}px at ` +
-        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — expected the shared .pk-band ` +
-        `even split below the 640px media gate`,
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — expected an even top/bottom split ` +
+        `below the 640px media gate (this guard survives any deliberate padding retune; it only ever ` +
+        `fails on an ASYMMETRIC one)`,
     )
   }
 
-  const SHARED_BAND_PADDING_PX = 144 // 2 x 4.5rem, .pk-band's own padding
-  const expectedHeight = measured.cierreInner.height + SHARED_BAND_PADDING_PX
+  const { top: paddingTop, bottom: paddingBottom } = measured.cierrePadding
+  const paddingDiff = Math.abs(paddingTop - paddingBottom)
+  if (paddingDiff >= CIERRE_GAP_TOLERANCE_PX) {
+    failures.push(
+      `#cierre mobile invariance: computed padding-top=${paddingTop.toFixed(2)}px ` +
+        `padding-bottom=${paddingBottom.toFixed(2)}px diff=${paddingDiff.toFixed(2)}px at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — #cierre's own mobile padding must ` +
+        `stay symmetric, whatever its magnitude`,
+    )
+  }
+
+  const expectedHeight = measured.cierreInner.height + paddingTop + paddingBottom
   const heightDiff = Math.abs(measured.cierre.height - expectedHeight)
   if (heightDiff >= 1) {
     failures.push(
       `#cierre mobile invariance: band height=${measured.cierre.height.toFixed(2)}px, expected ` +
         `~${expectedHeight.toFixed(2)}px (content ${measured.cierreInner.height.toFixed(2)}px + ` +
-        `shared band padding ${SHARED_BAND_PADDING_PX}px) at ` +
-        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — the desktop min-height floor must ` +
-        `not apply below the media gate`,
+        `the band's OWN computed padding, read live: ${paddingTop.toFixed(2)}px + ` +
+        `${paddingBottom.toFixed(2)}px) at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — ` +
+        `the desktop min-height floor (or any other treatment scoped to >=640px) must not apply ` +
+        `below the media gate`,
     )
   }
 

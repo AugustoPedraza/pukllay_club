@@ -2921,6 +2921,23 @@ body.pk-drawer-open {
       an observation for the next UAT round to judge against the fixed
       page, not acted on here.
 
+   4. CORRECTED (01.5-13, G-01.5-10 gap closure —
+      .planning/debug/G-01.5-10-mobile-cierre-heading-tagline-balance.md).
+      Paragraph 3 above justifies 5rem by naming "its larger heading" as a
+      co-carrier of Cierre's distinctness — that premise was FALSE below
+      640px until this correction: mobile `#cierre h2` carried no
+      Cierre-specific step at all (1.00x the page's own h2 norm at 375px,
+      vs 1.33x here at 640px and 2.00x at 1280px — E-08), so the sentence
+      was true only for the viewport it was written in and was never
+      checked against the one it was not. `#cierre h2` now gets its own
+      32px/40px step below 640px too (the `@media (max-width: 639px)`
+      block below, alongside its own `padding-block` counterpart), so the
+      heading is a co-carrier at BOTH regimes and paragraph 3's premise is
+      now accurate everywhere it is read, not deleted. See that block's own
+      comment for the mobile pad/content and sig/h2 arithmetic — the two
+      blocks are now a matched pair, this one desktop's half, that one
+      mobile's.
+
    No `gap` here: #cierre .pk-band-inner's single unconditional gap
    (above) already governs both viewports — a desktop override would
    recreate the two-spacing-system problem D-12 exists to prevent. No
@@ -3233,6 +3250,90 @@ body.pk-drawer-open {
   .pk-about-contact-links a {
     border-radius: 9999px;
     padding: 0.75rem;
+  }
+
+  /* G-01.5-10 gap closure (plan 01.5-13,
+     .planning/debug/G-01.5-10-mobile-cierre-heading-tagline-balance.md).
+     #cierre's mobile COUNTERPART to the >= 640px block's own two
+     treatments (`padding-block: 5rem` and `#cierre h2`'s
+     `clamp(2rem, 4vw, 3rem)`, both above) — that block's own comment now
+     cross-references here, and here cross-references there. Below 640px
+     #cierre previously entered NEITHER treatment: it fell back to the
+     shared `.pk-band { padding: 4.5rem 0 }` (sized for content-rich
+     bands) and to the page-wide `font-display text-2xl` heading (no
+     Cierre-specific step at all — E-08 measured Cierre's own step at
+     1.00x the page's h2 norm at 375px, vs 1.33x at 640px and 2.00x at
+     1280px), while D-11 below (`@media (max-width: 480px)`) removes the
+     Sumate button and one of the column's two gaps — 45.6% of the entire
+     content column (E-06) — with nothing compensating.
+
+     Two causes, ONE upstream condition (that media block owning both
+     treatments while mobile entered neither), so both levers ship
+     TOGETHER in this same block — no single-variable mutation in the
+     diagnosis's ten-case matrix (E-07) moves both quantities into range;
+     shipping one alone closes half the report, which on this band's
+     four-round UAT history is how a gap reopens rather than closes.
+
+     LEVER 1 — pad/content ("it has too much space"). Measured pre-fix:
+     1.67 against this page's own OTHER bands' 0.19-0.53 norm (E-05) and
+     against this band's own human-ACCEPTED desktop state of 0.90-1.02
+     (G-01.5-6) — the only band on the page whose padding exceeded its
+     content, by 67%, with 64.3% of the band rendering as empty ink (E-03).
+     At the natural 479-vs-481 differential (identical 72/72px padding
+     either side of D-11's threshold) the ratio moves 1.67 -> 0.91 purely
+     because the button reappears (E-06) — the page performs the
+     differential on itself. `padding-block: 2.5rem` here lands pad/content
+     at 0.93 with today's 86px content column, 0.85 once LEVER 2 below
+     also ships — inside the accepted range. Runner-up: `3rem` (1.12 /
+     1.02) — reach for it only if an end-of-phase walkthrough says 2.5rem
+     reads cramped. One value, one place.
+
+     LEVER 2 — sig/h2 ("the tagline ... needs better balance"). The band's
+     three rendered lines measured 163.7 / 85.9 / 204.4px (E-02/E-03): the
+     widest object in the band was its smallest, greyest, most subordinate
+     one — the 10px uppercase caption 24.8% WIDER than the 24px heading it
+     sits under. `font-size: 32px` here is exactly what the existing
+     desktop clamp already resolves to at the 640px gate, so this
+     continues the band's own size ramp rather than inventing a value;
+     sig/h2 lands at 0.936 (30px measured an exact 0.999 tie — no
+     hierarchy at all, so 32px is the smallest step that actually inverts
+     the relationship). `line-height: 40px` is declared, not inherited,
+     because the heading's line box is an operand in the rendered-gap
+     arithmetic below. Out-specifies the shared `font-display text-2xl`
+     utility on the same element (about_live.ex) the same way `#cierre h2`
+     above already does at >= 640px — see this file's top-of-file
+     cascade-layer hazard note: an unlayered `.pk-*`/#id rule beats a
+     layered utility, the intended direction here.
+
+     VERIFIED NO WRAP at the narrowest supported width: a 32px heading
+     measures 218.3px in #cierre's ~347px content box at 375px (63% fill);
+     see test/visual/about_geometry.mjs's no-wrap check at the sweep's
+     narrowest (320px) width, where the box shrinks to ~292px.
+
+     RENDERED-VS-DECLARED GAP: #cierre .pk-band-inner's single
+     unconditional `gap: 1.5rem` (D-12, above — NOT re-declared here, see
+     landmine below) reaches the eye as 36px, not the declared 24px,
+     because Bebas Neue is an all-caps face and "NOS VEMOS EL SÁBADO" has
+     no descender ink — 8.5px of the heading's line box below the baseline
+     sits permanently empty. 8.5 (unused descent) + 24.0 (declared gap) +
+     3.5 (caption leading) = 36.0px exactly; this heading step widens the
+     unused descent slightly, to ~38px. Do not retune this band's spacing
+     by reading `gap: 1.5rem` off the stylesheet alone — it renders 12px
+     smaller than what the eye receives.
+
+     LANDMINE, do not retry (E-07, all measured WORSE, not better):
+     tightening the gap to 16px/12px moves pad/content BACKWARDS to
+     1.85/1.95; raising the caption to 12px moves sig/h2 to 1.498; dropping
+     the forced `<br>` yields one 293.5px line and sig/h2 1.792 — the gap,
+     the caption size and the forced break are all correctly untouched
+     here, not overlooked. */
+  #cierre {
+    padding-block: 2.5rem;
+  }
+
+  #cierre h2 {
+    font-size: 32px;
+    line-height: 40px;
   }
 
   /* Plan 01.5-03, D-13: force the Cierre signature onto two lines at the
