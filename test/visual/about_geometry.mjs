@@ -1279,7 +1279,7 @@ const CHECKS = [
 ]
 
 // ---------------------------------------------------------------------------
-// Plan 01.5-08/01.5-10: fixed-bar / footer clearance oracle
+// Plan 01.5-08/01.5-10/01.5-14: fixed-bar / footer clearance oracle
 // ---------------------------------------------------------------------------
 // The only oracle that can confirm Task 2's actual claim. A source-level
 // test can confirm the body:has(.pk-about-cta-bar) clearance rule EXISTS;
@@ -1300,6 +1300,23 @@ const CHECKS = [
 // originally guarded against). Both the bar's real rendered height and the
 // reserved clearance are captured in the same pass so a future reader can
 // see which one moved without re-running the probe.
+//
+// Plan 01.5-14 (G-01.5-11 gap closure, sketch 052 winner B): the bar is no
+// longer a surface flush to the viewport edge — it is a content-sized pill
+// floating `bottom: 20px` above it. A TIGHT fit is now the WRONG assertion:
+// a floating pill's whole design premise is a visible gap below it, so some
+// bare background between the footer and the pill's top edge is the
+// correct, intended state. The measurement now reads the PILL itself
+// (`.pk-about-cta-bar a`, the anchor — the wrapper is a full-width
+// transparent positioning frame and no longer a proxy for the pill's own
+// footprint), not the wrapper, and the check asserts two things, both
+// derived from the pill's own measured rect (never a literal): (1) the
+// footer's bottom edge sits at or above the pill's top edge — OVERLAP is
+// the failure, and it is the serious one, since it hides real footer
+// content; (2) the visible gap between them does not exceed the pill's own
+// footprint (its offset from the viewport's bottom edge plus its own
+// height, read live) — SLACK is the failure, and it means more bare
+// background is showing than one pill-worth of space accounts for.
 const CTA_BAR_VISIBLE_WIDTH = 390 // <=480px, matches app.css's own threshold
 
 async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
@@ -1352,14 +1369,25 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
         };
 
         return {
-          bar: rectOf(document.querySelector('.pk-about-cta-bar')),
+          // Plan 01.5-14: the PILL itself, not the wrapper — sketch 052
+          // winner B makes .pk-about-cta-bar a full-width transparent
+          // positioning frame, so its own rect no longer describes the
+          // pill's footprint (only the anchor inside it does).
+          pill: rectOf(document.querySelector('.pk-about-cta-bar a')),
           footer: rectOf(document.querySelector('footer.pk-footer')),
           // Plan 01.5-10: the reserved document-end clearance itself
           // (body:has(.pk-about-cta-bar)'s computed padding-bottom),
           // captured alongside the two rects so the SUMMARY can report the
-          // bar's real height against what was actually reserved for it,
-          // without a second probe run.
+          // pill's real footprint against what was actually reserved for
+          // it, without a second probe run.
           reservedClearance: parseFloat(getComputedStyle(document.body).paddingBottom),
+          // Plan 01.5-14: the pill is position:fixed, so its viewport-
+          // relative rect is scroll-invariant, but the SLACK bound below
+          // still needs the viewport's own height to convert "pill.y" into
+          // "the pill's footprint from the viewport's bottom edge" —
+          // captured live here rather than assumed as the 900px the sweep
+          // happens to set, so this stays correct if that ever changes.
+          viewportHeight: window.innerHeight,
         };
       })())
     `,
@@ -1370,47 +1398,59 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
 }
 
 function checkFixedBarFooterClearance(measured, ctx) {
-  const { bar, footer, reservedClearance } = measured
+  const { pill, footer, reservedClearance, viewportHeight } = measured
 
-  if (!bar) {
-    return [`fixed-bar footer clearance: could not measure .pk-about-cta-bar at [${ctx.viewport}px, ${ctx.theme}]`]
-  }
-  if (bar.width === 0 || bar.height === 0) {
+  if (!pill) {
     return [
-      `fixed-bar footer clearance: .pk-about-cta-bar has a zero-size rect at ` +
-        `[${ctx.viewport}px, ${ctx.theme}] — expected it visible (display: block) at this width`,
+      `fixed-bar footer clearance: could not measure the sticky bar's pill ` +
+        `(.pk-about-cta-bar a) at [${ctx.viewport}px, ${ctx.theme}]`,
+    ]
+  }
+  if (pill.width === 0 || pill.height === 0) {
+    return [
+      `fixed-bar footer clearance: the sticky bar's pill has a zero-size rect at ` +
+        `[${ctx.viewport}px, ${ctx.theme}] — expected it visible at this width`,
     ]
   }
   if (!footer) {
     return [`fixed-bar footer clearance: could not measure <footer> at [${ctx.viewport}px, ${ctx.theme}]`]
   }
 
-  // Positive = the bar's top sits BELOW the footer's bottom edge — SLACK, a
-  // strip of document background is visible (the G-01.5-7 defect this check
-  // exists to catch; the ORIGINAL non-intersection check was satisfied by
-  // this direction of error). Negative = the bar's top sits ABOVE the
-  // footer's bottom edge — OVERLAP, the bar covers real footer content (the
-  // opposite failure mode plan 01.5-08 originally guarded against).
-  const distance = bar.y - (footer.y + footer.height)
-  const context =
-    `bar height=${bar.height.toFixed(2)}px, reserved clearance=` +
-    `${Number.isFinite(reservedClearance) ? reservedClearance.toFixed(2) : "?"}px, ` +
-    `footer bottom=${(footer.y + footer.height).toFixed(2)}, bar top=${bar.y.toFixed(2)}`
+  // Plan 01.5-14: the pill's own footprint from the viewport's bottom edge
+  // — its `bottom` offset PLUS its own height — derived here from the
+  // pill's measured rect and the live viewport height, never restated as a
+  // literal. A future change to the sketch's offset or to .pk-sumate-btn's
+  // height moves this bound automatically, the same derived-not-literal
+  // discipline this file's other budget checks already follow.
+  const pillFootprint = viewportHeight - pill.y
 
-  if (distance > CONTACT_TOLERANCE_PX) {
-    return [
-      `fixed-bar footer clearance: SLACK of ${distance.toFixed(2)}px between the footer's bottom ` +
-        `edge and the bar's top edge at [${ctx.viewport}px, ${ctx.theme}] (${context}) — expected ` +
-        `a TIGHT FIT (within ${CONTACT_TOLERANCE_PX}px), not mere non-overlap. Non-intersection ` +
-        `alone is exactly what the shipped G-01.5-7 defect satisfied.`,
-    ]
-  }
+  // Positive = the pill's top sits BELOW the footer's bottom edge — the
+  // footer clears the pill, some visible gap exists (by design, see the
+  // section comment above). Negative = the pill's top sits ABOVE the
+  // footer's bottom edge — OVERLAP, the pill covers real footer content.
+  const distance = pill.y - (footer.y + footer.height)
+  const context =
+    `pill footprint (offset+height)=${pillFootprint.toFixed(2)}px, reserved clearance=` +
+    `${Number.isFinite(reservedClearance) ? reservedClearance.toFixed(2) : "?"}px, ` +
+    `footer bottom=${(footer.y + footer.height).toFixed(2)}, pill top=${pill.y.toFixed(2)}`
 
   if (distance < -CONTACT_TOLERANCE_PX) {
     return [
-      `fixed-bar footer clearance: OVERLAP of ${(-distance).toFixed(2)}px — the fixed bar covers ` +
-        `real footer content at [${ctx.viewport}px, ${ctx.theme}] (${context}) — the document-end ` +
-        `clearance is not reserving enough`,
+      `fixed-bar footer clearance: OVERLAP of ${(-distance).toFixed(2)}px — the floating pill ` +
+        `covers real footer content at [${ctx.viewport}px, ${ctx.theme}] (${context}) — the ` +
+        `document-end clearance is not reserving enough. This is the serious direction: it ` +
+        `hides content a member needs to read or tap.`,
+    ]
+  }
+
+  if (distance > pillFootprint + CONTACT_TOLERANCE_PX) {
+    return [
+      `fixed-bar footer clearance: SLACK of ${distance.toFixed(2)}px between the footer's bottom ` +
+        `edge and the pill's top edge at [${ctx.viewport}px, ${ctx.theme}] (${context}) — expected ` +
+        `at most the pill's own footprint (${pillFootprint.toFixed(2)}px) of bare page background ` +
+        `below the footer, not more. A floating pill's design premise is SOME gap, so this bound ` +
+        `is generous by design — it only fails when more background shows than the pill itself ` +
+        `accounts for.`,
     ]
   }
 
@@ -1515,10 +1555,10 @@ async function main() {
         })
         casesRun++
 
-        if (measured.bar) {
+        if (measured.pill) {
           log(
-            `${label} bar top=${measured.bar.y.toFixed(2)} bar height=` +
-              `${measured.bar.height.toFixed(2)} reserved clearance=` +
+            `${label} pill top=${measured.pill.y.toFixed(2)} pill height=` +
+              `${measured.pill.height.toFixed(2)} reserved clearance=` +
               `${Number.isFinite(measured.reservedClearance) ? measured.reservedClearance.toFixed(2) : "?"} ` +
               `footer bottom=${measured.footer ? (measured.footer.y + measured.footer.height).toFixed(2) : "?"}`,
           )

@@ -6279,31 +6279,49 @@ body:has(#cierre) .pk-footer {
      exists only on the About page, so this selector needs no further
      scoping to stay page-scoped.
 
-     Plan 01.5-10 (G-01.5-7 gap closure — .planning/debug/G-01.5-7-cta-bar-
-     background-visible.md): the flat `4.5rem` above replaced a spacer's
-     inherited value with a placement fix, but was itself never re-derived
-     from the bar's own composition — its own comment used to concede
-     exactly that. It was 3px loose against the bar's shipped 69px height
-     (12px padding-top + 44px button + 12px padding-bottom + 1px border);
-     after plan 01.5-10's Task 1 grew the button to 48px the bar is 73px and
-     the SAME literal is now 1px TIGHT — the direction of the error flipped,
-     which is the predictable result of a hard literal pinned against a
-     content-derived height. Replaced with an expression composed from the
-     same parts a human would add up by hand, in the same units
-     `.pk-about-cta-bar` itself declares them in: its own padding-top
-     (0.75rem) + padding-bottom (0.75rem) + `.pk-sumate-btn`'s `min-height`
-     (48px) + the bar's own `border-top` width (1px). `calc()` lets these
-     stay legible as one derivation rather than a pre-added, re-guessable
-     number; Task 3's probe now asserts a TIGHT FIT against the bar's real
-     measured height instead of mere non-intersection, which is the check
-     that would have caught both the original 3px-loose and this
-     newly-introduced 1px-tight state. Co-located in this SAME
-     @media (max-width: 480px) block as .pk-about-cta-bar's own display swap
-     above, for the identical reason the D-11 rule below is: a threshold
-     mismatch between "bar appears" and "clearance is reserved" would put
-     the bar back over the footer at some width. */
+     DRIFT HISTORY (plan 01.5-10, G-01.5-7 gap closure — .planning/debug/
+     G-01.5-7-cta-bar-background-visible.md): a hard `4.5rem` literal
+     (inherited from the removed spacer) was 3px loose against the bar's
+     shipped 69px height; after plan 01.5-10 grew the button to 48px the
+     SAME literal became 1px TIGHT — the direction of the error flipped,
+     the predictable result of a hard literal pinned against a
+     content-derived height. Plan 01.5-10 replaced it with a `calc()`
+     composed from the bar's own parts (padding-top + padding-bottom +
+     button min-height + border-width), legible as one derivation instead
+     of a pre-added, re-guessable number — that discipline (derive, don't
+     restate) is why this stays a `calc()` below rather than a fresh
+     literal, even though every one of THOSE operands is now gone.
+
+     RE-DERIVED (plan 01.5-14, G-01.5-11 gap closure, sketch 052 winner
+     B): the element this reservation is FOR is no longer a bar flush to
+     the viewport edge — it is a pill floating `bottom: 20px` above it
+     (`.pk-about-cta-bar`, above), with no padding or border left on that
+     rule to compose from (both are gone). The reservation now covers an
+     OFFSET as well as a height: the pill's own `bottom` offset (20px) +
+     `.pk-sumate-btn`'s `min-height` (48px) + a deliberate breathing step
+     (1rem) above the footer so the pill doesn't read as pasted flush
+     against it. This is no longer a TIGHT fit the way the flush bar's
+     reservation was — a floating pill's whole design premise is a
+     visible gap below it, so some bare background between the footer and
+     the pill's top edge is the correct, intended state, not a defect.
+     `checkFixedBarFooterClearance` (test/visual/about_geometry.mjs) still
+     reports two directions, but its SLACK bound is now the pill's own
+     footprint (offset + height, measured live) rather than a near-zero
+     tolerance — see that function's own comment for the full shape.
+
+     Plan 01.5-12 landed branch A for the site-wide sticky-footer question
+     (leave it withdrawn, no shell change): `body` carries no viewport-
+     height floor and no flex column, so this `padding-bottom` is not
+     composing against any OTHER body-level reservation — measured and
+     confirmed no interaction exists, not merely assumed.
+
+     Co-located in this SAME @media (max-width: 480px) block as
+     .pk-about-cta-bar's own display swap above, for the identical reason
+     the D-11 rule below is: a threshold mismatch between "bar appears"
+     and "clearance is reserved" would put the bar back over the footer
+     at some width. */
   body:has(.pk-about-cta-bar) {
-    padding-bottom: calc(0.75rem + 0.75rem + 48px + 1px);
+    padding-bottom: calc(20px + 48px + 1rem);
   }
 
   /* Plan 01.5-04, D-11: suppresses the Cierre band's own Sumate button at
