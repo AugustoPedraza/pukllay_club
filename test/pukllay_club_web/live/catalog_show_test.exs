@@ -4313,21 +4313,53 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
-    test ".pk-pill-tag's --color-primary text meets the 4.5:1 contrast floor against --color-base-100 in both themes" do
-      for {label, block} <- [
-            {"light", light_theme_plugin_block()},
-            {"dark", dark_theme_plugin_block()}
-          ] do
-        primary = token_value(block, "--color-primary")
-        base_100 = token_value(block, "--color-base-100")
+    # Mirrors dark_lightbox_close_block/0's idiom above (lightbox close
+    # button dark-theme contrast describe block): sketch 055 (Option A,
+    # 2026-09-10) resolved the dark-mode primary-as-text regression via a
+    # dark-scoped override shared by 17 selectors (including .pk-pill-tag)
+    # rather than by changing a theme token, so the actual dark-mode ink
+    # for .pk-pill-tag is no longer --color-primary — it's whatever this
+    # override sets. Matching on the literal `[data-theme="dark"] ` +
+    # `.pk-pill-tag` selector text (guaranteed followed by a comma, since
+    # it is not the last selector in the list) pulls the real shared
+    # declaration body rather than assuming a hardcoded token name.
+    defp dark_pill_tag_text_override_block do
+      case Regex.run(~r/\[data-theme="dark"\] \.pk-pill-tag\b.*?\{([^}]*)\}/s, css_source()) do
+        [_, body] ->
+          body
 
-        ratio = contrast_ratio(relative_luminance(primary), relative_luminance(base_100))
-
-        assert ratio >= 4.5,
-               "#{label} theme: --color-primary (#{primary}) against --color-base-100 " <>
-                 "(#{base_100}) measured #{Float.round(ratio, 2)}:1 — .pk-pill-tag's hashtag " <>
-                 "text must clear the 4.5:1 WCAG AA text floor in both themes."
+        nil ->
+          flunk("No `[data-theme=\"dark\"] .pk-pill-tag` selector found in a dark-scoped override in assets/css/app.css")
       end
+    end
+
+    test ".pk-pill-tag's text meets the 4.5:1 contrast floor in both themes (sketch 055 dark-scoped override)" do
+      light_block = light_theme_plugin_block()
+      light_primary = token_value(light_block, "--color-primary")
+      light_base_100 = token_value(light_block, "--color-base-100")
+      light_ratio = contrast_ratio(relative_luminance(light_primary), relative_luminance(light_base_100))
+
+      assert light_ratio >= 4.5,
+             "light theme: --color-primary (#{light_primary}) against --color-base-100 " <>
+               "(#{light_base_100}) measured #{Float.round(light_ratio, 2)}:1 — .pk-pill-tag's " <>
+               "hashtag text must clear the 4.5:1 WCAG AA text floor in both themes."
+
+      dark_override_body = dark_pill_tag_text_override_block()
+
+      assert dark_override_body =~ ~r/color:\s*var\(--color-neutral\)\s*;/,
+             "The dark-scoped override covering `.pk-pill-tag` must set `color` to a read of " <>
+               "`--color-neutral` (sketch 055, Option A) — found: #{inspect(dark_override_body)}"
+
+      dark_block = dark_theme_plugin_block()
+      dark_text_color = token_value(dark_block, "--color-neutral")
+      dark_base_100 = token_value(dark_block, "--color-base-100")
+      dark_ratio = contrast_ratio(relative_luminance(dark_text_color), relative_luminance(dark_base_100))
+
+      assert dark_ratio >= 4.5,
+             "dark theme: --color-neutral (#{dark_text_color}) against --color-base-100 " <>
+               "(#{dark_base_100}) measured #{Float.round(dark_ratio, 2)}:1 — .pk-pill-tag's " <>
+               "hashtag text (dark-scoped to --color-neutral, sketch 055 Option A) must clear " <>
+               "the 4.5:1 WCAG AA text floor in both themes."
     end
   end
 end

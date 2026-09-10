@@ -871,12 +871,26 @@
    for exactly that reason, rather than looking like undocumented drift
    from the variant set's own rules.
 
-   --color-primary is the required token here, not --color-secondary —
-   measured against --color-base-100 (this file's own daisyui-theme
-   blocks): primary is 14.4:1 in light (#3D096D on #FFFFFF) and 6.0:1 in
-   dark (#A97FD1 on #170A26), both well clear of the 4.5:1 text floor;
-   secondary (#7E4CA5) measures only 3.1:1 in dark and would FAIL that
-   floor. Recorded here as the baseline for any future palette retune. */
+   --color-primary is the required token here in LIGHT mode, not
+   --color-secondary — measured against --color-base-100 (this file's own
+   daisyui-theme blocks): primary is 14.4:1 in light (#3D096D on
+   #FFFFFF), well clear of the 4.5:1 text floor; secondary (#7E4CA5)
+   measures only 3.1:1 in dark and would FAIL that floor.
+
+   DARK mode does NOT render --color-primary as text — see the
+   consolidated dark-scoped override directly below this rule's :hover
+   state. History: this rule originally shipped with dark primary
+   (#A97FD1) on the old dark ground (#170A26), measuring 6.0:1, clear of
+   the floor. Sketch 054 (2026-09-10) deepened dark's primary to #8C2BB6
+   for its FILL role (CTA buttons, wordmark — 6.70:1 white-ink margin,
+   the best of any candidate tested); measured as TEXT against the new
+   ground (#2F154E) that same value drops to 2.34:1, failing this floor
+   — the tripwire firing exactly as designed. Developer-chosen fix
+   (sketch 055, Option A "dark-scoped text token", 2026-09-10): reuse
+   --color-neutral (#B8A6CC, 7.00:1 on #2F154E) as dark's primary-as-text
+   ink across all 17 rules in this file that render --color-primary as a
+   text colour. Recorded here as the baseline for any future palette
+   retune. */
 .pk-pill-tag {
   background: transparent;
   border-color: transparent;
@@ -888,6 +902,67 @@
 
 .pk-pill-tag:hover {
   background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+/* Sketch 055 (2026-09-10), developer-chosen Option A ("dark-scoped text
+   token"): sketch 054's winning dark primary (#8C2BB6) reads 6.70:1 as a
+   FILL with white ink — excellent — but only 2.34:1 as TEXT against
+   --color-base-100 (2.08:1 on -200, 1.78:1 on -300), failing the 4.5:1
+   WCAG AA floor (see the .pk-pill-tag comment above, the tripwire that
+   caught this). Not the ladder lift's fault: the OLD primary (#A97FD1)
+   still measures 4.96:1 on the NEW ladder — it's specifically W2's
+   deeper, more saturated jewel tone (the same depth that earns the
+   6.70:1 fill margin) that breaks the text role.
+
+   Same shape as `.pk-lightbox-close`'s dark-scoped fix elsewhere in this
+   file (scope an override to the broken theme only, rather than
+   degrading the working one or reopening the palette decision): light's
+   own primary-as-text usage is untouched here (#3D096D already clears
+   14.4:1 as text) and none of the 8 hex values sketch 054 shipped in the
+   dark daisyui-theme block above were changed to make this pass.
+
+   --color-neutral (#B8A6CC) was picked over inventing a new token: it is
+   already this file's existing muted/quiet ink (see `.pk-lightbox-close`'s
+   own rationale for the same token), already mapped in default.css and
+   gated by check-theme-drift.sh, and measures 7.00:1 on --color-base-100
+   in dark — clear of the floor with margin to spare. Validated via
+   sketch 055 (variant A2) against every one of the 17 real affected
+   elements side by side; "you are here" active-nav-link states remain
+   legible through weight/underline/left-border, not colour alone.
+
+   All 17 rules in this file that declare `color: var(--color-primary)`
+   as a text colour are re-scoped to dark only below (`[data-theme="dark"]`
+   raises specificity above the un-prefixed base rule, so source order
+   doesn't matter). Rules that also use --color-primary for a BORDER or
+   BACKGROUND fill (e.g. .pk-drawer-links' active-link accent bar/tint,
+   .pk-pill-selected's background) are untouched — only the TEXT role was
+   ever broken. */
+[data-theme="dark"] .pk-pill-tag,
+[data-theme="dark"] .pk-pill-interactive:hover,
+[data-theme="dark"] .pk-nav-links a:hover,
+[data-theme="dark"] .pk-nav-links a:focus-visible,
+[data-theme="dark"] .pk-nav-links a[aria-current="page"],
+[data-theme="dark"] .pk-search-morph:hover:not(.is-open) .pk-search-morph-toggle,
+[data-theme="dark"] .pk-search-morph:focus-within:not(.is-open) .pk-search-morph-toggle,
+[data-theme="dark"] .pk-filter-trigger:hover,
+[data-theme="dark"] .pk-clear-filters-link:hover,
+[data-theme="dark"] .pk-nav-crumb a:hover,
+[data-theme="dark"] .pk-nav-crumb a:focus-visible,
+[data-theme="dark"] .pk-cat-trigger:hover,
+[data-theme="dark"] .pk-cat-trigger:focus-visible,
+[data-theme="dark"] .pk-cat-trigger.is-open,
+[data-theme="dark"] .pk-cat-item:hover,
+[data-theme="dark"] .pk-cat-item.is-active,
+[data-theme="dark"] .pk-bgg-note:hover,
+[data-theme="dark"] .pk-drawer-links a[aria-current="page"],
+[data-theme="dark"] .pk-drawer-links a[aria-current="page"] .pk-drawer-chevron,
+[data-theme="dark"] .pk-chip:hover,
+[data-theme="dark"] .pk-chip:focus-visible,
+[data-theme="dark"] .pk-desc-toggle:hover,
+[data-theme="dark"] .pk-desc-toggle:focus-visible,
+[data-theme="dark"] .pk-bgg-stat:hover,
+[data-theme="dark"] .pk-share-trigger:hover {
+  color: var(--color-neutral);
 }
 
 /* The modal's chosen-chip soft lift (`filter_modal.ex`'s `chip_class/1`
