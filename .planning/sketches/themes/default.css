@@ -106,20 +106,25 @@
    typography/spacing/shape/motion tokens are brand-locked and identical in
    both palettes. Shadows stay re-based on black instead of the brand-purple
    text color, since a purple-tinted shadow reads as muddy against an
-   already-purple background — they have no upstream daisyUI equivalent. */
+   already-purple background — they have no upstream daisyUI equivalent.
+
+   Re-derived AGAIN (2026-09-10) from sketch 054's winner "A (Lifted Ladder)
+   + W2 (Deep Jewel)" — base ladder lifted, primary deepened to a saturated
+   magenta-violet with white ink. See app.css's own dark daisyui-theme block
+   for the full provenance comment and measured contrast ratios. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #170A26;
-    --color-surface: #22103A;
-    --color-surface-2: #2F1750;
+    --color-bg: #2F154E;
+    --color-surface: #391B62;
+    --color-surface-2: #462278;
     --color-text: #F3ECFA;
     --color-text-muted: #B8A6CC;
-    --color-primary: #A97FD1;
-    --color-primary-content: #170A26;
-    --color-secondary: #7E4CA5;
-    --color-accent-bg: #3D2A56;
-    --color-accent-text: #E4D3F5;
-    --color-border: #2F1750;
+    --color-primary: #8C2BB6;
+    --color-primary-content: #FFFFFF;
+    --color-secondary: #642C77;
+    --color-accent-bg: #3A1F47;
+    --color-accent-text: #EBD7F4;
+    --color-border: #462278;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -128,17 +133,17 @@
   }
 }
 :root[data-theme="dark"] {
-  --color-bg: #170A26;
-  --color-surface: #22103A;
-  --color-surface-2: #2F1750;
+  --color-bg: #2F154E;
+  --color-surface: #391B62;
+  --color-surface-2: #462278;
   --color-text: #F3ECFA;
   --color-text-muted: #B8A6CC;
-  --color-primary: #A97FD1;
-  --color-primary-content: #170A26;
-  --color-secondary: #7E4CA5;
-  --color-accent-bg: #3D2A56;
-  --color-accent-text: #E4D3F5;
-  --color-border: #2F1750;
+  --color-primary: #8C2BB6;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #642C77;
+  --color-accent-bg: #3A1F47;
+  --color-accent-text: #EBD7F4;
+  --color-border: #462278;
   --color-danger: #E06B90;
   --color-success: #5FBE95;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
