@@ -2,7 +2,7 @@
 sketch: 056
 name: dark-cta-contrast-fix
 question: "The dark-mode outline-primary CTAs (Sumate hero/closing, catalog preview CTA, Reintentar retry) fail WCAG contrast at 2.08-2.34:1 — solid fill everywhere, split by role, or an ink swap like the 17 rules already fixed today?"
-winner: null
+winner: "B"
 tags: [dark-mode, contrast, accessibility, wcag, cta, quick-task-260910-gck]
 ---
 
@@ -50,7 +50,12 @@ open .planning/sketches/056-dark-cta-contrast-fix/index.html
 - Does B's two-treatment split read as intentional hierarchy (primary vs. secondary CTA) or as
   visual inconsistency between the preview card and the Sumate buttons?
 
-## Next Step
+## Decision
 
-Present this sketch to the developer, get a variant pick (or a synthesis), then resume the quick
-task 260910-gck executor with the decision to implement Task 3.
+**Winner: B — split by role.** The two Sumate CTAs (hero + closing band — the site's actual
+primary call-to-action) get the solid fill (`background: var(--color-primary)`,
+`color: var(--color-primary-content)`, 6.70:1), matching the treatment already proven on the
+mobile sticky Sumate. The catalog preview CTA and "Reintentar" retry (genuinely secondary
+buttons) get an ink-swap to `--color-neutral` (7.00:1/6.21:1), same mechanism as the 17 rules
+fixed in quick task 260910-efe. Resumed the quick task 260910-gck executor with this pick to
+implement Task 3.
