@@ -3,6 +3,13 @@
    feel true to the real app, not a generic mockup. Drift from upstream is
    checked by ./check-theme-drift.sh — run it after editing either file.
 
+   Quick task 260910-l7q, Task 3 Decision 2 (developer picked D2-i): this
+   mirror keeps RESOLVED HEXES, not `--pk-ramp-*` tokens — sketches stay
+   standalone single-file HTML with no build step, and `check-theme-drift.sh`
+   dereferences upstream's `var(--pk-ramp-NNN)` reads to their hex before
+   comparing (its Task 1 `deref` helper), so the gate stays a plain hex-to-hex
+   compare on this side.
+
    Upstream mapping (app.css daisyUI variable -> sketch variable here):
      --color-base-100      -> --color-bg
      --color-base-200      -> --color-surface
@@ -37,15 +44,15 @@
 :root {
   /* Colors — from 01-UI-SPEC.md daisyUI theme overrides (light) */
   --color-bg: #FFFFFF;
-  --color-surface: #F3ECFA;
+  --color-surface: #F6EAFD;
   --color-surface-2: #E3D3F0;
   --color-text: #241238;
   --color-text-muted: #6B5B7B;
-  --color-primary: #3D096D;
+  --color-primary: #45105C;
   --color-primary-content: #FFFFFF;
   --color-secondary: #7E4CA5;
   --color-accent-bg: #EDE1F7;
-  --color-accent-text: #3D096D;
+  --color-accent-text: #45105C;
   --color-border: #E3D3F0;
   --color-danger: #B23A5C;
   --color-success: #3F8F6B;
@@ -126,20 +133,33 @@
    --color-surface #391B62 -> #441659, --color-surface-2/--color-border
    #462278 -> #531B6D. See app.css's own dark daisyui-theme block comment
    for the full measured before/after OKLCh figures and the C1/C2/C3
-   decision record. */
+   decision record.
+
+   Re-derived a fifth time (quick task 260910-l7q, 2026-09-10): light
+   --color-primary/--color-accent-text (mapped from base's --color-primary/
+   --color-accent-content) moved #3D096D -> #45105C, and dark --color-surface/
+   --color-surface-2/--color-border/--color-text/--color-primary moved onto
+   the new shared `--pk-ramp-*` ramp's FLAT-envelope stops (--color-surface
+   #441659 -> #45105C, --color-surface-2/--color-border #531B6D -> #551670,
+   --color-text #F3ECFA -> #F6EAFD, --color-primary #8C2BB6 -> #8C2AB7). The
+   headline result: light --color-primary/--color-accent-text and dark
+   --color-surface now resolve to the IDENTICAL hex (#45105C) -- one
+   physical swatch worn as a light-theme button fill and a dark-theme card
+   surface, mirroring upstream's own --pk-ramp-900. See app.css's own ramp
+   block header comment for the full generator/audit provenance. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-bg: #361148;
-    --color-surface: #441659;
-    --color-surface-2: #531B6D;
-    --color-text: #F3ECFA;
+    --color-surface: #45105C;
+    --color-surface-2: #551670;
+    --color-text: #F6EAFD;
     --color-text-muted: #C59CDC;
-    --color-primary: #8C2BB6;
+    --color-primary: #8C2AB7;
     --color-primary-content: #FFFFFF;
     --color-secondary: #642C77;
     --color-accent-bg: #3A1F47;
     --color-accent-text: #EBD7F4;
-    --color-border: #531B6D;
+    --color-border: #551670;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -149,16 +169,16 @@
 }
 :root[data-theme="dark"] {
   --color-bg: #361148;
-  --color-surface: #441659;
-  --color-surface-2: #531B6D;
-  --color-text: #F3ECFA;
+  --color-surface: #45105C;
+  --color-surface-2: #551670;
+  --color-text: #F6EAFD;
   --color-text-muted: #C59CDC;
-  --color-primary: #8C2BB6;
+  --color-primary: #8C2AB7;
   --color-primary-content: #FFFFFF;
   --color-secondary: #642C77;
   --color-accent-bg: #3A1F47;
   --color-accent-text: #EBD7F4;
-  --color-border: #531B6D;
+  --color-border: #551670;
   --color-danger: #E06B90;
   --color-success: #5FBE95;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
