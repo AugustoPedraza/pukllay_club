@@ -5293,6 +5293,66 @@ body:has(#cierre) main.pk-boundary-collapse + .pk-footer {
   margin-top: 0;
 }
 
+/* G-01.5-8 gap closure (plan 01.5-11,
+   .planning/debug/G-01.5-8-cierre-tagline-footer-grouping.md). The margin
+   rule directly above (G-01.5-5) took this boundary to 0.00px, which was
+   correct for the complaint it closed and exposed a second one it did not:
+   `#cierre`'s tint (`.pk-band-tint`, `background: var(--color-base-200)`)
+   and `.pk-footer`'s own unmediated `background: var(--color-base-200)`
+   (declared above) resolve to the byte-identical computed token in BOTH
+   themes — measured rgb(243,236,250) light / rgb(34,16,58) dark — and once
+   flush the only separator left is `.pk-footer`'s own 1px `border-top` at
+   base-300, ~2.5x under this file's own 3:1 non-text floor (see the WCAG
+   comment near the top of this file). Two same-token full-bleed bands
+   sandwiching a sub-3:1 hairline read as one continuous field, not two.
+
+   The gap-size channel this boundary was tuned on has only two states and
+   both are defects: a non-zero gap paints a visible third-colour stripe
+   (G-01.5-5), zero merges the two surfaces (G-01.5-8, this rule). There is
+   no third value on that channel — the only exit is breaking the token
+   EQUALITY itself, not retuning the gap again. `#cierre`'s own tint is
+   D-14, a closed decision this exact boundary's diagnosis has already
+   ruled off-limits twice; the footer's side of the equality is the only
+   side left unclaimed by a closed decision.
+
+   Page-scoped via the same `body:has(#cierre)` presence idiom as the
+   margin rule above — `#cierre` exists on no other route — because
+   `.pk-footer`'s shared base-200 fill is the ONLY cue marking the footer
+   at all on `/` and `/juegos/1`, where the element above it in `<main>`
+   paints nothing. A global change would delete the footer's identity on
+   two pages that never reported a problem, so the shared, unmediated
+   `.pk-footer` rule above is left byte-identical. The border-top hairline
+   is also left alone: on a real fill step it stops being the sole boundary
+   and becomes an ordinary underline, and retouching it here would be a
+   second, unrelated change inside this same edit.
+
+   FULL LADDER ARITHMETIC, both themes (computed before any option was
+   judged, not after):
+       LIGHT  base-100/200 = 1.155   base-100/300 = 1.415   base-200/300 = 1.226
+       DARK   base-100/200 = 1.086   base-100/300 = 1.227   base-200/300 = 1.130
+   HONEST BOUND: no pair in this app's entire surface ladder clears 3:1 in
+   either theme. The literal request behind this gap ("a different color
+   ... to have a correct contrast") cannot be met to this app's own
+   documented standard by any token swap, and this exact fix class (a
+   sub-3:1 surface-token swap) was already shipped once on this codebase
+   and REJECTED on real-device human review
+   (search-right-align-mobile-cycle-3 in the debug knowledge base).
+
+   It does not follow that the step is useless: `#cierre`'s OWN top edge is
+   a transparent-to-base-200 step (1.155:1) spanning hundreds of pixels in
+   the same render, and it reads clearly there — area carries a boundary
+   that a 1px hairline at the same ratio cannot. base-300 (1.226:1 light /
+   1.130:1 dark, below) is a LARGER step than that legible control, so it
+   is chosen as the strongest available step in the ladder for this pair,
+   with base-100 (1.155:1 / 1.086:1) recorded by name as the measured
+   runner-up — reach for it as a one-token edit, not a re-diagnosis, if an
+   end-of-phase walkthrough says base-300 reads too heavy. Perceptual
+   sufficiency is unproven by measurement either way and is routed to that
+   walkthrough as a <human-check>, not declared closed here. */
+body:has(#cierre) .pk-footer {
+  background: var(--color-base-300);
+}
+
 /* ─── HEADER ROW CAPACITY: the one remaining reveal breakpoint ────────────
    Used to be TWO reveal cliffs (wordmark at 56rem, cat-trigger label at
    66rem) — this session's minimalism pass (2026-09-09, G-01.5 header

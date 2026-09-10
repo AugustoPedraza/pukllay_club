@@ -702,21 +702,64 @@ function checkCierreRunRatioBudget(measured, ctx) {
 const BOTTOM_BOUNDARY_BUDGET_MOBILE_PX = 18 // 16px target + 2px rounding headroom, <=480px
 const BOTTOM_BOUNDARY_BUDGET_PX = 26 // 24px target + 2px rounding headroom, >=481px
 
-// Plan 01.5-09 (G-01.5-5 gap closure). The flat pixel budget above passed
-// on the reported defect: 24.00px satisfied `<= 26`, because the budget was
-// a correctly-implemented statement of a target that contradicted the UAT
-// truth sitting next to it — the real property is not "small enough gap"
-// but "no visible seam between two surfaces the eye reads as one". This
-// check is now surface-conditional: when the last band's computed
-// background equals the footer's computed background (the About page,
-// where #cierre's tint and .pk-footer paint the identical token), it
-// requires CONTACT within the same tolerance every other band-to-band
-// boundary on the page already uses (checkAdjacentBandContact's own
-// CONTACT_TOLERANCE_PX) — a same-surface sandwich is only invisible at
-// zero. When the backgrounds differ (the catalog index, the detail page —
-// where the last in-flow element never paints a background at all), the
-// flat budget behaviour is unchanged, so this check still means something
-// on a future page that has its own, different surface relationship.
+// True only for a fully transparent computed background — the catalog
+// index's and the game detail page's trailing wrapper (a plain div, not a
+// .pk-band) is the only surface this app renders with an alpha channel at
+// all, so `alpha === 0` is an unambiguous test with no other computed
+// background this app declares to confuse it with.
+function isTransparentBackground(bg) {
+  if (!bg) return true
+  const match = bg.match(/^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)$/)
+  return match != null && parseFloat(match[1]) === 0
+}
+
+// Plan 01.5-09 (G-01.5-5 gap closure) shipped this check surface-
+// conditional: "when the last band's computed background equals the
+// footer's, require CONTACT; otherwise fall back to the flat pixel
+// budget." Before that, the ORIGINAL flat budget alone had already passed
+// on the reported G-01.5-5 defect — 24.00px satisfied `<= 26` — because the
+// budget was a correctly-implemented statement of a target that
+// contradicted the UAT truth sitting next to it: the real property was
+// never "small enough gap" but "no visible seam between two surfaces the
+// eye reads as one". That lesson still holds one level down and is why
+// case 1 below exists at all.
+//
+// Read literally, though, the 01.5-09 surface-conditional check ASSERTED
+// the next defect it was standing in front of: when the last band and the
+// footer paint the identical token, it REQUIRED them to be flush — and on
+// the shipped tree that was exactly true (surfacesMatch, distance 0.00), so
+// it returned clean instead of failing
+// (.planning/debug/G-01.5-8-cierre-tagline-footer-grouping.md, E-09). Plan
+// 01.5-11 rewrites it into the three-way rule the design actually needs,
+// in the SAME change as the fill fix that flips `surfacesMatch` to false —
+// a bare inversion of the old branch, done separately, would silently drop
+// this boundary into the flat budget below and quietly delete the contact
+// guarantee G-01.5-5 was closed on, letting a 24px gap reappear here with a
+// green suite:
+//   1. the last band and the footer paint the IDENTICAL computed
+//      background -> FAIL. No gap size is correct for two same-token
+//      full-bleed bands: a non-zero gap paints a visible third-colour
+//      stripe (G-01.5-5, closed) and zero merges the two surfaces into one
+//      field (G-01.5-8, this plan).
+//   2. the two backgrounds DIFFER and both are opaque -> require CONTACT
+//      within the same tolerance every other band-to-band boundary on this
+//      page already uses (checkAdjacentBandContact's own
+//      CONTACT_TOLERANCE_PX) — any gap between two opaque surfaces paints
+//      a visible third colour between them, the exact thing G-01.5-5 was
+//      closed on, and that guarantee must survive the fill change rather
+//      than lapsing into case 3's looser budget.
+//   3. the last band paints NOTHING at all (a fully transparent
+//      background — the catalog index's and the game detail page's
+//      trailing wrapper) -> the original flat pixel budget, unchanged;
+//      that surface relationship is a different page and a different
+//      defect, and this check should still mean something there.
+// Case 3 is evaluated BEFORE the equality/opacity comparison in cases 1-2:
+// a transparent last band never has a fill to compare, so testing equality
+// first would wrongly route it into case 2's stricter contact requirement.
+// No gate anywhere else in this repo compares two adjacent surfaces'
+// backgrounds for DIFFERENCE, and the equality this check now fails on
+// holds in dark theme with different literals — both cases 1 and 2 must
+// run, and do run, in every theme the sweep covers, not just light.
 function checkBottomBoundaryBudget(measured, ctx) {
   const { bands, footer, lastBandBackground, footerBackground } = measured
 
@@ -729,36 +772,48 @@ function checkBottomBoundaryBudget(measured, ctx) {
 
   const lastBand = bands[bands.length - 1]
   const distance = footer.y - (lastBand.rect.y + lastBand.rect.height)
-  const surfacesMatch =
-    lastBandBackground != null && lastBandBackground === footerBackground
 
-  if (surfacesMatch) {
-    if (Math.abs(distance) > CONTACT_TOLERANCE_PX) {
+  if (isTransparentBackground(lastBandBackground)) {
+    const budget = ctx.viewport <= 480 ? BOTTOM_BOUNDARY_BUDGET_MOBILE_PX : BOTTOM_BOUNDARY_BUDGET_PX
+
+    if (distance > budget) {
       return [
-        `bottom boundary budget: ${bandLabel(lastBand)} and <footer> paint the identical ` +
-          `computed background (${lastBandBackground}) — expected contact (within ` +
-          `${CONTACT_TOLERANCE_PX}px, the same rule every other boundary on this page follows), ` +
-          `measured a ${distance.toFixed(2)}px gap at [${ctx.viewport}px x ${ctx.height}px, ` +
-          `${ctx.theme}] — a same-token sandwich reads as a visible stripe at any non-zero size.`,
+        `bottom boundary budget: measured ${distance.toFixed(2)}px between ` +
+          `${bandLabel(lastBand)} (${lastBandBackground}) and <footer> (${footerBackground}), ` +
+          `expected <= ${budget}px at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
       ]
     }
+
+    if (distance < -CONTACT_TOLERANCE_PX) {
+      return [
+        `bottom boundary budget: ${bandLabel(lastBand)} overlaps <footer> by ` +
+          `${(-distance).toFixed(2)}px at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+      ]
+    }
+
     return []
   }
 
-  const budget = ctx.viewport <= 480 ? BOTTOM_BOUNDARY_BUDGET_MOBILE_PX : BOTTOM_BOUNDARY_BUDGET_PX
+  const surfacesMatch = lastBandBackground != null && lastBandBackground === footerBackground
 
-  if (distance > budget) {
+  if (surfacesMatch) {
     return [
-      `bottom boundary budget: measured ${distance.toFixed(2)}px between ` +
-        `${bandLabel(lastBand)} (${lastBandBackground}) and <footer> (${footerBackground}), ` +
-        `expected <= ${budget}px at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+      `bottom boundary budget: ${bandLabel(lastBand)} and <footer> paint the identical ` +
+        `computed background (${lastBandBackground}) at [${ctx.viewport}px x ${ctx.height}px, ` +
+        `${ctx.theme}] — no gap size is correct for two same-token full-bleed bands (a non-zero ` +
+        `gap paints a visible third-colour stripe, the G-01.5-5 defect; zero merges the two ` +
+        `surfaces into one field, the G-01.5-8 defect). Break the token equality, not the gap.`,
     ]
   }
 
-  if (distance < -CONTACT_TOLERANCE_PX) {
+  if (Math.abs(distance) > CONTACT_TOLERANCE_PX) {
     return [
-      `bottom boundary budget: ${bandLabel(lastBand)} overlaps <footer> by ` +
-        `${(-distance).toFixed(2)}px at [${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+      `bottom boundary budget: ${bandLabel(lastBand)} (${lastBandBackground}) and <footer> ` +
+        `(${footerBackground}) paint DIFFERENT opaque backgrounds — expected CONTACT (within ` +
+        `${CONTACT_TOLERANCE_PX}px, the same rule every other boundary on this page follows), ` +
+        `measured a ${distance.toFixed(2)}px gap at [${ctx.viewport}px x ${ctx.height}px, ` +
+        `${ctx.theme}] — any gap between two opaque surfaces paints a visible third colour ` +
+        `between them, the guarantee G-01.5-5 was closed on.`,
     ]
   }
 
