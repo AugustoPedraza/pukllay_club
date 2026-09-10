@@ -145,7 +145,7 @@ one deliberate bold stop.
 01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
 Map. Plan frontmatter carries decision-scoped pseudo-IDs.
 **Depends on:** Phase 1, Phase 01.4
-**Plans:** 12/14 plans executed (4 original + 4 gap-closure round 1 + 2 gap-closure round 2, all 10 executed; 4 gap-closure round 3 pending)
+**Plans:** 13/14 plans executed (4 original + 4 gap-closure round 1 + 2 gap-closure round 2, all 10 executed; 4 gap-closure round 3 pending)
 
 Plans:
 **Wave 1**
@@ -218,7 +218,7 @@ round's one decision checkpoint)*
 **Gap closure round 3 — Wave 3** *(blocked on 01.5-11/01.5-12 — shared `app.css`, `about_geometry.mjs`
 and `about_live_test.exs`)*
 
-- [ ] 01.5-13-PLAN.md — Mobile Cierre balance: the closing band finally gets a mobile counterpart to the `min-width: 640px` block that has held BOTH of its distinguishing treatments, plus the mobile-invariance oracle re-derived off its hard-coded padding literal and two new checks for the two properties the user actually reported (G-01.5-10)
+- [x] 01.5-13-PLAN.md — Mobile Cierre balance: the closing band finally gets a mobile counterpart to the `min-width: 640px` block that has held BOTH of its distinguishing treatments, plus the mobile-invariance oracle re-derived off its hard-coded padding literal and two new checks for the two properties the user actually reported (G-01.5-10)
 
 **Gap closure round 3 — Wave 4** *(blocked on 01.5-12/01.5-13 — shared files, and its document-end
 clearance is body padding that interacts with whatever 01.5-12's checkpoint lands on the body)*
