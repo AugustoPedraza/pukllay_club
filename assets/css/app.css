@@ -1126,6 +1126,43 @@
   margin-top: 8px;
 }
 
+/* Sketch 056 (2026-09-10), developer-chosen Option D ("split-by-role") for
+   quick task 260910-gck, secondary-tier half: `.pk-preview-cta` (this
+   card's own CTA) and `core_components.ex`'s `variant="secondary"` button
+   (`.pk-btn-secondary`, rendered as the catalog "Reintentar" retry today)
+   both resolve `btn-outline btn-primary`'s label/border to `--color-primary`
+   (#8C2BB6) in dark, measuring 2.34:1 against --color-base-100 and 2.08:1
+   against --color-base-200 (260910-gck-EVIDENCE.md) — under both the 4.5:1
+   WCAG 1.4.3 text floor and the 3:1 1.4.11 border floor. Unlike the
+   Sumate CTA (see `.pk-sumate-btn`'s dark-scoped solid-fill fix, below the
+   "PK CATALOG SURFACES" block), these two are genuinely secondary/repeated
+   actions, not the site's primary call to action, so they take sketch
+   055's ink-swap mechanism instead of a second solid-fill treatment:
+   `--color-neutral` (#B8A6CC), already this file's muted/quiet ink token,
+   measuring 7.00:1 on base-100 and 6.21:1 on base-200 — clear of both
+   floors on both grounds. Both `color` AND `border-color` are re-scoped
+   here (sketch 055's rules above only touched `color`, since none of
+   those 17 rules were also an outline-border role). No `:hover` override
+   needed: daisyUI's own `.btn-outline` selector excludes `:hover` from its
+   own guard, so hovering already falls through to the base `.btn-primary`
+   filled pair (`--color-primary` bg / `--color-primary-content` text,
+   6.70:1) — the existing, already-passing hover behaviour, untouched by
+   this rule. `core_components.ex`'s `variant="secondary"` had no `.pk-*`
+   hook to target directly (it rendered bare `btn btn-outline btn-primary`
+   before this task); a `pk-btn-secondary` class was added to that variant
+   string rather than selecting on daisyUI's raw class combination, which
+   would also match `.pk-sumate-btn` (it carries the same two classes) and
+   require a fragile `:not()` exclusion instead of an explicit hook. Light
+   theme is untouched: light's own outline-primary treatment already clears
+   14.4:1 as text (#3D096D on #FFFFFF). Validated via sketch 056 against
+   all 4 real affected elements (hero, closing band, preview card, retry
+   banner) before this pick. */
+[data-theme="dark"] .pk-preview-cta,
+[data-theme="dark"] .pk-btn-secondary {
+  color: var(--color-neutral);
+  border-color: var(--color-neutral);
+}
+
 /* position: fixed and appended once, outside every scrolling rail — the
    only fix for the overflow-x/overflow-y clipping interaction documented
    in card-interaction.md. */
@@ -2736,7 +2773,17 @@ body.pk-drawer-open {
    would compute smaller). Colour, border-width, hover and transition are
    deliberately NOT redeclared here: the outline modifier (`btn-outline
    btn-primary`) and the app's own border token already provide those, and
-   the diagnosis measured every other channel already at parity. */
+   the diagnosis measured every other channel already at parity.
+
+   DARK MODE DIVERGES from that last sentence as of quick task 260910-gck:
+   `btn-outline btn-primary`'s dark-mode colour (`--color-primary`,
+   #8C2BB6, as text/border) fails both the 4.5:1 WCAG 1.4.3 floor and the
+   3:1 1.4.11 floor against this app's dark grounds (2.34:1/2.08:1 —
+   260910-gck-EVIDENCE.md). The developer-chosen fix (sketch 056, Option D
+   "split-by-role") DOES redeclare colour for this class, but only inside
+   `[data-theme="dark"]` — see the dark-scoped solid-fill rule immediately
+   below `.pk-sumate-btn-solid`'s own rules. Light mode is untouched and
+   this paragraph's claim still holds there. */
 .pk-sumate-btn {
   min-height: 48px;
   padding-inline: 28px;
@@ -2807,6 +2854,39 @@ body.pk-drawer-open {
 }
 
 .pk-sumate-btn-solid:hover {
+  filter: brightness(1.08);
+}
+
+/* Sketch 056 (2026-09-10), developer-chosen Option D ("split-by-role") for
+   quick task 260910-gck, Sumate half: the hero and closing-band Sumate
+   placements (`.pk-sumate-btn` without `.pk-sumate-btn-solid`) fail WCAG
+   in dark mode as an outline (2.34:1/2.08:1 — see the "DARK MODE DIVERGES"
+   note on `.pk-sumate-btn` above). Sumate is the site's actual primary
+   call to action, so — unlike the ink-swap given to the genuinely
+   secondary CTAs (`.pk-preview-cta`/`.pk-btn-secondary`, above the "PK
+   CATALOG SURFACES" block) — it keeps full brand-primary visibility via
+   the SAME solid-fill pair already proven on the mobile sticky bar
+   immediately above: `--color-primary` background, `--color-primary-content`
+   text, 6.70:1. `:not(.pk-sumate-btn-solid)` excludes the sticky bar
+   itself from this rule: it already declares the identical values via its
+   own unscoped class, and a second rule setting the same properties on
+   the same element would recreate the two-rules-compete-on-one-property
+   failure this file has already fixed twice (see `.pk-sumate-btn`'s own
+   size-history comment above). The explicit `:hover` filter is needed for
+   the same reason `.pk-sumate-btn-solid:hover` needs one: `btn-outline`'s
+   own fill-on-hover inversion becomes meaningless once the rest state is
+   already filled. Light mode is untouched — light's own outline treatment
+   for Sumate already clears 14.4:1 as text (#3D096D on #FFFFFF) and is
+   not reopened here. Validated via sketch 056 against all 4 real affected
+   elements (hero, closing band, preview card, retry banner) before this
+   pick. */
+[data-theme="dark"] .pk-sumate-btn:not(.pk-sumate-btn-solid) {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .pk-sumate-btn:not(.pk-sumate-btn-solid):hover {
   filter: brightness(1.08);
 }
 

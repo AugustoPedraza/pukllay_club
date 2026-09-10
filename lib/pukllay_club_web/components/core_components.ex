@@ -104,7 +104,13 @@ defmodule PukllayClubWeb.CoreComponents do
   def button(%{rest: rest} = assigns) do
     variants = %{
       "primary" => "btn-primary",
-      "secondary" => "btn-outline btn-primary",
+      # `pk-btn-secondary` is a bare CSS hook (no declarations of its own
+      # elsewhere) added for quick task 260910-gck so app.css's dark-mode
+      # ink-swap fix can target this tier directly instead of matching
+      # daisyUI's raw `btn-outline btn-primary` combination, which would
+      # also match `.pk-sumate-btn` (the Sumate CTA carries the same two
+      # classes) and require a fragile `:not()` exclusion in the CSS.
+      "secondary" => "btn-outline btn-primary pk-btn-secondary",
       nil => "btn-primary btn-soft"
     }
 

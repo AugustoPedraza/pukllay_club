@@ -4361,5 +4361,155 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "hashtag text (dark-scoped to --color-neutral, sketch 055 Option A) must clear " <>
                "the 4.5:1 WCAG AA text floor in both themes."
     end
+
+    # Sketch 056 (2026-09-10), developer-chosen Option D ("split-by-role")
+    # for quick task 260910-gck: `btn-outline btn-primary`'s dark-mode
+    # colour (--color-primary as text/border) failed both the 4.5:1 WCAG
+    # 1.4.3 floor and the 3:1 1.4.11 floor on every outline-primary CTA
+    # (260910-gck-EVIDENCE.md). The fix splits by role: Sumate (the site's
+    # actual primary CTA) gets a dark-scoped SOLID fill reusing the
+    # already-proven .pk-sumate-btn-solid pair; the genuinely secondary
+    # CTAs (.pk-preview-cta, .pk-btn-secondary) get sketch 055's ink-swap
+    # mechanism. Matches on literal selector text (not a hardcoded token
+    # pair), same idiom as dark_pill_tag_text_override_block/0 above, so a
+    # future palette/mechanism change re-fires this tripwire instead of
+    # silently passing.
+    defp dark_sumate_solid_fill_block do
+      case Regex.run(
+             ~r/\[data-theme="dark"\] \.pk-sumate-btn:not\(\.pk-sumate-btn-solid\)\s*\{([^}]*)\}/s,
+             css_source()
+           ) do
+        [_, body] ->
+          body
+
+        nil ->
+          flunk(
+            "No `[data-theme=\"dark\"] .pk-sumate-btn:not(.pk-sumate-btn-solid)` rule found " <>
+              "in assets/css/app.css"
+          )
+      end
+    end
+
+    defp dark_secondary_cta_ink_swap_block do
+      case Regex.run(
+             ~r/\[data-theme="dark"\] \.pk-preview-cta,\s*\[data-theme="dark"\] \.pk-btn-secondary\s*\{([^}]*)\}/s,
+             css_source()
+           ) do
+        [_, body] ->
+          body
+
+        nil ->
+          flunk(
+            ~s(No `[data-theme="dark"] .pk-preview-cta, [data-theme="dark"] .pk-btn-secondary` ) <>
+              "rule found in assets/css/app.css"
+          )
+      end
+    end
+
+    test "dark-mode Sumate CTA solid-fills to the primary/primary-content pair (260910-gck)" do
+      solid_body = dark_sumate_solid_fill_block()
+
+      assert solid_body =~ ~r/background:\s*var\(--color-primary\)\s*;/,
+             "The dark-scoped Sumate override must set `background` to a read of " <>
+               "`--color-primary` — found: #{inspect(solid_body)}"
+
+      assert solid_body =~ ~r/color:\s*var\(--color-primary-content\)\s*;/,
+             "The dark-scoped Sumate override must set `color` to a read of " <>
+               "`--color-primary-content` — found: #{inspect(solid_body)}"
+
+      assert solid_body =~ ~r/border-color:\s*var\(--color-primary\)\s*;/,
+             "The dark-scoped Sumate override must set `border-color` to a read of " <>
+               "`--color-primary` — found: #{inspect(solid_body)}"
+
+      dark_block = dark_theme_plugin_block()
+      primary = token_value(dark_block, "--color-primary")
+      primary_content = token_value(dark_block, "--color-primary-content")
+      ratio = contrast_ratio(relative_luminance(primary_content), relative_luminance(primary))
+
+      assert ratio >= 4.5,
+             "dark theme: --color-primary-content (#{primary_content}) against its own solid " <>
+               "--color-primary background (#{primary}) measured #{Float.round(ratio, 2)}:1 — " <>
+               "Sumate's dark-mode solid-fill text must clear the 4.5:1 WCAG AA text floor."
+    end
+
+    test "dark-mode Sumate solid-fill excludes the sticky bar (not re-declared, 260910-gck)" do
+      # dark_sumate_solid_fill_block/0 already flunks if the rule is missing
+      # or if its selector doesn't literally read `:not(.pk-sumate-btn-solid)`
+      # — this test additionally proves no SECOND dark-scoped rule also
+      # targets `.pk-sumate-btn-solid` with the same background/color/
+      # border-color trio, which would recreate the two-rules-compete-on-
+      # one-property failure this file has already fixed twice.
+      _ = dark_sumate_solid_fill_block()
+
+      refute css_source() =~
+               ~r/\[data-theme="dark"\] \.pk-sumate-btn-solid\s*\{[^}]*background:\s*var\(--color-primary\)/s,
+             "`.pk-sumate-btn-solid` must not be re-declared by a second dark-scoped rule " <>
+               "setting the same background/color/border-color properties it already " <>
+               "declares unscoped."
+    end
+
+    test "dark-mode secondary CTAs ink-swap to --color-neutral, clearing both floors (260910-gck)" do
+      ink_body = dark_secondary_cta_ink_swap_block()
+
+      assert ink_body =~ ~r/color:\s*var\(--color-neutral\)\s*;/,
+             "The dark-scoped secondary-CTA override must set `color` to a read of " <>
+               "`--color-neutral` — found: #{inspect(ink_body)}"
+
+      assert ink_body =~ ~r/border-color:\s*var\(--color-neutral\)\s*;/,
+             "The dark-scoped secondary-CTA override must set `border-color` to a read of " <>
+               "`--color-neutral` — found: #{inspect(ink_body)}"
+
+      dark_block = dark_theme_plugin_block()
+      neutral = token_value(dark_block, "--color-neutral")
+      base_100 = token_value(dark_block, "--color-base-100")
+      base_200 = token_value(dark_block, "--color-base-200")
+
+      ratio_100 = contrast_ratio(relative_luminance(neutral), relative_luminance(base_100))
+      ratio_200 = contrast_ratio(relative_luminance(neutral), relative_luminance(base_200))
+
+      assert ratio_100 >= 4.5,
+             "dark theme: --color-neutral (#{neutral}) against --color-base-100 (#{base_100}) " <>
+               "measured #{Float.round(ratio_100, 2)}:1 — the preview CTA and secondary button " <>
+               "must clear the 4.5:1 WCAG AA text floor on base-100."
+
+      assert ratio_100 >= 3.0,
+             "dark theme: --color-neutral (#{neutral}) against --color-base-100 (#{base_100}) " <>
+               "measured #{Float.round(ratio_100, 2)}:1 — the outline border must clear the " <>
+               "3:1 WCAG 1.4.11 non-text floor on base-100."
+
+      assert ratio_200 >= 4.5,
+             "dark theme: --color-neutral (#{neutral}) against --color-base-200 (#{base_200}) " <>
+               "measured #{Float.round(ratio_200, 2)}:1 — the closing-band ground must also " <>
+               "clear the 4.5:1 WCAG AA text floor."
+
+      assert ratio_200 >= 3.0,
+             "dark theme: --color-neutral (#{neutral}) against --color-base-200 (#{base_200}) " <>
+               "measured #{Float.round(ratio_200, 2)}:1 — the outline border must clear the " <>
+               "3:1 WCAG 1.4.11 non-text floor on base-200."
+    end
+
+    test "light theme's outline-primary CTAs are untouched by the dark-mode fix (260910-gck)" do
+      light_block = light_theme_plugin_block()
+      light_primary = token_value(light_block, "--color-primary")
+      light_base_100 = token_value(light_block, "--color-base-100")
+      ratio = contrast_ratio(relative_luminance(light_primary), relative_luminance(light_base_100))
+
+      assert ratio >= 4.5,
+             "light theme: --color-primary (#{light_primary}) against --color-base-100 " <>
+               "(#{light_base_100}) measured #{Float.round(ratio, 2)}:1 — light mode's " <>
+               "outline-primary CTAs (Sumate, preview CTA, secondary button) must still " <>
+               "resolve straight from --color-primary with no dark-scoped override involved."
+
+      case Regex.run(~r/(?m)^\.pk-sumate-btn\s*\{([^}]*)\}/s, css_source()) do
+        [_, base_body] ->
+          refute base_body =~ ~r/color:|background:/,
+                 "The base (unscoped) `.pk-sumate-btn` rule must declare no `color`/`background` " <>
+                   "— light mode's outline treatment must keep coming from daisyUI's own " <>
+                   "`btn-outline btn-primary` utilities, untouched by this dark-only fix."
+
+        nil ->
+          flunk("No top-level `.pk-sumate-btn { ... }` rule found in assets/css/app.css")
+      end
+    end
   end
 end
