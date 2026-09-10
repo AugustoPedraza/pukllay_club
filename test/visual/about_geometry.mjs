@@ -1301,22 +1301,37 @@ const CHECKS = [
 // reserved clearance are captured in the same pass so a future reader can
 // see which one moved without re-running the probe.
 //
-// Plan 01.5-14 (G-01.5-11 gap closure, sketch 052 winner B): the bar is no
-// longer a surface flush to the viewport edge — it is a content-sized pill
-// floating `bottom: 20px` above it. A TIGHT fit is now the WRONG assertion:
-// a floating pill's whole design premise is a visible gap below it, so some
-// bare background between the footer and the pill's top edge is the
-// correct, intended state. The measurement now reads the PILL itself
-// (`.pk-about-cta-bar a`, the anchor — the wrapper is a full-width
-// transparent positioning frame and no longer a proxy for the pill's own
-// footprint), not the wrapper, and the check asserts two things, both
-// derived from the pill's own measured rect (never a literal): (1) the
-// footer's bottom edge sits at or above the pill's top edge — OVERLAP is
-// the failure, and it is the serious one, since it hides real footer
-// content; (2) the visible gap between them does not exceed the pill's own
-// footprint (its offset from the viewport's bottom edge plus its own
-// height, read live) — SLACK is the failure, and it means more bare
-// background is showing than one pill-worth of space accounts for.
+// Plan 01.5-14 (G-01.5-11 gap closure, sketch 052 winner B, SUPERSEDED):
+// briefly rewrote this oracle around a content-sized pill floating
+// `bottom: 20px` above the viewport edge, measuring `.pk-about-cta-bar a`
+// (the anchor) rather than the wrapper, on the premise that a floating
+// pill's whole design was a visible gap below it. Winner B was rejected at
+// round-3 UAT for covering the footer's "Powered by BGG" line — the exact
+// defect this oracle's BGG check (below) now exists to catch by name.
+//
+// Sketch 053 winner D (quick task 260910-av6, G-01.5-12): the wrapper
+// (`.pk-about-cta-bar`) is the surface again — its own rect is what can
+// cover content, so this is what the oracle measures once more. The reveal
+// is now asynchronous in two stages (the `.AboutHeaderMorph` rAF frame
+// flips `is-docked`, then the CSS transform transition runs for
+// `--duration-slow`), so `runBottomClearanceCase` below adds a settle wait
+// after the instant scroll — the same class of hazard as the `behavior:
+// "instant"` note above (that one fixed a stale SCROLL position; this one
+// fixes a stale TRANSITION state). `checkFixedBarFooterClearance` now
+// asserts three independent things, all derived from live measurements and
+// never from literals:
+//   1. VISIBLE AT THE BOTTOM — the bar actually revealed (`is-docked`) and
+//      sits flush with the viewport's bottom edge, proving it neither
+//      auto-hid nor is still mid-transition.
+//   2. BGG NEVER COVERED — `.pk-bgg-note`'s bottom edge is at or above the
+//      bar's top edge. This is winner B's exact rejection cause, named in
+//      the failure message so a future regression reads as a recurrence,
+//      not a fresh mystery.
+//   3. NO FOOTER OVERLAP / BOUNDED SLACK — the gap between the footer's
+//      bottom edge and the bar's top edge is non-negative (no overlap) and
+//      does not exceed the deliberate breathing step, itself derived as
+//      `reservedClearance - bar.height` (never restated as a literal
+//      step size).
 const CTA_BAR_VISIBLE_WIDTH = 390 // <=480px, matches app.css's own threshold
 
 async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
@@ -1340,7 +1355,7 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
 
   const measureResult = await client.send("Runtime.evaluate", {
     expression: `
-      JSON.stringify((() => {
+      (async () => {
         // Scrolled to the real page bottom — the only scroll position
         // where a clearance defect can be observed at all: the fixed bar
         // always covers the same viewport-relative slice, so only once the
@@ -1362,35 +1377,56 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
         // synchronous measurement.
         window.scrollTo({ top: document.body.scrollHeight, left: 0, behavior: "instant" });
 
+        // Settle wait (sketch 053 winner D): the reveal is now asynchronous
+        // in two stages — the .AboutHeaderMorph rAF frame flips is-docked
+        // on the NEXT frame after the scroll event fires, then the CSS
+        // transform/opacity transitions run for up to --duration-slow
+        // (280ms). A synchronous read immediately after scrollTo would
+        // capture a mid-flight or pre-flip rect — the same class of hazard
+        // as the 'behavior: instant' override above, just for a
+        // TRANSITION's settled state instead of a SCROLL position's. A
+        // double requestAnimationFrame guarantees at least one full paint
+        // cycle has run (so the scroll listener's rAF-scheduled frame has
+        // fired), then a timeout comfortably past 280ms lets the CSS
+        // transition itself finish.
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await new Promise((resolve) => setTimeout(resolve, 450));
+
         const rectOf = (el) => {
           if (!el) return null;
           const r = el.getBoundingClientRect();
           return { x: r.x, y: r.y, width: r.width, height: r.height };
         };
 
-        return {
-          // Plan 01.5-14: the PILL itself, not the wrapper — sketch 052
-          // winner B makes .pk-about-cta-bar a full-width transparent
-          // positioning frame, so its own rect no longer describes the
-          // pill's footprint (only the anchor inside it does).
-          pill: rectOf(document.querySelector('.pk-about-cta-bar a')),
-          footer: rectOf(document.querySelector('footer.pk-footer')),
-          // Plan 01.5-10: the reserved document-end clearance itself
+        const aboutHero = document.getElementById("about-hero");
+
+        return JSON.stringify({
+          // Sketch 053 winner D: the WRAPPER is the surface again, so its
+          // own top edge is what can cover content — not the anchor inside
+          // it (winner B's premise, now superseded).
+          bar: rectOf(document.querySelector(".pk-about-cta-bar")),
+          bggNote: rectOf(document.querySelector(".pk-bgg-note")),
+          footer: rectOf(document.querySelector("footer.pk-footer")),
+          // The reserved document-end clearance itself
           // (body:has(.pk-about-cta-bar)'s computed padding-bottom),
-          // captured alongside the two rects so the SUMMARY can report the
-          // pill's real footprint against what was actually reserved for
+          // captured alongside the rects so the SUMMARY can report the
+          // bar's real footprint against what was actually reserved for
           // it, without a second probe run.
           reservedClearance: parseFloat(getComputedStyle(document.body).paddingBottom),
-          // Plan 01.5-14: the pill is position:fixed, so its viewport-
-          // relative rect is scroll-invariant, but the SLACK bound below
-          // still needs the viewport's own height to convert "pill.y" into
-          // "the pill's footprint from the viewport's bottom edge" —
-          // captured live here rather than assumed as the 900px the sweep
-          // happens to set, so this stays correct if that ever changes.
+          // Whether the reveal trigger actually fired at the real page
+          // bottom — the D-03 boolean .AboutHeaderMorph toggles on
+          // #about-hero, reused verbatim as this bar's own entry trigger.
+          docked: aboutHero ? aboutHero.classList.contains("is-docked") : false,
+          // The bar is position:fixed, so its viewport-relative rect is
+          // scroll-invariant, but the flush-to-bottom check below still
+          // needs the viewport's own height — captured live here rather
+          // than assumed as the 900px the sweep happens to set, so this
+          // stays correct if that ever changes.
           viewportHeight: window.innerHeight,
-        };
-      })())
+        });
+      })()
     `,
+    awaitPromise: true,
     returnByValue: true,
   })
 
@@ -1398,63 +1434,158 @@ async function runBottomClearanceCase({ client, baseUrl, viewport, theme }) {
 }
 
 function checkFixedBarFooterClearance(measured, ctx) {
-  const { pill, footer, reservedClearance, viewportHeight } = measured
+  const { bar, bggNote, footer, reservedClearance, viewportHeight, docked } = measured
+  const label = `[${ctx.viewport}px, ${ctx.theme}]`
+  const failures = []
 
-  if (!pill) {
+  if (!bar || bar.width === 0 || bar.height === 0) {
     return [
-      `fixed-bar footer clearance: could not measure the sticky bar's pill ` +
-        `(.pk-about-cta-bar a) at [${ctx.viewport}px, ${ctx.theme}]`,
+      `fixed-bar footer clearance: could not measure a non-zero .pk-about-cta-bar rect at ` +
+        `${label} — expected it visible (docked) at the real page bottom at this width.`,
     ]
   }
-  if (pill.width === 0 || pill.height === 0) {
-    return [
-      `fixed-bar footer clearance: the sticky bar's pill has a zero-size rect at ` +
-        `[${ctx.viewport}px, ${ctx.theme}] — expected it visible at this width`,
-    ]
+
+  // 1. VISIBLE AT THE BOTTOM — the reveal trigger fired and the bar is
+  // flush with the viewport's own bottom edge, proving it neither
+  // auto-hid (there is no such mechanism) nor is still mid-transition
+  // after the settle wait above.
+  if (!docked) {
+    failures.push(
+      `fixed-bar footer clearance: #about-hero did not carry is-docked at the real page bottom ` +
+        `at ${label} — the bar's ONE reveal trigger (D-03 reuse) never fired, so it never ` +
+        `appeared at all.`,
+    )
   }
+
+  const barBottomGap = viewportHeight - (bar.y + bar.height)
+
+  if (Math.abs(barBottomGap) > CONTACT_TOLERANCE_PX) {
+    failures.push(
+      `fixed-bar footer clearance: the bar's bottom edge is ${barBottomGap.toFixed(2)}px from ` +
+        `the viewport's own bottom edge at ${label} (expected within ${CONTACT_TOLERANCE_PX}px) ` +
+        `— sketch 053 winner D is a FLUSH bar (bottom: 0), so it should sit exactly at the ` +
+        `viewport edge once revealed.`,
+    )
+  }
+
+  // 2. BGG NEVER COVERED — the exact rejection cause of sketch 052 winner
+  // B at round-3 UAT.
+  if (!bggNote) {
+    failures.push(`fixed-bar footer clearance: could not measure .pk-bgg-note at ${label}.`)
+  } else if (bggNote.y + bggNote.height > bar.y + CONTACT_TOLERANCE_PX) {
+    failures.push(
+      `fixed-bar footer clearance: the "Powered by BGG" line (.pk-bgg-note, bottom edge ` +
+        `${(bggNote.y + bggNote.height).toFixed(2)}) extends below the bar's top edge ` +
+        `(${bar.y.toFixed(2)}) at ${label} — this is the EXACT rejection cause of sketch 052 ` +
+        `winner B at round-3 UAT ("covers the footer's Powered by BGG line"), which sketch 053 ` +
+        `winner D and this check both exist to prevent from recurring.`,
+    )
+  }
+
+  // 3. NO FOOTER OVERLAP / BOUNDED SLACK — the gap between the footer's
+  // bottom edge and the bar's top edge must be non-negative (no overlap)
+  // and no larger than the deliberate breathing step, itself derived
+  // live rather than restated as a literal.
   if (!footer) {
-    return [`fixed-bar footer clearance: could not measure <footer> at [${ctx.viewport}px, ${ctx.theme}]`]
+    failures.push(`fixed-bar footer clearance: could not measure footer.pk-footer at ${label}.`)
+  } else {
+    const distance = bar.y - (footer.y + footer.height)
+    const step = reservedClearance - bar.height
+    const context =
+      `bar height=${bar.height.toFixed(2)}px, reserved clearance=` +
+      `${Number.isFinite(reservedClearance) ? reservedClearance.toFixed(2) : "?"}px, breathing ` +
+      `step=${step.toFixed(2)}px, footer bottom=${(footer.y + footer.height).toFixed(2)}, bar ` +
+      `top=${bar.y.toFixed(2)}`
+
+    if (distance < -CONTACT_TOLERANCE_PX) {
+      failures.push(
+        `fixed-bar footer clearance: OVERLAP of ${(-distance).toFixed(2)}px — the bar covers ` +
+          `real footer content at ${label} (${context}) — the document-end clearance is not ` +
+          `reserving enough. This is the serious direction: it hides content a member needs to ` +
+          `read or tap.`,
+      )
+    } else if (distance > step + CONTACT_TOLERANCE_PX) {
+      failures.push(
+        `fixed-bar footer clearance: SLACK of ${distance.toFixed(2)}px between the footer's ` +
+          `bottom edge and the bar's top edge at ${label} (${context}) — expected at most the ` +
+          `deliberate breathing step (${step.toFixed(2)}px, derived as reserved clearance minus ` +
+          `bar height), not more.`,
+      )
+    }
   }
 
-  // Plan 01.5-14: the pill's own footprint from the viewport's bottom edge
-  // — its `bottom` offset PLUS its own height — derived here from the
-  // pill's measured rect and the live viewport height, never restated as a
-  // literal. A future change to the sketch's offset or to .pk-sumate-btn's
-  // height moves this bound automatically, the same derived-not-literal
-  // discipline this file's other budget checks already follow.
-  const pillFootprint = viewportHeight - pill.y
+  return failures
+}
 
-  // Positive = the pill's top sits BELOW the footer's bottom edge — the
-  // footer clears the pill, some visible gap exists (by design, see the
-  // section comment above). Negative = the pill's top sits ABOVE the
-  // footer's bottom edge — OVERLAP, the pill covers real footer content.
-  const distance = pill.y - (footer.y + footer.height)
-  const context =
-    `pill footprint (offset+height)=${pillFootprint.toFixed(2)}px, reserved clearance=` +
-    `${Number.isFinite(reservedClearance) ? reservedClearance.toFixed(2) : "?"}px, ` +
-    `footer bottom=${(footer.y + footer.height).toFixed(2)}, pill top=${pill.y.toFixed(2)}`
+// ---------------------------------------------------------------------------
+// Quick task 260910-av6, Task 3: dock-vs-hero-CTA scroll-window diagnostic
+// ---------------------------------------------------------------------------
+// LOG-ONLY, never a failure. Quantifies the one place the locked mechanism
+// (reuse the docked boolean as the bar's entry trigger) and the stated
+// intent ("hidden until the hero's own Sumate scrolls out of view") can
+// diverge: if the bar's own dock trigger fires at a SMALLER scroll delta
+// than the delta at which the hero's own Sumate CTA leaves the viewport,
+// there is a scroll window where BOTH the hero CTA and the sticky bar are
+// on screen at once — two "Sumate" asks visible simultaneously. This task
+// deliberately does NOT change the trigger; it only measures and reports
+// the window, so a developer can judge whether it reads as a duplicate ask.
+async function runDockVsHeroCtaDiagnostic({ client, baseUrl, viewport }) {
+  await client.send("Emulation.setDeviceMetricsOverride", {
+    width: viewport,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  })
 
-  if (distance < -CONTACT_TOLERANCE_PX) {
-    return [
-      `fixed-bar footer clearance: OVERLAP of ${(-distance).toFixed(2)}px — the floating pill ` +
-        `covers real footer content at [${ctx.viewport}px, ${ctx.theme}] (${context}) — the ` +
-        `document-end clearance is not reserving enough. This is the serious direction: it ` +
-        `hides content a member needs to read or tap.`,
-    ]
-  }
+  const navigated = client.once("Page.loadEventFired")
+  await client.send("Page.navigate", { url: `${baseUrl}/quienes-somos` })
+  await navigated
 
-  if (distance > pillFootprint + CONTACT_TOLERANCE_PX) {
-    return [
-      `fixed-bar footer clearance: SLACK of ${distance.toFixed(2)}px between the footer's bottom ` +
-        `edge and the pill's top edge at [${ctx.viewport}px, ${ctx.theme}] (${context}) — expected ` +
-        `at most the pill's own footprint (${pillFootprint.toFixed(2)}px) of bare page background ` +
-        `below the footer, not more. A floating pill's design premise is SOME gap, so this bound ` +
-        `is generous by design — it only fails when more background shows than the pill itself ` +
-        `accounts for.`,
-    ]
-  }
+  const result = await client.send("Runtime.evaluate", {
+    expression: `
+      JSON.stringify((() => {
+        const anchor = document.querySelector("#about-hero [data-morph-anchor]");
+        const header = document.getElementById("app-header");
+        const sumate = document.querySelector("#about-hero a.pk-sumate-btn");
+        if (!anchor || !header || !sumate) {
+          return { error: "missing #about-hero [data-morph-anchor], #app-header or #about-hero a.pk-sumate-btn" };
+        }
 
-  return []
+        // Mirrors .AboutHeaderMorph's own this.dockRect() exactly: walk
+        // BOTH theme brand marks and take the one that actually has
+        // layout size (the other is display:none for the inactive theme).
+        const marks = header.querySelectorAll(".pk-brand-mark");
+        let dockRect = null;
+        for (const mark of marks) {
+          const rect = mark.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            dockRect = rect;
+            break;
+          }
+        }
+        if (!dockRect) return { error: "no visible .pk-brand-mark in #app-header" };
+
+        const anchorRect = anchor.getBoundingClientRect();
+        const sumateRect = sumate.getBoundingClientRect();
+
+        return {
+          // The hook docks when natural.top <= dock.top (this.frame()).
+          // At scrollY=0, scrolling down by (anchorRect.top - dockRect.top)
+          // brings anchor.top down to dock.top — the same arithmetic the
+          // hook itself performs every frame, just solved for scrollY
+          // once instead of re-evaluated continuously.
+          dockScrollDelta: anchorRect.top - dockRect.top,
+          // sumateRect.bottom (at scrollY=0) IS the scroll delta at which
+          // the hero Sumate's bottom edge reaches the viewport's top edge
+          // (y=0) — the point it fully leaves view scrolling down.
+          heroCtaScrollDelta: sumateRect.bottom,
+        };
+      })())
+    `,
+    returnByValue: true,
+  })
+
+  return JSON.parse(result.result.value)
 }
 
 // ---------------------------------------------------------------------------
@@ -1539,6 +1670,31 @@ async function main() {
       }
     }
 
+    // Quick task 260910-av6, Task 3: dock-vs-hero-CTA scroll-window
+    // diagnostic — log-only, run once (page geometry, not theme-dependent),
+    // ahead of the bottom-clearance loop below.
+    try {
+      const diag = await runDockVsHeroCtaDiagnostic({
+        client,
+        baseUrl,
+        viewport: CTA_BAR_VISIBLE_WIDTH,
+      })
+
+      if (diag.error) {
+        log(`[dock-vs-hero-CTA diagnostic @ ${CTA_BAR_VISIBLE_WIDTH}px] SKIPPED: ${diag.error}`)
+      } else {
+        const diff = diag.heroCtaScrollDelta - diag.dockScrollDelta
+        log(
+          `[dock-vs-hero-CTA diagnostic @ ${CTA_BAR_VISIBLE_WIDTH}px] bar's dock trigger fires at ` +
+            `scrollY=${diag.dockScrollDelta.toFixed(2)}px, hero Sumate leaves the viewport at ` +
+            `scrollY=${diag.heroCtaScrollDelta.toFixed(2)}px, difference=${diff.toFixed(2)}px ` +
+            `(${diff > 0 ? "POSITIVE — a scroll window exists where the hero CTA and the bar are both on screen" : "non-positive — no such window"})`,
+        )
+      }
+    } catch (err) {
+      log(`[dock-vs-hero-CTA diagnostic @ ${CTA_BAR_VISIBLE_WIDTH}px] SKIPPED (error): ${err.message}`)
+    }
+
     // Plan 01.5-08: fixed-bar/footer non-intersection, its own small loop —
     // scroll-dependent, so it cannot share the unscrolled per-case sweep
     // above. Runs at the one width where the bar is visible (390, <=480px),
@@ -1555,12 +1711,13 @@ async function main() {
         })
         casesRun++
 
-        if (measured.pill) {
+        if (measured.bar) {
           log(
-            `${label} pill top=${measured.pill.y.toFixed(2)} pill height=` +
-              `${measured.pill.height.toFixed(2)} reserved clearance=` +
+            `${label} bar top=${measured.bar.y.toFixed(2)} bar height=` +
+              `${measured.bar.height.toFixed(2)} docked=${measured.docked} reserved clearance=` +
               `${Number.isFinite(measured.reservedClearance) ? measured.reservedClearance.toFixed(2) : "?"} ` +
-              `footer bottom=${measured.footer ? (measured.footer.y + measured.footer.height).toFixed(2) : "?"}`,
+              `footer bottom=${measured.footer ? (measured.footer.y + measured.footer.height).toFixed(2) : "?"} ` +
+              `bgg bottom=${measured.bggNote ? (measured.bggNote.y + measured.bggNote.height).toFixed(2) : "?"}`,
           )
         }
 
