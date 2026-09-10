@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 20
+open_count: 21
 waived_count: 0
 fixed_count: 4
-total_count: 24
-last_updated: 2026-09-08T17:30:26.779Z
+total_count: 25
+last_updated: 2026-09-10T14:35:17.674Z
 ---
 
 # Broken Windows Ledger
@@ -39,6 +39,7 @@ last_updated: 2026-09-08T17:30:26.779Z
 | 22 | 01.3-12 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-12 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): on a real iOS/Mobile-Safari device at 390px and 1440px, both light and dark theme, across Honey Buzz (113)/Mille Fiori (193)/Illusion (396)/a short-description game/7 Wonders Duel, verify the chevron trails the clipped third line (not a row below it), the reserved right gutter reads acceptably on lines 1-2 at 390px (else apply the planner_note's pre-decided padding-right:1.75rem + hover/active-background-neutralised fallback pair, not a hand-tuned middle value), a near-full-width third line stays clear of the chevron, repeated expand/collapse stays reliable with no jump/flicker at the absolute/in-flow position switch, and the description stays justified with the third line ending on a whole word. | fixed |  | 2026-09-01T01:54:50.616Z | 2026-09-01T11:03:15.710Z |
 | 23 | 01.4 | stub | priv/static/images/about-maps-thumb-dark.jpg |  | Dark Maps thumbnail is a byte-identical copy of the light asset — no genuine dark-mode capture achieved this session; needs a real dark-tile capture (likely via the Maps mobile app), no code change required | fixed | moot; the dark asset was deleted in plan 01.4-12 along with its light twin when D-11 replaced the static screenshot pair with a live embed. There is no longer a dark capture to obtain. | 2026-09-05T14:47:28.044Z | 2026-09-06T01:50:23.255Z |
 | 24 | 01.5 | unrun-verify | .planning/phases/01.5-about-page-cta-rhythm-header-morph-refinement-implement-sket/01.5-07-SUMMARY.md |  | Cierre band 70vh proportion + visual balance at 768px/1280px deferred to end-of-phase human walkthrough (coverage D6) | open |  | 2026-09-08T17:30:26.779Z |  |
+| 25 | quick-260910-efe | deviation | test/pukllay_club_web/live/catalog_show_test.exs | 4316 | Rewrote .pk-pill-tag WCAG contrast test to measure what actually renders per theme (--color-primary in light, dark-scoped --color-neutral override in dark) instead of a stale hardcoded-token comparison, after sketch 055 Option A changed dark's primary-as-text mechanism; 4.5:1 floor unchanged | open |  | 2026-09-10T14:35:17.674Z |  |
 
 ````json
 [
@@ -328,6 +329,18 @@ last_updated: 2026-09-08T17:30:26.779Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-08T17:30:26.779Z",
+    "resolved_at": null
+  },
+  {
+    "id": 25,
+    "kind": "deviation",
+    "phase": "quick-260910-efe",
+    "file": "test/pukllay_club_web/live/catalog_show_test.exs",
+    "line": 4316,
+    "description": "Rewrote .pk-pill-tag WCAG contrast test to measure what actually renders per theme (--color-primary in light, dark-scoped --color-neutral override in dark) instead of a stale hardcoded-token comparison, after sketch 055 Option A changed dark's primary-as-text mechanism; 4.5:1 floor unchanged",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-10T14:35:17.674Z",
     "resolved_at": null
   }
 ]

@@ -34,7 +34,7 @@ even without already knowing board-game vocabulary.
 Phase: 01.5 (About Page CTA Rhythm & Header Morph Refinement) — EXECUTING
 Plan: 1 of 14
 Status: Executing Phase 01.5
-Last activity: 2026-09-10 - Completed quick task 260910-dev: Sketch-only exploration of dark-mode color composition (5 palette hypotheses + 2 rounds of developer-directed refinement, winner recorded)
+Last activity: 2026-09-10 - Completed quick task 260910-efe: Implemented sketch 054's dark theme, resolved a WCAG contrast regression via sketch 055 (Option A, dark-scoped --color-neutral)
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 plans (Phase 02 not yet planned)
 
@@ -265,6 +265,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260910-efe | Implement sketch 054's winning dark theme (Variant A ladder + W2 Deep Jewel primary) in `assets/css/app.css`; re-sync `.planning/sketches/themes/default.css`; blocking checkpoint found the winning primary fails WCAG contrast as text (17 rules) — resolved via sketch 055 (developer picked Option A, dark-scoped `--color-neutral` override) | 2026-09-10 | 74b731c | Complete (`mix quality` 903 tests/0 failures, `check-theme-drift.sh` exit 0, palette byte-exact) | [260910-efe-implementar-en-assets-css-app-css-el-the](./quick/260910-efe-implementar-en-assets-css-app-css-el-the/) |
 | 260910-dev | Sketch-only exploration to fix dark mode's color composition (too dark): sketch 054, 5 palette hypotheses over one composed real screen, measured WCAG contrast per variant. Developer picked Variant A (Lifted Ladder) as base, then directed a round-2 warm-primary refinement; winner is A's ladder + W2 "Deep Jewel" primary (`--color-primary: #8C2BB6`, white primary-content). Implementing in `assets/css/app.css` is a separate follow-up quick task. | 2026-09-10 | b532c6a | Complete (sketch-only; assets/css/app.css and .planning/sketches/themes/default.css unchanged, verified at every task boundary; full 13-token winner table recorded in README.md and SUMMARY.md) | [260910-dev-mejorar-arreglar-la-composici-n-de-color](./quick/260910-dev-mejorar-arreglar-la-composici-n-de-color/) |
 | 260824-9zo | On desktop, make the content respect the shell width | 2026-08-24 | 9b47d4e | | [260824-9zo-on-desktop-make-the-content-respect-the-](./quick/260824-9zo-on-desktop-make-the-content-respect-the-/) |
 | 260824-b71 | Polish catalog search filtering UX: mechanics, content hierarchy, desktop no-scroll, mobile bottom sheet | 2026-08-24 | 64a4cde | Complete | [260824-b71-polish-catalog-search-filtering-ux-defin](./quick/260824-b71-polish-catalog-search-filtering-ux-defin/) |
