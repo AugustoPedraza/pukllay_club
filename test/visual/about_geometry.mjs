@@ -424,7 +424,46 @@ async function runCase({ client, baseUrl, viewport, theme, height = 900 }) {
           : null;
         const footerBackground = footerEl ? getComputedStyle(footerEl).backgroundColor : null;
 
-        return { bands, cierre, cierreInner, footer, lastBandBackground, footerBackground, sumateCta };
+        // Plan 01.5-11 (G-01.5-8 gap closure, second lever): computed
+        // font-size and colour of the Cierre closing signature and of
+        // .pk-footer-meta — the exact five-attribute-collision pair the
+        // diagnosis measured (font-size and colour are the two properties
+        // this fix's own >= 640px rule can move; line-height/family/weight
+        // are shared type-scale defaults this fix does not touch). Read via
+        // getComputedStyle, same reasoning as lastBandBackground/
+        // footerBackground above: the resolved value is what the eye reads,
+        // not the declared rule. Also captures the signature's own
+        // rendered width, following sumateCta's pattern above, so this
+        // task's whole >= 640px scoping argument (the signature's width is
+        // an operand G-01.5-10 spends and must not move) is evidenced
+        // rather than merely asserted.
+        const signatureEl = document.querySelector('#cierre .pk-about-closing-meta');
+        const footerMetaEl = document.querySelector('.pk-footer-meta');
+        const signatureType = signatureEl
+          ? (() => {
+              const cs = getComputedStyle(signatureEl);
+              const rect = signatureEl.getBoundingClientRect();
+              return { fontSize: cs.fontSize, color: cs.color, width: rect.width };
+            })()
+          : null;
+        const footerMetaType = footerMetaEl
+          ? (() => {
+              const cs = getComputedStyle(footerMetaEl);
+              return { fontSize: cs.fontSize, color: cs.color };
+            })()
+          : null;
+
+        return {
+          bands,
+          cierre,
+          cierreInner,
+          footer,
+          lastBandBackground,
+          footerBackground,
+          sumateCta,
+          signatureType,
+          footerMetaType,
+        };
       })())
     `,
     returnByValue: true,
@@ -820,6 +859,59 @@ function checkBottomBoundaryBudget(measured, ctx) {
   return []
 }
 
+// Plan 01.5-11 (G-01.5-8 gap closure, second lever). No gate anywhere in
+// this repo observes TYPE-REGISTER SIMILARITY between two elements — every
+// existing check here is geometry (rects, gaps, distances) or a single
+// element's own surface. `.pk-about-eyebrow` (the signature's class) and
+// `.pk-footer-meta` sit 475 lines apart in app.css and independently
+// declare the same font-size/colour pair because they express the same
+// design-system role, so nothing structural stops them re-converging — a
+// future edit to either rule could silently restore the exact collision
+// this plan closes, with every other check in this file still green (none
+// of them look at font-size or colour of these two specific elements
+// together). This check exists to make that re-convergence a failure.
+//
+// Fails when BOTH font-size AND colour match between the signature and
+// .pk-footer-meta — the conjunction is the collision the diagnosis
+// measured (E-05: five attributes identical at once), not either property
+// alone; line-height/font-family/font-weight are shared type-scale
+// defaults neither this fix nor a plausible future edit is likely to
+// diverge on, so testing the two properties this plan's own rule can move
+// is the meaningful test. Must hold in BOTH themes: the collision holds in
+// dark theme with different literals, exactly like the surface equality
+// above.
+function checkSignatureFooterTypeCollision(measured, ctx) {
+  const { signatureType, footerMetaType } = measured
+
+  if (!signatureType) {
+    return [
+      `signature/footer-meta type collision: could not measure #cierre .pk-about-closing-meta at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+  if (!footerMetaType) {
+    return [
+      `signature/footer-meta type collision: could not measure .pk-footer-meta at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}]`,
+    ]
+  }
+
+  const sameFontSize = signatureType.fontSize === footerMetaType.fontSize
+  const sameColor = signatureType.color === footerMetaType.color
+
+  if (sameFontSize && sameColor) {
+    return [
+      `signature/footer-meta type collision: the Cierre closing signature and .pk-footer-meta ` +
+        `both compute font-size=${signatureType.fontSize} and color=${signatureType.color} at ` +
+        `[${ctx.viewport}px x ${ctx.height}px, ${ctx.theme}] — the exact collision that made the ` +
+        `signature read as the footer's own meta text instead of the closing statement's last ` +
+        `line (G-01.5-8).`,
+    ]
+  }
+
+  return []
+}
+
 // Plan 01.5-10 (G-01.5-4 gap closure). This repo's first assertion that
 // observes the Sumate button's own rendered box rather than the presence of
 // a class name — no ExUnit test can (rendered geometry is invisible to a
@@ -916,6 +1008,7 @@ const CHECKS = [
   checkCierreBottomBreathingRoom,
   checkCierreMobileInvariance,
   checkBottomBoundaryBudget,
+  checkSignatureFooterTypeCollision,
   checkSumateButtonGeometry,
 ]
 

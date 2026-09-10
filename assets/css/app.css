@@ -2865,6 +2865,62 @@ body.pk-drawer-open {
   #cierre h2 {
     font-size: clamp(2rem, 4vw, 3rem);
   }
+
+  /* G-01.5-8 gap closure (plan 01.5-11,
+     .planning/debug/G-01.5-8-cierre-tagline-footer-grouping.md), second
+     lever. The closing signature (`.pk-about-eyebrow.pk-about-closing-
+     meta`, markup above) and `.pk-footer-meta` independently declare the
+     SAME two lines — `font-size: 0.75rem` + `color: var(--color-neutral)`
+     — because both express this design system's "de-emphasised meta" role;
+     neither is wrong on its own terms. Measured against `.pk-footer-meta`
+     in both themes they computed to FIVE identical type attributes at
+     once — font-size, line-height, colour, font-family, font-weight — and
+     shared nothing with their own group (the 48px Bebas Neue heading, the
+     bordered pill button). With no container edge separating the two
+     surfaces (see the footer fill rule far below), Gestalt similarity
+     decided membership, and the signature read as the first of three
+     same-register grey Inter runs stacked down one continuous field
+     instead of the last line of the closing statement above it.
+
+     This is the SECOND of two levers, shipped alongside the surface fill
+     rather than instead of it: a fix resting on one sub-3:1 contrast ratio
+     is not safe on this codebase's record (three prior self-verified
+     colour-only fixes here were corrected on real-device review), and
+     colour is the one channel whose effectiveness does not depend on a
+     contrast ratio at all.
+
+     Colour ONLY, and only at this >= 640px regime — not size, not
+     text-transform, not letter-spacing, not font-weight. Two independent
+     reasons, not one:
+       (1) The five-attribute collision is exact only here. The
+           `@media (max-width: 639px)` block already gives this element a
+           different font-size (10px vs this regime's 12px) and its own
+           letter-spacing, so the collision is already partly broken below
+           640px — moving anything there would be solving an already-
+           smaller problem for no reason.
+       (2) The signature's rendered width below 640px is an OPERAND in
+           G-01.5-10's mobile heading/tagline balance argument (a later
+           plan spends it) — moving size or tracking here would shift that
+           operand out from under that plan's feet. Colour moves no
+           geometry at all, at any width, so this lever and G-01.5-10 can
+           both touch this element for two unrelated reasons without
+           colliding.
+
+     `var(--color-base-content)` is this theme's ordinary body ink — not a
+     new token, the same one `#cierre h2` above already resolves through —
+     chosen because it is definitionally NOT `--color-neutral`, the token
+     `.pk-footer-meta` uses, without inventing a third de-emphasis token
+     this design system does not otherwise have.
+
+     Recorded next lever, if colour alone reads insufficient at the
+     end-of-phase walkthrough: `text-transform: none`. Named here rather
+     than shipped because it is the one option that narrows the rendered
+     line (removing forced uppercasing shortens the string's measured
+     width) and therefore HELPS the G-01.5-10 mobile balance gap instead of
+     competing with it, unlike a size or weight change. */
+  #cierre .pk-about-closing-meta {
+    color: var(--color-base-content);
+  }
 }
 
 /* The dark FAQ band's token mapping (Claude's discretion, D-08): the

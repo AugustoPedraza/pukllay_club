@@ -1146,6 +1146,70 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
   end
 
+  # G-01.5-8 gap closure (plan 01.5-11,
+  # .planning/debug/G-01.5-8-cierre-tagline-footer-grouping.md), second
+  # lever's source guard. `.pk-about-eyebrow` and `.pk-footer-meta`
+  # independently declare the same font-size/color pair, 475 lines apart in
+  # app.css, because they express the same "de-emphasised meta" role —
+  # nothing structural stops them re-converging. test/visual/about_geometry.mjs
+  # has its own runtime check for this (checkSignatureFooterTypeCollision),
+  # but that probe needs a booted dev server and is not part of `mix test`;
+  # this is the source-level guard that runs in the normal suite.
+  describe "Cierre closing signature desktop type register (G-01.5-8 gap closure, plan 01.5-11)" do
+    test "the >=640px block gives #cierre .pk-about-closing-meta a color that is not var(--color-neutral)" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+      assert body, "Expected to extract the @media (min-width: 640px) block body."
+
+      rule = Regex.run(~r/#cierre \.pk-about-closing-meta\s*\{([^}]*)\}/s, body)
+
+      assert rule,
+             "Expected a #cierre .pk-about-closing-meta rule inside the @media (min-width: 640px) " <>
+               "block. Without it the Cierre closing signature (\"Pukllay Club · San Salvador de " <>
+               "Jujuy, Argentina\") keeps resolving font-size, line-height, color, font-family and " <>
+               "font-weight identically to .pk-footer-meta at desktop widths — the exact " <>
+               "five-attribute collision G-01.5-8's diagnosis measured in both themes, which read " <>
+               "the signature as the footer's own meta text instead of the closing statement's " <>
+               "last line. The signature is .pk-about-eyebrow's only consumer on this page, so " <>
+               "this override regresses no other caller."
+
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/color\s*:/,
+             "Expected the desktop #cierre .pk-about-closing-meta rule to declare a color."
+
+      refute rule_body =~ ~r/color\s*:\s*var\(--color-neutral\)/,
+             "Expected the desktop #cierre .pk-about-closing-meta color to resolve through a token " <>
+               "OTHER than var(--color-neutral) — that is the exact token .pk-footer-meta uses, and " <>
+               "reusing it here is the collision G-01.5-8 diagnosed: five computed type attributes " <>
+               "(font-size, line-height, color, font-family, font-weight) identical between the " <>
+               "signature and the footer's own meta text, in both themes, sharing nothing with the " <>
+               "signature's own group (the 48px heading, the bordered pill button)."
+    end
+
+    test "the <=639px signature rule (D-13) is untouched — no color declared there, size stays 10px" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      rule = Regex.run(~r/#cierre \.pk-about-closing-meta\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected the <=639px #cierre .pk-about-closing-meta rule to still exist."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/font-size\s*:\s*10px/,
+             "Expected the <=639px signature rule to keep its own font-size: 10px unchanged — this " <>
+               "gap closure is scoped to >=640px only, because the signature's rendered width below " <>
+               "640px is an operand plan 01.5-13's G-01.5-10 mobile balance argument spends, and this " <>
+               "lever deliberately moves no geometry."
+
+      refute rule_body =~ ~r/color\s*:/,
+             "Expected the <=639px signature rule to declare no color of its own — this gap " <>
+               "closure's colour lever is desktop-only (the type collision is exact only there); the " <>
+               "<=639px signature keeps inheriting .pk-about-eyebrow's base var(--color-neutral) " <>
+               "unchanged, matching the behavior spec's 'byte-identical below 640px' requirement."
+    end
+  end
+
   # Plan 01.5-03, Task 2 (D-12): every Cierre internal gap comes from ONE
   # flex gap on the content column, never per-element margins.
   describe "Cierre one flex gap (plan 01.5-03, D-12)" do
