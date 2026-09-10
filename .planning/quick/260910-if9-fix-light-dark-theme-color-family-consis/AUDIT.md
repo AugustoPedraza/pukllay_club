@@ -299,5 +299,169 @@ depending on whether the label is a section heading or an inline stat label.
 
 ## Post-change measurement
 
-Not yet run — Task 2 (developer decision) has not landed. This section is appended by Task 3 after
-the chosen values are applied to `assets/css/app.css`.
+Developer decision (recorded verbatim in `260910-if9-SUMMARY.md`): **Pick 1 = C2** (rotate dark's
+`--color-base-100/200/300` onto the brand hue, holding L and C), **Pick 2 = W1** (no label-ink
+change). Applied to `assets/css/app.css`; re-ran `oklch-audit.mjs` against the changed palette:
+
+```
+OKLCh audit -- quick task 260910-if9
+Threshold (proposal, Task 2 confirms): 8 deg intra-theme hue spread
+
+.pk-pill-neutral
+  light:
+    fill    base-200  #F3ECFA  L95.3 C0.020 H308.2
+    border  base-300  #E3D3F0  L88.9 C0.043 H310.1
+    ink     neutral   #6B5B7B  L49.9 C0.053 H307.3
+    intra-theme max hue spread: 2.8 deg -- PASS (threshold 8 deg)
+  dark:
+    fill    base-200  #441659  L30.8 C0.118 H313.1
+    border  base-300  #531B6D  L35.2 C0.139 H312.7
+    ink     neutral   #C59CDC  L75.2 C0.100 H313.1
+    intra-theme max hue spread: 0.4 deg -- PASS (threshold 8 deg)
+  cross-theme (light vs dark):
+    fill    hue delta 4.8 deg, chroma ratio 5.92x (light C0.020 / dark C0.118)
+    ink     hue delta 5.8 deg, chroma ratio 1.87x (light C0.053 / dark C0.100)
+
+.pk-pill-outline
+  light:
+    fill    transparent (not populated)
+    border  base-300  #E3D3F0  L88.9 C0.043 H310.1
+    ink     neutral   #6B5B7B  L49.9 C0.053 H307.3
+    intra-theme max hue spread: 2.8 deg -- PASS (threshold 8 deg)
+  dark:
+    fill    transparent (not populated)
+    border  base-300  #531B6D  L35.2 C0.139 H312.7
+    ink     neutral   #C59CDC  L75.2 C0.100 H313.1
+    intra-theme max hue spread: 0.4 deg -- PASS (threshold 8 deg)
+  cross-theme (light vs dark):
+    fill: N/A (not populated in one or both themes)
+    ink     hue delta 5.8 deg, chroma ratio 1.87x (light C0.053 / dark C0.100)
+
+.pk-pill-accent
+  light:
+    fill    accent    #EDE1F7  L92.6 C0.032 H309.9
+    border  accent    #EDE1F7  L92.6 C0.032 H309.9
+    ink     accent-content #3D096D  L30.4 C0.151 H300.1
+    intra-theme max hue spread: 9.9 deg -- FAIL (threshold 8 deg)
+  dark:
+    fill    accent    #3A1F47  L29.5 C0.077 H313.7
+    border  accent    #3A1F47  L29.5 C0.077 H313.7
+    ink     accent-content #EBD7F4  L90.4 C0.044 H315.5
+    intra-theme max hue spread: 1.7 deg -- PASS (threshold 8 deg)
+  cross-theme (light vs dark):
+    fill    hue delta 3.8 deg, chroma ratio 2.40x (light C0.032 / dark C0.077)
+    ink     hue delta 15.4 deg, chroma ratio 3.40x (light C0.151 / dark C0.044)
+
+.pk-pill-tag
+  light:
+    fill    transparent (not populated)
+    border  transparent (not populated)
+    ink     primary   #3D096D  L30.4 C0.151 H300.1
+    intra-theme max hue spread: 0.0 deg -- PASS (threshold 8 deg)
+  dark:
+    fill    transparent (not populated)
+    border  transparent (not populated)
+    ink     pk-ink-brand #C791E5  L73.9 C0.131 H312.9
+    intra-theme max hue spread: 0.0 deg -- PASS (threshold 8 deg)
+  cross-theme (light vs dark):
+    fill: N/A (not populated in one or both themes)
+    ink     hue delta 12.8 deg, chroma ratio 1.16x (light C0.151 / dark C0.131)
+
+.pk-pill-selected
+  light:
+    fill    primary   #3D096D  L30.4 C0.151 H300.1
+    border  primary   #3D096D  L30.4 C0.151 H300.1
+    ink     primary-content #FFFFFF  L100.0 C0.000 H89.9
+    intra-theme max hue spread: 149.8 deg -- FAIL (threshold 8 deg)
+  dark:
+    fill    primary   #8C2BB6  L50.2 C0.210 H313.1
+    border  primary   #8C2BB6  L50.2 C0.210 H313.1
+    ink     primary-content #FFFFFF  L100.0 C0.000 H89.9
+    intra-theme max hue spread: 136.8 deg -- FAIL (threshold 8 deg)
+  cross-theme (light vs dark):
+    fill    hue delta 13.0 deg, chroma ratio 1.39x (light C0.151 / dark C0.210)
+    ink     hue delta 0.0 deg, chroma ratio 1.00x (light C0.000 / dark C0.000)
+
+.pk-pill-interactive:hover
+  light:
+    fill    null      (not populated)
+    border  pk-ink-brand #3D096D  L30.4 C0.151 H300.1
+    ink     pk-ink-brand #3D096D  L30.4 C0.151 H300.1
+    intra-theme max hue spread: 0.0 deg -- PASS (threshold 8 deg)
+  dark:
+    fill    null      (not populated)
+    border  pk-ink-brand #C791E5  L73.9 C0.131 H312.9
+    ink     pk-ink-brand #C791E5  L73.9 C0.131 H312.9
+    intra-theme max hue spread: 0.0 deg -- PASS (threshold 8 deg)
+  cross-theme (light vs dark):
+    fill: N/A (not populated in one or both themes)
+    ink     hue delta 12.8 deg, chroma ratio 1.16x (light C0.151 / dark C0.131)
+
+.pk-chip
+  light:
+    fill    transparent (not populated)
+    border  base-300  #E3D3F0  L88.9 C0.043 H310.1
+    ink     neutral   #6B5B7B  L49.9 C0.053 H307.3
+    intra-theme max hue spread: 2.8 deg -- PASS (threshold 8 deg)
+  dark:
+    fill    transparent (not populated)
+    border  base-300  #531B6D  L35.2 C0.139 H312.7
+    ink     neutral   #C59CDC  L75.2 C0.100 H313.1
+    intra-theme max hue spread: 0.4 deg -- PASS (threshold 8 deg)
+  cross-theme (light vs dark):
+    fill: N/A (not populated in one or both themes)
+    ink     hue delta 5.8 deg, chroma ratio 1.87x (light C0.053 / dark C0.100)
+
+.pk-chip.is-active
+  light:
+    fill    accent    #EDE1F7  L92.6 C0.032 H309.9
+    border  primary   #3D096D  L30.4 C0.151 H300.1
+    ink     accent-content #3D096D  L30.4 C0.151 H300.1
+    intra-theme max hue spread: 9.9 deg -- FAIL (threshold 8 deg)
+  dark:
+    fill    accent    #3A1F47  L29.5 C0.077 H313.7
+    border  primary   #8C2BB6  L50.2 C0.210 H313.1
+    ink     accent-content #EBD7F4  L90.4 C0.044 H315.5
+    intra-theme max hue spread: 2.4 deg -- PASS (threshold 8 deg)
+  cross-theme (light vs dark):
+    fill    hue delta 3.8 deg, chroma ratio 2.40x (light C0.032 / dark C0.077)
+    ink     hue delta 15.4 deg, chroma ratio 3.40x (light C0.151 / dark C0.044)
+
+=== SUMMARY ===
+
+Intra-theme hue-family failures (> 8 deg spread):
+  - .pk-pill-accent (light): 9.9 deg spread
+  - .pk-pill-selected (light): 149.8 deg spread
+  - .pk-pill-selected (dark): 136.8 deg spread
+  - .pk-chip.is-active (light): 9.9 deg spread
+
+Cross-theme chroma ratio flags (> 3x):
+  - .pk-pill-neutral fill: 5.92x cross-theme chroma ratio
+  - .pk-pill-accent ink: 3.40x cross-theme chroma ratio
+  - .pk-chip.is-active ink: 3.40x cross-theme chroma ratio
+```
+
+**What changed:** `.pk-pill-neutral (dark)`, `.pk-pill-outline (dark)` and `.pk-chip (dark)` —
+the three tones F1 flagged — dropped OUT of the intra-theme failure list entirely. Dark's max hue
+spread for these three tones went from 15.0/14.6 degrees to **0.4 degrees**, well under the 8-degree
+threshold. The dark base ladder (`base-100` H300.7, `base-200` H298.5, `base-300` H298.1) now sits
+at H312.4-313.1, matching `--color-neutral`'s H313.1 essentially exactly.
+
+**What did not change (by design, confirmed out of scope in the Findings caveat above):**
+`.pk-pill-selected`'s achromatic-ink artifact and `.pk-pill-accent`/`.pk-chip.is-active`'s
+light-side 9.9-degree spread (driven by `--color-accent-content`, not touched by C2) remain in the
+SUMMARY's failure list — exactly as predicted, since C2 only targets the base-100/200/300 ladder.
+Not fixed here; left for a future task if the developer wants to revisit `--color-accent-content`.
+
+**Sketch 054's four pinned contrast assertions, re-verified post-rotation** (also asserted by the
+new ExUnit tripwire):
+
+| Assertion | Before | After | Floor |
+|---|---|---|---|
+| text (#F3ECFA) on bg | 13.59:1 | **13.67:1** | 13.59:1 |
+| muted (#C59CDC) on bg | 6.85:1 | **6.89:1** | 6.85:1 |
+| text (#F3ECFA) on surface | 12.07:1 | **12.09:1** | 12.07:1 |
+| primary-content (#FFFFFF) on primary | 6.70:1 | **6.70:1** (unchanged — primary untouched) | 6.70:1 |
+
+All four hold at or above their pre-rotation margin — C2 does not reopen sketch 054's contrast
+decision.
