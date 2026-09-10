@@ -38,24 +38,14 @@
     display: flex; flex-direction: column;
   }
 
-  /* ===== the 5 variants — each declares the FULL 13-token mapped set,
-     including "control" which restates today's shipped values verbatim.
-     contrast-check.mjs parses these blocks directly from this file. ===== */
-  .pk-sk-frame[data-variant="control"] {
-    --color-bg: #170A26;
-    --color-surface: #22103A;
-    --color-surface-2: #2F1750;
-    --color-border: #2F1750;
-    --color-text: #F3ECFA;
-    --color-text-muted: #B8A6CC;
-    --color-primary: #A97FD1;
-    --color-primary-content: #170A26;
-    --color-secondary: #7E4CA5;
-    --color-accent-bg: #3D2A56;
-    --color-accent-text: #E4D3F5;
-    --color-danger: #E06B90;
-    --color-success: #5FBE95;
-  }
+  /* ===== ROUND 2 — Variant A (Lifted Ladder) is the developer-chosen base
+     for bg/surface/surface-2/border; this round holds that ladder FIXED and
+     only varies --color-primary/-secondary/-accent-bg/-accent-text/
+     -primary-content across 3 warmer candidates, plus "a" itself kept as
+     the before/after reference. Each block still declares the FULL 13-token
+     mapped set — contrast-check.mjs parses these blocks directly from this
+     file. Round 1's control/b/c/d blocks were removed (Variant A already
+     won the base-ladder question; see README for the full round-1 record). ===== */
   .pk-sk-frame[data-variant="a"] {
     --color-bg: #2F154E;
     --color-surface: #391B62;
@@ -71,48 +61,48 @@
     --color-danger: #E06B90;
     --color-success: #5FBE95;
   }
-  .pk-sk-frame[data-variant="b"] {
-    --color-bg: #170A26;
-    --color-surface: #3D2163;
-    --color-surface-2: #58358D;
-    --color-border: #58358D;
+  .pk-sk-frame[data-variant="w1"] {
+    --color-bg: #2F154E;
+    --color-surface: #391B62;
+    --color-surface-2: #462278;
+    --color-border: #462278;
     --color-text: #F3ECFA;
     --color-text-muted: #B8A6CC;
-    --color-primary: #A97FD1;
-    --color-primary-content: #170A26;
-    --color-secondary: #7E4CA5;
-    --color-accent-bg: #3D2A56;
-    --color-accent-text: #E4D3F5;
+    --color-primary: #B073D3;
+    --color-primary-content: #2F154E;
+    --color-secondary: #7F409C;
+    --color-accent-bg: #442A55;
+    --color-accent-text: #E5D0F1;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
   }
-  .pk-sk-frame[data-variant="c"] {
-    --color-bg: #211B27;
-    --color-surface: #2D2735;
-    --color-surface-2: #3C3546;
-    --color-border: #3C3546;
+  .pk-sk-frame[data-variant="w2"] {
+    --color-bg: #2F154E;
+    --color-surface: #391B62;
+    --color-surface-2: #462278;
+    --color-border: #462278;
     --color-text: #F3ECFA;
     --color-text-muted: #B8A6CC;
-    --color-primary: #A97FD1;
-    --color-primary-content: #211B27;
-    --color-secondary: #7E4CA5;
-    --color-accent-bg: #3D2A56;
-    --color-accent-text: #E4D3F5;
+    --color-primary: #8C2BB6;
+    --color-primary-content: #FFFFFF;
+    --color-secondary: #642C77;
+    --color-accent-bg: #3A1F47;
+    --color-accent-text: #EBD7F4;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
   }
-  .pk-sk-frame[data-variant="d"] {
-    --color-bg: #170A26;
-    --color-surface: #22103A;
-    --color-surface-2: #2F1750;
-    --color-border: #2F1750;
-    --color-text: #E0D7EA;
-    --color-text-muted: #C6BCD2;
-    --color-primary: #A97FD1;
-    --color-primary-content: #170A26;
-    --color-secondary: #7E4CA5;
-    --color-accent-bg: #4E376C;
-    --color-accent-text: #D1BCE6;
+  .pk-sk-frame[data-variant="w3"] {
+    --color-bg: #2F154E;
+    --color-surface: #391B62;
+    --color-surface-2: #462278;
+    --color-border: #462278;
+    --color-text: #F3ECFA;
+    --color-text-muted: #B8A6CC;
+    --color-primary: #BA80DB;
+    --color-primary-content: #2F154E;
+    --color-secondary: #9146B4;
+    --color-accent-bg: #4D2E61;
+    --color-accent-text: #E9D8F3;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
   }
@@ -189,10 +179,16 @@
 <body>
 
 <div class="pk-sk-page-header">
-  <h1>Sketch 054 — Composición de color en modo oscuro</h1>
-  <p>El tema oscuro que ya está en producción se lee "demasiado oscuro". Cinco lecturas del mismo
-    diseño real — una réplica exacta de hoy (<code>Control</code>) y cuatro hipótesis distintas —
-    lado a lado, cada una con su propio contraste WCAG medido en vivo (no a ojo).</p>
+  <h1>Sketch 054 — Composición de color en modo oscuro (ronda 2)</h1>
+  <p><strong>Ronda 1</strong> comparó 5 lecturas de piso/superficie; el desarrollador eligió
+    <code>A — Lifted Ladder</code> como base (bg/surface/surface-2/border). Esa escalera de base
+    queda ahora FIJA en las 4 tarjetas de abajo — esta ronda solo varía dónde aparece
+    <code>--color-primary</code> (CTA, wordmark, icon dot, degradés de poster, secondary, accent)
+    buscando algo "cálido y profesional, dentro de nuestra identidad de marca": más saturación/
+    riqueza violeta-magenta, sin salir de la familia de tono violeta ya establecida.</p>
+  <p><code>A</code> se mantiene como referencia (el lavanda actual sobre la escalera elegida);
+    <code>W1/W2/W3</code> son las 3 propuestas cálidas. Mismo enfoque medido, no a ojo: cada
+    tarjeta muestra su contraste WCAG en vivo.</p>
   <p>Usá el selector de tema de la barra inferior derecha solo para confirmar que el tema claro
     sigue intacto — no está bajo revisión acá, cada tarjeta declara sus propios 13 tokens de color
     y no depende de ese selector.</p>
@@ -253,11 +249,10 @@ const SUBSTRATE_HTML = `
 `;
 
 const VARIANTS = [
-  { id: 'control', name: 'Control — "Hoy"', hypothesis: 'Valores tal cual están hoy en producción, reproducidos solo para comparar en vivo.' },
-  { id: 'a', name: 'A — Lifted Ladder', hypothesis: 'El piso es directamente demasiado oscuro: se sube toda la escalera de 3 pasos manteniendo el tono/croma y el espaciado relativo entre pasos.' },
-  { id: 'b', name: 'B — Elevated Surfaces', hypothesis: 'El piso está bien, la escalera es plana: se mantiene --color-bg cerca de hoy y se separan/elevan los pasos de superficie (header, card, footer).' },
-  { id: 'c', name: 'C — Quieter Ground', hypothesis: 'Las bases son demasiado cromáticas y se leen pesadas/turbias: se retira croma hacia un carbón casi neutro, dejando que los acentos violeta suenen más fuerte.' },
-  { id: 'd', name: 'D — Softened Ink', hypothesis: 'El piso está bien, el problema es el salto casi-negro a casi-blanco: se baja el texto desde blanco puro y se sube muted/accent para varios niveles legibles de jerarquía.' },
+  { id: 'a', name: 'A — Lifted Ladder (referencia)', hypothesis: 'Base elegida en la ronda 1, con el --color-primary lavanda de HOY sin tocar — referencia para medir cuánto cambia cada propuesta cálida.' },
+  { id: 'w1', name: 'A + Warm 1 — Warm Lift', hypothesis: 'Corrimiento de tono moderado (270° → 278°, hacia magenta) manteniendo casi el mismo brillo que hoy — cálido pero sutil.' },
+  { id: 'w2', name: 'A + Warm 2 — Deep Jewel', hypothesis: 'Corrimiento de tono mayor + mucha más saturación y más oscuro (más cerca del violeta profundo #3D096D del tema claro) — usa texto BLANCO sobre el primary, no tinta oscura, igual que ya hace el tema claro con su propio primary profundo.' },
+  { id: 'w3', name: 'A + Warm 3 — Warm Bright', hypothesis: 'Misma familia de tono que Warm 1 pero más claro/luminoso — un CTA más "punchy" mientras se mantiene la tinta oscura de hoy.' },
 ];
 
 const framesEl = document.getElementById('frames');

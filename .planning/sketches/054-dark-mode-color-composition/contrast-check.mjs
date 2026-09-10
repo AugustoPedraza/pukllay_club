@@ -5,10 +5,12 @@
 // straight out of this sketch's own index.html (single source — the page's
 // on-screen readout and this CLI therefore can never disagree about what a
 // variant's values are), then asserts:
-//   1. Exactly 5 variant blocks exist.
+//   1. Exactly 4 variant blocks exist (round 2: "a" reference + 3 warm
+//      primary/secondary/accent candidates layered on Variant A's ladder,
+//      which the developer already picked in round 1 — see README).
 //   2. Each block declares all 13 mapped color tokens.
 //   3. For every block, the 4 measured WCAG ratios are each >= 4.5:1.
-//   4. Each of the 4 proposals (a/b/c/d) differs from "control" in at least
+//   4. Each of the 3 warm proposals (w1/w2/w3) differs from "a" in at least
 //      one declared token value, so no proposal is a silent no-op.
 //
 // Exit 0 + a per-variant table on success. Exit 1 + the specific failures
@@ -38,8 +40,8 @@ const REQUIRED_TOKENS = [
 ];
 
 const CONTRAST_FLOOR = 4.5;
-const EXPECTED_VARIANT_COUNT = 5;
-const CONTROL_ID = "control";
+const EXPECTED_VARIANT_COUNT = 4;
+const CONTROL_ID = "a";
 
 function hexToRgb(hex) {
   const h = hex.trim().replace("#", "");
@@ -146,7 +148,8 @@ function main() {
     rows.push({
       id: variant.id,
       bgLum: bgLum.toFixed(4),
-      bg: tokens["bg"],
+      primary: tokens["primary"],
+      primaryContent: tokens["primary-content"],
       textOnBg: textOnBg.toFixed(2),
       mutedOnBg: mutedOnBg.toFixed(2),
       textOnSurface: textOnSurface.toFixed(2),
@@ -157,8 +160,8 @@ function main() {
   if (rows.length > 0) {
     console.log(
       "variant".padEnd(9) +
-        "bg-lum".padEnd(10) +
-        "bg".padEnd(10) +
+        "primary".padEnd(10) +
+        "primary-content".padEnd(18) +
         "text/bg".padEnd(10) +
         "muted/bg".padEnd(11) +
         "text/surf".padEnd(11) +
@@ -167,8 +170,8 @@ function main() {
     for (const r of rows) {
       console.log(
         r.id.padEnd(9) +
-          r.bgLum.padEnd(10) +
-          r.bg.padEnd(10) +
+          r.primary.padEnd(10) +
+          r.primaryContent.padEnd(18) +
           `${r.textOnBg}:1`.padEnd(10) +
           `${r.mutedOnBg}:1`.padEnd(11) +
           `${r.textOnSurface}:1`.padEnd(11) +
@@ -184,7 +187,7 @@ function main() {
   }
 
   console.log(
-    `\nOK: ${rows.length} variants x ${REQUIRED_TOKENS.length} tokens, every ratio >= ${CONTRAST_FLOOR}:1, every proposal distinct from control.`,
+    `\nOK: ${rows.length} variants x ${REQUIRED_TOKENS.length} tokens, every ratio >= ${CONTRAST_FLOOR}:1, every warm proposal distinct from "${CONTROL_ID}".`,
   );
   process.exit(0);
 }
