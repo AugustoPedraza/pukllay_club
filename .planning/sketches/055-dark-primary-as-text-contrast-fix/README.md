@@ -2,7 +2,7 @@
 sketch: 055
 name: dark-primary-as-text-contrast-fix
 question: "Sketch 054's winning primary (#8C2BB6, fill-only) fails 4.5:1 WCAG contrast when used as text in 17 real app.css rules — which replacement reads best without reopening the fill decision?"
-winner: null
+winner: "A2"
 tags: [dark-mode, contrast, accessibility, wcag, quick-task-260910-efe]
 ---
 
@@ -78,7 +78,10 @@ failure is a latent risk for *future* rules on an elevated surface, not a bug in
 exist today. Recorded here so it isn't rediscovered blind on the next palette or component that
 puts primary-as-text on a card or modal surface.
 
-## Next Step
+## Decision
 
-Present this sketch to the developer, get a variant pick (or a synthesis), then resume the quick
-task 260910-efe executor with the decision to implement Task 3.
+**Winner: A2 — dark-scoped `--color-neutral` ink (#B8A6CC, 7.00:1 on base-100).** The 17
+primary-as-text rules in `app.css` get a dark-mode-scoped override to the quieter neutral/muted
+ink instead of `--color-primary`. Palette stays byte-exact — no part of the two-round sketch 054
+decision is reopened. Resumed the quick task 260910-efe executor with this pick to implement
+Task 3.
