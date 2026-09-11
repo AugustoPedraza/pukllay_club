@@ -1,0 +1,1808 @@
+[
+  {
+    "viewportW": 768,
+    "viewportH": 800,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2956.5,
+      "bottom": 3365.15625,
+      "left": 0,
+      "right": 768,
+      "height": 408.65625,
+      "width": 768
+    },
+    "inner": {
+      "top": 3084.5,
+      "bottom": 3237.15625,
+      "left": 0,
+      "right": 768,
+      "height": 152.65625,
+      "width": 768
+    },
+    "footer": {
+      "top": 3389.15625,
+      "bottom": 3516.15625,
+      "left": 0,
+      "right": 768,
+      "height": 127,
+      "width": 768
+    },
+    "prevBand": {
+      "top": 2503.5,
+      "bottom": 2956.5,
+      "left": 0,
+      "right": 768,
+      "height": 453,
+      "width": 768
+    },
+    "prevInner": {
+      "top": 2575.5,
+      "bottom": 2884.5,
+      "left": 0,
+      "right": 768,
+      "height": 309,
+      "width": 768
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3084.5,
+        "bottom": 3127.15625,
+        "left": 274.84375,
+        "right": 493.15625,
+        "height": 42.65625,
+        "width": 218.3125
+      },
+      "cta": {
+        "top": 3151.15625,
+        "bottom": 3195.15625,
+        "left": 329.953125,
+        "right": 438.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3219.15625,
+        "bottom": 3237.15625,
+        "left": 191,
+        "right": 576.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3085.5,
+        "lineBoxBottom": 3124.5,
+        "inkTop": 3086.5,
+        "inkBottom": 3114.5,
+        "fontSize": 32,
+        "lineHeight": 42.6667,
+        "lines": 1,
+        "actualAsc": 28,
+        "actualDesc": 0,
+        "fbAsc": 29,
+        "fbDesc": 10
+      },
+      "meta": {
+        "lineBoxTop": 3220.15625,
+        "lineBoxBottom": 3235.15625,
+        "inkTop": 3223.15625,
+        "inkBottom": 3235.15625,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3516,
+    "_case": {
+      "w": 768,
+      "h": 800,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 768,
+    "viewportH": 900,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2956.5,
+      "bottom": 3365.15625,
+      "left": 0,
+      "right": 768,
+      "height": 408.65625,
+      "width": 768
+    },
+    "inner": {
+      "top": 3084.5,
+      "bottom": 3237.15625,
+      "left": 0,
+      "right": 768,
+      "height": 152.65625,
+      "width": 768
+    },
+    "footer": {
+      "top": 3389.15625,
+      "bottom": 3516.15625,
+      "left": 0,
+      "right": 768,
+      "height": 127,
+      "width": 768
+    },
+    "prevBand": {
+      "top": 2503.5,
+      "bottom": 2956.5,
+      "left": 0,
+      "right": 768,
+      "height": 453,
+      "width": 768
+    },
+    "prevInner": {
+      "top": 2575.5,
+      "bottom": 2884.5,
+      "left": 0,
+      "right": 768,
+      "height": 309,
+      "width": 768
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3084.5,
+        "bottom": 3127.15625,
+        "left": 274.84375,
+        "right": 493.15625,
+        "height": 42.65625,
+        "width": 218.3125
+      },
+      "cta": {
+        "top": 3151.15625,
+        "bottom": 3195.15625,
+        "left": 329.953125,
+        "right": 438.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3219.15625,
+        "bottom": 3237.15625,
+        "left": 191,
+        "right": 576.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3085.5,
+        "lineBoxBottom": 3124.5,
+        "inkTop": 3086.5,
+        "inkBottom": 3114.5,
+        "fontSize": 32,
+        "lineHeight": 42.6667,
+        "lines": 1,
+        "actualAsc": 28,
+        "actualDesc": 0,
+        "fbAsc": 29,
+        "fbDesc": 10
+      },
+      "meta": {
+        "lineBoxTop": 3220.15625,
+        "lineBoxBottom": 3235.15625,
+        "inkTop": 3223.15625,
+        "inkBottom": 3235.15625,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3516,
+    "_case": {
+      "w": 768,
+      "h": 900,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1024,
+    "viewportH": 800,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2950.921875,
+      "bottom": 3371.515625,
+      "left": 0,
+      "right": 1024,
+      "height": 420.59375,
+      "width": 1024
+    },
+    "inner": {
+      "top": 3078.921875,
+      "bottom": 3243.515625,
+      "left": 0,
+      "right": 1024,
+      "height": 164.59375,
+      "width": 1024
+    },
+    "footer": {
+      "top": 3395.515625,
+      "bottom": 3522.515625,
+      "left": 0,
+      "right": 1024,
+      "height": 127,
+      "width": 1024
+    },
+    "prevBand": {
+      "top": 2461.921875,
+      "bottom": 2950.921875,
+      "left": 0,
+      "right": 1024,
+      "height": 489,
+      "width": 1024
+    },
+    "prevInner": {
+      "top": 2533.921875,
+      "bottom": 2878.921875,
+      "left": 0,
+      "right": 1024,
+      "height": 345,
+      "width": 1024
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3078.921875,
+        "bottom": 3133.515625,
+        "left": 372.296875,
+        "right": 651.6875,
+        "height": 54.59375,
+        "width": 279.390625
+      },
+      "cta": {
+        "top": 3157.515625,
+        "bottom": 3201.515625,
+        "left": 457.953125,
+        "right": 566.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3225.515625,
+        "bottom": 3243.515625,
+        "left": 319,
+        "right": 704.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3080.921875,
+        "lineBoxBottom": 3129.921875,
+        "inkTop": 3082.921875,
+        "inkBottom": 3117.921875,
+        "fontSize": 40.96,
+        "lineHeight": 54.6133,
+        "lines": 1,
+        "actualAsc": 35,
+        "actualDesc": 0,
+        "fbAsc": 37,
+        "fbDesc": 12
+      },
+      "meta": {
+        "lineBoxTop": 3226.515625,
+        "lineBoxBottom": 3241.515625,
+        "inkTop": 3229.515625,
+        "inkBottom": 3241.515625,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3523,
+    "_case": {
+      "w": 1024,
+      "h": 800,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1280,
+    "viewportH": 720,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2965,
+      "bottom": 3395,
+      "left": 0,
+      "right": 1280,
+      "height": 430,
+      "width": 1280
+    },
+    "inner": {
+      "top": 3093,
+      "bottom": 3267,
+      "left": 0,
+      "right": 1280,
+      "height": 174,
+      "width": 1280
+    },
+    "footer": {
+      "top": 3419,
+      "bottom": 3546,
+      "left": 0,
+      "right": 1280,
+      "height": 127,
+      "width": 1280
+    },
+    "prevBand": {
+      "top": 2412,
+      "bottom": 2965,
+      "left": 0,
+      "right": 1280,
+      "height": 553,
+      "width": 1280
+    },
+    "prevInner": {
+      "top": 2484,
+      "bottom": 2893,
+      "left": 0,
+      "right": 1280,
+      "height": 409,
+      "width": 1280
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3093,
+        "bottom": 3157,
+        "left": 476.265625,
+        "right": 803.734375,
+        "height": 64,
+        "width": 327.46875
+      },
+      "cta": {
+        "top": 3181,
+        "bottom": 3225,
+        "left": 585.953125,
+        "right": 694.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3249,
+        "bottom": 3267,
+        "left": 447,
+        "right": 832.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3096,
+        "lineBoxBottom": 3153,
+        "inkTop": 3097,
+        "inkBottom": 3139,
+        "fontSize": 48,
+        "lineHeight": 64,
+        "lines": 1,
+        "actualAsc": 42,
+        "actualDesc": 0,
+        "fbAsc": 43,
+        "fbDesc": 14
+      },
+      "meta": {
+        "lineBoxTop": 3250,
+        "lineBoxBottom": 3265,
+        "inkTop": 3253,
+        "inkBottom": 3265,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3546,
+    "_case": {
+      "w": 1280,
+      "h": 720,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1280,
+    "viewportH": 800,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2965,
+      "bottom": 3395,
+      "left": 0,
+      "right": 1280,
+      "height": 430,
+      "width": 1280
+    },
+    "inner": {
+      "top": 3093,
+      "bottom": 3267,
+      "left": 0,
+      "right": 1280,
+      "height": 174,
+      "width": 1280
+    },
+    "footer": {
+      "top": 3419,
+      "bottom": 3546,
+      "left": 0,
+      "right": 1280,
+      "height": 127,
+      "width": 1280
+    },
+    "prevBand": {
+      "top": 2412,
+      "bottom": 2965,
+      "left": 0,
+      "right": 1280,
+      "height": 553,
+      "width": 1280
+    },
+    "prevInner": {
+      "top": 2484,
+      "bottom": 2893,
+      "left": 0,
+      "right": 1280,
+      "height": 409,
+      "width": 1280
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3093,
+        "bottom": 3157,
+        "left": 476.265625,
+        "right": 803.734375,
+        "height": 64,
+        "width": 327.46875
+      },
+      "cta": {
+        "top": 3181,
+        "bottom": 3225,
+        "left": 585.953125,
+        "right": 694.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3249,
+        "bottom": 3267,
+        "left": 447,
+        "right": 832.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3096,
+        "lineBoxBottom": 3153,
+        "inkTop": 3097,
+        "inkBottom": 3139,
+        "fontSize": 48,
+        "lineHeight": 64,
+        "lines": 1,
+        "actualAsc": 42,
+        "actualDesc": 0,
+        "fbAsc": 43,
+        "fbDesc": 14
+      },
+      "meta": {
+        "lineBoxTop": 3250,
+        "lineBoxBottom": 3265,
+        "inkTop": 3253,
+        "inkBottom": 3265,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3546,
+    "_case": {
+      "w": 1280,
+      "h": 800,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1280,
+    "viewportH": 900,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2965,
+      "bottom": 3395,
+      "left": 0,
+      "right": 1280,
+      "height": 430,
+      "width": 1280
+    },
+    "inner": {
+      "top": 3093,
+      "bottom": 3267,
+      "left": 0,
+      "right": 1280,
+      "height": 174,
+      "width": 1280
+    },
+    "footer": {
+      "top": 3419,
+      "bottom": 3546,
+      "left": 0,
+      "right": 1280,
+      "height": 127,
+      "width": 1280
+    },
+    "prevBand": {
+      "top": 2412,
+      "bottom": 2965,
+      "left": 0,
+      "right": 1280,
+      "height": 553,
+      "width": 1280
+    },
+    "prevInner": {
+      "top": 2484,
+      "bottom": 2893,
+      "left": 0,
+      "right": 1280,
+      "height": 409,
+      "width": 1280
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3093,
+        "bottom": 3157,
+        "left": 476.265625,
+        "right": 803.734375,
+        "height": 64,
+        "width": 327.46875
+      },
+      "cta": {
+        "top": 3181,
+        "bottom": 3225,
+        "left": 585.953125,
+        "right": 694.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3249,
+        "bottom": 3267,
+        "left": 447,
+        "right": 832.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3096,
+        "lineBoxBottom": 3153,
+        "inkTop": 3097,
+        "inkBottom": 3139,
+        "fontSize": 48,
+        "lineHeight": 64,
+        "lines": 1,
+        "actualAsc": 42,
+        "actualDesc": 0,
+        "fbAsc": 43,
+        "fbDesc": 14
+      },
+      "meta": {
+        "lineBoxTop": 3250,
+        "lineBoxBottom": 3265,
+        "inkTop": 3253,
+        "inkBottom": 3265,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3546,
+    "_case": {
+      "w": 1280,
+      "h": 900,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1280,
+    "viewportH": 1080,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2965,
+      "bottom": 3395,
+      "left": 0,
+      "right": 1280,
+      "height": 430,
+      "width": 1280
+    },
+    "inner": {
+      "top": 3093,
+      "bottom": 3267,
+      "left": 0,
+      "right": 1280,
+      "height": 174,
+      "width": 1280
+    },
+    "footer": {
+      "top": 3419,
+      "bottom": 3546,
+      "left": 0,
+      "right": 1280,
+      "height": 127,
+      "width": 1280
+    },
+    "prevBand": {
+      "top": 2412,
+      "bottom": 2965,
+      "left": 0,
+      "right": 1280,
+      "height": 553,
+      "width": 1280
+    },
+    "prevInner": {
+      "top": 2484,
+      "bottom": 2893,
+      "left": 0,
+      "right": 1280,
+      "height": 409,
+      "width": 1280
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3093,
+        "bottom": 3157,
+        "left": 476.265625,
+        "right": 803.734375,
+        "height": 64,
+        "width": 327.46875
+      },
+      "cta": {
+        "top": 3181,
+        "bottom": 3225,
+        "left": 585.953125,
+        "right": 694.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3249,
+        "bottom": 3267,
+        "left": 447,
+        "right": 832.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3096,
+        "lineBoxBottom": 3153,
+        "inkTop": 3097,
+        "inkBottom": 3139,
+        "fontSize": 48,
+        "lineHeight": 64,
+        "lines": 1,
+        "actualAsc": 42,
+        "actualDesc": 0,
+        "fbAsc": 43,
+        "fbDesc": 14
+      },
+      "meta": {
+        "lineBoxTop": 3250,
+        "lineBoxBottom": 3265,
+        "inkTop": 3253,
+        "inkBottom": 3265,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3546,
+    "_case": {
+      "w": 1280,
+      "h": 1080,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1440,
+    "viewportH": 900,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2965,
+      "bottom": 3395,
+      "left": 0,
+      "right": 1440,
+      "height": 430,
+      "width": 1440
+    },
+    "inner": {
+      "top": 3093,
+      "bottom": 3267,
+      "left": 80,
+      "right": 1360,
+      "height": 174,
+      "width": 1280
+    },
+    "footer": {
+      "top": 3419,
+      "bottom": 3546,
+      "left": 0,
+      "right": 1440,
+      "height": 127,
+      "width": 1440
+    },
+    "prevBand": {
+      "top": 2412,
+      "bottom": 2965,
+      "left": 0,
+      "right": 1440,
+      "height": 553,
+      "width": 1440
+    },
+    "prevInner": {
+      "top": 2484,
+      "bottom": 2893,
+      "left": 80,
+      "right": 1360,
+      "height": 409,
+      "width": 1280
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3093,
+        "bottom": 3157,
+        "left": 556.265625,
+        "right": 883.734375,
+        "height": 64,
+        "width": 327.46875
+      },
+      "cta": {
+        "top": 3181,
+        "bottom": 3225,
+        "left": 665.953125,
+        "right": 774.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3249,
+        "bottom": 3267,
+        "left": 527,
+        "right": 912.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3096,
+        "lineBoxBottom": 3153,
+        "inkTop": 3097,
+        "inkBottom": 3139,
+        "fontSize": 48,
+        "lineHeight": 64,
+        "lines": 1,
+        "actualAsc": 42,
+        "actualDesc": 0,
+        "fbAsc": 43,
+        "fbDesc": 14
+      },
+      "meta": {
+        "lineBoxTop": 3250,
+        "lineBoxBottom": 3265,
+        "inkTop": 3253,
+        "inkBottom": 3265,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3546,
+    "_case": {
+      "w": 1440,
+      "h": 900,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1512,
+    "viewportH": 982,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2965,
+      "bottom": 3395,
+      "left": 0,
+      "right": 1512,
+      "height": 430,
+      "width": 1512
+    },
+    "inner": {
+      "top": 3093,
+      "bottom": 3267,
+      "left": 116,
+      "right": 1396,
+      "height": 174,
+      "width": 1280
+    },
+    "footer": {
+      "top": 3419,
+      "bottom": 3546,
+      "left": 0,
+      "right": 1512,
+      "height": 127,
+      "width": 1512
+    },
+    "prevBand": {
+      "top": 2412,
+      "bottom": 2965,
+      "left": 0,
+      "right": 1512,
+      "height": 553,
+      "width": 1512
+    },
+    "prevInner": {
+      "top": 2484,
+      "bottom": 2893,
+      "left": 116,
+      "right": 1396,
+      "height": 409,
+      "width": 1280
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3093,
+        "bottom": 3157,
+        "left": 592.265625,
+        "right": 919.734375,
+        "height": 64,
+        "width": 327.46875
+      },
+      "cta": {
+        "top": 3181,
+        "bottom": 3225,
+        "left": 701.953125,
+        "right": 810.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3249,
+        "bottom": 3267,
+        "left": 563,
+        "right": 948.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3096,
+        "lineBoxBottom": 3153,
+        "inkTop": 3097,
+        "inkBottom": 3139,
+        "fontSize": 48,
+        "lineHeight": 64,
+        "lines": 1,
+        "actualAsc": 42,
+        "actualDesc": 0,
+        "fbAsc": 43,
+        "fbDesc": 14
+      },
+      "meta": {
+        "lineBoxTop": 3250,
+        "lineBoxBottom": 3265,
+        "inkTop": 3253,
+        "inkBottom": 3265,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3546,
+    "_case": {
+      "w": 1512,
+      "h": 982,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1920,
+    "viewportH": 1080,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2965,
+      "bottom": 3395,
+      "left": 0,
+      "right": 1920,
+      "height": 430,
+      "width": 1920
+    },
+    "inner": {
+      "top": 3093,
+      "bottom": 3267,
+      "left": 320,
+      "right": 1600,
+      "height": 174,
+      "width": 1280
+    },
+    "footer": {
+      "top": 3419,
+      "bottom": 3546,
+      "left": 0,
+      "right": 1920,
+      "height": 127,
+      "width": 1920
+    },
+    "prevBand": {
+      "top": 2412,
+      "bottom": 2965,
+      "left": 0,
+      "right": 1920,
+      "height": 553,
+      "width": 1920
+    },
+    "prevInner": {
+      "top": 2484,
+      "bottom": 2893,
+      "left": 320,
+      "right": 1600,
+      "height": 409,
+      "width": 1280
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3093,
+        "bottom": 3157,
+        "left": 796.265625,
+        "right": 1123.734375,
+        "height": 64,
+        "width": 327.46875
+      },
+      "cta": {
+        "top": 3181,
+        "bottom": 3225,
+        "left": 905.953125,
+        "right": 1014.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3249,
+        "bottom": 3267,
+        "left": 767,
+        "right": 1152.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3096,
+        "lineBoxBottom": 3153,
+        "inkTop": 3097,
+        "inkBottom": 3139,
+        "fontSize": 48,
+        "lineHeight": 64,
+        "lines": 1,
+        "actualAsc": 42,
+        "actualDesc": 0,
+        "fbAsc": 43,
+        "fbDesc": 14
+      },
+      "meta": {
+        "lineBoxTop": 3250,
+        "lineBoxBottom": 3265,
+        "inkTop": 3253,
+        "inkBottom": 3265,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3546,
+    "_case": {
+      "w": 1920,
+      "h": 1080,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 560,
+    "viewportH": 900,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 3200.390625,
+      "bottom": 3498.390625,
+      "left": 0,
+      "right": 560,
+      "height": 298,
+      "width": 560
+    },
+    "inner": {
+      "top": 3272.390625,
+      "bottom": 3426.390625,
+      "left": 0,
+      "right": 560,
+      "height": 154,
+      "width": 560
+    },
+    "footer": {
+      "top": 3522.390625,
+      "bottom": 3649.390625,
+      "left": 0,
+      "right": 560,
+      "height": 127,
+      "width": 560
+    },
+    "prevBand": {
+      "top": 2482.390625,
+      "bottom": 3200.390625,
+      "left": 0,
+      "right": 560,
+      "height": 718,
+      "width": 560
+    },
+    "prevInner": {
+      "top": 2554.390625,
+      "bottom": 3128.390625,
+      "left": 0,
+      "right": 560,
+      "height": 574,
+      "width": 560
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3272.390625,
+        "bottom": 3304.390625,
+        "left": 198.125,
+        "right": 361.859375,
+        "height": 32,
+        "width": 163.734375
+      },
+      "cta": {
+        "top": 3328.390625,
+        "bottom": 3372.390625,
+        "left": 225.953125,
+        "right": 334.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3396.390625,
+        "bottom": 3426.390625,
+        "left": 177.796875,
+        "right": 382.1875,
+        "height": 30,
+        "width": 204.390625
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3273.390625,
+        "lineBoxBottom": 3302.390625,
+        "inkTop": 3274.390625,
+        "inkBottom": 3295.390625,
+        "fontSize": 24,
+        "lineHeight": 32,
+        "lines": 1,
+        "actualAsc": 21,
+        "actualDesc": 0,
+        "fbAsc": 22,
+        "fbDesc": 7
+      },
+      "meta": {
+        "lineBoxTop": 3397.390625,
+        "lineBoxBottom": 3424.390625,
+        "inkTop": 3399.390625,
+        "inkBottom": 3424.390625,
+        "fontSize": 10,
+        "lineHeight": 15,
+        "lines": 3,
+        "actualAsc": 8,
+        "actualDesc": 2,
+        "fbAsc": 10,
+        "fbDesc": 2
+      }
+    },
+    "gapTopBox": 72,
+    "gapBottomBox": 72,
+    "docHeight": 3649,
+    "_case": {
+      "w": 560,
+      "h": 900,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 390,
+    "viewportH": 844,
+    "theme": "light",
+    "headerH": "64px",
+    "cierre": {
+      "top": 3317.390625,
+      "bottom": 3547.390625,
+      "left": 0,
+      "right": 390,
+      "height": 230,
+      "width": 390
+    },
+    "inner": {
+      "top": 3389.390625,
+      "bottom": 3475.390625,
+      "left": 0,
+      "right": 390,
+      "height": 86,
+      "width": 390
+    },
+    "footer": {
+      "top": 3563.390625,
+      "bottom": 3606.390625,
+      "left": 0,
+      "right": 390,
+      "height": 43,
+      "width": 390
+    },
+    "prevBand": {
+      "top": 2638.390625,
+      "bottom": 3317.390625,
+      "left": 0,
+      "right": 390,
+      "height": 679,
+      "width": 390
+    },
+    "prevInner": {
+      "top": 2710.390625,
+      "bottom": 3245.390625,
+      "left": 0,
+      "right": 390,
+      "height": 535,
+      "width": 390
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(243, 236, 250)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "16px",
+      "background": "rgb(243, 236, 250)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(255, 255, 255)",
+    "parts": {
+      "h2": {
+        "top": 3389.390625,
+        "bottom": 3421.390625,
+        "left": 113.125,
+        "right": 276.859375,
+        "height": 32,
+        "width": 163.734375
+      },
+      "cta": {
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "height": 0,
+        "width": 0
+      },
+      "meta": {
+        "top": 3445.390625,
+        "bottom": 3475.390625,
+        "left": 92.796875,
+        "right": 297.1875,
+        "height": 30,
+        "width": 204.390625
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3390.390625,
+        "lineBoxBottom": 3419.390625,
+        "inkTop": 3391.390625,
+        "inkBottom": 3412.390625,
+        "fontSize": 24,
+        "lineHeight": 32,
+        "lines": 1,
+        "actualAsc": 21,
+        "actualDesc": 0,
+        "fbAsc": 22,
+        "fbDesc": 7
+      },
+      "meta": {
+        "lineBoxTop": 3446.390625,
+        "lineBoxBottom": 3473.390625,
+        "inkTop": 3448.390625,
+        "inkBottom": 3473.390625,
+        "fontSize": 10,
+        "lineHeight": 15,
+        "lines": 3,
+        "actualAsc": 8,
+        "actualDesc": 2,
+        "fbAsc": 10,
+        "fbDesc": 2
+      }
+    },
+    "gapTopBox": 72,
+    "gapBottomBox": 72,
+    "docHeight": 3678,
+    "_case": {
+      "w": 390,
+      "h": 844,
+      "theme": "light"
+    }
+  },
+  {
+    "viewportW": 1280,
+    "viewportH": 800,
+    "theme": "dark",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2965,
+      "bottom": 3395,
+      "left": 0,
+      "right": 1280,
+      "height": 430,
+      "width": 1280
+    },
+    "inner": {
+      "top": 3093,
+      "bottom": 3267,
+      "left": 0,
+      "right": 1280,
+      "height": 174,
+      "width": 1280
+    },
+    "footer": {
+      "top": 3419,
+      "bottom": 3546,
+      "left": 0,
+      "right": 1280,
+      "height": 127,
+      "width": 1280
+    },
+    "prevBand": {
+      "top": 2412,
+      "bottom": 2965,
+      "left": 0,
+      "right": 1280,
+      "height": 553,
+      "width": 1280
+    },
+    "prevInner": {
+      "top": 2484,
+      "bottom": 2893,
+      "left": 0,
+      "right": 1280,
+      "height": 409,
+      "width": 1280
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(34, 16, 58)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(34, 16, 58)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(23, 10, 38)",
+    "parts": {
+      "h2": {
+        "top": 3093,
+        "bottom": 3157,
+        "left": 476.265625,
+        "right": 803.734375,
+        "height": 64,
+        "width": 327.46875
+      },
+      "cta": {
+        "top": 3181,
+        "bottom": 3225,
+        "left": 585.953125,
+        "right": 694.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3249,
+        "bottom": 3267,
+        "left": 447,
+        "right": 832.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3096,
+        "lineBoxBottom": 3153,
+        "inkTop": 3097,
+        "inkBottom": 3139,
+        "fontSize": 48,
+        "lineHeight": 64,
+        "lines": 1,
+        "actualAsc": 42,
+        "actualDesc": 0,
+        "fbAsc": 43,
+        "fbDesc": 14
+      },
+      "meta": {
+        "lineBoxTop": 3250,
+        "lineBoxBottom": 3265,
+        "inkTop": 3253,
+        "inkBottom": 3265,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3546,
+    "_case": {
+      "w": 1280,
+      "h": 800,
+      "theme": "dark"
+    }
+  },
+  {
+    "viewportW": 768,
+    "viewportH": 900,
+    "theme": "dark",
+    "headerH": "64px",
+    "cierre": {
+      "top": 2956.5,
+      "bottom": 3365.15625,
+      "left": 0,
+      "right": 768,
+      "height": 408.65625,
+      "width": 768
+    },
+    "inner": {
+      "top": 3084.5,
+      "bottom": 3237.15625,
+      "left": 0,
+      "right": 768,
+      "height": 152.65625,
+      "width": 768
+    },
+    "footer": {
+      "top": 3389.15625,
+      "bottom": 3516.15625,
+      "left": 0,
+      "right": 768,
+      "height": 127,
+      "width": 768
+    },
+    "prevBand": {
+      "top": 2503.5,
+      "bottom": 2956.5,
+      "left": 0,
+      "right": 768,
+      "height": 453,
+      "width": 768
+    },
+    "prevInner": {
+      "top": 2575.5,
+      "bottom": 2884.5,
+      "left": 0,
+      "right": 768,
+      "height": 309,
+      "width": 768
+    },
+    "prevBandId": "pk-band",
+    "cierreStyle": {
+      "paddingTop": "128px",
+      "paddingBottom": "128px",
+      "minHeight": "0px",
+      "display": "block",
+      "alignItems": "normal",
+      "background": "rgb(34, 16, 58)",
+      "marginBottom": "0px"
+    },
+    "prevBandStyle": {
+      "paddingTop": "72px",
+      "paddingBottom": "72px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "footerStyle": {
+      "marginTop": "24px",
+      "background": "rgb(34, 16, 58)",
+      "paddingTop": "0px"
+    },
+    "htmlBg": "rgb(23, 10, 38)",
+    "parts": {
+      "h2": {
+        "top": 3084.5,
+        "bottom": 3127.15625,
+        "left": 274.84375,
+        "right": 493.15625,
+        "height": 42.65625,
+        "width": 218.3125
+      },
+      "cta": {
+        "top": 3151.15625,
+        "bottom": 3195.15625,
+        "left": 329.953125,
+        "right": 438.046875,
+        "height": 44,
+        "width": 108.09375
+      },
+      "meta": {
+        "top": 3219.15625,
+        "bottom": 3237.15625,
+        "left": 191,
+        "right": 576.984375,
+        "height": 18,
+        "width": 385.984375
+      }
+    },
+    "ink": {
+      "h2": {
+        "lineBoxTop": 3085.5,
+        "lineBoxBottom": 3124.5,
+        "inkTop": 3086.5,
+        "inkBottom": 3114.5,
+        "fontSize": 32,
+        "lineHeight": 42.6667,
+        "lines": 1,
+        "actualAsc": 28,
+        "actualDesc": 0,
+        "fbAsc": 29,
+        "fbDesc": 10
+      },
+      "meta": {
+        "lineBoxTop": 3220.15625,
+        "lineBoxBottom": 3235.15625,
+        "inkTop": 3223.15625,
+        "inkBottom": 3235.15625,
+        "fontSize": 12,
+        "lineHeight": 18,
+        "lines": 2,
+        "actualAsc": 9,
+        "actualDesc": 3,
+        "fbAsc": 12,
+        "fbDesc": 3
+      }
+    },
+    "gapTopBox": 128,
+    "gapBottomBox": 128,
+    "docHeight": 3516,
+    "_case": {
+      "w": 768,
+      "h": 900,
+      "theme": "dark"
+    }
+  }
+]

@@ -1,0 +1,1758 @@
+{
+  "light": [
+    {
+      "vw": 323,
+      "thumb": {
+        "w": 261.33,
+        "h": 112,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 261.33,
+        "h": 112,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 261.5,
+        "dispH": 112,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 113.7,
+        "y": 42.6,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 245.33,
+        "h": 36,
+        "pctOfThumbH": 32.1,
+        "pctOfThumbArea": 30.2,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 243,
+        "clientW": 243,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 309.33,
+        "h": 426,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 375,
+      "thumb": {
+        "w": 299,
+        "h": 128.14,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 299,
+        "h": 128.14,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 299.2,
+        "dispH": 128.1,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 130.1,
+        "y": 48.7,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 283,
+        "h": 36,
+        "pctOfThumbH": 28.1,
+        "pctOfThumbArea": 26.6,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 281,
+        "clientW": 281,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 347,
+        "h": 442.14,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 414,
+      "thumb": {
+        "w": 338,
+        "h": 144.84,
+        "ratio": 2.334
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 338,
+        "h": 144.84,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 338.2,
+        "dispH": 144.8,
+        "cropXpct": 0,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 147,
+        "y": 55,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 322,
+        "h": 36,
+        "pctOfThumbH": 24.9,
+        "pctOfThumbArea": 23.7,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 320,
+        "clientW": 320,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 386,
+        "h": 458.84,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 480,
+      "thumb": {
+        "w": 404,
+        "h": 173.14,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 404,
+        "h": 173.14,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 404.2,
+        "dispH": 173.1,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 175.7,
+        "y": 65.8,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 388,
+        "h": 36,
+        "pctOfThumbH": 20.8,
+        "pctOfThumbArea": 20,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 386,
+        "clientW": 386,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 452,
+        "h": 459.14,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 639,
+      "thumb": {
+        "w": 527,
+        "h": 225.84,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 527,
+        "h": 225.84,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 527.3,
+        "dispH": 225.8,
+        "cropXpct": 0,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 229.2,
+        "y": 85.8,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 511,
+        "h": 36,
+        "pctOfThumbH": 15.9,
+        "pctOfThumbArea": 15.5,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 509,
+        "clientW": 509,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 575,
+        "h": 511.84,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 640,
+      "thumb": {
+        "w": 218,
+        "h": 112,
+        "ratio": 1.946
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 218,
+        "h": 112,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 261.5,
+        "dispH": 112,
+        "cropXpct": 16.6,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 92,
+        "y": 42.6,
+        "xPctOfBox": 42.2,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 202,
+        "h": 36,
+        "pctOfThumbH": 32.1,
+        "pctOfThumbArea": 29.8,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 200,
+        "clientW": 200,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 266,
+        "h": 454,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 768,
+      "thumb": {
+        "w": 282,
+        "h": 120.84,
+        "ratio": 2.334
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 282,
+        "h": 120.84,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 282.1,
+        "dispH": 120.8,
+        "cropXpct": 0,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 122.7,
+        "y": 45.9,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 266,
+        "h": 36,
+        "pctOfThumbH": 29.8,
+        "pctOfThumbArea": 28.1,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 264,
+        "clientW": 264,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 330,
+        "h": 434.84,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 900,
+      "thumb": {
+        "w": 348,
+        "h": 149.14,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 348,
+        "h": 149.14,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 348.2,
+        "dispH": 149.1,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 151.4,
+        "y": 56.7,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 332,
+        "h": 36,
+        "pctOfThumbH": 24.1,
+        "pctOfThumbArea": 23,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 330,
+        "clientW": 330,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 396,
+        "h": 463.14,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 1023,
+      "thumb": {
+        "w": 409.5,
+        "h": 175.5,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 409.5,
+        "h": 175.5,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 409.7,
+        "dispH": 175.5,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 178.1,
+        "y": 66.7,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 393.5,
+        "h": 36,
+        "pctOfThumbH": 20.5,
+        "pctOfThumbArea": 19.7,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 392,
+        "clientW": 392,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 457.5,
+        "h": 461.5,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 1024,
+      "thumb": {
+        "w": 410,
+        "h": 175.7,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 410,
+        "h": 175.7,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 410.2,
+        "dispH": 175.7,
+        "cropXpct": 0,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 178.3,
+        "y": 66.8,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗",
+        "chars": 60,
+        "w": 394,
+        "h": 36,
+        "pctOfThumbH": 20.5,
+        "pctOfThumbArea": 19.7,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 393,
+        "clientW": 392,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 458,
+        "h": 461.7,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "none",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "block",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 1280,
+      "thumb": {
+        "w": 538,
+        "h": 230.56,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 538,
+        "h": 230.56,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 538.3,
+        "dispH": 230.6,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 234,
+        "y": 87.6,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗",
+        "chars": 60,
+        "w": 522,
+        "h": 36,
+        "pctOfThumbH": 15.6,
+        "pctOfThumbArea": 15.1,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 520,
+        "clientW": 520,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 586,
+        "h": 516.56,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "none",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "block",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 1440,
+      "thumb": {
+        "w": 538,
+        "h": 230.56,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 538,
+        "h": 230.56,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 538.3,
+        "dispH": 230.6,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 234,
+        "y": 87.6,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗",
+        "chars": 60,
+        "w": 522,
+        "h": 36,
+        "pctOfThumbH": 15.6,
+        "pctOfThumbArea": 15.1,
+        "bg": "rgb(255, 255, 255)",
+        "border": "rgb(227, 211, 240) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 520,
+        "clientW": 520,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 586,
+        "h": 516.56,
+        "bg": "rgb(243, 236, 250)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "none",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "block",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    }
+  ],
+  "dark": [
+    {
+      "vw": 323,
+      "thumb": {
+        "w": 261.33,
+        "h": 112,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 261.33,
+        "h": 112,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 261.5,
+        "dispH": 112,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 113.7,
+        "y": 42.6,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 245.33,
+        "h": 36,
+        "pctOfThumbH": 32.1,
+        "pctOfThumbArea": 30.2,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 243,
+        "clientW": 243,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 309.33,
+        "h": 426,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 375,
+      "thumb": {
+        "w": 299,
+        "h": 128.14,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 299,
+        "h": 128.14,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 299.2,
+        "dispH": 128.1,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 130.1,
+        "y": 48.7,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 283,
+        "h": 36,
+        "pctOfThumbH": 28.1,
+        "pctOfThumbArea": 26.6,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 281,
+        "clientW": 281,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 347,
+        "h": 442.14,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 414,
+      "thumb": {
+        "w": 338,
+        "h": 144.84,
+        "ratio": 2.334
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 338,
+        "h": 144.84,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 338.2,
+        "dispH": 144.8,
+        "cropXpct": 0,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 147,
+        "y": 55,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 322,
+        "h": 36,
+        "pctOfThumbH": 24.9,
+        "pctOfThumbArea": 23.7,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 320,
+        "clientW": 320,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 386,
+        "h": 458.84,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 480,
+      "thumb": {
+        "w": 404,
+        "h": 173.14,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 404,
+        "h": 173.14,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 404.2,
+        "dispH": 173.1,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 175.7,
+        "y": 65.8,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 388,
+        "h": 36,
+        "pctOfThumbH": 20.8,
+        "pctOfThumbArea": 20,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 386,
+        "clientW": 386,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 452,
+        "h": 459.14,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 639,
+      "thumb": {
+        "w": 527,
+        "h": 225.84,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 527,
+        "h": 225.84,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 527.3,
+        "dispH": 225.8,
+        "cropXpct": 0,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 229.2,
+        "y": 85.8,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 511,
+        "h": 36,
+        "pctOfThumbH": 15.9,
+        "pctOfThumbArea": 15.5,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 509,
+        "clientW": 509,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 575,
+        "h": 511.84,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 640,
+      "thumb": {
+        "w": 218,
+        "h": 112,
+        "ratio": 1.946
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 218,
+        "h": 112,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 261.5,
+        "dispH": 112,
+        "cropXpct": 16.6,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 92,
+        "y": 42.6,
+        "xPctOfBox": 42.2,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 202,
+        "h": 36,
+        "pctOfThumbH": 32.1,
+        "pctOfThumbArea": 29.8,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 200,
+        "clientW": 200,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 266,
+        "h": 454,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 768,
+      "thumb": {
+        "w": 282,
+        "h": 120.84,
+        "ratio": 2.334
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 282,
+        "h": 120.84,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 282.1,
+        "dispH": 120.8,
+        "cropXpct": 0,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 122.7,
+        "y": 45.9,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 266,
+        "h": 36,
+        "pctOfThumbH": 29.8,
+        "pctOfThumbArea": 28.1,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 264,
+        "clientW": 264,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 330,
+        "h": 434.84,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 900,
+      "thumb": {
+        "w": 348,
+        "h": 149.14,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 348,
+        "h": 149.14,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 348.2,
+        "dispH": 149.1,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 151.4,
+        "y": 56.7,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 332,
+        "h": 36,
+        "pctOfThumbH": 24.1,
+        "pctOfThumbArea": 23,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 330,
+        "clientW": 330,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 396,
+        "h": 463.14,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 1023,
+      "thumb": {
+        "w": 409.5,
+        "h": 175.5,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 409.5,
+        "h": 175.5,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 409.7,
+        "dispH": 175.5,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 178.1,
+        "y": 66.7,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Cómo llegar ↗",
+        "chars": 13,
+        "w": 393.5,
+        "h": 36,
+        "pctOfThumbH": 20.5,
+        "pctOfThumbArea": 19.7,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 392,
+        "clientW": 392,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 457.5,
+        "h": 461.5,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "block",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "none",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 1024,
+      "thumb": {
+        "w": 410,
+        "h": 175.7,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 410,
+        "h": 175.7,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 410.2,
+        "dispH": 175.7,
+        "cropXpct": 0,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 178.3,
+        "y": 66.8,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗",
+        "chars": 60,
+        "w": 394,
+        "h": 36,
+        "pctOfThumbH": 20.5,
+        "pctOfThumbArea": 19.7,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 393,
+        "clientW": 392,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 458,
+        "h": 461.7,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "none",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "block",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 1280,
+      "thumb": {
+        "w": 538,
+        "h": 230.56,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 538,
+        "h": 230.56,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 538.3,
+        "dispH": 230.6,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 234,
+        "y": 87.6,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗",
+        "chars": 60,
+        "w": 522,
+        "h": 36,
+        "pctOfThumbH": 15.6,
+        "pctOfThumbArea": 15.1,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 520,
+        "clientW": 520,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 586,
+        "h": 516.56,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "none",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "block",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    },
+    {
+      "vw": 1440,
+      "thumb": {
+        "w": 538,
+        "h": 230.56,
+        "ratio": 2.333
+      },
+      "thumbCss": {
+        "aspectRatio": "21 / 9",
+        "minHeight": "112px",
+        "borderRadius": "8px",
+        "overflow": "hidden"
+      },
+      "img": {
+        "natW": 1200,
+        "natH": 514,
+        "natRatio": 2.3346,
+        "w": 538,
+        "h": 230.56,
+        "objectFit": "cover"
+      },
+      "crop": {
+        "dispW": 538.3,
+        "dispH": 230.6,
+        "cropXpct": 0.1,
+        "cropYpct": 0
+      },
+      "pinInBox": {
+        "x": 234,
+        "y": 87.6,
+        "xPctOfBox": 43.5,
+        "yPctOfBox": 38
+      },
+      "label": {
+        "text": "Club de Emprendedores, San Salvador de Jujuy — Cómo llegar ↗",
+        "chars": 60,
+        "w": 522,
+        "h": 36,
+        "pctOfThumbH": 15.6,
+        "pctOfThumbArea": 15.1,
+        "bg": "rgb(23, 10, 38)",
+        "border": "rgb(47, 23, 80) 1px",
+        "fontSize": "12px",
+        "radius": "8px",
+        "truncated": false,
+        "scrollW": 520,
+        "clientW": 520,
+        "coversPin": false,
+        "insetL": 8,
+        "insetR": 8,
+        "insetB": 8
+      },
+      "card": {
+        "w": 586,
+        "h": 516.56,
+        "bg": "rgb(34, 16, 58)",
+        "padding": "24px",
+        "radius": "8px",
+        "gap": "16px"
+      },
+      "labelVariantsInDom": [
+        {
+          "cls": "pk-about-map-label lg:hidden",
+          "display": "none",
+          "text": "Cómo llegar ↗"
+        },
+        {
+          "cls": "pk-about-map-label hidden lg:block",
+          "display": "block",
+          "text": "Club de Emprendedores, San Salvador de J"
+        }
+      ]
+    }
+  ]
+}
