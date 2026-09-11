@@ -23,15 +23,15 @@ Total Phases: 7
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-07)
+See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.6 — Light/Dark Theme Color-Family Consistency (complete; ready to ship)
+**Current focus:** Planning next milestone (Phase 2: Natural-Language Spanish Search + Auth)
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
+Phase: Milestone v1.0 complete — v1.0 shipped 2026-09-11
 Plan: —
 Status: Awaiting next milestone
 Last activity: 2026-09-11 — Milestone v1.0 completed and archived
@@ -232,10 +232,6 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 ### Blockers/Concerns
 
-- Phase 0: Three implementation decisions are explicitly deferred to Phase 0
-  discuss-phase/plan-phase rather than assumed now — Dockerfile strategy for aarch64, safe Ecto
-  migrations via Kamal, and minimal secrets management approach (see PROJECT.md "Open decisions")
-
 - Phase 2: Embedding runtime throughput/latency for local CPU embeddings is a genuine open
   unknown (research/SUMMARY.md) — must be resolved via an explicit spike before committing to
   Bumblebee vs. an alternative runtime or a specific model; do not skip or shortcut this spike.
@@ -252,11 +248,6 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 0 (plans 00-04 onward): main is now branch-protected requiring the 'quality' CI check — direct 'git push origin main' is rejected once a required status check exists. Future plan executors must land commits via a short branch + PR (gh pr create -> wait for CI -> gh pr merge), not a bare push, even though .planning/config.json still has git.branching_strategy:
 - Plan 00-06 (nightly backup): repo is now public (00-03 D-19), so GitHub's 60-day scheduled-workflow auto-disable applies to the nightly pg_dump->R2 cron workflow. Must accept this risk explicitly or add a keepalive mechanism when planning/executing 00-06.
 
-- [Phase 01, acknowledged 2026-08-18] Two UI/UX items from Phase 1's final human UAT were left open on purpose (developer chose to close the phase and fix these manually, section-by-section, rather than route through automated gap-closure — see `01-VERIFICATION.md` "Acknowledged Gaps"):
-  - **G-01-4 (major):** Carousel shelves on `/` read as a single vertical list with no visible affordance that there are multiple carousels, and horizontal scroll happens at the window level instead of being scoped to each carousel row. A diagnosis was opened at `.planning/debug/G-01-4-carousel-affordance.md`.
-  - **G-01-3 (unresolved):** The carousel prev/next scroll-controls test was skipped by the user ("I don't understand this") — whether the originally-reported "~20 columns forcing horizontal scroll" was a carousel rail or the `#games` grid is still an open question.
-  - These two remain the next manual UI/UX pass's starting point. The third item originally grouped here — the 7-item UI audit — was closed 2026-08-21 by quick task 260821-dah (see "Pending Todos" above).
-- [Resolved by quick task 260901-ty6, 2026-09-01] Mobile footer visual weight — the footer (not the full shell) had its ≤480px vertical chrome (margin+padding), wordmark, and link ink/gap all retuned down (96px→56px chrome); CDP-measured, 764/764 tests pass. Deferred item closed; if visual weight concerns resurface on other shell surfaces (header, drawer), that remains its own shell-wide phase.
 - Deferred (not a blocker): sticky title-echo bar's brand-tint/bounce question — mechanical separation/contrast/typography fixes shipped in 01.3-09 and 01.3-11 (both deliberately left the bar's own background fill and `.pk-scroll-top`'s bounce animation untouched, per each plan's own "Open design questions"); brand treatment itself still undecided, reported at least twice now (01.2 and 01.3).
 
 ### Quick Tasks Completed
