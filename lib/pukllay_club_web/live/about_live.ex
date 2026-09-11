@@ -30,6 +30,12 @@ defmodule PukllayClubWeb.AboutLive do
   `.pk-about-cta-spacer`/`.pk-about-cta-bar` pair (plans 01.1-08/01.1-09)
   are this club's ONLY join CTA site-wide (D-05 superseded) — every band
   this plan adds lives strictly between them, never inside or around them.**
+
+  **Sketch 050 (01.5-01, D-15):** the pending todo "Surface Pukllay Club
+  brand name in site content" is satisfied by the hero's isologo companion
+  wordmark (`.pk-about-morph-name`, D-01 through D-04) — scoped to the
+  About page only. No other page (nav, footer, home) gets brand-name text
+  added as part of this work.
   """
   use PukllayClubWeb, :live_view
 
@@ -43,7 +49,16 @@ defmodule PukllayClubWeb.AboutLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} fullbleed sticky active_nav={:quienes_somos}>
+    <%!-- Plan 01.5-08 (G-01.5-3 item 4): `bottom_collapse`, not
+    `boundary_collapse` — this page's TOP spacing is a separately-tuned,
+    correct decision that must not move, only the bottom boundary
+    double-stacks. Both catalog callers (index.ex/show.ex) already opted
+    into one of these two attrs; About was the one caller still taking the
+    full default bottom stack (<main>'s own pb-20 + the last band's own
+    trailing margin + .pk-footer's own top margin), the exact stack
+    app.css's `main.pk-bottom-collapse` comment records as measured on the
+    catalog page before its own 260902-il3 fix. --%>
+    <Layouts.app flash={@flash} fullbleed sticky bottom_collapse active_nav={:quienes_somos}>
       <:nav_links>
         <.link navigate={~p"/"}>Inicio</.link>
         <.link navigate={~p"/quienes-somos"} aria-current="page">Quiénes Somos</.link>
@@ -244,6 +259,14 @@ defmodule PukllayClubWeb.AboutLive do
                     if (shouldDock !== this.docked) {
                       this.docked = shouldDock
                       this.header.classList.toggle("is-docked", this.docked)
+                      // D-03: same boolean, same instant, same branch as the
+                      // header reveal above — this.el is #about-hero itself
+                      // (the hook is mounted on that section), so no new DOM
+                      // lookup is needed. No second boolean, no timer, no
+                      // scroll-position/viewport-height check anywhere in
+                      // this mechanism. Drives the hero eyebrow hide/reveal
+                      // and the companion wordmark fade (app.css).
+                      this.el.classList.toggle("is-docked", this.docked)
                       this.header.toggleAttribute("inert", !this.docked)
                       this.from = this.progress
                       this.to = this.docked ? 1 : 0
@@ -296,7 +319,12 @@ defmodule PukllayClubWeb.AboutLive do
                   // point (e.g. a #contacto deep link from the footer) sees
                   // the header already docked, with no jump and no replayed
                   // entrance. A null dock rect is treated as not-docked —
-                  // there is nothing yet to compare against.
+                  // there is nothing yet to compare against. The hero
+                  // eyebrow and the companion wordmark now resolve here
+                  // too (this.el.classList.toggle below), so that same
+                  // deep-linked visitor gets the right eyebrow/wordmark
+                  // state on the first painted frame, not on the next
+                  // scroll frame.
                   const natural0 = this.naturalRect()
                   const dock0 = this.dockRect()
                   this.docked = dock0 ? natural0.top <= dock0.top : false
@@ -304,6 +332,7 @@ defmodule PukllayClubWeb.AboutLive do
                   this.from = this.progress
                   this.to = this.progress
                   this.header.classList.toggle("is-docked", this.docked)
+                  this.el.classList.toggle("is-docked", this.docked)
                   this.header.toggleAttribute("inert", !this.docked)
                   // Writes the mark's transform immediately, at whichever
                   // state first paint resolved to.
@@ -342,8 +371,14 @@ defmodule PukllayClubWeb.AboutLive do
                   // About, so the `:has()` guard simply stops matching —
                   // there is no hiding class left over here to clean up
                   // (S1 fix, G-01.4-1). `is-docked` and `inert` are still
-                  // this hook's own state on a shared element, so those
-                  // still need explicit teardown.
+                  // this hook's own state on `this.header`, a SHARED
+                  // element that outlives this page, so those still need
+                  // explicit teardown. `this.el` (#about-hero) is NOT
+                  // torn down here on purpose: it is not shared — it
+                  // leaves the DOM on navigation away from About, same as
+                  // the `:has()`-driven header-hidden state above — so its
+                  // own `is-docked` class needs no cleanup; the class
+                  // disappears with the element.
                   this.header?.classList.remove("is-docked")
                   this.header?.removeAttribute("inert")
                 } catch (e) {
@@ -359,7 +394,12 @@ defmodule PukllayClubWeb.AboutLive do
           { margin-block-end: .75rem }` and would otherwise stack 12px on
           top of the declared clearance (G-01.4-3). --%>
           <div data-morph-anchor class="pk-about-mark-anchor mb-0" aria-hidden="true"></div>
-          <p class="font-sans text-xs uppercase tracking-widest text-neutral">
+          <%!-- pk-about-hero-eyebrow (D-03) exists purely as a stable hook for the
+          docked-state rule below — every visual property is still owned by the
+          Tailwind utilities beside it. Deliberately NOT .pk-about-eyebrow (that
+          class is the Cierre band's own closing-signature styling, including an
+          underlined-link companion rule that must not reach the hero). --%>
+          <p class="pk-about-hero-eyebrow font-sans text-xs uppercase tracking-widest text-neutral">
             Club de juegos de mesa · Jujuy
           </p>
           <h1 class="font-display pk-about-h1">Conectá jugando</h1>
@@ -586,8 +626,20 @@ defmodule PukllayClubWeb.AboutLive do
         </div>
       </section>
 
-      <%!-- "Qué hacemos" / "Nuestra historia" — verbatim D-06 copy. --%>
-      <section class="pk-band">
+      <%!-- "Qué hacemos" / "Nuestra historia" — verbatim D-06 copy.
+
+      D-14 (plan 01.5-04), whole-page band rhythm: adjacent bands alternate
+      plain -> tint -> (dark) -> plain -> tint down the page (photo rail
+      plain, this section tint, FAQ dark, Juntadas/Contacto plain, Cierre
+      tint) so each section visibly separates from its neighbour. FAQ's
+      dark/primary treatment sits OUTSIDE this alternation on purpose — it
+      is a deliberate one-off bold stop (see .pk-band-dark's own comment
+      below), not a third repeating state; folding it in would make every
+      band compete for the same attention instead of each one simply
+      separating from the section beside it. The alternation still reads
+      correctly with the dark band in the middle precisely because it is a
+      different KIND of thing, not one more alternating step. --%>
+      <section class="pk-band pk-band-tint">
         <div class="pk-band-inner pk-gutter grid gap-11 sm:grid-cols-2">
           <div>
             <h2 class="font-display text-2xl">Qué hacemos</h2>
@@ -657,17 +709,6 @@ defmodule PukllayClubWeb.AboutLive do
             <p class="text-lg">
               Nos juntamos los sábados en el Club de Emprendedores, San Salvador de Jujuy. Los juegos los llevamos nosotros; vos traé las ganas.
             </p>
-          </div>
-          <div id="contacto" class="pk-about-contact-card">
-            <h2 class="font-display text-2xl">Contacto</h2>
-            <p class="text-lg">
-              Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.
-            </p>
-            <Layouts.social_links
-              class="pk-about-contact-links"
-              icons={[:whatsapp, :instagram]}
-              labels
-            />
             <%!-- G-01.4-5 gap closure, plan 01.4-12, per CONTEXT.md D-11 through
             D-14, which reopened and reversed G-01.4-4's decision to decline
             an embed. The four preceding plans (01.4-07/09/10/11) all argued
@@ -681,7 +722,26 @@ defmodule PukllayClubWeb.AboutLive do
             for the CSP finding that made the frame look infeasible. The
             frame is deliberately inert (D-14): the overlay anchor below is
             the only interactive element in the box, so nobody "restores"
-            pan and zoom as a courtesy. --%>
+            pan and zoom as a courtesy.
+
+            Relocated from #contacto to #juntadas (plan 01.5-02 Task 3, D-09):
+            sketch 051 found the map names Juntadas' real-world meeting
+            location while Contacto is about reach-out channels, so it
+            belongs with Juntadas. This reopens 01.4's original Contacto
+            placement — that reopening is intentional and
+            developer-confirmed, not drift. This is a markup relocation
+            only: same page, same origin, same frame-src CSP scope, same
+            click-out-only interaction model — nothing about the embed
+            itself changed.
+
+            The lg (1024px) breakpoint on the caption pair below is now
+            load-bearing for a DIFFERENT reason than when it was written:
+            the parent's sm:grid-cols-2 still halves the column at 640px,
+            but the map now sits under Juntadas' shorter paragraph rather
+            than under Contacto's stack, so the 640-767px band the long
+            caption was tuned against still exists and the pair is still
+            correct as written — do not "simplify" it away while moving
+            it. --%>
             <div class="pk-about-map-thumb">
               <iframe
                 class="pk-about-map-embed"
@@ -713,20 +773,50 @@ defmodule PukllayClubWeb.AboutLive do
               </a>
             </div>
           </div>
+          <div id="contacto" class="pk-about-contact-card">
+            <h2 class="font-display text-2xl">Contacto</h2>
+            <p class="text-lg">
+              Escribinos por el grupo de WhatsApp o por Instagram — respondemos ahí mismo.
+            </p>
+            <%!-- D-06/D-07 (plan 01.5-02): three channels, not two. Facebook
+            added alongside WhatsApp/Instagram. `social_links/1` renders its
+            four `<a>` blocks in a FIXED source order (WhatsApp, Facebook,
+            Instagram, Email) regardless of how this `icons` list is
+            ordered, so the rendered sequence here is WhatsApp -> Facebook
+            -> Instagram. Email is deliberately absent (D-07): three
+            fully-labeled chips already measure ~387px against a 375px
+            phone's ~327px of available width, which is exactly what forces
+            the mobile icon-only treatment below (Task 2) — a fourth chip
+            has no room on either side of that breakpoint. Email stays a
+            footer-only channel. --%>
+            <Layouts.social_links
+              class="pk-about-contact-links"
+              icons={[:whatsapp, :instagram, :facebook]}
+              labels
+            />
+          </div>
         </div>
       </section>
 
-      <%!-- Closing CTA band. The design source's meta line links to a
-      link-aggregator site via ClubLinks.linktree_url/0 — that function no
-      longer exists: the developer explicitly removed the link-aggregator
-      channel site-wide during plan 01.1-01's footer revision ("remove it,
-      the channel is no longer rendered anywhere" — see ClubLinks'
-      moduledoc). Re-adding a link to a function that doesn't exist would
-      either fail to compile or require inventing a dead URL, so the
-      trailing link instead points at Instagram (still a real, live
-      channel) — same required "Pukllay Club · San Salvador de Jujuy,
-      Argentina ·" prefix, honest destination. Flagged for developer
-      review.
+      <%!-- Closing CTA band. The design source's meta line originally
+      linked to a link-aggregator site via ClubLinks.linktree_url/0 — that
+      function no longer exists: the developer explicitly removed the
+      link-aggregator channel site-wide during plan 01.1-01's footer
+      revision ("remove it, the channel is no longer rendered anywhere" —
+      see ClubLinks' moduledoc). Plan 049 (Phase 01.4) substituted a
+      trailing Instagram link in its place and flagged that substitution
+      "for developer review" in this comment.
+
+      That review happened in plan 01.5-03 (D-13): the trailing link is
+      removed entirely rather than re-pointed at a different channel —
+      Contacto's chip row directly above (D-06/D-07, plan 01.5-02) now
+      surfaces all three channels (WhatsApp, Facebook, Instagram)
+      explicitly, so a fourth mention of any one of them here would be
+      redundant, not helpful. The signature is now a plain "Pukllay Club ·
+      San Salvador de Jujuy, Argentina" carrying no link at all, forced
+      onto two centered lines on mobile at the "·" break point via a
+      responsive <br> (pk-about-closing-break) rather than wherever the
+      viewport happens to wrap it.
 
       Sketch 049: the button pair that used to sit above this meta line
       (Grupo de WhatsApp + Instagram) was removed — by the time a reader
@@ -735,29 +825,123 @@ defmodule PukllayClubWeb.AboutLive do
       the hero and the mobile sticky bar) was the rhythm-killer 049
       flagged. The band now reuses the shared sumate_cta/1 component
       instead, matching the hero's exact call shape. --%>
-      <section id="cierre" class="pk-band">
+      <section id="cierre" class="pk-band pk-band-tint">
         <div class="pk-band-inner pk-gutter text-center">
           <h2 class="font-display text-2xl">Nos vemos el sábado</h2>
-          <div class="flex justify-center">
+          <%!-- D-11 (plan 01.5-04): pk-about-cierre-cta on the WRAPPER, not
+          the anchor inside it — hiding only the anchor would leave an empty
+          flex child in #cierre .pk-band-inner's column, and that column's
+          `gap` (plan 01.5-03, D-12) would still allocate space on both sides
+          of an empty box. Hiding the wrapper removes the flex child outright
+          so the gap closes around it. See the app.css rule beside
+          .pk-about-cta-bar/.pk-about-cta-spacer for the full D-11 rationale
+          (same 480px threshold, same media block, on purpose). --%>
+          <div class="flex justify-center pk-about-cierre-cta">
             <Layouts.sumate_cta />
           </div>
-          <p class="pk-about-eyebrow">
-            Pukllay Club · San Salvador de Jujuy, Argentina ·
-            <a href={ClubLinks.instagram_url()} target="_blank" rel="noopener noreferrer">Instagram</a>
+          <p class="pk-about-eyebrow pk-about-closing-meta">
+            Pukllay Club ·<br class="pk-about-closing-break" /> San Salvador de Jujuy, Argentina
           </p>
         </div>
       </section>
 
-      <%!-- About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
-      Page-owned, not shell-owned: no other route can accidentally inherit it,
-      which is the whole point of the D-05 supersession — a site-wide sticky
-      bar would put the join ask back on every page the header just stopped
-      putting it on. Reuses the hero's own sumate_cta/1 so the two placements
-      can never drift to different labels/destinations. Both elements are
-      display:none at base, turned on only in the trailing @media (max-width:
-      480px) block. --%>
-      <div class="pk-about-cta-spacer" aria-hidden="true"></div>
-      <div class="pk-about-cta-bar"><Layouts.sumate_cta class="w-full" /></div>
+      <%!-- About-scoped mobile sticky join-CTA bar (01.1-09, D-05
+      superseded; rebuilt sketch 053 winner D, quick task 260910-av6,
+      G-01.5-12). Page-owned, not shell-owned: no other route can
+      accidentally inherit it, which is the whole point of the D-05
+      supersession — a site-wide sticky bar would put the join ask back on
+      every page the header just stopped putting it on. Reuses the hero's
+      own sumate_cta/1 so the two placements can never drift to different
+      labels/destinations. display:none at base, turned on only in the
+      trailing @media (max-width: 480px) block.
+
+      Winner D (app.css, .pk-about-cta-bar): a full-width surfaced bar,
+      hidden (translated out + invisible) until the page's own docked state
+      turns on — reusing the SAME `#about-hero.is-docked` boolean
+      `.AboutHeaderMorph` (above) already computes, no second scroll
+      mechanism — and then visible for the rest of the scroll, with no
+      footer-proximity auto-hide in either direction. Supersedes plan
+      01.5-14's sketch 052 winner B "floating compact pill", rejected at
+      round-3 UAT for covering the footer's "Powered by BGG" line; footer
+      clearance is now RESERVED (Task 2's live-measured
+      `--pk-about-cta-bar-h`, consumed by app.css's document-end
+      `body:has(.pk-about-cta-bar)` rule) instead of solved by auto-hiding
+      the bar.
+
+      `pk-sumate-btn-solid w-full` passed here through `sumate_cta/1`'s
+      existing caller-class merge seam: `pk-sumate-btn-solid` fills the
+      button solid from the audited primary/primary-content token pair
+      (unchanged from plan 01.5-14); `w-full` is restored (it was removed
+      by 01.5-14 when the wrapper became a content-sized pill) so the
+      button spans the bar's full inner width edge-to-edge at the page
+      gutter, matching winner D's full-width premise. Nothing else about
+      this call, `sumate_cta/1` itself, or the hero/closing-band placements
+      changes: those two stay outline on purpose — this is a mobile-overlay
+      treatment for the sticky bar alone, not a new button style for the
+      page.
+
+      Task 2 (G-01.5-12): a second page-owned colocated hook,
+      `.AboutCtaBarMeasure`, mounted here (a STATIC phx-hook string
+      literal — layouts.ex:205-215's note on why a dynamic expression fails
+      at runtime applies to every hook in this file, not just
+      `.AboutHeaderMorph`). `id="pk-about-cta-bar"` exists solely because
+      LiveView requires a DOM id for `phx-hook` to attach to. Mirrors
+      `.CatalogNav`'s own `--pk-header-h` publisher (layouts.ex) verbatim: a
+      `ResizeObserver` on this element publishes its real rendered height as
+      `--pk-about-cta-bar-h` on `documentElement`, consumed by app.css's
+      `body:has(.pk-about-cta-bar)` document-end clearance rule (below, in
+      the 480px block) so the reserved footer clearance is always derived
+      from the bar's LIVE height, never a stale literal. A
+      `translateY`/`opacity`/`visibility` hidden state does not affect the
+      measured height, so this measures correctly even while the bar is
+      hidden at page top. --%>
+      <div id="pk-about-cta-bar" class="pk-about-cta-bar" phx-hook=".AboutCtaBarMeasure">
+        <script :type={Phoenix.LiveView.ColocatedHook} name=".AboutCtaBarMeasure">
+          export default {
+            mounted() {
+              try {
+                // Load-bearing guards, not defensive noise (T-QUICK-01/
+                // T-QUICK-02). (1) height > 0 — a display:none measurement
+                // (every width above 480px) would otherwise publish a 0
+                // that collapses the document-end reservation during a
+                // resize down through the 480px threshold. (2) height !==
+                // this.lastHeight — the ResizeObserver feedback-loop
+                // mitigation: the published var feeds body's
+                // padding-bottom, and an unconditional write on every
+                // callback is how RO loops start. This bar's own height
+                // (padding + button min-height + border) is not affected
+                // by the property it publishes, so a real change only
+                // ever fires once per genuine resize.
+                this.lastHeight = null
+                this.publish = () => {
+                  const height = Math.ceil(this.el.getBoundingClientRect().height)
+                  if (height > 0 && height !== this.lastHeight) {
+                    this.lastHeight = height
+                    document.documentElement.style.setProperty(
+                      "--pk-about-cta-bar-h",
+                      height + "px"
+                    )
+                  }
+                }
+                this.observer = new ResizeObserver(this.publish)
+                this.observer.observe(this.el)
+                this.publish()
+              } catch (e) {
+                console.error("AboutCtaBarMeasure: mount block failed to wire", e)
+              }
+            },
+            destroyed() {
+              try {
+                this.observer?.disconnect()
+                document.documentElement.style.removeProperty("--pk-about-cta-bar-h")
+              } catch (e) {
+                console.error("AboutCtaBarMeasure: destroy block failed to wire", e)
+              }
+            }
+          }
+        </script>
+        <Layouts.sumate_cta class="pk-sumate-btn-solid w-full" />
+      </div>
 
       <%!-- Sketch 045 isologo scroll-morph mark: the SINGLE positioned
       floating element .AboutHeaderMorph (mounted on the hero section above)
@@ -775,6 +959,15 @@ defmodule PukllayClubWeb.AboutLive do
         <div class="pk-about-morph-mark-inner">
           <img src={~p"/images/isologo-light.png"} class="dark:hidden" alt="" />
           <img src={~p"/images/isologo-dark.png"} class="hidden dark:block" alt="" />
+          <%!-- Companion wordmark (D-01/D-02, sketch 050): a single reused
+          element, matching the theme-pair <img>s' own precedent — it takes
+          its color from a token and needs no per-theme duplicate. No
+          Tailwind utility touches font-family/font-size/font-weight/
+          letter-spacing/position/color/opacity here — .pk-about-morph-name
+          (app.css) owns every one of those properties, and an unlayered
+          .pk-* rule silently beats a utility on the same property in this
+          codebase. --%>
+          <span class="pk-about-morph-name">PUKLLAY CLUB</span>
         </div>
       </div>
 

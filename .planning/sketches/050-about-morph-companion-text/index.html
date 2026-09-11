@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>050 — About morph companion text (final)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  .note {
+    max-width: 680px; margin: 24px auto; padding: 12px 16px;
+    background: var(--color-accent-bg); color: var(--color-accent-text);
+    border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
+  }
+  .note strong { display: block; margin-bottom: 4px; }
+
+  .fake-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 65px;
+    background: transparent; box-shadow: none; pointer-events: none;
+    transition: background var(--duration-base) var(--ease-standard),
+                box-shadow var(--duration-base) var(--ease-standard);
+  }
+  .fake-header.is-revealed { pointer-events: auto; }
+  .fake-header.is-tinted {
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(6px);
+  }
+  .fake-header-inner {
+    position: relative; width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand-slot { display: flex; align-items: center; gap: 8px; width: 200px; }
+  /* Reserves the docked mark's own 32x32 footprint as a real layout box —
+     without this, the floating mark docks flush against .brand-slot's own
+     left edge, landing right on top of the wordmark text's first few
+     letters since nothing pushed the text over to make room (found live
+     while verifying sketch 051, same header markup as here). */
+  .mark-slot { width: 32px; height: 32px; flex-shrink: 0; }
+  .brand-text {
+    display: flex; flex-direction: column; line-height: 1;
+    opacity: 0; transform: translateX(-6px);
+    transition: opacity var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                transform var(--duration-base) var(--ease-out-soft) var(--duration-fast);
+  }
+  .is-docked .brand-text { opacity: 1; transform: translateX(0); }
+  .brand-name { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  .brand-tag { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+
+  .back-ludoteca {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--text-sm); color: var(--color-text-muted); text-decoration: none;
+    padding: 6px 10px; border-radius: var(--radius-full); border: 1px solid transparent;
+    opacity: 0; transform: translateX(6px);
+    transition: opacity var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                transform var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                color var(--duration-fast) var(--ease-standard),
+                border-color var(--duration-fast) var(--ease-standard),
+                background var(--duration-fast) var(--ease-standard);
+  }
+  .is-docked .back-ludoteca { opacity: 1; transform: translateX(0); }
+  .back-ludoteca:hover { color: var(--color-primary); border-color: var(--color-border); background: var(--color-surface); }
+  .back-ludoteca svg { width: 16px; height: 16px; }
+
+  /* Round 3's grouping fix: mark anchors to an in-flow spacer (first child
+     of .hero), so mark+companion+eyebrow+H1+subtext+CTA center together as
+     one block via the flex column's own gap/centering — not a separate
+     calculation against the section edge. */
+  .hero {
+    min-height: 92vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 16px; position: relative;
+  }
+  .mark-anchor { width: 100%; height: 220px; } /* HERO_SIZE(180) + gap + companion line + a little air */
+  /* Round 5: tied to the exact same `docked` boolean that drives the header
+     reveal and the companion-text hide (updateHeaderChrome() toggles all
+     three together) — so the eyebrow disappearing is the SAME crossing-
+     point event, not an incidental effect of it scrolling out of view on
+     its own. Symmetric both directions for free, since `docked` already
+     flips back on scroll-up. */
+  .hero-eyebrow {
+    font-size: var(--text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted);
+    transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+  .hero-eyebrow.is-docked { opacity: 0; }
+  .hero h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 8vw, 4.5rem); margin: 0; letter-spacing: 0.02em; }
+  .hero p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 32rem; margin: 0; }
+  .hero-cta {
+    margin-top: 8px; display: inline-flex; align-items: center; padding: 12px 28px;
+    border-radius: var(--radius-full); border: 1.5px solid var(--color-primary); color: var(--color-primary);
+    font-size: var(--text-base); font-weight: 600; text-decoration: none;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .hero-cta:hover { background: var(--color-primary); color: var(--color-primary-content); }
+
+  /* Single morphing mark — top/left/width/height set via JS inline styles,
+     never CSS, so there is exactly one source of truth for its position at
+     any moment (sketch 045's proven mechanic, untouched here). Companion
+     text lives INSIDE this element, absolutely positioned below the image
+     so it never affects the box's own size math. */
+  #morph-mark {
+    position: fixed; z-index: 60; top: 0; left: 0; width: 0; height: 0;
+    opacity: 0; transform: scale(0.75);
+    transition: opacity var(--duration-slow) var(--ease-out-soft),
+                transform var(--duration-slow) var(--ease-out-soft),
+                top var(--duration-slow) var(--ease-out-soft),
+                left var(--duration-slow) var(--ease-out-soft),
+                width var(--duration-slow) var(--ease-out-soft),
+                height var(--duration-slow) var(--ease-out-soft),
+                filter var(--duration-slow) var(--ease-out-soft);
+  }
+  #morph-mark.is-entered { opacity: 1; transform: scale(1); }
+  #morph-mark.is-first-play { animation: mark-glow 1600ms var(--ease-out-soft) 1; }
+  @keyframes mark-glow {
+    0% { filter: drop-shadow(0 0 0 transparent); }
+    50% { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--color-primary) 60%, transparent)); }
+    100% { filter: drop-shadow(0 0 0 transparent); }
+  }
+  #morph-mark.no-anim { transition: none !important; }
+  #morph-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+  /* Companion text — font-weight fixed at 400 always (Bebas Neue is
+     self-hosted at weight 400 ONLY in the real app; anything heavier is a
+     silent browser-faked bold the codebase avoids elsewhere). Picked size:
+     ~25px at rest ("V3 — Confident", round 4), tighter tracking than the
+     earlier rounds. */
+  .morph-companion-text {
+    display: none;
+    position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    margin-top: 10px; white-space: nowrap; text-align: center;
+  }
+  .mct-name {
+    display: block; font-family: var(--font-display); font-weight: 400;
+    letter-spacing: 0.02em; text-transform: uppercase; color: var(--color-text);
+  }
+
+  .scroll-filler { height: 160vh; padding: 48px 24px; }
+  .scroll-filler .band { max-width: 640px; margin: 0 auto 24px; padding: 32px; background: var(--color-surface); border-radius: var(--radius-lg); }
+  .scroll-hint { text-align: center; color: var(--color-text-muted); font-size: var(--text-sm); padding: 24px; }
+
+  [data-tools] {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,0.7); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.4;
+    transition: opacity 0.2s; display: flex; gap: 8px; align-items: center;
+  }
+  [data-tools]:hover { opacity: 1; }
+  [data-tools] select, [data-tools] button { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="note"><strong>Final — companion wordmark + coordinated eyebrow hide</strong>
+"PUKLLAY CLUB" travels baked into the isologo mark, scaling/fading with it as it docks into the
+header (real self-hosted Bebas Neue, weight 400). The whole hero — mark, companion, eyebrow, H1,
+subtext, CTA — centers as one grouped block. The eyebrow ("Club de juegos de mesa · Jujuy") hides
+the instant the mark docks and reappears the instant it undocks — same crossing-point event as
+the header reveal and the companion fade, not an incidental scroll effect.</div>
+
+<header class="fake-header" data-header>
+  <div class="fake-header-inner">
+    <div class="brand-slot">
+      <span class="mark-slot" aria-hidden="true"></span>
+      <span class="brand-text">
+        <span class="brand-name">Pukllay Club</span>
+        <span class="brand-tag">Juegos de mesa modernos</span>
+      </span>
+    </div>
+    <a class="back-ludoteca" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      Volver a la ludoteca
+    </a>
+  </div>
+</header>
+<section class="hero" data-hero>
+  <div class="mark-anchor" data-anchor aria-hidden="true"></div>
+  <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+  <h1>Conectá jugando</h1>
+  <p>Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+  <a class="hero-cta" href="#">Sumate</a>
+</section>
+<div class="scroll-hint">↓ scrolleá para ver el isologo saltar al header ↓</div>
+<div class="scroll-filler">
+  <div class="band"><strong>Qué hacemos</strong><p>Contenido de relleno para poder scrollear.</p></div>
+  <div class="band"><strong>Nuestra historia</strong><p>Más contenido de relleno.</p></div>
+</div>
+
+<div id="morph-mark">
+  <img src="../../../priv/static/images/isologo-light.png" alt="">
+  <span class="morph-companion-text">
+    <span class="mct-name">PUKLLAY CLUB</span>
+  </span>
+</div>
+
+<div data-tools>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+  <button onclick="setViewport(375)">📱</button>
+  <button onclick="setViewport(768)">📟</button>
+  <button onclick="setViewport(0)">🖥️</button>
+</div>
+
+<script>
+const HERO_SIZE = 180;
+const DOCK_SIZE = 32;
+const NAME_SCALE = 0.135; // -> ~25px at rest ("V3 — Confident", picked)
+
+let docked = false;
+let hasEntered = false;
+let entranceTimer = null;
+let ticking = false;
+let restTop = null; // captured fresh on load — the mark's natural top at scroll=0
+
+const markBox = document.getElementById('morph-mark');
+const mctName = markBox.querySelector('.mct-name');
+const mctWrap = markBox.querySelector('.morph-companion-text');
+const eyebrow = document.querySelector('.hero-eyebrow');
+
+function anchorEl() { return document.querySelector('[data-anchor]'); }
+function headerEl() { return document.querySelector('[data-header]'); }
+
+// The anchor is ordinary in-flow content and the flex column's first
+// child, so it already tracks scroll 1:1 AND shares the same
+// centering/gap rules as the eyebrow/H1/subtext beneath it (round 3's fix).
+function naturalRect() {
+  const r = anchorEl().getBoundingClientRect();
+  return { top: r.top, left: r.left + r.width / 2 - HERO_SIZE / 2, size: HERO_SIZE };
+}
+function dockRect() {
+  const slot = headerEl().querySelector('.brand-slot');
+  const r = slot.getBoundingClientRect();
+  return { top: r.top + (r.height - DOCK_SIZE) / 2, left: r.left, size: DOCK_SIZE };
+}
+function place(rect, animate) {
+  if (!animate) markBox.classList.add('no-anim');
+  markBox.style.top = rect.top + 'px';
+  markBox.style.left = rect.left + 'px';
+  markBox.style.width = rect.size + 'px';
+  markBox.style.height = rect.size + 'px';
+  if (!animate) {
+    void markBox.offsetWidth; // force reflow before re-enabling transitions
+    markBox.classList.remove('no-anim');
+  }
+}
+
+// 0 at rest, 1 exactly at the crossing point. Drives the companion text's
+// fade curve; the mark's own placement stays the same binary snap-at-
+// crossing mechanic proven in sketch 045 — this is purely for the text.
+function computeProgress(natural, dock) {
+  if (restTop === null) restTop = natural.top;
+  const totalTravel = restTop - dock.top;
+  if (totalTravel <= 0) return docked ? 1 : 0;
+  const traveled = restTop - natural.top;
+  return Math.min(1, Math.max(0, traveled / totalTravel));
+}
+
+// Single source of truth for everything gated on the dock crossing: the
+// header reveal, the eyebrow hide, AND (in updateCompanion) the companion
+// text hide all read the same `docked` boolean, so they change at the
+// exact same instant in both directions — dock hides eyebrow+companion
+// and reveals the header; undock is the exact reverse.
+function updateHeaderChrome() {
+  const header = headerEl();
+  header.classList.remove('is-revealed', 'is-tinted', 'is-docked');
+  if (docked) header.classList.add('is-revealed', 'is-tinted', 'is-docked');
+  eyebrow.classList.toggle('is-docked', docked);
+}
+
+function updateCompanion(rect, progress) {
+  const show = !docked;
+  mctWrap.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  mctName.style.fontSize = Math.max(7, rect.size * NAME_SCALE) + 'px';
+  mctName.style.opacity = String(Math.max(0, 1 - progress * 1.4));
+}
+
+function syncPosition() {
+  const natural = naturalRect();
+  const dock = dockRect();
+  const shouldDock = natural.top <= dock.top;
+
+  if (shouldDock !== docked) {
+    docked = shouldDock;
+    updateHeaderChrome();
+    const target = docked ? dock : natural;
+    place(target, true); // the one animated "become the header" / "rejoin the page" snap
+    updateCompanion(target, docked ? 1 : 0);
+  } else if (!docked) {
+    place(natural, false); // live tracking, no easing — moves exactly with scroll
+    updateCompanion(natural, computeProgress(natural, dock));
+  }
+  // while docked and still shouldDock, the mark just stays pinned at dock — nothing to update
+}
+
+function init() {
+  clearTimeout(entranceTimer);
+  markBox.classList.remove('is-entered', 'is-first-play');
+  hasEntered = false;
+  ticking = false;
+  restTop = null;
+  window.scrollTo(0, 0);
+
+  const natural = naturalRect();
+  const dock = dockRect();
+  docked = natural.top <= dock.top;
+  updateHeaderChrome();
+
+  if (docked) {
+    place(dock, false);
+    markBox.classList.add('is-entered');
+    hasEntered = true;
+    updateCompanion(dock, 1);
+  } else {
+    place(natural, false);
+    updateCompanion(natural, 0);
+    entranceTimer = setTimeout(() => {
+      markBox.classList.add('is-entered', 'is-first-play');
+      hasEntered = true;
+    }, 500);
+  }
+}
+
+function setViewport(px) {
+  document.body.style.maxWidth = px ? px + 'px' : 'none';
+  document.body.style.margin = px ? '0 auto' : '0';
+  document.body.style.border = px ? '1px solid var(--color-border)' : 'none';
+  init();
+}
+
+window.addEventListener('scroll', () => {
+  if (!hasEntered || ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    syncPosition();
+    ticking = false;
+  });
+}, { passive: true });
+
+window.addEventListener('resize', () => {
+  const rect = docked ? dockRect() : naturalRect();
+  place(rect, false);
+  updateCompanion(rect, docked ? 1 : computeProgress(naturalRect(), dockRect()));
+});
+
+init();
+</script>
+
+</body>
+</html>

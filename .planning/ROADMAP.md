@@ -129,6 +129,102 @@ be pulled forward without breaking that dependency chain.
 
 - [x] 01-12-PLAN.md — Sticky gutter-aligned nav with shelf anchors and search, mobile category chips, design-system record (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
 
+### Phase 01.5: About Page CTA Rhythm & Header Morph Refinement — implement sketch-findings-pukllay_club sketches 050-051: isologo scroll-morph gets a companion wordmark baked into the mark with eyebrow synced to the dock-crossing state; full-page CTA rhythm pass across the About page (Contacto card chrome dropped, soft-chip contact links plus Facebook, Maps thumbnail moved to Juntadas, Cierre full-screen on desktop with unified gap-based rhythm, alternating plain/tint band backgrounds page-wide) (INSERTED)
+
+**Goal:** The About page's isologo says the club's name as it scrolls, and the page's four CTA
+touchpoints read as one rhythm instead of four competing asks: a "PUKLLAY CLUB" companion wordmark
+travels and shrinks with the morphing mark while the hero eyebrow yields to the header at the same
+instant; Contacto sheds its card chrome and becomes a plain column of three soft accent-tinted
+chips (WhatsApp, Facebook, Instagram) that go circular and icon-only on a phone; the venue map moves
+to Juntadas where the copy names the meeting place; the closing band becomes a full-viewport
+destination on desktop with one gap-driven rhythm and a plain link-free signature; and adjacent
+bands alternate plain and tinted backgrounds down the page while the FAQ keeps its dark band as the
+one deliberate bold stop.
+**Requirements**: none — no REQ-IDs map to this inserted UI-polish phase (same pattern as Phase
+01.4). CONTEXT.md's locked decisions D-01..D-15 are this phase's acceptance criteria instead, per
+01.5-RESEARCH.md's "Phase Requirements → Test Map" and 01.5-VALIDATION.md's Per-Task Verification
+Map. Plan frontmatter carries decision-scoped pseudo-IDs.
+**Depends on:** Phase 1, Phase 01.4
+**Plans:** 14/14 plans executed (4 original + 4 gap-closure round 1 + 2 gap-closure round 2, all 10 executed; 4 gap-closure round 3 pending)
+
+Plans:
+**Wave 1**
+
+- [x] 01.5-01-PLAN.md — Isologo companion wordmark "PUKLLAY CLUB" baked into the morph mark, with the hero eyebrow synced to the same dock-crossing boolean (D-01, D-02, D-03, D-04, D-15)
+
+**Wave 2** *(blocked on Wave 1 — shared files)*
+
+- [x] 01.5-02-PLAN.md — Contacto de-chromed to a plain column of three accent-tinted chips that go circular on mobile, and the live Maps embed relocated to Juntadas (D-05, D-06, D-07, D-08, D-09)
+
+**Wave 3** *(blocked on Wave 2 — shared files)*
+
+- [x] 01.5-03-PLAN.md — Closing band: trailing Instagram link removed from the signature, two-line mobile wrap, one flex gap for all internal spacing, full-viewport on desktop (D-13, D-12, D-10)
+
+**Wave 4** *(blocked on Wave 3 — shared files)*
+
+- [x] 01.5-04-PLAN.md — Page-wide rhythm finishers: no duplicate Sumate at the 480px sticky-bar threshold, alternating plain/tint band backgrounds with the FAQ untouched, plus the phase gate (D-11, D-14)
+
+**Gap closure — Wave 1** *(from `01.5-UAT.md`: G-01.5-1, G-01.5-2, G-01.5-3, all three diagnosed
+to root cause in `.planning/debug/`. Plans 05 and 06 own disjoint file sets and run in parallel;
+plans 07 and 08 follow because they share `assets/css/app.css` with 06 and with each other.
+G-01.5-3 is deliberately split across three plans because its own diagnosis says its three pieces
+have different owners, different blast radii, and one is a design decision rather than a bug fix)*
+
+- [x] 01.5-05-PLAN.md — Sumate CTA proportions fixed at their single source: a real daisyUI size step composed with the 44px touch floor replaces the orphaned one-axis height utility, closing the hero AND Cierre balance reports in one component edit (G-01.5-1, G-01.5-3 item 5)
+- [x] 01.5-06-PLAN.md — `.pk-band` reclaims ownership of its own outer spacing from the shared shell wrapper so adjacent bands sit flush, plus the repo's first geometric oracle for band adjacency (G-01.5-2)
+
+**Gap closure — Wave 2** *(blocked on 01.5-06 — shared `app.css`, `about_live_test.exs` and the
+geometry probe)*
+
+- [x] 01.5-07-PLAN.md — Cierre band internal geometry: the header-height compensation whose premise D-14 invalidated is removed, the full-viewport question is decided with the developer, and the two CSS-source tests that passed on the bug are moved in lockstep (G-01.5-3 items 3a, 3b)
+
+**Gap closure — Wave 3** *(blocked on 01.5-07 — same stylesheet region; also overlaps 01.5-05 on
+`layouts_test.exs`)*
+
+- [x] 01.5-08-PLAN.md — Page bottom boundary: the About page opts into the bottom-collapse mechanism built for this exact stacked-declaration defect, the non-working CTA-bar spacer is replaced by page-scoped document-end clearance, and a caller-contract test surfaces the next page to forget (G-01.5-3 item 4)
+
+**Gap closure round 2 — Wave 1** *(from the 2026-09-09 UAT re-verification round: G-01.5-4 through
+G-01.5-7, all four diagnosed to root cause in `.planning/debug/`. Every one of the four is a case
+where the prior fix's arithmetic was CORRECT and the symptom survived it — the boundary budget was
+exactly met but rendered as a stripe between two same-token surfaces; the band's gaps were exactly
+equal but both too large against the page's own rhythm; the button was proportionate but not the
+button the composition was approved with; the bar was opaque and correctly stacked but painted the
+page's own background token. Both plans replace the gates that passed on the reported defects with
+assertions derived from measured properties rather than restatements of the CSS they test)*
+
+- [x] 01.5-09-PLAN.md — Page bottom: the Cierre-to-footer boundary goes to zero via a page-scoped override (the shared collapse rule stays correct for the catalog pages), the closing band's padding is retuned from 8rem to 5rem against the page's own 144px content-run rhythm, and both stale oracles are replaced with surface-conditional and run-ratio assertions (G-01.5-5, G-01.5-6)
+
+**Gap closure round 2 — Wave 2** *(blocked on 01.5-09 — same stylesheet region, same two test files,
+and this plan's clearance oracle measures the page bottom that 01.5-09 moves)*
+
+- [x] 01.5-10-PLAN.md — Sumate CTA restored to its approved design-source geometry at the component's single source, the sticky bar given the edge its two migrated siblings already have, its document-end clearance re-derived from the bar's own composition, and the repo's first rendered-box oracle (G-01.5-4, G-01.5-7)
+
+**Gap closure round 3 — Wave 1** *(from the 2026-09-09 end-of-phase walkthrough, test 18: G-01.5-8
+through G-01.5-11. Three were diagnosed to root cause in `.planning/debug/`; G-01.5-11 needed no
+diagnosis and carries its resolution pre-filled — it is a design decision the user made directly
+from sketch 052. The round's shape is set by two findings the diagnoses produced: the Cierre/footer
+boundary is an OSCILLATION on a two-state channel where both states have now been reported, and the
+sticky-footer mechanism G-01.5-9 asks to restore was DELETED seven days earlier at the developer's
+explicit request — so one plan in this round is a decision, not a fix. Every plan is strictly
+sequential: all four touch `app.css`)*
+
+- [x] 01.5-11-PLAN.md — The Cierre/footer boundary: the band/footer token equality is broken from the FOOTER's side (page-scoped, since that fill is the only thing marking the footer on the catalog pages), the closing signature's desktop colour is taken out of the footer's type register, and the oracle that literally asserted this defect becomes the three-way rule the design needs (G-01.5-8; also closes G-01.5-9's Cause B)
+
+**Gap closure round 3 — Wave 2** *(blocked on 01.5-11 — shared `app.css`. NOT AUTONOMOUS: carries the
+round's one decision checkpoint)*
+
+- [x] 01.5-12-PLAN.md — The site-wide sticky footer: a decision checkpoint on whether the mechanism the developer had removed on 2026-09-02 comes back, given that the 2026-09-09 report was measured incapable of being about it on the page it was filed against; then the chosen branch, an honest dated amendment to the stylesheet's superseding note, and a guard protecting whichever state was chosen (G-01.5-9)
+
+**Gap closure round 3 — Wave 3** *(blocked on 01.5-11/01.5-12 — shared `app.css`, `about_geometry.mjs`
+and `about_live_test.exs`)*
+
+- [x] 01.5-13-PLAN.md — Mobile Cierre balance: the closing band finally gets a mobile counterpart to the `min-width: 640px` block that has held BOTH of its distinguishing treatments, plus the mobile-invariance oracle re-derived off its hard-coded padding literal and two new checks for the two properties the user actually reported (G-01.5-10)
+
+**Gap closure round 3 — Wave 4** *(blocked on 01.5-12/01.5-13 — shared files, and its document-end
+clearance is body padding that interacts with whatever 01.5-12's checkpoint lands on the body)*
+
+- [x] 01.5-14-PLAN.md — Mobile CTA rebuilt as sketch 052 winner B: the bar's chrome dropped for a content-sized solid pill floating with elevation, its document-end clearance re-derived from the pill's real footprint, the flush-bar clearance oracle rewritten, and plan 01.5-10's one-round-old contrast guard superseded with its evidence preserved (G-01.5-11)
+
 ### Phase 01.4: UI polish pass for About page sketches (INSERTED)
 
 **Goal:** The shipped About page tells the truth and looks finished: it states the club's real
@@ -141,7 +237,7 @@ scroll.
 decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
 phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
 **Depends on:** Phase 1
-**Plans:** 10/11 active plans executed (12 authored, 1 superseded — 4 gap-closure plans added from UAT, 3 more from verification gap G-01.4-5)
+**Plans:** 11/11 plans complete
 
 Plans:
 **Wave 1**
@@ -190,7 +286,7 @@ Plans:
 
 **Wave 12** *(gap closure — verification G-01.4-5, blocked on Wave 10)*
 
-- [ ] 01.4-12-PLAN.md — Maps facade replaced by a live keyless Google Maps embed: a `frame-src` CSP directive derived from the embed URL itself so it can never be broader than the one frame it permits, the iframe made non-interactive behind a single full-box click-out to `ClubLinks.maps_url/0`, a `[data-theme="dark"]` filter approximation, the caption chip moved off the edge Google paints its own attribution into, both screenshot JPEGs and the pixel oracle deleted, and the visual probe rebuilt to gate the child frame's actual navigation commit (D-11, D-12, D-13, D-14; G-01.4-5)
+- [x] 01.4-12-PLAN.md — Maps facade replaced by a live keyless Google Maps embed: a `frame-src` CSP directive derived from the embed URL itself so it can never be broader than the one frame it permits, the iframe made non-interactive behind a single full-box click-out to `ClubLinks.maps_url/0`, a `[data-theme="dark"]` filter approximation, the caption chip moved off the edge Google paints its own attribution into, both screenshot JPEGs and the pixel oracle deleted, and the visual probe rebuilt to gate the child frame's actual navigation commit (D-11, D-12, D-13, D-14; G-01.4-5)
 
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 

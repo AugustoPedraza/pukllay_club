@@ -137,6 +137,112 @@ defmodule PukllayClubWeb.AboutLiveTest do
     end
   end
 
+  # Plan 01.5-08 (G-01.5-3 item 4): the About page opts into `bottom_collapse`
+  # (layouts.ex), which cancels <main>'s own `pb-20` while leaving the default
+  # top-padding utilities (`pt-8 sm:pt-20`) in place. Asserting BOTH halves is
+  # the point — a future "simplification" to `boundary_collapse` would also
+  # collapse the top boundary and move the hero, and would only be caught by
+  # the second half of this assertion failing.
+  describe "bottom-boundary opt-in (plan 01.5-08, G-01.5-3 item 4)" do
+    test "the about page's <main> carries the collapsed-bottom class, not pb-20, and keeps the default top-padding utilities",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      main_class =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("main")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert main_class =~ "pk-bottom-collapse"
+      refute main_class =~ "pb-20"
+      refute main_class =~ "pk-boundary-collapse"
+      assert main_class =~ "pt-8"
+      assert main_class =~ "sm:pt-20"
+    end
+  end
+
+  # G-01.5-5 gap closure (plan 01.5-09,
+  # .planning/debug/G-01.5-5-cierre-footer-gap.md): the shared
+  # `main.pk-bottom-collapse/pk-boundary-collapse + .pk-footer` rules above
+  # are correct everywhere except this one page, where #cierre's own tint
+  # paints the identical token the footer paints. Both halves of the
+  # assertion below matter: the page-scoped override must exist and zero
+  # THIS boundary, AND the shared declarations it overrides must still carry
+  # their own non-zero margin values — a future author "simplifying" by
+  # zeroing the shared rule instead would silently move the catalog index's
+  # and detail page's own closed 24px/16px boundary decisions, which have
+  # shipped unreported for two phases and were never the subject of this
+  # complaint.
+  describe "About page footer-boundary override (G-01.5-5 gap closure, plan 01.5-09)" do
+    test "a body:has(#cierre)-scoped rule zeroes the last-band-to-footer margin without touching the shared collapse declarations' own non-zero values" do
+      src = strip_comments(css_source())
+
+      override =
+        Regex.run(
+          ~r/body:has\(#cierre\)\s+main\.pk-bottom-collapse\s*\+\s*\.pk-footer\s*,\s*body:has\(#cierre\)\s+main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{([^}]*)\}/s,
+          src
+        )
+
+      assert override,
+             "Expected a body:has(#cierre)-scoped override targeting both " <>
+               "main.pk-bottom-collapse + .pk-footer and " <>
+               "main.pk-boundary-collapse + .pk-footer — the surface condition " <>
+               "(#cierre's tint matching .pk-footer's background) is unique to the " <>
+               "About page, so the override must be scoped by #cierre's presence, " <>
+               "not applied unconditionally."
+
+      [_, override_body] = override
+
+      assert override_body =~ ~r/margin-top\s*:\s*0\s*;/,
+             "Expected the page-scoped override to zero margin-top for the About page's " <>
+               "last-band-to-footer boundary."
+
+      # Both shared declarations this override outbids must still declare
+      # their own non-zero margin — proves the fix didn't "succeed" by
+      # weakening the rule every other page still depends on.
+      unmediated =
+        Regex.run(
+          ~r/(?<!body:has\(#cierre\)\s)main\.pk-bottom-collapse\s*\+\s*\.pk-footer\s*,\s*main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{([^}]*)\}/s,
+          src
+        )
+
+      assert unmediated, "Expected the shared, unmediated main.*-collapse + .pk-footer rule to still exist."
+      [_, unmediated_body] = unmediated
+
+      refute unmediated_body =~ ~r/margin-top\s*:\s*0\s*;/,
+             "The shared unmediated boundary rule must keep its own non-zero margin-top — " <>
+               "the catalog index and detail page still depend on it."
+
+      assert unmediated_body =~ ~r/margin-top\s*:\s*1\.5rem\s*;/,
+             "Expected the shared unmediated boundary rule to still declare margin-top: 1.5rem."
+
+      mobile_media =
+        case Regex.run(~r/@media\s*\(max-width:\s*480px\)\s*\{/, src, return: :index) do
+          [{start, match_len}] -> String.slice(src, (start + match_len)..-1//1)
+          nil -> nil
+        end
+
+      assert mobile_media, "Expected an @media (max-width: 480px) block."
+
+      mobile_rule =
+        Regex.run(
+          ~r/(?<!body:has\(#cierre\)\s)main\.pk-bottom-collapse\s*\+\s*\.pk-footer\s*,\s*main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{([^}]*)\}/s,
+          mobile_media
+        )
+
+      assert mobile_rule, "Expected the shared <=480px main.*-collapse + .pk-footer rule to still exist."
+      [_, mobile_rule_body] = mobile_rule
+
+      refute mobile_rule_body =~ ~r/margin-top\s*:\s*0\s*;/,
+             "The shared <=480px boundary rule must keep its own non-zero margin-top."
+
+      assert mobile_rule_body =~ ~r/margin-top\s*:\s*1rem\s*;/,
+             "Expected the shared <=480px boundary rule to still declare margin-top: 1rem."
+    end
+  end
+
   # D-09: the club plays at the club and never lends games out — these
   # patterns catch any accidental "take it home"/lending framing creeping
   # into the page's copy.
@@ -204,7 +310,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
                "Nos juntamos todos los sábados desde las 16 hs en el Club de Emprendedores, San Salvador de Jujuy. La entrada es libre y los juegos los ponemos nosotros."
     end
 
-    test "the #cierre band offers exactly one CTA (the shared Sumate component), not a duplicated WhatsApp/Instagram button pair (049)",
+    test "the #cierre band offers exactly one CTA (the shared Sumate component) and a plain signature carrying no links at all (plan 01.5-03, D-13)",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
@@ -213,18 +319,20 @@ defmodule PukllayClubWeb.AboutLiveTest do
       cierre_html = LazyHTML.to_html(cierre)
 
       assert cierre_html =~ "Nos vemos el sábado"
-      assert cierre_html =~ "Pukllay Club · San Salvador de Jujuy, Argentina ·"
+      assert cierre_html =~ "Pukllay Club ·"
+      assert cierre_html =~ "San Salvador de Jujuy, Argentina"
 
       cta_buttons = LazyHTML.query(cierre, "a.btn")
       assert Enum.count(cta_buttons) == 1
       assert LazyHTML.attribute(cta_buttons, "href") == [ClubLinks.whatsapp_group_url()]
       assert LazyHTML.to_html(cta_buttons) =~ "Sumate"
 
-      refute ClubLinks.instagram_url() in LazyHTML.attribute(cta_buttons, "href")
-
+      # D-13 (plan 01.5-03): the trailing Instagram link that shipped since
+      # plan 049 is gone — Contacto's chip row now covers all 3 channels
+      # explicitly, making a fourth mention here redundant. The closing
+      # band's only anchor is the Sumate button.
       meta_links = LazyHTML.query(cierre, "a:not(.btn)")
-      assert Enum.count(meta_links) == 1
-      assert LazyHTML.attribute(meta_links, "href") == [ClubLinks.instagram_url()]
+      assert Enum.empty?(meta_links)
     end
 
     test "/club and /quienes-somos render byte-identical HTML once per-connection session/CSRF tokens are normalized (D-01)",
@@ -704,8 +812,10 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
   # Plan 01.4-02 Task 3: the Contacto card's real WhatsApp/Instagram icon
   # links, resolved through the newly-public Layouts.social_links/1.
-  describe "Contacto card icon links (plan 01.4-02 Task 3)" do
-    test "renders exactly 2 links inside .pk-about-contact-links: WhatsApp and Instagram, in order",
+  # Extended to 3 channels in plan 01.5-02 (D-06/D-07): Facebook added,
+  # Email deliberately excluded (footer-only).
+  describe "Contacto card icon links (plan 01.4-02 Task 3, extended plan 01.5-02)" do
+    test "renders exactly 3 links inside .pk-about-contact-links: WhatsApp, Facebook and Instagram, in social_links/1's fixed render order",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
@@ -713,10 +823,14 @@ defmodule PukllayClubWeb.AboutLiveTest do
       links = LazyHTML.query(doc, ".pk-about-contact-links a")
       hrefs = LazyHTML.attribute(links, "href")
 
-      assert Enum.count(links) == 2
-      assert hrefs == [ClubLinks.whatsapp_group_url(), ClubLinks.instagram_url()]
+      assert Enum.count(links) == 3
 
-      refute ClubLinks.facebook_url() in hrefs
+      assert hrefs == [
+               ClubLinks.whatsapp_group_url(),
+               ClubLinks.facebook_url(),
+               ClubLinks.instagram_url()
+             ]
+
       refute Enum.any?(hrefs, &String.starts_with?(&1, "mailto:"))
     end
 
@@ -730,7 +844,1261 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       assert links_html =~ "<svg"
       assert links_html =~ "Grupo de WhatsApp"
+      assert links_html =~ "Facebook"
       assert links_html =~ "Instagram"
+    end
+  end
+
+  # Plan 01.5-02, Task 1 (D-05): the card's chrome (background, border-radius,
+  # padding) is gone, while the internal flex/gap layout is untouched.
+  describe "Contacto card de-chroming (plan 01.5-02, D-05)" do
+    test ".pk-about-contact-card keeps its flex layout but declares no background, border-radius or padding" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-contact-card\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-contact-card rule in app.css."
+      [_, body] = rule
+
+      assert Regex.scan(~r/background\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no background (D-05 removes the card chrome)."
+
+      assert Regex.scan(~r/border-radius\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no border-radius (D-05 removes the card chrome)."
+
+      assert Regex.scan(~r/padding\s*:/, body) == [],
+             "Expected .pk-about-contact-card to declare no padding (D-05 removes the card chrome)."
+
+      assert body =~ ~r/display\s*:\s*flex/,
+             "Expected .pk-about-contact-card to keep display: flex (D-05 preserves internal layout)."
+
+      assert body =~ ~r/flex-direction\s*:\s*column/,
+             "Expected .pk-about-contact-card to keep flex-direction: column (D-05 preserves internal layout)."
+
+      assert body =~ ~r/gap\s*:/,
+             "Expected .pk-about-contact-card to keep its gap (D-05 preserves internal layout)."
+    end
+  end
+
+  # Plan 01.5-02, Task 1 (D-06): the chip resting state pulls its colour
+  # pairing bare from --color-accent/--color-accent-content, matching
+  # .pk-pill-accent's existing precedent.
+  describe "Contacto chip accent tint (plan 01.5-02, D-06)" do
+    test ".pk-about-contact-links a declares the accent background/content colour pairing" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-contact-links a\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-contact-links a rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/background\s*:\s*var\(--color-accent\)/,
+             "Expected .pk-about-contact-links a to set background: var(--color-accent)."
+
+      assert body =~ ~r/color\s*:\s*var\(--color-accent-content\)/,
+             "Expected .pk-about-contact-links a to set color: var(--color-accent-content)."
+    end
+  end
+
+  # Plan 01.5-02, Task 2 (D-08): at <=639px the chip row drops labels and
+  # goes icon-only + circular + centered — a pure space-fit constraint
+  # (3 labeled chips ~387px vs a 375px phone's ~327px available width).
+  describe "Contacto chip mobile treatment (plan 01.5-02, D-08)" do
+    defp media_639_body(src) do
+      case Regex.run(~r/@media\s*\(max-width:\s*639px\)\s*\{/, src, return: :index) do
+        [{start, match_len}] ->
+          body_start = start + match_len
+          extract_balanced_block(src, body_start)
+
+        nil ->
+          nil
+      end
+    end
+
+    # Balanced-brace-aware scan from just after the media query's opening
+    # `{` to its matching close, so assertions below match only within this
+    # block's own body — matching a bare property against the whole file
+    # would pass on any of the dozens of unrelated rules that declare it.
+    defp extract_balanced_block(src, start_index) do
+      src
+      |> String.slice(start_index..-1//1)
+      |> do_extract_balanced_block(1, [])
+    end
+
+    defp do_extract_balanced_block(<<>>, _depth, acc), do: acc |> Enum.reverse() |> IO.iodata_to_binary()
+
+    defp do_extract_balanced_block(<<"{", rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth + 1, ["{" | acc])
+    end
+
+    defp do_extract_balanced_block(<<"}", _rest::binary>>, 1, acc) do
+      acc |> Enum.reverse() |> IO.iodata_to_binary()
+    end
+
+    defp do_extract_balanced_block(<<"}", rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth - 1, ["}" | acc])
+    end
+
+    defp do_extract_balanced_block(<<c::utf8, rest::binary>>, depth, acc) do
+      do_extract_balanced_block(rest, depth, [<<c::utf8>> | acc])
+    end
+
+    test "app.css contains a @media (max-width: 639px) block referencing .pk-about-contact-links" do
+      src = strip_comments(css_source())
+
+      assert src =~ ~r/@media\s*\(max-width:\s*639px\)/,
+             "Expected a @media (max-width: 639px) block in app.css."
+
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      assert body =~ ".pk-about-contact-links",
+             "Expected the @media (max-width: 639px) block to reference .pk-about-contact-links."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links a span is visually hidden via sr-only (CR-01), not display: none" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links a span\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links a span rule inside the 639px block."
+      [_, rule_body] = rule
+
+      refute rule_body =~ ~r/display\s*:\s*none/,
+             "Expected .pk-about-contact-links a span NOT to declare display: none (CR-01: WhatsApp has no aria-label with labels: true, so hiding its span from the a11y tree removes its only accessible name)."
+
+      assert rule_body =~ ~r/clip\s*:\s*rect\(0,\s*0,\s*0,\s*0\)/,
+             "Expected .pk-about-contact-links a span to use the sr-only visually-hidden technique so its text stays in the accessibility tree."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links declares justify-content: center" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links rule inside the 639px block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/justify-content\s*:\s*center/,
+             "Expected .pk-about-contact-links to declare justify-content: center."
+    end
+
+    test "inside the 639px block, .pk-about-contact-links a declares border-radius: 9999px" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+
+      rule = Regex.run(~r/\.pk-about-contact-links a\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a .pk-about-contact-links a rule inside the 639px block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/border-radius\s*:\s*9999px/,
+             "Expected .pk-about-contact-links a to declare border-radius: 9999px."
+    end
+
+    test "the rendered markup still contains all three label spans regardless of viewport",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      spans = LazyHTML.query(doc, ".pk-about-contact-links a span")
+
+      assert Enum.count(spans) == 3
+    end
+  end
+
+  # Plan 01.5-02, Task 3 (D-09): the live Maps embed relocated from
+  # #contacto into #juntadas, moved verbatim (every pre-existing embed
+  # test above must keep passing unchanged).
+  describe "Maps embed relocation to Juntadas (plan 01.5-02, D-09)" do
+    test "#juntadas .pk-about-map-thumb renders exactly 1 element", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, "#juntadas .pk-about-map-thumb")
+
+      assert Enum.count(thumb) == 1
+    end
+
+    test "#contacto .pk-about-map-thumb renders exactly 0 elements", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, "#contacto .pk-about-map-thumb")
+
+      assert Enum.empty?(thumb)
+    end
+
+    test "the map thumb was moved, not copied — exactly 1 .pk-about-map-thumb page-wide",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      thumb = LazyHTML.query(doc, ".pk-about-map-thumb")
+
+      assert Enum.count(thumb) == 1
+    end
+
+    test "the relocated iframe keeps its src and every security-relevant attribute byte-identical",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      iframe = LazyHTML.query(doc, "#juntadas .pk-about-map-embed")
+
+      assert Enum.count(iframe) == 1
+      assert LazyHTML.attribute(iframe, "src") == [ClubLinks.maps_embed_url()]
+      assert LazyHTML.attribute(iframe, "loading") == ["lazy"]
+      assert LazyHTML.attribute(iframe, "referrerpolicy") == ["strict-origin-when-cross-origin"]
+      assert LazyHTML.attribute(iframe, "sandbox") == ["allow-scripts allow-same-origin"]
+      assert LazyHTML.attribute(iframe, "tabindex") == ["-1"]
+      assert LazyHTML.attribute(iframe, "aria-hidden") == ["true"]
+    end
+
+    test "#contacto a returns exactly the 3 chip anchors — the overlay map link left with the map",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      links = LazyHTML.query(doc, "#contacto a")
+      hrefs = LazyHTML.attribute(links, "href")
+
+      assert Enum.count(links) == 3
+
+      assert hrefs == [
+               ClubLinks.whatsapp_group_url(),
+               ClubLinks.facebook_url(),
+               ClubLinks.instagram_url()
+             ]
+    end
+  end
+
+  # Plan 01.5-03, Task 1 (D-13): the Cierre signature's markup and the
+  # mobile size rule's specificity. The DOM half of "no trailing link" is
+  # covered above ("#cierre band offers exactly one CTA..."); these tests
+  # cover the two-line-wrap markup and the CSS-source facts that make the
+  # mobile size rule un-out-specifiable (sketch 051's second bug,
+  # about-page-content.md).
+  describe "Cierre closing signature two-line wrap (plan 01.5-03, D-13)" do
+    test "the signature paragraph carries both pk-about-eyebrow and pk-about-closing-meta, with exactly one pk-about-closing-break <br>",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      signature = LazyHTML.query(doc, "#cierre p.pk-about-eyebrow")
+
+      assert Enum.count(signature) == 1
+      [class] = LazyHTML.attribute(signature, "class")
+      assert class =~ "pk-about-eyebrow"
+      assert class =~ "pk-about-closing-meta"
+
+      breaks = LazyHTML.query(doc, "#cierre .pk-about-closing-break")
+      assert Enum.count(breaks) == 1
+      assert LazyHTML.tag(breaks) == ["br"]
+    end
+
+    test "app.css declares a top-level .pk-about-closing-break rule with display: none" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-about-closing-break\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a top-level .pk-about-closing-break rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/display\s*:\s*none/,
+             "Expected the top-level .pk-about-closing-break rule to declare display: none."
+    end
+
+    test "inside the 639px block, #cierre .pk-about-closing-break declares display: block and #cierre .pk-about-closing-meta declares a font-size" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      break_rule = Regex.run(~r/#cierre \.pk-about-closing-break\s*\{([^}]*)\}/s, body)
+      assert break_rule, "Expected a #cierre .pk-about-closing-break rule inside the 639px block."
+      [_, break_body] = break_rule
+
+      assert break_body =~ ~r/display\s*:\s*block/,
+             "Expected #cierre .pk-about-closing-break to declare display: block."
+
+      meta_rule = Regex.run(~r/#cierre \.pk-about-closing-meta\s*\{([^}]*)\}/s, body)
+      assert meta_rule, "Expected a #cierre .pk-about-closing-meta rule inside the 639px block."
+      [_, meta_body] = meta_rule
+
+      assert meta_body =~ ~r/font-size\s*:/,
+             "Expected #cierre .pk-about-closing-meta to declare a font-size."
+    end
+
+    test "the .pk-about-eyebrow and .pk-about-eyebrow a rules are unchanged apart from added comments" do
+      src = strip_comments(css_source())
+
+      eyebrow_rule = Regex.run(~r/\.pk-about-eyebrow\s*\{([^}]*)\}/s, src)
+      assert eyebrow_rule, "Expected a .pk-about-eyebrow rule in app.css."
+      [_, eyebrow_body] = eyebrow_rule
+
+      assert eyebrow_body =~ ~r/font-size\s*:\s*0\.75rem/
+      assert eyebrow_body =~ ~r/text-transform\s*:\s*uppercase/
+      assert eyebrow_body =~ ~r/letter-spacing\s*:\s*0\.1em/
+      assert eyebrow_body =~ ~r/color\s*:\s*var\(--color-neutral\)/
+
+      eyebrow_a_rule = Regex.run(~r/\.pk-about-eyebrow a\s*\{([^}]*)\}/s, src)
+      assert eyebrow_a_rule, "Expected a .pk-about-eyebrow a rule in app.css."
+      [_, eyebrow_a_body] = eyebrow_a_rule
+
+      assert eyebrow_a_body =~ ~r/color\s*:\s*inherit/
+      assert eyebrow_a_body =~ ~r/text-decoration\s*:\s*underline/
+    end
+  end
+
+  # G-01.5-8 gap closure (plan 01.5-11,
+  # .planning/debug/G-01.5-8-cierre-tagline-footer-grouping.md), second
+  # lever's source guard. `.pk-about-eyebrow` and `.pk-footer-meta`
+  # independently declare the same font-size/color pair, 475 lines apart in
+  # app.css, because they express the same "de-emphasised meta" role —
+  # nothing structural stops them re-converging. test/visual/about_geometry.mjs
+  # has its own runtime check for this (checkSignatureFooterTypeCollision),
+  # but that probe needs a booted dev server and is not part of `mix test`;
+  # this is the source-level guard that runs in the normal suite.
+  describe "Cierre closing signature desktop type register (G-01.5-8 gap closure, plan 01.5-11)" do
+    test "the >=640px block gives #cierre .pk-about-closing-meta a color that is not var(--color-neutral)" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+      assert body, "Expected to extract the @media (min-width: 640px) block body."
+
+      rule = Regex.run(~r/#cierre \.pk-about-closing-meta\s*\{([^}]*)\}/s, body)
+
+      assert rule,
+             "Expected a #cierre .pk-about-closing-meta rule inside the @media (min-width: 640px) " <>
+               "block. Without it the Cierre closing signature (\"Pukllay Club · San Salvador de " <>
+               "Jujuy, Argentina\") keeps resolving font-size, line-height, color, font-family and " <>
+               "font-weight identically to .pk-footer-meta at desktop widths — the exact " <>
+               "five-attribute collision G-01.5-8's diagnosis measured in both themes, which read " <>
+               "the signature as the footer's own meta text instead of the closing statement's " <>
+               "last line. The signature is .pk-about-eyebrow's only consumer on this page, so " <>
+               "this override regresses no other caller."
+
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/color\s*:/,
+             "Expected the desktop #cierre .pk-about-closing-meta rule to declare a color."
+
+      refute rule_body =~ ~r/color\s*:\s*var\(--color-neutral\)/,
+             "Expected the desktop #cierre .pk-about-closing-meta color to resolve through a token " <>
+               "OTHER than var(--color-neutral) — that is the exact token .pk-footer-meta uses, and " <>
+               "reusing it here is the collision G-01.5-8 diagnosed: five computed type attributes " <>
+               "(font-size, line-height, color, font-family, font-weight) identical between the " <>
+               "signature and the footer's own meta text, in both themes, sharing nothing with the " <>
+               "signature's own group (the 48px heading, the bordered pill button)."
+    end
+
+    test "the <=639px signature rule (D-13) is untouched — no color declared there, size stays 10px" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      rule = Regex.run(~r/#cierre \.pk-about-closing-meta\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected the <=639px #cierre .pk-about-closing-meta rule to still exist."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/font-size\s*:\s*10px/,
+             "Expected the <=639px signature rule to keep its own font-size: 10px unchanged — this " <>
+               "gap closure is scoped to >=640px only, because the signature's rendered width below " <>
+               "640px is an operand plan 01.5-13's G-01.5-10 mobile balance argument spends, and this " <>
+               "lever deliberately moves no geometry."
+
+      refute rule_body =~ ~r/color\s*:/,
+             "Expected the <=639px signature rule to declare no color of its own — this gap " <>
+               "closure's colour lever is desktop-only (the type collision is exact only there); the " <>
+               "<=639px signature keeps inheriting .pk-about-eyebrow's base var(--color-neutral) " <>
+               "unchanged, matching the behavior spec's 'byte-identical below 640px' requirement."
+    end
+  end
+
+  # Plan 01.5-13 (G-01.5-10 gap closure —
+  # .planning/debug/G-01.5-10-mobile-cierre-heading-tagline-balance.md):
+  # source guard for #cierre's mobile COUNTERPART to the >=640px block above
+  # (padding-block: 5rem; #cierre h2's clamp(2rem, 4vw, 3rem)).
+  # test/visual/about_geometry.mjs has its own runtime checks for the
+  # RENDERED effect (checkCierreProportionBudget, checkCierreHierarchy,
+  # checkCierreNoWrap), but that probe needs a booted dev server and is not
+  # part of `mix test`; this is the source-level guard that runs in the
+  # normal suite, pinning the STRUCTURE the plan's own decision insists on:
+  # "both levers ship in one media block, or neither."
+  describe "Cierre mobile counterpart to the 640px block (G-01.5-10 gap closure, plan 01.5-13)" do
+    test "the @media (max-width: 639px) block contains BOTH #cierre's own padding-block AND #cierre h2's own font-size/line-height" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      padding_rule = Regex.run(~r/#cierre\s*\{([^}]*)\}/s, body)
+
+      assert padding_rule,
+             "Expected a bare #cierre rule inside the @media (max-width: 639px) block declaring " <>
+               "its own padding-block. Without it, mobile Cierre falls back to the shared " <>
+               ".pk-band padding (4.5rem/72px, sized for content-rich bands) — the G-01.5-10 " <>
+               "diagnosis measured that as pad/content 1.67 against this page's own 0.19-0.53 " <>
+               "band norm and this band's own accepted 0.90-1.02 desktop state, with 64.3% of " <>
+               "the band rendering as empty ink."
+
+      [_, padding_body] = padding_rule
+
+      assert padding_body =~ ~r/padding-block\s*:/,
+             "Expected the mobile #cierre rule to declare its own padding-block."
+
+      h2_rule = Regex.run(~r/#cierre h2\s*\{([^}]*)\}/s, body)
+
+      assert h2_rule,
+             "Expected a #cierre h2 rule inside the @media (max-width: 639px) block declaring " <>
+               "its own font-size. Without it, the mobile heading keeps the page-wide " <>
+               "font-display text-2xl size with no Cierre-specific step at all (1.00x the page's " <>
+               "own h2 norm at 375px, vs 1.33x at 640px and 2.00x at 1280px — G-01.5-10's E-08) " <>
+               "and the closing signature (204.4px) keeps out-measuring the heading (163.7px), " <>
+               "24.8% wider — the exact inversion the user called unbalanced."
+
+      [_, h2_body] = h2_rule
+
+      assert h2_body =~ ~r/font-size\s*:/,
+             "Expected the mobile #cierre h2 rule to declare its own font-size."
+
+      assert h2_body =~ ~r/line-height\s*:/,
+             "Expected the mobile #cierre h2 rule to declare its own line-height — left to " <>
+               "inherit, the rendered clear gap above the signature (declared 24px, rendered " <>
+               "36px per the all-caps face's empty descent) becomes unpredictable, since the " <>
+               "heading's line box is an operand in that arithmetic."
+    end
+
+    test "neither new #cierre rule declares a gap of its own — D-12's one flex gap still governs both viewports" do
+      src = strip_comments(css_source())
+      body = media_639_body(src)
+      assert body, "Expected to extract the @media (max-width: 639px) block body."
+
+      # Scoped to the two NEW #cierre/#cierre h2 rule bodies specifically,
+      # not the whole 639px block — that block also legitimately contains
+      # .pk-about-contact-links's own unrelated `gap: 1rem` (D-08), which a
+      # whole-block scan would wrongly trip on.
+      padding_rule = Regex.run(~r/#cierre\s*\{([^}]*)\}/s, body)
+      assert padding_rule, "Expected a bare #cierre rule inside the @media (max-width: 639px) block."
+      [_, padding_body] = padding_rule
+
+      h2_rule = Regex.run(~r/#cierre h2\s*\{([^}]*)\}/s, body)
+      assert h2_rule, "Expected a #cierre h2 rule inside the @media (max-width: 639px) block."
+      [_, h2_body] = h2_rule
+
+      failure_message =
+        "Expected the mobile counterpart rules to declare no gap of their own. G-01.5-10's own " <>
+          "diagnosis measured tightening #cierre's gap as making the 'too much space' " <>
+          "complaint objectively WORSE (16px -> pad/content 1.85, 12px -> 1.95, both " <>
+          "backwards) — the fix lever here is padding and heading size, never the gap."
+
+      assert Regex.scan(~r/(?<![-\w])gap\s*:/, padding_body) == [], failure_message
+      assert Regex.scan(~r/(?<![-\w])gap\s*:/, h2_body) == [], failure_message
+    end
+
+    test "#cierre .pk-band-inner's gap is declared exactly once in the whole stylesheet, with no per-viewport override" do
+      src = strip_comments(css_source())
+
+      selector_occurrences = ~r/#cierre \.pk-band-inner\s*\{/ |> Regex.scan(src) |> length()
+
+      assert selector_occurrences == 1,
+             "Expected exactly one #cierre .pk-band-inner rule in the whole stylesheet, found " <>
+               "#{selector_occurrences}. D-12 requires the band's one internal spacing rule to " <>
+               "stay a single declaration, unconditional at every width — a second, viewport-" <>
+               "scoped declaration would reintroduce the two-spacing-system problem D-12 exists " <>
+               "to prevent, and would be exactly the kind of scattered override this plan was " <>
+               "structured to avoid ('both levers in one media block, or neither')."
+    end
+  end
+
+  # Plan 01.5-03, Task 2 (D-12): every Cierre internal gap comes from ONE
+  # flex gap on the content column, never per-element margins.
+  describe "Cierre one flex gap (plan 01.5-03, D-12)" do
+    test "#cierre .pk-band-inner is a top-level rule declaring display: flex, flex-direction: column, align-items: center and exactly one gap" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/#cierre \.pk-band-inner\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a top-level #cierre .pk-band-inner rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/display\s*:\s*flex/
+      assert body =~ ~r/flex-direction\s*:\s*column/
+      assert body =~ ~r/align-items\s*:\s*center/
+
+      assert ~r/(?<![-\w])gap\s*:/ |> Regex.scan(body) |> length() == 1,
+             "Expected exactly one gap declaration in #cierre .pk-band-inner."
+    end
+
+    test "#cierre .pk-band-inner declares no margin" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/#cierre \.pk-band-inner\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a top-level #cierre .pk-band-inner rule in app.css."
+      [_, body] = rule
+
+      assert Regex.scan(~r/margin/, body) == [],
+             "Expected #cierre .pk-band-inner to declare no margin."
+    end
+
+    test "the #cierre content column keeps the text-center utility so the two-line signature stays centered",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      inner = LazyHTML.query(doc, "#cierre .pk-band-inner")
+
+      assert Enum.count(inner) == 1
+      [class] = LazyHTML.attribute(inner, "class")
+      assert class =~ "text-center"
+    end
+
+    test "#cierre .pk-band-inner has exactly 3 element children (heading, button wrapper, signature)",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      children = LazyHTML.query(doc, "#cierre .pk-band-inner > *")
+
+      assert Enum.count(children) == 3
+    end
+  end
+
+  # Plan 01.5-03, Task 3 (D-10) shipped Cierre as a full-viewport moment on
+  # desktop, compensated against the header's own live published height.
+  # REVISED by plan 01.5-07 (G-01.5-3 items 3a/3b —
+  # .planning/debug/cierre-band-whitespace.md): the header-height
+  # compensation was removed (D-14 painted the band the header's own tint,
+  # so the header no longer visually eats the band's top edge and the
+  # compensation was silently shifting the gap split by one header height),
+  # and the 100vh floor was reduced to 70vh/70dvh per the 01.5-07 checkpoint
+  # decision (see 01.5-07-SUMMARY.md "Decisions").
+  describe "Cierre full-screen desktop treatment (plan 01.5-03 D-10, revised 01.5-07, revised again G-01.5-5/6 gap closure)" do
+    defp media_640_body(src) do
+      case Regex.run(~r/@media\s*\(min-width:\s*640px\)\s*\{/, src, return: :index) do
+        [{start, match_len}] ->
+          body_start = start + match_len
+          extract_balanced_block(src, body_start)
+
+        nil ->
+          nil
+      end
+    end
+
+    test "the @media (min-width: 640px) block contains a #cierre rule declaring a fixed padding-block, not a viewport-height floor" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+      assert body, "Expected to extract the @media (min-width: 640px) block body."
+
+      rule = Regex.run(~r/#cierre\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a #cierre rule inside the @media (min-width: 640px) block."
+      [_, rule_body] = rule
+
+      # G-01.5-5/G-01.5-6 gap closure: min-height: 70vh/70dvh (01.5-07) was
+      # still viewport-HEIGHT-coupled and reproduced the original "huge
+      # space top and bottom" complaint on common ~900px-tall laptop
+      # screens (measured 238.67px gaps). Replaced with a fixed
+      # padding-block so the whitespace amount is a constant, never a
+      # function of the viewer's screen height. See the CSS comment above
+      # this rule for the full measurement/rationale.
+      #
+      # 01.5-09 (G-01.5-6): retuned 8rem -> 5rem. This is the cheap guard
+      # that the MECHANISM stays a fixed padding rather than a
+      # height-relative floor (the refutes below); the bare value itself is
+      # expected to move whenever the value is deliberately retuned — see
+      # app.css's comment above this rule for the run-unit rationale and the
+      # recorded 6rem runner-up.
+      assert rule_body =~ ~r/padding-block\s*:\s*5rem\s*;/,
+             "Expected #cierre to declare a fixed padding-block: 5rem at >=640px, not a viewport-height-relative min-height."
+
+      refute rule_body =~ ~r/min-height/,
+             "#cierre must not reintroduce a min-height floor at this width — that mechanism is exactly what produced the huge-whitespace regression this test guards against."
+
+      refute rule_body =~ ~r/display\s*:\s*flex/,
+             "#cierre no longer needs flex/align-items to centre its content — a fixed padding-block produces identical top/bottom gaps via ordinary block flow, which is a stronger evenness guarantee. Reintroducing flex here is a sign the min-height mechanism crept back in."
+    end
+
+    test "the #cierre rule inside the >=640px block does not reintroduce the retired header-height padding shorthand" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+
+      rule = Regex.run(~r/#cierre\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a #cierre rule inside the @media (min-width: 640px) block."
+      [_, rule_body] = rule
+
+      # This asserted "no padding override at all" until this session's
+      # G-01.5-5/6 gap closure deliberately added padding-block: 8rem (see
+      # the test above) — that is now the correct, expected state, not a
+      # regression. What must still never come back is the SPECIFIC
+      # defective declaration 01.5-07 removed: the bare `padding:` shorthand
+      # keyed on --pk-header-h, which both shifted the top/bottom split by
+      # one header height (D-14 made the compensation unnecessary) and
+      # silently zeroed the shared bottom padding via its 3-value form.
+      refute rule_body =~ ~r/(?<![-\w])padding\s*:\s*var\(--pk-header-h/,
+             "The header-height top-padding compensation (`padding: var(--pk-header-h, ...) 0 0`) was " <>
+               "removed on purpose (01.5-07, G-01.5-3): D-14 painted #cierre the header's own tint, so " <>
+               "the header no longer eats visually into the band's top edge, and reinstating this " <>
+               "specific declaration reopens the uneven-gap defect it caused. This is distinct from " <>
+               "padding-block: 8rem (asserted above), which is this session's deliberate fixed-height " <>
+               "mechanism, not the retired compensation."
+    end
+
+    test "the block contains #cierre h2 with font-size: clamp(2rem, 4vw, 3rem)" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+
+      rule = Regex.run(~r/#cierre h2\s*\{([^}]*)\}/s, body)
+      assert rule, "Expected a #cierre h2 rule inside the @media (min-width: 640px) block."
+      [_, rule_body] = rule
+
+      assert rule_body =~ ~r/font-size\s*:\s*clamp\(2rem,\s*4vw,\s*3rem\)/
+    end
+
+    test "the @media (min-width: 640px) block declares no gap — the one gap from D-12 governs both viewports" do
+      src = strip_comments(css_source())
+      body = media_640_body(src)
+
+      assert Regex.scan(~r/(?<![-\w])gap\s*:/, body) == [],
+             "Expected the desktop full-screen block to declare no gap of its own."
+    end
+
+    test "--pk-header-h is republished from exactly one place and is still read by at least 3 rules in app.css" do
+      src = strip_comments(css_source())
+
+      consumer_count = ~r/var\(--pk-header-h/ |> Regex.scan(src) |> length()
+
+      # 01.5-07 removed #cierre's own reads of this token (its header-height
+      # compensation was the thing being removed); .pk-shelf's
+      # scroll-margin-top, .pk-title-echo's top and .pk-poster-col's sticky
+      # top remain, so the floor drops from >=4 to >=3, not to 0 — this is
+      # still a regression guard against a parallel/duplicate token, not a
+      # weakened check.
+      assert consumer_count >= 3,
+             "Expected --pk-header-h to be read by at least 3 rules in app.css (regression guard against a parallel token)."
+
+      layouts_src =
+        File.read!(Path.expand("../../../lib/pukllay_club_web/components/layouts.ex", __DIR__))
+
+      publisher_count =
+        ~r/setProperty\("--pk-header-h"/ |> Regex.scan(layouts_src) |> length()
+
+      assert publisher_count == 1,
+             "Expected --pk-header-h to be published from exactly one place in layouts.ex."
+    end
+  end
+
+  # Plan 01.5-04, Task 1 (D-11): the closing band's own Sumate button is
+  # suppressed at the exact same 480px threshold where the sticky
+  # .pk-about-cta-bar takes over, so a member never sees the same ask
+  # twice on one screen, and no width range exists with neither visible.
+  describe "Cierre CTA suppression at the sticky-bar threshold (plan 01.5-04, D-11)" do
+    defp media_480_body(src) do
+      case Regex.run(~r/@media\s*\(max-width:\s*480px\)\s*\{/, src, return: :index) do
+        [{start, match_len}] ->
+          body_start = start + match_len
+          extract_balanced_block(src, body_start)
+
+        nil ->
+          nil
+      end
+    end
+
+    test "app.css contains exactly one @media (max-width: 480px) block" do
+      src = strip_comments(css_source())
+
+      matches = Regex.scan(~r/@media\s*\(max-width:\s*480px\)/, src)
+
+      assert length(matches) == 1,
+             "Expected exactly one @media (max-width: 480px) block in app.css — both halves " <>
+               "of the sticky-bar/Cierre-button display swap must share one threshold (D-11), " <>
+               "never two separate blocks at the same value."
+    end
+
+    test "inside the 480px block, .pk-about-cta-bar declares display: block and #cierre .pk-about-cierre-cta declares display: none" do
+      src = strip_comments(css_source())
+      body = media_480_body(src)
+      assert body, "Expected to extract the @media (max-width: 480px) block body."
+
+      bar_rule = Regex.run(~r/\.pk-about-cta-bar\s*\{([^}]*)\}/s, body)
+      assert bar_rule, "Expected a .pk-about-cta-bar rule inside the 480px block."
+      [_, bar_body] = bar_rule
+      assert bar_body =~ ~r/display\s*:\s*block/
+
+      cierre_rule = Regex.run(~r/#cierre \.pk-about-cierre-cta\s*\{([^}]*)\}/s, body)
+      assert cierre_rule, "Expected a #cierre .pk-about-cierre-cta rule inside the 480px block."
+      [_, cierre_body] = cierre_rule
+      assert cierre_body =~ ~r/display\s*:\s*none/
+    end
+
+    # Plan 01.5-08 (G-01.5-3 item 4): the in-flow .pk-about-cta-spacer this
+    # test used to also assert here is gone, replaced by a page-scoped
+    # document-end clearance rule. That replacement must share the SAME
+    # 480px block as .pk-about-cta-bar's own display swap for the identical
+    # co-location reason D-11 itself exists: a threshold mismatch between
+    # "bar appears" and "clearance is reserved" would put the bar back over
+    # the footer at some width.
+    test "inside the 480px block, a body:has(.pk-about-cta-bar) rule reserves document-end padding-bottom" do
+      src = strip_comments(css_source())
+      body = media_480_body(src)
+      assert body, "Expected to extract the @media (max-width: 480px) block body."
+
+      clearance_rule = Regex.run(~r/body:has\(\.pk-about-cta-bar\)\s*\{([^}]*)\}/s, body)
+
+      assert clearance_rule,
+             "Expected a body:has(.pk-about-cta-bar) rule inside the SAME 480px block as " <>
+               ".pk-about-cta-bar's own display swap — a mismatched threshold would put the " <>
+               "fixed bar back over the footer at some width."
+
+      [_, clearance_body] = clearance_rule
+      assert clearance_body =~ ~r/padding-bottom\s*:\s*\S/
+    end
+
+    # G-01.5-7 gap closure (plan 01.5-10 —
+    # .planning/debug/G-01.5-7-cta-bar-background-visible.md): the inherited
+    # `4.5rem` literal was 3px loose against the bar's shipped 69px height
+    # and became 1px TIGHT the moment plan 01.5-10's Task 1 grew the Sumate
+    # button to 48px — a hard literal pinned against a content-derived
+    # height is guaranteed to drift, and already had, in both directions.
+    # This asserts the replacement is derived from the bar's own parts (rather
+    # than a bare literal that could silently drift again the next time the
+    # button's size changes), naming the drift this guards against in its own
+    # failure message.
+    #
+    # RETARGETED (debug cta-bar-footer-gap-uncolored), NOT relaxed. This test
+    # used to assert `padding-bottom: calc(` on the whole value. That shape was
+    # incidental to its intent and has since become WRONG: a top-level calc()
+    # is the only way to add a term to this reservation, and an additive term
+    # here is itself the bug that debug session fixed (any space reserved
+    # beyond the bar's height is `body` padding the bar cannot cover, so it
+    # paints page background as an uncoloured band between the footer and the
+    # bar). The anti-drift intent is unchanged and still fully enforced — the
+    # derivation simply moved INSIDE the var()'s fallback, which is where it
+    # belongs now that the live-measured var is the primary value. The
+    # complementary "no top-level calc()" assertion lives in
+    # about_cta_bar_clearance_test.exs; the two are deliberately opposite
+    # boundary neighbours around the same declaration.
+    test "the body:has(.pk-about-cta-bar) clearance is derived, not a bare literal" do
+      src = strip_comments(css_source())
+      body = media_480_body(src)
+      assert body, "Expected to extract the @media (max-width: 480px) block body."
+
+      clearance_rule = Regex.run(~r/body:has\(\.pk-about-cta-bar\)\s*\{([^}]*)\}/s, body)
+      assert clearance_rule, "Expected a body:has(.pk-about-cta-bar) rule inside the 480px block."
+      [_, clearance_body] = clearance_rule
+
+      assert clearance_body =~ ~r/padding-bottom\s*:\s*var\(/,
+             "Expected the document-end clearance to be driven by a custom property, not a " <>
+               "bare px/rem literal. A bare literal against a content-derived bar height is " <>
+               "guaranteed to drift — the inherited 4.5rem was 3px loose against the 69px " <>
+               "pre-01.5-10 bar and became 1px TIGHT the moment the button grew to 48px, which " <>
+               "is exactly the recurrence this guard exists to catch. Got: #{clearance_body}"
+
+      assert clearance_body =~ ~r/calc\(\s*10px\s*\+\s*48px\s*\+\s*10px\s*\+\s*1px\s*\)/,
+             "Expected the var()'s pre-connect FALLBACK to stay composed from the bar's own " <>
+               "declared parts (top padding + .pk-sumate-btn min-height + bottom padding + " <>
+               "border-top), not collapsed to a pre-added literal. The fallback is the value " <>
+               "that renders before .AboutCtaBarMeasure has published a height, so it is " <>
+               "subject to the identical drift the primary value was rescued from. " <>
+               "Got: #{clearance_body}"
+    end
+
+    test "no .pk-about-cta-spacer selector remains anywhere in app.css" do
+      src = strip_comments(css_source())
+
+      refute src =~ "pk-about-cta-spacer",
+             "Expected .pk-about-cta-spacer to be fully removed — its clearance job moved to " <>
+               "a body:has(.pk-about-cta-bar) document-end reservation (plan 01.5-08)."
+    end
+
+    test "the Cierre button wrapper carries pk-about-cierre-cta and still contains the Sumate anchor",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      wrapper = LazyHTML.query(doc, "#cierre .pk-about-cierre-cta")
+      assert Enum.count(wrapper) == 1
+
+      button = LazyHTML.query(doc, "#cierre .pk-about-cierre-cta a.btn")
+      assert Enum.count(button) == 1
+    end
+
+    test "no .pk-about-cta-spacer element renders on the about page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      assert Enum.empty?(LazyHTML.query(doc, ".pk-about-cta-spacer"))
+    end
+
+    # Plan 01.5-08 (Rule 1 bug, found via Task 3's live CDP probe): this
+    # element is not the shell's space-y-4 wrapper's last child
+    # (#pk-about-morph-mark and the <noscript> marker follow it), and
+    # Tailwind v4's space-y-* utilities apply margin-block-end (not
+    # margin-top, unlike v3) to every non-last child. Left un-neutralised,
+    # that gave this position:fixed;bottom:0 element a real 16px margin
+    # pushing its rendered box 16px above the true viewport edge — live-
+    # measured (390x900 viewport): bar top=815px/bottom=884px instead of the
+    # 831px/900px its own bottom:0 promises, eating directly into this
+    # plan's reserved clearance. Source-level regression guard; the live
+    # probe (test/visual/about_geometry.mjs) is the oracle that actually
+    # caught the defect.
+    test "the base .pk-about-cta-bar rule declares margin-block-end: 0" do
+      src = strip_comments(css_source())
+
+      base_rule = Regex.run(~r/(?m)^\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+      assert base_rule, "Expected a top-level (line-anchored) .pk-about-cta-bar rule in app.css."
+      [_, base_body] = base_rule
+
+      assert base_body =~ ~r/margin-block-end\s*:\s*0\b/,
+             "Expected the base .pk-about-cta-bar rule to zero margin-block-end — otherwise " <>
+               "the shell's space-y-4 utility (Tailwind v4: margin-block-end on every non-last " <>
+               "child) pushes this fixed, bottom:0 bar away from the true viewport edge."
+    end
+
+    # SUPERSEDED (sketch 053 winner D, quick task 260910-av6, G-01.5-12).
+    # This test used to assert `text-align: center` on the base rule,
+    # because sketch 052 winner B's wrapper held a content-sized pill that
+    # needed its own centring rule. Winner D's wrapper is full-width again
+    # (no more content-sized child to centre), so the base rule no longer
+    # needs — and no longer declares — text-align: center. What replaces it
+    # is the RENDERED fact that the bar's Sumate anchor spans the bar's
+    # full inner width.
+    test "the base .pk-about-cta-bar rule no longer centres a content-sized child; the bar's Sumate anchor is full-width instead (sketch 053 winner D)",
+         %{conn: conn} do
+      src = strip_comments(css_source())
+
+      base_rule = Regex.run(~r/(?m)^\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+      assert base_rule, "Expected a top-level (line-anchored) .pk-about-cta-bar rule in app.css."
+      [_, base_body] = base_rule
+
+      refute base_body =~ ~r/text-align\s*:\s*center/,
+             "Expected .pk-about-cta-bar to declare no text-align: center. Sketch 052 winner B " <>
+               "needed this to centre a content-sized pill; winner D's wrapper is full-width " <>
+               "again, so the bar's Sumate anchor now positions itself (w-full) rather than " <>
+               "being centred by the wrapper."
+
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+      doc = LazyHTML.from_document(html)
+      anchor = LazyHTML.query(doc, ".pk-about-cta-bar a")
+      assert Enum.count(anchor) == 1, "Expected exactly one anchor inside .pk-about-cta-bar."
+
+      [class] = LazyHTML.attribute(anchor, "class")
+
+      assert class =~ ~r/\bw-full\b/,
+             "Expected the bar's Sumate anchor to carry w-full — winner D's full-width bar " <>
+               "requires the button itself to span the bar's inner width edge-to-edge at the " <>
+               "page gutter, not just the wrapper's own box."
+    end
+
+    # G-01.5-7 gap closure (plan 01.5-10 —
+    # .planning/debug/G-01.5-7-cta-bar-background-visible.md): no gate in
+    # this repo can observe a RENDERED colour (about_geometry.mjs is a
+    # geometric oracle only, and check-theme-drift.sh is colour-scoped to a
+    # different comparison entirely), so a source-level assertion on the two
+    # token names is the only recurrence guard this fix can have. Pins BOTH
+    # the fill this bar must KEEP (base-100, deliberately different from its
+    # two siblings — the 6-arm differential proved swapping it is inert on
+    # the reported symptom and actively worse at the page bottom) and the
+    # border token it must now USE (neutral, replacing base-300).
+    #
+    # SUPERSEDED-THEN-RESTORED: plan 01.5-14 (sketch 052 winner B) removed
+    # the fill AND the border together, dissolving this fix's mechanism
+    # rather than regressing it (a bar with no surface has no faint
+    # boundary to misread) — figure/ground moved to the button's own solid
+    # primary fill instead. Sketch 053 winner D (quick task 260910-av6,
+    # G-01.5-12) restores a full surface to the bar, so this fix's ORIGINAL
+    # mechanism must come back with it, not be re-lost a second time: the
+    # base rule must once again declare background: var(--color-base-100)
+    # and a border-top resolving var(--color-neutral) — never
+    # var(--color-base-300), which plan 01.5-10 measured at 1.406:1 light /
+    # 1.19:1 dark, under the 3:1 WCAG 1.4.11 non-text floor (neutral
+    # measures 5.785:1 / 7.128:1).
+    test "the base .pk-about-cta-bar rule restores a background and a border-top (sketch 053 winner D restores plan 01.5-10's G-01.5-7 fix)" do
+      src = strip_comments(css_source())
+
+      base_rule = Regex.run(~r/(?m)^\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+      assert base_rule, "Expected a top-level (line-anchored) .pk-about-cta-bar rule in app.css."
+      [_, base_body] = base_rule
+
+      assert base_body =~ ~r/background\s*:\s*var\(--color-base-100\)/,
+             "Expected .pk-about-cta-bar to declare background: var(--color-base-100). Winner D " <>
+               "restores a surface to this bar (superseding sketch 052 winner B, which removed " <>
+               "it entirely) — this is the SAME fill plan 01.5-10's 6-arm differential proved " <>
+               "correct for this bar (base-200 was inert on the reported symptom and worse at " <>
+               "the real page bottom)."
+
+      assert base_body =~ ~r/border-top\s*:\s*1px\s+solid\s+var\(--color-neutral\)/,
+             "Expected .pk-about-cta-bar to declare border-top: 1px solid var(--color-neutral) " <>
+               "— NOT var(--color-base-300). Plan 01.5-10 measured base-300 at 1.406:1 light / " <>
+               "1.19:1 dark, under the 3:1 WCAG 1.4.11 non-text floor, and moved it to neutral " <>
+               "(5.785:1 / 7.128:1) to close G-01.5-7. Winner D restores the surface this border " <>
+               "was originally attached to, so that fix must come back with it, not be re-lost."
+    end
+
+    # NEW (sketch 053 winner D): the bar is ABSENT, not merely transparent,
+    # before the reveal trigger below fires. T-QUICK-03: visibility, not
+    # opacity alone, removes the anchor from the tab order and the a11y
+    # tree — matching this file's existing header-hide mechanism (WR-02,
+    # body:has(#about-hero[data-morph-armed]) #app-header).
+    test "the base .pk-about-cta-bar rule declares a translated-out, invisible hidden state" do
+      src = strip_comments(css_source())
+
+      base_rule = Regex.run(~r/(?m)^\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+      assert base_rule, "Expected a top-level (line-anchored) .pk-about-cta-bar rule in app.css."
+      [_, base_body] = base_rule
+
+      assert base_body =~ ~r/transform\s*:\s*translateY\(110%\)/,
+             "Expected .pk-about-cta-bar to declare transform: translateY(110%) at rest — the " <>
+               "bar must be translated fully out of the viewport before the docked-state reveal."
+
+      assert base_body =~ ~r/opacity\s*:\s*0\b/,
+             "Expected .pk-about-cta-bar to declare opacity: 0 at rest."
+
+      assert base_body =~ ~r/visibility\s*:\s*hidden\b/,
+             "Expected .pk-about-cta-bar to declare visibility: hidden at rest (T-QUICK-03) — " <>
+               "the bar must be absent from the tab order and the a11y tree before the trigger " <>
+               "fires, not merely painted transparent."
+    end
+
+    # NEW (sketch 053 winner D): the ONE entry trigger for this bar,
+    # reusing the D-03 boolean .AboutHeaderMorph already computes and
+    # toggles on #about-hero (about_live.ex) — the same class the hero
+    # eyebrow hide and the .pk-about-morph-name fade already read (both
+    # below, and above in this file's own describe blocks). No new scroll
+    # mechanism, no timer, no second boolean anywhere in this plan.
+    test "a body:has(#about-hero.is-docked) .pk-about-cta-bar rule reveals the bar (D-03 reuse, no second scroll mechanism)" do
+      src = strip_comments(css_source())
+
+      reveal_rule =
+        Regex.run(~r/body:has\(#about-hero\.is-docked\)\s*\.pk-about-cta-bar\s*\{([^}]*)\}/, src)
+
+      assert reveal_rule,
+             "Expected a body:has(#about-hero.is-docked) .pk-about-cta-bar rule in app.css — " <>
+               "this is a REUSE of the D-03 boolean .AboutHeaderMorph already toggles (the same " <>
+               "class the hero eyebrow hide and the .pk-about-morph-name fade already read), " <>
+               "never a new scroll mechanism."
+
+      [_, reveal_body] = reveal_rule
+
+      assert reveal_body =~ ~r/transform\s*:\s*translateY\(0\)/,
+             "Expected the reveal rule to declare transform: translateY(0)."
+
+      assert reveal_body =~ ~r/opacity\s*:\s*1\b/,
+             "Expected the reveal rule to declare opacity: 1."
+
+      assert reveal_body =~ ~r/visibility\s*:\s*visible\b/,
+             "Expected the reveal rule to declare visibility: visible."
+    end
+
+    # NEW (sketch 053 winner D, second refinement pass): once shown, the
+    # bar stays visible for the rest of the scroll in BOTH directions —
+    # there is no footer-proximity auto-hide anywhere in this mechanism,
+    # unlike the per-game detail-page bar's .DetailChrome scroll-retract/
+    # footer-park lifecycle (see this bar's own top-of-rule comment for why
+    # the two are deliberately unrelated mechanisms).
+    test "no footer-proximity auto-hide exists for .pk-about-cta-bar, in CSS or JS" do
+      css_src = strip_comments(css_source())
+
+      # Isolate each rule's SELECTOR text (everything before its own `{`)
+      # rather than scanning raw proximity in the stripped source — the
+      # word "footer" appears legitimately elsewhere near this bar's own
+      # media-query display swap (e.g. .pk-footer-legal's sibling rules),
+      # and a bare character-window proximity check would false-positive
+      # on that coincidental adjacency. A footer-proximity auto-hide rule
+      # would combine both tokens in ONE selector (e.g. a :has(+ footer)
+      # combinator) — no such selector should exist anywhere in app.css.
+      offending_selectors =
+        ~r/([^{}]+)\{/
+        |> Regex.scan(css_src)
+        |> Enum.map(fn [_, selector] -> selector end)
+        |> Enum.filter(fn selector ->
+          selector =~ "pk-about-cta-bar" and selector =~ ~r/footer/i
+        end)
+
+      assert offending_selectors == [],
+             "Expected no CSS selector combining .pk-about-cta-bar with any footer reference " <>
+               "(got: #{inspect(offending_selectors)}) — sketch 053's second refinement pass " <>
+               "removed footer-proximity auto-hide in favor of a live-measured document-end " <>
+               "clearance reservation instead."
+
+      live_src = File.read!(Path.expand("../../../lib/pukllay_club_web/live/about_live.ex", __DIR__))
+
+      refute live_src =~ "IntersectionObserver",
+             "Expected about_live.ex to contain no IntersectionObserver — the measurement hook " <>
+               "(Task 2) must never grow into a footer-proximity auto-hide, which is the exact " <>
+               "behavior sketch 053's second refinement pass removed."
+    end
+
+    # NEW (sketch 053 winner D): elevation moved to the bar's own surface
+    # (box-shadow, above); pointer-events: auto has nothing left to punch
+    # through, since the transparent, pointer-events: none wrapper it
+    # overrode is gone. The primary/primary-content assertions this test
+    # used to share a block with (background/color) are unchanged and
+    # still covered by the next test below.
+    test "the bar's Sumate button modifier declares no box-shadow and no pointer-events (elevation moved to the bar's own surface)" do
+      src = strip_comments(css_source())
+
+      modifier_rule = Regex.run(~r/\.pk-sumate-btn-solid\s*\{([^}]*)\}/s, src)
+      assert modifier_rule, "Expected a .pk-sumate-btn-solid modifier rule in app.css."
+      [_, modifier_body] = modifier_rule
+
+      refute modifier_body =~ ~r/box-shadow\s*:/,
+             "Expected .pk-sumate-btn-solid to declare no box-shadow — winner D's full-width " <>
+               "bar carries its own elevation (.pk-about-cta-bar's box-shadow), matching the " <>
+               "sketch's in-bar button, which itself carries none."
+
+      refute modifier_body =~ ~r/pointer-events\s*:/,
+             "Expected .pk-sumate-btn-solid to declare no pointer-events — it existed solely to " <>
+               "punch through the old transparent wrapper's pointer-events: none, which is gone " <>
+               "now that the wrapper is an opaque surface."
+    end
+
+    test "the bar's Sumate button resolves a solid fill from the primary token pair" do
+      src = strip_comments(css_source())
+
+      modifier_rule = Regex.run(~r/\.pk-sumate-btn-solid\s*\{([^}]*)\}/s, src)
+      assert modifier_rule, "Expected a .pk-sumate-btn-solid modifier rule in app.css."
+      [_, modifier_body] = modifier_rule
+
+      assert modifier_body =~ ~r/background\s*:\s*var\(--color-primary\)/,
+             "Expected the bar's button to resolve background: var(--color-primary) — a " <>
+               "stronger contrast position than the superseded border guard: the " <>
+               "primary/primary-content pair is an audited theme pair, whereas no step in the " <>
+               "base ladder clears the 3:1 non-text floor in either theme (plan 01.5-10 " <>
+               "measured base-300 at 1.406:1 light / 1.19:1 dark)."
+
+      assert modifier_body =~ ~r/color\s*:\s*var\(--color-primary-content\)/,
+             "Expected the bar's button label colour to resolve var(--color-primary-content), " <>
+               "matching the solid fill's own paired ink colour."
+    end
+  end
+
+  # Quick task 260910-av6, Task 2 (sketch 053 winner D, G-01.5-12): live-
+  # measured document-end clearance. .AboutCtaBarMeasure (a colocated hook,
+  # about_live.ex) mirrors .CatalogNav's own --pk-header-h publisher
+  # (layouts.ex) verbatim — a ResizeObserver on the bar's own element,
+  # publishing its real rendered height to documentElement for app.css's
+  # body:has(.pk-about-cta-bar) rule to consume. Only a pre-connect fallback
+  # may be a hardcoded literal; the real reservation must be driven by the
+  # bar's LIVE height.
+  describe "live-measured document-end clearance (quick task 260910-av6 Task 2, sketch 053 winner D)" do
+    test "the rendered bar carries a DOM id and phx-hook=\".AboutCtaBarMeasure\", and still carries pk-about-cta-bar",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      bar = LazyHTML.query(doc, ".pk-about-cta-bar")
+      assert Enum.count(bar) == 1, "Expected exactly one .pk-about-cta-bar element."
+
+      [id] = LazyHTML.attribute(bar, "id")
+
+      assert id != "" and id != nil,
+             "Expected .pk-about-cta-bar to carry a non-empty DOM id — LiveView requires one " <>
+               "for phx-hook to attach."
+
+      [hook] = LazyHTML.attribute(bar, "phx-hook")
+
+      # Phoenix resolves a colocated hook's leading-dot name to its fully
+      # qualified module-relative form at render time (layouts.ex:196-201's
+      # note on this file's own .CatalogNav hook) — ".AboutCtaBarMeasure" in
+      # the template renders as "PukllayClubWeb.AboutLive.AboutCtaBarMeasure".
+      assert hook == "PukllayClubWeb.AboutLive.AboutCtaBarMeasure",
+             "Expected .pk-about-cta-bar to carry the resolved " <>
+               "\".AboutCtaBarMeasure\" hook name, got: " <> inspect(hook)
+    end
+
+    test "the .AboutCtaBarMeasure hook's source contains ResizeObserver and does NOT contain IntersectionObserver" do
+      live_src = File.read!(Path.expand("../../../lib/pukllay_club_web/live/about_live.ex", __DIR__))
+
+      hook_match = Regex.run(~r/name="\.AboutCtaBarMeasure">([\s\S]*?)<\/script>/, live_src)
+      assert hook_match, "Expected an .AboutCtaBarMeasure colocated hook script in about_live.ex."
+      [_, hook_src] = hook_match
+
+      assert hook_src =~ "ResizeObserver",
+             "Expected .AboutCtaBarMeasure to use a ResizeObserver, mirroring .CatalogNav's own " <>
+               "--pk-header-h publisher (layouts.ex)."
+
+      refute hook_src =~ "IntersectionObserver",
+             "Expected .AboutCtaBarMeasure to contain no IntersectionObserver — the measurement " <>
+               "hook must never grow into a footer-proximity auto-hide, which is the exact " <>
+               "behavior sketch 053's second refinement pass removed."
+    end
+
+    test "inside the 480px block, body:has(.pk-about-cta-bar)'s padding-bottom reads var(--pk-about-cta-bar-h" do
+      src = strip_comments(css_source())
+      # media_480_body/1 is defined once, module-private, inside the
+      # "Cierre CTA suppression" describe block above — describe/2 does not
+      # create a new module scope, so the defp is reachable from here too.
+      body = media_480_body(src)
+
+      assert body, "Expected to extract the @media (max-width: 480px) block body."
+
+      clearance_rule = Regex.run(~r/body:has\(\.pk-about-cta-bar\)\s*\{([^}]*)\}/s, body)
+      assert clearance_rule, "Expected a body:has(.pk-about-cta-bar) rule inside the 480px block."
+      [_, clearance_body] = clearance_rule
+
+      # RETARGETED (debug cta-bar-footer-gap-uncolored): the seam this test
+      # exists to pin — CSS consumes the height JS publishes — is unchanged and
+      # still asserted. Only the surrounding `calc(...)` wrapper it used to
+      # require is gone, because that wrapper existed solely to hold an
+      # additive `+ 1rem` term, and that term WAS the bug: the reservation must
+      # be the bar's height and nothing more, or the excess renders as an
+      # uncoloured band between the footer and the bar. Requiring the wrapper
+      # here would now mandate the defect.
+      assert clearance_body =~ ~r/padding-bottom\s*:\s*var\(--pk-about-cta-bar-h/,
+             "Expected the document-end clearance's padding-bottom to read " <>
+               "var(--pk-about-cta-bar-h directly — pinning the JS-publishes/CSS-consumes seam " <>
+               "itself. Got: #{clearance_body}"
+    end
+  end
+
+  # Plan 01.5-04, Task 2 (D-14): page-wide band background alternation —
+  # plain -> tint -> dark -> plain -> tint top to bottom, with FAQ's dark
+  # band kept as a deliberate one-off highlight outside the alternation.
+  describe "About page band background alternation (plan 01.5-04, D-14)" do
+    test "app.css declares exactly one top-level .pk-band-tint rule with background: var(--color-base-200) as its only declaration" do
+      src = strip_comments(css_source())
+
+      matches = Regex.scan(~r/(?m)^\.pk-band-tint\s*\{/, src)
+
+      assert length(matches) == 1,
+             "Expected exactly one top-level .pk-band-tint rule in app.css."
+
+      [_, body] = Regex.run(~r/\.pk-band-tint\s*\{([^}]*)\}/s, src)
+      declarations = body |> String.split(";") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+
+      assert declarations == ["background: var(--color-base-200)"],
+             "Expected .pk-band-tint to declare background: var(--color-base-200) and nothing else, got: #{inspect(declarations)}"
+    end
+
+    test "the .pk-band-dark rule still declares background: var(--color-primary) and color: var(--color-primary-content) unchanged" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/\.pk-band-dark\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a .pk-band-dark rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/background\s*:\s*var\(--color-primary\)/
+      assert body =~ ~r/color\s*:\s*var\(--color-primary-content\)/
+    end
+
+    test "reading section.pk-band class attributes in document order yields the state sequence plain, tint, dark, plain, tint",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      sections = LazyHTML.query(doc, "section.pk-band")
+      classes = LazyHTML.attribute(sections, "class")
+
+      assert Enum.count(classes) == 5,
+             "Expected exactly 5 section.pk-band elements on the About page."
+
+      states =
+        Enum.map(classes, fn class ->
+          cond do
+            class =~ "pk-band-dark" -> :dark
+            class =~ "pk-band-tint" -> :tint
+            true -> :plain
+          end
+        end)
+
+      assert states == [:plain, :tint, :dark, :plain, :tint],
+             "Expected the band background sequence (document order) to be " <>
+               "plain, tint, dark, plain, tint — got: #{inspect(states)}. Asserting the ORDER " <>
+               "is the point: a correct set of classes attached to the wrong sections would " <>
+               "still satisfy a count-only assertion."
+    end
+
+    test "exactly 2 sections carry pk-band-tint and exactly 1 carries pk-band-dark, and it is #faq",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+
+      tinted = LazyHTML.query(doc, "section.pk-band-tint")
+      assert Enum.count(tinted) == 2
+
+      dark = LazyHTML.query(doc, "section.pk-band-dark")
+      assert Enum.count(dark) == 1
+      assert LazyHTML.attribute(dark, "id") == ["faq"]
+    end
+
+    test "no section carries both pk-band-tint and pk-band-dark", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      sections = LazyHTML.query(doc, "section.pk-band")
+      classes = LazyHTML.attribute(sections, "class")
+
+      refute Enum.any?(classes, fn class -> class =~ "pk-band-tint" and class =~ "pk-band-dark" end),
+             "Expected no section to carry both pk-band-tint and pk-band-dark — FAQ's dark " <>
+               "treatment stays a one-off highlight, not also tinted."
+    end
+
+    # G-01.5-2 gap closure (.planning/debug/inter-band-whitespace-gap.md,
+    # plan 01.5-06): the shared shell's `space-y-4` wrapper (layouts.ex:670)
+    # puts 16px of margin-block-end on every non-last direct child, which on
+    # the About page are these `.pk-band` sections — producing a visible
+    # whitespace strip at all four band-to-band boundaries. This is a
+    # CSS-source oracle (not geometry — see test/visual/about_geometry.mjs
+    # for the rendered-rect oracle this same gap closure adds), but it is
+    # the first test in this describe block to assert anything about
+    # SPACING rather than colour/class, since none of the four tests above
+    # could have caught a margin defect.
+    test ".pk-band declares margin-block-end: 0, cancelling the shell's space-y-4 margin at every band-to-band boundary" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/(?m)^\.pk-band\s*\{([^}]*)\}/s, src)
+
+      assert rule,
+             "Expected a top-level .pk-band rule in app.css."
+
+      [_, body] = rule
+
+      assert body =~ ~r/margin-block-end\s*:\s*0\b/,
+             "Expected .pk-band to declare margin-block-end: 0. Without it, layouts.ex's " <>
+               "shared shell wrapper (<div class=\"mx-auto space-y-4\">) puts 16px of " <>
+               "margin-block-end on every non-last direct child — on the About page those " <>
+               "children are the .pk-band sections themselves, producing a visible whitespace " <>
+               "strip at all four band-to-band boundaries (fotos->tint, tint->faq, faq->plain, " <>
+               "plain->cierre; see .planning/debug/inter-band-whitespace-gap.md). This zero is " <>
+               "load-bearing, not a redundant reset — do not delete it as dead CSS."
+    end
+  end
+
+  # G-01.5-7 gap closure (this session, 2026-09-09): .pk-nav is a
+  # layouts.ex-shared component (every page's sticky header), not
+  # About-scoped — but the bug was only DISCOVERED via the About page,
+  # because D-14 (this same phase, plan 01.5-04, tested above) is the only
+  # place in the app with a dark, high-contrast band a scrolled visitor can
+  # land the header over. The regression guard lives here rather than in
+  # layouts_test.exs to keep it next to the D-14 test it is a direct
+  # consequence of.
+  describe "sticky header opacity when scrolled (G-01.5-7 gap closure)" do
+    test ".pk-nav.is-scrolled declares a fully opaque background, no color-mix/transparent" do
+      src = strip_comments(css_source())
+
+      rule = Regex.run(~r/(?m)^\.pk-nav\.is-scrolled\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected a top-level .pk-nav.is-scrolled rule in app.css."
+      [_, body] = rule
+
+      background = Regex.run(~r/(?<![-\w])background\s*:\s*([^;]+);/, body)
+      assert background, "Expected .pk-nav.is-scrolled to declare a background."
+      [_, background_value] = background
+
+      # Scoped to the `background` declaration alone — box-shadow (below)
+      # legitimately keeps its own color-mix() for the hairline shadow
+      # tint, which was never the bug.
+      refute background_value =~ ~r/color-mix/,
+             "Expected .pk-nav.is-scrolled's background to declare no color-mix()/transparency. " <>
+               "A 94%-opaque tint here let the FAQ band's bold light-on-dark copy (D-14) read as " <>
+               "clearly visible ghost text through the scrolled header — invisible over light page " <>
+               "content, which is why no prior visual check over a plain background caught it. See " <>
+               "the CSS comment above this rule for the full incident."
+
+      assert String.trim(background_value) == "var(--color-base-200)",
+             "Expected .pk-nav.is-scrolled to declare a plain, fully opaque background: var(--color-base-200), got: #{inspect(background_value)}"
+
+      assert body =~ ~r/border-bottom-color/,
+             "Expected .pk-nav.is-scrolled to still declare border-bottom-color — the scrolled " <>
+               "state must remain visually distinct from rest via border + shadow, not silently " <>
+               "become identical to the unscrolled .pk-nav now that the transparency is gone."
+
+      assert body =~ ~r/box-shadow/,
+             "Expected .pk-nav.is-scrolled to still declare box-shadow, for the same reason as " <>
+               "border-bottom-color above."
     end
   end
 end

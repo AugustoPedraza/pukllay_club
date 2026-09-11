@@ -84,6 +84,220 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       refute html =~ "data-morph-anchor"
       refute html =~ "AboutHeaderMorph"
     end
+
+    test "GET / renders neither .pk-about-morph-name nor .pk-about-hero-eyebrow", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+
+      assert Enum.empty?(LazyHTML.query(doc, ".pk-about-morph-name"))
+      assert Enum.empty?(LazyHTML.query(doc, ".pk-about-hero-eyebrow"))
+    end
+  end
+
+  describe "the companion wordmark and hero eyebrow sync to the shared docked boolean (D-01/D-02/D-03)" do
+    test "exactly one .pk-about-morph-name renders inside #pk-about-morph-mark, reading PUKLLAY CLUB",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      name = LazyHTML.query(doc, "#pk-about-morph-mark .pk-about-morph-name")
+
+      assert Enum.count(name) == 1,
+             "Expected exactly one .pk-about-morph-name inside #pk-about-morph-mark."
+
+      assert name |> LazyHTML.text() |> to_string() |> String.trim() == "PUKLLAY CLUB"
+    end
+
+    test "the hero eyebrow carries pk-about-hero-eyebrow, distinct from the Cierre signature's pk-about-eyebrow",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+
+      hero_eyebrow = LazyHTML.query(doc, "#about-hero .pk-about-hero-eyebrow")
+      assert Enum.count(hero_eyebrow) == 1
+      assert hero_eyebrow |> LazyHTML.text() |> to_string() =~ "Club de juegos de mesa"
+
+      all_pk_about_eyebrow = LazyHTML.query(doc, ".pk-about-eyebrow")
+      cierre_pk_about_eyebrow = LazyHTML.query(doc, "#cierre .pk-about-eyebrow")
+
+      assert Enum.count(all_pk_about_eyebrow) == 1,
+             "The hero eyebrow must never join .pk-about-eyebrow — that class carries an " <>
+               "underlined-link companion rule meant for the Cierre band's closing signature."
+
+      assert Enum.count(cierre_pk_about_eyebrow) == 1,
+             "The page's only .pk-about-eyebrow element must live inside #cierre."
+    end
+
+    test "the .AboutHeaderMorph hook toggles is-docked on this.el (#about-hero), the same instant as the header" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      assert hook =~ ~s|this.el.classList.toggle("is-docked", this.docked)|,
+             "Expected the hook to toggle is-docked on this.el (#about-hero) — same boolean, " <>
+               "same instant as the existing header toggle, per D-03."
+    end
+
+    test "app.css declares the docked-state rules for the hero eyebrow and the companion wordmark" do
+      src = strip_comments(css_source())
+
+      assert src =~ "#about-hero.is-docked .pk-about-hero-eyebrow",
+             "Expected a docked-state rule hiding .pk-about-hero-eyebrow when #about-hero carries " <>
+               "is-docked."
+
+      assert src =~ "body:has(#about-hero.is-docked) .pk-about-morph-name",
+             "Expected a docked-state rule fading .pk-about-morph-name when #about-hero carries " <>
+               "is-docked — reached via body:has() since the wordmark is not a descendant of " <>
+               "#about-hero."
+    end
+
+    test "app.css declares exactly one top-level .pk-about-morph-name rule, absolutely positioned" do
+      src = strip_comments(css_source())
+
+      matches = Regex.scan(~r/(?m)^\.pk-about-morph-name\s*\{/, src)
+      assert length(matches) == 1
+
+      rule = Regex.run(~r/\.pk-about-morph-name\s*\{([^}]*)\}/s, src)
+      assert rule, "Expected to find a .pk-about-morph-name rule in app.css."
+      [_, body] = rule
+
+      assert body =~ ~r/font-weight:\s*400/
+      assert body =~ ~r/letter-spacing:\s*0\.02em/
+      assert body =~ ~r/position:\s*absolute/
+      assert body =~ ~r/top:\s*100%/
+      assert body =~ "var(--pk-about-mark-h)"
+      assert body =~ "var(--pk-about-mark-name-scale)"
+
+      weight_matches = Regex.scan(~r/font-weight:\s*(\d+)/, body)
+      assert weight_matches == [["font-weight: 400", "400"]]
+    end
+
+    test "the hook toggles is-docked on this.el at exactly 2 call sites (frame() and first paint)" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      matches = Regex.scan(~r/this\.el\.classList\.toggle\("is-docked"/, hook)
+
+      assert length(matches) == 2,
+             "Expected exactly 2 occurrences of this.el.classList.toggle(\"is-docked\" — one in " <>
+               "frame(), one in the first-paint block, so a deep-linked visitor and a scrolling " <>
+               "visitor resolve to the same state."
+    end
+
+    test "the hook toggles is-docked on this.header at exactly 2 call sites, unchanged by this plan" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      matches = Regex.scan(~r/this\.header\.classList\.toggle\("is-docked"/, hook)
+
+      assert length(matches) == 2,
+             "Expected the pre-existing pair of this.header.classList.toggle(\"is-docked\" call " <>
+               "sites to remain untouched — the new lines were added beside them, not in place " <>
+               "of them."
+    end
+
+    test "destroyed() removes is-docked only from this.header, never from this.el" do
+      hook = about_header_morph_hook_source(File.read!("lib/pukllay_club_web/live/about_live.ex"))
+
+      matches = Regex.scan(~r/classList\.remove\("is-docked"\)/, hook)
+      assert length(matches) == 1
+
+      [line] =
+        hook
+        |> String.split("\n")
+        |> Enum.filter(&(&1 =~ ~r/classList\.remove\("is-docked"\)/))
+
+      assert line =~ "this.header",
+             "Expected the sole is-docked removal to target this.header (a shared element that " <>
+               "outlives the page) — this.el (#about-hero) leaves the DOM on navigation and needs " <>
+               "no teardown of its own."
+    end
+
+    test "app.css registers exactly two Bebas Neue @font-face blocks, both weight 400" do
+      src = strip_comments(css_source())
+
+      font_face_blocks = ~r/@font-face\s*\{[^}]*\}/s |> Regex.scan(src) |> Enum.map(&hd/1)
+
+      bebas_blocks =
+        Enum.filter(font_face_blocks, &Regex.match?(~r/font-family:\s*"Bebas Neue"/, &1))
+
+      assert length(bebas_blocks) == 2,
+             "Expected exactly 2 @font-face blocks for \"Bebas Neue\"."
+
+      weights =
+        bebas_blocks
+        |> Enum.flat_map(fn block -> Regex.scan(~r/font-weight:\s*(\d+)/, block) end)
+        |> Enum.map(fn [_, w] -> w end)
+
+      assert weights == ["400", "400"],
+             "Expected both Bebas Neue @font-face blocks to declare font-weight: 400 (found " <>
+               "#{inspect(weights)}) — any other weight would be a browser-synthesized fake bold."
+    end
+
+    test "--pk-about-mark-name-scale is declared exactly once at 0.135" do
+      src = strip_comments(css_source())
+
+      matches = Regex.scan(~r/--pk-about-mark-name-scale:\s*0\.135/, src)
+      assert length(matches) == 1
+    end
+  end
+
+  describe "regression guards for D-04's hero grouping and the real header brand-slot layout (Task 3)" do
+    test "[data-morph-anchor] is the FIRST child of #about-hero, not just present", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      first_child = LazyHTML.query(doc, "#about-hero > :first-child")
+
+      assert Enum.count(first_child) == 1
+      [attr] = LazyHTML.attribute(first_child, "data-morph-anchor")
+
+      assert attr == "",
+             "Expected [data-morph-anchor] to be the FIRST child of #about-hero. The hook's " <>
+               "naturalRect() reads this element's rect, and the whole hero (mark, companion " <>
+               "wordmark, eyebrow, H1, subtext, CTA) only centers as one grouped block because " <>
+               "the mark anchors to this in-flow spacer rather than to the section's own top " <>
+               "edge (D-04) — if this regresses, the anchor rect would no longer represent the " <>
+               "block's true resting position."
+    end
+
+    test "the page's only .pk-about-eyebrow lives inside #cierre, not the hero (Pitfall 3 guard)",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+
+      all_eyebrow = LazyHTML.query(doc, ".pk-about-eyebrow")
+      cierre_eyebrow = LazyHTML.query(doc, "#cierre .pk-about-eyebrow")
+
+      assert Enum.count(all_eyebrow) == 1
+
+      assert Enum.count(cierre_eyebrow) == 1,
+             "The Cierre band's closing signature carries an underlined-link companion rule " <>
+               "meant for that specific band (01.5-RESEARCH.md Pitfall 3) — the hero eyebrow " <>
+               "deliberately uses its own .pk-about-hero-eyebrow hook instead, never this class."
+    end
+
+    test "the shared header's brand anchor renders a real pk-brand-mark <img> (width=36) before the wordmark",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+      brand_anchor = LazyHTML.query(doc, "#app-header .shrink-0 > a")
+      assert Enum.count(brand_anchor) == 1
+
+      anchor_html = LazyHTML.to_html(brand_anchor)
+
+      mark_pos = anchor_html |> :binary.match(~s(class="dark:hidden pk-brand-mark")) |> elem(0)
+      width_pos = anchor_html |> :binary.match(~s(width="36")) |> elem(0)
+      wordmark_pos = anchor_html |> :binary.match("PUKLLAY CLUB") |> elem(0)
+
+      assert width_pos < wordmark_pos and mark_pos < wordmark_pos,
+             "Expected the pk-brand-mark <img width=\"36\"> to render before the PUKLLAY CLUB " <>
+               "wordmark text inside the brand anchor. Sketch 050's own mockup header lacked " <>
+               "this reserved image box, causing a docked mark to overlap the wordmark's first " <>
+               "letters — the real app's brand_logo/1 already reserves that space via a real " <>
+               "<img>, so no spacer fix is needed here; this test pins that fact so the " <>
+               "sketch-only bug is never re-imported as a fix."
+    end
   end
 
   describe "the isologo suppression hook class (D-10 — a styling hook, not a fourth header state)" do

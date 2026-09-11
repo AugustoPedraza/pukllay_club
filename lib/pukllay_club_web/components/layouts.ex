@@ -23,35 +23,24 @@ defmodule PukllayClubWeb.Layouts do
   @isologo? File.exists?(@isologo_light_path) and File.exists?(@isologo_dark_path)
 
   @doc """
-  Renders the PUKLLAY CLUB horizontal logo lockup (isologo + wordmark + tagline).
+  Renders the PUKLLAY CLUB horizontal logo lockup (isologo + wordmark), one line.
 
   Renders a theme-aware isologo pair — the dark-purple mark for light theme, the white mark for
   dark theme, toggled by the `dark:` custom variant — when both
   `priv/static/images/isologo-light.png` and `isologo-dark.png` exist at compile time, and
-  degrades to the wordmark + tagline lockup with no `<img>` at all when either is missing.
+  degrades to the wordmark alone with no `<img>` at all when either is missing.
 
-  The second-line tagline is overridable via the `tagline` attr — the header uses the default,
-  the footer overrides it with the About page's hero tagline so the two clusters don't repeat
-  the same copy (260821-umm).
-
-  **The mark is the header's (D-A, 260823-snj).** `brand_logo/1` renders on both the header and
-  the footer, and rendering the isologo pair unconditionally on both doubled the brand identity
-  on every page. The `mark` attr (default `true`) selects between the two: the header keeps the
-  default and renders the full pair, the footer passes `mark={false}` and renders the wordmark +
-  tagline lockup only, demoted to the muted colour tier via the `pk-brand-quiet` class (D-B).
-  Below 480px the footer's lockup does not render at all — the whole `.pk-footer-left` cluster is
-  hidden there (sketch 044 winner H, quick task 260902-fdm; superseding 260901-ty6's earlier
-  ≤480px wordmark SIZE exception, which is withdrawn).
+  **Header-only since this session's minimalism pass (2026-09-09).** Used to also render on the
+  footer (with `mark={false}` suppressing the isologo and a `tagline` attr overriding the
+  header's copy) — both the two-line name+tagline lockup and the footer's reuse of it are gone
+  (see `footer/1`'s own doc for the footer's replacement). With exactly one caller left, the
+  `mark`/`tagline`/`pk-brand-quiet` plumbing that only ever served the footer branch is removed
+  rather than kept dead. The wordmark itself is now a SINGLE line ("PUKLLAY CLUB", no tagline) —
+  previously a two-line vertical stack next to the nav's single-line links, which read as an
+  inconsistent rhythm and forced the wordmark to hide below `56rem`/896px (bare isologo only on
+  mobile/tablet, reported as "feels so empty"). One line is narrow enough to render at every
+  width instead — see `header_capacity_test.exs` for the re-derived row-capacity arithmetic.
   """
-  attr :tagline, :string, default: "JUEGOS DE MESA MODERNOS"
-
-  attr :mark, :boolean,
-    default: true,
-    doc:
-      "when false, renders the wordmark + tagline lockup with no isologo <img> at all, and " <>
-        "demotes the wordmark to the muted colour tier via pk-brand-quiet. The footer is the " <>
-        "one call site that passes false (D-A) — the header keeps the true default. Below " <>
-        "480px the footer's whole lockup is hidden in CSS (sketch 044), not resized."
 
   # `isologo?` is deliberately not a declared `attr` — it's a test-only seam. No production call
   # site ever passes it, so `assign_new/3` always falls through to the compile-time `@isologo?`
@@ -63,10 +52,7 @@ defmodule PukllayClubWeb.Layouts do
     assigns = assign_new(assigns, :isologo?, fn -> @isologo? end)
 
     ~H"""
-    <a
-      href="/"
-      class={["flex-initial flex w-fit items-center gap-2 min-h-11", !@mark && "pk-brand-quiet"]}
-    >
+    <a href="/" class="flex-initial flex w-fit items-center gap-2 min-h-11">
       <%!-- Sketch 045, D-10: the two isologo images below carry a pure
       styling-hook class (added to both, nowhere else in this file) — no
       attr, no branch, no new state. It exists so the About page's
@@ -77,26 +63,21 @@ defmodule PukllayClubWeb.Layouts do
       selector reaching through `.pk-nav-inner > .shrink-0 > a > img`,
       which breaks the moment this markup's wrapping changes. --%>
       <img
-        :if={@isologo? and @mark}
+        :if={@isologo?}
         src={~p"/images/isologo-light.png"}
         width="36"
         alt=""
         class="dark:hidden pk-brand-mark"
       />
       <img
-        :if={@isologo? and @mark}
+        :if={@isologo?}
         src={~p"/images/isologo-dark.png"}
         width="36"
         alt=""
         class="hidden dark:block pk-brand-mark"
       />
-      <span class="pk-brand-wordmark flex flex-col leading-none">
-        <span class="pk-brand-name font-display text-2xl uppercase tracking-wide">
-          PUKLLAY CLUB
-        </span>
-        <span class="font-sans text-xs uppercase tracking-widest text-neutral">
-          {@tagline}
-        </span>
+      <span class="pk-brand-wordmark pk-brand-name font-display text-2xl uppercase tracking-wide leading-none">
+        PUKLLAY CLUB
       </span>
     </a>
     """
@@ -892,6 +873,42 @@ defmodule PukllayClubWeb.Layouts do
   classes directly rather than the component itself, since `button/1`'s
   `:rest` global attr list does not include `target`/`rel` (needed here for
   an external link) and would silently drop them.
+
+  **Size, superseded (G-01.5-1/G-01.5-3 item 5, plan 01.5-05).** The
+  composition below used to be daisyUI's `btn-lg` step composed with the
+  app's 44px touch-floor utility (`min-h-11`) — a correct fix for a real
+  proportion defect: the button had been a bare `min-h-12` one-axis height
+  override that produced a 1.03:1 squat, square-padded label box, and
+  `btn-lg` + `min-h-11` (matching `catalog_live/show.ex`'s reserve CTA)
+  repaired that mechanism, landing a healthy 1.74:1 ratio. It did NOT close
+  a separate, independent fidelity delta against sketch 051 — the human-
+  approved design source this composition's BALANCE was actually judged
+  against — because `btn-lg`'s own coupled height/padding-inline/font-size
+  (42px/16px/18px in this app's theme) never matched that source's spec
+  (48px/28px/16px). See `.planning/debug/G-01.5-4-hero-cierre-composition-
+  balance.md` for the full differential.
+
+  **Size, current (G-01.5-4, plan 01.5-10).** `pk-sumate-btn` (declared once
+  in `assets/css/app.css`, near the About page's own CSS group) now owns
+  every axis of the button's size — height, inline padding, font-size and
+  corner radius — as the sketch 051 spec measures them, restoring the
+  composition the design was approved with. `btn-lg` and `min-h-11` are both
+  gone: leaving either alongside `pk-sumate-btn` would have two rules
+  compete on height again, exactly the failure mode this composition already
+  fixed once. The 44px touch floor is met by `pk-sumate-btn`'s own 48px
+  `min-height` and is verified in `test/visual/about_geometry.mjs` by
+  measuring the RENDERED height, not by asserting a utility class is
+  present — a utility class can be silently outbid; a measured height cannot.
+
+  **Why this now diverges from the catalog page's reserve CTA
+  (`catalog_live/show.ex`'s `btn btn-primary btn-lg min-h-11 w-full`), the
+  very button plan 01.5-05 matched it to.** The reserve CTA is a different
+  surface, on a different page, with no counterpart in sketch 051, and no
+  UAT round has ever reported it — it is untouched by this plan. The Sumate
+  CTA is the object a human-approved composition (sketch 051, rounds 9/10)
+  was actually judged against, and that composition's own button geometry is
+  what this class restores. The two buttons no longer sharing a size
+  mechanism is a recorded decision, not drift.
   """
   attr :class, :string, default: nil
 
@@ -901,7 +918,7 @@ defmodule PukllayClubWeb.Layouts do
       href={PukllayClubWeb.ClubLinks.whatsapp_group_url()}
       target="_blank"
       rel="noopener noreferrer"
-      class={["btn btn-outline btn-primary min-h-12", @class]}
+      class={["btn btn-outline btn-primary pk-sumate-btn", @class]}
     >
       Sumate
     </a>
@@ -919,13 +936,23 @@ defmodule PukllayClubWeb.Layouts do
   # linktr.ee menu), and the BGG attribution is "Powered by BGG" + the
   # BGG logo mark, rendered by `bgg_attribution/1` below.
   #
-  # The left cluster overrides brand_logo/1's tagline with the About page's
-  # hero tagline ("Conectá jugando", verbatim from about_live.ex) instead of
-  # the header's default subtitle, so the footer doesn't just repeat the
-  # header's copy (260821-umm). It also passes mark={false} (D-A, 260823-snj):
-  # the isologo belongs to the header alone — see brand_logo/1's @doc for the
-  # full contract. The footer's wordmark is demoted to the muted colour tier
-  # by the pk-brand-quiet class mark={false} adds, not by shrinking it (D-B).
+  # REMOVED (this session's header/footer minimalism pass, 2026-09-09): the
+  # left cluster used to open with `<.brand_logo tagline="Conectá jugando"
+  # mark={false} />` — a wordmark-only, muted-colour repeat of the header's
+  # own brand identity (D-A/D-B, 260823-snj). The header already establishes
+  # brand identity on every page; repeating it in the footer read as visual
+  # weight with no new information, and this footer specifically has an
+  # unusually long history of "feels overloaded"/"feels imbalanced" reports
+  # (debug sessions footer-desktop-overloaded, footer-desktop-imbalance,
+  # footer-theme-toggle-balance — all fixed by retuning SPACING, none by
+  # removing an ELEMENT) — see `.planning/debug/knowledge-base.md`'s own
+  # generalizable lesson from that history: "hierarchy has three channels —
+  # proximity, weight/contrast, colour — fixing one and declaring victory is
+  # how 'still overloaded' survives a correct spacing fix." Dropping the
+  # brand block is the first fix to this footer that touches WEIGHT (an
+  # element's own footprint) rather than only proximity. The left cluster is
+  # now just the links list — a single navigational concern, not two
+  # different KINDS of concern (identity + navigation) sharing one cluster.
   #
   # The right cluster's "Tema" label and the toggle it labels are wrapped
   # together in `.pk-footer-theme` (debug footer-desktop-overloaded). They are
@@ -1029,7 +1056,6 @@ defmodule PukllayClubWeb.Layouts do
     <footer class="pk-footer">
       <div class="pk-footer-row mx-auto w-full max-w-7xl pk-gutter">
         <div class="pk-footer-left">
-          <.brand_logo tagline="Conectá jugando" mark={false} />
           <ul class="pk-footer-links">
             <li><a href="/quienes-somos#faq">FAQ</a></li>
             <li><a href="/quienes-somos#contacto">Contacto</a></li>

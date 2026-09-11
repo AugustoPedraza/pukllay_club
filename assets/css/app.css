@@ -454,7 +454,76 @@
    and the class's three presence tests plus this describe's own CSS-facts
    contract in `layouts_test.exs` (see that file's `git log` for
    260902-glf's removal commit). `.pk-app-shell` as a class no longer
-   exists anywhere in this codebase as of 2026-09-02. */
+   exists anywhere in this codebase as of 2026-09-02.
+
+   RE-REPORTED 2026-09-09 (G-01.5-9, "the foother still isn't a the very
+   bottom of the page") AND DECIDED AGAIN — same withdrawal, second time,
+   this time with both states of the tradeoff in front of the developer at
+   once. The debug session opened for this report (`.planning/debug/
+   G-01.5-9-footer-not-pinned-bottom.md`) measured the defect this note
+   already documents as real and reachable: on a page shorter than the
+   viewport, plain page background shows below the footer down to the true
+   viewport bottom. Its exact figures, both themes, identical numbers in
+   each: `/?q=<no results>` at 1280x900 -> 298.00px; at 1280x1080 ->
+   478.00px; at 390x844 -> 309.00px (a zero-result filter is one tap from
+   the home page); `/juegos/1` at 1280x1080 -> 32.31px (any 1080p-or-taller
+   desktop); at 1280x1440 -> 392.31px; `/` at 1280x4000 -> 963.50px.
+
+   But the page the 2026-09-09 screenshot was actually taken on,
+   /quienes-somos, was measured ARITHMETICALLY INCAPABLE of exhibiting that
+   defect: its `document.scrollHeight` is 3434px at every width from 1280
+   to 3440, and 3434px again with every `img`/`iframe` suppressed — the
+   footer's bottom edge sits at exactly `document.scrollHeight` (0.00px
+   residual) at every measured viewport and in both themes, with a pixel
+   row-scan showing the footer's own tint painting every row down to the
+   last one. What the report was actually about, on that specific page, is
+   this note's OWN mechanism from a different angle: `#cierre` and
+   `.pk-footer` painting the byte-identical token and sitting flush at
+   0.00px gave the footer no legible top edge, so it never read as a
+   bounded object "at the bottom of the page" even though it already was
+   one. Plan 01.5-11 fixed that half (a page-scoped `body:has(#cierre)
+   .pk-footer` fill change, zero geometry moved) before this chapter was
+   written.
+
+   This is one channel with two states — the mechanism does not remove the
+   empty space below a short page's footer, it relocates it to ABOVE the
+   footer, inside `<main>`, which is the exact band the developer rejected
+   on 2026-09-02 ("a large, empty, unstyled band between the catalog page's
+   last content row and the footer"). The developer has now reported both
+   states of that one switch, one week apart, and the correct sequence is
+   to decide with both reports on the table rather than let either one, in
+   isolation, look like an unambiguous "restore it."
+
+   CORRECTION to the debug session's one wrong claim: it states the
+   sticky-footer mechanism "is an ABSENCE in the shell... present since the
+   shell was written." That is incorrect. The mechanism EXISTED — it was
+   added in Phase 01.2 gap-closure round 4 (G-01.2-14/G-01.2-24 task 3,
+   directly above in this same comment's earlier paragraphs) — and was
+   DELETED on 2026-09-02 by quick task 260902-glf as the explicit developer
+   choice this whole note exists to record, offered against "investigate a
+   possible missing-content bug first." The session's own measurements are
+   unaffected by this correction; only its framing of the fix as filling a
+   gap nobody ever chose is wrong, and that framing is exactly what would
+   make an automated pass silently re-revert a decision the developer had
+   already made once.
+
+   DECISION, 2026-09-09 (plan 01.5-12, checkpoint Task 1, options as
+   presented — A "leave it withdrawn", B "restore it (the measured
+   mechanism)", C "paint the void instead of moving the footer
+   (unmeasured)"): **A — leave the mechanism withdrawn.** The 2026-09-02
+   decision stands a second time. Nothing that renders correctly today
+   changes, on any page, at any width. G-01.5-9 is closed on the half of
+   the report that was actually reachable on the reported page (cause B,
+   the surface equality, fixed by plan 01.5-11); the site-wide void below a
+   short page's footer (cause A, this note's subject) remains the
+   knowingly accepted tradeoff described above. A source-level test in
+   `layouts_test.exs` (see its "root layout sticky-footer decision"
+   describe block) now fails if a future pass ever reintroduces a viewport-
+   height floor or flex column on `body`, or a flex-grow factor on `main`,
+   without a new decision being recorded here first — this is a twice-made
+   decision, and the guard's job is to make a third silent reversal
+   impossible. B and C remain available later as a one-rule follow-up with
+   every measurement already on record in the debug session above. */
 
 /* Category-anchor scroll animation (debug category-menu-scroll-animation).
    Both category surfaces — the desktop .pk-cat-item mega-menu rows and the
@@ -1083,9 +1152,11 @@ body.pk-sheet-open {
 
 /* Sketch 001 (shelf-structure, variant D): sticky nav, padding-aligned to
    the row content below it via the same .pk-gutter rule 01-11 created —
-   never a second, independently-chosen padding value for the nav. Flat
-   translucent tint on scroll, deliberately no backdrop blur (the sketch
-   tested blur and rejected it in favour of the flat tint's clarity). */
+   never a second, independently-chosen padding value for the nav.
+   Deliberately no backdrop blur (the sketch tested blur and rejected it
+   in favour of a flat tint's clarity) — that choice still stands. The
+   scrolled state is distinguished by border + shadow (.is-scrolled,
+   below), not by transparency. */
 .pk-header-sticky {
   position: sticky;
   top: 0;
@@ -1169,70 +1240,53 @@ body.pk-sheet-open {
     box-shadow var(--duration-base) var(--ease-standard);
 }
 
+/* G-01.5-7 (about-page-cta-rhythm gap closure, 2026-09-09): background WAS
+   `color-mix(in srgb, var(--color-base-200) 94%, transparent)` — a
+   deliberate 6% see-through, chosen when this rule was first written
+   against light page content only. Plan 01.5-04 (D-14) later painted the
+   FAQ band --color-primary with bold light text; scrolled behind the
+   sticky nav, that 6% transparency was enough for the FAQ copy to read as
+   clearly visible ghost text through the header — invisible over light
+   content, legible over high-contrast dark content, so no prior visual
+   check over a plain background caught it. Made fully opaque (no
+   color-mix) rather than tuning the percentage down: a lower-but-nonzero
+   value would need re-validation against every band colour this page (and
+   any future page reusing .pk-nav) can scroll behind, which is exactly the
+   fragile-per-surface tuning this codebase's KB warns against; full
+   opacity closes the whole defect class in one step. The scrolled state
+   stays visually distinct via border-bottom + box-shadow alone — both
+   already present, neither touched here. */
 .pk-nav.is-scrolled {
-  background: color-mix(in srgb, var(--color-base-200) 94%, transparent);
+  background: var(--color-base-200);
   border-bottom-color: var(--color-base-300);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--color-base-content) 8%, transparent);
 }
 
-/* Header brand lockup. The header row (.pk-nav-inner) is a single-line,
-   auto-height flex row with align-items:center, so ANY text inside it that is
-   free to reflow silently becomes the row's height — and the .CatalogNav
-   ResizeObserver then publishes that height as --pk-header-h, shifting every
-   sticky-offset element on the page. Two rules make that structurally
-   impossible rather than merely unlikely:
+/* Header brand lockup (this session's minimalism pass, 2026-09-09 —
+   supersedes the two-line reveal-at-56rem mechanism this comment used to
+   document). The header row (.pk-nav-inner) is a single-line, auto-height
+   flex row with align-items:center, so ANY text inside it that is free to
+   reflow silently becomes the row's height — and the .CatalogNav
+   ResizeObserver then publishes that height as --pk-header-h, shifting
+   every sticky-offset element on the page (debug
+   header-height-wordmark-wrap). `nowrap` is still what makes that
+   structurally impossible; it is now the ONLY rule needed to do so.
 
-   1. nowrap, header-scoped. The lockup is a two-line composition by design
-      (name over tagline — flex-col + leading-none in brand_logo/1); a third
-      line is always a bug, never a narrow-viewport adaptation. Scoped to
-      .pk-nav-inner because the footer shares brand_logo/1 and has no
-      fixed-height contract of its own.
-   2. Hidden by default, revealed only at 56rem (see the HEADER ROW CAPACITY
-      block near the end of this file, which carries the full inventory and
-      both reveal sums). Seating the lockup, the nav links, the category
-      trigger AND a full 17.5rem pill needs 876.3px.
-
-      This used to read 48rem and "808.3px", and that sum was wrong by a
-      provable 68px (debug search-pill-tablet-squeeze): it counted three items
-      and two gaps, omitting `.pk-cat-trigger` (44px) and its 24px gap
-      entirely. Because the open pill is the row's only yielder, the whole
-      68px landed on the search box — the comment predicted a 239.7px pill at
-      768px and it measured 171.7px. Do not re-derive this number here; the
-      capacity block owns it and header_capacity_test.exs recomputes it.
-
-   The tagline is the widest line in the lockup (206px vs 111.3px for
-   "PUKLLAY CLUB"), so it is always the first thing to reflow — which is why
-   this failed as a growing header rather than as a clipped brand. */
+   The lockup used to be a two-line "PUKLLAY CLUB" / tagline stack, hidden
+   below 56rem/896px because at its 250px measured width it did not fit the
+   row below that point (see header_capacity_test.exs, and the retired
+   `wordmark reveal` comment near the end of this file for the full
+   arithmetic this superseded). `brand_logo/1` now renders ONE line, no
+   tagline — isologo (36px) + gap (8px) + "PUKLLAY CLUB" (111.3px) ≈ 155px,
+   comfortably narrower than every other item this row seats even on the
+   narrowest supported viewport (re-derived, not assumed —
+   header_capacity_test.exs's `required/1` sum covers this width at every
+   swept breakpoint). No `display: none` base rule and no reveal media
+   query are needed any more: the lockup is simply always visible, at every
+   width, which is also what closes the "mobile feels empty with just a
+   bare mark" report this session's gap closure addressed. */
 .pk-nav-inner .pk-brand-wordmark {
-  display: none;
   white-space: nowrap;
-}
-
-/* D-B (260823-snj): the footer's brand_logo/1 call passes mark={false},
-   which drops the isologo (D-A — the mark is the header's alone) and adds
-   pk-brand-quiet to the anchor. Demotion is by colour, not size: the
-   catalogue's measured type inventory is already at its 3-tier cap with
-   Bebas Neue/24px/400 as the single heading combo, so shrinking the footer
-   wordmark would add a 4th combo. Colour is the lever ui-design-system
-   names for this instead. Scoped override, matching the header-scoped rule
-   above — the two surfaces are meant to differ here.
-
-   UPDATE (quick task 260901-ty6): the ≤480px block below now makes a scoped
-   SIZE exception to "demotion is by colour, not size", for the mobile
-   footer's reported visual weight on this project's primary surface. The
-   reason given above still holds at ≥481px, where this rule is unchanged —
-   the exception is breakpoint-scoped, not a reversal of the decision. Its
-   cost — a Bebas Neue size that did not previously exist on the ≤480px
-   catalogue screen — is paid explicitly by re-measuring and updating the
-   ui-design-system inventory table, which is that table's own prescribed
-   process for adding a new type combo.
-
-   UPDATE (2026-09-02, quick task 260902-fdm): that ≤480px SIZE exception is
-   WITHDRAWN — sketch 044 winner H hides the entire footer lockup at ≤480px,
-   so there is no wordmark left to size there. D-B ("demotion is by colour,
-   not size") once again holds at every viewport width with no exception. */
-.pk-brand-quiet .pk-brand-name {
-  color: var(--color-neutral);
 }
 
 .pk-nav-links {
@@ -2544,13 +2598,214 @@ body.pk-drawer-open {
   overflow: hidden;
 }
 
+/* Sumate button design-source geometry (G-01.5-4 gap closure, plan 01.5-10 —
+   .planning/debug/G-01.5-4-hero-cierre-composition-balance.md). Restores the
+   approved sketch 051 button spec (`.btn-sumate`) at `Layouts.sumate_cta/1`'s
+   single source — the object the diagnosis proved was the ONLY channel of
+   the Cierre composition deviating from what a human approved (sketch 051
+   rounds 9/10). Rendered both in the same browser at the same widths: the
+   flat 24px gap, the heading ink, the centring and the band padding were all
+   already byte-identical to the approved sketch; the button alone measured
+   108.09x44 vs the sketch's 119.11x48, padding-inline 20px vs 28px (-28.6%),
+   radius 4px vs pill (a KIND difference), font-size 18px vs 16px (LARGER
+   type packed into a SMALLER box), padding ratio 1.74:1 vs 2.15:1, label ink
+   fill 61.1% vs 51.3% of the box. Applying only this four-property spec
+   in-browser landed production at 116.75x48 / 2.00:1 — within 2.4px and
+   0.7pp of the approved sketch, with no other channel moved (AND-gate: NO,
+   one object accounts for the entire measured delta).
+
+   All three Sumate placements (hero, closing band, sticky bar) share this
+   ONE class deliberately: sketch 051's own comment on `.btn-sumate` states
+   it is the "same class reused at all THREE Sumate call sites ... exactly
+   like production reuses one component so the three can never drift to
+   different labels/styles." A per-call-site exception would recreate, by
+   design, the exact drift both the sketch and `sumate_cta/1`'s own docstring
+   exist to prevent.
+
+   The pill radius is declared as the literal `9999px`, not a
+   `--radius-box`/`--radius-field` token: this block's own `.pk-pill` base
+   (above, "PK CATALOG SURFACES" group) already ships that exact literal on
+   more than a dozen surfaces, explicitly DISTINCT from the app's
+   `--radius-*` scale — a pill here is this repo's established way to
+   express a pill, not an exception to ui-design-system's "radius through
+   `--radius-box`/`--radius-field`, never a literal" rule (that rule attaches
+   to COLOUR; this file already ships pill literals elsewhere).
+
+   Height is declared as `min-height` (matching the design source's own
+   property, not `height`): daisyUI's `.btn`/`.btn-lg` set `height:
+   var(--size)` inside a Tailwind `@layer`, and a `min-height` floor from
+   this UNLAYERED rule wins regardless — no `!important` needed, per this
+   file's top-of-file CASCADE-LAYER HAZARD note — because an unlayered rule
+   always beats a layered one, and the browser's box model then resolves the
+   used height to the larger of the two (`min-height` wins whenever `height`
+   would compute smaller). Colour, border-width, hover and transition are
+   deliberately NOT redeclared here: the outline modifier (`btn-outline
+   btn-primary`) and the app's own border token already provide those, and
+   the diagnosis measured every other channel already at parity. */
+.pk-sumate-btn {
+  min-height: 48px;
+  padding-inline: 28px;
+  border-radius: 9999px;
+  font-size: 1rem;
+}
+
+/* Solid-fill modifier for .pk-sumate-btn (sketch 052 winner B, G-01.5-11
+   gap closure, plan 01.5-14 — .planning/sketches/052-about-mobile-cta-
+   alternatives/index.html:43-44 is the source: `.sumate-btn.solid {
+   background: var(--color-primary); color: var(--color-primary-content);
+   border-color: var(--color-primary); }`, `.sumate-btn.solid:hover {
+   filter: brightness(1.08); }`). Ships as a MODIFIER class applied through
+   `Layouts.sumate_cta/1`'s existing caller-class merge (`class={["btn
+   btn-outline btn-primary pk-sumate-btn", @class]}`) rather than as a new
+   component attribute or a swap of the base `btn-outline` class: a caller
+   can ADD a class through that merge but cannot REMOVE one already in the
+   list, and the design source expresses the fill the identical way — a
+   `.solid` modifier layered on top of the shared `.sumate-btn` geometry
+   class, not a second competing button class. Currently applied only to
+   the About page's sticky mobile CTA bar (.pk-about-cta-bar, below); the
+   hero and closing-band placements stay outline on purpose — winner B is a
+   mobile-overlay treatment for THIS placement, not a new button style for
+   the whole page.
+
+   Declares NO geometry: height, inline padding, radius and font-size all
+   stay owned by `.pk-sumate-btn` alone (above), so the three Sumate
+   placements can never drift to different sizes even though only one of
+   them is now filled.
+
+   Out-specifies daisyUI's layered `btn-outline`/`btn-primary` utilities
+   with no `!important` — the same unlayered-`.pk-*`-beats-layered-Tailwind
+   cascade direction `.pk-sumate-btn` itself already depends on (this
+   file's top-of-file CASCADE-LAYER HAZARD note). The hover treatment is
+   declared explicitly rather than inherited: `btn-outline`'s own hover
+   inverts an outline to a filled state, which means nothing once the rest
+   state is already filled.
+
+   Elevation reuses this file's existing mid-elevation shadow idiom
+   (`.pk-drawer`, `.pk-search-morph.is-open`: `0 8px 24px` against
+   `color-mix(in srgb, var(--pk-shadow-color) 28%, transparent)`) rather
+   than the sketch's own theme token (`var(--shadow-lg)`, which this app's
+   theme never defines) — the same reasoning plan 01.5-10 already used to
+   keep `.pk-sumate-btn`'s pill radius a literal instead of inventing a
+   radius token this theme doesn't have.
+
+   `pointer-events: auto` overrode `.pk-about-cta-bar`'s own
+   `pointer-events: none` (T-01.5-59): the wrapper was transparent to taps
+   so page content beside the floating pill stayed reachable, and this was
+   the one declaration that kept the pill itself tappable.
+
+   SUPERSEDED (sketch 053 winner D, quick task 260910-av6, G-01.5-12): both
+   `box-shadow` and `pointer-events: auto` are dropped. Winner D restores a
+   full-width surfaced bar (`.pk-about-cta-bar`, below) — elevation now
+   belongs to that bar's own `box-shadow` (matching the sketch's in-bar
+   button, which itself carries none), and `pointer-events: auto` has
+   nothing left to punch through: the transparent, `pointer-events: none`
+   wrapper it was overriding is gone, replaced by an opaque surface with no
+   `pointer-events` declaration of its own (the default `auto` already
+   makes every descendant tappable). Kept, unchanged: `background`/`color`/
+   `border-color` (the audited primary/primary-content pair) and the
+   `:hover` brightness filter below — neither is affected by the surface
+   change. */
+.pk-sumate-btn-solid {
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  border-color: var(--color-primary);
+}
+
+.pk-sumate-btn-solid:hover {
+  filter: brightness(1.08);
+}
+
 /* About-scoped mobile sticky join-CTA bar (01.1-09, D-05 superseded).
-   Page-owned (rendered by AboutLive only, never Layouts) and deliberately
-   has no hook and no scroll behavior at all — it is simply pinned, unlike
-   plan 01.1-04's .pk-mobile-cta-bar (the per-game reservation CTA, driven
-   by .DetailChrome's scroll-retract/footer-park lifecycle). No class, rule
-   or hook is shared between the two. Both sides of the display swap live
-   in the single trailing narrow-viewport media block below, per Pitfall 5. */
+   Page-owned (rendered by AboutLive only, never Layouts) — its display
+   swap lives in the single trailing narrow-viewport media block below, per
+   Pitfall 5.
+
+   Plan 01.5-08 (G-01.5-3 item 4): this bar used to be paired with an
+   in-flow `.pk-about-cta-spacer` placed before <footer> to reserve
+   clearance for it — that spacer is gone. It sat before the footer in
+   flow, so it cleared the closing band (which needed no clearance) while
+   leaving the footer, the element this fixed bar actually overlays,
+   still covered. The replacement is a `body:has(.pk-about-cta-bar)`
+   document-end reservation in the same media block as this bar's own
+   display swap, now driven by Task 2's live-measured `--pk-about-cta-bar-h`
+   rather than any bar-footprint literal — see that rule for the full
+   placement reasoning.
+
+   `margin-block-end: 0` (Rule 1 bug, found via plan 01.5-08's Task 3 live
+   CDP probe): this element is not the shell's `space-y-4` wrapper's LAST
+   child — `#pk-about-morph-mark` and the `<noscript>` marker follow it in
+   about_live.ex — and Tailwind v4's `space-y-*` utilities apply
+   `margin-block-end` to every non-last child (a different mechanism from
+   Tailwind v3's `margin-top`-on-non-first-child). Un-neutralised, that gave
+   this `position: fixed; bottom: 0` element a real 16px margin PUSHING ITS
+   RENDERED BOX 16px ABOVE the true viewport edge. Same unlayered-`.pk-*`-
+   beats-layered-Tailwind-utility cascade direction as `.pk-band`'s own
+   `margin-block-end: 0` fix (plan 01.5-06) — no `!important` needed, this
+   file's top-of-file CASCADE-LAYER HAZARD note already documents why. This
+   declaration stays non-optional now that the bar is flush again (winner D
+   restores `bottom: 0`) — a stray 16px margin on a flush bar reads as an
+   obviously wrong unpainted strip against the viewport edge.
+
+   SKETCH 053 WINNER D (quick task 260910-av6, G-01.5-12, refined —
+   .planning/sketches/053-about-mobile-cta-bar-footer-clearance/): supersedes
+   plan 01.5-14's sketch 052 winner B "floating compact pill", which was
+   rejected at round-3 UAT for covering the footer's "Powered by BGG" line
+   (the exact defect T-QUICK-04 in this plan's threat register exists to
+   prevent from recurring). Winner D is a full-width, flush, SURFACED bar
+   that stays hidden until the page's own docked state turns on (reusing
+   the boolean `.AboutHeaderMorph` already computes, D-03 below) and then
+   stays visible for the rest of the scroll — no footer-proximity auto-hide
+   in either direction, per sketch 053's second refinement pass.
+
+   Token mapping (sketch source -> this app, following plan 01.5-14's own
+   precedent of substituting repo tokens for sketch tokens):
+   - sketch `--color-bg` -> `--color-base-100` — plan 01.5-10's 6-arm
+     differential proved this fill correct for this bar (swapping to
+     base-200 was inert on the reported symptom and worse at the real page
+     bottom); winner D restores it along with the surface it was originally
+     attached to.
+   - sketch `--color-border` -> `--color-neutral`, deliberately NOT
+     `--color-base-300` — restores plan 01.5-10's G-01.5-7 contrast fix
+     (base-300 measured 1.406:1 light / 1.19:1 dark, under the 3:1 WCAG
+     1.4.11 non-text floor; neutral measures 5.785:1 / 7.128:1) alongside
+     the surface it was attached to, rather than re-losing it a second time.
+   - sketch's `color-mix(in srgb, var(--color-text) 10%, transparent)` ->
+     this repo's `--pk-shadow-color` at the same 10% ratio (the app has no
+     `--color-text` token; `--pk-shadow-color` is this file's own shadow
+     idiom, used elsewhere at 28%/10% depending on elevation weight).
+   - sketch's literal 16px inline padding -> `var(--pk-gutter)`, so the
+     full-width button's edges land on the page's own gutter line (0.875rem
+     inside this 480px block) instead of 2px off it.
+   - Deliberate non-goal: no `env(safe-area-inset-bottom)` padding —
+     `root.html.heex`'s viewport meta has no `viewport-fit=cover`, so
+     `env()` resolves to 0 here. Revisit only if that meta ever changes.
+
+   Hidden/reveal mechanism: `transform: translateY(110%)` + `opacity: 0` +
+   `visibility: hidden` at rest — the bar is ABSENT, not merely
+   transparent, before the trigger (T-QUICK-03: `visibility: hidden`
+   removes the anchor from the tab order and the a11y tree, matching this
+   file's existing header-hide mechanism, WR-02, rather than opacity
+   alone). The reveal rule immediately below flips all three under
+   `body:has(#about-hero.is-docked)` — the identical cross-subtree reach
+   `.pk-about-morph-name`'s own fade already uses (below), reading the ONE
+   boolean `.AboutHeaderMorph`'s per-frame driver already computes (D-03).
+   No second scroll mechanism, no IntersectionObserver, no footer-proximity
+   check, and deliberately no auto-hide in either direction. The
+   The visibility transition carries a `--duration-slow` delay on the way
+   OUT (this rule, below) so the element only goes non-visible AFTER the
+   slide-out transform finishes; the reveal rule immediately below has no
+   such delay — visibility flips instantly the moment the docked state
+   turns on, matching every other eased-in/instant-out asymmetry this file
+   already established for the header reveal (above, `.pk-nav-search`'s own
+   `transition-delay` longhand is this file's precedent for staging one
+   property's transition behind another's). Declared as the four
+   `transition-*` LONGHANDS, never the `transition:` shorthand — the
+   longhand form is what lets `visibility` carry its own delay independent
+   of `transform`/`opacity`, and (per `.pk-nav-search`'s own comment) this
+   file's `motion_rhythm_test.exs` only audits the shorthand for hardcoded
+   timing, so the longhand form is also the established way to keep every
+   duration/curve token-driven while giving one property a delay the
+   others don't share. */
 .pk-about-cta-bar {
   display: none;
   position: fixed;
@@ -2558,14 +2813,44 @@ body.pk-drawer-open {
   right: 0;
   bottom: 0;
   z-index: 40;
-  padding: 0.75rem var(--pk-gutter);
+  margin-block-end: 0;
   background: var(--color-base-100);
-  border-top: 1px solid var(--color-base-300);
+  border-top: 1px solid var(--color-neutral);
+  box-shadow: 0 -6px 16px color-mix(in srgb, var(--pk-shadow-color) 10%, transparent);
+  padding: 10px var(--pk-gutter);
+  transform: translateY(110%);
+  opacity: 0;
+  visibility: hidden;
+  transition-property: transform, opacity, visibility;
+  transition-duration: var(--duration-slow), var(--duration-base), var(--duration-slow);
+  transition-timing-function: var(--ease-out-soft), var(--ease-standard), linear;
+  transition-delay: 0s, 0s, var(--duration-slow);
 }
 
-.pk-about-cta-spacer {
-  display: none;
-  height: 4.5rem;
+/* The reveal: D-03 reuse of the identical `body:has(#about-hero.is-docked)`
+   reach `.pk-about-morph-name`'s fade already uses (below) — the ONE
+   boolean `.AboutHeaderMorph`'s per-frame driver already computes, no new
+   listener, no IntersectionObserver, no footer-proximity check anywhere in
+   this mechanism. Source order matters here: this rule must follow the
+   base `.pk-about-cta-bar` rule directly above so a plain (non-`:has()`)
+   base-rule regex binds to the correct match first. `transition-delay: 0s`
+   (uniform, no per-property stagger) on the way in, unlike the base rule's
+   delayed-out `visibility` — the bar should appear the instant the
+   transform/opacity transition starts, not wait for it to finish; this
+   explicit `0s` is required because, absent it, the higher-specificity
+   reveal rule would otherwise inherit the base rule's own
+   `transition-delay` list for the properties it doesn't re-declare.
+   Deliberately no auto-hide rule anywhere in this file for this bar, in
+   either scroll direction — sketch 053's second refinement pass removed
+   that behavior on purpose. */
+body:has(#about-hero.is-docked) .pk-about-cta-bar {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition-property: transform, opacity, visibility;
+  transition-duration: var(--duration-slow), var(--duration-base), 0s;
+  transition-timing-function: var(--ease-out-soft), var(--ease-standard), linear;
+  transition-delay: 0s;
 }
 
 /* About page content bands (01.1-02, D-07 spine: hero -> photo rail ->
@@ -2578,9 +2863,44 @@ body.pk-drawer-open {
    .pk-band-inner's cap now matches the shell's own max-w-7xl edge (80rem) —
    the same content width already shared by the header, footer and hero
    (sketch 048: the bands were shipped 16rem narrower than the shell they
-   sit in). Single shared declaration, no per-band override. */
+   sit in). Single shared declaration, no per-band override.
+
+   G-01.5-2 gap closure (.planning/debug/inter-band-whitespace-gap.md):
+   `layouts.ex:670`'s shared shell wraps every page's inner block in
+   `<div class="mx-auto space-y-4">`. Tailwind v4's space-y-4 compiles to
+   `:where(& > :not(:last-child)) { margin-block-end: 1rem }` — 16px of
+   block-end margin on every non-last DIRECT CHILD of that wrapper. On the
+   About page those children are these `.pk-band` sections, so the bands
+   never owned their own outer spacing; the shell did, invisibly, from
+   another file. That 16px painted as a visible strip of `<html>`'s
+   background colour between every adjacent pair of bands (most visibly
+   between the tinted Qué hacemos/Historia band and the dark FAQ band,
+   where both neighbours are saturated).
+
+   The margin-block-end: 0 below reclaims that outer spacing for the band
+   itself. No `!important` is needed: this rule is UNLAYERED (see this
+   file's top-of-file cascade-layer hazard note) while space-y-4 lives
+   inside `@layer utilities` behind a zero-specificity `:where()` — an
+   unlayered rule beats a layered one regardless of specificity, so this
+   wins deterministically.
+
+   Do NOT delete or gate space-y-4 in layouts.ex instead: all three
+   Layouts.app callers pass `fullbleed`, so `fullbleed` cannot discriminate,
+   and `catalog_live/show.ex:292` documents that the catalog index and
+   detail pages deliberately depend on that exact 16px inter-child rhythm.
+   This fix is scoped to `.pk-band` specifically so those pages stay
+   byte-identical.
+
+   Deliberate scope decision: the hero `<div>` above `#fotos` is the FIRST
+   child of the shell wrapper and is not a `.pk-band`, so it keeps its 16px
+   below it — this fix does not reach that boundary. Kept, not fixed,
+   because: both sides of that boundary are transparent so the gap is
+   invisible either way; it is the only boundary on the page that is not
+   band-to-band; and reaching it would need a second, page-specific rule
+   targeting an element with no shared class, for no visible gain. */
 .pk-band {
   padding: 4.5rem 0;
+  margin-block-end: 0;
 }
 
 .pk-band-inner {
@@ -2600,17 +2920,245 @@ body.pk-drawer-open {
   color: var(--color-neutral);
 }
 
+/* Plan 01.5-03, D-13: the Cierre closing signature (the ONE consumer of
+   this class that used to carry a trailing anchor) no longer contains a
+   link at all — kept here, not deleted, because .pk-about-eyebrow remains
+   a general class and this `a` rule may style a future non-Cierre
+   consumer; deleting a rule just because its only current caller stopped
+   using it is exactly the "audit only the property the change is about"
+   mistake sketch 051's third bug documents (about-page-content.md). */
 .pk-about-eyebrow a {
   color: inherit;
   text-decoration: underline;
 }
 
+/* Plan 01.5-03, D-13: the two-line mobile wrap for the Cierre signature.
+   Hidden by default (desktop reads the signature as one line); the
+   @media (max-width: 639px) block below turns it on. display: none/block
+   (not a Tailwind sm:hidden/hidden sm:block pair) per this file's
+   top-of-file cascade-hazard note — mixing an unlayered .pk-* rule with a
+   layered Tailwind utility on the same element produces a utility that
+   silently loses and looks live when it is not. */
+.pk-about-closing-break {
+  display: none;
+}
+
+/* Plan 01.5-03, D-12: the Cierre band's ONLY internal spacing rule.
+   `.pk-band` (above) declares only its own vertical padding and
+   `.pk-band-inner` (above) only a width cap + auto margins; Tailwind's
+   preflight zeroes heading/paragraph margins and this app loads no
+   typography plugin, so the band's three children (heading, button
+   wrapper, signature) have NO spacing between them without this rule.
+   This is therefore the band's first and only internal rhythm, not a
+   tidy-up of an existing margin system — it must stay a single
+   declaration applied unconditionally at every width (D-12's "consistent
+   rhythm across mobile and desktop" means one rule, unmodified per
+   viewport, not two hand-tuned spacing systems that drift apart). Do not
+   add a per-element margin anywhere in this band, and the desktop
+   full-screen media block below must not re-declare `gap` on top of this.
+
+   align-items: center centers each child's own BOX; it says nothing about
+   text alignment WITHIN a box. The `text-center` Tailwind utility on this
+   same element (markup, about_live.ex) is what keeps the two-line
+   signature's shorter first line centered inside a box sized to its
+   longer second line — sketch 051's round 13 lost exactly that property
+   during an unrelated layout rewrite and did not notice for four rounds,
+   because single-line content auto-sizes its box tightly enough to mask a
+   missing alignment (about-page-content.md, bug 3). This rule declares no
+   text-align; do not "consolidate" it here and do not remove the utility
+   from the markup.
+
+   The button wrapper's own `flex justify-center` utilities become
+   redundant once align-items: center shrink-wraps it, but are left in
+   place — removing them would be a second, unrelated layout change inside
+   this same edit, the exact shape of mistake sketch 051's round 13
+   documents. */
+#cierre .pk-band-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Plan 01.5-03, D-10, REVISED by 01.5-07, REVISED AGAIN by 01.5-09 (G-01.5-6
+   gap closure, 2026-09-09 — .planning/debug/G-01.5-6-cierre-top-bottom-
+   whitespace.md). Cierre still reads as a distinct closing moment on
+   desktop instead of one more shared 72px band (sketch 051 round 10a) —
+   D-10 is revised here, not superseded. Desktop-only — mobile keeps the
+   compact `.pk-band` treatment untouched. 640px matches the other
+   desktop-vs-mobile splits this phase introduced (D-08's 639px Contacto
+   breakpoint), one width below Tailwind's `sm`.
+
+   1. The header-height top padding is GONE (01.5-07). D-10 added
+      `padding: var(--pk-header-h, 4.5rem) 0 0` because the band was plain
+      white and the fixed header's own tint visually ate into the band's
+      top edge while nothing touched the bottom edge — that padding shifted
+      the flex centering point down to cancel exactly that overlap, and it
+      was correct when written. Plan 01.5-04 (D-14, LATER in this same
+      phase) then painted this band the exact token `.pk-nav` already is —
+      both measure the same colour — so the header now blends into the
+      band and subtracts nothing from the top edge. The compensation
+      outlived its condition; removing it fixed the uneven top/bottom split
+      (01.5-07). `--pk-header-h` is still read by 3 OTHER rules in this
+      file (`.pk-shelf`'s scroll-margin-top, `.pk-title-echo`'s `top`,
+      `.pk-poster-col`'s sticky `top`) — this is the one place in the file
+      that stopped needing it, not the token being retired.
+
+   2. The height mechanism is a FIXED padding, not a viewport-height floor
+      (01.5-07). `display: flex; align-items: center` are gone too — with
+      no floor beyond ordinary padding, normal block flow already produces
+      IDENTICAL top/bottom gaps for free (both are the same `padding-block`
+      value), a stronger evenness guarantee than flex-centring ever was.
+      This mechanism decision is unchanged by 01.5-09 below — only the
+      MAGNITUDE moves.
+
+   3. The MAGNITUDE (01.5-09, G-01.5-6): 01.5-07 shipped 8rem (128px), and
+      a live differential proved it correct-but-disproportionate — 128px is
+      1.78x the shared `.pk-band` padding (4.5rem/72px) every other section
+      on this page uses, the only band that deviates. Judged in the unit
+      the eye actually reads — the continuous inbound RUN from the previous
+      band's content to this heading, which stacks #cierre's own top
+      padding with the previous band's 72px bottom padding across a
+      contrast edge too low (1.15:1) to register as a visible delimiter —
+      8rem produced a 200px run against this page's OWN measured 144px norm
+      at all three other band-to-band boundaries: a 39% outlier. Retuned to
+      **5rem** (80px), landing the run at 152px — a 5.6% step off the
+      page's own norm, versus 6rem's 168px (still 17% off). 5rem is chosen
+      over the lower shared 4.5rem because Cierre's distinctness as a
+      closing moment is carried by its tint (D-14) and its larger heading
+      (`clamp(2rem, 4vw, 3rem)` below) rather than by padding alone — a
+      real +8px-per-side step over the shared band stays on top of those
+      two stronger signals. Recorded runner-up: **6rem** (run 168px, band
+      366px, 47.5% fill), to reach for only if an end-of-phase walkthrough
+      says 5rem reads cramped — one value, one place. Symmetric padding is
+      KEPT (not optically re-centred): the perceived-run asymmetry an
+      earlier pass flagged was measured against the OLD page, where a 24px
+      unpainted stripe still sat below the band (G-01.5-5, fixed above);
+      after that stripe closes, the band's bottom edge stops being a visual
+      boundary against the footer at all, changing the arithmetic an
+      asymmetric option would have been reasoned from — carried forward as
+      an observation for the next UAT round to judge against the fixed
+      page, not acted on here.
+
+   4. CORRECTED (01.5-13, G-01.5-10 gap closure —
+      .planning/debug/G-01.5-10-mobile-cierre-heading-tagline-balance.md).
+      Paragraph 3 above justifies 5rem by naming "its larger heading" as a
+      co-carrier of Cierre's distinctness — that premise was FALSE below
+      640px until this correction: mobile `#cierre h2` carried no
+      Cierre-specific step at all (1.00x the page's own h2 norm at 375px,
+      vs 1.33x here at 640px and 2.00x at 1280px — E-08), so the sentence
+      was true only for the viewport it was written in and was never
+      checked against the one it was not. `#cierre h2` now gets its own
+      32px/40px step below 640px too (the `@media (max-width: 639px)`
+      block below, alongside its own `padding-block` counterpart), so the
+      heading is a co-carrier at BOTH regimes and paragraph 3's premise is
+      now accurate everywhere it is read, not deleted. See that block's own
+      comment for the mobile pad/content and sig/h2 arithmetic — the two
+      blocks are now a matched pair, this one desktop's half, that one
+      mobile's.
+
+   No `gap` here: #cierre .pk-band-inner's single unconditional gap
+   (above) already governs both viewports — a desktop override would
+   recreate the two-spacing-system problem D-12 exists to prevent. No
+   `text-align` either — the text-center utility on the inner column still
+   owns that (see the #cierre .pk-band-inner comment above). */
+@media (min-width: 640px) {
+  #cierre {
+    padding-block: 5rem;
+  }
+
+  #cierre h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+  }
+
+  /* G-01.5-8 gap closure (plan 01.5-11,
+     .planning/debug/G-01.5-8-cierre-tagline-footer-grouping.md), second
+     lever. The closing signature (`.pk-about-eyebrow.pk-about-closing-
+     meta`, markup above) and `.pk-footer-meta` independently declare the
+     SAME two lines — `font-size: 0.75rem` + `color: var(--color-neutral)`
+     — because both express this design system's "de-emphasised meta" role;
+     neither is wrong on its own terms. Measured against `.pk-footer-meta`
+     in both themes they computed to FIVE identical type attributes at
+     once — font-size, line-height, colour, font-family, font-weight — and
+     shared nothing with their own group (the 48px Bebas Neue heading, the
+     bordered pill button). With no container edge separating the two
+     surfaces (see the footer fill rule far below), Gestalt similarity
+     decided membership, and the signature read as the first of three
+     same-register grey Inter runs stacked down one continuous field
+     instead of the last line of the closing statement above it.
+
+     This is the SECOND of two levers, shipped alongside the surface fill
+     rather than instead of it: a fix resting on one sub-3:1 contrast ratio
+     is not safe on this codebase's record (three prior self-verified
+     colour-only fixes here were corrected on real-device review), and
+     colour is the one channel whose effectiveness does not depend on a
+     contrast ratio at all.
+
+     Colour ONLY, and only at this >= 640px regime — not size, not
+     text-transform, not letter-spacing, not font-weight. Two independent
+     reasons, not one:
+       (1) The five-attribute collision is exact only here. The
+           `@media (max-width: 639px)` block already gives this element a
+           different font-size (10px vs this regime's 12px) and its own
+           letter-spacing, so the collision is already partly broken below
+           640px — moving anything there would be solving an already-
+           smaller problem for no reason.
+       (2) The signature's rendered width below 640px is an OPERAND in
+           G-01.5-10's mobile heading/tagline balance argument (a later
+           plan spends it) — moving size or tracking here would shift that
+           operand out from under that plan's feet. Colour moves no
+           geometry at all, at any width, so this lever and G-01.5-10 can
+           both touch this element for two unrelated reasons without
+           colliding.
+
+     `var(--color-base-content)` is this theme's ordinary body ink — not a
+     new token, the same one `#cierre h2` above already resolves through —
+     chosen because it is definitionally NOT `--color-neutral`, the token
+     `.pk-footer-meta` uses, without inventing a third de-emphasis token
+     this design system does not otherwise have.
+
+     Recorded next lever, if colour alone reads insufficient at the
+     end-of-phase walkthrough: `text-transform: none`. Named here rather
+     than shipped because it is the one option that narrows the rendered
+     line (removing forced uppercasing shortens the string's measured
+     width) and therefore HELPS the G-01.5-10 mobile balance gap instead of
+     competing with it, unlike a size or weight change. */
+  #cierre .pk-about-closing-meta {
+    color: var(--color-base-content);
+  }
+}
+
 /* The dark FAQ band's token mapping (Claude's discretion, D-08): the
    brand's own measured-contrast pair (app.css's WCAG comment above), not
-   the design source's own one-off literal colour values. */
+   the design source's own one-off literal colour values. This band is
+   deliberately OUTSIDE the D-14 plain/tint alternation below (plan
+   01.5-04) — it stays a one-off bold stop, not a third repeating state;
+   see .pk-band-tint's own comment for the full rationale. No section ever
+   carries both this class and .pk-band-tint. */
 .pk-band-dark {
   background: var(--color-primary);
   color: var(--color-primary-content);
+}
+
+/* Plan 01.5-04, D-14: page-wide band background alternation. A modifier
+   class layered on top of .pk-band, changing background only, exactly
+   mirroring .pk-band-dark's own shape above — .pk-band still owns the
+   vertical padding and .pk-band-inner still owns the width cap; this is a
+   per-band background change on top of the existing recipe, not a layout
+   change. Applied to exactly two sections (Qué hacemos/Historia and
+   Cierre) so the page reads plain -> tint -> dark -> plain -> tint top to
+   bottom (about_live.ex).
+
+   --color-base-200 (not a new --color-surface token, which this app does
+   not define) is this app's own established "one step off the page
+   background" surface colour — already defined in both theme blocks
+   (light/dark) and already used this exact way throughout this file (the
+   Contacto card's own background before plan 01.5-02 removed it, the
+   footer, the drawer). Reaching for a new token or a color-mix() here
+   would invent a second way to express a colour this app already
+   expresses one way. */
+.pk-band-tint {
+  background: var(--color-base-200);
 }
 
 .pk-faq-item {
@@ -2715,55 +3263,218 @@ body.pk-drawer-open {
   background: var(--color-primary);
 }
 
-/* Contacto card (sketch 048 winner A): the club's real icon links and its
-   Maps thumbnail merged into ONE card, replacing the previous two
-   separately-sized boxes. Surface/radius/padding match this app's card
-   convention (`ui-design-system`'s spacing scale, `--color-base-200` +
-   `--radius-box`), stacked as a vertical flex column so the heading, intro,
-   icon links (added in plan 01.4-02 Task 3) and map thumbnail share one
-   edge and one rhythm. */
+/* Contacto column (plan 01.5-02, D-05): sketch 051 found this card's
+   chrome — the `--color-base-200` + `--radius-box` + padding this app's
+   card convention gave it in sketch 048 — reading as a second heavy "ask"
+   competing with the closing CTA directly below it, and reading as a
+   differently-coloured box sitting beside Juntadas' plain column. D-05
+   drops the outer chrome only; Contacto now matches Juntadas' plain
+   background at every width, so the two columns read as one pair. The
+   internal flex/gap layout stays exactly as it was — only background,
+   border-radius and padding go away. This was a multi-round arrival in
+   sketch 051 (chrome stripped mobile-only in round 2, dropped on desktop
+   in round 8). */
 .pk-about-contact-card {
-  background: var(--color-base-200);
-  border-radius: var(--radius-box);
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-/* The Contacto card's real WhatsApp/Instagram icon links (plan 01.4-02
-   Task 3, `Layouts.social_links/1` with icons/labels). The shared
-   component renders its SVGs at width="16" — right for the footer/drawer's
-   compact rows, too small for this card's row — so this scope sizes them
-   explicitly rather than editing the shared markup. */
+/* The Contacto column's real WhatsApp/Facebook/Instagram chips (plan
+   01.4-02 Task 3, extended to 3 channels in plan 01.5-02 D-06/D-07,
+   `Layouts.social_links/1` with icons/labels). The shared component
+   renders its SVGs at width="16" — right for the footer/drawer's compact
+   rows, too small for this row — so this scope sizes them explicitly
+   rather than editing the shared markup. Row layout (D-06): wraps instead
+   of stacking, so three chips read as a row of chips rather than a
+   stacked list of buttons. */
 .pk-about-contact-links {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 0.625rem;
 }
 
+/* Accent-tint chip treatment (plan 01.5-02, D-06). Colour pairing copied
+   bare from `.pk-pill-accent` (above): `--color-accent` /
+   `--color-accent-content` is ALREADY a soft pastel pairing in both
+   themes and is already used bare as an accent surface by `.pk-pill-accent`
+   and `.pk-conn-banner` — no `color-mix()` derivation and no new custom
+   property. (The sketch's own theme named a `--color-accent-bg` token that
+   this app does not define; reaching for a derived tint here would invent
+   a second way to express a colour the app already expresses one way.)
+   Shape (D-06): chips carry icon AND text — neither icon-only circles
+   (tried and rejected in the sketch as too quiet/footer-like) nor
+   `sumate_cta`-shaped pills (which would make "reach out" read as the same
+   commitment level as "join"). */
 .pk-about-contact-links a {
   display: flex;
   align-items: center;
   gap: 0.625rem;
   padding: 0.625rem 0.875rem;
   border-radius: var(--radius-box);
-  background: var(--color-base-100);
-  border: 1px solid var(--color-base-300);
-  color: var(--color-base-content);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent-content);
   transition: border-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard);
 }
 
+/* Re-derived against the accent-tinted resting state (plan 01.5-02): the
+   prior hover swapped both border-color and color to --color-primary,
+   which was legible against the old --color-base-100 resting background
+   but not against an accent tint. Only border-color changes now; color
+   stays inherited from the resting rule so the label stays readable. */
 .pk-about-contact-links a:hover {
   border-color: var(--color-primary);
-  color: var(--color-primary);
 }
 
 .pk-about-contact-links a svg {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+/* Mobile icon-only chip row (plan 01.5-02 Task 2, D-08). Pure space-fit
+   constraint, not a style preference: three fully-labeled chips measure
+   roughly 387px, while a 375px phone offers about 327px of content width.
+   That arithmetic is also exactly why D-07 caps the row at three channels
+   - a fourth would not fit at either width, which is why Email stays
+   footer-only. The breakpoint is 639px (the width below Tailwind's `sm`),
+   matching the parent section's own `sm:grid-cols-2` collapse — deliberately
+   NOT the 480px threshold that governs `.pk-about-cta-bar` below; those are
+   unrelated mechanisms and plan 01.5-04 depends on them staying unrelated. */
+@media (max-width: 639px) {
+  .pk-about-contact-links {
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  /* sr-only, not display: none (CR-01) — WhatsApp's <a> has no aria-label
+     when `labels: true` (see Layouts.social_links/1); its only accessible
+     name is this span's text, so hiding it from the a11y tree too would
+     leave the club's primary contact channel unlabeled for screen readers. */
+  .pk-about-contact-links a span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .pk-about-contact-links a {
+    border-radius: 9999px;
+    padding: 0.75rem;
+  }
+
+  /* G-01.5-10 gap closure (plan 01.5-13,
+     .planning/debug/G-01.5-10-mobile-cierre-heading-tagline-balance.md).
+     #cierre's mobile COUNTERPART to the >= 640px block's own two
+     treatments (`padding-block: 5rem` and `#cierre h2`'s
+     `clamp(2rem, 4vw, 3rem)`, both above) — that block's own comment now
+     cross-references here, and here cross-references there. Below 640px
+     #cierre previously entered NEITHER treatment: it fell back to the
+     shared `.pk-band { padding: 4.5rem 0 }` (sized for content-rich
+     bands) and to the page-wide `font-display text-2xl` heading (no
+     Cierre-specific step at all — E-08 measured Cierre's own step at
+     1.00x the page's h2 norm at 375px, vs 1.33x at 640px and 2.00x at
+     1280px), while D-11 below (`@media (max-width: 480px)`) removes the
+     Sumate button and one of the column's two gaps — 45.6% of the entire
+     content column (E-06) — with nothing compensating.
+
+     Two causes, ONE upstream condition (that media block owning both
+     treatments while mobile entered neither), so both levers ship
+     TOGETHER in this same block — no single-variable mutation in the
+     diagnosis's ten-case matrix (E-07) moves both quantities into range;
+     shipping one alone closes half the report, which on this band's
+     four-round UAT history is how a gap reopens rather than closes.
+
+     LEVER 1 — pad/content ("it has too much space"). Measured pre-fix:
+     1.67 against this page's own OTHER bands' 0.19-0.53 norm (E-05) and
+     against this band's own human-ACCEPTED desktop state of 0.90-1.02
+     (G-01.5-6) — the only band on the page whose padding exceeded its
+     content, by 67%, with 64.3% of the band rendering as empty ink (E-03).
+     At the natural 479-vs-481 differential (identical 72/72px padding
+     either side of D-11's threshold) the ratio moves 1.67 -> 0.91 purely
+     because the button reappears (E-06) — the page performs the
+     differential on itself. `padding-block: 2.5rem` here lands pad/content
+     at 0.93 with today's 86px content column, 0.85 once LEVER 2 below
+     also ships — inside the accepted range. Runner-up: `3rem` (1.12 /
+     1.02) — reach for it only if an end-of-phase walkthrough says 2.5rem
+     reads cramped. One value, one place.
+
+     LEVER 2 — sig/h2 ("the tagline ... needs better balance"). The band's
+     three rendered lines measured 163.7 / 85.9 / 204.4px (E-02/E-03): the
+     widest object in the band was its smallest, greyest, most subordinate
+     one — the 10px uppercase caption 24.8% WIDER than the 24px heading it
+     sits under. `font-size: 32px` here is exactly what the existing
+     desktop clamp already resolves to at the 640px gate, so this
+     continues the band's own size ramp rather than inventing a value;
+     sig/h2 lands at 0.936 (30px measured an exact 0.999 tie — no
+     hierarchy at all, so 32px is the smallest step that actually inverts
+     the relationship). `line-height: 40px` is declared, not inherited,
+     because the heading's line box is an operand in the rendered-gap
+     arithmetic below. Out-specifies the shared `font-display text-2xl`
+     utility on the same element (about_live.ex) the same way `#cierre h2`
+     above already does at >= 640px — see this file's top-of-file
+     cascade-layer hazard note: an unlayered `.pk-*`/#id rule beats a
+     layered utility, the intended direction here.
+
+     VERIFIED NO WRAP at the narrowest supported width: a 32px heading
+     measures 218.3px in #cierre's ~347px content box at 375px (63% fill);
+     see test/visual/about_geometry.mjs's no-wrap check at the sweep's
+     narrowest (320px) width, where the box shrinks to ~292px.
+
+     RENDERED-VS-DECLARED GAP: #cierre .pk-band-inner's single
+     unconditional `gap: 1.5rem` (D-12, above — NOT re-declared here, see
+     landmine below) reaches the eye as 36px, not the declared 24px,
+     because Bebas Neue is an all-caps face and "NOS VEMOS EL SÁBADO" has
+     no descender ink — 8.5px of the heading's line box below the baseline
+     sits permanently empty. 8.5 (unused descent) + 24.0 (declared gap) +
+     3.5 (caption leading) = 36.0px exactly; this heading step widens the
+     unused descent slightly, to ~38px. Do not retune this band's spacing
+     by reading `gap: 1.5rem` off the stylesheet alone — it renders 12px
+     smaller than what the eye receives.
+
+     LANDMINE, do not retry (E-07, all measured WORSE, not better):
+     tightening the gap to 16px/12px moves pad/content BACKWARDS to
+     1.85/1.95; raising the caption to 12px moves sig/h2 to 1.498; dropping
+     the forced `<br>` yields one 293.5px line and sig/h2 1.792 — the gap,
+     the caption size and the forced break are all correctly untouched
+     here, not overlooked. */
+  #cierre {
+    padding-block: 2.5rem;
+  }
+
+  #cierre h2 {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  /* Plan 01.5-03, D-13: force the Cierre signature onto two lines at the
+     "·" break point rather than wherever the viewport happens to wrap it,
+     at a smaller size than the base 0.75rem .pk-about-eyebrow rule gives
+     it. 10px is sketch 051 round 12b's own measured value — at the base
+     0.75rem the line does not reliably produce exactly two lines on a
+     narrow phone, it produces three. The selector is an id (#cierre) plus
+     a class (.pk-about-closing-meta), specificity 1,1,0: no shared
+     type+class rule anywhere in this file can reach that, which is
+     exactly what sketch 051's second bug needed (about-page-content.md,
+     bug 2) — a shared `.band p` rule silently beat a single-class
+     `.closing-meta` rule's font-size for thirteen rounds because a
+     single-class selector alone couldn't out-specify it. */
+  #cierre .pk-about-closing-break {
+    display: block;
+  }
+
+  #cierre .pk-about-closing-meta {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
 }
 
 /* Live Google Maps embed frame (G-01.4-5 gap closure, plan 01.4-12,
@@ -2962,6 +3673,11 @@ body.pk-drawer-open {
      .planning/debug/G-01.4-3-isologo-bottom-spacing.md for the full
      measurement. */
   --pk-about-mark-clear: 80px;
+  /* Sketch 050's picked NAME_SCALE ("V3 — Confident", round 4): against the
+     declared 180px mark this resolves to 24.3px, the "~25px at rest" D-02
+     specifies. Larger (27px+) competed with the H1 for attention in the
+     sketch; smaller (~17px) read too quiet. */
+  --pk-about-mark-name-scale: 0.135;
 }
 
 /* The anchor is intentionally TALLER than the mark (G-01.4-3): its height
@@ -3028,6 +3744,10 @@ body.pk-drawer-open {
    compete for the same property. The entrance keeps its own eased CSS
    transition; it just no longer shares an element with the morph. */
 .pk-about-morph-mark-inner {
+  /* Makes the wordmark's absolute positioning below resolve against this
+     box, not the viewport — declared explicitly rather than relying on the
+     transform below implicitly creating the containing block. */
+  position: relative;
   width: 100%;
   height: 100%;
   opacity: 0;
@@ -3036,6 +3756,35 @@ body.pk-drawer-open {
   transition: opacity var(--duration-slow) var(--ease-standard),
     transform var(--duration-slow) var(--ease-standard),
     filter var(--duration-slow) var(--ease-standard);
+}
+
+/* Companion wordmark (D-01/D-02, sketch 050): (a) absolutely positioned so
+   it never participates in .pk-about-morph-mark's own height/aspect-ratio
+   math — it rides the hook's single per-frame translate3d(...) scale(...)
+   for free; (b) font-weight is 400 because both @font-face blocks for
+   "Bebas Neue" in this file register weight 400 and only weight 400 — any
+   other declared weight would be a browser-synthesized fake bold; (c)
+   margin-top: 12px is the visual gap between the isologo's ink and the
+   wordmark's cap-height — both isologo PNGs are cropped tight to their ink
+   with zero transparent padding (see the --pk-about-mark-clear derivation
+   comment above), so this value is the entire perceived separation and is
+   the one tunable this plan expects the end-of-phase visual check to
+   confirm. */
+.pk-about-morph-name {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: calc(var(--pk-about-mark-h) * var(--pk-about-mark-name-scale));
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-base-content);
+  transition: opacity var(--duration-slow) var(--ease-standard);
 }
 
 .pk-about-morph-mark.is-entered .pk-about-morph-mark-inner {
@@ -3090,6 +3839,31 @@ body:has(#about-hero[data-morph-armed]) #app-header.is-docked {
   visibility: visible;
   opacity: 1;
   transition: opacity var(--duration-slow) var(--ease-standard);
+}
+
+/* D-03: the hero eyebrow hides the instant the mark docks and reappears
+   the instant it undocks, reading the SAME #about-hero.is-docked class the
+   hook already toggles from the same boolean that drives the header
+   reveal above — no second mechanism. opacity, not display:none/
+   visibility, so the eyebrow's box is preserved and the crossing point
+   causes no reflow of the hero column (and therefore no scroll-position
+   shift that could feed back into the hook's own rect comparison). */
+.pk-about-hero-eyebrow {
+  transition: opacity var(--duration-slow) var(--ease-standard);
+}
+
+#about-hero.is-docked .pk-about-hero-eyebrow {
+  opacity: 0;
+}
+
+/* The companion fade D-03 requires, changing at the identical crossing-
+   point instant as the header reveal and the eyebrow hide. The wordmark
+   is a child of #pk-about-morph-mark, a page-level sibling of #about-hero
+   (not a descendant of it), so a descendant selector cannot reach it —
+   body:has(...) is the precedent this file already uses for exactly this
+   cross-subtree reach. */
+body:has(#about-hero.is-docked) .pk-about-morph-name {
+  opacity: 0;
 }
 
 /* Suppresses the header's own always-rendered isologo permanently on
@@ -4827,84 +5601,173 @@ main.pk-boundary-collapse + .pk-footer {
   margin-top: 1.5rem;
 }
 
-/* ─── HEADER ROW CAPACITY: the two reveal breakpoints ─────────────────────
-   Both blocks below reveal a piece of header content, so both are CLIFFS in
-   the row's width demand — the revealed item's whole width appears in a single
-   pixel of viewport. `.pk-search-morph.is-open` is the row's only yielder
-   (`min-width: 0; flex-shrink: 1`, while the brand and nav links are pinned
-   `flex-shrink: 0` by debug header-height-wordmark-wrap and the trigger is
-   `flex: 0 0 auto`), so 100% of every cliff lands on the search box, with no
-   floor. Both widths are therefore DERIVED FROM THE ROW'S OWN ARITHMETIC,
-   never from the nearest convenient breakpoint.
+/* G-01.5-5 gap closure (plan 01.5-09, 2026-09-09 —
+   .planning/debug/G-01.5-5-cierre-footer-gap.md). The shared boundary
+   decision immediately above is measured CORRECT and INVISIBLE everywhere
+   else it applies: the catalog index and the game detail page carry this
+   exact 24px (>=481px) / 16px (<=480px) margin today and have shipped it
+   unreported for two phases, because the last in-flow child of their
+   <main> never paints a background (a transparent space-y-4 wrapper). The
+   About page is the one caller whose last in-flow element — #cierre,
+   D-14's tint — paints the SAME token .pk-footer paints, so the identical
+   budget renders here as a visible full-bleed stripe of a third colour
+   instead of as breathing room. A live differential (footer's own
+   margin-top zeroed alone, geometry otherwise untouched) proved the
+   footer's existing `border-top` hairline plus its own `.pk-footer-row`
+   inner padding already mark and inset this one boundary with no external
+   gap needed at all — matching every OTHER band-to-band boundary on this
+   page, which measure exactly 0.00px (plan 01.5-06).
 
-   The shared inventory — max-content widths measured live on the catalog
-   header (debug search-pill-tablet-squeeze, CDP sweep over 24 widths):
-
-     isologo alone ........  36px   brand lockup (isologo+8+wordmark 206) 250px
-     nav links ............ 166.3px  cat-trigger, icon only .............. 44px
-     cat-trigger label .... 154.7px  open pill (17.5rem) ................ 280px
-     row gap (.pk-nav-inner) 24px    gutters (2 x --pk-gutter) ........... 64px
-
-   Each requirement is `content + gaps + gutters + a FULL 280px pill`, and the
-   declared breakpoint is the smallest whole rem at least 1rem above it. That
-   1rem is deliberate headroom, not slack: both sums depend on RENDERED TEXT
-   (the tagline, the link labels, the trigger's Spanish label), so they drift
-   with copy and with font metrics headless Chrome does not reproduce exactly,
-   and a reveal that lands a few px short does not degrade gracefully — it
-   drops the entire revealed item's width onto the pill at once.
-   header_capacity_test.exs RECOMPUTES both sums from this stylesheet's own
-   declared values instead of pinning these literals, and fails with the new
-   number if the copy moves.
-
-   THREE separate blocks (this pair plus the detail-layout block above), never
-   merged even where a width would coincide: retuning the detail masthead must
-   not silently move the header, and the two reveals are independent decisions
-   with independent arithmetic. */
-
-/* Wordmark reveal — the other half of the `.pk-nav-inner .pk-brand-wordmark`
-   base rule far above, positioned here (after every base rule it overrides)
-   for the ordering reason spelled out on the detail-layout block above.
-
-   Requirement: 250 + 24 + 166.3 + 24 + 44 + 24 + 280 + 64 = 876.3px.
-   Declared:    56rem / 896px.
-
-   WAS 48rem/768px, and that number was wrong by a provable 68px (debug
-   search-pill-tablet-squeeze). Its sum read `250 + 24 + 166.3 + 24 + 280 + 64
-   = 808.3` — three items and two gaps. It OMITTED `.pk-cat-trigger` entirely:
-   both the control's 44px and its 24px gap. The comment predicted the pill
-   would land at 239.7px at 768px; measured, it landed at 171.7px — short by
-   exactly the omitted 68px. The breakpoint was derived from a row inventory
-   that was missing a row item. 640px/sm was rejected when this rule was
-   written and stays rejected: it leaves the pill 111.7px, narrower than its
-   own 44px toggle plus 44px close control together. */
-@media (min-width: 56rem) {
-  .pk-nav-inner .pk-brand-wordmark {
-    display: flex;
-  }
+   D-14's tint on #cierre is deliberately NOT the lever: stripping it would
+   leave every pixel of this gap in place (measured, reversible) and would
+   also delete a closed design decision recorded elsewhere in this file.
+   Scoped instead to the one page where the surface-equality condition
+   holds, via the same `body:has(...)` presence-based page-scoping idiom
+   already established in this file (see the `#about-hero[data-morph-armed]`
+   rule far above) — `#cierre` exists on no other route, so `:has(#cierre)`
+   only ever matches here. `:has()` contributes ID-level specificity to the
+   compound selector, which is what lets this ONE declaration outbid BOTH
+   shared class-only rules above (the unmediated one and its
+   `@media (max-width: 480px)` sibling) regardless of source order or media
+   nesting — no `!important`, and no edit to either shared rule or its
+   selector ordering. Placed here, outside any media block, because the
+   same-token sandwich this rule corrects is unconditional across both
+   width regimes. */
+body:has(#cierre) main.pk-bottom-collapse + .pk-footer,
+body:has(#cierre) main.pk-boundary-collapse + .pk-footer {
+  margin-top: 0;
 }
 
-/* Cat-trigger label reveal. Requirement: the wordmark sum above plus this
-   label's own 154.7px = 1031.0px. Declared: 66rem / 1056px.
+/* G-01.5-8 gap closure (plan 01.5-11,
+   .planning/debug/G-01.5-8-cierre-tagline-footer-grouping.md). The margin
+   rule directly above (G-01.5-5) took this boundary to 0.00px, which was
+   correct for the complaint it closed and exposed a second one it did not:
+   `#cierre`'s tint (`.pk-band-tint`, `background: var(--color-base-200)`)
+   and `.pk-footer`'s own unmediated `background: var(--color-base-200)`
+   (declared above) resolve to the byte-identical computed token in BOTH
+   themes — measured rgb(243,236,250) light / rgb(34,16,58) dark — and once
+   flush the only separator left is `.pk-footer`'s own 1px `border-top` at
+   base-300, ~2.5x under this file's own 3:1 non-text floor (see the WCAG
+   comment near the top of this file). Two same-token full-bleed bands
+   sandwiching a sub-3:1 hairline read as one continuous field, not two.
 
-   WAS 50rem/800px, and that block's own comment recorded, without recognising
-   it, the reason it had to move. Verbatim: "measured live at 48rem/768px with
-   the label forced visible, the closed row overflowed the viewport by 10px
-   (documentElement.scrollWidth 763 vs clientWidth 753) and the open search
-   pill was squeezed down to a functionally useless 2px ... Measured the real
-   threshold by bisection: overflow persisted through 775px and cleared at
-   780px."
+   The gap-size channel this boundary was tuned on has only two states and
+   both are defects: a non-zero gap paints a visible third-colour stripe
+   (G-01.5-5), zero merges the two surfaces (G-01.5-8, this rule). There is
+   no third value on that channel — the only exit is breaking the token
+   EQUALITY itself, not retuning the gap again. `#cierre`'s own tint is
+   D-14, a closed decision this exact boundary's diagnosis has already
+   ruled off-limits twice; the footer's side of the equality is the only
+   side left unclaimed by a closed decision.
 
-   That is THIS defect, already seen once at 2px. But the bisection ran on the
-   CLOSED row's `scrollWidth` alone, and the open pill was never re-measured at
-   the breakpoint it moved to — so 50rem RELOCATED the cliff from 768px to
-   800px rather than removing it. Measured after that change: 202.7px of pill
-   at 799px, 49px at 800px — five pixels wider than the closed icon it morphed
-   from. One extra pixel of viewport destroyed the search box.
+   Page-scoped via the same `body:has(#cierre)` presence idiom as the
+   margin rule above — `#cierre` exists on no other route — because
+   `.pk-footer`'s shared base-200 fill is the ONLY cue marking the footer
+   at all on `/` and `/juegos/1`, where the element above it in `<main>`
+   paints nothing. A global change would delete the footer's identity on
+   two pages that never reported a problem, so the shared, unmediated
+   `.pk-footer` rule above is left byte-identical. The border-top hairline
+   is also left alone: on a real fill step it stops being the sole boundary
+   and becomes an ordinary underline, and retouching it here would be a
+   second, unrelated change inside this same edit.
 
-   The open state is the binding constraint and it is 251px wider than the
-   closed one, so no amount of bisecting on the closed row can find this
-   number. Compute it, don't probe for it. */
-@media (min-width: 66rem) {
+   FULL LADDER ARITHMETIC, both themes (computed before any option was
+   judged, not after):
+       LIGHT  base-100/200 = 1.155   base-100/300 = 1.415   base-200/300 = 1.226
+       DARK   base-100/200 = 1.086   base-100/300 = 1.227   base-200/300 = 1.130
+   HONEST BOUND: no pair in this app's entire surface ladder clears 3:1 in
+   either theme. The literal request behind this gap ("a different color
+   ... to have a correct contrast") cannot be met to this app's own
+   documented standard by any token swap, and this exact fix class (a
+   sub-3:1 surface-token swap) was already shipped once on this codebase
+   and REJECTED on real-device human review
+   (search-right-align-mobile-cycle-3 in the debug knowledge base).
+
+   It does not follow that the step is useless: `#cierre`'s OWN top edge is
+   a transparent-to-base-200 step (1.155:1) spanning hundreds of pixels in
+   the same render, and it reads clearly there — area carries a boundary
+   that a 1px hairline at the same ratio cannot. base-300 (1.226:1 light /
+   1.130:1 dark, below) is a LARGER step than that legible control, so it
+   is chosen as the strongest available step in the ladder for this pair,
+   with base-100 (1.155:1 / 1.086:1) recorded by name as the measured
+   runner-up — reach for it as a one-token edit, not a re-diagnosis, if an
+   end-of-phase walkthrough says base-300 reads too heavy. Perceptual
+   sufficiency is unproven by measurement either way and is routed to that
+   walkthrough as a <human-check>, not declared closed here. */
+body:has(#cierre) .pk-footer {
+  background: var(--color-base-300);
+}
+
+/* ─── HEADER ROW CAPACITY: the one remaining reveal breakpoint ────────────
+   Used to be TWO reveal cliffs (wordmark at 56rem, cat-trigger label at
+   66rem) — this session's minimalism pass (2026-09-09, G-01.5 header
+   simplification) made the brand lockup a single line and ALWAYS visible
+   (see the brand-lockup comment far above), which retired the wordmark
+   reveal entirely: there is no longer a "brand is 36px" state to switch out
+   of. Only the cat-trigger label reveal remains, and its own requirement
+   shrank along with the brand (see below).
+
+   The block below is a CLIFF in the row's width demand — the revealed
+   item's whole width appears in a single pixel of viewport.
+   `.pk-search-morph.is-open` is the row's only yielder (`min-width: 0;
+   flex-shrink: 1`, while the brand and nav links are pinned `flex-shrink: 0`
+   by debug header-height-wordmark-wrap and the trigger is `flex: 0 0 auto`),
+   so 100% of the cliff lands on the search box, with no floor. The width is
+   therefore DERIVED FROM THE ROW'S OWN ARITHMETIC, never from the nearest
+   convenient breakpoint.
+
+   The shared inventory — max-content widths measured live on the catalog
+   header (debug search-pill-tablet-squeeze's original sweep for everything
+   except the brand lockup, re-measured 2026-09-09 for the one-line lockup):
+
+     brand lockup (isologo+8+"PUKLLAY CLUB") 155.3px  nav links ...... 166.3px
+     cat-trigger, icon only ............ 44px  cat-trigger label .. 154.7px
+     open pill (17.5rem) ............... 280px  row gap (.pk-nav-inner) 24px
+     gutters (2 x --pk-gutter) .......... 64px
+
+   Requirement is `content + gaps + gutters + a FULL 280px pill`, and the
+   declared breakpoint is the smallest whole rem at least 1rem above it. That
+   1rem is deliberate headroom, not slack: the sum depends on RENDERED TEXT
+   (the link labels, the trigger's Spanish label), so it drifts with copy and
+   with font metrics headless Chrome does not reproduce exactly, and a reveal
+   that lands a few px short does not degrade gracefully — it drops the
+   entire revealed item's width onto the pill at once.
+   header_capacity_test.exs RECOMPUTES the sum from this stylesheet's own
+   declared values instead of pinning these literals, and fails with the new
+   number if the copy (or the brand lockup) moves again.
+
+   TWO separate blocks (this one plus the detail-layout block above), never
+   merged even where a width would coincide: retuning the detail masthead
+   must not silently move the header. */
+
+/* Cat-trigger label reveal. Requirement: 155.3 + 166.3 + 44 + 154.7 = 520.3,
+   + 3 row gaps (72) + a full pill (280) + 2 gutters (64) = 936.3px.
+   Declared: 60rem / 960px (23.7px headroom, inside the 16-32px band the
+   comment above requires).
+
+   WAS 66rem/1056px, sized against the OLD two-line brand lockup (250px) —
+   1056px cleared that 1031.0px requirement by only 25px, but with the new
+   155.3px lockup the true requirement dropped to 936.3px, leaving 1056px
+   119.7px of slack: well past this file's own "< required + 32px" ceiling
+   (drift, not deliberate headroom — a reveal breakpoint sized for a bigger
+   brand than the row actually carries hides the label later than it needs
+   to, for no reason). Re-derived to 60rem/960px against the new sum, not
+   left at the old literal.
+
+   History predating the brand-lockup change, kept for provenance: WAS
+   50rem/800px before that, and that block's own comment recorded, without
+   recognising it, the reason it had to move. Verbatim: "measured live at
+   48rem/768px with the label forced visible, the closed row overflowed the
+   viewport by 10px (documentElement.scrollWidth 763 vs clientWidth 753) and
+   the open search pill was squeezed down to a functionally useless 2px ...
+   Measured the real threshold by bisection: overflow persisted through
+   775px and cleared at 780px." That bisection ran on the CLOSED row's
+   `scrollWidth` alone, and the open pill was never re-measured at the
+   breakpoint it moved to — so 50rem RELOCATED the cliff from 768px to 800px
+   rather than removing it. The open state is the binding constraint and it
+   is 251px wider than the closed one, so no amount of bisecting on the
+   closed row can find this number. Compute it, don't probe for it. */
+@media (min-width: 60rem) {
   .pk-cat-trigger-label {
     display: inline;
   }
@@ -4986,12 +5849,25 @@ main.pk-boundary-collapse + .pk-footer {
 }
 
 /* ─── HEADER ROW CAPACITY: the band that cannot fit at all ────────────────
-   The two reveal breakpoints above give the row a full 280px pill everywhere
-   the row can HOLD one. Below 662.3px it cannot, at any breakpoint setting:
+   The reveal breakpoint above gives the row a full 280px pill everywhere it
+   can HOLD one. Below 781.6px it cannot, at any breakpoint setting:
 
-     36 (isologo, wordmark already hidden here) + 24 + 166.3 (nav links)
-        + 24 + 44 (icon-only trigger) + 24 + 280 (open pill) + 64 (gutters)
-        = 662.3px
+     155.3 (one-line brand lockup, always visible — see the brand-lockup
+        comment far above) + 24 + 166.3 (nav links) + 24 + 44 (icon-only
+        trigger) + 24 + 280 (open pill) + 64 (gutters) = 781.6px
+
+   WAS 662.3px (isologo alone, 36px, since the old two-line brand lockup
+   was still hidden in this range). This session's minimalism pass made the
+   brand lockup a single line and unconditionally visible — see the
+   brand-lockup comment far above — so the row's fixed-content minimum in
+   this band grew from 36px to 155.3px, and the ceiling below which search
+   must overlay grew with it by the same 119.3px. This is a WIDER overlay
+   band, not a regression: the fixed items (brand + nav links + trigger)
+   were never at risk in isolation, since the ceiling is defined to include
+   a full in-flow pill on top of them; without that pill (which is always
+   absolutely positioned throughout this whole band), the fixed items alone
+   need only 477.6px (155.3 + 166.3 + 44 + 2 gaps 48 + 2 gutters 64) — well
+   under even the narrowest live width in this band.
 
    Nothing above may be retuned to fix that — the two obvious moves are both
    pre-blocked by resolved sessions. Letting the brand or the nav links shrink
@@ -5009,9 +5885,9 @@ main.pk-boundary-collapse + .pk-footer {
    (`.pk-nav-inner.is-search-open` far above), so what the pill covers reads as
    backgrounded rather than clipped.
 
-   662px, with NO headroom added, deliberately unlike the two reveals above.
-   Those are cliffs; this is a ramp. One pixel above this ceiling the in-flow
-   pill is 280px, then 279, then 278 — so if the copy drifts a few px, a few px
+   781px, with NO headroom added, deliberately unlike the reveal above. That
+   is a cliff; this is a ramp. One pixel above this ceiling the in-flow pill
+   is 280px, then 279, then 278 — so if the copy drifts a few px, a few px
    of input width is the entire cost. Adding headroom here would instead push
    the overlay into widths that fit, covering the category glyph for no reason.
 
@@ -5026,7 +5902,7 @@ main.pk-boundary-collapse + .pk-footer {
    `var(--pk-gutter)` in both states by declaration, so the closed-vs-open
    right-edge invariant holds by construction instead of by compensation.
 
-   `max-width: 662px` OVERLAPS the <=480px block below rather than starting at
+   `max-width: 781px` OVERLAPS the <=480px block below rather than starting at
    `min-width: 481px`, and that is the debug search-right-align-mobile lesson
    applied: a `min-width: N+1` complement leaves a sub-pixel band (480.5px)
    matching NEITHER rule, and this particular gap would render the squeezed
@@ -5037,7 +5913,7 @@ main.pk-boundary-collapse + .pk-footer {
    (0-2-0) it would silently outrank that block on the catalog page and freeze
    the mobile overlay at these values — a rule two thousand lines away quietly
    deciding what phones get. */
-@media (max-width: 662px) {
+@media (max-width: 781px) {
   /* Scoped to headers carrying `.pk-nav-links`, which is the catalog index in
      both its filter states and nothing else. NOT unscoped: Detalle's
      `.pk-nav-crumb` is `flex: 1`, so taking the morph out of flow there would
@@ -5449,8 +6325,158 @@ main.pk-boundary-collapse + .pk-footer {
     display: block;
   }
 
-  .pk-about-cta-spacer {
-    display: block;
+  /* Plan 01.5-08 (G-01.5-3 item 4): replaces the in-flow
+     .pk-about-cta-spacer that used to sit here. .pk-about-cta-bar above is
+     `position: fixed`, so it always covers the bottom of the viewport at
+     every scroll position — clearance for it has to be reserved at the END
+     of the document (a body padding-bottom), not in the middle of it. The
+     element this rule replaces sat in flow BEFORE <footer>, which meant it
+     cleared whatever came after it — the closing band, which needed no
+     clearance — while leaving the footer itself, the element the bar
+     actually overlays, still covered at the real page bottom. See
+     `.planning/debug/assets/cierre-band-whitespace/mobile-390-page-bottom.png`
+     for the live-measured evidence of the bar covering the footer under the
+     old spacer.
+
+     Shape follows `body.pk-has-cta-bar` (declared far above, the detail
+     page's own document-end reservation for ITS fixed bar) — that is this
+     repo's in-repo precedent for reserving clearance at the end of the
+     document for a fixed bottom bar. This rule differs in mechanism, not
+     shape: the detail page's class is applied/removed by a JS lifecycle
+     hook (.DetailChrome) because that bar retracts/parks on scroll; this
+     page's bar does neither — it is unconditionally pinned once visible, so
+     there is no lifecycle to hang a hook on and none is needed. A
+     presence-based `:has()` selector reaches the same reserved-padding
+     result with no JavaScript and no new hook, reusing the exact idiom this
+     file already established for the isologo scroll-morph
+     (`body:has(#about-hero[data-morph-armed])`, above). `.pk-about-cta-bar`
+     exists only on the About page, so this selector needs no further
+     scoping to stay page-scoped.
+
+     DRIFT HISTORY (plan 01.5-10, G-01.5-7 gap closure — .planning/debug/
+     G-01.5-7-cta-bar-background-visible.md): a hard `4.5rem` literal
+     (inherited from the removed spacer) was 3px loose against the bar's
+     shipped 69px height; after plan 01.5-10 grew the button to 48px the
+     SAME literal became 1px TIGHT — the direction of the error flipped,
+     the predictable result of a hard literal pinned against a
+     content-derived height. Plan 01.5-10 replaced it with a `calc()`
+     composed from the bar's own parts (padding-top + padding-bottom +
+     button min-height + border-width), legible as one derivation instead
+     of a pre-added, re-guessable number — that discipline (derive, don't
+     restate) is why this stays a `calc()` below rather than a fresh
+     literal, even though every one of THOSE operands is now gone.
+
+     RE-DERIVED-THEN-SUPERSEDED (plan 01.5-14, G-01.5-11 gap closure,
+     sketch 052 winner B): briefly covered an OFFSET as well as a height,
+     since that version of the bar floated `bottom: 20px` above the
+     viewport edge instead of sitting flush. Sketch 053 winner D (quick
+     task 260910-av6, G-01.5-12) restores a flush bar, so the offset
+     operand is gone again — but the mechanism itself has changed more
+     fundamentally: this is no longer a composed-from-literals `calc()` at
+     all.
+
+     LIVE-MEASURED (sketch 053 winner D, quick task 260910-av6, G-01.5-12):
+     the reservation now reads `--pk-about-cta-bar-h`, a CSS custom
+     property published by `.AboutCtaBarMeasure` (about_live.ex, Task 2) —
+     a `ResizeObserver` on the bar's own element, mirroring `.CatalogNav`'s
+     `--pk-header-h` publisher (layouts.ex) verbatim. This is winner D's own
+     explicit requirement: the document reserves clearance sized to the
+     bar's LIVE-measured height, not a hardcoded literal, so a future change
+     to the bar's padding/button size/border-width can never silently drift
+     this reservation the way DRIFT HISTORY (above) already happened once.
+     The var's fallback — `calc(10px + 48px + 10px + 1px)` — covers ONLY the
+     pre-connect first paint (before the hook has run, or if JS fails to
+     wire): 10px top padding + `.pk-sumate-btn`'s 48px `min-height` + 10px
+     bottom padding + the bar's 1px `border-top`, composed from the bar's
+     own real declared parts (never a pre-added literal), matching plan
+     01.5-10's own "derive, don't restate" discipline.
+
+     NO ADDITIVE BREATHING TERM — this reservation is the bar's height and
+     NOTHING else (debug cta-bar-footer-gap-uncolored). The first port of
+     winner D carried a `+ 1rem` here, described as "the deliberate
+     breathing step between the footer's last line and the bar's top edge".
+     It was a port artifact — sketch 053's own clearance is
+     `clearance.style.height = barHeight + 'px'`, the measured bar height
+     EXACTLY, with no additive term anywhere, and its README promises "no
+     overlap, no vanishing bar, no leftover empty gap".
+
+     WHY THE TERM WAS A BUG, not merely unfaithful: this is `body` padding,
+     which lies OUTSIDE `.pk-footer`'s border-box, so every pixel of it
+     paints the PAGE background (`--color-base-100`) and not the footer's
+     page-scoped `--color-base-300` fill (`body:has(#cierre) .pk-footer`,
+     far above). The bar covers exactly `--pk-about-cta-bar-h` of the
+     reservation, so an additive term is by construction the one part that
+     can never be covered — it is permanently visible, and it is the only
+     surface on this page painted in a token neither of its neighbours
+     uses. Measured at 390x844: footer bottom 759.39, bar top 775.00, a
+     15.61px band of page background between two lavender/white surfaces.
+     Two things made it read even worse than 16px: this bar's own fill is
+     `--color-base-100` too, so the band merged with the bar's 10px top
+     padding into ONE ~27px pale field whose only internal marker is the
+     1px border (in dark theme those two measure rgb(22,9,37) and
+     rgb(23,10,38) — indistinguishable); and the bar's upward `box-shadow`
+     graded that field 252 -> 237, which is why it was reported as a "grey
+     area" rather than a white gap. Neither is the cause: a live patch that
+     changed ONLY this term, leaving fill and shadow byte-identical,
+     removed the band completely in both themes.
+
+     The breathing step itself was never missing — it was double-counted
+     across a surface boundary. `.pk-footer-row`'s own `--pk-footer-pad-block`
+     supplies 12px below the BGG line at this breakpoint, INSIDE the
+     footer's fill where it paints correctly; measured clearance from that
+     line to the bar's border is 11.61px, against sketch 053's own 16px
+     (its `.about-footer` padding). Do not re-add an additive term here to
+     buy more room — it will land outside the footer's box again and
+     reproduce this bug verbatim. If this boundary ever reads cramped, the
+     lever is `body:has(.pk-about-cta-bar) .pk-footer { padding-bottom }`,
+     which grows the footer's OWN lavender box; that option was measured
+     and deliberately not taken now only because it overshoots the sketch
+     (12 + 16 = 28px vs 16px).
+
+     Safe with no slack because `.AboutCtaBarMeasure` publishes
+     `Math.ceil(getBoundingClientRect().height)` (about_live.ex) — the
+     published value is always >= the real height, so this reservation can
+     never come up SHORT. Measured, the footer's edge lands 0.39px PAST the
+     bar's top edge, and that sub-pixel is spent inside the footer's 12px
+     padding, never on the "Powered by BGG" text — T-QUICK-04 does not
+     recur.
+
+     Plan 01.5-12 landed branch A for the site-wide sticky-footer question
+     (leave it withdrawn, no shell change): `body` carries no viewport-
+     height floor and no flex column, so this `padding-bottom` is not
+     composing against any OTHER body-level reservation — measured and
+     confirmed no interaction exists, not merely assumed.
+
+     Co-located in this SAME @media (max-width: 480px) block as
+     .pk-about-cta-bar's own display swap above, for the identical reason
+     the D-11 rule below is: co-location is load-bearing — a threshold
+     mismatch between "bar appears" and "clearance is reserved" puts the
+     bar back over the footer at some width. */
+  body:has(.pk-about-cta-bar) {
+    padding-bottom: var(--pk-about-cta-bar-h, calc(10px + 48px + 10px + 1px));
+  }
+
+  /* Plan 01.5-04, D-11: suppresses the Cierre band's own Sumate button at
+     the exact width where the sticky bar above takes over, so a member
+     never sees the same "Sumate" ask twice on one screen. This rule MUST
+     live in this SAME @media (max-width: 480px) block as .pk-about-cta-bar
+     and the document-end clearance rule directly above it, not a second
+     block at the same threshold — a threshold mismatch between "sticky bar
+     appears" and
+     "Cierre button disappears" would open a width range with NEITHER
+     visible, which is worse than the duplicate-ask problem this rule
+     solves. 480px is used because that is the exact width where
+     .pk-about-cta-bar pins a Sumate button to the bottom of the screen;
+     hiding the Cierre button any earlier (e.g. Tailwind's general 640px
+     `sm` breakpoint) would open a 480-639px range with no visible join CTA
+     anywhere in the lower half of the page. The #cierre prefix is a
+     deliberate, load-bearing use of the .pk-*-beats-utility cascade
+     direction this file's top-of-file note warns about elsewhere: it needs
+     to out-specify the flex/justify-center Tailwind utilities on the same
+     element (about_live.ex). Above 480px this rule does not apply at all,
+     and those utilities do their normal job. */
+  #cierre .pk-about-cierre-cta {
+    display: none;
   }
 
   .pk-crumb-sep,

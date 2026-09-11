@@ -705,6 +705,14 @@ defmodule PukllayClubWeb.FooterRhythmTest do
   # ink mass while occupying 40.7% of its width — the footer's least important
   # content was its densest. After: 364.11 vs 335.06 (1.09x), two concerns each.
   #
+  # UPDATE (2026-09-09, footer minimalism pass): the left cluster's brand
+  # block (brand_logo/1) is gone — see layouts.ex's footer/1 doc — leaving
+  # 201.14px (links only) vs. 248px (social + theme), 1.23x. Still well
+  # inside "balanced" territory (the 1.66x figure above is what "overloaded"
+  # actually measured as), re-verified live rather than assumed; see the
+  # "carry the known, live-measured-balanced concern counts" test below for
+  # the number and its provenance.
+  #
   # Oracle type: derived (contract), same as the rest of this file — the proof is
   # rendered geometry, so these pin the structure and declarations that geometry
   # depends on.
@@ -731,19 +739,44 @@ defmodule PukllayClubWeb.FooterRhythmTest do
                "interactive controls, which made the two \"peer\" clusters 1.66x apart in width."
     end
 
-    test "both clusters carry the same number of concerns" do
+    # UPDATE (2026-09-09, footer minimalism pass, G-01.5): this used to assert
+    # `left == right` — both clusters carried 2 concerns each (brand + links
+    # vs. social + theme), matching sketch 011's peer-cluster intent by a
+    # count proxy, since ExUnit's render_component/2 has no real layout
+    # engine and cannot measure rendered width directly (see this describe
+    # block's own "Oracle type: derived" note above). Removing the left
+    # cluster's brand block (this session — the header already carries brand
+    # identity on every page, and this footer's own debug history flagged
+    # spacing-only fixes as insufficient; see layouts.ex's footer/1 doc)
+    # makes left=1, right=2 by design, not drift — a strict count match is no
+    # longer the right invariant to enforce, because the content genuinely
+    # changed on purpose.
+    #
+    # The real property (width parity) was re-verified live instead of
+    # assumed: a CDP measurement at 1280px (this session) gave a 1.23x
+    # left/right width ratio (201.14px vs 248px) — well under the 1.66x that
+    # read as "overloaded" in the original debug session, and visually
+    # confirmed balanced on a live screenshot. ExUnit cannot re-derive that
+    # number, so this test pins the two counts that ratio was measured
+    # against as a change-detector: if either cluster's child count moves,
+    # the width relationship this comment documents may no longer hold, and
+    # whoever changes it should re-measure live rather than assume the old
+    # ratio survives.
+    test "the clusters carry the known, live-measured-balanced concern counts (1 left, 2 right)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
       doc = LazyHTML.from_document(html)
 
       left = doc |> LazyHTML.query(".pk-footer-left > *") |> Enum.count()
       right = doc |> LazyHTML.query(".pk-footer-right > *") |> Enum.count()
 
-      assert left == right,
-             "The footer's two clusters carry #{left} and #{right} concerns. Sketch 011 " <>
-               "specified them as PEERS; an imbalance here is what the reported ink/void " <>
-               "asymmetry actually was, and it is invisible to every spacing assertion above " <>
-               "because each individual gap can be perfectly correct while the clusters they " <>
-               "sit in are not comparable."
+      assert {left, right} == {1, 2},
+             "The footer's two clusters carry #{left} and #{right} concerns, not the " <>
+               "{1, 2} (links list vs. social+theme) this test was last measured against " <>
+               "(1.23x width ratio at 1280px, live CDP). A changed count here means the " <>
+               "width relationship may have shifted — re-measure live (see " <>
+               "test/visual/about_geometry.mjs for the CDP-probe pattern) before assuming " <>
+               "the footer still reads as balanced, rather than re-deriving a new expected " <>
+               "count from this structural check alone."
     end
 
     test "the break is width-based and survives the column flip at ≤480px" do

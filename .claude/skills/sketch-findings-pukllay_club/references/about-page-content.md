@@ -201,8 +201,126 @@ already `position: fixed` with no scroll-hide/retract logic — genuinely always
 Full mobile scroll length (hero → photos → Qué hacemos/Historia → FAQ → Contacto → closing) was
 walked section-by-section and confirmed reasonable — no section needs trimming for density.
 
+## Isologo Scroll-Morph Companion Wordmark (sketch 050)
+
+The About hero's isologo scroll-morphs into the header on scroll (045's mechanic). It never
+carried a text label — a first-time visitor scrolling saw a large graphic mark with no readable
+name until it docked. Fix: bake a "PUKLLAY CLUB" companion wordmark into the mark's own box, so
+it scales/fades in lockstep as the mark shrinks toward the header.
+
+**Winning treatment:**
+- Companion text lives *inside* the isologo's element (absolutely positioned below the image, not
+  affecting the box's own size math) — travels and shrinks with the mark itself, "melting into"
+  the header's real wordmark as it docks.
+- Size: ~25px at rest (`nameScale: 0.135` of the mark's own size), tight letter-spacing
+  (`0.02em`). Larger sizes (27px+) read as competing with the H1 for attention; smaller (~17px)
+  read as too quiet.
+- `font-weight: 400` always — Bebas Neue is self-hosted at weight 400 ONLY in the real app
+  (`assets/css/app.css`); anything heavier is a silent browser-faked bold the codebase explicitly
+  avoids elsewhere.
+- The mark anchors to an **in-flow spacer** as the first child of `.hero`, not the hero
+  *section's* own top edge — this is what lets mark + companion + eyebrow + H1 + subtext + CTA
+  all center together as one grouped block via the flex column's own gap, instead of the mark
+  floating disconnected near the section's top with an arbitrary gap to the rest of the content.
+- The hero's eyebrow line ("Club de juegos de mesa · Jujuy") hides the instant the mark docks and
+  reappears the instant it undocks — reads the *same* `docked` boolean that drives the header
+  reveal and the companion-text fade, so all three change at the identical crossing-point instant
+  in both scroll directions. Don't gate this on scroll position/viewport height — tie it to the
+  shared dock-state boolean.
+
+**Real bug found + fixed (theme-level, affects every sketch):** the shared sketch theme
+(`themes/default.css`) only declared `src: local("Bebas Neue")` for the display font — no actual
+webfont file. On any machine without that font installed, it silently fell back to a generic
+system sans, rendering "wrong." Fixed by adding the real self-hosted `.woff2` as a fallback source.
+
+**Real bug found + fixed (header layout):** the header's `.brand-slot` never reserved a box for
+the mark icon before the wordmark text (production's real markup always renders an `<img>` there
+first). Without that reserved space, a docked mark lands flush on the slot's own left edge,
+overlapping the first few letters of "PUKLLAY CLUB". Fix: reserve a `width`/`height` spacer
+matching the docked mark's size (`DOCK_SIZE`, 32px) as the first flex child, before the text.
+
+## About Page — CTA Rhythm & Band Backgrounds (sketch 051, 14 rounds)
+
+Composed the entire About page (hero → photo rail → content → FAQ → Juntadas/Contacto → Cierre)
+at real spacing for the first time, to check how the four CTA touchpoints (hero Sumate, Contacto's
+reach-out links, closing-band Sumate, mobile sticky Sumate bar) read together.
+
+**Contacto card:**
+- No card chrome (background/padding/border-radius) at any width — matches Juntadas' plain
+  background exactly, so the two columns read as one consistent pair, not "text column + boxed
+  CTA card." This was a multi-round arrival: card chrome first stripped mobile-only (round 2),
+  then dropped on desktop too (round 8) once the whole direction proved out.
+  Reason it needed to go: a second heavy, differently-colored card sitting right above the closing
+  CTA read as a redundant "ask" competing with Cierre's own Sumate button.
+- Contact links (WhatsApp/Instagram/Facebook) are **soft accent-tinted chips** (icon + text,
+  `background: var(--color-accent-bg)`) — not icon-only circles (tried and rejected: "breaks the
+  rhythm," reads too quiet/footer-like next to the bold text-bearing Sumate buttons elsewhere on
+  the page) and not `.btn-sumate`-shaped pills either (would make "reach out" read as the same
+  commitment level as "join").
+  - On mobile (≤639px), the label drops and the chip becomes icon-only + circular, **centered**
+    with a generous gap (not edge-`justify`-ed, and not left-aligned) — purely a space-fit
+    constraint (measured: 3 fully-labeled chips need ~387px, a 375px phone's available width is
+    ~327px), not a style change.
+- The Maps thumbnail belongs with **Juntadas**, not Contacto — it names Juntadas' real-world
+  meeting location; Contacto is about reach-out channels, not location. (This reopens sketch
+  048's original placement — flag for developer review before shipping.)
+
+**Cierre (closing CTA band):**
+- Full-screen on desktop (`min-height: 100vh`, flex-centered, heading scaled up to
+  `clamp(2rem, 4vw, 3rem)`) — makes the close a real destination-feeling moment instead of the
+  shared 72px band padding every other section uses. Desktop-only; mobile keeps the compact band.
+- `padding-top` equal to the fixed header's own height (65px) on the full-screen desktop version —
+  pure `align-items: center` in a 100vh box splits leftover space evenly by construction, but the
+  docked header visually eats into the top gap while nothing touches the bottom gap, so the *true*
+  split is even but the *visible* one isn't. Compensate with padding, don't just trust centering.
+- No duplicate Sumate button on mobile ≤480px (same threshold the real sticky CTA bar appears at,
+  not the general 640px mobile breakpoint — there's a 480-639px range with no sticky bar, so
+  hiding the button any earlier leaves a gap with no visible CTA at all).
+- All internal spacing (heading → button → meta line) driven by ONE flex `gap` on the content
+  column, not per-element margins — this is what "consistent rhythm across mobile/desktop" means
+  in practice: one rule, unmodified per viewport, rather than two hand-tuned spacing systems.
+- Closing meta line: plain signature only (`Pukllay Club · San Salvador de Jujuy, Argentina`), no
+  trailing social link — a link there is redundant once Contacto covers 3 channels explicitly.
+  On mobile, forced to two lines at the natural "·" break point (not wherever the width happens to
+  wrap it) via a responsive `<br>`, at a smaller size (10px) than the base line height needs to
+  produce genuinely 2 lines, not 3.
+
+**Band backgrounds (whole-page pattern):** alternate plain/tinted backgrounds between adjacent
+bands top to bottom — photo rail (plain) → Qué hacemos/historia (tint, `--color-surface`) → FAQ
+(dark/primary — kept as a **one-off highlight**, not folded into the alternation) → Juntadas/
+Contacto (plain) → Cierre (tint). The FAQ dark treatment reads as a deliberate "bold stop"; making
+every band that dark would have them all compete for the same attention instead of each section
+just visually separating from its neighbor.
+
+**Real bugs found + fixed along the way (all from live verification, not code review):**
+1. Debug annotation flags (used only in this sketch's own tooling, not a real pattern) were
+   positioned *inside* their target element's box and fully covered the compact 48px Sumate
+   buttons. General lesson: an annotation overlay needs to sit outside the content box it's
+   labeling (`bottom: 100%`), never inside it, regardless of how small the target looks.
+2. A shared `.band p` rule (class+type selector) silently beat a single-class `.closing-meta`
+   rule's `font-size` in the cascade — the meta line had been rendering at 18px, not the intended
+   small size, in every round until a two-line wrap made the size difference visible enough to
+   notice. **Lesson: when a shared type+class rule and a target's own single-class rule both set
+   the same property, the shared rule wins regardless of source order — qualify the target
+   selector with an extra class (or the parent's class) to reliably out-specify it.**
+3. A page rebuild (round 9, rewriting Cierre's spacing system) silently dropped the section's
+   own `text-align: center` rule in the process. Invisible for single-line content (a short box
+   auto-sizes to hug its text, masking the missing alignment) until multi-line text exposed it
+   (a short first line sat flush-left in a box sized to a longer second line). **Lesson: when
+   rewriting a block's layout rules, audit the FULL set of properties being replaced, not just
+   the ones the current change is about — a dropped unrelated property can stay invisible for
+   many rounds until content shape changes expose it.**
+4. Testing/tooling note: a sketch's own toolbar can visually narrow the page (`body.style.
+   maxWidth`) without changing `window.innerWidth`, so it never triggers real `@media`
+   breakpoints — this produces misleading "it looks wrong at this width" screenshots that are
+   actually just a wide layout squeezed into a narrow box. Fixed generally by loading the sketch
+   into a real `<iframe>` at the literal target width instead (its own independent viewport
+   responds to `@media` correctly) — reusable pattern for any future sketch needing responsive
+   verification.
+
 ## Origin
-Synthesized from sketches: 004, 045, 046, 047, 048, 049
+Synthesized from sketches: 004, 045, 046, 047, 048, 049, 050, 051
 Source files available in: sources/004-about-page/, sources/045-about-header-scroll-isologo/,
 sources/046-about-photo-rail-mobile-hero/, sources/047-about-content-bands/,
-sources/048-about-faq-contacto/, sources/049-about-closing-cta-mobile/
+sources/048-about-faq-contacto/, sources/049-about-closing-cta-mobile/,
+sources/050-about-morph-companion-text/, sources/051-about-full-page-cta-rhythm/

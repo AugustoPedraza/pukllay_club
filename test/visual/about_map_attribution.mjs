@@ -380,8 +380,16 @@ async function runCase({ client, baseUrl, viewport, theme }) {
   // smooth scroll here would leave the element's rect stale (mid-animation)
   // by the time the measurement snippet below reads it, since nothing
   // awaits the scroll's completion.
+  //
+  // Target changed from #contacto to #juntadas (plan 01.5-02 Task 3, D-09):
+  // the live Maps embed moved out of #contacto and into #juntadas. #contacto
+  // still exists (it keeps its heading/copy/chips) so this selector would
+  // still resolve either way — it would just center an element the map is
+  // no longer inside, quietly measuring the wrong region. This file is
+  // developer-invoked and outside mix quality/CI, so nothing else catches
+  // this drift.
   await client.send("Runtime.evaluate", {
-    expression: `document.querySelector('#contacto').scrollIntoView({block: "center", behavior: "instant"})`,
+    expression: `document.querySelector('#juntadas').scrollIntoView({block: "center", behavior: "instant"})`,
   })
 
   const childFrameTimeout = new Promise((resolve) =>
@@ -652,7 +660,7 @@ async function startCheckpointServer() {
       log(`FAIL: ${PROBE_BASE_URL}/up did not return 200 for the checkpoint.`)
       return
     }
-    log(`Checkpoint server (externally managed via PROBE_BASE_URL): ${PROBE_BASE_URL}/quienes-somos#contacto`)
+    log(`Checkpoint server (externally managed via PROBE_BASE_URL): ${PROBE_BASE_URL}/quienes-somos#juntadas`)
     return
   }
 
@@ -671,7 +679,7 @@ async function startCheckpointServer() {
   }
 
   log(`Checkpoint server is up. PID: ${proc.pid}`)
-  log(`Open: ${baseUrl}/quienes-somos#contacto`)
+  log(`Open: ${baseUrl}/quienes-somos#juntadas`)
 }
 
 async function pollUp(baseUrl) {

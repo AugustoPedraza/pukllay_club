@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>051 — About full-page CTA rhythm</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  .note {
+    max-width: 680px; margin: 24px auto; padding: 12px 16px;
+    background: var(--color-accent-bg); color: var(--color-accent-text);
+    border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
+  }
+  .note strong { display: block; margin-bottom: 4px; }
+  /* Debug-only annotation, NOT part of the real design: sits ABOVE each
+     marker (bottom:100%, its own box entirely outside the marker's box)
+     so it never overlaps the real CTA content beneath it — round 1 of
+     this sketch had it at top:8px/left:8px INSIDE the marker, which fully
+     covered the compact hero/cierre Sumate buttons (they're only 48px
+     tall, barely bigger than the flag itself). */
+  .cta-flag {
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 6px; z-index: 30;
+    font-family: var(--font-sans); font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--color-primary-content); background: var(--color-primary);
+    padding: 3px 8px; border-radius: var(--radius-full); pointer-events: none; white-space: nowrap;
+  }
+  .cta-marker { position: relative; }
+
+  .fake-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 65px;
+    background: transparent; box-shadow: none; pointer-events: none;
+    transition: background var(--duration-base) var(--ease-standard),
+                box-shadow var(--duration-base) var(--ease-standard);
+  }
+  .fake-header.is-revealed { pointer-events: auto; }
+  .fake-header.is-tinted {
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(6px);
+  }
+  .fake-header-inner {
+    position: relative; width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand-slot { display: flex; align-items: center; gap: 8px; width: 200px; }
+  /* Reserves the docked mark's own 32x32 footprint as a real layout box
+     (not just relying on dockRect() math) — without this, the floating
+     mark docks flush against .brand-slot's own left edge, landing right
+     on top of the wordmark text's first few letters since nothing pushed
+     the text over to make room (found live while verifying sketch 051). */
+  .mark-slot { width: 32px; height: 32px; flex-shrink: 0; }
+  .brand-text {
+    display: flex; flex-direction: column; line-height: 1;
+    opacity: 0; transform: translateX(-6px);
+    transition: opacity var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                transform var(--duration-base) var(--ease-out-soft) var(--duration-fast);
+  }
+  .is-docked .brand-text { opacity: 1; transform: translateX(0); }
+  .brand-name { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  .brand-tag { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+  .back-ludoteca {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--text-sm); color: var(--color-text-muted); text-decoration: none;
+    padding: 6px 10px; border-radius: var(--radius-full); border: 1px solid transparent;
+    opacity: 0; transform: translateX(6px);
+    transition: opacity var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                transform var(--duration-base) var(--ease-out-soft) var(--duration-fast),
+                color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard),
+                background var(--duration-fast) var(--ease-standard);
+  }
+  .is-docked .back-ludoteca { opacity: 1; transform: translateX(0); }
+  .back-ludoteca:hover { color: var(--color-primary); border-color: var(--color-border); background: var(--color-surface); }
+  .back-ludoteca svg { width: 16px; height: 16px; }
+
+  /* --- Hero (sketch 050's finalized winner: baked-in companion wordmark,
+     mark anchored in-flow with the hero content, eyebrow hides/reveals on
+     the exact same dock-crossing state as the header). Carried over
+     verbatim — this sketch is not re-opening the hero, only checking how
+     its CTA relates to the rest of the page. --- */
+  .hero {
+    min-height: 92vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 16px; position: relative;
+  }
+  .mark-anchor { width: 100%; height: 220px; }
+  .hero-eyebrow {
+    font-size: var(--text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted);
+    transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+  .hero-eyebrow.is-docked { opacity: 0; }
+  .hero h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 8vw, 4.5rem); margin: 0; letter-spacing: 0.02em; }
+  .hero p.hero-sub { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 32rem; margin: 0; }
+
+  /* Real "Sumate" button (layouts.ex's sumate_cta/1: btn-outline btn-primary
+     min-h-12) — same class reused at all THREE Sumate call sites below
+     (hero, closing band, mobile bar), exactly like production reuses one
+     component so the three can never drift to different labels/styles. */
+  .btn-sumate {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 48px;
+    padding: 0 28px; border-radius: var(--radius-full); border: 1.5px solid var(--color-primary);
+    color: var(--color-primary); font-size: var(--text-base); font-weight: 600; text-decoration: none;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .btn-sumate:hover { background: var(--color-primary); color: var(--color-primary-content); }
+  .btn-sumate.w-full { width: 100%; }
+
+  #morph-mark {
+    position: fixed; z-index: 60; top: 0; left: 0; width: 0; height: 0;
+    opacity: 0; transform: scale(0.75);
+    transition: opacity var(--duration-slow) var(--ease-out-soft), transform var(--duration-slow) var(--ease-out-soft),
+                top var(--duration-slow) var(--ease-out-soft), left var(--duration-slow) var(--ease-out-soft),
+                width var(--duration-slow) var(--ease-out-soft), height var(--duration-slow) var(--ease-out-soft),
+                filter var(--duration-slow) var(--ease-out-soft);
+  }
+  #morph-mark.is-entered { opacity: 1; transform: scale(1); }
+  #morph-mark.is-first-play { animation: mark-glow 1600ms var(--ease-out-soft) 1; }
+  @keyframes mark-glow {
+    0% { filter: drop-shadow(0 0 0 transparent); }
+    50% { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--color-primary) 60%, transparent)); }
+    100% { filter: drop-shadow(0 0 0 transparent); }
+  }
+  #morph-mark.no-anim { transition: none !important; }
+  #morph-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .morph-companion-text { display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 10px; white-space: nowrap; text-align: center; }
+  .mct-name { display: block; font-family: var(--font-display); font-weight: 400; letter-spacing: 0.02em; text-transform: uppercase; color: var(--color-text); }
+
+  /* --- Real content bands (D-07 spine: hero -> photo rail -> two-column ->
+     dark FAQ -> Juntadas/Contacto -> closing CTA). Literal 4.5rem/80rem
+     values below match app.css's .pk-band/.pk-band-inner exactly — the
+     point of this sketch is real rhythm, not the sketch theme's abstract
+     spacing scale. --- */
+  .band { padding: 4.5rem 0; }
+  .band-inner { max-width: 80rem; margin: 0 auto; padding: 0 24px; }
+  .band-dark { background: var(--color-primary); color: var(--color-primary-content); }
+  /* Round 14 (feedback: "I like how 'lo que todos preguntan' has a
+     different background to separate from the rest of content, I want
+     to follow a similar pattern for all that page") — FAQ's bold dark
+     band stays a one-off highlight (real production's `.pk-band-dark` is
+     deliberately used only there); everything else alternates between
+     plain and this quieter surface tint instead, so the page reads as a
+     stack of distinct blocks the way FAQ already does, without every
+     band fighting FAQ for the same "bold stop" attention. Order top to
+     bottom: photo rail (plain) -> Qué hacemos/historia (tint) -> FAQ
+     (dark, unchanged) -> Juntadas/Contacto (plain) -> Cierre (tint). */
+  .band-tint { background: var(--color-surface); }
+  .band h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0 0 12px; }
+  .band p { font-size: 1.125rem; line-height: 1.5; margin: 0; }
+  .two-col { display: grid; gap: 44px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .two-col { grid-template-columns: 1fr 1fr; } }
+
+  .photo-rail-placeholder {
+    height: 320px; border-radius: var(--radius-lg); background: repeating-linear-gradient(135deg, var(--color-surface), var(--color-surface) 12px, var(--color-surface-2) 12px, var(--color-surface-2) 24px);
+    display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); font-size: var(--text-sm);
+  }
+
+  .faq-item { margin-bottom: 28px; }
+  .faq-item:last-child { margin-bottom: 0; }
+  .faq-item dt { font-size: 1.125rem; font-weight: 600; margin-bottom: 4px; }
+  .faq-item dd { font-size: 1.125rem; margin: 0; }
+
+  /* Round 8 (feedback: "on desktop, Juntadas and Contacto have different
+     background") — the card background/padding/radius that rounds 2/6
+     already stripped on mobile is now dropped here too, so both columns
+     share the exact same plain background at every width, not just below
+     640px. Contacto keeps its own flex-column layout (gap:16px between
+     the heading/paragraph/chips) — only the box chrome around it is
+     gone. This is the same direction rounds 2/3/4/6/7 already pushed
+     Contacto toward (progressively lighter, less like a boxed CTA card),
+     just finished on desktop too. */
+  .contact-card {
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  /* Round 4 picked B — softer tinted chip, same accent tint this sketch's
+     own .note banner already uses, so it reads as "on brand" without
+     borrowing Sumate's exact join-CTA shape (contact and join stay
+     visually distinct kinds of ask). A (Sumate-shaped pill) and C (icon
+     avatar + text) are retired — see README for the full A/B/C comparison
+     history. Round 5 adds a third chip (Facebook) to the same row. */
+  .contact-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .contact-links svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .cl-soft {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px;
+    border-radius: var(--radius-lg); background: var(--color-accent-bg); color: var(--color-accent-text);
+    font-size: var(--text-sm); font-weight: 600; text-decoration: none;
+    transition: filter var(--duration-fast) var(--ease-standard);
+  }
+  .cl-soft:hover { filter: brightness(1.08); }
+  /* Round 7 (feedback: "following the rhythm, the map should be on
+     Juntadas, not Contacto, to make it more meaningful") — moved from
+     inside .contact-card to plain content here. Juntadas has no flex
+     container of its own (unlike .contact-card's gap:16px, which used to
+     provide the space above the map for free), so margin-top does that
+     job explicitly instead. This reopens sketch 048's original placement
+     (map lived in Contacto) — flagged for developer review, not silently
+     overriding a shipped decision. */
+  #juntadas .map-thumb { margin-top: 16px; }
+  .map-thumb {
+    aspect-ratio: 2 / 1; min-height: 7rem; border-radius: var(--radius-lg); position: relative; overflow: hidden;
+    background: repeating-linear-gradient(45deg, var(--color-surface-2), var(--color-surface-2) 10px, var(--color-surface) 10px, var(--color-surface) 20px);
+    display: flex; align-items: center; justify-content: center; color: var(--color-text-muted); font-size: var(--text-sm);
+  }
+  .map-thumb-label {
+    position: absolute; right: 8px; bottom: 8px; background: var(--color-bg); padding: 4px 10px;
+    border-radius: var(--radius-full); font-size: 11px; color: var(--color-text);
+  }
+
+  /* Round 6 fix (feedback: "be sure the 3 buttons fit on the same row"):
+     below 640px — the exact point .two-col stacks Juntadas and Contacto
+     into one column — the card's available width is only the viewport
+     minus its 24px gutters on each side. Measured: 3 fully-labeled soft
+     chips (WhatsApp/Instagram/Facebook, ~123/128/116px each + gaps) need
+     ~387px, more than a 375px phone has room for even BEFORE the
+     gutters, so they'd wrap to two lines. Rather than shrink the label
+     text until it clips, drop it entirely at this width and let the
+     chip go icon-only + circular — same shape/hover mechanic, still
+     on-brand (soft tint kept), just compact enough that all three always
+     fit one row down to the narrowest real phone width.
+
+     Round 9 (feedback: "for social row make it centered instead of
+     'justify'") — round 8's `space-between` anchored the two end chips to
+     the card's edges, which read as "justified" rather than a considered
+     group. Centered instead, with a deliberately generous gap (20px, up
+     from the row's own 10px) so the group still reads as spread across
+     the width rather than huddled — just anchored to the middle, not the
+     edges. */
+  @media (max-width: 639px) {
+    .cl-label { display: none; }
+    .cl-soft { padding: 13px; border-radius: 50%; gap: 0; }
+    .contact-links { width: 100%; justify-content: center; gap: 20px; }
+  }
+
+  /* Round 9 (feedback: Cierre "needs a full re-do to have consistent
+     rhythm all its content for mobile and desktop"). Old version mixed
+     two unrelated spacing sources — .band h2's own shared 12px
+     bottom-margin, plus .cta-row's ad hoc 20px above/below — that didn't
+     relate to any scale and didn't match how the rest of the page spaces
+     things (hero uses one flex gap for its whole stack; this now does
+     the same). One `gap: 24px` on the band-inner controls every internal
+     boundary (heading -> button -> meta), overriding the shared h2
+     margin so gap is the single source of truth. Same rule works
+     unmodified at both viewports — no separate mobile override needed,
+     since the fix was the rhythm SYSTEM, not a size that differs by
+     width.
+
+     Round 13 fix (real bug, feedback: "be sure 'Pukllay club' be
+     centered together to San Salvador...") — round 9's rebuild silently
+     dropped the original `.closing-band { text-align: center; }` rule
+     when it replaced the old .cta-row block above. `align-items: center`
+     on .band-inner centers each child's own BOX, but says nothing about
+     text alignment WITHIN a box — invisible for the single-line h2/button
+     (their auto-sized box already hugs the text, so there's no slack to
+     reveal it), but round 12's two-line meta text has a box as wide as
+     its longest line ("SAN SALVADOR DE JUJUY, ARGENTINA"), and without
+     text-align the shorter first line ("PUKLLAY CLUB ·") was sitting
+     flush-left inside that box instead of centered — confirmed via
+     computed styles (`text-align: start`, not `center`, before this fix). */
+  .closing-band { text-align: center; }
+  .closing-band .band-inner { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+  .closing-band h2 { margin: 0; }
+  /* Selector is `.closing-band .closing-meta`, not bare `.closing-meta` —
+     found live while checking round 12b: the shared `.band p` rule
+     (class+type = higher specificity than a single class) was silently
+     winning the font-size cascade this whole time, rendering this line
+     at 18px regardless of what `.closing-meta` declared. Two classes
+     here (specificity 0,2,0) reliably beats `.band p`'s (0,1,1). */
+  .closing-band .closing-meta { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); }
+  /* Round 12b (feedback: mobile "needs to be two centered lines with
+     small font size" for better balance) — a deliberate break at the
+     natural separator, not whatever width happens to wrap it. Hidden by
+     default (flows as one line on wider screens where it fits and
+     already reads fine); shown only at the same ≤639px "mobile" width
+     this file uses everywhere else. */
+  .closing-break { display: none; }
+  @media (max-width: 639px) {
+    .closing-break { display: block; }
+    .closing-band .closing-meta { font-size: 10px; letter-spacing: 0.04em; }
+  }
+
+  /* Round 10a (feedback: "I want the 'close' more prominent... full
+     screen band... for desktop only"): desktop-only (matching this
+     sketch's own two-col/mobile-CTA breakpoint conventions — 640px is
+     already "desktop" everywhere else in this file) — the band becomes a
+     full-viewport moment instead of the shared 72px band padding every
+     other section uses, with the heading scaled up to actually fill that
+     space meaningfully rather than just adding empty air around a
+     1.5rem heading. */
+  @media (min-width: 640px) {
+    .closing-band { min-height: 100vh; display: flex; align-items: center; padding: 0; }
+    .closing-band h2 { font-size: clamp(2rem, 4vw, 3rem); }
+  }
+
+  /* Round 12a (feedback: "for desktop, there is too much space from
+     bottom") — pure `align-items: center` on a 100vh box splits the
+     leftover space evenly above/below by construction, but the docked
+     65px header (fixed, overlapping the section's own top edge) visually
+     eats into that top gap while nothing touches the bottom gap — so the
+     TRUE top/bottom split reads as even, but the VISIBLE split doesn't.
+     padding-top equal to the header's own height shifts the flex
+     centering point down by that same amount, shrinking the bottom gap
+     and growing the true top gap by just enough to cancel the header's
+     visual overlap — restoring what actually looks even. 65px matches
+     .fake-header's own height elsewhere in this file, not a new number. */
+  @media (min-width: 640px) {
+    .closing-band { padding-top: 65px; }
+  }
+
+  /* Round 10b (feedback: "for mobile, remove the 'sumate' below 'nos
+     vemos el sábado' since it has the sticky CTA") — hidden at the SAME
+     threshold the real sticky bar actually appears (480px), not the
+     640px desktop breakpoint above: between 480-639px there is no sticky
+     bar, so hiding this button any earlier would leave that range with
+     no visible join CTA in the closing band at all. Removing a flex
+     child doesn't leave a gap — the column's own `gap: 24px` just closes
+     around it. */
+  @media (max-width: 480px) {
+    #cierre .btn-sumate { display: none; }
+  }
+
+  /* Real mobile-only sticky CTA bar — SAME media query threshold as
+     production (.pk-about-cta-bar / .pk-about-cta-spacer, max-width:480px),
+     not the sketch toolbar's 375px viewport constrainer, so switching to
+     📱 in the toolbar reproduces the exact real behavior. */
+  .mobile-cta-bar { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 24px; background: var(--color-bg); border-top: 1px solid var(--color-border); }
+  .mobile-cta-spacer { display: none; height: 72px; }
+  @media (max-width: 480px) {
+    .mobile-cta-bar { display: block; }
+    .mobile-cta-spacer { display: block; }
+  }
+
+  .scroll-hint { text-align: center; color: var(--color-text-muted); font-size: var(--text-sm); padding: 12px 24px 0; }
+
+  [data-tools] {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,0.7); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.4;
+    transition: opacity 0.2s; display: flex; gap: 8px; align-items: center;
+  }
+  [data-tools]:hover { opacity: 1; }
+  [data-tools] select, [data-tools] button { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div id="page-root">
+<div class="note"><strong>Composed view — all 4 CTA touchpoints, real spacing</strong>
+Real content-band padding (72px/section) and 1280px content width, same as production. Each CTA
+touchpoint is flagged with a small pill so they're easy to spot while scrolling: the hero's
+Sumate, the Contacto card's WhatsApp/Instagram/Facebook links, the closing band's Sumate, and the
+mobile-only sticky Sumate bar (toggle 📱 below — same 480px threshold as the real
+`.pk-about-cta-bar` media query). The Maps thumbnail lives in Juntadas now (round 7 — it names the
+real-world location, so the map belongs there, not with the reach-out links). Photo rail and the
+live Maps embed are simplified placeholders; their own motion/behavior was already validated in
+sketches 046/048 and isn't the point here.</div>
+
+<header class="fake-header" data-header>
+  <div class="fake-header-inner">
+    <div class="brand-slot">
+      <span class="mark-slot" aria-hidden="true"></span>
+      <span class="brand-text">
+        <span class="brand-name">Pukllay Club</span>
+        <span class="brand-tag">Juegos de mesa modernos</span>
+      </span>
+    </div>
+    <a class="back-ludoteca" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      Volver a la ludoteca
+    </a>
+  </div>
+</header>
+
+<section class="hero" data-hero>
+  <div class="mark-anchor" data-anchor aria-hidden="true"></div>
+  <p class="hero-eyebrow">Club de juegos de mesa · Jujuy</p>
+  <h1>Conectá jugando</h1>
+  <p class="hero-sub">Nos juntamos todos los sábados a jugar. Venís, te sentás, alguien te explica.</p>
+  <div class="cta-marker">
+    <span class="cta-flag">CTA 1 · Hero</span>
+    <a class="btn-sumate" href="#">Sumate</a>
+  </div>
+</section>
+<div class="scroll-hint">↓ scrolleá para ver el resto de la página ↓</div>
+
+<section class="band">
+  <div class="band-inner">
+    <div class="photo-rail-placeholder">Photo rail (5 fotos, autoplay — validado en sketch 046, no reproducido acá)</div>
+  </div>
+</section>
+
+<section class="band band-tint">
+  <div class="band-inner two-col">
+    <div>
+      <h2>Qué hacemos</h2>
+      <p>Organizamos juntadas semanales de juegos de mesa modernos, pensadas para gente que recién empieza tanto como para quienes ya juegan hace años. Mirá también <a href="#juntadas">Juntadas</a>.</p>
+    </div>
+    <div>
+      <h2>Nuestra historia</h2>
+      <p>Todo empezó en abril de 2021. Más de cinco años después nos sigue emocionando lo mismo: una mesa alcanza para que dos extraños se pongan de acuerdo, se rían y quieran volver a jugar.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="band band-dark">
+  <div class="band-inner">
+    <h2>Lo que todos preguntan</h2>
+    <dl>
+      <div class="faq-item"><dt>¿Cuándo y dónde?</dt><dd>Todos los sábados desde las 16 hs, en el Club de Emprendedores, San Salvador de Jujuy.</dd></div>
+      <div class="faq-item"><dt>¿Cuánto cuesta?</dt><dd>Reservá tu lugar por $5.000. ¿Venís de sorpresa? Son $7.000 — pero siempre hay lugar para vos.</dd></div>
+      <div class="faq-item"><dt>¿Tengo que saber jugar?</dt><dd>No. La mayoría de los juegos se aprenden en diez minutos y siempre hay alguien para explicarte.</dd></div>
+      <div class="faq-item"><dt>¿Puedo ir solo?</dt><dd>Sí, mucha gente viene sola. Te sumamos a una mesa apenas llegás.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="band">
+  <div class="band-inner two-col">
+    <div id="juntadas">
+      <h2>Juntadas</h2>
+      <p>Nos juntamos los sábados en el Club de Emprendedores, San Salvador de Jujuy. Los juegos los llevamos nosotros; vos traé las ganas.</p>
+      <a class="map-thumb" href="#" target="_blank" rel="noopener noreferrer">
+        Mapa (placeholder — el real es un embed vivo de Google, sketch 048)
+        <span class="map-thumb-label">Cómo llegar ↗</span>
+      </a>
+    </div>
+    <div id="contacto" class="contact-card cta-marker">
+      <span class="cta-flag">CTA 2 · Contacto</span>
+      <h2>Contacto</h2>
+      <p>Escribinos por el grupo de WhatsApp, por Instagram o por Facebook — respondemos ahí mismo.</p>
+      <div class="contact-links">
+        <a class="cl-soft" href="#" target="_blank" rel="noopener noreferrer" aria-label="Grupo de WhatsApp">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 11.5a8.5 8.5 0 1 1-3.9-7.15L20.5 3l-1.28 3.72A8.46 8.46 0 0 1 20.5 11.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 8.75c0-.41.34-.75.75-.75h.68c.32 0 .6.2.71.5l.5 1.35c.1.27.05.57-.13.8l-.5.63a5.4 5.4 0 0 0 2.51 2.51l.63-.5c.23-.18.53-.23.8-.13l1.35.5c.3.11.5.39.5.71v.68a.75.75 0 0 1-.75.75h-.5C11.32 15.8 8.2 12.68 8.5 9.25v-.5Z"/></svg>
+          <span class="cl-label">WhatsApp</span>
+        </a>
+        <a class="cl-soft" href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="16.7" cy="7.3" r="0.6" fill="currentColor" stroke="none"/></svg>
+          <span class="cl-label">Instagram</span>
+        </a>
+        <a class="cl-soft" href="https://facebook.com/PukllayClub" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.5 8.5h2V5.5h-2c-1.93 0-3.5 1.57-3.5 3.5v2H9v3h2v6.5h3V14h2.2l.5-3H14v-1.5c0-.55.45-1 1-1Z"/></svg>
+          <span class="cl-label">Facebook</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cierre" class="band closing-band band-tint cta-marker">
+  <span class="cta-flag">CTA 3 · Cierre</span>
+  <div class="band-inner">
+    <h2>Nos vemos el sábado</h2>
+    <a class="btn-sumate" href="#">Sumate</a>
+    <p class="closing-meta">Pukllay Club ·<br class="closing-break"> San Salvador de Jujuy, Argentina</p>
+  </div>
+</section>
+
+<div class="mobile-cta-spacer" aria-hidden="true"></div>
+<div class="mobile-cta-bar cta-marker">
+  <span class="cta-flag">CTA 4 · Sticky mobile</span>
+  <a class="btn-sumate w-full" href="#">Sumate</a>
+</div>
+
+<div id="morph-mark">
+  <img src="../../../priv/static/images/isologo-light.png" alt="">
+  <span class="morph-companion-text"><span class="mct-name">PUKLLAY CLUB</span></span>
+</div>
+</div><!-- /#page-root -->
+
+<!-- Real device-width preview: the toolbar's viewport buttons used to
+just set document.body.style.maxWidth, which visually narrows the page
+but does NOT change window.innerWidth — so it can't trigger a real
+@media breakpoint (found live: a screenshot at a narrowed body still
+showed the desktop 2-column grid, squeezed into a narrow column, rather
+than actually collapsing to one). An iframe has its own independent
+viewport, so loading this exact same file inside one at a literal pixel
+width fires real media queries regardless of the outer window's size —
+this is what real responsive-design tools do, not a hack. -->
+<iframe id="device-frame" src="about:blank" style="display:none;"></iframe>
+
+<div data-tools>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+  <button onclick="setViewport(375)">📱</button>
+  <button onclick="setViewport(768)">📟</button>
+  <button onclick="setViewport(0)">🖥️</button>
+</div>
+
+<script>
+const HERO_SIZE = 180;
+const DOCK_SIZE = 32;
+const NAME_SCALE = 0.135; // "V3 — Confident", sketch 050's picked size
+
+let docked = false;
+let hasEntered = false;
+let entranceTimer = null;
+let ticking = false;
+let restTop = null;
+
+const markBox = document.getElementById('morph-mark');
+const mctName = markBox.querySelector('.mct-name');
+const mctWrap = markBox.querySelector('.morph-companion-text');
+const eyebrow = document.querySelector('.hero-eyebrow');
+
+function anchorEl() { return document.querySelector('[data-anchor]'); }
+function headerEl() { return document.querySelector('[data-header]'); }
+
+function naturalRect() {
+  const r = anchorEl().getBoundingClientRect();
+  return { top: r.top, left: r.left + r.width / 2 - HERO_SIZE / 2, size: HERO_SIZE };
+}
+function dockRect() {
+  const slot = headerEl().querySelector('.brand-slot');
+  const r = slot.getBoundingClientRect();
+  return { top: r.top + (r.height - DOCK_SIZE) / 2, left: r.left, size: DOCK_SIZE };
+}
+function place(rect, animate) {
+  if (!animate) markBox.classList.add('no-anim');
+  markBox.style.top = rect.top + 'px';
+  markBox.style.left = rect.left + 'px';
+  markBox.style.width = rect.size + 'px';
+  markBox.style.height = rect.size + 'px';
+  if (!animate) {
+    void markBox.offsetWidth;
+    markBox.classList.remove('no-anim');
+  }
+}
+function computeProgress(natural, dock) {
+  if (restTop === null) restTop = natural.top;
+  const totalTravel = restTop - dock.top;
+  if (totalTravel <= 0) return docked ? 1 : 0;
+  const traveled = restTop - natural.top;
+  return Math.min(1, Math.max(0, traveled / totalTravel));
+}
+function updateHeaderChrome() {
+  const header = headerEl();
+  header.classList.remove('is-revealed', 'is-tinted', 'is-docked');
+  if (docked) header.classList.add('is-revealed', 'is-tinted', 'is-docked');
+  eyebrow.classList.toggle('is-docked', docked);
+}
+function updateCompanion(rect, progress) {
+  const show = !docked;
+  mctWrap.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  mctName.style.fontSize = Math.max(7, rect.size * NAME_SCALE) + 'px';
+  mctName.style.opacity = String(Math.max(0, 1 - progress * 1.4));
+}
+function syncPosition() {
+  const natural = naturalRect();
+  const dock = dockRect();
+  const shouldDock = natural.top <= dock.top;
+  if (shouldDock !== docked) {
+    docked = shouldDock;
+    updateHeaderChrome();
+    const target = docked ? dock : natural;
+    place(target, true);
+    updateCompanion(target, docked ? 1 : 0);
+  } else if (!docked) {
+    place(natural, false);
+    updateCompanion(natural, computeProgress(natural, dock));
+  }
+}
+function init() {
+  clearTimeout(entranceTimer);
+  markBox.classList.remove('is-entered', 'is-first-play');
+  hasEntered = false;
+  ticking = false;
+  restTop = null;
+  window.scrollTo(0, 0);
+  const natural = naturalRect();
+  const dock = dockRect();
+  docked = natural.top <= dock.top;
+  updateHeaderChrome();
+  if (docked) {
+    place(dock, false);
+    markBox.classList.add('is-entered');
+    hasEntered = true;
+    updateCompanion(dock, 1);
+  } else {
+    place(natural, false);
+    updateCompanion(natural, 0);
+    entranceTimer = setTimeout(() => {
+      markBox.classList.add('is-entered', 'is-first-play');
+      hasEntered = true;
+    }, 500);
+  }
+}
+// Real device-width preview via an iframe (see the HTML comment above the
+// iframe element for why): #page-root's own scroll-morph script only runs
+// in the outer document, so switching to a device width hides #page-root
+// entirely and points the iframe at this exact file — a fresh, independent
+// copy of the whole page (including its own copy of this script) renders
+// at the iframe's literal width, where @media queries respond correctly
+// regardless of the real browser window's size.
+function setViewport(px) {
+  const root = document.getElementById('page-root');
+  const frame = document.getElementById('device-frame');
+  if (!px) {
+    frame.style.display = 'none';
+    frame.src = 'about:blank';
+    root.style.display = '';
+    init();
+    return;
+  }
+  root.style.display = 'none';
+  frame.style.cssText = 'display:block; width:' + px + 'px; height:85vh; margin:24px auto; border:1px solid var(--color-border); box-shadow:var(--shadow-md);';
+  if (!frame.src.includes(location.pathname)) frame.src = location.href;
+}
+window.addEventListener('scroll', () => {
+  if (!hasEntered || ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => { syncPosition(); ticking = false; });
+}, { passive: true });
+window.addEventListener('resize', () => {
+  const rect = docked ? dockRect() : naturalRect();
+  place(rect, false);
+  updateCompanion(rect, docked ? 1 : computeProgress(naturalRect(), dockRect()));
+});
+init();
+</script>
+
+</body>
+</html>

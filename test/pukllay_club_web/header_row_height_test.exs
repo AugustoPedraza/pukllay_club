@@ -19,6 +19,18 @@ defmodule PukllayClubWeb.HeaderRowHeightTest do
   # were immune — 480px was never the width at which the wordmark stops fitting,
   # so every viewport from 481px to 808px was broken.
   #
+  # UPDATE (2026-09-09, header minimalism pass): the wordmark is now a SINGLE
+  # line ("PUKLLAY CLUB", no tagline), not the two-line name+tagline stack this
+  # file's history describes — at 155.3px measured (was 250px) it fits the row
+  # at every viewport width (re-verified via header_capacity_test.exs's
+  # re-derived arithmetic and a live CDP sweep, 320-1280px, both the catalog and
+  # About headers, zero overflow), so it is UNCONDITIONALLY visible now — no
+  # `display: none` base rule and no reveal breakpoint. The two-line-specific
+  # tests below (nowrap-as-two-lines, hidden-by-default-then-revealed) are
+  # retired along with the mechanism they guarded; `nowrap` itself — now
+  # guaranteeing exactly ONE line, not two — is still load-bearing and still
+  # tested.
+  #
   # Oracle type: derived (contract). Real proof of this bug is rendered geometry
   # in a browser, which ExUnit cannot observe; these assertions instead pin the
   # structural preconditions the geometry depends on. Each one was verified RED
@@ -72,12 +84,13 @@ defmodule PukllayClubWeb.HeaderRowHeightTest do
                "That is exactly the declaration that let the brand shrink and the header grow."
     end
 
-    test "the header wordmark is nowrap, so the lockup is always exactly two lines" do
+    test "the header wordmark is nowrap, so the lockup is always exactly one line" do
       body = block!(source(), ".pk-nav-inner .pk-brand-wordmark")
 
       assert body =~ "white-space: nowrap",
-             "The header wordmark must be nowrap. It is a two-line composition by design " <>
-               "(name over tagline); a third line is always a bug, never an adaptation."
+             "The header wordmark must be nowrap. It is a one-line composition by design " <>
+               "(\"PUKLLAY CLUB\", no tagline); a second line is always a bug, never an " <>
+               "adaptation."
     end
   end
 
@@ -97,66 +110,42 @@ defmodule PukllayClubWeb.HeaderRowHeightTest do
   end
 
   describe "the row has room for what it renders" do
-    test "the wordmark is hidden by default and revealed only at a wide-enough breakpoint" do
+    # G-01.5 header minimalism pass (2026-09-09): the wordmark used to be
+    # hidden by default and revealed only at a wide-enough breakpoint (its own
+    # describe block, retired along with the mechanism — see the moduledoc
+    # update above). At 155.3px the one-line lockup fits the row at every
+    # width, so there is nothing left to reveal: no `display: none` base rule
+    # exists to opt back in from, and no `@media (min-width: ...)` block
+    # exists to opt back in AT. This test asserts the ABSENCE directly, so a
+    # future re-introduction of either half of the retired mechanism (without
+    # the other) fails loudly instead of silently reinstating a partial,
+    # broken version of it.
+    test "the wordmark has no display:none base rule and no reveal breakpoint — it is unconditional" do
       src = source()
 
-      assert block!(src, ".pk-nav-inner .pk-brand-wordmark") =~ "display: none",
-             "The header wordmark must be hidden by default and opted back in at a breakpoint. " <>
-               "Showing it by default is what left 481-767px over-subscribed."
+      body = block!(src, ".pk-nav-inner .pk-brand-wordmark")
 
-      # A reveal block must exist, and it must be nowhere near the widths where
-      # the row demonstrably cannot hold the lockup.
-      #
-      # This is a FLOOR, not the boundary. It used to be the boundary, and the
-      # arithmetic recorded here was wrong: "250 + 24 + 166.3 + 24 + 280 + 64 =
-      # 808.3px" counts three items and two gaps, omitting `.pk-cat-trigger`
-      # (44px) and its 24px gap, so it under-stated the requirement by 68px and
-      # this test passed the defect (debug search-pill-tablet-squeeze). The real
-      # requirement is 876.3px, and header_capacity_test.exs now owns it —
-      # RECOMPUTED from the stylesheet's own gutter, row gap and pill width plus
-      # a fenced content inventory, rather than pinned as a literal here where
-      # it silently rotted.
-      #
-      # The floor below is kept because it is this file's own concern (a reveal
-      # at 640px/sm leaves the pill 111.7px, narrower than its own 44px toggle
-      # plus 44px close control, and the row starts growing) and because it
-      # holds independently of the capacity model being right.
-      reveal_widths =
-        src
-        |> String.split("@media (min-width: ")
-        |> Enum.drop(1)
-        |> Enum.filter(fn chunk ->
-          [head | _] = String.split(chunk, "@media", parts: 2)
-          head =~ ~r/\.pk-nav-inner \.pk-brand-wordmark\s*\{[^}]*display:\s*flex/
-        end)
-        |> Enum.map(fn chunk ->
-          case Regex.run(~r/^([\d.]+)(rem|px)/, chunk) do
-            [_, n, "rem"] -> String.to_float(n <> ".0") * 16
-            [_, n, "px"] -> String.to_float(n <> ".0")
-            nil -> flunk("Could not parse the min-width value revealing the header wordmark")
-          end
-        end)
+      refute body =~ ~r/display\s*:/,
+             "`.pk-nav-inner .pk-brand-wordmark` declares a `display` property. The one-line " <>
+               "lockup (155.3px) is unconditionally visible by design — reintroducing a " <>
+               "display toggle here means either a hide-by-default rule with no reveal (the " <>
+               "wordmark never appears) or a partial reveal mechanism that header_capacity_test.exs " <>
+               "no longer derives breakpoints for."
 
-      assert reveal_widths != [],
-             "No `@media (min-width: ...)` block restores `display: flex` on " <>
-               "`.pk-nav-inner .pk-brand-wordmark`. Without it the wordmark never appears at any " <>
-               "viewport width."
-
-      for width <- reveal_widths do
-        assert width >= 768,
-               "The header wordmark is revealed at #{trunc(width)}px, but the row cannot seat " <>
-                 "brand + nav links + the open search pill below 768px without the pill " <>
-                 "collapsing past its own controls. Revealing it earlier reopens the header " <>
-                 "height bug."
-      end
+      refute src =~ ~r/\.pk-nav-inner \.pk-brand-wordmark\s*\{[^}]*display:/,
+             "A `@media` block still toggles `.pk-nav-inner .pk-brand-wordmark`'s display " <>
+               "somewhere in the stylesheet. The one-line lockup needs no reveal breakpoint at " <>
+               "all — see header_capacity_test.exs for the re-derived row arithmetic that " <>
+               "proves it fits at every width."
     end
 
-    test "the narrow-viewport block does not re-declare the wordmark's display" do
+    test "the narrow-viewport block does not declare the wordmark's display" do
       refute narrow_viewport_block(source()) =~
                ~r/\.pk-nav-inner \.pk-brand-wordmark\s*\{[^}]*display:/,
-             "The ≤480px block declares the header wordmark's display again. One visual " <>
-               "property must have exactly one owner in this layer — and a 480px threshold is " <>
-               "precisely the wrong number, since the wordmark stops fitting at 768px."
+             "The ≤480px block declares the header wordmark's display. The lockup is " <>
+               "unconditionally visible at every width now — a per-breakpoint display override " <>
+               "here would silently reintroduce a hide/reveal mechanism this file's other test " <>
+               "asserts does not exist."
     end
   end
 end

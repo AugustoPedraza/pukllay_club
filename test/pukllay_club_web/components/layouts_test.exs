@@ -56,11 +56,10 @@ defmodule PukllayClubWeb.LayoutsTest do
   end
 
   describe "brand_logo/1" do
-    test "renders the wordmark and tagline" do
+    test "renders the one-line wordmark, no tagline" do
       html = render_component(&Layouts.brand_logo/1, %{})
 
       assert html =~ "PUKLLAY CLUB"
-      assert html =~ "JUEGOS DE MESA MODERNOS"
     end
   end
 
@@ -101,15 +100,23 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert dark_img_html =~ ~s(alt="")
     end
 
-    test "the footer's .pk-footer-left cluster renders no mark (D-A, 260823-snj)" do
+    test "the footer's .pk-footer-left cluster renders no mark and no brand_logo/1 call at all (this session's footer minimalism pass, 2026-09-09)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      footer_left_imgs =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-footer-left img")
+      doc = LazyHTML.from_document(html)
+      footer_left = LazyHTML.query(doc, ".pk-footer-left")
 
+      footer_left_imgs = LazyHTML.query(footer_left, "img")
       assert Enum.empty?(footer_left_imgs)
+
+      # Stronger than "no <img>" (which mark: false alone used to satisfy):
+      # the footer no longer calls brand_logo/1 at all, so it must render
+      # none of the wordmark markup either, not just no isologo.
+      footer_left_html = LazyHTML.to_html(footer_left)
+
+      refute footer_left_html =~ "pk-brand-wordmark",
+             "Expected .pk-footer-left to render no brand_logo/1 output at all — the footer " <>
+               "brand block was removed entirely, not just demoted to mark: false."
     end
 
     test "the header still renders exactly two <img> marks (header-only, not removed, 260823-snj)" do
@@ -123,7 +130,7 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert Enum.count(header_imgs) == 2
     end
 
-    test "forcing isologo? false renders no <img> and keeps the wordmark + default tagline" do
+    test "forcing isologo? false renders no <img> and keeps the wordmark" do
       html = render_component(&Layouts.brand_logo/1, %{isologo?: false})
 
       imgs =
@@ -133,7 +140,6 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       assert Enum.empty?(imgs)
       assert html =~ "PUKLLAY CLUB"
-      assert html =~ "JUEGOS DE MESA MODERNOS"
     end
 
     test "both mark paths satisfy File.exists?/1 (gate truthfulness)" do
@@ -142,40 +148,11 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  describe "brand_logo/1 mark attr (260823-snj)" do
-    test "mark: false renders no <img> but still renders the wordmark" do
-      html = render_component(&Layouts.brand_logo/1, %{mark: false})
-
-      imgs =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("img")
-
-      assert Enum.empty?(imgs)
-      assert html =~ "PUKLLAY CLUB"
-    end
-
-    test "mark: false composes with a passed tagline" do
-      html = render_component(&Layouts.brand_logo/1, %{mark: false, tagline: "Conectá jugando"})
-
-      assert html =~ "Conectá jugando"
-    end
-
-    test "mark: false emits pk-brand-quiet; the header default does not" do
-      quiet_html = render_component(&Layouts.brand_logo/1, %{mark: false})
-      default_html = render_component(&Layouts.brand_logo/1, %{})
-
-      assert quiet_html =~ "pk-brand-quiet"
-      refute default_html =~ "pk-brand-quiet"
-    end
-  end
-
   describe "app/1 header" do
-    test "shows the brand wordmark and tagline" do
+    test "shows the brand wordmark, one line, no tagline" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
       assert html =~ "PUKLLAY CLUB"
-      assert html =~ "JUEGOS DE MESA MODERNOS"
     end
 
     test "no longer contains the generated Phoenix marketing links" do
@@ -556,14 +533,21 @@ defmodule PukllayClubWeb.LayoutsTest do
       refute class =~ "pb-20"
     end
 
-    test "the about page's <main> carries neither pk-bottom-collapse nor pk-boundary-collapse, and still carries pb-20",
+    # Plan 01.5-08 (G-01.5-3 item 4): superseded the prior assertion here
+    # (About took the full default bottom stack). The about page now opts
+    # into `bottom_collapse` — same axis as the catalog index page, since its
+    # top spacing is a separately-correct decision that must not move. See
+    # `test/pukllay_club_web/live/about_live_test.exs`'s "bottom-boundary
+    # opt-in" describe block for the top-padding-preserved half of this
+    # contract.
+    test "the about page's <main> carries pk-bottom-collapse and not pb-20 or pk-boundary-collapse",
          %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       class = main_class(html)
-      refute class =~ "pk-bottom-collapse"
+      assert class =~ "pk-bottom-collapse"
+      refute class =~ "pb-20"
       refute class =~ "pk-boundary-collapse"
-      assert class =~ "pb-20"
     end
 
     test "the detail page's <main> carries pk-boundary-collapse and not pk-bottom-collapse", %{
@@ -579,25 +563,97 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  # Plan 01.5-08 (G-01.5-3 item 4, T-01.5-28): the defect this whole plan
+  # closes existed because `about_live.ex` never opted into either boundary
+  # attr and nothing surfaced that omission. This test is the surfacing
+  # mechanism for the NEXT caller that forgets: it enumerates every real
+  # `<Layouts.app` call site under `lib/` and asserts each one passes
+  # `boundary_collapse` or `bottom_collapse`.
+  describe "Layouts.app caller contract (plan 01.5-08, G-01.5-3 item 4)" do
+    # `lib/pukllay_club_web/components/layouts.ex` is the layout's OWN
+    # definition file, not a caller — its `@doc` for `app/1` includes an
+    # illustrative `<Layouts.app flash={@flash}>` usage example inside a
+    # docstring, with no boundary attr, because it is prose documentation,
+    # not a real render call. Excluded by path (the definition file), not by
+    # sniffing whether a match sits inside a docstring, which would be more
+    # fragile to a comment reflow.
+    @layouts_definition_file "lib/pukllay_club_web/components/layouts.ex"
+
+    # Callers explicitly exempted from this contract because they genuinely
+    # want <main>'s full, unmodified default top+bottom padding stack — not
+    # because nobody has looked. A caller taking that default stack
+    # accumulates THREE independently-reasonable declarations: <main>'s own
+    # bottom padding (`pb-20`, 80px) + its last child's own trailing margin +
+    # `.pk-footer`'s own top margin — the exact stack `app.css`'s
+    # `main.pk-bottom-collapse` comment records as measured live on the
+    # catalog page before quick task 260902-il3 fixed it (176px at 1280px /
+    # 128px at 390px). Empty on purpose: every current caller (the catalog
+    # index page, the game detail page, and the about page as of this plan)
+    # has a considered opt-in. Add a caller's file path here ONLY alongside a
+    # comment explaining why it genuinely wants the full default stack —
+    # never to silence this test.
+    @default_bottom_stack_exceptions []
+
+    # Matches the whole opening tag text up to its first `>` — robust to
+    # `mix format`'s attribute-per-line wrapping (unlike a regex anchored to
+    # a specific line shape) because it scans the raw source for the literal
+    # `<Layouts.app` token rather than a formatted rendering of it. This
+    # assumes no call site's attribute values themselves contain a literal
+    # `>` (e.g. a `>` inside a `{...}` expression) — none of today's three
+    # call sites do, and a future one that did would fail LOUDLY here (either
+    # by truncating the tag before a real boundary attr, which the assertion
+    # below would then correctly flag as missing) rather than silently.
+    @call_site_pattern ~r/<Layouts\.app\b.*?>/s
+
+    defp layouts_app_call_sites do
+      "lib/**/*.ex"
+      |> Path.wildcard()
+      |> Enum.reject(&(&1 == @layouts_definition_file))
+      |> Enum.flat_map(fn path ->
+        @call_site_pattern
+        |> Regex.scan(File.read!(path))
+        |> Enum.map(fn [tag] -> {path, tag} end)
+      end)
+    end
+
+    test "every Layouts.app call site under lib/ passes boundary_collapse or bottom_collapse, or is on the documented exception list" do
+      call_sites = layouts_app_call_sites()
+
+      assert call_sites != [],
+             "Expected to find at least one real <Layouts.app call site under lib/ — " <>
+               "if this fails, the scan itself is broken (wrong glob, wrong exclusion), " <>
+               "not that callers vanished."
+
+      for {path, tag} <- call_sites, path not in @default_bottom_stack_exceptions do
+        has_boundary_attr? = tag =~ ~r/\bboundary_collapse\b/ or tag =~ ~r/\bbottom_collapse\b/
+
+        assert has_boundary_attr?,
+               """
+               #{path} calls Layouts.app without boundary_collapse or bottom_collapse.
+
+               A caller that takes <main>'s full default vertical-padding stack
+               accumulates THREE independently-reasonable declarations at its bottom
+               boundary: <main>'s own bottom padding (pb-20, 80px) + its last child's
+               own trailing margin + .pk-footer's own top margin. app.css's
+               `main.pk-bottom-collapse` comment (quick task 260902-il3) records the
+               catalog page's own live-measured version of that stack before it opted
+               in: 176px at 1280px / 128px at 390px — this is the defect class plan
+               01.5-08 closed for the about page (G-01.5-3 item 4) after it went
+               unnoticed for several plans.
+
+               If this caller genuinely wants the unmodified default stack, add its
+               file path to @default_bottom_stack_exceptions above, with a comment
+               explaining why — do not let it pass this test silently.
+               """
+      end
+    end
+  end
+
   describe "brand_logo/1 hit target" do
     test "the wordmark link meets the app's 44px hit-target floor" do
       html = render_component(&Layouts.brand_logo/1, %{})
 
       assert html =~ "min-h-11"
-    end
-  end
-
-  # Guards the 2026-08-18 banned-Tailwind-pattern todo: text-[10px] is an
-  # arbitrary value and text-base-content/70 is an unmaintained holdover —
-  # both explicitly banned by ui-design-system in favor of the app's
-  # documented text-neutral muted-text convention.
-  describe "brand_logo/1 tagline tokens" do
-    test "renders the tagline through theme tokens, not banned arbitrary/opacity classes" do
-      html = render_component(&Layouts.brand_logo/1, %{})
-
-      refute html =~ "text-[10px]"
-      refute html =~ "text-base-content/70"
-      assert html =~ "text-neutral"
     end
   end
 
@@ -645,6 +701,100 @@ defmodule PukllayClubWeb.LayoutsTest do
   # a bare `<body>` with no class, and there is no longer a stylesheet
   # contract for this file to pin — see app.css's own dated note above
   # `.pk-gutter` for the full history and measurement record.
+
+  # G-01.5-9 (re-reported 2026-09-09) asked, a second time, whether the
+  # mechanism removed above should come back. Plan 01.5-12's checkpoint
+  # Task 1 decided A — leave it withdrawn — a second time, with both
+  # reported states in front of the developer. This describe block is the
+  # GUARD for that decision, not a restoration of the presence tests
+  # removed above: it asserts the shell declares NO such mechanism, and it
+  # is written to survive the very source it is guarding, because the
+  # SUPERSEDED note above `.pk-gutter` in app.css necessarily quotes these
+  # same declarations as PROSE while explaining why they were removed (e.g.
+  # the literal text "min-height: 100vh" inside that comment's backticks).
+  # A check against the raw file source would risk matching that prose
+  # instead of real CSS — the specific hazard this describe exists to
+  # avoid — so every assertion below first strips CSS comments, then
+  # further requires the declaration to sit inside an actual bare `body {`
+  # or `main {` rule block (not a comment, not `body.pk-has-cta-bar {`,
+  # not `body:has(#cierre) ... {`), which the prose never is.
+  describe "root layout sticky-footer decision (G-01.5-9, plan 01.5-12 — decided A: leave withdrawn, 2026-09-09)" do
+    @app_css_path "assets/css/app.css"
+
+    # Strips every `/* ... */` CSS comment (non-greedy, DOTALL) before any
+    # assertion runs. This is what keeps the SUPERSEDED note's own prose —
+    # which quotes `min-height: 100vh`, `min-height: 100dvh`, `flex-grow: 1`
+    # and `flex-direction: column` by name, in backticks, as part of the
+    # historical record — from ever being read as a live declaration.
+    defp app_css_without_comments do
+      @app_css_path
+      |> File.read!()
+      |> then(&Regex.replace(~r/\/\*.*?\*\//s, &1, ""))
+    end
+
+    # Matches a real, uncommented, BARE `body { ... }` or `main { ... }`
+    # rule — `body` or `main` as the entire selector, not `body.pk-foo`,
+    # not `body:has(...)`, not a comma-joined group. The negative lookbehind
+    # rejects a preceding word/dot/hyphen character so `.pk-app-shell` (a
+    # class, not this element) and `body.pk-sheet-open` (a compound
+    # selector, not this element alone) can never match.
+    defp bare_element_rule_blocks(css, element) do
+      ~r/(?<![\w.-])#{element}\s*\{([^}]*)\}/s
+      |> Regex.scan(css, capture: :all_but_first)
+      |> Enum.map(fn [block] -> block end)
+    end
+
+    @failure_message """
+    The shell just declared a site-wide sticky-footer mechanism on `body` \
+    or `main` — a viewport-height floor, a flex column, or a flex-grow \
+    factor. This is a TWICE-MADE decision, not an oversight: the mechanism \
+    was added in Phase 01.2 gap-closure round 4, deleted on 2026-09-02 by \
+    quick task 260902-glf as an explicit developer choice, re-reported on \
+    2026-09-09 as G-01.5-9, and decided AGAIN — still withdrawn — by plan \
+    01.5-12's checkpoint Task 1, with both reported states of the tradeoff \
+    (below-footer void on short pages vs. above-footer void on short \
+    pages, since this mechanism RELOCATES the empty space rather than \
+    removing it) in front of the developer both times.
+
+    The G-01.5-9 debug session
+    (.planning/debug/G-01.5-9-footer-not-pinned-bottom.md) got one thing \
+    wrong: it describes this mechanism as "an ABSENCE in the shell... \
+    present since the shell was written." It was not an absence — it \
+    EXISTED and was deliberately removed. Read the whole story, both \
+    dates, in app.css's own dated note above `.pk-gutter` (search for \
+    "SUPERSEDED 2026-09-02") before restoring anything here. If restoring \
+    it is truly the right call now, that is a NEW decision for a NEW plan \
+    to make explicitly, with its own checkpoint and its own dated chapter \
+    in that note — not a silent side effect of an automated pass reading \
+    the diagnosis this test's own history had to correct once already.
+    """
+
+    test "body declares no viewport-height sticky-footer floor" do
+      css = app_css_without_comments()
+
+      for block <- bare_element_rule_blocks(css, "body") do
+        refute block =~ ~r/min-height:\s*100d?vh/, @failure_message
+      end
+    end
+
+    test "body declares no flex column" do
+      css = app_css_without_comments()
+
+      for block <- bare_element_rule_blocks(css, "body") do
+        is_flex_column? = block =~ ~r/display:\s*flex\b/ and block =~ ~r/flex-direction:\s*column\b/
+        refute is_flex_column?, @failure_message
+      end
+    end
+
+    test "main declares no flex-grow factor" do
+      css = app_css_without_comments()
+
+      for block <- bare_element_rule_blocks(css, "main") do
+        refute block =~ ~r/flex(-grow)?:\s*[1-9]/, @failure_message
+      end
+    end
+  end
+
   describe "app/1 footer (SHELL-01, Task 2 checkpoint content)" do
     test "renders the shared pk-footer element with exactly three footer link labels" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
@@ -671,67 +821,14 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  # Footer's left cluster reuses brand_logo/1 but must not repeat the
-  # header's brand subtitle (260821-umm). The footer overrides the tagline
-  # with the About hero's <h1> text, verbatim including the accent
-  # (Conectá, not Conecta — see the plan's Correction note).
-  describe "app/1 footer left cluster tagline (260821-umm)" do
-    test "the footer's left cluster renders the About hero tagline" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      footer_left_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-footer-left")
-        |> LazyHTML.to_html()
-
-      assert footer_left_html =~ "Conectá jugando"
-    end
-
-    test "the footer's left cluster does not repeat the header's brand subtitle" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      footer_left_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-footer-left")
-        |> LazyHTML.to_html()
-
-      refute footer_left_html =~ "JUEGOS DE MESA MODERNOS"
-    end
-
-    test "the header's brand lockup still renders its original subtitle, unchanged" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      header_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("#app-header")
-        |> LazyHTML.to_html()
-
-      assert header_html =~ "JUEGOS DE MESA MODERNOS"
-      refute header_html =~ "Conectá jugando"
-    end
-
-    test "brand_logo/1 called with no attrs still renders the header subtitle (default preserved)" do
-      html = render_component(&Layouts.brand_logo/1, %{})
-
-      assert html =~ "JUEGOS DE MESA MODERNOS"
-    end
-
-    test "the footer's left cluster renders neither theme mark filename (D-A, 260823-snj)" do
-      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
-
-      footer_left_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query(".pk-footer-left")
-        |> LazyHTML.to_html()
-
-      refute footer_left_html =~ "isologo-light.png"
-      refute footer_left_html =~ "isologo-dark.png"
-    end
-  end
+  # G-01.5 footer minimalism pass (2026-09-09): the footer's left cluster
+  # used to reuse brand_logo/1 with a tagline override (260821-umm) — that
+  # whole mechanism (and this describe block's tests, which pinned its
+  # every detail: the override, the no-repeat-header-subtitle guarantee, the
+  # header's own subtitle staying put, the no-isologo-filename guard) is
+  # retired along with the footer brand block itself. The replacement
+  # coverage (no brand_logo output of any kind in .pk-footer-left) lives in
+  # the "brand_logo/1 theme-aware isologo pair" describe block above.
 
   describe "sumate_cta/1 (D-05 superseded, plan 01.1-08)" do
     test "renders the ClubLinks WhatsApp href with target=_blank and rel=noopener noreferrer" do
@@ -746,13 +843,52 @@ defmodule PukllayClubWeb.LayoutsTest do
     # Sketch 013-E: outline at rest, filling on hover — the same classes as
     # CoreComponents.button/1's "secondary" variant, applied directly since
     # button/1's :rest global attr list doesn't carry target/rel through.
-    test "carries the outline-at-rest button classes and the 48px height utility" do
+    #
+    # G-01.5-4 (plan 01.5-10): the outline/primary classes stay, but the
+    # size now comes from ONE class — pk-sumate-btn (app.css) — that owns
+    # every size axis (height, inline padding, font-size, radius) per sketch
+    # 051's approved design source. daisyUI's btn-lg size step and the app's
+    # min-h-11 touch-floor utility (plan 01.5-05's fix) are BOTH gone: this
+    # plan's own diagnosis (.planning/debug/G-01.5-4-hero-cierre-composition-
+    # balance.md) found that composition correctly fixed a real proportion
+    # defect (1.03:1 -> 1.74:1) but never matched the sketch the composition
+    # was actually approved against (2.15:1, pill radius, 28px padding,
+    # 16px font, 48px height) — restoring that fidelity means one class now
+    # owns the whole axis, so leaving btn-lg or min-h-11 alongside
+    # pk-sumate-btn would recreate the exact competing-declaration failure
+    # this same component has already been fixed for once. The 44px touch
+    # floor is met by pk-sumate-btn's own 48px min-height and is verified by
+    # MEASURED height in test/visual/about_geometry.mjs, not by a utility
+    # class name here.
+    test "carries the outline-at-rest button classes and the single pk-sumate-btn geometry class" do
       html = render_component(&Layouts.sumate_cta/1, %{})
 
       assert html =~ "btn-outline"
       assert html =~ "btn-primary"
-      assert html =~ "min-h-12"
+      assert html =~ "pk-sumate-btn"
+
+      refute html =~ "btn-lg",
+             "btn-lg is the daisyUI size step plan 01.5-10 retires. It couples a size step's " <>
+               "own height/padding-inline/font-size to values sketch 051 never specified (42px/" <>
+               "16px/18px in this app's theme) — leaving it alongside pk-sumate-btn makes the " <>
+               "two compete on every one of those axes and silently reintroduces a geometry the " <>
+               "design source was never approved with."
+
+      refute html =~ "min-h-11",
+             "min-h-11 is the one-axis touch-floor utility plan 01.5-05 added and plan 01.5-10 " <>
+               "retires. pk-sumate-btn's own 48px min-height already clears the 44px floor as a " <>
+               "measured property (see test/visual/about_geometry.mjs) — leaving this utility " <>
+               "alongside it would have two declarations compete on the same height axis again."
+
+      refute html =~ "min-h-12"
       refute html =~ "btn-sm"
+    end
+
+    test "still merges a caller-supplied class, so the mobile sticky bar keeps dictating its own width" do
+      html = render_component(&Layouts.sumate_cta/1, %{class: "w-full"})
+
+      assert html =~ "w-full"
+      assert html =~ "pk-sumate-btn"
     end
 
     test "is now public (no longer a private header-only function)" do
