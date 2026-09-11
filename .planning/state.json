@@ -1,12 +1,22 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.0",
+  "milestone": "v1.1 — Sharable Version",
   "phases": [
     {
       "number": "1",
-      "name": "Catalog v1",
-      "status": "in_progress"
+      "name": "Catalog v1 (+ 01.1–01.6)",
+      "status": "pending"
+    },
+    {
+      "number": "01.7",
+      "name": "Production Catalog Data & Security Hardening",
+      "status": "pending"
+    },
+    {
+      "number": "01.8",
+      "name": "SEO, Structured Data & Social Sharing",
+      "status": "pending"
     },
     {
       "number": "2",
@@ -25,9 +35,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 01.7 of 5 · executing"
   },
-  "updated_at": "2026-09-11T03:06:13.695Z"
+  "updated_at": "2026-09-11T14:48:37.280Z"
 }
