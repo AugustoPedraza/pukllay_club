@@ -22,6 +22,31 @@ dev_image_origin =
       "#{uri.scheme}://#{uri.host}#{port_suffix}"
   end
 
+# Configure your database
+#
+# Env-var-first Repo target (SEED-02): set DATABASE_URL inline for a single
+# `mix` invocation to point this dev environment at another database (e.g. a
+# tunnelled production instance) instead of the hardcoded local target below.
+# See AGENTS.md's "Production data seeding" section for the full re-seed
+# runbook. Left unset (the default), this resolves byte-identical to today's
+# hardcoded local target. Sensitive-data-on-connection-error logging is
+# forced off whenever the override is in effect, so a failed connection
+# through a tunnel cannot print a production password into a terminal.
+database_url = System.get_env("DATABASE_URL")
+
+repo_target =
+  if database_url do
+    [url: database_url, show_sensitive_data_on_connection_error: false]
+  else
+    [
+      username: "postgres",
+      password: "postgres",
+      hostname: "localhost",
+      database: "pukllay_club_dev",
+      show_sensitive_data_on_connection_error: true
+    ]
+  end
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 
@@ -40,15 +65,7 @@ config :phoenix_live_view,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
 
-# Configure your database
-config :pukllay_club, PukllayClub.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "pukllay_club_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+config :pukllay_club, PukllayClub.Repo, [stacktrace: true, pool_size: 10] ++ repo_target
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
