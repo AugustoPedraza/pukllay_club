@@ -12,7 +12,7 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 
 - [x] **SEED-01**: Production's live database has the full game catalog (~400+ games) loaded,
       matching dev — currently empty
-- [ ] **SEED-02**: A safe, repeatable, documented path exists to (re-)run the seed pipeline against
+- [x] **SEED-02**: A safe, repeatable, documented path exists to (re-)run the seed pipeline against
       production
 
 ### SEO
@@ -93,7 +93,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SEED-01 | Phase 01.7 | Complete |
-| SEED-02 | Phase 01.7 | Pending |
+| SEED-02 | Phase 01.7 | Complete |
 | SEO-01 | Phase 01.8 | Pending |
 | SEO-02 | Phase 01.8 | Pending |
 | SEO-03 | Phase 01.8 | Pending |
