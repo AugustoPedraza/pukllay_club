@@ -53,3 +53,8 @@ npm-debug.log
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
 
+# GSD workflow runtime state — ephemeral per-session lock/sentinel files,
+# not project content.
+/.gsd/
+/.planning/milestone.lock
+

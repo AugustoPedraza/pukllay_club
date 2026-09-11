@@ -1,0 +1,1078 @@
+{
+  "prod@375": {
+    "mark": {
+      "box": {
+        "w": 163.45,
+        "h": 180,
+        "top": 104,
+        "bottom": 284,
+        "left": 106,
+        "right": 269.45,
+        "cx": 187.73
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": ""
+    },
+    "name": {
+      "box": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 296,
+        "bottom": 332.44,
+        "left": 132.13,
+        "right": 243.31,
+        "cx": 187.72
+      },
+      "ink": {
+        "w": 111.19,
+        "h": 29,
+        "top": 299,
+        "bottom": 328,
+        "left": 132.13,
+        "right": 243.31,
+        "cx": 187.72
+      },
+      "fs": "24.3px",
+      "fw": "400",
+      "lh": "36.45px",
+      "mt": "12px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "PUKLLAY CLUB"
+    },
+    "eyebrow": {
+      "box": {
+        "w": 347,
+        "h": 16,
+        "top": 364,
+        "bottom": 380,
+        "left": 14,
+        "right": 361,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 246.34,
+        "h": 15,
+        "top": 364,
+        "bottom": 379,
+        "left": 64.33,
+        "right": 310.67,
+        "cx": 187.5
+      },
+      "fs": "12px",
+      "fw": "400",
+      "lh": "16px",
+      "mt": "0px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "h1": {
+      "box": {
+        "w": 347,
+        "h": 44,
+        "top": 392,
+        "bottom": 436,
+        "left": 14,
+        "right": 361,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 243.28,
+        "h": 53,
+        "top": 387,
+        "bottom": 440,
+        "left": 65.86,
+        "right": 309.14,
+        "cx": 187.5
+      },
+      "fs": "44px",
+      "fw": "400",
+      "lh": "44px",
+      "mt": "0px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Conectá jugando"
+    },
+    "sub": {
+      "box": {
+        "w": 347,
+        "h": 24,
+        "top": 448,
+        "bottom": 472,
+        "left": 14,
+        "right": 361,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 258.3,
+        "h": 20,
+        "top": 450,
+        "bottom": 470,
+        "left": 58.34,
+        "right": 316.64,
+        "cx": 187.49
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Volvé a jugar. Volvé a encontrarte."
+    },
+    "cta": {
+      "box": {
+        "w": 85.41,
+        "h": 48,
+        "top": 484,
+        "bottom": 532,
+        "left": 144.8,
+        "right": 230.2,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 51.41,
+        "h": 17,
+        "top": 499.5,
+        "bottom": 516.5,
+        "left": 161.8,
+        "right": 213.2,
+        "cx": 187.5
+      },
+      "fs": "14px",
+      "fw": "600",
+      "lh": "21px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "4px",
+      "pad": "0px 16px",
+      "text": "Sumate"
+    },
+    "anchor": {
+      "box": {
+        "w": 347,
+        "h": 260,
+        "top": 104,
+        "bottom": 364,
+        "left": 14,
+        "right": 361,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": ""
+    }
+  },
+  "s050@375": {
+    "mark": {
+      "box": {
+        "w": 180,
+        "h": 180,
+        "top": 533,
+        "bottom": 713,
+        "left": 97.5,
+        "right": 277.5,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": ""
+    },
+    "name": {
+      "box": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 723,
+        "bottom": 759.44,
+        "left": 131.91,
+        "right": 243.09,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 723,
+        "bottom": 759.44,
+        "left": 131.91,
+        "right": 243.09,
+        "cx": 187.5
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "10px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "PUKLLAY CLUB"
+    },
+    "eyebrow": {
+      "box": {
+        "w": 375,
+        "h": 54,
+        "top": 769,
+        "bottom": 823,
+        "left": 0,
+        "right": 375,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 319.25,
+        "h": 51,
+        "top": 770,
+        "bottom": 821,
+        "left": 27.88,
+        "right": 347.13,
+        "cx": 187.5
+      },
+      "fs": "18px",
+      "fw": "400",
+      "lh": "27px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "h1": {
+      "box": {
+        "w": 233.17,
+        "h": 60,
+        "top": 839,
+        "bottom": 899,
+        "left": 70.91,
+        "right": 304.08,
+        "cx": 187.49
+      },
+      "ink": {
+        "w": 233.17,
+        "h": 48,
+        "top": 845,
+        "bottom": 893,
+        "left": 70.91,
+        "right": 304.08,
+        "cx": 187.49
+      },
+      "fs": "40px",
+      "fw": "700",
+      "lh": "60px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Conectá jugando"
+    },
+    "sub": {
+      "box": {
+        "w": 375,
+        "h": 54,
+        "top": 769,
+        "bottom": 823,
+        "left": 0,
+        "right": 375,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 319.25,
+        "h": 51,
+        "top": 770,
+        "bottom": 821,
+        "left": 27.88,
+        "right": 347.13,
+        "cx": 187.5
+      },
+      "fs": "18px",
+      "fw": "400",
+      "lh": "27px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "cta": {
+      "box": {
+        "w": 119.11,
+        "h": 50,
+        "top": 993,
+        "bottom": 1043,
+        "left": 127.94,
+        "right": 247.05,
+        "cx": 187.49
+      },
+      "ink": {
+        "w": 61.11,
+        "h": 22,
+        "top": 1007,
+        "bottom": 1029,
+        "left": 156.94,
+        "right": 218.05,
+        "cx": 187.49
+      },
+      "fs": "16px",
+      "fw": "600",
+      "lh": "24px",
+      "mt": "8px",
+      "mb": "0px",
+      "radius": "9999px",
+      "pad": "12px 28px",
+      "text": "Sumate"
+    }
+  },
+  "s051@375": {
+    "mark": {
+      "box": {
+        "w": 180,
+        "h": 180,
+        "top": 649,
+        "bottom": 829,
+        "left": 97.5,
+        "right": 277.5,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": ""
+    },
+    "name": {
+      "box": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 839,
+        "bottom": 875.44,
+        "left": 131.91,
+        "right": 243.09,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 839,
+        "bottom": 875.44,
+        "left": 131.91,
+        "right": 243.09,
+        "cx": 187.5
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "10px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "PUKLLAY CLUB"
+    },
+    "eyebrow": {
+      "box": {
+        "w": 261.25,
+        "h": 18,
+        "top": 897,
+        "bottom": 915,
+        "left": 56.88,
+        "right": 318.13,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 261.25,
+        "h": 17,
+        "top": 897,
+        "bottom": 914,
+        "left": 56.88,
+        "right": 318.13,
+        "cx": 187.5
+      },
+      "fs": "12px",
+      "fw": "400",
+      "lh": "18px",
+      "mt": "12px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "h1": {
+      "box": {
+        "w": 233.17,
+        "h": 60,
+        "top": 943,
+        "bottom": 1003,
+        "left": 70.91,
+        "right": 304.08,
+        "cx": 187.49
+      },
+      "ink": {
+        "w": 233.17,
+        "h": 48,
+        "top": 949,
+        "bottom": 997,
+        "left": 70.91,
+        "right": 304.08,
+        "cx": 187.49
+      },
+      "fs": "40px",
+      "fw": "700",
+      "lh": "60px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Conectá jugando"
+    },
+    "sub": {
+      "box": {
+        "w": 261.25,
+        "h": 18,
+        "top": 897,
+        "bottom": 915,
+        "left": 56.88,
+        "right": 318.13,
+        "cx": 187.5
+      },
+      "ink": {
+        "w": 261.25,
+        "h": 17,
+        "top": 897,
+        "bottom": 914,
+        "left": 56.88,
+        "right": 318.13,
+        "cx": 187.5
+      },
+      "fs": "12px",
+      "fw": "400",
+      "lh": "18px",
+      "mt": "12px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "cta": {
+      "box": {
+        "w": 119.11,
+        "h": 48,
+        "top": 1089,
+        "bottom": 1137,
+        "left": 127.94,
+        "right": 247.05,
+        "cx": 187.49
+      },
+      "ink": {
+        "w": 61.11,
+        "h": 22,
+        "top": 1102,
+        "bottom": 1124,
+        "left": 156.94,
+        "right": 218.05,
+        "cx": 187.49
+      },
+      "fs": "16px",
+      "fw": "600",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "9999px",
+      "pad": "0px 28px",
+      "text": "Sumate"
+    }
+  },
+  "prod@1280": {
+    "mark": {
+      "box": {
+        "w": 163.45,
+        "h": 180,
+        "top": 153,
+        "bottom": 333,
+        "left": 558.5,
+        "right": 721.95,
+        "cx": 640.23
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": ""
+    },
+    "name": {
+      "box": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 345,
+        "bottom": 381.44,
+        "left": 584.63,
+        "right": 695.81,
+        "cx": 640.22
+      },
+      "ink": {
+        "w": 111.19,
+        "h": 29,
+        "top": 348,
+        "bottom": 377,
+        "left": 584.63,
+        "right": 695.81,
+        "cx": 640.22
+      },
+      "fs": "24.3px",
+      "fw": "400",
+      "lh": "36.45px",
+      "mt": "12px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "PUKLLAY CLUB"
+    },
+    "eyebrow": {
+      "box": {
+        "w": 1216,
+        "h": 16,
+        "top": 413,
+        "bottom": 429,
+        "left": 32,
+        "right": 1248,
+        "cx": 640
+      },
+      "ink": {
+        "w": 246.34,
+        "h": 15,
+        "top": 413,
+        "bottom": 428,
+        "left": 516.83,
+        "right": 763.17,
+        "cx": 640
+      },
+      "fs": "12px",
+      "fw": "400",
+      "lh": "16px",
+      "mt": "0px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "h1": {
+      "box": {
+        "w": 1216,
+        "h": 88,
+        "top": 441,
+        "bottom": 529,
+        "left": 32,
+        "right": 1248,
+        "cx": 640
+      },
+      "ink": {
+        "w": 486.56,
+        "h": 105,
+        "top": 432,
+        "bottom": 537,
+        "left": 396.72,
+        "right": 883.28,
+        "cx": 640
+      },
+      "fs": "88px",
+      "fw": "400",
+      "lh": "88px",
+      "mt": "0px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Conectá jugando"
+    },
+    "sub": {
+      "box": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Volvé a jugar. Volvé a encontrarte."
+    },
+    "cta": {
+      "box": {
+        "w": 85.41,
+        "h": 48,
+        "top": 577,
+        "bottom": 625,
+        "left": 597.3,
+        "right": 682.7,
+        "cx": 640
+      },
+      "ink": {
+        "w": 51.41,
+        "h": 17,
+        "top": 592.5,
+        "bottom": 609.5,
+        "left": 614.3,
+        "right": 665.7,
+        "cx": 640
+      },
+      "fs": "14px",
+      "fw": "600",
+      "lh": "21px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "4px",
+      "pad": "0px 16px",
+      "text": "Sumate"
+    },
+    "anchor": {
+      "box": {
+        "w": 1216,
+        "h": 260,
+        "top": 153,
+        "bottom": 413,
+        "left": 32,
+        "right": 1248,
+        "cx": 640
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": ""
+    }
+  },
+  "s050@1280": {
+    "mark": {
+      "box": {
+        "w": 180,
+        "h": 180,
+        "top": 396.5,
+        "bottom": 576.5,
+        "left": 550,
+        "right": 730,
+        "cx": 640
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": ""
+    },
+    "name": {
+      "box": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 586.5,
+        "bottom": 622.94,
+        "left": 584.41,
+        "right": 695.59,
+        "cx": 640
+      },
+      "ink": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 586.5,
+        "bottom": 622.94,
+        "left": 584.41,
+        "right": 695.59,
+        "cx": 640
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "10px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "PUKLLAY CLUB"
+    },
+    "eyebrow": {
+      "box": {
+        "w": 391.86,
+        "h": 27,
+        "top": 632.5,
+        "bottom": 659.5,
+        "left": 444.06,
+        "right": 835.92,
+        "cx": 639.99
+      },
+      "ink": {
+        "w": 391.86,
+        "h": 24,
+        "top": 633.5,
+        "bottom": 657.5,
+        "left": 444.06,
+        "right": 835.92,
+        "cx": 639.99
+      },
+      "fs": "18px",
+      "fw": "400",
+      "lh": "27px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "h1": {
+      "box": {
+        "w": 419.7,
+        "h": 108,
+        "top": 675.5,
+        "bottom": 783.5,
+        "left": 430.14,
+        "right": 849.84,
+        "cx": 639.99
+      },
+      "ink": {
+        "w": 419.7,
+        "h": 87,
+        "top": 685.5,
+        "bottom": 772.5,
+        "left": 430.14,
+        "right": 849.84,
+        "cx": 639.99
+      },
+      "fs": "72px",
+      "fw": "700",
+      "lh": "108px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Conectá jugando"
+    },
+    "sub": {
+      "box": {
+        "w": 391.86,
+        "h": 27,
+        "top": 632.5,
+        "bottom": 659.5,
+        "left": 444.06,
+        "right": 835.92,
+        "cx": 639.99
+      },
+      "ink": {
+        "w": 391.86,
+        "h": 24,
+        "top": 633.5,
+        "bottom": 657.5,
+        "left": 444.06,
+        "right": 835.92,
+        "cx": 639.99
+      },
+      "fs": "18px",
+      "fw": "400",
+      "lh": "27px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "cta": {
+      "box": {
+        "w": 119.11,
+        "h": 50,
+        "top": 877.5,
+        "bottom": 927.5,
+        "left": 580.44,
+        "right": 699.55,
+        "cx": 639.99
+      },
+      "ink": {
+        "w": 61.11,
+        "h": 22,
+        "top": 891.5,
+        "bottom": 913.5,
+        "left": 609.44,
+        "right": 670.55,
+        "cx": 639.99
+      },
+      "fs": "16px",
+      "fw": "600",
+      "lh": "24px",
+      "mt": "8px",
+      "mb": "0px",
+      "radius": "9999px",
+      "pad": "12px 28px",
+      "text": "Sumate"
+    }
+  },
+  "s051@1280": {
+    "mark": {
+      "box": {
+        "w": 180,
+        "h": 180,
+        "top": 457,
+        "bottom": 637,
+        "left": 550,
+        "right": 730,
+        "cx": 640
+      },
+      "ink": {
+        "w": 0,
+        "h": 0,
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "cx": 0
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": ""
+    },
+    "name": {
+      "box": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 647,
+        "bottom": 683.44,
+        "left": 584.41,
+        "right": 695.59,
+        "cx": 640
+      },
+      "ink": {
+        "w": 111.19,
+        "h": 36.44,
+        "top": 647,
+        "bottom": 683.44,
+        "left": 584.41,
+        "right": 695.59,
+        "cx": 640
+      },
+      "fs": "16px",
+      "fw": "400",
+      "lh": "24px",
+      "mt": "10px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "PUKLLAY CLUB"
+    },
+    "eyebrow": {
+      "box": {
+        "w": 261.25,
+        "h": 18,
+        "top": 705,
+        "bottom": 723,
+        "left": 509.38,
+        "right": 770.63,
+        "cx": 640
+      },
+      "ink": {
+        "w": 261.25,
+        "h": 17,
+        "top": 705,
+        "bottom": 722,
+        "left": 509.38,
+        "right": 770.63,
+        "cx": 640
+      },
+      "fs": "12px",
+      "fw": "400",
+      "lh": "18px",
+      "mt": "12px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "h1": {
+      "box": {
+        "w": 419.7,
+        "h": 108,
+        "top": 751,
+        "bottom": 859,
+        "left": 430.14,
+        "right": 849.84,
+        "cx": 639.99
+      },
+      "ink": {
+        "w": 419.7,
+        "h": 87,
+        "top": 761,
+        "bottom": 848,
+        "left": 430.14,
+        "right": 849.84,
+        "cx": 639.99
+      },
+      "fs": "72px",
+      "fw": "700",
+      "lh": "108px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Conectá jugando"
+    },
+    "sub": {
+      "box": {
+        "w": 261.25,
+        "h": 18,
+        "top": 705,
+        "bottom": 723,
+        "left": 509.38,
+        "right": 770.63,
+        "cx": 640
+      },
+      "ink": {
+        "w": 261.25,
+        "h": 17,
+        "top": 705,
+        "bottom": 722,
+        "left": 509.38,
+        "right": 770.63,
+        "cx": 640
+      },
+      "fs": "12px",
+      "fw": "400",
+      "lh": "18px",
+      "mt": "12px",
+      "mb": "12px",
+      "radius": "0px",
+      "pad": "0px",
+      "text": "Club de juegos de mesa · Jujuy"
+    },
+    "cta": {
+      "box": {
+        "w": 119.11,
+        "h": 48,
+        "top": 945,
+        "bottom": 993,
+        "left": 580.44,
+        "right": 699.55,
+        "cx": 639.99
+      },
+      "ink": {
+        "w": 61.11,
+        "h": 22,
+        "top": 958,
+        "bottom": 980,
+        "left": 609.44,
+        "right": 670.55,
+        "cx": 639.99
+      },
+      "fs": "16px",
+      "fw": "600",
+      "lh": "24px",
+      "mt": "0px",
+      "mb": "0px",
+      "radius": "9999px",
+      "pad": "0px 28px",
+      "text": "Sumate"
+    }
+  }
+}
