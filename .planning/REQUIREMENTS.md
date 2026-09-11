@@ -10,9 +10,9 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 
 ### Production Data
 
-- [ ] **SEED-01**: Production's live database has the full game catalog (~400+ games) loaded,
+- [x] **SEED-01**: Production's live database has the full game catalog (~400+ games) loaded,
       matching dev — currently empty
-- [ ] **SEED-02**: A safe, repeatable, documented path exists to (re-)run the seed pipeline against
+- [x] **SEED-02**: A safe, repeatable, documented path exists to (re-)run the seed pipeline against
       production
 
 ### SEO
@@ -41,22 +41,22 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 
 ### Security Hardening
 
-- [ ] **SEC-01**: Session cookies are marked `Secure` in production (env-gated so local HTTP dev
+- [x] **SEC-01**: Session cookies are marked `Secure` in production (env-gated so local HTTP dev
       is unaffected)
-- [ ] **SEC-02**: HTTPS responses include a valid HSTS header, verified live against production
-- [ ] **SEC-03**: CSP is reviewed and tightened where possible without breaking the existing
+- [x] **SEC-02**: HTTPS responses include a valid HSTS header, verified live against production
+- [x] **SEC-03**: CSP is reviewed and tightened where possible without breaking the existing
       Google Maps embed (`frame-src`)
-- [ ] **SEC-04**: CSRF protection is confirmed to also cover LiveView's websocket connect flow
+- [x] **SEC-04**: CSRF protection is confirmed to also cover LiveView's websocket connect flow
       (not just plain form posts)
 - [ ] **SEC-05**: JSON-LD script tags render correctly under CSP via a nonce or hash-source — not
       by weakening `script-src` with `unsafe-inline`
 
 ### Secrets Audit
 
-- [ ] **AUDIT-01**: A full git-history sweep for leaked secrets/keys/credentials/tokens has been
-      performed and documented (not just currently-tracked files)
-- [ ] **AUDIT-02**: Any real finding from the sweep is rotated/remediated; false positives
-      (e.g. `signing_salt`) are documented and dismissed
+- [x] **AUDIT-01**: A full git-history sweep for leaked secrets/keys/credentials/tokens has been
+      performed and documented (not just currently-tracked files) (Phase 01.7 plan 04)
+- [x] **AUDIT-02**: Any real finding from the sweep is rotated/remediated; false positives
+      (e.g. `signing_salt`) are documented and dismissed (Phase 01.7 plan 04)
 
 ## v2 Requirements
 
@@ -92,8 +92,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEED-01 | Phase 01.7 | Pending |
-| SEED-02 | Phase 01.7 | Pending |
+| SEED-01 | Phase 01.7 | Complete |
+| SEED-02 | Phase 01.7 | Complete |
 | SEO-01 | Phase 01.8 | Pending |
 | SEO-02 | Phase 01.8 | Pending |
 | SEO-03 | Phase 01.8 | Pending |
@@ -105,20 +105,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SHARE-03 | Phase 01.8 | Pending |
 | SHARE-04 | Phase 01.8 | Pending |
 | SHARE-05 | Phase 01.8 | Pending |
-| SEC-01 | Phase 01.7 | Pending |
-| SEC-02 | Phase 01.7 | Pending |
-| SEC-03 | Phase 01.7 | Pending |
-| SEC-04 | Phase 01.7 | Pending |
+| SEC-01 | Phase 01.7 | Complete |
+| SEC-02 | Phase 01.7 | Complete |
+| SEC-03 | Phase 01.7 | Complete |
+| SEC-04 | Phase 01.7 | Complete |
 | SEC-05 | Phase 01.8 | Pending |
-| AUDIT-01 | Phase 01.7 | Pending |
-| AUDIT-02 | Phase 01.7 | Pending |
+| AUDIT-01 | Phase 01.7 | Complete |
+| AUDIT-02 | Phase 01.7 | Complete |
 
 **Coverage:**
+
 - v1 requirements: 20 total
 - Mapped to phases: 20 (Phase 01.7: 8 · Phase 01.8: 12)
 - Unmapped: 0 — 100% coverage, no orphans, no duplicates
 
 **Phase notes:**
+
 - SEC-05 (JSON-LD renders under CSP via nonce/hash-source) is mapped to Phase 01.8, not 01.7: the
   CSP nonce refactor is the first step of the JSON-LD chain and is only observable once JSON-LD
   exists. Phase 01.7's CSP work (SEC-03) is a directive-by-directive review of the existing policy
