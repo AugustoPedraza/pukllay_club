@@ -53,10 +53,10 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 
 ### Secrets Audit
 
-- [ ] **AUDIT-01**: A full git-history sweep for leaked secrets/keys/credentials/tokens has been
-      performed and documented (not just currently-tracked files)
-- [ ] **AUDIT-02**: Any real finding from the sweep is rotated/remediated; false positives
-      (e.g. `signing_salt`) are documented and dismissed
+- [x] **AUDIT-01**: A full git-history sweep for leaked secrets/keys/credentials/tokens has been
+      performed and documented (not just currently-tracked files) (Phase 01.7 plan 04)
+- [x] **AUDIT-02**: Any real finding from the sweep is rotated/remediated; false positives
+      (e.g. `signing_salt`) are documented and dismissed (Phase 01.7 plan 04)
 
 ## v2 Requirements
 
@@ -110,8 +110,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-03 | Phase 01.7 | Pending |
 | SEC-04 | Phase 01.7 | Pending |
 | SEC-05 | Phase 01.8 | Pending |
-| AUDIT-01 | Phase 01.7 | Pending |
-| AUDIT-02 | Phase 01.7 | Pending |
+| AUDIT-01 | Phase 01.7 | Complete |
+| AUDIT-02 | Phase 01.7 | Complete |
 
 **Coverage:**
 - v1 requirements: 20 total
