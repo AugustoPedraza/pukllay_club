@@ -1,0 +1,33 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v1.0",
+  "phases": [
+    {
+      "number": "1",
+      "name": "Catalog v1",
+      "status": "in_progress"
+    },
+    {
+      "number": "2",
+      "name": "Natural-Language Spanish Search + Auth",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "RAG Rules Oracle",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Club Operations",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 2)",
+    "reason": "Phase 2 of 8 — needs a plan"
+  },
+  "updated_at": "2026-09-01T22:59:35.354Z"
+}

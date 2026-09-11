@@ -26,7 +26,9 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
       resized images, complexity-teaching UX (visual weight, plain-language mechanic/theme chips),
       hard filters, and keyword search — fully public, no auth (Phase 1; shell/detail-page chrome
       shipped in Phase 1.1; catalog-grid and detail-page navigation/layout polished across 32 plans
-      and 10 UAT gap-closure rounds in Phase 01.2, completed 2026-08-29)
+      and 10 UAT gap-closure rounds in Phase 01.2, completed 2026-08-29; game detail page content
+      accuracy — BGG stat/rank display, natural Argentine-Spanish descriptions, designer/artist
+      filtering, reading-column layout — completed across 12 plans in Phase 01.3, 2026-09-01)
 
 ### Active
 
@@ -118,6 +120,8 @@ assuming the visitor already speaks the hobby's vocabulary.
 | Business Context section omitted | Internal club tool — no payments, no revenue model | ✓ Good |
 | Dockerfile strategy, migration safety, secrets management | Deferred to Phase 0 discuss/plan rather than decided at project init | ✓ Resolved in Phase 0 — entrypoint-gated migrations (D-05), GitHub Actions repo secrets (D-08), live-proven via a real migration shipped through the pipeline (D-06) |
 | Phase 1.1 inserted (Site Shell & Content Pages) then Phase 01.2 inserted (Catalog & Detail Navigation Polish) — both urgent, both ahead of Phase 2 | Phase 1's catalog UX needed a real shared header/footer/about/detail shell before the hero NL-search feature would have anything worth searching into, then that shell's own mobile layout and lightbox needed a dedicated polish pass once real usage surfaced gaps | ✓ Good — both inserted phases complete; 01.2 in particular closed a 10-round UAT gap-closure chain (chip-system unification, lightbox rebuild, mobile masthead restructure) |
+| Phase 01.3 inserted (Game Detail Layout & Content Accuracy) — real BGG re-enrichment (385/393 games) + a full Gemini-translated Spanish description batch (384/385 games), plus designer/artist filtering, reading-column layout rework, and a 3-round chevron/toggle CSS gap-closure chain (float→native line-clamp→absolute-overlay) | Phase 1/01.2 shipped the detail page's layout and navigation but its actual game data (BGG stats, English descriptions) and information hierarchy still needed correcting before NL search (Phase 2) surfaces it to members | ✓ Good — 12 plans, 8/8 UAT checkpoints passed (incl. 2 real-device WebKit confirmations), threats_open: 0. One gap (G-01.3-1, empty hashtag row) resolved as intended behavior — CSV-derived tag coverage is only 26% of the catalog, accepted rather than fixed |
+| Phase 01.3.1 inserted (Game Image Quality & Multi-Image Gallery) — corrected `ImagePipeline.process_gallery/3` + catalog-wide `GalleryBackfill` re-run over ~434 games, plus a shared `.pk-poster-img` letterbox/contain class applied to every artwork surface except the lightbox and 64x64 selector chips | BGG's gallery images could be other-edition/other-language box covers (not photos of the actual game) and box art was being cropped to fill a fixed near-square frame — both silently broke the already-Complete CATALOG-01/CATALOG-09 requirements | ✓ Good — 2/2 plans, both UAT checkpoints passed (letterbox rendering across all surfaces; motivating example BGG id 305096 shows the correct Spanish/Fantasía cover with no stray thumbnail/dot strip). D-02 scope constraint: BGG's XML API v2 exposes no reachable gameplay/component photos (one image per thing/version, no caption/category, direct site probes 403) — gallery scope reduced to Spanish-edition box art only rather than the original multi-photo ask |
 
 ## Evolution
 
@@ -137,4 +141,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-29 after Phase 01.2 completion*
+*Last updated: 2026-09-01 after Phase 01.3.1 completion*

@@ -4,8 +4,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
 
+  alias Plug.Conn.Query
   alias PukllayClub.Catalog.Reservation
   alias PukllayClubWeb.CarouselRow
+  alias PukllayClubWeb.CatalogFilters
   alias PukllayClubWeb.GameChips
 
   describe "GET /juegos/:id" do
@@ -87,7 +89,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "+7"
     end
 
-    test "renders designers, age, and description in Ficha técnica, and players/duration once in the facts row (D-05)",
+    test "renders designers in the fact grid and description in the reading column, and players/duration once in the facts row; no minimum-age label renders (D-05, UAT gap G-01.3-1 item 2)",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -105,11 +107,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
 
       assert html =~ "Klaus Teuber"
-      assert html =~ "10+"
       assert html =~ "Compite por colonizar la isla de Catán."
 
+      # 01.3-07 (UAT gap G-01.3-1 item 2): no minimum-age row anywhere on
+      # the page, even though this game has a min_age set — the field and
+      # its ?min_age= filter param remain live, only this render site is
+      # gone.
+      refute html =~ "10+"
+      refute html =~ "Edad mínima"
+
       # D-05: players is represented exactly once, by the facts row —
-      # never restated as a Ficha técnica spec row.
+      # never restated as a fact-grid row.
       assert facts_html =~ "3-4"
       refute spec_html =~ "3-4"
       refute spec_html =~ "Jugadores"
@@ -444,47 +452,116 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html =~ "Otras opciones que te van a encantar"
     end
 
-    test "the ficha técnica never renders the dead Ilustrador or BGG-ranking rows (D-04)", %{
-      conn: conn
-    } do
-      game = game_fixture()
-
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
-
-      doc = LazyHTML.from_document(html)
-      spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
-
-      refute spec_html =~ "Ilustrador"
-      refute spec_html =~ "Puesto en el ranking BGG"
-      refute spec_html =~ "No disponible"
-    end
-
-    test "a game with a bgg_id renders a boardgamegeek.com link in the ficha técnica, one without renders none",
+    # D-04 (01.2-04) established the rule this test still covers, under
+    # different data: ground every field in the real schema, including its
+    # gaps — never paper over an absence with a placeholder. At the time
+    # this test was written the Ilustrador/BGG-ranking rows were dead
+    # placeholders with no backing schema field, so the correct behaviour
+    # was "never render, ever." D-05/D-06 (01.3-05), carried forward by
+    # 01.3-07's fact-grid/Comunidad BGG split, add real artists/bgg_rank
+    # columns, so the correct behaviour is now *conditional*: present when
+    # the field is set, absent when it's nil.
+    test "the Ilustradores fact-grid column and the Ranking BGG stat render conditionally on real data, never as a placeholder (D-04, D-05, D-06)",
          %{conn: conn} do
-      # weight_band differs so neither game is the other's Juegos similares
-      # bandmate — the footer's own unconditional BGG attribution link
-      # would otherwise make "no boardgamegeek.com anywhere on the page"
-      # unassertable regardless of this game's own bgg_id.
-      with_id = game_fixture(%{name: "Con BGG", bgg_id: 13, weight_band: "nivel_experto"})
-      without_id = game_fixture(%{name: "Sin BGG", bgg_id: nil, weight_band: "descubre_el_hobby"})
+      present =
+        game_fixture(%{
+          name: "Con Datos Avanzados",
+          artists: ["Klemens Franz"],
+          bgg_rank: 245,
+          bgg_id: 13,
+          weight_band: "nivel_experto"
+        })
 
-      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_id.id}")
-      {:ok, _view, html_without} = live(conn, ~p"/juegos/#{without_id.id}")
+      absent =
+        game_fixture(%{
+          name: "Sin Datos Avanzados",
+          artists: [],
+          bgg_rank: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          weight_band: "descubre_el_hobby"
+        })
 
-      spec_html_with =
-        html_with |> LazyHTML.from_document() |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+      {:ok, _view, html_present} = live(conn, ~p"/juegos/#{present.id}")
+      {:ok, _view, html_absent} = live(conn, ~p"/juegos/#{absent.id}")
 
-      spec_html_without =
-        html_without
+      spec_present =
+        html_present
         |> LazyHTML.from_document()
         |> LazyHTML.query(".pk-spec-list")
         |> LazyHTML.to_html()
 
-      assert spec_html_with =~ "boardgamegeek.com/boardgame/13"
-      refute spec_html_without =~ "boardgamegeek.com"
+      spec_absent =
+        html_absent
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-spec-list")
+        |> LazyHTML.to_html()
+
+      bgg_row_present =
+        html_present
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-bgg-row")
+        |> LazyHTML.to_html()
+
+      bgg_row_absent =
+        html_absent
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-bgg-row")
+        |> LazyHTML.to_html()
+
+      assert spec_present =~ "Ilustradores"
+      assert spec_present =~ "Klemens Franz"
+      assert bgg_row_present =~ "Ranking"
+      assert bgg_row_present =~ "#245"
+
+      refute spec_absent =~ "Ilustradores"
+      refute bgg_row_absent =~ "Ranking"
+
+      # Kept from the original test intact: the old singular "Ilustrador"
+      # placeholder label and the "No disponible" placeholder text must
+      # still never appear, on either game. The rows are now plural and
+      # data-backed (D-05/D-06), not resurrected as the old dead
+      # placeholder this assertion originally guarded against.
+      refute spec_present =~ "Ilustrador:"
+      refute spec_present =~ "No disponible"
+      refute spec_absent =~ "Ilustrador:"
+      refute spec_absent =~ "No disponible"
     end
 
-    test "a minimal-data game with none of the five spec fields renders no Ficha técnica heading, and the rest of the page still renders",
+    test "a game with a bgg_id renders a boardgamegeek.com/boardgame link in the Comunidad BGG block, one without renders none",
+         %{conn: conn} do
+      # weight_band differs so neither game is the other's Juegos similares
+      # bandmate. The assertion below scopes to "boardgamegeek.com/boardgame"
+      # (not the bare domain) specifically because the footer carries its
+      # own unconditional "Powered by BGG" attribution link to the bare
+      # https://boardgamegeek.com/ root on every page (layouts.ex) — without
+      # that scoping, "no boardgamegeek.com anywhere" would be unassertable
+      # regardless of this game's own bgg_id.
+      with_id = game_fixture(%{name: "Con BGG", bgg_id: 13, weight_band: "nivel_experto"})
+
+      # comunidad_bgg?/1 widens with bgg_id on top of advanced_stats?/1 —
+      # override every BGG stat AND the id to nil here, or the block still
+      # renders (Fuente line only) and the assertion below would be testing
+      # an impossible partial-data combination rather than the real "no BGG
+      # presence at all" case this test targets.
+      without_id =
+        game_fixture(%{
+          name: "Sin BGG",
+          bgg_id: nil,
+          weight_band: "descubre_el_hobby",
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil
+        })
+
+      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_id.id}")
+      {:ok, _view, html_without} = live(conn, ~p"/juegos/#{without_id.id}")
+
+      assert html_with =~ "boardgamegeek.com/boardgame/13"
+      refute html_without =~ "boardgamegeek.com/boardgame"
+    end
+
+    test "a minimal-data game with none of the five fact-grid fields and no bgg_id renders no fact grid and no Comunidad BGG block, and the rest of the page still renders",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -492,40 +569,80 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           min_age: nil,
           year_published: nil,
           designers: [],
+          artists: [],
           publishers: [],
-          bgg_id: nil
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          mechanics: [],
+          themes: []
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      refute html =~ "Ficha técnica"
       refute html =~ "pk-spec-list"
+      refute html =~ "Comunidad BGG"
       assert html =~ "Juego Minimo"
       assert html =~ "Reservar para el sábado"
     end
 
-    test "a game with only a bgg_id and none of the other four fields still renders the Ficha técnica heading and the BGG link",
+    test "a game with a bgg_rating renders the Valoración stat linking to its BGG page (D-06)",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Con Valoración", bgg_rating: 7.4, bgg_id: 13, weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      bgg_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
+
+      assert bgg_html =~ "Valoración"
+      assert bgg_html =~ "7.4/10"
+      assert bgg_html =~ "boardgamegeek.com/boardgame/13"
+    end
+
+    test "a game with no bgg_rating renders no Valoración stat, and the rest of the Comunidad BGG block still renders (D-06)",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Sin Valoración", bgg_rating: nil, weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      bgg_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
+
+      refute bgg_html =~ "Valoración"
+      assert html =~ "Comunidad BGG"
+    end
+
+    test "a game with only a bgg_id and none of the other four fields still renders no fact grid but does render the Comunidad BGG block and its BGG link",
          %{conn: conn} do
       game =
         game_fixture(%{
           min_age: nil,
           year_published: nil,
           designers: [],
+          artists: [],
           publishers: [],
+          mechanics: [],
+          themes: [],
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
           bgg_id: 77
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      assert html =~ "Ficha técnica"
+      refute html =~ "pk-spec-list"
+      assert html =~ "Comunidad BGG"
       assert html =~ "boardgamegeek.com/boardgame/77"
     end
 
-    test "clicking the description toggle expands and collapses the clamp", %{conn: conn} do
+    test "clicking the description toggle expands and collapses the description", %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba."})
 
       {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
-      assert html =~ "pk-clamp"
+      assert html =~ "pk-desc is-clamped"
       refute html =~ "is-expanded"
 
       html2 = render_click(view, "toggle-description", %{})
@@ -536,23 +653,766 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
-  describe "reading column reorder — title then description then a bounded more-info zone (G-01.2-10 task 3)" do
-    test "the description block is the element immediately following the title heading — ordered children, not a substring match",
+  # 01.3-08 (UAT gap G-01.3-1 item 6 + sketch 042's inline-chevron toggle)
+  # / 01.3-10 (gap closure G-01.3-4): pins the description's justify/clamp
+  # mechanism and the icon-only toggle's collapsed/expanded contract. The
+  # toggle is now ALWAYS a trailing sibling of the paragraph, never a
+  # descendant, in both states — moving it out of the paragraph's line box
+  # is what fixes G-01.3-4. Reuses css_source/0 (declared below in the
+  # title-echo describe block) for the source-level pins.
+  #
+  # Describe-block name kept short deliberately: combined with the longest
+  # test name below (the round-trip test), a longer describe name pushes
+  # the generated `-inlined-test <describe> <test>/1-fun-N-` atom past
+  # Erlang's 255-character atom limit and the module fails to compile with
+  # an opaque `core_to_ssa`/`list_to_atom` system-limit error.
+  describe "description justify + inline icon-only toggle contract (01.3-08/01.3-10)" do
+    test "initial render is collapsed: the paragraph is clamped and the toggle is its sibling, never a descendant",
          %{conn: conn} do
-      game = game_fixture(%{description: "Una crónica de mercaderes."})
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
 
-      # Adjacent-sibling combinator: this only matches when .pk-description
-      # is literally the very next element after #detail-title-block — an
-      # element reinserted between them (the weight badge, the editorial
-      # hashtags, either chip row) makes this query return nothing.
-      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+      p = LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped")
+      assert Enum.count(p) == 1
+
+      # The toggle must never be a descendant of the paragraph — this is
+      # the actual invariant G-01.3-4 is about.
+      assert Enum.empty?(LazyHTML.query(doc, "p#game-description button"))
+
+      toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
+      assert Enum.count(toggle) == 1
+
+      assert List.first(LazyHTML.attribute(toggle, "aria-expanded")) == "false"
+      assert List.first(LazyHTML.attribute(toggle, "aria-label")) == "Ver más"
+      assert List.first(LazyHTML.attribute(toggle, "aria-controls")) == "game-description"
     end
 
-    test "the mechanics/themes chip rows and editorial hashtags never render before the description block",
+    test "after one toggle event: the paragraph is no longer clamped and the toggle stays a trailing sibling",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      html = render_click(view, "toggle-description", %{})
+      doc = LazyHTML.from_document(html)
+
+      p_expanded = LazyHTML.query(doc, "p#game-description.pk-desc")
+      assert Enum.count(p_expanded) == 1
+      assert Enum.empty?(LazyHTML.query(doc, "p#game-description.is-clamped"))
+
+      # The toggle must still be a SIBLING of the paragraph, never a descendant.
+      assert Enum.empty?(LazyHTML.query(doc, "p#game-description button"))
+
+      trailing = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
+      assert Enum.count(trailing) == 1
+      assert List.first(LazyHTML.attribute(trailing, "aria-expanded")) == "true"
+      assert List.first(LazyHTML.attribute(trailing, "aria-label")) == "Ver menos"
+      assert List.first(LazyHTML.attribute(trailing, "aria-controls")) == "game-description"
+    end
+
+    test "round trip: expand, collapse, expand, collapse, expand, collapse — three full cycles, asserting after every transition",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert_collapsed = fn html ->
+        doc = LazyHTML.from_document(html)
+        assert Enum.count(LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped")) == 1
+        assert Enum.empty?(LazyHTML.query(doc, "p#game-description button"))
+        assert Enum.count(LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")) == 1
+      end
+
+      assert_expanded = fn html ->
+        doc = LazyHTML.from_document(html)
+        assert Enum.empty?(LazyHTML.query(doc, "p#game-description.pk-desc.is-clamped"))
+        assert Enum.empty?(LazyHTML.query(doc, "p#game-description button"))
+        assert Enum.count(LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")) == 1
+      end
+
+      assert_collapsed.(html)
+
+      # This is the exact regression sketch 042 hit: a version that only
+      # ever worked on the first expand, then silently no-op'd on every
+      # subsequent transition because the relocation logic branched on the
+      # button's current parent instead of the target state. Three full
+      # cycles (six transitions), asserting after each one, is the point.
+      html = render_click(view, "toggle-description", %{})
+      assert_expanded.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_collapsed.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_expanded.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_collapsed.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_expanded.(html)
+
+      html = render_click(view, "toggle-description", %{})
+      assert_collapsed.(html)
+    end
+
+    test "a game with a nil description renders neither the paragraph nor the toggle", %{
+      conn: conn
+    } do
+      game = game_fixture(%{description: nil})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "pk-desc-shell"
+      refute html =~ "pk-desc-toggle"
+      refute html =~ "id=\"game-description\""
+    end
+
+    test "the description declares justify and text-justify: inter-word, unconditional at every width" do
+      block =
+        case Regex.run(~r/(?m)^\.pk-desc\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-desc { ... }` rule found in assets/css/app.css")
+        end
+
+      assert block =~ ~r/text-align:\s*justify;/,
+             "`.pk-desc` must declare `text-align: justify` unconditionally (UAT item 6 — " <>
+               "the alignment must hold at every viewport width, not just desktop)."
+
+      assert block =~ ~r/text-justify:\s*inter-word;/,
+             "`.pk-desc` must declare `text-justify: inter-word` — word-based justification is " <>
+               "the right setting for Spanish prose regardless of the clip mechanism."
+    end
+
+    test "the collapsed description clips via a native three-line clamp with a native ellipsis" do
+      clamped_block =
+        case Regex.run(~r/(?m)^\.pk-desc\.is-clamped\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-desc.is-clamped { ... }` rule found in assets/css/app.css")
+        end
+
+      assert clamped_block =~ ~r/-webkit-line-clamp:\s*3;/,
+             "`.pk-desc.is-clamped` must declare the native 3-line clamp — the only clip " <>
+               "mechanism with a clean-cut guarantee (description-truncation.md)."
+
+      assert clamped_block =~ ~r/text-overflow:\s*ellipsis;/,
+             "`.pk-desc.is-clamped` must declare `text-overflow: ellipsis` — the engine-supplied " <>
+               "ellipsis this clamp mechanism exists for."
+    end
+
+    test "the toggle declares no float-based positioning and no line-height-derived margin" do
+      toggle_block =
+        case Regex.run(~r/(?m)^\.pk-desc-toggle\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-desc-toggle { ... }` rule found in assets/css/app.css")
+        end
+
+      refute toggle_block =~ ~r/float\s*:/,
+             "`.pk-desc-toggle` must not declare float-based positioning — G-01.3-4's root cause " <>
+               "was the toggle living inside the paragraph's line box via a float."
+
+      refute toggle_block =~ ~r/calc\(\d+ \* 1\.5em\)/,
+             "`.pk-desc-toggle` must not derive its position from a line-height multiple — it is " <>
+               "positioned purely as a flex child of `.pk-desc-shell`'s column now."
+
+      assert toggle_block =~ ~r/align-self:\s*flex-end;/,
+             "`.pk-desc-toggle` must position itself via `align-self: flex-end` on the shell's " <>
+               "flex column — the only positioning mechanism left after this gap closure."
+    end
+
+    # 01.3-10 task 2: net-new regressions pinning the OLD failure mode as
+    # un-reintroducible — not restatements of the pins above, which only
+    # assert the new mechanism is present.
+    test "the toggle is never a descendant of the paragraph, in EITHER the collapsed or the expanded state",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert_containment = fn html ->
+        doc = LazyHTML.from_document(html)
+
+        assert Enum.empty?(LazyHTML.query(doc, "p#game-description button")),
+               "An engine's float-versus-justified-line width computation can only move a " <>
+                 "control that lives INSIDE the line box — keeping the toggle outside the " <>
+                 "paragraph entirely is the structural guarantee against G-01.3-4, not a " <>
+                 "stylistic preference. G-01.3-4 could not reproduce in Blink at all (zero " <>
+                 "measured overflow), so a pixel-measurement assertion would have passed the " <>
+                 "whole time this bug shipped; this structural check would not."
+
+        assert Enum.count(LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")) ==
+                 1,
+               "Expected exactly one button.pk-desc-toggle as #game-description's adjacent " <>
+                 "sibling."
+      end
+
+      # Collapsed state.
+      assert_containment.(html)
+
+      # Expanded state — same invariant must hold after toggling.
+      html = render_click(view, "toggle-description", %{})
+      assert_containment.(html)
+    end
+
+    test "the toggle carries a real 44px box via markup utilities, not an invisible offset overlay",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
+      class = List.first(LazyHTML.attribute(toggle, "class")) || ""
+
+      assert class =~ "min-h-11",
+             "The toggle must carry `min-h-11`. The invisible `::before` offset overlay that " <>
+               "used to supply the 44px touch floor is deliberately gone — it hung 13px over " <>
+               "the paragraph above and the fact grid below, an accidental tap-hijack " <>
+               "surface, not a hit area — and must not be reintroduced."
+
+      assert class =~ "min-w-11",
+             "The toggle must carry `min-w-11`, for the same reason `min-h-11` is required " <>
+               "above: the invisible offset overlay it replaces must not come back."
+    end
+
+    test "no rule in the .pk-desc* family declares float-based positioning" do
+      family_span =
+        case Regex.run(
+               ~r/^\.pk-desc-shell\s*\{.*?(?=\n\/\* Boundary between the primary reading block)/ms,
+               css_source()
+             ) do
+          [span] ->
+            span
+
+          nil ->
+            flunk(
+              "Could not locate the .pk-desc* family span (from `.pk-desc-shell {` to the " <>
+                "boundary-divider comment) in assets/css/app.css."
+            )
+        end
+
+      # Scoped to extracted RULE BODIES only, never the whole file — this
+      # stylesheet's prose comments legitimately discuss the superseded
+      # float technique by name, and a whole-file scan would make the
+      # comment self-invalidating.
+      bodies = Regex.scan(~r/\{([^}]*)\}/s, family_span, capture: :all_but_first)
+
+      assert bodies != [],
+             "Expected at least one `{ ... }` rule body in the .pk-desc* family span."
+
+      for [body] <- bodies do
+        refute body =~ ~r/float\s*:/,
+               "Found float-based positioning inside a `.pk-desc*` family rule body:\n#{body}\n" <>
+                 "G-01.3-4's root cause was exactly this — a control positioned by a float " <>
+                 "inside a clipped, justified paragraph."
+      end
+    end
+  end
+
+  # 01.3-12 (gap closure G-01.3-6): ExUnit cannot measure a rendered box, so
+  # every assertion below is a DERIVED (contract) oracle — it parses the
+  # declarations the geometry is computed from and asserts on the computed
+  # numbers, mirroring the idiom `footer_rhythm_test.exs:486-590` already
+  # established on this codebase (strip comments, anchored `Regex.run` per
+  # rule body, `flunk` with an explanation when a rule has gone missing).
+  # The real oracle — does the chevron actually trail the third line on a
+  # rendered page — was exercised via the device check deferred to
+  # end-of-phase UAT (WINDOWS.md). Values are read out of the CSS/markup
+  # wherever a rule already declares them, never hard-coded, so rescaling
+  # one side (e.g. the icon) cannot silently leave the other (the padding
+  # that centres it) behind.
+  describe "collapsed toggle geometry (01.3-12)" do
+    @base_font_px 16
+
+    # Comments are prose, not cascade — this stylesheet's own comments now
+    # discuss `padding-right`/`position`/`min-w-11` etc. by name (the doc
+    # comments Task 1 rewrote), so a whole-blob regex without stripping
+    # comments first would be satisfied by prose alone. Reused verbatim from
+    # `footer_rhythm_test.exs`.
+    defp strip_comments(src), do: String.replace(src, ~r|/\*.*?\*/|s, "")
+
+    defp rule_body!(src, selector) do
+      pattern = ~r/(?m)^#{Regex.escape(selector)}\s*\{([^}]*)\}/s
+
+      case Regex.run(pattern, src) do
+        [_, body] ->
+          body
+
+        nil ->
+          flunk(
+            "No `#{selector} { ... }` top-level rule found in assets/css/app.css. If the " <>
+              "selector changed, update this test — it exists specifically to notice that " <>
+              "kind of drift."
+          )
+      end
+    end
+
+    defp rem_px!(block, prop, label) do
+      case Regex.run(~r/#{prop}:\s*([\d.]+)rem/, block) do
+        [_, v] ->
+          float = String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+          float * @base_font_px
+
+        nil ->
+          flunk("`#{prop}` is missing from #{label}")
+      end
+    end
+
+    defp px!(block, prop, label) do
+      case Regex.run(~r/#{prop}:\s*([\d.]+)px/, block) do
+        [_, v] -> String.to_integer(v)
+        nil -> flunk("`#{prop}` is missing from #{label}")
+      end
+    end
+
+    defp int_prop!(block, prop, label) do
+      case Regex.run(~r/#{prop}:\s*(\d+)/, block) do
+        [_, v] -> String.to_integer(v)
+        nil -> flunk("`#{prop}` is missing from #{label}")
+      end
+    end
+
+    defp float_prop!(block, prop, label) do
+      case Regex.run(~r/#{prop}:\s*([\d.]+)/, block) do
+        [_, v] -> String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+        nil -> flunk("`#{prop}` is missing from #{label}")
+      end
+    end
+
+    defp overlay_toggle_body!(src), do: rule_body!(src, ".pk-desc-shell:not(.is-expanded) .pk-desc-toggle")
+
+    test "basis: none of the reading column declares a font-size" do
+      src = strip_comments(css_source())
+
+      for selector <- [".pk-desc", ".pk-desc-shell", ".pk-reading-section", ".pk-text-col"] do
+        body = rule_body!(src, selector)
+
+        refute body =~ ~r/font-size:/,
+               "`#{selector}` declares a font-size. Every px number this describe block " <>
+                 "computes (line bands, icon centring, the reserved gutter) rests on the " <>
+                 "description computing at the #{@base_font_px}px document base declared " <>
+                 "nowhere in the reading column — if a future rule introduces a font-size " <>
+                 "here, THIS test must be the thing that notices, not a real device."
+      end
+    end
+
+    test "last line band: the collapsed icon's ink lands inside it, centred" do
+      src = strip_comments(css_source())
+
+      clamp_lines = int_prop!(rule_body!(src, ".pk-desc.is-clamped"), "-webkit-line-clamp", "`.pk-desc.is-clamped`")
+      line_height = float_prop!(rule_body!(src, ".pk-desc"), "line-height", "`.pk-desc`")
+      line_band = line_height * @base_font_px
+
+      overlay_body = overlay_toggle_body!(src)
+      padding_bottom = rem_px!(overlay_body, "padding-bottom", "the collapsed toggle override")
+      icon_height = px!(rule_body!(src, ".pk-desc-toggle-icon"), "height", "`.pk-desc-toggle-icon`")
+
+      assert padding_bottom + icon_height <= line_band,
+             "The collapsed toggle's icon (height #{icon_height}px, inset #{padding_bottom}px " <>
+               "from the paragraph's bottom edge) spans outside the #{line_band}px last line " <>
+               "band (#{clamp_lines} lines x #{line_height} x #{@base_font_px}px). A control " <>
+               "whose ink band falls entirely outside this range reads as a row of its own " <>
+               "below the paragraph — exactly what a real device showed for G-01.3-6 while " <>
+               "every DOM-structure and CSS-literal test in this file stayed green."
+
+      centring_gap = abs((line_band - icon_height) / 2 - padding_bottom)
+
+      assert centring_gap <= 1,
+             "The collapsed toggle's icon is #{centring_gap}px off-centre in its " <>
+               "#{line_band}px last line band (icon #{icon_height}px, inset " <>
+               "#{padding_bottom}px). Expected the icon to sit centred in the band it " <>
+               "trails, not merely somewhere inside it."
+    end
+
+    test "collapsed toggle is out of flow, expanded stays in flow" do
+      src = strip_comments(css_source())
+
+      overlay_body = overlay_toggle_body!(src)
+
+      assert overlay_body =~ ~r/position:\s*absolute;/,
+             "`.pk-desc-shell:not(.is-expanded) .pk-desc-toggle` must declare " <>
+               "`position: absolute` — the declaration that stops the shell's flex column " <>
+               "from handing the collapsed control a block row of its own, which is the " <>
+               "root cause of G-01.3-6."
+
+      base_toggle_body = rule_body!(src, ".pk-desc-toggle")
+
+      refute base_toggle_body =~ ~r/position\s*:/,
+             "The base `.pk-desc-toggle` rule declares its own `position`. It must stay " <>
+               "unpositioned so the collapsed-state override is the only thing that takes " <>
+               "the control out of flow — the expanded state must keep relying purely on " <>
+               "`.pk-desc-shell`'s flex column."
+
+      shell_body = rule_body!(src, ".pk-desc-shell")
+
+      assert shell_body =~ ~r/position:\s*relative;/,
+             "`.pk-desc-shell` must declare `position: relative`. Without it the collapsed " <>
+               "override's `bottom`/`right` resolve against some distant positioned " <>
+               "ancestor instead of the shell's own box, and the control leaves the card " <>
+               "entirely."
+    end
+
+    test "gutter matches the toggle's markup-declared tap width", %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
+      class = List.first(LazyHTML.attribute(toggle, "class")) || ""
+
+      min_w_px =
+        case Regex.run(~r/min-w-(\d+)/, class) do
+          [_, n] -> String.to_integer(n) * 4
+          nil -> flunk("Toggle class `#{class}` carries no `min-w-N` utility to bind the gutter to")
+        end
+
+      padding_right_px =
+        rem_px!(rule_body!(strip_comments(css_source()), ".pk-desc.is-clamped"), "padding-right", "`.pk-desc.is-clamped`")
+
+      assert padding_right_px >= min_w_px,
+             "`.pk-desc.is-clamped`'s padding-right (#{padding_right_px}px) is narrower than " <>
+               "the toggle's own markup-declared tap box (`min-w-#{div(min_w_px, 4)}` = " <>
+               "#{min_w_px}px, show.ex). This is the only thing binding a value in app.css " <>
+               "to a utility class in show.ex; anything less puts live description text " <>
+               "under an interactive box — the tap-hijack surface 01.3-10 deleted on purpose."
+    end
+
+    test "shell floor matches the toggle's markup-declared tap height", %{conn: conn} do
+      game = game_fixture(%{description: "Una descripción de prueba para el juego."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
+      class = List.first(LazyHTML.attribute(toggle, "class")) || ""
+
+      min_h_px =
+        case Regex.run(~r/min-h-(\d+)/, class) do
+          [_, n] -> String.to_integer(n) * 4
+          nil -> flunk("Toggle class `#{class}` carries no `min-h-N` utility to bind the floor to")
+        end
+
+      shell_min_height_px =
+        rem_px!(
+          rule_body!(strip_comments(css_source()), ".pk-desc-shell:not(.is-expanded)"),
+          "min-height",
+          "`.pk-desc-shell:not(.is-expanded)`"
+        )
+
+      assert shell_min_height_px >= min_h_px,
+             "The collapsed shell's min-height (#{shell_min_height_px}px) is shorter than " <>
+               "the toggle's own markup-declared tap box (`min-h-#{div(min_h_px, 4)}` = " <>
+               "#{min_h_px}px, show.ex). A sub-three-line description could then let the " <>
+               "absolutely positioned overlay hang upward over the hashtag row above the " <>
+               "description block."
+    end
+
+    test "no forbidden mechanism in the new rule, and the tripwire test still covers it" do
+      overlay_body = overlay_toggle_body!(strip_comments(css_source()))
+
+      refute overlay_body =~ ~r/float\s*:/,
+             "`.pk-desc-shell:not(.is-expanded) .pk-desc-toggle` must not declare " <>
+               "float-based positioning — G-01.3-4's documented root cause."
+
+      refute overlay_body =~ ~r/calc\(\d+ \* 1\.5em\)/,
+             "`.pk-desc-shell:not(.is-expanded) .pk-desc-toggle` must not derive its " <>
+               "position from a line-height multiple — the documented source of the " <>
+               "pre-01.3-10 fragility."
+
+      # Mirrors the family-span extraction the tripwire test at lines 881-912
+      # uses, so a rule placed outside that scan's bounds is caught here too.
+      family_span =
+        case Regex.run(
+               ~r/^\.pk-desc-shell\s*\{.*?(?=\n\/\* Boundary between the primary reading block)/ms,
+               css_source()
+             ) do
+          [span] ->
+            span
+
+          nil ->
+            flunk(
+              "Could not locate the .pk-desc* family span (from `.pk-desc-shell {` to the " <>
+                "boundary-divider comment) in assets/css/app.css."
+            )
+        end
+
+      assert family_span =~ ".pk-desc-shell:not(.is-expanded) .pk-desc-toggle {",
+             "The new collapsed-toggle override rule must sit inside the .pk-desc* family " <>
+               "span the tripwire test scans (from `.pk-desc-shell {` to the boundary " <>
+               "comment) — a rule placed outside those bounds silently falls out of that " <>
+               "test's float-scan coverage."
+    end
+  end
+
+  describe "Ilustradores fact-grid pills (D-05, 01.3-07)" do
+    test "renders a single illustrator as one filter-linked pill, not plain text", %{conn: conn} do
+      game = game_fixture(%{artists: ["Klemens Franz"], weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      anchors = LazyHTML.query(doc, ".pk-fact-col dd a[href^='/?artists=']")
+
+      assert Enum.count(anchors) == 1
+      assert html =~ "Ilustradores"
+      assert LazyHTML.to_html(anchors) =~ "Klemens Franz"
+      assert List.first(LazyHTML.attribute(anchors, "href")) == "/?artists=Klemens+Franz"
+    end
+
+    test "renders one pill per illustrator when there are several — never comma-joined text", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          artists: ["Klemens Franz", "Michael Menzel"],
+          weight_band: "ingenio_estratega"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      anchors = LazyHTML.query(doc, ".pk-fact-col dd a[href^='/?artists=']")
+
+      assert Enum.count(anchors) == 2
+      refute html =~ "Klemens Franz, Michael Menzel"
+    end
+
+    test "renders no Ilustradores fact-grid column when the artists list is empty", %{
+      conn: conn
+    } do
+      game = game_fixture(%{artists: [], weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Ilustradores"
+    end
+
+    test "a space- and accent-bearing illustrator name round-trips through the ~p href and CatalogFilters.from_params/1 to the exact original string (T-01.3-07-01)",
+         %{conn: conn} do
+      game = game_fixture(%{artists: ["Loïc Billiau"], weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      [href] =
+        doc
+        |> LazyHTML.query(".pk-fact-col dd a[href^='/?artists=']")
+        |> LazyHTML.attribute("href")
+
+      "/?" <> query_string = href
+
+      filters =
+        query_string
+        |> Query.decode()
+        |> CatalogFilters.from_params()
+
+      assert filters.artists == ["Loïc Billiau"]
+    end
+  end
+
+  describe "Comunidad BGG stats group (D-06, retitled + moved out of the fact grid by 01.3-07)" do
+    test "renders no Comunidad BGG block at all when there is no bgg_id and no stat", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          name: "Sin BGG En Absoluto",
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          weight_band: "descubre_el_hobby"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      refute html =~ "Comunidad BGG"
+      assert doc |> LazyHTML.query(".pk-bgg-label") |> Enum.empty?()
+      assert doc |> LazyHTML.query(".pk-bgg-stat") |> Enum.empty?()
+      assert doc |> LazyHTML.query(".pk-bgg-foot") |> Enum.empty?()
+    end
+
+    test "renders the group label and the Fuente line but no stat anchors when all three stats are nil and bgg_id is present",
+         %{conn: conn} do
+      # D-06: the shared fixture default holds a weight value — override it
+      # (along with rating/rank) explicitly, or this "all stats absent"
+      # case would silently exercise the one-stat-present branch instead.
+      game =
+        game_fixture(%{
+          name: "Sin Avanzado",
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          bgg_id: 13,
+          weight_band: "descubre_el_hobby"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert html =~ "Comunidad BGG"
+      assert doc |> LazyHTML.query(".pk-bgg-stat") |> Enum.empty?()
+      assert html =~ "boardgamegeek.com/boardgame/13"
+    end
+
+    test "renders exactly one stat anchor when only one stat is populated", %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Solo Peso",
+          bgg_weight: 3.2,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          bgg_id: 13,
+          weight_band: "nivel_experto"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      stats = LazyHTML.query(doc, ".pk-bgg-stat")
+      stats_html = LazyHTML.to_html(stats)
+
+      assert Enum.count(stats) == 1
+      assert stats_html =~ "Peso"
+      assert stats_html =~ "3.2/5"
+      refute html =~ "Valoración"
+      refute html =~ "Ranking"
+    end
+
+    test "renders all three stat anchors, each linking to the game's own BGG page", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          name: "Con Todo Avanzado",
+          bgg_weight: 3.2,
+          bgg_rating: 7.4,
+          bgg_rank: 245,
+          bgg_id: 13,
+          weight_band: "ingenio_estratega"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      stats_html = doc |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
+
+      assert stats_html =~ "Peso"
+      assert stats_html =~ "3.2/5"
+      assert stats_html =~ "Valoración"
+      assert stats_html =~ "7.4/10"
+      assert stats_html =~ "Ranking"
+      assert stats_html =~ "#245"
+
+      # The three stat anchors, plus the Fuente line's own anchor — all
+      # four link to the same BGG page. No other element on the page links
+      # to this specific /boardgame/13 path (the footer's own BGG
+      # attribution link points at the bare domain root, not this path).
+      bgg_links = LazyHTML.query(doc, "a[href='https://boardgamegeek.com/boardgame/13']")
+
+      assert Enum.count(bgg_links) == 4
+    end
+
+    # D-06: a game BGG has never ranked renders no ranking stat at all — no
+    # placeholder text, no "N/A", no "not ranked" — covered separately from
+    # the all-nil case above since bgg_rank absence is the one field
+    # backed by a research-flagged normalization assumption (BGG's own
+    # "Not Ranked" string must degrade to nil upstream, 01.3-UI-SPEC.md).
+    test "a game with no bgg_rank renders no Ranking stat and no placeholder text", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          name: "Sin Ranking",
+          bgg_rank: nil,
+          bgg_id: 13,
+          weight_band: "descubre_el_hobby"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      bgg_html = doc |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
+
+      refute bgg_html =~ "Ranking"
+      refute html =~ "Not Ranked"
+      refute html =~ "No disponible"
+      refute html =~ "N/A"
+    end
+  end
+
+  describe "reading-column section wrapping (D-03, D-04, recomposed by 01.3-07)" do
+    test "a fully-populated game renders exactly four section wrappers (title, description, fact grid, Comunidad BGG)",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Juego Completo",
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          weight_band: "nivel_experto"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-reading-section") |> Enum.count() == 4
+    end
+
+    test "a description-less, fact-less, BGG-less game renders exactly one section wrapper (title only)",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Juego Solo Titulo",
+          description: nil,
+          year_published: nil,
+          designers: [],
+          artists: [],
+          mechanics: [],
+          themes: [],
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil,
+          weight_band: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-reading-section") |> Enum.count() == 1
+    end
+  end
+
+  describe "reading column reorder — title, hashtags, description, fact grid, BGG (01.3-07)" do
+    test "title's section -> hashtag row -> description's section, ordered siblings not a substring match",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica de mercaderes.", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # Adjacent-sibling chain: this only matches when the hashtag row is
+      # literally the very next element after the title's own wrapper, and
+      # the description's own wrapper is literally the very next element
+      # after the hashtag row. An element reinserted anywhere in this chain
+      # (a divider, a badge, a stray wrapper) makes this query return 0.
+      assert doc
+             |> LazyHTML.query(".pk-reading-section + div.pk-rhythm-8 + div.pk-reading-section.pk-rhythm-16")
+             |> Enum.count() == 1
+    end
+
+    test "hashtags render after title, before description; Mecánicas/Temáticas still after description (sketch 042)",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -564,34 +1424,43 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
+      {title_idx, _} = :binary.match(html, "detail-title-block")
       {description_idx, _} = :binary.match(html, "Una crónica de mercaderes.")
       {mechanics_idx, _} = :binary.match(html, "Mecánicas")
       {themes_idx, _} = :binary.match(html, "Temáticas")
       {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
 
+      assert title_idx < hashtag_idx
+      assert hashtag_idx < description_idx
       assert description_idx < mechanics_idx
       assert description_idx < themes_idx
-      assert description_idx < hashtag_idx
     end
 
-    test "a separator element exists between the description block and the first more-information heading",
+    test "exactly one .pk-divider renders, inside #detail-shelf-separator — the reading column has none (G-01.3-1 items 1/9)",
          %{conn: conn} do
       game = game_fixture(%{description: "Una crónica.", mechanics: ["Dice Rolling"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      # A disconnected (static) render unconditionally shows the
+      # masthead↔shelf separator regardless of whether any similar-games
+      # bandmate exists (@loading short-circuits the emptiness check) —
+      # the same technique the masthead↔shelf boundary tests below use.
+      conn = get(conn, ~p"/juegos/#{game.id}")
+      html = html_response(conn, 200)
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query(".pk-description + .divider") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-divider") |> Enum.count() == 1
+      assert doc |> LazyHTML.query("#detail-shelf-separator > .pk-divider") |> Enum.count() == 1
     end
 
-    test "the hashtag row flows straight into the Mecánicas heading — ordered siblings, no element (the removed badge) between them (G-01.2-20)",
+    test "no h2.pk-section-heading renders anywhere — Mecánicas/Temáticas/Ficha técnica headings are gone (sketch 040)",
          %{conn: conn} do
       game =
         game_fixture(%{
           weight_band: "ingenio_estratega",
           description: "Una crónica.",
           mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
           tags: ["#CreaConexiones"]
         })
 
@@ -599,17 +1468,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      # Adjacent-sibling chain: the div immediately after .pk-divider (the
-      # editorial hashtag row) must itself be immediately followed by the
-      # Mecánicas heading. A re-added element between them (the former
-      # badge block) breaks the chain and this query returns 0 instead of
-      # 1 — even with a weight band present, which is the case that used
-      # to render the badge.
-      assert doc |> LazyHTML.query(".pk-divider + div + h2.pk-section-heading") |> Enum.count() ==
-               1
+      assert doc |> LazyHTML.query("h2.pk-section-heading") |> Enum.count() == 0
     end
 
-    test "a game with publishers renders no publisher row in the spec list", %{conn: conn} do
+    test "a game with publishers renders no publisher row anywhere", %{conn: conn} do
       game = game_fixture(%{publishers: ["Devir"]})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
@@ -618,39 +1480,52 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "Editorial"
     end
 
-    test "a game whose only populated spec field is publishers renders no Ficha técnica section at all",
+    test "a game whose only populated field is publishers renders no fact grid and no Comunidad BGG block",
          %{conn: conn} do
       game =
         game_fixture(%{
           min_age: nil,
           year_published: nil,
           designers: [],
+          artists: [],
+          mechanics: [],
+          themes: [],
           publishers: ["Devir"],
-          bgg_id: nil
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      refute html =~ "Ficha técnica"
       refute html =~ "pk-spec-list"
+      refute html =~ "Comunidad BGG"
     end
 
-    test "a game with a year and publishers still renders the Ficha técnica section with the year row",
+    test "a game with a year and publishers still renders the fact grid with the year row, and no Comunidad BGG block",
          %{conn: conn} do
       game =
         game_fixture(%{
           min_age: nil,
           year_published: 2001,
           designers: [],
+          artists: [],
+          mechanics: [],
+          themes: [],
           publishers: ["Devir"],
-          bgg_id: nil
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil
         })
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      assert html =~ "Ficha técnica"
+      assert html =~ "pk-spec-list"
       assert html =~ "2001"
       refute html =~ "Devir"
+      refute html =~ "Comunidad BGG"
     end
   end
 
@@ -1596,11 +2471,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
-  describe "Mecánicas/Temáticas chip contrast fix (G-01.2-20 task 2)" do
+  describe "Mecánicas/Temáticas chip contrast fix (G-01.2-20 task 2, retoned by 01.3-07)" do
     test "the mechanic and theme chip rows' wrapper carries the pk-chip-row scoping class",
          %{conn: conn} do
+      # 01.3-07: creator_pills/1 (Diseñadores/Ilustradores) also renders a
+      # pk-chip-row wrapper now, inside the same fact grid — scope this
+      # fixture to only mechanics/themes so the count below still isolates
+      # the two rows this test names.
       game =
         game_fixture(%{
+          designers: [],
+          artists: [],
           mechanics: ["Dice Rolling"],
           themes: ["Economic"]
         })
@@ -1620,13 +2501,14 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       doc = LazyHTML.from_document(html)
 
-      # The hashtag chip renders (proves the row is present at all) — now
-      # the pk-pill base + accent tone (G-01.2-26 task 3), not a daisyUI
-      # badge class.
-      assert doc |> LazyHTML.query(".pk-pill-accent") |> Enum.count() == 1
+      # The hashtag chip renders (proves the row is present at all) — the
+      # pk-pill base + tag tone (01.3-07, superseding the earlier accent
+      # tone — sketch 042's lightweight-text hashtag treatment), not a
+      # daisyUI badge class.
+      assert doc |> LazyHTML.query(".pk-pill-tag") |> Enum.count() == 1
 
       # ...but never as a descendant of a pk-chip-row wrapper.
-      assert doc |> LazyHTML.query("div.pk-chip-row .pk-pill-accent") |> Enum.count() == 0
+      assert doc |> LazyHTML.query("div.pk-chip-row .pk-pill-tag") |> Enum.count() == 0
     end
 
     test "linked chips, unlinked chips, and the overflow chip all render inside the scoped wrapper",
@@ -1652,24 +2534,24 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       # All three shapes render inside chip_row/1's single wrapper div,
       # which carries pk-chip-row unconditionally. Chip class strings now
-      # render from the pk-pill base + neutral tone (G-01.2-26 task 3) —
-      # interactive only on the linked branch, never on the static span or
-      # the overflow chip.
+      # render from the pk-pill base + outline tone (01.3-07, superseding
+      # the earlier neutral tone) — interactive only on the linked branch,
+      # never on the static span or the overflow chip.
       assert linked_html =~ "pk-chip-row"
 
       assert linked_html =~
-               ~r/<a[^>]*class="pk-pill pk-pill-neutral pk-pill-interactive"[^>]*>\s*Tira dados/
+               ~r/<a[^>]*class="pk-pill pk-pill-outline pk-pill-interactive"[^>]*>\s*Tira dados/
 
       assert unlinked_html =~ "pk-chip-row"
-      assert unlinked_html =~ ~s(<span class="pk-pill pk-pill-neutral">Tira dados</span>)
+      assert unlinked_html =~ ~s(<span class="pk-pill pk-pill-outline">Tira dados</span>)
 
       assert overflow_html =~ "pk-chip-row"
-      assert overflow_html =~ ~s(<span class="pk-pill pk-pill-neutral">+3</span>)
+      assert overflow_html =~ ~s(<span class="pk-pill pk-pill-outline">+3</span>)
 
       # Sanity check on the live page: the mechanic chip's real call site
       # (href_fun always passed) does render the linked shape inside the
       # scoped wrapper.
-      game = game_fixture(%{mechanics: ["Dice Rolling"]})
+      game = game_fixture(%{designers: [], artists: [], mechanics: ["Dice Rolling"]})
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
       doc = LazyHTML.from_document(html)
 
@@ -1796,14 +2678,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> Enum.count() == 1
     end
 
-    test "the description is the element immediately after the title", %{conn: conn} do
-      game = game_fixture(%{description: "Una crónica de mercaderes."})
+    test "the description's section immediately follows the title's section and the hashtag row (01.3-07 reorder)",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica de mercaderes.", tags: ["#CreaConexiones"]})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       doc = LazyHTML.from_document(html)
 
-      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+      assert doc
+             |> LazyHTML.query(".pk-reading-section + div.pk-rhythm-8 + div.pk-reading-section.pk-rhythm-16")
+             |> Enum.count() == 1
     end
 
     test "the poster column's reserve button and the bar's reserve button are separately addressable, and exactly one carries the breakpoint-toggled class",
@@ -1827,7 +2712,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute bar_class =~ "pk-poster-reserve"
     end
 
-    test "neither chip row nor the editorial hashtags appear before the description", %{conn: conn} do
+    test "the chip rows still render after the description; the editorial hashtags render before it (01.3-07 reorder)",
+         %{conn: conn} do
       game =
         game_fixture(%{
           description: "Una crónica.",
@@ -1845,12 +2731,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       assert description_idx < mechanics_idx
       assert description_idx < themes_idx
-      assert description_idx < hashtag_idx
+      assert hashtag_idx < description_idx
     end
 
-    test "no publisher row renders, and a publishers-only game renders no spec section", %{
-      conn: conn
-    } do
+    test "no publisher row renders, and a publishers-only game renders no fact grid and no Comunidad BGG block",
+         %{conn: conn} do
       with_publisher = game_fixture(%{publishers: ["Devir"]})
       {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_publisher.id}")
       refute html_with =~ "Editorial"
@@ -1860,12 +2745,19 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           min_age: nil,
           year_published: nil,
           designers: [],
+          artists: [],
+          mechanics: [],
+          themes: [],
           publishers: ["Devir"],
-          bgg_id: nil
+          bgg_id: nil,
+          bgg_weight: nil,
+          bgg_rating: nil,
+          bgg_rank: nil
         })
 
       {:ok, _view, html_only} = live(conn, ~p"/juegos/#{publishers_only.id}")
-      refute html_only =~ "Ficha técnica"
+      refute html_only =~ "pk-spec-list"
+      refute html_only =~ "Comunidad BGG"
     end
 
     test "a separator sits between the masthead and the shelf", %{conn: conn} do
@@ -2411,6 +3303,278 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # G-01.3-09 (UAT gap G-01.3-1 item 7): pins the sticky title-echo bar's
+  # separation from the page (a distinct fill token, not the page's own),
+  # its measured two-theme text/border contrast, and its shared-width
+  # alignment with the rest of the page's capped surfaces. Reuses the
+  # whole css_source/0 + dark_theme_plugin_block/0 + token_value/2 +
+  # relative_luminance/1 + contrast_ratio/2 harness the lightbox
+  # close-button describe block below already established — no second
+  # harness is written here. Sits beside "title-echo desktop hide" above,
+  # the existing idiom for asserting on this bar's CSS.
+  describe "sticky title-echo bar (G-01.3-09, UAT item 7)" do
+    # The bar's OWN rule, matched on its literal (unqualified) selector
+    # text anchored to the start of a line. `\s*\{` immediately after
+    # `.pk-title-echo` means `.pk-title-echo-inner {`, `.pk-title-echo.is-visible {`
+    # and `.pk-title-echo.is-parked {` can never be mistaken for it — none
+    # of those has whitespace-then-`{` directly following the bare
+    # `.pk-title-echo` token.
+    defp title_echo_block do
+      case Regex.run(~r/(?m)^\.pk-title-echo\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-title-echo {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # Same idiom, for the new inner wrapper rule.
+    defp title_echo_inner_block do
+      case Regex.run(~r/(?m)^\.pk-title-echo-inner\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-title-echo-inner {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # light_theme_plugin_block/0 is NOT redeclared here — 01.3-07's own
+    # "net-new CSS-source pins" describe block below already defines it
+    # (mirroring dark_theme_plugin_block/0), and `defp` scope is the whole
+    # module regardless of which describe block textually defines it. A
+    # second definition would fail this file's own harness-reuse
+    # discipline (see that block's comment).
+
+    test "the bar's own background token is the new base-200 step, not the page's own base-100" do
+      body = title_echo_block()
+
+      assert body =~ ~r/background:\s*var\(--color-base-200\)\s*;/,
+             "`.pk-title-echo` must declare `background: var(--color-base-200);` — the " <>
+               "one-step-darker/tinted rule detail-page-mobile-interaction.md already " <>
+               "established for the mobile CTA bar's own background fix, applied here."
+
+      refute body =~ ~r/var\(--color-base-100\)/,
+             "`.pk-title-echo` must not read `--color-base-100` anywhere in its own rule — " <>
+               "that is the exact same token the page body itself uses, and reusing it is the " <>
+               "'doesn't constrain well' defect this round exists to fix."
+    end
+
+    test "the bar declares no horizontal --pk-gutter padding of its own — that moved to the inner wrapper" do
+      body = title_echo_block()
+
+      refute body =~ ~r/padding:[^;]*--pk-gutter/,
+             "`.pk-title-echo` must not declare its own `--pk-gutter`-bearing horizontal " <>
+               "padding — that padding now lives on `.pk-title-echo-inner` (via the `pk-gutter` " <>
+               "utility class in the markup), on the SAME element as the width cap. Declaring it " <>
+               "here too would double-inset the bar's content."
+
+      assert title_echo_inner_block() =~ ~r/display:\s*flex\s*;/,
+             "`.pk-title-echo-inner` must declare `display: flex;` — the row layout that used " <>
+               "to live on `.pk-title-echo` itself moved here along with the horizontal padding."
+    end
+
+    test "text contrast (light theme): the bar's content token against its own base-200 fill meets 4.5:1" do
+      block = light_theme_plugin_block()
+      content = token_value(block, "--color-base-content")
+      fill = token_value(block, "--color-base-200")
+
+      ratio = contrast_ratio(relative_luminance(content), relative_luminance(fill))
+
+      assert ratio >= 4.5,
+             "light theme: the sticky bar's text (--color-base-content, #{content}) must " <>
+               "contrast at least 4.5:1 (WCAG 1.4.3) against the bar's own fill " <>
+               "(--color-base-200, #{fill}). Computed: #{Float.round(ratio, 2)}:1."
+    end
+
+    test "text contrast (dark theme): the bar's content token against its own base-200 fill meets 4.5:1" do
+      block = dark_theme_plugin_block()
+      content = token_value(block, "--color-base-content")
+      fill = token_value(block, "--color-base-200")
+
+      ratio = contrast_ratio(relative_luminance(content), relative_luminance(fill))
+
+      assert ratio >= 4.5,
+             "dark theme: the sticky bar's text (--color-base-content, #{content}) must " <>
+               "contrast at least 4.5:1 (WCAG 1.4.3) against the bar's own fill " <>
+               "(--color-base-200, #{fill}). Computed: #{Float.round(ratio, 2)}:1 — a future " <>
+               "palette retune that quietly walks either token toward the other must fail here, " <>
+               "not ship."
+    end
+
+    # The bar's border reads --color-neutral, not --color-base-300 — see
+    # .pk-title-echo's own comment in app.css. Measured directly against
+    # this file's tokens: --color-base-300 (the plan's original
+    # assumption) computes to only 1.41:1 light / 1.23:1 dark against
+    # --color-base-100, both far under the 3.0:1 floor these two tests
+    # enforce. This is a Rule 1 auto-fix — the base-100/200/300 family is
+    # a subtle background-stepping scale by design and cannot clear 3:1
+    # against base-100 at any of its three steps in either theme;
+    # --color-neutral is the token this codebase already reaches for when
+    # a control needs real, measured contrast while staying visually
+    # muted (see the lightbox close button's own dark-theme fix, same
+    # token, same reasoning, elsewhere in this file).
+    test "the bar's border reads --color-neutral, not --color-base-300" do
+      body = title_echo_block()
+
+      assert body =~ ~r/border-bottom:\s*1px solid var\(--color-neutral\)\s*;/,
+             "`.pk-title-echo` must declare its border-bottom from `--color-neutral`. " <>
+               "`--color-base-300` (the plan's original assumption) measures only 1.41:1 " <>
+               "light / 1.23:1 dark against `--color-base-100` — nowhere near the 3.0:1 " <>
+               "floor the two tests below enforce."
+
+      refute body =~ ~r/var\(--color-base-300\)/,
+             "`.pk-title-echo` must not read `--color-base-300` for its border — that token " <>
+               "measured under the 3.0:1 floor in both themes; see the test above."
+    end
+
+    test "non-text contrast (light theme): the bar's border token against the page background meets 3.0:1" do
+      block = light_theme_plugin_block()
+      border = token_value(block, "--color-neutral")
+      page_bg = token_value(block, "--color-base-100")
+
+      ratio = contrast_ratio(relative_luminance(border), relative_luminance(page_bg))
+
+      assert ratio >= 3.0,
+             "light theme: the sticky bar's separating border (--color-neutral, #{border}) " <>
+               "must contrast at least 3.0:1 (WCAG 1.4.11's non-text-contrast floor) against " <>
+               "the page background it separates from (--color-base-100, #{page_bg}). " <>
+               "Computed: #{Float.round(ratio, 2)}:1."
+    end
+
+    test "non-text contrast (dark theme): the bar's border token against the page background meets 3.0:1" do
+      block = dark_theme_plugin_block()
+      border = token_value(block, "--color-neutral")
+      page_bg = token_value(block, "--color-base-100")
+
+      ratio = contrast_ratio(relative_luminance(border), relative_luminance(page_bg))
+
+      assert ratio >= 3.0,
+             "dark theme: the sticky bar's separating border (--color-neutral, #{border}) " <>
+               "must contrast at least 3.0:1 (WCAG 1.4.11's non-text-contrast floor) against " <>
+               "the page background it separates from (--color-base-100, #{page_bg}). " <>
+               "Computed: #{Float.round(ratio, 2)}:1 — a separator the eye cannot find is the " <>
+               "\"doesn't constrain well\" complaint restated numerically."
+    end
+
+    test "the inner wrapper shares alignment classes with the masthead and shelf separator",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Title Echo Alignment Base", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Title Echo Alignment Sibling", weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      shared_classes = MapSet.new(~w(mx-auto w-full max-w-7xl pk-gutter))
+
+      for {label, selector} <- [
+            {"the title-echo bar's inner wrapper", "#detail-title-echo > .pk-title-echo-inner"},
+            {"the masthead wrapper", "#detail-masthead-wrap"},
+            {"the shelf separator", "#detail-shelf-separator"}
+          ] do
+        class =
+          doc
+          |> LazyHTML.query(selector)
+          |> LazyHTML.attribute("class")
+          |> List.first()
+
+        classes = class |> String.split(~r/\s+/, trim: true) |> MapSet.new()
+
+        assert MapSet.subset?(shared_classes, classes),
+               "#{label} (#{selector}) must carry all four shared alignment classes " <>
+                 "#{inspect(MapSet.to_list(shared_classes))} — found: #{inspect(class)}"
+      end
+    end
+
+    # 01.3-11 (gap closure G-01.3-5): the title span's OWN rule, matched on
+    # its literal (unqualified) selector text anchored to the start of a
+    # line — same idiom as title_echo_block/0 and title_echo_inner_block/0
+    # above, and the same reason: `.pk-title-echo-name` must never be
+    # confused with `.pk-title-echo` or `.pk-title-echo-inner`.
+    defp title_echo_name_block do
+      case Regex.run(~r/(?m)^\.pk-title-echo-name\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-title-echo-name {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the title has a deliberate typographic identity — display font, explicit size, explicit color" do
+      body = title_echo_name_block()
+
+      assert body =~ ~r/font-family:\s*var\(--font-display\)\s*;/,
+             "`.pk-title-echo-name` must declare `font-family: var(--font-display);`. A " <>
+               "title-role element that declares no font properties anywhere in its cascade " <>
+               "inherits ambient body text by omission, which is not a decision — that was " <>
+               "the exact defect G-01.3-5 reported."
+
+      assert body =~ ~r/font-size:\s*1\.25rem\s*;/,
+             "`.pk-title-echo-name` must declare an explicit `font-size: 1.25rem;` — the same " <>
+               "display-label step `.pk-section-heading` already uses, one step below the " <>
+               "real H1's text-3xl."
+
+      assert body =~ ~r/color:\s*var\(--color-base-content\)\s*;/,
+             "`.pk-title-echo-name` must declare an explicit `color: var(--color-base-content);` " <>
+               "rather than leaving its text color to inherit."
+    end
+
+    test "no faux bold — the rule declares weight 400 and no other numeric or keyword weight" do
+      body = title_echo_name_block()
+
+      assert body =~ ~r/font-weight:\s*400\s*;/,
+             "`.pk-title-echo-name` must declare `font-weight: 400;` explicitly. Bebas Neue is " <>
+               "self-hosted at weight 400 ONLY (see the @font-face blocks in assets/css/app.css), " <>
+               "so a heavier value here is synthesized by the browser into a faux bold that no " <>
+               "build step will ever flag."
+
+      refute body =~ ~r/font-weight:\s*(?!400\s*;)[0-9]+\s*;/,
+             "`.pk-title-echo-name` must not declare any numeric font-weight other than 400 — " <>
+               "only weight 400 of Bebas Neue is self-hosted."
+
+      refute body =~ ~r/font-weight:\s*(bold|bolder|semibold)\s*;/,
+             "`.pk-title-echo-name` must not declare a keyword font-weight (bold/bolder/semibold) " <>
+               "— only weight 400 of Bebas Neue is self-hosted; any other value is " <>
+               "browser-synthesized and never flagged by a build step."
+    end
+
+    test "typography and truncation coexist in the SAME rule" do
+      body = title_echo_name_block()
+
+      truncation_hits =
+        Regex.scan(
+          ~r/min-width:\s*0\s*;|white-space:\s*nowrap\s*;|overflow:\s*hidden\s*;|text-overflow:\s*ellipsis\s*;/,
+          body
+        )
+
+      assert length(truncation_hits) == 4,
+             "`.pk-title-echo-name` must still declare all four truncation properties " <>
+               "(min-width: 0, white-space: nowrap, overflow: hidden, text-overflow: ellipsis) " <>
+               "in the SAME rule as the new typography declarations. G-01.2-24: a larger font " <>
+               "in a flex item that lost `min-width: 0` wraps to a second line — the exact " <>
+               "defect that round fixed, and this round makes the text bigger."
+
+      assert body =~ ~r/font-family:\s*var\(--font-display\)/,
+             "The typography declarations must live in the SAME `.pk-title-echo-name` rule as " <>
+               "the truncation properties above, not a separate/overriding rule."
+    end
+
+    test "the deferred scope really is untouched — bar fill, scroll-top fill, and the bounce keyframes" do
+      assert title_echo_block() =~ ~r/background:\s*var\(--color-base-200\)\s*;/,
+             "`.pk-title-echo`'s fill token must still read `--color-base-200`. 01.3-09 recorded " <>
+               "a developer decision (accept-mechanical) to leave the brand-tint question open; " <>
+               "this test is what makes 'the typography fix did not quietly answer it' checkable " <>
+               "rather than merely asserted in a SUMMARY."
+
+      scroll_top_body =
+        case Regex.run(~r/(?m)^\.pk-scroll-top\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-scroll-top {...}` rule found in assets/css/app.css")
+        end
+
+      assert scroll_top_body =~ ~r/background:\s*var\(--color-primary\)\s*;/,
+             "`.pk-scroll-top`'s fill token must still read `--color-primary` — untouched by " <>
+               "this plan, remaining part of the open brand-tint question."
+
+      assert css_source() =~ ~r/(?m)^@keyframes pk-scroll-top-bounce\b/,
+             "The `pk-scroll-top-bounce` keyframes must still exist, untouched by this plan."
+    end
+  end
+
   # G-01.2-24 task 2: source-level CSS facts for the corrected
   # boundary-collapse footer margin.
   describe "boundary-collapse footer margin (Phase 01.2 gap-closure round 4, G-01.2-24 task 2)" do
@@ -2522,16 +3686,20 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # `80vh` was itself the bug — `.pk-lightbox` centres rather than stretches its child, so
       # the unclaimed 20% of viewport height rendered as two translucent scrim bands, one above
       # and one below the stage. Round 7 replaces the single `80vh` with this file's own
-      # dual-declaration full-viewport idiom (see `.pk-app-shell`'s comment for the fuller
-      # argument): the static unit as a fallback, the dynamic-viewport unit immediately after.
+      # dual-declaration full-viewport idiom (see the superseded-mechanism note above
+      # `.pk-gutter` in app.css, where `.pk-app-shell` used to live, for the fuller argument —
+      # that class is deleted outright as of 2026-09-02/260902-glf, but its former comment site
+      # keeps the idiom documented since two other places, including this one, cite it): the
+      # static unit as a fallback, the dynamic-viewport unit immediately after.
       assert body =~ ~r/height:\s*100vh;\s*height:\s*100dvh;/,
              "`.pk-lightbox-img` must declare `height` TWICE, adjacent and in this exact order " <>
                "— the older `100vh` unit immediately followed by the dynamic-viewport `100dvh` " <>
                "unit, with nothing but whitespace between them. This is not a redundant " <>
                "duplicate: the first line is the fallback a browser without `dvh` support keeps, " <>
-               "the second is what every current browser actually uses (see `.pk-app-shell`'s " <>
-               "own comment in this file for the fuller argument) — deleting either line " <>
-               "silently reintroduces the mobile-toolbar bug this pair exists to prevent."
+               "the second is what every current browser actually uses (see the superseded-" <>
+               "mechanism note above `.pk-gutter` in app.css, where `.pk-app-shell` used to " <>
+               "live, for the fuller argument) — deleting either line silently reintroduces " <>
+               "the mobile-toolbar bug this pair exists to prevent."
 
       height_declarations = Regex.scan(~r/height:\s*[^;]+;/, body)
 
@@ -3079,6 +4247,86 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           nil ->
             flunk("No top-level `.#{tone} { ... }` rule found in assets/css/app.css")
         end
+      end
+    end
+  end
+
+  # 01.3-07 (task 3 net-new coverage): CSS-source pins for the fact-grid
+  # breakpoint, the .pk-text-col rhythm mechanism, and the .pk-pill-tag
+  # hashtag contrast floor — three properties this restructure introduced
+  # that nothing in the pre-existing suite protected. Reuses css_source/0,
+  # dark_theme_plugin_block/0, token_value/2, relative_luminance/1 and
+  # contrast_ratio/2 from the lightbox-close-button describe block above —
+  # no second contrast/CSS-source harness written.
+  describe "01.3-07 net-new CSS-source pins (fact-grid breakpoint, rhythm mechanism, hashtag contrast)" do
+    # Same idiom as dark_theme_plugin_block/0 above, matching the light
+    # theme's own plugin block instead.
+    defp light_theme_plugin_block do
+      case Regex.run(
+             ~r/@plugin "daisyui\/packages\/bundle\/daisyui-theme" \{\s*name: "light";(.*?)\n\}/ms,
+             css_source()
+           ) do
+        [_, body] -> body
+        nil -> flunk("No light-theme `@plugin \"daisyui-theme\"` block found in assets/css/app.css")
+      end
+    end
+
+    test ".pk-fact-cols declares a single-column base rule and a two-column override inside the one 48rem block" do
+      src = css_source()
+
+      assert Regex.match?(~r/(?m)^\.pk-fact-cols\s*\{[^}]*grid-template-columns:\s*1fr;/s, src),
+             "`.pk-fact-cols` must declare a single-column base rule " <>
+               "(`grid-template-columns: 1fr`) outside any media query — the mobile default."
+
+      assert Regex.match?(
+               ~r/@media \(min-width: 48rem\) \{.*?\.pk-fact-cols\s*\{[^}]*grid-template-columns:\s*1fr 1fr;/ms,
+               src
+             ),
+             "The two-column override (`grid-template-columns: 1fr 1fr`) must live INSIDE the " <>
+               "single 48rem detail-layout `@media` block — a second, independently-opened " <>
+               "media query for this one rule would violate that block's own single-owner " <>
+               "invariant."
+    end
+
+    test ".pk-text-col declares no gap, and the three .pk-text-col > .pk-rhythm-* margin rules all exist (the additive-boundary regression pin)" do
+      src = css_source()
+
+      case Regex.run(~r/(?m)^\.pk-text-col\s*\{([^}]*)\}/s, src) do
+        [_, body] ->
+          refute body =~ ~r/gap:/,
+                 "`.pk-text-col` must declare no `gap` — a flex `gap` and a child `margin-top` " <>
+                   "are additive, exactly the stacked-boundary bug detail-page-layout.md " <>
+                   "records twice. The three named rhythm rules below are the ONLY spacing " <>
+                   "mechanism now."
+
+        nil ->
+          flunk("No top-level `.pk-text-col { ... }` rule found in assets/css/app.css")
+      end
+
+      for tier <- ["8", "16", "32"] do
+        assert Regex.match?(
+                 ~r/(?m)^\.pk-text-col > \.pk-rhythm-#{tier}\s*\{[^}]*margin-top:/s,
+                 src
+               ),
+               "`.pk-text-col > .pk-rhythm-#{tier}` must declare a `margin-top` — the named " <>
+                 "child-margin rhythm tier that replaced the removed flex `gap`."
+      end
+    end
+
+    test ".pk-pill-tag's --color-primary text meets the 4.5:1 contrast floor against --color-base-100 in both themes" do
+      for {label, block} <- [
+            {"light", light_theme_plugin_block()},
+            {"dark", dark_theme_plugin_block()}
+          ] do
+        primary = token_value(block, "--color-primary")
+        base_100 = token_value(block, "--color-base-100")
+
+        ratio = contrast_ratio(relative_luminance(primary), relative_luminance(base_100))
+
+        assert ratio >= 4.5,
+               "#{label} theme: --color-primary (#{primary}) against --color-base-100 " <>
+                 "(#{base_100}) measured #{Float.round(ratio, 2)}:1 — .pk-pill-tag's hashtag " <>
+                 "text must clear the 4.5:1 WCAG AA text floor in both themes."
       end
     end
   end

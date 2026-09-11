@@ -51,8 +51,17 @@ defmodule PukllayClubWeb.FooterRhythmTest do
     tail
   end
 
+  # Anchored to horizontal whitespace only (quick task 260902-fdm), not the
+  # bare unanchored pattern this helper used before. Sketch 044 adds
+  # `main.pk-boundary-collapse + .pk-footer { ... }` to this same media
+  # block, and that selector's tail is ALSO `.pk-footer {` — an unanchored
+  # regex would happily match wherever that tail's own `.` sits, silently
+  # returning a body with no chrome tokens in it and failing every consumer
+  # of this helper for the wrong reason. `(?m)^[ \t]*` still matches the
+  # indented rule inside the media block but cannot match a rule whose
+  # selector has a combinator (`main... + `) in front of it.
   defp narrow_footer_block(src) do
-    case Regex.run(~r/\.pk-footer\s*\{([^}]*)\}/, narrow_viewport_tail(src)) do
+    case Regex.run(~r/(?m)^[ \t]*\.pk-footer\s*\{([^}]*)\}/, narrow_viewport_tail(src)) do
       [_, body] -> body
       nil -> flunk("The ≤480px block no longer re-declares `.pk-footer` spacing tokens")
     end
@@ -78,6 +87,18 @@ defmodule PukllayClubWeb.FooterRhythmTest do
     case Regex.run(~r/--pk-footer-gap-#{name}:\s*([\d.]+)rem/, block) do
       [_, value] -> String.to_float(if String.contains?(value, "."), do: value, else: value <> ".0")
       nil -> flunk("Token `--pk-footer-gap-#{name}` is missing from this block")
+    end
+  end
+
+  # Sibling to rem_token!/2 for the non-`-gap-` tokens (`--pk-footer-offset`,
+  # `--pk-footer-pad-block`) added by quick task 260901-ty6. Kept separate
+  # rather than generalizing rem_token!/2's regex, since the gap tiers and the
+  # chrome tokens are read by different describe blocks with different naming
+  # conventions (`gap-item`/`gap-list`/... vs `offset`/`pad-block`).
+  defp footer_token!(block, name) do
+    case Regex.run(~r/--pk-footer-#{name}:\s*([\d.]+)rem/, block) do
+      [_, value] -> String.to_float(if String.contains?(value, "."), do: value, else: value <> ".0")
+      nil -> flunk("Token `--pk-footer-#{name}` is missing from this block")
     end
   end
 
@@ -153,6 +174,475 @@ defmodule PukllayClubWeb.FooterRhythmTest do
              "`.pk-footer-row` declares a two-value gap. Separate row/column gaps are exactly " <>
                "how the wrapped layout ended up with a tighter between-group gap than " <>
                "within-group gap."
+    end
+  end
+
+  # Quick task 260901-ty6. Guards the footer's VERTICAL chrome the same way
+  # the describe blocks above guard its horizontal gap tiers: two new tokens
+  # (--pk-footer-offset for .pk-footer's own margin-top, --pk-footer-pad-block
+  # for .pk-footer-row's padding-top/padding-bottom) declared once in the base
+  # rule and retuned — never re-declared as a literal — in the ≤480px block.
+  #
+  # Motivating measurement: before this change the mobile footer spent 48px
+  # (.pk-footer's own top margin) + 24px + 24px (.pk-footer-row's own
+  # top/bottom inner padding) = 96px of vertical chrome before any footer
+  # content, on this project's primary surface.
+  #
+  # Oracle type: derived (contract), same as every other describe block in
+  # this file — ExUnit cannot observe rendered geometry, so these pin the
+  # token declarations the geometry depends on. Every assertion here was
+  # verified RED against the pre-change stylesheet (a bare `margin-top: 3rem`
+  # literal on `.pk-footer`, a bare `padding-top`/`padding-bottom: 1.5rem`
+  # literal on `.pk-footer-row`, and no `--pk-footer-offset`/
+  # `--pk-footer-pad-block` token anywhere in the file) before the CSS was
+  # edited.
+  describe "the mobile footer spends less vertical chrome than the desktop one" do
+    test "the base .pk-footer rule declares both chrome tokens with a non-zero value" do
+      block = base_footer_block(source())
+
+      assert footer_token!(block, "offset") > 0,
+             "`--pk-footer-offset` must be declared on the base `.pk-footer` rule with a " <>
+               "non-zero value — it is what `margin-top` reads."
+
+      assert footer_token!(block, "pad-block") > 0,
+             "`--pk-footer-pad-block` must be declared on the base `.pk-footer` rule with a " <>
+               "non-zero value — it is what `.pk-footer-row`'s padding-top/padding-bottom read."
+    end
+
+    test "margin-top and padding-top/padding-bottom read the tokens, not bare literals" do
+      src = strip_comments(source())
+
+      footer_block =
+        case Regex.run(~r/(?m)^\.pk-footer\s*\{([^}]*)\}/, src) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-footer` rule found in assets/css/app.css")
+        end
+
+      row_block =
+        case Regex.run(~r/(?m)^\.pk-footer-row\s*\{([^}]*)\}/, src) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-footer-row` rule found in assets/css/app.css")
+        end
+
+      assert footer_block =~ ~r/margin-top:\s*var\(--pk-footer-offset\)/,
+             "`.pk-footer`'s `margin-top` must read `var(--pk-footer-offset)`, or the ≤480px " <>
+               "retune below has nothing to change."
+
+      assert row_block =~ ~r/padding-top:\s*var\(--pk-footer-pad-block\)/,
+             "`.pk-footer-row`'s `padding-top` must read `var(--pk-footer-pad-block)`."
+
+      assert row_block =~ ~r/padding-bottom:\s*var\(--pk-footer-pad-block\)/,
+             "`.pk-footer-row`'s `padding-bottom` must ALSO read `var(--pk-footer-pad-block)`. " <>
+               "Pinning only padding-top would admit a stylesheet where the bottom stayed a " <>
+               "literal and the mobile retune half-applies."
+
+      refute footer_block =~ ~r/margin-top:\s*[\d.]+rem/,
+             "`.pk-footer` still carries a bare rem literal for `margin-top` alongside the " <>
+               "token — that makes the token decorative rather than load-bearing."
+
+      refute row_block =~ ~r/padding-(top|bottom):\s*[\d.]+rem/,
+             "`.pk-footer-row` still carries a bare rem literal for `padding-top`/`padding-bottom` " <>
+               "alongside the token."
+    end
+
+    test "the ≤480px block retunes both tokens strictly downward, with a non-zero offset" do
+      base = base_footer_block(source())
+      narrow = narrow_footer_block(source())
+
+      base_offset = footer_token!(base, "offset")
+      base_pad = footer_token!(base, "pad-block")
+      mobile_offset = footer_token!(narrow, "offset")
+      mobile_pad = footer_token!(narrow, "pad-block")
+
+      # Compared numerically, not hardcoded — a future retune that keeps the
+      # direction (mobile always <= desktop) stays green, and one that
+      # inverts it fails, without needing this test edited every time.
+      assert mobile_offset < base_offset,
+             "The ≤480px `--pk-footer-offset` (#{mobile_offset}rem) must be strictly less than " <>
+               "the base value (#{base_offset}rem), or the mobile retune does nothing."
+
+      assert mobile_pad < base_pad,
+             "The ≤480px `--pk-footer-pad-block` (#{mobile_pad}rem) must be strictly less than " <>
+               "the base value (#{base_pad}rem), or the mobile retune does nothing."
+
+      assert mobile_offset > 0,
+             "The ≤480px `--pk-footer-offset` is #{mobile_offset}rem. A zero offset would butt " <>
+               "the footer against the content above it, which is the one thing this change " <>
+               "must not do — the footer must stay visibly separated by its own margin, on top " <>
+               "of its own background/border surface change."
+    end
+  end
+
+  # Quick task 260901-ty6, Task 2. Guards the ink/density half of the mobile
+  # footer weight reduction: the brand wordmark shrinks (scoped through
+  # `.pk-brand-quiet` so the header's wordmark is never reached), the nav
+  # links shrink, and the link-list gap tightens so the mobile tier scale
+  # reads item < list < group <= cluster (the base scale's own order, which
+  # the mobile block currently loses — the effective mobile scale today is
+  # 0.5/1/1/1.5rem, list and group collapsed onto one value).
+  #
+  # Oracle type: derived (contract), same as the rest of this file. Every
+  # assertion here was verified RED against the pre-change stylesheet (no
+  # `--pk-footer-gap-list` override in the ≤480px block, no
+  # `.pk-brand-quiet .pk-brand-name` font-size rule anywhere, and no
+  # `.pk-footer-links` font-size rule anywhere) before the CSS was edited.
+  #
+  # UPDATE (2026-09-02, quick task 260902-fdm): the ink/density half of this
+  # block — the wordmark shrink and the links shrink — was superseded by
+  # sketch 044's content reduction (the footer lockup and the links do not
+  # render at ≤480px at all anymore), so the three tests that measured that
+  # ink were removed rather than weakened into no-ops. The gap-scale and
+  # touch-floor tests below remain true and remain useful, so they stay.
+  describe "mobile-scoped ink and density: wordmark, links, and list gap" do
+    # Reads the EFFECTIVE mobile value for a gap tier: the ≤480px block's own
+    # override if it declares one, falling back to the base block's value
+    # otherwise. This is deliberate — the tier-ordering claim is about what
+    # actually renders at ≤480px, not only about what happens to be
+    # re-typed in the media block.
+    defp mobile_effective_gap!(name) do
+      case Regex.run(~r/--pk-footer-gap-#{name}:\s*([\d.]+)rem/, narrow_footer_block(source())) do
+        [_, value] -> String.to_float(if String.contains?(value, "."), do: value, else: value <> ".0")
+        nil -> rem_token!(base_footer_block(source()), name)
+      end
+    end
+
+    test "the effective mobile tier scale reads item < list < group <= cluster" do
+      item = mobile_effective_gap!("item")
+      list = mobile_effective_gap!("list")
+      group = mobile_effective_gap!("group")
+      cluster = mobile_effective_gap!("cluster")
+
+      # This is a strengthening of "the ≤480px override retunes values
+      # without reordering the tiers" above, not a new rule: that test only
+      # checks group <= cluster. The current effective mobile scale is
+      # 0.5/1/1/1.5rem — list and group are already collapsed onto one
+      # value — so this restores an ordering the BASE scale already has and
+      # the mobile scale had lost.
+      assert item < list,
+             "Effective mobile item (#{item}rem) must be tighter than list (#{list}rem)."
+
+      assert list < group,
+             "Effective mobile list (#{list}rem) must be tighter than group (#{group}rem) — " <>
+               "today they are both 1rem, so sibling links space out as far as the brand " <>
+               "sits from the link list, which is the same proximity inversion the desktop " <>
+               "fix above already closed once."
+
+      assert group <= cluster,
+             "Effective mobile group (#{group}rem) must not exceed cluster (#{cluster}rem)."
+    end
+
+    test "no unscoped .pk-brand-name font-size rule reaches the header's wordmark" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      refute narrow =~ ~r/(?m)^\s*\.pk-brand-name\s*\{[^}]*font-size/,
+             "The ≤480px block sets a bare `.pk-brand-name` font-size. `.pk-brand-name` is " <>
+               "shared by the header and the footer; an unscoped rule reaches the header's " <>
+               "wordmark too, which owns a different surface (`.pk-nav-inner .pk-brand-wordmark`)."
+    end
+
+    test "no rule in the ≤480px block reintroduces the banned 10px/0.625rem size" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      refute narrow =~ ~r/font-size:\s*(10px|0\.625rem)/,
+             "A rule in the ≤480px block sets `font-size: 10px`/`0.625rem`. Quick task " <>
+               "260821-dah closed exactly that value on this lockup (\"banned text-[10px]\"); " <>
+               "a mobile shrink is the natural place for it to silently come back."
+    end
+
+    test "the brand anchor keeps its 44px touch floor" do
+      html = render_component(&Layouts.brand_logo/1, %{})
+
+      assert html =~ "min-h-11",
+             "`brand_logo/1`'s anchor lost `min-h-11`. The lockup's natural height is already " <>
+               "under 44px, so this floor — not the type — is what sets the box; the header is " <>
+               "still `brand_logo/1`'s live surface (the footer's own lockup no longer renders " <>
+               "at ≤480px, sketch 044), so this floor must keep binding there regardless."
+    end
+  end
+
+  # Sketch 044, winner H (quick task 260902-fdm). Real-device feedback on the
+  # already-tightened footer (260901-ty6) still read as too heavy; the user's
+  # own framing broke the stalemate — "the only thing I need there is the BGG
+  # compliance." This describe block guards the resulting ≤480px shape: the
+  # left cluster and the copyright are hidden (PARENT, not children — the
+  # same reasoning `.pk-footer-right`'s hide already carries, so an empty
+  # visible box cannot spend a gap slot), the copyright hides through a
+  # stable class hook rather than position, the chrome tightens further than
+  # 260901-ty6 shipped, and — the most important assertion in this file — the
+  # BGG attribution can never be swept away by a container-level hide.
+  #
+  # Oracle type: derived (contract), same as the rest of this file. Every
+  # assertion here was verified RED against the pre-change stylesheet/markup:
+  # no `.pk-footer-left` hide, no `.pk-footer-copyright` class or hide rule,
+  # today's chrome ratios at 0.5/0.667 (not <= 0.4/0.55), and no
+  # `main.pk-boundary-collapse + .pk-footer` rule inside the ≤480px block.
+  describe "the ≤480px footer is the BGG compliance line and nothing else" do
+    test "the ≤480px block hides .pk-footer-left itself, not its children" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      assert narrow =~ ~r/\.pk-footer-left\s*\{[^}]*display:\s*none/,
+             "The ≤480px block must hide `.pk-footer-left` itself. A `display: none` child is " <>
+               "skipped by flex `gap`, but an empty visible parent still takes a slot in the " <>
+               "column — hiding `.brand_logo` and the link list individually would leave a " <>
+               "zero-height box spending a cluster gap, the same reason `.pk-footer-right`'s " <>
+               "own comment already gives for hiding that cluster as a whole."
+    end
+
+    test "the ≤480px block hides the copyright through its own named hook" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      assert narrow =~ ~r/\.pk-footer-copyright\s*\{[^}]*display:\s*none/,
+             "The ≤480px block must hide the copyright through a `.pk-footer-copyright` class " <>
+               "hook, not a positional selector. The two `.pk-footer-meta` spans are documented " <>
+               "as load-bearing and independently ordered (debug footer-desktop-imbalance), so " <>
+               "a `:first-child` hide would silently hide the wrong one if they are ever swapped."
+
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      copyright = LazyHTML.query(doc, ".pk-footer-legal > .pk-footer-meta.pk-footer-copyright")
+
+      assert Enum.count(copyright) == 1,
+             "Expected exactly one `.pk-footer-legal > .pk-footer-meta.pk-footer-copyright` " <>
+               "element — the class hook `footer/1` adds to the copyright span."
+
+      assert LazyHTML.text(copyright) =~ "Pukllay Club",
+             "The `.pk-footer-copyright` hook landed on the wrong span — its text must contain " <>
+               "\"Pukllay Club\"."
+    end
+
+    test "the surviving piece is the attribution — no rule anywhere hides it" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      doc = LazyHTML.from_document(html)
+
+      notes = LazyHTML.query(doc, ".pk-bgg-note")
+
+      assert Enum.count(notes) == 1,
+             "Expected exactly one `.pk-bgg-note` anchor in the rendered footer."
+
+      assert notes |> LazyHTML.attribute("href") |> List.first() == "https://boardgamegeek.com/",
+             "The `.pk-bgg-note` anchor's href must be exactly \"https://boardgamegeek.com/\"."
+
+      assert notes |> LazyHTML.query("img") |> Enum.count() == 1,
+             "The `.pk-bgg-note` anchor must still carry the BGG logo `<img>`."
+
+      assert notes |> LazyHTML.query("span") |> Enum.count() == 1,
+             "The `.pk-bgg-note` anchor must still carry its text `<span>`."
+
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      never_hidden = [
+        {~r/(?m)^\s*\.pk-footer-legal\s*\{[^}]*display:\s*none/, ".pk-footer-legal"},
+        {~r/(?m)^\s*\.pk-footer-meta\s*\{[^}]*display:\s*none/, "an unscoped .pk-footer-meta"},
+        {~r/\.pk-bgg-note\s*\{[^}]*display:\s*none/, ".pk-bgg-note"}
+      ]
+
+      for {pattern, name} <- never_hidden do
+        refute narrow =~ pattern,
+               "D-04 makes the BGG attribution a compliance requirement at every viewport " <>
+                 "width. A footer-reduction change is precisely where it could be swept away " <>
+                 "by a container-level hide — #{name} may never declare `display: none` in the " <>
+                 "≤480px block."
+      end
+    end
+
+    test "the chrome tightens further than 260901-ty6 shipped, expressed as ratios" do
+      base = base_footer_block(source())
+      narrow = narrow_footer_block(source())
+
+      base_offset = footer_token!(base, "offset")
+      base_pad = footer_token!(base, "pad-block")
+      mobile_offset = footer_token!(narrow, "offset")
+      mobile_pad = footer_token!(narrow, "pad-block")
+
+      assert mobile_offset / base_offset <= 0.4,
+             "The ≤480px `--pk-footer-offset` is #{Float.round(mobile_offset / base_offset, 3)}x " <>
+               "the base value. Sketch 044 needs this at 0.4x or tighter now that the footer " <>
+               "holds a single line — 260901-ty6 only reached 0.5x."
+
+      assert mobile_pad / base_pad <= 0.55,
+             "The ≤480px `--pk-footer-pad-block` is #{Float.round(mobile_pad / base_pad, 3)}x " <>
+               "the base value. Sketch 044 needs this at 0.55x or tighter now that the footer " <>
+               "holds a single line — 260901-ty6 only reached 0.667x."
+    end
+
+    test "the detail page and the catalog page open the same ≤480px footer gap" do
+      narrow = strip_comments(narrow_viewport_tail(source()))
+
+      boundary_margin =
+        case Regex.run(
+               ~r/main\.pk-boundary-collapse \+ \.pk-footer\s*\{[^}]*margin-top:\s*([\d.]+)rem/,
+               narrow
+             ) do
+          [_, v] ->
+            String.to_float(if String.contains?(v, "."), do: v, else: v <> ".0")
+
+          nil ->
+            flunk(
+              "No ≤480px `main.pk-boundary-collapse + .pk-footer` rule found — the detail " <>
+                "page's boundary-decoupling contract (260901-ty6) has nothing to retune."
+            )
+        end
+
+      mobile_offset = footer_token!(narrow_footer_block(source()), "offset")
+
+      assert boundary_margin == mobile_offset,
+             "The ≤480px `main.pk-boundary-collapse + .pk-footer` margin-top " <>
+               "(#{boundary_margin}rem) must equal the ≤480px `--pk-footer-offset` " <>
+               "(#{mobile_offset}rem). 260901-ty6 deliberately kept these as two independent " <>
+               "declarations that \"coincide by intent, not by a shared declaration\" — " <>
+               "retuning only the token would silently leave the detail page looser than the " <>
+               "catalog page on the project's primary surface."
+    end
+  end
+
+  # Quick task 260902-il3, Task 2. Motivating measurement: the catalog page's
+  # last carousel shelf sat 128px above the footer at 390px / 176px at
+  # 1280px, live-measured, before `bottom_collapse` shipped — three
+  # independently-reasonable declarations stacking (`<main>`'s own bottom
+  # padding, `.pk-shelf`'s own trailing margin, `.pk-footer`'s own top
+  # margin). Task 1 fixed this by adding a SECOND, independent bottom axis
+  # (`pk-bottom-collapse`, D-02) that shares one declaration with the detail
+  # page's existing `boundary_collapse` footer-margin rule rather than
+  # duplicating literals (D-04) — "declaring separate literals per
+  # orientation is what caused the drift in the first place" (app.css,
+  # ≤480px block comment).
+  #
+  # Oracle type: derived (contract), same as the rest of this file. Rendered
+  # geometry is the only oracle that can actually PROVE the fix — a class
+  # could render with no matching CSS rule and every assertion below would
+  # still pass — these assertions pin only the declarations that geometry
+  # depends on; Task 3 supplies the live-measured geometry that proves the
+  # declarations actually apply. Every assertion here was verified RED
+  # against a deliberately-broken variant (see each test's own comment).
+  describe "bottom_collapse shares its footer-margin declaration with boundary_collapse (260902-il3)" do
+    # Verified RED by temporarily splitting this rule into two separate
+    # rules (`main.pk-bottom-collapse + .pk-footer { margin-top: 1rem }` and
+    # `main.pk-boundary-collapse + .pk-footer { margin-top: 1.5rem }`) —
+    # this regex, which requires ONE rule whose selector list carries BOTH
+    # class names, stopped matching and the test flunked as expected.
+    defp bottom_collapse_footer_rule(src) do
+      case Regex.run(
+             ~r/main\.pk-bottom-collapse\s*\+\s*\.pk-footer\s*,\s*main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{([^}]*)\}/,
+             src
+           ) do
+        [_, body] -> body
+        nil -> nil
+      end
+    end
+
+    test "the >480px rule is ONE declaration shared by both selectors, at 1.5rem" do
+      body = source() |> wide_viewport_source() |> bottom_collapse_footer_rule()
+
+      refute is_nil(body),
+             "No single >480px rule found whose selector list contains both " <>
+               "`main.pk-bottom-collapse + .pk-footer` and " <>
+               "`main.pk-boundary-collapse + .pk-footer`. D-04 requires ONE shared " <>
+               "declaration, not two rules with independently-tunable literals."
+
+      assert body =~ ~r/margin-top:\s*1\.5rem/,
+             "The shared >480px `main.pk-bottom-collapse + .pk-footer, " <>
+               "main.pk-boundary-collapse + .pk-footer` rule must declare `margin-top: 1.5rem` " <>
+               "— the same value `boundary_collapse` already ships on the detail page " <>
+               "(sketch 035's closed equal-24px-boundary decision)."
+    end
+
+    # Verified RED the same way as the >480px test above, against the ≤480px
+    # block specifically.
+    test "the ≤480px rule is ONE declaration shared by both selectors, at 1rem, and matches --pk-footer-offset" do
+      body = source() |> narrow_viewport_tail() |> bottom_collapse_footer_rule()
+
+      refute is_nil(body),
+             "No single ≤480px rule found whose selector list contains both " <>
+               "`main.pk-bottom-collapse + .pk-footer` and " <>
+               "`main.pk-boundary-collapse + .pk-footer`."
+
+      assert body =~ ~r/margin-top:\s*1rem/,
+             "The shared ≤480px rule must declare `margin-top: 1rem` — the same value " <>
+               "`boundary_collapse` already ships on the detail page at this breakpoint " <>
+               "(sketch 044's reopened ≤480px boundary decision)."
+
+      mobile_offset = footer_token!(narrow_footer_block(source()), "offset")
+
+      assert mobile_offset == 1.0,
+             "The ≤480px `--pk-footer-offset` token (#{mobile_offset}rem) no longer equals " <>
+               "1rem — this test's hardcoded expectation in the shared rule above " <>
+               "(`margin-top: 1rem`) must be retuned alongside it, or the catalog page will " <>
+               "silently drift away from the detail page's boundary value."
+    end
+
+    # D-02: `bottom_collapse` cancels ONLY the bottom boundary, leaving
+    # `<main>`'s default top-padding utilities in place — this is the single
+    # assertion that makes REQ-2 (top spacing must not move) enforceable in
+    # ExUnit rather than only in Task 3's live measurement. Verified RED by
+    # temporarily adding a `padding-top` declaration to this rule.
+    defp bottom_collapse_main_block(src) do
+      case Regex.run(~r/(?m)^main\.pk-bottom-collapse\s*\{([^}]*)\}/, strip_comments(src)) do
+        [_, body] -> body
+        nil -> flunk("No `main.pk-bottom-collapse` rule found in assets/css/app.css")
+      end
+    end
+
+    test "main.pk-bottom-collapse declares padding-bottom: 0 and no padding-top" do
+      body = bottom_collapse_main_block(source())
+
+      assert body =~ ~r/padding-bottom:\s*0/,
+             "`main.pk-bottom-collapse` must declare `padding-bottom: 0` — the whole point of " <>
+               "this axis is cancelling `<main>`'s own bottom padding on the catalog page."
+
+      refute body =~ ~r/padding-top/,
+             "`main.pk-bottom-collapse` declares a `padding-top` — this axis must be bottom-" <>
+               "only (D-01). The catalog page's top spacing is a separately-tuned, closed " <>
+               "decision (REQ-2) that `boundary_collapse` (not this rule) is the one allowed " <>
+               "to touch."
+    end
+
+    # Verified RED by temporarily changing this rule's `margin-bottom: 0` to
+    # a nonzero value.
+    defp bottom_collapse_last_shelf_block(src) do
+      case Regex.run(
+             ~r/(?m)^main\.pk-bottom-collapse \.pk-shelf:last-of-type\s*\{([^}]*)\}/,
+             strip_comments(src)
+           ) do
+        [_, body] -> body
+        nil -> flunk("No `main.pk-bottom-collapse .pk-shelf:last-of-type` rule found")
+      end
+    end
+
+    test "main.pk-bottom-collapse .pk-shelf:last-of-type declares margin-bottom: 0" do
+      body = bottom_collapse_last_shelf_block(source())
+
+      assert body =~ ~r/margin-bottom:\s*0/,
+             "`main.pk-bottom-collapse .pk-shelf:last-of-type` must cancel the trailing " <>
+               "shelf's own margin — otherwise it stacks with the footer's own top margin " <>
+               "exactly as it did before this fix."
+    end
+
+    # Selector ordering is load-bearing for two EXISTING tests, not just this
+    # file's own: `catalog_show_test.exs` (~line 3582) and this file's own
+    # "the detail page and the catalog page open the same ≤480px footer gap"
+    # test (above) both regex for `main.pk-boundary-collapse + .pk-footer`
+    # sitting immediately before the opening brace. Verified RED by
+    # temporarily reversing the selector order in both grouped rules.
+    test "main.pk-boundary-collapse + .pk-footer stays immediately before the opening brace in both grouped rules" do
+      stripped = strip_comments(source())
+
+      assert Regex.match?(
+               ~r/main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{/,
+               wide_viewport_source(stripped)
+             ),
+             "The >480px grouped rule no longer has `main.pk-boundary-collapse + .pk-footer` " <>
+               "immediately before its opening brace. This breaks `catalog_show_test.exs`'s " <>
+               "and this file's own ≤480px-gap regex, both of which are anchored to that exact " <>
+               "adjacency — reordering the group (even alphabetically) is a breaking change."
+
+      assert Regex.match?(
+               ~r/main\.pk-boundary-collapse\s*\+\s*\.pk-footer\s*\{/,
+               narrow_viewport_tail(stripped)
+             ),
+             "The ≤480px grouped rule no longer has `main.pk-boundary-collapse + .pk-footer` " <>
+               "immediately before its opening brace — same downstream-test breakage as the " <>
+               ">480px case above."
     end
   end
 
@@ -293,18 +783,51 @@ defmodule PukllayClubWeb.FooterRhythmTest do
                "problem that killed the original Mission Band design."
     end
 
-    test "the ≤480px block returns the legal band to the centred stack" do
+    test "the ≤480px block right-aligns the legal band, not a centred stack" do
       narrow = narrow_viewport_tail(source())
 
-      # The stacked footer is centred: `.pk-footer-row` keeps `align-items: center`,
-      # which flips from "centre the clusters vertically" to "centre the stack
-      # horizontally" when the direction changes. A width:100% box opts out of that
-      # and left-aligns against the gutter while everything above it stays centred.
+      # At ≤480px `.pk-footer-row` is `flex-direction: column`, so `align-items`
+      # is the HORIZONTAL control there — it flips from "centre the clusters
+      # vertically" on the base ROW to "align the stack horizontally" the moment
+      # the direction changes. Without this override the row inherits the base
+      # rule's `center` and centres the one line that still renders.
+      assert narrow =~ ~r/\.pk-footer-row\s*\{[^}]*align-items:\s*flex-end/,
+             "The ≤480px block must declare `.pk-footer-row { align-items: flex-end; }`. " <>
+               "Without it the row inherits the base rule's `align-items: center`, and since " <>
+               "`.pk-footer-legal` is the only visible child left in the column, centring it " <>
+               "reads as a centred stack instead of a right-aligned one."
+
+      # `width: 100%` makes a flex item fill the cross axis, so ANY `align-items`
+      # value on the column — center, flex-end, doesn't matter — becomes a no-op
+      # on it. `width: auto` is a precondition of right alignment exactly as it
+      # was of centring; this assertion is unchanged in shape from before, only
+      # its reasoning below is updated.
       assert narrow =~ ~r/\.pk-footer-legal\s*\{[^}]*width:\s*auto/,
-             "The ≤480px block no longer resets `.pk-footer-legal`'s width to auto. Mobile is " <>
-               "this project's primary surface and its footer is a CENTRED column — leaving " <>
-               "the band full-width left-aligns the legal line while the brand and links above " <>
-               "it stay centred (measured: x=14 instead of 39.13 at 320px)."
+             "The ≤480px block no longer resets `.pk-footer-legal`'s width to auto. A " <>
+               "`width: 100%` flex item fills the column's cross axis, making any " <>
+               "`align-items` value — right alignment included — a no-op. `width: auto` is " <>
+               "what lets the new `align-items: flex-end` override actually apply."
+    end
+
+    # Guards requirement 3 (this change is ≤480px-scoped). Green from the start
+    # by design, not a RED proof: it asserts the BASE (>480px) rule, which this
+    # task never touches — a permanent guard against a future edit leaking the
+    # ≤480px alignment change outside the media block.
+    test "the >480px .pk-footer-row rule still centres the clusters vertically" do
+      wide = wide_viewport_source(source())
+
+      row =
+        case Regex.run(~r/(?m)^\.pk-footer-row\s*\{([^}]*)\}/, wide) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-footer-row` rule found before the ≤480px block")
+        end
+
+      assert row =~ ~r/align-items:\s*center/,
+             "`.pk-footer-row`'s base (>480px) rule must still set `align-items: center`. At " <>
+               ">480px this is a ROW, where `align-items: center` vertically centres the two " <>
+               "clusters against the legal band — a different meaning entirely from the " <>
+               "≤480px override's horizontal alignment. This change is ≤480px-scoped; the " <>
+               "base rule must never be touched by it."
     end
 
     test "the emptied right cluster cannot spend a gap slot on the mobile stack" do

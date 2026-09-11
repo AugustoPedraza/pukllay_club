@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
-stopped_at: Phase 01.2 complete, ready to plan Phase 02
-last_updated: "2026-08-29T15:48:23.163Z"
-last_activity: 2026-08-29
-last_activity_desc: Phase 01.2 complete, transitioned to Phase 02
-state_head: 80b815f6cd3281abbcd5b1e2fddc5621f3dadb1a
+stopped_at: "Completed quick task 260902-glf: Remove the site-wide sticky-footer layout"
+last_updated: "2026-09-02T15:18:56.812Z"
+last_activity: 2026-09-02
+last_activity_desc: Phase 01.3.1 complete, transitioned to Phase 02
+state_head: 0e0690c2890ded4caa5cb92f7405e6883f35bf94
 progress:
-  total_phases: 6
-  completed_phases: 3
-  total_plans: 48
-  completed_plans: 48
+  total_phases: 8
+  completed_phases: 5
+  total_plans: 62
+  completed_plans: 62
 milestone_name: milestone
 ---
 
@@ -21,7 +21,7 @@ milestone_name: milestone
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-29)
+See: .planning/PROJECT.md (updated 2026-09-01)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
@@ -32,15 +32,15 @@ even without already knowing board-game vocabulary.
 Phase: 02 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-29 — Phase 01.2 complete, transitioned to Phase 02
+Last activity: 2026-09-02 — Completed quick task 260902-il3: Fix the catalog page's last-shelf-to-footer gap
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 51
+- Total plans completed: 65
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -52,6 +52,8 @@ Progress: [██████████] 100%
 | 01 | 9 | - | - |
 | 01.1 | 9 | - | - |
 | 01.2 | 27 | - | - |
+| 01.3 | 12 | - | - |
+| 01.3.1 | 2 | - | - |
 
 **Recent Trend:**
 
@@ -92,6 +94,9 @@ Progress: [██████████] 100%
 | Phase 01.2 P12 | 45min | 3 tasks | 5 files |
 | Phase 01.2 P14 | 25min | 3 tasks | 5 files |
 | Phase 01.2 P15 | 15min | 3 tasks | 4 files |
+| Phase 01.3 P02 | 25min | 3 tasks | 1 files |
+| Phase 01.3 P04 | 45min | 2 tasks | 2 files |
+| Phase quick-260902-glf P01 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -169,6 +174,13 @@ Recent decisions affecting current work:
 - [Phase 01.2]: 01.2-15: reduced-motion for .pk-conn-spinner uses @media (prefers-reduced-motion: no-preference) gating the animation itself (matching .pk-scroll-top's idiom), not a new per-selector reduce-block override, since app.css already retired that pattern in favor of one universal * guard
 - [Phase 01.2]: 01.2-15: UI-SPEC's D-03 auto-load-more error row rescoped to a live query failure only (safe_filter_games/1, requires an established socket); a new connection-status row added for the transport-disconnect surface; header row-count corrected from a pre-existing 36/31 (already off-by-one against actual 37/32) to 38/33/3/2 after recounting
 - [Phase 01.2, 2026-08-29]: Phase closed after 32 plans and 10 UAT gap-closure rounds (G-01.2-9 through G-01.2-21) — the mobile detail-page masthead was rebuilt (facts pills above the poster, one buy-box card, compact dot row), a single shared pill/chip base component replaced five independently-styled chip implementations, the lightbox was rebuilt from scratch (full-screen opaque stage, shell-width photo cap, own selection state independent of the gallery carousel, unified dark/light control family), and a site-wide sticky-footer layout + mobile-only title-echo bar shipped. Final UAT gate closed 2026-08-29: 23/28 checkpoints reconfirmed via a live mobile (390px) browser spot-check; the remaining 5 desktop-only claims (shell-width alignment at 1280/1440/1920px) were accepted on existing exact-DOM-coordinate measurements already on record in the Gaps section, since this session's browser automation tool would not resize its rendering viewport past ~390px (resize_window reported success but window.innerWidth stayed pinned at 339px) — worth re-verifying live on a real desktop browser if that tool limitation is ever hit again for future UI work.
+- [Phase 01.3]: 01.3-02: D-06 checkpoint resolved run-now — full BGG re-enrichment ran against all 393 bgg_id-carrying games (385 updated, 8 missing from BGG, 14 unranked), plus artists backfilled/deduplicated for 385 games; Task 1's array_length(artists,1) IS NULL acceptance check has a Postgres empty-array-returns-NULL gap, verified as a false positive not a real skip (377+8=385)
+- [Phase 01.3]: 01.3-04: Ran the real Spanish translation batch (D-01) -- 384/385 games translated to natural Argentine (Rioplatense) Spanish; found and fixed a Rule 1 bug where --only-english's exact-match resumability filter silently skipped 214/385 real candidates because bgg_payload drifts independently via 01.3-02's re-enrichment; the one legitimate failure (id 252, Mysterium) hit Gemini's deterministic RECITATION/copyright filter and correctly kept its prior English text.
+- [Phase 01.3, 2026-09-01]: Phase closed after 12 plans and a 3-round chevron/toggle CSS gap-closure chain (float-in-justified-paragraph → native -webkit-line-clamp + trailing-sibling button → position:relative + :not(.is-expanded) absolute overlay) — final failure mode only reproduced on real WebKit/Mobile-Safari, not headless Chromium, confirming this codebase's established engine-divergence risk for this exact toggle-in-clamped-paragraph pattern. 8/8 UAT checkpoints passed, including 2 real-device confirmations (G-01.3-4+6 combined, G-01.3-5). G-01.3-1 (empty hashtag row) resolved as intended — HashtagNormalizer only derives tags from 3 CSV columns, giving 26% catalog coverage; accepted rather than widening the mapping. threats_open: 0 across 58 registered threats (01.3-SECURITY.md).
+- [Phase 01.3]: designer/artist catalog filtering added (`?designers=`/`?artists=` open-text params) — first non-whitelisted list param this app accepts; parameterized via `type(^values, {:array, :string})` + `fragment("? && ?", ...)`, capped at 20 values × 120 chars each, GIN-indexed.
+- [Phase 01.3]: `gemini_api_key` added alongside `bgg_api_token` in `Credentials` (`@secret_fields` + `@derive {Inspect, only: [...]}`, gitignored `config/dev.secret.exs` only); `instructor_lite` (hex.pm) is this phase's one new dependency, manually audited and approved in `01.3-RESEARCH.md` since it falls outside the automated npm/pypi/crates package-legitimacy seam.
+- [Phase 01.3.1, 2026-09-01]: Phase closed after 2 plans, both UAT checkpoints passed on first pass (letterbox rendering across catalog grid/hover/mobile-sheet/detail surfaces; motivating example BGG id 305096 confirmed showing the correct Spanish/Fantasía cover, no stray thumbnail/dot strip). D-02 checkpoint resolved BGG's XML API v2 exposing no reachable gameplay/component photos by narrowing gallery scope to Spanish-edition box art only; `GalleryBackfill` re-ran live over ~434 games; one shared `.pk-poster-img` letterbox class now applied verbatim across every artwork surface except the lightbox and 64x64 selector chips.
+- [Phase 02]: Quick task 260902-glf: reverted Phase 01.2's sticky-footer app shell (.pk-app-shell min-height/flex-grow) per developer's explicit choice; live CDP A/B measurement then found the accompanying flex column vestigial too (main carries only padding, no bottom margin, so nothing collapsed), so the entire .pk-app-shell class + its 3 presence tests + CSS-facts test contract were retired -- root.html.heex's <body> now carries no class at all
 
 ### Pending Todos
 
@@ -215,6 +227,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
   - **G-01-4 (major):** Carousel shelves on `/` read as a single vertical list with no visible affordance that there are multiple carousels, and horizontal scroll happens at the window level instead of being scoped to each carousel row. A diagnosis was opened at `.planning/debug/G-01-4-carousel-affordance.md`.
   - **G-01-3 (unresolved):** The carousel prev/next scroll-controls test was skipped by the user ("I don't understand this") — whether the originally-reported "~20 columns forcing horizontal scroll" was a carousel rail or the `#games` grid is still an open question.
   - These two remain the next manual UI/UX pass's starting point. The third item originally grouped here — the 7-item UI audit — was closed 2026-08-21 by quick task 260821-dah (see "Pending Todos" above).
+- [Resolved by quick task 260901-ty6, 2026-09-01] Mobile footer visual weight — the footer (not the full shell) had its ≤480px vertical chrome (margin+padding), wordmark, and link ink/gap all retuned down (96px→56px chrome); CDP-measured, 764/764 tests pass. Deferred item closed; if visual weight concerns resurface on other shell surfaces (header, drawer), that remains its own shell-wide phase.
+- Deferred (not a blocker): sticky title-echo bar's brand-tint/bounce question — mechanical separation/contrast/typography fixes shipped in 01.3-09 and 01.3-11 (both deliberately left the bar's own background fill and `.pk-scroll-top`'s bounce animation untouched, per each plan's own "Open design questions"); brand treatment itself still undecided, reported at least twice now (01.2 and 01.3).
 
 ### Quick Tasks Completed
 
@@ -248,11 +262,18 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260824-i8e | Removed the stale native sort `<select>` (Nombre/Duración/Complejidad/Más recientes) from the catalog page; sort machinery underneath (parse_sort/1, :sort assign, see-all/URL deep links) left fully intact | 2026-08-24 | c3b14b3 | Complete | [260824-i8e-the-select-for-nombre-duracion-etc-looks](./quick/260824-i8e-the-select-for-nombre-duracion-etc-looks/) |
 | 260824-q8z | Mobile drawer bottom block: social links reordered as a full-width, high-contrast, 44px CONTENT row; theme control centered and its "Tema" label converted to sr-only as a quiet FOOTER strip (mirrors the desktop footer's shipped pattern, applies sketch 021's Round-6 conclusion) | 2026-08-24 | 79b392b | Complete | [260824-q8z-for-mobile-the-social-links-at-the-botto](./quick/260824-q8z-for-mobile-the-social-links-at-the-botto/) |
 | 260824-t7g | New carousel arrow layer from sketches 022-026: relocated prev/next controls to Netflix-style edge-overlay chevrons gated to pointer-fine devices (022-C), replaced the browser's fixed smooth-scroll with the project's own 200ms soft ease-out curve (023-B) | 2026-08-24 | d106248 | Partial (live-smoothness sub-check needs a human eyeballing it in a foregrounded tab — see SUMMARY) | [260824-t7g-new-carousel-from-latest-sketches](./quick/260824-t7g-new-carousel-from-latest-sketches/) |
+| 260901-ty6 | Reduce the mobile (<=480px) footer's visual weight: shrink .pk-footer margin-top and .pk-footer-row vertical padding on mobile, shrink the footer brand_logo, and shrink footer-links font-size/gap on mobile. Desktop untouched. | 2026-09-01 | ed51bab | Complete (764/764 tests, mix quality passes; CDP-measured mobile chrome 96px→56px; one human-judgment visual check flagged in SUMMARY) | [260901-ty6-reduce-the-mobile-480px-footer-s-visual-](./quick/260901-ty6-reduce-the-mobile-480px-footer-s-visual-/) |
+| 260902-fdm | Reduce the mobile footer to just the BGG attribution line per sketch 044 (winner H): remove brand name/tagline, FAQ/Contacto/Juntadas links, and the copyright line from the <=480px footer; keep only <.bgg_attribution />; tighten the <=480px gap further. Desktop untouched. | 2026-09-02 | 1062835 | Complete (766/766 tests, mix format/compile clean; CDP-measured mobile chrome 56px→40px; one human-judgment visual check flagged in SUMMARY, same precedent as 260901-ty6) | [260902-fdm-reduce-the-mobile-footer-to-just-the-bgg](./quick/260902-fdm-reduce-the-mobile-footer-to-just-the-bgg/) |
+| 260902-g21 | On mobile (<=480px), right-align the footer (now just the BGG attribution line) instead of centering it; retire the stale centering-rationale comment; desktop unaffected. | 2026-09-02 | c2ff6a3 | Complete (767/767 tests, mix format clean; CDP-measured 320/390px right-edge alignment confirmed, desktop byte-identical at 768/1280px; one human-judgment visual check flagged in SUMMARY, same precedent as prior footer tasks) | [260902-g21-on-mobile-480px-right-align-the-footer-i](./quick/260902-g21-on-mobile-480px-right-align-the-footer-i/) |
+| 260902-glf | Delete the site-wide sticky-footer app shell mechanism (.pk-app-shell min-height/flex-grow) so the footer follows content instead of being pushed to the viewport bottom on short pages; live CDP A/B measurement then found the accompanying flex column vestigial too, so the entire .pk-app-shell class and its tests were retired. | 2026-09-02 | 0e0690c | Complete (762/762 tests, mix format/compile clean; CDP-measured short-page/long-page/CTA-bar geometry + flex-column A/B all byte-identical; two human-judgment visual checks flagged in SUMMARY, same precedent as prior footer tasks) | [260902-glf-remove-the-site-wide-sticky-footer-layou](./quick/260902-glf-remove-the-site-wide-sticky-footer-layou/) |
+| 260902-il3 | Fix the catalog page's ("/") last-shelf-to-footer gap: main's default pb-20 (80px) was stacking with .pk-shelf's trailing margin and .pk-footer's own margin-top since CatalogLive.Index never opted into the existing boundary_collapse mechanism the detail page uses. Added a new bottom_collapse attr (bottom-only, doesn't touch top spacing) sharing one CSS declaration with the detail page's footer-margin rule. | 2026-09-02 | cf95f7b | Complete (773/773 tests, mix quality clean; CDP-measured gap 128px/176px -> 16px/24px at 390px/1280px matching the detail page exactly; top spacing + detail/about pages unaffected; a stale test wrongly justifying catalog bottom padding as "CTA-bar clearance" found and fixed; D-03 shipped 16/24px split (matching detail page) not a flat 24px, flagged for confirmation) | [260902-il3-fix-the-large-empty-gap-between-the-last](./quick/260902-il3-fix-the-large-empty-gap-between-the-last/) |
 
 ### Roadmap Evolution
 
 - Phase 01.1 edited: cleaned up title/goal/requirements/success-criteria after insertion; added SHELL-01..05 to REQUIREMENTS.md
 - Phase 01.2 inserted after Phase 1: Catalog & Detail Navigation Polish — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped (URGENT)
+- Phase 01.3 inserted after Phase 01.2: Game detail page layout needs to be clearer/more scannable and the game information shown needs to be accurate; requested after Phase 01.2's navigation/mechanics polish shipped (URGENT)
+- Phase 01.3.1 inserted after Phase 01.3: Game Image Quality & Multi-Image Gallery (URGENT)
 
 ## Deferred Items
 
@@ -264,6 +285,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-29
-Stopped at: Phase 01.2 complete, ready to plan Phase 02
+Last session: 2026-09-02T15:18:56.202Z
+Stopped at: Completed quick task 260902-glf: Remove the site-wide sticky-footer layout
 Resume file: None

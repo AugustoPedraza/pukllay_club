@@ -23,7 +23,8 @@ config :pukllay_club, PukllayClub.Catalog.Seed,
   r2_access_key_id: "test-access-key-id",
   r2_secret_access_key: "test-secret-access-key",
   r2_catalog_bucket: "test-catalog-bucket",
-  r2_public_base_url: "https://images.test.invalid"
+  r2_public_base_url: "https://images.test.invalid",
+  gemini_api_key: "test-gemini-key"
 
 # In test we don't send emails
 config :pukllay_club, PukllayClub.Mailer, adapter: Swoosh.Adapters.Test

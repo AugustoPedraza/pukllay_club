@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 13
+open_count: 19
 waived_count: 0
-fixed_count: 0
-total_count: 13
-last_updated: 2026-08-26T22:51:30.480Z
+fixed_count: 3
+total_count: 22
+last_updated: 2026-09-01T11:03:15.710Z
 ---
 
 # Broken Windows Ledger
@@ -28,6 +28,15 @@ last_updated: 2026-08-26T22:51:30.480Z
 | 11 | 01.2-13 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Task 2 human-check: buy-box reads as one bounded panel lifted off the page (not fading into the reading column) at ~390px and >=1280px in both light and dark themes, share icon anchored over the panel's top-right corner at both widths, cover art fills its frame with no letterboxing, reserve button unambiguously the page's one primary action -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-26T22:28:46.824Z |  |
 | 12 | 01.2-13 | unrun-verify | assets/css/app.css |  | Task 3 human-check: at ~390px the stacked reserve+share bar reads balanced with reserve unmistakably primary, scroll-hide/reveal timing and footer-park behavior unchanged with no new jump, last real content never hidden behind the taller bar, and past 1100px (but below 768px) the bar's controls align under the content column instead of stretching edge-to-edge -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-26T22:28:47.008Z |  |
 | 13 | 01.2 | unmet-truth | lib/pukllay_club_web/live/catalog_live/index.ex |  | Active-filters chip row's visual weight balance vs the Resultados heading (sketch 029 Round 2's 'clearly secondary' intent) is asserted only via class/no-shadow presence in tests; needs a human eyeballing a live render in both themes — no browser tool available to this executor (01.2-12 D6). | open |  | 2026-08-26T22:51:30.480Z |  |
+| 14 | 01.3-02 | unrun-verify | lib/mix/tasks/catalog.enrich_bgg_stats.ex |  | Task 3 human-check: open 2-3 real game detail pages and confirm Valoración BGG shows a plausible 10-point score and links to that game's own BGG page -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; underlying data spot-checked via SQL (Wingspan 7.99/10 rank 38, Spirit Island 8.34/10 rank 11) | open |  | 2026-08-30T23:17:30.343Z |  |
+| 15 | 01.3-02 | todo | lib/pukllay_club/catalog/seed/bgg_client.ex |  | BggClient.fetch_batch/2 raises ArgumentError (:erlang.binary_to_integer("")) when called with an empty bgg_ids list, discovered via an ad hoc verification script during 01.3-02; not reachable through StatsEnricher's normal flow (chunk_every never yields an empty chunk from a non-empty candidate list) but is a latent crash if ever called with []; pre-existing 01.3-01 code, out of scope for this plan's no-code-changes constraint | open |  | 2026-08-30T23:17:30.601Z |  |
+| 16 | 01.3-04 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Human-check: open three game detail pages (short/long/unusual-title descriptions), confirm as a Spanish speaker the description reads naturally in Argentine Spanish (voseo), proper nouns/mechanic names survive untranslated, no stray escapes, and Ver mas/Ver menos still expands/collapses at mobile+desktop widths -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; text quality already reviewed by the executor against a 5-game sample (all 5 criteria incl. voseo) before the full batch ran | open |  | 2026-08-31T00:12:03.091Z |  |
+| 17 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual visual verification of the D-03/D-04 reading-column rhythm and D-06 Avanzado group at 390px/1440px against 01.3-UI-SPEC.md not run interactively (no browser tool available to this executor); deferred to end-of-phase UAT per workflow.human_verify_mode: end-of-phase. | open |  | 2026-08-31T00:35:26.436Z |  |
+| 18 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode | open |  | 2026-08-31T20:19:55.896Z |  |
+| 19 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-08 Task 3 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify description justify + mid-word-cut risk (fallback pre-decided) + chevron/ellipsis ink alignment (translateY(-2px), tuned but unverified against real Inter render) + repeated tap round-trips, across 3 real games x 2 widths (390/1440) x 2 themes; if any of the 6 combos cuts mid-word, apply this plan's pre-decided fallback CSS (real -webkit-line-clamp:3 + trailing-sibling toggle, recorded in 01.3-08-PLAN.md's planner_note) rather than re-sketching. | open |  | 2026-08-31T20:39:49.123Z |  |
+| 20 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-10 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify on a real iOS/Mobile-Safari device (the engine G-01.3-4 reproduced on, not Blink) that the chevron sits inside the text column at 390px, the clipped third line ends on a whole word, tapping expands/collapses reliably across round trips, and the description stays justified at 390px/1440px, across light+dark theme and a short + long description game. | fixed |  | 2026-08-31T23:15:03.802Z | 2026-09-01T11:03:15.503Z |
+| 21 | 01.3-11 | unrun-verify | assets/css/app.css |  | 01.3-11 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): at 390px, both light and dark theme, on a long game name with an accented capital and one that truncates, verify the sticky bar's title reads as a deliberate title (holds its own against the scroll-to-top button), stays on ONE line ending in an ellipsis, accented capitals render complete, and the bar's fill/border/button remain visually unchanged from before this plan. | fixed |  | 2026-08-31T23:29:56.119Z | 2026-09-01T02:15:46.887Z |
+| 22 | 01.3-12 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-12 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): on a real iOS/Mobile-Safari device at 390px and 1440px, both light and dark theme, across Honey Buzz (113)/Mille Fiori (193)/Illusion (396)/a short-description game/7 Wonders Duel, verify the chevron trails the clipped third line (not a row below it), the reserved right gutter reads acceptably on lines 1-2 at 390px (else apply the planner_note's pre-decided padding-right:1.75rem + hover/active-background-neutralised fallback pair, not a hand-tuned middle value), a near-full-width third line stays clear of the chevron, repeated expand/collapse stays reliable with no jump/flicker at the absolute/in-flow position switch, and the description stays justified with the third line ending on a whole word. | fixed |  | 2026-09-01T01:54:50.616Z | 2026-09-01T11:03:15.710Z |
 
 ````json
 [
@@ -186,6 +195,114 @@ last_updated: 2026-08-26T22:51:30.480Z
     "reason": "",
     "recorded_at": "2026-08-26T22:51:30.480Z",
     "resolved_at": null
+  },
+  {
+    "id": 14,
+    "kind": "unrun-verify",
+    "phase": "01.3-02",
+    "file": "lib/mix/tasks/catalog.enrich_bgg_stats.ex",
+    "line": null,
+    "description": "Task 3 human-check: open 2-3 real game detail pages and confirm Valoración BGG shows a plausible 10-point score and links to that game's own BGG page -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; underlying data spot-checked via SQL (Wingspan 7.99/10 rank 38, Spirit Island 8.34/10 rank 11)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-30T23:17:30.343Z",
+    "resolved_at": null
+  },
+  {
+    "id": 15,
+    "kind": "todo",
+    "phase": "01.3-02",
+    "file": "lib/pukllay_club/catalog/seed/bgg_client.ex",
+    "line": null,
+    "description": "BggClient.fetch_batch/2 raises ArgumentError (:erlang.binary_to_integer(\"\")) when called with an empty bgg_ids list, discovered via an ad hoc verification script during 01.3-02; not reachable through StatsEnricher's normal flow (chunk_every never yields an empty chunk from a non-empty candidate list) but is a latent crash if ever called with []; pre-existing 01.3-01 code, out of scope for this plan's no-code-changes constraint",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-30T23:17:30.601Z",
+    "resolved_at": null
+  },
+  {
+    "id": 16,
+    "kind": "unrun-verify",
+    "phase": "01.3-04",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "Human-check: open three game detail pages (short/long/unusual-title descriptions), confirm as a Spanish speaker the description reads naturally in Argentine Spanish (voseo), proper nouns/mechanic names survive untranslated, no stray escapes, and Ver mas/Ver menos still expands/collapses at mobile+desktop widths -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; text quality already reviewed by the executor against a 5-game sample (all 5 criteria incl. voseo) before the full batch ran",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-31T00:12:03.091Z",
+    "resolved_at": null
+  },
+  {
+    "id": 17,
+    "kind": "unrun-verify",
+    "phase": "01.3",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "Manual visual verification of the D-03/D-04 reading-column rhythm and D-06 Avanzado group at 390px/1440px against 01.3-UI-SPEC.md not run interactively (no browser tool available to this executor); deferred to end-of-phase UAT per workflow.human_verify_mode: end-of-phase.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-31T00:35:26.436Z",
+    "resolved_at": null
+  },
+  {
+    "id": 18,
+    "kind": "unrun-verify",
+    "phase": "01.3",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-31T20:19:55.896Z",
+    "resolved_at": null
+  },
+  {
+    "id": 19,
+    "kind": "unrun-verify",
+    "phase": "01.3",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "01.3-08 Task 3 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify description justify + mid-word-cut risk (fallback pre-decided) + chevron/ellipsis ink alignment (translateY(-2px), tuned but unverified against real Inter render) + repeated tap round-trips, across 3 real games x 2 widths (390/1440) x 2 themes; if any of the 6 combos cuts mid-word, apply this plan's pre-decided fallback CSS (real -webkit-line-clamp:3 + trailing-sibling toggle, recorded in 01.3-08-PLAN.md's planner_note) rather than re-sketching.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-31T20:39:49.123Z",
+    "resolved_at": null
+  },
+  {
+    "id": 20,
+    "kind": "unrun-verify",
+    "phase": "01.3",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "01.3-10 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify on a real iOS/Mobile-Safari device (the engine G-01.3-4 reproduced on, not Blink) that the chevron sits inside the text column at 390px, the clipped third line ends on a whole word, tapping expands/collapses reliably across round trips, and the description stays justified at 390px/1440px, across light+dark theme and a short + long description game.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-08-31T23:15:03.802Z",
+    "resolved_at": "2026-09-01T11:03:15.503Z"
+  },
+  {
+    "id": 21,
+    "kind": "unrun-verify",
+    "phase": "01.3-11",
+    "file": "assets/css/app.css",
+    "line": null,
+    "description": "01.3-11 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): at 390px, both light and dark theme, on a long game name with an accented capital and one that truncates, verify the sticky bar's title reads as a deliberate title (holds its own against the scroll-to-top button), stays on ONE line ending in an ellipsis, accented capitals render complete, and the bar's fill/border/button remain visually unchanged from before this plan.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-08-31T23:29:56.119Z",
+    "resolved_at": "2026-09-01T02:15:46.887Z"
+  },
+  {
+    "id": 22,
+    "kind": "unrun-verify",
+    "phase": "01.3-12",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "01.3-12 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): on a real iOS/Mobile-Safari device at 390px and 1440px, both light and dark theme, across Honey Buzz (113)/Mille Fiori (193)/Illusion (396)/a short-description game/7 Wonders Duel, verify the chevron trails the clipped third line (not a row below it), the reserved right gutter reads acceptably on lines 1-2 at 390px (else apply the planner_note's pre-decided padding-right:1.75rem + hover/active-background-neutralised fallback pair, not a hand-tuned middle value), a near-full-width third line stays clear of the chevron, repeated expand/collapse stays reliable with no jump/flicker at the absolute/in-flow position switch, and the description stays justified with the third line ending on a whole word.",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-09-01T01:54:50.616Z",
+    "resolved_at": "2026-09-01T11:03:15.710Z"
   }
 ]
 ````

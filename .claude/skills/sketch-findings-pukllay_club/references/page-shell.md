@@ -3,7 +3,9 @@
 This reference documents sketch 011's final state after 9 rounds of real revision — it replaces the
 original sketch 003 design entirely (the two-tier "Mission Band" footer and the `Catálogo`/`Acerca de`
 nav it describes below were superseded). If a source predates this note, treat this file as
-authoritative.
+authoritative. **Sketch 044 (2026-09-01/02) further revises the footer's `≤480px` state only** — see
+"Mobile Footer: Reduced to BGG Compliance Only" below; the desktop footer described in the rest of
+this file is unaffected.
 
 ## Design Decisions
 
@@ -83,6 +85,22 @@ keeps working with no extra CSS.
 the sketch uses a hexagon placeholder mark so header proportions are right. Swap in the real isologo
 SVG when it exists; no structural change needed.
 
+**Mobile Footer: Reduced to BGG Compliance Only (sketch 044).** Real-device feedback on the shipped
+`≤480px` footer (already tightened once by quick task 260901-ty6: shorter gap, smaller wordmark,
+smaller link text) still read as too heavy and unbalanced against the page's left-aligned content.
+Two rounds of alignment-only and content-reduction variants (A–G — centering tweaks, one-line
+brand lockup, icon-only mark, a bounded card frame) were all rejected as indecisive; the user's own
+framing broke the stalemate: *"the only thing I need there is the BGG compliance."* That framing plus
+this file's own since-resolved open item ("confirm the exact required wording/format against BGG's
+terms before shipping" — resolved: it's exactly "Powered by BGG" + logo, linking to
+boardgamegeek.com, per the shipped `bgg_attribution/1` component's documented D-04 decision)
+converged on the winning direction: **on `≤480px` only, the footer is nothing but the BGG
+attribution line** — brand name, tagline, copyright, and the FAQ/Contacto/Juntadas nav links are
+all removed. Verified via grep (not assumed) that those three links exist nowhere else in the app —
+removing them from the footer doesn't make the About page unreachable, but it does remove the direct
+jump to its FAQ/Contact/Meetups sections. Accepted as a known, deliberate tradeoff, not an oversight.
+Desktop's two-cluster footer (`>480px`) is completely unaffected by this change.
+
 ## What Was Tried and Rejected
 
 - **A sticky shelf-jump index bar** (Round 7), pinned directly under the already-sticky header,
@@ -98,6 +116,11 @@ SVG when it exists; no structural change needed.
   too cold, respectively.
 - **Two-tier Mission Band footer** — see Design Decisions above; the two visual weights read as two
   footers, not one.
+- **Mobile footer variants A–G (sketch 044)** — alignment-only tweaks (centered-tightened,
+  left-aligned, hybrid) were rejected as indecisive ("anyone feels correct... something clear?");
+  content-reduction variants that still kept the brand name and/or nav links (one-line lockup,
+  icon-only mark, a distinct bounded card, "minimal but keeps links") were all superseded once the
+  BGG-only requirement was made explicit. See "Mobile Footer" above for the winner (H).
 
 ## CSS Patterns
 
@@ -133,9 +156,16 @@ footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(-
 .bgg-note { color: inherit; text-decoration: underline; text-decoration-color: var(--color-border); text-underline-offset: 2px; }
 .bgg-note:hover { color: var(--color-primary); text-decoration-color: currentColor; }
 
+/* ≤480px: footer reduced to the BGG attribution line only (sketch 044, winner H).
+   .footer-left (brand + nav links) and .footer-social are hidden entirely;
+   .footer-copyright is hidden so only .bgg-note remains inside .footer-meta.
+   Desktop (>480px) keeps the two-cluster layout above, completely unchanged. */
 @media (max-width: 480px) {
-  .footer-d .footer-row { flex-direction: column; gap: var(--space-3); }
-  .footer-d .footer-left, .footer-d .footer-right { flex-direction: column; gap: var(--space-3); }
+  .footer-d .footer-row { padding-top: var(--space-2); padding-bottom: var(--space-2); }
+  .footer-d .footer-left,
+  .footer-social,
+  .footer-copyright,
+  .footer-dot { display: none; }
 }
 ```
 
@@ -176,7 +206,7 @@ footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(-
     </div>
     <div class="footer-right">
       <div class="footer-social">...instagram/whatsapp/discord icons...</div>
-      <span class="footer-meta">© 2026 Pukllay Club <span class="footer-dot">·</span> <a class="bgg-note">datos de BoardGameGeek</a></span>
+      <span class="footer-meta"><span class="footer-copyright">© 2026 Pukllay Club</span> <span class="footer-dot">·</span> <a class="bgg-note">datos de BoardGameGeek</a></span>
     </div>
   </div>
 </footer>
@@ -195,12 +225,22 @@ footer.pk-footer { background: var(--color-surface); border-top: 1px solid var(-
 - Don't cap the header/footer's width without capping everything else on the page to the same value
   — a real, twice-repeated bug (see `layout-navigation.md`, and the footer's own padding-vs-max-width
   nesting mistake above).
-- Don't ship the sketch's placeholder BGG mention as the real compliance-approved wording/asset.
+- Don't ship the sketch's placeholder BGG mention as the real compliance-approved wording/asset —
+  **resolved**: the shipped `bgg_attribution/1` component uses the real required wording ("Powered by
+  BGG" + logo, linking to boardgamegeek.com), confirmed against BGG's own terms.
 - Don't let a footer's visual weight go unchecked against sparse pages — the original two-tier design
   specifically looked footer-heavy under a thin page; check the thinnest page, not just the richest.
+- On mobile specifically, don't assume every desktop footer element earns its place just because it's
+  already there — re-litigate against the actual compliance requirement (sketch 044: only the BGG
+  line survived that test) rather than only trimming spacing/alignment around unchanged content.
 
 ## Origin
 Synthesized from sketch 011 (full-shell-composition), superseding sketch 003's original design after
 9 rounds of revision (shell composition → mobile fixes → header/footer rework → content-width
 alignment → vocabulary pass).
 Source file available in: `sources/011-full-shell-composition/`
+
+Mobile footer section synthesized from sketch 044 (mobile-footer-balance, winner H, 2026-09-01/02) —
+two rounds of variants (A–G) plus real-device feedback and a codebase grep for the FAQ/Contacto/
+Juntadas links' only usage. Desktop footer unaffected.
+Source file available in: `sources/044-mobile-footer-balance/`

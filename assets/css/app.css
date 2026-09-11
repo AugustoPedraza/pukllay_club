@@ -369,93 +369,92 @@
   padding-right: var(--pk-gutter);
 }
 
-/* Sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-14/
-   G-01.2-24 task 3): a single class on <body> (root.html.heex's only
-   change for this task) gives every page in the app a sticky-footer
-   layout — the footer's bottom edge reaches the bottom of a window taller
-   than the page's own content, with no band of plain page background
-   below it. On a window shorter than the content, the page scrolls
-   exactly as it always has.
+/* SUPERSEDED 2026-09-02 (quick task 260902-glf): the sticky-footer app
+   shell mechanism this comment used to document — a `min-height: 100vh;
+   min-height: 100dvh;` floor on `.pk-app-shell` plus a `flex-grow: 1` on
+   its `main` descendant — is WITHDRAWN. Both declarations are deleted
+   outright below, not commented out.
 
-   Minimum height is declared TWICE deliberately — the older `100vh` unit
-   first, the dynamic-viewport `100dvh` unit second — so a browser without
-   `dvh` support still gets the layout via `100vh`, and one that supports
-   `dvh` does not jump as mobile browser chrome shows/hides (the later
-   declaration wins in browsers that understand it; the earlier one is the
-   fallback a browser that doesn't understand `dvh` simply keeps).
+   WHY: a real mobile screenshot from the developer showed a large, empty,
+   unstyled band between the catalog page's last content row and the
+   footer. The mechanism (added Phase 01.2 gap-closure round 4, G-01.2-14/
+   G-01.2-24 task 3) had stretched `<body>` to fill at least one full
+   viewport specifically to stop the footer floating mid-page with plain
+   background below it on a short page — but on a page whose genuine
+   content can legitimately fall short of a tall viewport, that same floor
+   instead inserted the empty band ABOVE the footer, which is the worse of
+   the two defects. This was offered to the developer as an explicit
+   choice against "investigate a possible missing-content bug first," and
+   reverting the mechanism was chosen deliberately — this is a knowingly
+   accepted tradeoff, not an oversight, so do not restore the mechanism
+   without re-reading this note.
 
-   THIS RULE TARGETS <body> DIRECTLY. The flex-grow rule right below it
-   targets <main> via a DESCENDANT selector, not a direct-child one,
-   because <main> is not literally body's DOM child — every LiveView page
-   wraps its rendered output in a root container div carrying
-   `data-phx-session`, and `[data-phx-session] { display: contents }`
-   (declared near the top of this file, "Make LiveView wrapper divs
-   transparent for layout") removes that wrapper's own box entirely,
-   handing its children (the header, the connection banner, an optional
-   subnav, <main>, the footer, the flash group) directly to whatever
-   flex/grid context ITS OWN PARENT establishes — here, body's. That
-   flattening is exactly what makes a body-level flex column safe to use
-   without a second, matching rule on the wrapper: <main> ends up a real
-   flex item of body's own flex column, not nested two DOM levels deep
-   behind an un-styled intermediate box.
+   THE TRADEOFF KNOWINGLY REINTRODUCED: on a page shorter than the
+   viewport, the footer now sits immediately after its own content, with
+   plain page background below it down to the true viewport bottom —
+   exactly the defect this mechanism was originally built to prevent, now
+   deliberately re-accepted in exchange for removing the worse
+   above-footer gap.
 
-   OTHER BODY CHILDREN keep their natural heights, unchanged: the header
-   wrapper(s), the connection banner, the optional subnav and the footer
-   are in-flow flex items with no flex-grow of their own, so they size to
-   their own content and stretch to full width (align-items' default
-   `stretch`) exactly as they already did as plain blocks. The flash
-   group's own wrapper div is the same — but its CONTENTS (each
-   `CoreComponents.flash/1`) render with daisyUI's `toast` class, which is
-   `position: fixed` (confirmed by reading daisyUI's own bundled rule, not
-   assumed) — a fixed-position box is removed from normal flow entirely,
-   so the flash group's wrapper is always a 0-height flex item and can
-   never occupy space below the footer. No extra treatment needed here.
+   THE TWO THREAT FINDINGS THIS RULE ONCE MITIGATED, both now RETIRED
+   (not reopened) because the declarations that created the hazards are
+   gone:
+   - T-01.2-24-01 (containing-block safety): the removed `flex`/
+     `min-height` pair was never among the five properties that establish
+     a containing block for a `position: fixed` descendant (transform,
+     filter, perspective, contain, will-change) — so removing them cannot
+     newly break a fixed-position descendant's containing block. The
+     hazard this finding mitigated no longer exists because its premise
+     (the shell declaring those properties) no longer exists either.
+   - T-01.2-24-02 (reserved bottom-clearance interaction): the removed
+     `min-height` floor shared an element with `body.pk-has-cta-bar`'s
+     9.25rem reserved bottom padding, under this stylesheet's border-box
+     model. With the floor gone there is nothing left for that padding to
+     interact with on this rule's account — retired along with the floor,
+     re-confirmed live by quick task 260902-glf's own CTA-bar measurement
+     (see that task's SUMMARY).
 
-   CONTAINING-BLOCK SAFETY (T-01.2-24-01, mitigate): flex and min-height
-   are NOT among the five properties that establish a containing block for
-   a `position: fixed` descendant — transform, filter, perspective,
-   contain, will-change (see both existing containing-block audits in this
-   file, on .pk-title-echo and .pk-lightbox, both re-checked and updated
-   against this exact rule as part of this change — see their own
-   comments). Verified in a real browser (headless Chromium via CDP
-   against the running dev server, not from memory): the mobile CTA bar,
-   the title-echo bar and the lightbox all still anchor to the true
-   viewport with this rule active, not to body's own box.
+   THE DUAL-DECLARATION VIEWPORT-UNIT IDIOM survives here as a live,
+   citable explanation even though the rule that motivated it is gone —
+   this is load-bearing, not optional: `.pk-lightbox-img` (below in this
+   file) and a failure message in `catalog_show_test.exs` both name this
+   spot as THE canonical explanation of the idiom, and both must still
+   resolve to real prose. This file's idiom for a viewport-height envelope
+   is to declare the property TWICE, adjacent, in this order: the older
+   static unit (`100vh`) first as a fallback, then the dynamic-viewport
+   unit (`100dvh`) second. A browser without `dvh` support keeps the first
+   line; one that supports `dvh` uses the second (the later declaration
+   wins when both are understood) and does not jump as mobile browser
+   chrome shows/hides. Documented here because two other places in this
+   repo cite this spot by name, not because a rule here still uses it.
 
-   RESERVED BOTTOM-CLEARANCE INTERACTION (T-01.2-24-02, mitigate):
-   body.pk-has-cta-bar's 9.25rem/148px bottom padding (declared far above,
-   next to that class) lives on the SAME element as this rule, under this
-   stylesheet's border-box model, so min-height's target includes that
-   padding. Measured live at 390px on a real detail page (game id 1,
-   Chromium headless CDP): BEFORE this rule existed, `document.
-   documentElement.scrollHeight` was 1972px with a 147.7px gap between the
-   footer's bottom edge and the document's end (matching the reserved
-   clearance almost exactly — expected, since the CTA bar's own padding IS
-   that gap on every page whose content already exceeds one viewport
-   height, which this page's does by a wide margin: 1972px content vs.
-   844px viewport). AFTER adding this rule, the same measurement is
-   unchanged (content was already far taller than 100dvh, so the min-height
-   floor was never reached and <main> never needed to grow) — see the
-   task's own commit for the confirming after-measurement. No regression:
-   a page whose content is already taller than one viewport is a no-op for
-   `min-height`, and a page shorter than one viewport is exactly the case
-   this rule exists to fix. */
-.pk-app-shell {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
-}
-
-/* See .pk-app-shell's own comment above for why a DESCENDANT selector,
-   not a direct-child one, is correct here despite the rule's own name
-   ("the body's own <main> child") suggesting otherwise. flex-grow ALONE
-   (not the `flex` shorthand) is deliberate: <main> keeps its own natural
-   flex-basis (auto) and default flex-shrink (1) — grow is the one
-   property a sticky-footer layout needs added to it. */
-.pk-app-shell main {
-  flex-grow: 1;
-}
+   `.pk-app-shell`'s `display: flex; flex-direction: column` was NOT
+   removed on the assumption above alone — its fate was settled the same
+   day by a live A/B measurement (quick task 260902-glf, Task 3), not by
+   argument: with the height floor and growth factor already gone, is
+   there anything left for the flex column to do? The one candidate
+   mechanism was real — a flex container suppresses margin collapsing
+   between its items, and `.pk-footer`'s `margin-top: var(--pk-footer-
+   offset)` is exactly such a margin. The offsetting fact, also real: this
+   layout's `<main>` carries only padding (`pb-20 pt-8 sm:pt-20`), never a
+   bottom margin, so there is nothing on the other side for the footer's
+   top margin to collapse against — collapsing `0` (main's non-existent
+   bottom margin) with `1rem`/`3rem` (footer's top margin) still resolves
+   to `1rem`/`3rem` either way. Measured live via CDP (headless Chromium,
+   scratchpad script, not committed) toggling `.pk-app-shell { display:
+   block !important; }` against the running dev server at 390px, on both a
+   short page (a no-results catalog search state, well short of a 1400px
+   viewport) and a long page (a game detail page, content far exceeding
+   the viewport): EVERY measured number — `scrollHeight`, the footer's top
+   and bottom edges, the main-to-footer gap, and the footer-to-document-end
+   gap — was byte-identical with the flex column present vs. removed. The
+   flex column was vestigial by the time this measurement ran; it is
+   therefore ALSO deleted here, along with `<body>`'s `pk-app-shell` class
+   (its only markup consumer, `root.html.heex`, now renders a bare `<body>`)
+   and the class's three presence tests plus this describe's own CSS-facts
+   contract in `layouts_test.exs` (see that file's `git log` for
+   260902-glf's removal commit). `.pk-app-shell` as a class no longer
+   exists anywhere in this codebase as of 2026-09-02. */
 
 /* Category-anchor scroll animation (debug category-menu-scroll-animation).
    Both category surfaces — the desktop .pk-cat-item mega-menu rows and the
@@ -719,17 +718,25 @@
    VARIANT here — never a rule of its own, and never a second declaration
    of a property this block already owns.
 
-   Call-site inventory — COMPLETE as of 01.2-27 task 3 (01.2-26 migrated the
-   first three, 01.2-27 the remaining two; this is every one of UAT test
-   11's four named surfaces, plus the editorial hashtags it did not name):
+   Call-site inventory — updated 01.3-07 (01.2-26 migrated the first three,
+   01.2-27 the remaining two, 01.3-07 retoned two of those five and added a
+   sixth tone for the detail page's fact-grid creator pills):
      - GamePreview.facts_row/1 (players/tiempo/dificultad) — neutral tone,
-       dense size, interactive on the three link branches only
-     - GameChips.chip_row/1 (Mecánicas/Temáticas) — neutral tone, dense size
-     - GameChips.editorial_tags/1 (club hashtags) — accent tone, dense size
+       dense size, interactive on the three link branches only. Deliberately
+       NOT retoned by 01.3-07 — the masthead stays closed by the Phase 01.3
+       roadmap goal, so this is a recorded, deliberate neutral-vs-outline
+       inconsistency against the reading column below, not an oversight.
+     - GameChips.chip_row/1 (detail page fact-grid Mecánicas/Temáticas
+       columns) — outline tone (01.3-07, was neutral), dense size
+     - GameChips.editorial_tags/1 (club hashtags) — tag tone (01.3-07, was
+       accent), dense size
      - CatalogLive.Index's active-filters ("búsqueda activa") chip — accent
        tone, comfortable size, interactive, removable (01.2-27 task 1)
      - filter_modal.ex's facet/scalar chips — outline tone at rest, selected
        tone when chosen, comfortable size, interactive (01.2-27 task 2)
+     - CatalogLive.Show's creator_pills/1 (detail page fact-grid
+       Diseñadores/Ilustradores columns) — outline tone, dense size,
+       interactive (01.3-07)
    Deliberately excluded: the catalog's category-navigation chip (`.pk-chip`
    below, `index.ex`) — a 44px navigation control, not in the UAT's list;
    folding it in would widen a chip consolidation into a navigation change.
@@ -766,6 +773,32 @@
   background: transparent;
   border-color: var(--color-base-300);
   color: var(--color-neutral);
+}
+
+/* 01.3-07, GameChips.editorial_tags/1's only tone: sketch 042's 27-round-
+   tested winner is accent-coloured TEXT sitting right after the detail
+   page's title, not a solid filled pill — this tone deliberately overrides
+   the base's type scale (11px -> 0.875rem) and padding (4px 9px -> 0 3px)
+   for exactly that reason, rather than looking like undocumented drift
+   from the variant set's own rules.
+
+   --color-primary is the required token here, not --color-secondary —
+   measured against --color-base-100 (this file's own daisyui-theme
+   blocks): primary is 14.4:1 in light (#3D096D on #FFFFFF) and 6.0:1 in
+   dark (#A97FD1 on #170A26), both well clear of the 4.5:1 text floor;
+   secondary (#7E4CA5) measures only 3.1:1 in dark and would FAIL that
+   floor. Recorded here as the baseline for any future palette retune. */
+.pk-pill-tag {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 400;
+  padding: 0 3px;
+}
+
+.pk-pill-tag:hover {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 /* The modal's chosen-chip soft lift (`filter_modal.ex`'s `chip_class/1`
@@ -815,6 +848,27 @@
    the poster rather than floating between two equal gaps. */
 .pk-card-poster {
   aspect-ratio: 1 / 1.05;
+}
+
+/* Box art is not near-square: publishers ship tall, wide and square boxes.
+   Sizing an img to fill a fixed-ratio container crops real artwork away
+   regardless of the container's own shape. The stored WebP variants are
+   already generated aspect-ratio-preserving (Image.thumbnail/2 defaults to
+   resize-to-fit, never crop), so the full image is present and only CSS
+   was throwing it away. This is the single shared mechanism for the
+   letterbox treatment across every artwork surface (card, preview, detail
+   cover), per card-interaction.md's one-class-per-field rule: never a
+   copy-pasted utility string re-declared per template. The negative space
+   around the letterboxed image is filled by each container's own
+   bg-base-300 token showing through — not a blurred or scaled backdrop, and
+   not a second background declared here (see this file's own "one field,
+   one declaration" rule above). Wildcards in this comment are kept away
+   from the closing delimiter so a token like "object-fit" never forms an
+   accidental terminator. */
+.pk-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .pk-card-caption {
@@ -1161,7 +1215,22 @@ body.pk-sheet-open {
    Bebas Neue/24px/400 as the single heading combo, so shrinking the footer
    wordmark would add a 4th combo. Colour is the lever ui-design-system
    names for this instead. Scoped override, matching the header-scoped rule
-   above — the two surfaces are meant to differ here. */
+   above — the two surfaces are meant to differ here.
+
+   UPDATE (quick task 260901-ty6): the ≤480px block below now makes a scoped
+   SIZE exception to "demotion is by colour, not size", for the mobile
+   footer's reported visual weight on this project's primary surface. The
+   reason given above still holds at ≥481px, where this rule is unchanged —
+   the exception is breakpoint-scoped, not a reversal of the decision. Its
+   cost — a Bebas Neue size that did not previously exist on the ≤480px
+   catalogue screen — is paid explicitly by re-measuring and updating the
+   ui-design-system inventory table, which is that table's own prescribed
+   process for adding a new type combo.
+
+   UPDATE (2026-09-02, quick task 260902-fdm): that ≤480px SIZE exception is
+   WITHDRAWN — sketch 044 winner H hides the entire footer lockup at ≤480px,
+   so there is no wordmark left to size there. D-B ("demotion is by colour,
+   not size") once again holds at every viewport width with no exception. */
 .pk-brand-quiet .pk-brand-name {
   color: var(--color-neutral);
 }
@@ -1814,20 +1883,30 @@ body.pk-sheet-open {
      the single-line threshold further right. 0.5/1/1.5/2rem keeps the
      one-line layout starting at ~1065px (slightly earlier than the 1073px it
      started at before this fix) while still giving the item tier a 3x contrast
-     against the group tier — enough to visibly bind "Tema" to its buttons. */
+     against the group tier — enough to visibly bind "Tema" to its buttons.
+
+     Two more tokens live in this same declare-once contract (quick task
+     260901-ty6): --pk-footer-offset (this rule's own margin-top) and
+     --pk-footer-pad-block (.pk-footer-row's padding-top/padding-bottom).
+     They exist so the ≤480px block below can retune the footer's VERTICAL
+     chrome the same way it already retunes the horizontal gap tiers —
+     declared once here, consumed by both orientations, never re-declared as
+     a literal at either width. */
   --pk-footer-gap-item: 0.5rem; /* inside ONE unit: icon set, label+control */
   --pk-footer-gap-list: 1rem; /* between sibling text links */
   --pk-footer-gap-group: 1.5rem; /* between distinct concerns in a cluster */
   --pk-footer-gap-cluster: 2rem; /* between clusters, in EITHER orientation */
+  --pk-footer-offset: 3rem; /* this rule's own margin-top; retuned ≤480px */
+  --pk-footer-pad-block: 1.5rem; /* .pk-footer-row's padding-top/-bottom; retuned ≤480px */
 
   background: var(--color-base-200);
   border-top: 1px solid var(--color-base-300);
-  margin-top: 3rem;
+  margin-top: var(--pk-footer-offset);
 }
 
 .pk-footer-row {
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
+  padding-top: var(--pk-footer-pad-block);
+  padding-bottom: var(--pk-footer-pad-block);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3004,25 +3083,245 @@ body.pk-drawer-open {
 .pk-text-col {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+}
+
+/* 01.3-07: replaces the flex `gap` this rule used to carry (removed in the
+   SAME edit that added these three rules — a flex `gap` and a child
+   `margin-top` are additive, which is exactly the stacked-boundary bug
+   detail-page-layout.md records twice, once for the title-echo bar's own
+   opacity-vs-layout-space bug and once for the footer boundary's three
+   independently-reasonable spacing rules summing past 150px). Named-tier
+   rhythm (8px/16px/32px) instead of one flat gap lets each reading-column
+   boundary declare its own weight — sketch 042/043's tight 8px hashtag-
+   to-title tie, vs. the 32px gap before the Comunidad BGG block — where a
+   single `.pk-text-col` gap could only ever pick one value for every
+   boundary at once. Only a rendered child that actually carries one of
+   these classes gets a margin; an unrendered (`:if`-false) sibling
+   contributes nothing, so no dead space accumulates behind a hidden
+   section — the same guard-on-the-child discipline `.pk-reading-section`
+   itself already relies on for its own gap. */
+.pk-text-col > .pk-rhythm-8 {
+  margin-top: 0.5rem;
+}
+
+.pk-text-col > .pk-rhythm-16 {
+  margin-top: 1rem;
+}
+
+.pk-text-col > .pk-rhythm-32 {
+  margin-top: 2rem;
+}
+
+/* Spacing control only (D-03/D-04) — no border, no background, no shadow, no
+   radius. Sketch 037 already tested a shared bordered container for the
+   "these elements feel disconnected" complaint on this exact page and
+   rejected it in favour of proximity + rhythm; do not turn this into a card
+   treatment. */
+.pk-reading-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .pk-section-heading {
   font-family: var(--font-display);
   font-size: 1.25rem;
-  margin-top: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  /* margin-top removed — spacing is now owned entirely by the
+     .pk-text-col / .pk-reading-section gaps above, D-03/D-04 */
 }
 
-.pk-clamp {
+/* 01.3-10 (gap closure G-01.3-4): .pk-desc-shell wraps the description
+   paragraph and its always-trailing-sibling toggle button. Governs the
+   EXPANDED state: the flex column plus the toggle's own `align-self:
+   flex-end` below keeps the control an in-flow block below the full
+   text — no float, no in-paragraph nesting, no per-state branch.
+   Replaces the old plain .pk-description wrapper div, which carried no
+   CSS rule of its own.
+
+   01.3-12 (gap closure G-01.3-6): `position: relative` added below so the
+   collapsed-state override two rules down (`.pk-desc-shell:not(.is-expanded)
+   .pk-desc-toggle`) has something to anchor `bottom`/`right` against.
+   Without it those values resolve against some distant positioned
+   ancestor and the toggle leaves the card entirely. A column flex
+   container can only ever give a sibling its own row — it cannot pull a
+   child up into a PRIOR sibling's last line box — which is exactly what
+   made the toggle drop below the clamped paragraph instead of trailing
+   its third line (G-01.3-6). The flex column here still governs the
+   expanded state; the absolute overlay two rules down governs the
+   collapsed state only. */
+.pk-desc-shell {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* 01.3-12 (gap closure G-01.3-6): collapsed-state-only minimum height,
+   sized to match the toggle's own `min-h-11` markup box (show.ex). Exists
+   so a description shorter than the control (a one- or two-line
+   description) cannot let the absolute-positioned toggle below hang
+   upward past the shell's own box, over the hashtag row above it —
+   exactly the tap-hijack surface 01.3-10 deleted the invisible `::before`
+   overlay to fix. Scoped to `:not(.is-expanded)` because the expanded
+   state is unaffected: it is already tall enough (full text + in-flow
+   toggle row) and must not gain an artificial floor. */
+.pk-desc-shell:not(.is-expanded) {
+  min-height: 2.75rem;
+}
+
+/* 01.3-10 (gap closure G-01.3-4, UAT gap G-01.3-1 item 6): the
+   description paragraph itself. `line-height: 1.5` stays declared here.
+   `text-align: justify` is unconditional (applies at every viewport
+   width, not just desktop) per the UAT's explicit "the alignment must be
+   on desktop [too]" ask — this survives the clip-mechanism swap below
+   unchanged, because word-based justification is the right setting for
+   Spanish prose regardless of which mechanism clips the third line; no
+   float competes for that line's width any more. `overflow-wrap`/
+   `word-break: normal` are pinned explicitly so no inherited or future
+   rule introduces a break inside a word at the clip edge. */
+.pk-desc {
+  line-height: 1.5;
+  margin: 0;
+  text-align: justify;
+  text-justify: inter-word;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* 01.3-10 (gap closure G-01.3-4): native three-line clamp with a native
+   ellipsis. The prior max-height + floated-button technique's real
+   problem was never this property — it was that the toggle button lived
+   INSIDE the paragraph's line box, so its horizontal position depended on
+   an engine correctly excluding a float from a clipped, justified line's
+   width computation. Blink measured zero overflow; WebKit/Mobile Safari
+   did not (.planning/debug/chevron-outside-text-column.md). Sketch 042's
+   round-17 crash (an interactive button nested as a flex child inside a
+   webkit-box-orient paragraph) is what originally ruled this mechanism
+   out, but the toggle now lives OUTSIDE the paragraph entirely (see
+   .pk-desc-toggle below), so that configuration no longer exists and this
+   mechanism's real advantage is available: it is the only clip with a
+   native clean-cut guarantee (description-truncation.md), which is the
+   whole reason this gap exists. Do not restore the max-height variant —
+   moving the button out of the line box, not the clip property, is what
+   fixes G-01.3-4. */
+.pk-desc.is-clamped {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
   overflow: hidden;
+  text-overflow: ellipsis;
+  /* 01.3-12 (gap closure G-01.3-6): reserves the collapsed-state toggle's
+     horizontal footprint so no clipped text or ellipsis ever renders
+     under the tap box below. Sized to `2.75rem`, exactly the toggle's
+     `min-w-11` markup utility (show.ex) — not the smaller 16px icon —
+     because the toggle is a real interactive 44px hit area, and reserving
+     less than that would put live description text under both an
+     interactive control and its own hover/active background wash. The two
+     values live in different files (this stylesheet vs. show.ex's HEEx
+     utility classes) and must move together; the geometry test in
+     catalog_show_test.exs binds them so drift fails `mix test`. */
+  padding-right: 2.75rem;
 }
 
-.pk-clamp.is-expanded {
-  -webkit-line-clamp: unset;
-  overflow: visible;
+/* 01.3-10 (gap closure G-01.3-4): governs the EXPANDED state — positions
+   the control purely as a flex child of .pk-desc-shell's column,
+   `align-self: flex-end` placing it as an in-flow block below the full
+   text. No float, no line-height-derived margin-top: those all existed to
+   make the toggle sit correctly INSIDE the paragraph's line box, which is
+   exactly the dependency that produced G-01.3-4's engine-specific
+   divergence. Width/height are deliberately NOT declared here — the 44px
+   touch floor lives in the markup's min-h-11/min-w-11 utilities (show.ex,
+   the same idiom .pk-scroll-top already uses on this page), and declaring
+   it in both places would create the double-source problem this file's
+   top-of-file cascade-layer note already records being hit twice on this
+   page. `border-radius: var(--radius-selector)` (not fully circular) per
+   description-truncation.md's own "What to Avoid" list: a circular
+   ghost-button with its own hover halo reads as detached from the text no
+   matter how close it sits.
+
+   01.3-12 (gap closure G-01.3-6): this base rule no longer governs the
+   COLLAPSED state — see the `.pk-desc-shell:not(.is-expanded)
+   .pk-desc-toggle` override below `.pk-desc-toggle:active`. A
+   column-direction flex container can only ever give a sibling its own
+   row; it can never pull that sibling up into a PRIOR sibling's last line
+   box, no matter what `align-self` is set to (that only affects the
+   cross/horizontal axis). That is exactly what made the collapsed toggle
+   drop below the whole clamped paragraph instead of trailing its third
+   line. `align-self: flex-end` is left declared here anyway, unchanged,
+   because it still governs the expanded state and this file's own
+   CSS-source test pins it. */
+.pk-desc-toggle {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: var(--radius-selector);
+  color: var(--color-neutral);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.pk-desc-toggle:hover,
+.pk-desc-toggle:focus-visible {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.pk-desc-toggle:active {
+  transform: scale(0.88);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+/* 01.3-12 (gap closure G-01.3-6): the actual fix. Collapsed-state-only
+   override that takes the toggle OUT of `.pk-desc-shell`'s flex column —
+   `position: absolute` is what stops the column from handing it a block
+   row of its own, which is the only reason G-01.3-6 happened. Anchored on
+   `.pk-desc-shell`'s own box (via that rule's `position: relative`
+   above), `bottom: 0; right: 0` seats it flush with the paragraph's own
+   bottom-right corner. `align-items: flex-end` plus the 4px
+   `padding-bottom` inset puts the 16px icon's ink at 52-68px in the
+   72px-tall 3-line clamp box (3 x 24px line bands) — centred in the last
+   24px line band (48-72px), since (24 - 16) / 2 = 4. `0.25rem` is written
+   as a literal, matching Tailwind's own `space-1` step already used
+   elsewhere on this page — NOT a `calc()` over a line-height multiple,
+   which is forbidden by this file's own CSS-source test and was the
+   source of the pre-01.3-10 fragility. Do not reintroduce float-based
+   positioning here or anywhere in this rule family — it is the documented
+   root cause of G-01.3-4 and is pinned as un-reintroducible by the
+   tripwire test scanning this whole `.pk-desc*` span. The base
+   `.pk-desc-toggle` rule above still governs the EXPANDED state
+   unchanged. */
+.pk-desc-shell:not(.is-expanded) .pk-desc-toggle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  align-items: flex-end;
+  padding-bottom: 0.25rem;
+}
+
+/* 01.3-10 (gap closure G-01.3-4): 16px matches every other standalone
+   icon-button on this page (.pk-scroll-top's size-4). The vertical
+   ink-alignment nudge that used to live here is gone — it existed solely
+   to align the chevron's ink against the adjacent "…" glyph's ink, and
+   the native clamp above supplies its own ellipsis, so there is no glyph
+   beside the icon any more; the value it was tuned to no longer has a
+   referent. 01.3-12: this 16px square is also the number the collapsed
+   toggle's last-line-band geometry (see the override rule above) is
+   computed against — rescaling this icon without revisiting that rule's
+   `padding-bottom` would silently uncentre the ink in its line band; the
+   geometry test in catalog_show_test.exs reads this value from the
+   stylesheet rather than hard-coding it, precisely so that cannot happen
+   silently. */
+.pk-desc-toggle-icon {
+  width: 16px;
+  height: 16px;
 }
 
 /* Boundary between the primary reading block (title + description) and
@@ -3064,11 +3363,88 @@ body.pk-drawer-open {
   grid-column: 1 / -1;
 }
 
+/* 01.3-07: the unheaded fact grid (Diseñadores/Ilustradores/Mecánicas/
+   Temáticas, sketch 040) — a nested grid inside `.pk-spec-list`'s own `<dl>`
+   so the year row above it and this 2x2 block share one list. Single-column
+   base rule; the two-column override lives INSIDE the one 48rem detail-
+   layout `@media` block below (see that block's own comment) — never a
+   second media query. */
+.pk-fact-cols {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem 1.5rem;
+}
+
 .pk-spec-row dt {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-neutral);
   font-size: 0.75rem;
+}
+
+/* 01.3-07: reuses .pk-spec-row dt's own recipe (uppercase, 0.08em tracking,
+   neutral color, 0.75rem) plus its own bottom margin, since a fact-grid
+   column's label sits directly above a pill row rather than a single
+   `<dd>` value. */
+.pk-fact-col dt {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-neutral);
+  font-size: 0.75rem;
+  margin: 0 0 0.375rem;
+}
+
+.pk-fact-col dd {
+  margin: 0;
+}
+
+/* 01.3-07: the "Comunidad BGG" block (sketch 039/043) — a group label, up
+   to three independently-gated stat links and a Fuente line, replacing the
+   old bordered "Avanzado" sub-panel rule that lived here before. No
+   bordered container by design (sketch 039's own finding: "Comunidad BGG
+   drops any bordered container in favor of plain text"). */
+.pk-bgg-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-neutral);
+  font-size: 0.75rem;
+  margin: 0 0 0.375rem;
+}
+
+.pk-bgg-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Each stat is an outbound BGG link (T-01.3-07-03), not the sketch's plain
+   span — it needs the pointer affordance a link implies. */
+.pk-bgg-stat {
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.pk-bgg-stat:hover {
+  color: var(--color-primary);
+}
+
+.pk-bgg-num {
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-bgg-lbl {
+  color: var(--color-neutral);
+  font-size: 0.75rem;
+  margin-left: 3px;
+}
+
+.pk-bgg-foot {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+  margin: 0.125rem 0 0;
 }
 
 /* Mobile CTA bar (01.1-04, sketch 005/011): visible at rest below the
@@ -3211,9 +3587,9 @@ body.pk-cta-parked {
    correctly while that chain stays clean.
 
    RE-CHECKED (Phase 01.2 gap-closure round 4, G-01.2-24 task 3): <body>
-   now carries `.pk-app-shell` (flex column + min-height, see that class's
-   own comment above `.pk-gutter`). Re-walked the same chain against the
-   same five-property list with `<body>` in its new state and confirmed
+   carried `.pk-app-shell` (flex column + min-height, see that class's own
+   comment above `.pk-gutter`). Re-walked the same chain against the same
+   five-property list with `<body>` in that state and confirmed
    `display: flex`/`flex-direction: column`/`min-height` are NOT among
    them — flex and min-height do not establish a containing block for a
    `position: fixed` descendant. Verified live in a real browser (headless
@@ -3221,20 +3597,50 @@ body.pk-cta-parked {
    at a mobile width where body's natural height exceeds the viewport and
    at a desktop width tall enough to actually stretch body via
    min-height): this bar's `getBoundingClientRect()` still resolves
-   against the true viewport in both cases, not against body's box. */
+   against the true viewport in both cases, not against body's box.
+
+   RE-CHECKED AGAIN (2026-09-02, quick task 260902-glf, Task 3): the whole
+   `.pk-app-shell` class — `min-height` floor, `flex`/`flex-direction`, and
+   the class itself — is now deleted outright (see the superseded-mechanism
+   note above `.pk-gutter`, which also records the flex-column A/B
+   measurement that retired it). `<body>` today carries no class at all.
+   Since none of `.pk-app-shell`'s former declarations were ever among the
+   five containing-block-establishing properties, this audit's conclusion
+   is unaffected and gets strictly safer, not riskier, by their full
+   removal. Re-confirmed live via the same CDP method as the original
+   verification. */
+/* G-01.3-09 (UAT gap G-01.3-1 item 7): the bar's fill used to be
+   var(--color-base-100), the exact token the page body itself uses,
+   separated only by the 1px border below — the same defect
+   detail-page-mobile-interaction.md's "Color contrast on stacked
+   controls" section already diagnosed and fixed once on the mobile CTA
+   bar ("give a bar of stacked controls a background one step
+   darker/tinted than the controls sitting on it, not the same token").
+   var(--color-base-200) is that one step in BOTH themes (light #FFFFFF
+   -> #F3ECFA; dark #170A26 -> #22103A), so the two bars now share one
+   decision instead of two coincidences.
+
+   The border-bottom does NOT stay on var(--color-base-300) — measured
+   (Task 2's own contrast harness) at only 1.41:1 light / 1.23:1 dark
+   against the page background (var(--color-base-100)), far under the
+   3.0:1 WCAG 1.4.11 non-text-contrast floor this plan's own must_haves
+   require. The base-100/200/300 family is a subtle background-stepping
+   scale by design, not built for border visibility — none of its three
+   steps clears 3:1 against base-100 in either theme. var(--color-neutral)
+   does (6.16:1 light / 8.45:1 dark) and is the SAME token this codebase
+   already reaches for whenever a control needs real, measured contrast
+   while staying visually muted rather than a saturated accent color (see
+   the lightbox close button's dark-theme fix, G-01.2-20, directly below
+   in this file — same token, same reasoning). */
 .pk-title-echo {
   position: fixed;
   top: var(--pk-header-h, 4.5rem);
   left: 0;
   right: 0;
   z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.5rem var(--pk-gutter);
-  background: var(--color-base-100);
-  border-bottom: 1px solid var(--color-base-300);
+  padding: 0.5rem 0;
+  background: var(--color-base-200);
+  border-bottom: 1px solid var(--color-neutral);
   opacity: 0;
   pointer-events: none;
   transform: translateY(-8px);
@@ -3252,32 +3658,67 @@ body.pk-cta-parked {
   pointer-events: none;
 }
 
-/* Title-echo name truncation (Phase 01.2 gap-closure round 4, G-01.2-24
-   task 1). The bar's title <span> gets a real class, named for the element
-   it is, in the same pk- family as its parent, declared once here directly
-   below the bar's own rules. Four properties are required TOGETHER for a
-   flex item to truncate rather than wrap: a zero minimum width (a flex
-   item's default min-width is its own content, which is exactly what turns
-   "too narrow" into "second line" instead of "clipped"), no wrapping,
-   hidden overflow, and an ellipsis. The bar's OTHER flex item,
-   .pk-scroll-top below, is a fixed 2.75rem square with `flex: 0 0 auto`, so
-   every pixel the bar is short lands on this span — without `min-width: 0`
-   the span cannot shrink below its own content width and wraps to a second
-   line instead.
+/* G-01.3-09: the bar's content box, capping to the same shared shell
+   content width every other capped surface on this page uses
+   (#detail-masthead-wrap, .pk-footer-row) instead of spanning the bar's
+   own full-viewport background. The horizontal gutter that used to live
+   on .pk-title-echo itself (padding: 0.5rem var(--pk-gutter)) moved here
+   — onto the SAME element that carries the mx-auto/w-full/max-w-7xl cap
+   in show.ex's markup (the .pk-gutter utility class supplies it there),
+   never on an outer wrapper around the cap. page-shell.md records this
+   exact double-inset bug being hit twice already; declaring an
+   independent padding value on this rule as well as on .pk-gutter would
+   be a third instance of it. */
+.pk-title-echo-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
 
-   Measured fact (G-01.2-14 diagnosis, live CDP against the running dev
-   server, light theme): the bar's text and background measured at very
-   high contrast — rgb(36,18,56) text on rgb(255,255,255) background — so
-   the UAT-reported "don't have correct balance to contrast with
-   background... looks like text over two lines" complaint is the visual
-   crowding a two-line wrap produces inside a bar padded for one line, NOT
-   a colour-token defect. No colour on this bar changes here or anywhere
-   else in this fix. */
+/* Title-echo name truncation (Phase 01.2 gap-closure round 4, G-01.2-24
+   task 1), plus the title's own typographic identity (01.3-11, gap closure
+   G-01.3-5). The bar's title <span> gets a real class, named for the
+   element it is, in the same pk- family as its parent, declared once here
+   directly below the bar's own rules. Four properties are required
+   TOGETHER for a flex item to truncate rather than wrap: a zero minimum
+   width (a flex item's default min-width is its own content, which is
+   exactly what turns "too narrow" into "second line" instead of
+   "clipped"), no wrapping, hidden overflow, and an ellipsis. The bar's
+   OTHER flex item, .pk-scroll-top below, is a fixed 2.75rem square with
+   `flex: 0 0 auto`, so every pixel the bar is short lands on this span —
+   without `min-width: 0` the span cannot shrink below its own content
+   width and wraps to a second line instead.
+
+   G-01.3-5: before this round, the span declared none of font-family,
+   font-weight, font-size or color anywhere in its cascade, so it silently
+   inherited ambient body text next to .pk-scroll-top, a 44px solid-
+   brand-filled circle — plain undifferentiated text beside a heavy,
+   saturated button. Two other surfaces on this same page render this same
+   string and each made a deliberate, role-appropriate typographic choice:
+   the real H1 uses the display face at text-3xl, the breadcrumb echo uses
+   small muted Inter. This is that same missing decision for the bar's
+   echo role, sized one step down from the H1 (1.25rem, the same step
+   .pk-section-heading already uses) rather than against the button beside
+   it. font-weight is declared explicitly, not left implicit: Bebas Neue is
+   self-hosted at weight 400 ONLY (see the @font-face blocks above), so any
+   heavier value here would be silently synthesized into a faux bold by
+   the browser, with no build step ever flagging it. color states the
+   value this span already resolved to by inheritance, now as a decision,
+   so the existing two-theme 4.5:1 contrast pins below keep measuring the
+   token the bar actually uses. The bar's own fill, its border, and
+   .pk-scroll-top's fill and bounce are deliberately untouched here and
+   remain the brand-tint question 01.3-09 left open. */
 .pk-title-echo-name {
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--color-base-content);
 }
 
 .pk-scroll-top {
@@ -3355,13 +3796,22 @@ body.pk-cta-parked {
    #detail-page -> Layouts.app's own `.mx-auto.space-y-4` inner wrapper ->
    <main> -> the LiveView root (display: contents, so it contributes no
    box of its own — see "Make LiveView wrapper divs transparent for
-   layout" near the top of this file) -> <body> (now `.pk-app-shell`) ->
+   layout" near the top of this file) -> <body> (then `.pk-app-shell`) ->
    <html>. None of them declares transform, filter, perspective, contain,
-   or will-change; `.pk-app-shell`'s own `display: flex`/`min-height` are
-   also not on that list (see that class's own comment). Verified live in
-   a real browser (headless Chromium via CDP against the running dev
-   server): this element's `position: fixed` still resolves against the
-   true viewport with `.pk-app-shell` active. */
+   or will-change; `.pk-app-shell`'s then-current `display: flex`/
+   `min-height` were also not on that list (see that class's own comment).
+   Verified live in a real browser (headless Chromium via CDP against the
+   running dev server): this element's `position: fixed` still resolves
+   against the true viewport with `.pk-app-shell` active.
+
+   RE-CHECKED AGAIN (2026-09-02, quick task 260902-glf, Task 3): the whole
+   `.pk-app-shell` class — `min-height` floor, `flex`/`flex-direction`, and
+   the class itself — is now deleted outright (see the superseded-mechanism
+   note above `.pk-gutter`, which also records the flex-column A/B
+   measurement that retired it). `<body>` today carries no class at all,
+   so this audit's conclusion is unaffected and gets strictly safer, not
+   riskier. Re-confirmed live via the same CDP method as the original
+   verification. */
 
 /* G-01.2-19 (Phase 01.2 gap-closure round 9, plan 01.2-31): a third and
    final report of "the background should be full screen" traced to this
@@ -3500,11 +3950,15 @@ body.pk-cta-parked {
    design call with its own UAT item" — and that condition fired in the
    very next UAT round, so this is the deferral resolving on schedule,
    not a correction of a mistake. Third: the property below is declared
-   TWICE for the same reason `.pk-app-shell` declares `min-height` twice
-   (see that rule's own comment, above in this file, for the full
-   argument) — the static `100vh` is the fallback a browser without
-   dynamic-viewport support keeps, `100dvh` is what every current browser
-   actually uses, and neither line is a leftover duplicate to clean up.
+   TWICE following this file's own dual-declaration viewport-unit idiom
+   (see the superseded-mechanism note above `.pk-gutter`, where `.pk-app-
+   shell` used to live, for the fuller argument — that whole class,
+   `min-height` included, is deleted outright as of 2026-09-02/260902-glf,
+   but its former comment site keeps the idiom documented because this is
+   one of the two places that cite it) — the static `100vh` is the
+   fallback a browser without dynamic-viewport support keeps, `100dvh` is
+   what every current browser actually uses, and neither line is a
+   leftover duplicate to clean up.
    Fourth: a percentage of the parent's own box (`height: 100%`) would
    ALSO have resolved correctly here, since `.pk-lightbox` is a fixed,
    full-inset overlay with a definite height — it was rejected anyway, so
@@ -3755,7 +4209,10 @@ body.pk-cta-parked {
    place, so the two concerns can never drift apart. Declaring the
    override here (after the base rules above) is deliberate — an
    equal-specificity base rule placed AFTER its media override would
-   silently win at every width regardless of which query matches. */
+   silently win at every width regardless of which query matches. 01.3-07
+   added the reading column's fact-grid two-column override below — it
+   pairs up at this same breakpoint rather than opening a second media
+   query for one more rule. */
 @media (min-width: 48rem) {
   .pk-detail-masthead {
     grid-template-columns: 20rem 1fr;
@@ -3768,6 +4225,10 @@ body.pk-cta-parked {
 
   .pk-mobile-cta-bar {
     display: none;
+  }
+
+  .pk-fact-cols {
+    grid-template-columns: 1fr 1fr;
   }
 
   /* Title-echo bar desktop hide (Phase 01.2 gap-closure round 4, G-01.2-14/
@@ -3876,6 +4337,50 @@ main.pk-boundary-collapse .pk-shelf:last-of-type {
   margin-bottom: 0;
 }
 
+/* Bottom-collapse (opt-in, quick task 260902-il3). Layouts.app's
+   `bottom_collapse` attr (default false, mutually exclusive with
+   `boundary_collapse` — see that attr's own doc) renders this class on
+   <main> instead of its default `pb-20`, leaving the default top-padding
+   utilities in place. Unlike `boundary_collapse`, this axis only owns the
+   BOTTOM boundary: the catalog page's top spacing (32px/80px at
+   390px/1280px) is a separately-tuned, closed decision (D-01) that must
+   not move, and the top-boundary problem `boundary_collapse` was built for
+   — the hidden title-echo bar's dead layout space — does not exist on the
+   catalog page at all.
+
+   Before this fix, the catalog page's bottom boundary stacked three
+   independently-reasonable declarations, live-measured: <main>'s own
+   bottom padding (80px) + `.pk-shelf`'s own trailing margin (48px at
+   1280px / 32px at 390px) + `.pk-footer`'s own top margin (48px at 1280px
+   / 16px at 390px) = 176px at 1280px / 128px at 390px combined. These two
+   declarations are deliberately the same two `main.pk-boundary-collapse`
+   applies above, minus that block's `padding-top: 1.5rem` — this axis
+   never touches the top. */
+main.pk-bottom-collapse {
+  padding-bottom: 0;
+}
+
+main.pk-bottom-collapse .pk-shelf:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Quick task 260901-ty6: deliberately left as a literal, not converted to
+   --pk-footer-offset. Sketch 035's equal-24px-boundary decision (comment
+   above) is closed; converting this to the token would let a future mobile
+   retune silently move a decision that was made independently. The 1.5rem
+   here and the ≤480px `.pk-footer` block's --pk-footer-offset value below
+   happen to coincide by intent — both trace back to the same closed
+   sketch-035 decision — not by a shared declaration.
+
+   Quick task 260902-il3 (D-04): `main.pk-bottom-collapse + .pk-footer` is
+   grouped onto this same rule rather than duplicating the 1.5rem literal —
+   "declaring separate literals per orientation is what caused the drift in
+   the first place" (app.css, ≤480px block comment below). The new selector
+   is placed FIRST so `main.pk-boundary-collapse + .pk-footer` still sits
+   immediately before the opening brace — `catalog_show_test.exs` and
+   `footer_rhythm_test.exs` both regex for that exact adjacency, and a
+   later alphabetiser must not reorder this group. */
+main.pk-bottom-collapse + .pk-footer,
 main.pk-boundary-collapse + .pk-footer {
   margin-top: 1.5rem;
 }
@@ -4297,11 +4802,128 @@ main.pk-boundary-collapse + .pk-footer {
      this the mobile footer had those two backwards — 24px within, 12px
      between. Retuning values inside one shared scale keeps desktop and mobile
      one rhythm; declaring separate literals per orientation is what caused
-     the drift in the first place. */
+     the drift in the first place.
+
+     Quick task 260901-ty6 adds two more retuned tokens here:
+     --pk-footer-offset and --pk-footer-pad-block. Before this change the
+     mobile footer spent 48px (.pk-footer's own top margin) + 24px + 24px
+     (.pk-footer-row's own top/bottom inner padding) = 96px of vertical
+     chrome before any footer content — the heaviest block on the page by
+     that measure alone. The separation cue here is the footer's OWN surface
+     change (base-200 background + base-300 top border), so the margin only
+     has to supply breathing room rather than carry the boundary alone:
+     1.5rem is not a new number, it is the value
+     `main.pk-boundary-collapse + .pk-footer` already ships on the detail
+     page (app.css, sketch 035's closed equal-24px-boundary decision), so the
+     mobile default and the detail page now coincide by intent rather than
+     by accident. The post-change total is measured live in Task 3's
+     SUMMARY rather than asserted here.
+
+     UPDATE (2026-09-02, quick task 260902-fdm, sketch 044 winner H): the
+     mobile footer's own content just shrank to a single line (the BGG
+     attribution alone — see .pk-footer-left/.pk-footer-copyright below), so
+     260901-ty6's 1.5rem/1rem chrome — tuned for a 3-line footer — is
+     retuned once more, to 1rem/0.75rem. The boundary cue is still the
+     footer's own background/border surface change, not the margin, so the
+     margin only has to supply breathing room for what is now 12px of small
+     print. 1rem (16px) is the number sketch 044's own "What Changes in the
+     Real App" section names; 0.75rem is not a new number either — it is the
+     value this same block already carries for --pk-footer-gap-list. */
   .pk-footer {
     --pk-footer-gap-group: 1rem;
     --pk-footer-gap-cluster: 1.5rem;
+    --pk-footer-offset: 1rem;
+    --pk-footer-pad-block: 0.75rem;
+    /* Quick task 260901-ty6, Task 2: list and group were both 1rem here,
+       collapsing two of the four tiers onto one value — sibling links (list)
+       read as spaced exactly as far apart as the brand sits from the link
+       list (group), the same proximity inversion the desktop fix at the top
+       of this file already closed once for .pk-footer-row/the clusters.
+       0.75rem restores item < list < group <= cluster (0.5/0.75/1/1.5rem).
+
+       DORMANT (quick task 260902-fdm): --pk-footer-gap-list,
+       --pk-footer-gap-group and --pk-footer-gap-cluster are kept here even
+       though their consumers (.pk-footer-left, .pk-footer-right) are now
+       hidden at this breakpoint — they are dormant rather than wrong, one
+       line each on a shared scale, and deleting them would break the
+       tier-ordering guards for no rendered benefit. They wake again the
+       moment any future rule unhides a footer cluster below 480px. */
+    --pk-footer-gap-list: 0.75rem;
   }
+
+  /* Quick task 260902-fdm (sketch 044 winner H): the left cluster's
+     FAQ/Contacto/Juntadas links relocate NOWHERE on mobile — this is a
+     deliberate, developer-accepted content removal, not a drawer-equivalent
+     hide like .pk-footer-right below. Sketch 044's "Real Tradeoff, Verified"
+     section grepped the codebase and confirmed these three anchors exist
+     nowhere else in the app; the About page itself stays reachable from the
+     header, only the direct jump to its FAQ/Contact/Meetups sections is
+     lost. Recorded here explicitly so nobody later "restores" the links
+     believing the hide was an oversight, and nobody adds a fourth concern to
+     this cluster assuming it has a drawer equivalent.
+
+     Hides the CLUSTER, not its children, for the same reason
+     .pk-footer-right's own comment gives below: a `display: none` child is
+     skipped by flex `gap`, but an empty visible parent still takes a slot in
+     the column. */
+  .pk-footer-left {
+    display: none;
+  }
+
+  /* Quick task 260902-fdm (sketch 044 winner H): the copyright notice
+     carries no compliance requirement — sketch 044's research pass
+     established that the BGG attribution does and the copyright line does
+     not (copyright subsists without a printed notice). It survives
+     untouched at >480px; the class exists solely as a stable hook so this
+     hide is not positional (see FooterRhythmTest's own reasoning for why a
+     `:first-child` selector was rejected). */
+  .pk-footer-copyright {
+    display: none;
+  }
+
+  /* Quick task 260902-fdm: a LITERAL, not var(--pk-footer-offset) — same
+     decoupling contract 260901-ty6 established for this selector (see the
+     >480px rule of the same name further up this file). Sketch 044 is the
+     sketch round that legitimately reopens sketch 035's closed 24px
+     boundary decision, but only AT ≤480px: the >480px literal is untouched
+     and sketch 035's desktop decision still stands. Placed after the
+     `.pk-footer` token rule above in source order; that ordering matters to
+     nothing in the cascade (this selector's specificity already wins on its
+     own), and FooterRhythmTest's own helper is anchored precisely so it
+     never has to care either.
+
+     Quick task 260902-il3 (D-03/D-04): `main.pk-bottom-collapse +
+     .pk-footer` is grouped onto this same ≤480px rule for the identical
+     reason the >480px rule above gives — one boundary decision, one place
+     to retune it. This grouping is MANDATORY, not optional: the >480px
+     rule sits outside any media query and outbids `.pk-footer`'s own
+     `margin-top: var(--pk-footer-offset)` by source order, so without this
+     ≤480px override the catalog page would render 24px at mobile where the
+     detail page renders 16px — reopening sketch 044's closed ≤480px
+     boundary decision by omission. `main.pk-boundary-collapse + .pk-footer`
+     stays LAST in the selector list, immediately before the opening brace,
+     matching the >480px group's ordering rule above, for the same two
+     downstream regex tests. */
+  main.pk-bottom-collapse + .pk-footer,
+  main.pk-boundary-collapse + .pk-footer {
+    margin-top: 1rem;
+  }
+
+  /* WITHDRAWN (2026-09-02, quick task 260902-fdm, sketch 044 winner H): the
+     ≤480px SIZE exception to D-B ("demotion is by colour, not size") that
+     260901-ty6 introduced here is gone — the footer lockup does not render
+     at all at this breakpoint anymore (.pk-footer-left above is hidden), so
+     there is nothing left to size. D-B once again holds at every viewport
+     width with no exception. */
+
+  /* WITHDRAWN (2026-09-02, quick task 260902-fdm, sketch 044 winner H): the
+     ≤480px `.pk-footer-links` font-size rule 260901-ty6 introduced here is
+     gone — the FAQ/Contacto/Juntadas links do not render at ≤480px anymore
+     (.pk-footer-left above is hidden). The one fact from the removed
+     comment that is still true and still useful: the ≥481px links still
+     render at the inherited 1rem, and the stale native-`<select>` row
+     260901-ty6 corrected in ui-design-system/SKILL.md's type-inventory
+     table stays corrected. */
 
   /* Mobile/desktop swap (01.1-09 Task 2): the toggle and social cluster
      move into the drawer below 480px — reaching the footer there means
@@ -4328,21 +4950,55 @@ main.pk-boundary-collapse + .pk-footer {
     display: none;
   }
 
-  /* The stacked footer is a CENTRED column — .pk-footer-row keeps the base
-     rule's `align-items: center`, which stops meaning "vertically centre the
-     clusters" and starts meaning "horizontally centre the stack" the moment
-     the direction flips. Every block in it shrink-wraps and is centred:
-     measured at 320px, .pk-footer-left sits at x=59.42 for a width of 201.14,
-     i.e. dead centre.
+  /* SUPERSEDED (2026-09-02, quick task 260902-g21): the reasoning below —
+     that the stacked footer is a CENTRED column and `.pk-footer-row` should
+     keep the base rule's `align-items: center` — is withdrawn. Its measured
+     evidence (`.pk-footer-left` at x=59.42, dead centre in a 201.14px-wide
+     box) went dead the moment quick task 260902-fdm hid `.pk-footer-left`
+     outright at this breakpoint (see the hide rule above) — there is no
+     longer a centred multi-block stack for that measurement to describe.
+     The developer asked for the one remaining line (the BGG attribution) to
+     sit flush right instead, so this override now sets `align-items:
+     flex-end`. Nobody should restore `center` believing the old x=59.42/
+     x=39.13 measurements still stand — they described a DOM shape that no
+     longer renders.
 
-     .pk-footer-legal's `width: 100%` would opt it out of exactly that — a
-     full-width box makes its content start at the left gutter while
-     everything above it stays centred. Restoring `auto` gives the legal line
-     back the same shrink-to-fit box every other block in the stack has, so
-     `align-items: center` centres it identically (verified: x returns to the
-     pre-change 39.13 at 320px). The full-width trick is only needed where the
-     row is a ROW and something has to be forced off the line; here there is
-     one item per line already. */
+     The one claim from the old comment that is STILL true and load-bearing,
+     carried forward unchanged in mechanism: `.pk-footer-legal`'s `width:
+     100%` (the >480px base value) makes the item fill the row's full
+     content box; a full-width flex item fills the CROSS axis too, so any
+     `align-items` value on the column — `center` before, `flex-end` now —
+     becomes a no-op on it. This is not centring-specific; it is a
+     precondition of right alignment exactly as much as it was of centring,
+     which is why `width: auto` survives this change unedited below.
+
+     The direction flip is what makes `align-items` the horizontal control
+     here at all: the base (>480px) rule is a ROW, where `align-items:
+     center` vertically centres the two clusters against the legal band.
+     This block sets `flex-direction: column` above, and the same property
+     governs horizontal placement of the stack once it does — a `>480px`
+     rule and a `≤480px` override of the same property mean two unrelated
+     things, and neither can be read from the other.
+
+     Right alignment is safe and simple here because of one DOM fact: at
+     this breakpoint the column has exactly one visible child.
+     `.pk-footer-left` and `.pk-footer-right` are `display: none` (removed
+     from flex layout, not merely invisible — see both hide rules in this
+     block), and inside `.pk-footer-legal` itself `.pk-footer-copyright` is
+     hidden too (see above), leaving only the shrink-wrapped BGG attribution.
+
+     `text-align` was considered and deliberately NOT added.
+     `.pk-footer-legal` at ≤480px is `display: flex` with `width: auto`, so
+     its box shrink-wraps its content; `justify-content: space-between`
+     distributes free space and there is none left to distribute in a
+     shrink-wrapped box holding one visible item; `.pk-footer-meta` is
+     `white-space: nowrap`. That chain makes `align-items: flex-end` on the
+     column sufficient by itself — a `text-align` declaration here would be
+     redundant, not merely unnecessary. */
+  .pk-footer-row {
+    align-items: flex-end;
+  }
+
   .pk-footer-legal {
     width: auto;
   }
@@ -4377,14 +5033,13 @@ main.pk-boundary-collapse + .pk-footer {
     content: "‹ ";
   }
 
-  /* Detail page (01.1-03/01.1-04): a shorter description clamp and a
-     single-column ficha técnica below 480px. The masthead's own column
-     count and the poster column's sticky/static toggle are now handled
-     by the 48rem detail layout breakpoint (01.1-04) — nothing to repeat
-     here, both are already single-column/static below that width. */
-  .pk-clamp {
-    -webkit-line-clamp: 2;
-  }
+  /* 01.3-08: the old shorter mobile description clamp (01.1-03/01.1-04,
+     a two-line box-orient override at this same breakpoint) is removed.
+     The description paragraph's clip is now a fixed multiple of its own
+     line-height, not a viewport-dependent line count, so the clip is
+     already identical at every width by construction — no per-breakpoint
+     override is needed or wanted. The single-column ficha técnica note
+     below is unrelated and stays as-is. */
 
   .pk-spec-list {
     grid-template-columns: 1fr;

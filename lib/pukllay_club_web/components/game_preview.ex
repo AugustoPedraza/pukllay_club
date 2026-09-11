@@ -133,7 +133,7 @@ defmodule PukllayClubWeb.GamePreview do
 
     ~H"""
     <figure class="pk-preview-poster bg-base-300">
-      <img :if={@cover} src={@cover} alt="" class="h-full w-full object-cover js-cover-fallback" />
+      <img :if={@cover} src={@cover} alt="" class="pk-poster-img js-cover-fallback" />
       <div
         :if={@cover}
         class="hidden h-full w-full items-center justify-center bg-base-300 text-primary"

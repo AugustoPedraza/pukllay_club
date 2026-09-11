@@ -93,10 +93,15 @@ defmodule PukllayClub.Catalog do
   and pagination together (CATALOG-02/03/04, D-14/D-15).
 
   Accepts a map or keyword list with `:q`, `:mechanics` (Spanish labels),
-  `:themes` (Spanish labels), `:weight_bands`, `:tags`, `:players`,
-  `:max_playtime`, `:min_age`, `:sort`, `:limit` (default
-  #{@default_limit}), `:offset` (default 0). Always applies `LIMIT` —
-  never returns an unbounded result set (T-01-22).
+  `:themes` (Spanish labels), `:weight_bands`, `:tags`, `:designers`,
+  `:artists`, `:players`, `:max_playtime`, `:min_age`, `:sort`, `:limit`
+  (default #{@default_limit}), `:offset` (default 0). Always applies
+  `LIMIT` — never returns an unbounded result set (T-01-22).
+
+  `:designers`/`:artists` are exact whole-name array-membership matches
+  (not substring, not fuzzy) — a member arriving from a creator pill
+  expects that game's exact collaborator set, not a fuzzy neighborhood of
+  it.
 
   `:players` is an exact seat-count fit (`min_players <= n <= max_players`)
   below #{@players_open_bucket}; at or above #{@players_open_bucket} it is
@@ -422,6 +427,8 @@ defmodule PukllayClub.Catalog do
     |> maybe_filter_themes(Map.get(opts, :themes))
     |> maybe_filter_weight_bands(Map.get(opts, :weight_bands))
     |> maybe_filter_tags(Map.get(opts, :tags))
+    |> maybe_filter_designers(Map.get(opts, :designers))
+    |> maybe_filter_artists(Map.get(opts, :artists))
     |> maybe_filter_players(Map.get(opts, :players))
     |> maybe_filter_playtime(Map.get(opts, :max_playtime))
     |> maybe_filter_age(Map.get(opts, :min_age))
@@ -460,6 +467,24 @@ defmodule PukllayClub.Catalog do
 
   defp maybe_filter_tags(query, tags) do
     from g in query, where: fragment("? && ?", g.tags, type(^tags, {:array, :string}))
+  end
+
+  # Open-text, whole-name array-membership filters (01.3-06, T-01.3-06-01) —
+  # unlike every other maybe_filter_*/2 above, `designers`/`artists` have no
+  # closed Vocabulary to translate through (see CatalogFilters moduledoc);
+  # the bound-and-parameterize contract from CatalogFilters.parse_name_list_param/1
+  # is what keeps this safe, not a whitelist. Values reach the query only
+  # via `type(^values, {:array, :string})`, never string interpolation.
+  defp maybe_filter_designers(query, values) when values in [nil, []], do: query
+
+  defp maybe_filter_designers(query, values) do
+    from g in query, where: fragment("? && ?", g.designers, type(^values, {:array, :string}))
+  end
+
+  defp maybe_filter_artists(query, values) when values in [nil, []], do: query
+
+  defp maybe_filter_artists(query, values) do
+    from g in query, where: fragment("? && ?", g.artists, type(^values, {:array, :string}))
   end
 
   defp maybe_filter_players(query, nil), do: query

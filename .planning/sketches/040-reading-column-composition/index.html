@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 040 — Reading Column Composition</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 90px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 12px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
+  #variant-nav .caption strong { color: var(--color-text); }
+
+  .cause-note { max-width: 900px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+
+  .compare { display: flex; gap: var(--space-6); align-items: flex-start; justify-content: center; flex-wrap: wrap; max-width: 1240px; margin: 0 auto; padding: 0 var(--space-4) 60px; }
+  .frame { display: flex; flex-direction: column; gap: 10px; }
+  .frame-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); text-align: center; }
+  .frame.desktop .surface { width: 700px; max-width: 78vw; }
+  .frame.mobile .surface { width: 360px; max-width: 92vw; }
+  .surface { border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-4); background: var(--color-bg); }
+
+  /* ============ Reading column — mirrors production .pk-text-col exactly ============ */
+  .text-col { display: flex; flex-direction: column; gap: var(--space-6); }
+  .reading-section { display: flex; flex-direction: column; gap: var(--space-2); }
+  h1.title { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
+  .section-heading { font-family: var(--font-display); font-size: var(--text-xl); text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
+  .desc { line-height: 1.5; margin: 0; color: var(--color-text); }
+  .divider { height: 1px; background: var(--color-border); border: none; margin: 0; }
+
+  /* Shared pill base — production's app.css .pk-pill (11px, 4px/9px padding).
+     Editorial hashtags keep the solid .pk-pill-accent fill (a curated,
+     eye-catching category, not a structured fact) — everything ELSE in
+     "Sobre el juego" (creators, mecánicas, temáticas) now shares ONE
+     tone: .pk-pill-outline. Resolves the 4-tier drift this sketch found —
+     Mecánicas/Temáticas no longer get their own .pk-pill-neutral fill. */
+  .pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); text-decoration: none; border: 1px solid transparent; transition: all var(--duration-fast) var(--ease-standard); cursor: pointer; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill-accent { background: var(--color-accent-bg); border-color: var(--color-accent-bg); color: var(--color-accent-text); }
+  .pill-accent:hover { transform: translateY(-1px); }
+  .pill-outline { background: transparent; border-color: var(--color-border); color: var(--color-text-muted); }
+  .pill-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+  .spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); }
+  .spec-row dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 4px; }
+  .spec-row dd { margin: 0; }
+
+  /* Generalized from 039's "creators-cols" — same 2-col grid now holds
+     Diseñadores/Ilustradores AND Mecánicas/Temáticas, all as equal peer
+     "fact" cells inside "Sobre el juego." */
+  .fact-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); grid-column: 1 / -1; }
+  @media (max-width: 560px) { .fact-cols { grid-template-columns: 1fr; } }
+  .frame.mobile .fact-cols { grid-template-columns: 1fr; }
+  .fact-col dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
+
+  .bgg-link { color: var(--color-primary); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--color-primary) 40%, transparent); font-weight: 600; }
+  .bgg-link:hover { text-decoration-color: currentColor; }
+  .bgg-label { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
+  .bgg-row { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; }
+  .bgg-stat { font-size: var(--text-sm); }
+  .bgg-stat .num { font-weight: 600; color: var(--color-text); }
+  .bgg-stat .lbl { color: var(--color-text-muted); font-size: var(--text-xs); margin-left: 3px; }
+  .bgg-foot { font-size: var(--text-xs); color: var(--color-text-muted); margin: 2px 0 0; }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="caption"><strong>Resolved</strong> — round 3. Mecánicas and Temáticas are no longer
+  their own top-level sections: they're fact cells alongside Diseñadores/Ilustradores/Año, all
+  sharing the <code>.pk-pill-outline</code> tone. The group's own "Sobre el juego" heading is now
+  <strong>dropped entirely</strong> ("sounds redundant" — the whole page is already about the game;
+  the divider + editorial tags above already signal a new zone, the fact grid speaks for itself).
+  Editorial hashtags stay separate/solid-fill — a curated category, not a structured fact. Toggle
+  🌙/☀ to check both themes.</span>
+</div>
+
+<div class="cause-note">
+  <strong>Round history:</strong> R1 found a 4-tier pill inconsistency across the page (flagged
+  "definitely wrong"). R2 merged Mecánicas/Temáticas into one fact grid with Diseñadores/Ilustradores,
+  all on <code>.pill-outline</code> — a real structural change from production's current two separate
+  <code>&lt;h2&gt;</code> sections. R3 (this version) drops the "Sobre el juego" heading itself as
+  redundant — no heading now sits between the divider/tags above and the fact grid below.
+</div>
+
+<div class="compare">
+  <div class="frame desktop">
+    <div class="frame-label">Desktop</div>
+    <div class="surface">
+      <div class="text-col">
+        <div class="reading-section">
+          <h1 class="title">Spirit Island</h1>
+          <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+          colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+          invasores antes de que la isla sea devastada.</p>
+        </div>
+        <hr class="divider">
+        <div class="pill-row">
+          <a class="pill pill-accent" href="#">#CooperativoPuro</a>
+          <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
+        </div>
+        <div class="reading-section">
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+            <div class="fact-cols">
+              <div class="fact-col">
+                <dt>Diseñadores</dt>
+                <div class="pill-row"><a class="pill pill-outline" href="/?designers=R.+Eric+Reuss">R. Eric Reuss</a></div>
+              </div>
+              <div class="fact-col">
+                <dt>Ilustradores</dt>
+                <div class="pill-row">
+                  <a class="pill pill-outline" href="/?artists=Jason+Behnke">Jason Behnke</a>
+                  <a class="pill pill-outline" href="/?artists=Lo%C3%AFc+Billiau">Loïc Billiau</a>
+                  <a class="pill pill-outline" href="/?artists=Kathleen+Fraser">Kathleen Fraser</a>
+                </div>
+              </div>
+              <div class="fact-col">
+                <dt>Mecánicas</dt>
+                <div class="pill-row">
+                  <a class="pill pill-outline" href="/?mechanics=Colocaci%C3%B3n+de+losetas">Colocación de losetas</a>
+                  <a class="pill pill-outline" href="/?mechanics=Gesti%C3%B3n+de+mano">Gestión de mano</a>
+                  <a class="pill pill-outline" href="/?mechanics=Cooperativo">Cooperativo</a>
+                </div>
+              </div>
+              <div class="fact-col">
+                <dt>Temáticas</dt>
+                <div class="pill-row">
+                  <a class="pill pill-outline" href="/?themes=Fantas%C3%ADa">Fantasía</a>
+                  <a class="pill pill-outline" href="/?themes=Anti-colonialismo">Anti-colonialismo</a>
+                </div>
+              </div>
+            </div>
+          </dl>
+        </div>
+        <div class="reading-section">
+          <div class="bgg-label">Comunidad BGG</div>
+          <div class="bgg-row">
+            <span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span>
+            <span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span>
+            <span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span>
+          </div>
+          <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame mobile">
+    <div class="frame-label">Mobile 390px</div>
+    <div class="surface">
+      <div class="text-col">
+        <div class="reading-section">
+          <h1 class="title">Spirit Island</h1>
+          <p class="desc">Encarná a un espíritu ancestral de una isla y defendé tu tierra de la
+          colonización, combinando poderes elementales con las otras espíritus para expulsar a los
+          invasores antes de que la isla sea devastada.</p>
+        </div>
+        <hr class="divider">
+        <div class="pill-row">
+          <a class="pill pill-accent" href="#">#CooperativoPuro</a>
+          <a class="pill pill-accent" href="#">#AltaRejugabilidad</a>
+        </div>
+        <div class="reading-section">
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Año</dt><dd>2017</dd></div>
+            <div class="fact-cols">
+              <div class="fact-col">
+                <dt>Diseñadores</dt>
+                <div class="pill-row"><a class="pill pill-outline" href="/?designers=R.+Eric+Reuss">R. Eric Reuss</a></div>
+              </div>
+              <div class="fact-col">
+                <dt>Ilustradores</dt>
+                <div class="pill-row">
+                  <a class="pill pill-outline" href="/?artists=Jason+Behnke">Jason Behnke</a>
+                  <a class="pill pill-outline" href="/?artists=Lo%C3%AFc+Billiau">Loïc Billiau</a>
+                  <a class="pill pill-outline" href="/?artists=Kathleen+Fraser">Kathleen Fraser</a>
+                </div>
+              </div>
+              <div class="fact-col">
+                <dt>Mecánicas</dt>
+                <div class="pill-row">
+                  <a class="pill pill-outline" href="/?mechanics=Colocaci%C3%B3n+de+losetas">Colocación de losetas</a>
+                  <a class="pill pill-outline" href="/?mechanics=Gesti%C3%B3n+de+mano">Gestión de mano</a>
+                  <a class="pill pill-outline" href="/?mechanics=Cooperativo">Cooperativo</a>
+                </div>
+              </div>
+              <div class="fact-col">
+                <dt>Temáticas</dt>
+                <div class="pill-row">
+                  <a class="pill pill-outline" href="/?themes=Fantas%C3%ADa">Fantasía</a>
+                  <a class="pill pill-outline" href="/?themes=Anti-colonialismo">Anti-colonialismo</a>
+                </div>
+              </div>
+            </div>
+          </dl>
+        </div>
+        <div class="reading-section">
+          <div class="bgg-label">Comunidad BGG</div>
+          <div class="bgg-row">
+            <span class="bgg-stat"><span class="num">8.5</span><span class="lbl">/10 valoración</span></span>
+            <span class="bgg-stat"><span class="num">3.7</span><span class="lbl">/5 peso</span></span>
+            <span class="bgg-stat"><span class="num">#23</span><span class="lbl">ranking</span></span>
+          </div>
+          <p class="bgg-foot">Fuente: <a class="bgg-link" href="#">BoardGameGeek</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+</body>
+</html>

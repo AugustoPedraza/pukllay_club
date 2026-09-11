@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 044 — Mobile Footer Balance</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ddd; font-family: var(--font-sans); padding-top: 52px; }
+
+  /* ============ winner banner (replaces the old variant tab bar — A-G explored
+     and removed per decision; H won outright) ============ */
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: var(--color-primary); color: var(--color-primary-content);
+    border-bottom: 1px solid var(--color-border);
+    padding: 10px 16px; font-family: system-ui, sans-serif; font-size: 13px;
+  }
+
+  /* ============ phone frame — this sketch IS the mobile viewport question ============ */
+  .phone-wrap { display: flex; justify-content: center; padding: 24px 0 64px; }
+  .phone {
+    width: 375px; max-width: 92vw; background: var(--color-bg);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25); border-radius: 18px; overflow: hidden;
+    min-height: 640px; display: flex; flex-direction: column;
+  }
+
+  /* ============ fake page chrome (header + section) so the "gap to footer" reads in context ============ */
+  .fake-header {
+    display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .fake-header .mark { width: 26px; height: 26px; border-radius: 6px; background: var(--color-primary); }
+  .fake-header .word { font-family: var(--font-display); font-size: 1rem; letter-spacing: 0.02em; color: var(--color-text); }
+
+  .fake-section { padding: 18px 16px 0; }
+  .fake-section h2 {
+    font-family: var(--font-display); font-size: 1.15rem; letter-spacing: 0.02em;
+    color: var(--color-text); margin: 0 0 2px;
+  }
+  .fake-section p { font-size: 0.8rem; color: var(--color-text-muted); margin: 0 0 12px; }
+  .fake-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .fake-card { flex: 0 0 auto; width: 92px; }
+  .fake-card .art {
+    width: 92px; height: 92px; border-radius: 10px; background: var(--color-surface-2);
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .fake-card .cap { font-size: 0.68rem; color: var(--color-text); margin-top: 4px; text-align: center; }
+
+  /* the empty content area — 96px (shipped) down to 16px, the winning gap */
+  .content-spacer { background: var(--color-bg); height: 16px; }
+
+  /* ============ footer — winning variant H: nothing but the BGG compliance line ============ */
+  .pk-footer { background: var(--color-surface); border-top: 1px solid var(--color-border); }
+  .pk-footer .row { padding: 12px 16px; display: flex; align-items: center; }
+
+  /* Plain inline anchor, matching the real bgg_attribution/1 component's own reasoning
+     (layouts.ex:1104-1120): NOT inline-flex. An inline-flex container with no
+     baseline-aligned item synthesizes its baseline from the first flex item's border
+     box — here that's the image — which shoves the text off the shared text baseline.
+     Plain inline puts image+text in one formatting context with one baseline, by
+     construction, no compensating vertical-align number to keep in sync. */
+  .bgg-note { display: inline; text-decoration: underline; color: var(--color-text-muted); font-size: 0.8rem; }
+  .bgg-note img { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
+  .bgg-note span { text-decoration: underline; }
+
+  /* ============ measurement readout ============ */
+  .measure {
+    font-family: var(--font-mono, monospace); font-size: 11px; color: var(--color-text-muted);
+    background: var(--color-surface); border-top: 1px dashed var(--color-border);
+    padding: 8px 16px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .measure b { color: var(--color-text); }
+
+  /* ============ sketch toolbar ============ */
+  #sketch-tools {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui;
+    font-size: 12px; background: rgba(0,0,0,0.7); color: white; padding: 8px 12px;
+    border-radius: 8px; opacity: 0.5; transition: opacity 0.2s;
+  }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools select { margin-left: 6px; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  ★ Winner: Variant H — BGG Only, Literally. (A–G explored and removed; see README.md for the full comparison history.)
+</div>
+
+<div class="phone-wrap">
+  <div class="phone">
+    <div class="fake-header">
+      <div class="mark"></div>
+      <div class="word">PUKLLAY CLUB</div>
+    </div>
+    <div class="fake-section">
+      <h2>RECIENTEMENTE AÑADIDOS</h2>
+      <p>Las incorporaciones más nuevas a la ludoteca.</p>
+      <div class="fake-row">
+        <div class="fake-card"><div class="art">🎣</div><div class="cap">Pescadores</div></div>
+        <div class="fake-card"><div class="art">📖</div><div class="cap">H.D.P.</div></div>
+        <div class="fake-card"><div class="art">🕵️</div><div class="cap">Little Secret</div></div>
+        <div class="fake-card"><div class="art">🥑</div><div class="cap">Throw Th...</div></div>
+      </div>
+    </div>
+    <div class="content-spacer"></div>
+    <footer class="pk-footer">
+      <div class="row">
+        <a href="https://boardgamegeek.com/" target="_blank" rel="noopener noreferrer" class="bgg-note">
+          <img src="data:image/jpeg;base64,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" alt="">
+          <span>Powered by BGG</span>
+        </a>
+      </div>
+    </footer>
+    <div class="measure">
+      <span><b>Gap above footer:</b> 16px (was ~96px shipped)</span>
+      <span><b>Content:</b> nothing but the BGG compliance line — no brand name, no tagline, no nav links, no copyright</span>
+      <span><b>Icon:</b> the real bgg-logo.jpeg asset (16×16, matches the app's own bgg_attribution/1 component), plain inline with the text so image+text share one baseline</span>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  Theme:
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+</div>
+
+</body>
+</html>

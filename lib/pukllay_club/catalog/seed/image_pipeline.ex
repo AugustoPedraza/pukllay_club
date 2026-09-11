@@ -7,6 +7,13 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   parsed out of an untrusted BGG XML response is only as trustworthy as this
   allowlist, and an oversized/misdeclared response is rejected before it
   ever reaches the libvips decoder.
+
+  A second, gallery-specific download-and-upload path existed here through
+  phase 01.3 and was removed in phase 01.3.1: it traversed every BGG edition's
+  version image with no language gate, which surfaced other-edition,
+  other-language box covers as if they were extra photos of the game. See
+  `process_gallery/3`'s `@doc` for why, and git history for the removed
+  implementation.
   """
 
   alias PukllayClub.Catalog.Seed.Credentials
@@ -58,36 +65,28 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   end
 
   @doc """
-  Builds up to #{@max_gallery_images} additional club-hosted images from
-  distinct BGG version images (excluding whichever one `select_cover/1`
-  already chose), reusing this module's own host allowlist, size cap, and
-  `head_object` skip (T-01-14) — no second, unguarded download path. A game
-  with no extra version images returns `{:ok, []}` rather than a padded
-  placeholder list.
+  Always returns an empty gallery (D-01/D-02/D-03, phase 01.3.1).
+
+  BGG's XML API v2 exposes exactly one `image` per thing and one per
+  version, with no per-image caption or category field, so there is no
+  gameplay/component photo to select from that surface and no signal to
+  select one by. The traversal this function used to run instead walked
+  every version's single box-art `image`, which meant a game's "gallery"
+  was really a set of other-edition, other-language box covers presented as
+  if they were extra photos of the game — confirmed at the code level on
+  BGG id 305096 (Endless Winter: Paleoamericans), whose gallery included a
+  Taiwanese-edition box alongside its correct Spanish cover.
+
+  An empty gallery is the accepted outcome (01.3.1-CONTEXT.md D-03); the
+  detail page already renders a cover-only game correctly. The
+  #{@max_gallery_images}-image cap this function used to enforce is kept as
+  a module attribute, unused for now, so a future reinstatement of gallery
+  sourcing (e.g. a real gameplay/component-photo source) has a documented
+  cap to pick back up rather than a number invented from scratch.
   """
   @spec process_gallery(map(), String.t(), Credentials.t()) :: {:ok, [String.t()]}
-  def process_gallery(item, key_prefix, %Credentials{} = credentials) do
-    cover_source_url =
-      case select_cover(item) do
-        {:ok, url, _source} -> url
-        {:error, :no_image} -> nil
-      end
-
-    item
-    |> Map.get(:versions, [])
-    |> Enum.map(&Map.get(&1, :image))
-    |> Enum.filter(&usable_image?/1)
-    |> Enum.uniq()
-    |> Enum.reject(&(&1 == cover_source_url))
-    |> Enum.take(@max_gallery_images)
-    |> Enum.with_index(1)
-    |> Enum.reduce([], fn {source_url, index}, acc ->
-      case upload_gallery_image(source_url, key_prefix, index, credentials) do
-        {:ok, gallery_url} -> [gallery_url | acc]
-        {:error, _reason} -> acc
-      end
-    end)
-    |> then(&{:ok, Enum.reverse(&1)})
+  def process_gallery(_item, _key_prefix, %Credentials{}) do
+    {:ok, []}
   end
 
   defp spanish_version?(%{languages: languages, image: image}) do
@@ -101,16 +100,6 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   defp select_primary_cover(_item), do: {:error, :no_image}
 
   defp usable_image?(image), do: is_binary(image) and image != ""
-
-  defp upload_gallery_image(source_url, key_prefix, index, credentials) do
-    with :ok <- validate_url(source_url),
-         {:ok, image_bytes} <- download(source_url),
-         {:ok, vimage} <- Image.open(image_bytes),
-         {:ok, _thumb_url} <-
-           resize_and_upload(vimage, @thumb_width, "#{key_prefix}/gallery-#{index}-thumb.webp", credentials) do
-      resize_and_upload(vimage, @large_width, "#{key_prefix}/gallery-#{index}-large.webp", credentials)
-    end
-  end
 
   @doc """
   Req options merged into the download request, letting tests plug in

@@ -191,6 +191,63 @@ gutter directly.
 .pk-gallery-dot { width: 1.375rem; height: 2rem; } /* touch height stays accessible; visible footprint shrinks */
 ```
 
+**Ficha técnica creators become navigable pills; drop fields that don't exist or don't earn a
+section (Phase 01.3 UAT gap G-01.3-1, sketch 039) — refines the ficha-técnica grid decision above.**
+Diseñadores/Ilustradores render as filter-linked `.pk-pill-outline` pills (matching the "filter-
+linked chips/pills throughout" convention above), not plain comma-separated text — consistent with
+every other structured fact on the page. Two other things this round found and cut: "Edad mínima"
+(already redundant with the compact difficulty fact pill in the masthead — same "don't show the
+same fact twice" principle as the weight-band badge cut below) and an "Avanzado" label that wasn't
+a real section at all, just leftover heading text with nothing under it. Comunidad BGG drops any
+bordered container in favor of plain text — "Fuente: BoardGameGeek" as the link itself, not a card
+wrapping a link.
+
+**Mecánicas/Temáticas absorbed into the SAME fact grid as Diseñadores/Ilustradores/Año — the
+section heading is dropped entirely, not just merged (sketch 040) — revises 039's heading choice
+within the same round of work.** What were two separate `<h2>` sections in production (creators
+under one heading, mechanics/themes under another) become one shared 2-column fact grid, no heading
+at all. Once section headings are gone, nothing sits between the divider above and the fact grid —
+which is exactly what let sketch 042 (below) question whether the divider itself still had a job.
+
+```css
+.fact-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-6); grid-column: 1 / -1; }
+.fact-col dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: var(--text-xs); margin: 0 0 6px; }
+```
+
+**Editorial hashtags sit right after the title, before the description — and the divider is gone
+entirely (Phase 01.3 UAT gap G-01.3-1, sketch 042, 27 rounds — see the sketch's own README for the
+full round history).** Hashtags read as commentary on the game itself (a kicker-adjacent fact,
+paired with the title) rather than commentary on the prose that follows — tested against sitting
+above the divider, below it, and folded into the fact grid; "right after the title" won. The
+`.pk-divider` this file's earlier sketches kept between zones is removed altogether: once 040
+dropped both section headings, rhythm alone was already doing 100% of the separating work the
+divider used to help with, and nothing was left for it to visually punctuate. This closes the open
+question sketch 005's original layout implicitly carried forward. Description is `text-align:
+justify`, not left-aligned (a later explicit revision, applies uniformly to the whole reading
+column). The chevron/"read more" toggle pattern that sits at the end of the clamped description has
+enough of its own history (27 rounds) to warrant its own reference file — see
+`description-truncation.md`.
+
+```css
+.pill-row.rhythm-8 { margin-top: var(--space-2); } /* hashtags, tight to the title */
+.tag-c { font-size: var(--text-sm); font-weight: 400; color: var(--color-accent-text); background: transparent; }
+```
+
+**Consistency-checked (sketch 043): the masthead/buybox decisions above and 039-042's reading
+column DO compose into one coherent page** — verified live, not just read side-by-side. One real
+composition gap this pass found: the masthead's standalone desktop CTA (from the "facts pills
+relocate" decision above) and the mobile-only fixed CTA bar (`detail-page-mobile-interaction.md`)
+are two different components for two different breakpoints — a naive composition renders both at
+once on mobile. Confirm at implementation time that only one renders per breakpoint (the mobile
+bar's own scroll-driven show/hide state in the interaction file suggests this is likely already
+handled, but wasn't something either 028 or 032's sketch checked against the other directly).
+**Lightbox: 043 also recomposed the lightbox, but using the original 033/038 sketch files — that
+composition is now stale.** The real implementation went through several further gap-closure rounds
+after those sketches and converged on a different, better mechanism (a shared
+`--pk-shell-content-width` token read directly by the image and both chevrons, no wrapper element —
+a wrapper was considered and explicitly rejected). Don't use 043's lightbox markup as a reference;
+`detail-page-mobile-interaction.md`'s lightbox section is the current, authoritative version.
+
 ## CSS Patterns
 
 ```css
@@ -251,9 +308,21 @@ gutter directly.
 - Don't measure a component's margin against its own declared padding value alone — check it
   against the shared gutter reference directly; a panel's own internal padding can silently stack
   on top of the shared gutter and put that one element further from the edge than its siblings.
+- Don't render structured facts (creators, mechanics, themes) as plain comma-separated text once
+  the rest of the page's facts are filter-linked pills — inconsistent interactivity on data of the
+  same kind reads as an oversight, not a deliberate choice.
+- Don't keep a divider or section heading around "just in case it still has a job" once the
+  elements it used to separate are gone — 042 found the `.pk-divider` had nothing left to punctuate
+  once 040 had already removed both section headings it used to sit between.
+- Don't trust an older sketch's lightbox/masthead composition once a later gap-closure round has
+  touched the same component in the real codebase — check `detail-page-mobile-interaction.md`
+  (or the relevant reference file) for a more recent, implementation-verified version before reusing
+  a sketch's own markup for a "composed" check; sketch 043 rediscovered this the hard way.
 
 ## Origin
-Synthesized from sketches: 005, 027, 031, 032, 034, 035, 037
+Synthesized from sketches: 005, 027, 031, 032, 034, 035, 037, 039, 040, 042, 043
 Source files available in: sources/005-detail-page/, sources/027-buybox-panel-boundary/,
 sources/031-similar-games-fallback/, sources/032-masthead-facts-placement/,
-sources/034-chip-cleanup/, sources/035-detail-page-rhythm/, sources/037-masthead-grouping/
+sources/034-chip-cleanup/, sources/035-detail-page-rhythm/, sources/037-masthead-grouping/,
+sources/039-ficha-tecnica-creators/, sources/040-reading-column-composition/,
+sources/042-editorial-tags-divider/, sources/043-composed-full-detail-page/

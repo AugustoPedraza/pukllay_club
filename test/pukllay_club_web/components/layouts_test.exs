@@ -460,6 +460,54 @@ defmodule PukllayClubWeb.LayoutsTest do
       refute main_class(unset_html) =~ "px-4"
       refute main_class(collapsed_html) =~ "px-4"
     end
+
+    # Quick task 260902-il3: `bottom_collapse` is a SECOND, independent axis
+    # from `boundary_collapse` (D-01/D-02) — it collapses only the bottom
+    # boundary (cancelling `pb-20`), leaving the default top-padding
+    # utilities (`pt-8 sm:pt-20`) in place, for a page whose bottom boundary
+    # double-stacks but whose top spacing is a separately-tuned, closed
+    # decision that must not move (REQ-2). Exact-string assertion, matching
+    # the discipline the two tests above already established.
+    test "with bottom_collapse set and boundary_collapse unset, <main> carries the bottom-collapse class and keeps the default top-padding utilities" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          bottom_collapse: true,
+          inner_block: []
+        })
+
+      class = main_class(html)
+      assert class == "pk-bottom-collapse pt-8 sm:pt-20 px-4 sm:px-6 lg:px-8"
+      refute class =~ "pb-20"
+      refute class =~ "pk-boundary-collapse"
+    end
+
+    # D-02: the two collapse attrs are structurally exclusive branches, not
+    # competing declarations — `boundary_collapse` wins outright when both
+    # are set, and `pk-bottom-collapse` must never appear alongside it.
+    test "with both boundary_collapse and bottom_collapse set, boundary_collapse wins outright" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          boundary_collapse: true,
+          bottom_collapse: true,
+          inner_block: []
+        })
+
+      assert main_class(html) == "pk-boundary-collapse px-4 sm:px-6 lg:px-8"
+    end
+
+    test "fullbleed's horizontal-padding behavior is unchanged in the bottom_collapse state too" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          fullbleed: true,
+          bottom_collapse: true,
+          inner_block: []
+        })
+
+      refute main_class(html) =~ "px-4"
+    end
   end
 
   # G-01.2-22 task 3: the three call-site assertions that make the opt-in
@@ -486,6 +534,43 @@ defmodule PukllayClubWeb.LayoutsTest do
       {:ok, _view, html} = live(conn, ~p"/quienes-somos")
 
       refute main_class(html) =~ "pk-boundary-collapse"
+    end
+
+    # Quick task 260902-il3: the catalog page opts into the bottom-only axis
+    # instead — D-01 forbids reusing boundary_collapse here since it would
+    # also move the catalog page's separately-closed top spacing (REQ-2).
+    test "the catalog index page's <main> carries pk-bottom-collapse and not pb-20", %{
+      conn: conn
+    } do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      class = main_class(html)
+      assert class =~ "pk-bottom-collapse"
+      refute class =~ "pb-20"
+    end
+
+    test "the about page's <main> carries neither pk-bottom-collapse nor pk-boundary-collapse, and still carries pb-20",
+         %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      class = main_class(html)
+      refute class =~ "pk-bottom-collapse"
+      refute class =~ "pk-boundary-collapse"
+      assert class =~ "pb-20"
+    end
+
+    test "the detail page's <main> carries pk-boundary-collapse and not pk-bottom-collapse", %{
+      conn: conn
+    } do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      class = main_class(html)
+      assert class =~ "pk-boundary-collapse"
+      refute class =~ "pk-bottom-collapse"
     end
   end
 
@@ -536,95 +621,25 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  # G-01.2-24 task 3: the sticky-footer app shell — a single class on
-  # <body>, the only change root.html.heex carries for this task. Pins the
-  # class is present on every route this shell serves (catalog, detail,
-  # about), not just one.
-  describe "root layout sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-24)" do
-    test "the catalog index page's <body> carries pk-app-shell", %{conn: conn} do
-      game_fixture()
-      {:ok, _view, html} = live(conn, ~p"/")
-
-      doc = LazyHTML.from_document(html)
-      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
-
-      assert body_class =~ "pk-app-shell"
-    end
-
-    test "the detail page's <body> carries pk-app-shell", %{conn: conn} do
-      game = game_fixture()
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
-
-      doc = LazyHTML.from_document(html)
-      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
-
-      assert body_class =~ "pk-app-shell"
-    end
-
-    test "the about page's <body> carries pk-app-shell", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
-
-      doc = LazyHTML.from_document(html)
-      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
-
-      assert body_class =~ "pk-app-shell"
-    end
-  end
-
-  # Source-level CSS facts, matching this file's existing @css_path-style
-  # assertions elsewhere in the suite: the three declarations that together
-  # push the footer down (min-height, column flex direction, and the
-  # main-child flex-grow) — any one of them alone does nothing. A sibling
-  # describe, not nested inside the one above — ExUnit forbids nested
-  # describe blocks.
-  describe "pk-app-shell CSS facts (Phase 01.2 gap-closure round 4, G-01.2-24)" do
-    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
-
-    defp shell_css_source, do: File.read!(@css_path)
-
-    defp pk_app_shell_block do
-      case Regex.run(~r/(?m)^\.pk-app-shell\s*\{([^}]*)\}/, shell_css_source()) do
-        [_, body] -> body
-        nil -> flunk("No top-level `.pk-app-shell { ... }` rule found in app.css")
-      end
-    end
-
-    test "declares both a minimum height and a column flex direction" do
-      body = pk_app_shell_block()
-
-      assert body =~ ~r/display:\s*flex;/,
-             "`.pk-app-shell` must declare `display: flex` — without it, `flex-direction` " <>
-               "and the main-child `flex-grow` below have no flex formatting context to " <>
-               "act inside."
-
-      assert body =~ ~r/flex-direction:\s*column;/,
-             "`.pk-app-shell` must declare `flex-direction: column` — a row direction would " <>
-               "lay the header/main/footer out side by side instead of stacked."
-
-      assert body =~ ~r/min-height:\s*100vh;/,
-             "`.pk-app-shell` must declare `min-height: 100vh` as a fallback for browsers " <>
-               "without dynamic-viewport-unit support."
-
-      assert body =~ ~r/min-height:\s*100dvh;/,
-             "`.pk-app-shell` must also declare `min-height: 100dvh` — without it, mobile " <>
-               "browser chrome showing/hiding would jump the layout."
-    end
-
-    test "declares a flex-grow on the shell's <main> descendant, and no direct-child combinator" do
-      assert shell_css_source() =~ ~r/\.pk-app-shell main\s*\{\s*flex-grow:\s*1;\s*\}/,
-             "The main-child rule must declare `flex-grow: 1` on a DESCENDANT selector " <>
-               "(`.pk-app-shell main`), not a direct-child one (`.pk-app-shell > main`) — " <>
-               "<main> is not literally body's DOM child (every LiveView page wraps its " <>
-               "output in a `data-phx-session` root div, flattened by this file's own " <>
-               "`[data-phx-session] { display: contents }` rule), so a `>` combinator here " <>
-               "would silently never match."
-
-      refute shell_css_source() =~ ~r/\.pk-app-shell\s*>\s*main/,
-             "A direct-child combinator between .pk-app-shell and main would never match — " <>
-               "see the positive assertion above for why."
-    end
-  end
-
+  # REMOVED (2026-09-02, quick task 260902-glf, Task 3): the sticky-footer
+  # app shell's `.pk-app-shell` class and its whole CSS mechanism (min-
+  # height floor, main-child flex-grow, and — as of this task — the flex
+  # column too) are deleted outright, not commented out. This describe
+  # used to pin `<body>` carrying `pk-app-shell` on every route; the
+  # sibling `pk-app-shell CSS facts` describe (Phase 01.2 gap-closure round
+  # 4, G-01.2-24; briefly inverted into an absence guard earlier in this
+  # same task) used to assert the stylesheet contract. Both are gone
+  # because the class itself is gone: Task 3's live CDP A/B measurement
+  # (toggling `.pk-app-shell { display: block !important; }` against the
+  # running dev server at 390px, short and long pages) found EVERY
+  # geometry number byte-identical with the flex column present vs.
+  # removed — `<main>` carries only padding, never a bottom margin, so
+  # there was nothing left for `.pk-footer`'s top margin to collapse
+  # against once the height floor and growth factor were already gone.
+  # The flex column was therefore vestigial, `root.html.heex` now renders
+  # a bare `<body>` with no class, and there is no longer a stylesheet
+  # contract for this file to pin — see app.css's own dated note above
+  # `.pk-gutter` for the full history and measurement record.
   describe "app/1 footer (SHELL-01, Task 2 checkpoint content)" do
     test "renders the shared pk-footer element with exactly three footer link labels" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})

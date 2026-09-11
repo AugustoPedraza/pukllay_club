@@ -515,3 +515,151 @@ elements need neither.
 - None of 036–038 are implemented yet — all three are design-approved, ready for
   `/gsd-execute-phase 01.2 --gaps-only` against the phase's gap-closure plans (`01.2-23` through
   `01.2-27`).
+
+## Session: 2026-08-31
+
+**Sketches processed:** 5
+**Design areas added:** Description Truncation & "Read More" (new)
+**Design areas updated:** Detail Page — Layout & Content, Component System — Pills & Chips
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/` (updated in place)
+
+**Context:** Phase 01.3 UAT gap-closure (gap G-01.3-1: editorial hashtags render as a bare,
+unlabelled pill row after the divider; the divider's own job was also in question). 039-042
+answered that gap directly; 043 is a frontier consistency pass — the full detail page hadn't been
+composed-checked since sketch 011, which predates all 16 detail-page-specific sketches (027-042)
+layered on since.
+
+**This session's synthesis pass caught two real contradictions between already-processed sketches
+and this round's later, more-specific work — surfaced to the user rather than silently picked:**
+1. `pills-chips.md` (sketch 036, a system-wide unification pass) documented informational pills as
+   flat/borderless/middot-separated. Sketches 039-041 — a later, narrower, UAT-validated pass over
+   the exact same content (Mecánicas/Temáticas, creators) — use a bordered `.pill-outline` instead,
+   with real user sign-off. **User decision: 039-041 supersedes 036** for this and the
+   selected/active-state fill rule 041 also revised (outline + primary text, not a full fill —
+   041 found literal outline-everywhere made a selected filter-modal chip pixel-identical to its
+   unchecked neighbors).
+2. Sketch 043 recomposed the lightbox from the original 033/038 sketch files, but the real
+   implementation went through several further gap-closure rounds after those sketches (already
+   documented in `detail-page-mobile-interaction.md`) and converged on a different, better mechanism
+   (a shared `--pk-shell-content-width` token, no wrapper element — a wrapper was considered and
+   explicitly rejected in production). **User decision: omit 043's lightbox markup from the skill
+   entirely**, redirect to the existing (correct, more current) reference instead.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 039 | ficha-tecnica-creators | Sobre el juego (2-col creators, outline pills) + Comunidad BGG (plain text) | Detail Page — Layout & Content |
+| 040 | reading-column-composition | Mecánicas/Temáticas absorbed into one fact grid, section heading dropped | Detail Page — Layout & Content |
+| 041 | pill-system-outline | Outline everywhere; selected/active = primary border + text, no fill | Component System — Pills & Chips |
+| 042 | editorial-tags-divider | Below Title, justified, no divider, chevron truly inline via a float trick (27 rounds) | Detail Page — Layout & Content / Description Truncation & "Read More" |
+| 043 | composed-full-detail-page | single composed view — 2 real bugs fixed, 1 real risk found & deferred, lightbox omitted (stale) | Detail Page — Layout & Content |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — all 5 included, per explicit user direction ("Include all as-is") |
+
+## Design Direction
+No new aesthetic direction — Phase 01.3 gap-closure within the already-locked visual system, plus a
+frontier consistency check. One real design-system correction did land: informational pills across
+the whole app are confirmed as bordered `.pill-outline` (muted text), not the flat/borderless shape
+036 originally proposed — 039-041 is the current truth for this, checked against the real call-site
+inventory (`GameChips.chip_row/1`, `GameChips.editorial_tags/1`, `GamePreview.facts_row/1`,
+`filter_modal.ex`, `catalog_live/index.ex`'s active-filter row), not assumed.
+
+## Key Decisions
+- **Ficha técnica creators (039):** Diseñadores/Ilustradores become navigable, filter-linked outline
+  pills instead of plain text. Dropped Edad mínima (redundant with the masthead's difficulty pill)
+  and a fake "Avanzado" heading with nothing under it. Comunidad BGG drops its bordered container in
+  favor of plain text, "Fuente: BoardGameGeek" as the link itself.
+- **Reading column merge (040):** Mecánicas/Temáticas absorbed into the SAME fact grid as
+  Diseñadores/Ilustradores/Año — not just re-styled, structurally merged — and the "Sobre el juego"
+  heading 039 had just introduced is dropped entirely as redundant, all within the same round of
+  work.
+- **Pill system, site-wide (041):** confirmed outline tone across all 5 real pill/chip call sites.
+  Literal outline-everywhere was tried first and rejected — a selected filter-modal chip rendered
+  pixel-identical to its unchecked siblings — so selected/active permanently carries the pill's own
+  hover treatment (primary border + text, `font-weight: 700`) instead of a new fill.
+- **Editorial tags & divider, 27 rounds (042):** hashtags move to right after the title (before the
+  description), the divider is removed for good (nothing left to separate once 040 dropped both
+  section headings), description is justified. The chevron/"read more" toggle took 27 rounds — first
+  a crash (interactive element nested inside a `-webkit-line-clamp` paragraph), then several rounds
+  establishing that proximity fixes don't solve "looks disconnected" when the icon-button chrome
+  itself is the actual problem, landing on a true-inline float technique that's icon-only (a text
+  label was tried and explicitly rejected once genuine inline placement made it redundant). Full
+  history — including two known issues deliberately left unresolved for implementation time — now
+  lives in its own file, `references/description-truncation.md`.
+- **Full-page composition check (043):** confirmed the masthead/buybox/reading-column decisions
+  above compose into one real page. Found and fixed 2 real bugs (a desktop-CTA/mobile-CTA-bar
+  duplication risk; the lightbox's own width-cap and arrow-anchor rules had drifted apart between
+  sketches 033 and 038). Found and explicitly did NOT fix a more serious risk: 042's float-trick
+  chevron technique cut text mid-word once composed at a different container width than 042's own
+  demo used — flagged in `description-truncation.md` for implementation-time validation against
+  real content, per direct user instruction not to keep iterating on it in sketch form.
+
+## Open Items Carried Forward
+- 042/043's mid-word-truncation risk (float-trick chevron) — validate against real game
+  descriptions at the real card width before shipping; fall back to the real
+  `-webkit-line-clamp` + `text-overflow: ellipsis` variant (also built and documented in
+  `description-truncation.md`) if mid-word cuts turn out to be common.
+- 042/043's "…"/chevron ink-alignment nudge (`translateY(-4px)` on the svg) — re-tune against the
+  real `--font-sans` stack, not the sketch's approximation of it.
+- 043's masthead+buybox+reading-column composition is a valid reference; its lightbox composition
+  is NOT — `detail-page-mobile-interaction.md`'s existing lightbox section (already corrected
+  through 9 real post-sketch gap-closure rounds) is authoritative.
+- None of 039-042 are implemented yet — all four are design-approved gap-closure for Phase 01.3's
+  UAT gap G-01.3-1, ready for `/gsd-plan-phase` or a gap-closure quick task against
+  `CatalogLive.Show`.
+
+## Session: 2026-09-02
+
+**Sketches processed:** 1
+**Design areas updated:** Page Shell (Header + Footer) — mobile footer section only
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/` (updated in place)
+
+**Context:** Post-shipment real-device feedback. Quick task 260901-ty6 had already tightened the
+mobile (≤480px) footer's chrome (shorter gap above it, smaller wordmark, smaller link text), but a
+real phone screenshot still showed it as too heavy and unbalanced against the page's left-aligned
+content. This sketch is the first in this project to be prompted directly by a production
+screenshot rather than a UAT gap or fresh design area.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 044 | mobile-footer-balance | H (BGG Only, Literally) | Page Shell (Header + Footer) |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — included |
+
+## Design Direction
+No new aesthetic direction — a scoped mobile-only revision of the existing footer. Two rounds of
+variants (A-G: alignment-only tweaks, then content-reduction tweaks that still kept the brand name
+and/or nav links) were both rejected by the user as indecisive. The breakthrough was reframing the
+question from "how should this look" to "what's actually required here" — a quick research pass
+confirmed only the BGG attribution is a real compliance requirement (the copyright line and
+everything else was convention), which the user then took to its logical conclusion.
+
+## Key Decisions
+- **Mobile footer, BGG only (044, winner H):** on `≤480px` only, the footer is reduced to nothing
+  but the "Powered by BGG" attribution line (real logo + text, linking to boardgamegeek.com). Brand
+  name, tagline, the FAQ/Contacto/Juntadas nav links, and the copyright line are all removed.
+  Desktop (`>480px`) is completely unaffected — this is a mobile-breakpoint-scoped decision, not a
+  redesign of the footer itself.
+- **Verified, not assumed, tradeoff:** grepped the codebase to confirm FAQ/Contacto/Juntadas exist
+  nowhere else in the app (they're anchor links into specific sections of the "Quiénes Somos" page;
+  header nav only links to the page as a whole). Removing them from the footer doesn't make that
+  page unreachable, but does remove the direct jump to those sections. User explicitly accepted
+  this when picking H over G (which still kept the links).
+- **A stale open item in `page-shell.md` got resolved as a side effect:** that file had flagged
+  "confirm the exact required BGG wording/format before shipping" as unresolved since sketch 011.
+  It's since been resolved in the shipped `bgg_attribution/1` component (exact wording: "Powered by
+  BGG" + logo) — this wrap-up updates that note rather than leaving it stale.
+
+## Open Items Carried Forward
+- Whether FAQ/Contacto/Juntadas need a new home (e.g. surfaced within the About page's own content
+  rather than deep-linked from outside it) is unresolved — flagged, not decided, in
+  `page-shell.md`.
+- Not yet implemented — winner H is design-approved, ready for a `/gsd-quick` task against
+  `layouts.ex`'s `footer/1` and the `≤480px` block in `app.css`.

@@ -129,6 +129,101 @@ be pulled forward without breaking that dependency chain.
 
 - [x] 01-12-PLAN.md — Sticky gutter-aligned nav with shelf anchors and search, mobile category chips, design-system record (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
 
+### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
+
+**Goal:** The game detail page tells the truth about a game and reads like a page instead of a
+block: descriptions are in Spanish and free of markup noise, the illustrators and BGG's weight,
+rating and overall ranking are shown (each linking back to BGG), and the reading column has real
+visual hierarchy between its sections — without reopening the masthead, buy-box or lightbox Phase
+01.2 closed.
+**Requirements**: SHELL-03 (refined, not re-scoped — no new requirement IDs)
+**Depends on:** Phase 01.2
+**UI hint**: yes — `01.3-UI-SPEC.md` approved 2026-08-29
+**Plans:** 12/12 plans complete
+
+Plans:
+
+**Wave 1**
+
+- [x] 01.3-01-PLAN.md — TRACER: BGG rating end-to-end (xpath extraction → `artists`/`bgg_rating`/`bgg_rank` columns → rendered Ficha técnica row), plus the offline write path (`StatsEnricher`, `mix catalog.enrich_bgg_stats`, `mix catalog.backfill_artists`) (D-05, D-06)
+
+**Wave 2** *(blocked on Wave 1: needs the migration and both Mix tasks)*
+
+- [x] 01.3-02-PLAN.md — Offline data population: artists backfill from `bgg_payload`, then the full ~400-game BGG re-enrichment pass behind a decision checkpoint (D-05, D-06)
+
+**Wave 3** *(blocked on Wave 2: the translator reads the `bgg_payload` that pass refreshes)*
+
+- [x] 01.3-03-PLAN.md — Description cleanup + Gemini tooling: `DescriptionNormalizer` (30 confirmed character escapes), optional `gemini_api_key` credential, `instructor_lite` dep, validated response model and translator with an injectable call seam, `mix catalog.translate_descriptions` (D-01, D-02)
+
+**Wave 4** *(blocked on Wave 3: runs the task it builds)*
+
+- [x] 01.3-04-PLAN.md — Run the Spanish translation batch: API-key human-action gate, five-game sample review, then the full run (D-01, D-02)
+
+**Wave 5** *(blocked on Wave 4: UAT needs real Spanish text and real BGG stats on the page)*
+
+- [x] 01.3-05-PLAN.md — UI-SPEC implementation: two-tier reading-column rhythm, `.pk-reading-section` wrapping, uppercase section headings, Ilustradores row, labelled Avanzado stats group, and the rewritten Phase 01.2 drift test (D-03, D-04, D-05, D-06)
+
+**Gap closure — UAT gap G-01.3-1** *(reading-column redesign; visual decisions resolved by sketches 039-043, see the `sketch-findings-pukllay_club` skill)*
+
+**Wave 6** *(blocked on Wave 5: refines what 01.3-05 shipped)*
+
+- [x] 01.3-06-PLAN.md — Creator navigability backend: `?designers=` / `?artists=` as real bounded open-text filter params, GIN indexes, removable active-filter chips (sketch 039's flagged implementation follow-up)
+
+**Wave 7** *(blocked on Wave 6: the creator pills need their filter targets to exist)*
+
+- [x] 01.3-07-PLAN.md — Reading-column recomposition: hashtags after the title, divider and section headings removed, minimum-age row dropped, creators/mechanics/themes merged into one responsive two-column fact grid, Comunidad BGG replaces the Avanzado label (sketches 039/040/041/042/043)
+
+**Wave 8** *(blocked on Wave 7: same files, same reading column)*
+
+- [x] 01.3-08-PLAN.md — Justified description at every width plus sketch 042's inline icon-only chevron, rendered from `@description_expanded` instead of the sketch's JS relocation, with a pre-decided fallback for the known mid-word-cut risk
+
+**Wave 9** *(blocked on Wave 8: same files)*
+
+- [x] 01.3-09-PLAN.md — Mobile sticky title-echo bar: measurable separation, shared shell-width cap, enforced two-theme contrast floors — plus a decision checkpoint routing the two UAT items no sketch resolved (sticky-header brand treatment, mobile footer weight)
+
+**Gap closure — UAT gaps G-01.3-4 and G-01.3-5** *(second UAT pass over the 01.3-06..09 changes; G-01.3-1 was closed by product decision with no code change)*
+
+**Wave 10** *(blocked on Wave 9: same files, same reading column)*
+
+- [x] 01.3-10-PLAN.md — G-01.3-4 (blocker): apply 01.3-08's pre-authored fallback — native three-line clamp with a native ellipsis, and the chevron moved out of the justified paragraph into a contained 44px trailing-sibling control, so the WebKit-divergent float geometry that pushed it outside the text column cannot recur
+
+**Wave 11** *(blocked on Wave 10: same two files)*
+
+- [x] 01.3-11-PLAN.md — G-01.3-5 (cosmetic): give the sticky title-echo bar's title a deliberate typographic identity (brand display face, explicit size/weight/colour) alongside its existing truncation, leaving 01.3-09's deferred brand-tint and bounce questions untouched
+
+**Gap closure — UAT gap G-01.3-6** *(third UAT pass; real-device WebKit confirmation of the 01.3-10 fix found a follow-on regression it left behind. G-01.3-1 was closed by product decision, G-01.3-4/G-01.3-5 by plans 10/11)*
+
+**Wave 12** *(blocked on Wave 10: builds on the flex-column mechanism 01.3-10 introduced — not a revert of it)*
+
+- [x] 01.3-12-PLAN.md — G-01.3-6 (major): seat the collapsed description chevron in the clamped paragraph's third line band via a `:not(.is-expanded)`-scoped absolute overlay plus a reserved right gutter, instead of the flex-column row `align-self` alone can never lift it out of — and close the coverage gap both chevron gaps slipped through by pinning the control's geometry as a derived contract test
+
+### Phase 01.3.1: Game Image Quality & Multi-Image Gallery (INSERTED)
+
+**Goal:** Every image the catalog shows for a game is a correct image of that game, shown whole —
+no other-edition/other-language box covers presented as extra photos, and no box art cropped to
+fill a fixed near-square frame — across the ~434 games already seeded, not just future seeds.
+**Requirements**: TBD (inserted urgent fix; carries no requirement IDs of its own. Keeps the
+already-Complete CATALOG-01 and CATALOG-09 actually true.)
+**Depends on:** Phase 01.3
+**Plans:** 2/2 plans complete
+
+> **Scope constraint surfaced during planning (D-02).** Research found no reachable source for
+> BGG gameplay/component photos: the XML API v2 exposes one image per thing and one per version
+> with no caption or category to select on, Phase 1's own `01-COVERAGE.md` recorded the same
+> finding, and direct probes of BGG's site returned HTTP 403. D-01's literal ask therefore cannot
+> ship this phase. Plan 01 opens with a blocking `checkpoint:decision` presenting three options
+> (empty gallery / Spanish-edition box art only / defer the gallery question) rather than reducing
+> the scope silently.
+
+Plans:
+
+**Wave 1** *(both plans run in parallel — plan 01 owns `lib/pukllay_club/catalog/seed/**` and
+`test/pukllay_club/**`, plan 02 owns `assets/css/**`, `lib/pukllay_club_web/**` and
+`test/pukllay_club_web/**`; zero file overlap)*
+
+- [x] 01.3.1-01-PLAN.md — Gallery source correction + catalog-wide backfill: D-02 decision gate, corrected `ImagePipeline.process_gallery/3`, new `GalleryBackfill` module and `mix catalog.backfill_gallery` task, regression matrix, live re-run over ~434 games (D-01, D-02, D-03, D-07, D-08 · CATALOG-09)
+- [x] 01.3.1-02-PLAN.md — Letterbox rendering: one shared `.pk-poster-img` class applied verbatim to the resting card, hover preview / mobile sheet, and detail cover, with the lightbox and the 64x64 selector chips asserted untouched (D-04, D-05, D-06 · CATALOG-01)
+
 ### Phase 01.1: Site Shell & Content Pages (INSERTED)
 
 **Goal**: The sketch-validated designs that are not yet built in real code — a shared page shell, the about page, an upgraded detail page, the filter/search modal, and empty/loading/error states — are live in the app, composed together without reintroducing the drift the sketch composition rounds (007/011/012) already found and fixed once.

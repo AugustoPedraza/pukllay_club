@@ -29,6 +29,7 @@ defmodule Mix.Tasks.Catalog.Seed do
   alias PukllayClub.Catalog.Seed.BggClient
   alias PukllayClub.Catalog.Seed.Credentials
   alias PukllayClub.Catalog.Seed.CsvImport
+  alias PukllayClub.Catalog.Seed.DescriptionNormalizer
   alias PukllayClub.Catalog.Seed.ExpansionClassifier
   alias PukllayClub.Catalog.Seed.HashtagNormalizer
   alias PukllayClub.Catalog.Seed.ImagePipeline
@@ -264,7 +265,9 @@ defmodule Mix.Tasks.Catalog.Seed do
       max_playtime: item.max_playtime,
       playing_time: item.playing_time,
       min_age: item.min_age,
-      description: item.description,
+      # D-02: clean BGG's raw named-HTML-entity noise before it ever lands
+      # in the games table, so a future full re-seed cannot reintroduce it.
+      description: DescriptionNormalizer.clean(item.description),
       bgg_weight: item.average_weight,
       mechanics: item.mechanics,
       themes: item.categories,
