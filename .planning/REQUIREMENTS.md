@@ -10,7 +10,7 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 
 ### Production Data
 
-- [ ] **SEED-01**: Production's live database has the full game catalog (~400+ games) loaded,
+- [x] **SEED-01**: Production's live database has the full game catalog (~400+ games) loaded,
       matching dev — currently empty
 - [ ] **SEED-02**: A safe, repeatable, documented path exists to (re-)run the seed pipeline against
       production
@@ -92,7 +92,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEED-01 | Phase 01.7 | Pending |
+| SEED-01 | Phase 01.7 | Complete |
 | SEED-02 | Phase 01.7 | Pending |
 | SEO-01 | Phase 01.8 | Pending |
 | SEO-02 | Phase 01.8 | Pending |
@@ -114,11 +114,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUDIT-02 | Phase 01.7 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 20 total
 - Mapped to phases: 20 (Phase 01.7: 8 · Phase 01.8: 12)
 - Unmapped: 0 — 100% coverage, no orphans, no duplicates
 
 **Phase notes:**
+
 - SEC-05 (JSON-LD renders under CSP via nonce/hash-source) is mapped to Phase 01.8, not 01.7: the
   CSP nonce refactor is the first step of the JSON-LD chain and is only observable once JSON-LD
   exists. Phase 01.7's CSP work (SEC-03) is a directive-by-directive review of the existing policy
