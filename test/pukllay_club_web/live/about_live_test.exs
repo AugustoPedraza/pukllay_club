@@ -533,13 +533,13 @@ defmodule PukllayClubWeb.AboutLiveTest do
 
       imgs = LazyHTML.query(thumb, "img")
 
-      assert Enum.count(imgs) == 0,
+      assert Enum.empty?(imgs),
              "Expected zero <img> elements inside .pk-about-map-thumb — the live frame " <>
                "renders its own tiles, so there is no screenshot asset left to reference."
 
       credit = LazyHTML.query(doc, ".pk-about-map-credit")
 
-      assert Enum.count(credit) == 0,
+      assert Enum.empty?(credit),
              "Expected zero elements matching .pk-about-map-credit — plan 01.4-11's figcaption " <>
                "is superseded by 01.4-12 (CONTEXT.md D-15): the live frame renders Google's real " <>
                "attribution at native size, so a hand-authored credit line is now a second, " <>
@@ -548,7 +548,7 @@ defmodule PukllayClubWeb.AboutLiveTest do
       contacto = LazyHTML.query(doc, "#contacto")
       figures = LazyHTML.query(contacto, "figure")
 
-      assert Enum.count(figures) == 0,
+      assert Enum.empty?(figures),
              "Expected zero <figure> elements inside #contacto — the screenshot facade's " <>
                "<figure> wrapper (and its figcaption) is gone."
     end
