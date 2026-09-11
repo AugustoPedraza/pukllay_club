@@ -1,12 +1,3 @@
- - make full purple the background
- - make the full cycle list -> details -> list
- - the details has an extra "recommendation" carousel to keep navigation
- - the're are section navigation buttons on the top of the page for quick access to different sections
- - a game must to have as CTA a "Quiero Jugarlo!" or something similar that will open a modal where is going to ask name and open the WhatsApp  Business chat with a pre-filled message to the Pukllay Club so can "make the reservation" of the game
- - the home must to have a Powered by Boardgame Geek logo at the bottom of the page
- - the details of the game must to be on spanish
- - the treatment of thumbnail requires ratio consideration, since some games have a different aspect ratio, so the thumbnail should be displayed in a way that maintains its aspect ratio without distortion
- - there isn't like "catalogo completeo" grid. Always show "carousel" for sections.
 
  - this must to have the best SEO practices, including meta tags, alt text for images, and structured data for games to improve search engine visibility.(for jujuy)
  - always a preview and game's deatils must to have a native share integration for social media platforms, allowing users to easily share the game details with their friends and followers.

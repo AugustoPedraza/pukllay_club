@@ -48,19 +48,19 @@ repo and a link that gets passed around.
   4. After the CSP review, the About page's live Google Maps embed still renders, and a LiveView page still reconnects cleanly after a simulated network drop (websocket connect-time CSRF, not just plain form posts)
   5. A full-git-history secrets sweep (not just currently-tracked files) is recorded with every hit explicitly triaged: real-and-rotated, false-positive-and-dismissed (e.g. `signing_salt`), or inert-historical-and-accepted
 
-**Plans**: 5 plans
+**Plans**: 5/5 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01.7-01-PLAN.md — SEED-01: restore the real catalog from dev into production over the SSH tunnel (phase tracer), proven by a live game detail page
-- [ ] 01.7-02-PLAN.md — SEC-01/SEC-02: env-gated `Secure` session cookie with an assertable accessor, plus live HSTS and `/up` health-probe verification
-- [ ] 01.7-03-PLAN.md — SEC-03/SEC-04: directive-by-directive CSP audit pinned as regression assertions, plus LiveView websocket CSRF confirmation
-- [ ] 01.7-04-PLAN.md — AUDIT-01/AUDIT-02: full-git-history Gitleaks sweep, per-hit adjudication, and a blocking-human rotation gate
+- [x] 01.7-01-PLAN.md — SEED-01: restore the real catalog from dev into production over the SSH tunnel (phase tracer), proven by a live game detail page
+- [x] 01.7-02-PLAN.md — SEC-01/SEC-02: env-gated `Secure` session cookie with an assertable accessor, plus live HSTS and `/up` health-probe verification
+- [x] 01.7-03-PLAN.md — SEC-03/SEC-04: directive-by-directive CSP audit pinned as regression assertions, plus LiveView websocket CSRF confirmation
+- [x] 01.7-04-PLAN.md — AUDIT-01/AUDIT-02: full-git-history Gitleaks sweep, per-hit adjudication, and a blocking-human rotation gate
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01.7-05-PLAN.md — SEED-02: opt-in `DATABASE_URL` dev Repo target, upsert idempotency proof, and the AGENTS.md re-seed runbook
+- [x] 01.7-05-PLAN.md — SEED-02: opt-in `DATABASE_URL` dev Repo target, upsert idempotency proof, and the AGENTS.md re-seed runbook
 
 > **Build order inside this phase (from `research/SUMMARY.md`):** the seed-to-production work
 > (SEED-01/02) and the secrets sweep (AUDIT-01/02) have no dependency on the security work or on
@@ -156,7 +156,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Walking Skeleton to Production | 6/6 | Complete | 2026-07-27 |
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
-| 01.7. Production Catalog Data & Security Hardening | 0/5 | Planned | - |
+| 01.7. Production Catalog Data & Security Hardening | 5/5 | In Progress|  |
 | 01.8. SEO, Structured Data & Social Sharing | 0/TBD | Not started | - |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
