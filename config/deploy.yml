@@ -56,6 +56,12 @@ env:
     # a published club business number, not a secret. Different from the
     # ClubLinks group-invite URL (a different WhatsApp feature).
     RESERVATION_WHATSAPP_NUMBER: "5493884103255"
+    # Public-read R2 bucket host that every stored game image URL is minted
+    # from (see 01-01-PLAN.md's user_setup and PukllayClub.Catalog.Seed.Credentials).
+    # config/runtime.exs raises at boot without this — it scopes the CSP
+    # img-src directive to the club's actual image host. Not a secret: this
+    # exact hostname already appears in every rendered <img src> on the site.
+    R2_PUBLIC_BASE_URL: "https://pub-8f053d9e82db4d8eb43b5666a37546c4.r2.dev"
   secret:
     - SECRET_KEY_BASE
     - DATABASE_URL
