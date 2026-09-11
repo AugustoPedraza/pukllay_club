@@ -44,9 +44,9 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 - [x] **SEC-01**: Session cookies are marked `Secure` in production (env-gated so local HTTP dev
       is unaffected)
 - [x] **SEC-02**: HTTPS responses include a valid HSTS header, verified live against production
-- [ ] **SEC-03**: CSP is reviewed and tightened where possible without breaking the existing
+- [x] **SEC-03**: CSP is reviewed and tightened where possible without breaking the existing
       Google Maps embed (`frame-src`)
-- [ ] **SEC-04**: CSRF protection is confirmed to also cover LiveView's websocket connect flow
+- [x] **SEC-04**: CSRF protection is confirmed to also cover LiveView's websocket connect flow
       (not just plain form posts)
 - [ ] **SEC-05**: JSON-LD script tags render correctly under CSP via a nonce or hash-source — not
       by weakening `script-src` with `unsafe-inline`
@@ -107,8 +107,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SHARE-05 | Phase 01.8 | Pending |
 | SEC-01 | Phase 01.7 | Complete |
 | SEC-02 | Phase 01.7 | Complete |
-| SEC-03 | Phase 01.7 | Pending |
-| SEC-04 | Phase 01.7 | Pending |
+| SEC-03 | Phase 01.7 | Complete |
+| SEC-04 | Phase 01.7 | Complete |
 | SEC-05 | Phase 01.8 | Pending |
 | AUDIT-01 | Phase 01.7 | Complete |
 | AUDIT-02 | Phase 01.7 | Complete |
