@@ -51,10 +51,15 @@ repo and a link that gets passed around.
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 01.7-01-PLAN.md — SEED-01: restore the real catalog from dev into production over the SSH tunnel (phase tracer), proven by a live game detail page
 - [ ] 01.7-02-PLAN.md — SEC-01/SEC-02: env-gated `Secure` session cookie with an assertable accessor, plus live HSTS and `/up` health-probe verification
 - [ ] 01.7-03-PLAN.md — SEC-03/SEC-04: directive-by-directive CSP audit pinned as regression assertions, plus LiveView websocket CSRF confirmation
 - [ ] 01.7-04-PLAN.md — AUDIT-01/AUDIT-02: full-git-history Gitleaks sweep, per-hit adjudication, and a blocking-human rotation gate
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01.7-05-PLAN.md — SEED-02: opt-in `DATABASE_URL` dev Repo target, upsert idempotency proof, and the AGENTS.md re-seed runbook
 
 > **Build order inside this phase (from `research/SUMMARY.md`):** the seed-to-production work
