@@ -3,7 +3,8 @@
 ## Milestones
 
 - ✅ **v1.0 MVP Catalog** — Phase 0, Phase 1 (+ insertions 01.1–01.6) (shipped 2026-09-11)
-- 🚧 **v1.1+ (unnamed, next)** — Phase 2, Phase 3, Phase 4 (not yet started)
+- 🚧 **v1.1 Sharable Version** — Phase 01.7, Phase 01.8 (in progress, started 2026-09-11)
+- ⏳ **Later (unnamed)** — Phase 2, Phase 3, Phase 4 (not yet started, numbers and scope unchanged)
 
 ## Phases
 
@@ -24,6 +25,67 @@ Full phase-by-phase detail (goals, success criteria, plans) archived at
 - [x] Phase 01.6: Light/Dark Theme Color-Family Consistency (6/6 quick tasks)
 
 </details>
+
+**🚧 v1.1 Sharable Version (current milestone)** — inserted ahead of Phase 2 per the project's
+established decimal-insertion convention (01.1 … 01.6 all ran this way). Phase 2/3/4 keep their
+numbers and their scope; nothing from them is pulled forward.
+
+- [ ] **Phase 01.7: Production Catalog Data & Security Hardening** - Load the real ~400+ game catalog into production via a safe repeatable path, then close the cookie/HSTS/CSP/CSRF gaps and sweep git history for secrets
+- [ ] **Phase 01.8: SEO, Structured Data & Social Sharing** - Per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, and real image `alt` text
+
+### Phase 01.7: Production Catalog Data & Security Hardening (INSERTED)
+
+**Goal**: The live site at pukllay.club serves the real ~400+ game catalog instead of an empty
+state, and the production app meets baseline web-security practice appropriate for a now-public
+repo and a link that gets passed around.
+**Depends on**: Phase 1 (the shipped v1.0 catalog this loads data into and hardens)
+**Requirements**: SEED-01, SEED-02, SEC-01, SEC-02, SEC-03, SEC-04, AUDIT-01, AUDIT-02
+**Success Criteria** (what must be TRUE):
+
+  1. https://pukllay.club shows the real catalog — carousels, filters, search, and game detail pages populated with the same ~400+ games dev has, not the empty state
+  2. Re-running the seed against production is a documented, repeatable operation: a second run is idempotent (changes nothing), and BGG/R2 credentials are never committed and never hand-edited onto the production host
+  3. `curl -I https://pukllay.club/` shows a `Strict-Transport-Security` header with a sane `max-age` and a session `Set-Cookie` carrying `Secure`, while local HTTP dev still serves and holds a session normally
+  4. After the CSP review, the About page's live Google Maps embed still renders, and a LiveView page still reconnects cleanly after a simulated network drop (websocket connect-time CSRF, not just plain form posts)
+  5. A full-git-history secrets sweep (not just currently-tracked files) is recorded with every hit explicitly triaged: real-and-rotated, false-positive-and-dismissed (e.g. `signing_salt`), or inert-historical-and-accepted
+
+**Plans**: TBD
+
+> **Build order inside this phase (from `research/SUMMARY.md`):** the seed-to-production work
+> (SEED-01/02) and the secrets sweep (AUDIT-01/02) have no dependency on the security work or on
+> each other and can run in parallel; the security items (SEC-01…04) are four independently-verified
+> checkpoints, not one "add security headers" checkbox (PITFALLS.md Pitfall 5). Two standing
+> hazards to respect: `force_ssl`'s `exclude` list must stay in sync with kamal-proxy's `/up`
+> health check, and `csp.ex`'s single third-party `frame-src` (`ClubLinks.maps_embed_origin/0`) is
+> deliberate — do not "tighten" it away (Pitfall 6).
+
+### Phase 01.8: SEO, Structured Data & Social Sharing (INSERTED)
+
+**Goal**: A game link dropped into WhatsApp/Facebook/Twitter renders an appealing, on-brand preview
+card, and Google can discover, crawl, and understand every game page in the catalog.
+**Depends on**: Phase 01.7 (needs real production data to demonstrate a share card against, and
+builds its JSON-LD on the CSP baseline that phase establishes)
+**Requirements**: SEO-01, SEO-02, SEO-03, SEO-04, SEO-05, SEO-06, SHARE-01, SHARE-02, SHARE-03, SHARE-04, SHARE-05, SEC-05
+**Success Criteria** (what must be TRUE):
+
+  1. `curl` against a live game detail URL — no JS, no websocket, exactly what a crawler sees — returns that specific game's meta description, Open Graph tags, and Twitter Card tags, never the site-wide fallback
+  2. Sharing a game link via the existing native-share control produces a preview card on WhatsApp/Facebook/Twitter showing that game's own cover art at 1200×630 plus its title and description; pages with no natural hero image (catalog index, About) fall back to the branded isologo/wordmark card
+  3. Google's Rich Results Test validates `Game` structured data on a live game detail page and `LocalBusiness` (Jujuy) site-wide, with no CSP violation in the browser console and `script-src` still carrying no `unsafe-inline`
+  4. `https://pukllay.club/sitemap.xml` lists the catalog index plus every publicly-reachable game — count matches the live catalog, `lastmod` tracks each game's own `updated_at` — and `robots.txt` allows crawling and points at it
+  5. Catalog card and hover-preview images announce the actual game (to a screen reader, and when an image fails to load) instead of being skipped as decorative
+
+**Plans**: TBD
+
+> **Build order inside this phase (from `research/SUMMARY.md`):** the CSP nonce refactor
+> (`CSP.policy/0` → `policy/1`, per-request nonce in `put_csp/2` — SEC-05) comes first because the
+> JSON-LD blocks cannot render at all under this app's existing strict `script-src 'self'` without
+> it; then the `GameSEO` plug + `SEOTags` component + OG/JSON-LD chain. Alt text, `sitemap.xml`, and
+> `robots.txt` are independent of that chain and can run in parallel.
+>
+> **Accepted scope constraint (PITFALLS.md Pitfall 1 + 2).** SEO metadata must be computed in a Plug
+> that writes to `conn.assigns` before the LiveView mounts — anything gated on `connected?(socket)`
+> is invisible to every crawler. Correspondingly, `<head>` tags going stale during LiveView
+> client-side navigation is an accepted, documented limitation (José Valim's own guidance), not a
+> bug to engineer around with a JS head-patching hook.
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
@@ -76,12 +138,14 @@ Full phase-by-phase detail (goals, success criteria, plans) archived at
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
+Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Walking Skeleton to Production | 6/6 | Complete | 2026-07-27 |
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
+| 01.7. Production Catalog Data & Security Hardening | 0/TBD | Not started | - |
+| 01.8. SEO, Structured Data & Social Sharing | 0/TBD | Not started | - |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |

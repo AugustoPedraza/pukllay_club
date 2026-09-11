@@ -92,32 +92,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEED-01 | TBD | Pending |
-| SEED-02 | TBD | Pending |
-| SEO-01 | TBD | Pending |
-| SEO-02 | TBD | Pending |
-| SEO-03 | TBD | Pending |
-| SEO-04 | TBD | Pending |
-| SEO-05 | TBD | Pending |
-| SEO-06 | TBD | Pending |
-| SHARE-01 | TBD | Pending |
-| SHARE-02 | TBD | Pending |
-| SHARE-03 | TBD | Pending |
-| SHARE-04 | TBD | Pending |
-| SHARE-05 | TBD | Pending |
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
-| SEC-04 | TBD | Pending |
-| SEC-05 | TBD | Pending |
-| AUDIT-01 | TBD | Pending |
-| AUDIT-02 | TBD | Pending |
+| SEED-01 | Phase 01.7 | Pending |
+| SEED-02 | Phase 01.7 | Pending |
+| SEO-01 | Phase 01.8 | Pending |
+| SEO-02 | Phase 01.8 | Pending |
+| SEO-03 | Phase 01.8 | Pending |
+| SEO-04 | Phase 01.8 | Pending |
+| SEO-05 | Phase 01.8 | Pending |
+| SEO-06 | Phase 01.8 | Pending |
+| SHARE-01 | Phase 01.8 | Pending |
+| SHARE-02 | Phase 01.8 | Pending |
+| SHARE-03 | Phase 01.8 | Pending |
+| SHARE-04 | Phase 01.8 | Pending |
+| SHARE-05 | Phase 01.8 | Pending |
+| SEC-01 | Phase 01.7 | Pending |
+| SEC-02 | Phase 01.7 | Pending |
+| SEC-03 | Phase 01.7 | Pending |
+| SEC-04 | Phase 01.7 | Pending |
+| SEC-05 | Phase 01.8 | Pending |
+| AUDIT-01 | Phase 01.7 | Pending |
+| AUDIT-02 | Phase 01.7 | Pending |
 
 **Coverage:**
 - v1 requirements: 20 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 20 ⚠️ (resolved by gsd-roadmapper next)
+- Mapped to phases: 20 (Phase 01.7: 8 · Phase 01.8: 12)
+- Unmapped: 0 — 100% coverage, no orphans, no duplicates
+
+**Phase notes:**
+- SEC-05 (JSON-LD renders under CSP via nonce/hash-source) is mapped to Phase 01.8, not 01.7: the
+  CSP nonce refactor is the first step of the JSON-LD chain and is only observable once JSON-LD
+  exists. Phase 01.7's CSP work (SEC-03) is a directive-by-directive review of the existing policy
+  and must leave the nonce path open.
+- Phase 01.8 depends on Phase 01.7: sharing/Rich-Results verification needs production to already
+  hold the real catalog (SEED-01).
 
 ---
 *Requirements defined: 2026-09-11*
-*Last updated: 2026-09-11 after initial definition*
+*Last updated: 2026-09-11 after roadmap creation (traceability mapped to Phases 01.7 / 01.8)*
