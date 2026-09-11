@@ -92,6 +92,74 @@ custom classes must fully style the input
 - Ensure **clean typography, spacing, and layout balance** for a refined, premium look
 - Focus on **delightful details** like hover effects, loading states, and smooth page transitions
 
+## Production data seeding
+
+Production's `games` table is the developer's dev-machine seed pipeline's data, restored over a
+manual SSH tunnel — never seeded directly on the production host, and BGG/R2/Gemini credentials
+never touch that host or Kamal (SEED-01/SEED-02, D-04/D-05). Two procedures exist: the one-time
+restore already performed, and the repeatable re-seed path for every time after.
+
+### One-time restore (already performed, D-01/D-03)
+
+Plan 01.7-01 restored the dev-seeded catalog into production's previously-empty `games` table.
+The full command sequence, connection derivation, and every verification figure are recorded in
+`.planning/phases/01.7-production-catalog-data-security-hardening-inserted/01.7-SEED-RESTORE.md`
+— read that file for the actual commands rather than re-deriving them. In outline:
+
+1. Read production's resolved `DATABASE_URL` (role/host/database only, password supplied
+   directly by the developer) from Kamal's own env file on the host — `.kamal/secrets` locally
+   only ever holds a placeholder (D-08).
+2. Open a foreground SSH local port-forward bound to `127.0.0.1` on a non-default local port
+   (`ssh -f -N -L 127.0.0.1:15432:localhost:5432 deploy@<host>`), since the dev machine's own
+   Postgres already owns the default port.
+3. `pg_dump --data-only --table=games` the dev database, then restore through the tunnel with
+   `psql -h 127.0.0.1 -p 15432 ... pukllay_club_prod < dump.sql`.
+4. **Verify the dump's own `setval` line restored the sequence** — `grep setval dump.sql` before
+   restoring, then confirm `games_id_seq`'s `last_value` is `>= max(games.id)` in production after.
+   This is the step a hurried re-seed would skip, and skipping it doesn't fail at restore time —
+   it fails later, as a primary-key collision on the next write.
+5. Close the tunnel once verification passes.
+
+### Future re-seed path (D-04)
+
+To re-run the seed pipeline against production — for example, after a catalog CSV update — open
+the same foreground SSH local port-forward as above, then run `mix catalog.seed` and its
+companion tasks (`mix catalog.enrich_bgg_stats`, `mix catalog.backfill_artists`,
+`mix catalog.backfill_gallery`) locally, each with a one-shot inline `DATABASE_URL` pointed at the
+forward's local end:
+
+```
+DATABASE_URL="ecto://postgres:<password>@127.0.0.1:15432/pukllay_club_prod" mix catalog.seed
+```
+
+Three constraints, all load-bearing:
+
+- **`DATABASE_URL` is supplied inline for that single command only — never exported into a shell
+  profile.** An exported value silently retargets every later `mix` invocation in that shell,
+  including an unrelated local `mix test` or `mix ecto.migrate` run, to production.
+- **BGG, R2, and Gemini credentials resolve from the developer's gitignored
+  `config/dev.secret.exs`** through `PukllayClub.Catalog.Seed.Credentials` (env-var-first, then
+  `Application` config) exactly as they do for a normal dev seed run. They never touch the
+  production host and never route through Kamal — that is a standing decision from plan 01-01,
+  not a preference for this runbook.
+- **Production is only reachable at all while the forward from step 2 above is open** — a
+  deliberate, foreground, manual act, not something any CI job or scheduled task does on your
+  behalf.
+
+**Consequence that makes a careless re-seed expensive:** a full `mix catalog.seed` run rewrites
+every touched game's `description` from BGG's English source, reverting the club's curated
+Argentine-Spanish text to English. After any full re-seed, run
+`mix catalog.translate_descriptions --only-english` to re-translate every row the seed reverted —
+this is not optional cleanup, it is the reason D-01 chose the dump-and-restore path over a fresh
+re-derivation pipeline for the one-time restore in the first place. The Spanish voice is
+member-facing product, not internal metadata.
+
+**Considered and deliberately not adopted:** a GitHub Actions workflow for this re-seed path,
+modelled on the existing nightly backup workflow's SSH pattern (`.github/workflows/backup.yml`).
+At this project's cadence — a re-seed is an occasional, deliberate, developer-initiated act, not
+a scheduled one — the added CI/secrets-in-GitHub surface area was not worth automating. A future
+reader should treat this as a decision, not an oversight.
+
 
 <!-- usage-rules-start -->
 <!-- usage_rules-start -->
