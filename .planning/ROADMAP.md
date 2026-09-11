@@ -129,6 +129,69 @@ be pulled forward without breaking that dependency chain.
 
 - [x] 01-12-PLAN.md — Sticky gutter-aligned nav with shelf anchors and search, mobile category chips, design-system record (CATALOG-01, CATALOG-05, CATALOG-06, CATALOG-07)
 
+### Phase 01.4: UI polish pass for About page sketches (INSERTED)
+
+**Goal:** The shipped About page tells the truth and looks finished: it states the club's real
+April-2021 origin and its real $5.000/$7.000 pricing, every content band shares the shell's own
+80rem edge, the photo rail shows five real photographs of the club instead of grey placeholders,
+Contacto is one card carrying real icon links and a map to the venue, the closing band asks once
+instead of repeating itself, and the club's isologo fades in and morphs into the header as you
+scroll.
+**Requirements**: none — no REQ-IDs map to this inserted UI-polish phase. CONTEXT.md's locked
+decisions D-01..D-10 (plus the un-numbered `<specifics>` items from sketches 047/048/049) are this
+phase's acceptance criteria instead, per 01.4-RESEARCH.md `<phase_requirements>`.
+**Depends on:** Phase 1
+**Plans:** 10/11 active plans executed (12 authored, 1 superseded — 4 gap-closure plans added from UAT, 3 more from verification gap G-01.4-5)
+
+Plans:
+**Wave 1**
+
+- [x] 01.4-01-PLAN.md — Content truth pass: `.pk-band-inner` 64rem→80rem, the 047 copy rewrite incl. the April-2021 factual fix, and the FAQ pricing correction (sketches 047, 048)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 01.4-02-PLAN.md — Contacto rebuilt as one merged card: `ClubLinks.maps_url/0`, `social_links/1` promoted and parameterized, Maps screenshot asset (D-04, D-05, D-06)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 01.4-03-PLAN.md — Closing-CTA de-duplication onto the shared `sumate_cta/1`, plus a measured verdict on the mobile CTA-bar centering claim (sketch 049)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 01.4-04-PLAN.md — Photo rail: five real photographs cropped to fill, five dots, and the mobile hero tagline split (D-08, D-09, sketch 046)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [x] 01.4-05-PLAN.md — Isologo scroll-morph: page-owned `.AboutHeaderMorph` hook, hidden-at-rest header, single reused mark (D-01, D-02, D-03, D-10)
+
+**Wave 6** *(gap closure — UAT G-01.4-1)*
+
+- [x] 01.4-06-PLAN.md — Isologo morph gap closure: server-rendered hidden header (kills the load blink), a real spacing tier under the mark, and a transform-interpolated morph that retargets against two live rects (G-01.4-1)
+
+**Wave 7** *(gap closure — UAT G-01.4-2, blocked on Wave 6: same files)*
+
+- [x] 01.4-07-PLAN.md — Maps thumbnail gap closure: sketch 048's short mobile caption ported, the caption bounded to one opaque single-line chip, and a height floor for the 640-767px two-column band (G-01.4-2)
+
+**Wave 8** *(gap closure — UAT G-01.4-3, blocked on Wave 7: same files)*
+
+- [x] 01.4-08-PLAN.md — Isologo bottom-spacing gap closure: clear space derived from sketch 045 A3 into a named `--pk-about-mark-clear`, the anchor height decoupled from the mark height, the mark reconciled to the approved 180px, the hero's `py-12` rebalanced, and a ratio gate so the derivation survives the next resize (G-01.4-3)
+
+**Wave 9** *(gap closure — UAT G-01.4-4, blocked on Wave 8: same files)*
+
+- [x] 01.4-09-PLAN.md — Maps thumbnail second-round gap closure: the caption chip shrink-wrapped and nested concentrically, the screenshot recaptured at a legible zoom with an untruncated pin label and Google's attribution in frame, and a dark-theme capture wired on the isologo's own light/dark variant pattern — facade kept, embed declined by the user (G-01.4-4)
+
+**Wave 10** *(gap closure — verification G-01.4-5, blocked on Wave 9: same files)*
+
+- [x] 01.4-10-PLAN.md — Maps attribution crop gap closure: `.pk-about-map-thumb`'s aspect-ratio rederived from the committed screenshot's real 1656x804 dimensions (it still claimed the 21:9 of an asset 01.4-09 replaced, so `object-fit: cover` was discarding 5.86% off the top and bottom and Google's wordmark with it), the image bottom-anchored, the caption chip inset above a reserved attribution band, plus a committed headless-Chrome probe that renders the live page at 375/640/768/1280px in both themes and a test gating the asset/CSS shape relationship (G-01.4-5)
+
+**Wave 11 — superseded** *(planned, partially executed — Tasks 1-2 committed as a85047c/d2b771e, the blocking human checkpoint never ran and no SUMMARY was written; replanned after D-11-D-15 reopened and reversed the "do not embed" decision, which moots the illegible-caption problem this plan targeted)*
+
+- [~] 01.4-11-PLAN.md — superseded by 01.4-12
+
+**Wave 12** *(gap closure — verification G-01.4-5, blocked on Wave 10)*
+
+- [ ] 01.4-12-PLAN.md — Maps facade replaced by a live keyless Google Maps embed: a `frame-src` CSP directive derived from the embed URL itself so it can never be broader than the one frame it permits, the iframe made non-interactive behind a single full-box click-out to `ClubLinks.maps_url/0`, a `[data-theme="dark"]` filter approximation, the caption chip moved off the edge Google paints its own attribution into, both screenshot JPEGs and the pixel oracle deleted, and the visual probe rebuilt to gate the child frame's actual navigation commit (D-11, D-12, D-13, D-14; G-01.4-5)
+
 ### Phase 01.3: Game Detail Layout & Content Accuracy (INSERTED)
 
 **Goal:** The game detail page tells the truth about a game and reads like a page instead of a

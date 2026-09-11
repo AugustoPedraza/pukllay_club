@@ -85,13 +85,18 @@ defmodule PukllayClubWeb.LayoutsTest do
         |> LazyHTML.query("a img")
         |> Enum.map(&LazyHTML.to_html/1)
 
+      # Plan 01.4-05 (sketch 045, D-10) appended a `pk-brand-mark` styling
+      # hook class to both images alongside their theme-variant classes —
+      # the class-attribute assertions below now check containment rather
+      # than an exact string, since "dark:hidden"/"hidden dark:block" are
+      # no longer the ENTIRE class value.
       assert light_img_html =~ "isologo-light.png"
-      assert light_img_html =~ ~s(class="dark:hidden")
+      assert light_img_html =~ ~s(class="dark:hidden pk-brand-mark")
       assert light_img_html =~ ~s(width="36")
       assert light_img_html =~ ~s(alt="")
 
       assert dark_img_html =~ "isologo-dark.png"
-      assert dark_img_html =~ ~s(class="hidden dark:block")
+      assert dark_img_html =~ ~s(class="hidden dark:block pk-brand-mark")
       assert dark_img_html =~ ~s(width="36")
       assert dark_img_html =~ ~s(alt="")
     end
@@ -1172,10 +1177,14 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
-  # social_links/1 is a private (defp) component — same convention as
-  # footer/1 / header_inner/1 elsewhere in this module — so it's exercised
-  # indirectly through Layouts.app/1's rendered footer subtree, its one
-  # consumer with a stable, always-present container class.
+  # social_links/1 is now a PUBLIC component (promoted in plan 01.4-02
+  # Task 3) with three real call sites: the footer (.pk-footer-social), the
+  # mobile drawer (.pk-drawer-social), and the About page's Contacto card
+  # (.pk-about-contact-links, AboutLive). The footer/drawer tests below keep
+  # exercising it indirectly through Layouts.app/1's rendered subtree, since
+  # neither call site passes icons/labels and both must stay
+  # byte-identical to their pre-promotion output. The `icons`/`labels` attrs
+  # themselves are covered directly via render_component/2 further below.
   describe "social_links/1 (exercised via the footer's .pk-footer-social)" do
     test "renders four distinct Spanish aria-labels" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
@@ -1219,6 +1228,61 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       assert html =~ ~s(class="pk-footer-social")
       assert html =~ ~s(class="pk-drawer-social")
+    end
+  end
+
+  describe "social_links/1 icons/labels attrs (plan 01.4-02 Task 3, direct render_component/2)" do
+    test "default icons/labels reproduce the four-icon, no-label footer/drawer shape" do
+      html = render_component(&Layouts.social_links/1, %{class: "test-social"})
+
+      links = html |> LazyHTML.from_document() |> LazyHTML.query(".test-social a")
+      assert Enum.count(links) == 4
+
+      refute html =~ "Grupo de WhatsApp"
+      refute html =~ ">Facebook<"
+      refute html =~ ">Instagram<"
+      refute html =~ ">Correo<"
+    end
+
+    test "icons subset renders only the requested channels, in order" do
+      html =
+        render_component(&Layouts.social_links/1, %{
+          class: "test-social",
+          icons: [:whatsapp, :instagram]
+        })
+
+      doc = LazyHTML.from_document(html)
+      links = LazyHTML.query(doc, ".test-social a")
+      hrefs = LazyHTML.attribute(links, "href")
+
+      assert Enum.count(links) == 2
+
+      assert hrefs == [
+               PukllayClubWeb.ClubLinks.whatsapp_group_url(),
+               PukllayClubWeb.ClubLinks.instagram_url()
+             ]
+    end
+
+    test "labels: true renders a visible Spanish text label alongside the icon" do
+      html =
+        render_component(&Layouts.social_links/1, %{
+          class: "test-social",
+          icons: [:whatsapp, :instagram],
+          labels: true
+        })
+
+      assert html =~ "Grupo de WhatsApp"
+      assert html =~ ">Instagram<"
+    end
+
+    test "labels: false (default) renders no text label" do
+      html =
+        render_component(&Layouts.social_links/1, %{
+          class: "test-social",
+          icons: [:whatsapp]
+        })
+
+      refute html =~ "Grupo de WhatsApp"
     end
   end
 

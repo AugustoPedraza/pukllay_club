@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>047 — Qué hacemos / Historia / Juntadas copy</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 48px; }
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap;
+  }
+  .variant-tab {
+    font-family: var(--font-sans); font-size: var(--text-sm);
+    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
+    background: var(--color-surface); color: var(--color-text); cursor: pointer;
+  }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  .variant { display: none; }
+  .variant.active { display: block; }
+  .note {
+    max-width: 680px; margin: 24px auto; padding: 12px 16px;
+    background: var(--color-accent-bg); color: var(--color-accent-text);
+    border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
+  }
+  .shell { max-width: 1100px; margin: 0 auto; padding: 0 24px 64px; }
+  .band-grid { display: grid; gap: 44px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 640px) { .band-grid { grid-template-columns: 1fr; gap: 32px; } }
+  .band-grid h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0 0 8px; }
+  .band-grid p { font-size: var(--text-lg); margin: 0; }
+  .band-grid a.inline-link { color: var(--color-primary); text-decoration: underline; text-underline-offset: 2px; }
+  .juntadas-band { margin-top: 44px; padding-top: 44px; border-top: 1px solid var(--color-border); }
+  .juntadas-band h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0 0 8px; }
+  .juntadas-band p { font-size: var(--text-lg); margin: 0; max-width: 40rem; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('final', event)">Final ★ Selected</button>
+</div>
+
+<!-- ROUND 1 -->
+<div id="final" class="variant active">
+  <div class="note">Developer-authored final copy — not AI-drafted. Corrects the live page's "Empezamos en 2024" (should be April 2021) and adds real texture: a specific "400+ games, we pick today's selection" framing, and the club's provincial/national/international reach.</div>
+
+  <section class="shell">
+    <div class="band-grid">
+      <div>
+        <h2>Qué hacemos</h2>
+        <p>De más de 400 juegos elegimos la selección del día: esa es nuestra parte. La tuya es disfrutar. Si nunca jugaste a un juego de mesa moderno no importa, porque te explicamos las reglas ahí mismo y a los pocos minutos ya estás adentro de la partida, entre risas y gente que recién conocés.</p>
+        <p style="margin-top:12px"><a class="inline-link" href="#juntadas-final">Dónde y cuándo jugamos ↓</a></p>
+      </div>
+      <div>
+        <h2>Nuestra historia</h2>
+        <p>Todo empezó en abril de 2021, la primera vez que abrimos las mesas a la comunidad, y desde entonces no paramos. Como club representamos a la provincia en encuentros nacionales, y así terminamos haciendo jugar a personas de todo el país, y también a viajeros de Francia, España y Portugal que estaban de paso por la ciudad. Más de cinco años después nos sigue emocionando lo mismo: una mesa alcanza para que dos extraños se pongan de acuerdo, se rían y quieran volver a jugar.</p>
+      </div>
+    </div>
+    <div class="juntadas-band" id="juntadas-final">
+      <h2>Juntadas</h2>
+      <p>Nos juntamos los sábados en el Club de Emprendedores, San Salvador de Jujuy. Los juegos los llevamos nosotros; vos traé las ganas.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+function showVariant(id, evt) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (evt) evt.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>

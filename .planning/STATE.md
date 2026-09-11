@@ -4,24 +4,26 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
-stopped_at: "Completed quick task 260902-glf: Remove the site-wide sticky-footer layout"
-last_updated: "2026-09-02T15:18:56.812Z"
-last_activity: 2026-09-02
-last_activity_desc: Phase 01.3.1 complete, transitioned to Phase 02
-state_head: 0e0690c2890ded4caa5cb92f7405e6883f35bf94
+stopped_at: Phase 01.4 complete, ready to plan Phase 02
+last_updated: "2026-09-07T19:05:24.168Z"
+last_activity: 2026-09-07
+last_activity_desc: Phase 01.4 complete, transitioned to Phase 02
+state_head: 68d16b58caeccc931c1a03f7cd0a4ad90a46bc43
 progress:
-  total_phases: 8
-  completed_phases: 5
-  total_plans: 62
-  completed_plans: 62
+  total_phases: 9
+  completed_phases: 6
+  total_plans: 73
+  completed_plans: 73
 milestone_name: milestone
 ---
+
+Total Phases: 7
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-01)
+See: .planning/PROJECT.md (updated 2026-09-07)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
@@ -32,15 +34,15 @@ even without already knowing board-game vocabulary.
 Phase: 02 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-02 — Completed quick task 260902-il3: Fix the catalog page's last-shelf-to-footer gap
+Last activity: 2026-09-07 — Phase 01.4 complete, transitioned to Phase 02
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 plans (Phase 02 not yet planned)
+Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 plans (Phase 02 not yet planned)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 65
+- Total plans completed: 76
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -54,6 +56,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | 01.2 | 27 | - | - |
 | 01.3 | 12 | - | - |
 | 01.3.1 | 2 | - | - |
+| 01.4 | 11 | - | - |
 
 **Recent Trend:**
 
@@ -97,6 +100,11 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 60/60 p
 | Phase 01.3 P02 | 25min | 3 tasks | 1 files |
 | Phase 01.3 P04 | 45min | 2 tasks | 2 files |
 | Phase quick-260902-glf P01 | 25min | 3 tasks | 4 files |
+| Phase 01.4 P06 | 40min | 2 tasks | 3 files |
+| Phase 01.4 P07 | 25min | 2 tasks | 3 files |
+| Phase 01.4 P08 | 20min | 2 tasks | 3 files |
+| Phase 01.4 P09 | 20min | 3 tasks | 5 files |
+| Phase 01.4 P10 | 55min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -181,10 +189,25 @@ Recent decisions affecting current work:
 - [Phase 01.3]: `gemini_api_key` added alongside `bgg_api_token` in `Credentials` (`@secret_fields` + `@derive {Inspect, only: [...]}`, gitignored `config/dev.secret.exs` only); `instructor_lite` (hex.pm) is this phase's one new dependency, manually audited and approved in `01.3-RESEARCH.md` since it falls outside the automated npm/pypi/crates package-legitimacy seam.
 - [Phase 01.3.1, 2026-09-01]: Phase closed after 2 plans, both UAT checkpoints passed on first pass (letterbox rendering across catalog grid/hover/mobile-sheet/detail surfaces; motivating example BGG id 305096 confirmed showing the correct Spanish/Fantasía cover, no stray thumbnail/dot strip). D-02 checkpoint resolved BGG's XML API v2 exposing no reachable gameplay/component photos by narrowing gallery scope to Spanish-edition box art only; `GalleryBackfill` re-ran live over ~434 games; one shared `.pk-poster-img` letterbox class now applied verbatim across every artwork surface except the lightbox and 64x64 selector chips.
 - [Phase 02]: Quick task 260902-glf: reverted Phase 01.2's sticky-footer app shell (.pk-app-shell min-height/flex-grow) per developer's explicit choice; live CDP A/B measurement then found the accompanying flex column vestigial too (main carries only padding, no bottom margin, so nothing collapsed), so the entire .pk-app-shell class + its 3 presence tests + CSS-facts test contract were retired -- root.html.heex's <body> now carries no class at all
+- [Phase 01.4]: 01.4-06: S1 blink fixed via server-rendered data-morph-armed marker + body:has() CSS guard (visibility:hidden, transition:none on hide, eased only on .is-docked reveal), replacing the client-JS-applied hiding class; mb-8 gives the mark anchor its own spacing tier (S2); morph rewritten to per-frame transform interpolation (single rAF scheduler, both live rects re-read every frame, bisected cubic-bezier matching --ease-standard) replacing the CSS layout-property transition (S3)
+- [Phase 01.4]: 01.4-06: found and fixed (Rule 1) that the plan's literal <noscript><style> no-JS escape hatch is exempted from scripting-disabled-only behavior by the HTML spec's noscript child allowlist and would have permanently defeated S1 in every browser; replaced with a <noscript><div> marker (correctly parser-discarded when scripting is enabled) plus explicit hook-side removal, since LiveView's own connect-time DOM reconciliation was found to resurrect the parser-discarded marker on its own
+- [Phase 01.4]: 01.4-07: G-01.4-2 map thumbnail coverage gap closed via lg-breakpoint (not sm) two-caption variant pair + opaque single-line inset chip + min-height floor on the thumb — all three independently-necessary per the debug session's differential experiment; human-check for perceptual sufficiency deferred to end-of-phase UAT per this phase's human_verify_mode=end-of-phase convention
+- [Phase 01.4]: 01.4-08: --pk-about-mark-h reconciled 200px->180px (approved sketch 045 A3) and decoupled from anchor height via new --pk-about-mark-clear (80px, derived 44.4% of mark height) + calc(); #about-hero py-12 -> pt-2 pb-12 fixing inverted above/below allocation; closes G-01.4-3, human-check deferred to end-of-phase UAT
+- [Phase 01.4]: 01.4-09: Maps thumbnail chip shrink-wrap/concentric-nesting fixed (--pk-map-label-inset single-source), light asset recaptured (tighter zoom, dominant pin, attribution in frame); pin-label truncation accepted as permanent per human confirmation in Google Maps, full venue name already carried in surrounding text
+- [Phase 01.4]: 01.4-09: light/dark theme-variant <img> pair wired for the Maps thumbnail (mirrors brand_logo/1's isologo pattern, .pk-about-map-thumb img's display:block removed to avoid the 01.4-05 cascade hazard); real dark-mode capture NOT achieved (3 avenues exhausted: Maps web UI has no dark toggle, Chrome force-dark only recolors overlay text not tiles, OS dark mode leaves tiles light) — dark asset ships as an interim byte-identical copy of the light asset, tracked as an open stub (WINDOWS.md #23), deferring root cause (C) to a future pass
+- [Phase 01.4]: 01.4-10: G-01.4-5 closed — .pk-about-map-thumb's aspect-ratio now derives from --pk-map-thumb-w/-h (the asset's real 1656x804 dimensions) instead of a stale 21:9 literal that was cropping Google's Maps attribution off every render; ExUnit gate reads real JPEG dimensions off disk to prevent recurrence
+- [Phase 01.4]: 01.4-10: shipped test/visual/ — a zero-dependency Node+CDP+PIL visual probe that renders the live About page in real headless Chrome and independently confirms the crop geometry against painted pixels; deliberately excluded from mix quality/CI (needs a real browser + booted server), developer-invoked only
+- [Phase 01.4]: 01.4-12: G-01.4-4/G-01.4-5 closed for good — static Maps screenshot pair (light+dark, plan 01.4-09/10) retired entirely in favor of a live keyless Google Maps embed iframe (D-11..D-15); new CSP `frame-src` directive derived from `ClubLinks.maps_embed_origin/0` (first third-party frame origin in the project), `sandbox="allow-scripts allow-same-origin"`, `pointer-events:none` + overlay click-out link, dark-theme `invert()` filter human-approved as-is (D-13); plan 01.4-11 (figcaption-legibility approach) superseded/discarded mid-flight once the embed decision reversed its premise
+- [Phase 01.4, 2026-09-07]: Phase closed after 11/11 plans (plan 01.4-11 superseded/discarded by 01.4-12, cleanly absorbed) and a 4-gap UAT closure arc (G-01.4-1..4: isologo blink/spacing/motion, Maps thumbnail coverage → live embed). 7/7 UAT checkpoints passed; 01.4-VERIFICATION.md round 3: 11/12 truths verified directly + isologo motion human-confirmed in this session's final checkpoint. Security review: 46 threats registered across all 12 plans' own threat models, threats_open: 0 (01.4-SECURITY.md, ASVS L1 short-circuit — ASVS L1 grep/read verification, no auditor subagent needed since register_authored_at_plan_time was true for every plan and all mitigations were directly confirmed in code)
 
 ### Pending Todos
 
-0 pending. The 7-item retroactive UI audit of `CatalogLive.Index` (logged 2026-08-18 against
+1 pending: "Surface 'Pukllay Club' brand name in site content" (cosmetic, ui) —
+`.planning/todos/pending/2026-09-07-surface-pukllay-club-brand-name-in-content.md`. Raised
+2026-09-07 right after Phase 01.4's final UAT checkpoint passed — the site never spells out the
+club's name as text, only the isologo mark. User wants it sketched, not implemented ad hoc.
+
+The 7-item retroactive UI audit of `CatalogLive.Index` (logged 2026-08-18 against
 `ui-design-system`/`ux-patterns`/`ux-responsive`) was closed 2026-08-21 by quick task 260821-dah —
 all 7 moved to `.planning/todos/completed/` with dated Resolution sections; see
 `260821-dah-SUMMARY.md`. This also closes the touch-target human-verification thread from
@@ -274,6 +297,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.2 inserted after Phase 1: Catalog & Detail Navigation Polish — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped (URGENT)
 - Phase 01.3 inserted after Phase 01.2: Game detail page layout needs to be clearer/more scannable and the game information shown needs to be accurate; requested after Phase 01.2's navigation/mechanics polish shipped (URGENT)
 - Phase 01.3.1 inserted after Phase 01.3: Game Image Quality & Multi-Image Gallery (URGENT)
+- Phase 5 added: UI polish pass for About page sketches
+- Phase 01.4 inserted after Phase 1: UI polish pass for About page sketches (URGENT)
 
 ## Deferred Items
 
@@ -285,6 +310,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-02T15:18:56.202Z
-Stopped at: Completed quick task 260902-glf: Remove the site-wide sticky-footer layout
+Last session: 2026-09-07T19:05:24.168Z
+Stopped at: Phase 01.4 complete, ready to plan Phase 02
 Resume file: None

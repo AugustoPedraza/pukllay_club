@@ -2573,13 +2573,18 @@ body.pk-drawer-open {
    is a full-bleed wrapper (.pk-band, vertical padding only) around a
    single capped inner (.pk-band-inner, max-width + the shared .pk-gutter
    class) — .pk-band never sets its own horizontal padding, which is
-   exactly the double-gutter bug about-page-content.md documents. */
+   exactly the double-gutter bug about-page-content.md documents.
+
+   .pk-band-inner's cap now matches the shell's own max-w-7xl edge (80rem) —
+   the same content width already shared by the header, footer and hero
+   (sketch 048: the bands were shipped 16rem narrower than the shell they
+   sit in). Single shared declaration, no per-band override. */
 .pk-band {
   padding: 4.5rem 0;
 }
 
 .pk-band-inner {
-  max-width: 64rem;
+  max-width: 80rem;
   margin: 0 auto;
 }
 
@@ -2613,8 +2618,8 @@ body.pk-drawer-open {
   padding-top: 1.125rem;
 }
 
-/* Four-slide photo rail (D-12: labelled placeholders, no real photography
-   yet). Scroll-snapping, scrollbar hidden — same treatment as .pk-rail. */
+/* Five-slide photo rail of real club photography (D-08/D-09, sketch 046).
+   Scroll-snapping, scrollbar hidden — same treatment as .pk-rail. */
 .pk-about-rail {
   display: flex;
   gap: 14px;
@@ -2641,11 +2646,40 @@ body.pk-drawer-open {
   align-items: center;
   justify-content: center;
   text-align: center;
+  overflow: hidden;
   background: repeating-linear-gradient(
     135deg,
     var(--color-base-200) 0 10px,
     var(--color-base-100) 10px 20px
   );
+}
+
+/* Photo rail crop-to-fill (sketch 046, D-08): full-bleed object-fit: cover
+   inside the slide's existing 3:2 box — explicitly NOT .pk-poster-img's
+   letterbox/contain treatment, which exists for official box art where
+   cropping the artwork is wrong. The striped placeholder background above
+   stays as a harmless loading backdrop behind the image. */
+.pk-about-slide-ph img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Per-slide focal tuning for the two portrait sources (RESEARCH.md Pitfall
+   5) — checked live in headless Chrome at 375px/1280px (plan 01.4-04 Task
+   3). Both photos already read well at the CSS default (50% 50%): the
+   comunidad table's faces sit slightly above center, and the juego board's
+   subject sits slightly left-of-center, so both get a small explicit nudge
+   rather than the bare default, keeping the framing intentional if either
+   source photo is ever swapped. Landscape slides (explicacion, ludoteca,
+   festejo) need no override — their full frame already reads correctly. */
+.pk-about-slide[data-slide="comunidad"] .pk-about-slide-ph img {
+  object-position: 50% 38%;
+}
+
+.pk-about-slide[data-slide="juego"] .pk-about-slide-ph img {
+  object-position: 45% 48%;
 }
 
 .pk-about-dots {
@@ -2679,6 +2713,414 @@ body.pk-drawer-open {
 
 .pk-about-dot.is-active::before {
   background: var(--color-primary);
+}
+
+/* Contacto card (sketch 048 winner A): the club's real icon links and its
+   Maps thumbnail merged into ONE card, replacing the previous two
+   separately-sized boxes. Surface/radius/padding match this app's card
+   convention (`ui-design-system`'s spacing scale, `--color-base-200` +
+   `--radius-box`), stacked as a vertical flex column so the heading, intro,
+   icon links (added in plan 01.4-02 Task 3) and map thumbnail share one
+   edge and one rhythm. */
+.pk-about-contact-card {
+  background: var(--color-base-200);
+  border-radius: var(--radius-box);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* The Contacto card's real WhatsApp/Instagram icon links (plan 01.4-02
+   Task 3, `Layouts.social_links/1` with icons/labels). The shared
+   component renders its SVGs at width="16" — right for the footer/drawer's
+   compact rows, too small for this card's row — so this scope sizes them
+   explicitly rather than editing the shared markup. */
+.pk-about-contact-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.pk-about-contact-links a {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  color: var(--color-base-content);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-about-contact-links a:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.pk-about-contact-links a svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Live Google Maps embed frame (G-01.4-5 gap closure, plan 01.4-12,
+   D-11/D-12/D-14) — supersedes the fixed-ratio screenshot thumbnail
+   D-04/D-05/D-06 shipped and 01.4-07/09/10/11 progressively patched. See
+   about_live.ex's HEEX comment above the frame markup for the full
+   reversal rationale.
+
+   --pk-map-thumb-w, --pk-map-thumb-h and --pk-map-attrib-band are GONE:
+   all three existed only to describe a specific committed JPEG's bytes and
+   the strip of it Google's baked-in mark occupied. A live frame has no
+   source image whose shape must be matched or whose baked-in attribution
+   must be uncropped — Google renders its own tiles and its own attribution
+   at runtime, at whatever size this box gives it.
+
+   aspect-ratio: 2 / 1 is now a design choice, not a measurement: with
+   nothing to match, the box keeps the proportion a human already approved.
+   The shipped screenshot ratio was 2.0597 (1656x804) and 2/1 is within 3%
+   of it, so this is a deliberate no-visible-change, not a redesign. A
+   wider (shorter) box is also the safer direction for the 640-767px band
+   below, where the parent's sm:grid-cols-2 halves the card at exactly
+   640px and every prior round of this gap failed first.
+
+   min-height (G-01.4-2 gap closure, still load-bearing) floors the box for
+   that same 640-767px band: aspect-ratio alone let the box collapse to a
+   measured 218x93px there — see .planning/debug/G-01.4-2-map-thumb-coverage.md. */
+.pk-about-map-thumb {
+  aspect-ratio: 2 / 1;
+  min-height: 7rem;
+  overflow: hidden;
+  position: relative;
+  display: block;
+  border-radius: var(--radius-box);
+  /* Single source for the caption chip's inset (G-01.4-4 gap closure — see
+     .planning/debug/G-01.4-4-maps-thumbnail-approach.md). Custom properties
+     inherit, so .pk-about-map-label below reads the same value for its own
+     offsets and for the concentric-nesting radius calc — one declared
+     number keeps both relationships honest instead of two independently
+     hand-typed 0.5rem/8px literals drifting apart. */
+  --pk-map-label-inset: 0.5rem;
+}
+
+/* The live embed itself (plan 01.4-12, D-11/D-14). `pointer-events: none`
+   is the D-14 mechanism and does two jobs at once: it stops pan/zoom/
+   scroll-wheel inside the frame (a map that eats wheel events mid-column
+   is a scroll trap, and this project's primary target is mobile), and it
+   is what lets every click fall through to `.pk-about-map-link` below, so
+   D-06's single link-out survives the switch from screenshot to frame.
+   `border: 0` is the named replacement for the raw Google export's inline
+   `style="border:0"`, which this app's design system bans outright. */
+.pk-about-map-embed {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  pointer-events: none;
+}
+
+/* Dark-theme approximation (plan 01.4-12, D-13). The free keyless embed
+   exposes no styling API — a real dark map needs the Maps JavaScript API
+   with a style array or a cloud-styled Map ID, both of which need an API
+   key and an enabled billing account
+   (.planning/debug/resolved/G-01.4-4-maps-thumbnail-approach.md, finding
+   (c)). A CSS filter over the whole frame is the only lever available, and
+   D-13 is explicit that there is no formula for tuning it — only "looks
+   like a dark map", settled by eye. This IS an approximation, accepted
+   knowingly: it also inverts Google's own attribution and wordmark inside
+   the frame (a CSS filter on an iframe is one compositing layer, it cannot
+   exclude part of the frame's content), which is a knowing consequence of
+   D-13, not an oversight — Task 4's checkpoint asks a human to accept or
+   reject it specifically, with "drop the dark filter entirely" as the
+   named fallback if rejected.
+
+   Started from invert(0.92) hue-rotate(180deg) brightness(0.95)
+   contrast(0.9) (the plan's own suggested starting point) and tuned
+   against this theme's real --color-base-200 (#22103A, the Contacto
+   card's own surface — see the daisyui-theme dark block above) rather
+   than an imagined black. The starting point read slightly too washed out
+   and slightly too warm against that surface at brightness(0.95); dropping
+   brightness to 0.88 and raising contrast to 0.95 reads closer to a
+   genuine dark basemap without pushing the invert past the constraints
+   below.
+
+   Two constraints, both checkable rather than aesthetic (per D-13's own
+   text): invert() stays below 1 — a full inversion would turn Google's
+   attribution text into a photographic negative of itself, more
+   aggressive than a softened one — and no saturate() above 1, since the
+   map's road colors are already saturated and inverting them tends toward
+   magenta, which fights this app's purple brand rather than reading as
+   neutral chrome. */
+[data-theme="dark"] .pk-about-map-embed {
+  filter: invert(0.92) hue-rotate(180deg) brightness(0.88) contrast(0.95);
+}
+
+/* The overlay click target (plan 01.4-12, D-14/D-06): pinned to all four
+   edges of .pk-about-map-thumb so the click-out is reachable from anywhere
+   on the map, not just the caption chip. No background — it is invisible
+   by design, same as the screenshot-era anchor it replaces. */
+.pk-about-map-link {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+/* Opaque, bordered, inset, single-line chip (G-01.4-2 gap closure — see
+   .planning/debug/G-01.4-2-map-thumb-coverage.md for the full diagnosis).
+   Was a translucent (88%-opaque color-mix) edge-to-edge band, ported from a
+   sketch variant whose thumb had no image behind it — a real dense Maps
+   screenshot ghosts through 12% transmittance. Fully opaque + inset from
+   all three edges removes both the show-through and the hard full-bleed
+   seam. white-space/overflow/text-overflow bound the caption to one line
+   structurally, regardless of font metrics or a future copy edit — the two
+   caption-length variants in about_live.ex mean the ellipsis should never
+   actually trigger; it is the ceiling, not the mechanism. Declares no
+   `display` — an unlayered .pk-* rule setting display would beat the
+   hidden/lg:block utility pair, exactly the cascade hazard this file's
+   top-of-file note documents (already hit once on the isologo theme
+   variants, plan 01.4-05). An absolutely-positioned span already
+   blockifies on its own.
+
+   SIZING MODEL (G-01.4-4 gap closure — see
+   .planning/debug/G-01.4-4-maps-thumbnail-approach.md). The rule above
+   still pins both `left` and `right`, which stretches an absolutely-
+   positioned element to its container instead of letting it shrink-wrap —
+   the band's old sizing model, kept by mistake when this rule became a
+   chip. A chip is sized by its own content; only a band spans its
+   container. That single leftover offset was cause (A): a 283px chip
+   holding 79.3px of left-aligned text at 375px, 177.7px of dead space,
+   reading as an empty disabled input rather than a caption. Removing the
+   trailing-edge offset lets the chip size itself from its text; the
+   `max-width` below is what stops a long caption or a copy edit from ever
+   pushing past the frame now that nothing else bounds it. `border-radius`
+   is a calc(), not the bare `--radius-box` token: an inset element nests
+   concentrically only when its own radius equals the outer radius minus
+   the inset, and `--radius-box` (0.5rem) equals `--pk-map-label-inset`
+   (0.5rem) here, so the correct inner radius is 0 — expressed as the
+   subtraction, not a hard-coded `0px`, so the relationship survives either
+   token changing later; `max(0px, ...)` guards against `--radius-box` ever
+   dropping below the inset.
+
+   `top` (plan 01.4-12, D-13/D-14 supersede the prior `bottom` fix): the
+   chip and Google's mark used to share one flat image, so the fix was a
+   measured 3.5% reserve above the baked-in attribution strip. A live
+   frame paints its own attribution bar along its own bottom edge, at a
+   size this app does not control and cannot predict — a percentage
+   reserve is no longer a defensible bound. The chip vacates that edge
+   entirely and sits at the top instead, satisfying the same Geo
+   Guidelines clause the reserve served, more strongly: nothing this app
+   draws can ever overlap a strip whose height it does not know. */
+.pk-about-map-label {
+  position: absolute;
+  left: var(--pk-map-label-inset);
+  top: var(--pk-map-label-inset);
+  max-width: calc(100% - var(--pk-map-label-inset) * 2);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  /* inner radius = outer radius minus inset (concentric nesting) */
+  border-radius: max(0px, calc(var(--radius-box) - var(--pk-map-label-inset)));
+  color: var(--color-base-content);
+}
+
+/* Isologo scroll-morph (sketch 045, D-01/D-02/D-03/D-10): the hero's
+   in-flow anchor, the single floating mark it feeds, and the About-only
+   hidden/docked states .AboutHeaderMorph (about_live.ex) toggles on
+   #app-header from outside this module. Page-owned, About-scoped — D-10
+   forbids extending the shared header with a fourth state, so every rule
+   below is reached only through classes this hook adds/removes, never
+   through new markup in header_inner/1 or .CatalogNav. One value each, no
+   breakpoint branching (D-01: one mechanic on desktop and mobile). */
+/* Single source for the mark's rest size (Task 2, G-01.4-1 S3 fix): both
+   the anchor and the floating mark read this ONE custom property, closing
+   the two-independently-declared-200px-literals surface-drift hazard this
+   file's own single-source rule forbids. 180px (not 200px) reconciles the
+   shipped mark against sketch 045 variant A3, the recorded design winner
+   (G-01.4-3): the prior 200px was never a design decision, it was the
+   residue of 01.4-05's anchor-breathing-room intent being consumed by the
+   mark's own sizing (see .pk-about-mark-anchor below for how that got
+   fixed) and then welded in by this single-source refactor. */
+:root {
+  --pk-about-mark-h: 180px;
+  /* DERIVED (G-01.4-3), not a text-rhythm utility step: sketch 045 A3
+     measures 78.5px of clear space below its 180px mark = 43.6% of the
+     mark's own height. 80px against the now-180px mark is 44.4%, matching
+     the design source on both the absolute figure (80 vs 78.5px) and the
+     proportional one (44.4% vs 43.6%). It has to be this large relative to
+     intuition because both isologo PNGs (priv/static/images/isologo-
+     {light,dark}.png) are cropped tight to their ink with zero transparent
+     padding on any side — this CSS value is the ENTIRE perceived
+     separation from the copy below it, where a conventionally-padded
+     lockup would have donated 50-100px of its own at this size. See
+     .planning/debug/G-01.4-3-isologo-bottom-spacing.md for the full
+     measurement. */
+  --pk-about-mark-clear: 80px;
+}
+
+/* The anchor is intentionally TALLER than the mark (G-01.4-3): its height
+   is derived from BOTH --pk-about-mark-h and --pk-about-mark-clear, not
+   from the mark's height alone — do not "simplify" this calc back into a
+   bare var(--pk-about-mark-h), that is exactly the weld that caused
+   G-01.4-3 (an oversized mark silently consuming the anchor's own
+   clearance, see the derivation comment above). This decoupling lets the
+   anchor carry real clear space below the mark's rendered ink regardless
+   of the mark's own size, while both elements still read the single
+   declared --pk-about-mark-h source for the mark's rest size. No
+   margin-bottom is declared here — the clearance belongs in the height,
+   not in a margin, because an unlayered `.pk-*` rule declaring
+   margin-bottom would beat any Tailwind margin utility on the same
+   element (this file's own top-of-file cascade-hazard note; guarded by
+   about_header_morph_test.exs). */
+.pk-about-mark-anchor {
+  display: block;
+  height: calc(var(--pk-about-mark-h) + var(--pk-about-mark-clear));
+}
+
+/* The mark's box declares no transition and no resting opacity/transform
+   of its own (Task 2, G-01.4-1 S3 fix): the hook now owns `transform`
+   outright, writing one interpolated `translate3d(...) scale(...)` per
+   frame — there is no longer a CSS transition on top/left/width/height
+   for a scroll frame to fight, or for `.no-anim` to have to cancel.
+   `aspect-ratio` is the isologo's own real 939x1034 ratio, so the box IS
+   the glyph (object-fit has nothing left to letterbox) and a single
+   uniform scale maps it exactly onto the header's 36px-wide brand mark.
+   The entrance's own opacity/scale/glow now lives on the `-inner` child
+   below, not on this element, so the hook's transform and the entrance's
+   CSS transition never touch the same property. */
+.pk-about-morph-mark {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  height: var(--pk-about-mark-h);
+  aspect-ratio: 939 / 1034;
+  transform-origin: 0 0;
+}
+
+/* No `display` declared here (Rule 1 fix, found live via CDP in plan
+   01.4-05 Task 3): an earlier `display: block` on this selector silently
+   defeated the `hidden`/`dark:block` Tailwind utility pair on the theme-
+   variant <img> that should stay display:none — exactly the unlayered-
+   .pk-*-beats-Tailwind-utility cascade hazard this file's own top-of-file
+   note documents (`.pk-poster-col`'s prior position:static bug). Verified
+   with the rule removed: getComputedStyle(img).display correctly reads
+   "none" for the non-matching theme variant, leaving exactly one visible
+   isologo inside the mark. width/height/object-fit still apply — <img> is
+   a replaced element, so percentage sizing works without an explicit
+   display override. */
+.pk-about-morph-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* The entrance's own fade/scale/glow now lives on this inner wrapper, not
+   on `.pk-about-morph-mark` itself (Task 2, G-01.4-1 S3 fix) — the outer
+   element's only job is the hook's per-frame `transform`, so the
+   entrance's CSS transition and the hook's JS-driven transform never
+   compete for the same property. The entrance keeps its own eased CSS
+   transition; it just no longer shares an element with the morph. */
+.pk-about-morph-mark-inner {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transform: scale(0.75);
+  transform-origin: 50% 50%;
+  transition: opacity var(--duration-slow) var(--ease-standard),
+    transform var(--duration-slow) var(--ease-standard),
+    filter var(--duration-slow) var(--ease-standard);
+}
+
+.pk-about-morph-mark.is-entered .pk-about-morph-mark-inner {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@keyframes pk-about-mark-glow {
+  0% {
+    filter: drop-shadow(0 0 0 color-mix(in srgb, var(--color-primary) 0%, transparent));
+  }
+  40% {
+    filter: drop-shadow(0 0 14px color-mix(in srgb, var(--color-primary) 55%, transparent));
+  }
+  100% {
+    filter: drop-shadow(0 0 0 color-mix(in srgb, var(--color-primary) 0%, transparent));
+  }
+}
+
+.pk-about-morph-mark.is-first-play .pk-about-morph-mark-inner {
+  animation: pk-about-mark-glow var(--duration-slow) var(--ease-out-soft);
+}
+
+/* S1 fix (G-01.4-1): the header-hidden state is now driven by a `:has()`
+   selector keyed on `data-morph-armed`, a marker `#about-hero` renders
+   from the SERVER (about_live.ex) — not a class the client hook adds
+   after the LiveSocket join. This is what makes the hide apply before a
+   single line of JS has run, closing the "solid header, then it fades
+   away" blink the user reported. `transition: none` is deliberate: the
+   HIDE direction must be instant, because there is no state to animate
+   FROM — the header was never rendered visible in the first place.
+   `:has()` is Baseline-2023 (all evergreen browsers since ~2023); a
+   browser without it simply never matches this rule, degrading to the
+   PRE-fix behaviour (header visible at rest, exactly what plan 01.4-05
+   shipped) — never to something worse. The no-JS <noscript> override
+   below repeats this exact selector for scripting-disabled visitors. */
+body:has(#about-hero[data-morph-armed]) #app-header {
+  visibility: hidden;
+  opacity: 0;
+  transition: none;
+}
+
+/* The REVEAL direction is the only one allowed to ease — transitions are
+   read from the AFTER-change style, so adding `.is-docked` (the hook's
+   own state, added once the floating mark reaches the header's brand
+   slot) eases the header in, while removing it (on undock, or on the
+   `:has()` guard no longer matching at all) snaps instantly. This
+   asymmetry is intentional: the load-time animated fade-out the user
+   reported is now structurally impossible, since the header never
+   starts visible on About. */
+body:has(#about-hero[data-morph-armed]) #app-header.is-docked {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity var(--duration-slow) var(--ease-standard);
+}
+
+/* Suppresses the header's own always-rendered isologo permanently on
+   About (RESEARCH.md Pitfall 1, open question 2 resolution) — with the
+   floating mark parked exactly on this element's rect at dock, exactly
+   one isologo is visible at every instant, so there is no flicker/pop/
+   double-mark to reconcile (S-045-SINGLE-MARK). Moved under the same
+   `:has()` guard as the two rules above (S1 fix). */
+body:has(#about-hero[data-morph-armed]) #app-header .pk-brand-mark {
+  opacity: 0;
+}
+
+/* No-JS override (T-01.4-20) — restores the header for a visitor with
+   scripting disabled. `#pk-no-js-marker` is a <div> rendered inside a
+   <noscript> in about_live.ex; per the HTML parsing spec a bare element
+   like a <div> inside <noscript> is DISCARDED by the parser while
+   scripting is enabled (only base/link/meta/noframes/style survive
+   there), so this marker — and therefore this rule's `:has()` match —
+   exists ONLY when scripting is truly off (live-verified via CDP: the
+   marker is absent from the DOM with JS on, present with JS off). A
+   `<style>` placed directly inside that <noscript> does NOT have this
+   property (it is one of the exempted tags and becomes an ALWAYS-ACTIVE
+   stylesheet regardless of scripting) — that is why this rule lives
+   here instead of inline. `[data-no-js]` on the marker keeps this
+   selector's specificity identical to the hide rule above (ID + one
+   attribute inside :has()), so this rule wins by DECLARATION ORDER
+   alone — no `!important` needed, keeping this file's one reduced-
+   motion `!important` its only one. */
+body:has(#pk-no-js-marker[data-no-js]) #app-header {
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Mobile category chip row wrapper (sketch 020 Round 2): exists solely so

@@ -1709,6 +1709,27 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute policy =~ "geekdo"
       refute policy =~ "boardgamegeek"
     end
+
+    test "the policy's frame-src names exactly one origin, string-equal to ClubLinks.maps_embed_origin/0 (plan 01.4-12, D-12)",
+         %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      directive =
+        policy
+        |> String.split("; ")
+        |> Enum.find(&String.starts_with?(&1, "frame-src"))
+
+      assert directive,
+             "Expected a frame-src directive in the Content-Security-Policy header."
+
+      assert directive == "frame-src #{PukllayClubWeb.ClubLinks.maps_embed_origin()}",
+             "Expected frame-src's value to be string-equal to " <>
+               "PukllayClubWeb.ClubLinks.maps_embed_origin() — one token, not a substring " <>
+               "match. A wildcard, a scheme-only source, or a second origin would all fail " <>
+               "this equality without needing individual negative greps (D-12)."
+    end
   end
 
   describe "composite: shelf structure, card, preview surfaces and nav compose together (01-12)" do

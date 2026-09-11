@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>046 — Photo rail autoplay + mobile hero</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding-top: 48px; }
+
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    padding: 8px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap;
+  }
+  .variant-tab {
+    font-family: var(--font-sans); font-size: var(--text-sm);
+    padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
+    background: var(--color-surface); color: var(--color-text); cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  .variant-tab:hover { border-color: var(--color-primary); }
+
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  .note {
+    max-width: 680px; margin: 24px auto; padding: 12px 16px;
+    background: var(--color-accent-bg); color: var(--color-accent-text);
+    border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
+  }
+  .flag {
+    max-width: 680px; margin: 0 auto 24px; padding: 10px 16px;
+    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg));
+    color: var(--color-danger); border-radius: var(--radius-md); font-size: var(--text-sm); text-align: center;
+  }
+
+  section.block { max-width: 1100px; margin: 0 auto; padding: 0 24px 64px; }
+
+  /* ---- carousel ---- */
+  .rail-wrap { position: relative; overflow: hidden; border-radius: var(--radius-lg); }
+  .rail {
+    display: flex; gap: 12px; scroll-snap-type: x mandatory; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar { display: none; }
+  .slide {
+    flex: 0 0 100%; scroll-snap-align: start; aspect-ratio: 16/9; border-radius: var(--radius-lg);
+    display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+  }
+  .slide-ph {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--color-surface-2), var(--color-surface));
+    transition: transform 6000ms linear;
+  }
+  .slide-ph span { color: var(--color-primary); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.15em; }
+  .slide.is-active .slide-ph.kb { transform: scale(1.08); }
+
+  .dots { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); cursor: pointer; border: none; padding: 0; transition: all var(--duration-fast) var(--ease-standard); }
+  .dot.is-active { background: var(--color-primary); width: 20px; border-radius: var(--radius-full); }
+
+  /* Variant B: continuous drift */
+  .drift-track {
+    display: flex; gap: 12px; width: max-content;
+    animation: drift 28s linear infinite;
+  }
+  .drift-track.is-paused { animation-play-state: paused; }
+  .drift-track .slide { flex: 0 0 280px; aspect-ratio: 4/3; }
+  @keyframes drift {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .drift-wrap { overflow: hidden; border-radius: var(--radius-lg); }
+
+  h2.title { font-family: var(--font-display); font-size: 1.5rem; margin: 32px 0 12px; }
+
+  /* ---- mobile hero preview ---- */
+  .mobile-frame {
+    width: 375px; margin: 0 auto; border: 1px solid var(--color-border); border-radius: 20px;
+    padding: 32px 20px; text-align: center; background: var(--color-bg);
+  }
+  .mobile-frame .eyebrow { font-size: var(--text-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-muted); }
+  .mobile-frame h1 {
+    font-family: var(--font-display); font-size: 2.75rem; margin: 8px 0; line-height: 1;
+    max-width: 260px; margin-left: auto; margin-right: auto;
+  }
+  .mobile-frame .tagline {
+    font-size: var(--text-base); color: var(--color-text-muted); margin: 0 auto;
+    max-width: 260px; /* matches h1's rendered width */
+  }
+  .tagline-picker { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .tagline-btn {
+    font-size: var(--text-xs); padding: 6px 12px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-surface); cursor: pointer;
+  }
+  .tagline-btn.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  [data-tools] {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,0.7); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.4;
+    transition: opacity 0.2s; display: flex; gap: 8px; align-items: center;
+  }
+  [data-tools]:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a', event)">A: Autoplay Crossfade+Snap ★ Selected</button>
+</div>
+
+<div class="flag">⚠ No real club photos exist yet — placeholders below stand in. Sourcing/shooting real photography is a separate to-do, not something this sketch resolves.</div>
+
+<!-- ============ VARIANT A ============ -->
+<div id="a" class="variant active">
+  <div class="note">Auto-advances every 4s via native scroll-snap (same mechanism the shipped `.AboutCarousel` hook already uses for manual swipe/click), now also driven by a timer. Pauses on hover/touch/focus — same pause logic already shipped. No zoom, just a clean snap transition.</div>
+  <section class="block">
+    <div class="rail-wrap">
+      <div class="rail" data-rail="a">
+        <div class="slide"><div class="slide-ph"><span>foto — mesa llena un sábado</span></div></div>
+        <div class="slide"><div class="slide-ph"><span>foto — explicando un juego</span></div></div>
+        <div class="slide"><div class="slide-ph"><span>foto — la ludoteca</span></div></div>
+        <div class="slide"><div class="slide-ph"><span>foto — la comunidad</span></div></div>
+      </div>
+    </div>
+    <div class="dots" data-dots="a"></div>
+  </section>
+</div>
+
+<h2 class="title" style="text-align:center">Mobile hero — 2-line wrap + final tagline ★</h2>
+<div class="mobile-frame">
+  <p class="eyebrow">Club de juegos de mesa · Jujuy</p>
+  <h1>Conectá<br>jugando</h1>
+  <p class="tagline" id="tagline-target">Volvé a jugar. Volvé a encontrarte.</p>
+</div>
+<div style="height:64px"></div>
+
+<div data-tools>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Default</option>
+  </select>
+</div>
+
+<script>
+function showVariant(id, evt) {
+  document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (evt) evt.target.classList.add('active');
+}
+
+// ---- Variant A/C: autoplay snap carousel with dots ----
+function setupSnapCarousel(key, autoZoom) {
+  const rail = document.querySelector(`[data-rail="${key}"]`);
+  const dotsWrap = document.querySelector(`[data-dots="${key}"]`);
+  const slides = Array.from(rail.children);
+  let index = 0;
+  let paused = false;
+
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'dot' + (i === 0 ? ' is-active' : '');
+    dot.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(dot);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function goTo(i) {
+    index = i;
+    rail.scrollTo({ left: slides[i].offsetLeft, behavior: 'smooth' });
+    dots.forEach((d, di) => d.classList.toggle('is-active', di === i));
+    slides.forEach((s, si) => s.classList.toggle('is-active', si === i));
+  }
+
+  rail.addEventListener('mouseenter', () => paused = true);
+  rail.addEventListener('mouseleave', () => paused = false);
+  rail.addEventListener('touchstart', () => paused = true, { passive: true });
+
+  goTo(0);
+  setInterval(() => { if (!paused) goTo((index + 1) % slides.length); }, 4000);
+}
+setupSnapCarousel('a');
+
+</script>
+
+</body>
+</html>
