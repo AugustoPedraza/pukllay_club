@@ -4,12 +4,23 @@ defmodule PukllayClubWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
+  #
+  # `secure:` is gated on the compile-time `Mix.env()` (not a runtime env-var
+  # read) because Safari does not exempt localhost from the
+  # Secure-cookie-requires-HTTPS rule — an unconditional `true` would break
+  # session/CSRF continuity for a developer testing locally in Safari
+  # (T-01.7-04/T-01.7-20, SEC-01).
   @session_options [
     store: :cookie,
     key: "_pukllay_club_key",
     signing_salt: "NLUjW6HL",
-    same_site: "Lax"
+    same_site: "Lax",
+    secure: Mix.env() == :prod
   ]
+
+  @doc false
+  @spec session_options() :: keyword()
+  def session_options, do: @session_options
 
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]],
