@@ -1730,6 +1730,121 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
                "match. A wildcard, a scheme-only source, or a second origin would all fail " <>
                "this equality without needing individual negative greps (D-12)."
     end
+
+    # Phase 01.7 (01.7-03, SEC-03): the audit in 01.7-CSP-AUDIT.md concluded every directive
+    # below is sound as-is. These assertions pin each verdict as an exact-equality regression —
+    # the same one-token-not-a-substring technique the frame-src test above already uses — so a
+    # future "tighten the CSP" pass fails loudly on any widening OR narrowing, rather than
+    # silently drifting past a single aggregate "CSP reviewed" claim.
+
+    test "the policy's default-src is pinned to exactly 'self' (01.7 audit baseline)", %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      directive =
+        policy
+        |> String.split("; ")
+        |> Enum.find(&String.starts_with?(&1, "default-src"))
+
+      assert directive == "default-src 'self'",
+             "Expected default-src to name exactly 'self', nothing added or widened."
+    end
+
+    test "the policy's script-src is pinned to exactly 'self' — no inline-script or eval source (T-01.7-08)",
+         %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      directive =
+        policy
+        |> String.split("; ")
+        |> Enum.find(&String.starts_with?(&1, "script-src"))
+
+      assert directive == "script-src 'self'",
+             "Expected script-src to name exactly 'self' — no 'unsafe-inline'/'unsafe-eval'/nonce " <>
+               "source added. Phase 01.8's nonce refactor (SEC-05) is the only sanctioned way to " <>
+               "widen this directive; updating this assertion then is the intended, visible cost."
+    end
+
+    test "the policy's frame-ancestors is pinned to exactly 'none' — distinct from frame-src (T-01.7-09)",
+         %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      directive =
+        policy
+        |> String.split("; ")
+        |> Enum.find(&String.starts_with?(&1, "frame-ancestors"))
+
+      assert directive == "frame-ancestors 'none'",
+             "Expected frame-ancestors (who may frame THIS app) to stay 'none' — unrelated to " <>
+               "frame-src (what this app may frame), the exact conflation the G-01.4-4 debug " <>
+               "session had to untangle. Do not read this as the Maps embed's directive."
+    end
+
+    test "the policy's base-uri is pinned to exactly 'self'", %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      directive =
+        policy
+        |> String.split("; ")
+        |> Enum.find(&String.starts_with?(&1, "base-uri"))
+
+      assert directive == "base-uri 'self'",
+             "Expected base-uri to name exactly 'self', preventing a <base> tag injection from " <>
+               "rebasing relative URLs to an attacker-controlled origin."
+    end
+
+    test "the policy's form-action is pinned to exactly 'self'", %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      directive =
+        policy
+        |> String.split("; ")
+        |> Enum.find(&String.starts_with?(&1, "form-action"))
+
+      assert directive == "form-action 'self'",
+             "Expected form-action to name exactly 'self', so no injected/rogue form on this " <>
+               "app can submit to a third-party origin."
+    end
+
+    test "the policy's style-src keeps exactly the Tailwind/daisyUI inline-style allowance (D-08, T-01.7-21)",
+         %{conn: conn} do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      directive =
+        policy
+        |> String.split("; ")
+        |> Enum.find(&String.starts_with?(&1, "style-src"))
+
+      assert directive == "style-src 'self' 'unsafe-inline'",
+             "'unsafe-inline' here is required by Tailwind/daisyUI (inline style attributes) and " <>
+               "locked off-limits by D-08 — recorded as deliberate in 01.7-CSP-AUDIT.md, not " <>
+               "something a future narrowing pass should remove."
+    end
+
+    test "the policy emits exactly ten directives — a silently appended directive fails this", %{
+      conn: conn
+    } do
+      conn = get(conn, ~p"/")
+
+      [policy] = get_resp_header(conn, "content-security-policy")
+
+      directives = String.split(policy, "; ")
+
+      assert length(directives) == 10,
+             "Expected exactly ten Content-Security-Policy directives; got #{length(directives)}: " <>
+               inspect(directives)
+    end
   end
 
   describe "composite: shelf structure, card, preview surfaces and nav compose together (01-12)" do
