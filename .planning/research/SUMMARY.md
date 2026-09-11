@@ -1,162 +1,255 @@
 # Project Research Summary
 
 **Project:** PukllayClub
-**Domain:** Board-game catalog / discovery / recommendation product (small club scale, ~400 games), built on Elixir/Phoenix LiveView, deployed single-node ARM
-**Researched:** 2026-07-24
-**Confidence:** MEDIUM-HIGH
+**Domain:** SEO / social-sharing / security-hardening addition to an existing Elixir/Phoenix 1.8
+LiveView board-game catalog app
+**Researched:** 2026-09-11
+**Confidence:** HIGH
 
 ## Executive Summary
 
-PukllayClub is a board-game catalog and discovery product for a small club (~400 games), whose core differentiator is teaching non-hobbyists what a game actually plays like — translating BGG's opaque 1-5 complexity number and jargon-heavy mechanic taxonomy into plain Spanish — rather than being "a smaller BoardGameGeek." Research confirms this is a genuinely underserved niche: no competitor (BGG, board-game-cafe SaaS, existing NL recommenders) solves plain-language complexity translation or offers Spanish-language, rulebook-grounded rules Q&A at small-catalog scale. The already-fixed phase order (0: deploy skeleton, 1: catalog, 2: NL search + auth, 3: RAG rules oracle, 4: rental tracking) is validated by both the feature-dependency graph and the architecture: each phase adds exactly one new Elixir context on a stable base, and heavier phases (2, 3) reuse a shared local-embedding runtime rather than duplicating it.
+The v1.1 "Sharable Version" milestone adds SEO metadata, Open Graph/Twitter Card social-sharing
+tags, JSON-LD structured data, and security hardening to an existing Phoenix 1.8 LiveView app —
+with **zero new runtime dependencies**. Every feature area (meta/OG/Twitter tags, JSON-LD,
+sitemap.xml, cookie/HSTS hardening) is covered by Phoenix/Plug primitives already vendored in this
+codebase; the two third-party packages evaluated (`phoenix_seo`, `sitemapper`) were both rejected
+as over-built for a ~400-game catalog with no scheduled-job infrastructure (Oban) wired until
+Phase 2.
 
-The recommended approach is a single Phoenix 1.8/LiveView BEAM node behind Kamal 2 (kamal-proxy for TLS/zero-downtime cutover) on a single Hetzner CAX31 ARM box, with one Postgres 17 (pgvector + native tsvector) doing double duty as system-of-record and Oban's job queue — no separate services, no message broker. The single most load-bearing technical fact from this research is that EXLA ships a precompiled `aarch64-linux-gnu` (glibc) XLA binary, meaning local CPU embeddings via Bumblebee/Nx are *plumbing-feasible* on ARM without a slow from-source build — but actual embedding *throughput/latency* on real CAX31 hardware is genuinely unverified by any source found, which is exactly why the project's plan to spike this first in Phase 2 is correct and should not be skipped or shortcut.
+The one genuinely non-obvious architectural fact this research surfaced: **`root.html.heex`
+renders from `conn.assigns`, not `socket.assigns`.** `<.live_title>` is a special-cased exception
+in LiveView's own rendering pipeline, not a general pattern — assigning `:meta_tags` inside a
+LiveView's `mount/3`/`handle_params/3` would silently do nothing for crawlers, because link
+crawlers (Facebook, Twitter, WhatsApp, Google) only ever fetch the first disconnected HTTP
+response and never open a websocket. OG/meta content for `/juegos/:id` must be computed in a new
+Plug that runs before the LiveView mounts and writes to `conn.assigns`, mirroring how
+`get_csrf_token()` already reaches the root layout today.
 
-The dominant risk cluster is deployment plumbing, not product features: cross-building the ARM image under QEMU (should build natively instead), Kamal having no built-in migration hook (needs a custom entrypoint gating on the generated `Release.migrate`), secrets ending up in `.kamal/secrets` history, and health-check/readiness misconfiguration once Phase 2 adds embedding-model boot weight. A second risk cluster appears in Phase 2: pgvector index choice (use HNSW, not IVFFlat, at this row count), `maintenance_work_mem` defaults causing silent index-quality degradation, Oban concurrency starving the shared Ecto pool, and treating the free-tier Gemini API as dependable rather than building the fallback/backoff path the async architecture already makes cheap. All of these are addressed with concrete, low-cost mitigations documented in PITFALLS.md and should be treated as Phase 0/Phase 2 "definition of done" items, not later hardening work.
+The second real risk: this app's CSP (`csp.ex`) already runs `script-src 'self'` with no
+`unsafe-inline` and no nonce mechanism — a deliberate prior Sobelow fix. A naively-added inline
+`<script type="application/ld+json">` JSON-LD block will be silently blocked by the browser. The
+fix is a CSP nonce refactor (`policy/0` → `policy/1`, nonce generated per-request in `put_csp/2`)
+for the per-game `Game` JSON-LD, or a same-origin external script file as a simpler alternative;
+the static site-wide `LocalBusiness` block can use a hash-source instead since its content never
+changes. Social sharing also needs one new asset-pipeline step: existing game cover images are
+letterboxed/near-square (from Phase 01.3.1's `ImagePipeline`), not the 1200×630 aspect ratio
+Facebook/Twitter/WhatsApp expect for link-preview cards.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Core stack is already fixed by the project (Elixir/Phoenix/Kamal/single-Postgres/Hetzner); this research de-risks library-level choices within it rather than proposing alternatives. Elixir 1.19.x / OTP 28.x / Phoenix 1.8.9 / LiveView 1.2.7 are current-stable and version-compatible. Deploy via `mix phx.gen.release --docker`, Debian-slim (not Alpine) runner base — required both for Phoenix's own DNS-safety convention and because EXLA's ARM binaries only target glibc — built natively for `linux/arm64` (never QEMU). Postgres 17 via the `pgvector/pgvector:pg17` image as a Kamal accessory, bound to localhost only. AI/search stack: Bumblebee + EXLA (with `Nx.default_backend(EXLA.Backend)` explicitly set — the single most important non-obvious config step, or embeddings silently fall back to a >60x slower pure-Elixir path) for local CPU embeddings, `intfloat/multilingual-e5-small` as the candidate model (confirm via Phase 2 spike), pgvector + native Postgres `tsvector`/Spanish full-text search for hybrid RRF ranking, Oban (free tier) for async jobs, InstructorLite + Gemini adapter for structured LLM parsing. Quality gates: Credo `--strict`, Sobelow, `mix format --check-formatted`, `mix test --warnings-as-errors`, wired into a `mix quality` alias and `erlef/setup-beam`-based CI.
+No new hex dependencies. Per-page meta/OG/Twitter tags: hand-rolled HEEx function components fed
+by `conn.assigns` (not LiveView socket assigns — see Architecture Approach below), since all 3
+browser routes in this app are LiveViews with no controller/`conn`-based alternative path.
+`robots.txt` is already fully wired (`static_paths/0` includes it, file already exists on disk) —
+this is a content edit, not new code. `sitemap.xml` should be a small dynamic controller action
+(query + render XML) rather than the `sitemapper` hex package, which targets a scale/scheduled-
+regeneration use case this ~400-row catalog doesn't need. HSTS is very likely *already* being
+emitted in production: `Plug.SSL` defaults `hsts: true` (1yr max-age) whenever `force_ssl` is set,
+which `config/prod.exs` already does — this milestone's HSTS work is verification (`curl -I`
+against the live site), not new implementation.
 
 **Core technologies:**
-- Phoenix 1.8 + LiveView — real-time UI, streams for all lists, already fixed
-- PostgreSQL 17 + pgvector + native tsvector — single system-of-record for catalog, embeddings, jobs, auth
-- Bumblebee/Nx/EXLA (CPU) — in-process local embeddings, no Python sidecar; must explicitly set EXLA as the Nx backend
-- Oban — Postgres-backed async queue for every LLM/embedding call, keeps the request hot path under ~50ms
-- InstructorLite + Gemini adapter — structured LLM output for NL query parsing (Phase 2) and grounded rules answers (Phase 3)
-- Kamal 2 + kamal-proxy — zero-downtime deploy + TLS, no separate Caddy/Traefik
+- Hand-rolled HEEx `SEOTags` function component — per-page meta/OG/Twitter tags — no LiveView
+  head-metadata primitive exists beyond `<.live_title>`, confirmed against `phoenix_live_view`
+  GitHub issue #1194 (an open feature request for exactly this capability)
+- A new `PukllayClubWeb.Plugs.GameSEO` plug + `PukllayClubWeb.SitemapController` — both plain
+  Plug/Phoenix controller primitives, no new deps
+- `Plug.SSL`'s existing `force_ssl`/HSTS default and `Plug.Session`'s `secure:` cookie option —
+  both already vendored via `plug`/`phoenix`
 
 ### Expected Features
 
-The domain is board-game catalog/discovery for a small club; research confirms table-stakes catalog features are well-understood and cheap, while the real differentiator work is in translation/UX (complexity, mechanics) and true Spanish NL search — both genuinely uncommon in this space.
+**Must have (table stakes) — this milestone's core scope:**
+- Meta description, real `alt` text, `robots.txt` + `sitemap.xml`, JSON-LD (`Game` per detail
+  page, `LocalBusiness` site-wide — `Game` not `Product` since this isn't commerce; `LocalBusiness`
+  not `Organization` since the club has a real physical location already surfaced via the About
+  page's Maps embed)
+- OG + Twitter Card tags on game detail pages, reusing the existing native-share canonical URL
+- Secure session cookie flag, verified HSTS, CSP audit, one-time secrets sweep
 
-**Must have (table stakes):**
-- Browse/filter catalog by player count, playtime, category/mechanic/theme, keyword search — no account required
-- Own resized cover images (recognition is the primary browsing cue)
-- Complexity/weight indicator and minimum-age filter, sortable results, mobile-first fast UI
+**Should have (competitive, in-scope for this milestone per user's explicit ask):**
+- Branded site-wide OG fallback image (isologo/wordmark) for pages without a natural hero image
+  (catalog index, About)
 
-**Should have (competitive differentiators):**
-- Plain-Spanish weight-band complexity descriptor (not a bare 1-5 number) — highest-leverage UX move, no competitor solves this well
-- Plain-Spanish mechanic/theme chips (curated ~15-25 vocabulary, not BGG's 100+ taxonomy)
-- Natural-language Spanish query → matched games (Phase 2 hero feature) — genuinely rare in this space
-- Rules Q&A grounded in official rulebooks with citations (Phase 3), scoped per-game to control hallucination risk
-- Lightweight rental tracking (Phase 4) — deliberately smaller than cafe-SaaS ops suites
-
-**Defer / reject (anti-features):**
-- BGG-style public ratings/rank, full 100+ mechanic taxonomy, collaborative "users who liked X" recs (no data volume at this scale), table/session reservation systems, general cross-game rules chatbot, voice interface, membership/payment features, icon-only complexity/mechanic cues (increases cognitive load for the target non-hobbyist audience)
+**Defer (v2+, explicitly out of this milestone):**
+- Google Business Profile setup — highest-leverage local-SEO lever available, but it's an
+  out-of-band operational task, not a codebase change
+- Rate limiting (e.g. Hammer) — correctly deferred: there's no login/POST-heavy surface yet in this
+  no-auth catalog; real target arrives with Phase 2's magic-link auth
+- Ongoing automated secret-scanning in CI (gitleaks/trufflehog wired into the pipeline) — user
+  explicitly chose a one-time sweep over new tooling for this milestone
 
 ### Architecture Approach
 
-Single Phoenix release on one BEAM node: LiveView modules call plain-Elixir contexts (one per roadmap phase — `Catalog`, `Search`, `RulesOracle`, `ClubOps`, `Accounts`) for fast (<50ms) synchronous reads/writes; anything slower (LLM calls, embeddings, RAG, ingestion) is enqueued as an Oban job and results delivered back via a request-scoped `Phoenix.PubSub` topic, never called inline from `handle_event`. A shared `embeddings/runtime.ex` infra module (not a business context) wraps the local Nx.Serving model and is used by both `Search` and `RulesOracle` without either context reaching into the other. Tags/mechanics use native `text[]` + GIN (no join table) at this scale. One Postgres database holds catalog data, embeddings (HNSW-indexed), rulebook chunks, rentals, auth, and Oban's own job tables.
+Per-game SEO metadata must be computed in a new route-scoped Plug (`GameSEO`) that runs *before*
+the LiveView mounts, doing its own `Catalog.get_game!/1` lookup and writing to `conn.assigns[:seo]`
+— the same channel `get_csrf_token()` already uses to reach `root.html.heex`. The resulting
+duplicate DB lookup (plug + `CatalogLive.Show.mount/3`) is an accepted, sub-millisecond cost
+(indexed PK query against ~400 rows). `sitemap.xml` is a live controller
+(`PukllayClubWeb.SitemapController`, mirroring the existing `HealthController`), not a
+build-time-generated static file — Kamal's Docker build has no DB access, so a build-time
+generator would ship a snapshot that drifts the moment the catalog changes.
 
 **Major components:**
-1. `Catalog` context (Phase 1) — games, copies, tags; foundational, browse/filter is the fast synchronous baseline every later phase must not degrade
-2. `Search` context (Phase 2) — hybrid NL query parsing (LLM) + local embedding + RRF-fused pgvector/tsvector ranking, enqueue-and-subscribe pattern
-3. `RulesOracle` context (Phase 3) — per-game-scoped RAG: chunk/embed rulebooks (admin ingestion pipeline), retrieve top-k, grounded LLM answer with citation
-4. `ClubOps` context (Phase 4) — rental tracking (copy status + holder), FK's into Catalog's copy schema, needs an admin-role concept distinct from member magic-link auth
-5. `Accounts` (phx.gen.auth, Phase 2) — member magic-link auth + `Scope` struct consumed by other contexts needing authorization
+1. `PukllayClubWeb.Plugs.GameSEO` (new) — resolves the game and builds SEO metadata for
+   `/juegos/:id`, feeding both the OG/meta component and the per-game JSON-LD block
+2. `PukllayClubWeb.CSP.policy/1` (modified from `policy/0`) — accepts a per-request nonce,
+   generated in `put_csp/2`, applied to both the static `LocalBusiness` JSON-LD and the per-game
+   `Game` JSON-LD blocks in `root.html.heex`
+3. `PukllayClubWeb.SitemapController` (new) — live per-request XML sitemap generation, mirrors
+   `HealthController`'s existing pattern
+4. `SEOTags` HEEx function component (new) — renders `<meta>`/OG/Twitter tags in `root.html.heex`
+   from `conn.assigns`
 
 ### Critical Pitfalls
 
-1. **QEMU cross-build for the ARM image** — 5-20x slower and can crash under Erlang JIT; build natively (arm64 CI runner or the CAX31 host itself), never `--platform=linux/arm64` from an amd64 runner.
-2. **No built-in Kamal migration hook** — wire a custom entrypoint that runs the generated `Release.migrate` before `bin/server` starts, gating traffic cutover on migration success via the health check; never run `mix ecto.migrate` against a release (Mix isn't available).
-3. **Secrets in `.kamal/secrets`** — gitignore it, source real values via CI-injected env substitution (never literals), scope secrets per role/accessory explicitly, rotate anything ever committed.
-4. **ARM embedding runtime performance is unverified** — plumbing works (EXLA has a precompiled aarch64-linux-gnu binary) but throughput/latency on real CAX31 hardware is a genuine unknown; the Phase 2 "spike first" plan is correct and must not be skipped — benchmark before committing, prefer FP32/INT8 over FP16 on ARM.
-5. **pgvector index and memory tuning at small scale** — use HNSW (not IVFFlat, whose centroids get baked in if built before the full seed loads); raise `maintenance_work_mem` before `CREATE INDEX` or builds silently degrade/spill to disk.
-6. **Free-tier Gemini as a hard dependency** — build retry/backoff and a non-LLM (keyword/embedding-only) fallback into Phase 2's search flow from the start, since rate limits and quota changes are real and undocumented in advance.
+1. **OG tags computed in LiveView `mount`/`handle_params` never reach crawlers** — crawlers only
+   see the first disconnected HTTP render and never open a websocket; avoid by computing SEO
+   metadata in a pre-mount Plug writing to `conn.assigns`, not a socket assign.
+2. **Naively-added inline JSON-LD is silently blocked by this app's own CSP** — `script-src 'self'`
+   has no `unsafe-inline` and no nonce; avoid with a per-request nonce (dynamic per-game content)
+   or a hash-source (static site-wide content), verified against this app's actual `csp.ex`.
+3. **Stale meta tags across LiveView client-side navigation are a real but acceptable limitation**
+   — José Valim has stated canonical/OG-style tags don't need live-patch updates since crawlers
+   never execute client-side navigation; document this as accepted scope rather than building a
+   fragile JS-hook workaround.
+4. **A false sense of completeness from `put_secure_browser_headers` alone** — this milestone has
+   4 independently-verifiable security gaps (missing `secure: true` on the session cookie,
+   unconfirmed actual `Strict-Transport-Security` header in production, a directive-by-directive
+   CSP review that must not break the existing Google Maps `frame-src` allowance, and a LiveView
+   websocket-reconnect CSRF test) — treat each as its own checkpoint, not one checkbox.
+5. **A git-history secrets sweep that only checks currently-tracked files gives false confidence**
+   — ~880 commits have landed since the D-19 public-flip check; the sweep must cover full git
+   history. Expect common false positives (`signing_salt`, test fixtures) that should NOT be
+   rotated — Phoenix's own generator commits `signing_salt` intentionally; the real secret to
+   watch for is `secret_key_base`, which should never appear in history at all.
 
 ## Implications for Roadmap
 
-The project's phase order (0-4) is already fixed in PROJECT.md; this research validates that order and adds concrete definition-of-done items per phase rather than proposing a different structure.
+Based on research, this milestone fits as **one phase** with a strict internal build order (no
+phase split needed — total estimated effort ~4-5 hours of implementation across independent and
+dependent pieces):
 
-### Phase 0: Deploy Skeleton
-**Rationale:** Prove the full deploy loop (CI → native arm64 Docker build → Kamal → migrations-on-deploy → HTTPS → nightly backup) before any product/AI code exists — architecture research explicitly warns against gold-plating this phase with pgvector/Oban "to save a migration later."
-**Delivers:** Working Kamal+Postgres deploy pipeline with zero-downtime, migration-gated releases and a tested nightly `pg_dump`→R2 backup+restore drill.
-**Addresses:** No product features — infra only.
-**Avoids:** Pitfalls 1-4 (QEMU cross-build, missing migration hook, plaintext secrets, misconfigured health check) — all four are explicitly flagged Phase 0 decisions.
+### Phase (internal step 1): Security hardening
+**Rationale:** Independent of everything else, touches only `endpoint.ex`/`config/prod.exs`/CSP —
+do first so later steps build on a hardened baseline.
+**Delivers:** `secure: Mix.env() == :prod` on the session cookie (env-gated, not bare `true` —
+Safari does not exempt `localhost` from the Secure-cookie-requires-HTTPS rule the way
+Firefox/Chrome do, so an unconditional flag would break local Safari testing), explicit `hsts:
+true` in `config/prod.exs`, curl-verified HSTS header, CSP directive-by-directive review with an
+explicit Maps `frame-src` regression check.
+**Avoids:** Pitfall 4 (false sense of completeness).
 
-### Phase 1: Catalog v1
-**Rationale:** Feature research confirms browse/filter/complexity-translation is the minimum viable product that validates the core hook (teaching complexity, not assuming it) — and architecture research confirms this phase sets the `text[]`+GIN and `tsvector` precedent that Phase 2/3 hybrid search reuses.
-**Delivers:** Public, no-auth catalog browse/filter/search with weight-band complexity descriptors and plain-Spanish mechanic/theme chips.
-**Addresses:** All table-stakes features + the plain-Spanish complexity/mechanic differentiators from FEATURES.md.
-**Avoids:** Establishes the tag-vocabulary contract Phase 2's NL parser depends on — retrofitting it later would require redoing the parser's target schema.
+### Phase (internal step 2): CSP nonce infrastructure
+**Rationale:** Prerequisite for the JSON-LD work; sequenced right after security hardening since
+it modifies the same `csp.ex`/`put_csp/2` code path.
+**Delivers:** `policy/0` → `policy/1` refactor, per-request nonce generated in `put_csp/2` and
+assigned to `conn`.
+**Uses:** `Plug.Conn` primitives already in the stack.
 
-### Phase 2: NL Search + Auth
-**Rationale:** The hero differentiator (Spanish NL query matching) sits on top of a proven catalog; architecture requires local embeddings + LLM parsing to be split into separate async jobs/queues with independent retry policies, and this is also where the ARM embedding spike must happen first.
-**Delivers:** Spike-validated local embedding runtime, hybrid RRF search, magic-link auth (`phx.gen.auth`) + favorites.
-**Uses:** Bumblebee/EXLA, pgvector (HNSW), InstructorLite/Gemini, Oban (`:llm` and `:embeddings` queues sized against Postgres `max_connections`).
-**Implements:** `Search` context, `embeddings/runtime.ex` shared infra, enqueue-and-subscribe pattern (Pattern 1).
+### Phase (internal step 3): GameSEO plug + SEOTags component
+**Rationale:** Core of the OG/social-sharing work; depends on step 2's nonce plumbing for the
+JSON-LD block it also introduces.
+**Delivers:** `PukllayClubWeb.Plugs.GameSEO`, `SEOTags` HEEx component, per-game `Game` JSON-LD
+(nonced) and site-wide `LocalBusiness` JSON-LD (hash-sourced), OG + Twitter Card tags on game
+detail pages using existing cover art, a 1200×630 image-render step verified against
+`ImagePipeline`'s flexibility, and a branded fallback image (isologo/wordmark) for pages without a
+natural hero image.
+**Implements:** Architecture components 1, 2, 4 above.
 
-### Phase 3: Rules Oracle (RAG)
-**Rationale:** Depends on stable per-game identity from Phase 1 and the shared embedding runtime from Phase 2; scoping Q&A to one selected game at a time (not open cross-catalog chat) controls hallucination risk per the competitor pattern research validated (cite-the-passage builds trust).
-**Delivers:** Admin rulebook ingestion pipeline + member-facing per-game rules Q&A with citations.
-**Addresses:** Rules Q&A differentiator from FEATURES.md.
-**Avoids:** Anti-pattern of a general-purpose cross-game chatbot (explicitly rejected in FEATURES.md).
+### Phase (internal step 4): SEO content — alt text, sitemap, robots.txt
+**Rationale:** Fully independent of the OG/JSON-LD work; can run in parallel with step 3.
+**Delivers:** Real `alt` text on catalog card/hover-preview images (currently `alt=""`),
+`PukllayClubWeb.SitemapController` (live per-request XML), `robots.txt` content edit adding a
+`Sitemap:` directive.
+**Addresses:** SEO table-stakes from FEATURES.md.
 
-### Phase 4: Club Ops (Rental Tracking)
-**Rationale:** Deliberately last — built against a stable schema per PROJECT.md, and feature research confirms this needs an admin-role concept not yet introduced by Phase 2's member-only magic-link auth.
-**Delivers:** Copy status + holder tracking (check-out/check-in), admin-only mutation path.
-**Addresses:** Lightweight rental tracking differentiator, deliberately scoped smaller than cafe-SaaS competitors.
-**Avoids:** Anti-features (reservation/scheduling systems, payments) explicitly rejected in FEATURES.md.
+### Phase (internal step 5): Secrets sweep
+**Rationale:** No code dependency on anything else; can run anytime, ideally early to surface any
+finding before other work builds on top of it.
+**Delivers:** A full-git-history secrets sweep (not just tracked files) producing an explicit
+triage list — real/rotated, false-positive/documented, inert-historical/accepted.
+**Avoids:** Pitfall 5.
 
 ### Phase Ordering Rationale
 
-- Each phase adds exactly one new Elixir context without restructuring earlier ones (architecture's "one context per phase" principle) — this is why the fixed 0→1→2→3→4 order works without rework.
-- Feature dependencies confirm the order is forced, not arbitrary: complexity-teaching UX requires Phase 1's data; NL search requires Phase 1's tag vocabulary; Rules Q&A requires Phase 1's stable game identity; rental tracking requires an admin-role concept only worth introducing once the schema (Phase 1-3) is stable.
-- Deployment/infra pitfalls cluster entirely in Phase 0; AI/data pitfalls cluster entirely in Phase 2 — this maps cleanly onto the phase boundaries and argues for treating both phases' pitfall checklists as literal done-criteria, not follow-up hardening.
+- Security hardening first because it's fully independent and establishes a hardened baseline
+  before adding new surface area (JSON-LD, sitemap).
+- CSP nonce work must precede JSON-LD content since the JSON-LD blocks need the nonce to render at
+  all under this app's existing strict `script-src`.
+- Alt-text/sitemap/robots.txt and the secrets sweep have no dependency on the OG/JSON-LD/CSP chain
+  and can be parallelized against it.
+- This grouping avoids Pitfall 1 (OG-via-socket failure) by design — GameSEO is a Plug from the
+  start, never a LiveView assign.
 
 ### Research Flags
 
-Needs deeper research during planning:
-- **Phase 2:** ARM embedding runtime throughput is a genuine open unknown (no ARM-specific benchmark exists anywhere) — plan an explicit spike/benchmark step before committing to Bumblebee vs. Ortex or a specific model. Also re-verify Gemini's current free-tier model name/RPM limits at implementation time (documentation churns faster than this research can track).
-- **Phase 3:** RAG chunking/retrieval quality and citation UX have no reference implementation to copy from competitors (per FEATURES.md) — expect iteration once real rulebooks are ingested.
+Phases likely needing a short spike during planning:
+- **CSP nonce infrastructure:** ~30-minute spike recommended if unfamiliar with threading a nonce
+  through `connect_info`/`on_mount` so it survives LiveView websocket reconnects — well-documented
+  pattern (Dan Schultzer), low risk, but non-trivial the first time.
 
-Phases with standard, well-documented patterns (research-phase likely unnecessary):
-- **Phase 0:** Kamal+Phoenix deploy pattern is well-documented across multiple independent sources (AppSignal, Fly.io Phoenix Files, official Kamal/Phoenix docs) — follow STACK.md/PITFALLS.md directly.
-- **Phase 1:** Standard Ecto/Phoenix context + `text[]`/GIN/tsvector patterns, confirmed against official hexdocs.
-- **Phase 4:** Simple CRUD-style rental tracking on top of an already-stable schema; low technical risk per architecture research.
+Phases with standard, well-documented patterns (safe to skip a dedicated research-phase pass):
+- Security hardening (cookie/HSTS) — verified directly against Plug's own hexdocs and this app's
+  actual config.
+- Alt text, sitemap, robots.txt — standard Phoenix controller/content patterns.
+- Secrets sweep — standard git-history-grep/gitleaks technique, well-documented for a one-time
+  solo-dev check.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM-HIGH | Versions verified directly against hex.pm/GitHub release APIs (HIGH); deployment/config patterns cross-checked across 2+ sources (MEDIUM); ARM embedding feasibility has a real open risk (throughput unverified) |
-| Features | MEDIUM | Cross-checked across multiple community/vendor sources, no primary product documentation exists for this exact niche — directional, not settled fact, especially the weight-band descriptor wording |
-| Architecture | MEDIUM | Phoenix/Ecto/phx.gen.auth patterns confirmed against official hexdocs (HIGH); pgvector hybrid-search and Bumblebee/ARM patterns cross-checked across 2-3 independent write-ups (MEDIUM); ARM CPU throughput numbers are from non-ARM, non-Elixir benchmarks |
-| Pitfalls | MEDIUM | Web-sourced, cross-checked across multiple independent sources per topic; no official case study exists for this exact stack combination, so scale numbers are directional |
+| Stack | HIGH | Verified directly against Plug/Phoenix hexdocs and this app's own config files; `phoenix_seo`/`sitemapper` rejections checked against each package's own hexdocs |
+| Features | MEDIUM-HIGH | schema.org type choices and sitemap/robots conventions cross-checked across 3+ sources; `og:image` 1200×630 sizing assumes `ImagePipeline` can produce that variant — needs verification during execution |
+| Architecture | HIGH | Root-layout `conn.assigns` behavior verified verbatim against Phoenix LiveView's official live-layouts guide (two independent fetches, same wording); CSP+JSON-LD interaction cross-checked against MDN/OWASP; sitemap recommendation derived directly from this repo's own Kamal/Docker deploy constraints |
+| Pitfalls | MEDIUM-HIGH | OG-via-socket failure corroborated by `phoenix_live_view` issue #1194 and a direct José Valim forum statement; CSP-nonce mechanism cross-checked across 2-4 independent sources; security-header/cookie/CSRF gaps grounded directly in this app's own source code |
 
-**Overall confidence:** MEDIUM-HIGH
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- ARM CPU embedding latency/throughput for `multilingual-e5-small` (or equivalent) on real CAX31 hardware — no source anywhere gives concrete numbers on ARM64; must be resolved via the Phase 2 spike, not assumed from this research.
-- Gemini free-tier model name and RPM/RPD limits — verify against Google AI Studio's current pricing page at Phase 2 implementation time, not from this document.
-- Exact weight-band wording/format for the plain-Spanish complexity descriptor — no competitor reference implementation exists; will need its own design iteration during Phase 1 UI design.
-- Whether the source CSV data includes a minimum-age field — confirm during Phase 1 planning.
-- Postgrex is mid-transition to 1.0.0 (currently `-rc.1`) — check for a final stable release at Phase 0 implementation time.
+- `og:image` 1200×630 sizing: verify `ImagePipeline` can actually produce this aspect ratio from
+  existing letterboxed cover art before committing to the exact rendering approach — resolve
+  during phase planning/execution, not blocking roadmap creation.
+- Whether to spend effort on full CSP-nonce plumbing vs. a documented-accepted-risk
+  `'unsafe-inline'` shortcut for JSON-LD — both are legitimate options consistent with this
+  codebase's existing accepted-risk convention (see prior `WR-04`-style entries); worth an explicit
+  decision at plan time.
+- Which specific brand asset (`isologo-light.png` vs `isologo-dark.png`, both under
+  `priv/static/images/`) serves as the site-wide OG fallback image — a content/design choice for
+  plan time, not an architecture question.
+- Whether the original D-19 public-flip secrets check was a full-history tool-driven scan or a
+  manual review — affects how much independent value a fresh full-history sweep adds vs. a
+  since-then-only check; resolve by just running the full sweep regardless (cheap, one-time).
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- hex.pm package API — version numbers for Phoenix, LiveView, Ecto SQL, Postgrex, Oban, pgvector, InstructorLite, Bumblebee, EXLA, Nx, xla, Credo, Sobelow, Req, Finch
-- github.com/elixir-nx/xla releases API — confirmed `aarch64-linux-gnu` precompiled XLA binary exists
-- hexdocs.pm/phoenix (Contexts, Cross-context Boundaries, mix phx.gen.auth, Releases) — official Phoenix docs
-- hexdocs.pm/ecto_sql — Ecto.Migration official docs
-- hexdocs.pm/pgvector — official pgvector-elixir library docs
+- Phoenix LiveView official `live-layouts` guide — root layout `conn.assigns` vs `socket.assigns`
+  behavior
+- `phoenix_live_view` GitHub issue #1194 — open feature request confirming no general per-page
+  head-metadata primitive exists beyond `<.live_title>`
+- Plug's own hexdocs (`Plug.SSL`, `Plug.Session`) — HSTS default behavior, cookie `secure:` option
+- This app's own source: `lib/pukllay_club_web/csp.ex`, `router.ex`, `endpoint.ex`,
+  `config/prod.exs`, `live/catalog_live/show.ex` (share_control/1), `priv/static/robots.txt`
 
 ### Secondary (MEDIUM confidence)
-- AppSignal Blog — Deploying/Advanced Strategies for Phoenix with Kamal
-- kamal-deploy.org — secrets, environment variables, healthcheck configuration docs
-- Fly.io Phoenix Files — Safe Ecto Migrations, Tag All the Things, GitHub Actions CI
-- Jonathan Katz / Crunchy Data / Tembo — pgvector hybrid search and HNSW vs IVFFlat tuning
-- DockYard — Ortex/ONNX on Elixir
-- Elixir Forum threads — Bumblebee/EXLA backend performance, InstructorLite Gemini adapter, ARM Docker build issues
-- BGG community threads, NN/g UX research, board-game-cafe SaaS vendor sites (TWICE, GameLedger, GameShelf), rules-Q&A AI products (RulesBot.ai, Boardside, BGRB) — feature landscape and competitor analysis
+- MDN Content-Security-Policy docs, content-security-policy.com — inline-script CSP enforcement
+  applies regardless of `type` attribute (blocks JSON-LD under strict `script-src`)
+- Dan Schultzer's writeup — LiveView nonce-threading via `connect_info` for websocket reconnects
+- `phoenix_seo` and `sitemapper` hex package docs — evaluated and rejected as over-scoped for this
+  app's size/deploy model
+- José Valim forum statement — stale meta tags across LiveView client-nav is an accepted,
+  documented limitation, not a bug to fix
 
 ### Tertiary (LOW confidence)
-- Nixiesearch/Medium — non-ARM, non-Elixir embedding quantization benchmark, used only as directional illustration of FP16-on-ARM risk, not a guarantee
+- General 2026 tool-comparison/history-scrubbing guides for gitleaks/trufflehog-style secrets
+  sweeps — cross-checked across 4+ sources converging on the same guidance, but no single
+  canonical source
 
 ---
-*Research completed: 2026-07-24*
+*Research completed: 2026-09-11*
 *Ready for roadmap: yes*
