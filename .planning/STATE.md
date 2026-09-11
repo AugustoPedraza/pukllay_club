@@ -1,20 +1,20 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: 01.5
-current_phase_name: About Page CTA Rhythm & Header Morph Refinement
-status: executing
+status: Awaiting next milestone
 stopped_at: Completed 01.5-08-PLAN.md
-last_updated: "2026-09-10T03:24:38.773Z"
-last_activity: 2026-09-10
-last_activity_desc: Phase 01.5 execution resumed (wave continue)
-state_head: 83ed1e5adb2bcfe836bb48c1191d32c7799cc016
+last_updated: "2026-09-11T03:06:13.676Z"
+last_activity: 2026-09-11
+last_activity_desc: Milestone v1.0 completed and archived
+state_head: 31d947270bb96db5f0bb29d11e9672ddb615d5a8
 progress:
-  total_phases: 10
-  completed_phases: 6
+  total_phases: 11
+  completed_phases: 7
   total_plans: 87
-  completed_plans: 86
+  completed_plans: 87
 milestone_name: milestone
+current_phase: "01.5"
+current_phase_name: About Page CTA Rhythm & Header Morph Refinement
 ---
 
 Total Phases: 7
@@ -31,12 +31,10 @@ even without already knowing board-game vocabulary.
 
 ## Current Position
 
-Phase: 01.5 (About Page CTA Rhythm & Header Morph Refinement) — EXECUTING
-Plan: 1 of 14
-Status: Executing Phase 01.5
-Last activity: 2026-09-10 - Completed quick task 260910-l7q: Rebuilt light/dark palette on one shared 11-stop OKLCh ramp (FLAT envelope); light's primary button now literally shares a hex with dark's card surface, enforced by a new drift-blocking test invariant
-
-Progress: [░░░░░░░░░░░░░░░░░░░░] 73/73 plans (Phase 02 not yet planned)
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-11 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -265,46 +263,6 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
-| 260910-l7q | Redesign light/dark palette as one shared OKLCh ramp so theme roles literally reuse the same hex, not just hue-family: researched industry prior art (only Material Design 3 does literal cross-theme value reuse; Radix/Primer share only step numbers, not values), built a committed generator (`ramp-audit.mjs`) producing FLAT vs ANCHORED candidate ramps with role-by-role JOIN/OFF-RAMP verdicts. Two blocking checkpoints: developer picked D-HueMove (light's `--color-primary` moves ~13° onto dark's brand hue H313.1) and then FLAT over the plan's recommended ANCHORED envelope, specifically because FLAT delivers the true 3-way shared swatch (light `--color-primary` + light `--color-accent-content` + dark `--color-base-200` all resolve to `#45105C`) that ANCHORED missed by ΔE 0.0168 — closing the developer's own motivating example (the "Reservar para el sábado" button). Sketch mirror kept as resolved hexes (D2-i). New ExUnit invariant proves the shared swatch and blocks silent drift off the ramp. | 2026-09-10 | 4663c4f | Complete (917 tests/0 failures, `mix quality` exit 0, `check-theme-drift.sh` 39/39 pairs match, two red-proofs: all 3 hex-parsing gates fail on unresolvable stop, invariant fails on reverted role; all WCAG floors hold with margin; live dark/light browser walkthrough deferred to developer) | [260910-l7q-redesign-the-light-dark-color-palette-as](./quick/260910-l7q-redesign-the-light-dark-color-palette-as/) |
-| 260910-if9 | Fix light/dark chip-family and label-ink consistency: measured (OKLCh audit script) that dark's pill/chip surface (`--color-base-100/200/300`) sat 14.6-15.0° off its own ink hue while light's equivalent was only 2.8° apart — root cause was 260910-hdc rotating dark's ink onto the brand hue (H313.1) without rotating dark's base ladder. Blocking checkpoint: developer picked C2 (rotate dark's base ladder onto H313.1, holding L/C — root-cause fix, re-verified against sketch 054's 4 pinned contrast assertions) over C1 (retone pills only) and C3 (equalize cross-theme relationship without moving hues); picked W1 (no label-ink change) over W2/W3 since dark's label-to-body lightness gap (Δ20.1) is already tighter than light's (Δ26.9) and clears 6.85:1 contrast — not a contrast defect. | 2026-09-10 | 054ded5 | Complete (`mix quality` 913 tests/0 failures, `check-theme-drift.sh` exit 0, TDD tripwires red→green, post-change OKLCh audit confirms hue spread dropped 15.0°→0.4°; live dark/light browser walkthrough deferred to developer) | [260910-if9-fix-light-dark-theme-color-family-consis](./quick/260910-if9-fix-light-dark-theme-color-family-consis/) |
-| 260910-hdc | Fix dark mode's "disabled-looking" purple and the branded/muted purple mismatch: dark's interactive ink (nav links, outline `Ver detalles` CTA, editorial pills) had been ink-swapped to `--color-neutral` (sketch 055/056) to fix contrast, but that token is a chroma-collapsed C0.057 muted ink vs the same role's C0.151 in light — read as grey, not purple, and sat 6.6° off dark's own `--color-primary` hue. Added a new `--pk-ink-brand` token (dark: `#C791E5`, light: `var(--color-primary)`, so light cannot drift) for the interactive role, and retuned dark `--color-neutral` onto the brand hue (`#C59CDC`) for the muted role — one hue, three deliberate chroma tiers (fill > interactive ink > muted ink). Developer-confirmed via live dark/light walkthrough. | 2026-09-10 | f78f105 | Complete (`mix quality` 908 tests/0 failures, `check-theme-drift.sh` exit 0, new OKLCh chroma-floor + hue-alignment tripwire tests, light theme byte-identical, developer UAT confirmed) | [260910-hdc-fix-inconsistent-purple-cta-colors-acros](./quick/260910-hdc-fix-inconsistent-purple-cta-colors-acros/) |
-| 260910-gck | Fix dark-mode outline-primary CTA contrast (Sumate hero/closing, catalog preview CTA, "Reintentar" retry) — daisyUI's `btn-outline btn-primary` rendered `--color-primary` as text/border at 2.08-2.34:1, below WCAG floors. Blocking checkpoint + sketch 056 found developer wanted split-by-role: solid fill (6.70:1) for the two Sumate CTAs (the real primary action), ink-swap to `--color-neutral` (7.00:1/6.21:1) for the genuinely secondary buttons | 2026-09-10 | ee04317 | Complete (`mix quality` 907 tests/0 failures, `check-theme-drift.sh` exit 0, tripwire-verified regression tests) | [260910-gck-be-sure-to-have-this-colors-correct-cta-](./quick/260910-gck-be-sure-to-have-this-colors-correct-cta-/) |
-| 260910-efe | Implement sketch 054's winning dark theme (Variant A ladder + W2 Deep Jewel primary) in `assets/css/app.css`; re-sync `.planning/sketches/themes/default.css`; blocking checkpoint found the winning primary fails WCAG contrast as text (17 rules) — resolved via sketch 055 (developer picked Option A, dark-scoped `--color-neutral` override) | 2026-09-10 | 74b731c | Complete (`mix quality` 903 tests/0 failures, `check-theme-drift.sh` exit 0, palette byte-exact) | [260910-efe-implementar-en-assets-css-app-css-el-the](./quick/260910-efe-implementar-en-assets-css-app-css-el-the/) |
-| 260910-dev | Sketch-only exploration to fix dark mode's color composition (too dark): sketch 054, 5 palette hypotheses over one composed real screen, measured WCAG contrast per variant. Developer picked Variant A (Lifted Ladder) as base, then directed a round-2 warm-primary refinement; winner is A's ladder + W2 "Deep Jewel" primary (`--color-primary: #8C2BB6`, white primary-content). Implementing in `assets/css/app.css` is a separate follow-up quick task. | 2026-09-10 | b532c6a | Complete (sketch-only; assets/css/app.css and .planning/sketches/themes/default.css unchanged, verified at every task boundary; full 13-token winner table recorded in README.md and SUMMARY.md) | [260910-dev-mejorar-arreglar-la-composici-n-de-color](./quick/260910-dev-mejorar-arreglar-la-composici-n-de-color/) |
-| 260824-9zo | On desktop, make the content respect the shell width | 2026-08-24 | 9b47d4e | | [260824-9zo-on-desktop-make-the-content-respect-the-](./quick/260824-9zo-on-desktop-make-the-content-respect-the-/) |
-| 260824-b71 | Polish catalog search filtering UX: mechanics, content hierarchy, desktop no-scroll, mobile bottom sheet | 2026-08-24 | 64a4cde | Complete | [260824-b71-polish-catalog-search-filtering-ux-defin](./quick/260824-b71-polish-catalog-search-filtering-ux-defin/) |
-| 260824-eqc | Implement sketch 019 (variant D) in FilterModal: new copy, per-section cards, 6+ Jugadores bucket, ghost Limpiar filtros, background dim/blur, Destacados cut | 2026-08-24 | ce04eff | Complete | [260824-eqc-implement-sketch-019-s-winning-design-va](./quick/260824-eqc-implement-sketch-019-s-winning-design-va/) |
-| 260824-jkc | Implement sketch 020's winning design: refined mobile chip index row + desktop mega-menu | 2026-08-24 | 9b88168 | Complete | [260824-jkc-implement-sketch-020-s-winning-design-re](./quick/260824-jkc-implement-sketch-020-s-winning-design-re/) |
-| 260824-u5d | Implement pagination for the catalog carousels/sections: in-row horizontal infinite scroll (30-game ceiling), Ver todo tile removed | 2026-08-24 | 218accf | Complete | [260824-u5d-implement-pagination-for-the-catalog-car](./quick/260824-u5d-implement-pagination-for-the-catalog-car/) |
-| 260806-rq8 | Add Styler + mix_audit quality gates (superseded credence) to mix quality | 2026-08-06 | 9477e7f | | [260806-rq8-add-credence-semantic-ast-elixir-linter-](./quick/260806-rq8-add-credence-semantic-ast-elixir-linter-/) |
-| 260818-fro | Integrate Tidewave (dev-only) MCP plug into Phoenix endpoint | 2026-08-18 | d3761dd | | [260818-fro-integrate-tidewave-dev-only-into-phoenix](./quick/260818-fro-integrate-tidewave-dev-only-into-phoenix/) |
-| 260823-snj | Polish desktop header: search icon relevance + header-only isologo (footer de-duplicated) | 2026-08-23 | f0484a0 | | [260823-snj-polish-desktop-header-improve-the-search](./quick/260823-snj-polish-desktop-header-improve-the-search/) |
-| 260824-7mt | Implement sketch 018 winner B — mute theme toggle color/size and tone active state vs social icons | 2026-08-24 | c6d378b | | [260824-7mt-implement-sketch-018-winner-variant-b-mu](./quick/260824-7mt-implement-sketch-018-winner-variant-b-mu/) |
-| 260818-lg2 | Convert docs/ux-patterns.md into ux-patterns + ux-responsive skills, merge hierarchy/affordance into ui-design-system | 2026-08-18 | 3a4380e | | [260818-lg2-convert-docs-ux-patterns-md-into-three-s](./quick/260818-lg2-convert-docs-ux-patterns-md-into-three-s/) |
-| 260818-gdb | Fix the max-w-2xl container bug in Layouts.app | 2026-08-18 | b44d927 | | [260818-gdb-fix-the-max-w-2xl-container-bug-in-lib-p](./quick/260818-gdb-fix-the-max-w-2xl-container-bug-in-lib-p/) |
-| 260818-h9p | Build UX pattern reference doc at docs/ux-patterns.md from research | 2026-08-18 | 703a919 | | [260818-h9p-build-ux-pattern-reference-doc-at-docs-u](./quick/260818-h9p-build-ux-pattern-reference-doc-at-docs-u/) |
-| 260818-jpm | Add Linear/GOV.UK/Shopify/Microsoft/NN.g reference points (B28-B32) and LiveView-fit/device-target/PWA-scope answers (F33-F35) to docs/ux-patterns.md | 2026-08-18 | 58a2b6c | | [260818-jpm-add-linear-gov-uk-shopify-master-detail-](./quick/260818-jpm-add-linear-gov-uk-shopify-master-detail-/) |
-| 260818-mhl | Add igniter and usage_rules as dev-only dependencies and wire up dependency usage-rules syncing into AGENTS.md | 2026-08-18 | e775f45 | Verified | [260818-mhl-add-igniter-and-usage-rules-as-dev-only-](./quick/260818-mhl-add-igniter-and-usage-rules-as-dev-only-/) |
-| 8 | Add a .mcp.json file at the repo root that configures the Tidewave MCP server as an HTTP (streamable) server pointing at http://localhost:4000/tidewave/mcp, matching the standard Tidewave README setup. | 2026-08-18 | 808e34a | — | — |
-| 260818-n4l | Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias | 2026-08-18 | c11b257 | Verified | [260818-n4l-add-dialyxir-and-excoveralls-and-make-th](./quick/260818-n4l-add-dialyxir-and-excoveralls-and-make-th/) |
-| 9 | Add dialyxir and excoveralls, make precommit non-mutating, add quality.full alias | 2026-08-18 | c11b257 | — | — |
-| 11 | Add mix precommit/quality workflow rules to .planning/codebase/CONVENTIONS.md | 2026-08-18 | 4811893 | — | — |
-| 12 | Merge theme.css's brand-manual provenance/WCAG docs into app.css; remove non-compiling orphaned theme.css | 2026-08-21 | a3967fe | — | — |
-| 13 | Reconcile sketch theme with app.css (D2 conform, D2b retire dark-purple.css), add check-theme-drift.sh; D1 geometry deferred | 2026-08-21 | 34a40f0 | — | — |
-| 14 | Fix 7 UI audit findings on CatalogLive.Index (drawer overlap, theme-toggle a11y/hit-target, logo/tagline, button hierarchy, type inventory) — quick-260821-dah | 2026-08-21 | b90b499 | — | — |
-| 260821-umm | Footer's left cluster now shows the About hero tagline ("Conectá jugando") instead of repeating the header's "JUEGOS DE MESA MODERNOS" subtitle | 2026-08-21 | 9734f18 | | [260821-umm-footer-left-cluster-in-layouts-ex-footer](./quick/260821-umm-footer-left-cluster-in-layouts-ex-footer/) |
-| 260821-v7q | Wired the real isologo mark into Layouts.brand_logo/1 with theme-aware light/dark images and rebuilt favicon.ico from the purple isologo lockup | 2026-08-21 | aff2b1d | | [260821-v7q-wire-up-the-real-isologo-mark-theme-awar](./quick/260821-v7q-wire-up-the-real-isologo-mark-theme-awar/) |
-| 17 | Polish the desktop header: base-200 surface, rebalanced pk-nav-actions cluster, shared 48px height/centre line, muted+active nav-link tiers | 2026-08-22 | 9195443 | — | — |
-| 260824-hu1 | On mobile the expanded header search now aligns its own edges (not just its contents) to the shared gutter line, restoring the fully-rounded pill shape | 2026-08-24 | 0fcc255 | Complete | [260824-hu1-on-mobile-the-expanded-search-looks-awfu](./quick/260824-hu1-on-mobile-the-expanded-search-looks-awfu/) |
-| 260824-i8e | Removed the stale native sort `<select>` (Nombre/Duración/Complejidad/Más recientes) from the catalog page; sort machinery underneath (parse_sort/1, :sort assign, see-all/URL deep links) left fully intact | 2026-08-24 | c3b14b3 | Complete | [260824-i8e-the-select-for-nombre-duracion-etc-looks](./quick/260824-i8e-the-select-for-nombre-duracion-etc-looks/) |
-| 260824-q8z | Mobile drawer bottom block: social links reordered as a full-width, high-contrast, 44px CONTENT row; theme control centered and its "Tema" label converted to sr-only as a quiet FOOTER strip (mirrors the desktop footer's shipped pattern, applies sketch 021's Round-6 conclusion) | 2026-08-24 | 79b392b | Complete | [260824-q8z-for-mobile-the-social-links-at-the-botto](./quick/260824-q8z-for-mobile-the-social-links-at-the-botto/) |
-| 260824-t7g | New carousel arrow layer from sketches 022-026: relocated prev/next controls to Netflix-style edge-overlay chevrons gated to pointer-fine devices (022-C), replaced the browser's fixed smooth-scroll with the project's own 200ms soft ease-out curve (023-B) | 2026-08-24 | d106248 | Partial (live-smoothness sub-check needs a human eyeballing it in a foregrounded tab — see SUMMARY) | [260824-t7g-new-carousel-from-latest-sketches](./quick/260824-t7g-new-carousel-from-latest-sketches/) |
-| 260901-ty6 | Reduce the mobile (<=480px) footer's visual weight: shrink .pk-footer margin-top and .pk-footer-row vertical padding on mobile, shrink the footer brand_logo, and shrink footer-links font-size/gap on mobile. Desktop untouched. | 2026-09-01 | ed51bab | Complete (764/764 tests, mix quality passes; CDP-measured mobile chrome 96px→56px; one human-judgment visual check flagged in SUMMARY) | [260901-ty6-reduce-the-mobile-480px-footer-s-visual-](./quick/260901-ty6-reduce-the-mobile-480px-footer-s-visual-/) |
-| 260902-fdm | Reduce the mobile footer to just the BGG attribution line per sketch 044 (winner H): remove brand name/tagline, FAQ/Contacto/Juntadas links, and the copyright line from the <=480px footer; keep only <.bgg_attribution />; tighten the <=480px gap further. Desktop untouched. | 2026-09-02 | 1062835 | Complete (766/766 tests, mix format/compile clean; CDP-measured mobile chrome 56px→40px; one human-judgment visual check flagged in SUMMARY, same precedent as 260901-ty6) | [260902-fdm-reduce-the-mobile-footer-to-just-the-bgg](./quick/260902-fdm-reduce-the-mobile-footer-to-just-the-bgg/) |
-| 260902-g21 | On mobile (<=480px), right-align the footer (now just the BGG attribution line) instead of centering it; retire the stale centering-rationale comment; desktop unaffected. | 2026-09-02 | c2ff6a3 | Complete (767/767 tests, mix format clean; CDP-measured 320/390px right-edge alignment confirmed, desktop byte-identical at 768/1280px; one human-judgment visual check flagged in SUMMARY, same precedent as prior footer tasks) | [260902-g21-on-mobile-480px-right-align-the-footer-i](./quick/260902-g21-on-mobile-480px-right-align-the-footer-i/) |
-| 260902-glf | Delete the site-wide sticky-footer app shell mechanism (.pk-app-shell min-height/flex-grow) so the footer follows content instead of being pushed to the viewport bottom on short pages; live CDP A/B measurement then found the accompanying flex column vestigial too, so the entire .pk-app-shell class and its tests were retired. | 2026-09-02 | 0e0690c | Complete (762/762 tests, mix format/compile clean; CDP-measured short-page/long-page/CTA-bar geometry + flex-column A/B all byte-identical; two human-judgment visual checks flagged in SUMMARY, same precedent as prior footer tasks) | [260902-glf-remove-the-site-wide-sticky-footer-layou](./quick/260902-glf-remove-the-site-wide-sticky-footer-layou/) |
-| 260902-il3 | Fix the catalog page's ("/") last-shelf-to-footer gap: main's default pb-20 (80px) was stacking with .pk-shelf's trailing margin and .pk-footer's own margin-top since CatalogLive.Index never opted into the existing boundary_collapse mechanism the detail page uses. Added a new bottom_collapse attr (bottom-only, doesn't touch top spacing) sharing one CSS declaration with the detail page's footer-margin rule. | 2026-09-02 | cf95f7b | Complete (773/773 tests, mix quality clean; CDP-measured gap 128px/176px -> 16px/24px at 390px/1280px matching the detail page exactly; top spacing + detail/about pages unaffected; a stale test wrongly justifying catalog bottom padding as "CTA-bar clearance" found and fixed; D-03 shipped 16/24px split (matching detail page) not a flat 24px, flagged for confirmation) | [260902-il3-fix-the-large-empty-gap-between-the-last](./quick/260902-il3-fix-the-large-empty-gap-between-the-last/) |
-| 260910-av6 | Implement sketch 053 winner D (final) for G-01.5-12: replace .pk-about-cta-bar's content-sized floating pill with a full-width bar that stays hidden until the hero's own Sumate button scrolls out of view (reuse the existing docked-state boolean), then stays visible for the rest of the scroll — no footer auto-hide. Document-end clearance below the footer now sized to the bar's live-measured height. | 2026-09-10 | ac174b6 | Complete (mix quality clean, 899 tests, 0 failures; CDP geometry oracle 0 failures in both themes; open design question logged — 439.67px scroll window where hero CTA and bar coexist, not resolved in scope; two-theme human walkthrough deferred to end-of-phase UAT) | [260910-av6-implement-sketch-053-winner-d-final-for-](./quick/260910-av6-implement-sketch-053-winner-d-final-for-/) |
 
 ### Roadmap Evolution
 
@@ -352,3 +310,7 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-09-11T02:02:16Z
 Stopped at: Ship operation complete — all 5 sequential phase PRs (#30 Phase 01.2, #32 Phase 01.3+01.3.1, #33 Phase 01.4, #34 Phase 01.5+av6, #35 Phase 01.6) merged and deployed; `origin/main` and local `main` reconciled; production healthy (`/up` → 200)
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
