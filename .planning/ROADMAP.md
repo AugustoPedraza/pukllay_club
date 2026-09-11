@@ -558,6 +558,29 @@ Plans:
 
 - [x] 01.2-32-PLAN.md — G-01.2-21: the two lightbox chevrons adopt the dark-theme fill the close button got in round 8, through the class both buttons already share, so the overlay's three controls read as one family instead of one treated control beside two untreated siblings; round 8's skip rationale (a UAT pass measured against the then-translucent backdrop) expired when round 9 made that backdrop opaque, and the round is gated by an assertion comparing the two dark-scoped rules' declarations to each other rather than checking each in isolation
 
+### Phase 01.6: Light/Dark Theme Color-Family Consistency (INSERTED)
+
+**Goal:** Light and dark themes stop looking like two unrelated palettes wearing the same layout.
+Starting from a developer complaint that dark mode felt "too dark," this phase ran through six
+quick tasks that progressively fixed the dark-mode composition itself, then its CTA contrast, then
+its interactive-vs-muted ink split, then a chip/pill hue-family mismatch between the two themes, and
+finally rebuilt the whole palette on one shared, algorithmically-generated OKLCh ramp so specific
+roles (e.g. the "Reservar para el sábado" button fill) literally share the same hex value with their
+dark-mode counterpart (the card surface) instead of merely sharing a hue family.
+**Requirements**: none — reactive quality-fix phase with no REQ-IDs, same pattern as Phase 01.4/01.5.
+Each quick task's own CONTEXT.md/RESEARCH.md decisions are its acceptance criteria.
+**Depends on:** Phase 01.5
+**Plans:** 6/6 quick tasks executed
+
+Plans:
+
+- [x] 260910-dev — Sketch-only exploration (sketch 054): 5 dark-mode palette hypotheses measured for WCAG contrast; developer picked a lifted base ladder + a round-2 warm "Deep Jewel" primary
+- [x] 260910-efe — Shipped sketch 054's winning dark theme byte-exact in `assets/css/app.css`; re-synced the sketch mirror
+- [x] 260910-gck — Fixed dark-mode outline-primary CTA contrast (WCAG 1.4.3/1.4.11), split by role: solid-fill for the two Sumate CTAs, ink-swap to `--color-neutral` for genuinely secondary buttons
+- [x] 260910-hdc — Introduced the `--pk-ink-brand` token to separate dark's interactive ink from its muted ink, both retuned onto the brand hue — one hue, three deliberate chroma tiers
+- [x] 260910-if9 — Measured (new OKLCh audit script) and closed a 14.6°-15.0° hue split between dark's pill/chip surfaces and their own ink, left over from `hdc` rotating ink but not the base ladder; label-ink left unchanged after the audit showed it wasn't a contrast defect
+- [x] 260910-l7q — Researched industry prior art (Material Design 3 is the only system doing literal cross-theme value reuse) and rebuilt the palette as one shared 11-stop OKLCh ramp; light's `--color-primary`/`--color-accent-content` and dark's `--color-base-200` now resolve to the identical hex, enforced by a new drift-blocking test invariant
+
 ### Phase 2: Natural-Language Spanish Search + Auth
 
 **Goal**: Members can describe what they want in plain Spanish and get matched games — the core value of the product — then save favorites behind lightweight auth.

@@ -3974,34 +3974,104 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
+    # Pulls the `:root[data-theme="dark"]` rule (quick task 260910-hdc) so
+    # token_value/2 can read `--pk-ink-brand`'s dark declaration out of it —
+    # same scoping reason as dark_theme_plugin_block/0 above: this token is
+    # ALSO declared under plain `:root` (light, a variable read of
+    # `--color-primary`), so reading the token name against the whole file
+    # would risk matching the wrong scope.
+    defp dark_pk_ink_brand_root_block do
+      case Regex.run(~r/:root\[data-theme="dark"\]\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No `:root[data-theme=\"dark\"] { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    # Pulls the single plain `:root { ... }` block that declares at least
+    # one `--pk-ramp-*` stop (quick task 260910-l7q, Task 1 tracer) —
+    # disambiguated from the file's OTHER plain `:root { ... }` block (the
+    # one carrying `--pk-ink-brand`, see dark_pk_ink_brand_root_block/0's
+    # sibling above) by CONTENT rather than by match order, the same idiom
+    # `oklch-audit.mjs`'s `parsePlainRootPkInkBrand` already uses.
+    defp ramp_root_block do
+      css_source()
+      |> then(&Regex.scan(~r/(?m)^:root\s*\{([^}]*)\}/, &1, capture: :all_but_first))
+      |> List.flatten()
+      |> Enum.find(&(&1 =~ ~r/--pk-ramp-/))
+      |> case do
+        nil -> flunk("No plain `:root { ... }` block declaring a `--pk-ramp-` stop found in assets/css/app.css")
+        body -> body
+      end
+    end
+
     defp token_value(source, token) do
       case Regex.run(~r/#{Regex.escape(token)}:\s*([^;]*);/, source) do
-        [_, value] -> String.trim(value)
+        [_, value] -> value |> String.trim() |> deref_ramp_value()
         nil -> flunk("No `#{token}` token found in the given source")
+      end
+    end
+
+    # One-hop dereference (quick task 260910-l7q, Task 1 tracer):
+    # `token_value/2` is the single choke point ~30 existing colour
+    # assertions already funnel through, so teaching the dereference here
+    # keeps every call site working unedited. Only a value that IS a
+    # `var()` read of a `--pk-ramp-` stop is dereferenced; every other value
+    # (hex literals, the `rgb(...)` triple `--pk-shadow-color` carries)
+    # passes through untouched. An unresolvable stop is a hard failure
+    # (`flunk`), never a silent pass-through of the raw `var(...)` string —
+    # that would turn every colour comparison funnelled through here into a
+    # string compare that happens to pass for the wrong reason (see the
+    # plan's threat model, T-l7q-01).
+    defp deref_ramp_value(value) do
+      case Regex.run(~r/^var\((--pk-ramp-[0-9]+)\)$/, value) do
+        [_, stop] ->
+          case Regex.run(~r/#{Regex.escape(stop)}:\s*([^;]*);/, ramp_root_block()) do
+            [_, resolved] ->
+              String.trim(resolved)
+
+            nil ->
+              flunk(
+                "Could not resolve `#{stop}` (referenced via `#{value}`) in the --pk-ramp-* " <>
+                  "root block — a role points at a ramp stop that does not exist."
+              )
+          end
+
+        nil ->
+          value
       end
     end
 
     # Turns a colour written either as a six-digit hex literal or as a
     # space-separated `rgb(r g b)` triple (this file's two colour formats)
-    # into a WCAG relative luminance.
-    defp relative_luminance(color) do
-      {r, g, b} =
-        case Regex.run(~r/^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/, String.trim(color)) do
-          [_, r, g, b] ->
-            {String.to_integer(r, 16), String.to_integer(g, 16), String.to_integer(b, 16)}
+    # into an {r, g, b} 0-255 integer triple. Shared by relative_luminance/1
+    # (WCAG contrast) and oklab/1 (quick task 260910-hdc, OKLCh chroma/hue) —
+    # both need the same raw channels, just different downstream math.
+    defp parse_rgb(color) do
+      case Regex.run(~r/^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/, String.trim(color)) do
+        [_, r, g, b] ->
+          {String.to_integer(r, 16), String.to_integer(g, 16), String.to_integer(b, 16)}
 
-          nil ->
-            case Regex.run(~r/rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)/, color) do
-              [_, r, g, b] -> {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
-              nil -> flunk("Could not parse colour value for contrast computation: #{inspect(color)}")
-            end
-        end
+        nil ->
+          case Regex.run(~r/rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)/, color) do
+            [_, r, g, b] -> {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
+            nil -> flunk("Could not parse colour value for contrast computation: #{inspect(color)}")
+          end
+      end
+    end
+
+    # sRGB (0-255) -> linear-light single channel, the standard EOTF used by
+    # both the WCAG relative-luminance formula and the OKLab conversion.
+    defp srgb_channel_to_linear(channel) do
+      c = channel / 255
+      if c <= 0.03928, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
+    end
+
+    # Turns a colour into a WCAG relative luminance.
+    defp relative_luminance(color) do
+      {r, g, b} = parse_rgb(color)
 
       [r, g, b]
-      |> Enum.map(fn channel ->
-        c = channel / 255
-        if c <= 0.03928, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
-      end)
+      |> Enum.map(&srgb_channel_to_linear/1)
       |> then(fn [rl, gl, bl] -> 0.2126 * rl + 0.7152 * gl + 0.0722 * bl end)
     end
 
@@ -4009,6 +4079,50 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     defp contrast_ratio(l1, l2) do
       {lighter, darker} = if l1 >= l2, do: {l1, l2}, else: {l2, l1}
       (lighter + 0.05) / (darker + 0.05)
+    end
+
+    # sRGB -> linear -> OKLab (Björn Ottosson's published matrices — the
+    # same conversion this plan's `measured_root_cause` table and
+    # `contrast-check.mjs`'s methodology comment cite). Returns {l, a, b} in
+    # OKLab space; oklch_chroma/1 and oklch_hue/1 below derive the polar
+    # (chroma, hue) form from it. Added for quick task 260910-hdc: the
+    # tripwire that encodes "reads as brand purple, not disabled grey" is a
+    # CHROMA floor, which relative_luminance/1's WCAG math cannot express.
+    defp oklab(color) do
+      {r, g, b} = parse_rgb(color)
+      [rl, gl, bl] = Enum.map([r, g, b], &srgb_channel_to_linear/1)
+
+      l = 0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl
+      m = 0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl
+      s = 0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl
+
+      cbrt = fn v -> if v < 0, do: -:math.pow(-v, 1 / 3), else: :math.pow(v, 1 / 3) end
+      l_ = cbrt.(l)
+      m_ = cbrt.(m)
+      s_ = cbrt.(s)
+
+      lab_l = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
+      lab_a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_
+      lab_b = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+
+      {lab_l, lab_a, lab_b}
+    end
+
+    # OKLCh chroma magnitude — "how saturated", the axis this task's fix
+    # actually turns on (a contrast-only fix can pass WCAG while still
+    # reading as grey; chroma is what distinguishes "brand purple" from
+    # "disabled grey" at the same lightness/contrast).
+    defp oklch_chroma(color) do
+      {_l, a, b} = oklab(color)
+      :math.sqrt(a * a + b * b)
+    end
+
+    # OKLCh hue angle in degrees [0, 360) — the axis "one hue, three chroma
+    # tiers" (this task's stated goal) is actually about.
+    defp oklch_hue(color) do
+      {_l, a, b} = oklab(color)
+      degrees = :math.atan2(b, a) * 180 / :math.pi()
+      if degrees < 0, do: degrees + 360, else: degrees
     end
 
     test "the dark-theme rule sets --btn-color and --btn-fg from the neutral token pair, no literal colour" do
@@ -4313,20 +4427,715 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
-    test ".pk-pill-tag's --color-primary text meets the 4.5:1 contrast floor against --color-base-100 in both themes" do
-      for {label, block} <- [
-            {"light", light_theme_plugin_block()},
-            {"dark", dark_theme_plugin_block()}
-          ] do
-        primary = token_value(block, "--color-primary")
-        base_100 = token_value(block, "--color-base-100")
+    # Mirrors dark_lightbox_close_block/0's idiom above (lightbox close
+    # button dark-theme contrast describe block): sketch 055 (Option A,
+    # 2026-09-10) resolved the dark-mode primary-as-text regression via a
+    # dark-scoped override shared by 24 selectors (including .pk-pill-tag)
+    # rather than by changing a theme token, so the actual dark-mode ink
+    # for .pk-pill-tag is no longer --color-primary — it's whatever this
+    # override sets. Matching on the literal `[data-theme="dark"] ` +
+    # `.pk-pill-tag` selector text (guaranteed followed by a comma, since
+    # it is not the last selector in the list) pulls the real shared
+    # declaration body rather than assuming a hardcoded token name.
+    #
+    # UPDATED (quick task 260910-hdc, 2026-09-10): sketch 055's shared
+    # override now resolves `color` from `--pk-ink-brand`, not
+    # `--color-neutral` directly — see that token's provenance comment near
+    # the top of app.css and the amended comment above the CSS block itself.
+    defp dark_pill_tag_text_override_block do
+      case Regex.run(~r/\[data-theme="dark"\] \.pk-pill-tag\b.*?\{([^}]*)\}/s, css_source()) do
+        [_, body] ->
+          body
 
-        ratio = contrast_ratio(relative_luminance(primary), relative_luminance(base_100))
+        nil ->
+          flunk("No `[data-theme=\"dark\"] .pk-pill-tag` selector found in a dark-scoped override in assets/css/app.css")
+      end
+    end
+
+    test ".pk-pill-tag's text meets the 4.5:1 contrast floor in both themes and clears the brand-chroma floor in dark (260910-hdc)" do
+      light_block = light_theme_plugin_block()
+      light_primary = token_value(light_block, "--color-primary")
+      light_base_100 = token_value(light_block, "--color-base-100")
+      light_ratio = contrast_ratio(relative_luminance(light_primary), relative_luminance(light_base_100))
+
+      assert light_ratio >= 4.5,
+             "light theme: --color-primary (#{light_primary}) against --color-base-100 " <>
+               "(#{light_base_100}) measured #{Float.round(light_ratio, 2)}:1 — .pk-pill-tag's " <>
+               "hashtag text must clear the 4.5:1 WCAG AA text floor in both themes."
+
+      # Light's `--pk-ink-brand` declaration must be a variable READ of
+      # `--color-primary`, not a copied literal — so a future author cannot
+      # quietly replace it with a hex and let light silently drift from the
+      # brand manual.
+      #
+      # UPDATED (quick task 260910-l7q, Task 1 tracer): app.css now
+      # declares a SECOND plain `:root { ... }` block (the `--pk-ramp-*`
+      # ramp, ordered before this one) — `Regex.run/2` would silently match
+      # that one first and break this assertion, so this scans every plain
+      # `:root` block and picks the one containing `--pk-ink-brand`, the
+      # same disambiguation-by-content idiom `ramp_root_block/0` uses for
+      # its own sibling block.
+      root_body =
+        css_source()
+        |> then(&Regex.scan(~r/(?m)^:root\s*\{([^}]*)\}/, &1, capture: :all_but_first))
+        |> List.flatten()
+        |> Enum.find(&(&1 =~ ~r/--pk-ink-brand:/))
+        |> case do
+          nil -> flunk("No plain `:root { ... }` block declaring `--pk-ink-brand` found in assets/css/app.css")
+          body -> body
+        end
+
+      assert root_body =~ ~r/--pk-ink-brand:\s*var\(--color-primary\)\s*;/,
+             "`:root`'s `--pk-ink-brand` declaration must be `var(--color-primary)`, a variable " <>
+               "read — not a copied hex literal — found: #{inspect(root_body)}"
+
+      dark_override_body = dark_pill_tag_text_override_block()
+
+      assert dark_override_body =~ ~r/color:\s*var\(--pk-ink-brand\)\s*;/,
+             "The dark-scoped override covering `.pk-pill-tag` must set `color` to a read of " <>
+               "`--pk-ink-brand` (quick task 260910-hdc) — found: #{inspect(dark_override_body)}"
+
+      dark_ink_brand_body = dark_pk_ink_brand_root_block()
+      dark_ink_brand = token_value(dark_ink_brand_body, "--pk-ink-brand")
+
+      dark_block = dark_theme_plugin_block()
+      dark_base_100 = token_value(dark_block, "--color-base-100")
+      dark_base_200 = token_value(dark_block, "--color-base-200")
+      dark_base_300 = token_value(dark_block, "--color-base-300")
+
+      for {ground_name, ground_hex} <- [
+            {"base-100", dark_base_100},
+            {"base-200", dark_base_200},
+            {"base-300", dark_base_300}
+          ] do
+        ratio = contrast_ratio(relative_luminance(dark_ink_brand), relative_luminance(ground_hex))
 
         assert ratio >= 4.5,
-               "#{label} theme: --color-primary (#{primary}) against --color-base-100 " <>
-                 "(#{base_100}) measured #{Float.round(ratio, 2)}:1 — .pk-pill-tag's hashtag " <>
-                 "text must clear the 4.5:1 WCAG AA text floor in both themes."
+               "dark theme: --pk-ink-brand (#{dark_ink_brand}) against --color-#{ground_name} " <>
+                 "(#{ground_hex}) measured #{Float.round(ratio, 2)}:1 — .pk-pill-tag's hashtag " <>
+                 "text (dark-scoped to --pk-ink-brand) must clear the 4.5:1 WCAG AA text floor " <>
+                 "on every dark ground."
+      end
+
+      # The chroma floor is the actual fix: a value can clear every contrast
+      # ratio above while still being a de-saturated grey-lavender that
+      # reads as "disabled" rather than "brand purple". A future retune
+      # that walks --pk-ink-brand back toward --color-neutral's C0.057 must
+      # fail here rather than ship silently.
+      chroma = oklch_chroma(dark_ink_brand)
+
+      assert chroma >= 0.11,
+             "dark theme: --pk-ink-brand (#{dark_ink_brand}) measured OKLCh chroma " <>
+               "#{Float.round(chroma, 3)}, below the 0.11 floor that distinguishes a saturated " <>
+               "brand purple from a desaturated 'disabled' grey-lavender."
+    end
+
+    # Sketch 056 (2026-09-10), developer-chosen Option D ("split-by-role")
+    # for quick task 260910-gck: `btn-outline btn-primary`'s dark-mode
+    # colour (--color-primary as text/border) failed both the 4.5:1 WCAG
+    # 1.4.3 floor and the 3:1 1.4.11 floor on every outline-primary CTA
+    # (260910-gck-EVIDENCE.md). The fix splits by role: Sumate (the site's
+    # actual primary CTA) gets a dark-scoped SOLID fill reusing the
+    # already-proven .pk-sumate-btn-solid pair; the genuinely secondary
+    # CTAs (.pk-preview-cta, .pk-btn-secondary) get sketch 055's ink-swap
+    # mechanism. Matches on literal selector text (not a hardcoded token
+    # pair), same idiom as dark_pill_tag_text_override_block/0 above, so a
+    # future palette/mechanism change re-fires this tripwire instead of
+    # silently passing.
+    defp dark_sumate_solid_fill_block do
+      case Regex.run(
+             ~r/\[data-theme="dark"\] \.pk-sumate-btn:not\(\.pk-sumate-btn-solid\)\s*\{([^}]*)\}/s,
+             css_source()
+           ) do
+        [_, body] ->
+          body
+
+        nil ->
+          flunk(
+            "No `[data-theme=\"dark\"] .pk-sumate-btn:not(.pk-sumate-btn-solid)` rule found " <>
+              "in assets/css/app.css"
+          )
+      end
+    end
+
+    # UPDATED (quick task 260910-hdc, 2026-09-10): this block's ink-swap
+    # target moved from `--color-neutral` to `--pk-ink-brand` — see that
+    # token's provenance comment near the top of app.css and the amended
+    # sketch 056 comment above the CSS block itself.
+    defp dark_secondary_cta_ink_swap_block do
+      case Regex.run(
+             ~r/\[data-theme="dark"\] \.pk-preview-cta,\s*\[data-theme="dark"\] \.pk-btn-secondary\s*\{([^}]*)\}/s,
+             css_source()
+           ) do
+        [_, body] ->
+          body
+
+        nil ->
+          flunk(
+            ~s(No `[data-theme="dark"] .pk-preview-cta, [data-theme="dark"] .pk-btn-secondary` ) <>
+              "rule found in assets/css/app.css"
+          )
+      end
+    end
+
+    test "dark-mode Sumate CTA solid-fills to the primary/primary-content pair (260910-gck)" do
+      solid_body = dark_sumate_solid_fill_block()
+
+      assert solid_body =~ ~r/background:\s*var\(--color-primary\)\s*;/,
+             "The dark-scoped Sumate override must set `background` to a read of " <>
+               "`--color-primary` — found: #{inspect(solid_body)}"
+
+      assert solid_body =~ ~r/color:\s*var\(--color-primary-content\)\s*;/,
+             "The dark-scoped Sumate override must set `color` to a read of " <>
+               "`--color-primary-content` — found: #{inspect(solid_body)}"
+
+      assert solid_body =~ ~r/border-color:\s*var\(--color-primary\)\s*;/,
+             "The dark-scoped Sumate override must set `border-color` to a read of " <>
+               "`--color-primary` — found: #{inspect(solid_body)}"
+
+      dark_block = dark_theme_plugin_block()
+      primary = token_value(dark_block, "--color-primary")
+      primary_content = token_value(dark_block, "--color-primary-content")
+      ratio = contrast_ratio(relative_luminance(primary_content), relative_luminance(primary))
+
+      assert ratio >= 4.5,
+             "dark theme: --color-primary-content (#{primary_content}) against its own solid " <>
+               "--color-primary background (#{primary}) measured #{Float.round(ratio, 2)}:1 — " <>
+               "Sumate's dark-mode solid-fill text must clear the 4.5:1 WCAG AA text floor."
+    end
+
+    test "dark-mode Sumate solid-fill excludes the sticky bar (not re-declared, 260910-gck)" do
+      # dark_sumate_solid_fill_block/0 already flunks if the rule is missing
+      # or if its selector doesn't literally read `:not(.pk-sumate-btn-solid)`
+      # — this test additionally proves no SECOND dark-scoped rule also
+      # targets `.pk-sumate-btn-solid` with the same background/color/
+      # border-color trio, which would recreate the two-rules-compete-on-
+      # one-property failure this file has already fixed twice.
+      _ = dark_sumate_solid_fill_block()
+
+      refute css_source() =~
+               ~r/\[data-theme="dark"\] \.pk-sumate-btn-solid\s*\{[^}]*background:\s*var\(--color-primary\)/s,
+             "`.pk-sumate-btn-solid` must not be re-declared by a second dark-scoped rule " <>
+               "setting the same background/color/border-color properties it already " <>
+               "declares unscoped."
+    end
+
+    test "dark-mode secondary CTAs ink-swap to --pk-ink-brand, clearing both floors (260910-hdc)" do
+      ink_body = dark_secondary_cta_ink_swap_block()
+
+      assert ink_body =~ ~r/color:\s*var\(--pk-ink-brand\)\s*;/,
+             "The dark-scoped secondary-CTA override must set `color` to a read of " <>
+               "`--pk-ink-brand` (quick task 260910-hdc) — found: #{inspect(ink_body)}"
+
+      assert ink_body =~ ~r/border-color:\s*var\(--pk-ink-brand\)\s*;/,
+             "The dark-scoped secondary-CTA override must set `border-color` to a read of " <>
+               "`--pk-ink-brand` (quick task 260910-hdc) — found: #{inspect(ink_body)}"
+
+      dark_ink_brand_body = dark_pk_ink_brand_root_block()
+      ink_brand = token_value(dark_ink_brand_body, "--pk-ink-brand")
+
+      dark_block = dark_theme_plugin_block()
+      base_100 = token_value(dark_block, "--color-base-100")
+      base_200 = token_value(dark_block, "--color-base-200")
+
+      ratio_100 = contrast_ratio(relative_luminance(ink_brand), relative_luminance(base_100))
+      ratio_200 = contrast_ratio(relative_luminance(ink_brand), relative_luminance(base_200))
+
+      assert ratio_100 >= 4.5,
+             "dark theme: --pk-ink-brand (#{ink_brand}) against --color-base-100 (#{base_100}) " <>
+               "measured #{Float.round(ratio_100, 2)}:1 — the preview CTA and secondary button " <>
+               "must clear the 4.5:1 WCAG AA text floor on base-100."
+
+      assert ratio_100 >= 3.0,
+             "dark theme: --pk-ink-brand (#{ink_brand}) against --color-base-100 (#{base_100}) " <>
+               "measured #{Float.round(ratio_100, 2)}:1 — the outline border must clear the " <>
+               "3:1 WCAG 1.4.11 non-text floor on base-100."
+
+      assert ratio_200 >= 4.5,
+             "dark theme: --pk-ink-brand (#{ink_brand}) against --color-base-200 (#{base_200}) " <>
+               "measured #{Float.round(ratio_200, 2)}:1 — the closing-band ground must also " <>
+               "clear the 4.5:1 WCAG AA text floor."
+
+      assert ratio_200 >= 3.0,
+             "dark theme: --pk-ink-brand (#{ink_brand}) against --color-base-200 (#{base_200}) " <>
+               "measured #{Float.round(ratio_200, 2)}:1 — the outline border must clear the " <>
+               "3:1 WCAG 1.4.11 non-text floor on base-200."
+
+      chroma = oklch_chroma(ink_brand)
+
+      assert chroma >= 0.11,
+             "dark theme: --pk-ink-brand (#{ink_brand}) measured OKLCh chroma " <>
+               "#{Float.round(chroma, 3)}, below the 0.11 floor that distinguishes a saturated " <>
+               "brand purple from a desaturated 'disabled' grey-lavender."
+    end
+
+    test "light theme's outline-primary CTAs are untouched by the dark-mode fix (260910-gck)" do
+      light_block = light_theme_plugin_block()
+      light_primary = token_value(light_block, "--color-primary")
+      light_base_100 = token_value(light_block, "--color-base-100")
+      ratio = contrast_ratio(relative_luminance(light_primary), relative_luminance(light_base_100))
+
+      assert ratio >= 4.5,
+             "light theme: --color-primary (#{light_primary}) against --color-base-100 " <>
+               "(#{light_base_100}) measured #{Float.round(ratio, 2)}:1 — light mode's " <>
+               "outline-primary CTAs (Sumate, preview CTA, secondary button) must still " <>
+               "resolve straight from --color-primary with no dark-scoped override involved."
+
+      case Regex.run(~r/(?m)^\.pk-sumate-btn\s*\{([^}]*)\}/s, css_source()) do
+        [_, base_body] ->
+          refute base_body =~ ~r/color:|background:/,
+                 "The base (unscoped) `.pk-sumate-btn` rule must declare no `color`/`background` " <>
+                   "— light mode's outline treatment must keep coming from daisyUI's own " <>
+                   "`btn-outline btn-primary` utilities, untouched by this dark-only fix."
+
+        nil ->
+          flunk("No top-level `.pk-sumate-btn { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    # Quick task 260910-hdc, Task 2: the tripwire that encodes "one hue per
+    # theme" — the actual thing this task fixes, distinct from Task 1's
+    # contrast/chroma-floor tests above. A future palette retune that
+    # re-splits the muted ink away from dark's brand hue must fail here
+    # rather than ship silently.
+    test "dark's muted ink sits within 2 degrees of dark's brand hue, at a chroma between the old muted value and --pk-ink-brand (260910-hdc)" do
+      dark_block = dark_theme_plugin_block()
+      neutral = token_value(dark_block, "--color-neutral")
+      primary = token_value(dark_block, "--color-primary")
+
+      neutral_hue = oklch_hue(neutral)
+      primary_hue = oklch_hue(primary)
+      hue_delta = abs(neutral_hue - primary_hue)
+
+      assert hue_delta <= 2.0,
+             "dark theme: --color-neutral (#{neutral}, hue #{Float.round(neutral_hue, 1)}°) must " <>
+               "sit within 2 degrees of --color-primary's hue (#{primary}, hue " <>
+               "#{Float.round(primary_hue, 1)}°) — measured delta #{Float.round(hue_delta, 1)}° — " <>
+               "so dark theme carries one purple hue, not two families 6.6 degrees apart."
+
+      neutral_chroma = oklch_chroma(neutral)
+
+      dark_ink_brand_body = dark_pk_ink_brand_root_block()
+      ink_brand = token_value(dark_ink_brand_body, "--pk-ink-brand")
+      ink_brand_chroma = oklch_chroma(ink_brand)
+
+      assert neutral_chroma < ink_brand_chroma,
+             "dark theme: --color-neutral's chroma (#{Float.round(neutral_chroma, 3)}) must stay " <>
+               "strictly below --pk-ink-brand's chroma (#{Float.round(ink_brand_chroma, 3)}), so " <>
+               "the muted tier can never overtake the interactive-ink tier."
+
+      old_muted_chroma = oklch_chroma("#B8A6CC")
+
+      assert neutral_chroma > old_muted_chroma,
+             "dark theme: --color-neutral's chroma (#{Float.round(neutral_chroma, 3)}) must be " <>
+               "strictly above the superseded muted value's chroma " <>
+               "(#{Float.round(old_muted_chroma, 3)}, #B8A6CC) — the whole point of this task's " <>
+               "retune was to lift chroma onto the brand hue, not merely relabel the old value."
+    end
+  end
+
+  # Quick task 260910-if9, Task 3 (developer decision: Pick 1 = C2 -- rotate
+  # dark's --color-base-100/200/300 onto the brand hue (H313.1), holding L
+  # and C; Pick 2 = W1 -- no label-ink change). Reuses
+  # dark_theme_plugin_block/0, light_theme_plugin_block/0, token_value/2,
+  # oklch_hue/1, oklch_chroma/1, relative_luminance/1 and contrast_ratio/2
+  # from the describe blocks above -- no second CSS-source or OKLCh harness
+  # declared here. C1 and C3 were costed in AUDIT.md but not picked (C1 --
+  # narrower blast radius but caps out around a 10-degree residual spread
+  # before the WCAG floor breaks; C3 -- structurally symmetric across themes
+  # but does not close dark's own internal split) and are not tested here.
+  # W2/W3 (new/split label-ink token) are not written either -- W1 was
+  # picked, so `.pk-fact-col dt` / `.pk-bgg-label` / `.pk-bgg-lbl` /
+  # `.pk-bgg-foot` are asserted UNCHANGED below, not given a new token.
+  describe "quick task 260910-if9: dark base ladder rotated onto the brand hue (C2)" do
+    # Task 1's oklch-audit.mjs proposed 8 degrees as a starting threshold
+    # (light's own worst intra-tone spread, .pk-pill-accent, measures 9.8
+    # degrees) -- Task 2's decision did not contest this number, so it is
+    # taken as confirmed. C2's rotation lands the whole ladder within ~1
+    # degree of the ink hue, well under this threshold regardless.
+    @if9_hue_family_threshold_deg 8.0
+
+    # Sketch 054's own four pinned WCAG ratios (assets/css/app.css's dark
+    # `daisyui-theme` block comment, displayed there rounded to 2 decimals
+    # as 13.59/6.85/12.07/6.70:1). These module attributes hold the true
+    # unrounded floor truncated to 3 decimals (never rounded UP) so this
+    # test cannot fail purely from the source comment's own display
+    # rounding -- primary-content-on-primary in particular is untouched by
+    # C2 and its precise value (6.696172) sits just BELOW the comment's
+    # rounded-up "6.70:1", which a naive 6.70 floor would fail on a value
+    # C2 never touched.
+    @sketch_054_text_on_bg_floor 13.593
+    @sketch_054_muted_on_bg_floor 6.847
+    @sketch_054_text_on_surface_floor 12.069
+    @sketch_054_primary_content_on_primary_floor 6.696
+
+    test "dark's --color-base-100/200/300 sit within the hue-family threshold of dark's ink (--color-neutral), closing the F1 split (260910-if9 AUDIT.md)" do
+      dark_block = dark_theme_plugin_block()
+
+      base_100 = token_value(dark_block, "--color-base-100")
+      base_200 = token_value(dark_block, "--color-base-200")
+      base_300 = token_value(dark_block, "--color-base-300")
+      neutral = token_value(dark_block, "--color-neutral")
+
+      hues = %{
+        "base-100" => oklch_hue(base_100),
+        "base-200" => oklch_hue(base_200),
+        "base-300" => oklch_hue(base_300),
+        "neutral" => oklch_hue(neutral)
+      }
+
+      {min_name, min_hue} = Enum.min_by(hues, fn {_, h} -> h end)
+      {max_name, max_hue} = Enum.max_by(hues, fn {_, h} -> h end)
+      spread = max_hue - min_hue
+
+      assert spread <= @if9_hue_family_threshold_deg,
+             "dark theme: max hue spread across --color-base-100/200/300 and --color-neutral " <>
+               "is #{Float.round(spread, 1)}° (#{min_name} #{Float.round(min_hue, 1)}° to " <>
+               "#{max_name} #{Float.round(max_hue, 1)}°) -- must be at or below the " <>
+               "#{@if9_hue_family_threshold_deg}° hue-family threshold Task 1's audit proposed " <>
+               "and Task 2's C2 pick (rotate the base ladder onto the brand hue) commits to " <>
+               "closing. Before this fix, `.pk-pill-outline`/`.pk-chip`'s border " <>
+               "(--color-base-300) measured 15.0° from --color-neutral and `.pk-pill-neutral`'s " <>
+               "fill (--color-base-200) measured 14.6° from it (260910-if9 AUDIT.md, finding F1)."
+    end
+
+    test "light theme's --color-base-100/300 are unchanged by the dark-only C2 rotation, and --color-base-200 is unchanged by C2 specifically" do
+      light_block = light_theme_plugin_block()
+
+      assert token_value(light_block, "--color-base-100") == "#FFFFFF",
+             "light theme: --color-base-100 must stay byte-identical -- C2 is dark-scoped only."
+
+      # UPDATED (quick task 260910-l7q): light `--color-base-200` legitimately
+      # moved off its pre-l7q byte-identical value (#F3ECFA) when it JOINed
+      # the shared `--pk-ramp-*` ramp under the FLAT envelope (dE 0.0085,
+      # per ramp-audit.mjs) -- this is a DIFFERENT, LATER task's deliberate
+      # change, not a 260910-if9 C2 regression. token_value/2's one-hop
+      # `var(--pk-ramp-*)` dereference (also added by 260910-l7q) resolves
+      # this to the ramp's real hex, so this assertion still proves "C2
+      # itself never touched light" even though light's OWN value has since
+      # moved for an unrelated, later, developer-approved reason.
+      assert token_value(light_block, "--color-base-200") == "#F6EAFD",
+             "light theme: --color-base-200 must resolve to the shared ramp's --pk-ramp-100 " <>
+               "stop (260910-l7q) -- C2 itself never touched this value."
+
+      assert token_value(light_block, "--color-base-300") == "#E3D3F0",
+             "light theme: --color-base-300 must stay byte-identical -- C2 is dark-scoped only."
+    end
+
+    test "dark's --color-neutral ink still clears the WCAG 4.5:1 text floor against --color-base-200 (pill fill) and --color-base-100 (the ground transparent-fill tones render against)" do
+      dark_block = dark_theme_plugin_block()
+      neutral = token_value(dark_block, "--color-neutral")
+      base_100 = token_value(dark_block, "--color-base-100")
+      base_200 = token_value(dark_block, "--color-base-200")
+
+      ratio_on_fill = contrast_ratio(relative_luminance(neutral), relative_luminance(base_200))
+      ratio_on_page = contrast_ratio(relative_luminance(neutral), relative_luminance(base_100))
+
+      assert ratio_on_fill >= 4.5,
+             "dark theme: --color-neutral (#{neutral}) on --color-base-200 (#{base_200}, " <>
+               "`.pk-pill-neutral`'s fill after the C2 rotation) measured " <>
+               "#{Float.round(ratio_on_fill, 2)}:1 -- must clear the 4.5:1 WCAG text floor."
+
+      assert ratio_on_page >= 4.5,
+             "dark theme: --color-neutral (#{neutral}) on --color-base-100 (#{base_100}, the " <>
+               "page ground `.pk-pill-outline`/`.pk-chip` render against with a transparent " <>
+               "fill) measured #{Float.round(ratio_on_page, 2)}:1 -- must clear the 4.5:1 WCAG " <>
+               "text floor."
+    end
+
+    test "sketch 054's four pinned dark-mode contrast assertions hold at or above their recorded ratios after the C2 rotation" do
+      dark_block = dark_theme_plugin_block()
+
+      base_100 = token_value(dark_block, "--color-base-100")
+      base_200 = token_value(dark_block, "--color-base-200")
+      base_content = token_value(dark_block, "--color-base-content")
+      neutral = token_value(dark_block, "--color-neutral")
+      primary = token_value(dark_block, "--color-primary")
+      primary_content = token_value(dark_block, "--color-primary-content")
+
+      text_on_bg = contrast_ratio(relative_luminance(base_content), relative_luminance(base_100))
+      muted_on_bg = contrast_ratio(relative_luminance(neutral), relative_luminance(base_100))
+      text_on_surface = contrast_ratio(relative_luminance(base_content), relative_luminance(base_200))
+
+      primary_content_on_primary =
+        contrast_ratio(relative_luminance(primary_content), relative_luminance(primary))
+
+      assert text_on_bg >= @sketch_054_text_on_bg_floor,
+             "dark theme: text (#{base_content}) on bg (#{base_100}) measured " <>
+               "#{Float.round(text_on_bg, 4)}:1 -- must stay at or above sketch 054's recorded " <>
+               "#{@sketch_054_text_on_bg_floor}:1. A C2 base-ladder rotation must never silently " <>
+               "degrade sketch 054's pinned dark-mode contrast."
+
+      assert muted_on_bg >= @sketch_054_muted_on_bg_floor,
+             "dark theme: muted (#{neutral}) on bg (#{base_100}) measured " <>
+               "#{Float.round(muted_on_bg, 4)}:1 -- must stay at or above sketch 054's recorded " <>
+               "#{@sketch_054_muted_on_bg_floor}:1."
+
+      assert text_on_surface >= @sketch_054_text_on_surface_floor,
+             "dark theme: text (#{base_content}) on surface (#{base_200}) measured " <>
+               "#{Float.round(text_on_surface, 4)}:1 -- must stay at or above sketch 054's " <>
+               "recorded #{@sketch_054_text_on_surface_floor}:1."
+
+      assert primary_content_on_primary >= @sketch_054_primary_content_on_primary_floor,
+             "dark theme: primary-content (#{primary_content}) on primary (#{primary}) measured " <>
+               "#{Float.round(primary_content_on_primary, 4)}:1 -- must stay at or above sketch " <>
+               "054's recorded #{@sketch_054_primary_content_on_primary_floor}:1 (--color-primary " <>
+               "and --color-primary-content are untouched by C2 -- this pins that fact)."
+    end
+
+    test "dark's uppercase/inline label ink rules still read var(--color-neutral) -- W1 (no change) leaves the label tier untouched" do
+      src = css_source()
+
+      for selector <- [".pk-fact-col dt", ".pk-bgg-label", ".pk-bgg-lbl", ".pk-bgg-foot"] do
+        case Regex.run(~r/(?m)^#{Regex.escape(selector)}\s*\{([^}]*)\}/s, src) do
+          [_, body] ->
+            assert body =~ ~r/color:\s*var\(--color-neutral\)\s*;/,
+                   "`#{selector}` must still read `color: var(--color-neutral)` -- Task 2's Pick " <>
+                     "2 was W1 (no change): dark's label-to-body lightness gap (ΔL 20.1) is " <>
+                     "already tighter than light's (ΔL 26.9) and clears 6.85:1 contrast, so this " <>
+                     "task deliberately does not introduce a --pk-ink-label token."
+
+          nil ->
+            flunk("No top-level `#{selector} { ... }` rule found in assets/css/app.css")
+        end
+      end
+    end
+  end
+
+  # Quick task 260910-l7q, Task 5: the invariant that is the entire reason
+  # approach (b) -- daisyUI's `--color-*` slots as `var()` reads into a
+  # shared `--pk-ramp-*` ramp -- was worth its blast radius. Reuses
+  # dark_theme_plugin_block/0, light_theme_plugin_block/0, token_value/2,
+  # ramp_root_block/0, css_source/0, oklab/1, oklch_chroma/1 and
+  # oklch_hue/1 from the describe blocks above -- no second CSS-source or
+  # OKLCh harness declared here. This exact describe name is the string
+  # the Task 5 red proof (below, in this plan) greps ExUnit's failure
+  # output for -- a different name would make that proof vacuous.
+  describe "quick task 260910-l7q: shared OKLCh ramp invariants" do
+    # Envelope constants as committed to the ramp block's own header
+    # comment in app.css (Task 3 Decision 1: FLAT, k=0.85, H313.1). A
+    # future change to either value must update both the CSS comment and
+    # these two module attributes together.
+    @l7q_ramp_hue 313.1
+    @l7q_ramp_k 0.85
+
+    # Roles DELIBERATELY off the ramp under the FLAT envelope Task 3 picked
+    # -- either categorically (D-Semantics' four semantic hues + their
+    # -content slots; pure achromatic white) or because Task 2's
+    # role-by-role audit put them in the blocked set (chroma tier or
+    # contrast -- see the per-role annotation directly above each
+    # declaration in app.css, and 260910-l7q-SUMMARY.md for the full
+    # table). A role in a theme's `--color-*` list that is NEITHER a
+    # `var(--pk-ramp-*)` read NOR on that theme's allow-list here is
+    # exactly the silent drift T-l7q-03 exists to catch.
+    @l7q_light_off_ramp ~w(
+      base-100 base-300 base-content primary-content secondary secondary-content
+      accent neutral neutral-content
+      info info-content success success-content warning warning-content error error-content
+    )
+    @l7q_dark_off_ramp ~w(
+      base-100 primary-content secondary secondary-content accent accent-content
+      neutral neutral-content
+      info info-content success success-content warning warning-content error error-content
+    )
+
+    # Every `--color-<role>: <value>;` declaration in a theme block, as
+    # {role, trimmed value} pairs -- shared by both invariant tests below.
+    defp l7q_color_declarations(body) do
+      ~r/--color-([a-z0-9-]+):\s*([^;]+);/
+      |> Regex.scan(body)
+      |> Enum.map(fn [_, role, value] -> {role, String.trim(value)} end)
+    end
+
+    # The 11 committed ramp stops, in the order they appear in
+    # `ramp_root_block/0`'s body -- which IS descending-lightness order by
+    # construction (the block is hand-authored top-to-bottom that way and
+    # test 1 below separately proves nothing else shares the block), so no
+    # re-sort is needed here.
+    defp l7q_ramp_stops do
+      ~r/--pk-ramp-([0-9]+):\s*(#[0-9A-Fa-f]{6});/
+      |> Regex.scan(ramp_root_block())
+      |> Enum.map(fn [_, stop, hex] -> {stop, hex} end)
+    end
+
+    # OKLCh -> linear sRGB (the exact inverse of oklab/1's forward
+    # matrices, mirroring ramp-audit.mjs's own `oklchToLab`/
+    # `labToLinearRgb` -- ported here, not re-derived, per D-NoFourthCopy's
+    # spirit: one canonical derivation, now in two languages because the
+    # gate needs to run in both, never three+ independent copies).
+    defp l7q_oklch_to_lab(l_pct, c, h_deg) do
+      l = l_pct / 100
+      h_rad = h_deg * :math.pi() / 180
+      {l, c * :math.cos(h_rad), c * :math.sin(h_rad)}
+    end
+
+    defp l7q_lab_to_linear_rgb({l, a, b}) do
+      l_ = l + 0.3963377774 * a + 0.2158037573 * b
+      m_ = l - 0.1055613458 * a - 0.0638541728 * b
+      s_ = l - 0.0894841775 * a - 1.291485548 * b
+
+      ll = l_ * l_ * l_
+      mm = m_ * m_ * m_
+      ss = s_ * s_ * s_
+
+      r = 4.0767416621 * ll - 3.3077115913 * mm + 0.2309699292 * ss
+      g = -1.2684380046 * ll + 2.6097574011 * mm - 0.3413193965 * ss
+      b_out = -0.0041960863 * ll - 0.7034186147 * mm + 1.707614701 * ss
+
+      {r, g, b_out}
+    end
+
+    defp l7q_in_gamut?(l_pct, c, h_deg) do
+      eps = 1.0e-6
+      {r, g, b} = l7q_lab_to_linear_rgb(l7q_oklch_to_lab(l_pct, c, h_deg))
+      r >= -eps and r <= 1 + eps and g >= -eps and g <= 1 + eps and b >= -eps and b <= 1 + eps
+    end
+
+    # Ports ramp-audit.mjs's own `maxChroma` bisection -- the maximum
+    # in-gamut sRGB chroma at a given OKLCh lightness/hue. Used ONLY to
+    # check that no committed stop exceeds the declared k times this
+    # ceiling, never to regenerate the ramp (that stays ramp-audit.mjs's
+    # job).
+    defp l7q_max_chroma(l_pct, h_deg) do
+      {lo, _hi} =
+        Enum.reduce(1..40, {0.0, 0.5}, fn _, {lo, hi} ->
+          mid = (lo + hi) / 2
+          if l7q_in_gamut?(l_pct, mid, h_deg), do: {mid, hi}, else: {lo, mid}
+        end)
+
+      lo
+    end
+
+    defp l7q_oklch_lightness(hex) do
+      {l, _a, _b} = oklab(hex)
+      l * 100
+    end
+
+    test "single source: --pk-ramp-* stops are declared exactly 11 times, all inside one plain :root block, and no theme block redeclares one" do
+      src = css_source()
+      full_declaration = ~r/(?m)^\s*--pk-ramp-[0-9]{2,3}:\s*#[0-9A-Fa-f]{6};\s*$/
+
+      all_declarations = Regex.scan(full_declaration, src)
+
+      assert length(all_declarations) == 11,
+             "Expected exactly 11 `--pk-ramp-*` stop declarations (a full `token: #hex;` " <>
+               "line) across the whole stylesheet, found #{length(all_declarations)}. A " <>
+               "second declaration -- especially inside a daisyui-theme block -- would " <>
+               "restore per-theme divergence while still looking shared (plan threat " <>
+               "T-l7q-02)."
+
+      in_ramp_block = Regex.scan(full_declaration, ramp_root_block())
+
+      assert length(in_ramp_block) == 11,
+             "All 11 --pk-ramp-* stops must live inside the ONE plain `:root` block that " <>
+               "declares them -- found #{length(in_ramp_block)} inside it against 11 total " <>
+               "in the whole file, meaning at least one stop is declared somewhere else."
+
+      for {block_name, block_body} <- [
+            {"dark theme", dark_theme_plugin_block()},
+            {"light theme", light_theme_plugin_block()}
+          ] do
+        refute Regex.match?(~r/(?m)^\s*--pk-ramp-[0-9]+:/, block_body),
+               "The #{block_name} block must never declare its own --pk-ramp-* token -- it " <>
+                 "may only READ one via var(--pk-ramp-NNN)."
+      end
+    end
+
+    test "no silent drift off-ramp: every --color-* role is either a ramp read or an explicitly allow-listed off-ramp role" do
+      for {theme_name, block, allow_list} <- [
+            {"light", light_theme_plugin_block(), @l7q_light_off_ramp},
+            {"dark", dark_theme_plugin_block(), @l7q_dark_off_ramp}
+          ] do
+        for {role, value} <- l7q_color_declarations(block) do
+          on_ramp = Regex.match?(~r/^var\(--pk-ramp-[0-9]+\)$/, value)
+          allow_listed = role in allow_list
+
+          assert on_ramp or allow_listed,
+                 "#{theme_name} theme: --color-#{role} is #{inspect(value)} -- neither a " <>
+                   "var(--pk-ramp-*) read nor on the explicit off-ramp allow-list above. " <>
+                   "Either this role must join the ramp, or its name must be added to the " <>
+                   "allow-list with a recorded reason -- this is the exact drift the " <>
+                   "260910-efe -> gck -> hdc -> if9 chain is a record of (plan threat T-l7q-03)."
+        end
+      end
+    end
+
+    test "the shared swatch holds: light primary, light accent-content and dark base-200 resolve to the identical hex at the brand hue" do
+      light_block = light_theme_plugin_block()
+      dark_block = dark_theme_plugin_block()
+
+      light_primary = token_value(light_block, "--color-primary")
+      light_accent_content = token_value(light_block, "--color-accent-content")
+      dark_base_200 = token_value(dark_block, "--color-base-200")
+
+      assert light_primary == light_accent_content,
+             "light --color-primary (#{light_primary}) and --color-accent-content " <>
+               "(#{light_accent_content}) must resolve to the identical hex -- both are the " <>
+               "same forced D-HueMove join onto the same ramp stop."
+
+      assert light_primary == dark_base_200,
+             "light --color-primary/--color-accent-content (#{light_primary}) and dark " <>
+               "--color-base-200 (#{dark_base_200}) must resolve to the identical hex -- " <>
+               "this is the developer's own 'Reservar para el sábado' motivating example " <>
+               "(260910-l7q-CONTEXT.md), closed by construction. A future palette edit that " <>
+               "quietly un-shares this swatch must fail here."
+
+      hue = oklch_hue(light_primary)
+      raw_delta = abs(hue - @l7q_ramp_hue)
+      hue_delta = min(raw_delta, 360 - raw_delta)
+
+      assert hue_delta <= 2.0,
+             "The shared swatch (#{light_primary}) measured OKLCh hue " <>
+               "#{Float.round(hue, 1)}°, #{Float.round(hue_delta, 1)}° from the ramp's " <>
+               "brand hue H#{@l7q_ramp_hue} -- must stay within the same 2° tolerance the " <>
+               "260910-hdc tripwire already uses."
+    end
+
+    test "the ramp is a ramp: strictly monotone lightness, every stop within 2 degrees of H313.1, and no stop exceeds k * gamut-max chroma" do
+      stops = l7q_ramp_stops()
+
+      assert length(stops) == 11, "Expected 11 ramp stops, found #{length(stops)}"
+
+      stops_with_l = Enum.map(stops, fn {stop, hex} -> {stop, l7q_oklch_lightness(hex)} end)
+
+      for [{prev_stop, prev_l}, {stop, l}] <- Enum.chunk_every(stops_with_l, 2, 1, :discard) do
+        assert l < prev_l,
+               "Ramp stop --pk-ramp-#{stop} (L#{Float.round(l, 1)}) must be strictly darker " <>
+                 "than the preceding declared stop --pk-ramp-#{prev_stop} (L#{Float.round(prev_l, 1)}) " <>
+                 "-- the ladder must read as a ladder, in the order the stops are declared."
+      end
+
+      for {stop, hex} <- stops do
+        c = oklch_chroma(hex)
+
+        # Hue is numerically undefined at C=0 and increasingly noisy as C
+        # approaches it -- atan2(b, a) amplifies the same 8-bit hex
+        # quantization step into a proportionally larger angle at low
+        # chroma. Measured directly against this ramp's own near-white
+        # stop (--pk-ramp-50, C≈0.013): 2.6° off H313.1, purely from hex
+        # rounding, not a real hue drift. Every OTHER stop (C >= 0.028)
+        # measures within 0.4° of H313.1. 0.02 sits between the two, so it
+        # exempts only the one stop where hue is genuinely unmeasurable at
+        # hex precision, not a general escape hatch.
+        if c >= 0.02 do
+          hue = oklch_hue(hex)
+          raw_delta = abs(hue - @l7q_ramp_hue)
+          hue_delta = min(raw_delta, 360 - raw_delta)
+
+          assert hue_delta <= 2.0,
+                 "--pk-ramp-#{stop} (#{hex}) measured OKLCh hue #{Float.round(hue, 1)}°, " <>
+                   "#{Float.round(hue_delta, 1)}° from H#{@l7q_ramp_hue} -- every stop must " <>
+                   "sit on the ramp's single fixed hue."
+        end
+
+        l = l7q_oklch_lightness(hex)
+        ceiling = @l7q_ramp_k * l7q_max_chroma(l, @l7q_ramp_hue)
+
+        assert c <= ceiling + 0.005,
+               "--pk-ramp-#{stop} (#{hex}) measured OKLCh chroma #{Float.round(c, 4)}, above " <>
+                 "the declared envelope's ceiling #{Float.round(ceiling, 4)} " <>
+                 "(k=#{@l7q_ramp_k} * gamut-max at L#{Float.round(l, 1)}/H#{@l7q_ramp_hue}) -- " <>
+                 "no stop may be pinned to (or past) the sRGB gamut wall."
       end
     end
   end

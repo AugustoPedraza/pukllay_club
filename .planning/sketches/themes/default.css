@@ -3,6 +3,13 @@
    feel true to the real app, not a generic mockup. Drift from upstream is
    checked by ./check-theme-drift.sh — run it after editing either file.
 
+   Quick task 260910-l7q, Task 3 Decision 2 (developer picked D2-i): this
+   mirror keeps RESOLVED HEXES, not `--pk-ramp-*` tokens — sketches stay
+   standalone single-file HTML with no build step, and `check-theme-drift.sh`
+   dereferences upstream's `var(--pk-ramp-NNN)` reads to their hex before
+   comparing (its Task 1 `deref` helper), so the gate stays a plain hex-to-hex
+   compare on this side.
+
    Upstream mapping (app.css daisyUI variable -> sketch variable here):
      --color-base-100      -> --color-bg
      --color-base-200      -> --color-surface
@@ -37,15 +44,15 @@
 :root {
   /* Colors — from 01-UI-SPEC.md daisyUI theme overrides (light) */
   --color-bg: #FFFFFF;
-  --color-surface: #F3ECFA;
+  --color-surface: #F6EAFD;
   --color-surface-2: #E3D3F0;
   --color-text: #241238;
   --color-text-muted: #6B5B7B;
-  --color-primary: #3D096D;
+  --color-primary: #45105C;
   --color-primary-content: #FFFFFF;
   --color-secondary: #7E4CA5;
   --color-accent-bg: #EDE1F7;
-  --color-accent-text: #3D096D;
+  --color-accent-text: #45105C;
   --color-border: #E3D3F0;
   --color-danger: #B23A5C;
   --color-success: #3F8F6B;
@@ -106,20 +113,53 @@
    typography/spacing/shape/motion tokens are brand-locked and identical in
    both palettes. Shadows stay re-based on black instead of the brand-purple
    text color, since a purple-tinted shadow reads as muddy against an
-   already-purple background — they have no upstream daisyUI equivalent. */
+   already-purple background — they have no upstream daisyUI equivalent.
+
+   Re-derived AGAIN (2026-09-10) from sketch 054's winner "A (Lifted Ladder)
+   + W2 (Deep Jewel)" — base ladder lifted, primary deepened to a saturated
+   magenta-violet with white ink. See app.css's own dark daisyui-theme block
+   for the full provenance comment and measured contrast ratios.
+
+   Re-derived a third time (quick task 260910-hdc, 2026-09-10): --color-neutral
+   (mapped to --color-text-muted here) moved #B8A6CC -> #C59CDC, same
+   lightness, chroma lifted onto dark's own brand hue (H313.1) instead of
+   sitting 6.6 degrees off it. See app.css's own dark daisyui-theme block
+   comment for the full measured rationale.
+
+   Re-derived a fourth time (quick task 260910-if9, 2026-09-10): --color-bg /
+   --color-surface / --color-surface-2 (and --color-border, fed by the same
+   base-300 source) rotated onto dark's brand hue (H313.1), holding each
+   value's own lightness and chroma: --color-bg #2F154E -> #361148,
+   --color-surface #391B62 -> #441659, --color-surface-2/--color-border
+   #462278 -> #531B6D. See app.css's own dark daisyui-theme block comment
+   for the full measured before/after OKLCh figures and the C1/C2/C3
+   decision record.
+
+   Re-derived a fifth time (quick task 260910-l7q, 2026-09-10): light
+   --color-primary/--color-accent-text (mapped from base's --color-primary/
+   --color-accent-content) moved #3D096D -> #45105C, and dark --color-surface/
+   --color-surface-2/--color-border/--color-text/--color-primary moved onto
+   the new shared `--pk-ramp-*` ramp's FLAT-envelope stops (--color-surface
+   #441659 -> #45105C, --color-surface-2/--color-border #531B6D -> #551670,
+   --color-text #F3ECFA -> #F6EAFD, --color-primary #8C2BB6 -> #8C2AB7). The
+   headline result: light --color-primary/--color-accent-text and dark
+   --color-surface now resolve to the IDENTICAL hex (#45105C) -- one
+   physical swatch worn as a light-theme button fill and a dark-theme card
+   surface, mirroring upstream's own --pk-ramp-900. See app.css's own ramp
+   block header comment for the full generator/audit provenance. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #170A26;
-    --color-surface: #22103A;
-    --color-surface-2: #2F1750;
-    --color-text: #F3ECFA;
-    --color-text-muted: #B8A6CC;
-    --color-primary: #A97FD1;
-    --color-primary-content: #170A26;
-    --color-secondary: #7E4CA5;
-    --color-accent-bg: #3D2A56;
-    --color-accent-text: #E4D3F5;
-    --color-border: #2F1750;
+    --color-bg: #361148;
+    --color-surface: #45105C;
+    --color-surface-2: #551670;
+    --color-text: #F6EAFD;
+    --color-text-muted: #C59CDC;
+    --color-primary: #8C2AB7;
+    --color-primary-content: #FFFFFF;
+    --color-secondary: #642C77;
+    --color-accent-bg: #3A1F47;
+    --color-accent-text: #EBD7F4;
+    --color-border: #551670;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -128,17 +168,17 @@
   }
 }
 :root[data-theme="dark"] {
-  --color-bg: #170A26;
-  --color-surface: #22103A;
-  --color-surface-2: #2F1750;
-  --color-text: #F3ECFA;
-  --color-text-muted: #B8A6CC;
-  --color-primary: #A97FD1;
-  --color-primary-content: #170A26;
-  --color-secondary: #7E4CA5;
-  --color-accent-bg: #3D2A56;
-  --color-accent-text: #E4D3F5;
-  --color-border: #2F1750;
+  --color-bg: #361148;
+  --color-surface: #45105C;
+  --color-surface-2: #551670;
+  --color-text: #F6EAFD;
+  --color-text-muted: #C59CDC;
+  --color-primary: #8C2AB7;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #642C77;
+  --color-accent-bg: #3A1F47;
+  --color-accent-text: #EBD7F4;
+  --color-border: #551670;
   --color-danger: #E06B90;
   --color-success: #5FBE95;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);

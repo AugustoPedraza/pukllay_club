@@ -216,9 +216,18 @@ defmodule PukllayClubWeb.MotionRhythmTest do
     end
 
     test "the motion tokens still hold sketch 006's validated values" do
-      root = Enum.find_value(rules(source()), fn {sel, body} -> sel == ":root" && body end)
+      # UPDATED (quick task 260910-l7q): app.css now declares a SECOND plain
+      # `:root { ... }` block (the `--pk-ramp-*` shared colour ramp, ordered
+      # BEFORE this one) -- picking "the first `:root` block" would silently
+      # grab that one instead, which has no motion tokens at all. Disambiguate
+      # by content (the presence of `--duration-fast:`), the same idiom this
+      # stylesheet's other multi-`:root`-block tests already use.
+      root =
+        Enum.find_value(rules(source()), fn {sel, body} ->
+          sel == ":root" && String.contains?(body, "--duration-fast:") && body
+        end)
 
-      assert root, "No top-level `:root` block found in assets/css/app.css"
+      assert root, "No top-level `:root` block declaring `--duration-fast` found in assets/css/app.css"
 
       for {token, value} <- [
             {"--duration-fast", "100ms"},
