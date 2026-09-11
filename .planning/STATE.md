@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
-current_phase: "01.7"
-current_phase_name: Production Catalog Data & Security Hardening (INSERTED)
-status: executing
-stopped_at: Phase 01.7 context gathered
-last_updated: "2026-09-11T14:48:37.259Z"
+current_phase: "01.8"
+current_phase_name: SEO, Structured Data & Social Sharing
+status: planning
+stopped_at: Phase 01.7 complete, ready to plan Phase 01.8
+last_updated: "2026-09-11T19:57:09.772Z"
 last_activity: 2026-09-11
-last_activity_desc: Phase 01.7 execution started
-state_head: 9a4ee8a66bdbca51aab230849cfb9250310971b9
+last_activity_desc: Phase 01.7 complete, transitioned to Phase 01.8
+state_head: a8d9812aac1407baf1f2bab5077efe2782eac50c
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 5
 ---
 
 Total Phases: 9
@@ -27,22 +27,22 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.7 — Production Catalog Data & Security Hardening (INSERTED)
-security hardening), then Phase 01.8 (SEO, structured data, social sharing). Both are decimal
-insertions ahead of Phase 2, which keeps its number and scope.
+**Current focus:** Phase 01.8 — SEO, Structured Data & Social Sharing (INSERTED). Phase 01.7
+(production catalog data + security hardening) completed 2026-09-11. Both are decimal insertions
+ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.7 (Production Catalog Data & Security Hardening (INSERTED)) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 01.7
-Last activity: 2026-09-11 — Phase 01.7 execution started
+Phase: 01.8 — SEO, Structured Data & Social Sharing
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-11 — Phase 01.7 complete, transitioned to Phase 01.8
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 76
+- Total plans completed: 81
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -57,6 +57,7 @@ Last activity: 2026-09-11 — Phase 01.7 execution started
 | 01.3 | 12 | - | - |
 | 01.3.1 | 2 | - | - |
 | 01.4 | 11 | - | - |
+| 01.7 | 5 | - | - |
 
 **Recent Trend:**
 
@@ -207,6 +208,7 @@ Recent decisions affecting current work:
 - [Phase 01.5]: 01.5-06: .pk-band gains margin-block-end: 0 (unlayered rule beating layouts.ex's layered space-y-4 utility, no !important) to close G-01.5-2's inter-band whitespace strip; hero->#fotos boundary keeps its 16px deliberately (both sides transparent, only non-band-to-band boundary); new test/visual/about_geometry.mjs is this repo's first geometric CDP adjacency oracle, structured with a CHECKS list for plans 01.5-07/08 to extend
 - [Phase 01.5]: [Phase 01.5]: 01.5-07: G-01.5-3 items 3a/3b closed -- #cierre's header-height padding compensation removed (D-14 painted the band the header's own tint, invalidating D-10's premise) and its desktop min-height floor reduced 100vh -> 70vh/70dvh (checkpoint decision, reduce-floor ~70%); D-10 revised not superseded; test/visual/about_geometry.mjs gained a HEIGHTS sweep axis + gap-evenness/breathing-room/mobile-invariance checks
 - [Phase 01.5]: [Phase 01.5]: 01.5-08: About page opted into bottom_collapse (not boundary_collapse, top spacing untouched); .pk-about-cta-spacer replaced by body:has(.pk-about-cta-bar) document-end clearance (JS-free presence selector, no lifecycle hook needed); found+fixed a Rule 1 bug where Tailwind v4's space-y-4 applies margin-block-end (not margin-top, unlike v3) to non-last children, giving the fixed CTA bar a stray 16px margin that was eating into the reserved clearance; live probe confirmed last-band-to-footer distance now exactly 16px/24px matching the catalog/detail pages, closing G-01.5-3 and this whole gap-closure round
+- [Phase 01.7, 2026-09-11]: Phase closed after 5/5 plans, 3/3 UAT checkpoints passed, threats_open: 0 (01.7-SECURITY.md). Production DB restored to the real ~434-game catalog over an SSH tunnel (idempotent `upsert_game!/1` on `csv_row`, re-verified live); env-gated `Secure` session cookie shipped via an explicit `session_options/0` contract; CSP audited directive-by-directive and pinned as regression assertions; CSRF confirmed to cover LiveView's websocket connect flow; full-git-history secrets sweep (Gitleaks) found one reviewed false positive, no real leaks. One UAT finding (missing disconnect banner) diagnosed as a test-method artifact — Chrome DevTools Offline doesn't sever WebSocket connections — not an app defect; re-verified via `liveSocket.disconnect()/connect()`, passed clean. Two unrelated pre-existing UI issues surfaced as a side effect (banner lacks sticky positioning; LiveView's `JS.show` overrides its intended `display:flex`) — logged to Blockers/Concerns for a future pass, not this phase's scope.
 
 ### Pending Todos
 
@@ -243,10 +245,12 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
   CSP (`script-src 'self'`, no `unsafe-inline`, no nonce). The nonce refactor (SEC-05) must land
   before the JSON-LD content, and `unsafe-inline` is never an acceptable shortcut here.
 
-- Phase 01.7: `force_ssl`'s `exclude` list must stay in sync with kamal-proxy's `/up` health check,
-  and `csp.ex`'s single third-party `frame-src` (`ClubLinks.maps_embed_origin/0`, added in 01.4-12)
-  is deliberate — a generic "tighten the CSP" pass that removes it breaks the About page's Maps
-  embed.
+- Not a blocker, low priority: `.pk-conn-banner` (disconnect indicator, shipped in 01.2-15) has no
+  `position:sticky/fixed`, so on a real disconnect it renders above the viewport if the member is
+  scrolled down; separately, LiveView's `JS.show` writes inline `display:block`, silently
+  overriding the banner's intended `display:flex` layout. Both pre-existing, found incidentally
+  while diagnosing a Phase 01.7 UAT report (`.planning/debug/no-disconnect-banner.md`), not caused
+  by 01.7. Worth a small follow-up pass whenever the connection-status UI is next touched.
 
 - Phase 2: Embedding runtime throughput/latency for local CPU embeddings is a genuine open
   unknown (research/SUMMARY.md) — must be resolved via an explicit spike before committing to
@@ -316,10 +320,10 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-11T14:01:41.989Z
-Stopped at: Phase 01.7 context gathered
-Resume file: .planning/phases/01.7-production-catalog-data-security-hardening-inserted/01.7-CONTEXT.md
+Last session: 2026-09-11T21:05:00Z
+Stopped at: Phase 01.7 complete, ready to plan Phase 01.8
+Resume file: None
 
 ## Operator Next Steps
 
-- Plan the first v1.1 phase with /gsd-plan-phase 01.7
+- Discuss/plan Phase 01.8 with /gsd-discuss-phase 01.8 or /gsd-plan-phase 01.8
