@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-09-07)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.5 — About Page CTA Rhythm & Header Morph Refinement
+**Current focus:** Phase 01.6 — Light/Dark Theme Color-Family Consistency (complete; ready to ship)
 
 ## Current Position
 
