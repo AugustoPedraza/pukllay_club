@@ -1,231 +1,120 @@
 # Stack Research
 
-**Domain:** Elixir/Phoenix LiveView production deployment — Docker+Kamal on ARM (Hetzner CAX31),
-local CPU embeddings, pgvector hybrid search, Oban async jobs, InstructorLite/Gemini structured
-LLM parsing, CI quality gates
-**Researched:** 2026-07-24
-**Confidence:** MEDIUM-HIGH (versions verified directly against hex.pm/GitHub release APIs = HIGH;
-deployment/config patterns cross-checked across 2+ independent sources = MEDIUM; the ARM embedding
-feasibility question specifically has a genuine open risk flagged below)
+**Domain:** SEO metadata, Open Graph/Twitter Card social-sharing, JSON-LD structured data, sitemap.xml, and security hardening — additive to an existing Elixir/Phoenix 1.8 LiveView app
+**Researched:** 2026-09-11
+**Confidence:** HIGH (Phoenix/Plug core behavior, verified against `hexdocs.pm` + the app's own `endpoint.ex`/`router.ex`/`csp.ex`/`config/prod.exs`) / MEDIUM (third-party package evaluation, verified against each package's own hexdocs but not hands-on)
 
-This file validates and de-risks the stack the project has **already committed to** (see
-PROJECT.md constraints). It does not propose alternatives to the core choices (Elixir/Phoenix,
-single Postgres, Docker+Kamal, Hetzner CAX31) — only to library/package-level decisions within
-those choices.
+## Headline Recommendation
+
+**Zero new runtime dependencies are required for this milestone.** Every one of the four feature
+areas (meta/OG/Twitter tags, JSON-LD, sitemap.xml, cookie/HSTS hardening) is fully covered by
+Phoenix/Plug primitives already vendored into this app (`mix.exs` already has `phoenix`, `jason`,
+`plug`, `sobelow`). The only changes needed are: two new HEEx function components, one new
+lightweight controller/route, one config line (`secure: true`), and content edits to two static
+files (`robots.txt`, and a new `sitemap.xml`-serving route). This matches the project's own stated
+principle of avoiding unnecessary abstraction for a solo-dev, near-zero-ops app — see "What NOT to
+Use" below for the two packages that were evaluated and explicitly rejected for this scale.
 
 ## Recommended Stack
 
-### Core Technologies
+### Core Technologies (no version changes — already pinned)
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| Elixir | 1.19.x | Language | Current stable (Oct 2025 release); up to 4x faster compilation for large projects, enhanced type checking. Requires OTP 28.1+. Phoenix 1.8 only requires Elixir 1.15+, so this is headroom, not a hard requirement — pin to whatever `mix phx.new` scaffolds if it lags slightly. |
-| Erlang/OTP | 28.x | BEAM runtime | Paired with Elixir 1.19. `hexpm/elixir` Docker images (used by `mix phx.gen.release --docker`) are multi-arch and publish `linux/arm64` builds for every Elixir+OTP+Debian combination — no ARM-specific Dockerfile changes needed for the builder stage. |
-| Phoenix | 1.8.9 | Web framework | Already the project's fixed choice. 1.8.x is the current stable line (1.8.0 → 1.8.9 as of this research). |
-| Phoenix LiveView | 1.2.7 | Real-time UI | Ships with Phoenix 1.8 scaffolding; use whatever `mix phx.new` pins — don't hand-pick a different minor. |
-| Ecto SQL | 3.14.x | DB layer | Standard Postgres adapter for Phoenix; no ARM concerns (pure Elixir + Postgrex, no NIFs). |
-| Postgrex | 1.0.0-rc.1 (or last stable 0.22.x) | Postgres driver | Prefer the last stable `0.22.x` over the `1.0.0-rc` for a production app unless you specifically need rc features — rc tags can still shift before final release. |
-| PostgreSQL | 17 (via `pgvector/pgvector:pg17` image if self-hosting in a Kamal accessory) | Database | One DB for everything per project constraint. Use the `pgvector/pgvector` image (not vanilla `postgres`) so the extension is present from container boot — it publishes multi-platform (amd64+arm64) images, confirmed via Docker Hub layer listings for `pg17`, `pg17-trixie`, `pg17-bookworm` tags. |
+| Phoenix (existing) | 1.8.9 | LiveView `assign`s drive per-page `<title>` (`<.live_title>`) today; the same mechanism extends to meta/OG tags | All three browser routes (`CatalogLive.Index`, `CatalogLive.Show`, `AboutLive`) are LiveViews, not controller-rendered — there is no `conn.assigns` path to worry about, only socket assigns flowing into one shared `root.html.heex`. This simplifies the integration to a single pattern, not two. |
+| Plug (existing, transitive via Phoenix) | current via Phoenix 1.8.9 | `Plug.SSL` (HSTS), `Plug.Session` (`secure`/`same_site` cookie flags), `Plug.Static` (serves `robots.txt`/future static assets verbatim) | Already doing 90% of the hardening work — `force_ssl` is already configured in `config/prod.exs` and `put_secure_browser_headers`/`put_csp` are already wired in the `:browser` pipeline. The gaps are one missing key (`secure: true`) and verification, not new plugs. |
+| Jason (existing) | `~> 1.4` (resolves 1.4.4/1.4.5) | Encodes JSON-LD `@context`/`@type` maps for `schema.org` `Game`/`LocalBusiness` | Already a direct dependency (`mix.exs:90`) and Phoenix's default JSON library — no reason to add a schema.org-specific encoding library on top of a general JSON encoder for two static-shaped maps. |
 
-### Deployment Stack (Items 1–2: Docker release + ARM)
+### Feature-by-feature approach
 
-| Technology | Version/Approach | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `mix phx.gen.release --docker` | Built into Phoenix 1.8 | Generates the production Dockerfile | This is the standard, framework-blessed path — don't hand-roll a Dockerfile from a blog post. It generates a multi-stage build: a `hexpm/elixir:<elixir>-erlang-<otp>-debian-<codename>-<date>` builder stage that compiles deps + assets + the release, and a slim `debian:<codename>-<date>-slim` runner stage that only contains the built release + runtime libs (openssl, libncurses, locales). |
-| Runner base image | `debian:trixie-slim` (glibc), **not Alpine** | Final image OS | Two independent reasons converge here: (1) Phoenix's own generator avoids Alpine specifically because of musl-related DNS resolution issues in production; (2) EXLA's precompiled XLA binaries for ARM64 target `aarch64-linux-**gnu**` (glibc) — there is no musl/Alpine precompiled variant, so if Phase 2's embedding work ships in the same release, Alpine would force a from-source XLA build (Bazel + Clang 18, "usually takes a very long time" per the XLA README) on every image build. Debian slim avoids that entirely. |
-| Buildx / native arm64 build | `docker buildx build --platform linux/arm64` on a native ARM builder (or the Hetzner box itself), not QEMU-emulated | Producing the deploy image | Cross-compiling Elixir/Erlang NIFs (bcrypt_elixir, EXLA, etc.) under QEMU emulation is slow and occasionally flaky. Prefer building natively: either build directly on an ARM CI runner (e.g. GitHub-hosted `ubuntu-24.04-arm` or a self-hosted ARM runner) or let Kamal build on the target Hetzner host itself (`builder: { arch: arm64 }` — the default in Kamal when you don't override `remote`). Since the whole deploy target is single-arch (CAX31 is ARM-only), there's no need for multi-arch manifests at all — just build for `linux/arm64` and stop. |
-| Image size | Expect roughly 150-250MB post multi-stage (Elixir release + Debian slim + a handful of runtime `.so` libs) | — | ERTS is bundled inside the Mix release itself, so the runner image doesn't need Erlang/Elixir installed — this is *why* a plain Debian slim base still ends up smaller than trying to strip Alpine packages by hand. If Bumblebee/EXLA ships in the same release (Phase 2), expect the image to grow substantially (EXLA's XLA extension + a bundled ONNX/tokenizer model can each be 50-150MB) — this is a acceptable one-time cost, not a per-deploy cost, since Kamal only pulls layers that changed. |
+| Feature | Approach | Why |
+|---------|----------|-----|
+| Per-page meta description, OG tags, Twitter Card tags | **Hand-rolled**: a `PukllayClubWeb.SEO` HEEx function component rendered once in `root.html.heex`, reading a socket assign (e.g. `@meta`) that each LiveView sets in `mount/3`/`handle_params/3`; falls back to site-wide defaults (brand isologo/wordmark, generic description) when a LiveView doesn't set it | Phoenix LiveView has **no built-in primitive** for per-page `<head>` metadata beyond `<.live_title>` — this is a long-standing, still-open framework gap (`phoenixframework/phoenix_live_view#1194`). The community-standard workaround *is* exactly this pattern: assign a map/struct per-LiveView, render conditionally in the root layout. With only 3 routes (1 needing truly dynamic per-item data — `CatalogLive.Show`), a ~30-line function component is simpler than adopting a package built around N routes and multiple content types. |
+| JSON-LD (`Game` on detail pages, `LocalBusiness`/Jujuy site-wide) | **Hand-rolled**: a second small HEEx component that takes a plain map and renders `<script type="application/ld+json">{Phoenix.HTML.raw(Jason.encode!(data))}</script>` | schema.org JSON-LD is just a JSON object with `@context`/`@type` keys — there is no meaningful abstraction a library adds over "build a map, `Jason.encode!/1` it." Two gotchas to bake into the component itself (see Version Compatibility below): (1) HEEx auto-escapes by default, so the encoded JSON must go through `Phoenix.HTML.raw/1` or the quotes/braces get HTML-entity-mangled; (2) escape literal `</` sequences in the encoded output (e.g. `String.replace(json, "</", "<\\/")`) as defense-in-depth against a game title/description ever containing `</script>` and prematurely closing the tag — a known JSON-in-`<script>` gotcha, not Phoenix-specific. |
+| `robots.txt` | **Already fully wired — content edit only, zero code** | `PukllayClubWeb.static_paths/0` (`lib/pukllay_club_web.ex:20`) already includes `robots.txt` in the list `Plug.Static` serves from `priv/static/`, and `priv/static/robots.txt` already exists (currently the `phx.new` placeholder). Just replace its contents with real `User-agent: *` / `Allow: /` / `Sitemap: https://pukllay.club/sitemap.xml` directives. No router change, no new plug. |
+| `sitemap.xml` | **Hand-rolled**: one new plain (non-LiveView) controller action + router route, querying game ids/slugs and rendering XML directly (`put_resp_content_type("application/xml")` + `send_resp/3`), not a static file | The catalog is ~400 rows behind a single indexed query — cheap enough to render per-request with an HTTP `cache-control` header (e.g. `max-age: 3600`) rather than committing a static file that goes stale every time a game is added/removed, or wiring a background-job regeneration pipeline that doesn't exist yet (Oban is a *Phase 2* addition per the project roadmap — pulling it forward just for sitemap regeneration would be scope creep). Route it through its own pipeline (`plug :accepts, ["xml"]`), the same pattern already used for `/up`'s `:health` pipeline in `router.ex`. |
+| Secure session cookie (`secure: true`) | **One config-line change** to `@session_options` in `endpoint.ex`, gated to compile-time `Mix.env() == :prod` | The `Secure` cookie attribute requires HTTPS to transmit the cookie at all. Firefox and (partially) Chrome exempt `http://localhost` from this requirement for local dev convenience, but **Safari does not** — testing this app locally in Safari with an unconditional `secure: true` would silently drop the session cookie (breaking flash messages / LiveView reconnect state in dev). The existing `endpoint.ex` already has a precedent for exactly this compile-time-env-gated pattern (`if Mix.env() == :dev do plug Tidewave end`, line 30) — mirror it: `secure: true` only when `Mix.env() == :prod`. This is compile-time, not `config/runtime.exs`, because `Plug.Session`'s options are captured once at compile time via the `plug` macro (same reason the existing `force_ssl` comment notes "required to be set at compile-time"). |
+| HSTS (`Strict-Transport-Security` header) | **Verify only — likely already emitted, no code change** | `Plug.SSL.init/1` defaults `:hsts` to `true` with `expires: 31_536_000` (1 year) whenever `force_ssl` is configured at all — which `config/prod.exs` already does (`rewrite_on: [:x_forwarded_proto]`, plus the `/up`/`localhost` excludes). Because nothing in the current config explicitly sets `hsts: false`, the header should already be going out on every HTTPS response except the excluded `/up` health-check path. **Action item is verification, not implementation**: `curl -sI https://pukllay.club/ | grep -i strict-transport-security` against production. `:subdomains` and `:preload` both default to `false` — leave them off unless the site adds a `www.` subdomain or the team decides to submit to hstspreload.org (submitting requires `includeSubDomains` + `preload` + a 1-year+ max-age, and is a one-way ratchet — don't do it casually on a domain with any subdomain plans). |
 
-### Deployment Stack (Item 2: Kamal)
+### Development Tools
 
-| Technology | Version/Approach | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Kamal | 2.x (`kamal-deploy.org`) | Deploy orchestrator | Already the project's fixed choice. Kamal 2 replaced Traefik with **kamal-proxy**, a purpose-built Ruby reverse proxy that does instant traffic-cutover zero-downtime deploys and automatic Let's Encrypt TLS — exactly matching the constraint "kamal-proxy for TLS/reverse-proxy, do not layer Caddy on top." |
-| Migrations on deploy | Custom Docker `ENTRYPOINT` script that runs `/app/bin/migrate` before `exec /app/bin/server` | Safe migration-on-deploy | Kamal has **no** Heroku-style `release_command` hook. The idiomatic Elixir/Kamal pattern (used across every Phoenix+Kamal guide found) is: intercept the entrypoint, and only when the container's command is `bin/server`, run `bin/migrate` first. Because Kamal's zero-downtime deploy only routes traffic to a new container **after** it passes its health check, a migration failure inside the entrypoint simply prevents the new container from ever becoming healthy — the old container keeps serving traffic and Kamal reports a failed deploy. This gives you migration-gated zero-downtime deploys for free, without a separate hook mechanism. Phoenix's `phx.gen.release` already generates the `bin/migrate` overlay script and a `Release.migrate/0` function using `Ecto.Migrator` directly (no `Mix` dependency) — use that, don't shell out to `mix ecto.migrate` in production (Mix isn't available in a release). |
-| Secrets | `.kamal/secrets` (gitignored, dotenv-format, supports variable/command substitution) | Secrets handling | Kamal's built-in secrets file is the right default over plain env vars for anything sensitive (`SECRET_KEY_BASE`, `DATABASE_URL`, registry password, Gemini API key): `deploy.yml` declares which env vars are `clear` (inline, non-secret, e.g. `PHX_HOST`) vs `secret` (name only — the value is resolved from `.kamal/secrets` at deploy time and written to an env file on the host, never baked into the image or committed to git). For a solo-dev budget project, plain `.kamal/secrets` with values entered directly (no 1Password/Bitwarden integration) is sufficient — the command-substitution feature exists for scaling to a team, which this project explicitly is not. |
-| Postgres hosting | Kamal **accessory** (not managed DB) running `pgvector/pgvector:pg17`, with a host-mounted volume (`/var/lib/postgresql/data`) | Database process | Matches "single Hetzner node, ~€15/mo" — a managed Postgres add-on would blow the budget. Accessories are Kamal's mechanism for long-running non-app containers (DB, Redis) on the same host; use the `pgvector/pgvector` image specifically instead of vanilla `postgres` so the extension is present without a manual `apt install postgresql-*-pgvector` step. Back this up via the project's existing nightly `pg_dump` → R2 plan — Kamal accessories do not include backup automation, that has to be a cron/Oban job. |
-| kamal-proxy | Built into Kamal 2, `proxy: { ssl: true, host: pukllay.club }` | TLS termination + reverse proxy | Automatic Let's Encrypt cert issuance/renewal, holds requests during container swap for zero-downtime. No separate Caddy/nginx needed — confirms the project's constraint is directly supported, not a workaround. |
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| Sobelow (existing, `~> 0.14` in `mix.exs`, resolves 0.14.1) | Already gates `mix quality`; its `Config.*` checks are exactly the family that flags a missing `secure: true` on session cookies and missing/weak HTTPS config | Current stable on hex.pm is **0.15.0** (the pinned `~> 0.14` constraint does *not* auto-resolve to it, since `~>` treats the second-to-last segment as the floor for `0.x` versions). Optional, low-priority: bump to `~> 0.15` to pick up any newer checks before running the security-hardening pass — not required for this milestone to succeed, but worth doing opportunistically since Sobelow is precisely the tool auditing this milestone's own deliverable. |
+| `curl -I` / browser DevTools Network tab | Manual verification of `Strict-Transport-Security`, `Set-Cookie: ...Secure`, and CSP headers against the live production origin | No package needed — this is the standard way to confirm headers actually reached the wire, since `force_ssl`/`Plug.Session` config correctness and "the header is actually present in the deployed response" are two different claims. |
+| Google Rich Results Test / schema.org validator (web tools, not hex packages) | Validate the hand-written `Game`/`LocalBusiness` JSON-LD parses as valid structured data | External, free, no integration — just paste a rendered page's JSON-LD blob in. Do this once per structured-data type added, not per game. |
+| Mozilla Observatory / securityheaders.com (web tools) | Independent second opinion on the full header set (CSP, HSTS, `X-Content-Type-Options`, etc.) once cookie/HSTS changes ship | Complements Sobelow (which is static analysis of the *code*) with a live check of what the *deployed* endpoint actually sends — same rationale as the `curl` verification step above. |
 
-### AI/Search Stack (Items 3–6, Phase 2)
+## Installation
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Bumblebee | 0.7.1 | Elixir ML inference wrapper (HF models) | The standard (only real option) for running HF-hosted embedding models directly in the BEAM without a Python sidecar — matches the project's "no separate service" architecture principle. |
-| Nx / EXLA | 0.13.0 / 0.13.0 | Tensor ops + compiled backend for Bumblebee | **Must explicitly configure `Nx.default_backend(EXLA.Backend)`** (or set it in config). Without it, Bumblebee falls back to pure-Elixir tensor ops, which one Elixir Forum thread reported taking **over 60 seconds** for a single embedding vs sub-second with EXLA — this is the single most important non-obvious configuration step for this whole stack. |
-| `xla` (EXLA's native dependency) | 0.10.0 | Precompiled XLA extension | **Verified directly against the `elixir-nx/xla` GitHub release assets**: `xla_extension-0.10.0-aarch64-linux-gnu-cpu.tar.gz` exists. This means EXLA CPU inference on ARM64 Linux uses a **precompiled binary** — no `XLA_BUILD=true` + Bazel/Clang from-source build is required on the Hetzner box or in CI. This directly de-risks the project's stated "spike the ARM embedding runtime first" plan for Phase 2: the runtime dependency itself is not the risk, only inference *speed* is (see Pitfalls/risk flag below). |
-| Embedding model | `intfloat/multilingual-e5-small` (384-dim, 100 languages, 12 layers) — preferred over `paraphrase-multilingual-MiniLM-L12-v2` (118M params, 384-dim) | Spanish sentence embeddings | Both are standard small multilingual sentence-transformer models with Spanish support and are explicitly described as CPU-servable; e5-small is smaller (better CPU latency headroom) at comparable quality for retrieval-style tasks. Confirm the final pick during the Phase 2 spike with real latency numbers on the actual CAX31 (or an equivalent ARM box) — this is exactly the kind of decision the project has correctly deferred to a spike rather than locking in from research. |
-| pgvector (Postgres extension) | via `pgvector/pgvector:pg17` image | Vector column type + ANN indexes | Standard vector extension for Postgres; multi-platform image confirmed (arm64 included). |
-| `pgvector` (hex package) | 0.4.0 | Ecto/Postgrex vector type + query helpers | Supports `:vector`/`:halfvec`/`:bit`/`:sparsevec` Ecto types, HNSW/IVFFlat index creation via normal Ecto migrations, and — notably — ships a **hybrid search (tsvector + vector, Reciprocal Rank Fusion) example** in its own repo that combines Postgres full-text search with vector similarity, which is exactly the item-4 requirement. Use this as the starting implementation reference rather than building RRF from scratch. |
-| Postgres full-text search | Native `tsvector`/`tsquery` + GIN index, `ts_rank`/`ts_rank_cd` | Keyword half of hybrid search | No extra package needed — this is built into Postgres. Spanish-language search needs the `spanish` text search configuration (`to_tsvector('spanish', ...)`), which ships with stock Postgres (no extra extension). |
-| Oban | 2.23.0 | Postgres-backed async job queue | Already the project's fixed choice; current stable, actively maintained (last release within the last ~2 months of this research date). Free/OSS tier is sufficient at this scale — Oban Pro/Web are not required (Oban Web 2.12.6 exists as an optional dashboard but is a paid add-on beyond the free `oban` core; skip it for a solo-dev budget project and use `oban`'s own instrumentation/telemetry + logs instead). |
-| InstructorLite | 1.2.0 | Structured output extraction from LLMs | Already the project's fixed choice. Ships adapters for OpenAI, Anthropic, **Gemini**, Llamacpp, and OpenAI-compatible providers. Response validation is Ecto-schema-based: define a schema with `use Ecto.Schema, use InstructorLite.Instruction`, pass it as `response_model`, and InstructorLite derives the JSON schema and validates the LLM's structured response against it — this fits naturally with an existing Ecto-based codebase (no separate JSON-schema-authoring step). |
-| Gemini model (via InstructorLite's Gemini adapter) | `gemini-2.0-flash` or `gemini-2.5-flash` (verify current free-tier model name/limits at implementation time — Google changes free-tier model availability faster than most docs stay current) | Query parsing LLM | The Gemini adapter requires manually passing `json_schema` alongside `response_model` (InstructorLite's docs note Gemini needs this explicitly, unlike the OpenAI adapter) and an API key via `adapter_context: [api_key: ...]`. **Flag:** free-tier rate limits and available model names change; re-verify the exact model id and RPM/RPD limits against Google's current AI Studio pricing page during Phase 2 planning, not from this research (LOW confidence on any specific free-tier number as of this write-up). |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `req` | 0.6.3 | HTTP client | InstructorLite's default HTTP client; also good general-purpose choice for any other outbound HTTP (BGG API in later phases, R2 backup upload if not using `aws-cli`/rclone directly). |
-| `finch` | 0.23.0 | HTTP connection pooling | Transitive dependency of `req`; no direct action needed, just don't fight it with a second HTTP client stack. |
-| Tailwind + daisyUI | phx.new 1.8 defaults | UI | Already fixed by the project; no research needed beyond confirming it's still the `phx.new` default (it is, as of Phoenix 1.8). |
-
-### Development Tools (Item 7: Quality Tooling + CI)
-
-| Tool | Version | Purpose | Notes |
-|------|---------|---------|-------|
-| Credo | 1.7.19 | Static analysis / style | Run with `--strict` as specified. Current stable. |
-| Sobelow | 0.14.1 | Phoenix-specific security static analysis | Checks for XSS, SQL injection, insecure config, CSRF, etc. specific to Phoenix apps — complements Credo, which is style/complexity-focused, not security-focused. |
-| `mix format --check-formatted` | Built into Elixir | Formatting gate | No install needed. |
-| `mix test --warnings-as-errors` | Built into Elixir/ExUnit | Test gate that also fails on compiler warnings | Standard practice — catches unused-variable/deprecated-function drift before it becomes a real bug. |
-| `erlef/setup-beam` GitHub Action | `@v1` (auto-resolves latest within v1) | CI toolchain setup | The standard, Elixir-team-maintained action for pinning Elixir+OTP versions in GitHub Actions — every current Elixir CI guide found uses this over manually installing Erlang. |
-| Styler (`adobe/elixir-styler`) | 1.12.2 | `mix format` plugin — auto-fixes non-idiomatic Elixir | Wired via `.formatter.exs`'s `plugins` list (`plugins: [Phoenix.LiveView.HTMLFormatter, Styler]`), **not** a separate `mix quality` alias step — it runs automatically inside `format --check-formatted` (already step 4 of the alias). Guards against AI-generated code drift over time; battle-tested (3.6M downloads, ~3 years old, Adobe-maintained). **Caveat (documented in its own README): Styler can change the behaviour of your program** — e.g. `case`->`if` rewrites can alter semantics when a `case` clause's expression isn't strictly `true`/`false`, since the equivalent `if` silently completes where the `case` would raise. Always review `git diff` for every Styler-produced rewrite before committing — do not accept rewrites on trust, per Styler's own guidance. |
-| `mix_audit` | 2.1.5 | `mix deps.audit` — scans `mix.lock` against the elixir-security-advisories DB | Dev/test-only dep (`only: [:dev, :test], runtime: false`), matching the Credo/Sobelow pattern. Gates `mix quality` alongside `mix hex.audit` (built into Hex, flags retired packages) — closes a supply-chain/dependency-hygiene gap Credo/Sobelow don't cover. |
-
-## `mix quality` Alias Pattern
-
-Standard, widely-used pattern (add to `mix.exs` under `def aliases`):
+No `mix.exs` changes required for the four feature areas themselves. Optional Sobelow version bump:
 
 ```elixir
-defp aliases do
-  [
-    quality: [
-      "hex.audit",
-      "deps.audit",
-      "deps.unlock --check-unused",
-      "format --check-formatted",
-      "credo --strict",
-      "sobelow --config",
-      "test --warnings-as-errors"
-    ]
-  ]
-end
+# mix.exs — optional, not required
+{:sobelow, "~> 0.15", only: [:dev, :test], runtime: false}
 ```
 
-Notes:
-- `sobelow --config` reads a `.sobelow-conf` file for allowlisting known-safe findings (e.g. a specific `Mix.env() != :prod` check) — create this file empty initially and only add exceptions when Sobelow flags a reviewed false positive, not preemptively.
-- Order matters for fast local feedback: cheapest/fastest checks first before the slower `test` run, so a formatting typo fails in seconds, not after a 30s+ test suite run.
-  - `hex.audit` runs first because Mix's own `mix help hex.audit` states it "must be invoked before any other tasks that may load or start your application" — first position satisfies this without touching `:extra_applications`.
-  - `deps.audit` and `deps.unlock --check-unused` are grouped right after it: both are metadata-only checks against `mix.lock`/`mix.exs` with no compilation step, so they're cheaper than `format`/`credo` and belong ahead of them.
-  - `format --check-formatted` (now Styler-augmented — see the Development Tools table above), `credo --strict`, `sobelow` (security), and `test` (slowest) keep their original relative order.
-- `.formatter.exs`'s `plugins` list now includes `Styler` alongside `Phoenix.LiveView.HTMLFormatter`, so `format --check-formatted` also gates on Styler's idiom checks — no separate alias step exists for Styler itself.
-- Do **not** add `dialyzer` to this same alias unless you're prepared for its first-run PLT build cost (~2-5 min) — if you want type-checking, run it as a separate CI job with its own PLT cache, not inline in the fast local `mix quality` loop.
-
-## GitHub Actions CI Pattern
-
-Standard shape confirmed across multiple current guides (Fly.io's Phoenix Files, several 2025/2026 blog writeups) — no single canonical file exists to copy verbatim, but the consistent pattern is:
-
-```yaml
-name: CI
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        ports: ["5432:5432"]
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: "1.19.x"
-          otp-version: "28.x"
-      - uses: actions/cache@v4
-        with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-
-      - run: mix deps.get
-      - run: mix quality
-        env:
-          MIX_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/pukllay_club_test
+```bash
+mix deps.update sobelow
 ```
-
-Key points:
-- Use plain `postgres:17` (not `pgvector/pgvector`) for CI **unless** Phase 2 tests exercise real vector columns — at that point switch the CI service image to `pgvector/pgvector:pg17` too, so `CREATE EXTENSION vector` succeeds in the test DB. Do this switch when Phase 2 lands, not in Phase 0.
-- Cache key on `mix.lock` hash is the standard invalidation trigger — don't key on `mix.exs` alone, `mix.lock` is what actually pins resolved versions.
-- `ubuntu-latest` (amd64) runners are fine for CI even though production is arm64 — nothing in this stack is architecture-sensitive at the *test* level (no NIF compilation differences that would produce different test behavior); only the *deploy image build* needs to target arm64.
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|--------------------------|
-| Bumblebee + EXLA (local CPU embeddings) | Remote embedding API (OpenAI, Voyage, Cohere) | If the Phase 2 spike shows CPU embedding latency/throughput on the CAX31 is unacceptable even after tuning (batch size, sequence length caps) — this is explicitly the fallback the project should be ready to reach for. Remote embeddings would violate the stated "never an LLM call on the request hot path" principle only if called synchronously; called via Oban async it's compatible with the architecture, just costs money per embedding and adds a network dependency. Treat this as the documented Plan B, not a first choice. |
-| `pgvector/pgvector:pg17` accessory | Managed Postgres (Neon, Supabase, Crunchy Bridge) | If backup/ops burden of self-hosting Postgres on the CAX31 becomes the actual bottleneck later — but this contradicts the €15/mo budget constraint today, so not recommended now. |
-| Debian slim runner image | Alpine runner image | Only if you deliberately drop EXLA/Bumblebee from the release entirely (e.g. embeddings moved to a remote API) — then Alpine's smaller footprint has no offsetting cost, since musl DNS issues are the only real objection and can be worked around. Not recommended here because the project's stated plan keeps local embeddings in-process. |
-| Entrypoint-script migration gating | A separate `kamal deploy` pre-hook (`.kamal/hooks/pre-deploy`) that SSHs in and runs `mix ecto.migrate` | Kamal hooks run on the *deployer's* machine/CI runner, not inside the release container, and `mix` isn't available inside a release — so hooks would need a separate `mix ecto.migrate` invocation against the release, which is more moving parts than the single self-contained entrypoint approach. Prefer the entrypoint pattern. |
-| `.kamal/secrets` plain file | 1Password/Bitwarden CLI integration via Kamal's command-substitution support | Once this becomes a team project or the number of secrets/environments grows — for a solo dev with one production destination, the added CLI/vault setup is unnecessary process overhead. |
+| Hand-rolled HEEx component + LiveView socket assigns for meta/OG/Twitter/JSON-LD | [`phoenix_seo`](https://hex.pm/packages/phoenix_seo) (dbernheisel), current v0.3.1 — a protocol-based framework with `use SEO`, per-domain config modules (Open Graph/Twitter/Facebook/Site/JSON-LD), a compile-time JSON-LD builder registration step, and a `<SEO.juice>` root-layout component | If the site grows to many distinct content types each needing structured metadata (e.g. blog posts, events, multiple locales) *and* the team wants compile-time protocol dispatch instead of hand-checking assigns. At 3 routes (1 truly dynamic), the package's config-module/protocol-implementation ceremony costs more than it saves; it's a legitimate, actively-maintained package (last updated within this research's lookback window) worth revisiting if this milestone's scope expands significantly in Phase 4 (admin/catalog CMS-like features). |
+| Hand-rolled controller route rendering `sitemap.xml` per-request from a single Ecto query | [`sitemapper`](https://hex.pm/packages/sitemapper) (breakroom), current v0.10.0 — stream-based generator supporting file/S3 persistence, image-sitemap extension, multi-file sitemap indexes | If the catalog grows past the low thousands of URLs, gains additional URL-bearing content types (e.g. per-designer or per-mechanic pages), or the team already has Oban wired up (Phase 2+) to run scheduled regeneration jobs. `sitemapper`'s design center is million-URL sites regenerated on a schedule and persisted to disk/S3 — none of which this milestone's ~400-game catalog needs; a live per-request query is simpler and always fresh. |
+| Compile-time `Mix.env() == :prod` guard on `secure: true` in `@session_options` | Environment-variable-driven runtime toggle (e.g. reading `PHX_SERVER`/a custom env var in `config/runtime.exs`) | Only if the team ever needs to run a "staging" environment that serves over HTTPS but isn't the `:prod` Mix env — not the case here (single production host, single Mix env per the project's constraints). The compile-time guard is simpler and matches the codebase's own existing convention. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|--------------|
-| Alpine-based Docker runner image (if Phase 2 embeddings ship) | No precompiled `aarch64` XLA binary targets musl; would force a slow from-source Bazel/Clang XLA build on every image rebuild, and Phoenix's own generator avoids Alpine already for DNS reasons | `debian:trixie-slim` (or whatever Debian codename `phx.gen.release --docker` currently generates) |
-| `mix ecto.migrate` invoked directly against a Mix release in production | `Mix` is a build tool, not included in compiled OTP releases — this command will not exist/work at runtime | The generated `bin/migrate` overlay script, which wraps `Ecto.Migrator` directly (no Mix dependency) |
-| Traefik or a hand-rolled Caddy container in front of Kamal | Redundant — kamal-proxy (Kamal 2's built-in reverse proxy) already does TLS + zero-downtime traffic cutover; the project's constraint explicitly forbids layering Caddy on top | kamal-proxy (default, nothing extra to configure beyond `proxy: { ssl: true, host: ... }` in `deploy.yml`) |
-| Running Bumblebee/EXLA without setting `EXLA.Backend` as the Nx default backend | Silently falls back to pure-Elixir tensor math; one real-world report showed a single embedding going from >60s to sub-second purely by fixing this config | `Nx.default_backend(EXLA.Backend)` in `config/runtime.exs` (or wherever Bumblebee's serving is configured), plus tuned `compile: [batch_size:, sequence_length:]` options on the `Bumblebee.Text.text_embedding` serving for short Spanish search queries |
-| Oban Pro/Web as a first-phase requirement | Paid add-ons; the free `oban` core package covers everything the project's stated use case (async embedding + LLM query parsing, off the request path) needs | Free `oban` package + its own telemetry/logging; revisit Oban Web only if a real operational need for a dashboard emerges |
-| Postgrex `1.0.0-rc.1` in production | Release-candidate tag; can still change before the real 1.0.0 | Latest stable `0.22.x` line, which `mix phx.new` will pin by default unless overridden |
+| `phoenix_seo` or any similarly-scoped SEO framework, for this milestone | Adds a protocol-implementation and compile-time-config-module layer to solve a problem (3 routes, 1 dynamic) that a single ~30-line function component solves just as correctly, with less to learn/maintain for a solo dev | Hand-rolled `PukllayClubWeb.SEO` (or similarly named) function component(s), assigned per-LiveView |
+| `sitemapper` or any stream/S3-persistence sitemap generator, for this milestone | Built for scale (millions of URLs, scheduled background regeneration) this app doesn't have yet; would also implicitly pull forward a "when does this regenerate" scheduling question that only has a good answer once Oban exists (Phase 2) | A dynamic controller/plug route rendering XML directly from a single Ecto query, cached via HTTP headers |
+| Committing a static, hand-generated `sitemap.xml` file into `priv/static/` | Goes stale the moment a game is added, removed, or its `updated_at` changes — silently wrong sitemap is worse than no sitemap for crawl-budget purposes | The dynamic route above — same infra cost, always correct |
+| Unconditional `secure: true` on `@session_options` (no env gate) | Silently drops the session cookie in Safari during local dev (Safari does not exempt `localhost` from the Secure-cookie-requires-HTTPS rule, unlike Firefox/Chrome) | Compile-time `Mix.env() == :prod` gate, mirroring the existing `Mix.env() == :dev` Tidewave pattern already in `endpoint.ex` |
+| Manually constructing/duplicating the `Strict-Transport-Security` header via a custom plug | `Plug.SSL` (already active through `force_ssl` in `config/prod.exs`) already emits it correctly by default — a hand-rolled second header risks either duplicating it or silently disagreeing with `Plug.SSL`'s own max-age/subdomains/preload values | Verify the existing header via `curl`; only pass explicit `hsts: [...]` sub-options to `force_ssl` if the defaults (1 year, no subdomains, no preload) are deliberately being changed |
+| Escaping/omitting `type="application/ld+json"` script tags from the CSP `script-src` allowlist review, or worse, adding `'unsafe-inline'` to `script-src` to "make JSON-LD work" | Unnecessary and actively weakens the existing CSP: `<script>` elements whose `type` is not a JS MIME type (blank, `module`, `importmap`, or a JS type) are excluded from `script-src` enforcement entirely per the CSP spec — `application/ld+json` already renders fine under the current `script-src 'self'` policy with zero CSP changes | Leave `csp.ex`'s `script-src 'self'` exactly as-is; the JSON-LD `<script type="application/ld+json">` tags need no CSP accommodation |
 
 ## Stack Patterns by Variant
 
-**If the Phase 2 ARM embedding spike shows unacceptable CPU latency:**
-- Fall back to a remote embedding API (still called async via Oban, never on the request path)
-- This preserves every other architectural decision (pgvector, hybrid search, Oban) — only the embedding *source* changes, not the storage/search layer
+**If the catalog's public URL surface grows well beyond games** (e.g. per-designer pages, per-mechanic pages, a blog/news section is added in a later milestone):
+- Revisit `sitemapper` once there's a real multi-content-type, multi-thousand-URL sitemap to assemble and Oban (Phase 2+) exists to schedule its regeneration
+- Because Oban is already the project's fixed async-job mechanism from Phase 2 onward, `sitemapper`'s typical "generate + persist" usage would slot in as a periodic Oban job rather than needing any new scheduling infrastructure
 
-**If Phase 2 test suites start exercising real vector search:**
-- Switch the CI Postgres service image from `postgres:17` to `pgvector/pgvector:pg17` so `CREATE EXTENSION vector` works in CI, not just in the Kamal accessory
+**If the site adds locales beyond Rioplatense Spanish, or many more structured-data types** (events, reviews, FAQ pages):
+- Revisit `phoenix_seo` — its per-domain config-module/protocol design starts paying for itself once there are more than a couple of content shapes needing metadata, especially across locales
+- Until then, the hand-rolled component keeps the mental model at "one map in, one `<meta>`/`<script>` block out"
 
-**If the project ever needs true multi-node clustering (out of scope today, single CAX31 node):**
-- `libcluster` + `libcluster_postgres` (using the shared Postgres DB as a node registry) is the documented pattern for Kamal+Phoenix clustering — noted here only so it's not rediscovered from scratch if a future milestone needs it; not relevant to the current single-node architecture
+**If Phase 2's magic-link auth (`phx.gen.auth`) lands and introduces its own "remember me" cookie:**
+- Apply the same `secure: true` (compile-time-prod-gated) treatment to that cookie's options — `phx.gen.auth`'s generated `UserAuth` module has its own `@remember_me_cookie` options list, separate from `@session_options` in `endpoint.ex`; don't assume fixing one fixes both
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
 |-----------|------------------|-------|
-| Phoenix 1.8.9 | Elixir 1.15+ (project should use 1.19.x), Phoenix LiveView 1.2.x | `mix phx.new` pins compatible versions automatically — don't hand-override unless there's a specific reason. |
-| EXLA 0.13.0 | `xla` 0.10.0, Nx 0.13.0 | These three are released in lockstep by the `elixir-nx` org; always bump together, never pin EXLA/Nx to mismatched minors. |
-| `xla` 0.10.0 precompiled binary | `aarch64-linux-gnu` (glibc) only, not musl | This is the load-bearing compatibility fact for the ARM Docker base image decision — see "What NOT to Use." |
-| `pgvector` hex package 0.4.0 | Postgres with the `pgvector` extension installed (any recent pgvector extension version; use `pgvector/pgvector:pg17` image) | The hex package is a thin Ecto/Postgrex type wrapper — the real version dependency is the *Postgres extension*, which the Docker image bundles. |
-| Oban 2.23.0 | Postgres-backed (also supports SQLite3/MySQL, irrelevant here) | No special version pinning needed against Ecto/Postgrex beyond normal Hex dependency resolution. |
-| InstructorLite 1.2.0 | Ecto (for `response_model` schemas), `req` (HTTP), `Jason` (only needed pre-Elixir-1.18, irrelevant here since we're on 1.19) | Gemini adapter specifically requires manually passing `json_schema` in addition to `response_model` — don't assume it's auto-derived the same way as the OpenAI adapter. |
+| `Plug.SSL.init/1` defaults | `force_ssl: [rewrite_on: [:x_forwarded_proto], exclude: [...]]` (already in `config/prod.exs`) | `:hsts` defaults to `true`, `:expires` to `31_536_000` (1 year), `:subdomains` and `:preload` both default to `false` — the app's current config already emits HSTS with these defaults; nothing further is required unless the defaults are deliberately being overridden |
+| `Plug.Session` cookie options | `:secure`, `:http_only`, `:same_site`, `:domain`, `:max_age` all forward to `Plug.Conn.put_resp_cookie/4` | `:http_only` already defaults to `true` at the `Plug.Conn` layer (not something this app needs to set explicitly); `:secure` defaults to `false` and must be set explicitly — this is the one gap in the current `@session_options` |
+| Session cookie `:secure` flag | Safari **does not** treat `http://localhost` as a secure context for cookie purposes; Firefox and Chrome (partial) do | Load-bearing fact for the `Mix.env() == :prod` compile-time gate recommended above — without the gate, local Safari testing silently loses session state |
+| CSP `script-src` directive | `<script type="application/ld+json">` elements | Per the CSP spec, `script-src` enforcement only applies to `<script>` elements whose `type` is empty, a JS MIME type, `module`, or `importmap` — `application/ld+json` is none of these, so it is exempt by spec, not by any explicit allowlisting. No change needed to `PukllayClubWeb.CSP.policy/0`. |
+| HEEx auto-escaping | `Jason.encode!/1` output embedded in a `<script>` tag | HEEx escapes interpolated content by default; embedding pre-encoded JSON requires `Phoenix.HTML.raw/1` (or the `raw/1` import) around the `Jason.encode!/1` result, or the JSON's quotes/braces get corrupted into HTML entities |
+| Sobelow `~> 0.14` (pinned) | Current stable `0.15.0` | `~>` treats the second segment as the ceiling for `0.x` releases (`~> 0.14` allows `>= 0.14.0, < 0.15.0`), so the existing constraint will **not** auto-pick-up 0.15.0 — a manual `mix.exs` bump is needed if the newer version's checks are wanted for this security-hardening milestone |
 
 ## Sources
 
-- `hex.pm` API (`/api/packages/<name>`) for every version number above — Phoenix, Phoenix LiveView, Ecto SQL, Postgrex, Oban, pgvector, InstructorLite, Bumblebee, EXLA, Nx, xla, Credo, Sobelow, Req, Finch, Oban Web — **HIGH confidence** (direct registry API, not a search result)
-- `github.com/elixir-nx/xla` releases API (`/repos/elixir-nx/xla/releases/latest`) — confirmed `xla_extension-0.10.0-aarch64-linux-gnu-cpu.tar.gz` asset exists — **HIGH confidence** (direct GitHub API, the single most load-bearing fact in this document for de-risking Phase 2 on ARM)
-- `hexdocs.pm/phoenix/releases.html` and `Mix.Tasks.Phx.Gen.Release` docs (via WebSearch) — Dockerfile generation behavior, Debian-not-Alpine rationale — MEDIUM confidence (cross-checked across search summary + generator behavior is well-documented framework behavior)
-- `github.com/pgvector/pgvector-elixir` README (via WebFetch) — Ecto migration examples, HNSW/IVFFlat index syntax, hybrid search example location — MEDIUM confidence
-- `github.com/martosaur/instructor_lite` README (via WebFetch) — adapter list, Gemini-specific `json_schema` requirement, Ecto-schema-based validation — MEDIUM confidence
-- AppSignal Blog, "Deploying Phoenix Applications with Kamal" (2025-06-10) and "Advanced Strategies..." (2025-07-08) (via WebFetch) — Kamal builder/proxy config, entrypoint-based migration pattern, secrets clear-vs-secret split, accessory pattern — MEDIUM confidence (single blog source per specific claim, but pattern is consistent with Kamal's own docs structure)
-- `kamal-deploy.org/docs/configuration/environment-variables/` (via WebSearch summary) — `.kamal/secrets` dotenv format, variable/command substitution, `KAMAL_REGISTRY_PASSWORD` — MEDIUM confidence
-- Elixir Forum thread, "Bumblebee/Axon vs. Python: Performance for sentence embedding" (via WebFetch) — the >60s-without-EXLA-backend finding — MEDIUM confidence (single anecdotal forum report, but mechanism — pure-Elixir fallback tensor ops — is consistent with how Nx backends work)
-- `elixir-lang.org` blog, "Elixir v1.19 released" (Oct 2025, via WebSearch) — Elixir 1.19/OTP 28.1+ pairing — MEDIUM confidence
-- Docker Hub `pgvector/pgvector` tag listings (via WebSearch) — multi-platform (amd64+arm64) image confirmation — MEDIUM confidence
-- Docker Hub `hexpm/elixir` tag/layer listings (via WebSearch) — multi-arch builder image confirmation — MEDIUM confidence
-- Fly.io "Phoenix Files" — GitHub Actions for Elixir CI (via WebFetch) — CI workflow shape, `erlef/setup-beam`, caching key strategy — MEDIUM confidence
-
-## Open Risk Flags for Roadmap
-
-1. **Genuinely unresolved (LOW confidence until spiked):** Actual CPU embedding *throughput/latency* for `multilingual-e5-small` or similar on a real CAX31 vCPU. The dependency chain works (EXLA has ARM binaries), but no source found gives concrete ms/embedding numbers on ARM64 Cloud CPUs specifically — every benchmark found was x86 or GPU. This is exactly why the project's plan to "spike the ARM embedding runtime first" in Phase 2 is the right call — treat this research as confirming the plumbing works, not as confirming the performance is acceptable.
-2. **Verify at implementation time, not from this research:** Gemini's specific free-tier model name and rate limits (RPM/RPD) change faster than documentation — re-check Google AI Studio's current pricing/limits page when Phase 2 is actually planned/built, don't hardcode a model name from this document into the roadmap.
-3. **Minor:** Postgrex is mid-transition to a `1.0.0` major version (currently at `-rc.1`); by the time Phase 0 is actually built, a final `1.0.0` may have shipped — check at implementation time rather than pinning the rc.
+- `hexdocs.pm/phoenix/using_ssl.html` (via WebSearch) — `force_ssl`/`Plug.SSL` compile-time requirement, HSTS behavior — MEDIUM confidence (search summary, cross-checked against Plug's own docs below)
+- `plug.hexdocs.pm/Plug.SSL.html` (via WebFetch) — `:hsts`, `:expires`, `:subdomains`, `:preload`, `:rewrite_on`, `:exclude` defaults — HIGH confidence (direct fetch of the authoritative module doc)
+- `plug.hexdocs.pm/Plug.Session.html` (via WebFetch) — `:secure`/`:http_only`/`:same_site` option list, deference to `Plug.Conn.put_resp_cookie/4` — MEDIUM confidence (doc page didn't spell out every default explicitly; cross-checked against known Plug.Conn cookie defaults)
+- This app's own `lib/pukllay_club_web/endpoint.ex`, `lib/pukllay_club_web/router.ex`, `lib/pukllay_club_web/csp.ex`, `lib/pukllay_club_web.ex`, `config/prod.exs`, `mix.exs` (direct file reads) — current `@session_options`, `force_ssl` config, CSP policy, `static_paths/0` already including `robots.txt`, existing `Mix.env() == :dev` compile-time-gate precedent, Sobelow/Jason version pins — HIGH confidence (primary source, the actual code)
+- `phoenix-seo.hexdocs.pm/SEO.html` (via WebFetch) — `phoenix_seo` v0.3.1 install/config shape, LiveView `SEO.assign/2` pattern, `<SEO.juice>` root-layout integration — MEDIUM confidence (single-source doc fetch, cross-checked against its GitHub README summary from search)
+- `sitemapper.hexdocs.pm/readme.html` (via WebFetch) — `sitemapper` v0.10.0 storage backends (`FileStore`/`S3Store`), stream-based design, serving via `Plug.Static` vs controller — MEDIUM confidence
+- `github.com/phoenixframework/phoenix_live_view` issue #1194 (via WebSearch) — confirms no built-in LiveView primitive for per-page `<head>` meta beyond `<.live_title>`, as of this research — MEDIUM confidence (issue referenced via search summary, consistent with known LiveView architecture — root layout renders once, LiveView content is patched, not the `<head>`)
+- `mathiasbynens.be/notes/json-dom-csp` (referenced via WebSearch summary) — the `</script>`-in-JSON escaping gotcha for `<script type="application/json">`/`application/ld+json"` blocks — MEDIUM confidence
+- CSP spec behavior for non-JS `<script>` `type` attributes being exempt from `script-src` (via WebSearch, cross-referencing MDN's `script-src` page summary) — MEDIUM confidence
+- `hex.pm/api/packages/{sobelow,phoenix_seo,sitemapper,jason}` (via direct `curl`) — exact current version numbers — HIGH confidence (direct registry API)
+- Mozilla/Chromium bug trackers (`bugzilla.mozilla.org` #1618113, #1648993) referenced via WebSearch summary — Firefox/Chrome `localhost`-as-secure-context exemption for the `Secure` cookie attribute, Safari's stricter behavior — MEDIUM confidence (cross-checked across two independent bug reports plus a summarizing article)
 
 ---
-*Stack research for: PukllayClub Elixir/Phoenix/Kamal/ARM production deployment*
-*Researched: 2026-07-24*
+*Stack research for: SEO/social-sharing/security-hardening additions to PukllayClub v1.1*
+*Researched: 2026-09-11*

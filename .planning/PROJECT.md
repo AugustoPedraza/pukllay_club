@@ -15,6 +15,29 @@ A member can describe what they want in plain Spanish and find a game that fits 
 already knowing board-game vocabulary. Everything before that (a working, deployed catalog) exists
 to make that possible; everything after it (rules Q&A, rental tracking) is a differentiator on top.
 
+## Current Milestone: v1.1 Sharable Version
+
+**Goal:** Make the live catalog safe and appealing to actually pass around — discoverable on
+Google, good-looking when a game link is dropped into WhatsApp/Facebook/Twitter, hardened against
+the basics now that the repo is public, and clean of any leaked secrets.
+
+**Target features:**
+- **Production catalog data (highest priority — blocks everything else looking real):** the live
+  production database at pukllay.club is currently empty of games, despite the seed pipeline
+  having loaded ~400+ games in dev. The seed pipeline was deliberately scoped dev-machine-only
+  (BGG/R2 credentials only ever in gitignored `config/dev.secret.exs`, never wired through Kamal)
+  — needs a safe path to run it against production, or the SEO/sharing work below has nothing real
+  to demonstrate
+- SEO: per-page meta descriptions, real `alt` text on catalog card/preview images, a real
+  `robots.txt` + `sitemap.xml`, and JSON-LD structured data (schema.org `Game` on detail pages,
+  `LocalBusiness`/Jujuy context site-wide)
+- Social sharing: Open Graph + Twitter Card tags on game detail pages (title/description/game
+  cover-art image) and a site-wide brand fallback (isologo/wordmark), sharing the same canonical
+  URL the existing native-share control already builds
+- Security hardening: secure session cookie flag, HSTS/CSP/CSRF/XSS audit and fixes
+- One-time secrets sweep across full git history and all tracked config files (no new tooling —
+  repo already keeps real secrets gitignored per D-19)
+
 ## Requirements
 
 ### Validated
@@ -43,6 +66,20 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
 
 ### Active
 
+- [ ] Production's live database has the real ~400+ game catalog loaded (it is currently empty —
+      the seed pipeline has only ever run against dev) via a safe, repeatable path to run it
+      against production (v1.1 — highest priority, blocks the rest of this milestone being
+      demonstrable)
+- [ ] Game detail and catalog pages carry real SEO metadata (descriptions, alt text, sitemap,
+      robots.txt, JSON-LD structured data) so the catalog is discoverable on Google, targeted at
+      Jujuy (v1.1)
+- [ ] Game detail pages carry Open Graph + Twitter Card tags (title/description/cover image) and
+      the site carries a branded fallback, so shared links render an appealing, on-brand preview
+      on WhatsApp/Facebook/Twitter (v1.1)
+- [ ] The production app follows baseline web security practice (secure cookies, HSTS, CSP, CSRF,
+      XSS) appropriate for a now-public repo and a link that gets passed around (v1.1)
+- [ ] No secrets, keys, or credentials are discoverable anywhere in the public repo or its git
+      history (v1.1)
 - [ ] Members can search the catalog with natural-language Spanish queries via local embeddings +
       pgvector hybrid ranking + LLM query parsing, and save favorites behind magic-link auth
       (Phase 2 — hero feature)
@@ -167,4 +204,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-11 after v1.0 milestone*
+*Last updated: 2026-09-11 after starting v1.1 milestone*

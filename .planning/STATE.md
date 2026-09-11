@@ -1,23 +1,23 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.0
-status: Awaiting next milestone
-stopped_at: Completed 01.5-08-PLAN.md
-last_updated: "2026-09-11T03:06:13.676Z"
+milestone: v1.1
+milestone_name: Sharable Version
+current_phase: "01.7"
+current_phase_name: Production Catalog Data & Security Hardening (INSERTED)
+status: planning
+stopped_at: Phase 01.7 context gathered
+last_updated: "2026-09-11T14:43:54.194Z"
 last_activity: 2026-09-11
-last_activity_desc: Milestone v1.0 completed and archived
-state_head: 31d947270bb96db5f0bb29d11e9672ddb615d5a8
+last_activity_desc: v1.1 roadmap created (Phases 01.7 + 01.8, 20/20 requirements mapped)
+state_head: bffa3f9f991cf6581e38f7c5b05fd5a990539d71
 progress:
-  total_phases: 11
-  completed_phases: 7
-  total_plans: 87
-  completed_plans: 87
-milestone_name: milestone
-current_phase: "01.5"
-current_phase_name: About Page CTA Rhythm & Header Morph Refinement
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 0
 ---
 
-Total Phases: 7
+Total Phases: 9
 
 # Project State
 
@@ -27,14 +27,16 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Planning next milestone (Phase 2: Natural-Language Spanish Search + Auth)
+**Current focus:** Milestone v1.1 "Sharable Version" — Phase 01.7 (production catalog data +
+security hardening), then Phase 01.8 (SEO, structured data, social sharing). Both are decimal
+insertions ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: Milestone v1.0 complete — v1.0 shipped 2026-09-11
+Phase: 01.7 (Production Catalog Data & Security Hardening (INSERTED)) — READY TO EXECUTE
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-11 — Milestone v1.0 completed and archived
+Status: Roadmap created — ready to plan Phase 01.7
+Last activity: 2026-09-11 — v1.1 roadmap created (Phases 01.7 + 01.8, 20/20 requirements mapped)
 
 ## Performance Metrics
 
@@ -232,6 +234,20 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 ### Blockers/Concerns
 
+- Phase 01.8: `og:image` must be 1200x630, but Phase 01.3.1's `ImagePipeline` produces letterboxed
+  near-square cover art — verify `ImagePipeline` can actually emit that aspect ratio before
+  committing to a rendering approach (research/SUMMARY.md "Gaps to Address"). Fallback options exist
+  (no composition pipeline in scope for v1.1), but this is an open unknown at plan time.
+
+- Phase 01.8: inline `<script type="application/ld+json">` is silently blocked by this app's own
+  CSP (`script-src 'self'`, no `unsafe-inline`, no nonce). The nonce refactor (SEC-05) must land
+  before the JSON-LD content, and `unsafe-inline` is never an acceptable shortcut here.
+
+- Phase 01.7: `force_ssl`'s `exclude` list must stay in sync with kamal-proxy's `/up` health check,
+  and `csp.ex`'s single third-party `frame-src` (`ClubLinks.maps_embed_origin/0`, added in 01.4-12)
+  is deliberate — a generic "tighten the CSP" pass that removes it breaks the About page's Maps
+  embed.
+
 - Phase 2: Embedding runtime throughput/latency for local CPU embeddings is a genuine open
   unknown (research/SUMMARY.md) — must be resolved via an explicit spike before committing to
   Bumblebee vs. an alternative runtime or a specific model; do not skip or shortcut this spike.
@@ -264,6 +280,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 5 added: UI polish pass for About page sketches
 - Phase 01.4 inserted after Phase 1: UI polish pass for About page sketches (URGENT)
 - Phase 01.5 inserted after Phase 1: About Page CTA Rhythm & Header Morph Refinement — implement sketch-findings-pukllay_club sketches 050-051 (URGENT)
+- Phase 01.7 inserted after Phase 01.6 (milestone v1.1): Production Catalog Data & Security Hardening — production's live DB is empty of games, and the now-public repo/passed-around link needs baseline cookie/HSTS/CSP/CSRF hardening plus a one-time full-git-history secrets sweep. Numbered as a decimal insertion continuing the 01.N convention so Phase 2/3/4 keep their numbers and scope.
+- Phase 01.8 inserted after Phase 01.7 (milestone v1.1): SEO, Structured Data & Social Sharing — per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, real image `alt` text. Split from 01.7 because its UAT (share a live game link, run Rich Results Test) requires production to already hold the real catalog, and because its verification mode (crawler/social-preview) is entirely different from 01.7's (operator/`curl -I`/production data).
 
 ## Deferred Items
 
@@ -298,10 +316,10 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-11T02:02:16Z
-Stopped at: Ship operation complete — all 5 sequential phase PRs (#30 Phase 01.2, #32 Phase 01.3+01.3.1, #33 Phase 01.4, #34 Phase 01.5+av6, #35 Phase 01.6) merged and deployed; `origin/main` and local `main` reconciled; production healthy (`/up` → 200)
-Resume file: None
+Last session: 2026-09-11T14:01:41.989Z
+Stopped at: Phase 01.7 context gathered
+Resume file: .planning/phases/01.7-production-catalog-data-security-hardening-inserted/01.7-CONTEXT.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan the first v1.1 phase with /gsd-plan-phase 01.7
