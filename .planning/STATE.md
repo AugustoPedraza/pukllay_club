@@ -322,7 +322,30 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| debug_sessions | G-01-2-badge-title-overlap | diagnosed | 2026-09-10 |
+| debug_sessions | G-01-3-catalog-grid-overflow | diagnosed | 2026-09-10 |
+| debug_sessions | G-01-4-carousel-affordance | diagnosed | 2026-09-10 |
+| debug_sessions | G-01-4-section-hierarchy | diagnosed | 2026-09-10 |
+| debug_sessions | G-01-5-expansions-in-recent | diagnosed | 2026-09-10 |
+| debug_sessions | G-01-6-card-info-density | diagnosed | 2026-09-10 |
+| debug_sessions | G-01-7-double-focus-ring | diagnosed | 2026-09-10 |
+| debug_sessions | G-01.4-1-isologo-morph-blink | diagnosed | 2026-09-10 |
+| debug_sessions | G-01.4-2-map-thumb-coverage | diagnosed | 2026-09-10 |
+| debug_sessions | G-01.5-4-hero-cierre-composition-balance | diagnosed | 2026-09-10 |
+| debug_sessions | G-01.5-5-cierre-footer-gap | diagnosed | 2026-09-10 |
+| debug_sessions | G-01.5-6-cierre-top-bottom-whitespace | diagnosed | 2026-09-10 |
+| debug_sessions | G-01.5-7-cta-bar-background-visible | diagnosed | 2026-09-10 |
+| debug_sessions | cierre-band-whitespace | diagnosed | 2026-09-10 |
+| debug_sessions | hashtags-not-visible | diagnosed | 2026-09-10 |
+| debug_sessions | hero-cta-isologo-balance | diagnosed | 2026-09-10 |
+| debug_sessions | inter-band-whitespace-gap | diagnosed | 2026-09-10 |
+| debug_sessions | knowledge-base | unknown | 2026-09-10 |
+| debug_sessions | lightbox-width-scrim-not-shell-width | diagnosed | 2026-09-10 |
+| todos | 2026-09-07-surface-pukllay-club-brand-name-in-content.md | (presence-only) | 2026-09-10 |
+| verification_gaps | Phase 01.5 / 01.5-VERIFICATION.md | human_needed | 2026-09-10 |
+| deferred_items | Phase 01.4: pre-existing `mix format` drift in layouts_test.exs (plan 01.4-07 note) | acknowledged | 2026-09-10 |
+| deferred_items | Phase 01.4: pre-existing `mix format` drift in layouts_test.exs, still present (plan 01.4-12 note) | acknowledged | 2026-09-10 |
+| deferred_items | Phase 01.5: pre-existing `mix format` drift in two Plan 01.5-01 files, resolved in 01.5-04 | acknowledged | 2026-09-10 |
 
 ## Session Continuity
 

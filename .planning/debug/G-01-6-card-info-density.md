@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "G-01-6: The game card on the catalog main page presents too much information at once with no clear visual hierarchy between primary and secondary fields — feels 'overloaded' for a casual/new player."
 created: 2026-08-18T20:30:00.000Z
 updated: 2026-08-18T21:00:00.000Z
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus

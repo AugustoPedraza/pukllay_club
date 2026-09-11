@@ -4,8 +4,13 @@ title: Surface "Pukllay Club" brand name in site content
 area: ui
 severity: cosmetic
 files:
+
   - lib/pukllay_club_web/live/about_live.ex
   - lib/pukllay_club_web/components/layouts.ex
+
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
 ---
 
 ## Problem
@@ -24,6 +29,7 @@ sketch this before deciding on an approach, rather than have it implemented ad h
 ## Solution
 
 TBD — candidate approaches to explore via `/gsd-sketch` when this is picked up:
+
 - Add "Pukllay Club" as visible text near the isologo in the header/footer brand lockup (not just
   alt text)
 - Add it explicitly in the About page's opening copy/hero if not already present in prose form

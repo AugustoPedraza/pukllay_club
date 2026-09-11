@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "G-01-2: The game title and weight-band badge in a catalog card overlap on narrow/mobile viewport widths."
 created: 2026-08-18T21:21:47.000Z
 updated: 2026-08-18T21:21:47.000Z
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus
