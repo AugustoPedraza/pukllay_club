@@ -73,7 +73,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         name: "Un título extraordinariamente largo que debería ocupar más de dos líneas de texto"
       })
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "extraordinariamente"})
 
       assert grid_html(html) =~ "pk-card-caption"
     end
@@ -82,9 +87,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
          %{conn: conn} do
       game_fixture(%{name: "Juego Banded", weight_band: "ingenio_estratega"})
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Juego Banded"})
+
       card_html = html |> grid_html() |> strip_preview_templates()
 
+      assert card_html =~ "Juego Banded"
       refute card_html =~ "Ingenio estratega"
       refute card_html =~ "Reglas de 15-20 minutos"
     end
@@ -104,9 +116,16 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         weight_band: "descubre_el_hobby"
       })
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Juego Con Chips"})
+
       card_html = html |> grid_html() |> strip_preview_templates()
 
+      assert card_html =~ "Juego Con Chips"
       refute card_html =~ "badge"
       refute card_html =~ "#CreaConexiones"
       refute card_html =~ "#EquipoGanador"
@@ -135,7 +154,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         weight_band: "nivel_experto"
       })
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Juego Con Metadata"})
+
       card_html = grid_html(html)
 
       assert card_html =~ "data-game-preview"
@@ -271,31 +296,28 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       game_fixture(%{name: "Alfa Corto", playing_time: 20})
       game_fixture(%{name: "Zeta Largo", playing_time: 120})
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
 
       assert position(grid_html(html), "Alfa Corto") < position(grid_html(html), "Zeta Largo")
 
-      {:ok, _view, html2} = live(conn, ~p"/?sort=playtime_desc")
+      {:ok, _view, html2} =
+        live(conn, ~p"/?weight_bands=ingenio_estratega&sort=playtime_desc")
 
       assert position(grid_html(html2), "Zeta Largo") < position(grid_html(html2), "Alfa Corto")
     end
 
-    test "pressing Cargar más appends the next page and leaves already-rendered cards in place", %{
-      conn: conn
-    } do
+    test "dispatching load-more appends the next page and leaves already-rendered cards in place",
+         %{conn: conn} do
       for n <- 1..30 do
         game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
       end
 
-      {:ok, view, html} = live(conn, ~p"/")
+      {:ok, view, html} = live(conn, ~p"/?q=Juego")
 
       assert card_count(html) == 24
       assert html =~ "Juego 01"
 
-      html2 =
-        view
-        |> element("button", "Cargar más")
-        |> render_click()
+      html2 = render_click(view, "load-more", %{})
 
       assert card_count(html2) == 30
       assert html2 =~ "Juego 01"
@@ -306,17 +328,17 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         game_fixture(%{name: "G#{n}", mechanics: ["Dice Rolling"]})
       end
 
-      {:ok, view, html} = live(conn, ~p"/")
-      assert html =~ "Cargar más"
+      {:ok, view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
+      assert card_count(html) == 24
 
-      view |> element("button", "Cargar más") |> render_click()
+      render_click(view, "load-more", %{})
 
       html2 =
         view
         |> form("#catalog-search-form")
         |> render_change(%{q: "G1"})
 
-      refute html2 =~ "Cargar más"
+      assert card_count(html2) == 1
     end
 
     test "a filter combination with no matches renders the empty state, and Limpiar filtros restores results",
@@ -370,15 +392,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
 
     test "the result count renders in correct Spanish singular/plural form", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
       assert html =~ "0 juegos encontrados"
 
       game_fixture(%{name: "Solo Juego"})
-      {:ok, _view2, html2} = live(conn, ~p"/")
+      {:ok, _view2, html2} = live(conn, ~p"/?weight_bands=ingenio_estratega")
       assert html2 =~ "1 juego encontrado"
 
       game_fixture(%{name: "Otro Juego"})
-      {:ok, _view3, html3} = live(conn, ~p"/")
+      {:ok, _view3, html3} = live(conn, ~p"/?weight_bands=ingenio_estratega")
       assert html3 =~ "2 juegos encontrados"
     end
 
@@ -587,6 +609,127 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "vertical infinite scroll: .GridScroll sentinel-driven load-more (D-03)" do
+    test "the hook element's data-exhausted is false while more pages remain, and true once the offset reaches the total",
+         %{conn: conn} do
+      for n <- 1..30 do
+        game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
+      end
+
+      {:ok, view, html} = live(conn, ~p"/?q=Juego")
+
+      assert grid_scroll_html(html) =~ ~s(data-exhausted="false")
+
+      html2 = render_click(view, "load-more", %{})
+
+      assert grid_scroll_html(html2) =~ ~s(data-exhausted="true")
+    end
+
+    test "the results view renders the sentinel element and exactly four trailing skeleton placeholders with stable ids",
+         %{conn: conn} do
+      game_fixture(%{name: "Sentinel Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render_click(view, "apply-filters", %{})
+
+      section_html = grid_scroll_html(html)
+
+      assert section_html =~ "data-grid-sentinel"
+      assert section_html =~ ~s(id="grid-skel-1")
+      assert section_html =~ ~s(id="grid-skel-2")
+      assert section_html =~ ~s(id="grid-skel-3")
+      assert section_html =~ ~s(id="grid-skel-4")
+      refute section_html =~ ~s(id="grid-skel-5")
+    end
+
+    test "the rendered results view contains no inline script tag — the colocated hook is extracted at build time",
+         %{conn: conn} do
+      game_fixture(%{name: "No Script Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render_click(view, "apply-filters", %{})
+
+      refute html =~ "export default"
+    end
+
+    test "dispatching load-more appends the next page without disturbing already-rendered cards, and data-exhausted flips to true on the last page",
+         %{conn: conn} do
+      for n <- 1..30 do
+        game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
+      end
+
+      {:ok, view, html} = live(conn, ~p"/?q=Juego")
+
+      assert card_count(html) == 24
+      assert html =~ "Juego 01"
+
+      html2 = render_click(view, "load-more", %{})
+
+      assert card_count(html2) == 30
+      assert html2 =~ "Juego 01"
+      assert grid_scroll_html(html2) =~ ~s(data-exhausted="true")
+    end
+
+    test "dispatching load-more again after the result set is exhausted is a no-op: unchanged card count, no error state",
+         %{conn: conn} do
+      for n <- 1..30 do
+        game_fixture(%{name: "Juego #{String.pad_leading(Integer.to_string(n), 2, "0")}"})
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/?q=Juego")
+      render_click(view, "load-more", %{})
+
+      html3 = render_click(view, "load-more", %{})
+
+      assert card_count(html3) == 30
+      refute html3 =~ "No pudimos cargar más juegos."
+    end
+
+    test "the manual pagination control no longer renders anywhere in the results view", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Any Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+      html = render_click(view, "apply-filters", %{})
+
+      refute html =~ "Cargar más"
+    end
+
+    test "changing a filter after loading additional pages resets the offset and clears any error state",
+         %{conn: conn} do
+      for n <- 1..30 do
+        game_fixture(%{name: "G#{n}", mechanics: ["Dice Rolling"]})
+      end
+
+      {:ok, view, html} = live(conn, ~p"/?weight_bands=ingenio_estratega")
+      assert grid_scroll_html(html) =~ ~s(data-exhausted="false")
+
+      render_click(view, "load-more", %{})
+
+      html2 =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "G1"})
+
+      assert grid_scroll_html(html2) =~ ~s(data-exhausted="true")
+      refute html2 =~ "No pudimos cargar más juegos."
+    end
+
+    # A mid-scroll load-more query failure (:more_error, distinct from the
+    # existing :load_error path) is not reachable from this suite: every
+    # value that can make safe_filter_games/1's rescue fire (e.g. the
+    # out-of-Postgres-int-range players value used by the existing
+    # "when the catalog query raises" test) fails identically on the very
+    # first apply_filters/1 call — offset is never client-controlled, so
+    # there is no way to make page 1 of a filter succeed while a later
+    # load-more page of the SAME filter fails. Recorded here rather than
+    # writing a test that would assert nothing; the inline retry line's
+    # actual failure/recovery behaviour is deferred to Task 3's
+    # <human-check> item 4, the same pattern 01.2-03-SUMMARY.md's D6 used
+    # for an analogous untestable scenario.
+  end
+
   describe "differentiated row headers and titled main grid (G-01-4)" do
     test "the hero row renders in the primary colour and a weight-band row renders its Vocabulary descriptor as a subtitle",
          %{conn: conn} do
@@ -605,12 +748,15 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert carousel_html =~ "Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez."
     end
 
-    test "the unfiltered landing render contains the main-grid section heading", %{conn: conn} do
+    test "the unfiltered landing renders the carousel-rows container and no results grid (D-01)",
+         %{conn: conn} do
       game_fixture()
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      assert html =~ "El catálogo completo"
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+      refute html =~ "El catálogo completo"
     end
 
     test "a filtered render shows the results-wording heading and hides the carousel block", %{
@@ -628,6 +774,363 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert html =~ "Resultados"
       refute html =~ "El catálogo completo"
       refute html =~ "id=\"carousel-rows\""
+    end
+  end
+
+  describe "the two-surface contract: carousels XOR grid (D-01, D-02)" do
+    test "an unfiltered landing renders the carousel-rows container, the chip index row and the desktop mega-menu, and renders no #games container",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ ~s(id="carousel-rows")
+      assert html =~ "pk-chip-nav"
+      assert html =~ "pk-cat-trigger"
+      refute html =~ ~s(id="games")
+    end
+
+    test "pressing the filter modal's primary CTA with no facets selected renders the #games container and the full-catalog heading, and hides the carousel surface",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "apply-filters", %{})
+
+      assert html =~ ~s(id="games")
+      assert html =~ "El catálogo completo"
+      refute html =~ ~s(id="carousel-rows")
+      refute html =~ "pk-chip-nav"
+      refute html =~ "pk-cat-trigger"
+    end
+
+    test "dismissing the modal instead, with no facets selected, leaves the carousel surface rendered and renders no #games container",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "close-filters", %{})
+
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+    end
+
+    test "from the submitted state, dispatching clear-filters returns the carousel surface and removes the #games container",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "apply-filters", %{})
+
+      html = render_click(view, "clear-filters", %{})
+
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+    end
+
+    # A load failure while the carousel surface is showing was considered
+    # (D-02's must_haves list it as a state to prove) but is not reachable
+    # from this suite: every path that can put the socket into
+    # :load_error (safe_filter_games/1's rescue, exercised via the
+    # out-of-range players value in the "GET /" load-error test) also sets
+    # a real filter, which makes filters_active?/1 — and therefore
+    # browsing_results?/1 — true, landing on the grid surface instead.
+    # Recorded here rather than writing a test that would assert nothing;
+    # see the plan's SUMMARY for the same note.
+  end
+
+  describe "active-filters summary row (G-01.2-4, sketch 029 winner C)" do
+    test "several facets, a scalar and a query active render one chip per filter, using the modal's own labels",
+         %{conn: conn} do
+      game_fixture(%{
+        name: "Multi Filter Game",
+        weight_band: "ingenio_estratega",
+        mechanics: ["Trading"],
+        min_players: 3,
+        max_players: 3
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "weight_bands", "choice" => "ingenio_estratega"})
+      render_click(view, "toggle-facet", %{"facet" => "mechanics", "choice" => "Comercia"})
+      render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "3"})
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Multi"})
+
+      chip_html = active_filter_chips_html(html)
+
+      assert chip_html =~ "Nivel: Ingenio estratega"
+      assert chip_html =~ "Mecánica: Comercia"
+      assert chip_html =~ "Jugadores: 3"
+      assert chip_html =~ "Búsqueda: Multi"
+    end
+
+    test "only a query active renders exactly one chip, naming the query", %{conn: conn} do
+      game_fixture(%{name: "Query Only Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Query"})
+
+      chips =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-active-filter-chip")
+
+      assert Enum.count(chips) == 1
+      assert LazyHTML.to_html(chips) =~ "Búsqueda: Query"
+    end
+
+    test "the unfiltered carousel surface renders no summary chips", %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      refute html =~ "pk-active-filter-chip"
+    end
+
+    test "clicking a facet chip drops exactly that filter and leaves the others intact", %{
+      conn: conn
+    } do
+      game_fixture(%{
+        name: "Both Match",
+        weight_band: "ingenio_estratega",
+        mechanics: ["Trading"]
+      })
+
+      game_fixture(%{name: "Only Mechanic", mechanics: ["Trading"]})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "weight_bands", "choice" => "ingenio_estratega"})
+      render_click(view, "toggle-facet", %{"facet" => "mechanics", "choice" => "Comercia"})
+
+      html =
+        view
+        |> element(~s(.pk-active-filter-chip[phx-value-facet="weight_bands"]))
+        |> render_click()
+
+      grid = grid_html(html)
+      assert grid =~ "Both Match"
+      assert grid =~ "Only Mechanic"
+      refute html =~ "Nivel: Ingenio estratega"
+      assert html =~ "Mecánica: Comercia"
+    end
+
+    test "clicking the query chip clears the query and leaves facets intact", %{conn: conn} do
+      game_fixture(%{name: "Facet And Query", mechanics: ["Trading"]})
+      game_fixture(%{name: "Facet Only", mechanics: ["Trading"]})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "mechanics", "choice" => "Comercia"})
+
+      view
+      |> form("#catalog-search-form")
+      |> render_change(%{q: "Facet And"})
+
+      # A direct render_click/3 (matching the "toggle-facet" style two
+      # events above), not an `element(view, selector) |> render_click()`
+      # DOM lookup: since G-01.2-9 (01.2-16) the chip's `phx-click` renders
+      # as a JS.push-encoded value (`page_loading: true`), not the literal
+      # event-name string a `[phx-click="clear-query"]` attribute selector
+      # depended on.
+      html = render_click(view, "clear-query", %{})
+
+      assert html =~ "Mecánica: Comercia"
+      refute html =~ "Búsqueda:"
+
+      grid = grid_html(html)
+      assert grid =~ "Facet And Query"
+      assert grid =~ "Facet Only"
+    end
+
+    test "removing the last remaining filter chip returns the member to the carousel surface", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "Solo Filter Game", weight_band: "ingenio_estratega"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "weight_bands", "choice" => "ingenio_estratega"})
+
+      html =
+        view
+        |> element(~s(.pk-active-filter-chip[phx-value-facet="weight_bands"]))
+        |> render_click()
+
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+    end
+
+    test "the clear-everything action drops every active filter at once", %{conn: conn} do
+      game_fixture(%{name: "Cleared Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-facet", %{"facet" => "mechanics", "choice" => "Comercia"})
+
+      view
+      |> form("#catalog-search-form")
+      |> render_change(%{q: "Cleared"})
+
+      html =
+        view
+        |> element(".pk-clear-filters-link")
+        |> render_click()
+
+      refute html =~ "pk-active-filter-chip"
+      assert html =~ ~s(id="carousel-rows")
+    end
+
+    test "chips do not carry filter_modal's own selection-chip class (Round 2's separation, sketch 029)",
+         %{conn: conn} do
+      game_fixture(%{name: "Any Game", weight_band: "ingenio_estratega"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        render_click(view, "toggle-facet", %{"facet" => "weight_bands", "choice" => "ingenio_estratega"})
+
+      chip_html = active_filter_chips_html(html)
+
+      refute chip_html =~ "badge-primary"
+      refute chip_html =~ "badge-neutral"
+      refute chip_html =~ ~s(class="badge)
+    end
+
+    # G-01.2-27 task 1: pins the migration onto the shared pill base — a
+    # future revert to a bespoke `.pk-active-filter-chip` rule (the exact
+    # drift this consolidation ends) fails here, not just visually.
+    test "each applied-filter chip composes the shared pill base, the accent tone, the comfortable size, and the interactive variant",
+         %{conn: conn} do
+      game_fixture(%{name: "Pill Base Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Pill Base"})
+
+      chip_classes =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-active-filter-chip")
+        |> LazyHTML.attribute("class")
+
+      assert chip_classes != []
+
+      for class_list <- chip_classes do
+        tokens = String.split(class_list)
+
+        assert "pk-pill" in tokens
+        assert "pk-pill-accent" in tokens
+        assert "pk-pill-comfortable" in tokens
+        assert "pk-pill-interactive" in tokens
+      end
+    end
+  end
+
+  describe "settling the background surface once per modal close (G-01.2-4 defect C)" do
+    test "G-01.2-4: opening the modal on the carousel surface and toggling a facet leaves the rendered surface unchanged while the modal stays open",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+
+      html =
+        view
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
+        |> render_click()
+
+      # The background surface is FROZEN: still carousels, no grid heading
+      # — even though the filter is now active server-side and the modal's
+      # own live match count already reflects it. This looks like it
+      # contradicts D-01 (carousels XOR grid) but doesn't: D-01 governs the
+      # DESIRED surface (browsing_results?/1); this test is about the
+      # RENDERED one (:rendered_results), frozen deliberately while the
+      # modal covers it.
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+      refute html =~ "Resultados"
+      assert html =~ "Ver 1 juego"
+    end
+
+    test "G-01.2-4: closing that modal via the X commits the swap: the grid heading appears and the carousel container is gone",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+
+      view
+      |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
+      |> render_click()
+
+      html = view |> element("button[data-modal-close]") |> render_click()
+
+      assert html =~ "Resultados"
+      refute html =~ ~s(id="carousel-rows")
+    end
+
+    test "G-01.2-4: the repopulation test — after opening, filtering and closing via the X, the grid actually contains the matching card, not just an empty frame",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
+
+      view
+      |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
+      |> render_click()
+
+      html = view |> element("button[data-modal-close]") |> render_click()
+
+      assert card_count(html) == 1
+      assert grid_html(html) =~ "Hobby Game"
+    end
+
+    test "G-01.2-4: the explicit-submission CTA with nothing selected renders a populated grid (UAT Test 4 clause 1)",
+         %{conn: conn} do
+      game_fixture(%{name: "Any Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "apply-filters", %{})
+
+      assert card_count(html) == 1
+    end
+
+    test "G-01.2-4: clear-filters returns the member to the carousels with the row actually populated (mirror-direction repopulation)",
+         %{conn: conn} do
+      game_fixture(%{name: "Crea Game", tags: ["#CreaConexiones"]})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "apply-filters", %{})
+      html = render_click(view, "clear-filters", %{})
+
+      assert html =~ ~s(id="carousel-rows")
+      refute html =~ ~s(id="games")
+      assert carousel_card_count(html, "crea_conexiones") == 1
     end
   end
 
@@ -979,6 +1482,108 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "search-morph server-owned open state (G-01.2-2, G-01.2-3)" do
+    # The strip regression, pinned. Pre-01.2-11, .pk-search-morph carried a
+    # literal `class="pk-search-morph"` string alongside a dynamic
+    # data-search-expanded attribute on the SAME element — the moment any
+    # of the element's dynamic inputs changed (here: @q flipping
+    # browsing_results?/1, which drops the nav_menu/subnav sibling slots),
+    # LiveView re-applied the server's attribute set and stripped the
+    # client-added `.is-open` class. syncMorph() then silently re-added it
+    # but never restored focus, so the member's next keystroke went
+    # nowhere. Now the class is rendered FROM :search_expanded on every
+    # render, so there is nothing left to strip.
+    test "opening the search then typing a query that flips browsing_results? leaves the pill open",
+         %{conn: conn} do
+      game_fixture(%{name: "Some Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render_click(view, "open-search", %{})
+      assert html =~ ~s(data-search-expanded="true")
+      assert html =~ "is-open"
+
+      html2 =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Some"})
+
+      assert html2 =~ ~s(data-search-expanded="true")
+      assert html2 =~ "is-open"
+    end
+
+    test "close-search removes the open state, and a subsequent handle_params for the same query does not restore it",
+         %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/?q=Catan")
+      assert html =~ ~s(data-search-expanded="true")
+
+      html2 = render_click(view, "close-search", %{})
+      assert html2 =~ ~s(data-search-expanded="false")
+
+      # Re-runs handle_params/3 on the SAME LiveView process with the
+      # identical query string — the widen-only rule must not treat this
+      # as "a URL carrying a query" reopening what the member just closed.
+      html3 = render_patch(view, ~p"/?q=Catan")
+      assert html3 =~ ~s(data-search-expanded="false")
+    end
+
+    # The assertion that the deleted document-level outside-press listener
+    # (G-01.2-3/G-01.2-4 defect A) is really gone: every filter-modal
+    # interaction below is a full LiveView round trip, and none of them
+    # touch :search_expanded server-side.
+    test "opening the filter modal, toggling a facet, and closing it leaves the open state untouched",
+         %{conn: conn} do
+      game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "open-search", %{})
+
+      html =
+        view
+        |> element(~s([aria-label="Abrir filtros"]))
+        |> render_click()
+
+      assert html =~ ~s(data-search-expanded="true")
+
+      html2 =
+        view
+        |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
+        |> render_click()
+
+      assert html2 =~ ~s(data-search-expanded="true")
+
+      html3 = render_click(view, "close-filters", %{})
+      assert html3 =~ ~s(data-search-expanded="true")
+    end
+  end
+
+  describe "card-vs-preview href parity for the forwarded ?from= filter state (G-01.2-1)" do
+    # The debug session found no defect here — GameCard and GamePreview
+    # mirror the same three-clause detail_path/2 from the same @from_query
+    # assign — but that surface was unreachable while search was broken, so
+    # nothing had ever observed it. This is what makes the finding
+    # permanent rather than a claim: string equality, not a substring
+    # match on one side.
+    test "GameCard's own link and GamePreview's Ver detalles CTA build identical hrefs for the same game",
+         %{conn: conn} do
+      game_fixture(%{name: "Parity Game"})
+
+      {:ok, _view, html} = live(conn, ~p"/?q=Parity")
+
+      card_html = grid_html(html)
+
+      [card_tag] = Regex.run(~r/<a[^>]*data-game-card[^>]*>/, card_html)
+      [_, card_href] = Regex.run(~r/href="([^"]+)"/, card_tag)
+
+      [preview_tag] = Regex.run(~r/<a[^>]*pk-preview-cta[^>]*>/, card_html)
+      [_, preview_href] = Regex.run(~r/href="([^"]+)"/, preview_tag)
+
+      assert card_href == preview_href
+      assert card_href =~ "from="
+    end
+  end
+
   describe "no join CTA in the header (D-05 superseded, plan 01.1-08)" do
     test "the #app-header subtree contains no join-CTA label", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/")
@@ -1177,7 +1782,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html =~ "class=\"modal modal-open\""
     end
 
-    test "toggling a facet from inside the open surface narrows the grid and leaves the surface open",
+    # Superseded by Task 2 (G-01.2-4 defect C): this test used to assert the
+    # background grid narrowed the instant a facet was toggled inside the
+    # open modal — exactly the "jumps the UI all the time" bug this plan
+    # fixes. See the "surface unchanged while modal is open" test below
+    # (settling behaviour describe block) for the corrected contract; the
+    # live-count half of the old intent is still covered by the next test.
+    test "toggling a facet from inside the open surface leaves the modal open and its live count updated, without restructuring the page behind it",
          %{conn: conn} do
       game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
       game_fixture(%{name: "Expert Game", weight_band: "nivel_experto"})
@@ -1191,10 +1802,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
-      grid = grid_html(html)
-      assert grid =~ "Hobby Game"
-      refute grid =~ "Expert Game"
       assert html =~ "modal-open"
+      assert html =~ "Ver 1 juego"
+      refute html =~ ~s(id="games")
+      assert html =~ ~s(id="carousel-rows")
     end
 
     test "the live match count in the surface changes as a facet is toggled", %{conn: conn} do
@@ -1203,15 +1814,20 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/")
 
+      # D-01/D-02: opening the modal alone (nothing selected yet) no longer
+      # keeps the grid — and its "N juegos encontrados" heading — rendered
+      # behind it; the live count is checked via the modal's own footer
+      # CTA label instead, which is always present whenever the modal is
+      # open, filtered or not.
       html_before = view |> element(~s([aria-label="Abrir filtros"])) |> render_click()
-      assert html_before =~ "2 juegos encontrados"
+      assert html_before =~ "Ver 2 juegos"
 
       html_after =
         view
         |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
-      assert html_after =~ "1 juego encontrado"
+      assert html_after =~ "Ver 1 juego"
     end
 
     test "the surface closes on close-filters", %{conn: conn} do
@@ -1223,9 +1839,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html =~ "class=\"modal modal-open\""
     end
 
-    test "with a facet active and q empty, the morph carries data-search-expanded=\"true\"", %{
-      conn: conn
-    } do
+    # 01.2-11 superseded this test's prior expectation. Toggling a facet no
+    # longer force-opens the search pill to reveal the filter badge (the
+    # collapsible-badge defect from G-01.2-4) — :search_expanded is now
+    # member-owned, only opened by open-search/a URL-carried filter at
+    # handle_params time, or closed by close-search. A facet click routes
+    # through apply_filters/1 alone, which never touches it.
+    test "toggling a facet from a closed pill does not force it open", %{conn: conn} do
       game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
 
       {:ok, view, _html} = live(conn, ~p"/")
@@ -1235,7 +1855,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> element(~s(button[phx-value-facet="weight_bands"][phx-value-choice="descubre_el_hobby"]))
         |> render_click()
 
-      assert html =~ ~s(data-search-expanded="true")
+      assert html =~ ~s(data-search-expanded="false")
     end
 
     test "with no facet active and q empty, the morph carries data-search-expanded=\"false\"", %{
@@ -1328,9 +1948,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       html =
         render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "4"})
 
-      grid = grid_html(html)
-      assert grid =~ "Four Player Game"
-      assert grid =~ "Big Group Game"
+      # Clearing the last active scalar returns the member to the carousel
+      # surface (D-01/D-02), not an unfiltered grid — both fixtures keep
+      # their default tags/weight_band, so they're reachable via the
+      # carousel-rows section instead.
+      assert html =~ "Four Player Game"
+      assert html =~ "Big Group Game"
+      refute html =~ ~s(id="games")
     end
 
     test "toggling max_playtime does not reset an already-active players chip", %{conn: conn} do
@@ -1372,7 +1996,13 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
          %{conn: conn} do
       game_fixture(%{name: "Untouched Scalar Game"})
 
-      {:ok, view, html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Untouched"})
+
       before_count = card_count(html)
 
       html2 =
@@ -1393,9 +2023,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       html =
         render_click(view, "toggle-scalar", %{"scalar" => "players", "choice" => "abc"})
 
-      grid = grid_html(html)
-      assert grid =~ "Four Player Game"
-      assert grid =~ "Big Group Game"
+      # An unparseable choice degrades the scalar back to nil — with no
+      # filter left active, the member lands back on the carousel surface
+      # (D-01/D-02), not an unfiltered grid.
+      assert html =~ "Four Player Game"
+      assert html =~ "Big Group Game"
+      refute html =~ ~s(id="games")
     end
   end
 
@@ -1429,8 +2062,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, _view, html_unfiltered} = live(conn, ~p"/")
       {:ok, _view2, html_bogus} = live(conn, ~p"/?mechanics=NoExiste")
 
-      assert grid_html(html_unfiltered) =~ "Any Game"
-      assert grid_html(html_bogus) =~ "Any Game"
+      # CatalogFilters.from_params/1's whitelist already drops "NoExiste"
+      # down to mechanics: [] before this LiveView ever sees it, so both
+      # mounts land on the same unfiltered carousel surface (D-01/D-02),
+      # not the grid — checked on the whole page in both cases.
+      assert html_unfiltered =~ "Any Game"
+      assert html_bogus =~ "Any Game"
     end
 
     test "a 50-element param list is truncated and the page still renders", %{conn: conn} do
@@ -1446,16 +2083,242 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       game_fixture(%{name: "Zebra Game", csv_row: 9001})
       game_fixture(%{name: "Alpha Game", csv_row: 9002})
 
-      {:ok, _view, html} = live(conn, ~p"/?sort=nope")
+      {:ok, _view, html} = live(conn, ~p"/?sort=nope&weight_bands=ingenio_estratega")
 
-      assert position(html, "Alpha Game") < position(html, "Zebra Game")
+      assert position(grid_html(html), "Alpha Game") < position(grid_html(html), "Zebra Game")
     end
 
     test "?players=abc leaves the players filter unset rather than raising", %{conn: conn} do
       game_fixture(%{name: "Any Game"})
 
+      # An unset players filter with nothing else active is the unfiltered/
+      # carousel surface (D-01/D-02), not the grid.
       assert {:ok, _view, html} = live(conn, ~p"/?players=abc")
-      assert grid_html(html) =~ "Any Game"
+      assert html =~ "Any Game"
+    end
+  end
+
+  # G-01.2-9 gap closure (01.2-16, Task 3): pins the three connections that
+  # are invisible to the compiler and therefore the ones a future refactor
+  # would quietly break — the page-loading annotation, the results
+  # wrapper's hook mount point, and both results regions' surface-flip fade
+  # marker. Each assertion below was mutation-verified during authoring
+  # (removing the wiring it covers made that assertion fail) — see the
+  # 01.2-16-SUMMARY.md for the exact mutations and failing test names.
+  describe "G-01.2-9 search/filter transition wiring" do
+    test "G-01.2-9: the search form, the one active filter chip, and the clear-filters control are page_loading-annotated",
+         %{conn: conn} do
+      game_fixture(%{name: "Catan"})
+
+      # Exactly ONE active filter (the query, via ?q=) keeps the rendered
+      # chip count at exactly 1 — no mechanics/weight_bands/etc. selected,
+      # each of which would render its own additional chip and inflate the
+      # count below past 3. That makes the total annotated-element count
+      # predictable: the search form + one chip + the clear-filters
+      # control = 3, matching this plan's own declared annotation-site
+      # count (index.ex Task 2).
+      {:ok, _view, html} = live(conn, ~p"/?q=Catan")
+
+      form_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#catalog-search-form")
+        |> LazyHTML.to_html()
+
+      assert form_html =~ "page_loading"
+
+      # Each `Phoenix.LiveView.JS.push(event, page_loading: true)` renders
+      # exactly one `"page_loading"` JSON key in its element's attribute
+      # value, so a plain whole-page substring count is a reliable proxy
+      # for "how many elements are annotated" — the same idiom card_count/1
+      # above uses for `data-game-card`.
+      annotated_count = html |> String.split("page_loading") |> length() |> Kernel.-(1)
+
+      assert annotated_count == 3
+    end
+
+    test "the results wrapper carries a non-empty id and the .ResultsLoading phx-hook attribute",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      wrapper_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#results-region")
+        |> LazyHTML.to_html()
+
+      assert wrapper_html != ""
+      # Colocated hooks render with their fully-qualified module name
+      # (e.g. "PukllayClubWeb.CatalogLive.Index.ResultsLoading"), not the
+      # literal ".ResultsLoading" written in the template — matched by
+      # substring here so this test doesn't hardcode (and drift from) the
+      # exact qualified path.
+      assert wrapper_html =~ ~r/phx-hook="[^"]*ResultsLoading"/
+    end
+
+    test "the carousel-rows container carries the surface-flip fade marker on the unfiltered surface",
+         %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      carousel_rows_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows")
+        |> LazyHTML.to_html()
+
+      assert carousel_rows_html =~ "pk-surface-fade"
+    end
+
+    test "the grid-scroll wrapper carries the surface-flip fade marker once a search flips the surface to the grid",
+         %{conn: conn} do
+      game_fixture(%{name: "Catan"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html =
+        view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Catan"})
+
+      assert grid_scroll_html(html) =~ "pk-surface-fade"
+    end
+  end
+
+  # G-01.2-27 task 3 (gap-closure round 3 cont'd, UAT gap G-01.2-15): the
+  # drift gate that closes the loop the previous plan's tone-variant gate
+  # started (catalog_show_test.exs). This exact drift — a chip- or
+  # pill-shaped element growing its own bespoke radius/padding/font-size
+  # instead of composing the shared base — has repeated at least three
+  # times in this codebase before either gate existed (`.pk-chip-row
+  # .badge`'s G-01.2-20 color-only patch, `.pk-active-filter-chip`'s own
+  # "must NEVER be merged" note, `.pk-chip`'s own "same outline-at-rest
+  # logic" note — see the diagnosis at
+  # .planning/debug/G-01.2-15-pill-chip-design-inconsistency.md), which is
+  # why a comment alone was judged insufficient here too.
+  describe "bespoke-chip drift gate (Phase 01.2 gap-closure round 3, G-01.2-27 task 3)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    defp drift_gate_css_source, do: File.read!(@css_path)
+
+    # Every top-level (column-0) CSS rule whose selector text names "chip"
+    # or "pill" — found by reading, not assumed (`grep -n "chip\|-pill"
+    # assets/css/app.css`): everything not excluded below is either the
+    # pill system itself (`.pk-pill` and its tone/size/interactive variants
+    # — already policed by catalog_show_test.exs's own gate) or a
+    # structural container/pseudo-element with no geometry to police
+    # (`.pk-chip-nav`'s scroll rail, its edge-fade pseudo-elements, its
+    # spacer, its scrollbar reset).
+    defp bespoke_chip_rules(src) do
+      ~r/(?m)^(\.[^{}]+?)\{([^{}]*)\}/
+      |> Regex.scan(src)
+      |> Enum.map(fn [_, selector, body] -> {String.trim(selector), body} end)
+      |> Enum.filter(fn {selector, _body} ->
+        (String.contains?(selector, "chip") or String.contains?(selector, "pill")) and
+          not String.contains?(selector, "pk-pill")
+      end)
+    end
+
+    # One named, reasoned exclusion per selector family that legitimately
+    # keeps a bespoke declaration — not a guess, each reason cites the exact
+    # plan/task that put it there. `pk-chip` is matched with a precise
+    # token boundary (not a bare substring) so it names ONLY the
+    # category-navigation chip itself, never `pk-chip-nav`/`pk-chip-spacer`/
+    # `pk-chip-nav-wrap` (structural containers this gate never needed to
+    # exempt in the first place).
+    # Built from what the RED commit's failing run actually reported, not
+    # from a guess. One named, reasoned exclusion per selector family that
+    # legitimately keeps a bespoke declaration — each reason cites the
+    # exact plan/task that put it there. `pk-chip` is matched with a
+    # precise token boundary (not a bare substring) so it names ONLY the
+    # category-navigation chip itself, never `pk-chip-nav`/`pk-chip-spacer`/
+    # `pk-chip-nav-wrap` (structural containers this gate never needed to
+    # exempt in the first place — they don't declare radius/padding/
+    # font-size, so the RED run never flagged them).
+    @exclusions %{
+      "pk-chip" =>
+        "the catalog's category-navigation chip — deliberately excluded from " <>
+          "this whole consolidation (G-01.2-27); a 44px navigation control, " <>
+          "not one of the UAT's five chip families. Named again in the pill " <>
+          "system's own governing note (app.css) with the same reason.",
+      "pk-active-filter-chip" =>
+        "its asymmetric trailing padding (tighter on the right, where the " <>
+          "dismiss × sits) is the one property genuinely specific to this " <>
+          "chip and is not base material (G-01.2-27 task 1).",
+      "pk-active-filter-chip-x" =>
+        "the trailing dismiss affordance is a sub-element of the pill, not a " <>
+          "pill itself — its own 16px circle, 50% radius and 12px glyph size " <>
+          "are untouched by this consolidation and were never claimed to " <>
+          "derive from the shared pill's type scale (G-01.2-27 task 1)."
+    }
+
+    defp excluded?(selector) do
+      Enum.any?(@exclusions, fn {marker, _reason} ->
+        Regex.match?(~r/(?<![\w-])#{Regex.escape(marker)}(?![\w-])/, selector)
+      end)
+    end
+
+    # CSS's `padding` shorthand puts the horizontal component in a
+    # position that depends on how many values are given (1: all sides: 2:
+    # vertical horizontal; 3: top horizontal bottom; 4: top right bottom
+    # left) — `.pk-chip-nav-wrap`'s own `padding: 0.75rem 0` is VERTICAL
+    # only (horizontal component is literally `0`) and must not trip this
+    # gate, which is why "declares padding at all" is not the check.
+    defp declares_horizontal_padding?(body) do
+      cond do
+        Regex.match?(~r/padding-(left|right|inline)/, body) ->
+          true
+
+        match = Regex.run(~r/(?<![-\w])padding:\s*([^;]+);/, body) ->
+          [_, value] = match
+          parts = value |> String.trim() |> String.split(~r/\s+/)
+
+          horizontal =
+            case length(parts) do
+              1 -> [Enum.at(parts, 0)]
+              2 -> [Enum.at(parts, 1)]
+              3 -> [Enum.at(parts, 1)]
+              4 -> [Enum.at(parts, 1), Enum.at(parts, 3)]
+              _ -> parts
+            end
+
+          Enum.any?(horizontal, &(&1 not in ~w(0 0px 0rem 0em)))
+
+        true ->
+          false
+      end
+    end
+
+    test "no chip- or pill-shaped rule outside the pill system declares a radius, a horizontal padding, or a type size" do
+      rules = bespoke_chip_rules(drift_gate_css_source())
+
+      assert rules != [],
+             "expected to find at least the excluded category-navigation chip's rule in " <>
+               "assets/css/app.css — 0 rules found suggests the scan regex broke, not that " <>
+               "the codebase is clean"
+
+      for {selector, body} <- rules, not excluded?(selector) do
+        refute body =~ ~r/border-radius/,
+               "`#{selector}` declares its own border-radius outside the pill system. A new " <>
+                 "chip extends `.pk-pill` with a variant; it does not get a rule of its own. " <>
+                 "This exact drift has happened at least three times in this codebase already " <>
+                 "(G-01.2-15) — a comment alone was judged insufficient, which is why this " <>
+                 "assertion exists."
+
+        refute declares_horizontal_padding?(body),
+               "`#{selector}` declares its own horizontal padding outside the pill system. A " <>
+                 "new chip extends `.pk-pill`/`.pk-pill-comfortable` with a variant; it does " <>
+                 "not get a rule of its own. If the base genuinely cannot express what this " <>
+                 "call site needs, that is a design decision to raise, not a rule to add " <>
+                 "quietly."
+
+        refute body =~ ~r/font-size/,
+               "`#{selector}` declares its own font-size outside the pill system. Type size " <>
+                 "lives on `.pk-pill` or a size variant, never on a bespoke chip rule."
+      end
     end
   end
 
@@ -1473,6 +2336,28 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     html
     |> LazyHTML.from_document()
     |> LazyHTML.query("#games")
+    |> LazyHTML.to_html()
+  end
+
+  # Scopes assertions to the active-filters summary row's chips only
+  # (Task 1, G-01.2-4) — a plain substring search would also match a
+  # "Nivel"/"Jugadores" label rendered elsewhere on the page (e.g. inside
+  # the filter modal itself, which is always in the DOM).
+  defp active_filter_chips_html(html) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query(".pk-active-filter-chip")
+    |> LazyHTML.to_html()
+  end
+
+  # Scopes assertions to the #grid-scroll hook element (D-03) — the
+  # .GridScroll wrapper, its data-exhausted attribute, the sentinel, and
+  # the trailing skeleton placeholders all live here, one level above
+  # #games itself.
+  defp grid_scroll_html(html) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("#grid-scroll")
     |> LazyHTML.to_html()
   end
 

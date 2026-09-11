@@ -3,6 +3,7 @@ defmodule PukllayClubWeb.LayoutsTest do
   use Phoenix.Component
 
   import Phoenix.LiveViewTest
+  import PukllayClub.CatalogFixtures
 
   alias PukllayClubWeb.Layouts
 
@@ -34,6 +35,21 @@ defmodule PukllayClubWeb.LayoutsTest do
       <:nav_search>
         <input type="text" name="q" id="test-search-input" />
       </:nav_search>
+      content
+    </Layouts.app>
+    """
+  end
+
+  # Local wrapper for exercising the :subnav slot (G-01.2-8, plan 01.2-15) —
+  # #app-subnav only renders when the slot is non-empty (`:if={@subnav !=
+  # []}`), and the connection-status bar's document-position test needs a
+  # real #app-subnav element to compare offsets against.
+  defp render_with_subnav(assigns) do
+    ~H"""
+    <Layouts.app flash={%{}}>
+      <:subnav>
+        <div id="test-subnav-content">chips</div>
+      </:subnav>
       content
     </Layouts.app>
     """
@@ -259,6 +275,85 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  # G-01.2-8 gap closure (plan 01.2-15): replaces phx.new's stock
+  # #client-error/#server-error toast with an on-brand, Spanish, in-flow
+  # connection-status bar. No pre-existing test in this file ever asserted
+  # on either removed id, so there is nothing to delete here — these are all
+  # newly authored assertions.
+  describe "app/1 connection-status bar (G-01.2-8, plan 01.2-15)" do
+    test "flash_group/1 renders neither connection-state id nor the stock toast positioning classes" do
+      html = render_component(&Layouts.flash_group/1, %{flash: %{}})
+
+      refute html =~ "client-error"
+      refute html =~ "server-error"
+      refute html =~ "toast-top"
+      refute html =~ "toast-end"
+    end
+
+    test "flash_group/1 still renders an :info and an :error flash (deletion was surgical)" do
+      html =
+        render_component(&Layouts.flash_group/1, %{
+          flash: %{"info" => "Guardado con éxito", "error" => "Algo salió mal"}
+        })
+
+      assert html =~ "Guardado con éxito"
+      assert html =~ "Algo salió mal"
+    end
+
+    test "app/1 renders exactly one connection-status bar carrying hidden, role and both connection bindings" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      bar_nodes =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-conn-banner")
+
+      assert Enum.count(bar_nodes) == 1
+
+      bar_html = LazyHTML.to_html(bar_nodes)
+
+      assert bar_html =~ ~s(id="connection-status")
+      assert bar_html =~ "hidden"
+      assert bar_html =~ ~s(role="status")
+      assert bar_html =~ "phx-disconnected"
+      assert bar_html =~ "phx-connected"
+    end
+
+    test "the bar's copy is Spanish and none of the three replaced English strings remain" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert html =~ "Reconectando"
+      assert html =~ "no encontramos tu conexión a internet"
+      refute html =~ "Attempting to reconnect"
+      refute html =~ "Something went wrong"
+      refute html =~ "find the internet"
+    end
+
+    # The placement assertion compares two numeric offsets, not presence —
+    # presence alone would still pass with the bar left at the bottom of the
+    # document, which is the exact defect being fixed (the old toast was
+    # already in the right DOM position and still read as a floating card
+    # because of `position: fixed`; the fix is that this bar is now in flow
+    # *here*, between the header and #app-subnav).
+    #
+    # Mutation check performed once by hand while authoring this test
+    # (restored immediately after, per the plan's acceptance criteria):
+    # moving the bar's markup down to just before `<.footer />` in
+    # `Layouts.app/1` made this test fail (bar offset landed after the
+    # #app-subnav offset), confirming the assertion actually depends on
+    # document order rather than passing unconditionally.
+    test "the connection-status bar sits between #app-header and #app-subnav in document order" do
+      html = render_component(&render_with_subnav/1, %{})
+
+      {header_offset, _} = :binary.match(html, ~s(id="app-header"))
+      {bar_offset, _} = :binary.match(html, ~s(id="connection-status"))
+      {subnav_offset, _} = :binary.match(html, ~s(id="app-subnav"))
+
+      assert header_offset < bar_offset
+      assert bar_offset < subnav_offset
+    end
+  end
+
   # Header cluster rework (quick task 260822-2v9): the header element carries
   # the horizontal-padding-zeroing utility alongside navbar, and the brand
   # wrapper no longer swallows the row's free space. The .pk-nav-actions
@@ -313,6 +408,85 @@ defmodule PukllayClubWeb.LayoutsTest do
       refute html =~ "max-w-2xl"
       assert html =~ "mx-auto"
     end
+
+    defp main_class(html) do
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("main")
+      |> LazyHTML.attribute("class")
+      |> List.first()
+    end
+
+    # G-01.2-22 task 2/3: `boundary_collapse` (default false) and <main>'s
+    # default vertical-padding utilities are mutually exclusive branches of
+    # one `if` — never both rendered at once (see the CASCADE-LAYER HAZARD
+    # note at the top of app.css for why that would be a landmine, not a
+    # convenience). Asserting the exact class string, not a substring, is
+    # the whole point: a future edit that retunes the shared default for
+    # every page must fail this test by name.
+    test "with boundary_collapse unset, <main> carries exactly today's default vertical-padding utilities" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      assert main_class(html) == "pb-20 pt-8 sm:pt-20 px-4 sm:px-6 lg:px-8"
+    end
+
+    test "with boundary_collapse set, <main> carries the collapse class and none of the default vertical-padding utilities" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          boundary_collapse: true,
+          inner_block: []
+        })
+
+      class = main_class(html)
+      assert class == "pk-boundary-collapse px-4 sm:px-6 lg:px-8"
+      refute class =~ "pb-20"
+      refute class =~ "pt-8"
+      refute class =~ "sm:pt-20"
+    end
+
+    test "fullbleed's horizontal-padding behavior is unchanged in either boundary_collapse state" do
+      unset_html =
+        render_component(&Layouts.app/1, %{flash: %{}, fullbleed: true, inner_block: []})
+
+      collapsed_html =
+        render_component(&Layouts.app/1, %{
+          flash: %{},
+          fullbleed: true,
+          boundary_collapse: true,
+          inner_block: []
+        })
+
+      refute main_class(unset_html) =~ "px-4"
+      refute main_class(collapsed_html) =~ "px-4"
+    end
+  end
+
+  # G-01.2-22 task 3: the three call-site assertions that make the opt-in
+  # scoping enforceable rather than a convention — the detail page passes
+  # `boundary_collapse`, the catalog index and about pages do not.
+  describe "boundary_collapse call-site contract (G-01.2-22)" do
+    test "the detail page's <main> carries pk-boundary-collapse", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert main_class(html) =~ "pk-boundary-collapse"
+    end
+
+    test "the catalog index page's <main> does not carry pk-boundary-collapse", %{conn: conn} do
+      game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      refute main_class(html) =~ "pk-boundary-collapse"
+    end
+
+    test "the about page's <main> does not carry pk-boundary-collapse", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      refute main_class(html) =~ "pk-boundary-collapse"
+    end
   end
 
   describe "brand_logo/1 hit target" do
@@ -359,6 +533,95 @@ defmodule PukllayClubWeb.LayoutsTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       assert html =~ ~s(lang="es")
+    end
+  end
+
+  # G-01.2-24 task 3: the sticky-footer app shell — a single class on
+  # <body>, the only change root.html.heex carries for this task. Pins the
+  # class is present on every route this shell serves (catalog, detail,
+  # about), not just one.
+  describe "root layout sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-24)" do
+    test "the catalog index page's <body> carries pk-app-shell", %{conn: conn} do
+      game_fixture()
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
+
+      assert body_class =~ "pk-app-shell"
+    end
+
+    test "the detail page's <body> carries pk-app-shell", %{conn: conn} do
+      game = game_fixture()
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
+
+      assert body_class =~ "pk-app-shell"
+    end
+
+    test "the about page's <body> carries pk-app-shell", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/quienes-somos")
+
+      doc = LazyHTML.from_document(html)
+      body_class = doc |> LazyHTML.query("body") |> LazyHTML.attribute("class") |> List.first()
+
+      assert body_class =~ "pk-app-shell"
+    end
+  end
+
+  # Source-level CSS facts, matching this file's existing @css_path-style
+  # assertions elsewhere in the suite: the three declarations that together
+  # push the footer down (min-height, column flex direction, and the
+  # main-child flex-grow) — any one of them alone does nothing. A sibling
+  # describe, not nested inside the one above — ExUnit forbids nested
+  # describe blocks.
+  describe "pk-app-shell CSS facts (Phase 01.2 gap-closure round 4, G-01.2-24)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    defp shell_css_source, do: File.read!(@css_path)
+
+    defp pk_app_shell_block do
+      case Regex.run(~r/(?m)^\.pk-app-shell\s*\{([^}]*)\}/, shell_css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-app-shell { ... }` rule found in app.css")
+      end
+    end
+
+    test "declares both a minimum height and a column flex direction" do
+      body = pk_app_shell_block()
+
+      assert body =~ ~r/display:\s*flex;/,
+             "`.pk-app-shell` must declare `display: flex` — without it, `flex-direction` " <>
+               "and the main-child `flex-grow` below have no flex formatting context to " <>
+               "act inside."
+
+      assert body =~ ~r/flex-direction:\s*column;/,
+             "`.pk-app-shell` must declare `flex-direction: column` — a row direction would " <>
+               "lay the header/main/footer out side by side instead of stacked."
+
+      assert body =~ ~r/min-height:\s*100vh;/,
+             "`.pk-app-shell` must declare `min-height: 100vh` as a fallback for browsers " <>
+               "without dynamic-viewport-unit support."
+
+      assert body =~ ~r/min-height:\s*100dvh;/,
+             "`.pk-app-shell` must also declare `min-height: 100dvh` — without it, mobile " <>
+               "browser chrome showing/hiding would jump the layout."
+    end
+
+    test "declares a flex-grow on the shell's <main> descendant, and no direct-child combinator" do
+      assert shell_css_source() =~ ~r/\.pk-app-shell main\s*\{\s*flex-grow:\s*1;\s*\}/,
+             "The main-child rule must declare `flex-grow: 1` on a DESCENDANT selector " <>
+               "(`.pk-app-shell main`), not a direct-child one (`.pk-app-shell > main`) — " <>
+               "<main> is not literally body's DOM child (every LiveView page wraps its " <>
+               "output in a `data-phx-session` root div, flattened by this file's own " <>
+               "`[data-phx-session] { display: contents }` rule), so a `>` combinator here " <>
+               "would silently never match."
+
+      refute shell_css_source() =~ ~r/\.pk-app-shell\s*>\s*main/,
+             "A direct-child combinator between .pk-app-shell and main would never match — " <>
+               "see the positive assertion above for why."
     end
   end
 
@@ -613,6 +876,78 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       assert toggle_html =~ ~s(aria-expanded="false")
       assert toggle_html =~ ~s(aria-controls="pk-nav-search-region")
+    end
+  end
+
+  describe "app/1 search-morph server-owned open state (01.2-11)" do
+    # Two directions, not one — a single-direction test would still pass
+    # against a rule that unconditionally emitted the class (the exact bug
+    # class Task 1 fixes: the class must be PRESENT when true and ABSENT
+    # when false, not merely present-when-true).
+    test "search_expanded=true renders is-open on the morph and is-search-open on the nav row" do
+      html = render_component(&render_with_nav_search/1, %{search_expanded: true})
+
+      morph_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-search-morph") |> LazyHTML.to_html()
+
+      nav_inner_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-nav-inner") |> LazyHTML.to_html()
+
+      assert morph_html =~ "is-open"
+      assert nav_inner_html =~ "is-search-open"
+    end
+
+    test "search_expanded=false renders neither modifier class" do
+      html = render_component(&render_with_nav_search/1, %{search_expanded: false})
+
+      morph_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-search-morph") |> LazyHTML.to_html()
+
+      nav_inner_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-nav-inner") |> LazyHTML.to_html()
+
+      refute morph_html =~ "is-open"
+      refute nav_inner_html =~ "is-search-open"
+    end
+
+    test "the toggle and close buttons carry open-search/close-search and their state-derived aria-expanded/tabindex in both directions" do
+      html_closed = render_component(&render_with_nav_search/1, %{search_expanded: false})
+      html_open = render_component(&render_with_nav_search/1, %{search_expanded: true})
+
+      toggle_closed =
+        html_closed
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-toggle")
+        |> LazyHTML.to_html()
+
+      close_closed =
+        html_closed
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-close")
+        |> LazyHTML.to_html()
+
+      toggle_open =
+        html_open
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-toggle")
+        |> LazyHTML.to_html()
+
+      close_open =
+        html_open
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph-close")
+        |> LazyHTML.to_html()
+
+      assert toggle_closed =~ ~s(phx-click="open-search")
+      assert close_closed =~ ~s(phx-click="close-search")
+
+      assert toggle_closed =~ ~s(aria-expanded="false")
+      assert toggle_closed =~ ~s(tabindex="0")
+      assert close_closed =~ ~s(tabindex="-1")
+
+      assert toggle_open =~ ~s(aria-expanded="true")
+      assert toggle_open =~ ~s(tabindex="-1")
+      assert close_open =~ ~s(tabindex="0")
     end
   end
 

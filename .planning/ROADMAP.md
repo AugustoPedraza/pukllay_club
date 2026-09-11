@@ -192,6 +192,118 @@ Plans:
 
 - [x] 01.1-07-PLAN.md — Empty/loading/error states and the branded 404 page (SHELL-05)
 
+### Phase 01.2: Catalog & Detail Navigation Polish (INSERTED)
+
+**Goal:** The curated carousels are the catalog's browse surface and the grid is exclusively the search/filter results view with auto-loading scroll; the game detail page presents a self-contained buy-box beside an honest spec list, a "Juegos similares" shelf ranked by shared mechanics/themes, and a breadcrumb that returns a member to the filtered view they arrived from.
+**Requirements**: CATALOG-01, SHELL-03, SHELL-04 (refined — this inserted phase adds no new requirement IDs and does not change their acceptance criteria)
+**Depends on:** Phase 1 (and Phase 1.1's shared shell/detail-page components)
+**Plans:** 27/27 plans complete
+
+Plans:
+**Wave 1**
+
+- [x] 01.2-01-PLAN.md — D-08 tracer: breadcrumb carries catalog filters forward (new shared `CatalogFilters` parse/encode/sanitise module)
+- [x] 01.2-02-PLAN.md — D-06: rank "Juegos similares" by shared mechanics/themes within the weight band
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 01.2-03-PLAN.md — D-01/D-02: grid becomes exclusively the search/filter results view; modal CTA is the explicit-submission signal
+- [x] 01.2-04-PLAN.md — D-04/D-05/D-07: Ficha técnica cleanup, players/duration de-duplication, buy-box redesign
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 01.2-05-PLAN.md — D-03: auto-loading infinite scroll replaces the manual results-grid pagination control
+
+**Superseded** *(planned, never executed — replanned after sketches 027-031 resolved the visual-design ambiguity in this gap set; kept as the record of what was designed first)*
+
+- [~] 01.2-06-PLAN.md — superseded by 01.2-11
+- [~] 01.2-07-PLAN.md — superseded by 01.2-12
+- [~] 01.2-08-PLAN.md — superseded by 01.2-13
+- [~] 01.2-09-PLAN.md — superseded by 01.2-14
+- [~] 01.2-10-PLAN.md — superseded by 01.2-15
+
+**Wave 4 — gap closure** *(from 01.2-UAT.md: 8 gaps across 9 tests)*
+
+- [x] 01.2-11-PLAN.md — G-01.2-1/2/3: search-morph open state becomes server-owned so LiveView patches stop stripping it; header hook reduced to focus management and failure-isolated
+- [x] 01.2-13-PLAN.md — G-01.2-5/6: poster column gets a containing block at every width (unlayered-CSS cascade defect); buy-box takes sketch 027's Elevated Shadow boundary; mobile CTA bar takes sketch 028's Stacked layout
+
+**Wave 5 — gap closure** *(blocked on Wave 4 completion)*
+
+- [x] 01.2-12-PLAN.md — G-01.2-4: removable active-filters chip row inline with the Resultados heading (sketch 029 winner); background surface settles once instead of restructuring under the open modal
+- [x] 01.2-14-PLAN.md — G-01.2-7: "Juegos similares" always fills via one widened bounded query (sketch 031 Always-Full Guarantee); title stays fixed, widening signalled by an "Ampliado" badge and a subtitle swap
+
+**Wave 6 — gap closure** *(blocked on Wave 5 completion)*
+
+- [x] 01.2-15-PLAN.md — G-01.2-8: stock connection toast replaced by sketch 030's branded Spanish inline bar under the header; UI-SPEC corrected on what the grid's inline retry line can cover
+
+**Wave 7 — gap closure** *(from the 01.2 re-verification UAT: G-01.2-9 and G-01.2-10)*
+
+- [x] 01.2-16-PLAN.md — G-01.2-9: search/filter gets a real in-flight affordance — LiveView's own page-loading events dim the results region and drive a brand-coloured progress bar, and cards/surface flips fade in instead of popping
+
+**Wave 8 — gap closure** *(blocked on Wave 7 completion)*
+
+- [x] 01.2-17-PLAN.md — G-01.2-10 (part 1 of 2): mobile masthead rework — pills over the poster, description straight after the title, one Reservar on the phone, chip rows below a "más información" boundary, publisher row dropped; opens with a blocking decision checkpoint on the pills/weight-badge/thumbnail-strip questions
+
+**Wave 9 — gap closure** *(blocked on Wave 8 completion)*
+
+- [x] 01.2-18-PLAN.md — G-01.2-10 (part 2 of 2): separator between the detail content and the "Juegos similares" shelf; stacked share pill removed from the mobile CTA bar with its dead class, dead clause and reserved body padding all recomputed together
+
+**Wave 10 — gap closure round 2** *(from the second detail-page UAT round: G-01.2-11 mobile and G-01.2-12 desktop, both against the same masthead; design resolved by sketches 032-035)*
+
+- [x] 01.2-19-PLAN.md — G-01.2-11/12: masthead restructure per sketch 032 — one facts row above the poster panel (two copies collapsed into one), panel treatment moved off the column so the Reservar CTA sits outside it, dots centered, and the page's own narrower width cap dropped in favour of the header/footer shell
+
+**Wave 11 — gap closure round 2** *(blocked on Wave 10 completion — same files)*
+
+- [x] 01.2-20-PLAN.md — G-01.2-11/12: sketch 034 chip cleanup — duplicated weight-band badge and its descriptor removed, the weight-band filter link relocated onto the surviving dificultad pill, and the Mecánicas/Temáticas chips given real padding plus a fill and border that read in both themes
+
+**Wave 12 — gap closure round 2** *(blocked on Wave 11 completion — same files)*
+
+- [x] 01.2-21-PLAN.md — G-01.2-11/12: sketch 033 lightbox — the inverting text-token scrim replaced by one shared fixed-dark declaration read by both full-screen overlays, a token-driven fade-and-scale open/close replacing the display switch, arrow-key navigation routed through the existing guarded buttons, and the arrow-anchoring question decided and recorded
+
+**Wave 13 — gap closure round 2** *(blocked on Wave 12 completion — same files)*
+
+- [x] 01.2-22-PLAN.md — G-01.2-11/12: sketch 035 rhythm — the hidden sticky title bar taken out of document flow, and both page boundaries collapsed from four and two stacked contributors to one deliberate 24px value each, behind an opt-in layout flag so no other page changes
+
+**Wave 14 — gap closure round 3** *(from the third detail-page UAT round: G-01.2-13, G-01.2-14, G-01.2-15, G-01.2-16, all diagnosed. Every plan below edits `assets/css/app.css`, so the round runs strictly sequentially — one wave per plan, not for dependency reasons but because a shared stylesheet cannot be edited in parallel worktrees)*
+
+- [x] 01.2-23-PLAN.md — G-01.2-13: mobile masthead cohesion — the dot row compacted to a real indicator while keeping a usable tap target, and the facts pills moved inside the poster panel so the pills, the photo and the dots become one card with one edge
+
+**Wave 15 — gap closure round 3** *(blocked on Wave 14 — same stylesheet)*
+
+- [x] 01.2-24-PLAN.md — G-01.2-14: the condensed title bar becomes phone-only and single-line, the carousel-to-footer boundary gets a real 24px gap instead of padding hidden inside the footer's own box, and the app gains its first sticky-footer layout at the root
+
+**Wave 16 — gap closure round 3** *(blocked on Wave 15 — same stylesheet)*
+
+- [x] 01.2-25-PLAN.md — G-01.2-16: the lightbox photo takes the shell's own content width, both chevrons get an explicit stacking order, and the lightbox gains its own selection so navigating it never moves the gallery underneath
+
+**Wave 17 — gap closure round 3** *(blocked on Wave 16 — same stylesheet)*
+
+- [x] 01.2-26-PLAN.md — G-01.2-15 (part 1 of 2): the app's first shared pill base and its documented tone/size/interactive variants, plus the detail page's three chip families migrated onto it; opens with a blocking decision checkpoint on the base geometry and the variant set
+
+**Wave 18 — gap closure round 3** *(blocked on Wave 17 — same stylesheet)*
+
+- [x] 01.2-27-PLAN.md — G-01.2-15 (part 2 of 2): the catalog's active-filter chips and the filter modal's option chips migrated onto the same base, the superseded rules retired with forwarding notes, and a drift gate that fails when a sixth bespoke chip family appears
+
+**Wave 19 — gap closure round 4** *(from the fourth detail-page UAT round: G-01.2-17, diagnosed. Blocked on Wave 18 — same stylesheet)*
+
+- [x] 01.2-28-PLAN.md — G-01.2-17: the lightbox photo gets a real width, height and opaque stage instead of a cap it was never large enough to reach, so the overlay finally spans the shell's content width and stops showing the page behind it; the guidance that produced the no-op is corrected at its source
+
+**Wave 20 — gap closure round 5** *(from the fifth detail-page UAT round: G-01.2-18, diagnosed. Blocked on Wave 19 — same rule)*
+
+- [x] 01.2-29-PLAN.md — G-01.2-18: the lightbox stage takes the whole screen's height instead of four fifths of it, so the two bands of translucent scrim above and below it disappear — written in this file's own static-then-dynamic viewport-unit idiom so a mobile browser's collapsing toolbar cannot leave the stage taller than the screen
+
+**Wave 21 — gap closure round 6** *(from the sixth detail-page UAT round: G-01.2-20, diagnosed. Blocked on Wave 20 — same stylesheet region)*
+
+- [x] 01.2-30-PLAN.md — G-01.2-20: the lightbox close button gets an explicit, measured fill in dark theme only, because a theme-varying `base-200` default on the theme-invariant `--pk-shadow-color` stage measures 1.1:1 in dark and >10:1 in light; the fix sets both the fill and the foreground (daisyUI sets them independently) and is gated by a test that computes the ratio rather than matching token names
+
+**Wave 22 — gap closure round 6** *(G-01.2-19, the other gap from the same UAT round. Its automated diagnosis was falsified during planning — the live-reload theory is disproven, the patterns block has been in `config/runtime.exs` since the scaffold commit — and the developer chose the container-paint fix over widening the photo stage. Blocked on Wave 21 — same stylesheet region)*
+
+- [x] 01.2-31-PLAN.md — G-01.2-19: the lightbox's own backdrop becomes fully opaque, so the overlay finally covers the whole screen instead of leaving a ~37%-of-window lavender band beside the width-capped photo stage; the stage itself is not resized, so 01.2-28's measured chevron alignment survives, and `--pk-overlay-scrim` loses a reader rather than being re-tuned since the mobile preview sheet still needs it at 72%
+
+**Wave 23 — gap closure round 10** *(from the tenth detail-page UAT round: G-01.2-21, diagnosed. Blocked on Wave 22 — same stylesheet region, and 01.2-31's opaque backdrop is the environmental change that makes this gap real)*
+
+- [x] 01.2-32-PLAN.md — G-01.2-21: the two lightbox chevrons adopt the dark-theme fill the close button got in round 8, through the class both buttons already share, so the overlay's three controls read as one family instead of one treated control beside two untreated siblings; round 8's skip rationale (a UAT pass measured against the then-translucent backdrop) expired when round 9 made that backdrop opaque, and the round is gated by an assertion comparing the two dark-scoped rules' declarations to each other rather than checking each in isolation
+
 ### Phase 2: Natural-Language Spanish Search + Auth
 
 **Goal**: Members can describe what they want in plain Spanish and get matched games — the core value of the product — then save favorites behind lightweight auth.

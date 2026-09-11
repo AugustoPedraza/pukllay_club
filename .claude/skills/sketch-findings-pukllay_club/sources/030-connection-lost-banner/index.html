@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 030 — Connection Lost Banner</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: nowrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); flex-shrink: 0; }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .spacer { flex: 1; min-width: 8px; }
+  #variant-nav .caption { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body { padding-top: 78px; margin: 0; }
+
+  .fake-header { max-width: 1100px; margin: 0 auto; padding: var(--space-4); display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-family: var(--font-display); font-size: var(--text-xl); letter-spacing: 0.02em; }
+  .page { max-width: 1100px; margin: 0 auto; padding: var(--space-4); }
+  .approach-note { font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-4); }
+  .approach-note strong { color: var(--color-text); }
+
+  .grid-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-3); margin-top: var(--space-4); }
+  .card-ph { aspect-ratio: 3/4; border-radius: var(--radius-md); background: var(--color-surface-2); }
+
+  .demo-toggle { display: flex; gap: 8px; margin-bottom: var(--space-4); }
+  .demo-btn { border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .demo-btn:hover { border-color: var(--color-primary); }
+  .demo-btn.on { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  .spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* banners hidden by default, shown via .is-down toggle on body (simulates phx-disconnected) */
+  .conn-banner { display: none; }
+  body.is-down .conn-banner { display: flex; }
+
+  /* ===== VARIANT A — full-width inline bar under the header (winner).
+     Round 3: was --color-surface-2 + a danger-red spinner/icon — read as
+     an error/alarm for what is, most of the time, a brief auto-recovering
+     reconnect. Recolored to the app's own accent tint (informative, not
+     alarming) and centered for a calmer, more deliberate announcement
+     instead of a left-pinned strip. */
+  .conn-banner { align-items: center; justify-content: center; gap: 10px; background: var(--color-accent-bg); color: var(--color-accent-text); border-bottom: 1px solid var(--color-border); padding: 11px var(--space-4); font-size: var(--text-sm); font-weight: 600; text-align: center; }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.45; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools button { font-size: 11px; background: rgba(255,255,255,0.12); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active">A: Inline Bar ★ Selected</button>
+  <div class="spacer"></div>
+  <div class="caption">B/C explored and dropped — see README. Round 3: recolored off danger-red, centered.</div>
+</div>
+
+<div id="variant-a" class="variant variant-a">
+  <div class="conn-banner"><span class="spinner"></span><span class="msg">Reconectando… no encontramos tu conexión a internet</span></div>
+  <div class="fake-header"><span class="brand">PUKLLAY CLUB</span></div>
+  <div class="page">
+    <div class="approach-note"><strong>A — Inline Bar (winner, Round 3 recolored):</strong> full-width bar directly under the header. No longer danger-red — uses the app's own accent tint so a brief, usually self-recovering reconnect reads as informative rather than alarming, and the message is centered for a calmer, more deliberate announcement.</div>
+    <div class="demo-toggle"><button class="demo-btn" onclick="toggleDown(this)">Simular desconexión</button></div>
+    <div class="grid-preview">
+      <div class="card-ph"></div><div class="card-ph"></div><div class="card-ph"></div><div class="card-ph"></div>
+      <div class="card-ph"></div><div class="card-ph"></div><div class="card-ph"></div><div class="card-ph"></div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <span>Tema:</span>
+  <button onclick="toggleTheme()">☀/🌙</button>
+</div>
+
+<script>
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+}
+function toggleDown(btn) {
+  document.body.classList.toggle('is-down');
+  btn.classList.toggle('on');
+  btn.textContent = document.body.classList.contains('is-down') ? 'Simular reconexión ✓' : 'Simular desconexión';
+}
+</script>
+</body>
+</html>

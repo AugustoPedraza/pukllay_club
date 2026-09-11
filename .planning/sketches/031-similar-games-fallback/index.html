@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 031 — Similar Games Fallback</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: nowrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); flex-shrink: 0; }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .spacer { flex: 1; min-width: 8px; }
+  #variant-nav .caption { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body { padding-top: 78px; margin: 0; }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
+  .approach-note { font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-4); }
+  .approach-note strong { color: var(--color-text); }
+
+  .demo-toggle { display: flex; gap: 8px; margin-bottom: var(--space-6); }
+  .demo-btn { border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .demo-btn:hover { border-color: var(--color-primary); }
+  .demo-btn.on { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+
+  .shelf { margin-bottom: var(--space-8); }
+  .shelf h3 { font-family: var(--font-display); font-size: var(--text-xl); letter-spacing: 0.01em; margin: 0 0 2px; }
+  .shelf .subtitle { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-3); }
+  .shelf .ampliado { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-xs); font-weight: 700; color: var(--color-primary); background: var(--color-accent-bg); padding: 2px 9px; border-radius: var(--radius-full); margin-left: 8px; vertical-align: middle; }
+
+  .rail-wrap { position: relative; }
+  .rail { display: flex; gap: var(--space-3); overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+  .rail::-webkit-scrollbar { display: none; }
+  .card-ph { flex: 0 0 140px; aspect-ratio: 3/4; border-radius: var(--radius-md); background: var(--color-surface-2); display: flex; align-items: flex-end; padding: 8px; font-size: var(--text-xs); font-weight: 600; color: var(--color-text-muted); }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.45; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools button { font-size: 11px; background: rgba(255,255,255,0.12); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active">C: Always-Full Guarantee ★ Selected</button>
+  <div class="spacer"></div>
+  <div class="caption">A/B explored and dropped — see README. Toggle below to preview a sparse same-band pool.</div>
+</div>
+
+<div id="variant-c" class="variant variant-c">
+  <div class="page">
+    <div class="approach-note"><strong>C — Always-Full Guarantee (winner):</strong> the shelf always shows a full row — the pool widens to adjacent bands/broader overlap whenever the same-band pool is thin, so a sparse rail is structurally impossible. A small "Ampliado" caption is the only visible sign widening happened; the shelf itself always looks identical.</div>
+    <div class="demo-toggle"><button class="demo-btn" onclick="toggleSparse(this)">Simular banda dispersa</button></div>
+
+    <div class="shelf" data-state="full">
+      <h3>Juegos similares<span class="ampliado" id="ampliado-c" style="display:none">Ampliado</span></h3>
+      <p class="subtitle" id="subtitle-c">Mismo nivel de dificultad, mecánicas y temática parecidas</p>
+      <div class="rail-wrap"><div class="rail">
+        <div class="card-ph">Ticket to Ride</div><div class="card-ph">Azul</div><div class="card-ph">7 Wonders</div><div class="card-ph">Wingspan</div><div class="card-ph">Splendor</div><div class="card-ph">Carcassonne</div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <span>Tema:</span>
+  <button onclick="toggleTheme()">☀/🌙</button>
+</div>
+
+<script>
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+}
+function toggleSparse(btn) {
+  const sparse = btn.classList.toggle('on');
+  btn.textContent = sparse ? 'Simular banda rica ✓' : 'Simular banda dispersa';
+  const scope = btn.closest('.variant');
+  const ampliado = scope.querySelector('#ampliado-c');
+  const subtitleC = scope.querySelector('#subtitle-c');
+  if (ampliado) ampliado.style.display = sparse ? 'inline-flex' : 'none';
+  if (subtitleC) subtitleC.textContent = sparse ? 'Otras opciones que te van a encantar' : 'Mismo nivel de dificultad, mecánicas y temática parecidas';
+}
+</script>
+</body>
+</html>

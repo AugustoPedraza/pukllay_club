@@ -287,3 +287,231 @@ what we already have working"). This caught two real discrepancies:
 - Sketch 023's custom-eased arrow-click scroll (006-D's curve, replacing the current plain
   `scroll-behavior: smooth`) is a nice-to-have, explicitly not required for correctness — flagged as
   optional in `carousel-mechanics.md` rather than bundled into the arrow-relocation work.
+
+## Session: 2026-08-26
+
+**Sketches processed:** 5
+**Design areas:** Detail Page — Layout & Content, Detail Page — Mobile & Interaction Patterns,
+Filter & Search, Connection Feedback (new)
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
+
+Phase 01.2 UAT gap-closure round — five sketches answering the visual/copy half of five UAT gaps
+diagnosed in `.planning/debug/G-01.2-5` through `G-01.2-8` (plus the missing-affordance sub-issue
+of `G-01.2-3/4`). Three other UAT gaps in the same phase (`href-parity`, `search-input-broken`, the
+search-morph state-machine bug) were pure code fixes with no design question and are out of scope
+for this wrap-up.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 027 | buybox-panel-boundary | B (Elevated Shadow) | Detail Page — Layout & Content |
+| 028 | mobile-cta-balance | D (Stacked) | Detail Page — Mobile & Interaction Patterns |
+| 029 | active-filters-chip-row | C (Inline with Heading, rebalanced) | Filter & Search |
+| 030 | connection-lost-banner | A (Inline Bar, recolored) | Connection Feedback |
+| 031 | similar-games-fallback | C (Always-Full Guarantee) | Detail Page — Layout & Content |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — all 5 included |
+
+## Design Direction
+No new aesthetic direction — this round is gap-closure within the already-locked visual system
+(26 prior sketches), so mood/reference intake was skipped and the session went straight to
+decomposition. Each sketch answers one UAT-flagged visual defect against the existing brand tokens.
+
+## Key Decisions
+- **Buy-box boundary (027):** a soft shadow lift read as a self-contained panel better than either
+  a stronger border or a stronger fill — purely additive on top of `.poster-col`'s existing fill,
+  no token change.
+- **Mobile CTA bar (028):** the bar's ~87/13 width imbalance between the reserve button and the
+  share control isn't fixable by rebalancing that ratio (3 attempts rejected) — switching to a
+  stacked internal layout (reserve full-width, share as a quiet second row) is what read as
+  balanced. Also fixed globally: the bar's content now caps to the same 1100px column as the
+  buy-box instead of stretching edge-to-edge past it. A floating/overhanging share circle was tried
+  and reverted — a `position: fixed` bar's overhang is fixed screen space and can overlap whatever
+  page content scrolls underneath it.
+- **Active-filters chip row (029):** not yet built. Chips sit inline with the "Resultados" heading;
+  reusing the filter modal's own solid-filled chip style outweighed the heading, so this row gets a
+  lighter accent-tint treatment instead — a deliberately different chip style from the modal's.
+- **Connection-lost banner (030):** not yet built. Replaces the stock, unbranded, English `phx.new`
+  toast with an on-brand, centered, Spanish inline bar under the header. Recolored off
+  `--color-danger` (alarming for a usually self-recovering reconnect) to the app's own accent tint.
+- **Similar-games fallback (031):** the shelf's layout stays completely invariant regardless of
+  same-band pool size — the query is responsible for always widening enough to fill it (a separate,
+  not-yet-designed backend decision); an "Ampliado" badge + subtitle swap is the only visible sign
+  widening happened. Whether the title itself should also swap to "Otras sugerencias" (the user's
+  original proposal) is flagged as still open.
+
+## Open Items Carried Forward
+- 031: whether "Juegos similares" should fully retitle to "Otras sugerencias" when widened, versus
+  the winning badge-only treatment — needs a call once this is actually built and can be judged
+  against real widened results.
+- 031's actual query-layer widening strategy (adjacent-band distance / dropped band filter /
+  `bgg_weight` proximity — three candidates in the phase's debug log) is unresolved; this round only
+  covered the visual/copy layer.
+- 027's underlying cascade-layer positioning bug (unlayered `.pk-*` CSS beating layered Tailwind
+  utilities, breaking the share control's containing block below 768px) and the G-01.2-3/4
+  search-morph state-machine/grid-jump issues are still open code fixes, untouched by this round.
+- 029 and 030 are both design-approved but not yet implemented — next step is `/gsd-plan-phase`
+  (or a quick task) against `CatalogLive.Index`'s Resultados header and
+  `PukllayClubWeb.Layouts.flash_group/1` respectively.
+
+## Session: 2026-08-27
+
+**Sketches processed:** 4
+**Design areas:** Detail Page — Layout & Content, Detail Page — Mobile & Interaction Patterns
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
+
+**Context:** Round 2 of Phase 01.2 UAT gap-closure. Round 1's fixes (sketches 027–031, shipped)
+didn't fully resolve the detail-page masthead complaints — a second UAT pass (gaps G-01.2-11
+mobile, G-01.2-12 desktop) reopened the same area with more specific feedback. All 4 sketches
+directly ground themselves in the shipped `CatalogLive.Show`/`app.css` code (not free-floating
+mockups), and three of the four found real, verifiable code bugs while grounding — not just taste
+questions: a lightbox backdrop built from the wrong color token (inverts in dark theme), a sticky
+element occupying invisible layout space, and three independently-reasonable spacing rules
+stacking at the footer boundary.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 032 | masthead-facts-placement | A (Pills Above, CTA Detached) | Detail Page — Layout & Content |
+| 033 | lightbox-contrast | A (Fixed Dark Scrim, refined w/ nav + transition) | Detail Page — Mobile & Interaction Patterns |
+| 034 | chip-cleanup | A (Bordered Outline, Soft Fill) | Detail Page — Layout & Content |
+| 035 | detail-page-rhythm | D (Equal, 24px/24px) | Detail Page — Layout & Content |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — all 4 included |
+
+## Design Direction
+No new aesthetic direction — gap-closure within the already-locked visual system, same as round 1.
+Each sketch answers one UAT-flagged defect against the existing brand tokens; several also revise
+decisions round 1 (or the original sketch 005) had recorded as settled, once real UAT feedback
+showed those fixes hadn't fully landed.
+
+## Key Decisions
+- **Masthead facts/CTA placement (032):** minimal-diff won over two more dramatic restructures
+  (a full-width pills bar + standalone buy panel; CTA relocated into the text column as an
+  e-commerce buy-box). Pills move from an absolute image overlay (mobile) / inline-with-title
+  (desktop) placement to a plain row above the poster panel; the Reservar CTA moves outside the
+  poster's bordered/shadowed panel instead of living inside it. Also fixed: the masthead's
+  independent 1100px width cap is gone — it now shares the header/footer's own 1280px shell width
+  (the "Juegos similares" shelf below already used the wider one correctly). Mobile gallery dots
+  centered (were left-aligned by default flex behavior).
+- **Lightbox contrast (033):** root cause found while grounding, not a taste call — the backdrop
+  mixed the app's text color into the scrim instead of a background color, which inverts in dark
+  theme (pale veil instead of a dimming scrim). Fixed with a fixed dark value matching the app's
+  existing shadow/scrim token, used consistently by every other floating surface. Refined after
+  initial approval: added prev/next chevron nav + arrow-key support (production has them, the
+  first sketch round omitted them), and a soft fade/scale-in open-close transition using the app's
+  own validated motion tokens instead of an instant `display` toggle. Open question left for
+  implementation: whether the nav arrows should anchor to the viewport edge (as sketched) or the
+  image's own edge, per viewport.
+- **Chip cleanup (034):** two bundled fixes — dropped a weight-band badge+description block a
+  prior round had deliberately kept (it duplicated the same dificultad fact already shown in the
+  facts pill row); gave the Mecánicas/Temáticas chips real padding + background contrast instead
+  of the bare unstyled default.
+- **Detail-page rhythm (035):** the "too much whitespace" complaints traced to two additive bugs —
+  an always-rendered sticky title-echo bar still occupying layout space while invisible (top), and
+  three independently-reasonable spacing rules stacking to 150px+ at the footer boundary (bottom).
+  Started with 3 asymmetric scale options; mid-review discussion (why not the same value at both
+  ends?) led to adding and picking a 4th, equal-spacing variant over the original asymmetric
+  favorite.
+
+## Open Items Carried Forward
+- 033: the lightbox's prev/next arrow horizontal position (viewport-edge vs. image-relative) is
+  unresolved — deferred to implementation, to be decided per viewport rather than re-sketched.
+- 031's open items (title retitle-on-widen, query-layer widening strategy) remain open, untouched
+  by this round.
+- 027's underlying cascade-layer positioning bug and the G-01.2-3/4 search-morph issues remain open
+  code fixes, untouched by this round.
+- 029 and 030 (round 1) are still design-approved but not yet implemented.
+- None of 032–035 are implemented yet — all four are design-approved, ready for
+  `/gsd-plan-phase` (or a gap-closure quick task) against `CatalogLive.Show`.
+
+## Session: 2026-08-27 (continued)
+
+**Sketches processed:** 3
+**Design areas added:** Component System — Pills & Chips (new)
+**Design areas updated:** Detail Page — Layout & Content, Detail Page — Mobile & Interaction
+Patterns
+**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
+
+**Context:** Round 3 of Phase 01.2 UAT gap-closure — a third UAT pass over 032–035's shipped fixes
+(plans 01.2-19 through 01.2-22) found they hadn't fully landed, plus one genuinely new complaint
+that hadn't surfaced before: inconsistent pill/chip styling across the whole app, not just the
+detail page. All three sketches went through real diagnosis first
+(`.planning/debug/G-01.2-13/14/16-*.md`) before sketching, so — like round 2 — several findings are
+verified code facts, not taste calls: five independently-styled pill/chip implementations with no
+shared base (036), a dot-touch-target sizing bug plus a panel-padding margin mismatch (037), and a
+lightbox width cap that never read the shell's own content width (038).
+
+**Two sketches also caught their own bugs mid-review, worth flagging generally:** both 036/037/038
+initially shipped with the exact multi-variant CSS-scoping bug 032's README had already documented
+once (a `.variant.active` wrapper carrying the tab-switching `id` but not the CSS-scoping class the
+variant-specific rules targeted, so every variant-specific style silently matched nothing) — caught
+only when the user reported "no style" / "buttons don't work" / "still looks weird" against what
+should have been three visibly different renders. Worth a standing checklist item for any future
+multi-variant sketch: verify the `id` used for JS tab-switching and the `class` used for CSS
+variant-scoping are applied to the *same element*, not assumed from the markup alone.
+
+## Included Sketches
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 036 | pill-chip-unification | A+B Synthesis (flat info pills + always-bordered action chips + tap-press feedback) | Component System — Pills & Chips |
+| 037 | masthead-grouping | C (Proximity Only, no shared container) | Detail Page — Layout & Content |
+| 038 | lightbox-shell-width | Shell-Width-Anchored Arrows (round-2 synthesis) | Detail Page — Mobile & Interaction Patterns |
+
+## Excluded Sketches
+| # | Name | Reason |
+|---|------|--------|
+| — | — | none — all 3 included |
+
+## Design Direction
+No new aesthetic direction — gap-closure within the already-locked visual system, same as rounds 1
+and 2. One genuinely new principle did emerge though: **unify pills/chips by interactivity role
+(does tapping this do anything?), not by content type** — the industry pattern (Material Design's
+"filter chip", Airbnb's own filter pills) for signaling tappability with no hover state on touch is
+an always-visible border at rest plus a real tap-press feedback state; purely informational
+elements need neither.
+
+## Key Decisions
+- **Pill/chip unification (036, 5 rounds):** landed on flat, chrome-free informational pills
+  (facts/mecánicas/temáticas/editorial — nothing to tap, no border) + tightly-sized, always-bordered
+  interactive chips (active filters/filter-modal — 44px touch height, `:active` press feedback).
+  Five rounds of real back-and-forth: initial three directions (one universal shape / two sizes by
+  interactivity / three tiers by prominence) → balance refinement on the picked direction → theme
+  text color + no icons/hashtags → three minimalism explorations → the final A+B synthesis,
+  explicitly grounded in how Netflix/Airbnb signal tappability without a hover state. New
+  cross-cutting reference file: `references/pills-chips.md`.
+- **Masthead grouping (037):** revises 032's masthead findings again — proximity-only (tightened
+  rhythm + aligned edges, no shared background/border) won over two container-based options. Two
+  co-located bugs fixed the same round: the gallery dots' 44px touch target was making the visible
+  mark spacing read 5x wider than intended; the poster panel's own internal padding put the photo
+  16px further from the shell gutter than its siblings.
+- **Lightbox shell width (038):** resolves 033's explicitly-left-open question. The photo now caps
+  to the shell's own content width instead of a standalone `min(90vw, 60rem)`, and — the actual fix
+  the open question was missing — the nav arrows anchor to that *same* shell-width box, not the raw
+  viewport; anchoring the photo and the arrows to two different boundaries is what made round 1's
+  "viewport-edge" variant still look wrong even after the width fix. Also fixed: mobile's left
+  chevron rendering behind the image (no explicit `z-index`, so DOM paint order lost against the
+  wide image).
+
+## Open Items Carried Forward
+- 033's original open item (viewport-edge vs. image-relative arrows) is now resolved by 038 — no
+  longer open.
+- The lightbox/carousel state-sync bug found during round-3 diagnosis (`@selected_image` shared
+  between the poster carousel and the lightbox, so lightbox navigation moves the underlying
+  carousel) is a code fix planned separately (gap-closure plan `01.2-25`) — not a sketch question,
+  so `detail-page-mobile-interaction.md`'s existing "Lightbox / carousel sync" section is
+  intentionally left as-is pending that fix landing and a future wrap-up correcting it.
+- The title-echo bar appearing on desktop (should be mobile-only) and a footer-boundary spacing
+  regression, both found during round-3 diagnosis, are pure code fixes with no design question —
+  out of scope for this wrap-up, covered by gap-closure plan `01.2-24`.
+- 031's open items (title retitle-on-widen, query-layer widening strategy) remain open, untouched.
+- 029 and 030 (round 1) are still design-approved but not yet implemented.
+- None of 036–038 are implemented yet — all three are design-approved, ready for
+  `/gsd-execute-phase 01.2 --gaps-only` against the phase's gap-closure plans (`01.2-23` through
+  `01.2-27`).

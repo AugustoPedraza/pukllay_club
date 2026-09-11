@@ -5,6 +5,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   import PukllayClub.CatalogFixtures
 
   alias PukllayClub.Catalog.Reservation
+  alias PukllayClubWeb.CarouselRow
+  alias PukllayClubWeb.GameChips
 
   describe "GET /juegos/:id" do
     test "returns 200 for an unauthenticated visitor and renders the full title (CATALOG-08)", %{
@@ -21,13 +23,36 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "Un título extraordinariamente largo que no debería truncarse en la página de detalle"
     end
 
-    test "renders the weight-band label AND its one-line descriptor", %{conn: conn} do
+    test "renders the weight-band label but no badge element and no descriptor sentence (G-01.2-20)",
+         %{conn: conn} do
       game = game_fixture(%{weight_band: "ingenio_estratega"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
+      doc = LazyHTML.from_document(html)
+
       assert html =~ "Ingenio estratega"
-      assert html =~ "Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante."
+      assert doc |> LazyHTML.query(".badge-secondary") |> Enum.count() == 0
+      refute html =~ "Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante."
+    end
+
+    test "exactly one link into the weight-band filter exists on the page, and it is the dificultad pill",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      matches = LazyHTML.query(doc, "a[href='/?weight_bands=ingenio_estratega']")
+      assert Enum.count(matches) == 1
+
+      # G-01.2-26 task 3: the exact-equality assertion now pins the element
+      # carrying the pk-fact marker (kept as a test selector/scoping hook,
+      # zero visual declarations left on it) plus the pk-pill base, the
+      # neutral tone, and the interactive variant (this is a link branch).
+      link_class = matches |> LazyHTML.attribute("class") |> List.first()
+      assert link_class == "pk-fact pk-pill pk-pill-neutral pk-pill-interactive"
     end
 
     test "renders the complete mechanic chip list with no overflow indicator", %{conn: conn} do
@@ -62,12 +87,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "+7"
     end
 
-    test "renders designers, publishers, players, playtime, age, and description when present, omitting each individually when absent",
+    test "renders designers, age, and description in Ficha técnica, and players/duration once in the facts row (D-05)",
          %{conn: conn} do
       game =
         game_fixture(%{
           designers: ["Klaus Teuber"],
-          publishers: ["Devir"],
           min_players: 3,
           max_players: 4,
           min_age: 10,
@@ -76,20 +100,27 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
+      doc = LazyHTML.from_document(html)
+      facts_html = doc |> LazyHTML.query(".pk-facts-row") |> LazyHTML.to_html()
+      spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
+
       assert html =~ "Klaus Teuber"
-      assert html =~ "Devir"
-      assert html =~ "3-4"
       assert html =~ "10+"
       assert html =~ "Compite por colonizar la isla de Catán."
+
+      # D-05: players is represented exactly once, by the facts row —
+      # never restated as a Ficha técnica spec row.
+      assert facts_html =~ "3-4"
+      refute spec_html =~ "3-4"
+      refute spec_html =~ "Jugadores"
+      refute spec_html =~ "Duración"
     end
 
-    test "omits designers/publishers/age/description rows individually when absent", %{
-      conn: conn
-    } do
+    test "omits designers/age/description rows individually when absent, and Editorial never renders (G-01.2-10 task 3)",
+         %{conn: conn} do
       game =
         game_fixture(%{
           designers: [],
-          publishers: [],
           min_age: nil,
           description: nil
         })
@@ -140,7 +171,28 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html2 =
         view
-        |> element(~s(button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"]))
+        |> element(~s(#gallery-thumbnails button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"]))
+        |> render_click()
+
+      assert html2 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
+    end
+
+    # G-01.2-10 task 2, D3: the dot affordance dispatches the exact same
+    # event/param as the thumbnail it mirrors, through the same
+    # select-image whitelist.
+    test "clicking a dot swaps the main image", %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover-large.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      assert html =~ ~s(src="https://images.test.invalid/games/1/cover-large.webp")
+
+      html2 =
+        view
+        |> element(~s(#gallery-dots button[phx-value-url="https://images.test.invalid/games/1/gallery-1.webp"]))
         |> render_click()
 
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
@@ -346,7 +398,53 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert view.module == PukllayClubWeb.CatalogLive.Show
     end
 
-    test "the ficha técnica renders Ilustrador as No disponible and no BGG rank digits", %{
+    # G-01.2-7 / sketch 031: a same-band-filled shelf renders no "Ampliado"
+    # badge and keeps the existing weight-band subtitle — the shelf's
+    # visible chrome is unchanged when widening never happened.
+    test "a same-band-filled shelf renders no badge and the existing weight-band subtitle", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Base Same Band", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Bandmate Same Band", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      refute html =~ "Ampliado"
+      assert html =~ "Otros juegos del mismo nivel: Nivel experto"
+      refute html =~ "Otras opciones que te van a encantar"
+    end
+
+    # A widened shelf (the shelf had to reach past the viewed game's own
+    # band to fill the cap) renders the "Ampliado" badge and the swapped
+    # subtitle, while the title itself is unchanged.
+    test "a widened shelf renders the Ampliado badge and the widened subtitle", %{conn: conn} do
+      game = game_fixture(%{name: "Base Widened", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Other Band 1", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Other Band 2", weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      assert html =~ "Ampliado"
+      assert html =~ "Otras opciones que te van a encantar"
+      refute html =~ "Otros juegos del mismo nivel:"
+    end
+
+    test "a no-band game's shelf renders the Ampliado badge and the widened subtitle", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Base No Band", weight_band: nil})
+      game_fixture(%{name: "Other 1", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      assert html =~ "Ampliado"
+      assert html =~ "Otras opciones que te van a encantar"
+    end
+
+    test "the ficha técnica never renders the dead Ilustrador or BGG-ranking rows (D-04)", %{
       conn: conn
     } do
       game = game_fixture()
@@ -356,15 +454,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       doc = LazyHTML.from_document(html)
       spec_html = doc |> LazyHTML.query(".pk-spec-list") |> LazyHTML.to_html()
 
-      assert spec_html =~ "Ilustrador"
-      assert spec_html =~ "Puesto en el ranking BGG"
-
-      illustrator_row =
-        doc
-        |> LazyHTML.query(".pk-spec-row")
-        |> Enum.find(&(LazyHTML.text(&1) =~ "Ilustrador"))
-
-      assert LazyHTML.text(illustrator_row) =~ "No disponible"
+      refute spec_html =~ "Ilustrador"
+      refute spec_html =~ "Puesto en el ranking BGG"
+      refute spec_html =~ "No disponible"
     end
 
     test "a game with a bgg_id renders a boardgamegeek.com link in the ficha técnica, one without renders none",
@@ -392,6 +484,43 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute spec_html_without =~ "boardgamegeek.com"
     end
 
+    test "a minimal-data game with none of the five spec fields renders no Ficha técnica heading, and the rest of the page still renders",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Juego Minimo",
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: [],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Ficha técnica"
+      refute html =~ "pk-spec-list"
+      assert html =~ "Juego Minimo"
+      assert html =~ "Reservar para el sábado"
+    end
+
+    test "a game with only a bgg_id and none of the other four fields still renders the Ficha técnica heading and the BGG link",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: [],
+          bgg_id: 77
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Ficha técnica"
+      assert html =~ "boardgamegeek.com/boardgame/77"
+    end
+
     test "clicking the description toggle expands and collapses the clamp", %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba."})
 
@@ -407,7 +536,203 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  describe "reading column reorder — title then description then a bounded more-info zone (G-01.2-10 task 3)" do
+    test "the description block is the element immediately following the title heading — ordered children, not a substring match",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica de mercaderes."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # Adjacent-sibling combinator: this only matches when .pk-description
+      # is literally the very next element after #detail-title-block — an
+      # element reinserted between them (the weight badge, the editorial
+      # hashtags, either chip row) makes this query return nothing.
+      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+    end
+
+    test "the mechanics/themes chip rows and editorial hashtags never render before the description block",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          description: "Una crónica de mercaderes.",
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          tags: ["#CreaConexiones"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      {description_idx, _} = :binary.match(html, "Una crónica de mercaderes.")
+      {mechanics_idx, _} = :binary.match(html, "Mecánicas")
+      {themes_idx, _} = :binary.match(html, "Temáticas")
+      {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
+
+      assert description_idx < mechanics_idx
+      assert description_idx < themes_idx
+      assert description_idx < hashtag_idx
+    end
+
+    test "a separator element exists between the description block and the first more-information heading",
+         %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica.", mechanics: ["Dice Rolling"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-description + .divider") |> Enum.count() == 1
+    end
+
+    test "the hashtag row flows straight into the Mecánicas heading — ordered siblings, no element (the removed badge) between them (G-01.2-20)",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          weight_band: "ingenio_estratega",
+          description: "Una crónica.",
+          mechanics: ["Dice Rolling"],
+          tags: ["#CreaConexiones"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # Adjacent-sibling chain: the div immediately after .pk-divider (the
+      # editorial hashtag row) must itself be immediately followed by the
+      # Mecánicas heading. A re-added element between them (the former
+      # badge block) breaks the chain and this query returns 0 instead of
+      # 1 — even with a weight band present, which is the case that used
+      # to render the badge.
+      assert doc |> LazyHTML.query(".pk-divider + div + h2.pk-section-heading") |> Enum.count() ==
+               1
+    end
+
+    test "a game with publishers renders no publisher row in the spec list", %{conn: conn} do
+      game = game_fixture(%{publishers: ["Devir"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Devir"
+      refute html =~ "Editorial"
+    end
+
+    test "a game whose only populated spec field is publishers renders no Ficha técnica section at all",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: ["Devir"],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      refute html =~ "Ficha técnica"
+      refute html =~ "pk-spec-list"
+    end
+
+    test "a game with a year and publishers still renders the Ficha técnica section with the year row",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          min_age: nil,
+          year_published: 2001,
+          designers: [],
+          publishers: ["Devir"],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Ficha técnica"
+      assert html =~ "2001"
+      refute html =~ "Devir"
+    end
+  end
+
+  describe "masthead↔shelf boundary (G-01.2-18 task 1)" do
+    test "a separator sits between the masthead's wrapper and the shelf's section root — ordered siblings, not mere presence",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Base Boundary", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Bandmate Boundary", weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # Adjacent-sibling combinator, mirroring the #detail-title-block +
+      # .pk-description assertion style 01.2-17 already established — this
+      # only matches when the separator is literally the very next element
+      # after the masthead's own outer wrapper, and the shelf is literally
+      # the very next element after the separator.
+      assert doc |> LazyHTML.query("#detail-masthead-wrap + #detail-shelf-separator") |> Enum.count() ==
+               1
+
+      assert doc |> LazyHTML.query("#detail-shelf-separator + #similares") |> Enum.count() == 1
+    end
+
+    test "the separator renders on the loading (disconnected) pass too, ahead of the skeleton shelf",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Base Loading Boundary", weight_band: "nivel_experto"})
+
+      conn = get(conn, ~p"/juegos/#{game.id}")
+      html = html_response(conn, 200)
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#detail-shelf-separator + #similares-skeleton") |> Enum.count() ==
+               1
+    end
+
+    test "the shelf's own title, badge, and subtitle still render unchanged with the boundary in place",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Base Boundary Shelf", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Other Band Boundary", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "Juegos similares"
+      assert html =~ "Ampliado"
+      assert html =~ "Otras opciones que te van a encantar"
+    end
+  end
+
+  # G-01.2-22 task 3: co-located with this page's own test suite (rather
+  # than relying solely on layouts_test.exs's call-site assertions) — the
+  # detail page IS the one call site that opts into the boundary-collapse
+  # flag, so this file should say so directly.
+  describe "detail page boundary-collapse contract (G-01.2-22)" do
+    test "the detail page's <main> carries pk-boundary-collapse, not the shared default vertical padding",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      class = doc |> LazyHTML.query("main") |> LazyHTML.attribute("class") |> List.first()
+
+      assert class =~ "pk-boundary-collapse"
+      refute class =~ "pb-20"
+      refute class =~ "pt-8"
+    end
+  end
+
   describe "detail page mobile chrome and interaction (SHELL-03)" do
+    # G-01.2-21 task 3: this describe pins the lightbox's SERVER-SIDE
+    # contract (its state class, its aria-hidden marking, and its guarded
+    # select-image path) with ExUnit. The other half of the contract —
+    # whether the open/close actually fades and scales, whether focus
+    # really moves between the trigger and the close button, and whether
+    # ArrowLeft/ArrowRight actually change the image — is all client-side
+    # (colocated hook JS) and is NOT exercised by these LiveView tests,
+    # which never run JavaScript. That half lives in this plan's own
+    # <human-check> blocks, harvested into 01.2-UAT.md at phase end. Naming
+    # that boundary here is deliberate: it is what stops a later reader from
+    # assuming this file already covers it.
     test "the CTA bar, title-echo bar, and title block all render with their ids", %{conn: conn} do
       game = game_fixture()
 
@@ -416,6 +741,59 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html =~ ~s(id="detail-cta-bar")
       assert html =~ ~s(id="detail-title-echo")
       assert html =~ ~s(id="detail-title-block")
+    end
+
+    # G-01.2-22 task 1: the title-echo bar's positioning moved from a flow-
+    # occupying value to a viewport-anchored one (a layout-space fix — see
+    # app.css's own comment on .pk-title-echo). This test pins that the
+    # element itself, its scroll-to-top control, and its resting (neither
+    # state class present) first render all survive that change untouched.
+    # Whether the hook actually ADDS is-visible on scroll or is-parked at
+    # the footer is client-side scroll-driven behavior with no LiveView
+    # render-test equivalent — untested here, and said so, per the plan's
+    # own instruction; those two remain routed to the human-check below.
+    test "the title-echo bar still carries its scroll-to-top control, and neither state class is present on first render",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      title_echo_html = doc |> LazyHTML.query("#detail-title-echo") |> LazyHTML.to_html()
+
+      assert title_echo_html =~ ~s(data-scroll-top)
+      assert title_echo_html =~ "Volver arriba"
+
+      class =
+        doc
+        |> LazyHTML.query("#detail-title-echo")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      refute class =~ "is-visible"
+      refute class =~ "is-parked"
+    end
+
+    # G-01.2-24 task 1: the bar's title <span> gets a real class so it can
+    # be styled directly (min-width: 0 + no-wrap + ellipsis, declared in
+    # app.css) — a game name too long to fit alongside the fixed 44px
+    # scroll-to-top button must clip on one line instead of wrapping to a
+    # second one. This test pins the class exists on the span; the visual
+    # truncation itself is CSS and routed to the phase's own human-check.
+    test "the title-echo bar's title span carries pk-title-echo-name", %{conn: conn} do
+      game = game_fixture(%{name: "Through the Ages: A New Story of Civilization"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      span_html =
+        doc
+        |> LazyHTML.query("#detail-title-echo span")
+        |> LazyHTML.to_html()
+
+      assert span_html =~ ~s(class="pk-title-echo-name")
+      assert span_html =~ "Through the Ages: A New Story of Civilization"
     end
 
     test "the CTA bar's button and the buy-box button share the same phx-click and label", %{
@@ -462,7 +840,12 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ ~r/\son[a-z]+=/
     end
 
-    test "the lightbox opens on the currently selected image and stays in sync with select-image",
+    # G-01.2-21 task 2: the lightbox is now always rendered (state lives in
+    # the is-open class + aria-hidden, not in whether the element exists —
+    # see app.css's own comment on why display can no longer gate this), so
+    # this test asserts on the CLASS and aria-hidden marking rather than on
+    # the element's presence/absence.
+    test "the lightbox is inert on first render (present, no open class, aria-hidden), opens via its is-open class, and stays in sync with select-image",
          %{conn: conn} do
       game =
         game_fixture(%{
@@ -471,10 +854,27 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         })
 
       {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
-      refute html =~ "pk-lightbox"
+
+      lightbox_state = fn html ->
+        doc = LazyHTML.from_document(html)
+
+        {
+          doc |> LazyHTML.query("#detail-lightbox") |> LazyHTML.attribute("class") |> List.first(),
+          doc
+          |> LazyHTML.query("#detail-lightbox")
+          |> LazyHTML.attribute("aria-hidden")
+          |> List.first()
+        }
+      end
+
+      {class1, hidden1} = lightbox_state.(html)
+      refute class1 =~ "is-open"
+      assert hidden1 == "true"
 
       html2 = render_click(view, "open-lightbox", %{})
-      assert html2 =~ "pk-lightbox"
+      {class2, hidden2} = lightbox_state.(html2)
+      assert class2 =~ "is-open"
+      assert hidden2 == "false"
       assert html2 =~ ~s(aria-modal="true")
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
 
@@ -486,7 +886,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html3 =~ ~s(src="https://images.test.invalid/games/1/gallery-1.webp")
 
       html4 = render_click(view, "close-lightbox", %{})
-      refute html4 =~ "pk-lightbox"
+      {class4, hidden4} = lightbox_state.(html4)
+      refute class4 =~ "is-open"
+      assert hidden4 == "true"
     end
 
     test "the select-image whitelist guard still rejects a foreign url while the lightbox is open",
@@ -506,7 +908,249 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
     end
 
-    test "both share buttons render, carry identical data-share-url matching the canonical route",
+    test "the lightbox chevrons carry the keyboard handler's stable hooks and wrap at both ends of the gallery",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: [
+            "https://images.test.invalid/games/1/gallery-1.webp",
+            "https://images.test.invalid/games/1/gallery-2.webp"
+          ]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      # G-01.2-25: the chevrons compute their target against @lightbox_image,
+      # which is only seeded once the lightbox actually opens (a visitor
+      # cannot navigate a closed lightbox) — open it first, same as a real
+      # interaction would.
+      html = render_click(view, "open-lightbox", %{})
+
+      neighbor_urls = fn html ->
+        doc = LazyHTML.from_document(html)
+
+        {
+          doc
+          |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]")
+          |> LazyHTML.attribute("phx-value-url")
+          |> List.first(),
+          doc
+          |> LazyHTML.query("#detail-lightbox [data-lightbox-next]")
+          |> LazyHTML.attribute("phx-value-url")
+          |> List.first()
+        }
+      end
+
+      # cover_url is first in gallery_thumbnails/1's list (the START end),
+      # so its previous neighbor wraps AROUND to the last gallery image and
+      # its next neighbor is the first gallery image — unchanged targets,
+      # only the new data-lightbox-prev/next hooks are added.
+      {prev_url, next_url} = neighbor_urls.(html)
+      assert prev_url == "https://images.test.invalid/games/1/gallery-2.webp"
+      assert next_url == "https://images.test.invalid/games/1/gallery-1.webp"
+
+      # Selecting the LAST image (the other END) and re-reading the chevron
+      # targets confirms the wrap holds at both ends, not just the one the
+      # page mounts on. Dispatched at the lightbox's OWN event
+      # (select-lightbox-image, G-01.2-25) — the chevrons no longer move
+      # the page's own select-image assign.
+      html2 =
+        render_click(view, "select-lightbox-image", %{
+          "url" => "https://images.test.invalid/games/1/gallery-2.webp"
+        })
+
+      {prev_url2, next_url2} = neighbor_urls.(html2)
+      assert prev_url2 == "https://images.test.invalid/games/1/gallery-1.webp"
+      assert next_url2 == "https://images.test.invalid/games/1/cover.webp"
+    end
+
+    # G-01.2-25 task 2: the lightbox's own selection (@lightbox_image) is
+    # split from the page's (@selected_image) — stepping through the
+    # lightbox must change ONLY the lightbox's own image. The poster image,
+    # the thumbnail carrying the active border and the dot carrying the
+    # active state (all readers of @selected_image) must not move.
+    test "stepping the lightbox forward changes only the lightbox's own image — the poster, active thumbnail and active dot underneath stay put",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: [
+            "https://images.test.invalid/games/1/gallery-1.webp",
+            "https://images.test.invalid/games/1/gallery-2.webp"
+          ]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      html = render_click(view, "open-lightbox", %{})
+      doc = LazyHTML.from_document(html)
+
+      poster_src_before =
+        doc
+        |> LazyHTML.query("#detail-lightbox-trigger img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      active_thumb_before =
+        doc
+        |> LazyHTML.query(~s(#gallery-thumbnails button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      active_dot_before =
+        doc
+        |> LazyHTML.query(~s(#gallery-dots button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_src_before == game.cover_url
+      assert active_thumb_before =~ "border-primary"
+      assert active_dot_before =~ "is-active"
+
+      next_url =
+        doc
+        |> LazyHTML.query("#detail-lightbox [data-lightbox-next]")
+        |> LazyHTML.attribute("phx-value-url")
+        |> List.first()
+
+      html2 = render_click(view, "select-lightbox-image", %{"url" => next_url})
+      doc2 = LazyHTML.from_document(html2)
+
+      lightbox_img_src =
+        doc2
+        |> LazyHTML.query("#detail-lightbox .pk-lightbox-img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      assert lightbox_img_src == next_url
+
+      poster_src_after =
+        doc2
+        |> LazyHTML.query("#detail-lightbox-trigger img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      active_thumb_after =
+        doc2
+        |> LazyHTML.query(~s(#gallery-thumbnails button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      active_dot_after =
+        doc2
+        |> LazyHTML.query(~s(#gallery-dots button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_src_after == poster_src_before
+      assert active_thumb_after == active_thumb_before
+      assert active_dot_after == active_dot_before
+    end
+
+    test "the page's poster, active thumbnail and active dot are still unchanged after the lightbox closes, and reopening starts from the same image again",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      render_click(view, "open-lightbox", %{})
+
+      render_click(view, "select-lightbox-image", %{
+        "url" => "https://images.test.invalid/games/1/gallery-1.webp"
+      })
+
+      html = render_click(view, "close-lightbox", %{})
+      doc = LazyHTML.from_document(html)
+
+      poster_src =
+        doc
+        |> LazyHTML.query("#detail-lightbox-trigger img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      active_thumb_class =
+        doc
+        |> LazyHTML.query(~s(#gallery-thumbnails button[phx-value-url='#{game.cover_url}']))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_src == game.cover_url
+      assert active_thumb_class =~ "border-primary"
+
+      # G-01.2-25: close-lightbox deliberately does NOT sync @lightbox_image
+      # back onto @selected_image, so reopening re-seeds from the
+      # untouched page selection, not the lightbox's last navigated-to
+      # image.
+      html2 = render_click(view, "open-lightbox", %{})
+      doc2 = LazyHTML.from_document(html2)
+
+      lightbox_img_src =
+        doc2
+        |> LazyHTML.query("#detail-lightbox .pk-lightbox-img")
+        |> LazyHTML.attribute("src")
+        |> List.first()
+
+      assert lightbox_img_src == game.cover_url
+    end
+
+    test "the select-lightbox-image whitelist guard rejects a url outside the gallery list and leaves the lightbox's image unchanged",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: []
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      render_click(view, "open-lightbox", %{})
+
+      html2 = render_click(view, "select-lightbox-image", %{"url" => "https://evil.example.com/x.jpg"})
+
+      refute html2 =~ "evil.example.com"
+      assert html2 =~ ~s(src="https://images.test.invalid/games/1/cover.webp")
+    end
+
+    test "the poster button that opens the lightbox carries the stable id the hook focuses on close",
+         %{conn: conn} do
+      game = game_fixture(%{cover_url: "https://images.test.invalid/games/1/cover.webp"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ ~s(id="detail-lightbox-trigger")
+    end
+
+    test "a game with exactly one gallery image renders no chevrons, and a game with none renders the lightbox with no image inside",
+         %{conn: conn} do
+      one_image_game =
+        game_fixture(%{cover_url: "https://images.test.invalid/games/1/cover.webp"})
+
+      {:ok, _view, html_one} = live(conn, ~p"/juegos/#{one_image_game.id}")
+
+      doc_one = LazyHTML.from_document(html_one)
+      assert doc_one |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]") |> Enum.count() == 0
+      assert doc_one |> LazyHTML.query("#detail-lightbox [data-lightbox-next]") |> Enum.count() == 0
+
+      no_image_game = game_fixture(%{cover_url: nil, gallery_urls: []})
+
+      {:ok, _view, html_none} = live(conn, ~p"/juegos/#{no_image_game.id}")
+
+      doc_none = LazyHTML.from_document(html_none)
+      assert doc_none |> LazyHTML.query("#detail-lightbox") |> Enum.count() == 1
+      assert doc_none |> LazyHTML.query("#detail-lightbox .pk-lightbox-img") |> Enum.count() == 0
+      assert doc_none |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]") |> Enum.count() == 0
+      assert doc_none |> LazyHTML.query("#detail-lightbox [data-lightbox-next]") |> Enum.count() == 0
+    end
+
+    # G-01.2-18 task 2: the mobile CTA bar's own copy of this control was
+    # removed — the poster's corner icon is now the page's sole share entry
+    # point, so this test asserts on the one remaining control rather than
+    # comparing two.
+    test "the one remaining share button renders with a data-share-url matching the canonical route",
          %{conn: conn} do
       game = game_fixture(%{name: "Juego Compartido"})
 
@@ -517,12 +1161,9 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       buybox_url =
         doc |> LazyHTML.query("#detail-share-buybox") |> LazyHTML.attribute("data-share-url")
 
-      ctabar_url =
-        doc |> LazyHTML.query("#detail-share-ctabar") |> LazyHTML.attribute("data-share-url")
-
       assert buybox_url != []
-      assert buybox_url == ctabar_url
       assert hd(buybox_url) =~ ~p"/juegos/#{game.id}"
+      assert doc |> LazyHTML.query("#detail-share-ctabar") |> Enum.count() == 0
     end
 
     test "the share fallback's WhatsApp and X hrefs are percent-encoded", %{conn: conn} do
@@ -542,8 +1183,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         |> LazyHTML.query("a[aria-label='Compartir por X']")
         |> LazyHTML.attribute("href")
 
-      assert length(whatsapp_hrefs) == 2
-      assert length(x_hrefs) == 2
+      assert length(whatsapp_hrefs) == 1
+      assert length(x_hrefs) == 1
 
       for href <- whatsapp_hrefs ++ x_hrefs do
         query = href |> String.split("?", parts: 2) |> List.last()
@@ -561,6 +1202,738 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     #     with the reserved body padding collapsing in the same transition
     #   - the title-echo bar's fade-in once the real <h1> has scrolled past
     #     the header
+  end
+
+  describe "buy-box redesign — panel, poster aspect, CTA prominence, cover fallback (D-07)" do
+    test "the buy-box cover carries the shared poster aspect class, not the wide preview ratio class",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      poster_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-poster-col") |> LazyHTML.to_html()
+
+      assert poster_html =~ "pk-card-poster"
+      refute poster_html =~ "pk-preview-poster"
+      refute poster_html =~ "aspect-video"
+    end
+
+    # The elevated-shadow panel treatment (fill/border/shadow, G-01.2-5/
+    # G-01.2-6, sketch 027) moved off .pk-poster-col and onto the new
+    # .pk-poster-panel element (G-01.2-19 task 1) — this assertion follows
+    # the treatment to its new home rather than being dropped, since the
+    # decision it protects (no inline utility duplicating the CSS-declared
+    # panel look) is still in force, just on a different element.
+    test "the poster panel does not carry the fill-only utility string (elevated-shadow panel lives in app.css, G-01.2-5/G-01.2-6)",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      poster_panel_class =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-poster-panel")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      refute poster_panel_class =~ "bg-base-200"
+      refute poster_panel_class =~ "rounded-box"
+      refute poster_panel_class =~ "p-4"
+    end
+
+    test "the reserve CTA carries the large size step and full width, and the share control is absolutely positioned rather than a row sibling",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      poster_html = doc |> LazyHTML.query(".pk-poster-col") |> LazyHTML.to_html()
+
+      reserve_button_class =
+        doc
+        |> LazyHTML.query(".pk-poster-col button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert reserve_button_class =~ "btn-lg"
+      assert reserve_button_class =~ "w-full"
+      refute reserve_button_class =~ "flex-1"
+
+      # Structural assertion (not class-string matching): the share
+      # control's wrapper is an absolutely positioned sibling ancestor
+      # inside the poster frame (G-01.2-10 task 2's positioning context,
+      # nested one level inside the poster column), not a flex-row
+      # sibling of the reserve button.
+      share_wrap_ancestor_class =
+        doc
+        |> LazyHTML.query(".pk-poster-frame > div")
+        |> Enum.map(&LazyHTML.attribute(&1, "class"))
+        |> Enum.find(fn class -> List.first(class) =~ "absolute" end)
+
+      assert share_wrap_ancestor_class
+      assert poster_html =~ "detail-share-buybox"
+    end
+
+    test "the buy-box image carries the cover-fallback class and is immediately followed by a hidden placeholder sibling",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      cover_button_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-poster-col button[phx-click='open-lightbox']")
+        |> LazyHTML.to_html()
+
+      assert cover_button_html =~ "js-cover-fallback"
+
+      # Structural check (not just presence): the hidden placeholder is the
+      # <img>'s next sibling inside the same button, mirroring GameCard's
+      # shape verbatim, so the app-wide error listener's
+      # `target.nextElementSibling` lookup actually finds it.
+      [_before, after_img] =
+        String.split(cover_button_html, ~r/<img[^>]*js-cover-fallback[^>]*>/, parts: 2)
+
+      assert after_img =~ ~r/^\s*<div class="hidden/
+      assert after_img =~ "hero-puzzle-piece"
+    end
+
+    test "the mobile CTA bar still renders with its id and reserve button alongside the .DetailChrome hook",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      cta_bar_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#detail-cta-bar") |> LazyHTML.to_html()
+
+      assert html =~ ~s(id="detail-cta-bar")
+      assert cta_bar_html =~ ~s(phx-click="open-reservation")
+      assert html =~ ~s(phx-hook="PukllayClubWeb.CatalogLive.Show.DetailChrome")
+    end
+
+    # G-01.2-18 task 2: the bar's second (share) row is gone — this test now
+    # pins the single-control shape and the surviving alignment cap rather
+    # than the stacked two-control layout it used to assert.
+    test "the mobile CTA bar's inner wrapper holds only the reserve button, capped to the content column (G-01.2-18 task 2)",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+      cta_bar_html = doc |> LazyHTML.query("#detail-cta-bar") |> LazyHTML.to_html()
+
+      # Structural assertion (not class-string matching): pk-cta-bar-inner
+      # sits between the bar and its one remaining control, and its own
+      # parent carries pk-gutter — the shipped shell-column recipe, reused
+      # verbatim so the bar's control aligns under the content column.
+      inner_parent_class =
+        doc
+        |> LazyHTML.query("#detail-cta-bar > div")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert inner_parent_class =~ "pk-gutter"
+
+      reserve_button_class =
+        doc
+        |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert reserve_button_class =~ "w-full"
+      refute reserve_button_class =~ "flex-1"
+      refute cta_bar_html =~ "flex-1"
+
+      assert cta_bar_html =~ "pk-cta-bar-inner"
+      refute cta_bar_html =~ "Compartir"
+
+      assert doc |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner > *") |> Enum.count() == 1
+    end
+  end
+
+  describe "G-01.2-11/G-01.2-12 masthead contract (facts row, panel, CTA, dots, shell width)" do
+    test "facts_row renders exactly once, as the poster panel's first child, immediately followed by the poster frame",
+         %{conn: conn} do
+      game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # Exactly one copy exists in the whole document — the mobile overlay
+      # copy and the desktop inline copy are gone, collapsed into one.
+      assert doc |> LazyHTML.query(".pk-facts-row") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> Enum.count() == 1
+
+      # Ordered-siblings assertion (not mere presence): the row is the
+      # panel's FIRST child and precedes the poster frame in document
+      # order, at every viewport width (G-01.2-23 task 2, sketch 037 —
+      # moved from being the poster column's first child to being the
+      # poster panel's first child, so the pills and the photo share one
+      # inset).
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row + .pk-poster-frame") |> Enum.count() ==
+               1
+
+      # Negative assertion: the row is no longer a direct child of the
+      # poster column. A future edit that moves it back out must fail
+      # here, not silently reopen the margin-mismatch bug G-01.2-23 fixed.
+      assert doc |> LazyHTML.query(".pk-poster-col > .pk-facts-row") |> Enum.count() == 0
+    end
+
+    test "the players, tiempo and dificultad pills all render inside the single facts row, with the same link targets they have today",
+         %{conn: conn} do
+      game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row .pk-fact") |> Enum.count() == 3
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-panel > .pk-facts-row a.pk-fact[href*='?players=']")
+             |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-panel > .pk-facts-row a.pk-fact[href*='?max_playtime=']")
+             |> Enum.count() == 1
+
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row .pk-difficulty") |> Enum.count() ==
+               1
+    end
+
+    test "the poster panel contains the poster frame and both gallery strips, and does NOT contain the poster column's Reservar button",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-poster-panel .pk-poster-frame") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-panel #gallery-thumbnails") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-panel #gallery-dots") |> Enum.count() == 1
+
+      # Structural assertion: the button is a SIBLING of the panel, not a
+      # descendant of it.
+      assert doc
+             |> LazyHTML.query(".pk-poster-panel button[phx-click='open-reservation']")
+             |> Enum.count() == 0
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-panel + button[phx-click='open-reservation'].pk-poster-reserve")
+             |> Enum.count() == 1
+    end
+
+    test "the poster column's reserve button carries pk-poster-reserve and the mobile CTA bar's reserve button does not",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      poster_reserve_class =
+        doc
+        |> LazyHTML.query(".pk-poster-col button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      cta_bar_reserve_class =
+        doc
+        |> LazyHTML.query("#detail-cta-bar button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert poster_reserve_class =~ "pk-poster-reserve"
+      refute cta_bar_reserve_class =~ "pk-poster-reserve"
+    end
+
+    # Two Reservar controls exist in the document (the in-panel one and the
+    # fixed bar's one), and exactly one carries the breakpoint-toggled
+    # class — this is the DOM-level fact CSS depends on. The visual half of
+    # the invariant (only one is ever VISIBLE at a given width) is routed to
+    # the phase's human-check, not tested here.
+    test "exactly two Reservar controls exist in the document, and exactly one carries the breakpoint-toggled class",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      reserve_buttons = LazyHTML.query(doc, "button[phx-click='open-reservation']")
+      assert Enum.count(reserve_buttons) == 2
+
+      breakpoint_gated =
+        reserve_buttons
+        |> Enum.map(&LazyHTML.attribute(&1, "class"))
+        |> Enum.filter(fn class -> List.first(class) =~ "pk-poster-reserve" end)
+
+      assert Enum.count(breakpoint_gated) == 1
+    end
+
+    test "the share control is still a descendant of the poster frame, not the panel's margin",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-poster-frame #detail-share-buybox") |> Enum.count() == 1
+    end
+
+    test "each dot dispatches select-image with the same phx-value-url the matching thumbnail dispatches, and the dot count equals the thumbnail count",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: [
+            "https://images.test.invalid/games/1/gallery-1.webp",
+            "https://images.test.invalid/games/1/gallery-2.webp"
+          ]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      thumbnail_urls =
+        doc |> LazyHTML.query("#gallery-thumbnails button") |> LazyHTML.attribute("phx-value-url")
+
+      dot_urls = doc |> LazyHTML.query("#gallery-dots button") |> LazyHTML.attribute("phx-value-url")
+
+      assert length(thumbnail_urls) == 3
+      assert length(dot_urls) == 3
+      assert Enum.sort(thumbnail_urls) == Enum.sort(dot_urls)
+    end
+
+    test "a game with no cover and no gallery images renders the placeholder with no broken panel or stray strip",
+         %{conn: conn} do
+      game = game_fixture(%{cover_url: nil, gallery_urls: []})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # The existing no-image placeholder still renders inside the frame,
+      # inside the panel.
+      assert doc |> LazyHTML.query(".pk-poster-panel .pk-poster-frame .pk-card-poster") |> Enum.count() ==
+               1
+
+      assert html =~ "hero-puzzle-piece"
+
+      # The single facts row still renders unconditionally.
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> Enum.count() == 1
+
+      refute html =~ "gallery-thumbnails"
+      refute html =~ "gallery-dots"
+    end
+
+    # Task 2's ask: the three wrappers that used to carry an inner width
+    # cap (--pk-detail-col-width) now carry only the shell recipe the
+    # header/footer already use — one assertion per wrapper, named so a
+    # regression re-capping any one of them fails a test that names it.
+    test "the masthead wrapper, the shelf-separator wrapper and the CTA bar's outer wrapper all carry the same shell recipe classes",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "nivel_experto"})
+      game_fixture(%{weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      shell_recipe = "mx-auto w-full max-w-7xl pk-gutter"
+
+      masthead_wrap_class =
+        doc |> LazyHTML.query("#detail-masthead-wrap") |> LazyHTML.attribute("class") |> List.first()
+
+      shelf_separator_wrap_class =
+        doc
+        |> LazyHTML.query("#detail-shelf-separator")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      cta_bar_outer_wrap_class =
+        doc |> LazyHTML.query("#detail-cta-bar > div") |> LazyHTML.attribute("class") |> List.first()
+
+      assert masthead_wrap_class == shell_recipe
+      assert shelf_separator_wrap_class == shell_recipe
+      assert cta_bar_outer_wrap_class == shell_recipe
+    end
+
+    # The removed separator-only width-cap class appears nowhere in the
+    # rendered page — asserted structurally (an exact class-list match on
+    # the divider itself) rather than by grepping for the retired class's
+    # own literal name, which this file must not reintroduce even in a
+    # test string.
+    test "the shelf-separator divider carries only its shared divider classes, no separate width-cap class",
+         %{conn: conn} do
+      game = game_fixture(%{weight_band: "nivel_experto"})
+      game_fixture(%{weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      separator_class =
+        doc
+        |> LazyHTML.query("#detail-shelf-separator .divider")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert separator_class == "divider pk-divider"
+    end
+  end
+
+  describe "Mecánicas/Temáticas chip contrast fix (G-01.2-20 task 2)" do
+    test "the mechanic and theme chip rows' wrapper carries the pk-chip-row scoping class",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("div.pk-chip-row") |> Enum.count() == 2
+    end
+
+    test "the editorial hashtag row does NOT carry pk-chip-row — the two rows stay separately styled",
+         %{conn: conn} do
+      game = game_fixture(%{tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      # The hashtag chip renders (proves the row is present at all) — now
+      # the pk-pill base + accent tone (G-01.2-26 task 3), not a daisyUI
+      # badge class.
+      assert doc |> LazyHTML.query(".pk-pill-accent") |> Enum.count() == 1
+
+      # ...but never as a descendant of a pk-chip-row wrapper.
+      assert doc |> LazyHTML.query("div.pk-chip-row .pk-pill-accent") |> Enum.count() == 0
+    end
+
+    test "linked chips, unlinked chips, and the overflow chip all render inside the scoped wrapper",
+         %{conn: conn} do
+      # The detail page's own call sites always pass href_fun (linked-chip
+      # shape only, real-world call sites have far fewer than the 99-limit
+      # so overflow never fires there) — exercise chip_row/1's other two
+      # shapes (unlinked span, overflow +N) directly via render_component,
+      # the same component-testing idiom this codebase already uses
+      # elsewhere, without touching game_chips_test.exs (out of scope for
+      # this plan).
+      linked_html =
+        render_component(&GameChips.chip_row/1,
+          terms: ["Tira dados"],
+          limit: 4,
+          href_fun: fn term -> "/?mechanics=#{term}" end
+        )
+
+      unlinked_html = render_component(&GameChips.chip_row/1, terms: ["Tira dados"], limit: 4)
+
+      overflow_html =
+        render_component(&GameChips.chip_row/1, terms: for(n <- 1..5, do: "Termino #{n}"), limit: 2)
+
+      # All three shapes render inside chip_row/1's single wrapper div,
+      # which carries pk-chip-row unconditionally. Chip class strings now
+      # render from the pk-pill base + neutral tone (G-01.2-26 task 3) —
+      # interactive only on the linked branch, never on the static span or
+      # the overflow chip.
+      assert linked_html =~ "pk-chip-row"
+
+      assert linked_html =~
+               ~r/<a[^>]*class="pk-pill pk-pill-neutral pk-pill-interactive"[^>]*>\s*Tira dados/
+
+      assert unlinked_html =~ "pk-chip-row"
+      assert unlinked_html =~ ~s(<span class="pk-pill pk-pill-neutral">Tira dados</span>)
+
+      assert overflow_html =~ "pk-chip-row"
+      assert overflow_html =~ ~s(<span class="pk-pill pk-pill-neutral">+3</span>)
+
+      # Sanity check on the live page: the mechanic chip's real call site
+      # (href_fun always passed) does render the linked shape inside the
+      # scoped wrapper.
+      game = game_fixture(%{mechanics: ["Dice Rolling"]})
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query("div.pk-chip-row a.pk-pill[href*='mechanics=']")
+             |> Enum.count() == 1
+    end
+  end
+
+  # G-01.2-26 task 3: negative assertion pinning the migration — a future
+  # partial re-migration back onto a daisyUI badge class (on any of the
+  # three families this plan touches) must fail here.
+  describe "pk-pill migration pins no framework badge class survives (G-01.2-26 task 3)" do
+    test "the reading column (editorial hashtags, Mecánicas, Temáticas) and the facts row render from pk-pill, never a daisyUI badge class",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          tags: ["#CreaConexiones"],
+          weight_band: "ingenio_estratega"
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      text_col_html = doc |> LazyHTML.query(".pk-text-col") |> LazyHTML.to_html()
+      facts_html = doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> LazyHTML.to_html()
+
+      refute text_col_html =~ ~r/class="[^"]*\bbadge\b/,
+             "the reading column (editorial hashtags, Mecánicas, Temáticas) must render from " <>
+               "the pk-pill base, not a daisyUI badge class"
+
+      refute facts_html =~ ~r/class="[^"]*\bbadge\b/,
+             "the facts row must render from the pk-pill base, not a daisyUI badge class"
+    end
+  end
+
+  describe "one control in the mobile CTA bar (G-01.2-18 task 2)" do
+    test "the fixed bottom bar contains exactly one interactive control, and it is the reserve button",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      controls = LazyHTML.query(doc, "#detail-cta-bar .pk-cta-bar-inner button, #detail-cta-bar .pk-cta-bar-inner a")
+
+      assert Enum.count(controls) == 1
+
+      assert doc
+             |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner button[phx-click='open-reservation']")
+             |> Enum.count() == 1
+    end
+
+    test "the page still renders exactly one share control, and it is inside the poster frame",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-share-trigger") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(".pk-poster-frame .pk-share-trigger") |> Enum.count() == 1
+      refute html =~ "detail-share-ctabar"
+    end
+
+    test "the bar's reserve button still carries the full-width and touch-floor classes it carries today",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      reserve_button_class =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#detail-cta-bar button[phx-click='open-reservation']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert reserve_button_class =~ "w-full"
+      assert reserve_button_class =~ "min-h-11"
+    end
+
+    test "the shared share-control component renders its accessible name unconditionally now that only one shape remains",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      aria_label =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-share-trigger")
+        |> LazyHTML.attribute("aria-label")
+        |> List.first()
+
+      refute aria_label in [nil, ""]
+    end
+  end
+
+  # 01.2-18 task 3: every mechanical ask from G-01.2-10's UAT `missing` list
+  # gathered into one named group so a regression on any single one fails a
+  # test that names that ask, rather than failing something generic spread
+  # across other describe blocks. One assertion per ask, not one shared
+  # assertion.
+  describe "G-01.2-10 mobile detail-page contract (regression pin, 01.2-18 task 3)" do
+    # G-01.2-19 task 1 revised this invariant: the two-copy overlay/inline
+    # swap is gone, collapsed into a single facts row above the poster
+    # panel (see the "masthead restructure" describe above for the full
+    # contract). This test now pins that one row still renders on every
+    # render, rather than the two wrappers it used to assert.
+    test "the single facts row renders, as a direct child of the poster column, on every render",
+         %{conn: conn} do
+      game = game_fixture(%{min_players: 2, max_players: 4})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query(".pk-poster-panel > .pk-facts-row") |> Enum.count() == 1
+    end
+
+    test "the description is the element immediately after the title", %{conn: conn} do
+      game = game_fixture(%{description: "Una crónica de mercaderes."})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#detail-title-block + .pk-description") |> Enum.count() == 1
+    end
+
+    test "the poster column's reserve button and the bar's reserve button are separately addressable, and exactly one carries the breakpoint-toggled class",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      poster_reserve = LazyHTML.query(doc, ".pk-poster-col button[phx-click='open-reservation']")
+      bar_reserve = LazyHTML.query(doc, "#detail-cta-bar button[phx-click='open-reservation']")
+
+      assert Enum.count(poster_reserve) == 1
+      assert Enum.count(bar_reserve) == 1
+
+      poster_class = poster_reserve |> LazyHTML.attribute("class") |> List.first()
+      bar_class = bar_reserve |> LazyHTML.attribute("class") |> List.first()
+
+      assert poster_class =~ "pk-poster-reserve"
+      refute bar_class =~ "pk-poster-reserve"
+    end
+
+    test "neither chip row nor the editorial hashtags appear before the description", %{conn: conn} do
+      game =
+        game_fixture(%{
+          description: "Una crónica.",
+          mechanics: ["Dice Rolling"],
+          themes: ["Economic"],
+          tags: ["#CreaConexiones"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      {description_idx, _} = :binary.match(html, "Una crónica.")
+      {mechanics_idx, _} = :binary.match(html, "Mecánicas")
+      {themes_idx, _} = :binary.match(html, "Temáticas")
+      {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
+
+      assert description_idx < mechanics_idx
+      assert description_idx < themes_idx
+      assert description_idx < hashtag_idx
+    end
+
+    test "no publisher row renders, and a publishers-only game renders no spec section", %{
+      conn: conn
+    } do
+      with_publisher = game_fixture(%{publishers: ["Devir"]})
+      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_publisher.id}")
+      refute html_with =~ "Editorial"
+
+      publishers_only =
+        game_fixture(%{
+          min_age: nil,
+          year_published: nil,
+          designers: [],
+          publishers: ["Devir"],
+          bgg_id: nil
+        })
+
+      {:ok, _view, html_only} = live(conn, ~p"/juegos/#{publishers_only.id}")
+      refute html_only =~ "Ficha técnica"
+    end
+
+    test "a separator sits between the masthead and the shelf", %{conn: conn} do
+      game = game_fixture(%{weight_band: "nivel_experto"})
+      game_fixture(%{weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#detail-masthead-wrap + #detail-shelf-separator") |> Enum.count() ==
+               1
+    end
+
+    test "the bar holds exactly one control", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#detail-cta-bar .pk-cta-bar-inner > *") |> Enum.count() == 1
+    end
+
+    # Checkpoint D3 (01.2-17): dots on mobile, thumbnails on desktop — both
+    # sides of the swap exist in the DOM at every render (CSS toggles which
+    # one is visible), so the developer's chosen outcome (keep the strip,
+    # add dots alongside it) stays checkable even if a later "cleanup"
+    # tries to silently remove what was chosen to keep.
+    test "the gallery renders both the thumbnail strip and the dot affordance (checkpoint D3)",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert html =~ "gallery-thumbnails"
+      assert html =~ "gallery-dots"
+    end
+
+    # "Exactly one reserve control per viewport" is not testable server-side
+    # (the breakpoint that hides one of them is CSS, not markup) — this pins
+    # the DOM-level fact that CSS depends on instead: two reserve controls
+    # exist in the document and exactly one of them carries the class the
+    # 48rem detail-layout block toggles. The visual half of the invariant
+    # (only one is ever VISIBLE at a given width) is routed to the phase's
+    # human-check.
+    test "exactly two reserve controls exist in the document, and exactly one of them is breakpoint-gated",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      reserve_buttons = LazyHTML.query(doc, "button[phx-click='open-reservation']")
+      assert Enum.count(reserve_buttons) == 2
+
+      breakpoint_gated =
+        reserve_buttons
+        |> Enum.map(&LazyHTML.attribute(&1, "class"))
+        |> Enum.filter(fn class -> List.first(class) =~ "pk-poster-reserve" end)
+
+      assert Enum.count(breakpoint_gated) == 1
+    end
   end
 
   describe "reservation flow (SHELL-03, T-01.1-02)" do
@@ -706,12 +2079,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   end
 
   describe "facts pills and chips link into the catalog's filter params (SHELL-04, 01.1-06)" do
-    test "the weight-band badge links to ?weight_bands=<band>", %{conn: conn} do
+    test "the dificultad pill links to ?weight_bands=<band> — the badge's removed link target, moved here (G-01.2-20)",
+         %{conn: conn} do
       game = game_fixture(%{name: "Banded Game", weight_band: "ingenio_estratega"})
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      assert html =~ ~s(href="/?weight_bands=ingenio_estratega")
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-panel > .pk-facts-row a.pk-fact[href='/?weight_bands=ingenio_estratega']")
+             |> Enum.count() == 1
+    end
+
+    test "a game with no weight band renders neither a dificultad link nor a bare band label in the facts row",
+         %{conn: conn} do
+      game = game_fixture(%{name: "No Band Game", weight_band: nil})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc
+             |> LazyHTML.query(".pk-poster-panel > .pk-facts-row a[href*='weight_bands=']")
+             |> Enum.count() == 0
+
+      refute html =~ "pk-difficulty"
     end
 
     test "each editorial tag links to ?tags=<tag>", %{conn: conn} do
@@ -812,6 +2205,881 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       assert disconnected_html =~ "pk-card-poster"
       assert connected_html =~ "pk-card-poster"
+    end
+  end
+
+  describe "breadcrumb carries forward catalog filters (D-08)" do
+    test "returning via the breadcrumb after a filtered catalog search lands back on the same filtered view",
+         %{conn: conn} do
+      game_fixture(%{name: "Catán Dice"})
+      game_fixture(%{name: "Other Dice"})
+
+      {:ok, index_view, _html} = live(conn, ~p"/")
+
+      filtered_html =
+        index_view
+        |> form("#catalog-search-form")
+        |> render_change(%{q: "Catán"})
+
+      href =
+        filtered_html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("[data-game-card]")
+        |> LazyHTML.attribute("href")
+        |> List.first()
+
+      assert href =~ "from="
+
+      {:ok, _show_view, show_html} = live(conn, href)
+
+      assert show_html =~ "Catán Dice"
+
+      crumb_href =
+        show_html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-nav-crumb a")
+        |> LazyHTML.attribute("href")
+        |> List.first()
+
+      assert crumb_href == "/?q=Cat%C3%A1n"
+    end
+
+    test "a direct /juegos/:id visit (no from param) breadcrumbs back to the bare catalog root", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Direct Visit Game"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      crumb_href =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-nav-crumb a")
+        |> LazyHTML.attribute("href")
+        |> List.first()
+
+      assert crumb_href == "/"
+    end
+
+    test "a from value carrying an absolute foreign URL never becomes the breadcrumb target", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Hostile From Game"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}?from=#{"https://evil.example"}")
+
+      crumb_href =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-nav-crumb a")
+        |> LazyHTML.attribute("href")
+        |> List.first()
+
+      assert crumb_href == "/"
+    end
+  end
+
+  describe "carousel_row/1 badge attr (G-01.2-7, sketch 031)" do
+    test "badge: nil renders a header identical to today's — no badge element present" do
+      game = game_fixture(%{name: "Row Game"})
+
+      html =
+        render_component(&CarouselRow.carousel_row/1, %{
+          id: "row",
+          title: "Título",
+          games: [{"g-#{game.id}", game}],
+          row_key: "row"
+        })
+
+      header_html =
+        html |> LazyHTML.from_fragment() |> LazyHTML.query(".pk-row-header") |> LazyHTML.to_html()
+
+      refute header_html =~ "badge-accent"
+    end
+
+    test "badge: \"Ampliado\" renders that text inside the heading" do
+      game = game_fixture(%{name: "Row Game"})
+
+      html =
+        render_component(&CarouselRow.carousel_row/1, %{
+          id: "row",
+          title: "Título",
+          games: [{"g-#{game.id}", game}],
+          row_key: "row",
+          badge: "Ampliado"
+        })
+
+      header_html =
+        html |> LazyHTML.from_fragment() |> LazyHTML.query(".pk-row-header") |> LazyHTML.to_html()
+
+      assert header_html =~ "badge-accent"
+      assert header_html =~ "Ampliado"
+    end
+
+    # G-01.2-7 regression guard: this is the one page carousel_row/1's new
+    # badge attr does NOT otherwise touch. Rendered exactly as
+    # CatalogLive.Index calls it (no badge argument passed, matching all 8
+    # D-09 home-page rows), the emitted header must carry no badge element.
+    test "rendered exactly as CatalogLive.Index calls it (no badge arg), the header carries no badge element" do
+      game = game_fixture(%{name: "Home Page Game"})
+
+      html =
+        render_component(&CarouselRow.carousel_row/1, %{
+          id: "carousel-destacados_del_club",
+          title: "Destacados del club",
+          games: [{"g-#{game.id}", game}],
+          variant: :hero,
+          subtitle: "Los favoritos del club",
+          empty: false,
+          row_key: "destacados_del_club",
+          exhausted: true
+        })
+
+      header_html =
+        html |> LazyHTML.from_fragment() |> LazyHTML.query(".pk-row-header") |> LazyHTML.to_html()
+
+      refute header_html =~ "badge-accent"
+    end
+  end
+
+  describe "gallery dot hit-box floors (Phase 01.2 gap-closure round 3, G-01.2-23 task 1)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    # First top-level `.pk-gallery-dot {...}` block in app.css, matched on
+    # the exact selector text so a future `.pk-gallery-dot-mark` or
+    # `.pk-gallery-dots` addition can never be mistaken for this one.
+    defp gallery_dot_block do
+      src = File.read!(@css_path)
+
+      case Regex.run(~r/(?m)^\.pk-gallery-dot\s*\{([^}]*)\}/, src) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-gallery-dot {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the dot's hit box is 1.5rem wide and 2.75rem tall — a 24px width floor and a 44px height floor" do
+      body = gallery_dot_block()
+
+      assert body =~ ~r/width:\s*1\.5rem/,
+             "`.pk-gallery-dot` must declare `width: 1.5rem` (24px) — the WCAG 2.5.8 AA " <>
+               "target-size minimum. A wider box reopens the ~40px mark spacing UAT test 8 " <>
+               "flagged (a 44px-wide box is geometrically incompatible with a compact " <>
+               "three-dot indicator); a narrower box drops below the accessibility floor."
+
+      assert body =~ ~r/height:\s*2\.75rem/,
+             "`.pk-gallery-dot` must keep `height: 2.75rem` (44px) — this layer's own " <>
+               "`min-h-11` HEIGHT floor. The dot is the phone's ONLY image switcher " <>
+               "(the thumbnail strip is desktop-only); shrinking its tap height would make " <>
+               "it unreachable."
+    end
+  end
+
+  # G-01.2-24 task 1: source-level CSS fact for this gap-closure round — the
+  # 48rem detail-layout block hides the title-echo bar at desktop widths.
+  # Co-located here (matching the gallery-dot-hit-box describe above)
+  # rather than in layouts_test.exs since this is specific to this page's
+  # own CSS, not shared-shell CSS.
+  describe "title-echo desktop hide (Phase 01.2 gap-closure round 4, G-01.2-24 task 1)" do
+    @css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    defp css_source, do: File.read!(@css_path)
+
+    # Matches the single top-level `@media (min-width: 48rem) { ... }`
+    # block. The block's own closing brace is un-indented (column 0); every
+    # nested rule's closing brace inside it is indented — so a non-greedy
+    # match up to the first `\n}` finds exactly the block's own end, never
+    # a nested rule's end, regardless of how many rules live inside it.
+    defp detail_layout_breakpoint_block do
+      case Regex.run(~r/^@media \(min-width: 48rem\) \{(.*?)\n\}/ms, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `@media (min-width: 48rem) { ... }` block found in app.css")
+      end
+    end
+
+    test "the 48rem detail-layout block hides the title-echo bar, beside the mobile CTA bar's own hide" do
+      block = detail_layout_breakpoint_block()
+
+      assert block =~ ~r/\.pk-title-echo\s*\{\s*display:\s*none;\s*\}/,
+             "The single 48rem detail-layout block (the same one that already hides " <>
+               ".pk-mobile-cta-bar) must also hide .pk-title-echo — this is G-01.2-14's " <>
+               "confirmed desktop-leak defect: the condensed title bar must never render " <>
+               "at or above the detail breakpoint."
+
+      assert block =~ ~r/\.pk-mobile-cta-bar\s*\{\s*display:\s*none;\s*\}/,
+             "Sanity check: the mobile CTA bar's own pre-existing hide must still be present " <>
+               "in the same block — the two phone-only bars are hidden in exactly one place."
+    end
+  end
+
+  # G-01.2-24 task 2: source-level CSS facts for the corrected
+  # boundary-collapse footer margin.
+  describe "boundary-collapse footer margin (Phase 01.2 gap-closure round 4, G-01.2-24 task 2)" do
+    test "the boundary-collapse following-footer rule declares a non-zero top margin" do
+      case Regex.run(~r/main\.pk-boundary-collapse \+ \.pk-footer\s*\{([^}]*)\}/, css_source()) do
+        [_, body] ->
+          refute body =~ ~r/margin-top:\s*0\b/,
+                 "A zero top margin here puts the footer's tinted box flush against the " <>
+                   "carousel — the exact defect G-01.2-14 was opened for."
+
+          assert body =~ ~r/margin-top:\s*1\.5rem/,
+                 "`main.pk-boundary-collapse + .pk-footer` must declare `margin-top: 1.5rem` " <>
+                   "(24px), matching the wrapper's own 24px top padding — the real gap this " <>
+                   "boundary is aiming at, not a value hidden inside the footer's own padding."
+
+        nil ->
+          flunk("No `main.pk-boundary-collapse + .pk-footer { ... }` rule found in app.css")
+      end
+    end
+
+    # Existing wrapper-top-padding and shelf-margin-cancel facts, kept
+    # exactly as the plan requires ("keep any existing assertions").
+    test "the boundary-collapse wrapper still declares 1.5rem top padding and cancels the last shelf's trailing margin" do
+      assert Regex.match?(
+               ~r/main\.pk-boundary-collapse\s*\{[^}]*padding-top:\s*1\.5rem;[^}]*padding-bottom:\s*0;[^}]*\}/s,
+               css_source()
+             )
+
+      assert Regex.match?(
+               ~r/main\.pk-boundary-collapse \.pk-shelf:last-of-type\s*\{[^}]*margin-bottom:\s*0;[^}]*\}/s,
+               css_source()
+             )
+    end
+  end
+
+  # G-01.2-25 task 1 (gap-closure round 5), corrected by G-01.2-28 task 1
+  # (gap-closure round 6): the lightbox photo's cap-only width fix was a
+  # confirmed no-op (a `max-width` can only shrink, never grow, an element
+  # already smaller than it), so round 6 replaced the cap with a real
+  # `width`/`height`/`background` on `.pk-lightbox-img`, backed by a new
+  # `--pk-shell-content-width` token declared once in `:root`. The
+  # chevron-stacking tests below predate round 6 and are untouched by it.
+  # `css_source/0` is the shared helper the two describe blocks above
+  # already established.
+  describe "lightbox shell-width photo and chevron stacking (Phase 01.2 gap-closure round 5, G-01.2-25 task 1; round 6, G-01.2-28 task 1)" do
+    # First (and only) top-level `.pk-lightbox-img {...}` rule, matched on
+    # the literal selector text, mirroring `gallery_dot_block/0`'s pattern
+    # above so a future sibling rule can never be mistaken for this one.
+    defp lightbox_img_block do
+      case Regex.run(~r/(?m)^\.pk-lightbox-img\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-lightbox-img {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # The shared token's own `:root` declaration — round 6 moved the shell-
+    # width formula here from `.pk-lightbox-img`'s own (now-removed) cap,
+    # so the two assertions that used to match against the photo rule's
+    # brace body (the container property and the gutter token) now match
+    # here instead, per the plan's own instruction to move rather than
+    # delete them.
+    defp shell_content_width_token_declaration do
+      case Regex.run(~r/--pk-shell-content-width:\s*([^;]*);/, css_source()) do
+        [_, value] -> value
+        nil -> flunk("No `--pk-shell-content-width` token declared in assets/css/app.css")
+      end
+    end
+
+    test "the shell's content width is named once as a token, reading the container property and the shared gutter" do
+      token_value = shell_content_width_token_declaration()
+
+      assert token_value =~ ~r/var\(--container-7xl,\s*80rem\)/,
+             "`--pk-shell-content-width` must read Tailwind's own `--container-7xl` custom " <>
+               "property (the same one `.max-w-7xl` resolves against, confirmed emitted in the " <>
+               "built stylesheet) rather than a hand-copied 80rem literal with no link back to " <>
+               "the shell — this is the formula that moved here from `.pk-lightbox-img`'s own " <>
+               "cap when the cap was replaced by a real width."
+
+      assert token_value =~ ~r/var\(--pk-gutter\)/,
+             "`--pk-shell-content-width` must subtract the shared `--pk-gutter` token (not a " <>
+               "hardcoded rem value) so the token — and every rule that reads it — stays in " <>
+               "sync with the header/footer/masthead's own content width, including the " <>
+               "token's own narrower value below the 480px breakpoint."
+    end
+
+    test "the lightbox photo declares a real width and height instead of caps, plus an opaque fill" do
+      body = lightbox_img_block()
+
+      refute body =~ ~r/max-width/,
+             "`.pk-lightbox-img` must no longer carry a `max-width` at all. A `max-width` can " <>
+               "only ever SHRINK an element, never grow one — which is exactly why the previous " <>
+               "round's fix (widening this same cap to the shell's width) was a confirmed no-op: " <>
+               "every photo in this catalog renders at a fixed ~800px intrinsic size from the " <>
+               "seed pipeline, already smaller than any cap this rule has ever carried. Only a " <>
+               "real `width` can grow the box past that intrinsic size."
+
+      assert body =~ ~r/width:\s*var\(--pk-shell-content-width\)\s*;/,
+             "`.pk-lightbox-img`'s width must be a single bare read of `--pk-shell-content-width` " <>
+               "— the token the shell's own container/gutter formula now lives on — with no " <>
+               "fallback literal beside it, which would be a second, silently-diverging opinion " <>
+               "about where the shell's edge is."
+
+      refute body =~ ~r/max-height/,
+             "the vertical cap must become a real `height` (see the next assertions), matching " <>
+               "the photo's own new real width — a mix of one real dimension and one capped " <>
+               "dimension would leave the box's height still bounded by its own intrinsic size."
+
+      # G-01.2-18 (gap-closure round 7, plan 01.2-29): the previous round's carried-forward
+      # `80vh` was itself the bug — `.pk-lightbox` centres rather than stretches its child, so
+      # the unclaimed 20% of viewport height rendered as two translucent scrim bands, one above
+      # and one below the stage. Round 7 replaces the single `80vh` with this file's own
+      # dual-declaration full-viewport idiom (see `.pk-app-shell`'s comment for the fuller
+      # argument): the static unit as a fallback, the dynamic-viewport unit immediately after.
+      assert body =~ ~r/height:\s*100vh;\s*height:\s*100dvh;/,
+             "`.pk-lightbox-img` must declare `height` TWICE, adjacent and in this exact order " <>
+               "— the older `100vh` unit immediately followed by the dynamic-viewport `100dvh` " <>
+               "unit, with nothing but whitespace between them. This is not a redundant " <>
+               "duplicate: the first line is the fallback a browser without `dvh` support keeps, " <>
+               "the second is what every current browser actually uses (see `.pk-app-shell`'s " <>
+               "own comment in this file for the fuller argument) — deleting either line " <>
+               "silently reintroduces the mobile-toolbar bug this pair exists to prevent."
+
+      height_declarations = Regex.scan(~r/height:\s*[^;]+;/, body)
+
+      assert length(height_declarations) == 2,
+             "`.pk-lightbox-img` must declare `height` exactly twice and no third time. CSS " <>
+               "takes the LAST declaration of a property, so a stray third `height:` anywhere " <>
+               "below the static/dynamic pair would silently restore whatever envelope it names " <>
+               "— with both correct lines still sitting above it looking right. Found " <>
+               "#{length(height_declarations)}: #{inspect(height_declarations)}"
+
+      assert body =~ ~r/background:\s*var\(--pk-shadow-color\)\s*;/,
+             "`.pk-lightbox-img` must declare an OPAQUE fill reading `--pk-shadow-color` " <>
+               "directly at full strength — not mixed toward transparency like every other " <>
+               "consumer of that token — so the area the photo doesn't cover is a solid stage. " <>
+               "A box that merely reaches the shell's width without a fill of its own still lets " <>
+               "the page show through exactly as before, which is the reported symptom this " <>
+               "round exists to fix."
+
+      assert body =~ ~r/object-fit:\s*contain/,
+             "object-fit must stay byte-identical to HEAD"
+
+      assert body =~ ~r/border-radius:\s*var\(--radius-box\)/,
+             "border-radius must stay byte-identical to HEAD"
+
+      assert body =~ ~r/box-shadow:\s*0 28px 56px/,
+             "the two-layer shadow must stay byte-identical to HEAD"
+
+      assert body =~ ~r/transform:\s*scale\(0\.96\)/,
+             "the scale transition must stay byte-identical to HEAD"
+    end
+
+    test "the container paints an opaque shadow-token field; the scrim token keeps its value for its sole reader (G-01.2-19)" do
+      case Regex.run(~r/--pk-overlay-scrim:\s*([^;]*);/, css_source()) do
+        [_, value] ->
+          assert value =~ ~r/color-mix\(in srgb, var\(--pk-shadow-color\) 72%, transparent\)/,
+                 "`--pk-overlay-scrim` must keep mixing `--pk-shadow-color` at exactly 72% — " <>
+                   "the lightbox leaving is a reader moving OFF this token, not a licence to " <>
+                   "retune it. After this round the mobile preview sheet's backdrop " <>
+                   "(`.pk-sheet-backdrop`) is this token's SOLE reader, so 72% is not merely a " <>
+                   "value the two surfaces happened to share anymore — it is the only thing the " <>
+                   "token exists for, and it is still exactly right there, since that sheet is " <>
+                   "meant to be seen through."
+
+        nil ->
+          flunk("No `--pk-overlay-scrim` token found in assets/css/app.css")
+      end
+
+      case Regex.run(~r/(?m)^\.pk-lightbox\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] ->
+          assert body =~ ~r/background:\s*var\(--pk-shadow-color\)\s*;/,
+                 "`.pk-lightbox` must declare a bare, full-strength read of `--pk-shadow-color` " <>
+                   "for its own background, with no `color-mix()` wrapper. This element is a " <>
+                   "full-inset fixed overlay (`position: fixed; inset: 0`) that has ALWAYS " <>
+                   "covered the whole viewport, so what showed around the stage was never " <>
+                   "uncovered page — it was this element's own translucent paint compositing " <>
+                   "over the page beneath it. A translucent paint on a full-coverage box is a " <>
+                   "coverage bug that no amount of resizing the CHILD can fix."
+
+          refute body =~ ~r/--pk-overlay-scrim/,
+                 "`.pk-lightbox` must no longer read `--pk-overlay-scrim` at all. A revert to " <>
+                   "the translucent value silently reintroduces the exact band the screenshots " <>
+                   "showed — roughly 37% of a 1920px window exposed laterally, a thin sliver at " <>
+                   "390px — and this refutation is what makes that revert fail loudly instead of " <>
+                   "quietly reproducing it."
+
+        nil ->
+          flunk("No top-level `.pk-lightbox { ... }` rule found in assets/css/app.css")
+      end
+
+      case Regex.run(~r/(?m)^\.pk-sheet-backdrop\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] ->
+          assert body =~ ~r/background:\s*var\(--pk-overlay-scrim\)\s*;/,
+                 "`.pk-sheet-backdrop` must still read `--pk-overlay-scrim` for its own " <>
+                   "background. The token is not deleted because this sheet still needs it, and " <>
+                   "the sheet itself is not changed because nobody reported it — a frozen value " <>
+                   "with no live reader would be dead code, and this is the pairing that proves " <>
+                   "it is not."
+
+        nil ->
+          flunk("No top-level `.pk-sheet-backdrop { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the container and stage backgrounds are the identical string (G-01.2-19)" do
+      container_body =
+        case Regex.run(~r/(?m)^\.pk-lightbox\s*\{([^}]*)\}/s, css_source()) do
+          [_, body] -> body
+          nil -> flunk("No top-level `.pk-lightbox { ... }` rule found in assets/css/app.css")
+        end
+
+      stage_body = lightbox_img_block()
+
+      container_bg =
+        case Regex.run(~r/background:\s*([^;]+);/, container_body) do
+          [_, value] -> String.trim(value)
+          nil -> flunk("No `background` declaration found in `.pk-lightbox`")
+        end
+
+      stage_bg =
+        case Regex.run(~r/background:\s*([^;]+);/, stage_body) do
+          [_, value] -> String.trim(value)
+          nil -> flunk("No `background` declaration found in `.pk-lightbox-img`")
+        end
+
+      assert container_bg == stage_bg,
+             "`.pk-lightbox`'s background (#{inspect(container_bg)}) and " <>
+               "`.pk-lightbox-img`'s background (#{inspect(stage_bg)}) must be the EQUAL " <>
+               "string, not merely two values that both happen to match a pattern. A future " <>
+               "edit that gives the container its own slightly different dark reintroduces the " <>
+               "identical band a few percent fainter — exactly the class of defect that took " <>
+               "three UAT rounds to pin down the first time."
+    end
+
+    test "both lightbox chevrons carry the shared class, their own side class, and kept their event bindings",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          cover_url: "https://images.test.invalid/games/1/cover.webp",
+          gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      prev = LazyHTML.query(doc, "#detail-lightbox [data-lightbox-prev]")
+      next = LazyHTML.query(doc, "#detail-lightbox [data-lightbox-next]")
+
+      assert prev != [],
+             "must find an element carrying `data-lightbox-prev` — the attribute the " <>
+               "keyboard handler's ArrowLeft branch queries by"
+
+      assert next != [],
+             "must find an element carrying `data-lightbox-next` — the attribute the " <>
+               "keyboard handler's ArrowRight branch queries by"
+
+      prev_class = prev |> LazyHTML.attribute("class") |> List.first()
+      next_class = next |> LazyHTML.attribute("class") |> List.first()
+
+      assert prev_class =~ "pk-lightbox-chevron",
+             "the previous-image chevron must carry the shared stacking-order class — this is " <>
+               "the one that was rendering invisible behind the photo at mobile widths"
+
+      assert next_class =~ "pk-lightbox-chevron",
+             "the next-image chevron must ALSO carry the shared class, not only the " <>
+               "previously-broken one, so a future markup reorder can never silently " <>
+               "reintroduce the DOM-order accident on this side instead"
+
+      assert prev_class =~ "pk-lightbox-chevron-prev",
+             "the previous-image chevron must carry its own `pk-lightbox-chevron-prev` side " <>
+               "class (G-01.2-28 task 2) — the shared class and the side class are one " <>
+               "contract, and splitting them across two tests would invite someone to " <>
+               "satisfy one and drop the other."
+
+      assert next_class =~ "pk-lightbox-chevron-next",
+             "the next-image chevron must ALSO carry its own `pk-lightbox-chevron-next` " <>
+               "side class."
+
+      # Positional-edit guard: the class-attribute rewrite must not have taken an
+      # adjacent binding with it — cheaper and more precise than reading a diff.
+      assert prev |> LazyHTML.attribute("phx-click") |> List.first() == "select-lightbox-image",
+             "the previous chevron's class rewrite must not have taken its click event with it"
+
+      assert next |> LazyHTML.attribute("phx-click") |> List.first() == "select-lightbox-image",
+             "the next chevron's class rewrite must not have taken its click event with it"
+
+      prev_url = prev |> LazyHTML.attribute("phx-value-url") |> List.first()
+      next_url = next |> LazyHTML.attribute("phx-value-url") |> List.first()
+
+      assert prev_url not in [nil, ""],
+             "the previous chevron must still carry a non-empty neighbour URL"
+
+      assert next_url not in [nil, ""],
+             "the next chevron must still carry a non-empty neighbour URL"
+
+      assert prev |> LazyHTML.attribute("aria-label") |> List.first() == "Imagen anterior",
+             "the previous chevron must keep its accessible label"
+
+      assert next |> LazyHTML.attribute("aria-label") |> List.first() == "Imagen siguiente",
+             "the next chevron must keep its accessible label"
+    end
+
+    test "each lightbox chevron's side rule sets its own horizontal inset from the shared shell-width token" do
+      for {side, prop} <- [{"prev", "left"}, {"next", "right"}] do
+        body =
+          case Regex.run(~r/(?m)^\.pk-lightbox-chevron-#{side}\s*\{([^}]*)\}/s, css_source()) do
+            [_, body] ->
+              body
+
+            nil ->
+              flunk("No top-level `.pk-lightbox-chevron-#{side} {...}` rule found in assets/css/app.css")
+          end
+
+        assert body =~
+                 ~r/#{prop}:\s*calc\(50% - \(var\(--pk-shell-content-width\) \/ 2\)\)\s*;/,
+               "`.pk-lightbox-chevron-#{side}` must set `#{prop}` to a calculation reading " <>
+                 "`--pk-shell-content-width` directly, with no fallback literal beside it — " <>
+                 "`.pk-lightbox` is `position: fixed; inset: 0` (the full viewport), so it is " <>
+                 "the containing block this button resolves against, and a bare length here " <>
+                 "anchors the button to the BROWSER's edge no matter what the photo is doing, " <>
+                 "which is exactly the anchoring the user rejected in two consecutive UAT " <>
+                 "rounds (tests 12 and 17)."
+      end
+    end
+
+    test "the .pk-lightbox-chevron class declares an explicit numeric z-index above the photo" do
+      case Regex.run(~r/(?m)^\.pk-lightbox-chevron\s*\{([^}]*)\}/, css_source()) do
+        [_, body] ->
+          assert body =~ ~r/z-index:\s*\d/,
+                 "`.pk-lightbox-chevron` must declare an explicit numeric z-index so both " <>
+                   "chevrons outrank the photo regardless of DOM order — relying on " <>
+                   "`z-index: auto` and markup order is the confirmed root cause of the " <>
+                   "mobile left-chevron-behind-the-image defect."
+
+        nil ->
+          flunk("No `.pk-lightbox-chevron { ... }` rule found in assets/css/app.css")
+      end
+    end
+  end
+
+  # G-01.2-20, plan 01.2-30 (gap-closure round 8): the lightbox close button
+  # inherits daisyUI's unmodified `.btn` fill (`--color-base-200`) because it
+  # carries no colour modifier class. That default measures fine in light
+  # theme (near-white against the fixed dark `--pk-shadow-color` backdrop)
+  # but ~1.1:1 in dark theme (a very dark purple against a near-identical
+  # dark backdrop) — UAT test 20's "On the dark needs a little more
+  # constrant." This describe block guards the dark-theme-only fix: a rule
+  # scoped to `[data-theme="dark"]` sets `--btn-color`/`--btn-fg` from the
+  # neutral token pair, `.pk-lightbox-close`'s own rule stays untouched
+  # (pinned exhaustively, not by a negative check, since an unscoped fill
+  # added there would silently drag light theme along), and the resulting
+  # contrast is MEASURED from the file's own tokens rather than string-
+  # matched, so a future palette retune that walks `--color-neutral` back
+  # toward the backdrop fails the suite instead of shipping quietly.
+  describe "lightbox close button dark-theme contrast (Phase 01.2 gap-closure round 8, G-01.2-20, plan 01.2-30)" do
+    # The dark-scoped rule, matched on its literal selector text at the
+    # start of a line — mirrors `lightbox_img_block/0`'s idiom above so a
+    # future sibling rule (e.g. a light-theme variant) can never be mistaken
+    # for this one. `.pk-lightbox-close`'s OWN rule (no `[data-theme=...]`
+    # prefix) cannot match this pattern, since `^` anchors to the start of
+    # the selector text.
+    defp dark_lightbox_close_block do
+      case Regex.run(
+             ~r/(?m)^\[data-theme="dark"\] \.pk-lightbox-close\s*\{([^}]*)\}/s,
+             css_source()
+           ) do
+        [_, body] -> body
+        nil -> flunk("No top-level `[data-theme=\"dark\"] .pk-lightbox-close {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # `.pk-lightbox-close`'s own (unscoped) rule — same idiom, matched on its
+    # bare selector so it is never confused with the dark-scoped rule above.
+    defp lightbox_close_own_block do
+      case Regex.run(~r/(?m)^\.pk-lightbox-close\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-lightbox-close {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # Pulls the dark theme's own `@plugin "daisyui-theme"` block (`name:
+    # "dark"`) so a token lookup can be scoped to it — reading a token name
+    # against the whole file would silently return LIGHT theme's value if
+    # light theme's block happened to be matched first.
+    defp dark_theme_plugin_block do
+      case Regex.run(
+             ~r/@plugin "daisyui\/packages\/bundle\/daisyui-theme" \{\s*name: "dark";(.*?)\n\}/ms,
+             css_source()
+           ) do
+        [_, body] -> body
+        nil -> flunk("No dark-theme `@plugin \"daisyui-theme\"` block found in assets/css/app.css")
+      end
+    end
+
+    defp token_value(source, token) do
+      case Regex.run(~r/#{Regex.escape(token)}:\s*([^;]*);/, source) do
+        [_, value] -> String.trim(value)
+        nil -> flunk("No `#{token}` token found in the given source")
+      end
+    end
+
+    # Turns a colour written either as a six-digit hex literal or as a
+    # space-separated `rgb(r g b)` triple (this file's two colour formats)
+    # into a WCAG relative luminance.
+    defp relative_luminance(color) do
+      {r, g, b} =
+        case Regex.run(~r/^#([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/, String.trim(color)) do
+          [_, r, g, b] ->
+            {String.to_integer(r, 16), String.to_integer(g, 16), String.to_integer(b, 16)}
+
+          nil ->
+            case Regex.run(~r/rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)/, color) do
+              [_, r, g, b] -> {String.to_integer(r), String.to_integer(g), String.to_integer(b)}
+              nil -> flunk("Could not parse colour value for contrast computation: #{inspect(color)}")
+            end
+        end
+
+      [r, g, b]
+      |> Enum.map(fn channel ->
+        c = channel / 255
+        if c <= 0.03928, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
+      end)
+      |> then(fn [rl, gl, bl] -> 0.2126 * rl + 0.7152 * gl + 0.0722 * bl end)
+    end
+
+    # Turns two relative luminances into a WCAG contrast ratio.
+    defp contrast_ratio(l1, l2) do
+      {lighter, darker} = if l1 >= l2, do: {l1, l2}, else: {l2, l1}
+      (lighter + 0.05) / (darker + 0.05)
+    end
+
+    test "the dark-theme rule sets --btn-color and --btn-fg from the neutral token pair, no literal colour" do
+      body = dark_lightbox_close_block()
+
+      assert body =~ ~r/--btn-color:\s*var\(--color-neutral\)\s*;/,
+             "`[data-theme=\"dark\"] .pk-lightbox-close` must set `--btn-color` to a read of " <>
+               "`--color-neutral` — daisyUI's `.btn` resolves its fill from `--btn-color` (falling " <>
+               "back to `--color-base-200` when unset), so this is what gives the button an " <>
+               "explicit, measured fill in dark theme instead of the unmodified default."
+
+      assert body =~ ~r/--btn-fg:\s*var\(--color-neutral-content\)\s*;/,
+             "`[data-theme=\"dark\"] .pk-lightbox-close` must ALSO set `--btn-fg` to a read of " <>
+               "`--color-neutral-content`. daisyUI's base `.btn` rule sets `--btn-fg: " <>
+               "var(--color-base-content)` INDEPENDENTLY of `--btn-bg`/`--btn-color` — see " <>
+               "`.btn-neutral` in deps/daisyui/packages/bundle/daisyui.mjs, which sets BOTH " <>
+               "`--btn-color` and `--btn-fg` together, never one alone. A rule that changed only " <>
+               "the fill would leave the icon at `--color-base-content` (near-white in dark " <>
+               "theme) on the new light-lavender chip — a second, freshly-introduced contrast " <>
+               "bug of the same family as the one this round exists to fix."
+    end
+
+    test "pk-lightbox-close's own rule declares exactly its four original properties, in order, and no fifth" do
+      body = lightbox_close_own_block()
+
+      properties =
+        ~r/([a-z-]+):/
+        |> Regex.scan(body)
+        |> Enum.map(fn [_, prop] -> prop end)
+
+      assert properties == ["position", "top", "right", "z-index"],
+             "`.pk-lightbox-close` must declare EXACTLY these four properties, in this exact " <>
+               "order, and no fifth. This is an EXHAUSTIVE positive assertion rather than a " <>
+               "negative 'does not contain a fill' check — a negative check would still pass a " <>
+               "rule that had grown some OTHER unscoped visual property, which is the whole " <>
+               "failure mode this round guards against: the button's own rule must stay neutral " <>
+               "so light theme (already correct, already signed off) cannot be dragged along by " <>
+               "a fix meant to be dark-only. This rule's anchoring (position/top/right) is a " <>
+               "recorded decision that BOTH round 6 (01.2-28) and round 7 (01.2-29) were " <>
+               "explicitly prohibited from reopening. Found: #{inspect(properties)}"
+    end
+
+    test "the dark-theme fill and its icon colour meet WCAG contrast floors, computed from this file's own tokens" do
+      dark_block = dark_theme_plugin_block()
+
+      neutral = token_value(dark_block, "--color-neutral")
+      neutral_content = token_value(dark_block, "--color-neutral-content")
+      shadow_color = token_value(css_source(), "--pk-shadow-color")
+
+      fill_ratio = contrast_ratio(relative_luminance(neutral), relative_luminance(shadow_color))
+      content_ratio = contrast_ratio(relative_luminance(neutral_content), relative_luminance(neutral))
+
+      assert fill_ratio >= 3.0,
+             "The close button's dark-theme fill (`--color-neutral`, #{neutral}) must contrast " <>
+               "at least 3.0:1 (WCAG 1.4.11's non-text-contrast floor) against `--pk-shadow-color` " <>
+               "(#{shadow_color}) — the fixed literal both the lightbox scrim and the opaque " <>
+               "stage are built from. Computed: #{Float.round(fill_ratio, 2)}:1. The failing pair " <>
+               "this round replaces — dark-theme `--color-base-200` (#22103A) against the same " <>
+               "backdrop — computed to approximately 1.1:1, a perfectly well-formed pair of token " <>
+               "reads that was simply the wrong pair; a future palette retune that quietly walks " <>
+               "`--color-neutral` back down toward that surface must fail here, not ship."
+
+      assert content_ratio >= 4.5,
+             "The icon's dark-theme colour (`--color-neutral-content`, #{neutral_content}) must " <>
+               "contrast at least 4.5:1 (WCAG 1.4.3) against its own new fill (`--color-neutral`, " <>
+               "#{neutral}) — the fix must not trade an invisible chip for an invisible glyph. " <>
+               "Computed: #{Float.round(content_ratio, 2)}:1."
+    end
+  end
+
+  # G-01.2-21, plan 01.2-32 (gap-closure round 10): round 8 (G-01.2-20/01.2-30) gave
+  # `.pk-lightbox-close` a dark-theme fill because daisyUI's unmodified `.btn` default
+  # measured ~1.1:1 against the lightbox's fixed dark backdrop. It deliberately left the
+  # chevrons alone, on the stated grounds that they "passed UAT test 21 in both themes on
+  # this same stage." That test ran while `.pk-lightbox` was still a translucent scrim.
+  # Round 9 (G-01.2-19/01.2-31) then made that field fully opaque, string-identical to the
+  # photo stage — the exact condition that made the close button's default fill invisible
+  # in dark theme, now unchanged for the chevrons too. This describe block guards the
+  # completion of round 8's fix across the whole control set: the chevrons get the SAME
+  # two declarations the close button already has, through the shared class both already
+  # carry, and a new test asserts the two dark-scoped rules' declaration SETS are equal —
+  # so the family is enforced as a relationship, not as two independently-correct rules
+  # that happen to agree today.
+  describe "lightbox chevron dark-theme contrast, consistent with the close button (Phase 01.2 gap-closure round 10, G-01.2-21, plan 01.2-32)" do
+    # The new dark-scoped chevron rule, matched on its literal selector text at the start
+    # of a line — mirrors `dark_lightbox_close_block/0`'s idiom directly above so this rule
+    # can never be mistaken for `.pk-lightbox-close`'s or `.pk-lightbox-chevron`'s own.
+    defp dark_lightbox_chevron_block do
+      case Regex.run(
+             ~r/(?m)^\[data-theme="dark"\] \.pk-lightbox-chevron\s*\{([^}]*)\}/s,
+             css_source()
+           ) do
+        [_, body] -> body
+        nil -> flunk("No top-level `[data-theme=\"dark\"] .pk-lightbox-chevron {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # `.pk-lightbox-chevron`'s own (unscoped, shared) rule — anchored at the start of a
+    # line and requiring the brace to follow immediately after "chevron", so it can never
+    # match `.pk-lightbox-chevron-prev`/`-next`'s rules, which have a dash right after the
+    # same substring.
+    defp lightbox_chevron_shared_block do
+      case Regex.run(~r/(?m)^\.pk-lightbox-chevron\s*\{([^}]*)\}/, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-lightbox-chevron {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # `.pk-lightbox-chevron-prev`/`-next`'s own per-side rule.
+    defp lightbox_chevron_side_block(side) do
+      case Regex.run(~r/(?m)^\.pk-lightbox-chevron-#{side}\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-lightbox-chevron-#{side} {...}` rule found in assets/css/app.css")
+      end
+    end
+
+    # Turns a brace body into a sorted list of {property, value} pairs, whitespace-
+    # normalised on the value side. Used only by the consistency-gate test below, which
+    # compares two rules' declarations to each other rather than to a fixed string — a
+    # rule declaring the same two PROPERTIES with two DIFFERENT tokens would be exactly
+    # the inconsistency this test exists to catch, so property names alone are not enough.
+    defp declaration_pairs(body) do
+      body
+      |> String.split(";")
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.map(fn decl ->
+        [prop, value] = String.split(decl, ":", parts: 2)
+        {String.trim(prop), value |> String.trim() |> String.replace(~r/\s+/, " ")}
+      end)
+      |> Enum.sort()
+    end
+
+    test "the dark-theme chevron rule sets --btn-color and --btn-fg from the neutral token pair, no literal colour" do
+      body = dark_lightbox_chevron_block()
+
+      assert body =~ ~r/--btn-color:\s*var\(--color-neutral\)\s*;/,
+             "`[data-theme=\"dark\"] .pk-lightbox-chevron` must set `--btn-color` to a read of " <>
+               "`--color-neutral` — daisyUI's `.btn` resolves its fill from `--btn-color` " <>
+               "(falling back to `--color-base-200` when unset), so this is what gives both " <>
+               "chevrons an explicit, measured fill in dark theme instead of the unmodified " <>
+               "default they currently inherit."
+
+      assert body =~ ~r/--btn-fg:\s*var\(--color-neutral-content\)\s*;/,
+             "`[data-theme=\"dark\"] .pk-lightbox-chevron` must ALSO set `--btn-fg` to a read " <>
+               "of `--color-neutral-content`. daisyUI's base `.btn` rule sets `--btn-fg: " <>
+               "var(--color-base-content)` INDEPENDENTLY of `--btn-bg`/`--btn-color` — see " <>
+               "`.btn-neutral` in deps/daisyui/packages/bundle/daisyui.mjs, which sets BOTH " <>
+               "`--btn-color` and `--btn-fg` together, never one alone. A rule that changed " <>
+               "only the fill would leave each chevron's icon at `--color-base-content` " <>
+               "(near-white in dark theme) on the new light-lavender chip — roughly 1.9:1, " <>
+               "moving the invisibility from the chip to the glyph on two controls this time. " <>
+               "This is the SECOND time this exact trap is documented in this file's tests (the " <>
+               "close button's own test above states it too); it is restated here rather than " <>
+               "cross-referenced because a failure message is read at the moment of failure, " <>
+               "not followed as a link."
+    end
+
+    test "the dark-theme chevron rule's declarations equal the dark-theme close button rule's declarations" do
+      chevron_pairs = declaration_pairs(dark_lightbox_chevron_block())
+      close_pairs = declaration_pairs(dark_lightbox_close_block())
+
+      assert chevron_pairs == close_pairs,
+             "The dark-scoped chevron rule and the dark-scoped close-button rule must declare " <>
+               "the SAME SET of property/value pairs — property names AND values, whitespace-" <>
+               "normalised, not just matching property names. These three controls are markup-" <>
+               "identical daisyUI circular buttons sitting on one backdrop, and the user has " <>
+               "now reported TWICE that they must read as one family — once as \"the close " <>
+               "button needs more contrast\" and once, after only the close button was fixed, " <>
+               "as \"the close button and the rest of controls must be consistent.\" Two " <>
+               "independently-correct rules that happen to agree today are not a family; a " <>
+               "family is a rule that fails when they stop agreeing. If a future round " <>
+               "genuinely needs the chevrons treated differently from the close button, that " <>
+               "is a design decision that must be made deliberately and recorded — deleting " <>
+               "this assertion is the correct way to make it. Chevron declared: " <>
+               "#{inspect(chevron_pairs)}. Close button declared: #{inspect(close_pairs)}."
+    end
+
+    test "the three unscoped chevron rules still declare exactly their stacking order and their own horizontal inset" do
+      shared_props =
+        ~r/([a-z-]+):/
+        |> Regex.scan(lightbox_chevron_shared_block())
+        |> Enum.map(fn [_, prop] -> prop end)
+
+      assert shared_props == ["z-index"],
+             "`.pk-lightbox-chevron` must declare EXACTLY `z-index` and no other property. " <>
+               "This is an EXHAUSTIVE positive assertion, not a negative \"contains no fill\" " <>
+               "check — a negative check would still pass a rule that had grown some OTHER " <>
+               "unscoped visual property, and unscoped is the failure mode that matters here " <>
+               "because it would repaint light theme too. This stacking order is a recorded " <>
+               "decision (G-01.2-25, the fix for a chevron painting behind the photo) and is " <>
+               "not this round's to touch. Found: #{inspect(shared_props)}"
+
+      for {side, prop} <- [{"prev", "left"}, {"next", "right"}] do
+        properties =
+          ~r/([a-z-]+):/
+          |> Regex.scan(lightbox_chevron_side_block(side))
+          |> Enum.map(fn [_, p] -> p end)
+
+        assert properties == [prop],
+               "`.pk-lightbox-chevron-#{side}` must declare EXACTLY `#{prop}` and no other " <>
+                 "property. This horizontal inset is the shell-width alignment the user asked " <>
+                 "for across two separate UAT rounds (01.2-28 task 2) and is not this round's " <>
+                 "to touch. Found: #{inspect(properties)}"
+      end
+    end
+  end
+
+  # G-01.2-26 task 2 (gap-closure round 3, UAT gap G-01.2-15): the one base
+  # pill representation + its variants. This test is the structural defence
+  # against the exact drift that broke the pill rhythm three separate times
+  # before this consolidation — a tone variant quietly growing a geometry
+  # declaration (radius/padding/font-size) that belongs on the base alone.
+  describe "pill system tone-variant geometry gate (Phase 01.2 gap-closure round 3, G-01.2-26 task 2)" do
+    @tone_variants ~w(pk-pill-neutral pk-pill-accent pk-pill-outline pk-pill-selected)
+
+    test "no pk-pill tone variant declares border-radius, padding, or font-size — those three properties live on the base alone" do
+      src = css_source()
+
+      for tone <- @tone_variants do
+        case Regex.run(~r/(?m)^\.#{tone}\s*\{([^}]*)\}/s, src) do
+          [_, body] ->
+            refute body =~ ~r/border-radius/,
+                   "`.#{tone}` must not declare border-radius — shape lives on `.pk-pill` " <>
+                     "alone. A tone variant re-declaring geometry is the exact drift that broke " <>
+                     "the pill rhythm three separate times before this consolidation (G-01.2-15)."
+
+            refute body =~ ~r/padding/,
+                   "`.#{tone}` must not declare padding — padding lives on `.pk-pill` (the " <>
+                     "dense default) or a size variant, never on a tone."
+
+            refute body =~ ~r/font-size/,
+                   "`.#{tone}` must not declare font-size — type size lives on `.pk-pill` or a " <>
+                     "size variant, never on a tone."
+
+          nil ->
+            flunk("No top-level `.#{tone} { ... }` rule found in assets/css/app.css")
+        end
+      end
     end
   end
 end

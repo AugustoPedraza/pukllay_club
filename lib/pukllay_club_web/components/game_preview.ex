@@ -45,14 +45,16 @@ defmodule PukllayClubWeb.GamePreview do
   independently when its underlying data is absent — see the field-level
   rules in the moduledoc-referenced sketch findings.
 
-  Optional `linked` (01.1-06, default `false`): when `true`, the players
-  and tiempo facts render as `<.link navigate>` into the catalog's
-  `players`/`max_playtime` filter params. The dificultad fact is
-  deliberately never linked here — `GameChips.weight_band_badge/1`
-  (rendered separately on the detail page) already owns that link target,
-  and this component is also the browse-card hover preview, where `false`
-  (the default) renders every existing caller byte-identically to before
-  this attr existed.
+  Optional `linked` (01.1-06, default `false`): when `true`, the players,
+  tiempo, and dificultad facts all render as `<.link navigate>` into the
+  catalog's `players`/`max_playtime`/`weight_bands` filter params. The
+  dificultad fact used to be deliberately unlinked here because
+  `GameChips.weight_band_badge/1` owned that link target on the detail
+  page — G-01.2-20 removed the badge's only call site, so this pill is now
+  the page's only entry into the weight-band filter, and gained the same
+  link/span branch the other two facts already had. This component is
+  also the browse-card hover preview, where `false` (the default) renders
+  every existing caller byte-identically to before this attr existed.
   """
   attr :game, Game, required: true
   attr :linked, :boolean, default: false
@@ -70,13 +72,13 @@ defmodule PukllayClubWeb.GamePreview do
       <.link
         :if={@players_text && @linked && @game.min_players && @game.max_players}
         navigate={~p"/?players=#{@game.max_players}"}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral pk-pill-interactive"
       >
         <.icon name="hero-users-micro" class="size-3" />{@players_text}
       </.link>
       <span
         :if={@players_text && (!@linked || !(@game.min_players && @game.max_players))}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral"
       >
         <.icon name="hero-users-micro" class="size-3" />{@players_text}
       </span>
@@ -84,18 +86,25 @@ defmodule PukllayClubWeb.GamePreview do
       <.link
         :if={@tiempo_text && @linked && (@game.playing_time || @game.max_playtime)}
         navigate={~p"/?max_playtime=#{@game.playing_time || @game.max_playtime}"}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral pk-pill-interactive"
       >
         <.icon name="hero-clock-micro" class="size-3" />{@tiempo_text}
       </.link>
       <span
         :if={@tiempo_text && (!@linked || !(@game.playing_time || @game.max_playtime))}
-        class="pk-fact"
+        class="pk-fact pk-pill pk-pill-neutral"
       >
         <.icon name="hero-clock-micro" class="size-3" />{@tiempo_text}
       </span>
 
-      <span :if={@band} class="pk-fact">
+      <.link
+        :if={@band && @linked && @game.weight_band}
+        navigate={~p"/?weight_bands=#{@game.weight_band}"}
+        class="pk-fact pk-pill pk-pill-neutral pk-pill-interactive"
+      >
+        <.difficulty_indicator level={@level} />{@band.label}
+      </.link>
+      <span :if={@band && (!@linked || !@game.weight_band)} class="pk-fact pk-pill pk-pill-neutral">
         <.difficulty_indicator level={@level} />{@band.label}
       </span>
     </div>
@@ -108,8 +117,16 @@ defmodule PukllayClubWeb.GamePreview do
   editorial tag (hidden on the portal by one CSS rule), and the outlined
   `Ver detalles` CTA — a lower-commitment action than the interaction that
   revealed it, so it is never the filled primary button.
+
+  Accepts an optional `:from` (D-08) — the caller's current catalog filter
+  query string, mirrored from `GameCard`'s own `:from` attr so both routes
+  into the detail page (a resting card click and this preview's `Ver
+  detalles` CTA) carry the same forwarded filter state. Defaults to `nil`,
+  which renders the `Ver detalles` link exactly as it did before this attr
+  existed.
   """
   attr :game, Game, required: true
+  attr :from, :string, default: nil
 
   def preview_body(assigns) do
     assigns = assign(assigns, :cover, assigns.game.cover_url || assigns.game.thumbnail_url)
@@ -142,7 +159,7 @@ defmodule PukllayClubWeb.GamePreview do
         {List.first(@game.tags)}
       </span>
       <.link
-        navigate={~p"/juegos/#{@game}"}
+        navigate={detail_path(@game, @from)}
         class="pk-preview-cta btn btn-outline btn-primary btn-block min-h-11"
       >
         Ver detalles
@@ -157,11 +174,12 @@ defmodule PukllayClubWeb.GamePreview do
   clones this content on demand when a card is hovered or tapped.
   """
   attr :game, Game, required: true
+  attr :from, :string, default: nil
 
   def preview_template(assigns) do
     ~H"""
     <template data-game-preview>
-      <.preview_body game={@game} />
+      <.preview_body game={@game} from={@from} />
     </template>
     """
   end
@@ -380,4 +398,13 @@ defmodule PukllayClubWeb.GamePreview do
   defp tiempo_text(%{min_playtime: min, max_playtime: max}) when min == max, do: "#{min} min"
 
   defp tiempo_text(%{min_playtime: min, max_playtime: max}), do: "#{min}-#{max} min"
+
+  # D-08: mirrors `GameCard`'s own `detail_path/2` verbatim — three
+  # literal clauses, never a dynamic path assembled from raw strings — so
+  # both routes into the detail page (a resting card click and this
+  # preview's `Ver detalles` CTA) produce identical hrefs for identical
+  # inputs.
+  defp detail_path(game, nil), do: ~p"/juegos/#{game}"
+  defp detail_path(game, ""), do: ~p"/juegos/#{game}"
+  defp detail_path(game, from), do: ~p"/juegos/#{game}?#{[from: from]}"
 end

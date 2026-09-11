@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 027 — Buy-box Panel Boundary</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* ============================= VARIANT NAV ============================= */
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .variant-tab:hover { border-color: var(--color-primary); }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .spacer { flex: 1; }
+  #variant-nav .caption { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 32ch; }
+  body { padding-top: 74px; }
+  #variant-nav.wrapped { padding-bottom: 6px; }
+
+  /* ============================= SHARED PAGE CHROME ============================= */
+  .pk-gutter { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .crumb { max-width: 1100px; margin: 0 auto; padding: var(--space-4) 0 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+  .crumb a { color: var(--color-text-muted); text-decoration: none; }
+  .crumb a:hover { color: var(--color-primary); }
+  .crumb .sep { margin: 0 6px; opacity: 0.5; }
+  .crumb .current { color: var(--color-text); font-weight: 600; }
+
+  .pk-detail-masthead { max-width: 1100px; margin: 0 auto; padding: var(--space-6) 0 var(--space-8); display: grid; grid-template-columns: 1fr; gap: var(--space-6); align-items: start; }
+  @media (min-width: 768px) {
+    .pk-detail-masthead { grid-template-columns: 340px 1fr; gap: 3rem; }
+  }
+
+  .pk-poster-col { position: relative; padding: var(--space-4); border-radius: var(--radius-lg); }
+  .pk-poster-col .cover { width: 100%; aspect-ratio: 3/4; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: var(--color-primary-content); font-family: var(--font-display); font-size: var(--text-2xl); letter-spacing: 0.02em; text-align: center; padding: var(--space-3); }
+  .pk-share-wrap { position: absolute; right: var(--space-3); top: var(--space-3); z-index: 10; }
+  .pk-share-btn { width: 40px; height: 40px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-sm); transition: all var(--duration-fast) var(--ease-standard); }
+  .pk-share-btn:hover { border-color: var(--color-primary); color: var(--color-primary); transform: translateY(-1px); }
+  .panel-meta { margin-top: var(--space-4); }
+  .panel-weight { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); font-weight: 700; color: var(--color-primary); background: var(--color-accent-bg); padding: 4px 10px; border-radius: var(--radius-full); margin-bottom: var(--space-3); }
+  .reserve-btn { display: block; width: 100%; text-align: center; background: var(--color-primary); color: var(--color-primary-content); border: none; border-radius: var(--radius-md); padding: 13px 16px; font-weight: 700; font-size: var(--text-base); cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .reserve-btn:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .reserve-btn:active { transform: translateY(0); }
+  .reserve-hint { text-align: center; font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-2); }
+
+  .pk-text-col h1 { font-family: var(--font-display); font-size: var(--text-display); letter-spacing: 0.01em; margin: 0 0 var(--space-2); }
+  .pk-text-col .desc { color: var(--color-text-muted); line-height: 1.6; margin: 0 0 var(--space-4); max-width: 62ch; }
+  .spec-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); }
+  .spec-row dt { color: var(--color-text-muted); }
+  .spec-row dd { margin: 0; font-weight: 600; }
+
+  /* ============================= VARIANT A — Defined Border ============================= */
+  .variant-a .pk-poster-col { background: var(--color-surface-2); border: 1.5px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border)); }
+
+  /* ============================= VARIANT B — Elevated Shadow ============================= */
+  .variant-b .pk-poster-col { background: var(--color-bg); border: 1px solid var(--color-border); box-shadow: var(--shadow-md); }
+
+  /* ============================= VARIANT C — Stronger Fill (fill-only constraint kept) ============================= */
+  .variant-c .pk-poster-col { background: var(--color-accent-bg); }
+
+  /* toggle for hint text under each variant */
+  .approach-note { max-width: 1100px; margin: 0 auto; padding: 0 0 var(--space-2); font-size: var(--text-sm); color: var(--color-text-muted); }
+  .approach-note strong { color: var(--color-text); }
+
+  /* ============================= TOOLBAR ============================= */
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.45; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools button, #sketch-tools select { font-size: 11px; background: rgba(255,255,255,0.12); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+  .viewport-frame { margin: 0 auto; transition: max-width var(--duration-base) var(--ease-standard); }
+  /* Real breakpoint testing note: the 📱/📟/🖥 buttons only cap this
+     wrapper's max-width — they do NOT change the real browser viewport, so
+     the @media (min-width:768px) rule above won't flip from them (same
+     lesson learned the hard way in sketch 005). Resize the actual window,
+     or use devtools' device toolbar, to see the true mobile stack. */
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a')">A: Defined Border</button>
+  <button class="variant-tab" onclick="showVariant('b')">B: Elevated Shadow ★ Selected</button>
+  <button class="variant-tab" onclick="showVariant('c')">C: Stronger Fill</button>
+  <div class="spacer"></div>
+  <div class="caption">Resize the real browser window below 768px to see the mobile stack — the toolbar's viewport buttons are approximate only.</div>
+</div>
+
+<div id="variant-a" class="variant viewport-frame variant-a">
+  <div class="crumb"><a href="#">Ludoteca</a><span class="sep">/</span><span class="current">Catan</span></div>
+  <div class="approach-note"><strong>A — Defined Border:</strong> keeps the current fill but adds a visible hairline in a primary-tinted tone (not the flat --color-border pair proven sub-perceptual elsewhere in this app) so the panel edge reads even without a shadow.</div>
+  <div class="pk-detail-masthead">
+    <div class="pk-poster-col">
+      <div class="pk-share-wrap"><button class="pk-share-btn" onclick="fakeShare(this)">⇪</button></div>
+      <div class="cover">CATAN</div>
+      <div class="panel-meta">
+        <button class="reserve-btn" onclick="fakeReserve(this)">Reservar para jugar</button>
+        <div class="reserve-hint">Coordinamos por WhatsApp</div>
+      </div>
+    </div>
+    <div class="pk-text-col">
+      <span class="panel-weight">Nivel: Ingenio estratega</span>
+      <h1>Catan</h1>
+      <p class="desc">Comercia, construye y expande tu territorio en la isla de Catan. Un clásico de negociación y gestión de recursos, ideal para 3-4 jugadores que ya conocen lo básico del hobby.</p>
+      <dl>
+        <div class="spec-row"><dt>Jugadores</dt><dd>3-4</dd></div>
+        <div class="spec-row"><dt>Duración</dt><dd>60-90 min</dd></div>
+        <div class="spec-row"><dt>Edad mínima</dt><dd>10+</dd></div>
+        <div class="spec-row"><dt>Mecánicas</dt><dd>Comercio, Trazado de área</dd></div>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div id="variant-b" class="variant viewport-frame variant-b" style="display:none">
+  <div class="crumb"><a href="#">Ludoteca</a><span class="sep">/</span><span class="current">Catan</span></div>
+  <div class="approach-note"><strong>B — Elevated Shadow:</strong> drops the fill difference and instead lifts the panel off the page with a soft shadow on a plain background — the panel reads as a distinct raised surface rather than a colored region.</div>
+  <div class="pk-detail-masthead">
+    <div class="pk-poster-col">
+      <div class="pk-share-wrap"><button class="pk-share-btn" onclick="fakeShare(this)">⇪</button></div>
+      <div class="cover">CATAN</div>
+      <div class="panel-meta">
+        <button class="reserve-btn" onclick="fakeReserve(this)">Reservar para jugar</button>
+        <div class="reserve-hint">Coordinamos por WhatsApp</div>
+      </div>
+    </div>
+    <div class="pk-text-col">
+      <span class="panel-weight">Nivel: Ingenio estratega</span>
+      <h1>Catan</h1>
+      <p class="desc">Comercia, construye y expande tu territorio en la isla de Catan. Un clásico de negociación y gestión de recursos, ideal para 3-4 jugadores que ya conocen lo básico del hobby.</p>
+      <dl>
+        <div class="spec-row"><dt>Jugadores</dt><dd>3-4</dd></div>
+        <div class="spec-row"><dt>Duración</dt><dd>60-90 min</dd></div>
+        <div class="spec-row"><dt>Edad mínima</dt><dd>10+</dd></div>
+        <div class="spec-row"><dt>Mecánicas</dt><dd>Comercio, Trazado de área</dd></div>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div id="variant-c" class="variant viewport-frame variant-c" style="display:none">
+  <div class="crumb"><a href="#">Ludoteca</a><span class="sep">/</span><span class="current">Catan</span></div>
+  <div class="approach-note"><strong>C — Stronger Fill (fill-only, matches the original plan's constraint):</strong> no border, no shadow — keeps 01.2-04's "lowest-risk boundary" rule but swaps the flat base-200 wash for the accent tint already used elsewhere for emphasis, which sits further from the page background than base-200 does.</div>
+  <div class="pk-detail-masthead">
+    <div class="pk-poster-col">
+      <div class="pk-share-wrap"><button class="pk-share-btn" onclick="fakeShare(this)">⇪</button></div>
+      <div class="cover">CATAN</div>
+      <div class="panel-meta">
+        <button class="reserve-btn" onclick="fakeReserve(this)">Reservar para jugar</button>
+        <div class="reserve-hint">Coordinamos por WhatsApp</div>
+      </div>
+    </div>
+    <div class="pk-text-col">
+      <span class="panel-weight">Nivel: Ingenio estratega</span>
+      <h1>Catan</h1>
+      <p class="desc">Comercia, construye y expande tu territorio en la isla de Catan. Un clásico de negociación y gestión de recursos, ideal para 3-4 jugadores que ya conocen lo básico del hobby.</p>
+      <dl>
+        <div class="spec-row"><dt>Jugadores</dt><dd>3-4</dd></div>
+        <div class="spec-row"><dt>Duración</dt><dd>60-90 min</dd></div>
+        <div class="spec-row"><dt>Edad mínima</dt><dd>10+</dd></div>
+        <div class="spec-row"><dt>Mecánicas</dt><dd>Comercio, Trazado de área</dd></div>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <span>Tema:</span>
+  <button onclick="toggleTheme()">☀/🌙</button>
+  <span>Viewport (approx):</span>
+  <button onclick="setViewport('375px')">📱</button>
+  <button onclick="setViewport('768px')">📟</button>
+  <button onclick="setViewport('1280px')">🖥</button>
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.style.display = 'none');
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).style.display = 'block';
+  event.target.classList.add('active');
+}
+function setViewport(w) {
+  document.querySelectorAll('.viewport-frame').forEach(f => f.style.maxWidth = w);
+}
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+}
+function fakeShare(btn) {
+  const original = btn.textContent;
+  btn.textContent = '✓';
+  btn.style.borderColor = 'var(--color-success)';
+  btn.style.color = 'var(--color-success)';
+  setTimeout(() => { btn.textContent = original; btn.style.borderColor = ''; btn.style.color = ''; }, 1200);
+}
+function fakeReserve(btn) {
+  const original = btn.textContent;
+  btn.textContent = 'Abriendo WhatsApp...';
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1000);
+}
+</script>
+</body>
+</html>

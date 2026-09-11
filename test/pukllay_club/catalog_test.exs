@@ -377,7 +377,7 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
-  describe "similar_games/1 (SHELL-03 — 01.1-03 checkpoint: weight-band, capped at 12)" do
+  describe "similar_games/1 (SHELL-03 — D-06 ranking + G-01.2-7 always-full widening, capped at 12)" do
     test "never includes the game itself" do
       game = game_fixture(%{name: "Self", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate", weight_band: "nivel_experto"})
@@ -385,29 +385,36 @@ defmodule PukllayClub.CatalogTest do
       refute game.id in Enum.map(Catalog.similar_games(game), & &1.id)
     end
 
-    test "only returns games sharing the same weight band" do
+    test "band-mates rank before other-band games — band is now a preference, not a filter (G-01.2-7)" do
       game = game_fixture(%{name: "Base", weight_band: "nivel_experto"})
       same_band = game_fixture(%{name: "Same Band", weight_band: "nivel_experto"})
       other_band = game_fixture(%{name: "Other Band", weight_band: "descubre_el_hobby"})
 
-      results = Catalog.similar_games(game)
+      result_ids = game |> Catalog.similar_games() |> Enum.map(& &1.id)
 
-      assert Enum.any?(results, &(&1.id == same_band.id))
-      refute Enum.any?(results, &(&1.id == other_band.id))
+      assert same_band.id in result_ids
+      assert other_band.id in result_ids
+
+      assert Enum.find_index(result_ids, &(&1 == same_band.id)) <
+               Enum.find_index(result_ids, &(&1 == other_band.id))
     end
 
-    test "a game whose band has no other members returns an empty list" do
+    test "a game whose band has no other members still returns a widened, non-empty shelf (G-01.2-7)" do
       lonely = game_fixture(%{name: "Lonely", weight_band: "descubre_el_hobby"})
-      game_fixture(%{name: "Different Band", weight_band: "nivel_experto"})
+      other = game_fixture(%{name: "Different Band", weight_band: "nivel_experto"})
 
-      assert Catalog.similar_games(lonely) == []
+      result_ids = lonely |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert other.id in result_ids
     end
 
-    test "a game with a nil weight_band returns an empty list" do
+    test "a game with a nil weight_band returns a full, overlap-ranked shelf instead of an empty list (G-01.2-7)" do
       unbanded = game_fixture(%{name: "Unbanded", weight_band: nil})
-      game_fixture(%{name: "Also Unbanded", weight_band: nil})
+      other = game_fixture(%{name: "Also Unbanded", weight_band: nil})
 
-      assert Catalog.similar_games(unbanded) == []
+      result_ids = unbanded |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert other.id in result_ids
     end
 
     test "the result never exceeds the cap when more than 12 band-mates exist" do
@@ -418,6 +425,297 @@ defmodule PukllayClub.CatalogTest do
       end
 
       assert length(Catalog.similar_games(game)) == 12
+    end
+
+    test "ranks band-mates by overlap (zero-overlap band-mate last), and ranks the other-band game after every band-mate despite its higher overlap (G-01.2-7)" do
+      # Names are deliberately chosen so alphabetical order is the OPPOSITE
+      # of overlap-ranked order ("Alfa..." would sort first, "Zulu..." last)
+      # — this proves ranking is driven by overlap, not incidentally by name.
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      candidate_high =
+        game_fixture(%{
+          name: "Zulu High Overlap",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      candidate_mid =
+        game_fixture(%{
+          name: "Mike Mid Overlap",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      candidate_zero =
+        game_fixture(%{
+          name: "Alfa Zero Overlap",
+          weight_band: "ingenio_estratega",
+          mechanics: [],
+          themes: []
+        })
+
+      candidate_other_band =
+        game_fixture(%{
+          name: "Other Band Full Overlap",
+          weight_band: "descubre_el_hobby",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert result_ids == [
+               candidate_high.id,
+               candidate_mid.id,
+               candidate_zero.id,
+               candidate_other_band.id
+             ]
+    end
+
+    test "band-mates with identical overlap scores are ordered by name ascending, then id ascending" do
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      zebra =
+        game_fixture(%{name: "Zebra", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      alfa =
+        game_fixture(%{name: "Alfa", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      assert base |> Catalog.similar_games() |> Enum.map(& &1.id) == [alfa.id, zebra.id]
+    end
+
+    test "a base game with empty mechanics and empty themes returns its band-mates without raising" do
+      base =
+        game_fixture(%{name: "Base", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      bandmate =
+        game_fixture(%{
+          name: "Bandmate",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: ["Fantasy"]
+        })
+
+      assert base |> Catalog.similar_games() |> Enum.map(& &1.id) == [bandmate.id]
+    end
+
+    test "the cap cannot truncate away the best matches when more than 12 band-mates exist" do
+      # Names are deliberately chosen so the low-overlap candidates sort
+      # BEFORE the high-overlap ones alphabetically ("Alfa..." < "Zeta...")
+      # — a LIMIT applied before ranking would keep the 12 "Alfa" rows and
+      # drop all 3 high-overlap "Zeta" rows entirely.
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      high_overlap =
+        for n <- 1..3 do
+          game_fixture(%{
+            name: "Zeta High #{n}",
+            weight_band: "ingenio_estratega",
+            mechanics: ["Deck Building", "Set Collection"],
+            themes: []
+          })
+        end
+
+      for n <- 1..12 do
+        game_fixture(%{
+          name: "Alfa Low #{String.pad_leading(to_string(n), 2, "0")}",
+          weight_band: "ingenio_estratega",
+          mechanics: [],
+          themes: []
+        })
+      end
+
+      result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert length(result_ids) == 12
+      assert Enum.take(result_ids, 3) == Enum.map(high_overlap, & &1.id)
+    end
+
+    test "ordering is deterministic across repeated calls" do
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      zebra =
+        game_fixture(%{name: "Zebra", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      alfa =
+        game_fixture(%{name: "Alfa", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      expected = [alfa.id, zebra.id]
+
+      for _ <- 1..3 do
+        assert base |> Catalog.similar_games() |> Enum.map(& &1.id) == expected
+      end
+    end
+
+    test "a band-mate with empty mechanics/themes is returned (score 0) when the base game has both populated" do
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: ["Fantasy"]
+        })
+
+      empty_bandmate =
+        game_fixture(%{
+          name: "Empty Bandmate",
+          weight_band: "ingenio_estratega",
+          mechanics: [],
+          themes: []
+        })
+
+      assert empty_bandmate.id in Enum.map(Catalog.similar_games(base), & &1.id)
+    end
+  end
+
+  describe "similar_games/1 — G-01.2-7 always-full guarantee" do
+    test "the shelf fills to the 12-card cap even when only 3 band-mates exist" do
+      base = game_fixture(%{name: "Base", weight_band: "ingenio_estratega"})
+
+      for n <- 1..3 do
+        game_fixture(%{name: "Bandmate #{n}", weight_band: "ingenio_estratega"})
+      end
+
+      for n <- 1..8 do
+        game_fixture(%{name: "OtherHobby #{n}", weight_band: "descubre_el_hobby"})
+      end
+
+      for n <- 1..7 do
+        game_fixture(%{name: "OtherExperto #{n}", weight_band: "nivel_experto"})
+      end
+
+      assert length(Catalog.similar_games(base)) == 12
+    end
+
+    test "the 3 band-mates occupy the leading positions and no band-mate appears after position 3" do
+      base = game_fixture(%{name: "Base", weight_band: "ingenio_estratega"})
+
+      bandmate_ids =
+        for n <- 1..3 do
+          game_fixture(%{name: "Bandmate #{n}", weight_band: "ingenio_estratega"}).id
+        end
+
+      for n <- 1..15 do
+        game_fixture(%{name: "OtherBand #{n}", weight_band: "descubre_el_hobby"})
+      end
+
+      result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert MapSet.new(Enum.take(result_ids, 3)) == MapSet.new(bandmate_ids)
+      refute Enum.any?(Enum.drop(result_ids, 3), &(&1 in bandmate_ids))
+    end
+
+    test "band-mates are ordered overlap desc, then name, then id, even amid widening" do
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      high =
+        game_fixture(%{
+          name: "Zulu High",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building", "Set Collection"],
+          themes: ["Fantasy"]
+        })
+
+      mid =
+        game_fixture(%{
+          name: "Mike Mid",
+          weight_band: "ingenio_estratega",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      zero =
+        game_fixture(%{name: "Alfa Zero", weight_band: "ingenio_estratega", mechanics: [], themes: []})
+
+      for n <- 1..10, do: game_fixture(%{name: "Filler #{n}", weight_band: "nivel_experto"})
+
+      result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert Enum.take(result_ids, 3) == [high.id, mid.id, zero.id]
+    end
+
+    test "the top-up block orders by band distance before overlap — an adjacent-band zero-overlap game outranks a far-band high-overlap game" do
+      base =
+        game_fixture(%{
+          name: "Base",
+          weight_band: "descubre_el_hobby",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      adjacent_zero_overlap =
+        game_fixture(%{
+          name: "Adjacent Zero",
+          weight_band: "ingenio_estratega",
+          mechanics: [],
+          themes: []
+        })
+
+      far_high_overlap =
+        game_fixture(%{
+          name: "Far High",
+          weight_band: "nivel_experto",
+          mechanics: ["Deck Building"],
+          themes: []
+        })
+
+      result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert result_ids == [adjacent_zero_overlap.id, far_high_overlap.id]
+    end
+
+    test "a nil weight_band game gets a full shelf when the catalog can fill it" do
+      base = game_fixture(%{name: "Base Nil", weight_band: nil})
+
+      for n <- 1..8, do: game_fixture(%{name: "Hobby #{n}", weight_band: "descubre_el_hobby"})
+      for n <- 1..7, do: game_fixture(%{name: "Experto #{n}", weight_band: "nivel_experto"})
+
+      assert length(Catalog.similar_games(base)) == 12
+    end
+
+    test "a catalog holding fewer than 12 other games returns all of them exactly once, excluding the viewed game" do
+      base = game_fixture(%{name: "Base Small", weight_band: "ingenio_estratega"})
+
+      others = for n <- 1..5, do: game_fixture(%{name: "Other #{n}", weight_band: "descubre_el_hobby"})
+
+      result_ids = base |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert length(result_ids) == 5
+      assert Enum.sort(result_ids) == Enum.sort(Enum.map(others, & &1.id))
+      refute base.id in result_ids
     end
   end
 end

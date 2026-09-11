@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 10
+open_count: 13
 waived_count: 0
 fixed_count: 0
-total_count: 10
-last_updated: 2026-08-22T20:00:32.776Z
+total_count: 13
+last_updated: 2026-08-26T22:51:30.480Z
 ---
 
 # Broken Windows Ledger
@@ -25,6 +25,9 @@ last_updated: 2026-08-22T20:00:32.776Z
 | 8 | 01.1-03 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual human-check: at 1440px scroll /juegos/:id -- the poster column pins below the header with no overlap/gap and releases at the end of the masthead; at 390px the layout is a single column and the ficha tecnica is one column wide -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-22T19:27:49.892Z |  |
 | 9 | 01.1-04 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual human-check: at a real 390px viewport, the CTA bar is visible on first paint with no scroll, retracts during an active scroll and returns ~200ms after it stops, parks with the footer while body padding-bottom collapses in the same transition, and the title-echo bar fades in only after the h1 has fully scrolled past the header -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-22T20:00:25.349Z |  |
 | 10 | 01.1-04 | unrun-verify | assets/css/app.css |  | Manual human-check: the mobile CTA bar's computed backgroundColor is visibly distinct from its own outlined share button's background (verify via computed style, not by eye) -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-22T20:00:32.776Z |  |
+| 11 | 01.2-13 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Task 2 human-check: buy-box reads as one bounded panel lifted off the page (not fading into the reading column) at ~390px and >=1280px in both light and dark themes, share icon anchored over the panel's top-right corner at both widths, cover art fills its frame with no letterboxing, reserve button unambiguously the page's one primary action -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-26T22:28:46.824Z |  |
+| 12 | 01.2-13 | unrun-verify | assets/css/app.css |  | Task 3 human-check: at ~390px the stacked reserve+share bar reads balanced with reserve unmistakably primary, scroll-hide/reveal timing and footer-park behavior unchanged with no new jump, last real content never hidden behind the taller bar, and past 1100px (but below 768px) the bar's controls align under the content column instead of stretching edge-to-edge -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | open |  | 2026-08-26T22:28:47.008Z |  |
+| 13 | 01.2 | unmet-truth | lib/pukllay_club_web/live/catalog_live/index.ex |  | Active-filters chip row's visual weight balance vs the Resultados heading (sketch 029 Round 2's 'clearly secondary' intent) is asserted only via class/no-shadow presence in tests; needs a human eyeballing a live render in both themes — no browser tool available to this executor (01.2-12 D6). | open |  | 2026-08-26T22:51:30.480Z |  |
 
 ````json
 [
@@ -146,6 +149,42 @@ last_updated: 2026-08-22T20:00:32.776Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-22T20:00:32.776Z",
+    "resolved_at": null
+  },
+  {
+    "id": 11,
+    "kind": "unrun-verify",
+    "phase": "01.2-13",
+    "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
+    "line": null,
+    "description": "Task 2 human-check: buy-box reads as one bounded panel lifted off the page (not fading into the reading column) at ~390px and >=1280px in both light and dark themes, share icon anchored over the panel's top-right corner at both widths, cover art fills its frame with no letterboxing, reserve button unambiguously the page's one primary action -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-26T22:28:46.824Z",
+    "resolved_at": null
+  },
+  {
+    "id": 12,
+    "kind": "unrun-verify",
+    "phase": "01.2-13",
+    "file": "assets/css/app.css",
+    "line": null,
+    "description": "Task 3 human-check: at ~390px the stacked reserve+share bar reads balanced with reserve unmistakably primary, scroll-hide/reveal timing and footer-park behavior unchanged with no new jump, last real content never hidden behind the taller bar, and past 1100px (but below 768px) the bar's controls align under the content column instead of stretching edge-to-edge -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-26T22:28:47.008Z",
+    "resolved_at": null
+  },
+  {
+    "id": 13,
+    "kind": "unmet-truth",
+    "phase": "01.2",
+    "file": "lib/pukllay_club_web/live/catalog_live/index.ex",
+    "line": null,
+    "description": "Active-filters chip row's visual weight balance vs the Resultados heading (sketch 029 Round 2's 'clearly secondary' intent) is asserted only via class/no-shadow presence in tests; needs a human eyeballing a live render in both themes — no browser tool available to this executor (01.2-12 D6).",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-26T22:51:30.480Z",
     "resolved_at": null
   }
 ]

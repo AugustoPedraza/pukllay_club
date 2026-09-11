@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 034 — Chip Cleanup</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 96px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .variant-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
+
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  .cause-note { max-width: 700px; margin: 0 auto var(--space-4); padding: var(--space-3); background: var(--color-accent-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-accent-text); }
+  .cause-note code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+
+  .removed-block { max-width: 700px; margin: 0 auto var(--space-4); padding: var(--space-3); border: 1px dashed var(--color-danger); border-radius: var(--radius-md); opacity: 0.55; }
+  .removed-block .label { font-size: var(--text-xs); font-weight: 700; color: var(--color-danger); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .removed-badge { display: inline-block; background: var(--color-secondary); color: #fff; font-size: var(--text-sm); font-weight: 700; padding: 6px 14px; border-radius: var(--radius-full); margin-bottom: 4px; }
+  .removed-desc { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; text-decoration: line-through; }
+
+  .text-col { max-width: 700px; margin: 0 auto; padding: 0 var(--space-4) 60px; display: flex; flex-direction: column; gap: var(--space-3); }
+  .text-col h1 { font-family: var(--font-display); font-size: var(--text-2xl); margin: 0; }
+  .facts-row { display: flex; gap: 6px; }
+  .fact { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); }
+  .pk-desc { line-height: 1.5; margin: 0; }
+  .pk-divider { height: 1px; background: var(--color-border); border: none; margin: 0; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag-chip { background: var(--color-accent-bg); color: var(--color-accent-text); font-size: var(--text-xs); font-weight: 600; padding: 4px 10px; border-radius: var(--radius-full); }
+
+  .section-heading { font-family: var(--font-display); font-size: var(--text-lg); margin: var(--space-2) 0 0; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* baseline chip look shared by all variants unless overridden — mirrors
+     the plain daisyUI `badge badge-sm` production currently uses (no
+     custom .pk-* override exists for it), the reference point the
+     complaint was measured against */
+  .chip-base { display: inline-flex; align-items: center; font-size: var(--text-xs); font-weight: 600; border-radius: var(--radius-full); }
+
+  /* =========================================================================
+     WINNER: A — Bordered Outline, Soft Fill
+     Same shape as production (border + fill), but with real breathing room
+     (padding roughly doubled) and a background token that actually reads
+     against the page instead of nearly matching it. B (solid fill, no
+     border) and C (section-grouped card) explored and dropped — see
+     README for the round history. ========================================= */
+  .chip { padding: 6px 14px; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text); }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.5; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active">A: Bordered Outline, Soft Fill ★ Selected</button>
+  <span class="caption">B/C explored and dropped — see README for the round history. Toggle 🌙/☀ to check both themes. Drops the redundant weight-band badge+description block (dashed strikethrough below).</span>
+</div>
+
+<div class="cause-note">
+  <strong>Two separate cleanups, applied together:</strong> (1) the weight-band badge
+  ("Nivel experto" + its explanatory sentence) duplicates the same dificultad pill already shown in
+  the facts row above the title — removed below, same in all 3 variants. (2) the Mecánicas/Temáticas
+  chips use the plain daisyUI <code>badge badge-sm</code> treatment with no custom styling — tight
+  border-to-text padding and a background that barely contrasts against the page. The 3 tabs above
+  compare different fixes for (2) only.
+</div>
+
+<div class="removed-block">
+  <div class="label">Removed (was here, between the tag row and "Mecánicas")</div>
+  <div class="removed-badge">Nivel experto</div>
+  <p class="removed-desc">Requiere varias partidas para dominarlo — ideal para jugadores con experiencia.</p>
+</div>
+
+<div class="variant variant-a active" id="variant-a">
+  <div class="text-col">
+    <div class="facts-row">
+      <span class="fact">👥 1-4</span>
+      <span class="fact">⏱ 90-120 min</span>
+      <span class="fact">●●● Nivel experto</span>
+    </div>
+    <h1>Terraforming Mars: Ares Expedition</h1>
+    <p class="pk-desc">Terraformá Marte compitiendo con otras corporaciones: subí la temperatura, el oxígeno y el agua del planeta mientras construís tu propio motor de producción de recursos.</p>
+    <hr class="pk-divider">
+    <div class="tag-row">
+      <span class="tag-chip">#DuelosMemorables</span>
+      <span class="tag-chip">#EquipoGanador</span>
+    </div>
+
+    <h2 class="section-heading">Mecánicas</h2>
+    <div class="chip-row">
+      <span class="chip-base chip">Construcción de motor</span>
+      <span class="chip-base chip">Gestión de mano</span>
+      <span class="chip-base chip">Colocación de losetas</span>
+      <span class="chip-base chip">Puntuación variable</span>
+    </div>
+    <h2 class="section-heading">Temáticas</h2>
+    <div class="chip-row">
+      <span class="chip-base chip">Ciencia ficción</span>
+      <span class="chip-base chip">Exploración espacial</span>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+<script>
+  function showVariant(id) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('variant-' + id).classList.add('active');
+    event.target.classList.add('active');
+  }
+</script>
+
+</body>
+</html>

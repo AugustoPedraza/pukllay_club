@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 032 — Masthead Facts Placement</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* ============================= SCAFFOLDING ============================= */
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-top: 96px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); }
+
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .variant-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .caption { width: 100%; font-size: var(--text-xs); color: var(--color-text-muted); }
+  #variant-nav .caption strong { color: var(--color-text); }
+
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  /* Shell reference bars — mimic the REAL header/footer wrapper exactly:
+     mx-auto max-w-7xl (1280px) + pk-gutter (2rem/32px each side). Every
+     variant reuses this same class on the masthead/shelf/cta-bar wrappers
+     below instead of a separate narrower cap — that IS this sketch's width
+     fix (gap G-01.2-12: "content isn't using the width defined by header
+     and footer"). No --pk-detail-col-width token exists in this sketch. */
+  .pk-shell-wrap { max-width: 1280px; margin: 0 auto; padding: 0 2rem; }
+
+  .shell-bar { background: var(--color-surface); border-bottom: 1px dashed var(--color-border); padding: 14px 0; }
+  .shell-bar.is-footer { border-bottom: none; border-top: 1px dashed var(--color-border); margin-top: 2.5rem; }
+  .shell-bar .shell-bar-inner { display: flex; align-items: center; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 600; letter-spacing: 0.02em; }
+  .shell-bar .shell-bar-inner b { color: var(--color-primary); font-family: var(--font-display); letter-spacing: 0.04em; font-size: var(--text-sm); }
+
+  /* ============================= FACTS PILLS ============================= */
+  /* Copied verbatim from production's .pk-facts-row/.pk-fact (app.css) —
+     same pill visual, only its PLACEMENT changes per variant below. */
+  .pk-facts-row { display: flex; align-items: center; gap: 6px; margin: 0; }
+  .pk-facts-row.is-justified { justify-content: space-between; }
+  .pk-fact { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: var(--radius-full); }
+  .pk-difficulty { display: inline-flex; align-items: center; gap: 3px; }
+  .pk-difficulty-dot { width: 5px; height: 5px; border-radius: 9999px; background: var(--color-border); }
+  .pk-difficulty-dot.is-filled { background: var(--color-text-muted); }
+
+  /* ============================= POSTER PANEL ============================= */
+  .pk-poster-panel { position: relative; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: var(--space-3); }
+  .pk-poster-frame { position: relative; aspect-ratio: 3/4; border-radius: var(--radius-md); overflow: hidden; background: linear-gradient(135deg, var(--color-secondary), var(--color-primary)); display: flex; align-items: center; justify-content: center; font-size: 64px; cursor: zoom-in; }
+  .pk-poster-frame:hover .zoom-hint { opacity: 1; }
+  .zoom-hint { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; font-size: 16px; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
+  .share-fab { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; background: var(--color-bg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; transition: all var(--duration-fast) var(--ease-standard); z-index: 6; }
+  .share-fab:hover { border-color: var(--color-primary); color: var(--color-primary); transform: translateY(-1px); }
+
+  .pk-gallery-dots { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: var(--space-2); }
+  .pk-gallery-dot { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; padding: 0; }
+  .pk-gallery-dot-mark { width: 8px; height: 8px; border-radius: 9999px; background: var(--color-border); transition: background-color var(--duration-fast) var(--ease-standard); }
+  .pk-gallery-dot.is-active .pk-gallery-dot-mark, .pk-gallery-dot:hover .pk-gallery-dot-mark { background: var(--color-primary); }
+
+  /* ============================= CTA BUTTON ============================= */
+  .reserve-btn { width: 100%; border: none; border-radius: var(--radius-md); background: var(--color-primary); color: var(--color-primary-content); font-weight: 700; font-size: var(--text-base); min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .reserve-btn:hover { filter: brightness(1.08); }
+  .reserve-btn:active { transform: translateY(1px); }
+  .reserve-toast { font-size: var(--text-xs); color: var(--color-success); font-weight: 600; text-align: center; margin-top: 6px; opacity: 0; transition: opacity var(--duration-base) var(--ease-standard); }
+  .reserve-toast.is-visible { opacity: 1; }
+
+  /* ============================= TEXT COLUMN (shared) ============================= */
+  .pk-text-col { display: flex; flex-direction: column; gap: var(--space-3); }
+  .pk-text-col h1 { font-family: var(--font-display); font-size: var(--text-2xl); letter-spacing: 0.01em; margin: 0; }
+  .pk-desc { font-size: var(--text-base); line-height: 1.5; color: var(--color-text); margin: 0; }
+  .pk-divider { height: 1px; background: var(--color-border); border: none; margin: 0; }
+  .pk-section-heading { font-family: var(--font-display); font-size: var(--text-lg); margin: var(--space-2) 0 0; letter-spacing: 0.02em; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: var(--text-xs); font-weight: 600; padding: 4px 10px; border-radius: var(--radius-full); }
+  .chip.tag { background: var(--color-accent-bg); color: var(--color-accent-text); border-color: transparent; }
+  .weight-badge { display: inline-flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+  .weight-badge .badge-pill { background: var(--color-secondary); color: #fff; font-size: var(--text-xs); font-weight: 700; padding: 4px 12px; border-radius: var(--radius-full); }
+  .weight-badge .descriptor { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4); margin: 0; }
+  .spec-row dt { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); font-size: 10px; margin: 0 0 2px; }
+  .spec-row dd { margin: 0; font-size: var(--text-sm); }
+
+  /* ============================= SIMILARES SHELF (width reference only) ============================= */
+  .similares-shelf { padding: var(--space-4) 0; }
+  .similares-shelf h2 { font-family: var(--font-display); font-size: var(--text-lg); margin: 0 0 var(--space-2); }
+  .similares-rail { display: flex; gap: 12px; overflow-x: auto; }
+  .similares-card { flex: 0 0 120px; aspect-ratio: 3/4; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-surface-2), var(--color-surface)); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+
+  /* ============================= MOBILE FIXED CTA BAR (unchanged, width fixed) ============================= */
+  .mobile-cta-bar { display: none; }
+
+  @media (max-width: 767px) {
+    .mobile-cta-bar { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 0.75rem 0; background: var(--color-surface); border-top: 1px solid var(--color-border); }
+    .mobile-cta-bar .pk-shell-wrap { padding: 0 1rem; }
+    .variant-body { padding-bottom: 84px; }
+  }
+
+  /* =========================================================================
+     VARIANT A — Pills Bar Above Poster, CTA Detached Below Panel
+     Minimal-diff from production: same 2-col grid, pills relocate from an
+     absolute overlay ON the poster image to a plain in-flow row ABOVE the
+     poster panel (full width of the poster column, justified on mobile).
+     Reservar moves OUTSIDE the bordered/shadowed poster panel entirely —
+     a visible gap + no shared border reads as a separate action, not part
+     of the panel/carousel. ========================================== */
+  .variant-a .masthead-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-4); padding: var(--space-4) 0; }
+  .variant-a .poster-col { display: flex; flex-direction: column; gap: var(--space-3); }
+  .variant-a .poster-col .pk-facts-row { padding: 0 2px; }
+  .variant-a .cta-standalone { margin-top: var(--space-2); }
+
+  @media (min-width: 768px) {
+    .variant-a .masthead-grid { grid-template-columns: 22rem 1fr; align-items: start; }
+    .variant-a .poster-col { position: sticky; top: 5.5rem; }
+    .variant-a .mobile-cta-bar { display: none !important; }
+    .variant-a .cta-standalone { display: block; }
+  }
+  .variant-a .cta-standalone { display: none; }
+  @media (max-width: 767px) { .variant-a .cta-standalone { display: none; } }
+
+  /* ============================= TOOLBAR ============================= */
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.45; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools select { font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('a')">A: Pills Above, CTA Detached ★ Selected</button>
+  <span class="caption">B/C explored and dropped — see README for the round history. <strong>Widen/narrow the real browser window past 768px</strong> to see the desktop⇄mobile swap (real @media, not the toolbar's viewport buttons — see sketch 005's own note on why). Fixes the shell-width mismatch (masthead/shelf/CTA bar now share the header/footer's exact 1280px+gutter box) and centers the mobile gallery dots.</span>
+</div>
+
+<!-- ============================= VARIANT A ============================= -->
+<div class="variant variant-a active" id="variant-a">
+  <div class="variant-body">
+    <div class="shell-bar">
+      <div class="pk-shell-wrap shell-bar-inner"><b>PukllayClub</b><span>Header — 1280px shell (reference only)</span></div>
+    </div>
+
+    <div class="pk-shell-wrap">
+      <div class="masthead-grid">
+        <div class="poster-col">
+          <div class="pk-facts-row is-justified">
+            <span class="pk-fact">👥 1-4</span>
+            <span class="pk-fact">⏱ 90-120 min</span>
+            <span class="pk-fact"><span class="pk-difficulty"><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span><span class="pk-difficulty-dot is-filled"></span></span> Nivel experto</span>
+          </div>
+          <div class="pk-poster-panel">
+            <button class="share-fab" onclick="pulse(this)" aria-label="Compartir" title="Compartir">↗</button>
+            <div class="pk-poster-frame" data-gallery="a" onclick="cycleImage(this)">🚀</div>
+            <div class="pk-gallery-dots" data-dots="a">
+              <button class="pk-gallery-dot is-active" onclick="selectDot(this,'a',0)"><span class="pk-gallery-dot-mark"></span></button>
+              <button class="pk-gallery-dot" onclick="selectDot(this,'a',1)"><span class="pk-gallery-dot-mark"></span></button>
+              <button class="pk-gallery-dot" onclick="selectDot(this,'a',2)"><span class="pk-gallery-dot-mark"></span></button>
+              <button class="pk-gallery-dot" onclick="selectDot(this,'a',3)"><span class="pk-gallery-dot-mark"></span></button>
+            </div>
+          </div>
+          <div class="cta-standalone">
+            <button class="reserve-btn" onclick="reserve(this)">🎲 ¡Quiero Jugarlo!</button>
+            <p class="reserve-toast">¡Listo! Te contactamos por WhatsApp.</p>
+          </div>
+        </div>
+
+        <div class="pk-text-col">
+          <h1>Terraforming Mars: Ares Expedition</h1>
+          <p class="pk-desc">Terraformá Marte compitiendo con otras corporaciones: subí la temperatura, el oxígeno y el agua del planeta mientras construís tu propio motor de producción de recursos. Esta edición standalone simplifica las reglas del original sin perder profundidad estratégica.</p>
+          <hr class="pk-divider">
+          <div class="chip-row">
+            <span class="chip tag">#DuelosMemorables</span>
+            <span class="chip tag">#EquipoGanador</span>
+          </div>
+          <div class="weight-badge">
+            <span class="badge-pill">Nivel experto</span>
+            <span class="descriptor">Requiere varias partidas para dominarlo — ideal para jugadores con experiencia.</span>
+          </div>
+          <h2 class="pk-section-heading">Mecánicas</h2>
+          <div class="chip-row">
+            <span class="chip">Construcción de motor</span>
+            <span class="chip">Gestión de mano</span>
+            <span class="chip">Colocación de losetas</span>
+            <span class="chip">Puntuación variable</span>
+          </div>
+          <h2 class="pk-section-heading">Temáticas</h2>
+          <div class="chip-row">
+            <span class="chip">Ciencia ficción</span>
+            <span class="chip">Exploración espacial</span>
+          </div>
+          <h2 class="pk-section-heading">Ficha técnica</h2>
+          <dl class="spec-list">
+            <div class="spec-row"><dt>Edad mínima</dt><dd>12+</dd></div>
+            <div class="spec-row"><dt>Año</dt><dd>2021</dd></div>
+            <div class="spec-row" style="grid-column:1/-1"><dt>Diseñadores</dt><dd>Jacob Fryxelius, Isaac Fryxelius</dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="similares-shelf">
+        <h2>Juegos similares</h2>
+        <div class="similares-rail">
+          <div class="similares-card">🔮</div>
+          <div class="similares-card">🐦</div>
+          <div class="similares-card">🏝</div>
+          <div class="similares-card">🗺</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shell-bar is-footer">
+      <div class="pk-shell-wrap shell-bar-inner"><b>PukllayClub</b><span>Footer — same 1280px shell</span></div>
+    </div>
+
+    <div class="mobile-cta-bar">
+      <div class="pk-shell-wrap">
+        <button class="reserve-btn" onclick="reserve(this)">🎲 ¡Quiero Jugarlo!</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">Light/Dark (system)</option>
+  </select>
+  <button onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; this.textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark'">🌙 Dark</button>
+</div>
+
+<script>
+  const IMAGES = ['🚀', '🪐', '🌡', '📦'];
+
+  function showVariant(id) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('variant-' + id).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function cycleImage(frame) {
+    const key = frame.dataset.gallery;
+    const dots = document.querySelectorAll(`[data-dots="${key}"] .pk-gallery-dot`);
+    let idx = [...dots].findIndex(d => d.classList.contains('is-active'));
+    idx = (idx + 1) % IMAGES.length;
+    frame.textContent = IMAGES[idx];
+    dots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
+  }
+
+  function selectDot(btn, key, idx) {
+    const dots = document.querySelectorAll(`[data-dots="${key}"] .pk-gallery-dot`);
+    dots.forEach(d => d.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    document.querySelector(`[data-gallery="${key}"]`).textContent = IMAGES[idx];
+  }
+
+  function reserve(btn) {
+    const original = btn.textContent;
+    btn.textContent = '✓ ¡Reservado!';
+    btn.disabled = true;
+    const toast = btn.closest('.cta-standalone, .buy-rail, .pk-text-col, .mobile-cta-bar')?.querySelector('.reserve-toast');
+    if (toast) toast.classList.add('is-visible');
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; if (toast) toast.classList.remove('is-visible'); }, 2200);
+  }
+
+  function pulse(btn) {
+    btn.style.transform = 'scale(0.9)';
+    setTimeout(() => btn.style.transform = '', 120);
+  }
+</script>
+
+</body>
+</html>

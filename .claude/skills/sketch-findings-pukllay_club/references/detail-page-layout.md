@@ -76,6 +76,121 @@ detail page's "more like this" has no natural "see all" destination the way a ta
 does), and it activates `CarouselRow`'s `subtitle` prop (unused by any home-page caller today) to
 explain *why* these games are surfaced.
 
+**Buy-box panel boundary: elevated shadow, not a fill/border change (Phase 01.2 gap-closure,
+sketch 027).** UAT flagged the buy-box as not reading like "one self-contained panel distinct from
+the reading column" (root cause: `bg-base-200`/`bg-base-100` measured at 1.415:1/1.086:1 contrast
+in a prior debug session, well under this app's own 3:1 non-text floor). Three fixes were sketched
+— a stronger border, a stronger fill, and a soft shadow lift — **the shadow lift won**: it separates
+the panel on a plain background without changing `.poster-col`'s existing fill token at all, so the
+fix is purely additive (shadow + no border) on top of whatever fixes the panel's separate CSS
+cascade-layer positioning bug (unlayered `.pk-*` rules beating layered Tailwind utilities — a code
+fix, not a design decision, see the phase's own debug log).
+
+```css
+.pk-poster-col { background: var(--color-bg); border: 1px solid var(--color-border); box-shadow: var(--shadow-md); }
+```
+
+**Facts pills relocate to the poster panel, and the CTA leaves it (Phase 01.2 gap-closure round 2,
+sketch 032) — revises "Facts pills sit with the title, not the CTA" above.** A later UAT round
+flagged the masthead again: on mobile the pills had drifted to an absolute overlay *on top of* the
+poster image (not living with the title at all — an undocumented change from this file's original
+sketch 005 decision), and on both viewports the Reservar button sat *inside* the same
+bordered/shadowed panel as the poster, reading as "part of the carousel" rather than a separate
+decision. Sketch 032 compared three structural fixes — pills-above-panel/CTA-detached-below;
+a full-width pills bar + fully standalone buy panel; CTA relocated into the text column as an
+e-commerce-style buy box — **the minimal-diff option won**: pills move to a plain in-flow row
+directly above the poster panel (justified full-width on mobile, centered gallery dots), and the
+Reservar button moves *outside* the bordered/shadowed panel with a visible gap below it. The
+buy-box principle above is revised to: **image + pills live together in one panel; the CTA is a
+separate, adjacent element below it, not inside the same bordered box.**
+
+**Masthead width now matches the header/footer shell — the separate 1100px cap is gone.** UAT
+flagged that the masthead/CTA-bar/shelf-separator's own narrower content-width token read
+noticeably narrower than the header/footer's own `max-w-7xl` + `pk-gutter` box (1280px). The
+"Juegos similares" shelf below already correctly used the wider shell width, so the masthead
+needed to widen to match it, not the other way around — don't give one section of a page its own
+independent width cap when every other section shares one.
+
+```css
+.pk-detail-masthead { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
+@media (min-width: 768px) { .pk-detail-masthead { grid-template-columns: 22rem 1fr; } }
+.pk-poster-col .pk-facts-row { justify-content: space-between; } /* mobile: justified full-width */
+.pk-poster-reserve { margin-top: var(--space-2); } /* outside the bordered panel, not inside it */
+.pk-gallery-dots { justify-content: center; } /* was left-aligned by default flex behavior */
+```
+
+**Don't show the same fact twice at two different sizes (Phase 01.2 gap-closure round 2, sketch
+034).** A weight-band badge + explanatory sentence ("Nivel experto" / "Requiere varias partidas
+para dominarlo...") that an earlier round deliberately kept below the divider turned out to just
+duplicate the same dificultad fact already shown compactly in the facts pill row above the title —
+a later UAT round reversed that keep-decision and removed the badge+sentence entirely. When a fact
+already has a home in a compact summary row, don't give it a second, more verbose home lower on the
+same page.
+
+**Mecánicas/Temáticas chips need real border/background contrast, not the bare daisyUI default.**
+The chip row's default badge styling ships with no custom override — tight padding, background
+that barely reads against the page. Fix is real breathing room + a background token that actually
+contrasts, keeping the same border+fill shape:
+
+```css
+.pk-chip-row .badge { padding: 6px 14px; background: var(--color-surface); border: 1px solid var(--color-border); }
+```
+
+**Section spacing: one deliberate value at each boundary, not stacked independent declarations
+(Phase 01.2 gap-closure round 2, sketch 035).** Two additive bugs, both worth checking for
+elsewhere in this codebase: (1) the sticky title-echo bar (see `detail-page-mobile-interaction.md`)
+is unconditionally rendered and only hidden via `opacity: 0` — as `position: sticky` it still
+occupies real layout space even while invisible, silently padding out the header→masthead gap by
+~60-70px on top of the page's own top padding. (2) three independent spacing rules stacked at the
+footer boundary (the page content wrapper's own bottom padding + the footer's own top margin + the
+footer's inner row's own top padding) summed to over 150px — each reasonable alone, far too much
+together. Fix: collapse both boundaries to one deliberate value, and — after discussion — make it
+the *same* value at top and bottom (24px) rather than asymmetric: a uniform, minimal rhythm read
+better than giving the footer boundary more room just "because it's the page ending."
+
+**"Juegos similares" shelf never goes sparse — the shelf itself always looks identical (Phase 01.2
+gap-closure, sketch 031).** UAT pushback: a 1-2 card rail for a thin weight-band pool "isn't
+acceptable." Rather than a distinct sparse-state layout (compact cluster, no edge-fade — tried and
+rejected as an unnecessary second visual mode), the winning direction keeps `.pk-shelf`'s layout
+completely invariant and makes the *query* responsible for always filling it (widen to adjacent
+bands / broader overlap / `bgg_weight` proximity when the same-band pool is thin — a
+`Catalog.similar_games/1` change, not covered here). The only visible signal that widening
+happened is a small pill badge next to the title plus a subtitle swap — title itself stays "Juegos
+similares" rather than switching to "Otras sugerencias" (flagged as still open: verify this reads
+as different enough from a true same-band match once built).
+
+```css
+.pk-shelf-badge { display: inline-flex; align-items: center; font-size: var(--text-xs); font-weight: 700; color: var(--color-primary); background: var(--color-accent-bg); padding: 2px 9px; border-radius: var(--radius-full); margin-left: 8px; vertical-align: middle; }
+```
+```html
+<h3>Juegos similares<span class="pk-shelf-badge" :if={@similares_widened}>Ampliado</span></h3>
+<p class="pk-shelf-subtitle">{if @similares_widened, do: "Otras opciones que te van a encantar", else: "Mismo nivel de dificultad, mecánicas y temática parecidas"}</p>
+```
+
+**Grouping a cluster of elements doesn't need a shared container — proximity + aligned edges is
+enough (Phase 01.2 gap-closure round 3, sketch 037).** A later UAT round found the mobile masthead
+(facts pills, poster photo, gallery dots) still read as "floating" pieces even after sketch 032's
+fix moved them into the right relative order. Two structural fixes were compared against a
+proximity-only baseline — an extended bordered/shadowed panel wrapping the facts row too, and a
+soft tinted background band with no border — **proximity-only won**: no shared background or
+border at all; grouping comes purely from tightened vertical rhythm between the three elements and
+every edge landing flush against the same shell gutter. Don't reach for a shared container as the
+default fix for "these elements feel disconnected" — check whether rhythm/alignment alone already
+solves it first, since it's the smallest possible diff and avoids inventing a new bordered surface
+the design system has to carry forward. Two smaller co-located bugs, fixed the same round: the
+carousel dot row's 44px WCAG touch-target buttons were making the *visible* mark spacing read 5x
+wider than intended (fixed via tighter negative-margin compression, keeping the full tap area); and
+the poster panel's own internal padding put the photo's visible edge 16px further from the shell
+gutter than its siblings (facts row and CTA), a mismatch invisible until measured against the
+gutter directly.
+
+```css
+.pk-facts-row { margin-bottom: 8px; } /* tightened, was --space-3 (16px) */
+.pk-poster-frame img { border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); }
+.pk-gallery-dots { margin: -0.625rem 0; } /* compensates the 44px touch button so only the ~16px visible mark row shows */
+.pk-gallery-dot { width: 1.375rem; height: 2rem; } /* touch height stays accessible; visible footprint shrinks */
+```
+
 ## CSS Patterns
 
 ```css
@@ -107,7 +222,38 @@ explain *why* these games are surfaced.
 - Don't fake schema fields that don't exist (illustrator, BGG rank) — label the gap explicitly.
 - Don't add a `.pk-see-all` tile to a "similar games" shelf — there's no real destination for it
   the way there is for a home-page tag/weight-band shelf.
+- Don't try to fix the buy-box's "doesn't read as a panel" complaint by strengthening its fill
+  color alone — a shadow lift on the existing fill won over both a stronger border and a stronger
+  fill in sketch 027's comparison.
+- Don't give a sparse "Juegos similares" rail its own distinct compact layout — fix it at the
+  query layer (always widen the pool to fill the shelf) so the shelf's visual treatment stays one
+  invariant thing, not two.
+- Don't put the CTA button inside the same bordered/shadowed panel as the poster image — it reads
+  as "part of the carousel" rather than a separate decision, even though both live in the buy-box
+  column.
+- Don't give one page section (e.g. the masthead) its own independent content-width cap when every
+  other section on the page shares one — cross-check against the header/footer's actual width, not
+  a value chosen in isolation.
+- Don't show the same fact twice at two visual weights on the same page (a compact pill, then a
+  larger badge+sentence lower down) — pick one home for it.
+- Don't leave a sticky element unconditionally rendered and only hidden via `opacity: 0` — as
+  `position: sticky` (or any non-`fixed`/non-`absolute` positioning) it still occupies real layout
+  space while invisible, silently padding out whatever comes after it.
+- Don't let independently-reasonable spacing rules stack at the same page boundary (e.g. a
+  wrapper's bottom padding + the next section's own top margin + that section's own inner padding)
+  — collapse to one deliberate value per boundary.
+- Don't default to a shared bordered/tinted container to make a cluster of elements "read as
+  grouped" — try tightening rhythm + aligning edges to a shared reference (gutter/grid) first; a
+  proximity-only fix won over two container variants in sketch 037.
+- Don't size a touch-target element's *visible* mark/icon the same as its actual hit-box — a 44px
+  WCAG tap target with an 8px visible mark needs the visible spacing compressed independently
+  (negative margin on the row), or the row reads far more spread out than intended.
+- Don't measure a component's margin against its own declared padding value alone — check it
+  against the shared gutter reference directly; a panel's own internal padding can silently stack
+  on top of the shared gutter and put that one element further from the edge than its siblings.
 
 ## Origin
-Synthesized from sketch: 005
-Source file available in: sources/005-detail-page/
+Synthesized from sketches: 005, 027, 031, 032, 034, 035, 037
+Source files available in: sources/005-detail-page/, sources/027-buybox-panel-boundary/,
+sources/031-similar-games-fallback/, sources/032-masthead-facts-placement/,
+sources/034-chip-cleanup/, sources/035-detail-page-rhythm/, sources/037-masthead-grouping/

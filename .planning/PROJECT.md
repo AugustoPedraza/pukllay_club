@@ -22,12 +22,14 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
 - [x] A trivial but real Phoenix app is deployed to production at pukllay.club over HTTPS, with CI,
       zero-downtime deploys, migrations-on-deploy, and nightly backups (Validated in Phase 0 —
       walking skeleton; live-verified against production, not just code review)
+- [x] Members can browse and filter a catalog of ~400 games with carousels/cards/streams, own
+      resized images, complexity-teaching UX (visual weight, plain-language mechanic/theme chips),
+      hard filters, and keyword search — fully public, no auth (Phase 1; shell/detail-page chrome
+      shipped in Phase 1.1; catalog-grid and detail-page navigation/layout polished across 32 plans
+      and 10 UAT gap-closure rounds in Phase 01.2, completed 2026-08-29)
 
 ### Active
 
-- [ ] Members can browse and filter a catalog of ~400 games with carousels/cards/streams, own
-      resized images, complexity-teaching UX (visual weight, plain-language mechanic/theme chips),
-      hard filters, and keyword search — fully public, no auth (Phase 1)
 - [ ] Members can search the catalog with natural-language Spanish queries via local embeddings +
       pgvector hybrid ranking + LLM query parsing, and save favorites behind magic-link auth
       (Phase 2 — hero feature)
@@ -115,6 +117,7 @@ assuming the visitor already speaks the hobby's vocabulary.
 | Cloudflare R2 for nightly backup storage | S3-compatible, no egress fees, fits budget | ✓ Good — live in Phase 0, manually verified |
 | Business Context section omitted | Internal club tool — no payments, no revenue model | ✓ Good |
 | Dockerfile strategy, migration safety, secrets management | Deferred to Phase 0 discuss/plan rather than decided at project init | ✓ Resolved in Phase 0 — entrypoint-gated migrations (D-05), GitHub Actions repo secrets (D-08), live-proven via a real migration shipped through the pipeline (D-06) |
+| Phase 1.1 inserted (Site Shell & Content Pages) then Phase 01.2 inserted (Catalog & Detail Navigation Polish) — both urgent, both ahead of Phase 2 | Phase 1's catalog UX needed a real shared header/footer/about/detail shell before the hero NL-search feature would have anything worth searching into, then that shell's own mobile layout and lightbox needed a dedicated polish pass once real usage surfaced gaps | ✓ Good — both inserted phases complete; 01.2 in particular closed a 10-round UAT gap-closure chain (chip-system unification, lightbox rebuild, mobile masthead restructure) |
 
 ## Evolution
 
@@ -134,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-27 after Phase 0 completion*
+*Last updated: 2026-08-29 after Phase 01.2 completion*

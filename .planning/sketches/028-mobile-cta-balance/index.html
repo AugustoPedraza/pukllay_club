@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 028 — Mobile CTA Bar Balance</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 10px 16px; display: flex; gap: 8px; font-family: var(--font-sans); flex-wrap: wrap; align-items: center; }
+  .variant-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); padding: 8px 14px; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .variant-tab.active { background: var(--color-primary); color: var(--color-primary-content); border-color: var(--color-primary); }
+  #variant-nav .spacer { flex: 1; }
+  #variant-nav .caption { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 34ch; }
+  body { padding-top: 74px; margin: 0; }
+
+  .phone-note { max-width: 1100px; margin: var(--space-4) auto var(--space-2); padding: 0 var(--space-4); font-size: var(--text-sm); color: var(--color-text-muted); }
+  .phone-note strong { color: var(--color-text); }
+
+  .page-filler { max-width: 1100px; margin: 0 auto; padding: var(--space-4); padding-bottom: 140px; }
+  .filler-hero { aspect-ratio: 3/1.4; border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: var(--color-primary-content); font-family: var(--font-display); font-size: var(--text-2xl); margin-bottom: var(--space-4); }
+  .filler-line { height: 12px; border-radius: 6px; background: var(--color-surface-2); margin-bottom: 10px; }
+  .filler-line.w60 { width: 60%; }
+  .filler-line.w80 { width: 80%; }
+  .filler-line.w40 { width: 40%; }
+
+  /* ============================= CTA BAR =============================
+     Round 2 fix: the bar's background may span edge-to-edge, but its
+     CONTENT is capped to the same max-width as the page column (1100px,
+     matching sketch 027's masthead) and centered — so at any viewport
+     wider than 1100px the buttons align under the content above them
+     instead of stretching across the raw browser window. Below 1100px
+     (every real mobile/tablet width) the cap never engages, so content
+     naturally fills the full viewport width exactly as before. */
+  .pk-mobile-cta-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 0.75rem 0; background: var(--color-surface); border-top: 1px solid var(--color-border); }
+  .cta-bar-inner { max-width: 1100px; margin: 0 auto; padding: 0 0.875rem; display: flex; align-items: center; gap: 0.75rem; }
+
+  .reserve-btn { border: none; border-radius: var(--radius-md); background: var(--color-primary); color: var(--color-primary-content); font-weight: 700; font-size: var(--text-base); min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); }
+  .reserve-btn:hover { filter: brightness(1.08); }
+  .reserve-btn:active { transform: translateY(1px); }
+
+  .share-btn { min-width: 44px; min-height: 44px; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--duration-fast) var(--ease-standard); font-size: 18px; }
+  .share-btn:hover { transform: translateY(-1px); }
+
+  /* ===== VARIANT D — stacked: reserve full-width on top, share as a secondary row below ===== */
+  .variant-d .cta-bar-inner { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  .variant-d .reserve-btn { width: 100%; }
+  .variant-d .share-btn { width: 100%; min-height: 38px; border-radius: var(--radius-md); flex-direction: row; gap: 6px; font-size: var(--text-sm); font-weight: 600; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); }
+  .variant-d .share-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+  #sketch-tools { position: fixed; bottom: 92px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: white; padding: 8px 12px; border-radius: 8px; opacity: 0.45; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools button { font-size: 11px; background: rgba(255,255,255,0.12); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" onclick="showVariant('d')">D: Stacked ★ Selected</button>
+  <div class="spacer"></div>
+  <div class="caption">A/B/C/E explored and dropped — see README for the round-by-round history. Widen past 1100px to confirm the bar aligns under the content column.</div>
+</div>
+
+<div id="variant-d" class="variant variant-d">
+  <div class="phone-note"><strong>D — Stacked (winner):</strong> reserve button takes the full bar width on its own row; share drops to a smaller secondary row below it, styled as a quiet outline pill so it clearly reads as secondary, not competing with the primary action.</div>
+  <div class="page-filler">
+    <div class="filler-hero">CATAN</div>
+    <div class="filler-line w80"></div>
+    <div class="filler-line w60"></div>
+    <div class="filler-line w40"></div>
+    <div class="filler-line w80"></div>
+    <div class="filler-line w60"></div>
+  </div>
+  <div class="pk-mobile-cta-bar">
+    <div class="cta-bar-inner">
+      <button class="reserve-btn" onclick="fakeReserve(this)">Reservar para jugar</button>
+      <button class="share-btn" onclick="fakeShare(this)">⇪ Compartir</button>
+    </div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <span>Tema:</span>
+  <button onclick="toggleTheme()">☀/🌙</button>
+</div>
+
+<script>
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach(v => v.style.display = 'none');
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('variant-' + id).style.display = 'block';
+  event.target.classList.add('active');
+}
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+}
+function fakeShare(btn) {
+  const original = btn.textContent;
+  btn.textContent = '✓';
+  setTimeout(() => { btn.textContent = original; }, 1000);
+}
+function fakeReserve(btn) {
+  const original = btn.textContent;
+  btn.textContent = 'Abriendo WhatsApp...';
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1000);
+}
+</script>
+</body>
+</html>

@@ -98,10 +98,19 @@ defmodule PukllayClubWeb.FilterModal do
   `Phoenix.LiveComponent` — no state of its own, matching `FilterDrawer`'s
   discipline before it, per 01-PATTERNS.md). Live-apply is unchanged by
   this shell: every control still applies its filter immediately on
-  click/keystroke, nothing is staged. The CTA is an exit affordance, not
-  a submit — its only effect is `phx-click="close-filters"`; it does not
-  filter or apply anything itself, since filtering already happened
-  underneath.
+  click/keystroke, nothing is staged. The footer CTA (dispatching the
+  `apply-filters` event, 01.2-03 D-02) is now the modal's one explicit
+  submission signal — pressing it, even with nothing selected, tells
+  `CatalogLive.Index` the member asked to see the current result set (its
+  `:browse_all` assign), which is what lets an empty submission land on
+  the full-catalog grid instead of being indistinguishable from a fresh
+  page load. It still does not filter or apply anything itself, since
+  filtering already happened underneath — it only records intent.
+  Dismissal and submission are deliberately two different events: the
+  backdrop button and the corner close button both still dispatch the
+  `close-filters` event and change nothing about the result set, so
+  closing the modal without pressing its CTA always returns the member to
+  wherever they were (the carousels, if nothing was active).
 
   `core_components.ex` was checked and has no modal component — this uses
   daisyUI's bundled `modal`/`modal-open`/`modal-box`/`modal-backdrop`
@@ -382,7 +391,23 @@ defmodule PukllayClubWeb.FilterModal do
           >
             Limpiar filtros
           </.button>
-          <.button class={["btn", "btn-primary", "min-h-11"]} phx-click="close-filters">
+          <%!-- min-w-40 + tabular-nums (Task 2, G-01.2-4 defect C): the label
+          carries a live match count, so it resizes on every facet click and
+          keystroke, dragging the whole footer row with it. Sized for the
+          widest string the catalog can produce — "Ver 9999 juegos" (16
+          chars, a 4-digit ceiling one order of magnitude above today's
+          ~434-game catalog, per the plan's own sizing note), which is wider
+          than the singular "Ver 1 juego" (11 chars) — via a character-count
+          estimate (no live browser measurement tool in this environment):
+          ~8px/char average for this button's font plus its own horizontal
+          padding comfortably fits inside 10rem. tabular-nums stops the
+          digits themselves from shifting width as the count changes. The
+          count still updates on every interaction — only the box stops
+          moving. --%>
+          <.button
+            class={["btn", "btn-primary", "min-h-11", "min-w-40", "tabular-nums"]}
+            phx-click="apply-filters"
+          >
             {cta_label(@total)}
           </.button>
         </div>
@@ -486,13 +511,27 @@ defmodule PukllayClubWeb.FilterModal do
   # Single source of truth for the chip's visual contract (ui-design-system:
   # "a field that must look identical on two surfaces is declared in exactly
   # one place") — both `facet_pill/1` and `scalar_chip/1` build their class
-  # from this, so the two chip families cannot drift apart. `shadow-sm` on
-  # the selected state (sketch 019, quick-260824-eqc) is the non-arbitrary
-  # translation of the sketch's soft colored box-shadow on the active chip —
-  # a literal colored shadow would need an arbitrary Tailwind value, which is
-  # banned.
-  defp chip_class(true), do: ["badge", "min-h-11", "px-3", "badge-primary", "shadow-sm"]
-  defp chip_class(false), do: ["badge", "min-h-11", "px-3", "badge-neutral", "badge-outline"]
+  # from this, so the two chip families cannot drift apart. Both families now
+  # derive from the app-wide shared pill (`pk-pill`, assets/css/app.css PK
+  # CATALOG SURFACES block, G-01.2-26/27; diagnosis at
+  # .planning/debug/G-01.2-15-pill-chip-design-inconsistency.md), so this
+  # helper's job has narrowed from "define the chip's visual contract" to
+  # "choose which tone of the shared pill this state gets."
+  #
+  # The soft lift on the selected state (sketch 019, quick-260824-eqc) —
+  # originally shipped here as the Tailwind utility `shadow-sm`, the
+  # non-arbitrary translation of the sketch's soft colored box-shadow, since
+  # a literal colored shadow would need a banned arbitrary Tailwind value —
+  # moved with the lift: `pk-pill-selected` now declares that same
+  # `box-shadow` once, in the base's own variant block, which is why no
+  # shadow utility appears in either returned list below any more.
+  defp chip_class(true) do
+    ["pk-pill", "pk-pill-selected", "pk-pill-comfortable", "pk-pill-interactive", "min-h-11"]
+  end
+
+  defp chip_class(false) do
+    ["pk-pill", "pk-pill-outline", "pk-pill-comfortable", "pk-pill-interactive", "min-h-11"]
+  end
 
   defp cta_label(1), do: "Ver 1 juego"
   defp cta_label(n), do: "Ver #{n} juegos"

@@ -18,17 +18,37 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   `rescue` degrades a failed "more like this" lookup to no shelf rather than
   taking down a detail page whose primary content already loaded fine.
 
-  `handle_event("select-image", ...)` swaps the main image only when the
-  client-supplied `url` is a member of the game's own
+  `handle_event("select-image", ...)` swaps the page's own main image only
+  when the client-supplied `url` is a member of the game's own
   `[cover_url | gallery_urls]` list — a crafted url is never echoed
   unchecked into an `img src` (T-01-26). The lightbox (`handle_event(
-  "open-lightbox"/"close-lightbox", ...)`) reuses this exact handler and
-  whitelist for its own previous/next controls, so there is a single
-  guarded image-selection path, not a second one (T-01.1-16).
+  "open-lightbox"/"close-lightbox"/"select-lightbox-image", ...)`) has its
+  OWN selection assign, `@lightbox_image`, seeded from the page's current
+  selection when it opens and never synced back when it closes —
+  navigating inside the open lightbox must never move the page's own
+  poster image, thumbnail border or dot underneath it (G-01.2-25,
+  diagnosed in
+  `.planning/debug/G-01.2-16-lightbox-scrim-width-carousel-sync.md`). This
+  supersedes the earlier "there is a single guarded image-selection path,
+  not a second one" contract (T-01.1-16, 01.1-04): that contract literally
+  shared ONE assign between the page and the lightbox, which is exactly
+  why the lightbox's own chevrons visibly dragged the underlying
+  gallery/dots along with them. What survives from T-01.1-16 is narrower
+  and still true: there is exactly one membership whitelist
+  (`valid_gallery_image?/2`), called by both `select-image` and
+  `select-lightbox-image` — two selection assigns, one shared guard.
 
   Every field from this plan's `<planner_assumption>` omission table is
   individually conditional: an absent field removes its whole row/element,
-  never a blank placeholder.
+  never a blank placeholder. Ficha técnica applies this at two levels
+  (01.2-04, D-04/D-05): each remaining row keeps its own independent `:if`
+  guard, AND the section heading plus the list are themselves wrapped in
+  `ficha_tecnica?/1` so a game with none of the four carriable fields
+  (min_age, year_published, designers, bgg_id) shows no empty heading over
+  an empty grid. The publisher-name field this section used to carry was
+  dropped entirely in the G-01.2-10 mobile masthead rework (01.2-17) — the
+  UAT called it useless information, and the removal is unconditional
+  (every viewport width), not a mobile-only cut.
 
   Mobile chrome (SHELL-03, plan 01.1-04): `.DetailChrome` drives the fixed
   bottom CTA bar and the sticky title-echo bar off a single passive
@@ -55,11 +75,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.CarouselRow
+  alias PukllayClubWeb.CatalogFilters
   alias PukllayClubWeb.GameChips
   alias PukllayClubWeb.GamePreview
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     game = Catalog.get_game!(id)
     # 01.1-07: the same disconnected/connected two-phase mount trick
     # CatalogLive.Index already uses. :loading is set once here and never
@@ -67,17 +88,31 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     # similar-games query entirely (a skeleton shelf occupies the same
     # footprint instead), the connected mount runs it for real.
     loading? = not connected?(socket)
+    similar_games = if(loading?, do: [], else: safe_similar_games(game))
+    # G-01.2-7 / sketch 031: pure comparison over at most @similares_limit
+    # already-loaded structs — no extra query, and no change to
+    # similar_games/1's return type. A no-band game's every returned game
+    # differs from `nil`, so widened? is true — correct, since that shelf
+    # is entirely a widened pool.
+    similares_widened? = Enum.any?(similar_games, &(&1.weight_band != game.weight_band))
 
     {:ok,
      socket
      |> assign(:page_title, game.name)
      |> assign(:game, game)
+     |> assign(:catalog_path, CatalogFilters.catalog_path(params["from"]))
      |> assign(:selected_image, game.cover_url)
+     # G-01.2-25 task 2: the lightbox's own selection, initialised the same
+     # way the page's is. Never read until "open-lightbox" reseeds it from
+     # @selected_image — this default only matters for the always-rendered
+     # (but closed/hidden) lightbox's very first static render.
+     |> assign(:lightbox_image, game.cover_url)
      |> assign(:mechanic_labels, Vocabulary.covered_mechanics(game.mechanics))
      |> assign(:theme_labels, Vocabulary.covered_themes(game.themes))
      |> assign(:loading, loading?)
-     |> assign(:similar_games, if(loading?, do: [], else: safe_similar_games(game)))
-     |> assign(:similares_subtitle, similares_subtitle(game))
+     |> assign(:similar_games, similar_games)
+     |> assign(:similares_widened, similares_widened?)
+     |> assign(:similares_subtitle, similares_subtitle(game, similares_widened?))
      |> assign(:description_expanded, false)
      |> assign(:lightbox_open, false)
      |> assign(:reservation_number, Application.get_env(:pukllay_club, :reservation_whatsapp_number))
@@ -86,10 +121,39 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:reservation_error, nil)}
   end
 
+  # header_inner/1's search-morph toggle/close buttons now dispatch
+  # open-search/close-search unconditionally on any page filling the
+  # nav_search slot (01.2-11) — this page passes a hardcoded
+  # search_expanded={false} and never varies it (its nav_search slot is a
+  # plain native GET form to "/", not the catalog's live-filtered box), so
+  # both clauses are deliberate no-ops. Without them, clicking the search
+  # icon here would crash the LiveView with no matching handle_event clause.
+  @impl true
+  def handle_event("open-search", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("close-search", _params, socket), do: {:noreply, socket}
+
   @impl true
   def handle_event("select-image", %{"url" => url}, socket) do
-    if url in gallery_thumbnails(socket.assigns.game) do
+    if valid_gallery_image?(socket.assigns.game, url) do
       {:noreply, assign(socket, :selected_image, url)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # G-01.2-25 task 2: the lightbox's OWN selection event, distinct from the
+  # page's "select-image" above. Assigns only @lightbox_image — the page's
+  # poster, thumbnail border and dot (all readers of @selected_image) never
+  # move while the lightbox is open. Guarded by the SAME
+  # valid_gallery_image?/2 predicate "select-image" uses (T-01.2-25-01): one
+  # whitelist, two callers, never a second one written fresh for this
+  # handler.
+  @impl true
+  def handle_event("select-lightbox-image", %{"url" => url}, socket) do
+    if valid_gallery_image?(socket.assigns.game, url) do
+      {:noreply, assign(socket, :lightbox_image, url)}
     else
       {:noreply, socket}
     end
@@ -104,7 +168,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   def handle_event("open-lightbox", _params, socket) do
     socket =
       if socket.assigns.selected_image do
-        assign(socket, :lightbox_open, true)
+        # G-01.2-25 task 2: seed the lightbox's own selection from whatever
+        # the page is currently showing, so it opens on the image the
+        # visitor was looking at. Re-seeded on every open, not just the
+        # first — closing without syncing back (see close-lightbox below)
+        # means a stale @lightbox_image from a prior visit must never leak
+        # into the next open.
+        socket
+        |> assign(:lightbox_image, socket.assigns.selected_image)
+        |> assign(:lightbox_open, true)
       else
         socket
       end
@@ -114,6 +186,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   @impl true
   def handle_event("close-lightbox", _params, socket) do
+    # G-01.2-25 task 2: deliberately does NOT sync @lightbox_image back
+    # onto @selected_image. The diagnosed gap was that navigating inside
+    # the open lightbox moved the page's own selection underneath it;
+    # syncing back on close would reintroduce that exact defect, only
+    # delayed by one interaction (close). Answered conservatively as NO —
+    # see the module doc's two-selection paragraph. If a later round wants
+    # the lightbox's last-viewed image to become the page's, that is a
+    # designed decision with its own UAT item, not an implementation
+    # detail to slip in here.
     {:noreply, assign(socket, :lightbox_open, false)}
   end
 
@@ -169,9 +250,16 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     <%!-- active_nav={nil} passed explicitly, not defaulted into: Detalle is a
     drill-down of the catalog and a peer of neither top-level nav entry
     (sketch 017's own page switcher marks no drawer link active here). --%>
-    <Layouts.app flash={@flash} fullbleed sticky search_expanded={false} active_nav={nil}>
+    <Layouts.app
+      flash={@flash}
+      fullbleed
+      sticky
+      search_expanded={false}
+      active_nav={nil}
+      boundary_collapse
+    >
       <:crumb>
-        <.link navigate={~p"/"}>Ludoteca</.link>
+        <.link navigate={@catalog_path}>Ludoteca</.link>
         <span class="pk-crumb-sep">/</span>
         <span class="pk-crumb-current">{@game.name}</span>
       </:crumb>
@@ -237,6 +325,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 // should not. headerHeight is read from the real
                 // --pk-header-h custom property published by .CatalogNav —
                 // never a literal pixel value.
+                //
+                // No viewport-width check here (G-01.2-24 task 1): the
+                // stylesheet already hides #detail-title-echo at and above
+                // the 48rem detail-layout breakpoint (app.css's single
+                // block that owns every mobile-vs-desktop swap on this
+                // page). Toggling a class on an element the stylesheet is
+                // not rendering is inert — a pixel/rem literal here would
+                // just be a second declaration of a value the stylesheet
+                // already owns once.
                 const headerHeight =
                   parseFloat(
                     getComputedStyle(document.documentElement).getPropertyValue("--pk-header-h")
@@ -268,7 +365,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         </script>
 
         <div id="detail-title-echo" class="pk-title-echo">
-          <span>{@game.name}</span>
+          <span class="pk-title-echo-name">{@game.name}</span>
           <button
             type="button"
             data-scroll-top
@@ -280,70 +377,131 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         </div>
 
         <div class="space-y-4">
-          <div class="mx-auto w-full max-w-7xl pk-gutter">
+          <div id="detail-masthead-wrap" class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-detail-masthead">
               <div class="pk-poster-col">
+                <div class="pk-poster-panel">
+                  <%!-- G-01.2-19 task 1 (was G-01.2-10 task 2): one facts
+                  row exists on the page, above the poster photo, at every
+                  viewport width — the mobile absolute overlay and the
+                  desktop inline copy are gone. Its own root already
+                  carries pk-facts-row, so no wrapper div is added.
+                  G-01.2-23 task 2 (round 3, sketch 037): moved from being
+                  the poster COLUMN's first child to being the poster
+                  PANEL's first child — the row's position relative to the
+                  photo is unchanged (the UAT approved it: "the pills are
+                  ok on the position"), only its containing box changed.
+                  Inside the panel, the pills now share the exact 1rem card
+                  padding the photo already had, so the pills and the
+                  photo's left/right edges coincide and the phone's buy-box
+                  reads as one card with one edge instead of two floating
+                  pieces. Addressed in CSS as a direct child of
+                  .pk-poster-panel (.pk-poster-panel > .pk-facts-row). See
+                  G-01.2-11/G-01.2-12 and sketch 032, and G-01.2-23 and
+                  sketch 037 for this move. --%>
+                  <GamePreview.facts_row game={@game} linked={true} />
+
+                  <div class="pk-poster-frame">
+                    <div class="absolute right-2 top-2 z-10">
+                      <.share_control id="detail-share-buybox" game={@game} />
+                    </div>
+
+                    <button
+                      :if={@selected_image}
+                      id="detail-lightbox-trigger"
+                      type="button"
+                      phx-click="open-lightbox"
+                      aria-label="Ampliar imagen del juego"
+                      class="pk-card-poster overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
+                    >
+                      <img
+                        src={@selected_image}
+                        alt={@game.name}
+                        class="h-full w-full object-cover js-cover-fallback"
+                      />
+                      <div class="hidden h-full w-full items-center justify-center bg-base-300 text-primary">
+                        <.icon name="hero-puzzle-piece" class="size-16" />
+                      </div>
+                    </button>
+                    <div
+                      :if={!@selected_image}
+                      class="pk-card-poster overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
+                    >
+                      <.icon name="hero-puzzle-piece" class="size-16" />
+                      <span class="sr-only">{@game.name}</span>
+                    </div>
+                  </div>
+
+                  <%!-- G-01.2-10 task 2, D3 (recommended: dots on mobile,
+                  thumbnails on desktop). Both strips are built from the same
+                  gallery_thumbnails/1 list and both dispatch select-image
+                  against the page's own @selected_image assign, sharing the
+                  same membership-check whitelist (valid_gallery_image?/2).
+                  The lightbox has since gained its OWN separate selection
+                  and event (@lightbox_image / select-lightbox-image,
+                  G-01.2-25) — but these two strips still drive one
+                  page-level assign between them, not two. Exactly one of
+                  the two renders per viewport, swap declared in app.css's
+                  single 48rem block. --%>
+                  <div
+                    :if={@game.gallery_urls != []}
+                    id="gallery-thumbnails"
+                    class="gap-2 overflow-x-auto pk-gallery-thumbnails"
+                  >
+                    <button
+                      :for={url <- gallery_thumbnails(@game)}
+                      type="button"
+                      phx-click="select-image"
+                      phx-value-url={url}
+                      class={[
+                        "h-16 w-16 shrink-0 overflow-hidden rounded-box border-2",
+                        (url == @selected_image && "border-primary") || "border-transparent"
+                      ]}
+                    >
+                      <img src={url} alt={@game.name} class="h-full w-full object-cover" />
+                    </button>
+                  </div>
+
+                  <div :if={@game.gallery_urls != []} id="gallery-dots" class="pk-gallery-dots">
+                    <button
+                      :for={{url, idx} <- Enum.with_index(gallery_thumbnails(@game))}
+                      type="button"
+                      phx-click="select-image"
+                      phx-value-url={url}
+                      aria-label={"Ver imagen #{idx + 1} de #{length(gallery_thumbnails(@game))}"}
+                      aria-current={(url == @selected_image && "true") || nil}
+                      class={["pk-gallery-dot", (url == @selected_image && "is-active") || nil]}
+                    >
+                      <span class="pk-gallery-dot-mark"></span>
+                    </button>
+                  </div>
+                </div>
+
+                <%!-- G-01.2-19 task 1 (was G-01.2-10 task 2, ask #3):
+                hidden below the detail layout breakpoint so the phone
+                shows exactly one Reservar control (the fixed
+                .pk-mobile-cta-bar below), revealed at/above it in the same
+                48rem block where the bar itself becomes hidden — both
+                halves of the invariant live in one place. Now a sibling
+                AFTER the bordered/shadowed panel above, not a descendant
+                of it, so it reads as a separate decision rather than a
+                fourth carousel control. --%>
                 <button
-                  :if={@selected_image}
                   type="button"
-                  phx-click="open-lightbox"
-                  aria-label="Ampliar imagen del juego"
-                  class="aspect-video overflow-hidden rounded-box bg-base-300 block w-full min-h-11 cursor-zoom-in"
+                  phx-click="open-reservation"
+                  class="btn btn-primary btn-lg min-h-11 w-full pk-poster-reserve"
                 >
-                  <img src={@selected_image} alt={@game.name} class="h-full w-full object-cover" />
+                  {reservation_cta_label()}
                 </button>
-                <div
-                  :if={!@selected_image}
-                  class="aspect-video overflow-hidden rounded-box bg-base-300 flex h-full w-full items-center justify-center text-primary"
-                >
-                  <.icon name="hero-puzzle-piece" class="size-16" />
-                  <span class="sr-only">{@game.name}</span>
-                </div>
-
-                <div
-                  :if={@game.gallery_urls != []}
-                  id="gallery-thumbnails"
-                  class="flex gap-2 overflow-x-auto"
-                >
-                  <button
-                    :for={url <- gallery_thumbnails(@game)}
-                    type="button"
-                    phx-click="select-image"
-                    phx-value-url={url}
-                    class={[
-                      "h-16 w-16 shrink-0 overflow-hidden rounded-box border-2",
-                      (url == @selected_image && "border-primary") || "border-transparent"
-                    ]}
-                  >
-                    <img src={url} alt={@game.name} class="h-full w-full object-cover" />
-                  </button>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    phx-click="open-reservation"
-                    class="btn btn-primary min-h-11 flex-1"
-                  >
-                    {reservation_cta_label()}
-                  </button>
-                  <.share_control id="detail-share-buybox" game={@game} />
-                </div>
               </div>
 
               <div class="pk-text-col">
-                <GamePreview.facts_row game={@game} linked={true} />
-
                 <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
 
-                <.link :if={@game.weight_band} navigate={~p"/?weight_bands=#{@game.weight_band}"}>
-                  <GameChips.weight_band_badge game={@game} show_descriptor={true} />
-                </.link>
-                <GameChips.editorial_tags
-                  tags={@game.tags}
-                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
-                />
-
+                <%!-- G-01.2-10 task 3: the description sits immediately
+                after the title with nothing in between (ask #2) — every
+                element that used to be wedged here (weight-band badge,
+                editorial hashtags) moved below the separator. --%>
                 <div :if={@game.description} class="pk-description">
                   <p class={["pk-clamp", @description_expanded && "is-expanded"]}>
                     {@game.description}
@@ -356,6 +514,35 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                     {(@description_expanded && "Ver menos") || "Ver más"}
                   </button>
                 </div>
+
+                <%!-- Boundary between the primary reading block (title +
+                description) and supplementary "more information" content
+                (ask #4/#6). daisyUI's own divider component checked and
+                used as-is for the line's colour/thickness (already
+                theme-aware via color-mix, no hand-rolled rule needed for
+                that); only its own default margin fought .pk-text-col's
+                already-established 1rem flex gap (doubling the visible
+                gap around the line), so .pk-divider neutralizes just that
+                one property. Reused verbatim by 01.2-18 for the boundary
+                before the recommendations shelf. --%>
+                <div class="divider pk-divider" role="separator"></div>
+
+                <GameChips.editorial_tags
+                  tags={@game.tags}
+                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
+                />
+
+                <%!-- G-01.2-20 task 1 (was D2's "keep the badge, relocate it
+                here"): the badge block and its explanatory sentence are
+                gone — the next UAT pass reversed the prior round's
+                keep-decision ("still it shows its 'category' pills with a
+                description(remove it)"). The dificultad fact now appears
+                exactly once, in the facts row above the poster
+                (`GamePreview.facts_row/1`, `linked={true}`), which also
+                inherited this badge's filter-link target
+                (`?weight_bands=`). The weight-band badge component itself
+                is kept with zero call sites — see its own doc comment
+                (in `GameChips`) for why. --%>
 
                 <h2 :if={@mechanic_labels != []} class="pk-section-heading">Mecánicas</h2>
                 <GameChips.chip_row
@@ -371,16 +558,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   href_fun={fn label -> ~p"/?themes=#{label}" end}
                 />
 
-                <h2 class="pk-section-heading">Ficha técnica</h2>
-                <dl class="pk-spec-list">
-                  <div :if={@game.min_players && @game.max_players} class="pk-spec-row">
-                    <dt>Jugadores</dt>
-                    <dd>{@game.min_players}-{@game.max_players}</dd>
-                  </div>
-                  <div :if={playtime_text(@game)} class="pk-spec-row">
-                    <dt>Duración</dt>
-                    <dd>{playtime_text(@game)}</dd>
-                  </div>
+                <%!-- G-01.2-10 task 3, ask #5: the publisher row is gone
+                (unconditional, every viewport width) and ficha_tecnica?/1
+                below narrowed from five fields to four — see that
+                function's own comment. --%>
+                <h2 :if={ficha_tecnica?(@game)} class="pk-section-heading">Ficha técnica</h2>
+                <dl :if={ficha_tecnica?(@game)} class="pk-spec-list">
                   <div :if={@game.min_age} class="pk-spec-row">
                     <dt>Edad mínima</dt>
                     <dd>{@game.min_age}+</dd>
@@ -392,18 +575,6 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   <div :if={@game.designers != []} class="pk-spec-row pk-spec-row--wide">
                     <dt>Diseñadores</dt>
                     <dd>{Enum.join(@game.designers, ", ")}</dd>
-                  </div>
-                  <div :if={@game.publishers != []} class="pk-spec-row pk-spec-row--wide">
-                    <dt>Editorial</dt>
-                    <dd>{Enum.join(@game.publishers, ", ")}</dd>
-                  </div>
-                  <div class="pk-spec-row pk-spec-row--wide">
-                    <dt>Ilustrador</dt>
-                    <dd>No disponible</dd>
-                  </div>
-                  <div class="pk-spec-row pk-spec-row--wide">
-                    <dt>Puesto en el ranking BGG</dt>
-                    <dd>No disponible</dd>
                   </div>
                   <div :if={@game.bgg_id} class="pk-spec-row pk-spec-row--wide">
                     <dd>
@@ -422,6 +593,30 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             </div>
           </div>
 
+          <%!-- G-01.2-18 task 1: boundary between the detail content above
+          and the recommendations shelf below, so a reader can tell the
+          page has changed subject rather than reading the shelf as more of
+          the masthead's own content. Second call site of 01.2-17's
+          .pk-divider (see that rule's own comment). G-01.2-19 task 2
+          removed the width-cap class this line used
+          to carry — this wrapper already shares the shell's own
+          mx-auto/w-full/max-w-7xl/pk-gutter recipe with the masthead and
+          the CTA bar's inner wrapper, so no per-element width override is
+          needed for the line to start and end level with both. Renders on
+          the loading pass too (the skeleton shelf reserves the real
+          shelf's footprint, so the boundary must exist ahead of it as
+          well, or it would pop in only once the connected mount replaces
+          the skeleton) and, on the connected pass, is gated on the exact
+          same emptiness the shelf itself checks — a boundary above an
+          empty shelf is worse than no boundary at all. --%>
+          <div
+            :if={@loading or @similar_games != []}
+            id="detail-shelf-separator"
+            class="mx-auto w-full max-w-7xl pk-gutter"
+          >
+            <div class="divider pk-divider" role="separator"></div>
+          </div>
+
           <%!-- 01.1-07: skeleton shelf while @loading (disconnected pass) —
           reserves the shelf's own footprint so nothing jumps once the
           connected mount replaces it with real (or, if there are none,
@@ -431,6 +626,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             :if={!@loading}
             id="similares"
             title="Juegos similares"
+            badge={if @similares_widened, do: "Ampliado"}
             games={Enum.map(@similar_games, &{"similares-#{&1.id}", &1})}
             subtitle={@similares_subtitle}
             empty={@similar_games == []}
@@ -439,31 +635,74 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           />
         </div>
 
+        <%!-- G-01.2-18 task 2: the bar's own second row (a stacked share
+        control duplicating the poster's corner share icon) is gone — the
+        reserve button is now the wrapper's only child. .pk-cta-bar-inner
+        itself stays (see its own comment in app.css: it survives for the
+        alignment cap, not for the stacking it was introduced for). --%>
         <div id="detail-cta-bar" class="pk-mobile-cta-bar">
-          <button type="button" phx-click="open-reservation" class="btn btn-primary min-h-11 flex-1">
-            {reservation_cta_label()}
-          </button>
-          <.share_control id="detail-share-ctabar" game={@game} />
+          <div class="mx-auto w-full max-w-7xl pk-gutter">
+            <div class="pk-cta-bar-inner">
+              <button
+                type="button"
+                phx-click="open-reservation"
+                class="btn btn-primary min-h-11 w-full"
+              >
+                {reservation_cta_label()}
+              </button>
+            </div>
+          </div>
         </div>
 
+        <%!-- G-01.2-21 task 2: always rendered now (no `:if`) — state lives in
+        the `is-open` class + aria-hidden, not in whether this element
+        exists, which is what lets the open/close transition below actually
+        transition (there is no closed DOM state to fade from/to on a
+        conditionally-rendered element). The image itself keeps its own
+        `:if` so a game with no selected image renders an empty, hidden
+        container rather than an <img> with no src. --%>
         <div
-          :if={@lightbox_open}
           id="detail-lightbox"
-          class="pk-lightbox is-open"
+          class={["pk-lightbox", @lightbox_open && "is-open"]}
           role="dialog"
           aria-modal="true"
           aria-label="Imágenes del juego"
+          aria-hidden={to_string(!@lightbox_open)}
           phx-hook=".Lightbox"
         >
           <script :type={Phoenix.LiveView.ColocatedHook} name=".Lightbox">
             export default {
               mounted() {
-                this.closeBtn = this.el.querySelector("[data-lightbox-close]")
-                this.closeBtn?.focus()
+                // The element is always present now, so mount only ever
+                // observes the closed state (lightbox_open defaults false
+                // before first mount) — this deliberately does NOT focus
+                // anything on mount, which would otherwise steal focus on
+                // every page load.
+                this.wasOpen = false
+                this.syncFocusOnOpenChange()
 
                 this.onKeydown = (e) => {
+                  // Inert-while-closed guard: a stray key event (this
+                  // listener lives on an element that is always in the DOM)
+                  // must never act on a hidden overlay.
+                  if (!this.el.classList.contains("is-open")) return
+
                   if (e.key === "Escape") {
                     this.pushEvent("close-lightbox", {})
+                    return
+                  }
+                  // Arrow keys click the SAME chevron buttons the pointer
+                  // already uses — no url is computed here and no event is
+                  // pushed, so the keyboard route goes through the exact
+                  // same select-image handler and membership whitelist as
+                  // the buttons (T-01.2-21-01), never a second selection
+                  // path.
+                  if (e.key === "ArrowLeft") {
+                    this.el.querySelector("[data-lightbox-prev]")?.click()
+                    return
+                  }
+                  if (e.key === "ArrowRight") {
+                    this.el.querySelector("[data-lightbox-next]")?.click()
                     return
                   }
                   if (e.key !== "Tab") return
@@ -483,6 +722,22 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 }
                 this.el.addEventListener("keydown", this.onKeydown)
               },
+              updated() {
+                this.syncFocusOnOpenChange()
+              },
+              // Single routine driving focus off a state TRANSITION (not
+              // the current state alone), called from both mounted() and
+              // updated() so it never runs twice for the same transition
+              // and never runs on an unrelated re-render.
+              syncFocusOnOpenChange() {
+                const isOpen = this.el.classList.contains("is-open")
+                if (isOpen && !this.wasOpen) {
+                  this.el.querySelector("[data-lightbox-close]")?.focus()
+                } else if (!isOpen && this.wasOpen) {
+                  document.getElementById("detail-lightbox-trigger")?.focus()
+                }
+                this.wasOpen = isOpen
+              },
               destroyed() {
                 this.el.removeEventListener("keydown", this.onKeydown)
               }
@@ -497,24 +752,46 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           >
             <.icon name="hero-x-mark" class="size-5" />
           </button>
+          <%!-- Arrow-anchoring decision, SUPERSEDED (G-01.2-21 -> G-01.2-28
+          task 2): the previous round anchored both chevrons to the
+          browser's own edge (left-4/right-4) rather than the shell's
+          content edge, for three reasons. Two survive here, one does not.
+          (1) survives, differently: no wrapper element was needed then,
+          and none is needed now either — both buttons read
+          --pk-shell-content-width directly (see .pk-lightbox-chevron-prev/
+          -next in app.css) instead of sitting inside a bounds element.
+          (2) survives outright: at phone widths these buttons barely move,
+          so the 44px touch targets stay clear of the photo's own tap area
+          exactly as before. (3) did not survive: "no complaint recorded"
+          stopped being true when the user asked for shell-width arrows
+          twice, in UAT tests 12 and 17 — the original decision itself
+          named that as the condition for reopening it, and the condition
+          fired. The values themselves live in app.css, not here. --%>
           <button
             :if={length(gallery_thumbnails(@game)) > 1}
             type="button"
-            phx-click="select-image"
-            phx-value-url={lightbox_neighbor(@game, @selected_image, -1)}
+            data-lightbox-prev
+            phx-click="select-lightbox-image"
+            phx-value-url={lightbox_neighbor(@game, @lightbox_image, -1)}
             aria-label="Imagen anterior"
-            class="btn btn-circle min-h-11 min-w-11 absolute left-4 top-1/2 -translate-y-1/2"
+            class="pk-lightbox-chevron pk-lightbox-chevron-prev btn btn-circle min-h-11 min-w-11 absolute top-1/2 -translate-y-1/2"
           >
             <.icon name="hero-chevron-left" class="size-5" />
           </button>
-          <img src={@selected_image} alt={@game.name} class="pk-lightbox-img" />
+          <img
+            :if={@lightbox_image}
+            src={@lightbox_image}
+            alt={@game.name}
+            class="pk-lightbox-img"
+          />
           <button
             :if={length(gallery_thumbnails(@game)) > 1}
             type="button"
-            phx-click="select-image"
-            phx-value-url={lightbox_neighbor(@game, @selected_image, 1)}
+            data-lightbox-next
+            phx-click="select-lightbox-image"
+            phx-value-url={lightbox_neighbor(@game, @lightbox_image, 1)}
             aria-label="Imagen siguiente"
-            class="btn btn-circle min-h-11 min-w-11 absolute right-4 top-1/2 -translate-y-1/2"
+            class="pk-lightbox-chevron pk-lightbox-chevron-next btn btn-circle min-h-11 min-w-11 absolute top-1/2 -translate-y-1/2"
           >
             <.icon name="hero-chevron-right" class="size-5" />
           </button>
@@ -659,11 +936,22 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   attr :id, :string, required: true
   attr :game, Game, required: true
 
-  # Shared by the buy-box column and the mobile CTA bar (01.1-04) so the
-  # two share controls can never drift. Native Web Share API first
-  # (.ShareButton hook); the fallback popover's WhatsApp/X intent hrefs and
-  # the copy-link target are built server-side in HEEx with
-  # URI.encode_www_form/1 — no client-side URL assembly (T-01.1-08).
+  # Shared by the buy-box column (the mobile CTA bar's own copy was removed
+  # in G-01.2-18 task 2) so a future second call site can never drift from
+  # this one. Native Web Share API first (.ShareButton hook); the fallback
+  # popover's WhatsApp/X intent hrefs and the copy-link target are built
+  # server-side in HEEx with URI.encode_www_form/1 — no client-side URL
+  # assembly (T-01.1-08).
+  #
+  # G-01.2-18 task 2: this component briefly carried a `variant` attribute
+  # (Phase 01.2 gap-closure, G-01.2-6) so the buy-box panel and the mobile
+  # CTA bar could render two different shapes for the same trigger — a
+  # bordered circle on the panel (sketch 027) vs a full-width labelled pill
+  # in the bar (sketch 028). With the bar's own copy removed, only the
+  # panel's bordered-circle shape remains: the attribute, the conditional
+  # visible "Compartir" label, the conditional `aria-label`, and the
+  # class-per-variant helper behind them all collapsed back to one shape
+  # rather than being kept "in case" a second call site returns.
   defp share_control(assigns) do
     assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game.id}"))
 
@@ -676,7 +964,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         data-share-title={@game.name}
         data-share-url={@share_url}
         aria-label="Compartir juego"
-        class="btn btn-circle btn-outline btn-primary min-h-11 min-w-11"
+        class="pk-share-trigger min-h-11 min-w-11"
       >
         <.icon name="hero-share" class="size-5" />
       </button>
@@ -768,9 +1056,22 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     Enum.reject([game.cover_url | game.gallery_urls], &is_nil/1)
   end
 
-  # The lightbox's previous/next controls reuse this against the same
-  # whitelist gallery_thumbnails/1 builds — there is no second,
-  # independently-derived image list (T-01.1-16). Wraps around both ends.
+  # T-01.2-25-01: the single membership whitelist both "select-image" (the
+  # page's own selection) and "select-lightbox-image" (the lightbox's own,
+  # G-01.2-25) call before ever assigning a client-supplied url. One
+  # predicate, two callers — a client-supplied url reaching an `img src`
+  # unchecked is the exact defect this guards against, and adding the
+  # lightbox's own selection event must never add a second, independently
+  # written whitelist alongside this one.
+  defp valid_gallery_image?(game, url) do
+    url in gallery_thumbnails(game)
+  end
+
+  # The lightbox's previous/next controls compute their target url by
+  # walking gallery_thumbnails/1's own list — there is no second,
+  # independently-derived image list (T-01.1-16). Called with
+  # @lightbox_image as `current` (G-01.2-25) — the lightbox's own
+  # selection, not the page's @selected_image. Wraps around both ends.
   defp lightbox_neighbor(game, current, offset) do
     urls = gallery_thumbnails(game)
 
@@ -780,19 +1081,27 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     end
   end
 
-  defp playtime_text(%{playing_time: t}) when is_integer(t), do: "#{t} min"
-
-  defp playtime_text(%{min_playtime: min, max_playtime: max}) when is_integer(min) and is_integer(max) and min != max,
-    do: "#{min}-#{max} min"
-
-  defp playtime_text(%{min_playtime: min}) when is_integer(min), do: "#{min} min"
-  defp playtime_text(%{max_playtime: max}) when is_integer(max), do: "#{max} min"
-  defp playtime_text(_game), do: nil
+  # D-04/D-05 (01.2-04): the UI-SPEC `zero-one-many` backstop for Ficha
+  # técnica — the section (heading + list) renders only when at least one
+  # of the four remaining carriable fields is present, so a minimal-data
+  # game never shows a bare heading over an empty grid. Every field read
+  # here is present on every %Game{} (two integers, one array column with
+  # `default: []`, one nullable integer) — no nil-dereference path exists.
+  # Narrowed from five fields to four in the G-01.2-10 mobile masthead
+  # rework (01.2-17): the publisher-name clause was dropped in the same
+  # edit as the spec-row it guarded — the two must move together, or a
+  # game whose only remaining data was that field re-opens the exact
+  # empty-heading hole this guard exists to close.
+  defp ficha_tecnica?(game) do
+    not is_nil(game.min_age) or
+      not is_nil(game.year_published) or
+      game.designers != [] or
+      not is_nil(game.bgg_id)
+  end
 
   # Subtitle for the Juegos similares shelf — reuses Vocabulary.weight_band/1's
   # existing plain-Spanish descriptor label rather than authoring new copy
-  # (01.1-03 checkpoint decision). nil when the game has no band, matching
-  # Catalog.similar_games/1's own nil-band guard (there is nothing to name).
+  # (01.1-03 checkpoint decision).
   # 01.1-07: mirrors CatalogLive.Index's safe_filter_games/1 shape — a
   # failure in the "more like this" row must never take down a detail page
   # whose primary content already loaded fine. carousel_row/1's own
@@ -805,9 +1114,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     _error -> []
   end
 
-  defp similares_subtitle(%{weight_band: nil}), do: nil
+  # G-01.2-7 / sketch 031: similares_subtitle/1 became similares_subtitle/2,
+  # taking the widened? flag alongside the game. A widened shelf (including
+  # every no-band game, which is always widened per Catalog.similar_games/1's
+  # new contract) gets sketch 031's copy; a true same-band shelf keeps
+  # exactly the copy it returned before this plan.
+  defp similares_subtitle(_game, true), do: "Otras opciones que te van a encantar"
+  defp similares_subtitle(%{weight_band: nil}, false), do: nil
 
-  defp similares_subtitle(game) do
+  defp similares_subtitle(game, false) do
     case Vocabulary.weight_band(game.weight_band) do
       nil -> nil
       band -> "Otros juegos del mismo nivel: " <> band.label

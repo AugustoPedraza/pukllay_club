@@ -23,6 +23,13 @@ defmodule PukllayClubWeb.CarouselRow do
   `subtitle` is a one-line plain-Spanish explanation of what that shelf is.
   The caller owns the copy; this component only renders it.
 
+  `badge` (G-01.2-7, sketch 031): an optional small daisyUI `badge-accent`
+  pill rendered inside the `<h2>` right after `@title` — the sole visible
+  signal that `CatalogLive.Show`'s Juegos similares shelf had to widen
+  beyond the viewed game's own weight band to stay full. Defaults `nil`;
+  every one of the 8 home-page callers leaves it unset, so those rows are
+  byte-identical to before this attr existed.
+
   G-01-3: the rail's horizontal scroll is intentional — it is NOT the
   responsive `#games` grid. The always-visible `.pk-rail-wrap` edge-fade
   is the primary passive scroll cue (01-11); Netflix-style edge-overlay
@@ -46,6 +53,12 @@ defmodule PukllayClubWeb.CarouselRow do
   attr :empty, :boolean, default: false
   attr :row_key, :string, required: true
   attr :exhausted, :boolean, default: false
+  # G-01.2-7 / sketch 031: an optional quiet annotation next to the title
+  # (e.g. "Ampliado" on a widened Juegos similares shelf). `nil` for every
+  # existing caller (the 8 home-page rows never pass it), so those rows
+  # render byte-identically — see catalog_show_test.exs's home-page
+  # invariance test.
+  attr :badge, :string, default: nil
 
   def carousel_row(assigns) do
     ~H"""
@@ -211,7 +224,12 @@ defmodule PukllayClubWeb.CarouselRow do
       </script>
       <div class="pk-row-header mx-auto w-full max-w-7xl pk-gutter flex items-end justify-between gap-4">
         <div class="space-y-1">
-          <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>{@title}</h2>
+          <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>
+            {@title}<span
+              :if={@badge}
+              class="badge badge-accent badge-sm rounded-full font-bold ml-2 align-middle"
+            >{@badge}</span>
+          </h2>
           <p :if={@subtitle} class="text-neutral text-sm">{@subtitle}</p>
         </div>
       </div>

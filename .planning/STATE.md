@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 2
+current_phase: 02
 current_phase_name: Natural-Language Spanish Search + Auth
 status: planning
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-08-25T00:00:03.828Z"
-last_activity: 2026-08-24
-last_activity_desc: Completed quick task 260824-q8z - mobile drawer bottom block content/footer split
-state_head: 368d0b8ecb844439b469c74ede0ccab41fad8bd0
+stopped_at: Phase 01.2 complete, ready to plan Phase 02
+last_updated: "2026-08-29T15:48:23.163Z"
+last_activity: 2026-08-29
+last_activity_desc: Phase 01.2 complete, transitioned to Phase 02
+state_head: 80b815f6cd3281abbcd5b1e2fddc5621f3dadb1a
 progress:
-  total_phases: 5
-  completed_phases: 2
-  total_plans: 21
-  completed_plans: 21
+  total_phases: 6
+  completed_phases: 3
+  total_plans: 48
+  completed_plans: 48
 milestone_name: milestone
 ---
 
@@ -21,18 +21,18 @@ milestone_name: milestone
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-24)
+See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.1 — Site Shell & Content Pages (INSERTED)
+**Current focus:** Phase 02 — Natural-Language Spanish Search + Auth
 
 ## Current Position
 
-Phase: 2 — Natural-Language Spanish Search + Auth
+Phase: 02 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-24 - Completed quick task 260824-u5d: in-row horizontal infinite scroll for the 8 catalog carousels (30-game ceiling), Ver todo tile removed
+Last activity: 2026-08-29 — Phase 01.2 complete, transitioned to Phase 02
 
 Progress: [██████████] 100%
 
@@ -40,7 +40,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 24
+- Total plans completed: 51
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -51,6 +51,7 @@ Progress: [██████████] 100%
 | 00 | 6 | - | - |
 | 01 | 9 | - | - |
 | 01.1 | 9 | - | - |
+| 01.2 | 27 | - | - |
 
 **Recent Trend:**
 
@@ -81,6 +82,16 @@ Progress: [██████████] 100%
 | Phase 01.1 P01 | 115min | 3 tasks | 9 files |
 | Phase quick-260821-v7q P01 | 35min | 3 tasks | 6 files |
 | Phase quick-260824-jkc P01 | 40min | 3 tasks | 4 files |
+| Phase 01.2 P01 | 50min | 2 tasks | 7 files |
+| Phase 01.2 P02 | 10min | 2 tasks | 2 files |
+| Phase 01.2 P03 | 55min | 3 tasks | 3 files |
+| Phase 01.2 P04 | 11min | 3 tasks | 2 files |
+| Phase 01.2 P05 | 15min | 3 tasks | 3 files |
+| Phase 01.2 P11 | 40min | 3 tasks | 5 files |
+| Phase 01.2 P13 | 35min | 3 tasks | 3 files |
+| Phase 01.2 P12 | 45min | 3 tasks | 5 files |
+| Phase 01.2 P14 | 25min | 3 tasks | 5 files |
+| Phase 01.2 P15 | 15min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -139,6 +150,25 @@ Recent decisions affecting current work:
 - [Phase 01.1]: Quick task 260821-v7q: assign_new/3 replaces a compile-time isologo? constant so tests can force the wordmark-only fallback branch that becomes unreachable once both real mark PNGs exist on disk; production behaviour byte-identical since no call site passes the key
 - [Phase 01.1]: Quick task 260822-2v9: header surface base-200 (matches footer token), brand wrapper flex-1->flex-initial, .pk-nav-actions groups Sumate CTA + theme toggle with margin-left:auto fallback, CTA rises to the toggle's fixed 48px anchor (min-h-12, small-size modifier dropped), CoreComponents.input/1's fieldset wrapper neutralized via header-scoped selector (not the shared component), .pk-nav-links demoted to neutral with a new aria-current active-state rule
 - [Phase 2]: Quick task 260824-jkc: shipped sketch 020's winning design — desktop 'Explorar categorías' mega-menu (Layouts.category_menu/1, right-anchored panel, one shared derived shelf list feeding both surfaces) + refined bare-outline/soft-tint mobile chip row; scroll-spy widened to [data-chip-target] so both surfaces share one IntersectionObserver; .pk-shelf landing offset derived from --pk-header-h. Two Rule-1 auto-fixes found via live headless-Chrome CDP measurement (not caught by ExUnit): dual flex margin-left:auto competing between trigger/search (fixed via general-sibling override) and the trigger label's 48rem reveal overflowing the row at 768px (moved to a measured 50rem breakpoint).
+- [Phase 01.2]: 01.2-01: mirrored (not extracted into a shared module) the three-clause detail_path/2 helper in both GameCard and GamePreview so both routes into the detail page carry identical ?from= state; PukllayClubWeb.CatalogFilters is now the single filter-parsing/validation authority, consumed by both CatalogLive.Index (URL read) and CatalogLive.Show (breadcrumb sanitiser)
+- [Phase 01.2]: 01.2-02: D-06 similar_games/1 ranks same-weight-band candidates by a single Postgres fragment/2 set-intersection score (mechanics x2 + themes x1, desc, then name/id asc tie-break) instead of alphabetical order; overlap ranks but never filters, so a zero-overlap band-mate is still returned last
+- [Phase 01.2]: 01.2-03: browsing_results?/1 wraps filters_active?/1 (never restates it) as the single gate for carousel vs. grid; a Rule 1 bugfix (:carousel_needs_reset/sync_carousel_visibility) was required so phx-update="stream" carousel rows actually repopulate every time the member returns from the grid, since D-01/D-02 removed the grid's always-visible fallback
+- [Phase 01.2]: 01.2-04: Ficha técnica trimmed to Edad mínima/Año/Diseñadores/Editorial/BGG link with a new ficha_tecnica?/1 section-level guard closing the zero-one-many backstop; playtime_text/1 removed with its two sole call sites (D-04/D-05)
+- [Phase 01.2]: 01.2-04: buy-box redesigned per UI-SPEC D-07 — pk-card-poster aspect, bg-base-200/rounded-box/p-4 panel, btn-lg full-width reserve CTA, top-right-anchored btn-sm share control (also fixing the mobile CTA bar's weight split since share_control/1 is shared), and a js-cover-fallback cover-failure fallback; mobile bar's flex-1/height/padding/timing and .DetailChrome untouched
+- [Phase 01.2]: 01.2-05: .GridScroll colocated hook (vertical twin of .CarouselScroll) drives grid infinite scroll via an IntersectionObserver sentinel; data-exhausted folds in the new :more_error assign so a mid-scroll failure parks the hook instead of auto-retrying, and apply_filters/1 resets :more_error on both branches alongside :load_error
+- [Phase 01.2]: 01.2-11: search-morph open/closed state moved fully server-side (Layouts.header_inner/1 renders is-open/is-search-open/aria-expanded/tabindex from a :search_expanded assign); .CatalogNav hook reduced to focus-only management and the document-level outside-click listener deleted (fixed G-01.2-2/G-01.2-3)
+- [Phase 01.2]: 01.2-11: handle_params/3 widens :search_expanded only on a filters_active? false->true transition (not a plain OR against current state) so a same-query re-run never resurrects a box the member explicitly closed; CatalogLive.Show gained no-op open-search/close-search handlers since header_inner/1's buttons now dispatch these unconditionally on every nav_search-slot page
+- [Phase 01.2]: [Phase 01.2]: 01.2-13: .pk-poster-col position: static -> relative (unlayered .pk-* rule was silently defeating the layered Tailwind relative utility below 768px, G-01.2-5); cascade-layer hazard documented at top of app.css; audit of all 18 .pk-* position rules found no second instance
+- [Phase 01.2]: [Phase 01.2]: 01.2-13: buy-box panel ported sketch 027 variant B's Elevated Shadow (fill+border+shadow, per the rendered artifact, not detail-page-layout.md's fill-only prose summary); share_control/1 gained a variant attr (:panel/:bar) with two real shapes, both at the 44px floor rather than the sketch's smaller sizes
+- [Phase 01.2]: [Phase 01.2]: 01.2-13: mobile CTA bar restructured to sketch 028's stacked layout (.pk-cta-bar-inner, reserve w-full not flex-1, share as a labelled full-width pill), capped to 68.75rem; body.pk-has-cta-bar padding recomputed 9.25rem -> 12.5rem (148+44+8px, derived); .DetailChrome scroll state machine untouched
+- [Phase 01.2]: 01.2-12: :rendered_results assign now holds the SETTLED background surface (distinct from browsing_results?/1's DESIRED-surface predicate); settle_surface/1 is a no-op while @filters_open is true so the carousel/grid never restructures behind the open modal, and apply-filters/close-filters/clear-filters all now re-enter apply_filters/1 after closing the modal to settle + repopulate the reappearing container's stream in one round trip
+- [Phase 01.2]: 01.2-12: active-filters chip row (sketch 029 winner C) added to the Resultados header — .pk-active-filter-chip is deliberately distinct from filter_modal.ex's own selection-chip class (no shadow, soft accent tint); chip removal reuses toggle-facet/toggle-scalar verbatim, new parameterless clear-query handler for the query chip
+- [Phase 01.2]: 01.2-14: Catalog.similar_games/1's weight_band hard filter replaced by a band-preference array_position order_by term (nearest-band-first, derived from Vocabulary.weight_band_level/1) — shelf always fills to 12 cards, including for no-band games; D-06's intra-band overlap order kept byte-identical (G-01.2-7)
+- [Phase 01.2]: 01.2-14: carousel_row/1 gained an optional badge attr (daisyUI badge-accent, rounded-full) defaulting nil; CatalogLive.Show derives :similares_widened by comparing returned games' bands and swaps in sketch 031's Ampliado badge + widened subtitle only when the shelf had to widen past the viewed game's own band
+- [Phase 01.2]: 01.2-15: deleted flash_group/1's #client-error/#server-error toast entirely and replaced with .pk-conn-banner (element-id-targeted phx-disconnected/phx-connected bindings, accent tint, Spanish copy) as a sibling of #app-header inside the LiveView root but outside the header so it never shifts --pk-header-h
+- [Phase 01.2]: 01.2-15: reduced-motion for .pk-conn-spinner uses @media (prefers-reduced-motion: no-preference) gating the animation itself (matching .pk-scroll-top's idiom), not a new per-selector reduce-block override, since app.css already retired that pattern in favor of one universal * guard
+- [Phase 01.2]: 01.2-15: UI-SPEC's D-03 auto-load-more error row rescoped to a live query failure only (safe_filter_games/1, requires an established socket); a new connection-status row added for the transport-disconnect surface; header row-count corrected from a pre-existing 36/31 (already off-by-one against actual 37/32) to 38/33/3/2 after recounting
+- [Phase 01.2, 2026-08-29]: Phase closed after 32 plans and 10 UAT gap-closure rounds (G-01.2-9 through G-01.2-21) — the mobile detail-page masthead was rebuilt (facts pills above the poster, one buy-box card, compact dot row), a single shared pill/chip base component replaced five independently-styled chip implementations, the lightbox was rebuilt from scratch (full-screen opaque stage, shell-width photo cap, own selection state independent of the gallery carousel, unified dark/light control family), and a site-wide sticky-footer layout + mobile-only title-echo bar shipped. Final UAT gate closed 2026-08-29: 23/28 checkpoints reconfirmed via a live mobile (390px) browser spot-check; the remaining 5 desktop-only claims (shell-width alignment at 1280/1440/1920px) were accepted on existing exact-DOM-coordinate measurements already on record in the Gaps section, since this session's browser automation tool would not resize its rendering viewport past ~390px (resize_window reported success but window.innerWidth stayed pinned at 339px) — worth re-verifying live on a real desktop browser if that tool limitation is ever hit again for future UI work.
 
 ### Pending Todos
 
@@ -222,6 +252,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 ### Roadmap Evolution
 
 - Phase 01.1 edited: cleaned up title/goal/requirements/success-criteria after insertion; added SHELL-01..05 to REQUIREMENTS.md
+- Phase 01.2 inserted after Phase 1: Catalog & Detail Navigation Polish — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped (URGENT)
 
 ## Deferred Items
 
@@ -233,6 +264,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-25T00:00:03.053Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: /home/apedraza/projects/pukllay_club/.planning/phases/02-natural-language-spanish-search-auth/02-UI-SPEC.md
+Last session: 2026-08-29
+Stopped at: Phase 01.2 complete, ready to plan Phase 02
+Resume file: None

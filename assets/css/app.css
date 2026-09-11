@@ -9,6 +9,35 @@
 /* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
 @source "../../_build/dev/phoenix-colocated/pukllay_club/*/";
 
+/* CASCADE-LAYER HAZARD (Phase 01.2 gap-closure, G-01.2-5): Tailwind v4
+   generates every one of its own utility classes (`.relative`, `.p-4`,
+   `.bg-base-200`, etc.) inside `@layer utilities`. Every custom `.pk-*`
+   rule in THIS file, from here down, is written with no `@layer` wrapper
+   at all — it is unlayered CSS. Per the CSS Cascading and Layers spec, an
+   unlayered rule always beats a rule in any named layer, REGARDLESS of
+   selector specificity or source order. A `.pk-*` rule here that sets a
+   property some Tailwind utility also sets will therefore silently win
+   over that utility on the same element — and the utility will look like
+   it did nothing, with no warning, no specificity fight to notice, and no
+   test that string-matches class attributes able to see it.
+
+   Concrete instance this note is written from: `.pk-poster-col`'s own
+   `position: static` base rule silently defeated the `relative` Tailwind
+   utility a template added to the same element to give an
+   absolutely-positioned child a containing block. Below the 768px detail
+   breakpoint, where no other rule overrode `.pk-poster-col`'s position,
+   the child resolved against the initial containing block instead and
+   rendered near the top of the whole page — see
+   `.planning/debug/G-01.2-5-buybox-layout.md` for the full trace.
+
+   THE RULE TO FOLLOW: when a `.pk-*` rule in this file and a Tailwind
+   utility class both want to set one property on one element, delete the
+   utility from the markup and keep the property in the `.pk-*` rule. One
+   field, one declaration, in the file that already owns that element's
+   layout. Do not add a second, competing declaration and hope specificity
+   or source order sorts it out — for unlayered-vs-layered rules, it
+   categorically will not. */
+
 /* Self-hosted brand typefaces (Bebas Neue + Inter). Both are OFL-licensed, so self-hosting
    from priv/static/fonts/ is permitted. Self-hosting avoids a runtime request to any
    third-party Google font CDN for every visitor.
@@ -204,12 +233,74 @@
 
 /* Sketch 001 (shelf-structure, variant D): the single gutter token every
    aligned surface (header, row headers, rail wraps, capped page sections)
-   shares. .pk-gutter below is the ONLY rule that reads this token — no
-   other selector in this stylesheet may set a horizontal padding on an
-   aligned surface, which is what guarantees the nav and row content can
-   never drift to two different spacing values again. */
+   shares. `.pk-gutter` below is the PRIMARY reader — the utility class
+   every `mx-auto w-full max-w-7xl pk-gutter`-recipe surface uses
+   (`.pk-nav-inner`, `#detail-masthead-wrap`, `.pk-footer-row`,
+   `#detail-shelf-separator`, the mobile CTA bar's inner wrapper). It is
+   NOT the token's only reader, and claiming otherwise stopped being true
+   some time ago — corrected here (G-01.2-25) after a read-first audit
+   found several bespoke `.pk-*` rules already reading `var(--pk-gutter)`
+   directly, without going through the `.pk-gutter` class, for their OWN
+   horizontal alignment: `.pk-cat-panel` (right offset + max-width),
+   `.pk-about-cta-bar` and `.pk-title-echo` (their own horizontal
+   padding), `.pk-chip-spacer` (a flex-basis spacer sized to the gutter),
+   `.pk-search-morph` in both its closed and open-state rules (right
+   offset + width), and — as of G-01.2-28 — the `--pk-shell-content-width`
+   token declared just below (its own formula reads this token directly).
+   `.pk-lightbox-img` and both lightbox chevron side rules read THAT
+   derived token now, not `--pk-gutter` itself, so this token has one
+   fewer direct reader than the previous round recorded, not one more —
+   the formula moved, it did not multiply. The invariant this token actually enforces is
+   narrower than "one reader": no selector anywhere in this file may
+   declare an INDEPENDENTLY-CHOSEN horizontal-alignment value — a literal
+   px/rem/vw number picked fresh for one rule — on an aligned surface;
+   every rule that needs one reads THIS token, whether via `.pk-gutter` or
+   directly, so the nav, the row content and the lightbox photo can never
+   drift to a second, silently-diverging spacing value again. */
 :root {
   --pk-gutter: 2rem;
+
+  /* --pk-shell-content-width (Phase 01.2 gap-closure round 6, G-01.2-28
+     task 1): the shell's content width, named so more than one rule can
+     read it instead of each carrying its own copy of the formula. The
+     formula itself is not new — it is the exact `calc()` `.pk-lightbox-img`
+     used to carry on its own standalone `max-width` before this round,
+     moved here and given a name because two independent readers now need
+     the identical number: the lightbox photo's real box (below) and both
+     lightbox chevrons' horizontal insets (`.pk-lightbox-chevron-prev`/
+     `-next`, G-01.2-28 task 2). A second hand-written copy of this formula
+     on either reader is exactly the drift this comment's own opening
+     paragraph forbids — it would let the photo and the arrows hold two
+     independently-authored opinions about where the shell's edge is,
+     which is the original UAT-reported fault, not the fix for it.
+
+     The name is not invented here: `sketch-findings-pukllay_club`'s own
+     lightbox reference already cites `--pk-shell-content-width` as though
+     it existed, in a snippet written before this token was ever declared.
+     Adopting that exact name makes the recorded design language and this
+     stylesheet agree for the first time, instead of leaving a documented
+     token that no rule had ever backed.
+
+     This token IS the shell's content width by construction, not merely
+     near it: every capped surface on this page (`.pk-nav-inner`,
+     `#detail-masthead-wrap`, `.pk-footer-row`) is a box capped at
+     `--container-7xl` with `--pk-gutter` eating inward as padding, so this
+     token's edge and every one of those surfaces' content edges are the
+     same line at every viewport. Declared on this same element as
+     `--pk-gutter` for exactly that reason: the below-480px gutter override
+     further down this file re-declares `--pk-gutter` on `:root`, and
+     because this token's own formula reads `--pk-gutter` rather than a
+     copied value, the narrower gutter flows through to this token for
+     free — verified, not assumed.
+
+     One honest limit, recorded rather than chased: below `--container-7xl`
+     (80rem), the formula's `100vw` term includes the scrollbar's own width
+     on browsers that count it in `vw`, so this token's box can overhang
+     the shell's true content edge by a scrollbar's width in that range.
+     Above `--container-7xl`, the container term wins over the viewport
+     term and the alignment is exact — which is where every desktop check
+     in this round looks. */
+  --pk-shell-content-width: calc(min(100vw, var(--container-7xl, 80rem)) - (2 * var(--pk-gutter)));
 
   /* WR-04: the one literal color allowed in this block — every floating
      surface's drop shadow (portal/sheet/drawer/lightbox/popover) needs a
@@ -220,8 +311,39 @@
      independently copy-pasted literals — consume via
      `color-mix(in srgb, var(--pk-shadow-color) N%, transparent)`, matching
      this file's existing color-mix-for-alpha idiom (see .pk-sheet-backdrop
-     below for a theme-token example of the same pattern). */
+     below for a theme-token example of the same pattern).
+
+     G-01.2-28 task 1 added this token's first FULL-STRENGTH consumer:
+     `.pk-lightbox-img`'s own `background` reads this value directly, with
+     no `color-mix()` wrapper, because that rule needs an OPAQUE stage
+     behind the photo, not another translucent layer. The invariant this
+     token exists to preserve is the one that matters here — no rule ever
+     writes its own dark literal — not the narrower claim that every
+     consumer mixes it for alpha; a fixed value read at full strength still
+     never inverts between themes, which is the property every reader
+     actually needs. G-01.2-19 (round 9, plan 01.2-31) adds this token's
+     second full-strength consumer: `.pk-lightbox` itself now reads the
+     identical declaration, so the container and the stage are deliberately
+     the same paint rather than two darks that merely happen to match. */
   --pk-shadow-color: rgb(20 8 34);
+
+  /* Overlay scrim (Phase 01.2 gap-closure round 2, sketch 033 winner A,
+     G-01.2-11): the backdrop behind EVERY full-screen overlay on this page
+     reads this one declaration. It must never be built from a semantic
+     TEXT-color token — the value it replaced mixed in the app's TEXT color
+     (base-content), which is near-black in light theme (reads as a normal
+     dimming scrim) and near-white in dark theme (a pale veil laid over an
+     already-dark page — the opposite of what a scrim is for). Derived from
+     --pk-shadow-color above (the same fixed dark value every other floating
+     surface's shadow already uses so it never inverts) rather than a new
+     literal. This token now has exactly one reader, .pk-sheet-backdrop
+     (Phase 01.2 gap-closure round 9, G-01.2-19, plan 01.2-31): the lightbox
+     moved to a bare, full-strength read of --pk-shadow-color instead (see
+     .pk-lightbox's own comment for why), which needed a DIFFERENT value —
+     not a different setting of this same one — so the split is by reader.
+     The token is neither deleted nor retuned: the sheet still needs exactly
+     this 72% mix to stay a scrim you can see the page through. */
+  --pk-overlay-scrim: color-mix(in srgb, var(--pk-shadow-color) 72%, transparent);
 
   /* Motion system (sketch 006, variant D — Subtle/Soft): the fastest of the
      three tested options, paired with a no-overshoot soft ease-out. New
@@ -245,6 +367,94 @@
 .pk-gutter {
   padding-left: var(--pk-gutter);
   padding-right: var(--pk-gutter);
+}
+
+/* Sticky-footer app shell (Phase 01.2 gap-closure round 4, G-01.2-14/
+   G-01.2-24 task 3): a single class on <body> (root.html.heex's only
+   change for this task) gives every page in the app a sticky-footer
+   layout — the footer's bottom edge reaches the bottom of a window taller
+   than the page's own content, with no band of plain page background
+   below it. On a window shorter than the content, the page scrolls
+   exactly as it always has.
+
+   Minimum height is declared TWICE deliberately — the older `100vh` unit
+   first, the dynamic-viewport `100dvh` unit second — so a browser without
+   `dvh` support still gets the layout via `100vh`, and one that supports
+   `dvh` does not jump as mobile browser chrome shows/hides (the later
+   declaration wins in browsers that understand it; the earlier one is the
+   fallback a browser that doesn't understand `dvh` simply keeps).
+
+   THIS RULE TARGETS <body> DIRECTLY. The flex-grow rule right below it
+   targets <main> via a DESCENDANT selector, not a direct-child one,
+   because <main> is not literally body's DOM child — every LiveView page
+   wraps its rendered output in a root container div carrying
+   `data-phx-session`, and `[data-phx-session] { display: contents }`
+   (declared near the top of this file, "Make LiveView wrapper divs
+   transparent for layout") removes that wrapper's own box entirely,
+   handing its children (the header, the connection banner, an optional
+   subnav, <main>, the footer, the flash group) directly to whatever
+   flex/grid context ITS OWN PARENT establishes — here, body's. That
+   flattening is exactly what makes a body-level flex column safe to use
+   without a second, matching rule on the wrapper: <main> ends up a real
+   flex item of body's own flex column, not nested two DOM levels deep
+   behind an un-styled intermediate box.
+
+   OTHER BODY CHILDREN keep their natural heights, unchanged: the header
+   wrapper(s), the connection banner, the optional subnav and the footer
+   are in-flow flex items with no flex-grow of their own, so they size to
+   their own content and stretch to full width (align-items' default
+   `stretch`) exactly as they already did as plain blocks. The flash
+   group's own wrapper div is the same — but its CONTENTS (each
+   `CoreComponents.flash/1`) render with daisyUI's `toast` class, which is
+   `position: fixed` (confirmed by reading daisyUI's own bundled rule, not
+   assumed) — a fixed-position box is removed from normal flow entirely,
+   so the flash group's wrapper is always a 0-height flex item and can
+   never occupy space below the footer. No extra treatment needed here.
+
+   CONTAINING-BLOCK SAFETY (T-01.2-24-01, mitigate): flex and min-height
+   are NOT among the five properties that establish a containing block for
+   a `position: fixed` descendant — transform, filter, perspective,
+   contain, will-change (see both existing containing-block audits in this
+   file, on .pk-title-echo and .pk-lightbox, both re-checked and updated
+   against this exact rule as part of this change — see their own
+   comments). Verified in a real browser (headless Chromium via CDP
+   against the running dev server, not from memory): the mobile CTA bar,
+   the title-echo bar and the lightbox all still anchor to the true
+   viewport with this rule active, not to body's own box.
+
+   RESERVED BOTTOM-CLEARANCE INTERACTION (T-01.2-24-02, mitigate):
+   body.pk-has-cta-bar's 9.25rem/148px bottom padding (declared far above,
+   next to that class) lives on the SAME element as this rule, under this
+   stylesheet's border-box model, so min-height's target includes that
+   padding. Measured live at 390px on a real detail page (game id 1,
+   Chromium headless CDP): BEFORE this rule existed, `document.
+   documentElement.scrollHeight` was 1972px with a 147.7px gap between the
+   footer's bottom edge and the document's end (matching the reserved
+   clearance almost exactly — expected, since the CTA bar's own padding IS
+   that gap on every page whose content already exceeds one viewport
+   height, which this page's does by a wide margin: 1972px content vs.
+   844px viewport). AFTER adding this rule, the same measurement is
+   unchanged (content was already far taller than 100dvh, so the min-height
+   floor was never reached and <main> never needed to grow) — see the
+   task's own commit for the confirming after-measurement. No regression:
+   a page whose content is already taller than one viewport is a no-op for
+   `min-height`, and a page shorter than one viewport is exactly the case
+   this rule exists to fix. */
+.pk-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* See .pk-app-shell's own comment above for why a DESCENDANT selector,
+   not a direct-child one, is correct here despite the rule's own name
+   ("the body's own <main> child") suggesting otherwise. flex-grow ALONE
+   (not the `flex` shorthand) is deliberate: <main> keeps its own natural
+   flex-basis (auto) and default flex-shrink (1) — grow is the one
+   property a sticky-footer layout needs added to it. */
+.pk-app-shell main {
+  flex-grow: 1;
 }
 
 /* Category-anchor scroll animation (debug category-menu-scroll-animation).
@@ -431,6 +641,13 @@
   display: block;
 }
 
+/* Vertical twin of the rule above: D-03's grid infinite-scroll trailing
+   skeletons share .pk-trailing-skel's `display: none` default and are
+   revealed the same way, scoped to .pk-grid instead of .pk-rail. */
+.pk-grid[data-loading] .pk-trailing-skel {
+  display: block;
+}
+
 .pk-facts-row {
   display: flex;
   align-items: center;
@@ -439,19 +656,13 @@
   margin-bottom: 8px;
 }
 
-.pk-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  background: var(--color-base-200);
-  border: 1px solid var(--color-base-300);
-  color: var(--color-neutral);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 9px;
-  border-radius: 9999px;
-}
+/* G-01.2-26 task 3: `.pk-fact`'s declarations moved to the `.pk-pill`
+   base + the `pk-pill-neutral` tone (declared above, near the top of this
+   PK CATALOG SURFACES block) — `GamePreview.facts_row/1`'s markup now
+   carries `pk-fact pk-pill pk-pill-neutral` (plus `pk-pill-interactive` on
+   the three link branches). The `pk-fact` class survives on the markup as
+   a marker (a test selector and a semantic name for what the element is)
+   but carries no declarations here anymore. */
 
 .pk-difficulty {
   display: inline-flex;
@@ -468,6 +679,135 @@
 
 .pk-difficulty-dot.is-filled {
   background: var(--color-neutral);
+}
+
+/* Pill system (Phase 01.2 gap-closure round 3, G-01.2-26; diagnosis at
+   .planning/debug/G-01.2-15-pill-chip-design-inconsistency.md): the one
+   base pill representation UAT test 11 asked for — "why is there a kind of
+   pill for difficulty, time and # of players, but another kind of pills
+   for mecanicas, temáticas? ... We need 1 representation and its
+   variants." Five independently hand-tuned pill/chip implementations
+   existed with no shared base; three separate historical sessions each
+   hand-matched a colour or a border between some PAIR of them and left the
+   geometry untouched, which is why the rhythm kept breaking after each fix.
+
+   Framework check (required before hand-rolling anything, per
+   ui-design-system): daisyUI's `.badge` (v5.5.20, this repo's pinned
+   `mix.exs` tag) declares `border-radius: var(--radius-selector)` —
+   `0.25rem` in this app's theme (`assets/css/app.css`'s own
+   `daisyui-theme` blocks), not the full `9999px` pill the facts pills
+   already ship; a fixed height via its own `--size` custom property
+   (pinned unless released with `h-auto`, the exact trap `.pk-chip-row
+   .badge` below and `weight_band_badge/1` each separately had to work
+   around); and a `font-size` that steps per `badge-{xs,sm,md,lg,xl}`
+   modifier with no `font-weight` declared anywhere in the component (it
+   inherits the surrounding text's regular weight, never the 600 semibold
+   every hand-rolled pill family in this file uses). Three of this app's
+   five pill families — `.pk-chip-row .badge` below, `editorial_tags/1`'s
+   bare `.badge-accent`, and `filter_modal.ex`'s `chip_class/1` — already
+   start from `.badge`, and each one needed a DIFFERENT override to reach a
+   different shape. That is the confirmation `.badge` cannot carry this
+   app's whole variant set unaided, and a custom base is justified.
+
+   Governing rule: every visual property a pill can have — shape,
+   typography, padding, fill, border — is declared here, once. A call site
+   picks the base (`pk-pill`), a tone (`pk-pill-neutral` / `pk-pill-accent`
+   / `pk-pill-outline` / `pk-pill-selected`), optionally a size
+   (`pk-pill-comfortable` / `pk-pill-large` — the dense default needs no
+   size class), and optionally `pk-pill-interactive` for a tappable pill. A
+   call site that needs a property this block does not offer adds a
+   VARIANT here — never a rule of its own, and never a second declaration
+   of a property this block already owns.
+
+   Call-site inventory — COMPLETE as of 01.2-27 task 3 (01.2-26 migrated the
+   first three, 01.2-27 the remaining two; this is every one of UAT test
+   11's four named surfaces, plus the editorial hashtags it did not name):
+     - GamePreview.facts_row/1 (players/tiempo/dificultad) — neutral tone,
+       dense size, interactive on the three link branches only
+     - GameChips.chip_row/1 (Mecánicas/Temáticas) — neutral tone, dense size
+     - GameChips.editorial_tags/1 (club hashtags) — accent tone, dense size
+     - CatalogLive.Index's active-filters ("búsqueda activa") chip — accent
+       tone, comfortable size, interactive, removable (01.2-27 task 1)
+     - filter_modal.ex's facet/scalar chips — outline tone at rest, selected
+       tone when chosen, comfortable size, interactive (01.2-27 task 2)
+   Deliberately excluded: the catalog's category-navigation chip (`.pk-chip`
+   below, `index.ex`) — a 44px navigation control, not in the UAT's list;
+   folding it in would widen a chip consolidation into a navigation change.
+   Named again, verbatim, in the bespoke-chip drift gate's own exclusion
+   list (catalog_live_test.exs) so a future author reads the same reason in
+   both places. The orphaned `weight_band_badge/1` shape (below,
+   `game_chips.ex`) has no call site; its SHAPE joins the variant set as
+   `pk-pill-large`, its markup does not move. */
+.pk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 4px 9px;
+}
+
+.pk-pill-neutral {
+  background: var(--color-base-200);
+  border-color: var(--color-base-300);
+  color: var(--color-neutral);
+}
+
+.pk-pill-accent {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-content);
+}
+
+.pk-pill-outline {
+  background: transparent;
+  border-color: var(--color-base-300);
+  color: var(--color-neutral);
+}
+
+/* The modal's chosen-chip soft lift (`filter_modal.ex`'s `chip_class/1`
+   ships this today as the Tailwind utility `shadow-sm`), expressed through
+   this file's own colour-mix-for-alpha shadow idiom instead of a literal
+   rgba() value — same magnitude as `.pk-share-trigger`'s identical rule
+   below, this file's existing "soft lift at small scale" pattern. */
+.pk-pill-selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-content);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--pk-shadow-color) 6%, transparent);
+}
+
+.pk-pill-comfortable {
+  font-size: 0.75rem;
+  padding: 0 12px;
+}
+
+/* Absorbs `weight_band_badge/1`'s declared shape (`badge-lg h-auto
+   whitespace-normal py-1 text-center leading-tight`) — that component's
+   markup is untouched; this size variant only gives its SHAPE a home in
+   the variant set, so a future decision to bring it back does not
+   reinvent it. Releases the base's no-wrap and centres text because a
+   large pill is allowed to run to two lines; every other property still
+   comes from `.pk-pill`. */
+.pk-pill-large {
+  font-size: 1rem;
+  padding: 4px 14px;
+  white-space: normal;
+  text-align: center;
+}
+
+.pk-pill-interactive {
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-pill-interactive:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 /* resting card (Task 2): poster art then a plain caption block below it —
@@ -489,6 +829,48 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Entry fade (G-01.2-9 gap closure, Task 1): apply_filters/1's
+   `stream(:games, games, reset: true)` destroys and re-creates #games'
+   children on every search keystroke/filter change, so a `transition`
+   has nothing to animate from — a newly inserted node has no previous
+   value to transition FROM. An animation replays on insertion instead,
+   which is exactly the primitive this teardown-and-rebuild needs.
+   Opacity only, no translate: the complaint is a content pop, and travel
+   on a full-width region reopens the amplitude problem this file's
+   motion notes document at length. Scoped to `.pk-grid` (the results
+   grid, `#games`) so the carousel rails' resting cards on the unfiltered
+   home surface are untouched — this gap is about the search/filter
+   results path, not a page-wide first-paint animation. `:not(.pk-trailing-skel)`
+   excludes the grid's own permanent trailing skeleton placeholders (which
+   also carry `.pk-card`, see the data-loading rules above): those toggle
+   `display: none` -> `block` during load-more and must keep doing that
+   with no animation, unchanged from today. Covered automatically by the
+   universal reduced-motion guard at the end of this file — confirmed by
+   reading it; nothing new needed here since it targets `*`. */
+@keyframes pk-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.pk-grid .pk-card:not(.pk-trailing-skel) {
+  animation: pk-fade-in var(--duration-base) var(--ease-standard);
+}
+
+/* Surface-flip fade: shared marker Task 2 applies to BOTH results
+   regions (#carousel-rows and the #grid-scroll wrapper around .pk-grid)
+   — each is `:if`-gated, so remounting either one on a carousel<->grid
+   flip is a fresh node and this replays exactly then. Slower than the
+   card-level fade above because it fades a whole page region rather than
+   one card; same easing, same reduced-motion coverage. */
+.pk-surface-fade {
+  animation: pk-fade-in var(--duration-slow) var(--ease-standard);
 }
 
 .pk-preview-poster {
@@ -569,7 +951,10 @@
 .pk-sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--color-base-content) 55%, transparent);
+  /* Reads --pk-overlay-scrim (declared once, above the theme-token block) —
+     do not write this value independently again; see that declaration's
+     comment for why a text-color token is never the right source. */
+  background: var(--pk-overlay-scrim);
   z-index: 600;
   opacity: 0;
   pointer-events: none;
@@ -651,6 +1036,68 @@ body.pk-sheet-open {
   position: sticky;
   top: 0;
   z-index: 50;
+}
+
+/* G-01.2-8 gap closure (01.2-15). Replaces phx.new's stock #client-error /
+   #server-error toast (`toast toast-top toast-end`, core_components.ex
+   flash/1) that used to fire on a genuine WEBSOCKET TRANSPORT DISCONNECT.
+   This is a categorically different failure mode from CatalogLive.Index's
+   `:more_error` inline retry line, which only covers a live, connected
+   query failure over an already-established channel — the two stay
+   separate surfaces (connection-feedback.md's "What to Avoid").
+
+   Sketch 030 Round 3: the accent tint, never --color-error — a brief,
+   usually self-recovering reconnect must not read as an alarm.
+
+   `display: flex` is declared outright (not switched from `none` by a body
+   class the way the sketch did it): visibility here is owned entirely by
+   the `hidden` attribute + the element's own phx-disconnected/phx-connected
+   bindings in layouts.ex, so there is no CSS-side toggle to write. */
+.pk-conn-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--color-accent);
+  color: var(--color-accent-content);
+  border-bottom: 1px solid var(--color-base-300);
+  padding: 11px 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.pk-conn-spinner {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+/* No-preference gate (matches .pk-scroll-top's established idiom above,
+   NOT a new per-selector `prefers-reduced-motion: reduce` override) — this
+   file already retired the hand-maintained reduce-block-per-selector
+   pattern (see the "REDUCED-MOTION GUARD" comment near the end of this
+   file) in favour of one universal `*` guard with !important. A local
+   `reduce` override here would be dead weight layered on top of that
+   guard, not a second line of defense: the universal rule already forces
+   `animation-duration: 1ms !important` on every element, keyframe
+   included. Gating the animation's very existence behind `no-preference`
+   (rather than declaring it unconditionally and relying solely on the
+   universal override) is the same belt-and-braces posture .pk-scroll-top
+   already uses. */
+@media (prefers-reduced-motion: no-preference) {
+  .pk-conn-spinner {
+    animation: pk-spin 0.7s linear infinite;
+  }
+}
+
+@keyframes pk-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .pk-nav {
@@ -984,6 +1431,80 @@ body.pk-sheet-open {
   font-size: 10px;
   line-height: 16px;
   text-align: center;
+}
+
+/* Active-filters summary row (Task 1, gap-closure G-01.2-4, sketch 029
+   winner C "Inline with Heading", Round 2 rebalanced; migrated onto the
+   shared pill base at G-01.2-27 task 1 — diagnosis at
+   .planning/debug/G-01.2-15-pill-chip-design-inconsistency.md). This chip
+   renders `pk-pill pk-pill-accent pk-pill-comfortable pk-pill-interactive`
+   (index.ex) — every visual property but one now comes from the base and
+   its variants; the padding below is the one property genuinely specific
+   to this chip.
+
+   Supersedes the sentence that used to stand here: "these two chip
+   treatments must NEVER be merged: a removable applied-filter chip and a
+   selectable modal option chip are different affordances, even sharing
+   the same base pill shape." That argument was right and still holds —
+   what was never true is that holding it required two independently
+   hand-maintained rule bodies. The affordances were never merged; the two
+   declarations of one shared pill shape were. This chip is
+   `pk-pill-accent`; the modal's chosen option chip (`filter_modal.ex`'s
+   `chip_class/1`) is `pk-pill-selected` — two tones of the one base, still
+   visually distinct at a glance, now enforced by the tone-variant drift
+   gate (catalog_show_test.exs) rather than by a second geometry
+   declaration.
+
+   Sketch 029's outcome survives the migration: this chip is deliberately
+   LIGHTER than the modal's `pk-pill-selected` chip so it does not outweigh
+   the "Resultados" heading it sits beside — `pk-pill-accent` declares a
+   flat `background`/`border-color` with no shadow, while `pk-pill-selected`
+   alone declares the soft-lift box-shadow; that asymmetry is exactly the
+   distinction sketch 029 asked for, and it is preserved untouched. */
+.pk-active-filter-chip {
+  /* Tighter on the trailing side because the dismiss × sits there — the
+     base's symmetric `pk-pill-comfortable` padding (0 12px) would crowd
+     the × against the label. The base's own 4px gap (`.pk-pill`) is
+     unchanged and already correct for this chip's label-to-× spacing (was
+     5px here before the migration — the 1px difference was never a
+     deliberate design choice, just an unreconciled hand-tuned value — so
+     no gap override is carried forward). */
+  padding: 4px 5px 4px 11px;
+}
+
+.pk-active-filter-chip-x {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--color-neutral);
+  font-size: 12px;
+  line-height: 1;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-active-filter-chip:hover .pk-active-filter-chip-x {
+  background: var(--color-error);
+  color: var(--color-error-content);
+}
+
+.pk-clear-filters-link {
+  border: none;
+  background: none;
+  color: var(--color-neutral);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-clear-filters-link:hover {
+  color: var(--color-primary);
 }
 
 .pk-search-morph.is-open .pk-nav-search {
@@ -2261,16 +2782,223 @@ body.pk-drawer-open {
    masthead to its two-column sticky grid AND hides the mobile CTA bar in
    one place, so the two concerns can never drift apart. */
 .pk-detail-masthead {
-  max-width: 68.75rem;
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
   gap: 3rem;
   align-items: start;
 }
 
+/* Plain flex column layout wrapper (Phase 01.2 gap-closure round 2,
+   G-01.2-19 task 1, sketch 032). Used to also carry the buy-box panel's
+   own fill/border/shadow treatment directly — that treatment now lives on
+   the new .pk-poster-panel element below so the CTA can stand outside it
+   (see that rule's own long provenance comment for the sketch-027 history,
+   carried across verbatim). This rule keeps only its own layout
+   responsibilities: the 01.2-13 cascade-layer position fix (`position:
+   relative`, see that plan's own note — G-01.2-5), and the flex column +
+   gap that used to be the `space-y-4` Tailwind utility in show.ex's
+   markup, now declared here since the utility and this gap would
+   otherwise be two declarations of one field. */
 .pk-poster-col {
-  position: static;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Three properties only, scoped to the facts row as a direct child of the
+   poster panel (Phase 01.2 gap-closure round 2, G-01.2-19 task 1, sketch
+   032) — the row now renders once, above the poster photo, at every
+   viewport width, replacing the old two-copy overlay/inline swap entirely.
+   `justify-content` is deliberately NOT redeclared here: the shared
+   .pk-facts-row rule above already owns `space-between`, which is exactly
+   the "justified, full width of the column" behaviour the UAT asked for.
+   `flex-wrap`/`row-gap` preserve the measured lesson from 01.2-17 (a real
+   390px viewport left the row's natural nowrap content width, 279px,
+   wider than its available space) — the row has more room now than it did
+   as an overlay, but the smallest real viewports still leave little
+   margin, and a nowrap row with `space-between` overflows silently rather
+   than clipping visibly. `margin-bottom: 0` cancels the shared row's own
+   8px bottom margin, because the panel's flex `gap` below already supplies
+   that spacing and the two are additive — same reasoning as .pk-divider's
+   own note on this file.
+
+   Selector re-pointed from `.pk-poster-col > .pk-facts-row` to
+   `.pk-poster-panel > .pk-facts-row` (Phase 01.2 gap-closure round 3,
+   G-01.2-23 task 2, sketch 037): the facts row and the poster photo used
+   to be siblings across a card boundary — the row sat directly in
+   `.pk-poster-col`, the photo sat inside `.pk-poster-panel` one level in.
+   `.pk-poster-panel`'s own 1rem card padding (below) therefore inset the
+   photo 16px further from the shared `--pk-gutter` line than the row,
+   which sat flush against it — the exact mismatch UAT test 8 reported
+   ("the margin left and right of the shell isn't the same for all the
+   components"). Moving the row inside the panel puts it on the same side
+   of that padding as the photo, so the two now share one inset and their
+   left/right edges coincide. The panel's own OUTER edge is untouched by
+   this move and still lands on the shared gutter line, so the card, the
+   fixed CTA bar's button and the "Juegos similares" row header below all
+   still start and end at one x-position; the photo's remaining inset from
+   that shared line is the card's own padding, and is deliberate. */
+.pk-poster-panel > .pk-facts-row {
+  flex-wrap: wrap;
+  row-gap: 4px;
+  margin-bottom: 0;
+}
+
+/* G-01.2-26 task 3: this rule's declarations moved to the `.pk-pill` base
+   + the `pk-pill-neutral` tone (declared above, near the top of this PK
+   CATALOG SURFACES block) — `GameChips.chip_row/1`'s chips now carry
+   `pk-pill pk-pill-neutral` (plus `pk-pill-interactive` on linked
+   branches) directly, so no descendant-selector override on
+   `.pk-chip-row .badge` is needed anymore. The `pk-chip-row` wrapper class
+   survives on the markup as a test selector and a name for the row, but
+   scopes nothing here now. */
+
+/* Buy-box panel boundary: elevated shadow, not fill alone (Phase 01.2
+   gap-closure, sketch 027 variant B — "Elevated Shadow", the human-picked
+   winner over a stronger border and a stronger fill). Radius and padding
+   stay this app's own `--radius-box`/`1rem` (already what `rounded-box
+   p-4` produced on this element) rather than importing the sketch's own
+   `--radius-lg`/`--space-4` literals — one visual result, ported through
+   this file's existing tokens, not the sketch's.
+
+   Two deliberate departures from `detail-page-layout.md`'s own prose
+   summary of this fix, both resolved in favour of the rendered sketch
+   artifact a human actually looked at and picked: (1) the reference doc
+   says "purely additive (shadow + no border)" and leaves the fill alone;
+   sketch 027 variant B's own `index.html` sets background, adds a 1px
+   border, AND adds the shadow — implemented here as written in the
+   artifact, with the discrepancy flagged for the reference file to
+   correct. (2) the sketch's `--shadow-md` is theme-aware (a much heavier
+   dark-mode alpha); this file's WR-04 rule is one fixed
+   `--pk-shadow-color` at one fixed percentage for both themes, so WR-04
+   wins here too — in dark mode the lift reads lighter than the sketch's
+   dark value, and the 1px `--color-base-300` border (a real step against
+   `--color-base-100` in dark) is what carries the separation there
+   instead. Deliberate, theme-verified tradeoff, not an oversight.
+
+   Moved off .pk-poster-col and onto this new element (Phase 01.2
+   gap-closure round 2, G-01.2-19 task 1, sketch 032) — same values,
+   different selector — so the panel wraps only the poster frame and the
+   gallery strips, and the Reservar button can step outside it as a
+   sibling rather than reading as "part of the carousel". `display: flex`
+   + the column gap below is the internal rhythm the column's own
+   `space-y-4` utility used to supply. */
+.pk-poster-panel {
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  padding: 1rem;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--pk-shadow-color) 12%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Positioning context for the share control (Phase 01.2 gap-closure,
+   G-01.2-10 task 2). Declared here, in the frame's own rule, not through a
+   Tailwind `relative` utility on the element — an unlayered .pk-* rule
+   always beats a layered utility in this stylesheet (see the
+   cascade-layer hazard note at the top of this file), and a layered
+   `relative` losing to an unlayered position declaration is precisely the
+   defect G-01.2-5 was opened for. */
+.pk-poster-frame {
+  position: relative;
+}
+
+/* Poster-column reserve button, hidden below the detail layout breakpoint
+   (G-01.2-10 ask #3): the fixed .pk-mobile-cta-bar is already the mobile
+   CTA, so this in-panel copy only needs to exist at/above 48rem, where
+   the bar itself is hidden (see the swap in the single 48rem block).
+   `inline-flex`, not a generic `block`, restores exactly the display
+   value daisyUI's own .btn component declares — a button restored to the
+   wrong display value is a subtle alignment bug (icon/label centring)
+   nobody looks for until it has already shipped. `margin-top: 0.5rem`
+   (Phase 01.2 gap-closure round 2, G-01.2-19 task 1, sketch 032), added
+   on top of the column's own 0.75rem gap, detaches the CTA visually: 1.25rem
+   of empty page now sits between the panel's bottom border and the
+   button, so it reads as a separate decision rather than a fourth
+   carousel control. */
+.pk-poster-reserve {
+  display: none;
+  margin-top: 0.5rem;
+}
+
+/* Gallery thumbnails vs. dots (G-01.2-10 ask #8, D3 = dots on mobile,
+   thumbnails on desktop) — two sides of one swap, both built from the
+   same gallery_thumbnails/1 list in show.ex. Reveal lives with every
+   other detail-layout swap in the single 48rem block. */
+.pk-gallery-thumbnails {
+  display: none;
+}
+
+.pk-gallery-dots {
+  display: flex;
+  align-items: center;
+  /* Centered under the poster (Phase 01.2 gap-closure round 2, G-01.2-19
+     task 1, sketch 032) — was left-aligned by default flex behaviour. */
+  justify-content: center;
+  /* Gap zeroed (Phase 01.2 gap-closure round 3, G-01.2-23 task 1, UAT test
+     8 — "too much space between them, should be a default 3 dots"). The
+     4px gap this row used to declare was never the cause of the spread
+     (see .pk-gallery-dot's own comment for the real arithmetic); it is
+     zeroed here because the dot's hit box is now narrow enough that any
+     positive gap re-opens the very distance this pair of changes closes. */
+  gap: 0;
+  /* Each dot's own 44px-tall touch floor (below) would otherwise push this
+     row's visual footprint to a full 44px tall; this negative margin
+     compensates so only the small mark itself (plus a little breathing
+     room) is visible, while the full 44px hit area still exists for
+     touch — the standard "expand the hit area without expanding what's
+     seen" technique, not a second declaration of the mark's own size. */
+  margin: -0.625rem 0;
+}
+
+/* Dot hit box narrowed to 24x44 CSS px — deliberately NOT this layer's
+   usual 44x44 square (Phase 01.2 gap-closure round 3, G-01.2-23 task 1,
+   UAT test 8 / T-01.2-23-01). With an 8px mark (.pk-gallery-dot-mark
+   below) centred in a 44px square and a 4px row gap, the visible distance
+   between two adjacent marks was (44-8)/2 + 4 + (44-8)/2 = 40px — five
+   times the declared gap, and the direct cause of "too much space between
+   them, should be a default 3 dots." Narrowing to a 24px-wide box with the
+   row's gap now zero drops that same arithmetic to
+   (24-8)/2 + 0 + (24-8)/2 = 16px, a compact default-dot-row distance.
+   `height` stays 2.75rem (44px, this layer's own `min-h-11` floor, a
+   HEIGHT floor and fully honoured here) — `width` is the one dimension
+   allowed to shrink, down to 24px, the WCAG 2.5.8 AA (Enhanced) target-size
+   minimum and no further. A 44px-wide box is geometrically incompatible
+   with a compact three-dot indicator; the two requirements cannot both be
+   true, and the UAT explicitly asked for the compact one — this is a
+   named, deliberate tradeoff, not an oversight. A negative horizontal
+   margin was considered and rejected to close the remaining gap: it would
+   let one dot's hit box overlap its neighbour's, silently handing the
+   overlap area's taps to whichever dot is later in the DOM. `flex: 0 0
+   auto` pins the narrowed box so the row around it can neither shrink it
+   further nor stretch it. */
+.pk-gallery-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 2.75rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.pk-gallery-dot-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--color-base-300);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-gallery-dot:hover .pk-gallery-dot-mark,
+.pk-gallery-dot.is-active .pk-gallery-dot-mark {
+  background: var(--color-primary);
 }
 
 .pk-text-col {
@@ -2296,6 +3024,35 @@ body.pk-drawer-open {
   -webkit-line-clamp: unset;
   overflow: visible;
 }
+
+/* Boundary between the primary reading block (title + description) and
+   supplementary "more information" content (G-01.2-10 task 3, ask #4/#6).
+   daisyUI's own .divider component is used as-is for the line's own
+   colour/thickness — already theme-aware via color-mix, so no rule for
+   that is declared here. Only its default `margin: 1rem 0` is overridden:
+   .pk-text-col's flex `gap: 1rem` above already supplies the spacing on
+   both sides, and the two are additive (gap does not collapse against a
+   child's own margin), so leaving the daisyUI default would double the
+   visible gap around the line. Reused verbatim by 01.2-18 for the
+   boundary before the recommendations shelf — declare any future change
+   to this line's own appearance here, once, not per call site. */
+.pk-divider {
+  margin: 0;
+}
+
+/* Boundary between the detail masthead and the "Juegos similares" shelf
+   below it (01.2-18 task 1) — second call site of the exact `.pk-divider`
+   declared above (01.2-17 already checked daisyUI's own .divider and
+   settled on hand-overriding only its default margin; that decision is
+   reused verbatim here, not re-litigated). G-01.2-19 task 2 removed the
+   width-cap class that used to sit alongside `.pk-divider`
+   here: it existed only to cap this line to the masthead's own narrower
+   column, but UAT found that column narrower than the header/footer
+   shell — the correct width is the shell's, which every wrapper here
+   (this one included) already sits inside via `mx-auto w-full max-w-7xl
+   pk-gutter`. The line now starts and ends level with the masthead above
+   it AND the shelf below it, because all three finally share one width;
+   no per-call-site width override is declared for this line at all. */
 
 .pk-spec-list {
   display: grid;
@@ -2336,11 +3093,9 @@ body.pk-drawer-open {
   right: 0;
   bottom: 0;
   z-index: 45;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem var(--pk-gutter);
+  padding: 0.75rem 0;
   background: var(--color-base-200);
+  border-top: 1px solid var(--color-base-300);
   /* --ease-standard, not --ease-out-soft — same amplitude reasoning as
      .pk-sheet/.pk-drawer, see the long note on .pk-sheet. The subtlety here is
      that ONE rule drives TWO states with very different travels, so it is
@@ -2355,6 +3110,27 @@ body.pk-drawer-open {
      together on the same footerReached flag, and giving them different curves
      desyncs the bar from the page padding it is clearing. */
   transition: transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
+}
+
+/* Bar inner wrapper (Phase 01.2 gap-closure, sketch 028 variant D —
+   "Stacked" — originally introduced to lay out a reserve row above a
+   second, share-control row). G-01.2-18 task 2 removed that second row —
+   the bar's own corner share icon on the poster was already the page's
+   share entry point, so stacking a second one here was redundant.
+   G-01.2-19 task 2 then removed the `max-width`/`margin: 0 auto` this
+   rule used to declare — it capped the bar's control to the masthead's
+   own narrower column, which UAT found narrower than the header/footer
+   shell; the horizontal gutter that used to live on `.pk-mobile-cta-bar`
+   itself already lives on the `pk-gutter` class on the middle wrapper in
+   show.ex, and that wrapper's own `max-w-7xl` is now the only width
+   authority in play. This wrapper survives for its `flex-direction:
+   column`/`align-items: stretch` alone now, so the single button still
+   fills the wrapper's own width; the `gap` that used to space two rows
+   apart has nothing left to space and is gone. */
+.pk-cta-bar-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .pk-mobile-cta-bar.is-hidden {
@@ -2386,7 +3162,16 @@ body.pk-has-cta-bar {
      Must stay on the SAME duration and curve as .pk-mobile-cta-bar above:
      both fire on the same footerReached flag, and this padding is precisely
      the clearance the bar occupies, so any desync between them shows up as
-     the footer and the bar sliding at different rates. */
+     the footer and the bar sliding at different rates.
+     9.25rem/148px (G-01.2-18 task 2): derived, not chosen — subtracts back
+     out exactly what the Phase 01.2 gap-closure stacked layout (sketch 028)
+     had added: 200px (12.5rem, the stacked bar's two-row clearance) minus
+     44px (the removed share row) minus 8px (the row gap it had) = 148px,
+     landing on the exact value this rule held before the stacked layout
+     ever shipped. This paragraph's own measured collapse-travel numbers
+     above were computed against this exact value, so they are accurate
+     again without needing to re-measure. Recompute this number again if
+     the bar's internal row height ever changes. */
   transition: padding-bottom var(--duration-base) var(--ease-standard);
 }
 
@@ -2397,13 +3182,51 @@ body.pk-cta-parked {
 /* Sticky title-echo bar (01.1-04): a condensed, title-only copy of the
    masthead's <h1> (a full facts+title+tags echo was tried and rejected as
    overloaded), fading in under the site header once the real title has
-   scrolled fully out of view. Sticky, not fixed — it has a natural
-   container boundary. Also parks on the same footerReached flag as the
-   CTA bar, even though it doesn't spatially overlap the footer, so both
-   retract together as a coherent pair. */
+   scrolled fully out of view. Also parks on the same footerReached flag as
+   the CTA bar, even though it doesn't spatially overlap the footer, so
+   both retract together as a coherent pair.
+
+   G-01.2-22 task 1: this element's positioning moved from a flow-
+   occupying value to a viewport-anchored one. The old value still put
+   this element in normal document flow even while `opacity: 0` hid it —
+   the bar's own box sat between the header and the masthead at every
+   scroll position, adding roughly its own height as dead space on top of
+   <main>'s own top padding (sketch 035's Design Question). Anchoring to
+   the viewport removes that box from flow entirely; `left: 0`/`right: 0`
+   restore the full-width span the old value gave it for free. A
+   `display` toggle was ruled out instead of this change: `display` cannot
+   be transitioned, and this bar's opacity/transform fade must survive.
+   The "un-stick at the container boundary" behaviour the old value
+   bought is not needed here either — this bar already parks explicitly on
+   the same footerReached flag the CTA bar uses (see .is-parked below), so
+   nothing is lost by anchoring to the viewport instead.
+
+   Containing-block hazard checked before trusting this (this project has
+   hit this exact bug once — see detail-page-mobile-interaction.md's
+   "Sticky title-echo bar" note): walked the ancestor chain
+   #detail-title-echo -> #detail-page -> Layouts.app's own
+   `.mx-auto.space-y-4` inner wrapper -> <main> -> <body> -> <html>, and
+   confirmed none of them declares transform, filter, perspective,
+   contain, or will-change — a viewport-anchored element only anchors
+   correctly while that chain stays clean.
+
+   RE-CHECKED (Phase 01.2 gap-closure round 4, G-01.2-24 task 3): <body>
+   now carries `.pk-app-shell` (flex column + min-height, see that class's
+   own comment above `.pk-gutter`). Re-walked the same chain against the
+   same five-property list with `<body>` in its new state and confirmed
+   `display: flex`/`flex-direction: column`/`min-height` are NOT among
+   them — flex and min-height do not establish a containing block for a
+   `position: fixed` descendant. Verified live in a real browser (headless
+   Chromium via CDP against the running dev server, scrolled mid-page, both
+   at a mobile width where body's natural height exceeds the viewport and
+   at a desktop width tall enough to actually stretch body via
+   min-height): this bar's `getBoundingClientRect()` still resolves
+   against the true viewport in both cases, not against body's box. */
 .pk-title-echo {
-  position: sticky;
+  position: fixed;
   top: var(--pk-header-h, 4.5rem);
+  left: 0;
+  right: 0;
   z-index: 40;
   display: flex;
   align-items: center;
@@ -2427,6 +3250,34 @@ body.pk-cta-parked {
 .pk-title-echo.is-parked {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Title-echo name truncation (Phase 01.2 gap-closure round 4, G-01.2-24
+   task 1). The bar's title <span> gets a real class, named for the element
+   it is, in the same pk- family as its parent, declared once here directly
+   below the bar's own rules. Four properties are required TOGETHER for a
+   flex item to truncate rather than wrap: a zero minimum width (a flex
+   item's default min-width is its own content, which is exactly what turns
+   "too narrow" into "second line" instead of "clipped"), no wrapping,
+   hidden overflow, and an ellipsis. The bar's OTHER flex item,
+   .pk-scroll-top below, is a fixed 2.75rem square with `flex: 0 0 auto`, so
+   every pixel the bar is short lands on this span — without `min-width: 0`
+   the span cannot shrink below its own content width and wraps to a second
+   line instead.
+
+   Measured fact (G-01.2-14 diagnosis, live CDP against the running dev
+   server, light theme): the bar's text and background measured at very
+   high contrast — rgb(36,18,56) text on rgb(255,255,255) background — so
+   the UAT-reported "don't have correct balance to contrast with
+   background... looks like text over two lines" complaint is the visual
+   crowding a two-line wrap produces inside a bar padded for one line, NOT
+   a colour-token defect. No colour on this bar changes here or anywhere
+   else in this fix. */
+.pk-title-echo-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pk-scroll-top {
@@ -2468,29 +3319,224 @@ body.pk-cta-parked {
    client-side carouselIndex, so "gallery and lightbox share one
    selection" is structural, not something two listeners keep in sync
    (T-01.1-16 — its previous/next controls reuse the existing
-   select-image whitelist unchanged). Reuses .pk-sheet-backdrop's exact
-   background value and .pk-portal's exact shadow values rather than
-   declaring a second set of matching numbers. */
+   select-image whitelist unchanged). Read --pk-overlay-scrim at the time
+   (Phase 01.2 gap-closure round 2, G-01.2-11): the SAME declaration
+   .pk-sheet-backdrop read, not a second value that merely happened to
+   match it. Superseded by G-01.2-19 below: this rule's own background now
+   points at a different token entirely — see that paragraph, and
+   --pk-overlay-scrim's own comment, for why. Reuses .pk-portal's exact
+   shadow values rather than declaring a second set of matching numbers.
+
+   G-01.2-21 task 2: this element is now ALWAYS rendered (its markup no
+   longer carries a Phoenix `:if`) — state lives in the `is-open` class, not
+   in whether the element exists, so display can no longer gate visibility
+   (display cannot be transitioned; that's the whole reason the old
+   instant display:none/flex toggle snapped instead of fading). `display:
+   flex` moves to this base rule permanently. Closed state is
+   opacity/visibility/pointer-events instead. `visibility` is a DISCRETE
+   property — per spec it flips at the point its own easing curve's output
+   crosses 50%, not at a literal duration/delay — so giving it double
+   opacity's duration (`calc(var(--duration-base) * 2)`) makes that 50%
+   crossing land at approximately the same wall-clock moment opacity
+   finishes fading to 0, holding the box "visible" (in the
+   accessibility-tree sense) for effectively the whole fade without a
+   literal delay value. This project's own motion_rhythm_test.exs bans a
+   literal duration/delay AND the `step-*`/`linear` keywords the more usual
+   version of this technique reaches for — `calc()` on the existing tokens
+   is the one construct available that stays inside both that gate and the
+   two-curve system. Opening (adding .is-open) recascades to a SHORTER
+   transition list that omits visibility entirely, so visibility flips back
+   to `visible` immediately when the class is added — the fade-in is
+   visible from its very first frame.
+
+   CONTAINING-BLOCK AUDIT (recorded Phase 01.2 gap-closure round 4,
+   G-01.2-24 task 3, alongside .pk-title-echo's own audit above): walked
+   the ancestor chain #detail-lightbox-trigger's `.pk-lightbox` sibling ->
+   #detail-page -> Layouts.app's own `.mx-auto.space-y-4` inner wrapper ->
+   <main> -> the LiveView root (display: contents, so it contributes no
+   box of its own — see "Make LiveView wrapper divs transparent for
+   layout" near the top of this file) -> <body> (now `.pk-app-shell`) ->
+   <html>. None of them declares transform, filter, perspective, contain,
+   or will-change; `.pk-app-shell`'s own `display: flex`/`min-height` are
+   also not on that list (see that class's own comment). Verified live in
+   a real browser (headless Chromium via CDP against the running dev
+   server): this element's `position: fixed` still resolves against the
+   true viewport with `.pk-app-shell` active. */
+
+/* G-01.2-19 (Phase 01.2 gap-closure round 9, plan 01.2-31): a third and
+   final report of "the background should be full screen" traced to this
+   CONTAINER's own paint, not to the photo stage. A full-inset fixed
+   element already covers the entire viewport by construction (see
+   `position: fixed; inset: 0` below) — so when something around a piece
+   of content inside it reads as uncovered, the first question is whether
+   the container's own paint is translucent, not how big the content is.
+   Rounds 6 and 7 each grew the stage instead — a real width and fill in
+   round 6, real height in round 7 — and the complaint survived both,
+   because what the two screenshots showed was never uncovered page: it
+   was this element's own 72% scrim compositing over the page beneath it.
+
+   The numbers reconcile exactly. `.pk-lightbox-img`'s width cap
+   (`--pk-shell-content-width`) resolves to roughly 1216px at a 1920px
+   window, leaving roughly 704px — about 37% of the window — of this
+   element's own background exposed laterally; at 390px the gutter
+   subtraction leaves a thin sliver per side instead. A wide band at
+   desktop and a sliver at mobile is precisely what the two screenshots
+   showed, and reconciling the diagnosis against that geometry is what
+   falsified an earlier automated diagnosis, which blamed a missing
+   dev-mode `:live_reload` `patterns` block. That block already existed in
+   `config/runtime.exs`, dated to the project's scaffold commit — the
+   earlier diagnosis read only `config/dev.exs` and never reconciled its
+   conclusion against the reported geometry at all.
+
+   Growing the stage to `100vw` was the other option and was rejected: its
+   width reads `--pk-shell-content-width`, the same boundary both
+   `.pk-lightbox-chevron-prev` and `.pk-lightbox-chevron-next` read for
+   their own horizontal insets (G-01.2-28), and that chevron/stage
+   alignment was measured and signed off at 1920px. Widening the child to
+   fix a paint problem would have silently moved a boundary two other
+   rules depend on. The stage is unchanged by this round; round 6's
+   paragraph below, immediately above `.pk-lightbox-img`, written when
+   that task deliberately left this container alone, is superseded by
+   this one, not contradicted by it — that task's own scope simply ended
+   before this question did.
+
+   `--pk-overlay-scrim` is not re-tuned and not deleted: `.pk-sheet-
+   backdrop` still needs exactly 72%, the lightbox needed 100% — a
+   DIFFERENT value, not a new setting for the same one — so the token
+   splits by reader instead. Its own `:root` comment is corrected in this
+   same commit to name the sheet as its sole surviving reader.
+
+   What this round deliberately did NOT do: the stage was not resized, so
+   G-01.2-17's letterbox decision and G-01.2-28's measured chevron/stage
+   alignment both survive untouched; the chevrons, the close button and
+   01.2-30's dark-theme fill were all left alone; and the stage's own
+   `border-radius`/`box-shadow` were KEPT even though both stop reading
+   against a same-colour field now, because deleting them is a design call
+   with its own item, not a cleanup to fold into a paint fix. One more
+   consequence worth naming: G-01.2-18's remark below, above
+   `.pk-lightbox-img`, about a hairline of scrim during the opening
+   scale-in no longer applies — the photo still visibly scales in, but the
+   stage's edge simply stops reading, since the field behind it is now the
+   same colour. */
 .pk-lightbox {
-  display: none;
+  display: flex;
   position: fixed;
   inset: 0;
   z-index: 700;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--color-base-content) 55%, transparent);
+  background: var(--pk-shadow-color);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out-soft),
+    visibility calc(var(--duration-base) * 2) var(--ease-standard);
 }
 
 .pk-lightbox.is-open {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity var(--duration-base) var(--ease-out-soft);
 }
 
+/* G-01.2-28 task 1 (gap-closure round 6, corrects G-01.2-25 task 1 above,
+   diagnosed in .planning/debug/lightbox-width-scrim-not-shell-width.md):
+   the previous round's fix was real, compiled and served — and still a
+   no-op — because it only ever widened a CAP. A `max-width` can only ever
+   SHRINK an element, never grow one: a plain `<img>` with no `width`
+   attribute renders at its own intrinsic pixel size, and every photo in
+   this catalog is produced by `PukllayClub.Catalog.Seed.ImagePipeline`'s
+   fixed `@large_width` (800px), near-square, at seed time — well under
+   every cap this rule has ever carried, the old 60rem/960px one and the
+   widened 80rem-minus-gutters one alike. Both caps sat unused above an
+   800px image; widening a ceiling that was never the binding constraint
+   could never change what rendered.
+
+   The visible fix is therefore a real WIDTH plus a solid FILL, not a
+   larger ceiling. `width` below reads `--pk-shell-content-width` (this
+   file's `:root` block, above) directly — the identical formula this
+   rule used to carry on its own `max-width`, now named once and read by
+   three rules (this one, plus both lightbox chevron side rules, G-01.2-28
+   task 2) instead of independently re-derived by each. `height`'s round-6
+   value (a single `80vh`, carried forward unchanged from the prior cap)
+   is superseded — see the G-01.2-18 paragraph below for what shipped
+   instead and why. `background` is new: an OPAQUE fill built from
+   `--pk-shadow-color` at full strength
+   (unlike every other consumer of that token, which mixes it toward
+   transparency) — the half of the fix the reported symptom actually
+   turns on, since a box that merely reaches the shell's width but still
+   lets the page show through wherever the 800px photo doesn't cover it
+   would change nothing anyone can see, and this gap would have failed a
+   third time. Reading `--pk-shadow-color` directly keeps this fill from
+   ever inverting between themes (the lesson sketch 033 already paid for,
+   see `sketch-findings-pukllay_club`) and introduces no new literal
+   colour — the one rule this whole block is under.
+
+   Raising `@large_width` so the photo itself could reach the shell's
+   width on its own pixels is a separate pass: it needs a re-seed of every
+   image in the catalog and is deliberately not folded in here.
+
+   `--pk-overlay-scrim` and `.pk-lightbox`'s own background are NOT
+   re-tuned by this task — see this task's own `<human-check>` for how the
+   scrim question is answered now that the stage behind the photo is
+   opaque; the scrim's value is shared with the mobile preview sheet
+   (`.pk-sheet-backdrop`) and stays exactly as G-01.2-25 left it.
+
+   G-01.2-18 (gap-closure round 7, closed by plan 01.2-29): the single
+   `height: 80vh` round 6 carried forward above was itself the remaining
+   bug, not a settled value. Four points worth keeping straight — the
+   first is now historical, not current: `.pk-lightbox` (above) was at
+   the time a CENTRING flex container over a translucent field, so any
+   shortfall between this rule's own height and the viewport rendered as
+   two symmetric bands of that translucent scrim, one above the stage and
+   one below it — the entire mechanism behind the user's "the background
+   should be full screen" report. G-01.2-19 later made `.pk-lightbox`'s
+   own field opaque, so a height shortfall today would show the SAME
+   colour above and below the stage, not a visible band; this paragraph
+   is kept for the historical reasoning, not as a description of the
+   current paint. Second: round 6 deferred picking a different vertical number on
+   purpose and named the exact condition for reopening it — "a separate
+   design call with its own UAT item" — and that condition fired in the
+   very next UAT round, so this is the deferral resolving on schedule,
+   not a correction of a mistake. Third: the property below is declared
+   TWICE for the same reason `.pk-app-shell` declares `min-height` twice
+   (see that rule's own comment, above in this file, for the full
+   argument) — the static `100vh` is the fallback a browser without
+   dynamic-viewport support keeps, `100dvh` is what every current browser
+   actually uses, and neither line is a leftover duplicate to clean up.
+   Fourth: a percentage of the parent's own box (`height: 100%`) would
+   ALSO have resolved correctly here, since `.pk-lightbox` is a fixed,
+   full-inset overlay with a definite height — it was rejected anyway, so
+   this file keeps exactly one idiom for "as tall as the viewport"
+   instead of two. One more thing worth recording, now historical rather
+   than current: at the time this paragraph was written, the scale-in
+   transform below briefly rendered this stage at slightly under full
+   size during the opening transition, so a hairline of the (then
+   translucent) scrim was visible for the length of that animation and
+   then gone. G-01.2-19's container fix (see that gap's own comment,
+   above `.pk-lightbox`) made this stop applying: the stage still visibly
+   scales in, but since the field behind it is now the same colour as the
+   stage, the edge simply stops reading instead of showing a hairline. */
 .pk-lightbox-img {
-  max-width: min(90vw, 60rem);
-  max-height: 80vh;
+  width: var(--pk-shell-content-width);
+  height: 100vh;
+  height: 100dvh;
+  background: var(--pk-shadow-color);
   object-fit: contain;
   border-radius: var(--radius-box);
   box-shadow: 0 28px 56px color-mix(in srgb, var(--pk-shadow-color) 38%, transparent), 0 10px 24px color-mix(in srgb, var(--pk-shadow-color) 24%, transparent);
+  /* Scale-in pairs with the container's own fade above, on the same
+     tokens — no wrapper element added. The sketch's own markup needed a
+     wrapper because its close button was anchored to the image's corner;
+     this app's close button is positioned against the viewport (see
+     .pk-lightbox-close below), so a wrapper here would carry no job. */
+  transform: scale(0.96);
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+.pk-lightbox.is-open .pk-lightbox-img {
+  transform: scale(1);
 }
 
 .pk-lightbox-close {
@@ -2498,6 +3544,186 @@ body.pk-cta-parked {
   top: 1rem;
   right: 1rem;
   z-index: 2;
+}
+
+/* G-01.2-20, plan 01.2-30 (gap-closure round 8): the close button's own
+   fill has no colour treatment of its own, so it inherits daisyUI's
+   unmodified `.btn` default — whatever `--color-base-200` is in the active
+   theme. The surface behind it, though, is theme-INVARIANT:
+   `--pk-shadow-color` is a single fixed dark literal, and both the scrim
+   and the opaque stage (`.pk-lightbox-img`, above) are built from it. A
+   theme-VARYING fill on a theme-INVARIANT backdrop is legible in one theme
+   by construction and illegible in the other — same asymmetry sketch 033
+   already paid for on the backdrop itself, opposite side of it this time.
+
+   The numbers: dark-theme `--color-base-200` (#22103A) against
+   `--pk-shadow-color` (#140822) measures ≈1.1:1 — the reported defect.
+   Light-theme `--color-base-200` (#F3ECFA) against the same backdrop
+   measures >10:1 — already correct, already signed off. What ships below,
+   dark-theme `--color-neutral` (#B8A6CC) against the same backdrop,
+   measures ≈8.6:1.
+
+   Scoped to dark only, not declared once for both themes, because
+   light-theme `--color-neutral` (#6B5B7B) against the same fixed backdrop
+   measures only ≈3.1:1 — worse than the >10:1 default it would replace. An
+   invariant rule would fix the broken theme by degrading the working one.
+
+   Two properties, not one: daisyUI's base `.btn` sets `--btn-fg:
+   var(--color-base-content)` independently of `--btn-bg`/`--btn-color`, so
+   changing only the fill would leave the icon at `--color-base-content`
+   (near-white in dark theme) on the new light-lavender chip — moving the
+   invisibility from the chip to the glyph. `--btn-color` and `--btn-fg`
+   below are the same pair daisyUI's own `.btn-neutral` sets together.
+
+   What this round deliberately did NOT do: the button did not move,
+   resize, or change shape (its anchoring is a decision rounds 6/01.2-28
+   and 7/01.2-29 were both prohibited from reopening); the markup was not
+   touched, so no daisyUI modifier class was added to it; and the chevrons
+   were left alone, since they passed UAT test 21 in both themes on this
+   same stage. */
+[data-theme="dark"] .pk-lightbox-close {
+  --btn-color: var(--color-neutral);
+  --btn-fg: var(--color-neutral-content);
+}
+
+/* G-01.2-25 task 1: BOTH lightbox chevrons get one explicit stacking
+   order above the photo, rather than relying on `z-index: auto`'s DOM-
+   order paint rule. Diagnosed root cause: the prev button, the `<img>`
+   and the next button are DOM siblings with no explicit z-index, so
+   sibling paint order followed markup order — prev, then image, then
+   next — meaning the image painted OVER the prev button and UNDER the
+   next button wherever their boxes overlapped. At mobile widths the
+   image's cap left the left-4-anchored prev button's box directly under
+   the image's edge, which is why only the LEFT chevron went invisible
+   and not the right one — an accident of markup order, not a deliberate
+   design. Both buttons carry this class, not only the previously-broken
+   one: leaving the right chevron on that same DOM-order accident means
+   the next markup reorder would silently break it too. Value matches
+   `.pk-lightbox-close` above's own explicit z-index — none of the three
+   controls spatially overlap each other, so there is no tie to resolve,
+   only each one needing to independently outrank the photo. */
+.pk-lightbox-chevron {
+  z-index: 2;
+}
+
+/* G-01.2-28 task 2 (gap-closure round 6, supersedes G-01.2-21's viewport-
+   edge anchoring): each chevron's horizontal inset, one rule per side,
+   sitting BESIDE the shared stacking rule above rather than inside it —
+   the inset genuinely differs per side, the stacking order genuinely does
+   not, so neither belongs on the other's rule.
+
+   WHY: so the arrows and the photo are measured against ONE boundary
+   instead of two. `.pk-lightbox` is `position: fixed; inset: 0` (see
+   above) — the full viewport — and it is the containing block every
+   absolutely-positioned child of it, including both these buttons,
+   resolves against. That single fact is why the previous round's bare
+   `left-4`/`right-4` was a browser-edge anchor by construction, no matter
+   what the photo was doing: `.pk-lightbox-img` (above) now reaches
+   `--pk-shell-content-width`, but a plain length here would still measure
+   from the viewport's own edge, leaving the two surfaces drifted apart
+   exactly as before. The value below is therefore a CALCULATION reading
+   the shared token, never a length: half the containing block, less half
+   the token, which resolves to the exact distance from the browser's edge
+   to the stage's edge — landing each button's outer edge on the same line
+   the header's brand lockup and the footer's clusters already share. No
+   fallback literal is added beside the token for the same reason a
+   fallback is never added elsewhere in this file: it would be a second,
+   silently-diverging opinion about the shell's width.
+
+   The user asked for this exact placement twice, in two separate UAT
+   rounds (tests 12 and 17) — see the superseded markup comment in
+   `show.ex` for the fuller history of why a recorded decision was
+   reopened rather than left standing a third time.
+
+   WHAT CHANGES AT EACH WIDTH: a large inward move at desktop (the stage
+   is far narrower than the viewport there); a smaller inward move in the
+   band between the 480px breakpoint and `--container-7xl`'s own width
+   (where `--pk-gutter`'s narrower below-480px value has not yet kicked
+   in but the viewport term is also not yet capped); and, on a phone,
+   effectively no move at all — below 480px the shell's content edge and
+   the viewport edge are one narrow gutter apart, which is the same
+   distance `left-4`/`right-4` already approximated. */
+.pk-lightbox-chevron-prev {
+  left: calc(50% - (var(--pk-shell-content-width) / 2));
+}
+
+.pk-lightbox-chevron-next {
+  right: calc(50% - (var(--pk-shell-content-width) / 2));
+}
+
+/* G-01.2-21, plan 01.2-32 (gap-closure round 10): completes round 8's fix
+   (G-01.2-20/01.2-30, comment above) across the control set it was scoped
+   out of. Same mechanism as that fix — a theme-VARYING fill on the
+   lightbox's theme-INVARIANT `--pk-shadow-color` backdrop is legible in
+   one theme by construction and illegible in the other — applied here to
+   both chevrons instead of restated; see that comment for the full
+   derivation.
+
+   Round 8 left the chevrons alone on the stated grounds that they "passed
+   UAT test 21 in both themes on this same stage." That was true when
+   written: test 21 ran under plan 01.2-29, while `.pk-lightbox`'s own
+   field was still a translucent scrim. Plan 01.2-31 (G-01.2-19, round 9)
+   then made that field fully opaque, string-identical to the photo
+   stage — the exact condition that made the close button's identical
+   unmodified `.btn` default go from legible to ≈1.1:1 in G-01.2-20. The
+   chevrons were never re-tested after that change and carry the same
+   latent defect the close button had before round 8.
+
+   One rule on the SHARED class `.pk-lightbox-chevron`, not two per-side
+   rules: both buttons already carry that class (pinned by an existing
+   assertion above), and two rules holding the same value would be two
+   places for it to drift — the precise shape of the defect this round
+   closes.
+
+   Scoped to dark only, for the same number round 8 already recorded:
+   light-theme `--color-neutral` (#6B5B7B) measures only ≈3.1:1 against
+   this same fixed backdrop — worse than the >10:1 default it would
+   replace. An invariant rule would fix the broken theme by degrading the
+   working one, now for two more controls.
+
+   General lesson this round adds to the one above: when a set of
+   markup-identical sibling controls shares a surface, a contrast fix
+   applied to one of them is not a partial fix — it is a NEW defect,
+   because the treated sibling makes the untreated ones read as broken
+   rather than merely dim. The user reported this round's gap as
+   inconsistency, not as invisibility, which is the evidence for that
+   claim. */
+[data-theme="dark"] .pk-lightbox-chevron {
+  --btn-color: var(--color-neutral);
+  --btn-fg: var(--color-neutral-content);
+}
+
+/* Share trigger (Phase 01.2 gap-closure, sketch 027): a bordered circle on
+   a plain fill with a soft lift, replacing the `btn-outline btn-primary
+   btn-sm` utility string G-01.2-6's debug session measured as "barely
+   visible" against the panel — and `btn-sm` was itself a no-op, since
+   `min-h-11 min-w-11` (kept on the element in markup, not moved here)
+   already clamped the button to 44px both before and after that class
+   existed. The sketch's own circle is 40px; this repo's 44px touch floor
+   outranks it, so the sketch's size is not ported, only its border/fill/
+   shadow treatment is. This rule briefly had a sibling variant rule
+   (Phase 01.2 gap-closure, sketch 028) for the mobile CTA bar's own second
+   share control; that call site — and this rule's own variant split —
+   was removed in G-01.2-18 task 2, since the panel's corner icon is the
+   page's one share entry point now. */
+.pk-share-trigger {
+  border-radius: 9999px;
+  border: 1px solid var(--color-base-300);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--pk-shadow-color) 6%, transparent);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.pk-share-trigger:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 /* Share popover (01.1-04): the native-Web-Share-API fallback surface,
@@ -2543,6 +3769,115 @@ body.pk-cta-parked {
   .pk-mobile-cta-bar {
     display: none;
   }
+
+  /* Title-echo bar desktop hide (Phase 01.2 gap-closure round 4, G-01.2-14/
+     G-01.2-24 task 1): placed immediately beside the mobile CTA bar's own
+     `display: none` above so the two phone-only bars are hidden in exactly
+     one place and can never drift apart again. The bar is a phone
+     affordance that echoes a title which, at and above this breakpoint, is
+     still on screen beside the sticky poster column (.pk-poster-col
+     above) — its paired sibling already got this treatment, this one was
+     simply never added when the bar was introduced.
+
+     This is a VIEWPORT-CLASS hide, not a runtime state change: at desktop
+     the bar never appears, so there is nothing to fade. The base rule's
+     opacity/transform fade and its two state classes (.is-visible/
+     .is-parked, both above) are untouched — they remain the only mechanism
+     that shows or hides the bar while a visitor scrolls BELOW this
+     breakpoint, where the bar's runtime state machine still needs them. */
+  .pk-title-echo {
+    display: none;
+  }
+
+  /* Poster-column reserve button reveal — the mobile bar above is hidden
+     at this same breakpoint, so exactly one Reservar control is ever on
+     screen. inline-flex matches daisyUI's own .btn display value. */
+  .pk-poster-reserve {
+    display: inline-flex;
+  }
+
+  /* Thumbnails/dots swap (G-01.2-10 task 2, D3 = dots on mobile). */
+  .pk-gallery-thumbnails {
+    display: flex;
+  }
+
+  .pk-gallery-dots {
+    display: none;
+  }
+
+  /* G-01.2-22 task 2: the fixed bottom bar above is hidden at this same
+     breakpoint, but body.pk-has-cta-bar's reserved bottom padding
+     (declared far above, next to that class — see its own arithmetic
+     comment) was still being applied at every width, reserving clearance
+     for a bar that no longer exists here. Zeroed as a desktop-only
+     override in the one block that already owns this breakpoint's
+     detail-layout swap, alongside the bar's own display:none above, so
+     both halves of the swap live together. The mobile value, its
+     transition and its arithmetic comment are untouched by this. */
+  body.pk-has-cta-bar {
+    padding-bottom: 0;
+  }
+}
+
+/* Boundary-collapse (opt-in, Phase 01.2 gap-closure round 2, G-01.2-11/
+   G-01.2-12, sketch 035; bottom-boundary arithmetic CORRECTED in gap-
+   closure round 4, G-01.2-14/G-01.2-24 task 2 — see that correction below,
+   this paragraph's own original framing is kept intact above it rather
+   than silently rewritten). Layouts.app's `boundary_collapse` attr
+   (default false) renders this class on <main> instead of its default
+   vertical-padding utilities (mutually exclusive, see that attr's own doc
+   and the CASCADE-LAYER HAZARD note at the top of this file). Collapses
+   the detail page's two page-boundary gaps — header to masthead, and last
+   shelf to footer — to one deliberate 24px value at each end.
+
+   Bottom boundary, before round 2's fix, stacked four independently-
+   reasonable declarations: <main>'s own bottom padding (80px) +
+   `.pk-shelf`'s own trailing margin (48px) + `.pk-footer`'s own top
+   margin (48px) + `.pk-footer-row`'s own inner top padding (24px) = 200px
+   combined. The wrapper's own bottom padding and the shelf's trailing
+   margin are still correctly cancelled below — both are genuinely
+   redundant contributors that should not stack, and that part of round
+   2's reasoning holds.
+
+   CORRECTION (round 4): round 2 also cancelled the footer's own top
+   margin and claimed `.pk-footer-row`'s remaining 24px inner top padding
+   "IS the resulting 24px" — G-01.2-14's live measurement (real CDP
+   against the running dev server, not inferred from the stylesheet alone)
+   found the carousel's bottom edge and the footer's top edge coincide
+   exactly, a 0px external gap. That 24px inner padding sits INSIDE the
+   footer's own background and border — it is the footer's own content
+   inset, not a gap BETWEEN the carousel and the footer, and it can never
+   read as one no matter how it's tuned. The footer's own inner padding
+   was never the target and was never a contributor to this boundary; it
+   stays byte-identical below, restated with this corrected reason instead
+   of the disproven one. The bottom boundary is therefore the FOOTER'S OWN
+   TOP MARGIN, set below to the same 1.5rem/24px the top boundary uses —
+   one deliberate declaration, in one place, on the far side of the
+   footer's border from its own inner padding.
+
+   Top boundary, before this fix: the title-echo bar's own dead layout
+   space while hidden (removed in task 1, by taking that bar out of normal
+   document flow) plus <main>'s own top padding. This block sets the
+   wrapper's own top padding directly to the same 24px landed on below.
+
+   Equal top/bottom (24px/24px) was a developer decision made against
+   three asymmetric alternatives (sketch 035, variant D chosen over A/B/C)
+   — a uniform, minimal rhythm read better than giving the footer boundary
+   more room just because it is the page's ending. That discussion is
+   closed; if it needs reopening, that is a new sketch round, not a code
+   edit. Round 4 makes this 24px REAL rather than changing what it should
+   be. */
+main.pk-boundary-collapse {
+  padding-top: 1.5rem;
+  padding-bottom: 0;
+}
+
+main.pk-boundary-collapse .pk-shelf:last-of-type {
+  margin-bottom: 0;
+}
+
+main.pk-boundary-collapse + .pk-footer {
+  margin-top: 1.5rem;
 }
 
 /* ─── HEADER ROW CAPACITY: the two reveal breakpoints ─────────────────────
@@ -2668,13 +4003,39 @@ body.pk-cta-parked {
    (banned by ui-design-system), which is why it lives in this block.
    `.is-dimmed` is driven entirely by the existing `@filters_open` assign
    in `CatalogLive.Index` — no new hook, no new assign. */
+/* Opacity appended to the transition shorthand ABOVE (G-01.2-9 gap
+   closure, Task 1) for the in-flight dim below — never a second
+   `transition:` shorthand on this selector: a shorthand resets every
+   longhand it doesn't mention, which is the exact multi-hour bug class
+   this file has already paid for once elsewhere. Filter keeps its
+   existing duration/curve untouched; opacity gets its own, faster pair
+   since a paint-only in-flight dim is a different kind of change than
+   the modal's blur. */
 .pk-dimmable {
-  transition: filter var(--duration-base) var(--ease-out-soft);
+  transition:
+    filter var(--duration-base) var(--ease-out-soft),
+    opacity var(--duration-fast) var(--ease-standard);
 }
 
 .pk-dimmable.is-dimmed {
   filter: blur(3px) saturate(0.7) brightness(0.94);
   pointer-events: none;
+}
+
+/* In-flight dim for the search/filter round trip (G-01.2-9): mirrors the
+   .GridScroll/.CarouselScroll `data-loading` idiom used above for
+   trailing-skeleton reveal, just scoped to the results wrapper instead
+   of one rail/grid fetch-more. Set/cleared by the wrapper's own
+   colocated hook (index.ex Task 2) via `dataset`, never an inline style.
+   An opacity below 1 here establishes a containing block for
+   `position: fixed` descendants — the SAME constraint `.is-dimmed`'s
+   blur already imposes above, just applying at a different trigger — which
+   is why `GamePreview.preview_host/1` and `FilterModal.filter_modal/1`
+   stay OUTSIDE this wrapper (see index.ex's own comment on that
+   boundary): nesting either inside would both dim it and re-anchor its
+   fixed positioning to this wrapper's box. */
+.pk-dimmable[data-loading] {
+  opacity: 0.55;
 }
 
 /* ─── HEADER ROW CAPACITY: the band that cannot fit at all ────────────────
