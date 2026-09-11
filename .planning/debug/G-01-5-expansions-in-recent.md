@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "G-01-5: Game expansions are appearing in the 'Recién añadidos' (recently added) section on the catalog main page, when that section should only ever show base games."
 created: 2026-08-18T00:00:00.000Z
 updated: 2026-08-18T00:00:00.000Z
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus

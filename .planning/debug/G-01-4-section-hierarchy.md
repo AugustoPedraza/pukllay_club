@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "G-01-4: The catalog's ~8 sections on the main page all look the same — no clear visual hierarchy, spacing, or heading treatment separating one section from the next."
 created: 2026-08-18T00:00:00.000Z
 updated: 2026-08-18T00:00:00.000Z
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus

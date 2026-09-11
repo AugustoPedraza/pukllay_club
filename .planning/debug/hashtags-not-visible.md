@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "G-01.3-1: Hashtags below the game title are not visible on the game detail page (Phase 01.3, PukllayClub board-game catalog, Phoenix LiveView)."
 created: 2026-08-31T21:30:00Z
 updated: 2026-08-31T22:20:00Z
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus

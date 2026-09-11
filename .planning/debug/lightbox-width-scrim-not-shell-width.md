@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "Investigate issue: lightbox-width-scrim-not-shell-width. Plan 01.2-25 was supposed to make the game-detail lightbox photo derive its max-width from the site's own shell/container width token, and both chevrons were supposed to get an explicit z-index. Code-confirmed present by TWO independent verifier passes (source reads only, no live render). Live UAT round shows the fix did NOT visibly take effect."
 created: 2026-08-28T00:00:00.000Z
 updated: 2026-08-28T00:10:00.000Z
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus

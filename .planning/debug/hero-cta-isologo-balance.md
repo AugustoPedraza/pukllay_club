@@ -5,12 +5,17 @@ created: 2026-09-08T16:00:00Z
 updated: 2026-09-08T17:20:00Z
 gap_id: G-01.5-1
 artifacts: .planning/debug/assets/hero-cta-isologo-balance/
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus
 
 bug_class: Bohrbug (deterministic, purely visual — reproduces at every load, no timing/concurrency)
 known_pattern_candidates:
+
   - "footer-theme-toggle-balance — 'wrong balance' between adjacent concerns; the diagnostic instrument
      is a CHANNEL INVENTORY (chrome / proximity / KIND / fill / ink / BOX GEOMETRY): enumerate the
      channels prior work already touched, attack the unmeasured one."
@@ -278,7 +283,6 @@ started: Discovered during end-of-phase UAT for phase 01.5 (2026-09-08)
     drop `min-h-12`: that ships a 35px button, below the project's 44px touch floor. `btn-lg` alone
     gives 42px, still 2px short — so a size step must be COMPOSED with `min-h-11`, exactly as
     show.ex:502 already does.
-
 
 ## Resolution
 

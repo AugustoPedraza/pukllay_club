@@ -12,6 +12,7 @@ task's changes are auto-fixed).
   modified by commit `fddc0f6` (an earlier, unrelated plan). Pre-existing
   drift, out of scope for this plan. Not fixed here; flag for a future
   formatting pass or `mix format` run.
+  status: acknowledged
 
 ## 01.4-12
 
@@ -25,3 +26,4 @@ task's changes are auto-fixed).
   `lib/pukllay_club_web/live/about_live.ex`,
   `test/pukllay_club_web/live/{about_live,catalog_live}_test.exs`) are
   individually clean under `mix format --check-formatted`.
+  status: acknowledged

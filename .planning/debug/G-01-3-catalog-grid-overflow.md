@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "G-01-3: Catalog grid renders ~20 columns of game cards side by side on the main page, forcing horizontal scrolling, instead of a responsive column count per viewport width."
 created: 2026-08-18T00:00:00.000Z
 updated: 2026-08-18T00:00:00.000Z
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus

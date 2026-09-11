@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "3. the close \"nos vemos el sabado\" has a huge space top and bottom / 4. also on the close band there are wrong white space and the bottom has bottom space from viewport"
 created: 2026-09-08
 updated: 2026-09-08
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-09-11
+  status: diagnosed
 ---
 
 ## Current Focus
@@ -626,6 +630,7 @@ suggested_fix_direction: |
 ## Assets
 
 Captured to `.planning/debug/assets/cierre-band-whitespace/`:
+
 - `tablet-768-cierre-top.png` — item 3 at >=640px: the 157px group inside a 900px band.
 - `mobile-390-page-bottom.png` — item 4 at <=480px: the 200px white void between the tinted
   Cierre band and the tinted footer, with the fixed Sumate bar overlaying the footer (E-11).
