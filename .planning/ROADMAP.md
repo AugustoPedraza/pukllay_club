@@ -85,7 +85,14 @@ builds its JSON-LD on the CSP baseline that phase establishes)
   4. `https://pukllay.club/sitemap.xml` lists the catalog index plus every publicly-reachable game — count matches the live catalog, `lastmod` tracks each game's own `updated_at` — and `robots.txt` allows crawling and points at it
   5. Catalog card and hover-preview images announce the actual game (to a screen reader, and when an image fails to load) instead of being skipped as decorative
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 01.8-01-PLAN.md — Wave 1 · CSP nonce refactor plus the crawler-visible per-game SEO chain: `GameSEO`/`SiteSEO` plugs, the `SEO` payload builder, `SEOTags`, meta description, Open Graph/Twitter tags and `Game` JSON-LD (SEC-05, SEO-01, SEO-05, SHARE-01, SHARE-02)
+- [ ] 01.8-02-PLAN.md — Wave 1 · Real `alt` text across all six cover render branches on `GameCard` and `GamePreview`, via one shared generator that handles the sparse-publishers case (SEO-02)
+- [ ] 01.8-03-PLAN.md — Wave 2 · Request-time `sitemap.xml` from the live catalog, plus real `robots.txt` content pointing at it (SEO-03, SEO-04)
+- [ ] 01.8-04-PLAN.md — Wave 2 · The 1200x630 og-card letterbox transform, its one-time `catalog.backfill_og_cards` batch, and the real run against the live catalog (SHARE-03, SHARE-05)
+- [ ] 01.8-05-PLAN.md — Wave 2 · `LocalBusiness` JSON-LD from the locked club facts, `ClubLinks.public_phone/0`, and the sketch-approved branded OG fallback card (SEO-06, SHARE-04)
 
 > **Build order inside this phase (from `research/SUMMARY.md`):** the CSP nonce refactor
 > (`CSP.policy/0` → `policy/1`, per-request nonce in `put_csp/2` — SEC-05) comes first because the
