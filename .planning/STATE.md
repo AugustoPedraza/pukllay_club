@@ -6,9 +6,9 @@ current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
 stopped_at: Phase 01.8 complete, ready to plan Phase 2
-last_updated: "2026-09-12T17:08:49.435Z"
+last_updated: "2026-09-12T21:19:13.424Z"
 last_activity: 2026-09-12
-state_head: c5504209eeb8028eb798184568f811e13767d247
+state_head: 76c02b82dcd8e25679f6981979b35a0cecd374cf
 progress:
   total_phases: 5
   completed_phases: 1
@@ -298,6 +298,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260912-mxr | Close out 6 remaining diagnosed debug sessions (5 resolved incl. no-disconnect-banner not-a-bug; hashtags-not-visible still open) | 2026-09-12 | bf3d3f2 | — | .planning/quick/260912-mxr-close-out-the-6-remaining-diagnosed-debug-sessions-in-planni |
 | 260912-mxs | Complete brand-name todo (satisfied by Sketch 050 wordmark, footer, SEO) | 2026-09-12 | a3124f9 | — | .planning/quick/260912-mxs-complete-pending-todo-planning-todos-pending-2026-09-07-surf |
 | 260912-mxt | Reconcile Windows ledger (21 open -> 9 open, 11 fixed, 1 waived) | 2026-09-12 | 0277a2f | — | .planning/quick/260912-mxt-reconcile-the-21-open-entries-in-the-windows-ledger-planning |
+| 7 | Closed hashtags-not-visible debug session as not-a-bug (G-01.3-1 product decision) and waived remaining 9 WINDOWS.md entries with residual-risk reasons — ledger open 0, unblocks /gsd-ship | 2026-09-12 | 76c02b8 | — | — |
 
 ### Roadmap Evolution
 
