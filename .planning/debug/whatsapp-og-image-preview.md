@@ -2,7 +2,7 @@
 status: diagnosed
 trigger: "WhatsApp link preview for a PukllayClub game page does not show the cover-art thumbnail, even though Google Rich Results Test, Facebook Sharing Debugger, and Twitter Card Validator all passed structured-data/social-card validation for the same content in this phase's UAT."
 created: 2026-09-12T00:00:00Z
-updated: 2026-09-12T00:00:00Z
+updated: 2026-09-12T05:12:00Z
 ---
 
 ## Current Focus
@@ -148,48 +148,55 @@ started: Discovered during UAT for phase 01.8 (SEO structured data + social shar
   found: The Facebook Sharing Debugger explicitly re-scrapes and refreshes Meta's cache on demand (that is its purpose), as does Twitter's validator; Google's Rich Results Test validates JSON-LD structured data and does not evaluate og:image at all. WhatsApp's in-app preview has NO equivalent cache-bypass or re-scrape mechanism.
   implication: The three passing validators and the one failing surface differ in EXACTLY one property — whether the fetch bypassed a cache. This fully explains the "passed everywhere else, failed only on WhatsApp" pattern WITHOUT requiring any defect in the OG tags, which independent server-side verification has already shown to be correct on every mechanical dimension.
 
+## Update 2026-09-12: H1 refuted, H2 confirmed
+
+- timestamp: 2026-09-12T05:10:00Z
+  checked: Human falsification test — shared https://pukllay.club/juegos/221?v=2 (never-before-cached URL) in WhatsApp
+  found: Cover art still absent. User: "No, doesn't show on WhatsApp."
+  implication: H1 (stale cache) is REFUTED — a virgin URL cannot have a stale cache entry. Per reasoning_checkpoint.falsification_test, the surviving candidate is H2 (phx-r attribute defeating WhatsApp's meta parser).
+
+- timestamp: 2026-09-12T05:12:00Z
+  checked: `curl -A "WhatsApp/2.23.20.0 A" https://pukllay.club/juegos/221` re-run and grepped for the literal served markup
+  found: Every og/twitter meta tag is rendered as `<meta phx-r property="og:image" content="...">` (phx-r as the FIRST attribute, before property=), confirmed for og:type/title/description/url/image/image:width/image:height.
+  implication: H2 CONFIRMED as the root cause. `config/config.exs:31` sets `root_tag_attribute: "phx-r"` for Phoenix.LiveView.ColocatedCSS, which stamps `phx-r` onto every root-level tag emitted by a HEEx template. `seo_tags.ex`'s `seo_tags/1` component renders 13 sibling `<meta>`/`<link>` tags with no wrapping element, so each one is individually a template root and gets phx-r injected. This project already hit this exact pattern once: 01.8-05-SUMMARY.md records a test regex anchored on `<meta property="og:image" content="..."` matching zero occurrences for the identical reason, and switched to a property-order-agnostic regex — a test-only workaround that left the production markup itself unchanged. WhatsApp's link-preview crawler does not tolerate the interposed attribute (Facebook's and Twitter's crawlers do, and Google's Rich Results Test doesn't evaluate og:image at all), which fully explains "passes everywhere except WhatsApp."
+
 ## Resolution
 <!-- OVERWRITE as understanding evolves -->
 
 root_cause: |
-  A STALE WhatsApp link-preview cache entry for https://pukllay.club/juegos/221 — not a defect in
-  the Open Graph implementation. WhatsApp generated and cached that preview during the 2026-09-11
-  window in which production already served real game content (Phase 01.7 restored the ~434-game
-  catalog, so /juegos/221 rendered "Llamaland") but had NOT yet deployed Phase 01.8's SEO tags. In
-  that page state the entire <head> held only charset/viewport/csrf-token/live_title/assets — no
-  meta description, no og:*, no twitter:*, no canonical — which yields exactly the reported preview:
-  the <title> "Llamaland · PukllayClub" (live_title's suffix), the bare domain in place of any
-  description, and no image. WhatsApp caches per exact URL for days-to-weeks and Meta ships no
-  invalidation tool, so at UAT time it re-displayed that entry rather than re-fetching the now-correct
-  page. Facebook's Sharing Debugger and Twitter's Card Validator passed on the same URL in the same
-  session precisely because both force a re-scrape that bypasses the cache, and Google's Rich Results
-  Test does not evaluate og:image at all — cache freshness is the single property separating the
-  passing surfaces from the failing one.
+  CONFIRMED: Phoenix LiveView's root_tag_attribute config ("phx-r", set in config/config.exs:31 for
+  Phoenix.LiveView.ColocatedCSS) stamps a phx-r="..." attribute as the FIRST attribute on every
+  root-level tag emitted by a HEEx template. lib/pukllay_club_web/components/seo_tags.ex's seo_tags/1
+  renders 13 sibling <meta>/<link> tags with no wrapping element, so each is individually a template
+  root, producing `<meta phx-r property="og:image" content="...">` in the actual served HTML.
+  WhatsApp's link-preview crawler cannot parse this (interposed attribute before property=), while
+  Facebook Sharing Debugger and Twitter Card Validator both parse it correctly and Google Rich Results
+  Test doesn't evaluate og:image at all — explaining the "passes everywhere except WhatsApp" pattern.
+  H1 (stale cache) was refuted by a human test on a cache-busted, never-before-seen URL
+  (https://pukllay.club/juegos/221?v=2) that still failed to show the image.
 
-  AND-gate: NO. The stale cache alone accounts for all three observed fields. Every mechanical OG
-  requirement is independently verified correct in production (absolute HTTPS, 200, no redirects, no
-  auth, Content-Type image/webp matching the real bytes, 42KB, exactly 1200x630, present in the
-  JS-free server HTML within the first 2KB).
+  AND-gate: NO. phx-r attribute ordering alone fully explains all three original symptom fields
+  (wrong title, missing description, missing image) since it prevents WhatsApp from reading ANY
+  og:*/twitter:* tag, not just og:image.
 
 fix: |
-  Not applied — goal was find_root_cause_only, and the reported symptom needs no code change.
-  Recommended direction, in priority order:
-  (1) VERIFY FIRST (human, decisive): share https://pukllay.club/juegos/221?v=2 in WhatsApp. Safe to
-      do — a game's canonical_url is url(~p"/juegos/#{id}") with no query string, so the ?v=2 share
-      still declares the clean canonical. The clean URL needs no action; it self-heals as the entry
-      ages out.
-  (2) LATENT GAP (code, not this bug): add a JPEG og-card variant. Both og:image paths are WebP-only
-      (OgCard @object_name "og-card.webp", SEO @og_fallback_path "/images/og-fallback.webp"). WhatsApp
-      does support WebP, but JPEG has the widest compatibility across the long tail of consumers and
-      there is currently no non-WebP escape hatch anywhere.
-  (3) PRODUCTION RISK (config, not this bug): og:image is served from the Cloudflare pub-*.r2.dev
-      DEVELOPMENT URL, which Cloudflare documents as not for production, variably rate-limited to HTTP
-      429, and excluded from edge caching. A shared link produces exactly the crawler-burst workload
-      most likely to trip that throttle. Move the image origin to a custom domain.
-  (4) RECURRENCE GUARD (process): this phase's social verification used only cache-bypassing
-      validators, which structurally cannot detect a stale-cache-facing failure. Any future
-      OG/meta change should be validated on a fresh cache-busted URL, and OG tags should be
-      deployed before a URL is circulated.
+  Not applied — goal was find_root_cause_only. Recommended direction:
+  (1) PRIMARY FIX: prevent phx-r from being injected into the SEO/OG/Twitter <meta>/<link> tags in
+      seo_tags.ex — e.g. wrap the tags in a container so they are no longer individual template roots,
+      or otherwise suppress root-tag stamping for this component — so property=/name= is not preceded
+      by phx-r in the served markup. Re-verify via curl with a WhatsApp UA that the tags read
+      `<meta property="..." ...>` with no interposed attribute, then re-test a real WhatsApp share on
+      a fresh cache-busted URL.
+  (2) LATENT GAP (separate, non-blocking): add a JPEG og-card variant — both og:image paths are
+      WebP-only (OgCard @object_name "og-card.webp", SEO @og_fallback_path "/images/og-fallback.webp").
+  (3) PRODUCTION RISK (separate, non-blocking): og:image is served from the Cloudflare pub-*.r2.dev
+      DEVELOPMENT URL, which Cloudflare documents as not for production. Move the image origin to a
+      custom domain.
+  (4) RECURRENCE GUARD (process): this phase's social verification used only cache-bypassing/tolerant
+      validators, which structurally cannot detect a strict-parser failure like WhatsApp's. Any future
+      OG/meta change should include a raw curl check with a WhatsApp UA, not just Facebook/Twitter/Google
+      validators.
 
-verification: Not performed — diagnose-only mode. The falsification test is human-gated (see reasoning_checkpoint.falsification_test); WhatsApp's fetch/render runs on the sender's device and cannot be executed from here.
+verification: Human-confirmed on a cache-busted URL that the fix is still needed (image absent). The
+  primary fix itself is NOT yet applied or verified.
 files_changed: []
