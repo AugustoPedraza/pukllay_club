@@ -30,7 +30,7 @@ Full phase-by-phase detail (goals, success criteria, plans) archived at
 established decimal-insertion convention (01.1 … 01.6 all ran this way). Phase 2/3/4 keep their
 numbers and their scope; nothing from them is pulled forward.
 
-- [ ] **Phase 01.7: Production Catalog Data & Security Hardening** - Load the real ~400+ game catalog into production via a safe repeatable path, then close the cookie/HSTS/CSP/CSRF gaps and sweep git history for secrets
+- [x] **Phase 01.7: Production Catalog Data & Security Hardening** - Load the real ~400+ game catalog into production via a safe repeatable path, then close the cookie/HSTS/CSP/CSRF gaps and sweep git history for secrets (completed 2026-09-11)
 - [ ] **Phase 01.8: SEO, Structured Data & Social Sharing** - Per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, and real image `alt` text
 
 ### Phase 01.7: Production Catalog Data & Security Hardening (INSERTED)
@@ -85,7 +85,19 @@ builds its JSON-LD on the CSP baseline that phase establishes)
   4. `https://pukllay.club/sitemap.xml` lists the catalog index plus every publicly-reachable game — count matches the live catalog, `lastmod` tracks each game's own `updated_at` — and `robots.txt` allows crawling and points at it
   5. Catalog card and hover-preview images announce the actual game (to a screen reader, and when an image fails to load) instead of being skipped as decorative
 
-**Plans**: TBD
+**Plans**: 5/5 plans executed
+
+Plans:
+**Wave 1**
+
+- [x] 01.8-01-PLAN.md — Wave 1 · CSP nonce refactor plus the crawler-visible per-game SEO chain: `GameSEO`/`SiteSEO` plugs, the `SEO` payload builder, `SEOTags`, meta description, Open Graph/Twitter tags and `Game` JSON-LD (SEC-05, SEO-01, SEO-05, SHARE-01, SHARE-02)
+- [x] 01.8-02-PLAN.md — Wave 1 · Real `alt` text across all six cover render branches on `GameCard` and `GamePreview`, via one shared generator that handles the sparse-publishers case (SEO-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 01.8-03-PLAN.md — Wave 2 · Request-time `sitemap.xml` from the live catalog, plus real `robots.txt` content pointing at it (SEO-03, SEO-04)
+- [x] 01.8-04-PLAN.md — Wave 2 · The 1200x630 og-card letterbox transform, its one-time `catalog.backfill_og_cards` batch, and the real run against the live catalog (SHARE-03, SHARE-05)
+- [x] 01.8-05-PLAN.md — Wave 2 · `LocalBusiness` JSON-LD from the locked club facts, `ClubLinks.public_phone/0`, and the sketch-approved branded OG fallback card (SEO-06, SHARE-04)
 
 > **Build order inside this phase (from `research/SUMMARY.md`):** the CSP nonce refactor
 > (`CSP.policy/0` → `policy/1`, per-request nonce in `put_csp/2` — SEC-05) comes first because the
@@ -156,8 +168,8 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Walking Skeleton to Production | 6/6 | Complete | 2026-07-27 |
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
-| 01.7. Production Catalog Data & Security Hardening | 5/5 | In Progress|  |
-| 01.8. SEO, Structured Data & Social Sharing | 0/TBD | Not started | - |
+| 01.7. Production Catalog Data & Security Hardening | 5/5 | Complete    | 2026-09-11 |
+| 01.8. SEO, Structured Data & Social Sharing | 5/5 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |

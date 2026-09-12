@@ -17,26 +17,26 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 
 ### SEO
 
-- [ ] **SEO-01**: Every game detail page has a unique, real meta description
-- [ ] **SEO-02**: Catalog card and hover-preview images have real, descriptive `alt` text
+- [x] **SEO-01**: Every game detail page has a unique, real meta description
+- [x] **SEO-02**: Catalog card and hover-preview images have real, descriptive `alt` text
       (currently `alt=""`)
-- [ ] **SEO-03**: `robots.txt` allows crawling and references `sitemap.xml`
-- [ ] **SEO-04**: `sitemap.xml` lists the catalog index and every game detail page, generated live
+- [x] **SEO-03**: `robots.txt` allows crawling and references `sitemap.xml`
+- [x] **SEO-04**: `sitemap.xml` lists the catalog index and every game detail page, generated live
       from the database (not a build-time static file)
-- [ ] **SEO-05**: Every game detail page carries JSON-LD `Game` structured data
-- [ ] **SEO-06**: The site carries JSON-LD `LocalBusiness` structured data reflecting the club's
+- [x] **SEO-05**: Every game detail page carries JSON-LD `Game` structured data
+- [x] **SEO-06**: The site carries JSON-LD `LocalBusiness` structured data reflecting the club's
       Jujuy location
 
 ### Social Sharing
 
-- [ ] **SHARE-01**: Every game detail page carries Open Graph tags (title, description, image,
+- [x] **SHARE-01**: Every game detail page carries Open Graph tags (title, description, image,
       url, type) reflecting that specific game
-- [ ] **SHARE-02**: Every game detail page carries Twitter Card tags (`summary_large_image`)
+- [x] **SHARE-02**: Every game detail page carries Twitter Card tags (`summary_large_image`)
       reflecting that specific game
-- [ ] **SHARE-03**: OG/Twitter images are properly sized (1200×630) using the game's own cover art
-- [ ] **SHARE-04**: Pages without a natural hero image (catalog index, About) carry a branded OG
+- [x] **SHARE-03**: OG/Twitter images are properly sized (1200×630) using the game's own cover art
+- [x] **SHARE-04**: Pages without a natural hero image (catalog index, About) carry a branded OG
       fallback image (isologo/wordmark)
-- [ ] **SHARE-05**: Sharing a game link via the existing native-share control produces an
+- [x] **SHARE-05**: Sharing a game link via the existing native-share control produces an
       appealing, on-brand preview card on the receiving platform (WhatsApp/Facebook/Twitter)
 
 ### Security Hardening
@@ -48,7 +48,7 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
       Google Maps embed (`frame-src`)
 - [x] **SEC-04**: CSRF protection is confirmed to also cover LiveView's websocket connect flow
       (not just plain form posts)
-- [ ] **SEC-05**: JSON-LD script tags render correctly under CSP via a nonce or hash-source — not
+- [x] **SEC-05**: JSON-LD script tags render correctly under CSP via a nonce or hash-source — not
       by weakening `script-src` with `unsafe-inline`
 
 ### Secrets Audit
@@ -94,22 +94,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | SEED-01 | Phase 01.7 | Complete |
 | SEED-02 | Phase 01.7 | Complete |
-| SEO-01 | Phase 01.8 | Pending |
-| SEO-02 | Phase 01.8 | Pending |
-| SEO-03 | Phase 01.8 | Pending |
-| SEO-04 | Phase 01.8 | Pending |
-| SEO-05 | Phase 01.8 | Pending |
-| SEO-06 | Phase 01.8 | Pending |
-| SHARE-01 | Phase 01.8 | Pending |
-| SHARE-02 | Phase 01.8 | Pending |
-| SHARE-03 | Phase 01.8 | Pending |
-| SHARE-04 | Phase 01.8 | Pending |
-| SHARE-05 | Phase 01.8 | Pending |
+| SEO-01 | Phase 01.8 | Complete |
+| SEO-02 | Phase 01.8 | Complete |
+| SEO-03 | Phase 01.8 | Complete |
+| SEO-04 | Phase 01.8 | Complete |
+| SEO-05 | Phase 01.8 | Complete |
+| SEO-06 | Phase 01.8 | Complete |
+| SHARE-01 | Phase 01.8 | Complete |
+| SHARE-02 | Phase 01.8 | Complete |
+| SHARE-03 | Phase 01.8 | Complete |
+| SHARE-04 | Phase 01.8 | Complete |
+| SHARE-05 | Phase 01.8 | Complete |
 | SEC-01 | Phase 01.7 | Complete |
 | SEC-02 | Phase 01.7 | Complete |
 | SEC-03 | Phase 01.7 | Complete |
 | SEC-04 | Phase 01.7 | Complete |
-| SEC-05 | Phase 01.8 | Pending |
+| SEC-05 | Phase 01.8 | Complete |
 | AUDIT-01 | Phase 01.7 | Complete |
 | AUDIT-02 | Phase 01.7 | Complete |
 

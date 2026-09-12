@@ -156,6 +156,29 @@ defmodule PukllayClub.Catalog do
   def get_game!(id), do: Repo.get!(Game, id)
 
   @doc """
+  The single, explicitly-ordered source of truth for `sitemap.xml`'s
+  per-game entries (SEO-04). Selects only `:id` and `:updated_at` — the
+  minimum needed to build one `<url>` entry with its own `<lastmod>`.
+  Ordered by `:id` (a property of the query, not of Postgres' physical row
+  order) so two successive requests over unchanged data return
+  byte-identical documents.
+
+  There is no visibility, draft, or soft-delete column on this schema
+  today (confirmed by direct read of `PukllayClub.Catalog.Game`) — every
+  row is selected. A future phase adding such a column must add a filter
+  here at the same time, or a hidden/draft game would still appear in the
+  public sitemap.
+  """
+  @spec sitemap_entries() :: [%{id: integer(), updated_at: NaiveDateTime.t() | DateTime.t()}]
+  def sitemap_entries do
+    Repo.all(
+      from g in Game,
+        select: %{id: g.id, updated_at: g.updated_at},
+        order_by: [asc: g.id]
+    )
+  end
+
+  @doc """
   Games "similar" to `game` for the detail page's Juegos similares shelf.
 
   **G-01.2-7 / sketch 031 (Always-Full Guarantee) supersedes D-06's original

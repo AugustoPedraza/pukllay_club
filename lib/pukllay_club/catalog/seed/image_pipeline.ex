@@ -14,6 +14,16 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   other-language box covers as if they were extra photos of the game. See
   `process_gallery/3`'s `@doc` for why, and git history for the removed
   implementation.
+
+  `og_card/1` (phase 01.8, D-06/D-07/D-08) is a third transform living
+  alongside `process/3`: it letterboxes a game's own already-stored R2 cover
+  (never the BGG original) onto a 1200x630 brand-coloured canvas for social
+  sharing. It reuses `download/1`'s 15 MB cap and content-type check
+  unchanged, but validates against a different host allowlist — the
+  configured `:pukllay_club, :image_origin` host, the same single key
+  `PukllayClubWeb.CSP.img_src/0` derives the browser policy from — so this
+  module never hardcodes an R2 hostname (`csp.ex`'s moduledoc states that
+  rule explicitly, for the same reason).
   """
 
   alias PukllayClub.Catalog.Seed.Credentials
@@ -25,6 +35,15 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   @large_width 800
   @max_gallery_images 3
   @spanish_language_link "Spanish"
+  @og_card_width 1200
+  @og_card_height 630
+  # D-07: the letterbox background is the light theme's --color-primary,
+  # which resolves to --pk-ramp-600 in assets/css/app.css (verbatim:
+  # `--pk-ramp-600: #8C2AB7;`). The dark theme's own --color-primary
+  # (--pk-ramp-900) is deliberately not used — a static social-preview image
+  # can't be theme-aware, so this is the one correct literal, not a
+  # discretion call.
+  @og_card_background "#8C2AB7"
 
   @doc """
   Downloads `source_url`, resizes it to a #{@thumb_width}px-wide thumbnail
@@ -35,7 +54,7 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   @spec process(String.t(), String.t(), Credentials.t()) ::
           {:ok, %{thumbnail_url: String.t(), cover_url: String.t()}} | {:error, term()}
   def process(source_url, key_prefix, %Credentials{} = credentials) do
-    with :ok <- validate_url(source_url),
+    with :ok <- validate_url(source_url, @allowed_hosts),
          {:ok, image_bytes} <- download(source_url),
          {:ok, vimage} <- Image.open(image_bytes),
          {:ok, thumb_url} <-
@@ -102,6 +121,41 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   defp usable_image?(image), do: is_binary(image) and image != ""
 
   @doc """
+  Fetches `cover_url` — a game's own already-stored R2 cover (D-06), never a
+  BGG original — and returns a #{@og_card_width}x#{@og_card_height} WebP with
+  the source letterboxed (fit, never cropped) onto the brand-coloured canvas
+  (D-07/D-08).
+
+  `cover_url`'s host must resolve against the configured `:pukllay_club,
+  :image_origin` application key; every other mitigation on this download
+  path (the streaming #{@max_download_bytes}-byte cap, the image
+  content-type check) is byte-identical to `process/3`'s (T-01-09/T-01-10).
+
+  Uses `Image.thumbnail/3` with `fit: :contain` to scale the source to fit
+  inside the target box first, then `Image.embed/4` to pad it onto the exact
+  canvas — both steps are required and the order matters: `embed/4` only
+  pads and requires the canvas to be at least as large as the source on both
+  axes, and the stored cover variant (produced at `@large_width` wide,
+  near-square) can be taller than #{@og_card_height}px, so calling `embed/4`
+  alone would fail or misbehave on exactly the images this function exists
+  to handle.
+
+  Returns `{:ok, binary}` — the caller decides the object key and the
+  storage write; this function never uploads.
+  """
+  @spec og_card(String.t()) :: {:ok, binary()} | {:error, term()}
+  def og_card(cover_url) do
+    with :ok <- validate_url(cover_url, og_card_allowed_hosts()),
+         {:ok, image_bytes} <- download(cover_url),
+         {:ok, vimage} <- Image.open(image_bytes),
+         {:ok, fitted} <- Image.thumbnail(vimage, "#{@og_card_width}x#{@og_card_height}", fit: :contain),
+         {:ok, canvas} <-
+           Image.embed(fitted, @og_card_width, @og_card_height, background: @og_card_background) do
+      Image.write(canvas, :memory, suffix: ".webp")
+    end
+  end
+
+  @doc """
   Req options merged into the download request, letting tests plug in
   `Req.Test` without that configuration ever reaching production.
   """
@@ -110,13 +164,30 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
     Application.get_env(:pukllay_club, :image_download_req_options, [])
   end
 
-  defp validate_url(url) do
+  defp validate_url(url, allowed_hosts) do
     uri = URI.parse(url)
 
-    if uri.scheme == "https" and uri.host in @allowed_hosts do
+    if uri.scheme == "https" and uri.host in allowed_hosts do
       :ok
     else
       {:error, {:disallowed_url, url}}
+    end
+  end
+
+  # Never a literal R2 hostname here (csp.ex's moduledoc states this rule
+  # for exactly this reason) — derived from the same single application key
+  # PukllayClubWeb.CSP.img_src/0 already scopes the browser policy to, so
+  # the fetch allowlist and the rendered CSP can never name different hosts.
+  defp og_card_allowed_hosts do
+    case Application.get_env(:pukllay_club, :image_origin) do
+      origin when is_binary(origin) and origin != "" ->
+        case URI.parse(origin).host do
+          nil -> []
+          host -> [host]
+        end
+
+      _missing ->
+        []
     end
   end
 

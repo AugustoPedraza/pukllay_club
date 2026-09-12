@@ -45,6 +45,18 @@ defmodule PukllayClubWeb.ClubLinks do
   runtime-config-driven phone number (`RESERVATION_WHATSAPP_NUMBER`
   env var) — that value is operational config, not public marketing copy,
   and must never be resolved through this module.
+
+  `public_phone/0` was added in phase 01.8 (D-02, SEO-06) for the
+  site-wide `LocalBusiness` structured-data block. It deliberately
+  duplicates the same digits as `RESERVATION_WHATSAPP_NUMBER` (the club's
+  published WhatsApp business number, declared under `config/deploy.yml`'s
+  non-secret `env.clear` block) as a second, public-facing literal —
+  preserving rather than weakening the contract above: the env var itself
+  still must never be resolved through this module. The literal is
+  formatted with a leading `+` (E.164-style international format), the
+  conventional presentation for schema.org's `telephone` property, per
+  CONTEXT.md's discretion note to make the minimal transform rather than
+  invent a new one.
   """
 
   @whatsapp_group_url "https://chat.whatsapp.com/L1TLhxGSkgiF1dgkJnp8Pp"
@@ -55,6 +67,7 @@ defmodule PukllayClubWeb.ClubLinks do
   @maps_embed_url "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3639.6166670771295!2d-65.31692332474148!3d-24.18385368475632!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x941b0f37e482f525%3A0xec531e2a26316237!2sCLUB%20DE%20EMPRENDEDORES%20DE%20JUJUY!5e0!3m2!1sen!2sar!4v1788656261124!5m2!1sen!2sar"
   @maps_embed_uri URI.new!(@maps_embed_url)
   @maps_embed_origin "#{@maps_embed_uri.scheme}://#{@maps_embed_uri.host}"
+  @public_phone "+5493884103255"
 
   @doc "The club's public WhatsApp group invite link (Sumate CTA, footer, About page)."
   def whatsapp_group_url, do: @whatsapp_group_url
@@ -84,4 +97,14 @@ defmodule PukllayClubWeb.ClubLinks do
   `frame-src` directive (D-12).
   """
   def maps_embed_origin, do: @maps_embed_origin
+
+  @doc """
+  The club's public phone number for structured-data/marketing display
+  (schema.org `LocalBusiness` `telephone`, D-02, SEO-06). Same digits as
+  the operational `RESERVATION_WHATSAPP_NUMBER` env var — duplicated here
+  as a literal, not resolved through that var, per this module's own
+  "not the reservation number" contract (see moduledoc). Formatted with a
+  leading `+` (E.164-style international format).
+  """
+  def public_phone, do: @public_phone
 end

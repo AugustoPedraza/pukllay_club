@@ -682,12 +682,19 @@ defmodule PukllayClubWeb.AboutHeaderMorphTest do
       {:ok, _view, anchor_html} = live(conn, ~p"/quienes-somos#contacto")
       {:ok, _view, plain_html} = live(conn, ~p"/quienes-somos")
 
+      # Phase 01.8-05 added a fifth per-request field to this same
+      # normalization set: the site-wide LocalBusiness JSON-LD script now
+      # renders on every browser route under a fresh per-request CSP nonce
+      # (router's put_csp/2) — normalize only the nonce attribute value,
+      # never the JSON-LD payload itself, mirroring about_live_test.exs's
+      # own extension of this helper.
       normalize = fn html ->
         html
         |> String.replace(~r/csrf-token" content="[^"]*"/, "csrf-token\" content=\"X\"")
         |> String.replace(~r/data-phx-session="[^"]*"/, "data-phx-session=\"X\"")
         |> String.replace(~r/data-phx-static="[^"]*"/, "data-phx-static=\"X\"")
         |> String.replace(~r/id="phx-[^"]*"/, "id=\"phx-X\"")
+        |> String.replace(~r/nonce="[^"]*"/, "nonce=\"X\"")
       end
 
       assert normalize.(anchor_html) == normalize.(plain_html),

@@ -24,10 +24,21 @@ defmodule PukllayClubWeb.GameCard do
   brand-placeholder element, degrading to the same placeholder the
   nil-cover case already uses (01-UI-SPEC.md's "cover/gallery image load
   failure" row) — distinct from the nil-URL case, which renders the
-  placeholder directly with no `<img>` at all. The image's `alt` is empty
-  because the adjacent caption heading already names the game inside the
-  same link — repeating it would announce the name twice to a screen
-  reader.
+  placeholder directly with no `<img>` at all.
+
+  **Reversal (SEO-02, D-10):** the cover `<img>`'s `alt` used to be
+  deliberately empty — the adjacent caption heading already names the game
+  inside the same link, and repeating it seemed redundant to a screen
+  reader. SEO-02/D-10 reverses that: the `alt` (and both placeholder
+  `<div>`s' `role="img"`/`aria-label`, previously icon-only with no
+  accessible name at all) now carry
+  `PukllayClubWeb.GameText.cover_alt/1`'s full name-plus-editorial
+  accessible name. The overlap with the visible `<h3>` caption for the name
+  portion was weighed and accepted, not overlooked — D-10's form adds the
+  publisher, information the caption does not provide, and the two broken
+  -image/missing-image branches had no accessible name at all before this
+  change, which is the actual gap SEO-02 and ROADMAP success criterion 5
+  name.
 
   Accepts an optional `:class` so a caller (the grid vs. a horizontally
   -scrolling `CarouselRow` rail, 01-05) can control the card's width/shrink
@@ -45,6 +56,7 @@ defmodule PukllayClubWeb.GameCard do
   use PukllayClubWeb, :html
 
   alias PukllayClubWeb.GamePreview
+  alias PukllayClubWeb.GameText
 
   attr :id, :string, required: true
   attr :game, PukllayClub.Catalog.Game, required: true
@@ -52,6 +64,8 @@ defmodule PukllayClubWeb.GameCard do
   attr :from, :string, default: nil
 
   def game_card(assigns) do
+    assigns = assign(assigns, :cover_alt, GameText.cover_alt(assigns.game))
+
     ~H"""
     <.link
       navigate={detail_path(@game, @from)}
@@ -63,18 +77,22 @@ defmodule PukllayClubWeb.GameCard do
         <img
           :if={@game.thumbnail_url}
           src={@game.thumbnail_url}
-          alt=""
+          alt={@cover_alt}
           loading="lazy"
           class="pk-poster-img js-cover-fallback"
         />
         <div
           :if={@game.thumbnail_url}
+          role="img"
+          aria-label={@cover_alt}
           class="hidden h-full w-full items-center justify-center bg-base-300 text-primary"
         >
           <.icon name="hero-puzzle-piece" class="size-12" />
         </div>
         <div
           :if={!@game.thumbnail_url}
+          role="img"
+          aria-label={@cover_alt}
           class="flex h-full w-full items-center justify-center bg-base-300 text-primary"
         >
           <.icon name="hero-puzzle-piece" class="size-12" />

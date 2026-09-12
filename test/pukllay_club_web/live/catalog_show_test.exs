@@ -1425,7 +1425,16 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       {title_idx, _} = :binary.match(html, "detail-title-block")
-      {description_idx, _} = :binary.match(html, "Una crónica de mercaderes.")
+
+      # Phase 01.8's Game JSON-LD block (`root.html.heex`, rendered inside
+      # <head>) also carries this game's own description text verbatim, so
+      # a scope-free :binary.match/2 would find that earlier <head>
+      # occurrence instead of the visible reading-column one this test
+      # means to locate. Scope the search to start at the title, which is
+      # always inside <body>.
+      {description_idx, _} =
+        :binary.match(html, "Una crónica de mercaderes.", scope: {title_idx, byte_size(html) - title_idx})
+
       {mechanics_idx, _} = :binary.match(html, "Mecánicas")
       {themes_idx, _} = :binary.match(html, "Temáticas")
       {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
@@ -2724,7 +2733,16 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
 
-      {description_idx, _} = :binary.match(html, "Una crónica.")
+      # Phase 01.8's Game JSON-LD block (`root.html.heex`, rendered inside
+      # <head>) also carries this game's own description text verbatim, so
+      # a scope-free :binary.match/2 would find that earlier <head>
+      # occurrence instead of the visible reading-column one this test
+      # means to locate. Scope the search to start at <body>.
+      {body_idx, _} = :binary.match(html, "<body")
+
+      {description_idx, _} =
+        :binary.match(html, "Una crónica.", scope: {body_idx, byte_size(html) - body_idx})
+
       {mechanics_idx, _} = :binary.match(html, "Mecánicas")
       {themes_idx, _} = :binary.match(html, "Temáticas")
       {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")

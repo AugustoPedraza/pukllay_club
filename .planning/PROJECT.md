@@ -63,23 +63,23 @@ the basics now that the repo is public, and clean of any leaked secrets.
 - [x] Light and dark themes read as one coherent system instead of two unrelated palettes — the
       whole UI rebuilt onto one shared, algorithmically-generated OKLCh ramp so specific roles
       literally share hex values across themes (Phase 01.6, 6 quick tasks) — v1.0
+- [x] Production's live database has the real ~434-game catalog loaded — restored over an SSH
+      tunnel with a content-idempotent, re-runnable upsert (Phase 01.7, 2026-09-11) — v1.1
+- [x] The production app follows baseline web security practice: env-gated `Secure` session
+      cookie via an explicit contract, HSTS, CSP audited and pinned as regression assertions, CSRF
+      confirmed to cover LiveView's websocket connect flow (Phase 01.7, 2026-09-11) — v1.1
+- [x] No secrets, keys, or credentials are discoverable anywhere in the public repo or its git
+      history — full-history Gitleaks sweep, one reviewed false positive, no real leaks (Phase
+      01.7, 2026-09-11) — v1.1
 
 ### Active
 
-- [ ] Production's live database has the real ~400+ game catalog loaded (it is currently empty —
-      the seed pipeline has only ever run against dev) via a safe, repeatable path to run it
-      against production (v1.1 — highest priority, blocks the rest of this milestone being
-      demonstrable)
 - [ ] Game detail and catalog pages carry real SEO metadata (descriptions, alt text, sitemap,
       robots.txt, JSON-LD structured data) so the catalog is discoverable on Google, targeted at
       Jujuy (v1.1)
 - [ ] Game detail pages carry Open Graph + Twitter Card tags (title/description/cover image) and
       the site carries a branded fallback, so shared links render an appealing, on-brand preview
       on WhatsApp/Facebook/Twitter (v1.1)
-- [ ] The production app follows baseline web security practice (secure cookies, HSTS, CSP, CSRF,
-      XSS) appropriate for a now-public repo and a link that gets passed around (v1.1)
-- [ ] No secrets, keys, or credentials are discoverable anywhere in the public repo or its git
-      history (v1.1)
 - [ ] Members can search the catalog with natural-language Spanish queries via local embeddings +
       pgvector hybrid ranking + LLM query parsing, and save favorites behind magic-link auth
       (Phase 2 — hero feature)
@@ -185,6 +185,7 @@ assuming the visitor already speaks the hobby's vocabulary.
 | Phase 01.4 inserted (UI Polish Pass for About Page Sketches) — real April-2021 origin/$5.000-$7.000 pricing copy, 80rem band width fix, 5-photo rail, de-duplicated Contacto card, isologo scroll-morph header mechanic, and (after a 3-round gap-closure arc) a live keyless Google Maps embed replacing the original static screenshot thumbnail | The About page sketches (D-01..D-15 in 01.4-CONTEXT.md) needed to ship as real code before the site could be called "finished" for members, and two UAT rounds surfaced that the isologo motion and the Maps thumbnail both needed real code fixes, not just tuning | ✓ Good — 11/11 plans (plan 01.4-11 superseded/discarded by 01.4-12, absorbed cleanly), 7/7 UAT checkpoints passed after a 4-gap closure arc (G-01.4-1..4), 01.4-VERIFICATION.md round 3: 11/12 truths verified + 1 human-confirmed at end. Google Maps embed reopened mid-phase per the user's own question ("what if we integrate google maps..."), requiring a new CSP `frame-src` directive (first third-party frame origin) — closed with 46 threats registered across all 12 plans, threats_open: 0 (01.4-SECURITY.md) |
 | Phase 01.5 inserted (About Page CTA Rhythm & Header Morph Refinement) — isologo scroll-morph gains a companion "PUKLLAY CLUB" wordmark synced to the header dock boolean, Cierre band becomes a full-viewport closing destination with unified gap-based rhythm, and the mobile sticky CTA went through three rounds (full-width bar → user-rejected floating pill → hero-synced full-width bar, quick task 260910-av6) before satisfying the user's ask for an industry-standard pattern | Round-1 and round-2 UAT found the hero/Cierre CTA composition, band whitespace, and Cierre/footer contrast all needed real fixes, not just the sketch's static mockup; round-3 then rejected the shipped mobile-CTA design outright as a UX preference, not a defect | ✓ Good — 14 plans + 1 follow-up quick task, 20/20 UAT tests resolved (14 pass, 2 superseded-by-later-fix, 4 marked superseded from earlier rounds), final end-of-phase human walkthrough confirmed 2026-09-10 against a live re-run of test/visual/about_geometry.mjs (0 failures) |
 | Phase 01.6 inserted (Light/Dark Theme Color-Family Consistency) — six quick tasks progressively fixed dark-mode composition, CTA contrast, interactive-vs-muted ink split, and a chip/pill hue mismatch, then rebuilt the whole palette on one shared 11-stop OKLCh ramp so specific roles (e.g. a CTA fill and its dark-mode card-surface counterpart) literally share the same hex value | Developer complaint that dark mode felt "too dark" and inconsistent with light mode; researched prior art and found only Material Design 3 does literal cross-theme value reuse, adopted that approach here | ✓ Good — 6/6 quick tasks executed and deployed (PR #35), enforced going forward by a drift-blocking test invariant |
+| Phase 01.7 (Production Catalog Data & Security Hardening) — production DB restored to the real ~434-game catalog over an SSH tunnel (content-idempotent upsert on `csv_row`); env-gated `Secure` session cookie via an explicit `session_options/0` contract; CSP audited directive-by-directive and pinned as regression assertions; CSRF confirmed to cover LiveView's websocket connect flow; full-git-history Gitleaks secrets sweep | The now-public repo and a link that gets passed around needed baseline web-security practice, and the live site was serving an empty catalog until the seed pipeline (dev-machine-only by design) could safely reach production | ✓ Good — 5/5 plans, 3/3 UAT checkpoints passed, threats_open: 0 (01.7-SECURITY.md). One UAT finding (missing disconnect banner) diagnosed as a test-method artifact (Chrome DevTools Offline doesn't sever WebSockets), not an app defect — re-verified via `liveSocket.disconnect()/connect()`, passed clean. Two unrelated pre-existing UI issues (banner positioning, `JS.show` display override) surfaced incidentally and logged to STATE.md Blockers/Concerns, out of this phase's scope |
 
 ## Evolution
 
@@ -204,4 +205,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-11 after starting v1.1 milestone*
+*Last updated: 2026-09-11 after Phase 01.7*

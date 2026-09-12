@@ -22,6 +22,7 @@ defmodule PukllayClubWeb.GamePreview do
 
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Vocabulary
+  alias PukllayClubWeb.GameText
 
   @doc """
   Three dots, the first `level` of them filled, indicating a game's
@@ -129,19 +130,26 @@ defmodule PukllayClubWeb.GamePreview do
   attr :from, :string, default: nil
 
   def preview_body(assigns) do
-    assigns = assign(assigns, :cover, assigns.game.cover_url || assigns.game.thumbnail_url)
+    assigns =
+      assigns
+      |> assign(:cover, assigns.game.cover_url || assigns.game.thumbnail_url)
+      |> assign(:cover_alt, GameText.cover_alt(assigns.game))
 
     ~H"""
     <figure class="pk-preview-poster bg-base-300">
-      <img :if={@cover} src={@cover} alt="" class="pk-poster-img js-cover-fallback" />
+      <img :if={@cover} src={@cover} alt={@cover_alt} class="pk-poster-img js-cover-fallback" />
       <div
         :if={@cover}
+        role="img"
+        aria-label={@cover_alt}
         class="hidden h-full w-full items-center justify-center bg-base-300 text-primary"
       >
         <.icon name="hero-puzzle-piece" class="size-12" />
       </div>
       <div
         :if={!@cover}
+        role="img"
+        aria-label={@cover_alt}
         class="flex h-full w-full items-center justify-center bg-base-300 text-primary"
       >
         <.icon name="hero-puzzle-piece" class="size-12" />
