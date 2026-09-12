@@ -52,6 +52,20 @@ defmodule PukllayClubWeb do
     quote do
       use Phoenix.LiveView
 
+      # Records a Sentry breadcrumb for every mount/handle_params/handle_event,
+      # so an unhandled event reports WHICH event and WHICH param keys it
+      # carried. Without it a whole-function clause mismatch only ever names
+      # the module's first clause — the exact dead end that made Sentry
+      # ELIXIR-1 expensive to diagnose (see
+      # `.planning/debug/resolved/catalog-show-no-clause.md`).
+      #
+      # The custom scrubber is not optional: Sentry's default only redacts
+      # credential-shaped keys (`password`/`passwd`/`secret`), and this app's
+      # user-typed data arrives under `nombre` and `value`. See
+      # `PukllayClubWeb.SentryScrubber` for the keep-the-keys/drop-the-values
+      # policy and why it is written that way.
+      on_mount {Sentry.LiveViewHook, scrubber: {PukllayClubWeb.SentryScrubber, :scrub, []}}
+
       unquote(html_helpers())
     end
   end

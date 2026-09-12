@@ -142,6 +142,29 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   @impl true
   def handle_event("close-search", _params, socket), do: {:noreply, socket}
 
+  # CarouselRow's .CarouselScroll hook pushes `carousel-load-more` from the
+  # rail's own scroll listener on ANY page that renders a carousel row —
+  # this page's "Juegos similares" shelf included. Today the push is
+  # client-guarded: this page passes `exhausted={true}`, which the hook
+  # reads into `this.exhausted` and early-returns on, so the event never
+  # actually leaves the browser. That guard is a single template attribute,
+  # and without this clause the server has nothing behind it — exactly the
+  # gap the open-search/close-search no-ops above exist to close.
+  #
+  # This is NOT a no-op stand-in: replying `exhausted: true` is the truthful
+  # answer here. The shelf is a fixed, already-complete `similar_games/1`
+  # result with no paging behind it, so "load more" genuinely has nothing to
+  # load. The reply shape matches what the hook consumes (`if (reply &&
+  # reply.exhausted) this.exhausted = true`) and what CatalogLive.Index's own
+  # handler returns for an exhausted row, so a client that ignores
+  # data-exhausted and fires anyway is told to stop instead of crashing the
+  # page. `_params` rather than `%{"row" => _}`: the whole point of this
+  # clause is that no payload shape may reach handle_event/3 unmatched.
+  @impl true
+  def handle_event("carousel-load-more", _params, socket) do
+    {:reply, %{exhausted: true}, socket}
+  end
+
   @impl true
   def handle_event("select-image", %{"url" => url}, socket) do
     if valid_gallery_image?(socket.assigns.game, url) do
@@ -226,8 +249,33 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # Validate on blur only (ux-patterns B12: "validate after the action —
   # blur/submit — not while typing"). No phx-change is wired on the form
   # for this reason; only the name input's own phx-blur reaches here.
+  #
+  # The params key is "value", NOT "nombre", and that is load-bearing. A
+  # `phx-blur` is not a form event: nothing serializes the <form>, so the
+  # input's `name="nombre"` never reaches the payload. LiveView's client
+  # builds a blur payload with `extractMeta`
+  # (deps/phoenix_live_view/priv/static/phoenix_live_view.esm.js) — every
+  # `phx-value-*` attribute, PLUS the element's native `.value` under the
+  # key "value" for any non-<form> element that has one. This input carries
+  # no `phx-value-*` attributes, so "value" is the ONLY key that arrives.
+  #
+  # This is the mirror image of the trap documented in filter_modal.ex's
+  # moduledoc: there, extractMeta's unconditional `meta.value = el.value`
+  # CLOBBERED an intended `phx-value-value` binding; here that same line is
+  # the only reason we get a payload at all. Do NOT "tidy" this pattern
+  # back to `%{"nombre" => name}` to match the input's name attribute —
+  # that mismatch crashed the LiveView on every blur in prod (Sentry
+  # ELIXIR-1, diagnosed in
+  # `.planning/debug/resolved/catalog-show-no-clause.md`), and `mix test`
+  # cannot catch it from markup alone: LiveViewTest builds the params map
+  # in the test process and never runs `extractMeta`, so only a test that
+  # pins this exact payload shape (catalog_show_test.exs) guards it.
+  #
+  # `reserve` below deliberately keeps `%{"nombre" => name}` — it IS a real
+  # `phx-submit` on the <form>, so it genuinely receives serialized form
+  # params.
   @impl true
-  def handle_event("validate-reservation", %{"nombre" => name}, socket) do
+  def handle_event("validate-reservation", %{"value" => name}, socket) do
     {:noreply, assign_reservation_name(socket, name)}
   end
 
@@ -244,11 +292,11 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     |> assign(:reservation_error, reservation_name_error(trimmed))
   end
 
-  defp reservation_name_error(""), do: "Ingresá tu nombre para continuar."
+  defp reservation_name_error(""), do: "Falta tu nombre."
 
   defp reservation_name_error(name) do
     if String.length(name) > 60 do
-      "El nombre es demasiado largo (máximo 60 caracteres)."
+      "Ese nombre es muy largo."
     end
   end
 
@@ -990,7 +1038,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             </h3>
 
             <p :if={is_nil(@reservation_number)} class="text-sm text-neutral mt-4">
-              La reserva no está disponible por el momento. Escribinos directamente para coordinar.
+              Las reservas están cerradas por ahora. Escribinos y lo coordinamos.
             </p>
 
             <div :if={@reservation_number}>
@@ -1012,7 +1060,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                     errors={if @reservation_error, do: [@reservation_error], else: []}
                   />
                   <button type="submit" class="btn btn-primary min-h-11 w-full mt-2">
-                    Continuar
+                    Seguir
                   </button>
                 </form>
               </div>
@@ -1030,7 +1078,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   rel="noopener noreferrer"
                   class="btn btn-primary min-h-11 w-full"
                 >
-                  Abrir WhatsApp
+                  Mandar por WhatsApp
                 </a>
               </div>
             </div>
@@ -1048,10 +1096,14 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   defp reservation_cta_label, do: "Reservar para el sábado"
 
   # D-09/D-10 framing: asks the club to have the game set up at the next
-  # Saturday session — never to lend/take it home. Approved verbatim at the
-  # 01.1-05 checkpoint; see 01.1-05-SUMMARY.md for the decision record.
+  # Saturday session — never to lend/take it home. That FRAMING is the part
+  # 01.1-05 approved (see 01.1-05-SUMMARY.md for the decision record) and it is
+  # unchanged here; the wording was loosened afterwards to drop the stilted
+  # "para jugarlo el próximo". Unlike everything else in this modal, this string
+  # is not UI chrome — it is the message a member actually SENDS to the club, so
+  # re-read it end to end before touching it again.
   defp reservation_message(name, game_name) do
-    "¡Hola! Soy #{name} y quiero reservar #{game_name} para jugarlo el próximo sábado en el club."
+    "¡Hola! Soy #{name}, quiero reservar #{game_name} para el sábado en el club."
   end
 
   # Built entirely server-side (T-01.1-02) — URI.encode_www_form/1 percent-
