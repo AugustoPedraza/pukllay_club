@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-01-4-carousel-affordance: Carousel/shelf sections on the PukllayClub catalog homepage do not read as distinct carousels, and horizontal scrolling happens at the window/page level instead of within each individual carousel row."
 created: 2026-08-18T23:00:00Z
-updated: 2026-08-18T23:20:00Z
+updated: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -146,10 +146,13 @@ controls fix already shipped in 01-08: the `.CarouselScroll` hook's visibility c
 (`this.rail.scrollWidth > this.rail.clientWidth`) can never be true while the rail is unconstrained,
 because scrollWidth and clientWidth both equal the same unclipped content width — so the round
 prev/next buttons never appear on any row, reinforcing the 'just a vertical list' perception."
-fix: "(not applied — find_root_cause_only mode) Add `w-full` (or an equivalent explicit width/
-max-width constraint) to the `data-rail` div's class list in carousel_row.ex line 97, so
-`class=\"carousel carousel-center gap-4 rounded-box w-full\"`. This should be verified to also
-restore the `.CarouselScroll` hook's overflow-controls visibility check once the rail is properly
-clipped."
-verification: (not run — diagnosis only)
-files_changed: []
+fix: "plan 01-11 (commits `2265d13`/`31b63a0`/`a9155f3`/`7c642c8`): daisyUI's unconstrained `.carousel`/`.carousel-item` rail was replaced entirely by the project's own `.pk-rail-wrap`/`.pk-rail` treatment, which is explicitly width-bound (`mx-auto w-full max-w-7xl pk-gutter`) instead of `w-full`-less `inline-flex`, so the rail clips to its container and scrolls internally rather than overflowing the window. 01-UAT.md's G-01-4 entry records this diagnosis as superseded by the 01-11 rail rework rather than fixed by adding `w-full` to the old daisyUI class."
+verification: |
+  - `grep -n 'class=\"carousel\|carousel-item' lib/pukllay_club_web/components/carousel_row.ex` -> 0 hits: the daisyUI `.carousel` container this root cause names (missing its `w-full` companion) no longer exists in the rail markup at all.
+  - Current rail wrapper: lib/pukllay_club_web/components/carousel_row.ex:236 (`<div data-rail-wrap class="pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter">`) — explicitly carries `w-full` (bounded by `max-w-7xl`), giving the rail's containing box the width constraint the root cause found missing; the inner scrollable element is `.pk-rail` (line 245), a distinct element from the old unconstrained `.carousel` div.
+  - `.pk-rail`/`.pk-rail-wrap` overflow/clip rules: assets/css/app.css:818 (`.pk-rail-wrap`), 843 (`.pk-rail`).
+  - The `.CarouselScroll` hook's overflow check now reads `data-overflows` from `this.rail.scrollWidth > this.rail.clientWidth` against the now-clipped `.pk-rail` (carousel_row.ex:160-164), and drives visible prev/next buttons (`.pk-rail-btn`, assets/css/app.css:882, gated by `[data-overflows="true"]` at assets/css/app.css:911-918) — the same visibility check this root cause found permanently false is now able to fire because the rail is clipped.
+  - 01-UAT.md:106-124 (gap_id G-01-4) records `root_cause: "Superseded — the original diagnosis (.planning/debug/G-01-4-carousel-affordance.md) ..."` with `debug_session` pointing at this file and noting it was superseded by the 01-11 rail rework.
+files_changed:
+  - lib/pukllay_club_web/components/carousel_row.ex
+  - assets/css/app.css

@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-01-6: The game card on the catalog main page presents too much information at once with no clear visual hierarchy between primary and secondary fields — feels 'overloaded' for a casual/new player."
 created: 2026-08-18T20:30:00.000Z
-updated: 2026-08-18T21:00:00.000Z
+updated: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -133,6 +133,13 @@ root_cause: >
   co-equal "secondary" rows, one of which is uncapped) with no structural or strong visual signal
   telling a first-time viewer which one to read first — matching the reported "too much
   information at once with no hierarchy" precisely.
-fix: (not applied — diagnose-only mode per goal: find_root_cause_only)
-verification: (not applicable — diagnose-only mode)
-files_changed: []
+fix: "plan 01-07 (commit `5e95f1e`) first grouped the three chip/badge rows with a `badge-lg`/cap treatment, but plan 01-10 (commit `5944382`, `feat(01-10): strip resting card to poster plus single-line title`) superseded that entirely — the resting `GameCard.game_card/1` now renders ONLY the cover image and a single-line title, and every chip/badge (weight band, editorial tags, mechanic chips) was moved off the resting card into `GamePreview`'s desktop hover-intent portal / mobile full-screen sheet. The root cause's mechanism (three stacked chip rows inside `card-body`) no longer exists in the resting card at all."
+verification: |
+  - `grep -n 'weight_band_badge\|editorial_tags\|chip_row\|GameChips\.' lib/pukllay_club_web/components/game_card.ex` -> 0 hits (only a prose mention of `GameChips` in the moduledoc, referring to the detail page, not this component's own render): the three co-equal chip/badge rows this root cause names are entirely absent from game_card.ex's render function (lib/pukllay_club_web/components/game_card.ex:66-107) — the card now renders only `<figure class="pk-card-poster">` (cover) and `<h3>{@game.name}</h3>` (lines 76-103).
+  - lib/pukllay_club_web/components/game_card.ex:9-16 (moduledoc): "Every secondary fact — players, tiempo, difficulty, one editorial tag, the `Ver detalles` CTA — lives behind interaction in `PukllayClubWeb.GamePreview` ... None of it renders on the resting card."
+  - 01-10-SUMMARY.md's coverage row D1: "Resting card shows only poster + single-line title, no weight badge/tags/mechanics/CTA", verified by test `test/pukllay_club_web/live/catalog_live_test.exs#a resting grid card carries no chip, badge, or button markup for a game with tags and mechanics (sketch 002)`, status pass.
+  - The uncapped-editorial-tags half of the AND-gate is also independently closed: `GameChips.editorial_tags/1` (lib/pukllay_club_web/components/game_chips.ex:147-149) now has a `limit` attr with overflow `+N` handling, mirroring `chip_row/1`'s existing cap pattern — though this component no longer has any call site on GameCard at all (game_chips.ex:70-71, 125-126: "GameCard uses neither this nor chip_row/1").
+files_changed:
+  - lib/pukllay_club_web/components/game_card.ex
+  - lib/pukllay_club_web/components/game_preview.ex
+  - lib/pukllay_club_web/components/game_chips.ex

@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-01-3: Catalog grid renders ~20 columns of game cards side by side on the main page, forcing horizontal scrolling, instead of a responsive column count per viewport width."
 created: 2026-08-18T00:00:00.000Z
-updated: 2026-08-18T00:00:00.000Z
+updated: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -59,6 +59,12 @@ started: Discovered during UAT (Phase 01-catalog-v1)
 ## Resolution
 
 root_cause: "Not a defect in the `#games` responsive grid at lib/pukllay_club_web/live/catalog_live/index.ex:314 — its Tailwind classes (`grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4`) are correctly compiled, unconflicted, and correctly escalate by breakpoint (verified directly in priv/static/assets/css/app.css). The reported '~20 columns side by side, forcing horizontal scrolling' is the by-design behavior of the `CarouselRow` component (lib/pukllay_club_web/components/carousel_row.ex) — one of the 8 D-09 carousel rows rendered above the grid on the same unfiltered landing page — using daisyUI's `.carousel` (inline-flex, overflow-x:scroll, no wrap) + `.carousel-item` (flex:none), each row capped at exactly `@carousel_limit = 20` games (lib/pukllay_club/catalog.ex:21), matching the user's 'roughly 20' observation precisely. Contributing factor: `.carousel`'s `scrollbar-width: none` hides the native scrollbar, removing the visual cue that the row is meant to scroll, which plausibly caused the user to misattribute this intentional horizontal-scroll carousel to 'the grid not being responsive'."
-fix: ""
-verification: ""
-files_changed: []
+fix: "plan 01-08 (commits `7ba31b4`/`61e4ba1`/`72a8451`/`8e4a1d5`) and plan 01-11 (commits `2265d13`/`31b63a0`/`a9155f3`/`7c642c8`): 01-08 added persistent, self-hiding prev/next scroll controls to signal the row scrolls; 01-11 then replaced daisyUI's `.carousel`/`.carousel-item` entirely with the project's own `.pk-rail`/`.pk-rail-wrap` treatment (edge-fade cue + `data-overflows`-gated prev/next buttons), removing the hidden-scrollbar contributing factor this root cause names. The `#games` grid itself, already confirmed correctly responsive, is unchanged."
+verification: |
+  - `grep -n 'carousel-item\|carousel carousel-center\|class=\"carousel' lib/pukllay_club_web/components/carousel_row.ex lib/pukllay_club_web/live/catalog_live/index.ex` -> 0 hits: the daisyUI `.carousel`/`.carousel-item` classes this root cause blamed for the hidden-scrollbar contributing factor are gone from both render sites.
+  - Rail markup: lib/pukllay_club_web/components/carousel_row.ex:236-278 (`data-rail-wrap` / `.pk-rail-wrap` wrapping visible `.pk-rail-btn` prev/next `<button>`s and `data-rail` / `.pk-rail`) replaces the old scrollbar-hiding `.carousel` container with a wrap that has always-visible edge-fade (`.pk-rail-wrap::before`/`::after`, assets/css/app.css:822-838) and prev/next controls gated by `[data-overflows="true"]` (assets/css/app.css:911-918) — a passive+active scroll affordance where none existed before.
+  - `.pk-rail`/`.pk-rail-wrap`/`.pk-rail-btn` rules confirmed present: assets/css/app.css:818, 843, 882.
+  - The 20-game-per-row cap (`@carousel_limit`, lib/pukllay_club/catalog.ex:21) is unchanged and, per this root cause and Step 4(d), is by-design and out of scope for resolution.
+files_changed:
+  - lib/pukllay_club_web/components/carousel_row.ex
+  - assets/css/app.css

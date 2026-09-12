@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-01-2: The game title and weight-band badge in a catalog card overlap on narrow/mobile viewport widths."
 created: 2026-08-18T21:21:47.000Z
-updated: 2026-08-18T21:21:47.000Z
+updated: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -68,6 +68,10 @@ started: Discovered during UAT (Phase 01-catalog-v1)
 ## Resolution
 
 root_cause: "daisyUI's `.badge` component (used unmodified by `GameChips.weight_band_badge/1` in lib/pukllay_club_web/components/game_chips.ex, called from lib/pukllay_club_web/components/game_card.ex with the label 'Descubre el hobby') sets a FIXED single-line `height: var(--size)` (~21px) but does not set `white-space: nowrap` or `overflow: hidden`, while also setting `width: fit-content` — a shrink-to-fit width that a flexbox/grid ancestor is free to compress. In game_card.ex, the badge sits as a flex-column sibling of the title `<h3>` inside daisyUI's `.card-body` (`display:flex; flex-direction:column; gap: 8px`), inside a catalog grid cell that is only `minmax(0, 1fr)`-wide (lib/pukllay_club_web/live/catalog_live/index.ex's `grid-cols-2` — no explicit card width, unlike carousel_row.ex's fixed `w-40`/`w-48`). At narrow/mobile viewports (below the `sm:` 640px breakpoint, 2 columns), each card's available content width (~130-160px after grid gap + card-body p-4 padding) drops below the natural single-line width of the 3-word label 'Descubre el hobby' (~145-155px). The badge's `width: fit-content` then clamps its box to the narrower available width, its text wraps onto 2 lines (default `white-space: normal`), but its `height` stays pinned at the single-line 21px value. Because `.badge` has no `overflow: hidden`, the now-2-line, vertically-centered text visibly overflows the fixed-height box both upward and downward — the upward bleed crosses the mere 8px `card-body` flex gap and collides with the h3 title sitting directly above it. This reproduces in any browser (it is pure flexbox box-sizing math, not a Firefox-specific line-clamp/rendering quirk as the original UAT report speculated) and only at column widths narrow enough to force the wrap — matching 'not present at full desktop width' exactly. This module/pattern is shared: any future weight-band label (or possibly-long term) rendered through this same `.badge` treatment at narrow widths is equally exposed."
-fix: ""
-verification: ""
-files_changed: []
+fix: "plan 01-07 (commit `2fae9a7`): `weight_band_badge/1`'s `<span>` gained `badge-lg h-auto whitespace-normal py-1 text-center leading-tight`, releasing daisyUI's fixed single-line `height: var(--size)` pin (`h-auto`) and allowing normal text wrap without vertical overflow; the box now grows to fit a wrapped 2-line label instead of bleeding into the title above it."
+verification: |
+  - `h-auto whitespace-normal` on the weight-band `<span>`: lib/pukllay_club_web/components/game_chips.ex:52 (`<span class="badge badge-secondary badge-lg h-auto whitespace-normal py-1 text-center leading-tight">`) — `grep -n 'h-auto whitespace-normal' lib/pukllay_club_web/components/game_chips.ex` -> 1 hit at line 52, confirming the fixed-height daisyUI `.badge` height pin from the diagnosis is released.
+  - test/pukllay_club_web/components/game_chips_test.exs asserts the `badge-lg`/`h-auto` class literal (01-07-SUMMARY.md coverage row for G-01-2, kind: unit, status: pass); `mix test --warnings-as-errors` full suite passing at 01-07's completion (148 tests, 0 failures).
+  - Later commit `1c49b09` (G-01.2-26) touched the same file but left this class list untouched, only documenting it as the model for `.pk-pill-large` (game_chips.ex:37-42) — the h-auto/whitespace-normal treatment this root cause depends on is still live, not superseded.
+files_changed:
+  - lib/pukllay_club_web/components/game_chips.ex

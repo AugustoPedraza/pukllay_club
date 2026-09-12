@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-01-4: The catalog's ~8 sections on the main page all look the same — no clear visual hierarchy, spacing, or heading treatment separating one section from the next."
 created: 2026-08-18T00:00:00.000Z
-updated: 2026-08-18T00:00:00.000Z
+updated: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -73,6 +73,11 @@ started: Discovered during UAT (Phase 01-catalog-v1)
 ## Resolution
 
 root_cause: "Two combined code-level omissions in the unfiltered catalog view, both in the same category (markup/styling, not config/environment/data): (1) `CarouselRow.carousel_row/1` (lib/pukllay_club_web/components/carousel_row.ex:23) renders an identical, unvaried `<h2 class=\"font-display text-2xl\">{@title}</h2>` for all 8 D-09 rows regardless of the row's semantic role (hero/curated row vs. per-hashtag row vs. per-weight-band row vs. recency row) — the design system's own documented emphasis levers (weight, color) are never used to differentiate them; (2) `CatalogLive.Index.render/1` (lib/pukllay_club_web/live/catalog_live/index.ex, between lines 284 and 305) gives the main `#games` grid — the 9th and most prominent section, containing the full filtered catalog — no heading treatment at all, only a `text-neutral text-sm` (muted/secondary-tier) result-count line where a section label would be. Together these mean every section boundary on the page is either a repeat of the exact same heading style or has no heading at all, which is functionally indistinguishable from 'no clear visual hierarchy... separating one section from the next' as reported."
-fix: ""
-verification: ""
-files_changed: []
+fix: "plan 01-08 (commits `7ba31b4`/`61e4ba1`): `carousel_row/1` gained `variant`/`subtitle` attrs so the curated row is ranked above the other 7 by colour and every row gets a distinct one-line plain-Spanish subtitle, and `CatalogLive.Index`'s main `#games` grid gained its own `font-display text-2xl` heading (`main_grid_heading/1`) instead of only a muted result-count line."
+verification: |
+  - CAUSE 1 (uniform, unvaried carousel-row heading) gone: lib/pukllay_club_web/live/catalog_live/index.ex:785-786 `defp row_variant(:destacados_del_club), do: :hero` / `defp row_variant(_key), do: :standard`, wired into the call site at index.ex:1047 (`variant={row_variant(row.key)}`); carousel_row.ex:227 (`<h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>`) now varies the heading's colour by row semantic role, and index.ex:792-802 (`row_subtitle/1`) gives each of the 8 rows a distinct one-line subtitle, rendered at index.ex:1048 / carousel_row.ex:233.
+  - CAUSE 2 (main grid has no heading) gone: lib/pukllay_club_web/live/catalog_live/index.ex:837-839 (`main_grid_heading/1`, "Toda la ludoteca"/"Resultados") rendered as `<h2 class="font-display text-2xl">{main_grid_heading(assigns)}</h2>` at index.ex:1077, directly above the previously-lone `text-neutral text-sm` result-count line (now index.ex:1078).
+  - 01-08-SUMMARY.md and 01-UAT.md's G-01-4 entry (line 106-124) both confirm 01-08 landed the variant/subtitle/heading changes; the later 01-11 rail rework left these headings untouched (only the rail/scroll mechanism changed, per the separate G-01-4-carousel-affordance session).
+files_changed:
+  - lib/pukllay_club_web/live/catalog_live/index.ex
+  - lib/pukllay_club_web/components/carousel_row.ex
