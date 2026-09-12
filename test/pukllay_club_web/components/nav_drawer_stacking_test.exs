@@ -24,9 +24,9 @@ defmodule PukllayClubWeb.NavDrawerStackingTest do
 
   @css_path Path.expand("../../../assets/css/app.css", __DIR__)
   @core_components_path Path.expand(
-                           "../../../lib/pukllay_club_web/components/core_components.ex",
-                           __DIR__
-                         )
+                          "../../../lib/pukllay_club_web/components/core_components.ex",
+                          __DIR__
+                        )
 
   defp css_source, do: File.read!(@css_path)
 
