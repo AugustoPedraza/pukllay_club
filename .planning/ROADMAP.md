@@ -85,7 +85,7 @@ builds its JSON-LD on the CSP baseline that phase establishes)
   4. `https://pukllay.club/sitemap.xml` lists the catalog index plus every publicly-reachable game — count matches the live catalog, `lastmod` tracks each game's own `updated_at` — and `robots.txt` allows crawling and points at it
   5. Catalog card and hover-preview images announce the actual game (to a screen reader, and when an image fails to load) instead of being skipped as decorative
 
-**Plans**: 5/5 plans executed
+**Plans**: 5/7 plans executed (2 gap-closure plans added after UAT)
 
 Plans:
 **Wave 1**
@@ -98,6 +98,11 @@ Plans:
 - [x] 01.8-03-PLAN.md — Wave 2 · Request-time `sitemap.xml` from the live catalog, plus real `robots.txt` content pointing at it (SEO-03, SEO-04)
 - [x] 01.8-04-PLAN.md — Wave 2 · The 1200x630 og-card letterbox transform, its one-time `catalog.backfill_og_cards` batch, and the real run against the live catalog (SHARE-03, SHARE-05)
 - [x] 01.8-05-PLAN.md — Wave 2 · `LocalBusiness` JSON-LD from the locked club facts, `ClubLinks.public_phone/0`, and the sketch-approved branded OG fallback card (SEO-06, SHARE-04)
+
+**Gap closure — G-01.8-3** *(UAT: WhatsApp link preview shows no cover art)*
+
+- [ ] 01.8-06-PLAN.md — Wave 1 · Rebuild `SEOTags.seo_tags/1` as an escaping-safe markup builder so LiveView's `root_tag_attribute` stamp no longer sits between `<meta` and `property=`, re-anchor every served-response Open Graph assertion on the strict tag form, and ship a self-testing strict-crawler smoke oracle (SHARE-01, SHARE-02)
+- [ ] 01.8-07-PLAN.md — Wave 2 · Prove the fix on the live deployed host with a WhatsApp user agent across a game page and both branded-fallback routes, then close the debug session and register the pattern in the debug knowledge base (SHARE-01, SHARE-02, SHARE-03, SHARE-04)
 
 > **Build order inside this phase (from `research/SUMMARY.md`):** the CSP nonce refactor
 > (`CSP.policy/0` → `policy/1`, per-request nonce in `put_csp/2` — SEC-05) comes first because the
