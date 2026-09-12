@@ -36,8 +36,10 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 - [x] **SHARE-03**: OG/Twitter images are properly sized (1200×630) using the game's own cover art
 - [x] **SHARE-04**: Pages without a natural hero image (catalog index, About) carry a branded OG
       fallback image (isologo/wordmark)
-- [x] **SHARE-05**: Sharing a game link via the existing native-share control produces an
+- [ ] **SHARE-05**: Sharing a game link via the existing native-share control produces an
       appealing, on-brand preview card on the receiving platform (WhatsApp/Facebook/Twitter)
+      — server-side markup proven strict-crawler-clean (local + live host); real WhatsApp
+      device render still pending human confirmation (01.8-UAT.md Test 4)
 
 ### Security Hardening
 
@@ -104,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SHARE-02 | Phase 01.8 | Complete |
 | SHARE-03 | Phase 01.8 | Complete |
 | SHARE-04 | Phase 01.8 | Complete |
-| SHARE-05 | Phase 01.8 | Complete |
+| SHARE-05 | Phase 01.8 | Pending (01.8-UAT.md Test 4) |
 | SEC-01 | Phase 01.7 | Complete |
 | SEC-02 | Phase 01.7 | Complete |
 | SEC-03 | Phase 01.7 | Complete |

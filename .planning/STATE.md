@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: "01.8"
 current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
 status: executing
-stopped_at: Completed 01.8-06-PLAN.md (all 3 tasks, plan complete)
-last_updated: "2026-09-12T14:55:07.932Z"
+stopped_at: Completed 01.8-07-PLAN.md (all 7 plans in phase 01.8 now have SUMMARY.md)
+last_updated: "2026-09-12T15:20:02.508Z"
 last_activity: 2026-09-12
 last_activity_desc: Phase 01.8 execution started
-state_head: 53a83025eb7d10dff58beb63dbe5783e790cdcc1
+state_head: 8bdd4c89dd658fdd755e057796518a7f1bbd9d10
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 Total Phases: 9
@@ -34,9 +34,9 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
-Last activity: 2026-09-12 — Phase 01.8 execution started
+Last activity: 2026-09-12 — Completed quick task 260912-hrx: docs-only path filtering for deploy.yml
 
 ## Performance Metrics
 
@@ -116,6 +116,7 @@ Last activity: 2026-09-12 — Phase 01.8 execution started
 | Phase 01.8 P04 | ~50min | 3 tasks | 7 files |
 | Phase 01.8 P05 | ~40min | 3 tasks | 9 files |
 | Phase 01.8 P06 | 15min | 3 tasks | 8 files |
+| Phase 01.8 P07 | 20 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -291,6 +292,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260912-hrx | Docs-only pushes to main skip build-and-push/deploy via an always-run paths-filter gate job; `quality` (both deploy.yml's D-04 guard and ci.yml's actual required check) stays unconditional | 2026-09-12 | 16226be | complete | [260912-hrx-add-path-based-filtering-to-github-workf](./quick/260912-hrx-add-path-based-filtering-to-github-workf/) |
 
 ### Roadmap Evolution
 
@@ -337,8 +339,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T14:55:07.878Z
-Stopped at: Completed 01.8-06-PLAN.md (all 3 tasks, plan complete)
+Last session: 2026-09-12T15:20:01.493Z
+Stopped at: Completed 01.8-07-PLAN.md (all 7 plans in phase 01.8 now have SUMMARY.md)
 Resume file: None
 
 ## Operator Next Steps

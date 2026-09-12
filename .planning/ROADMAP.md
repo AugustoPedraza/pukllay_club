@@ -85,7 +85,7 @@ builds its JSON-LD on the CSP baseline that phase establishes)
   4. `https://pukllay.club/sitemap.xml` lists the catalog index plus every publicly-reachable game — count matches the live catalog, `lastmod` tracks each game's own `updated_at` — and `robots.txt` allows crawling and points at it
   5. Catalog card and hover-preview images announce the actual game (to a screen reader, and when an image fails to load) instead of being skipped as decorative
 
-**Plans**: 6/7 plans executed (2 gap-closure plans added after UAT)
+**Plans**: 7/7 plans executed (2 gap-closure plans added after UAT)
 
 Plans:
 **Wave 1**
@@ -102,7 +102,7 @@ Plans:
 **Gap closure — G-01.8-3** *(UAT: WhatsApp link preview shows no cover art)*
 
 - [x] 01.8-06-PLAN.md — Wave 1 · Rebuild `SEOTags.seo_tags/1` as an escaping-safe markup builder so LiveView's `root_tag_attribute` stamp no longer sits between `<meta` and `property=`, re-anchor every served-response Open Graph assertion on the strict tag form, and ship a self-testing strict-crawler smoke oracle (SHARE-01, SHARE-02)
-- [ ] 01.8-07-PLAN.md — Wave 2 · Prove the fix on the live deployed host with a WhatsApp user agent across a game page and both branded-fallback routes, then close the debug session and register the pattern in the debug knowledge base (SHARE-01, SHARE-02, SHARE-03, SHARE-04)
+- [x] 01.8-07-PLAN.md — Wave 2 · Prove the fix on the live deployed host with a WhatsApp user agent across a game page and both branded-fallback routes, then close the debug session and register the pattern in the debug knowledge base (SHARE-01, SHARE-02, SHARE-03, SHARE-04)
 
 > **Build order inside this phase (from `research/SUMMARY.md`):** the CSP nonce refactor
 > (`CSP.policy/0` → `policy/1`, per-request nonce in `put_csp/2` — SEC-05) comes first because the
@@ -174,7 +174,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 2 → 3 → 4
 | 0. Walking Skeleton to Production | 6/6 | Complete | 2026-07-27 |
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
 | 01.7. Production Catalog Data & Security Hardening | 5/5 | Complete    | 2026-09-11 |
-| 01.8. SEO, Structured Data & Social Sharing | 6/7 | In Progress|  |
+| 01.8. SEO, Structured Data & Social Sharing | 7/7 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
