@@ -33,10 +33,10 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
       url, type) reflecting that specific game
 - [x] **SHARE-02**: Every game detail page carries Twitter Card tags (`summary_large_image`)
       reflecting that specific game
-- [ ] **SHARE-03**: OG/Twitter images are properly sized (1200×630) using the game's own cover art
+- [x] **SHARE-03**: OG/Twitter images are properly sized (1200×630) using the game's own cover art
 - [ ] **SHARE-04**: Pages without a natural hero image (catalog index, About) carry a branded OG
       fallback image (isologo/wordmark)
-- [ ] **SHARE-05**: Sharing a game link via the existing native-share control produces an
+- [x] **SHARE-05**: Sharing a game link via the existing native-share control produces an
       appealing, on-brand preview card on the receiving platform (WhatsApp/Facebook/Twitter)
 
 ### Security Hardening
@@ -102,9 +102,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEO-06 | Phase 01.8 | Pending |
 | SHARE-01 | Phase 01.8 | Complete |
 | SHARE-02 | Phase 01.8 | Complete |
-| SHARE-03 | Phase 01.8 | Pending |
+| SHARE-03 | Phase 01.8 | Complete |
 | SHARE-04 | Phase 01.8 | Pending |
-| SHARE-05 | Phase 01.8 | Pending |
+| SHARE-05 | Phase 01.8 | Complete |
 | SEC-01 | Phase 01.7 | Complete |
 | SEC-02 | Phase 01.7 | Complete |
 | SEC-03 | Phase 01.7 | Complete |

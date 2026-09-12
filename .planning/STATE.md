@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: "01.8"
 current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
 status: executing
-stopped_at: Completed 01.8-03-PLAN.md
-last_updated: "2026-09-12T02:16:20.224Z"
+stopped_at: Completed 01.8-04-PLAN.md
+last_updated: "2026-09-12T02:54:59.253Z"
 last_activity: 2026-09-11
 last_activity_desc: Phase 01.8 execution started
-state_head: dd1a791b7fa3fff750d1dcd2659ca501698e69a2
+state_head: e73445c63b561152af9373af489aa490bb4d2c54
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-09-11 — Phase 01.8 execution started
 
@@ -113,6 +113,7 @@ Last activity: 2026-09-11 — Phase 01.8 execution started
 | Phase 01.8 P01 | 65min | 2 tasks | 11 files |
 | Phase 01.8 P02 | ~20min | 2 tasks | 6 files |
 | Phase 01.8 P03 | 25min | 2 tasks | 6 files |
+| Phase 01.8 P04 | ~50min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,9 @@ Recent decisions affecting current work:
 - [Phase 01.8]: 01.8-01: JSON-LD script-closing sequences escaped via a global '/' -> '\/' replacement on the Jason-encoded payload
 - [Phase 01.8]: [Phase 01.8]: 01.8-02: GameText.cover_alt/1 + editorial_text/1 (single generator, D-10) wired into all six GameCard/GamePreview cover render branches (img alt + role=img/aria-label on both broken-image/nil-cover placeholder divs); GameCard moduledoc records the SEO-02 reversal of the earlier empty-alt decision; multiple publishers join with a plain comma, no 'y'-conjunction special case
 - [Phase 01.8]: [Phase 01.8]: 01.8-03: sitemap_entries/0 selects only id+updated_at with explicit order_by(asc: id); SitemapController mirrors HealthController (own :sitemap pipeline, no session/CSRF/CSP); lastmod derived via two DateTime/NaiveDateTime clauses to sidestep games.updated_at's ambiguous bare-timestamps() struct type (RESEARCH.md Pitfall C); robots.txt stub deleted outright (no comment lines survive) with an absolute Sitemap: directive whose path is asserted against the router's own ~p route
+- [Phase 01.8]: 01.8-04: OGCardBackfill's candidate query selects every game (not filtered to cover_url IS NOT NULL) so a cover-less row is genuinely scanned-and-skipped via object_key_for/1's nil, per Task 2's own acceptance criterion; dry-run scanned (434) intentionally diverges from cover-having count (385)
+- [Phase 01.8]: 01.8-04: Storage-side og-card coverage check compares against COUNT(DISTINCT cover_url) not COUNT(*), since the catalog's known duplicate-BGG_ID 163412 (D-19) means 385 covered rows produce only 384 distinct objects
+- [Phase 01.8]: 01.8-04: Fixed a pre-existing R2Storage.list_keys/2 pagination bug (silently capped at S3's 1000-key first page) found while running this plan's own storage-side coverage verification
 
 ### Pending Todos
 
@@ -328,8 +332,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T02:16:20.170Z
-Stopped at: Completed 01.8-03-PLAN.md
+Last session: 2026-09-12T02:54:59.202Z
+Stopped at: Completed 01.8-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

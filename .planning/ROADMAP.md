@@ -85,7 +85,7 @@ builds its JSON-LD on the CSP baseline that phase establishes)
   4. `https://pukllay.club/sitemap.xml` lists the catalog index plus every publicly-reachable game — count matches the live catalog, `lastmod` tracks each game's own `updated_at` — and `robots.txt` allows crawling and points at it
   5. Catalog card and hover-preview images announce the actual game (to a screen reader, and when an image fails to load) instead of being skipped as decorative
 
-**Plans**: 3/5 plans executed
+**Plans**: 4/5 plans executed
 
 Plans:
 **Wave 1**
@@ -96,7 +96,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 01.8-03-PLAN.md — Wave 2 · Request-time `sitemap.xml` from the live catalog, plus real `robots.txt` content pointing at it (SEO-03, SEO-04)
-- [ ] 01.8-04-PLAN.md — Wave 2 · The 1200x630 og-card letterbox transform, its one-time `catalog.backfill_og_cards` batch, and the real run against the live catalog (SHARE-03, SHARE-05)
+- [x] 01.8-04-PLAN.md — Wave 2 · The 1200x630 og-card letterbox transform, its one-time `catalog.backfill_og_cards` batch, and the real run against the live catalog (SHARE-03, SHARE-05)
 - [ ] 01.8-05-PLAN.md — Wave 2 · `LocalBusiness` JSON-LD from the locked club facts, `ClubLinks.public_phone/0`, and the sketch-approved branded OG fallback card (SEO-06, SHARE-04)
 
 > **Build order inside this phase (from `research/SUMMARY.md`):** the CSP nonce refactor
@@ -169,7 +169,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 2 → 3 → 4
 | 0. Walking Skeleton to Production | 6/6 | Complete | 2026-07-27 |
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
 | 01.7. Production Catalog Data & Security Hardening | 5/5 | Complete    | 2026-09-11 |
-| 01.8. SEO, Structured Data & Social Sharing | 3/5 | In Progress|  |
+| 01.8. SEO, Structured Data & Social Sharing | 4/5 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
