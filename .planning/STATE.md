@@ -4,17 +4,17 @@ milestone: v1.1
 milestone_name: Sharable Version
 current_phase: "01.8"
 current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
-status: verifying
-stopped_at: Completed 01.8-05-PLAN.md (all 3 tasks, plan complete)
-last_updated: "2026-09-12T03:32:26.913Z"
-last_activity: 2026-09-11
+status: executing
+stopped_at: Completed 01.8-06-PLAN.md (all 3 tasks, plan complete)
+last_updated: "2026-09-12T14:55:07.932Z"
+last_activity: 2026-09-12
 last_activity_desc: Phase 01.8 execution started
-state_head: 42c6dfb15fc98ffa0cc192688cf691e2b73f4508
+state_head: 53a83025eb7d10dff58beb63dbe5783e790cdcc1
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 12
+  completed_plans: 11
 ---
 
 Total Phases: 9
@@ -34,9 +34,9 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-09-11 — Phase 01.8 execution started
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-09-12 — Phase 01.8 execution started
 
 ## Performance Metrics
 
@@ -115,6 +115,7 @@ Last activity: 2026-09-11 — Phase 01.8 execution started
 | Phase 01.8 P03 | 25min | 2 tasks | 6 files |
 | Phase 01.8 P04 | ~50min | 3 tasks | 7 files |
 | Phase 01.8 P05 | ~40min | 3 tasks | 9 files |
+| Phase 01.8 P06 | 15min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -224,6 +225,7 @@ Recent decisions affecting current work:
 - [Phase 01.8]: 01.8-04: Fixed a pre-existing R2Storage.list_keys/2 pagination bug (silently capped at S3's 1000-key first page) found while running this plan's own storage-side coverage verification
 - [Phase 01.8]: 01.8-05: Sketch 057 (D-05) settled on variant B (centered stacked isologo + wordmark + tagline, ramp-800 background) for the OG fallback share card; exported 1200x630 WebP placed at priv/static/images/og-fallback.webp
 - [Phase 01.8]: 01.8-05: Task 3's served-response gate parses the real rendered og:image meta tag content rather than calling SEO.site_default/1 directly, exercising tag-emission-to-Plug.Static-serving end to end; found and fixed an attribute-order-agnostic regex bug (LiveView's phx-r debug attribute interposes between the tag name and property=)
+- [Phase 01.8]: 01.8-06: seo_tags/1 rebuilt as a plain Elixir markup function (not a HEEx component) so LiveView's phx-r root-tag attribute can never interpose before property=/name= again; root.html.heex calls it as a safe expression — 01.8-05's order-agnostic served-response regex helpers reversed back to strict form, since that loosening is exactly what let production keep serving WhatsApp-unparseable markup while the suite stayed green (G-01.8-3)
 
 ### Pending Todos
 
@@ -335,8 +337,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T03:32:26.863Z
-Stopped at: Completed 01.8-05-PLAN.md (all 3 tasks, plan complete)
+Last session: 2026-09-12T14:55:07.878Z
+Stopped at: Completed 01.8-06-PLAN.md (all 3 tasks, plan complete)
 Resume file: None
 
 ## Operator Next Steps
