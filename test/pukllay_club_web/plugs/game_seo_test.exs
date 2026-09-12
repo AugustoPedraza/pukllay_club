@@ -233,14 +233,14 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
   end
 
   defp meta_property_content(html, key) do
-    case Regex.run(~r/<meta property="#{Regex.escape(key)}" content="([^"]*)"/, html) do
+    case Regex.run(~r/<meta[^>]*\bproperty="#{Regex.escape(key)}" content="([^"]*)"/, html) do
       [_, value] -> value
       nil -> nil
     end
   end
 
   defp meta_name_content(html, key) do
-    case Regex.run(~r/<meta name="#{Regex.escape(key)}" content="([^"]*)"/, html) do
+    case Regex.run(~r/<meta[^>]*\bname="#{Regex.escape(key)}" content="([^"]*)"/, html) do
       [_, value] -> value
       nil -> nil
     end

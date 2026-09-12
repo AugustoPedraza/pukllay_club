@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <.live_title default="PukllayClub" suffix=" · PukllayClub" phx-no-format>{assigns[:page_title]}</.live_title>
+    <PukllayClubWeb.SEOTags.seo_tags seo={assigns[:seo]} />
     {if assigns[:seo] && assigns[:seo][:json_ld] && assigns[:csp_nonce] do
       PukllayClubWeb.SEO.json_ld_tag(assigns[:seo][:json_ld], assigns[:csp_nonce])
     end}

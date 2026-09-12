@@ -19,6 +19,23 @@ defmodule PukllayClubWeb.SEO do
 
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.OgCard
+  alias PukllayClub.Catalog.Vocabulary
+
+  # D-04's brand fallback asset, produced by a later plan's /gsd-sketch
+  # round — the literal path is fixed here regardless, so this plan's
+  # SiteSEO/SEOTags wiring compiles and serves a correct (if 404-until-
+  # shipped) URL rather than blocking on that human design round
+  # (CONTEXT.md D-05's explicit "do not block the rest of the phase").
+  @og_fallback_path "/images/og-fallback.webp"
+
+  @site_title "PukllayClub"
+  @site_description "Catálogo de juegos de mesa de Pukllay Club, Jujuy — encontrá tu próximo juego."
+
+  # A typical search-engine snippet truncates well before this; wide
+  # enough for the D-09 template's longest clause combination without
+  # ever needing to truncate mid-word in practice, narrow enough that a
+  # truncation (when one does happen) still reads as a real sentence.
+  @max_description_length 155
 
   @doc """
   Builds the per-game SEO payload for `game`. `conn` is accepted (but
@@ -30,8 +47,44 @@ defmodule PukllayClubWeb.SEO do
   def for_game(_conn, %Game{} = game) do
     %{
       title: game.name,
+      description: meta_description(game),
       canonical_url: canonical_url(game),
+      image_url: og_image_url(game),
       json_ld: game_json_ld(game)
+    }
+  end
+
+  # AboutLive.ex's own moduledoc: "/club" and "/quienes-somos" are two URL
+  # aliases pointing at the exact same LiveView and "must resolve
+  # identically; neither route redirects to the other" (D-01, SHELL-02,
+  # pinned by a byte-identical-output regression test). A raw
+  # `conn.request_path` canonical would give each alias its own distinct
+  # canonical_url/og:url, silently breaking that invariant. Canonicalizing
+  # the alias to its primary path is the standard SEO treatment for
+  # intentional duplicate-content URLs — one canonical target, not one per
+  # alias — and is what keeps both aliases' full SEO payload identical.
+  @alias_paths %{"/quienes-somos" => "/club"}
+
+  @doc """
+  Builds the site-wide default SEO payload for any hero-less route (the
+  catalog index, About). Never a nil-game branch of `for_game/2` — see
+  this plan's `<assumption_delta_decision>`.
+
+  `canonical_url` is built from `conn.request_path` (path only — a
+  filtered catalog URL's query string must not become its canonical),
+  canonicalizing known URL aliases (`@alias_paths`) to their primary path
+  first, via `PukllayClubWeb.Endpoint.url/0`, not `~p`, for the same
+  reason `fallback_image_url/0` below does.
+  """
+  @spec site_default(Plug.Conn.t()) :: map()
+  def site_default(%Plug.Conn{} = conn) do
+    path = Map.get(@alias_paths, conn.request_path, conn.request_path)
+
+    %{
+      title: @site_title,
+      description: @site_description,
+      canonical_url: PukllayClubWeb.Endpoint.url() <> path,
+      image_url: fallback_image_url()
     }
   end
 
@@ -87,6 +140,77 @@ defmodule PukllayClubWeb.SEO do
       "</script>"
     ])
   end
+
+  @doc """
+  Builds the D-09 meta description: name, then a mechanic clause, then a
+  complexity clause, then the Jujuy hook — Rioplatense/Argentine voseo
+  (D-11). Each clause is built by an independent nil-or-value function,
+  mirroring `GamePreview.players_text/1`'s idiom, never a single
+  interpolation with holes — that is exactly how the empty-list/nil cases
+  would otherwise produce a dangling connector, a double space, or a
+  trailing separator.
+
+  Never interpolates `game.mechanics` (or any other array field) directly
+  — only a single label taken from `Vocabulary.covered_mechanics/1`,
+  which already filters/orders off the game's own stored array
+  deterministically, never map-iteration order (PITFALLS Pitfall B,
+  RESEARCH.md).
+  """
+  @spec meta_description(Game.t()) :: String.t()
+  def meta_description(%Game{} = game) do
+    ["Descubrí #{game.name}", mechanic_clause(game), weight_clause(game), "en Pukllay Club, Jujuy."]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(", ")
+    |> String.replace(", en Pukllay Club", " en Pukllay Club")
+    |> truncate(@max_description_length)
+  end
+
+  defp mechanic_clause(%Game{mechanics: mechanics}) do
+    case Vocabulary.covered_mechanics(mechanics) do
+      [] -> nil
+      [first | _] -> "un juego de #{first}"
+    end
+  end
+
+  defp weight_clause(%Game{weight_band: nil}), do: nil
+
+  defp weight_clause(%Game{weight_band: value}) do
+    case Vocabulary.weight_band(value) do
+      nil -> nil
+      %{label: label} -> "pensado para el nivel #{label}"
+    end
+  end
+
+  defp truncate(text, max_length) do
+    if String.length(text) <= max_length do
+      text
+    else
+      text
+      |> String.slice(0, max_length)
+      |> String.replace(~r/\s+\S*$/u, "")
+      |> Kernel.<>("…")
+    end
+  end
+
+  @doc """
+  Selects `game`'s og-card URL when derivable, the branded fallback
+  otherwise — the add-alongside identity model from this plan's
+  `<assumption_delta_decision>`: never an empty value, never a relative
+  path (SHARE-01, edge:empty).
+  """
+  @spec og_image_url(Game.t()) :: String.t()
+  def og_image_url(%Game{} = game) do
+    OgCard.url_for(game) || fallback_image_url()
+  end
+
+  # Uses `Endpoint.url/0` + a literal path, deliberately not `~p`: verified
+  # routes check static files at compile time, and the sketch-produced
+  # asset (D-04/D-05) lands in a later plan by design, so a `~p` reference
+  # here would couple this plan's compilation to a human design round that
+  # CONTEXT.md explicitly says must not block the rest of the phase.
+  # Everything else in this codebase that builds a route URL keeps using
+  # `~p` — this is the one deliberate exception, and only for this path.
+  defp fallback_image_url, do: PukllayClubWeb.Endpoint.url() <> @og_fallback_path
 
   defp canonical_url(%Game{id: id}), do: url(~p"/juegos/#{id}")
 

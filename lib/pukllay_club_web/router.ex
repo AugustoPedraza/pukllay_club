@@ -9,6 +9,7 @@ defmodule PukllayClubWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :put_csp
+    plug PukllayClubWeb.Plugs.SiteSEO
   end
 
   pipeline :api do
