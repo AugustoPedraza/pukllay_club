@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: "01.8"
 current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
 status: executing
-stopped_at: Completed 01.8-02-PLAN.md
-last_updated: "2026-09-12T02:03:00.473Z"
+stopped_at: Completed 01.8-03-PLAN.md
+last_updated: "2026-09-12T02:16:20.224Z"
 last_activity: 2026-09-11
 last_activity_desc: Phase 01.8 execution started
-state_head: 278b7e6b97c81a5bb2cd72ec979e38ccb98fda08
+state_head: dd1a791b7fa3fff750d1dcd2659ca501698e69a2
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-09-11 — Phase 01.8 execution started
 
@@ -112,6 +112,7 @@ Last activity: 2026-09-11 — Phase 01.8 execution started
 | Phase 01.5 P08 | 36min | 3 tasks | 5 files |
 | Phase 01.8 P01 | 65min | 2 tasks | 11 files |
 | Phase 01.8 P02 | ~20min | 2 tasks | 6 files |
+| Phase 01.8 P03 | 25min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -215,6 +216,7 @@ Recent decisions affecting current work:
 - [Phase 01.8]: 01.8-01: SEO.site_default/1 canonicalizes AboutLive's /quienes-somos alias to /club so both URL aliases keep an identical SEO payload (SHELL-02)
 - [Phase 01.8]: 01.8-01: JSON-LD script-closing sequences escaped via a global '/' -> '\/' replacement on the Jason-encoded payload
 - [Phase 01.8]: [Phase 01.8]: 01.8-02: GameText.cover_alt/1 + editorial_text/1 (single generator, D-10) wired into all six GameCard/GamePreview cover render branches (img alt + role=img/aria-label on both broken-image/nil-cover placeholder divs); GameCard moduledoc records the SEO-02 reversal of the earlier empty-alt decision; multiple publishers join with a plain comma, no 'y'-conjunction special case
+- [Phase 01.8]: [Phase 01.8]: 01.8-03: sitemap_entries/0 selects only id+updated_at with explicit order_by(asc: id); SitemapController mirrors HealthController (own :sitemap pipeline, no session/CSRF/CSP); lastmod derived via two DateTime/NaiveDateTime clauses to sidestep games.updated_at's ambiguous bare-timestamps() struct type (RESEARCH.md Pitfall C); robots.txt stub deleted outright (no comment lines survive) with an absolute Sitemap: directive whose path is asserted against the router's own ~p route
 
 ### Pending Todos
 
@@ -326,8 +328,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T02:03:00.414Z
-Stopped at: Completed 01.8-02-PLAN.md
+Last session: 2026-09-12T02:16:20.170Z
+Stopped at: Completed 01.8-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
