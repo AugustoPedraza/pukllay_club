@@ -229,7 +229,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
         pattern = ~r/<#{element}\s+#{attr}="#{Regex.escape(key)}"/
 
         assert Regex.match?(pattern, body),
-               "G-01.8-3 recurrence guard: expected \"#{key}\" to render as <#{element} #{attr}=\"#{key}\" ...> " <>
+               ~s(G-01.8-3 recurrence guard: expected "#{key}" to render as <#{element} #{attr}="#{key}" ...> ) <>
                  "with #{attr}= immediately after the tag name (no attribute interposed, e.g. LiveView's " <>
                  "phx-r). Offending element: #{offending_element(body, key)}"
       end

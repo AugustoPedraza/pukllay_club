@@ -39,6 +39,18 @@ this gate — not for "trivial" changes, not via admin/force-merge. Merging to `
 Treat a failing or hanging health check (Kamal's `/up` probe) the same way: fix the underlying
 readiness issue, never disable or loosen the check to force a deploy through.
 
+## Social/Crawler Head-Block Changes
+
+Any change to the meta/Open Graph/Twitter head block (`lib/pukllay_club_web/components/seo_tags.ex`,
+`lib/pukllay_club_web/components/layouts/root.html.heex`) must be re-verified against a strict
+link-preview crawler before shipping, by running
+`node test/production/og_tags_whatsapp_ua.mjs <deployed-url>` against the deployed host. Passing
+Facebook Sharing Debugger, Twitter Card Validator, or Google Rich Results Test does **not**
+substitute for this — those parsers are tolerant of markup a strict crawler (WhatsApp) rejects,
+which is exactly how G-01.8-3 (an attribute interposed before `property=`/`name=`, from LiveView's
+`phx-r` root-tag stamping) shipped to production while every one of those three validators passed.
+See `.planning/debug/whatsapp-og-image-preview.md` for the full diagnosis.
+
 ## Non-Goals (Phase 0)
 
 Phase 0 is the deploy pipeline only — a proven walking skeleton, not gold-plating:
