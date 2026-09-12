@@ -187,30 +187,35 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
 
 ## Git Sync Discipline
 
-`branching_strategy` is `"none"` — phases execute directly on `main`. GSD's
-`execute-phase` workflow does **not** check `main` against `origin/main` for
-this branching strategy (that fetch/ff-only check only exists for the
-`"phase"`/`"milestone"` branching arms), and neither `/gsd-ship` nor
-`/gsd-pr-branch` sync local `main` back after a PR merges. Left unmanaged,
-local and origin silently diverge — which happened once already (phase 01.7
-was executed both directly on local `main` and, separately, via a PR that
-merged to `origin/main`, with nothing reconciling the two). The only thing
-that incidentally notices is the unrelated worktree-isolation fork-base
-check, which just silently degrades parallel execution to sequential instead
-of warning anyone.
+**Root cause (confirmed 2026-09-12):** `origin/main` on GitHub is branch-protected
+and rejects direct pushes — it requires a PR. But this project's GSD config has
+`branching_strategy: "none"`, which assumes phases commit straight to local `main`
+and push directly. That mismatch is the actual mechanism behind repeat divergence:
+local `main` accumulates real commits that can never be pushed as-is, while `origin/main`
+only advances through PRs (see PR #40 for phase 01.7, PR #41 for the 01.7+01.8 sync).
+GSD's `execute-phase` workflow doesn't help here either — it never checks `main` against
+`origin/main` for `branching_strategy: "none"` (that fetch/ff-only check only exists for
+the `"phase"`/`"milestone"` branching arms), and neither `/gsd-ship` nor `/gsd-pr-branch`
+sync local `main` back after a PR merges. The only thing that incidentally notices at all
+is the unrelated worktree-isolation fork-base check, which just silently degrades
+parallel execution to sequential instead of warning anyone. This has happened before —
+there's a leftover `sync-local-main-260824` branch on origin from a prior attempt at the
+same fix.
 
-Until this is fixed upstream in GSD itself, enforce it manually:
+Until `branching_strategy` is reconsidered for this repo (or GSD adds native support for
+protected-`main` remotes), enforce this manually:
 
-- **Before starting `/gsd-execute-phase` on any phase**, run `git status` and
-  confirm it says "up to date with origin/main". If it says "diverged" or
-  shows an ahead/behind count, reconcile first (`git fetch origin && git merge
-  origin/main`, resolving any conflict) — do not start the phase on a
-  diverged `main`.
-- **After a phase's commits land on `main`**, push immediately:
-  `git push origin main`. Don't let local run ahead of origin across
-  sessions.
-- **If a PR is ever shipped** via `/gsd-ship` or `/gsd-pr-branch`, sync local
-  `main` the moment it merges, before touching anything else:
+- **Before starting `/gsd-execute-phase` on any phase**, run `git status` and confirm it
+  says "up to date with origin/main". If it says "diverged" or shows an ahead/behind
+  count, reconcile first — do not start the phase on a diverged `main`.
+- **`git push origin main` will fail** (branch protection) — do not rely on it as the
+  sync mechanism. To land local commits, push a branch and open a PR:
+  `git checkout -b sync-main-<date> && git push -u origin sync-main-<date> && gh pr create`.
+- **To reconcile a diverged `main` before that PR merges:** `git fetch origin && git merge
+  origin/main` on a throwaway branch cut from local `main`, resolve conflicts (check
+  planning-doc conflicts for which side is actually more current — don't blindly prefer
+  either side), run the full test suite, then push that branch and PR it.
+- **After the PR merges on GitHub**, sync local `main` back before starting new work:
   `git fetch origin && git checkout main && git merge --ff-only origin/main`.
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
