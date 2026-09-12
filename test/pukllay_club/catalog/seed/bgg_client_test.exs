@@ -102,6 +102,24 @@ defmodule PukllayClub.Catalog.Seed.BggClientTest do
       assert {:error, {:http, 401}} = BggClient.fetch_batch([184_267], credentials)
     end
 
+    test "returns {:ok, []} for an empty id list without making an HTTP request (WINDOWS #15)",
+         %{credentials: credentials} do
+      # WINDOWS.md entry 15: `[]` passed the `length(bgg_ids) <= 20` guard and
+      # built an `id=""` request, crashing on `:erlang.binary_to_integer("")`.
+      test_pid = self()
+
+      Req.Test.stub(BggClient, fn conn ->
+        send(test_pid, {:bgg_request_made, conn.query_string})
+
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, "<items></items>")
+      end)
+
+      assert {:ok, []} = BggClient.fetch_batch([], credentials)
+      refute_received {:bgg_request_made, _}
+    end
+
     test "retries a 429 response and succeeds on the next attempt", %{credentials: credentials} do
       Req.Test.stub(BggClient, fn conn ->
         count = Process.get(:bgg_client_test_attempts, 0)
