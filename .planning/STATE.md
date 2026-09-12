@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: "01.8"
-current_phase_name: seo-structured-data-social-sharing-inserted
+current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
 status: executing
-stopped_at: Phase 01.8 context gathered
-last_updated: "2026-09-12T00:35:23.179Z"
+stopped_at: Completed 01.8-01-PLAN.md
+last_updated: "2026-09-12T01:53:12.810Z"
 last_activity: 2026-09-11
-last_activity_desc: Phase 01.7 complete, transitioned to Phase 01.8
-state_head: 58de20a7d0274d51fda3f3ae37de8ddf9c164007
+last_activity_desc: Phase 01.8 execution started
+state_head: f35d07d817a56fe64b734871e073c48cda863440
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 0
   total_plans: 10
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 Total Phases: 9
@@ -27,16 +27,16 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.8 — SEO, Structured Data & Social Sharing (INSERTED). Phase 01.7
+**Current focus:** Phase 01.8 — SEO, Structured Data & Social Sharing (INSERTED)
 (production catalog data + security hardening) completed 2026-09-11. Both are decimal insertions
 ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8 (seo-structured-data-social-sharing-inserted) — READY TO EXECUTE
-Plan: Not started
+Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-09-11 — Phase 01.7 complete, transitioned to Phase 01.8
+Last activity: 2026-09-11 — Phase 01.8 execution started
 
 ## Performance Metrics
 
@@ -110,6 +110,7 @@ Last activity: 2026-09-11 — Phase 01.7 complete, transitioned to Phase 01.8
 | Phase 01.5 P06 | 18min | 2 tasks | 3 files |
 | Phase 01.5 P07 | 25min | 3 tasks | 3 files |
 | Phase 01.5 P08 | 36min | 3 tasks | 5 files |
+| Phase 01.8 P01 | 65min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -209,6 +210,9 @@ Recent decisions affecting current work:
 - [Phase 01.5]: [Phase 01.5]: 01.5-07: G-01.5-3 items 3a/3b closed -- #cierre's header-height padding compensation removed (D-14 painted the band the header's own tint, invalidating D-10's premise) and its desktop min-height floor reduced 100vh -> 70vh/70dvh (checkpoint decision, reduce-floor ~70%); D-10 revised not superseded; test/visual/about_geometry.mjs gained a HEIGHTS sweep axis + gap-evenness/breathing-room/mobile-invariance checks
 - [Phase 01.5]: [Phase 01.5]: 01.5-08: About page opted into bottom_collapse (not boundary_collapse, top spacing untouched); .pk-about-cta-spacer replaced by body:has(.pk-about-cta-bar) document-end clearance (JS-free presence selector, no lifecycle hook needed); found+fixed a Rule 1 bug where Tailwind v4's space-y-4 applies margin-block-end (not margin-top, unlike v3) to non-last children, giving the fixed CTA bar a stray 16px margin that was eating into the reserved clearance; live probe confirmed last-band-to-footer distance now exactly 16px/24px matching the catalog/detail pages, closing G-01.5-3 and this whole gap-closure round
 - [Phase 01.7, 2026-09-11]: Phase closed after 5/5 plans, 3/3 UAT checkpoints passed, threats_open: 0 (01.7-SECURITY.md). Production DB restored to the real ~434-game catalog over an SSH tunnel (idempotent `upsert_game!/1` on `csv_row`, re-verified live); env-gated `Secure` session cookie shipped via an explicit `session_options/0` contract; CSP audited directive-by-directive and pinned as regression assertions; CSRF confirmed to cover LiveView's websocket connect flow; full-git-history secrets sweep (Gitleaks) found one reviewed false positive, no real leaks. One UAT finding (missing disconnect banner) diagnosed as a test-method artifact — Chrome DevTools Offline doesn't sever WebSocket connections — not an app defect; re-verified via `liveSocket.disconnect()/connect()`, passed clean. Two unrelated pre-existing UI issues surfaced as a side effect (banner lacks sticky positioning; LiveView's `JS.show` overrides its intended `display:flex`) — logged to Blockers/Concerns for a future pass, not this phase's scope.
+- [Phase 01.8]: 01.8-01: HEEx tokenizer treats <script>/<style> tag bodies as opaque raw text — JSON-LD rendered via SEO.json_ld_tag/2 (a hand-built raw HTML string), not inline HEEx markup
+- [Phase 01.8]: 01.8-01: SEO.site_default/1 canonicalizes AboutLive's /quienes-somos alias to /club so both URL aliases keep an identical SEO payload (SHELL-02)
+- [Phase 01.8]: 01.8-01: JSON-LD script-closing sequences escaped via a global '/' -> '\/' replacement on the Jason-encoded payload
 
 ### Pending Todos
 
@@ -320,9 +324,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-11T21:04:47.807Z
-Stopped at: Phase 01.8 context gathered
-Resume file: .planning/phases/01.8-seo-structured-data-social-sharing-inserted/01.8-CONTEXT.md
+Last session: 2026-09-12T01:53:12.753Z
+Stopped at: Completed 01.8-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
