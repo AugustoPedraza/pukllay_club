@@ -45,11 +45,14 @@ defmodule PukllayClubWeb.GameText do
   The publisher clause of `cover_alt/1`, independent so a caller composes
   rather than trims: `nil` for a game with `publishers: []` (the schema
   default — a real production path, not a theoretical one, per this
-  catalog's precedent for sparse per-column coverage), otherwise
-  `"editado por "` followed by every publisher joined with `", "`.
+  catalog's precedent for sparse per-column coverage) or `publishers: nil`
+  (the column has no `NOT NULL` constraint, so a row written outside the
+  seed changeset's `validate_required/2` — e.g. a raw `Repo.insert_all`
+  backfill — can legally carry a null array), otherwise `"editado por "`
+  followed by every publisher joined with `", "`.
   """
   @spec editorial_text(Game.t()) :: String.t() | nil
-  def editorial_text(%Game{publishers: []}), do: nil
+  def editorial_text(%Game{publishers: publishers}) when publishers in [nil, []], do: nil
 
   def editorial_text(%Game{publishers: publishers}) do
     "editado por #{Enum.join(publishers, ", ")}"

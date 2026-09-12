@@ -11,6 +11,12 @@ defmodule PukllayClubWeb.GameTextTest do
       assert GameText.editorial_text(game) == nil
     end
 
+    test "returns nil for a game with publishers: nil (nullable column, no changeset in the read path)" do
+      game = %Game{name: "Catán", publishers: nil}
+
+      assert GameText.editorial_text(game) == nil
+    end
+
     test "returns the 'editado por' clause for a single publisher" do
       game = %Game{name: "Catán", publishers: ["Devir"]}
 
