@@ -45,7 +45,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
     socket =
       socket
-      |> assign(:page_title, "Catálogo")
+      |> assign(:page_title, "Ludoteca")
       |> assign(:q, q)
       # Member-owned, server-rendered open/closed state for the header's
       # search-morph (01.2-11, closes G-01.2-2/G-01.2-3). Seeded true only
@@ -831,11 +831,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     |> Enum.map(fn row -> %{key: row.key, title: row.title, subtitle: row_subtitle(row.key)} end)
   end
 
-  # "El catálogo completo" is a false claim once filters narrow the result
+  # "Toda la ludoteca" is a false claim once filters narrow the result
   # set — the heading text depends on whether a filter is active, but the
   # header itself always renders (even on a zero-result view).
   defp main_grid_heading(assigns) do
-    if filters_active?(assigns), do: "Resultados", else: "El catálogo completo"
+    if filters_active?(assigns), do: "Resultados", else: "Toda la ludoteca"
   end
 
   # A filtered view shows one authoritative result set — the curated
@@ -867,7 +867,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   end
 
   # D-01/D-02: the single source of truth for which of the two browse
-  # surfaces renders — carousels, or the flat "El catálogo completo" grid.
+  # surfaces renders — carousels, or the flat "Toda la ludoteca" grid.
   # CALLS filters_active?/1 rather than restating its clauses, so the
   # carousel gate and the grid gate can never drift apart:
   # filters_active?/1 stays the narrower "is a filter actually applied"
@@ -1055,7 +1055,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
           <div :if={@load_error} class="mx-auto w-full max-w-7xl pk-gutter">
             <div class="pk-state">
-              <h2>No pudimos cargar el catálogo</h2>
+              <h2>No pudimos cargar la ludoteca</h2>
               <p>Hubo un problema de conexión.</p>
               <%!-- CoreComponents.button/1 checked first (ui-design-system's
             "check core_components.ex before hand-rolling markup" rule) —
