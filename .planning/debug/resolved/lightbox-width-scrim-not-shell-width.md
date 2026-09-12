@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Investigate issue: lightbox-width-scrim-not-shell-width. Plan 01.2-25 was supposed to make the game-detail lightbox photo derive its max-width from the site's own shell/container width token, and both chevrons were supposed to get an explicit z-index. Code-confirmed present by TWO independent verifier passes (source reads only, no live render). Live UAT round shows the fix did NOT visibly take effect."
 created: 2026-08-28T00:00:00.000Z
-updated: 2026-08-28T00:10:00.000Z
+updated: 2026-09-12
+resolved: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -163,6 +164,41 @@ root_cause: "`.pk-lightbox-img` declares only `max-width`/`max-height` (upper bo
   this exact outcome pre-anticipated in a source comment), not a bug; the scrim-not-obscuring complaint
   is the already-diagnosed-in-G-01.2-16 perceptual consequence of a small photo against a large
   translucent field, which persists because the photo's actual rendered size never changed."
-fix: (not applied — goal is find_root_cause_only; diagnosis returned to caller for fix planning)
-verification: (n/a — no fix applied in this session)
-files_changed: []
+fix: |
+  RETROACTIVE CLOSURE (quick 260912-mxr, 2026-09-12) — fix landed after this diagnosis. Plan
+  01.2-28 (commit 739b057, "Lightbox Shell-Width Stage & Chevron Re-Anchoring") replaced
+  `.pk-lightbox-img`'s `max-width`/`max-height` caps with a real `width` and `height` plus an
+  opaque `background`, addressing the diagnosed root cause directly: a cap can only shrink an
+  oversized image, never grow one already smaller than the cap, and every catalog image renders at
+  a fixed ~800px intrinsic width. The new `width` reads a new named token,
+  `--pk-shell-content-width` (adopting the exact formula the old `max-width` used to carry), so the
+  photo now actually reaches the shell's content width instead of rendering at its unconstrained
+  intrinsic size. The same plan also re-anchored both chevrons to the same shell edge via
+  `calc(50% - (var(--pk-shell-content-width) / 2))`, reopening the 01.2-21 viewport-edge-anchoring
+  decision this diagnosis's Eliminated section had correctly identified as a separate, deliberate
+  tradeoff (not touched by this closure's root-cause chain, but landed in the same commit).
+verification: |
+  `grep -n "\.pk-lightbox-img {" -A10 assets/css/app.css` (2026-09-12) shows:
+  ```
+  .pk-lightbox-img {
+    width: var(--pk-shell-content-width);
+    height: 100vh;
+    height: 100dvh;
+    background: var(--pk-shadow-color);
+    object-fit: contain;
+    ...
+  }
+  ```
+  — a real `width` declaration is present (not merely `max-width`), directly closing the diagnosed
+  root cause ("a plain `<img>` with no explicit width renders at its INTRINSIC pixel size...
+  max-width/max-height can only shrink an oversized image, never grow one"). Landing commit
+  739b057 (01.2-28-SUMMARY.md), which records the new `--pk-shell-content-width` token declared
+  exactly once in `:root` and read bare (no fallback literal) by exactly three rules
+  (`.pk-lightbox-img`, `.pk-lightbox-chevron-prev`, `.pk-lightbox-chevron-next`), confirmed via
+  `grep` in that plan's own verification.
+files_changed:
+  - "assets/css/app.css — .pk-lightbox-img's max-width/max-height caps replaced with a real width
+     (reads new --pk-shell-content-width :root token) and height, plus an opaque background; new
+     .pk-lightbox-chevron-prev/-next side rules anchor both chevrons to the same shell edge"
+  - "lib/pukllay_club_web/live/catalog_live/show.ex — both chevron buttons' class attributes
+     changed from viewport-edge utility offsets (left-4/right-4) to the new side classes"

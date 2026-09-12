@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "3. the close \"nos vemos el sabado\" has a huge space top and bottom / 4. also on the close band there are wrong white space and the bottom has bottom space from viewport"
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-12
+resolved: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -561,16 +562,64 @@ root_cause: |
   bottom (`barCoversFooter: true`, visible in `mobile-390-page-bottom.png`), because the spacer
   sits BEFORE the footer in flow (E-11).
 
-fix: "NOT APPLIED — diagnose-only mode (goal: find_root_cause_only)."
+fix: |
+  RETROACTIVE CLOSURE (quick 260912-mxr, 2026-09-12) — all three components fixed across three
+  plans:
 
+  ITEM 3a (whitespace volume) — plan 01.5-07 (commit 860b95e) reduced `#cierre`'s `>=640px`
+  `min-height: 100vh` floor. Plan 01.5-09 (commit 50c41b0) then retuned the mechanism again,
+  from the 01.5-07 dual-declaration `70vh`/`70dvh` floor to a fixed `padding-block: 5rem`
+  (developer decision, closing G-01.5-6): the band no longer uses a viewport-height floor at all,
+  it uses a fixed padding-block matching the page's own measured band rhythm (5.6% step off the
+  144px norm, vs. the diagnosed 39% outlier at the original 8rem/100vh).
+
+  ITEM 3b (uneven top/bottom gaps) — plan 01.5-07 (commit 860b95e) removed `#cierre`'s
+  `padding: var(--pk-header-h, 4.5rem) 0 0` shorthand entirely, restoring `.pk-band`'s shared
+  symmetric padding. The CSS comment above the rule (app.css:3416-3435) explicitly documents why:
+  D-14 (plan 01.5-04) painted the band the header's own tint, so the header no longer visually eats
+  the top gap and the compensation's premise no longer holds.
+
+  ITEM 4 (extra empty band before the footer) — plan 01.5-08 (commit 83c9880) opted the About
+  page's `Layouts.app` call into `bottom_collapse` (about_live.ex:61), the mechanism already built
+  for this exact stacked-boundary defect class. The same plan (commit 84d7724) removed the
+  in-flow `.pk-about-cta-spacer` div entirely (template and both stylesheet rules) and replaced it
+  with a page-scoped `body:has(.pk-about-cta-bar)` document-end clearance rule, since the spacer
+  cleared the wrong element (it sat before the footer, which the fixed bar actually overlaid).
 verification: |
-  n/a — no fix applied. Root causes established by measure-mutate-restore differential testing on
-  the running dev server via CDP, with controls: item 3's two halves each isolated to exactly one
-  declaration (E-05), item 4's five contributors each isolated and summing to zero residual
-  (E-06), a `.pk-band` padding control confirming neither is band padding (E-06 EXP I), and a
-  tint-strip control confirming D-14 is the exposure condition and not the cause (E-07).
+  ITEM 3a: `grep -n "#cierre {" -A5 assets/css/app.css` (2026-09-12) shows the `@media (min-width:
+  640px)` block's `#cierre` rule as `{ padding-block: 5rem; }` only — no `min-height` property at
+  all. `grep -n "min-height: 100vh" assets/css/app.css` finds one match, at line 610, inside a
+  SUPERSEDED comment about an unrelated `.pk-app-shell` mechanism (quick task 260902-glf) — not
+  `#cierre`. Landing commits 860b95e (01.5-07-SUMMARY.md, D1 "gaps equal within a pixel... 18/18
+  cases") and 50c41b0 (01.5-09-SUMMARY.md, D2 "padding-block retuned from 8rem to 5rem... 5.6%
+  step").
 
-files_changed: []
+  ITEM 3b: `grep -n "var(--pk-header-h" assets/css/app.css` shows the string `padding:
+  var(--pk-header-h, 4.5rem) 0 0` appears only once, at line 3426, inside a comment explaining WHY
+  it was removed ("The header-height top padding is GONE (01.5-07)... that padding shifted the
+  flex centering point down to cancel exactly that overlap, and it was correct when written...
+  removing it fixed the uneven top/bottom split") — it is prose describing history, not a live
+  declaration. `--pk-header-h` remains read live by 3 other unrelated rules (`.pk-shelf`
+  scroll-margin-top, `.pk-title-echo` top, `.pk-poster-col` sticky top), confirming the token
+  itself was not retired, only this one consumer. Landing commit 860b95e (01.5-07-SUMMARY.md).
+
+  ITEM 4: `grep -n "bottom_collapse\|pk-about-cta-spacer" lib/pukllay_club_web/live/about_live.ex`
+  shows `<Layouts.app flash={@flash} fullbleed sticky bottom_collapse active_nav={:quienes_somos}>`
+  (line 61, a live attribute) and two comment-only mentions of `pk-about-cta-spacer` referencing
+  its historical existence, with no `class="pk-about-cta-spacer"` element anywhere in the rendered
+  markup (confirmed reading lines 820-845, the `#cierre` section through the CTA bar). `grep -n
+  "pk-about-cta-spacer" assets/css/app.css` likewise finds only prose/comment mentions (lines 3157,
+  6762), no live `.pk-about-cta-spacer { ... }` rule. Landing commits 83c9880 (01.5-08-SUMMARY.md,
+  D1 "About page opts into bottom_collapse") and 84d7724 (01.5-08-SUMMARY.md, D3 "the in-flow
+  .pk-about-cta-spacer is fully removed... replaced by a page-scoped body:has(.pk-about-cta-bar)
+  document-end clearance rule").
+files_changed:
+  - "assets/css/app.css — #cierre's >=640px block: min-height:100vh removed then replaced by a
+     fixed padding-block:5rem (01.5-07, 01.5-09); padding:var(--pk-header-h,4.5rem) 0 0 removed
+     entirely, restoring .pk-band's shared symmetric padding (01.5-07); .pk-about-cta-spacer's two
+     rules removed, new body:has(.pk-about-cta-bar) document-end padding-bottom rule added (01.5-08)"
+  - "lib/pukllay_club_web/live/about_live.ex — Layouts.app call gains bottom_collapse; the
+     .pk-about-cta-spacer div removed from the template (01.5-08)"
 
 suggested_fix_direction: |
   Three separable pieces of work. Do not fold them into one edit — they have different owners,
