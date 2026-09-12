@@ -185,6 +185,34 @@ to make that possible; everything after it (rules Q&A, rental tracking) is a dif
 
 <!-- GSD:stack-end -->
 
+## Git Sync Discipline
+
+`branching_strategy` is `"none"` — phases execute directly on `main`. GSD's
+`execute-phase` workflow does **not** check `main` against `origin/main` for
+this branching strategy (that fetch/ff-only check only exists for the
+`"phase"`/`"milestone"` branching arms), and neither `/gsd-ship` nor
+`/gsd-pr-branch` sync local `main` back after a PR merges. Left unmanaged,
+local and origin silently diverge — which happened once already (phase 01.7
+was executed both directly on local `main` and, separately, via a PR that
+merged to `origin/main`, with nothing reconciling the two). The only thing
+that incidentally notices is the unrelated worktree-isolation fork-base
+check, which just silently degrades parallel execution to sequential instead
+of warning anyone.
+
+Until this is fixed upstream in GSD itself, enforce it manually:
+
+- **Before starting `/gsd-execute-phase` on any phase**, run `git status` and
+  confirm it says "up to date with origin/main". If it says "diverged" or
+  shows an ahead/behind count, reconcile first (`git fetch origin && git merge
+  origin/main`, resolving any conflict) — do not start the phase on a
+  diverged `main`.
+- **After a phase's commits land on `main`**, push immediately:
+  `git push origin main`. Don't let local run ahead of origin across
+  sessions.
+- **If a PR is ever shipped** via `/gsd-ship` or `/gsd-pr-branch`, sync local
+  `main` the moment it merges, before touching anything else:
+  `git fetch origin && git checkout main && git merge --ff-only origin/main`.
+
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 
 ## Conventions
