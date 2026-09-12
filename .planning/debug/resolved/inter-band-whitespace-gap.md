@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "there are space between bands"
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-12
+resolved: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -319,11 +320,32 @@ root_cause: |
   D-14 exposed, NOT a D-14 regression — the fix belongs at the band/shell spacing boundary,
   not in D-14's colour work.
 
-fix: "NOT APPLIED — diagnose-only mode (goal: find_root_cause_only)."
-
-verification: "n/a — no fix applied. Root cause established by differential test E-05 (isolating the shell margin drives the gap to exactly 0px; the padding control leaves it at 16px)."
-
-files_changed: []
+fix: |
+  RETROACTIVE CLOSURE (quick 260912-mxr, 2026-09-12) — fix landed after this diagnosis. Plan
+  01.5-06 (commit 5ebfde3, "`.pk-band` Outer-Spacing Ownership + Geometric Adjacency Oracle")
+  added `margin-block-end: 0` directly to the existing unlayered `.pk-band` rule, cancelling the
+  shell wrapper's `space-y-4` margin via cascade-layer precedence (an unlayered `.pk-*` rule beats
+  any rule inside `@layer utilities` regardless of specificity — no `!important` needed). Scoped
+  to `.pk-band` itself, not to `layouts.ex`'s shell wrapper, per this diagnosis's own constraint
+  that the catalog pages deliberately depend on that exact 16px rhythm (`catalog_live/show.ex:292`).
+  The hero -> `#fotos` boundary's 16px was deliberately kept (both sides transparent, invisible
+  either way) — a documented decision, not an oversight.
+verification: |
+  `grep -n "^\.pk-band {" -A3 assets/css/app.css` (2026-09-12) shows:
+  ```
+  .pk-band {
+    padding: 4.5rem 0;
+    margin-block-end: 0;
+  }
+  ```
+  — a live declaration, not a comment. `grep -n "space-y-4" lib/pukllay_club_web/components/layouts.ex`
+  confirms the shell wrapper (`<div class="mx-auto space-y-4">`, layouts.ex:651) is untouched, exactly
+  as this diagnosis required (deleting or gating `space-y-4` would have broken the catalog pages).
+  Landing commit 5ebfde3 (01.5-06-SUMMARY.md), which also reports a live probe measuring 0.00px at
+  all four About-page band-to-band boundaries across 3 widths x 2 themes (6/6 cases).
+files_changed:
+  - "assets/css/app.css — added `margin-block-end: 0` to the existing `.pk-band` rule, with a
+     comment naming the shell's `space-y-4` utility as the thing it cancels"
 
 suggested_fix_direction: |
   Give `.pk-band` ownership of its own outer spacing, the same way it already owns its inner

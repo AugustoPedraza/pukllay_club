@@ -294,6 +294,10 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 |---|-------------|------|--------|--------|-----------|
 | 260912-hrx | Docs-only pushes to main skip build-and-push/deploy via an always-run paths-filter gate job; `quality` (both deploy.yml's D-04 guard and ci.yml's actual required check) stays unconditional | 2026-09-12 | 16226be | complete | [260912-hrx-add-path-based-filtering-to-github-workf](./quick/260912-hrx-add-path-based-filtering-to-github-workf/) |
 | 260912-im6 | Renamed user-facing "catálogo" copy to "ludoteca" (404 page, catalog index title/heading/error states, site-level SEO description) — Rioplatense voseo tone, closing a split where the game-detail breadcrumb already said "Ludoteca"; no code identifiers touched | 2026-09-12 | 68b8960 | complete | [260912-im6-rename-user-facing-cat-logo-copy-to-ludo](./quick/260912-im6-rename-user-facing-cat-logo-copy-to-ludo/) |
+| 260912-mxq | Close out 13 diagnosed G-01.x debug sessions (12 resolved, G-01-7 still open) | 2026-09-12 | 01ef0eb | — | .planning/quick/260912-mxq-close-out-the-13-diagnosed-g-01-x-debug-sessions-in-planning |
+| 260912-mxr | Close out 6 remaining diagnosed debug sessions (5 resolved incl. no-disconnect-banner not-a-bug; hashtags-not-visible still open) | 2026-09-12 | bf3d3f2 | — | .planning/quick/260912-mxr-close-out-the-6-remaining-diagnosed-debug-sessions-in-planni |
+| 260912-mxs | Complete brand-name todo (satisfied by Sketch 050 wordmark, footer, SEO) | 2026-09-12 | a3124f9 | — | .planning/quick/260912-mxs-complete-pending-todo-planning-todos-pending-2026-09-07-surf |
+| 260912-mxt | Reconcile Windows ledger (21 open -> 9 open, 11 fixed, 1 waived) | 2026-09-12 | 0277a2f | — | .planning/quick/260912-mxt-reconcile-the-21-open-entries-in-the-windows-ledger-planning |
 
 ### Roadmap Evolution
 
@@ -301,7 +305,6 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.2 inserted after Phase 1: Catalog & Detail Navigation Polish — polish the catalog index page and game detail page navigation and layout, refining what Phase 1/1.1 shipped (URGENT)
 - Phase 01.3 inserted after Phase 01.2: Game detail page layout needs to be clearer/more scannable and the game information shown needs to be accurate; requested after Phase 01.2's navigation/mechanics polish shipped (URGENT)
 - Phase 01.3.1 inserted after Phase 01.3: Game Image Quality & Multi-Image Gallery (URGENT)
-- Phase 5 added: UI polish pass for About page sketches
 - Phase 01.4 inserted after Phase 1: UI polish pass for About page sketches (URGENT)
 - Phase 01.5 inserted after Phase 1: About Page CTA Rhythm & Header Morph Refinement — implement sketch-findings-pukllay_club sketches 050-051 (URGENT)
 - Phase 01.7 inserted after Phase 01.6 (milestone v1.1): Production Catalog Data & Security Hardening — production's live DB is empty of games, and the now-public repo/passed-around link needs baseline cookie/HSTS/CSP/CSRF hardening plus a one-time full-git-history secrets sweep. Numbered as a decimal insertion continuing the 01.N convention so Phase 2/3/4 keep their numbers and scope.

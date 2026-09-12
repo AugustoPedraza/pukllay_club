@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "The first \"sumate\" CTA doesn't play correct balance with isologo and so on"
 created: 2026-09-08T16:00:00Z
-updated: 2026-09-08T17:20:00Z
+updated: 2026-09-12
+resolved: 2026-09-12
 gap_id: G-01.5-1
 artifacts: .planning/debug/assets/hero-cta-isologo-balance/
 audit_acknowledged:
@@ -329,6 +330,38 @@ root_cause: |
   the two the UAT flagged (G-01.5-1 and G-01.5-3 item 5, "on the close band, the CTA doesn't have
   the correct balance"). One root cause very likely explains both.
 
-fix: [not applied — goal: find_root_cause_only]
-verification: [n/a — diagnose-only mode]
-files_changed: []
+fix: |
+  RETROACTIVE CLOSURE (quick 260912-mxr, 2026-09-12) — fix landed after this diagnosis, in two
+  plans:
+
+  Plan 01.5-05 (commit eaf9f76, "Sumate CTA size-step fix") first replaced the orphaned
+  `min-h-12` one-axis height utility on `Layouts.sumate_cta/1` with daisyUI's `btn-lg` size step
+  composed with the project's `min-h-11` touch-floor utility, so height/padding-inline/font-size
+  moved together instead of height alone.
+
+  Plan 01.5-10 (commit 0e99941, "Sumate Button Geometry & Sticky Bar Edge") then superseded that
+  composition entirely: it retired `btn-lg`/`min-h-11` and introduced a single new CSS class,
+  `.pk-sumate-btn` (assets/css/app.css:3045), which owns height (48px `min-height`), horizontal
+  padding (28px `padding-inline`), radius (9999px pill) and font-size (1rem) all in one coupled
+  declaration — restoring sketch 051's approved button geometry (measured 116.75x48, padding ratio
+  2.00:1, vs. the diagnosed defect's 1.03:1) at the component's single source, reaching all three
+  `sumate_cta/1` call sites (hero, Cierre band, mobile sticky bar).
+verification: |
+  `grep -n "min-h-12" lib/pukllay_club_web/components/layouts.ex assets/css/app.css` (2026-09-12)
+  finds exactly one match, at layouts.ex:880 — inside prose ("the button had been a bare
+  `min-h-12` one-axis height...") documenting the historical defect, not a live class. The live
+  `sumate_cta/1` definition (layouts.ex:917-925) renders
+  `class={["btn btn-outline btn-primary pk-sumate-btn", @class]}` — no `min-h-12`, no `btn-lg`, no
+  `min-h-11`. `.pk-sumate-btn` (app.css:3045-3050) declares `min-height: 48px; padding-inline:
+  28px; border-radius: 9999px; font-size: 1rem;` in one rule — height, horizontal padding, radius
+  and font-size are coupled together, the opposite of the diagnosed one-axis stretch. Landing
+  commits: eaf9f76 (01.5-05-SUMMARY.md) and 0e99941 (01.5-10-SUMMARY.md, which superseded 01.5-05's
+  `btn-lg`+`min-h-11` composition with the current `.pk-sumate-btn` class — 01.5-10-SUMMARY.md
+  measures the live result at 116.75x48, padding ratio 2.00:1, matching this diagnosis's own
+  falsification-test prediction almost exactly).
+files_changed:
+  - "lib/pukllay_club_web/components/layouts.ex — sumate_cta/1's class list changed from `btn
+     btn-outline btn-primary min-h-12` (01.5-05: to `btn-lg min-h-11`; 01.5-10: superseded again)
+     to the current `btn btn-outline btn-primary pk-sumate-btn`"
+  - "assets/css/app.css — new `.pk-sumate-btn` class (01.5-10) owning min-height/padding-inline/
+     border-radius/font-size in one coupled declaration, replacing daisyUI's btn-lg size step"

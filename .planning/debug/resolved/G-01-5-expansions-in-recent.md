@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-01-5: Game expansions are appearing in the 'Recién añadidos' (recently added) section on the catalog main page, when that section should only ever show base games."
 created: 2026-08-18T00:00:00.000Z
-updated: 2026-08-18T00:00:00.000Z
+updated: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -70,6 +70,12 @@ started: Discovered during UAT (Phase 01-catalog-v1)
 ## Resolution
 
 root_cause: "No is_expansion/parent_game_id column exists anywhere in the Game schema (only a free-text marker inside Nombre, e.g. '(expa)'/'Expansión'/'Expansion', which is never parsed during seeding) [data]; AND lib/pukllay_club/catalog.ex's recent_query/0 (backing the 'Recientemente añadidos' carousel row) applies zero filter and orders by inserted_at desc/csv_row desc, which — because the bulk seed inserts rows in strict ascending csv_row order — collapses to 'return the highest csv_row rows first' [code]. The club's source CSV (priv/repo/seed_data/ludoteca.csv) happens to cluster essentially all its expansion/promo entries as a contiguous block at the tail of the sheet (csv_row ~410-435 of 434), so this unfiltered recency ordering surfaces almost exclusively expansions instead of a representative recently-added set."
-fix: ""
-verification: ""
-files_changed: []
+fix: "plan 01-09 (commits `7a3ea20`/`f94bc85`/`0ef4ef4`/`9896692`/`9846086`/`65d9930`): added a `games.is_expansion` boolean column with a migration backfill, a new `PukllayClub.Catalog.Seed.ExpansionClassifier` module deriving the flag from marker text plus override rules, and a `where: g.is_expansion == false` predicate on `recent_query/0` — closing both the [data] no-column half and the [code] unfiltered-query half of the AND-gate."
+verification: |
+  - [data] column now exists: priv/repo/migrations/20260818222551_add_games_is_expansion.exs (`add_games_is_expansion`); `PukllayClub.Catalog.Seed.ExpansionClassifier` at lib/pukllay_club/catalog/seed/expansion_classifier.ex derives `is_expansion` from the Nombre marker text this root cause identified as previously unparsed.
+  - [code] filter now applied: lib/pukllay_club/catalog.ex:438-441 `defp recent_query do from g in Game, where: g.is_expansion == false, order_by: [desc: g.inserted_at, desc: g.csv_row] end` — the root cause's exact "no where clause at all" gap is filled; `grep -n 'is_expansion == false' lib/pukllay_club/catalog.ex` -> 1 hit at line 440.
+  - 65d9930 (docs(01-09)) and 01-09-SUMMARY.md record the plan as complete, with the earlier 7a3ea20/9896692 commits being intentional failing-test-first (TDD) commits for the classifier and the query exclusion, both later made to pass by f94bc85/9846086.
+files_changed:
+  - lib/pukllay_club/catalog.ex
+  - lib/pukllay_club/catalog/seed/expansion_classifier.ex
+  - priv/repo/migrations/20260818222551_add_games_is_expansion.exs
