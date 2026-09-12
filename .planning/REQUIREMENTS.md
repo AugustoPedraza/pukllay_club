@@ -18,7 +18,7 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 ### SEO
 
 - [x] **SEO-01**: Every game detail page has a unique, real meta description
-- [ ] **SEO-02**: Catalog card and hover-preview images have real, descriptive `alt` text
+- [x] **SEO-02**: Catalog card and hover-preview images have real, descriptive `alt` text
       (currently `alt=""`)
 - [ ] **SEO-03**: `robots.txt` allows crawling and references `sitemap.xml`
 - [ ] **SEO-04**: `sitemap.xml` lists the catalog index and every game detail page, generated live
@@ -95,7 +95,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEED-01 | Phase 01.7 | Complete |
 | SEED-02 | Phase 01.7 | Complete |
 | SEO-01 | Phase 01.8 | Complete |
-| SEO-02 | Phase 01.8 | Pending |
+| SEO-02 | Phase 01.8 | Complete |
 | SEO-03 | Phase 01.8 | Pending |
 | SEO-04 | Phase 01.8 | Pending |
 | SEO-05 | Phase 01.8 | Complete |

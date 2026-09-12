@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: "01.8"
 current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
 status: executing
-stopped_at: Completed 01.8-01-PLAN.md
-last_updated: "2026-09-12T01:53:12.810Z"
+stopped_at: Completed 01.8-02-PLAN.md
+last_updated: "2026-09-12T02:03:00.473Z"
 last_activity: 2026-09-11
 last_activity_desc: Phase 01.8 execution started
-state_head: f35d07d817a56fe64b734871e073c48cda863440
+state_head: 278b7e6b97c81a5bb2cd72ec979e38ccb98fda08
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-09-11 — Phase 01.8 execution started
 
@@ -111,6 +111,7 @@ Last activity: 2026-09-11 — Phase 01.8 execution started
 | Phase 01.5 P07 | 25min | 3 tasks | 3 files |
 | Phase 01.5 P08 | 36min | 3 tasks | 5 files |
 | Phase 01.8 P01 | 65min | 2 tasks | 11 files |
+| Phase 01.8 P02 | ~20min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -213,6 +214,7 @@ Recent decisions affecting current work:
 - [Phase 01.8]: 01.8-01: HEEx tokenizer treats <script>/<style> tag bodies as opaque raw text — JSON-LD rendered via SEO.json_ld_tag/2 (a hand-built raw HTML string), not inline HEEx markup
 - [Phase 01.8]: 01.8-01: SEO.site_default/1 canonicalizes AboutLive's /quienes-somos alias to /club so both URL aliases keep an identical SEO payload (SHELL-02)
 - [Phase 01.8]: 01.8-01: JSON-LD script-closing sequences escaped via a global '/' -> '\/' replacement on the Jason-encoded payload
+- [Phase 01.8]: [Phase 01.8]: 01.8-02: GameText.cover_alt/1 + editorial_text/1 (single generator, D-10) wired into all six GameCard/GamePreview cover render branches (img alt + role=img/aria-label on both broken-image/nil-cover placeholder divs); GameCard moduledoc records the SEO-02 reversal of the earlier empty-alt decision; multiple publishers join with a plain comma, no 'y'-conjunction special case
 
 ### Pending Todos
 
@@ -324,8 +326,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T01:53:12.753Z
-Stopped at: Completed 01.8-01-PLAN.md
+Last session: 2026-09-12T02:03:00.414Z
+Stopped at: Completed 01.8-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

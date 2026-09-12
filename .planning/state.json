@@ -16,7 +16,7 @@
     {
       "number": "01.8",
       "name": "SEO, Structured Data & Social Sharing",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "2",
@@ -39,5 +39,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 01.8 of 5 · executing"
   },
-  "updated_at": "2026-09-12T01:52:57.584Z"
+  "updated_at": "2026-09-12T02:02:42.516Z"
 }
