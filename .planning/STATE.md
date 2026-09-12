@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
 Plan: 3 of 7
 Status: Ready to execute
-Last activity: 2026-09-12 — Phase 01.8 execution started
+Last activity: 2026-09-12 — Completed quick task 260912-hrx: docs-only path filtering for deploy.yml
 
 ## Performance Metrics
 
@@ -292,6 +292,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260912-hrx | Docs-only pushes to main skip build-and-push/deploy via an always-run paths-filter gate job; `quality` (both deploy.yml's D-04 guard and ci.yml's actual required check) stays unconditional | 2026-09-12 | 16226be | complete | [260912-hrx-add-path-based-filtering-to-github-workf](./quick/260912-hrx-add-path-based-filtering-to-github-workf/) |
 
 ### Roadmap Evolution
 
