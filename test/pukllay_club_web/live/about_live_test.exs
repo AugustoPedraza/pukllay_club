@@ -344,15 +344,22 @@ defmodule PukllayClubWeb.AboutLiveTest do
       # phx-session/phx-static payload per connection, so raw HTML from two
       # separate live/2 calls is never byte-identical even for the exact
       # same route (verified empirically against this repo) — normalizing
-      # only those four per-connection fields, never any real page content,
+      # only those per-connection fields, never any real page content,
       # is what makes "byte-identical" a meaningful, non-flaky claim rather
-      # than a permanently-failing one.
+      # than a permanently-failing one. Phase 01.8-05 added a fifth
+      # per-request field: the site-wide LocalBusiness JSON-LD script now
+      # renders on every browser route (this one included) under a fresh
+      # CSP nonce minted per request (router's put_csp/2) — its content is
+      # otherwise identical across requests, so normalizing only the nonce
+      # attribute value (never the JSON-LD payload itself) preserves this
+      # test's real content-equality guarantee.
       normalize = fn html ->
         html
         |> String.replace(~r/csrf-token" content="[^"]*"/, "csrf-token\" content=\"X\"")
         |> String.replace(~r/data-phx-session="[^"]*"/, "data-phx-session=\"X\"")
         |> String.replace(~r/data-phx-static="[^"]*"/, "data-phx-static=\"X\"")
         |> String.replace(~r/id="phx-[^"]*"/, "id=\"phx-X\"")
+        |> String.replace(~r/nonce="[^"]*"/, "nonce=\"X\"")
       end
 
       assert normalize.(club_html) == normalize.(quienes_html)

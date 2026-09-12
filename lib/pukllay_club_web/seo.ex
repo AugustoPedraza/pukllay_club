@@ -31,6 +31,16 @@ defmodule PukllayClubWeb.SEO do
   @site_title "PukllayClub"
   @site_description "Catálogo de juegos de mesa de Pukllay Club, Jujuy — encontrá tu próximo juego."
 
+  # D-01: the club's real, current meeting venue ("Club de Emprendedores de
+  # Jujuy"), confirmed by the user — not a placeholder. D-03: Saturdays at
+  # 17:00 is the only schedule to encode; no other day/hour is invented.
+  @local_business_name "Pukllay Club"
+  @local_business_street "Avenida España 1500"
+  @local_business_locality "San Salvador de Jujuy"
+  @local_business_region "Jujuy"
+  @local_business_postal_code "Y4600"
+  @local_business_country "AR"
+
   # A typical search-engine snippet truncates well before this; wide
   # enough for the D-09 template's longest clause combination without
   # ever needing to truncate mid-word in practice, narrow enough that a
@@ -111,6 +121,49 @@ defmodule PukllayClubWeb.SEO do
     |> maybe_put("image", image_for(game))
     |> maybe_put("description", game.description)
     |> put_number_of_players(game)
+    |> Jason.encode!()
+    |> escape_script_close()
+  end
+
+  @doc """
+  Builds the escaped, `Jason`-encoded `LocalBusiness` JSON-LD payload —
+  the site-wide structured-data block (SEO-06) naming Pukllay Club's real
+  Jujuy meeting venue, its public phone
+  (`PukllayClubWeb.ClubLinks.public_phone/0`) and its Saturday 17:00
+  schedule (D-01/D-02/D-03). Every value here is a compile-time literal —
+  no game or per-request data — so this function returns the same bytes
+  on every call. Escaped the same way `game_json_ld/1` escapes its
+  payload (T-01.8-20): built as a plain Elixir map and encoded via
+  `Jason.encode!/1`, never string interpolation.
+
+  Deliberate deviation from RESEARCH.md's Pattern 4: this block is
+  delivered under the same per-request nonce as the `Game` block, not a
+  compile-time SHA-256 hash-source — see this plan's own recorded
+  rationale (byte-exactness fragility of the hash approach vs. the
+  nonce's already-zero marginal cost).
+  """
+  @spec local_business_json() :: String.t()
+  def local_business_json do
+    %{
+      "@context" => "https://schema.org",
+      "@type" => "LocalBusiness",
+      "name" => @local_business_name,
+      "url" => PukllayClubWeb.Endpoint.url(),
+      "address" => %{
+        "@type" => "PostalAddress",
+        "streetAddress" => @local_business_street,
+        "addressLocality" => @local_business_locality,
+        "addressRegion" => @local_business_region,
+        "postalCode" => @local_business_postal_code,
+        "addressCountry" => @local_business_country
+      },
+      "telephone" => PukllayClubWeb.ClubLinks.public_phone(),
+      "openingHoursSpecification" => %{
+        "@type" => "OpeningHoursSpecification",
+        "dayOfWeek" => "Saturday",
+        "opens" => "17:00"
+      }
+    }
     |> Jason.encode!()
     |> escape_script_close()
   end

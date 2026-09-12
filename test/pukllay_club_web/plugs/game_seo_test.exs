@@ -15,22 +15,23 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
   @json_ld_open ~r/<script type="application\/ld\+json"[^>]*nonce="([^"]*)"[^>]*>(.*?)<\/script>/s
 
   describe "Game JSON-LD (SEO-05, SEC-05)" do
-    test "renders exactly one JSON-LD script element naming the game", %{conn: conn} do
+    test "renders exactly one Game JSON-LD script element naming the game (phase 01.8-05 also adds a site-wide LocalBusiness script — total is now two)",
+         %{conn: conn} do
       game = game_fixture(%{name: "Carcassonne"})
 
       conn = get(conn, ~p"/juegos/#{game.id}")
       body = html_response(conn, 200)
 
-      assert count_occurrences(body, ~s(type="application/ld+json")) == 1
+      assert count_occurrences(body, ~s(type="application/ld+json")) == 2
 
-      [[_full, _nonce, payload]] = Regex.scan(@json_ld_open, body, capture: :all)
+      [_full, _nonce, payload] = game_json_ld_match(body)
       decoded = Jason.decode!(payload)
 
       assert decoded["@type"] == "Game"
       assert decoded["name"] == "Carcassonne"
     end
 
-    test "the script's nonce attribute is byte-equal to the nonce source in the response's own CSP header",
+    test "the Game script's nonce attribute is byte-equal to the nonce source in the response's own CSP header",
          %{conn: conn} do
       game = game_fixture()
 
@@ -40,7 +41,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
       [policy] = get_resp_header(conn, "content-security-policy")
       [_, csp_nonce] = Regex.run(~r/'nonce-([^']+)'/, policy)
 
-      [[_full, script_nonce, _payload]] = Regex.scan(@json_ld_open, body, capture: :all)
+      [_full, script_nonce, _payload] = game_json_ld_match(body)
 
       assert script_nonce == csp_nonce
     end
@@ -65,7 +66,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
       conn = get(conn, ~p"/juegos/#{game.id}")
       body = html_response(conn, 200)
 
-      [[_full, _nonce, payload]] = Regex.scan(@json_ld_open, body, capture: :all)
+      [_full, _nonce, payload] = game_json_ld_match(body)
       decoded = Jason.decode!(payload)
 
       refute Map.has_key?(decoded, "numberOfPlayers")
@@ -74,16 +75,16 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     end
 
     test "a game whose name carries an angle bracket and a script-closing sequence still yields " <>
-           "exactly one script element and an escaped payload",
+           "exactly one Game script element and an escaped payload",
          %{conn: conn} do
       game = game_fixture(%{name: "Ataque</script><script>alert(1)</script> Total"})
 
       conn = get(conn, ~p"/juegos/#{game.id}")
       body = html_response(conn, 200)
 
-      assert count_occurrences(body, ~s(type="application/ld+json")) == 1
+      assert count_occurrences(body, ~s(type="application/ld+json")) == 2
 
-      [[_full, _nonce, payload]] = Regex.scan(@json_ld_open, body, capture: :all)
+      [_full, _nonce, payload] = game_json_ld_match(body)
 
       refute payload =~ "</"
 
@@ -91,16 +92,16 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
       assert decoded["name"] == "Ataque</script><script>alert(1)</script> Total"
     end
 
-    test "two renders of the same game produce byte-identical JSON-LD payload bytes", %{conn: conn} do
+    test "two renders of the same game produce byte-identical Game JSON-LD payload bytes", %{conn: conn} do
       game = game_fixture()
 
       conn1 = get(conn, ~p"/juegos/#{game.id}")
       body1 = html_response(conn1, 200)
-      [[_full1, _nonce1, payload1]] = Regex.scan(@json_ld_open, body1, capture: :all)
+      [_full1, _nonce1, payload1] = game_json_ld_match(body1)
 
       conn2 = get(build_conn(), ~p"/juegos/#{game.id}")
       body2 = html_response(conn2, 200)
-      [[_full2, _nonce2, payload2]] = Regex.scan(@json_ld_open, body2, capture: :all)
+      [_full2, _nonce2, payload2] = game_json_ld_match(body2)
 
       assert payload1 == payload2
     end
@@ -215,6 +216,17 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
       assert twitter_title == og_title
       assert twitter_description == og_description
     end
+  end
+
+  # Phase 01.8-05 added a second, site-wide LocalBusiness JSON-LD script to
+  # every page (including /juegos/:id) — this helper isolates the Game-typed
+  # match among the (now two) script elements so this file's pre-existing
+  # assertions keep testing what they always tested, not "whichever script
+  # happens to match first."
+  defp game_json_ld_match(body) do
+    @json_ld_open
+    |> Regex.scan(body, capture: :all)
+    |> Enum.find(fn [_full, _nonce, payload] -> Jason.decode!(payload)["@type"] == "Game" end)
   end
 
   defp count_occurrences(haystack, needle) do
