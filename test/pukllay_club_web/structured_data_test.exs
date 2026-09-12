@@ -116,6 +116,7 @@ defmodule PukllayClubWeb.StructuredDataTest do
       # silently emitting a dead image URL to every social crawler.
       [[_full, image_url]] =
         Regex.scan(~r/<meta[^>]*\bproperty="og:image"[^>]*\bcontent="([^"]+)"/, body)
+
       path = URI.parse(image_url).path
 
       asset_conn = get(build_conn(), path)
