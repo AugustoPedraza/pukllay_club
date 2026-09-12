@@ -480,10 +480,31 @@ defmodule PukllayClubWeb.AboutLive do
                     })
                   }
 
+                  // Dot activation (tap, mouse click, or keyboard Enter/Space
+                  // on the native button — all fire "click", and keyboard
+                  // activation fires no "pointerdown" at all) and rail
+                  // swipes ("pointerdown") share one pause-then-resume
+                  // helper: it pauses, clears any pending resume, and arms a
+                  // fresh 6s resume. The dots live in [data-dots], a SIBLING
+                  // of [data-rail] rather than a descendant, so a listener
+                  // scoped to the rail alone never sees a dot interaction
+                  // (WINDOWS #7) — routing both paths through this shared
+                  // helper, registered on this.el (which contains both
+                  // [data-rail] and [data-dots]) for clicks and on this.rail
+                  // for pointerdown, closes that gap. mouseenter still
+                  // cancels a pending resume so a resting mouse keeps the
+                  // rail paused even if a dot was clicked moments earlier.
+                  this.resumeTimer = null
+                  this.pauseThenResume = () => {
+                    this.paused = true
+                    clearTimeout(this.resumeTimer)
+                    this.resumeTimer = setTimeout(() => { this.paused = false }, 6000)
+                  }
+
                   this.onClick = (e) => {
                     const button = e.target.closest("[data-goto]")
                     if (!button || !this.el.contains(button)) return
-                    this.paused = true
+                    this.pauseThenResume()
                     this.goTo(parseInt(button.dataset.goto, 10))
                   }
                   this.el.addEventListener("click", this.onClick)
@@ -503,21 +524,13 @@ defmodule PukllayClubWeb.AboutLive do
                   }
                   this.rail.addEventListener("scroll", this.onScroll, {passive: true})
 
-                  // WR-01: touch devices fire pointerdown on every swipe/dot
-                  // tap but never fire mouseenter/mouseleave, so on
-                  // mouse-only reset (the old mouseleave-only logic) a touch
-                  // interaction paused autoplay permanently for the rest of
-                  // the page's life. A short idle-resume timer gives touch
-                  // users the same "comes back after you stop interacting"
-                  // behavior mouse users already get from mouseleave, without
-                  // changing the mouse-driven UX at all (mouseleave still
-                  // resumes immediately, and clears the pending timer so it
-                  // doesn't double-fire).
-                  this.resumeTimer = null
+                  // WR-01: touch devices fire pointerdown on every swipe but
+                  // never fire mouseenter/mouseleave, so a swipe shares the
+                  // same pause-then-resume helper the click path uses above,
+                  // giving touch users the same "comes back after you stop
+                  // interacting" behavior mouse users get from mouseleave.
                   this.onPointerDown = () => {
-                    this.paused = true
-                    clearTimeout(this.resumeTimer)
-                    this.resumeTimer = setTimeout(() => { this.paused = false }, 6000)
+                    this.pauseThenResume()
                   }
                   this.onMouseEnter = () => {
                     this.paused = true
