@@ -91,7 +91,15 @@ defmodule PukllayClub.Catalog.Seed.OGCardBackfillTest do
 
       assert {:ok, binary} = ImagePipeline.og_card("https://images.test.invalid/games/1/cover-large.webp")
       assert {:ok, vimage} = Image.open(binary)
-      assert Image.get_pixel!(vimage, 0, 0) == @brand_hex_rgb
+
+      # Lossy WebP quantizes slightly — assert within tolerance rather than
+      # exact equality, the same way a lossy-codec pixel value is compared
+      # anywhere else in this codebase.
+      [r, g, b] = Image.get_pixel!(vimage, 0, 0)
+      [er, eg, eb] = @brand_hex_rgb
+      assert_in_delta r, er, 5
+      assert_in_delta g, eg, 5
+      assert_in_delta b, eb, 5
     end
 
     test "the returned binary decodes as WebP" do
@@ -237,5 +245,4 @@ defmodule PukllayClub.Catalog.Seed.OGCardBackfillTest do
       assert first_scanned == second_scanned
     end
   end
-
 end
