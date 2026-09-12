@@ -8,6 +8,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   alias PukllayClub.Catalog.Reservation
   alias PukllayClubWeb.CarouselRow
   alias PukllayClubWeb.CatalogFilters
+  alias PukllayClubWeb.CatalogLive.Show
   alias PukllayClubWeb.GameChips
 
   describe "GET /juegos/:id" do
@@ -403,7 +404,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
 
       refute html =~ "Juegos similares"
-      assert view.module == PukllayClubWeb.CatalogLive.Show
+      assert view.module == Show
     end
 
     # G-01.2-7 / sketch 031: a same-band-filled shelf renders no "Ampliado"
@@ -2985,6 +2986,224 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # Still no such schema after a full submit — nothing was ever wired to
       # persist, so there is nothing a submit could have created.
       refute Code.ensure_loaded?(Reservation)
+    end
+  end
+
+  # Regression pins for the prod FunctionClauseError diagnosed in
+  # `.planning/debug/resolved/catalog-show-no-clause.md` (Sentry ELIXIR-1).
+  #
+  # Oracle type: DERIVED — the expected payload shape is not a guess, it is
+  # read off LiveView's shipped client
+  # (deps/phoenix_live_view/priv/static/phoenix_live_view.esm.js): `extractMeta`
+  # emits every `phx-value-*` attribute plus, for any non-<form> element with a
+  # native `.value`, that value under the key "value"; the focusout binding
+  # pushes exactly that, because `eventMeta/3` returns `{}` with no liveSocket
+  # `metadata` callback registered (assets/js/app.js registers none).
+  #
+  # These MUST push the payload explicitly rather than going through
+  # `view |> element("#reservation-nombre") |> render_blur()`. LiveViewTest
+  # builds a non-form event's params from `phx-value-*` attributes ALONE
+  # (client_proxy.ex's `maybe_values/4` fallback -> `TreeDOM.all_values/1`); it
+  # never replicates extractMeta's native-`.value` copy, so the element-based
+  # helper would send `%{}` — a payload no browser can produce. That blind spot
+  # is exactly why a fully green suite coexisted with a 100%-reproducible prod
+  # crash: nothing here drove these handlers at all before this block existed.
+  describe "reservation blur contract (regression: Sentry ELIXIR-1, catalog-show-no-clause)" do
+    setup %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      %{view: view, game: game}
+    end
+
+    test "a blur carries the typed name under \"value\", and the handler accepts it", %{view: view} do
+      html = render_blur(view, "validate-reservation", %{"value" => "Ana"})
+
+      assert html =~ "Abrir WhatsApp"
+      refute html =~ "Ingresá tu nombre para continuar."
+    end
+
+    test "an empty blur reports the empty-name message rather than crashing", %{view: view} do
+      html = render_blur(view, "validate-reservation", %{"value" => ""})
+
+      assert html =~ "Ingresá tu nombre para continuar."
+      refute html =~ "Abrir WhatsApp"
+    end
+
+    test "a whitespace-only blur behaves identically to an empty one", %{view: view} do
+      html = render_blur(view, "validate-reservation", %{"value" => "   "})
+
+      assert html =~ "Ingresá tu nombre para continuar."
+      refute html =~ "Abrir WhatsApp"
+    end
+
+    # Boundary neighbours around the 60-grapheme equivalence class: the single
+    # reported value would have missed an off-by-one on either side of it.
+    test "exactly 60 graphemes is accepted on blur", %{view: view} do
+      html = render_blur(view, "validate-reservation", %{"value" => String.duplicate("a", 60)})
+
+      assert html =~ "Abrir WhatsApp"
+      refute html =~ "El nombre es demasiado largo (máximo 60 caracteres)."
+    end
+
+    test "61 graphemes is rejected on blur", %{view: view} do
+      html = render_blur(view, "validate-reservation", %{"value" => String.duplicate("a", 61)})
+
+      assert html =~ "El nombre es demasiado largo (máximo 60 caracteres)."
+      refute html =~ "Abrir WhatsApp"
+    end
+
+    # The markup half of the contract the handler's pattern depends on. If a
+    # `phx-value-*` attribute is ever added here, extractMeta would start
+    # emitting that key too and someone could plausibly "tidy" the handler onto
+    # it — this pins that the input carries none, so "value" really is the only
+    # key that can arrive.
+    test "the blurring input carries no phx-value-* attribute, so \"value\" is the only payload key",
+         %{view: view} do
+      input =
+        view
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(~s(input[phx-blur="validate-reservation"]))
+
+      assert Enum.count(input) == 1
+
+      value_attrs =
+        input
+        |> LazyHTML.attributes()
+        |> List.first()
+        |> Enum.map(fn {name, _} -> name end)
+        |> Enum.filter(&String.starts_with?(&1, "phx-value-"))
+
+      assert value_attrs == []
+      assert input |> LazyHTML.attribute("name") |> List.first() == "nombre"
+    end
+
+    # `reserve` is the other half of the same modal and is deliberately NOT
+    # symmetric: it is a real phx-submit on the <form>, so it does receive
+    # serialized form params. Pinned here so the two are never "made
+    # consistent" with each other by someone reading only one of them.
+    test "submit still speaks form params (\"nombre\"), unlike blur", %{view: view} do
+      html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
+
+      assert html =~ "Abrir WhatsApp"
+    end
+  end
+
+  # Class guard for the whole bug family, automating the enumeration that
+  # diagnosed it: every event this page can dispatch must have a clause. The
+  # attribute scan covers the template and everything it renders; the source
+  # scan covers colocated hooks, whose <script> blocks are extracted at compile
+  # time and so never appear in the rendered HTML.
+  describe "every event the detail page can dispatch is handled (catalog-show-no-clause class guard)" do
+    @event_attr_pattern ~r/phx-(?:click|blur|submit|change|keydown|keyup|focus)="([^"]*)"/
+    # Show's own module, plus the two other modules whose colocated hooks run
+    # on a rendered detail page (Layouts.app's header and the Juegos similares
+    # shelf). A hook push is invisible to any markup scan.
+    @hook_push_sources [
+      "lib/pukllay_club_web/live/catalog_live/show.ex",
+      "lib/pukllay_club_web/components/layouts.ex",
+      "lib/pukllay_club_web/components/carousel_row.ex"
+    ]
+
+    test "the dispatchable event set is exactly the reviewed list", %{conn: conn} do
+      game =
+        game_fixture(%{
+          gallery_urls: [
+            "https://images.test.invalid/games/13/gallery-1.webp",
+            "https://images.test.invalid/games/13/gallery-2.webp"
+          ]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      # Open the reservation modal so its own subtree is in the scanned markup.
+      html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      from_markup =
+        @event_attr_pattern
+        |> Regex.scan(html)
+        |> Enum.map(&List.last/1)
+        # JS-command bindings (e.g. the theme switcher's JS.dispatch) render as
+        # a JSON array, not an event name — they never reach handle_event/3.
+        |> Enum.reject(&String.starts_with?(&1, "["))
+
+      from_hooks =
+        Enum.flat_map(@hook_push_sources, fn path ->
+          ~r/pushEvent\("([^"]+)"/
+          |> Regex.scan(File.read!(path))
+          |> Enum.map(&List.last/1)
+        end)
+
+      dispatchable = from_markup |> Enum.concat(from_hooks) |> Enum.uniq() |> Enum.sort()
+
+      assert dispatchable == [
+               "carousel-load-more",
+               "close-lightbox",
+               "close-reservation",
+               "close-search",
+               "open-lightbox",
+               "open-reservation",
+               "open-search",
+               "reserve",
+               "select-image",
+               "select-lightbox-image",
+               "toggle-description",
+               "validate-reservation"
+             ],
+             """
+             The set of events reachable from the detail page changed.
+
+             Every name here needs a matching CatalogLive.Show.handle_event/3
+             clause whose params pattern matches the payload the BROWSER sends
+             — not the one a render_click/render_blur test fabricates. See
+             `.planning/debug/resolved/catalog-show-no-clause.md`: an
+             unmatched payload crashes the whole LiveView, and the stacktrace
+             blames the module's FIRST clause, not the guilty one.
+             """
+    end
+
+    # CarouselRow's .CarouselScroll hook can push carousel-load-more from any
+    # page rendering a shelf. This page's shelf is client-guarded by
+    # exhausted={true}, so the push should not happen — but the server must
+    # still answer it, because that guard is one template attribute deep.
+    test "carousel-load-more is answered (exhausted) instead of crashing the page", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert render_hook(view, "carousel-load-more", %{"row" => "similares"}) =~ game.name
+      assert render_hook(view, "carousel-load-more", %{}) =~ game.name
+    end
+
+    # Not cosmetic, and not assertable through render_hook/3 (which surfaces
+    # only the rendered result). `exhausted: true` in the REPLY is the whole
+    # stop signal: .CarouselScroll clears `pending` in the reply callback and
+    # only latches `this.exhausted` when the reply says so, so a `{:noreply,
+    # socket}` here would leave the rail re-firing this event on every single
+    # scroll frame instead of stopping after one.
+    test "the carousel-load-more reply carries the stop signal the hook latches on" do
+      socket = %Phoenix.LiveView.Socket{}
+
+      assert {:reply, %{exhausted: true}, ^socket} =
+               Show.handle_event("carousel-load-more", %{}, socket)
+    end
+
+    # The client-side half of the guard. A band-mate is required for the shelf
+    # to render at all (an empty shelf is omitted entirely), so this also
+    # documents that the guard only exists on pages where a shelf exists.
+    test "the Juegos similares shelf is still marked exhausted in the markup", %{conn: conn} do
+      game = game_fixture(%{name: "Base Exhausted", weight_band: "nivel_experto"})
+      game_fixture(%{name: "Bandmate Exhausted", weight_band: "nivel_experto"})
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      shelf =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#similares")
+
+      assert Enum.count(shelf) == 1
+      assert shelf |> LazyHTML.attribute("data-exhausted") |> List.first() == "true"
     end
   end
 
