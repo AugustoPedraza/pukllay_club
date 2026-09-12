@@ -2875,8 +2875,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html = view |> form("#reservation-modal form", %{"nombre" => ""}) |> render_submit()
 
-      assert html =~ "Ingresá tu nombre para continuar."
-      refute html =~ "Abrir WhatsApp"
+      assert html =~ "Falta tu nombre."
+      refute html =~ "Mandar por WhatsApp"
     end
 
     test "a whitespace-only name behaves identically to an empty one", %{conn: conn} do
@@ -2886,8 +2886,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html = view |> form("#reservation-modal form", %{"nombre" => "   "}) |> render_submit()
 
-      assert html =~ "Ingresá tu nombre para continuar."
-      refute html =~ "Abrir WhatsApp"
+      assert html =~ "Falta tu nombre."
+      refute html =~ "Mandar por WhatsApp"
     end
 
     test "a name over 60 graphemes produces a length message and no wa.me link", %{conn: conn} do
@@ -2898,8 +2898,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       too_long = String.duplicate("a", 61)
       html = view |> form("#reservation-modal form", %{"nombre" => too_long}) |> render_submit()
 
-      assert html =~ "El nombre es demasiado largo (máximo 60 caracteres)."
-      refute html =~ "Abrir WhatsApp"
+      assert html =~ "Ese nombre es muy largo."
+      refute html =~ "Mandar por WhatsApp"
     end
 
     test "a valid name produces a working wa.me link to the configured number", %{conn: conn} do
@@ -2957,7 +2957,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
 
       assert html =~ "quiero reservar"
-      assert html =~ "próximo sábado en el club"
+      assert html =~ "sábado en el club"
       refute html =~ ~r/presta|préstamo|alquil|llevar a casa/i
     end
 
@@ -2971,8 +2971,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
-      assert html =~ "La reserva no está disponible por el momento."
-      refute html =~ "Abrir WhatsApp"
+      assert html =~ "Las reservas están cerradas por ahora."
+      refute html =~ "Mandar por WhatsApp"
     end
 
     test "no reservation data is persisted anywhere — the app defines no schema for it", %{conn: conn} do
@@ -3020,22 +3020,22 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "a blur carries the typed name under \"value\", and the handler accepts it", %{view: view} do
       html = render_blur(view, "validate-reservation", %{"value" => "Ana"})
 
-      assert html =~ "Abrir WhatsApp"
-      refute html =~ "Ingresá tu nombre para continuar."
+      assert html =~ "Mandar por WhatsApp"
+      refute html =~ "Falta tu nombre."
     end
 
     test "an empty blur reports the empty-name message rather than crashing", %{view: view} do
       html = render_blur(view, "validate-reservation", %{"value" => ""})
 
-      assert html =~ "Ingresá tu nombre para continuar."
-      refute html =~ "Abrir WhatsApp"
+      assert html =~ "Falta tu nombre."
+      refute html =~ "Mandar por WhatsApp"
     end
 
     test "a whitespace-only blur behaves identically to an empty one", %{view: view} do
       html = render_blur(view, "validate-reservation", %{"value" => "   "})
 
-      assert html =~ "Ingresá tu nombre para continuar."
-      refute html =~ "Abrir WhatsApp"
+      assert html =~ "Falta tu nombre."
+      refute html =~ "Mandar por WhatsApp"
     end
 
     # Boundary neighbours around the 60-grapheme equivalence class: the single
@@ -3043,15 +3043,15 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "exactly 60 graphemes is accepted on blur", %{view: view} do
       html = render_blur(view, "validate-reservation", %{"value" => String.duplicate("a", 60)})
 
-      assert html =~ "Abrir WhatsApp"
-      refute html =~ "El nombre es demasiado largo (máximo 60 caracteres)."
+      assert html =~ "Mandar por WhatsApp"
+      refute html =~ "Ese nombre es muy largo."
     end
 
     test "61 graphemes is rejected on blur", %{view: view} do
       html = render_blur(view, "validate-reservation", %{"value" => String.duplicate("a", 61)})
 
-      assert html =~ "El nombre es demasiado largo (máximo 60 caracteres)."
-      refute html =~ "Abrir WhatsApp"
+      assert html =~ "Ese nombre es muy largo."
+      refute html =~ "Mandar por WhatsApp"
     end
 
     # The markup half of the contract the handler's pattern depends on. If a
@@ -3087,7 +3087,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "submit still speaks form params (\"nombre\"), unlike blur", %{view: view} do
       html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
 
-      assert html =~ "Abrir WhatsApp"
+      assert html =~ "Mandar por WhatsApp"
     end
   end
 

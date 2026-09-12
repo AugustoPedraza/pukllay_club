@@ -292,11 +292,11 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     |> assign(:reservation_error, reservation_name_error(trimmed))
   end
 
-  defp reservation_name_error(""), do: "Ingresá tu nombre para continuar."
+  defp reservation_name_error(""), do: "Falta tu nombre."
 
   defp reservation_name_error(name) do
     if String.length(name) > 60 do
-      "El nombre es demasiado largo (máximo 60 caracteres)."
+      "Ese nombre es muy largo."
     end
   end
 
@@ -1038,7 +1038,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
             </h3>
 
             <p :if={is_nil(@reservation_number)} class="text-sm text-neutral mt-4">
-              La reserva no está disponible por el momento. Escribinos directamente para coordinar.
+              Las reservas están cerradas por ahora. Escribinos y lo coordinamos.
             </p>
 
             <div :if={@reservation_number}>
@@ -1060,7 +1060,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                     errors={if @reservation_error, do: [@reservation_error], else: []}
                   />
                   <button type="submit" class="btn btn-primary min-h-11 w-full mt-2">
-                    Continuar
+                    Seguir
                   </button>
                 </form>
               </div>
@@ -1078,7 +1078,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   rel="noopener noreferrer"
                   class="btn btn-primary min-h-11 w-full"
                 >
-                  Abrir WhatsApp
+                  Mandar por WhatsApp
                 </a>
               </div>
             </div>
@@ -1096,10 +1096,14 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   defp reservation_cta_label, do: "Reservar para el sábado"
 
   # D-09/D-10 framing: asks the club to have the game set up at the next
-  # Saturday session — never to lend/take it home. Approved verbatim at the
-  # 01.1-05 checkpoint; see 01.1-05-SUMMARY.md for the decision record.
+  # Saturday session — never to lend/take it home. That FRAMING is the part
+  # 01.1-05 approved (see 01.1-05-SUMMARY.md for the decision record) and it is
+  # unchanged here; the wording was loosened afterwards to drop the stilted
+  # "para jugarlo el próximo". Unlike everything else in this modal, this string
+  # is not UI chrome — it is the message a member actually SENDS to the club, so
+  # re-read it end to end before touching it again.
   defp reservation_message(name, game_name) do
-    "¡Hola! Soy #{name} y quiero reservar #{game_name} para jugarlo el próximo sábado en el club."
+    "¡Hola! Soy #{name}, quiero reservar #{game_name} para el sábado en el club."
   end
 
   # Built entirely server-side (T-01.1-02) — URI.encode_www_form/1 percent-
