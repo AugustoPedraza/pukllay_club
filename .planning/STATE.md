@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
-current_phase: "01.8"
-current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
-status: executing
-stopped_at: Completed 01.8-07-PLAN.md (all 7 plans in phase 01.8 now have SUMMARY.md)
-last_updated: "2026-09-12T15:20:02.508Z"
+current_phase: 2
+current_phase_name: Natural-Language Spanish Search + Auth
+status: planning
+stopped_at: Phase 01.8 complete, ready to plan Phase 2
+last_updated: "2026-09-12T16:22:19.857Z"
 last_activity: 2026-09-12
-last_activity_desc: Phase 01.8 execution started
-state_head: 8bdd4c89dd658fdd755e057796518a7f1bbd9d10
+last_activity_desc: Phase 01.8 complete, transitioned to Phase 2
+state_head: 607c81e6c1c54b00b6eb6111c2928e615b6f1a3b
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 12
   completed_plans: 12
 ---
@@ -33,16 +33,16 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
-Plan: 3 of 7
-Status: Ready to execute
-Last activity: 2026-09-12 — Completed quick task 260912-hrx: docs-only path filtering for deploy.yml
+Phase: 2 — Natural-Language Spanish Search + Auth
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-12 - Completed quick task 260912-im6: Rename user-facing "catálogo" copy to "ludoteca" across the site
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 81
+- Total plans completed: 88
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -58,6 +58,7 @@ Last activity: 2026-09-12 — Completed quick task 260912-hrx: docs-only path fi
 | 01.3.1 | 2 | - | - |
 | 01.4 | 11 | - | - |
 | 01.7 | 5 | - | - |
+| 01.8 | 7 | - | - |
 
 **Recent Trend:**
 
@@ -293,6 +294,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
 | 260912-hrx | Docs-only pushes to main skip build-and-push/deploy via an always-run paths-filter gate job; `quality` (both deploy.yml's D-04 guard and ci.yml's actual required check) stays unconditional | 2026-09-12 | 16226be | complete | [260912-hrx-add-path-based-filtering-to-github-workf](./quick/260912-hrx-add-path-based-filtering-to-github-workf/) |
+| 260912-im6 | Renamed user-facing "catálogo" copy to "ludoteca" (404 page, catalog index title/heading/error states, site-level SEO description) — Rioplatense voseo tone, closing a split where the game-detail breadcrumb already said "Ludoteca"; no code identifiers touched | 2026-09-12 | 68b8960 | complete | [260912-im6-rename-user-facing-cat-logo-copy-to-ludo](./quick/260912-im6-rename-user-facing-cat-logo-copy-to-ludo/) |
 
 ### Roadmap Evolution
 
@@ -340,7 +342,7 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-09-12T15:20:01.493Z
-Stopped at: Completed 01.8-07-PLAN.md (all 7 plans in phase 01.8 now have SUMMARY.md)
+Stopped at: Phase 01.8 complete, ready to plan Phase 2
 Resume file: None
 
 ## Operator Next Steps

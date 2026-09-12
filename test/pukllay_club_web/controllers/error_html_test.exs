@@ -8,8 +8,8 @@ defmodule PukllayClubWeb.ErrorHTMLTest do
     html = render_to_string(PukllayClubWeb.ErrorHTML, "404", "html", [])
 
     assert html =~ "Juego no encontrado"
-    assert html =~ "Este juego no existe o fue removido del catálogo."
-    assert html =~ "Volver al catálogo"
+    assert html =~ "Este juego no existe o fue removido de la ludoteca."
+    assert html =~ "Volver a la ludoteca"
     refute html == "Not Found"
     refute html =~ "Exception"
     refute html =~ "stacktrace"

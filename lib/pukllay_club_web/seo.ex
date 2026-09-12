@@ -29,7 +29,7 @@ defmodule PukllayClubWeb.SEO do
   @og_fallback_path "/images/og-fallback.webp"
 
   @site_title "PukllayClub"
-  @site_description "Catálogo de juegos de mesa de Pukllay Club, Jujuy — encontrá tu próximo juego."
+  @site_description "La ludoteca de juegos de mesa de Pukllay Club, Jujuy — encontrá tu próximo juego."
 
   # D-01: the club's real, current meeting venue ("Club de Emprendedores de
   # Jujuy"), confirmed by the user — not a placeholder. D-03: Saturdays at
