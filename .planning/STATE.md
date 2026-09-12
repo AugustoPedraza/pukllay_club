@@ -304,6 +304,9 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260912-pnx | Suppress daisyUI double focus ring on filter modal checklist search input, keep single border focus indicator; G-01-7 resolved | 2026-09-12 | a395d6a | — | .planning/quick/260912-pnx-fix-debug-session-g-01-7-double-focus-ring-planning-debug-g |
 | 260912-pny | Pending todo: browser verification checklist for waived WINDOWS UI entries 3,4,5,7,13,18,24 + G-01-7 visual check | 2026-09-12 | 19a59f6 | — | .planning/quick/260912-pny-capture-a-pending-todo-in-planning-todos-pending-for-a-singl |
 | 12 | Record 2026-09-12 browser verification of waived WINDOWS entries: flip 3/5/13/24 to fixed, 4/7/18 left waived with diagnose-only debug sessions; close todo | 2026-09-12 | eafc756 | — | — |
+| 260912-rwt | Fix WINDOWS #4 (mobile nav drawer painted under the About floating isologo) | 2026-09-12 | 192c6be | — | .planning/quick/260912-rwt-fix-windows-4-mobile-nav-drawer-painted-under-the-about-floa |
+| 260912-rwu | Fix WINDOWS #7 (About photo rail stays paused after a dot click) | 2026-09-12 | 9bb1f5f | — | .planning/quick/260912-rwu-fix-windows-7-about-photo-rail-stays-paused-after-a-dot-clic |
+| 260912-rwv | Fix WINDOWS #18 (tappable pills under 44px) | 2026-09-12 | 5efd404 | — | .planning/quick/260912-rwv-fix-windows-18-tappable-pills-under-44px-read-the-diagnosed |
 
 ### Roadmap Evolution
 
