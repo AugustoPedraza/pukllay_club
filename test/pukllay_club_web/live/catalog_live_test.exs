@@ -421,7 +421,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
           "choice" => "99999999999999"
         })
 
-      assert html =~ "No pudimos cargar el catálogo"
+      assert html =~ "No pudimos cargar la ludoteca"
       assert html =~ "Hubo un problema de conexión."
       assert html =~ "Reintentar"
       # The daisyUI flash placeholders (always present, hidden) legitimately
@@ -756,7 +756,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       assert html =~ ~s(id="carousel-rows")
       refute html =~ ~s(id="games")
-      refute html =~ "El catálogo completo"
+      refute html =~ "Toda la ludoteca"
     end
 
     test "a filtered render shows the results-wording heading and hides the carousel block", %{
@@ -772,7 +772,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> render_change(%{q: "Filtered"})
 
       assert html =~ "Resultados"
-      refute html =~ "El catálogo completo"
+      refute html =~ "Toda la ludoteca"
       refute html =~ "id=\"carousel-rows\""
     end
   end
@@ -799,7 +799,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       html = render_click(view, "apply-filters", %{})
 
       assert html =~ ~s(id="games")
-      assert html =~ "El catálogo completo"
+      assert html =~ "Toda la ludoteca"
       refute html =~ ~s(id="carousel-rows")
       refute html =~ "pk-chip-nav"
       refute html =~ "pk-cat-trigger"

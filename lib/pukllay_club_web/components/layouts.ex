@@ -855,7 +855,7 @@ defmodule PukllayClubWeb.Layouts do
   a page-scoped mobile CTA bar (plan 01.1-09).
 
   Search and the CTA moved in opposite directions for the same underlying
-  reason: search became cheap enough to spread to *more* pages (Catálogo and
+  reason: search became cheap enough to spread to *more* pages (Ludoteca and
   Detalle) once it stopped needing a permanent box and became a 44px icon
   (sketch 017 Round 4). The CTA was never a space problem, it was a
   **context** problem — "Sumate al club" asks for a commitment before the
