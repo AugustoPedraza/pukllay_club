@@ -20,7 +20,20 @@
   out: nil,
   private: false,
   router: nil,
-  skip: false,
+  # skip: true makes sobelow honor function-level inline `# sobelow_skip
+  # ["Submodule"]` annotations (and a skips-fingerprint file, which this
+  # project deliberately does not have — no .sobelow-skips exists).
+  # Annotated functions, all reviewed for WINDOWS #1 (2026-09-12):
+  #   - PukllayClub.Catalog.Seed.CsvImport.stream_rows/1
+  #   - PukllayClub.Catalog.Seed.CsvImport.header_row/1 (private)
+  #   - PukllayClub.Catalog.Seed.Report.write!/2
+  # These cover the four Traversal.FileModule findings from WINDOWS #1 — all
+  # four paths are operator-supplied seed tooling input (CLI-run `mix
+  # catalog.seed`, or test fixtures), never web input. A function-level skip
+  # was chosen over adding Traversal.FileModule to the project-wide `ignore`
+  # list above so any future web-reachable traversal bug in another module
+  # would still be caught. Reviewed 2026-09-12.
+  skip: true,
   threshold: :low,
   verbose: false,
   version: false
