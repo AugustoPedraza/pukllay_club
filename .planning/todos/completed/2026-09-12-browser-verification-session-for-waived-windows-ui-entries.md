@@ -4,12 +4,16 @@ title: Browser verification session for waived Windows UI entries
 area: ui
 severity: minor
 files:
+
   - lib/pukllay_club_web/components/layouts.ex
   - assets/css/app.css
   - lib/pukllay_club_web/live/about_live.ex
   - lib/pukllay_club_web/live/catalog_live/index.ex
   - lib/pukllay_club_web/live/catalog_live/show.ex
   - .planning/WINDOWS.md
+
+completed: 2026-09-12
+status: completed
 ---
 
 ## Problem
@@ -191,3 +195,61 @@ this todo.
   `## Resolution` section, with a debug-session slug on FAIL.
 - Once all 7 entries and the G-01-7 follow-up are recorded, close this todo:
   `node ~/.claude/gsd-core/bin/gsd-tools.cjs todo complete 2026-09-12-browser-verification-session-for-waived-windows-ui-entries.md`
+
+## Resolution
+
+Session run 2026-09-12 against the local dev server with Claude in Chrome. Method notes:
+
+- The Chrome window cannot go below ~640px viewport, so 390px checks ran in a same-origin iframe
+  sized to exactly 390px (CSS breakpoints resolve against the iframe width; `innerWidth` read
+  390). 768px and 1440px checks ran in a real resized window (`innerWidth` 768 / 1440).
+- Drawer, focus-trap and click checks used real mouse clicks and key presses, not synthetic events.
+- Visual-judgment items (13, 24, G-01-7, and the Entry 4 overlap) were decided by the user from
+  screenshots; measurable items were measured in the DOM.
+
+| Entry | Route(s) | Width(s) | Theme(s) | Result |
+|-------|----------|----------|----------|--------|
+| 3 | `/`, `/quienes-somos`, `/juegos/179` | 390, 1440 | dark | PASS: row flipped to `fixed` |
+| 4 | `/quienes-somos` | 390 | light, dark | FAIL: debug `about-logo-over-nav-drawer`, row left `waived` |
+| 5 | `/quienes-somos`; `/`, `/juegos/179` | 390, 1440 | dark | PASS: row flipped to `fixed` |
+| 7 | `/quienes-somos#fotos` | 1440 | light | FAIL: debug `about-rail-dot-click-pause`, row left `waived` |
+| 13 | `/?players=4&max_playtime=60` | 390, 1440 | light, dark | PASS (user visual): row flipped to `fixed` |
+| 18 | `/juegos/179`, `/juegos/137` | 390, 1440 | light, dark | FAIL: debug `creator-pill-touch-target`, row left `waived` |
+| 24 | `/quienes-somos#cierre` | 768 | light, dark | PASS (user visual): row flipped to `fixed` |
+| G-01-7 | `/` filter modal, "Buscar mecánica…" | 390, 1440 | light, dark | PASS (user visual) |
+
+Details:
+
+- **3:** On open, focus lands on "Cerrar menú" and `aria-expanded="true"`. Tab ×11-12 and Shift+Tab ×11-12
+  never left `#pk-nav-drawer` on any route (focus wraps). Escape, close button and backdrop each close
+  the drawer, restore `inert` and return focus to "Abrir menú". The Inicio / Quiénes Somos link
+  navigates with the drawer closed. At 1440px the hamburger and drawer are `display:none`, and 100-360
+  real Tab presses per route never focused inside the drawer.
+- **4:** All listed criteria passed: rows 320×45 with chevrons, `aria-current="page"` accent,
+  `.pk-drawer-bottom` pinned, footer shows only "Powered by BGG" in both themes. However,
+  `.pk-about-morph-mark` (fixed, z-index 60) paints over the open drawer and covers "Menú". The drawer
+  (z-index 61) sits inside the sticky header's z-index 50 stacking context. The user ruled this a
+  failure, since a drawer must overlay the whole page. Screenshots:
+  `e4-drawer-390-{light,dark}.png` (session scratchpad).
+- **5:** The bar is hidden at page top, visible after the dock at every sampled scroll position in both
+  directions. At the bottom, "Powered by BGG" ends at y=657 and the footer at y=671, where the bar
+  starts. The Cierre Sumate button has zero height at 390px. No `#pk-about-cta-bar` at 1440px or on
+  `/` or `/juegos/179`.
+- **7:** PASS lines: manual scroll tracks the dot (including the last dot at max scroll), clicking "Foto 3"
+  jumps to it, idle auto-advance runs every ~4.5s, hover pauses, and mouseleave resumes on the next
+  tick. FAIL: after a dot click, auto-advance never resumes (44s observed, page focused, mouse off the
+  rail). `onClick` sets `paused` without arming the 6s resume timer, which only rail `pointerdown`
+  arms, and the dots sit outside the rail. So a dot tap on touch pauses autoplay permanently. NOT RUN:
+  the unfocused-tab and `prefers-reduced-motion` lines, because automation could not background the tab
+  or emulate the media feature.
+- **13:** Heading "Resultados", chips "Jugadores: 4" and "Duración máx.: 60 min", and "Limpiar filtros"
+  are all present. Screenshots: `e13-{390,1440}-{light,dark}`.
+- **18:** FAIL on height only: pills measure 26.5px (need ≥44px), with no pseudo-element hit-area
+  expansion. PASS: outline pill style; hover at 1440px shifts border and text to brand ink
+  rgb(69,16,92); both creator links land on `Resultados` with the `Diseñador:` / `Ilustrador:` chip and
+  7 Wonders Duel at both widths; Wingspan's 4 artist pills wrap onto 2 rows with no overflow.
+- **24:** `#cierre` computed padding is 80px/80px, the heading, Sumate and signature are centred on the
+  same x, and `#pk-about-cta-bar` is `display:none`. Screenshots: `e24-768-{light,dark}`.
+- **G-01-7:** In all 4 combos the keyboard-focused input matches `:focus-visible`, with outline and
+  box-shadow `none` on the input and both wrappers. The only focus indicator is the bottom border
+  switching to `base-content`.

@@ -6,9 +6,9 @@ current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
 stopped_at: Phase 01.8 complete, ready to plan Phase 2
-last_updated: "2026-09-12T21:19:13.424Z"
+last_updated: "2026-09-12T22:47:35.590Z"
 last_activity: 2026-09-12
-state_head: 76c02b82dcd8e25679f6981979b35a0cecd374cf
+state_head: eafc75618b134335e4b8c630dbe9d54939a2b2ca
 progress:
   total_phases: 5
   completed_phases: 1
@@ -303,6 +303,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260912-pnw | Function-level sobelow_skip for reviewed operator-only seed file paths in csv_import/report (WINDOWS #1 fixed); mix quality green | 2026-09-12 | def1307 | — | .planning/quick/260912-pnw-resolve-windows-md-entry-1-sobelow-low-confidence-traversal |
 | 260912-pnx | Suppress daisyUI double focus ring on filter modal checklist search input, keep single border focus indicator; G-01-7 resolved | 2026-09-12 | a395d6a | — | .planning/quick/260912-pnx-fix-debug-session-g-01-7-double-focus-ring-planning-debug-g |
 | 260912-pny | Pending todo: browser verification checklist for waived WINDOWS UI entries 3,4,5,7,13,18,24 + G-01-7 visual check | 2026-09-12 | 19a59f6 | — | .planning/quick/260912-pny-capture-a-pending-todo-in-planning-todos-pending-for-a-singl |
+| 12 | Record 2026-09-12 browser verification of waived WINDOWS entries: flip 3/5/13/24 to fixed, 4/7/18 left waived with diagnose-only debug sessions; close todo | 2026-09-12 | eafc756 | — | — |
 
 ### Roadmap Evolution
 
