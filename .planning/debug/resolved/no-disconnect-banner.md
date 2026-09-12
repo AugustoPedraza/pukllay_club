@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "I don't see the banner but it reconnects wihout problem"
 created: 2026-09-11T19:30:00Z
-updated: 2026-09-11T19:45:00Z
+updated: 2026-09-12
+resolved: 2026-09-12
 ---
 
 ## Current Focus
@@ -204,8 +205,29 @@ root_cause: |
      disconnect it is invisible whenever the user is scrolled away from the top of the page.
   C. LiveView's `JS.show` writes an inline `display: block` (defaultDisplay for a div), which beats
      `.pk-conn-banner{display:flex}`, so the bar's flex centering and 10px spinner gap never apply.
-fix: not applied — goal was find_root_cause_only
-verification: n/a
+fix: |
+  not-a-bug — closed as not-a-bug on 2026-09-12 (quick 260912-mxr). Chrome DevTools "Offline"
+  network emulation does not close or block established WebSocket connections, so the LiveView
+  socket never disconnected and `phx-disconnected` never fired. The defect was in the UAT
+  procedure (01.7-UAT.md Test 3 used DevTools Offline against a WebSocket transport), not in the
+  application code. No application change was made or needed.
+
+  Latent contributing factors B and C are NOT resolved by this closure and still exist in code:
+  factor B — `.pk-conn-banner` (assets/css/app.css:1571) has no `position` declaration, so on a
+  real disconnect while scrolled away from the top of the page the banner renders off-screen;
+  factor C — `layouts.ex:556` `show("#connection-status")` passes no explicit `display`, so
+  LiveView's JS.show writes an inline `display: block`, overriding the rule's intended
+  `display: flex` (justify-content/align-items/gap become inert). Both remain tracked in
+  STATE.md Blockers/Concerns as pre-existing, un-caused-by-01.7 cosmetic/visibility issues.
+verification: |
+  01.7-UAT.md gap G-01.7-3 (lines 54-67) records `status: resolved`, re-verified via
+  `liveSocket.disconnect()` / `liveSocket.connect()` in the browser console (window.liveSocket
+  exposed at assets/js/app.js:77) — banner appeared, clean reconnect, matching this session's own
+  `suggested_verification_method`. Landing commit 322b4bb ("test(01.7): resolve UAT gap -
+  disconnect banner was a test-method artifact"). `grep -n 'connection-status'
+  lib/pukllay_club_web/components/layouts.ex` (2026-09-12) confirms the banner markup and its
+  phx-disconnected/phx-connected bindings are still present at lines 551/556/559 — the code path
+  the UAT procedure failed to exercise is intact and unchanged.
 files_changed: []
 
 suggested_verification_method: |
