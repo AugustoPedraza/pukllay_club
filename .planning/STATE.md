@@ -4,12 +4,11 @@ milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
-status: planning
+status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
 stopped_at: Phase 01.8 complete, ready to plan Phase 2
-last_updated: "2026-09-12T16:22:19.857Z"
+last_updated: "2026-09-12T17:08:49.435Z"
 last_activity: 2026-09-12
-last_activity_desc: Phase 01.8 complete, transitioned to Phase 2
-state_head: 607c81e6c1c54b00b6eb6111c2928e615b6f1a3b
+state_head: c5504209eeb8028eb798184568f811e13767d247
 progress:
   total_phases: 5
   completed_phases: 1
@@ -35,8 +34,8 @@ ahead of Phase 2, which keeps its number and scope.
 
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-12 - Completed quick task 260912-im6: Rename user-facing "catálogo" copy to "ludoteca" across the site
+Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
+Last activity: 2026-09-12
 
 ## Performance Metrics
 
