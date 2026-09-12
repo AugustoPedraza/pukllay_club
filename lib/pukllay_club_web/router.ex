@@ -20,6 +20,12 @@ defmodule PukllayClubWeb.Router do
     plug :accepts, ["text"]
   end
 
+  # SEO-04: request-time XML sitemap — no session/CSRF/CSP needed for a
+  # machine-read document, mirrors the :health pipeline's shape exactly.
+  pipeline :sitemap do
+    plug :accepts, ["xml"]
+  end
+
   # Phase 01.8 (SEC-05/SEO-05): resolves the game and writes conn.assigns[:seo]
   # before CatalogLive.Show mounts, so a JS-free crawler's disconnected
   # response already carries per-game meta/OG/JSON-LD (Pitfall 1 — a crawler
@@ -46,6 +52,12 @@ defmodule PukllayClubWeb.Router do
     pipe_through :health
 
     get "/up", HealthController, :up
+  end
+
+  scope "/", PukllayClubWeb do
+    pipe_through :sitemap
+
+    get "/sitemap.xml", SitemapController, :index
   end
 
   # Other scopes may use custom stacks.
