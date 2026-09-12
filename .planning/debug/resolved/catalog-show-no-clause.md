@@ -138,57 +138,6 @@ next_action: none — human verification passed in a real browser
 (2026-09-12), fix committed on `fix/catalog-show-reservation-blur-payload`,
 session archived.
 
-## Symptoms
-
-
-**Source:** Sentry issue `ELIXIR-1` (org `pukllay-club`, project `elixir`), event
-`fcba376e2f4b49179771e62c99f16563`.
-
-**Expected behavior:** Every event the `/juegos/:slug` detail page (`CatalogLive.Show`)
-can dispatch from its template has a matching `handle_event/3` clause, so no user
-interaction crashes the LiveView process.
-
-**Actual behavior:** A LiveView client event reached
-`PukllayClubWeb.CatalogLive.Show.handle_event/3` with no matching clause, raising
-`FunctionClauseError` and crashing the LiveView channel process (the user's page
-would have reconnected/remounted, losing in-page state such as an open lightbox or
-reservation modal).
-
-**Error message:**
-```
-FunctionClauseError: no function clause matching in
-PukllayClubWeb.CatalogLive.Show.handle_event/3
-```
-
-**Stacktrace (first-party frame last):**
-```
-:proc_lib.init_p_do_apply/3 (proc_lib.erl:333)
-:gen_server.handle_msg/3 (gen_server.erl:2420)
-:gen_server.try_handle_info/3 (gen_server.erl:2434)
-Phoenix.LiveView.Channel.handle_info/2 (lib/phoenix_live_view/channel.ex:265)
-:telemetry.span/3 (deps/telemetry/src/telemetry.erl:359)
-anonymous fn/3 in Phoenix.LiveView.Channel.view_handle_event/3 (channel.ex:565)
-PukllayClubWeb.CatalogLive.Show.handle_event/3 (lib/pukllay_club_web/live/catalog_live/show.ex:140)
-```
-
-Note: `show.ex:140` is the FIRST `handle_event/3` clause in the module
-(`"open-search"`), which is what Elixir reports for a whole-function clause
-mismatch — it is NOT necessarily the clause at fault. The actual failing event
-name and params were NOT captured in the Sentry payload (`domain` is
-`["[Filtered]"]`, and no `event`/`params` extra was attached).
-
-**Timeline:** First and last seen 2026-09-11T18:31:03Z. 1 occurrence, 0 users
-impacted (anonymous). Environment `prod`, server `34.41.63.138` (the GCP e2-micro),
-Elixir 1.19.5 / OTP 28. Client geo: Council Bluffs, US — a US datacenter region,
-consistent with a bot/crawler or a synthetic probe rather than a club member in
-Jujuy, but that is a hypothesis to test, not an established fact.
-
-**Reproduction:** Unknown — not reproduced locally yet. Reproduction requires
-identifying which `phx-click`/`phx-change`/`phx-submit`/`phx-keydown` (or JS-pushed)
-event name the detail page's template (and any shared layout/component rendered
-inside it, e.g. `header_inner/1`, the lightbox, the reservation modal) can emit
-that has no matching clause in `CatalogLive.Show`.
-
 ## Evidence
 
 - timestamp: 2026-09-11T18:31:03Z
