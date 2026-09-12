@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "WINDOWS entry 4 browser-verification FAIL — About page floating isologo paints above the open mobile nav drawer on /quienes-somos at 390px (light and dark)."
 created: 2026-09-12T23:30:00Z
-updated: 2026-09-13T00:05:00Z
+updated: 2026-09-12T23:29:17Z
 goal: find_root_cause_only
 ---
 
@@ -11,7 +11,7 @@ goal: find_root_cause_only
 hypothesis: CONFIRMED — The drawer (z 61) and backdrop (z 60) are local to #app-header's stacking context (.pk-header-sticky, z 50), so they composite into the root at z 50; #pk-about-morph-mark is a root-context fixed layer at z 60 (load-bearing for the header dock), so it paints above the whole header context, drawer included.
 bug_class: Bohrbug (deterministic visual stacking defect, reproduces every time in both themes)
 test: done — baseline repro + EXP-A/B/C + close-transition sampling + flash-toast probe (see Evidence)
-next_action: none (diagnose-only). Hand the suggested fix direction in Resolution to a /gsd-quick or fix session.
+next_action: none (resolved by quick 260912-rwt)
 
 reasoning_checkpoint:
   hypothesis: "The mark covers the open drawer because the drawer and its backdrop are position:fixed descendants of .pk-header-sticky (position: sticky; z-index: 50), which forms a stacking context, so their z 61/60 only order them inside the header; in the root context the whole header — drawer included — sits at 50, below the root-level .pk-about-morph-mark at 60."
@@ -150,6 +150,51 @@ suggested_fix_direction: |
   Not recommended: `body.pk-drawer-open .pk-about-morph-mark { visibility: hidden }` (EXP-C) — same blink/pop edges as the minimal alternative, but About-only: leaves the flash toast painting over the drawer on every route and leaves the drawer's broken "only needs to beat .pk-nav" assumption in place for the next root layer > 50. Globally lowering the mark below 50 is ruled out (EXP-B: removes the docked header logo).
   Recurrence guard to add with the fix: a browser-level check (elementFromPoint at the drawer title with the drawer open on /quienes-somos docked === drawer descendant) plus a CSS contract test that the drawer's effective root z exceeds .pk-about-morph-mark's z and the flash toast's z-50 — no existing gate checks cross-component z-order.
   Other elements that can hit the same stacking-context trap: flash toast `.toast.toast-top.toast-end.z-50` (core_components.ex:68) — ties the header at 50 and wins by tree order, measured painting over the open drawer on / and /quienes-somos (latent: no put_flash in lib today); the desktop "Explorar categorías" mega-menu (.pk-cat-backdrop 60 / .pk-cat-panel 62, Inicio) is confined to the same z-50 header context and would lose to any root layer >= 50 (today only the flash toast); any future root-level fixed layer with z > 50. Safe today: .pk-about-cta-bar 40, .pk-title-echo 40, .pk-mobile-cta-bar 45 (below the header), and the 500-700 modals (mutually exclusive with an open drawer) — if the drawer is re-tiered into that band, pick values that do not collide.
-fix: (not applied — diagnose-only; see suggested_fix_direction)
-verification: (not applicable — diagnose-only)
-files_changed: [] (proposed: lib/pukllay_club_web/components/layouts.ex, assets/css/app.css, plus a regression test under test/pukllay_club_web/)
+fix: "quick 260912-rwt (commit e76599a) applied the Preferred structural direction verbatim: `nav_drawer/1` moved out of both `#app-header` branches (sticky and non-sticky) to a single page-level render site in `Layouts.app/1`, immediately after the non-sticky header branch and before `#connection-status` — the same placement pattern as that existing page-level sibling. `.pk-drawer-backdrop` / `.pk-drawer` were re-tiered from 60/61 to 550/551 (root-context overlay band), above `.pk-about-morph-mark` (60, unchanged, still load-bearing for the docked header logo), `.pk-header-sticky` (50) and the flash toast's z-50, and below `.pk-sheet-backdrop`/`.pk-sheet` (600/601) and `.pk-lightbox` (700) with no collision against `.pk-portal` (500) either. The backdrop gained `id=pk-nav-drawer-backdrop`; `.CatalogNav`'s drawer block now looks the drawer up via `document.getElementById(pk-nav-drawer)` and the backdrop via `document.getElementById(pk-nav-drawer-backdrop)` (outside `this.el`, the same named-root pattern already used for `#app-subnav`), with `drawerClose` scoped to `this.drawer.querySelector` instead of `this.el`; the hamburger lookup stays on `this.el` since it remains inside the header. Both stale rationale comments (`layouts.ex`'s `.CatalogNav` drawer-block comment and `app.css`'s comment above `.pk-drawer`) were rewritten to describe the new page-level placement and its WINDOWS #4 history instead of the invalidated confined-context assumption. The latent same-class-trap flash-toast instance (core_components.ex:68, z-50) is closed by the same re-tier, since the drawer no longer shares the header's z-50 stacking context with it."
+verification: |
+  - New test/pukllay_club_web/components/nav_drawer_stacking_test.exs (5 tests): observed RED
+    before the markup/CSS/hook change (drawer nested in #app-header; z 60/61 below the 500 floor),
+    GREEN after — markup ancestry (drawer + backdrop render exactly once each, as direct children
+    of body, never descendants of #app-header, in both sticky:false and sticky:true) plus
+    cross-component z-order parsed live from assets/css/app.css and core_components.ex source
+    (backdrop 550/panel 551 outrank .pk-about-morph-mark 60, .pk-header-sticky 50 and the flash
+    toast's z-50; both sit strictly inside the 500 (.pk-portal) - 700 (.pk-lightbox) band,
+    colliding with none of .pk-portal/.pk-sheet-backdrop/.pk-sheet/.pk-lightbox).
+  - Existing suites: `mix test test/pukllay_club_web/components/nav_drawer_stacking_test.exs
+    test/pukllay_club_web/components/layouts_test.exs test/pukllay_club_web/live/about_live_test.exs`
+    -> 189 tests, 0 failures. `mix test test/pukllay_club_web/components/nav_drawer_stacking_test.exs
+    test/pukllay_club_web/footer_overflow_test.exs test/pukllay_club_web/motion_rhythm_test.exs
+    test/pukllay_club_web/live/catalog_show_test.exs test/pukllay_club_web/live/catalog_live_test.exs`
+    -> 357 tests, 0 failures.
+  - Grep gates: exactly one `<.nav_drawer active_nav=` call site; `id="pk-nav-drawer-backdrop"`
+    present once; zero remaining `this.el.querySelector("#pk-nav-drawer")` /
+    `this.el.querySelector(".pk-drawer-backdrop")`; `.pk-drawer { z-index: 551; }`,
+    `.pk-drawer-backdrop { z-index: 550; }`, `.pk-about-morph-mark { z-index: 60; }` unchanged;
+    the stale `only needs to beat .pk-nav`/`never outside it` phrases are gone from app.css/
+    layouts.ex; a `WINDOWS #4` comment now precedes `.pk-drawer` in app.css.
+  - Live browser check (headless Chrome via CDP, 390x844, both close-button and real-mouse-event
+    interaction — a plain `element.click()` was tried first and found to NOT reproduce this app's
+    actual focus-return behaviour, since it skips the browser's native focus-on-click step; a real
+    `Input.dispatchMouseEvent` was used instead once that was confirmed): on /quienes-somos, after
+    scrolling to dock the header and opening the drawer, `elementFromPoint` at the centre of the
+    drawer's "Menú" title AND at the centre of `.pk-about-morph-mark` both resolved to a descendant
+    of `#pk-nav-drawer`, in both light and dark themes — the isologo no longer paints over the open
+    drawer. Closing via the close button restored the docked mark (`elementFromPoint` at its centre
+    resolved back to `.pk-about-morph-mark`) and removed `body.pk-drawer-open`. Open/close/Escape/
+    backdrop-tap and focus-return-to-hamburger were also exercised on `/`, `/quienes-somos` and
+    `/juegos/1` — all passed. One probe-methodology pitfall found and corrected along the way (not
+    an app defect): clicking the exact centre of the full-viewport `.pk-drawer-backdrop` rect at
+    390px actually lands on the drawer PANEL itself, since the right-anchored panel (82%/20rem
+    wide, z 551 above the backdrop's 550) visually covers most of that rect — the probe was
+    corrected to click the exposed left-edge strip instead, which is what a real user would tap.
+    Observation on the closed-drawer right-edge artifact question the debug session flagged: no new
+    artifact appears — the drawer's own `display`/`transform` hiding is unchanged by this move (its
+    visibility was never driven by the header's `visibility: hidden`), so behaviour is unchanged
+    from before, at parity with `/`.
+  - `mix quality` (hex.audit, deps.audit, deps.unlock --check-unused, format --check-formatted with
+    Styler, credo --strict, sobelow --config, test --warnings-as-errors) exits 0 — see
+    260912-rwt-SUMMARY.md for the tail output captured for this run.
+files_changed:
+  - lib/pukllay_club_web/components/layouts.ex
+  - assets/css/app.css
+  - test/pukllay_club_web/components/nav_drawer_stacking_test.exs
