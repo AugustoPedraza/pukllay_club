@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "WhatsApp link preview for a PukllayClub game page does not show the cover-art thumbnail, even though Google Rich Results Test, Facebook Sharing Debugger, and Twitter Card Validator all passed structured-data/social-card validation for the same content in this phase's UAT."
 created: 2026-09-12T00:00:00Z
-updated: 2026-09-12T05:12:00Z
+updated: 2026-09-12T15:30:00Z
 ---
 
 ## Current Focus
@@ -180,23 +180,70 @@ root_cause: |
   og:*/twitter:* tag, not just og:image.
 
 fix: |
-  Not applied — goal was find_root_cause_only. Recommended direction:
-  (1) PRIMARY FIX: prevent phx-r from being injected into the SEO/OG/Twitter <meta>/<link> tags in
-      seo_tags.ex — e.g. wrap the tags in a container so they are no longer individual template roots,
-      or otherwise suppress root-tag stamping for this component — so property=/name= is not preceded
-      by phx-r in the served markup. Re-verify via curl with a WhatsApp UA that the tags read
-      `<meta property="..." ...>` with no interposed attribute, then re-test a real WhatsApp share on
-      a fresh cache-busted URL.
-  (2) LATENT GAP (separate, non-blocking): add a JPEG og-card variant — both og:image paths are
-      WebP-only (OgCard @object_name "og-card.webp", SEO @og_fallback_path "/images/og-fallback.webp").
-  (3) PRODUCTION RISK (separate, non-blocking): og:image is served from the Cloudflare pub-*.r2.dev
-      DEVELOPMENT URL, which Cloudflare documents as not for production. Move the image origin to a
-      custom domain.
-  (4) RECURRENCE GUARD (process): this phase's social verification used only cache-bypassing/tolerant
-      validators, which structurally cannot detect a strict-parser failure like WhatsApp's. Any future
-      OG/meta change should include a raw curl check with a WhatsApp UA, not just Facebook/Twitter/Google
-      validators.
+  APPLIED (plan 01.8-06, commits 910f6bb/cef08f4/8b978cc/53a8302, merged to origin/main and deployed
+  via PR #42, run 34701256366, 2026-09-12T15:07:06Z). PRIMARY FIX: `seo_tags/1` was rebuilt from a
+  HEEx function component into a plain Elixir markup function (`Phoenix.HTML.raw/2` over a hand-built
+  string, every dynamic value routed through `Phoenix.HTML.attributes_escape/1`) so it no longer goes
+  through Phoenix.LiveView's `TagEngine.Compiler` at all — the compiler is what seeds each template's
+  state with `local_root?: true` and stamps `root_tag_attribute` ("phx-r", config/config.exs:31) onto
+  every wrapper-less sibling tag. Taking the tag engine out of the rendering path removes the
+  attribute-injection mechanism at its source rather than working around its output.
+  `root.html.heex` now calls `seo_tags(@seo)` as a safe expression (`<%= seo_tags(@seo) %>`), the same
+  call shape `SEO.json_ld_tag/2` already used for the JSON-LD script blocks — this mirrors an existing
+  in-repo precedent rather than inventing a new pattern.
 
-verification: Human-confirmed on a cache-busted URL that the fix is still needed (image absent). The
-  primary fix itself is NOT yet applied or verified.
-files_changed: []
+  REJECTED ALTERNATIVE: inlining all 13 tags directly into `root.html.heex`'s `<head>` as HEEx markup.
+  This was rejected because it would still be compiled by `Phoenix.LiveView.TagEngine` (so the fix
+  would not actually remove the root-tag-stamping condition — `root.html.heex` itself is a template,
+  and its own top-level tags are proof of this: `git show 1cb2708~1:...root.html.heex`'s `<meta
+  charset>` renders clean today only because it sits inside `<head>`, not because HEEx inlining is
+  safe in general) AND it would dissolve `SEOTags` as a reusable, testable component boundary,
+  leaving the fix invisible to any future re-extraction.
+
+  REVERSAL: 01.8-05's order-agnostic served-response test regex (added specifically to route around a
+  zero-match assertion caused by this same phx-r interposition) was reversed back to strict form in
+  `game_seo_test.exs` and `structured_data_test.exs` — that loosening is exactly what let the
+  production defect ship undetected while the test suite stayed green (see `knowledge-base.md`'s
+  "Why not caught" field, Process branch, for the generalized lesson).
+
+  (2) LATENT GAP (separate, non-blocking, deferred — see `deferred-items.md`): add a JPEG og-card
+      variant — both og:image paths are WebP-only (OgCard @object_name "og-card.webp", SEO
+      @og_fallback_path "/images/og-fallback.webp").
+  (3) PRODUCTION RISK (separate, non-blocking, deferred — see `deferred-items.md`): og:image is served
+      from the Cloudflare pub-*.r2.dev DEVELOPMENT URL, which Cloudflare documents as not for
+      production. Move the image origin to a custom domain.
+  (4) RECURRENCE GUARD (process, applied): `test/production/og_tags_whatsapp_ua.mjs` ships as a
+      self-testing, WhatsApp-UA production smoke oracle, and `AGENTS.md` now states a convention
+      requiring it be run against the deployed host for any future head-block change — closing the
+      gap that let only tolerant/cache-bypassing validators (Facebook Sharing Debugger, Twitter Card
+      Validator, Google Rich Results Test) stand in for social verification this phase.
+
+verification: |
+  Live-verified against the deployed host (plan 01.8-07, precondition confirmed: origin/main commit
+  cef08f4 present, deploy.yml run 34701256366 success at 2026-09-12T15:07:06Z, after that commit).
+
+  Command: `node test/production/og_tags_whatsapp_ua.mjs https://pukllay.club/juegos/221
+  https://pukllay.club/ https://pukllay.club/club`
+  URLs: https://pukllay.club/juegos/221 (Llamaland, per-game og-card.webp), https://pukllay.club/
+  (catalog index, branded fallback card), https://pukllay.club/club (club page, canonical-alias
+  route).
+  Exit code: 0 — all 13 keys strict-clean (property=/name=/rel= immediately after the element name)
+  on all three URLs.
+
+  Verbatim live `og:image` element (fetched with a WhatsApp UA, JS-free), the byte-level counterpart
+  of the pre-fix `<meta phx-r property="og:image" ...>` this session captured:
+  `<meta property="og:image" content="https://pub-8f053d9e82db4d8eb43b5666a37546c4.r2.dev/games/330038/og-card.webp">`
+
+  The real WhatsApp share re-test (a fresh cache-busted URL, confirming image + unsuffixed og:title +
+  Spanish description, plus the branded fallback card on a hero-less route) is PENDING in
+  end-of-phase UAT — see plan 01.8-07's Task 1 human-check instructions, reproduced verbatim in
+  01.8-07-SUMMARY.md. It is not claimed as passed here.
+files_changed:
+  - lib/pukllay_club_web/components/seo_tags.ex
+  - lib/pukllay_club_web/components/layouts/root.html.heex
+  - test/pukllay_club_web/components/seo_tags_test.exs
+  - test/pukllay_club_web/plugs/game_seo_test.exs
+  - test/pukllay_club_web/structured_data_test.exs
+  - test/production/og_tags_whatsapp_ua.mjs
+  - AGENTS.md
+  - .planning/phases/01.8-seo-structured-data-social-sharing-inserted/deferred-items.md
