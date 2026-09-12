@@ -5,6 +5,7 @@ defmodule PukllayClubWeb.GamePreviewTest do
 
   alias PukllayClub.Catalog.Game
   alias PukllayClubWeb.GamePreview
+  alias PukllayClubWeb.GameText
 
   @nivel_experto %Game{
     id: 1,
@@ -118,6 +119,71 @@ defmodule PukllayClubWeb.GamePreviewTest do
 
       refute html =~ "weight_bands="
       refute html =~ "pk-difficulty"
+    end
+  end
+
+  describe "preview_body/1 — cover accessible name (SEO-02, D-10)" do
+    defp poster_figure(html) do
+      [_, figure_body] =
+        Regex.run(~r/<figure[^>]*class="pk-preview-poster[^>]*>(.*?)<\/figure>/s, html)
+
+      figure_body
+    end
+
+    test "with a cover_url, the <img> alt equals GameText.cover_alt/1 for the game and is not empty" do
+      game = %{@nivel_experto | cover_url: "https://images.test.invalid/games/1/cover-large.webp", publishers: ["Devir"]}
+      expected = GameText.cover_alt(game)
+
+      html = render_component(&GamePreview.preview_body/1, game: game)
+      figure = poster_figure(html)
+
+      [img] = Regex.run(~r/<img[^>]*>/, figure)
+      assert expected != ""
+      assert img =~ ~s(alt="#{expected}")
+      refute img =~ ~s(alt="")
+    end
+
+    test "the hidden broken-image placeholder carries an image role and the same accessible name" do
+      game = %{@nivel_experto | cover_url: "https://images.test.invalid/games/1/cover-large.webp", publishers: ["Devir"]}
+      expected = GameText.cover_alt(game)
+
+      html = render_component(&GamePreview.preview_body/1, game: game)
+      figure = poster_figure(html)
+
+      [placeholder] = Regex.run(~r/<div[^>]*class="hidden[^"]*"[^>]*>/, figure)
+      assert placeholder =~ ~s(role="img")
+      assert placeholder =~ ~s(aria-label="#{expected}")
+    end
+
+    test "with no cover_url or thumbnail_url, renders no <img> and a visible placeholder carrying an image role and the accessible name" do
+      game = %{@nivel_experto | cover_url: nil, publishers: []}
+      expected = GameText.cover_alt(game)
+
+      html = render_component(&GamePreview.preview_body/1, game: game)
+      figure = poster_figure(html)
+
+      refute figure =~ "<img"
+
+      [placeholder] = Regex.run(~r/<div[^>]*class="flex[^"]*"[^>]*>/, figure)
+      assert placeholder =~ ~s(role="img")
+      assert placeholder =~ ~s(aria-label="#{expected}")
+    end
+
+    test "a game with publishers: [] renders the name-only accessible name form in all three branches" do
+      game = %{@nivel_experto | cover_url: nil, publishers: []}
+
+      html = render_component(&GamePreview.preview_body/1, game: game)
+
+      assert html =~ "Portada de #{game.name}"
+      refute html =~ "editado por"
+    end
+
+    test "a game name containing & renders escaped in the alt attribute and the component renders without raising" do
+      game = %{@nivel_experto | name: "Ticket to Ride & Friends", cover_url: nil, publishers: []}
+
+      html = render_component(&GamePreview.preview_body/1, game: game)
+
+      assert html =~ "Ticket to Ride &amp; Friends"
     end
   end
 
