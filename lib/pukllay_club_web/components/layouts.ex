@@ -332,16 +332,26 @@ defmodule PukllayClubWeb.Layouts do
             }
 
             try {
-              // Mobile nav drawer (01.1-09): guarded on this.drawer existing so
-              // this hook is a no-op everywhere the drawer markup isn't present.
-              // Extends this one hook rather than adding a second — the drawer
-              // reaches its own DOM via this.el.querySelector, never outside it
-              // except the one documented body-class scroll lock.
-              this.drawer = this.el.querySelector("#pk-nav-drawer")
+              // Mobile nav drawer (01.1-09; re-tiered for WINDOWS #4): guarded
+              // on this.drawer existing so this hook is a no-op everywhere the
+              // drawer markup isn't present. The drawer and its backdrop are
+              // page-level siblings of #app-header (moved out for WINDOWS #4
+              // because the sticky header's z-index: 50 stacking context
+              // capped the drawer's effective root z at 50, below both the
+              // About page's floating isologo and the flash toast — see
+              // .planning/debug/resolved/about-logo-over-nav-drawer.md), so
+              // they are looked up by id OUTSIDE this.el — the same
+              // named-root, cross-root pattern the scroll-spy block above
+              // already uses for #app-subnav. The hamburger stays inside the
+              // header and is still found via this.el. The body-class scroll
+              // lock remains the other documented reach outside the header.
+              // Guarded on this.drawer existing, and this remains the one
+              // hook that owns the drawer rather than adding a second.
+              this.drawer = document.getElementById("pk-nav-drawer")
               if (this.drawer) {
-                this.drawerBackdrop = this.el.querySelector(".pk-drawer-backdrop")
+                this.drawerBackdrop = document.getElementById("pk-nav-drawer-backdrop")
                 this.hamburger = this.el.querySelector(".pk-nav-hamburger")
-                this.drawerClose = this.el.querySelector(".pk-drawer-close")
+                this.drawerClose = this.drawer.querySelector(".pk-drawer-close")
                 this.drawerReturnFocus = null
 
                 this.openDrawer = () => {
@@ -508,7 +518,6 @@ defmodule PukllayClubWeb.Layouts do
         nav_menu={@nav_menu}
         search_expanded={@search_expanded}
       />
-      <.nav_drawer active_nav={@active_nav} />
     </div>
     <div :if={!@sticky} id="app-header" class="pk-header">
       <.header_inner
@@ -518,8 +527,25 @@ defmodule PukllayClubWeb.Layouts do
         nav_menu={@nav_menu}
         search_expanded={@search_expanded}
       />
-      <.nav_drawer active_nav={@active_nav} />
     </div>
+
+    <%!--
+    WINDOWS #4: the mobile nav drawer is a MODAL overlay and must render as a
+    page-level sibling of #app-header, deliberately like #connection-status
+    below — never as a child of either #app-header branch above.
+    #app-header.pk-header-sticky is a z-index: 50 stacking context; rendered
+    inside it, the drawer's own z-index only ordered it inside the header, and
+    the whole header (drawer included) composited into the root at effective z
+    50 — losing to the root-level About page floating isologo
+    (#pk-about-morph-mark, z 60) and to the z-50 flash toast (WINDOWS #4,
+    .planning/debug/resolved/about-logo-over-nav-drawer.md). It must stay
+    outside the header with no ancestor that creates a stacking context
+    (positioned + z-index, transform, opacity below 1, filter, contain,
+    isolation, will-change). It still renders here, inside the LiveView root,
+    so LiveView continues to mount/patch it normally; .CatalogNav's hook reaches
+    it by id.
+    --%>
+    <.nav_drawer active_nav={@active_nav} />
 
     <%!--
     G-01.2-8 gap closure (01.2-15). Replaces the stock `phx.new` `#client-error`
@@ -805,7 +831,7 @@ defmodule PukllayClubWeb.Layouts do
 
   defp nav_drawer(assigns) do
     ~H"""
-    <div class="pk-drawer-backdrop" aria-hidden="true"></div>
+    <div id="pk-nav-drawer-backdrop" class="pk-drawer-backdrop" aria-hidden="true"></div>
     <aside
       id="pk-nav-drawer"
       class="pk-drawer"
