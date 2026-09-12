@@ -26,14 +26,13 @@ defmodule PukllayClubWeb.SitemapController do
   end
 
   defp render_sitemap(entries) do
-    [
+    IO.iodata_to_binary([
       ~s(<?xml version="1.0" encoding="UTF-8"?>),
       ~s(<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">),
       url_entry(url(~p"/"), nil),
       Enum.map(entries, &game_entry/1),
       "</urlset>"
-    ]
-    |> IO.iodata_to_binary()
+    ])
   end
 
   defp game_entry(%{id: id, updated_at: updated_at}) do
