@@ -8,10 +8,81 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    # Docs-only pushes (.planning/, .claude/, docs/, any *.md — roughly 590
+    # tracked files) must never trigger a full Elixir release build + Kamal
+    # deploy, since the Dockerfile's COPY list (mix.exs, mix.lock, config,
+    # priv, lib, assets, rel, docker-entrypoint) never touches those paths —
+    # a documentation change provably cannot alter the built image. This job
+    # classifies the push; it does NOT depend on `quality` (see below) and
+    # `quality` does NOT depend on it (see the `quality` job's own comment).
+    runs-on: ubuntu-latest
+    # Least privilege: this job runs third-party JavaScript (paths-filter)
+    # on the runner with a token. Scoping to contents:read (dropping the
+    # packages:write / deploy secrets that other jobs need) means even a
+    # fully compromised action here can only read repo contents, never push
+    # an image or reach SECRET_KEY_BASE/DATABASE_URL/DEPLOY_SSH_KEY/
+    # POSTGRES_PASSWORD, which are scoped to build-and-push/deploy only.
+    permissions:
+      contents: read
+    outputs:
+      # Fail-open by construction: compare against the literal string
+      # 'false' rather than reading the raw output directly. If the filter
+      # step errors, is skipped, or can't resolve a base commit, its output
+      # is empty/absent — which is not the string 'false' — so this
+      # expression resolves to true and build-and-push/deploy still run.
+      # An unnecessary deploy is cheap; a silently skipped real deploy is
+      # not, so every degradation path here deploys rather than skips.
+      code: ${{ steps.filter.outputs.code != 'false' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 (full history) is required because paths-filter
+          # compares this same-branch push against the commit immediately
+          # before it — a shallow checkout could leave that base commit
+          # unreachable, which would otherwise silently break comparison.
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: filter
+        uses: dorny/paths-filter@v4
+        # If this action errors or is unavailable, don't block or skip the
+        # deploy — let the `code` output above resolve to true instead.
+        continue-on-error: true
+        with:
+          # Default quantifier `some` ORs the negations below, so e.g. a
+          # `.planning/*.md` file would satisfy "not under .claude" and get
+          # classified as code. `every` requires a file to be simultaneously
+          # not markdown, not under .planning, not under .claude, and not
+          # under docs to count as code — the correct AND-of-negations
+          # "anything that isn't documentation" semantics.
+          predicate-quantifier: 'every'
+          # Deny-list of documentation paths, deliberately not an allow-list
+          # of code paths, so any new source directory added later defaults
+          # to being treated as code (safe direction). `ideas.txt`, `.gsd/`,
+          # and `.github/**` are intentionally NOT in this list and will
+          # keep triggering deploys — conservative by design, not an
+          # oversight.
+          filters: |
+            code:
+              - '!**/*.md'
+              - '!*.md'
+              - '!.planning/**'
+              - '!.claude/**'
+              - '!docs/**'
+
   quality:
     # Re-run the quality gate on main before build/deploy, so a broken merge
     # never reaches production (D-04) — even though the PR that merged here
     # already passed this same gate once.
+    #
+    # Deliberately carries no `if:` and no `needs:` on the `changes` gate
+    # above: this job's name is the required status check that GitHub branch
+    # protection is configured against, and a required check that never
+    # reports (because it was skipped) blocks merges indefinitely rather
+    # than passing them. `quality` must run — and report — on every push,
+    # documentation-only or not.
     runs-on: ubuntu-latest
 
     services:
@@ -60,7 +131,11 @@ jobs:
         run: mix quality
 
   build-and-push:
-    needs: quality
+    needs: [changes, quality]
+    # Skip the build entirely for a docs-only push (see the `changes` job's
+    # comment for why this is provably safe). `quality` stays in `needs` —
+    # dropping it would let a broken merge reach production (D-04).
+    if: needs.changes.outputs.code == 'true'
     # Native x86_64 build on a plain runner (D-20 supersedes D-01's native
     # arm64 assumption: production moved from a Hetzner CAX31 (arm64) to a
     # GCP e2-micro (x86_64) due to a 2026 capacity shortage). ubuntu-latest
@@ -124,7 +199,11 @@ jobs:
           # not a QEMU-emulated cross-build (D-20 supersedes D-01).
 
   deploy:
-    needs: build-and-push
+    needs: [changes, build-and-push]
+    # A skipped `build-and-push` already skips `deploy` via `needs:` alone,
+    # so this condition is redundant today — stated anyway so the gate
+    # survives a future edit that relaxes this job's `needs:` list.
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
