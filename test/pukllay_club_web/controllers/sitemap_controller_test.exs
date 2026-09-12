@@ -21,7 +21,7 @@ defmodule PukllayClubWeb.SitemapControllerTest do
       game_fixture(%{name: "Dos"})
       game_fixture(%{name: "Tres"})
 
-      body = get(conn, ~p"/sitemap.xml") |> response(200)
+      body = conn |> get(~p"/sitemap.xml") |> response(200)
 
       expected = Catalog.count_games() + 1
       assert count_locs(body) == expected
@@ -30,7 +30,7 @@ defmodule PukllayClubWeb.SitemapControllerTest do
     test "every game's absolute detail URL appears exactly once, with a lastmod date", %{conn: conn} do
       game = game_fixture(%{name: "Catán"})
 
-      body = get(conn, ~p"/sitemap.xml") |> response(200)
+      body = conn |> get(~p"/sitemap.xml") |> response(200)
 
       detail_url = url(~p"/juegos/#{game.id}")
       assert occurrences(body, detail_url) == 1
@@ -40,7 +40,7 @@ defmodule PukllayClubWeb.SitemapControllerTest do
     end
 
     test "the catalog index URL is present", %{conn: conn} do
-      body = get(conn, ~p"/sitemap.xml") |> response(200)
+      body = conn |> get(~p"/sitemap.xml") |> response(200)
 
       assert body =~ "<loc>#{url(~p"/")}</loc>"
     end
@@ -48,7 +48,7 @@ defmodule PukllayClubWeb.SitemapControllerTest do
     test "no entry carries a priority or changefreq element", %{conn: conn} do
       game_fixture()
 
-      body = get(conn, ~p"/sitemap.xml") |> response(200)
+      body = conn |> get(~p"/sitemap.xml") |> response(200)
 
       refute body =~ "<priority>"
       refute body =~ "<changefreq>"
@@ -63,7 +63,7 @@ defmodule PukllayClubWeb.SitemapControllerTest do
       # than assuming it, so this test fails loudly if that ever changes.
       assert NaiveDateTime.to_date(game_a.updated_at) == NaiveDateTime.to_date(game_b.updated_at)
 
-      body = get(conn, ~p"/sitemap.xml") |> response(200)
+      body = conn |> get(~p"/sitemap.xml") |> response(200)
 
       assert occurrences(body, url(~p"/juegos/#{game_a.id}")) == 1
       assert occurrences(body, url(~p"/juegos/#{game_b.id}")) == 1
@@ -88,16 +88,16 @@ defmodule PukllayClubWeb.SitemapControllerTest do
     test "two successive requests over unchanged data return byte-identical bodies", %{conn: conn} do
       game_fixture()
 
-      first = get(conn, ~p"/sitemap.xml") |> response(200)
-      second = get(conn, ~p"/sitemap.xml") |> response(200)
+      first = conn |> get(~p"/sitemap.xml") |> response(200)
+      second = conn |> get(~p"/sitemap.xml") |> response(200)
 
       assert first == second
     end
 
     test "a game inserted between two requests appears only in the second response", %{conn: conn} do
-      first = get(conn, ~p"/sitemap.xml") |> response(200)
+      first = conn |> get(~p"/sitemap.xml") |> response(200)
       new_game = game_fixture(%{name: "Recién llegado"})
-      second = get(conn, ~p"/sitemap.xml") |> response(200)
+      second = conn |> get(~p"/sitemap.xml") |> response(200)
 
       detail_url = url(~p"/juegos/#{new_game.id}")
       refute first =~ detail_url
