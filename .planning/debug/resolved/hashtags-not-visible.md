@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-01.3-1: Hashtags below the game title are not visible on the game detail page (Phase 01.3, PukllayClub board-game catalog, Phoenix LiveView)."
 created: 2026-08-31T21:30:00Z
-updated: 2026-08-31T22:20:00Z
+updated: 2026-09-12
+resolved: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -130,6 +131,16 @@ root_cause: |
   absolutely nothing (no placeholder, no empty-state text) in that case — making "no hashtag data"
   visually indistinguishable from "hashtags are broken" to anyone spot-checking multiple game
   pages during UAT.
-fix: (not applied — diagnose-only investigation)
-verification: (not applicable — no fix applied)
+fix: |
+  Not a bug — closed as intended behavior, no code change. GameChips.editorial_tags/1 correctly
+  omits the hashtag row when game.tags == [], and HashtagNormalizer derives tags from only 3 CSV
+  columns, so most games legitimately have no hashtags. This was accepted as a product decision in
+  01.3-UAT.md gap G-01.3-1 (status: resolved, resolved_by: "product decision — accepted as intended,
+  no code fix", resolved_at: 2026-08-31). Closure of this debug session as not-a-bug confirmed by
+  the user on 2026-09-12. The mechanism is still present in code by design (not a regression).
+verification: |
+  2026-09-12: `lib/pukllay_club_web/components/game_chips.ex` still guards the row with
+  `:if={@tags != []}` (~line 162) and `hashtag_normalizer.ex` still maps the 3 editorial columns
+  (~line 22) — unchanged intended behavior. Original session verified tagged games (Wingspan Asia
+  id 125, Spirit Island id 13) render the row legibly at 390px/1440px in both themes.
 files_changed: []
