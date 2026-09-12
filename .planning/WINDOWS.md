@@ -1,10 +1,10 @@
 ---
 schema_version: 1
 open_count: 0
-waived_count: 10
-fixed_count: 16
+waived_count: 8
+fixed_count: 18
 total_count: 26
-last_updated: 2026-09-12T21:18:09.701Z
+last_updated: 2026-09-12T21:52:17.249Z
 ---
 
 # Broken Windows Ledger
@@ -15,7 +15,7 @@ last_updated: 2026-09-12T21:18:09.701Z
 
 | id | phase | kind | file | line | description | status | reason | recorded_at | resolved_at |
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
-| 1 | quick-260818-gdb | deviation | config/runtime.exs |  | Pre-existing unstaged formatting/sobelow issues (config/runtime.exs unformatted, low-confidence Traversal.FileModule findings in seed/csv_import.ex + seed/report.ex, a Software Design credo suggestion in core_components.ex) block 'mix quality passes clean' -- none touched by this plan; task's own files (layouts.ex, tests, SKILL.md) are individually clean. | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Low-severity, not ship-blocking: sobelow Traversal.FileModule findings are low-confidence in offline seed tooling (seed/csv_import.ex, seed/report.ex) not reachable from web requests; mix quality gate passes. | 2026-08-18T14:57:00.671Z | 2026-09-12T21:18:08.013Z |
+| 1 | quick-260818-gdb | deviation | config/runtime.exs |  | Pre-existing unstaged formatting/sobelow issues (config/runtime.exs unformatted, low-confidence Traversal.FileModule findings in seed/csv_import.ex + seed/report.ex, a Software Design credo suggestion in core_components.ex) block 'mix quality passes clean' -- none touched by this plan; task's own files (layouts.ex, tests, SKILL.md) are individually clean. | fixed | Fixed 2026-09-12 in quick 260912-pnw (def1307): function-level sobelow_skip on reviewed operator-only seed paths; mix quality passes. | 2026-08-18T14:57:00.671Z | 2026-09-12T21:52:17.249Z |
 | 2 | quick-260822-2v9 | deviation | assets/css/app.css |  | Header row overflows horizontally at 375px (brand wordmark wraps, horizontal scrollbar) after the desktop header polish — narrow-viewport block confirmed byte-identical, out of scope per plan C-1, deliberately not fixed | fixed |  | 2026-08-22T05:30:01.096Z | 2026-09-12T20:35:45.479Z |
 | 3 | 01.1-09 | unrun-verify | lib/pukllay_club_web/components/layouts.ex |  | Task 1 human-check: drawer opens/traps focus/closes every way (Escape, close button, backdrop, link nav) on all three routes at 390px, absent+unreachable at 1440px -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Mobile drawer focus/close behaviours never exercised by a human UAT; residual risk accepted, re-check opportunistically. | 2026-08-22T14:11:54.024Z | 2026-09-12T21:18:08.219Z |
 | 4 | 01.1-09 | unrun-verify | assets/css/app.css |  | Task 2 human-check: drawer rows read as full-width tappable list with chevrons and left-accent active state, toggle+socials pinned hard to the panel's bottom edge, footer sheds toggle/socials but keeps copyright+BGG attribution at 390px -- deferred to end-of-phase visual verification | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Mobile drawer visual layout never exercised by a human UAT; residual risk accepted, re-check opportunistically. | 2026-08-22T14:11:54.190Z | 2026-09-12T21:18:08.436Z |
@@ -29,7 +29,7 @@ last_updated: 2026-09-12T21:18:09.701Z
 | 12 | 01.2-13 | unrun-verify | assets/css/app.css |  | Task 3 human-check: at ~390px the stacked reserve+share bar reads balanced with reserve unmistakably primary, scroll-hide/reveal timing and footer-park behavior unchanged with no new jump, last real content never hidden behind the taller bar, and past 1100px (but below 768px) the bar's controls align under the content column instead of stretching edge-to-edge -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | fixed |  | 2026-08-26T22:28:47.008Z | 2026-09-12T20:35:46.750Z |
 | 13 | 01.2 | unmet-truth | lib/pukllay_club_web/live/catalog_live/index.ex |  | Active-filters chip row's visual weight balance vs the Resultados heading (sketch 029 Round 2's 'clearly secondary' intent) is asserted only via class/no-shadow presence in tests; needs a human eyeballing a live render in both themes — no browser tool available to this executor (01.2-12 D6). | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Subjective visual-weight judgment (active-filter chip row vs Resultados heading); structural intent pinned by tests. Accepted as-is. | 2026-08-26T22:51:30.480Z | 2026-09-12T21:18:09.033Z |
 | 14 | 01.3-02 | unrun-verify | lib/mix/tasks/catalog.enrich_bgg_stats.ex |  | Task 3 human-check: open 2-3 real game detail pages and confirm Valoración BGG shows a plausible 10-point score and links to that game's own BGG page -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; underlying data spot-checked via SQL (Wingspan 7.99/10 rank 38, Spirit Island 8.34/10 rank 11) | fixed |  | 2026-08-30T23:17:30.343Z | 2026-09-12T20:27:42.288Z |
-| 15 | 01.3-02 | todo | lib/pukllay_club/catalog/seed/bgg_client.ex |  | BggClient.fetch_batch/2 raises ArgumentError (:erlang.binary_to_integer("")) when called with an empty bgg_ids list, discovered via an ad hoc verification script during 01.3-02; not reachable through StatsEnricher's normal flow (chunk_every never yields an empty chunk from a non-empty candidate list) but is a latent crash if ever called with []; pre-existing 01.3-01 code, out of scope for this plan's no-code-changes constraint | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Latent bug, still present: BggClient.fetch_batch/2 raises on an empty bgg_ids list (bgg_client.ex:33), but not reachable via StatsEnricher's normal path (seed tooling only). Accepted; fix if the call path changes. | 2026-08-30T23:17:30.601Z | 2026-09-12T21:18:09.242Z |
+| 15 | 01.3-02 | todo | lib/pukllay_club/catalog/seed/bgg_client.ex |  | BggClient.fetch_batch/2 raises ArgumentError (:erlang.binary_to_integer("")) when called with an empty bgg_ids list, discovered via an ad hoc verification script during 01.3-02; not reachable through StatsEnricher's normal flow (chunk_every never yields an empty chunk from a non-empty candidate list) but is a latent crash if ever called with []; pre-existing 01.3-01 code, out of scope for this plan's no-code-changes constraint | fixed | Fixed 2026-09-12 in quick 260912-pnv (048f607): fetch_batch([], _) returns {:ok, []} without a request; regression test added. | 2026-08-30T23:17:30.601Z | 2026-09-12T21:52:17.249Z |
 | 16 | 01.3-04 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Human-check: open three game detail pages (short/long/unusual-title descriptions), confirm as a Spanish speaker the description reads naturally in Argentine Spanish (voseo), proper nouns/mechanic names survive untranslated, no stray escapes, and Ver mas/Ver menos still expands/collapses at mobile+desktop widths -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; text quality already reviewed by the executor against a 5-game sample (all 5 criteria incl. voseo) before the full batch ran | fixed |  | 2026-08-31T00:12:03.091Z | 2026-09-12T20:35:46.958Z |
 | 17 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual visual verification of the D-03/D-04 reading-column rhythm and D-06 Avanzado group at 390px/1440px against 01.3-UI-SPEC.md not run interactively (no browser tool available to this executor); deferred to end-of-phase UAT per workflow.human_verify_mode: end-of-phase. | fixed |  | 2026-08-31T00:35:26.436Z | 2026-09-12T20:35:47.148Z |
 | 18 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). 01.3-UAT test 1 confirmed 4 of 5 sub-items; only 'tappable creator pills' was never explicitly confirmed. Residual risk accepted. | 2026-08-31T20:19:55.896Z | 2026-09-12T21:18:09.464Z |
@@ -51,10 +51,10 @@ last_updated: 2026-09-12T21:18:09.701Z
     "file": "config/runtime.exs",
     "line": null,
     "description": "Pre-existing unstaged formatting/sobelow issues (config/runtime.exs unformatted, low-confidence Traversal.FileModule findings in seed/csv_import.ex + seed/report.ex, a Software Design credo suggestion in core_components.ex) block 'mix quality passes clean' -- none touched by this plan; task's own files (layouts.ex, tests, SKILL.md) are individually clean.",
-    "status": "waived",
-    "reason": "Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Low-severity, not ship-blocking: sobelow Traversal.FileModule findings are low-confidence in offline seed tooling (seed/csv_import.ex, seed/report.ex) not reachable from web requests; mix quality gate passes.",
+    "status": "fixed",
+    "reason": "Fixed 2026-09-12 in quick 260912-pnw (def1307): function-level sobelow_skip on reviewed operator-only seed paths; mix quality passes.",
     "recorded_at": "2026-08-18T14:57:00.671Z",
-    "resolved_at": "2026-09-12T21:18:08.013Z"
+    "resolved_at": "2026-09-12T21:52:17.249Z"
   },
   {
     "id": 2,
@@ -219,10 +219,10 @@ last_updated: 2026-09-12T21:18:09.701Z
     "file": "lib/pukllay_club/catalog/seed/bgg_client.ex",
     "line": null,
     "description": "BggClient.fetch_batch/2 raises ArgumentError (:erlang.binary_to_integer(\"\")) when called with an empty bgg_ids list, discovered via an ad hoc verification script during 01.3-02; not reachable through StatsEnricher's normal flow (chunk_every never yields an empty chunk from a non-empty candidate list) but is a latent crash if ever called with []; pre-existing 01.3-01 code, out of scope for this plan's no-code-changes constraint",
-    "status": "waived",
-    "reason": "Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Latent bug, still present: BggClient.fetch_batch/2 raises on an empty bgg_ids list (bgg_client.ex:33), but not reachable via StatsEnricher's normal path (seed tooling only). Accepted; fix if the call path changes.",
+    "status": "fixed",
+    "reason": "Fixed 2026-09-12 in quick 260912-pnv (048f607): fetch_batch([], _) returns {:ok, []} without a request; regression test added.",
     "recorded_at": "2026-08-30T23:17:30.601Z",
-    "resolved_at": "2026-09-12T21:18:09.242Z"
+    "resolved_at": "2026-09-12T21:52:17.249Z"
   },
   {
     "id": 16,
