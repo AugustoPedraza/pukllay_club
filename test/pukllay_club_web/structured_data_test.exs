@@ -16,6 +16,12 @@ defmodule PukllayClubWeb.StructuredDataTest do
 
   @json_ld_open ~r/<script type="application\/ld\+json"[^>]*nonce="([^"]*)"[^>]*>(.*?)<\/script>/s
 
+  # Task 3 (SHARE-04): the real asset Task 2's checkpoint placed on disk,
+  # read the same way `stylesheet_integrity_test.exs` reads `app.css` —
+  # a real file path expanded relative to this test file, never a
+  # hand-typed absolute path.
+  @og_fallback_disk_path Path.expand("../../priv/static/images/og-fallback.webp", __DIR__)
+
   describe "LocalBusiness JSON-LD (SEO-06)" do
     test "GET /, GET /club and GET /juegos/:id each return exactly one LocalBusiness JSON-LD payload" do
       game = game_fixture()
@@ -90,6 +96,33 @@ defmodule PukllayClubWeb.StructuredDataTest do
       types = body |> decode_json_ld_payloads() |> Enum.map(& &1["@type"]) |> Enum.sort()
 
       assert types == ["Game", "LocalBusiness"]
+    end
+  end
+
+  describe "OG fallback asset (SHARE-04)" do
+    test "the fallback asset's real decoded dimensions are exactly 1200x630" do
+      assert {:ok, vimage} = Image.open(@og_fallback_disk_path)
+      assert Image.width(vimage) == 1200
+      assert Image.height(vimage) == 630
+    end
+
+    test "the fallback asset is actually served, as an image, at the path the og:image tag emits" do
+      body = build_conn() |> get(~p"/") |> html_response(200)
+
+      # Derived from the real rendered og:image tag (which reads
+      # `@seo.image_url`, itself built by `SEO.site_default/1` via plan
+      # 01's `fallback_image_url/0`) — never a separately typed literal,
+      # so a future rename of the asset fails this gate loudly instead of
+      # silently emitting a dead image URL to every social crawler.
+      [[_full, image_url]] =
+        Regex.scan(~r/<meta[^>]*\bproperty="og:image"[^>]*\bcontent="([^"]+)"/, body)
+      path = URI.parse(image_url).path
+
+      asset_conn = get(build_conn(), path)
+
+      assert asset_conn.status == 200
+      assert [content_type] = get_resp_header(asset_conn, "content-type")
+      assert content_type =~ "image/"
     end
   end
 
