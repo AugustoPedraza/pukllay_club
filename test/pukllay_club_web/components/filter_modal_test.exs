@@ -369,6 +369,41 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ "max-h-40"
     end
 
+    # G-01-7: daisyUI's `.input` draws a border plus a separate 2px-offset
+    # outline on focus (the "double ring"). CoreComponents.input/1 suppresses
+    # the outline half by default (focus:outline-hidden focus-within:outline-hidden),
+    # but checklist/1 renders a raw <input> that bypasses input/1, so the pair
+    # is pinned here explicitly. focus:border-base-content keeps exactly one
+    # visible indicator (this element's border-base-300 utility otherwise
+    # outranks daisyUI's own focus border-darkening rule in the compiled CSS
+    # layer order, which would leave no visible indicator at all).
+    test "both checklist search inputs carry CoreComponents.input/1's focus-ring suppression (G-01-7)" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      doc = LazyHTML.from_document(html)
+
+      input_classes =
+        doc
+        |> LazyHTML.query(~s(input[data-fc-input]))
+        |> LazyHTML.attribute("class")
+
+      assert length(input_classes) == 2
+
+      for class_list <- input_classes do
+        tokens = String.split(class_list)
+
+        assert "input" in tokens
+        assert "input-ghost" in tokens
+        assert "focus:outline-hidden" in tokens
+        assert "focus-within:outline-hidden" in tokens
+        assert "focus:border-base-content" in tokens
+      end
+    end
+
     test "there is no age filter control and no Edad mínima label" do
       html =
         render_component(&FilterModal.filter_modal/1, %{
