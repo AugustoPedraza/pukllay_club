@@ -294,7 +294,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
 | 260912-hrx | Docs-only pushes to main skip build-and-push/deploy via an always-run paths-filter gate job; `quality` (both deploy.yml's D-04 guard and ci.yml's actual required check) stays unconditional | 2026-09-12 | 16226be | complete | [260912-hrx-add-path-based-filtering-to-github-workf](./quick/260912-hrx-add-path-based-filtering-to-github-workf/) |
-| 260912-im6 | Renamed user-facing "catálogo" copy to "ludoteca" (404 page, catalog index title/heading/error states, site-level SEO description) — Rioplatense voseo tone, closing a split where the game-detail breadcrumb already said "Ludoteca"; no code identifiers touched | 2026-09-12 | a6bbad5 | complete | [260912-im6-rename-user-facing-cat-logo-copy-to-ludo](./quick/260912-im6-rename-user-facing-cat-logo-copy-to-ludo/) |
+| 260912-im6 | Renamed user-facing "catálogo" copy to "ludoteca" (404 page, catalog index title/heading/error states, site-level SEO description) — Rioplatense voseo tone, closing a split where the game-detail breadcrumb already said "Ludoteca"; no code identifiers touched | 2026-09-12 | 68b8960 | complete | [260912-im6-rename-user-facing-cat-logo-copy-to-ludo](./quick/260912-im6-rename-user-facing-cat-logo-copy-to-ludo/) |
 
 ### Roadmap Evolution
 
