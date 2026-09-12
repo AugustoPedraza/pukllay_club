@@ -39,10 +39,29 @@ defmodule PukllayClub.Catalog.Seed.R2Storage do
   @impl true
   def list_keys(%Credentials{} = credentials, prefix) do
     config = config_overrides(credentials)
+    bucket = credentials.r2_catalog_bucket
 
-    case ExAws.request(ExAws.S3.list_objects_v2(credentials.r2_catalog_bucket, prefix: prefix), config) do
+    list_keys_page(bucket, prefix, nil, config, [])
+  end
+
+  # S3's `ListObjectsV2` (and R2's implementation of it) caps a single
+  # response at 1000 keys and signals more via `is_truncated`/
+  # `next_continuation_token` — this catalog's "games/" prefix holds three
+  # objects per covered game (cover-thumb/cover-large/og-card) plus two per
+  # cover-less game, comfortably exceeding 1000 once every game has an
+  # og-card. A caller of `list_keys/2` expects "every object key under
+  # prefix" per this behaviour's own @doc; silently returning only the
+  # first page would under-report coverage without ever raising.
+  defp list_keys_page(bucket, prefix, continuation_token, config, acc) do
+    opts = [prefix: prefix] ++ if continuation_token, do: [continuation_token: continuation_token], else: []
+
+    case ExAws.request(ExAws.S3.list_objects_v2(bucket, opts), config) do
+      {:ok, %{body: %{contents: contents, is_truncated: "true", next_continuation_token: token}}}
+      when is_binary(token) and token != "" ->
+        list_keys_page(bucket, prefix, token, config, acc ++ Enum.map(contents, & &1.key))
+
       {:ok, %{body: %{contents: contents}}} ->
-        {:ok, Enum.map(contents, & &1.key)}
+        {:ok, acc ++ Enum.map(contents, & &1.key)}
 
       {:error, reason} ->
         {:error, reason}
