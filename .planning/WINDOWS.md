@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 21
+open_count: 22
 waived_count: 0
 fixed_count: 4
-total_count: 25
-last_updated: 2026-09-10T14:35:17.674Z
+total_count: 26
+last_updated: 2026-09-12T03:07:10.127Z
 ---
 
 # Broken Windows Ledger
@@ -40,6 +40,7 @@ last_updated: 2026-09-10T14:35:17.674Z
 | 23 | 01.4 | stub | priv/static/images/about-maps-thumb-dark.jpg |  | Dark Maps thumbnail is a byte-identical copy of the light asset — no genuine dark-mode capture achieved this session; needs a real dark-tile capture (likely via the Maps mobile app), no code change required | fixed | moot; the dark asset was deleted in plan 01.4-12 along with its light twin when D-11 replaced the static screenshot pair with a live embed. There is no longer a dark capture to obtain. | 2026-09-05T14:47:28.044Z | 2026-09-06T01:50:23.255Z |
 | 24 | 01.5 | unrun-verify | .planning/phases/01.5-about-page-cta-rhythm-header-morph-refinement-implement-sket/01.5-07-SUMMARY.md |  | Cierre band 70vh proportion + visual balance at 768px/1280px deferred to end-of-phase human walkthrough (coverage D6) | open |  | 2026-09-08T17:30:26.779Z |  |
 | 25 | quick-260910-efe | deviation | test/pukllay_club_web/live/catalog_show_test.exs | 4316 | Rewrote .pk-pill-tag WCAG contrast test to measure what actually renders per theme (--color-primary in light, dark-scoped --color-neutral override in dark) instead of a stale hardcoded-token comparison, after sketch 055 Option A changed dark's primary-as-text mechanism; 4.5:1 floor unchanged | open |  | 2026-09-10T14:35:17.674Z |  |
+| 26 | 01.8-05 | stub | priv/static/images/og-fallback.webp |  | OG-fallback branded share card (SHARE-04, D-04/D-05) not yet on disk -- blocked on a /gsd-sketch round (Task 2 checkpoint, gate=blocking-human); GET / and GET /club's og:image/twitter:image 404 until the sketch-approved asset lands | open |  | 2026-09-12T03:07:10.127Z |  |
 
 ````json
 [
@@ -341,6 +342,18 @@ last_updated: 2026-09-10T14:35:17.674Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-10T14:35:17.674Z",
+    "resolved_at": null
+  },
+  {
+    "id": 26,
+    "kind": "stub",
+    "phase": "01.8-05",
+    "file": "priv/static/images/og-fallback.webp",
+    "line": null,
+    "description": "OG-fallback branded share card (SHARE-04, D-04/D-05) not yet on disk -- blocked on a /gsd-sketch round (Task 2 checkpoint, gate=blocking-human); GET / and GET /club's og:image/twitter:image 404 until the sketch-approved asset lands",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-12T03:07:10.127Z",
     "resolved_at": null
   }
 ]

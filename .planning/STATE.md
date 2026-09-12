@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: "01.8"
 current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
 status: executing
-stopped_at: Completed 01.8-04-PLAN.md
-last_updated: "2026-09-12T02:54:59.253Z"
+stopped_at: "Paused at 01.8-05 Task 2 checkpoint (blocking-human): OG-fallback sketch needed"
+last_updated: "2026-09-12T03:08:44.514Z"
 last_activity: 2026-09-11
 last_activity_desc: Phase 01.8 execution started
-state_head: e73445c63b561152af9373af489aa490bb4d2c54
+state_head: 4a3c2b66832ba787e60ba2fd06f554d7594ba112
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 Total Phases: 9
@@ -281,6 +281,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Plan 00-06 (nightly backup): repo is now public (00-03 D-19), so GitHub's 60-day scheduled-workflow auto-disable applies to the nightly pg_dump->R2 cron workflow. Must accept this risk explicitly or add a keepalive mechanism when planning/executing 00-06.
 
 - Deferred (not a blocker): sticky title-echo bar's brand-tint/bounce question — mechanical separation/contrast/typography fixes shipped in 01.3-09 and 01.3-11 (both deliberately left the bar's own background fill and `.pk-scroll-top`'s bounce animation untouched, per each plan's own "Open design questions"); brand treatment itself still undecided, reported at least twice now (01.2 and 01.3).
+- Phase 01.8 plan 05 paused at Task 2's blocking-human checkpoint: the branded 1200x630 OG-fallback share card (SHARE-04, D-04/D-05) needs a /gsd-sketch round, approval, and export to priv/static/images/og-fallback.webp before Task 3 (dimension/served-response gates) can run. Task 1 (LocalBusiness JSON-LD, SEO-06) is complete and committed.
 
 ### Quick Tasks Completed
 
@@ -332,9 +333,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T02:54:59.202Z
-Stopped at: Completed 01.8-04-PLAN.md
-Resume file: None
+Last session: 2026-09-12T03:08:44.463Z
+Stopped at: Paused at 01.8-05 Task 2 checkpoint (blocking-human): OG-fallback sketch needed
+Resume file: .planning/phases/01.8-seo-structured-data-social-sharing-inserted/01.8-05-PLAN.md
 
 ## Operator Next Steps
 
