@@ -236,7 +236,7 @@ defmodule PukllayClubWeb.AboutCarouselHookTest do
       assert Enum.count(dot_gotos) == 5,
              "Expected 5 [data-goto] buttons inside [data-dots]."
 
-      assert Enum.count(rail_gotos) == 0,
+      assert Enum.empty?(rail_gotos),
              "Expected 0 [data-goto] elements inside [data-rail] — [data-dots] is a SIBLING of " <>
                "[data-rail], not a descendant, which is why rail-scoped listeners (pointerdown, " <>
                "mouseenter, mouseleave) never see a dot interaction. This is the root cause the " <>
