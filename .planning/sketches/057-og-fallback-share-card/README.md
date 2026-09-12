@@ -2,7 +2,7 @@
 sketch: 057
 name: og-fallback-share-card
 question: "How should the isologo + wordmark compose on a solid brand-color 1200x630 canvas, and which ramp step should that background be?"
-winner: null
+winner: "B (ramp-800 background, isologo-dark.png + wordmark + tagline)"
 tags: [seo, share-card, branding, phase-01.8]
 ---
 
@@ -37,6 +37,17 @@ purple, meant for a light background, and disappears here) and the header's own 
 - Which background ramp step reads best at this larger, text-bearing canvas — ramp-600 (matches the
   per-game og-cards already shipped in plan 01.8-04, for one consistent purple across every social
   preview image site-wide) or a deeper step?
+
+## Decision
+**Winner: Variant B (centered stacked), background ramp-800 (#551670)**, with a third line added
+beyond the original two-question scope: a tagline under the wordmark reading
+"Tu club de juegos de mesa modernos — Jujuy" — developer-requested during review, so the fallback
+card also communicates what the club is and where, not just its name. Rendered via a dedicated
+`export.html` in this sketch's own font/layout, then composited pixel-for-pixel with Pillow
+(isologo-dark.png + the same self-hosted Bebas Neue/Inter fonts, same 190px mark width / 68px
+wordmark / 27px tagline / 20px gaps) and exported as WebP — decoded dimensions verified at exactly
+1200×630 through the app's own `image`/vix library before landing at
+`priv/static/images/og-fallback.webp`.
 
 ## Found while grounding this sketch (not this sketch's decision, flagging for the record)
 D-07 (already shipped, plan 01.8-04) names the per-game letterbox background as "the site's existing
