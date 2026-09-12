@@ -29,6 +29,15 @@ or a "back to catalog" action depending on which state it's in — never more th
 - 404 (detail, game not found): "Juego no encontrado" / "Este juego no existe o fue removido del
   catálogo." / button: "Volver al catálogo"
 
+**2026-09-12 update — reworded site-wide to name the ludoteca.** The strings above are the
+original sketch 003/01.1-07 record and are kept as-is for that history. Site-wide, the browse
+surface now has one name everywhere — `Ludoteca` / `Toda la ludoteca` — matching the detail-page
+breadcrumb, which already said `Ludoteca`. Use these NEW strings for these states going forward:
+- Error (load failed): "No pudimos cargar la ludoteca"
+- 404 (detail, game not found): "Este juego no existe o fue removido de la ludoteca." / button:
+  "Volver a la ludoteca"
+- Catalog index unfiltered heading: "Toda la ludoteca"
+
 Same plain-Spanish, no-jargon voice already established across the card ("difficulty," not raw
 min-age) and the about page — terse here specifically because the moment calls for get-out-of-the-way,
 not more teaching.
