@@ -4,12 +4,12 @@ milestone: v1.1
 milestone_name: Sharable Version
 current_phase: "01.8"
 current_phase_name: SEO, Structured Data & Social Sharing (INSERTED)
-status: executing
-stopped_at: "Paused at 01.8-05 Task 2 checkpoint (blocking-human): OG-fallback sketch needed"
-last_updated: "2026-09-12T03:08:44.514Z"
+status: verifying
+stopped_at: Completed 01.8-05-PLAN.md (all 3 tasks, plan complete)
+last_updated: "2026-09-12T03:32:26.913Z"
 last_activity: 2026-09-11
 last_activity_desc: Phase 01.8 execution started
-state_head: 4a3c2b66832ba787e60ba2fd06f554d7594ba112
+state_head: 42c6dfb15fc98ffa0cc192688cf691e2b73f4508
 progress:
   total_phases: 5
   completed_phases: 0
@@ -35,7 +35,7 @@ ahead of Phase 2, which keeps its number and scope.
 
 Phase: 01.8 (SEO, Structured Data & Social Sharing (INSERTED)) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-11 — Phase 01.8 execution started
 
 ## Performance Metrics
@@ -114,6 +114,7 @@ Last activity: 2026-09-11 — Phase 01.8 execution started
 | Phase 01.8 P02 | ~20min | 2 tasks | 6 files |
 | Phase 01.8 P03 | 25min | 2 tasks | 6 files |
 | Phase 01.8 P04 | ~50min | 3 tasks | 7 files |
+| Phase 01.8 P05 | ~40min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -221,6 +222,8 @@ Recent decisions affecting current work:
 - [Phase 01.8]: 01.8-04: OGCardBackfill's candidate query selects every game (not filtered to cover_url IS NOT NULL) so a cover-less row is genuinely scanned-and-skipped via object_key_for/1's nil, per Task 2's own acceptance criterion; dry-run scanned (434) intentionally diverges from cover-having count (385)
 - [Phase 01.8]: 01.8-04: Storage-side og-card coverage check compares against COUNT(DISTINCT cover_url) not COUNT(*), since the catalog's known duplicate-BGG_ID 163412 (D-19) means 385 covered rows produce only 384 distinct objects
 - [Phase 01.8]: 01.8-04: Fixed a pre-existing R2Storage.list_keys/2 pagination bug (silently capped at S3's 1000-key first page) found while running this plan's own storage-side coverage verification
+- [Phase 01.8]: 01.8-05: Sketch 057 (D-05) settled on variant B (centered stacked isologo + wordmark + tagline, ramp-800 background) for the OG fallback share card; exported 1200x630 WebP placed at priv/static/images/og-fallback.webp
+- [Phase 01.8]: 01.8-05: Task 3's served-response gate parses the real rendered og:image meta tag content rather than calling SEO.site_default/1 directly, exercising tag-emission-to-Plug.Static-serving end to end; found and fixed an attribute-order-agnostic regex bug (LiveView's phx-r debug attribute interposes between the tag name and property=)
 
 ### Pending Todos
 
@@ -281,7 +284,6 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Plan 00-06 (nightly backup): repo is now public (00-03 D-19), so GitHub's 60-day scheduled-workflow auto-disable applies to the nightly pg_dump->R2 cron workflow. Must accept this risk explicitly or add a keepalive mechanism when planning/executing 00-06.
 
 - Deferred (not a blocker): sticky title-echo bar's brand-tint/bounce question — mechanical separation/contrast/typography fixes shipped in 01.3-09 and 01.3-11 (both deliberately left the bar's own background fill and `.pk-scroll-top`'s bounce animation untouched, per each plan's own "Open design questions"); brand treatment itself still undecided, reported at least twice now (01.2 and 01.3).
-- Phase 01.8 plan 05 paused at Task 2's blocking-human checkpoint: the branded 1200x630 OG-fallback share card (SHARE-04, D-04/D-05) needs a /gsd-sketch round, approval, and export to priv/static/images/og-fallback.webp before Task 3 (dimension/served-response gates) can run. Task 1 (LocalBusiness JSON-LD, SEO-06) is complete and committed.
 
 ### Quick Tasks Completed
 
@@ -333,9 +335,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-12T03:08:44.463Z
-Stopped at: Paused at 01.8-05 Task 2 checkpoint (blocking-human): OG-fallback sketch needed
-Resume file: .planning/phases/01.8-seo-structured-data-social-sharing-inserted/01.8-05-PLAN.md
+Last session: 2026-09-12T03:32:26.863Z
+Stopped at: Completed 01.8-05-PLAN.md (all 3 tasks, plan complete)
+Resume file: None
 
 ## Operator Next Steps
 

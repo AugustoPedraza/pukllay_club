@@ -24,7 +24,7 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 - [x] **SEO-04**: `sitemap.xml` lists the catalog index and every game detail page, generated live
       from the database (not a build-time static file)
 - [x] **SEO-05**: Every game detail page carries JSON-LD `Game` structured data
-- [ ] **SEO-06**: The site carries JSON-LD `LocalBusiness` structured data reflecting the club's
+- [x] **SEO-06**: The site carries JSON-LD `LocalBusiness` structured data reflecting the club's
       Jujuy location
 
 ### Social Sharing
@@ -34,7 +34,7 @@ Requirements for milestone v1.1 "Sharable Version". Each maps to roadmap phases.
 - [x] **SHARE-02**: Every game detail page carries Twitter Card tags (`summary_large_image`)
       reflecting that specific game
 - [x] **SHARE-03**: OG/Twitter images are properly sized (1200×630) using the game's own cover art
-- [ ] **SHARE-04**: Pages without a natural hero image (catalog index, About) carry a branded OG
+- [x] **SHARE-04**: Pages without a natural hero image (catalog index, About) carry a branded OG
       fallback image (isologo/wordmark)
 - [x] **SHARE-05**: Sharing a game link via the existing native-share control produces an
       appealing, on-brand preview card on the receiving platform (WhatsApp/Facebook/Twitter)
@@ -99,11 +99,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEO-03 | Phase 01.8 | Complete |
 | SEO-04 | Phase 01.8 | Complete |
 | SEO-05 | Phase 01.8 | Complete |
-| SEO-06 | Phase 01.8 | Pending |
+| SEO-06 | Phase 01.8 | Complete |
 | SHARE-01 | Phase 01.8 | Complete |
 | SHARE-02 | Phase 01.8 | Complete |
 | SHARE-03 | Phase 01.8 | Complete |
-| SHARE-04 | Phase 01.8 | Pending |
+| SHARE-04 | Phase 01.8 | Complete |
 | SHARE-05 | Phase 01.8 | Complete |
 | SEC-01 | Phase 01.7 | Complete |
 | SEC-02 | Phase 01.7 | Complete |
