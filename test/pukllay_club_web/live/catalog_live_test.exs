@@ -1751,7 +1751,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
              "Expected default-src to name exactly 'self', nothing added or widened."
     end
 
-    test "the policy's script-src is pinned to exactly 'self' — no inline-script or eval source (T-01.7-08)",
+    test "the policy's script-src names 'self' plus a per-request nonce — no unsafe-inline/unsafe-eval source (SEC-05, was T-01.7-08)",
          %{conn: conn} do
       conn = get(conn, ~p"/")
 
@@ -1762,10 +1762,14 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> String.split("; ")
         |> Enum.find(&String.starts_with?(&1, "script-src"))
 
-      assert directive == "script-src 'self'",
-             "Expected script-src to name exactly 'self' — no 'unsafe-inline'/'unsafe-eval'/nonce " <>
-               "source added. Phase 01.8's nonce refactor (SEC-05) is the only sanctioned way to " <>
-               "widen this directive; updating this assertion then is the intended, visible cost."
+      assert directive =~ ~r/^script-src 'self' 'nonce-[^']+'$/,
+             "Expected script-src to name exactly 'self' plus a 'nonce-…' source — still no " <>
+               "'unsafe-inline'/'unsafe-eval' source. Phase 01.8's nonce refactor (SEC-05) is " <>
+               "the sanctioned widening this assertion now pins; a second widening beyond the " <>
+               "nonce should fail this regex."
+
+      refute directive =~ "unsafe-inline"
+      refute directive =~ "unsafe-eval"
     end
 
     test "the policy's frame-ancestors is pinned to exactly 'none' — distinct from frame-src (T-01.7-09)",

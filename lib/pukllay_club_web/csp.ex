@@ -28,17 +28,26 @@ defmodule PukllayClubWeb.CSP do
   written into this module would be a second source of truth that can
   silently disagree with the first. Resolve it only through
   `ClubLinks.maps_embed_origin/0`.
+
+  `script-src` (phase 01.8, SEC-05) carries a per-request nonce appended
+  inside this same directive's value — never a new directive. The nonce is
+  generated once per HTTP request by the router's `put_csp/2` plug (the
+  only source of truth for it) and passed into `policy/1` as an argument,
+  so this module never reads it from process state or a second call site.
+  `'unsafe-inline'` was never present on `script-src` before this refactor
+  and is not being introduced by it — the nonce is additive, not a
+  weakening.
   """
 
-  @doc "Builds the full Content-Security-Policy header value."
-  @spec policy() :: String.t()
-  def policy do
+  @doc "Builds the full Content-Security-Policy header value for `nonce`."
+  @spec policy(String.t()) :: String.t()
+  def policy(nonce) do
     Enum.join(
       [
         "default-src 'self'",
         img_src(),
         "style-src 'self' 'unsafe-inline'",
-        "script-src 'self'",
+        script_src(nonce),
         frame_src(),
         "font-src 'self'",
         "connect-src 'self' ws: wss:",
@@ -59,6 +68,13 @@ defmodule PukllayClubWeb.CSP do
       origin when is_binary(origin) and origin != "" -> "img-src 'self' data: #{origin}"
       _missing -> "img-src 'self' data:"
     end
+  end
+
+  # See the moduledoc's `script-src` paragraph. The nonce arrives as an
+  # argument, never read from process state — the same "never a second
+  # source of truth" rule `img_src/0`/`frame_src/0` already enforce.
+  defp script_src(nonce) do
+    "script-src 'self' 'nonce-#{nonce}'"
   end
 
   # See the moduledoc's `frame-src` paragraph. Computed, not a literal in

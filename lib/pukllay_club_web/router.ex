@@ -19,13 +19,26 @@ defmodule PukllayClubWeb.Router do
     plug :accepts, ["text"]
   end
 
+  # Phase 01.8 (SEC-05/SEO-05): resolves the game and writes conn.assigns[:seo]
+  # before CatalogLive.Show mounts, so a JS-free crawler's disconnected
+  # response already carries per-game meta/OG/JSON-LD (Pitfall 1 — a crawler
+  # never opens the LiveView socket). Scoped to /juegos/:id only.
+  pipeline :game_seo do
+    plug PukllayClubWeb.Plugs.GameSEO
+  end
+
   scope "/", PukllayClubWeb do
     pipe_through :browser
 
     live "/", CatalogLive.Index, :index
-    live "/juegos/:id", CatalogLive.Show, :show
     live "/club", AboutLive, :show
     live "/quienes-somos", AboutLive, :show
+  end
+
+  scope "/", PukllayClubWeb do
+    pipe_through [:browser, :game_seo]
+
+    live "/juegos/:id", CatalogLive.Show, :show
   end
 
   scope "/", PukllayClubWeb do
@@ -62,6 +75,10 @@ defmodule PukllayClubWeb.Router do
   # own arguments and cannot observe a header set by a separate plug, which
   # is why this exemption is named there instead of silenced here.
   defp put_csp(conn, _opts) do
-    put_resp_header(conn, "content-security-policy", PukllayClubWeb.CSP.policy())
+    nonce = 24 |> :crypto.strong_rand_bytes() |> Base.encode64(padding: false)
+
+    conn
+    |> assign(:csp_nonce, nonce)
+    |> put_resp_header("content-security-policy", PukllayClubWeb.CSP.policy(nonce))
   end
 end
