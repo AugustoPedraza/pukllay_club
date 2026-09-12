@@ -466,7 +466,12 @@ defmodule PukllayClubWeb.FilterModal do
   # match `facet_assign_key/1`'s clauses in `CatalogLive.Index`, since each
   # row reuses `toggle-facet` verbatim (no new server plumbing). A raw
   # `<input>` is used for the search box rather than `CoreComponents.input/1`,
-  # which wraps its field in a fieldset this layout has no room for.
+  # which wraps its field in a fieldset this layout has no room for. Because
+  # it bypasses input/1 it must carry input/1's focus:outline-hidden
+  # focus-within:outline-hidden pair by hand (G-01-7,
+  # .planning/debug/resolved/G-01-7-double-focus-ring.md), plus
+  # focus:border-base-content because border-base-300 would otherwise pin
+  # the border and leave no focus indicator.
   defp checklist(assigns) do
     ~H"""
     <div>
@@ -479,7 +484,7 @@ defmodule PukllayClubWeb.FilterModal do
           type="text"
           data-fc-input={@key}
           autocomplete="off"
-          class="input input-ghost w-full rounded-none border-0 border-b border-base-300"
+          class="input input-ghost w-full rounded-none border-0 border-b border-base-300 focus:outline-hidden focus-within:outline-hidden focus:border-base-content"
           placeholder={checklist_placeholder(@key)}
         />
         <div data-fc-list={@key} class="max-h-40 overflow-y-auto">

@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "G-01-7: The main-page search input renders what looks like a 'double' black border/focus ring when focused, instead of a single clean focus ring consistent with the rest of the UI."
 created: 2026-08-18T21:10:00.000Z
-updated: 2026-08-18T21:30:00.000Z
+updated: 2026-09-12
 audit_acknowledged:
   milestone: v1.0
   at: 2026-09-11
@@ -14,7 +14,7 @@ audit_acknowledged:
 hypothesis: CONFIRMED (see Resolution)
 test: n/a — diagnose-only mode
 expecting: n/a
-next_action: none — diagnosis complete, hand off to gsd-planner for gap-closure scoping
+next_action: n/a — resolved by quick 260912-pnx
 
 ## Symptoms
 
@@ -121,6 +121,27 @@ started: Discovered during UAT (Phase 01-catalog-v1)
     focus indicator is desired, which is exactly what CLAUDE.md/ui-design-system implies for "a
     single, clean focus ring consistent with the rest of the UI."
 
+- timestamp: 2026-09-12T00:00:00.000Z
+  checked: "lib/pukllay_club_web/components/core_components.ex:260/284/307 vs. lib/pukllay_club_web/components/filter_modal.ex checklist/1 (quick 260912-pnx)"
+  found: >
+    The original two sites this session diagnosed (main-page search input, sort `<select>`) were
+    fixed by plan 01-07, which baked the suppression pair `focus:outline-hidden
+    focus-within:outline-hidden` into every default class string in `CoreComponents.input/1`
+    (core_components.ex:260 select, :284 textarea, :307 text) — every `<.input>` call site in the
+    app passes no `class` override, so all of them inherit the suppression. A live recurrence was
+    found at `FilterModal.checklist/1`'s raw checklist search `<input>`
+    (filter_modal.ex, added by quick 260824-b71), which bypasses `CoreComponents.input/1` entirely
+    and therefore still drew daisyUI's 2px-offset outline on focus. Additionally, on this specific
+    element `border-base-300` (a plain Tailwind utility, `@layer utilities`) outranks daisyUI's own
+    `.input`/`.input-ghost` focus border-darkening rule (nested inside `@layer
+    daisyui.l1.l2` under `@layer utilities`, therefore lower-specificity in source order) — so
+    suppressing only the outline half would have left this one field with no visible focus
+    indicator at all, unlike every `CoreComponents.input/1`-rendered field.
+  implication: >
+    G-01-7 is fully closed only once this raw input carries the same suppression pair, plus an
+    explicit `focus:border-base-content` to restore the one indicator the layering fact above would
+    otherwise remove.
+
 ## Resolution
 
 root_cause: >
@@ -149,6 +170,14 @@ root_cause: >
   confirm this is the component's genuine default appearance and that suppressing it (e.g. via a
   `focus:outline-none`/`focus-within:outline-none`-style override, as daisyUI's own ghost/search
   Input examples do) is the standard technique for a single, clean focus ring.
-fix: (not applied — diagnose-only mode per goal: find_root_cause_only)
-verification: (not applicable — diagnose-only mode)
-files_changed: []
+fix: "quick 260912-pnx (commit ea1df22): the original sites (main-page search input, sort select) were fixed by plan 01-07 via CoreComponents.input/1's default class strings carrying focus:outline-hidden focus-within:outline-hidden. The remaining raw checklist search input in FilterModal.checklist/1 now carries that same pair plus focus:border-base-content, so exactly one focus indicator remains there too."
+verification: |
+  - `grep -n 'class="input input-ghost[^"]*focus:outline-hidden focus-within:outline-hidden' lib/pukllay_club_web/components/filter_modal.ex` -> 1 hit (line 487), confirming the checklist search input carries the suppression pair plus focus:border-base-content.
+  - New test "both checklist search inputs carry CoreComponents.input/1's focus-ring suppression (G-01-7)" added to test/pukllay_club_web/components/filter_modal_test.exs — observed RED (failing on the missing focus:outline-hidden token) before the filter_modal.ex change, GREEN after. Full file: `mix test test/pukllay_club_web/components/filter_modal_test.exs` -> 26 tests, 0 failures.
+  - `mix format --check-formatted` and `mix credo --strict` both clean (888 mods/funs, no issues) on the touched files.
+  - `mix assets.build` then `grep -c 'focus\\:border-base-content' priv/static/assets/css/app.css` -> 1, confirming Tailwind emitted the new utility (CSS-escapes the colon in the class selector, hence the literal backslash in the grep pattern).
+  - Raw-control sweep `grep -rn '<input\|<select\|<textarea' lib | grep -v core_components.ex` lists only filter_modal.ex's two `<input>` lines: the now-suppressed checklist search box and its sibling checkbox input (`type="checkbox" class="checkbox checkbox-sm"`), which is deliberately left unchanged — daisyUI's `.checkbox` uses a single focus-visible outline, not the `.input`/`.select` border-bump-plus-offset-outline mechanism, and CoreComponents.input/1's own checkbox branch ships the identical unsuppressed `checkbox checkbox-sm` class, so it already matches the project convention.
+  - No live browser focus check was performed in this session — verification here is class-token/test/compiled-CSS evidence only, not a visual confirmation in an actual browser.
+files_changed:
+  - lib/pukllay_club_web/components/filter_modal.ex
+  - test/pukllay_club_web/components/filter_modal_test.exs

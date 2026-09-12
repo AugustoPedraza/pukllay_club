@@ -138,6 +138,11 @@ defmodule PukllayClub.Catalog.Seed.Report do
 
   @doc "Renders and writes the report to `path`, creating parent directories as needed."
   @spec write!(t(), String.t()) :: t()
+  # Reviewed 2026-09-12 for WINDOWS #1: `path` comes from `mix catalog.seed`'s
+  # `report_path/0` (File.cwd! joined with the constant
+  # priv/repo/seed_data/catalog_seed_report.md) or a test tmp path; never web
+  # input. One skip covers both File.mkdir_p!/1 and File.write!/2 below.
+  # sobelow_skip ["Traversal.FileModule"]
   def write!(%__MODULE__{} = report, path) do
     path |> Path.dirname() |> File.mkdir_p!()
     File.write!(path, render(report))

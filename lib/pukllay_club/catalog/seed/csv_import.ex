@@ -20,6 +20,12 @@ defmodule PukllayClub.Catalog.Seed.CsvImport do
   `Nombre` is blank are skipped (the file's one trailing artifact row). The
   7 empty trailing `Columna N` columns are trimmed from every returned map.
   """
+  # Reviewed 2026-09-12 for WINDOWS #1: `path` is operator-supplied seed
+  # tooling input, defaulting to the compiled priv/repo/seed_data/ludoteca.csv.
+  # Only callers are `mix catalog.seed` and tests; no PukllayClubWeb module
+  # reaches it, and Mix tasks do not ship in the release. Any future caller
+  # passing a user-derived path must drop this skip.
+  # sobelow_skip ["Traversal.FileModule"]
   def stream_rows(path \\ default_path()) do
     header = header_row(path)
 
@@ -36,6 +42,8 @@ defmodule PukllayClub.Catalog.Seed.CsvImport do
     Application.app_dir(:pukllay_club, @default_relative_path)
   end
 
+  # Only receives the already-reviewed `path` from `stream_rows/1` above.
+  # sobelow_skip ["Traversal.FileModule"]
   defp header_row(path) do
     path
     |> File.stream!()

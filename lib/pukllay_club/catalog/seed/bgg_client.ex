@@ -27,9 +27,13 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
 
   Returns `{:ok, [item_map]}` — one map per `<item>` in the response, with
   every field from 01-COVERAGE.md section 1a's INTEGRATE list — or
-  `{:error, reason}` on a non-retryable failure or exhausted retries.
+  `{:error, reason}` on a non-retryable failure or exhausted retries. An
+  empty id list returns `{:ok, []}` immediately without contacting BGG
+  (WINDOWS.md entry 15).
   """
   @spec fetch_batch([integer()], Credentials.t()) :: {:ok, [map()]} | {:error, term()}
+  def fetch_batch([], %Credentials{}), do: {:ok, []}
+
   def fetch_batch(bgg_ids, %Credentials{} = credentials) when length(bgg_ids) <= @max_batch_size do
     ids = Enum.map_join(bgg_ids, ",", &to_string/1)
     do_request(ids, credentials, @max_attempts)
