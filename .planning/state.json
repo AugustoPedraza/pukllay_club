@@ -16,7 +16,7 @@
     {
       "number": "01.8",
       "name": "SEO, Structured Data & Social Sharing",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "2",
@@ -36,8 +36,8 @@
   ],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 01.8 of 5 · executing"
+    "label": "Advance to the next step (plan phase 2)",
+    "reason": "Phase 2 of 5 — needs a plan"
   },
-  "updated_at": "2026-09-12T15:19:43.281Z"
+  "updated_at": "2026-09-12T16:22:19.919Z"
 }
