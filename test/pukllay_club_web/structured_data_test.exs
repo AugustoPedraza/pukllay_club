@@ -114,8 +114,12 @@ defmodule PukllayClubWeb.StructuredDataTest do
       # 01's `fallback_image_url/0`) — never a separately typed literal,
       # so a future rename of the asset fails this gate loudly instead of
       # silently emitting a dead image URL to every social crawler.
+      # Strict form (G-01.8-3): property= must be the first attribute after
+      # the tag name, matching game_seo_test.exs's meta_property_content/2 —
+      # this is the one og:image assertion that walks the value all the way
+      # through to a real served response, so it holds the strict form too.
       [[_full, image_url]] =
-        Regex.scan(~r/<meta[^>]*\bproperty="og:image"[^>]*\bcontent="([^"]+)"/, body)
+        Regex.scan(~r/<meta\s+property="og:image"\s+content="([^"]+)"/, body)
 
       path = URI.parse(image_url).path
 

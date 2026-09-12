@@ -200,6 +200,41 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
       assert meta_content(body, "og:image:height") == "630"
     end
 
+    test "every SEO head tag holds the strict form on a real GET /juegos/:id response, recurrence guard for G-01.8-3",
+         %{conn: conn} do
+      game = game_fixture()
+
+      conn = get(conn, ~p"/juegos/#{game.id}")
+      body = html_response(conn, 200)
+
+      # Built here (not hand-copied) so a future tag added to seo_tags.ex is
+      # automatically covered without editing this assertion.
+      expected_keys = [
+        {"meta", "name", "description"},
+        {"link", "rel", "canonical"},
+        {"meta", "property", "og:type"},
+        {"meta", "property", "og:title"},
+        {"meta", "property", "og:description"},
+        {"meta", "property", "og:url"},
+        {"meta", "property", "og:image"},
+        {"meta", "property", "og:image:width"},
+        {"meta", "property", "og:image:height"},
+        {"meta", "name", "twitter:card"},
+        {"meta", "name", "twitter:title"},
+        {"meta", "name", "twitter:description"},
+        {"meta", "name", "twitter:image"}
+      ]
+
+      for {element, attr, key} <- expected_keys do
+        pattern = ~r/<#{element}\s+#{attr}="#{Regex.escape(key)}"/
+
+        assert Regex.match?(pattern, body),
+               "G-01.8-3 recurrence guard: expected \"#{key}\" to render as <#{element} #{attr}=\"#{key}\" ...> " <>
+                 "with #{attr}= immediately after the tag name (no attribute interposed, e.g. LiveView's " <>
+                 "phx-r). Offending element: #{offending_element(body, key)}"
+      end
+    end
+
     test "twitter:title/description are never empty and equal their Open Graph counterparts", %{conn: conn} do
       game = game_fixture()
 
@@ -237,24 +272,43 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
   end
 
   # Extracts a `<meta property="X" content="...">`/`<meta name="X" content="...">`
-  # value regardless of attribute order — never a single substring check, since
-  # SHARE-01's edge condition is precisely that per-game tags must REPLACE the
-  # defaults, which a substring check cannot distinguish.
+  # value with `property=`/`name=` anchored as the FIRST attribute after the
+  # tag name — never order-agnostic. That order-agnostic form was this
+  # helper's shape from 01.8-05 through 01.8-05-SUMMARY.md, deliberately
+  # loosened at the time to tolerate LiveView's phx-r root-tag attribute
+  # (config/config.exs:31, Phoenix.LiveView.ColocatedCSS) interposing before
+  # the identifying key. That loosening is exactly what let production keep
+  # serving markup WhatsApp's strict link-preview parser cannot read while
+  # this whole suite stayed green (G-01.8-3, .planning/debug/whatsapp-og-
+  # image-preview.md). Task 1 of this plan removed the phx-r stamping at the
+  # source (seo_tags.ex is no longer a HEEx template), so the strict form is
+  # now both correct and enforceable — reintroducing an interposed attribute
+  # must fail this suite loudly, not pass silently.
   defp meta_content(html, key) do
     meta_name_content(html, key) || meta_property_content(html, key)
   end
 
   defp meta_property_content(html, key) do
-    case Regex.run(~r/<meta[^>]*\bproperty="#{Regex.escape(key)}" content="([^"]*)"/, html) do
+    case Regex.run(~r/<meta\s+property="#{Regex.escape(key)}"\s+content="([^"]*)"/, html) do
       [_, value] -> value
       nil -> nil
     end
   end
 
   defp meta_name_content(html, key) do
-    case Regex.run(~r/<meta[^>]*\bname="#{Regex.escape(key)}" content="([^"]*)"/, html) do
+    case Regex.run(~r/<meta\s+name="#{Regex.escape(key)}"\s+content="([^"]*)"/, html) do
       [_, value] -> value
       nil -> nil
+    end
+  end
+
+  # Prints the actual served element for a failed strict-form assertion —
+  # a diagnostic that names the offending key AND shows the real markup,
+  # rather than a bare nil/false comparison.
+  defp offending_element(html, key) do
+    case Regex.run(~r/<(?:meta|link)[^>]*#{Regex.escape(key)}[^>]*>/, html) do
+      [match] -> match
+      nil -> "(no element found containing #{inspect(key)})"
     end
   end
 
