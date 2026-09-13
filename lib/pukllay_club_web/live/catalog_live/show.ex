@@ -126,21 +126,29 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:reservation_number, Application.get_env(:pukllay_club, :reservation_whatsapp_number))
      |> assign(:reservation_open, false)
      |> assign(:reservation_name, "")
-     |> assign(:reservation_error, nil)}
+     |> assign(:reservation_error, nil)
+     # Header search-morph open/closed state (01.2-11 contract). Always
+     # closed on arrival — unlike CatalogLive.Index there is no ?q= on this
+     # URL to seed it from.
+     |> assign(:search_expanded, false)}
   end
 
-  # header_inner/1's search-morph toggle/close buttons now dispatch
-  # open-search/close-search unconditionally on any page filling the
-  # nav_search slot (01.2-11) — this page passes a hardcoded
-  # search_expanded={false} and never varies it (its nav_search slot is a
-  # plain native GET form to "/", not the catalog's live-filtered box), so
-  # both clauses are deliberate no-ops. Without them, clicking the search
-  # icon here would crash the LiveView with no matching handle_event clause.
+  # header_inner/1 renders `.pk-search-morph.is-open` ONLY from this page's
+  # :search_expanded assign (01.2-11: no client JS toggles the class), and
+  # its toggle/close buttons dispatch open-search/close-search. These two
+  # clauses must therefore really flip the assign, exactly like
+  # CatalogLive.Index's. They used to be `{:noreply, socket}` no-ops next to
+  # a hardcoded `search_expanded={false}`: that avoided a crash, but left the
+  # detail page's search input permanently collapsed (width 0, opacity 0,
+  # pointer-events none) at every viewport — tapping the icon did nothing
+  # (debug search-broken-on-mobile-detail). What stays different from Index
+  # is only the slot's CONTENT: a plain native GET form to "/", submitted by
+  # the browser, so no search/filter event exists here.
   @impl true
-  def handle_event("open-search", _params, socket), do: {:noreply, socket}
+  def handle_event("open-search", _params, socket), do: {:noreply, assign(socket, :search_expanded, true)}
 
   @impl true
-  def handle_event("close-search", _params, socket), do: {:noreply, socket}
+  def handle_event("close-search", _params, socket), do: {:noreply, assign(socket, :search_expanded, false)}
 
   # CarouselRow's .CarouselScroll hook pushes `carousel-load-more` from the
   # rail's own scroll listener on ANY page that renders a carousel row —
@@ -310,7 +318,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
       flash={@flash}
       fullbleed
       sticky
-      search_expanded={false}
+      search_expanded={@search_expanded}
       active_nav={nil}
       boundary_collapse
     >

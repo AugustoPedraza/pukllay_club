@@ -166,10 +166,12 @@ defmodule PukllayClubWeb.Layouts do
       "the search form, rendered inside the header aligned with row content. The toggle and " <>
         "close buttons that reveal/hide this slot's content dispatch page-owned " <>
         "`open-search`/`close-search` events (01.2-11) — any page filling this slot must " <>
-        "implement both `handle_event` clauses, even as a no-op, or a click on the search icon " <>
-        "crashes that LiveView. `CatalogLive.Index` sets `:search_expanded` from them; " <>
-        "`CatalogLive.Show` renders a plain native GET form here and never varies " <>
-        "`search_expanded` (always `false`), so its clauses are no-ops."
+        "implement both `handle_event` clauses AND pass back a `search_expanded` it flips from " <>
+        "them. A missing clause crashes that LiveView on an icon click; a no-op clause is worse " <>
+        "than a crash, because it fails silently — the pill can never open and its slot content " <>
+        "stays unreachable (debug search-broken-on-mobile-detail). `CatalogLive.Index` and " <>
+        "`CatalogLive.Show` both set `:search_expanded` from them; they differ only in the slot " <>
+        "content (Show renders a plain native GET form to `/`)."
 
   slot :crumb, doc: "breadcrumb content for a genuine drill-down page (Detalle only)"
 

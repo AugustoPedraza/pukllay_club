@@ -3207,6 +3207,102 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # Regression pin for debug session search-broken-on-mobile-detail. The
+  # header search-morph's open/closed state is server-owned (01.2-11): the
+  # ONLY thing that ever puts `.is-open` on `.pk-search-morph` is the page's
+  # :search_expanded assign. This page used to answer open-search/close-search
+  # with `{:noreply, socket}` and pass a hardcoded `search_expanded={false}`,
+  # so tapping the magnifying glass round-tripped, changed nothing, and the
+  # native GET form's input stayed `width: 0; opacity: 0; pointer-events:
+  # none` (app.css `.pk-search-morph .pk-nav-search`) at every viewport. The
+  # "every event is handled" class guard above stayed green throughout — it
+  # proves a clause EXISTS, never that the clause does anything. These tests
+  # click the real rendered buttons (element/2 + render_click/1) so they go
+  # through the same phx-click binding a tap does.
+  describe "header search-morph opens and closes on the detail page (search-broken-on-mobile-detail)" do
+    defp morph(html), do: html |> LazyHTML.from_document() |> LazyHTML.query(".pk-search-morph")
+
+    defp morph_open?(html) do
+      doc = LazyHTML.from_document(html)
+
+      Enum.count(LazyHTML.query(doc, ".pk-search-morph.is-open")) == 1 and
+        Enum.count(LazyHTML.query(doc, ".pk-nav-inner.is-search-open")) == 1 and
+        doc |> LazyHTML.query(".pk-search-morph") |> LazyHTML.attribute("data-search-expanded") == ["true"] and
+        doc |> LazyHTML.query(".pk-search-morph-toggle") |> LazyHTML.attribute("aria-expanded") == ["true"]
+    end
+
+    defp morph_closed?(html) do
+      doc = LazyHTML.from_document(html)
+
+      Enum.empty?(LazyHTML.query(doc, ".pk-search-morph.is-open")) and
+        Enum.empty?(LazyHTML.query(doc, ".pk-nav-inner.is-search-open")) and
+        doc |> LazyHTML.query(".pk-search-morph") |> LazyHTML.attribute("data-search-expanded") == ["false"] and
+        doc |> LazyHTML.query(".pk-search-morph-toggle") |> LazyHTML.attribute("aria-expanded") == ["false"]
+    end
+
+    test "renders closed on arrival, with the native GET search form inside the morph", %{conn: conn} do
+      game = game_fixture()
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert morph_closed?(html)
+      assert html |> morph() |> Enum.count() == 1
+
+      form =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-search-morph #pk-nav-search-region form[role='search']")
+
+      assert LazyHTML.attribute(form, "action") == ["/"]
+      assert LazyHTML.attribute(form, "method") == ["get"]
+
+      assert html
+             |> LazyHTML.from_document()
+             |> LazyHTML.query(".pk-search-morph input#detail-search-q[name='q']")
+             |> Enum.count() == 1
+    end
+
+    test "tapping the search icon opens the morph so the input becomes reachable", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      html = view |> element(".pk-search-morph-toggle") |> render_click()
+
+      assert morph_open?(html),
+             "Tapping `.pk-search-morph-toggle` on the detail page must render " <>
+               "`.pk-search-morph.is-open` (and `.pk-nav-inner.is-search-open`, " <>
+               "data-search-expanded/aria-expanded=\"true\"). Without `.is-open` the search " <>
+               "input stays width 0 / opacity 0 / pointer-events none at every viewport."
+    end
+
+    test "the close control closes it again, and the icon reopens it", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert view |> element(".pk-search-morph-toggle") |> render_click() |> morph_open?()
+      assert view |> element(".pk-search-morph-close") |> render_click() |> morph_closed?()
+      assert view |> element(".pk-search-morph-toggle") |> render_click() |> morph_open?()
+    end
+
+    test "open-search is idempotent and close-search on an already-closed morph stays closed",
+         %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      assert view |> render_click("close-search", %{}) |> morph_closed?()
+      assert view |> render_click("open-search", %{}) |> morph_open?()
+      assert view |> render_click("open-search", %{}) |> morph_open?()
+    end
+
+    test "an unrelated event does not strip an open morph shut", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+
+      view |> element(".pk-search-morph-toggle") |> render_click()
+
+      assert view |> render_click("toggle-description", %{}) |> morph_open?()
+    end
+  end
+
   describe "facts pills and chips link into the catalog's filter params (SHELL-04, 01.1-06)" do
     test "the dificultad pill links to ?weight_bands=<band> — the badge's removed link target, moved here (G-01.2-20)",
          %{conn: conn} do
