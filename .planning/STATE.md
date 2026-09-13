@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
-current_phase: 2
-current_phase_name: Natural-Language Spanish Search + Auth
+current_phase: 01.8.1
+current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados
 status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
 stopped_at: Phase 01.8 complete, ready to plan Phase 2
-last_updated: "2026-09-13T17:12:50.928Z"
+last_updated: "2026-09-13T17:41:40.095Z"
 last_activity: 2026-09-13
 last_activity_desc: "Completed quick task 260912-waa: Apply sketch 058 winner (ramp hue H313.1→H300) to app.css, both themes"
-state_head: ee932be27d60fc5bc4034ad51885e52655d90092
+state_head: fd8c194c4fece8bccd78ddd8c4fd66fda09a5646
 progress:
-  total_phases: 5
-  completed_phases: 1
+  total_phases: 6
+  completed_phases: 2
   total_plans: 12
   completed_plans: 12
 ---
@@ -27,13 +27,13 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.8 — SEO, Structured Data & Social Sharing (INSERTED)
+**Current focus:** Phase 01.8.1 — Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 (production catalog data + security hardening) completed 2026-09-11. Both are decimal insertions
 ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 2 — Natural-Language Spanish Search + Auth
+Phase: 01.8.1 — Staff Admin — Ludoteca, Shelves & Curated Destacados
 Plan: Not started
 Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
 Last activity: 2026-09-13 - Completed quick task 260913-j8k: Close stale UAT audit items (docs-only)
@@ -329,6 +329,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.5 inserted after Phase 1: About Page CTA Rhythm & Header Morph Refinement — implement sketch-findings-pukllay_club sketches 050-051 (URGENT)
 - Phase 01.7 inserted after Phase 01.6 (milestone v1.1): Production Catalog Data & Security Hardening — production's live DB is empty of games, and the now-public repo/passed-around link needs baseline cookie/HSTS/CSP/CSRF hardening plus a one-time full-git-history secrets sweep. Numbered as a decimal insertion continuing the 01.N convention so Phase 2/3/4 keep their numbers and scope.
 - Phase 01.8 inserted after Phase 01.7 (milestone v1.1): SEO, Structured Data & Social Sharing — per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, real image `alt` text. Split from 01.7 because its UAT (share a live game link, run Rich Results Test) requires production to already hold the real catalog, and because its verification mode (crawler/social-preview) is entirely different from 01.7's (operator/`curl -I`/production data).
+- Phase 01.8.1 inserted after Phase 01.8: Staff Admin — Ludoteca, Shelves & Curated Destacados (prioritized ahead of Phase 2/3; from /gsd-explore) (URGENT)
 
 ## Deferred Items
 

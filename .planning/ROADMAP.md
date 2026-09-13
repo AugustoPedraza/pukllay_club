@@ -32,6 +32,7 @@ numbers and their scope; nothing from them is pulled forward.
 
 - [x] **Phase 01.7: Production Catalog Data & Security Hardening** - Load the real ~400+ game catalog into production via a safe repeatable path, then close the cookie/HSTS/CSP/CSRF gaps and sweep git history for secrets (completed 2026-09-11)
 - [x] **Phase 01.8: SEO, Structured Data & Social Sharing** - Per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, and real image `alt` text (completed 2026-09-12)
+- [ ] **Phase 01.8.1: Staff Admin — Ludoteca, Shelves & Curated Destacados** - Invite-only staff magic-link auth, ludoteca CRUD, per-game shelf locations with walk-the-shelf assignment, curated first carousel, CSV-band vs BGG-weight audit (inserted 2026-09-13, prioritized ahead of Phase 2/3)
 
 ### Phase 01.7: Production Catalog Data & Security Hardening (INSERTED)
 
@@ -116,6 +117,30 @@ Plans:
 > client-side navigation is an accepted, documented limitation (José Valim's own guidance), not a
 > bug to engineer around with a JS head-patching hook.
 
+### Phase 01.8.1: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
+
+**Goal:** Club staff (owner + up to 3 invited accounts) can sign in, manage the ludoteca, record
+where each physical game lives, curate the first home carousel, and fix mis-banded games —
+prioritized ahead of Phase 2/3 for Saturday operations and a living home page.
+**Mode:** mvp
+**Requirements**: TBD
+**Depends on:** Phase 01.8; production outbound email (todo `email-provider-and-dns`)
+**Context:** `.planning/notes/staff-admin-decisions.md`
+**Success Criteria** (what must be TRUE):
+
+  1. Staff sign in via passwordless magic link (`phx.gen.auth`, staff role); registration is invite-only — no public sign-up path exists, and `/admin` routes reject non-staff
+  2. Staff can add, edit, and remove games in the ludoteca
+  3. Each game carries a shelf-level storage location; staff can bulk-assign locations on a phone by picking a shelf and tapping the games on it, and can view games listed in shelf order (pick/restore list)
+  4. Staff can rename the first home carousel and hand-pick + order its games; all other carousel rows remain automatic
+  5. Staff can see games whose CSV `weight_band` disagrees with their `bgg_weight`, and either correct the band or explicitly keep it
+
+**Plans:** 0 plans
+**UI hint**: yes
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 01.8.1 to break down)
+
 ### Phase 2: Natural-Language Spanish Search + Auth
 
 **Goal**: Members can describe what they want in plain Spanish and get matched games — the core value of the product — then save favorites behind lightweight auth.
@@ -151,6 +176,11 @@ Plans:
 ### Phase 4: Club Operations
 
 **Goal**: Club admins can manage the catalog and physical copies and track in-person rentals, using an admin role distinct from member magic-link auth.
+
+> **Scope note (2026-09-13):** staff auth, catalog add/edit/remove, and the curated first carousel
+> moved forward into Phase 01.8.1 (Staff Admin). Phase 4 keeps physical copies, rental tracking,
+> and promotions — revisit these criteria (and seed `saturday-sessions-and-managed-carousels`)
+> when Phase 4 is planned.
 **Mode:** mvp
 **Depends on**: Phase 3
 **Requirements**: CLUBOPS-01, CLUBOPS-02, CLUBOPS-03, CLUBOPS-04
@@ -167,7 +197,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 2 → 3 → 4
+Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 01.8.1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -175,6 +205,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 2 → 3 → 4
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
 | 01.7. Production Catalog Data & Security Hardening | 5/5 | Complete    | 2026-09-11 |
 | 01.8. SEO, Structured Data & Social Sharing | 7/7 | Complete    | 2026-09-12 |
+| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 0/TBD | Not started | - |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
