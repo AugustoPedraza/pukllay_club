@@ -5,11 +5,11 @@ milestone_name: Sharable Version
 current_phase: 01.8.1
 current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados
 status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
-stopped_at: Phase 01.8.1 context gathered
-last_updated: "2026-09-13T22:51:37.677Z"
+stopped_at: Phase 01.8.1 UI-SPEC approved
+last_updated: "2026-09-13T23:08:26.971Z"
 last_activity: 2026-09-13
 last_activity_desc: "Completed quick task 260912-waa: Apply sketch 058 winner (ramp hue H313.1→H300) to app.css, both themes"
-state_head: 4cdbbc8d841f4c3ddaeefe37d6d1b30ed855c0fa
+state_head: f1950f7df960b563654db09e6d471b38bf5700ac
 progress:
   total_phases: 6
   completed_phases: 2
@@ -364,9 +364,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-13T22:51:37.327Z
-Stopped at: Phase 01.8.1 context gathered
-Resume file: .planning/phases/01.8.1-staff-admin-ludoteca-shelves-curated-destacados/01.8.1-CONTEXT.md
+Last session: 2026-09-13T23:08:26.718Z
+Stopped at: Phase 01.8.1 UI-SPEC approved
+Resume file: .planning/phases/01.8.1-staff-admin-ludoteca-shelves-curated-destacados/01.8.1-UI-SPEC.md
 
 ## Operator Next Steps
 
