@@ -5252,8 +5252,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "stop (260910-l7q, rotated to H300 by 260912-waa/sketch 058) -- C2 itself never " <>
                "touched this value."
 
-      assert token_value(light_block, "--color-base-300") == "#E3D3F0",
-             "light theme: --color-base-300 must stay byte-identical -- C2 is dark-scoped only."
+      # UPDATED (quick task 260912-waa): 260910-if9's C2 rotation never
+      # touched light -- this value stayed byte-identical through that
+      # task. It has since moved for a DIFFERENT, LATER reason: sketch 058
+      # (quick task 260912-waa) rotated every purple literal in both
+      # themes onto the ramp's uniform H300 hue, "keep consistency with
+      # light version to uniform color" per the developer's own
+      # instruction.
+      assert token_value(light_block, "--color-base-300") == "#DED4F3",
+             "light theme: --color-base-300 must resolve to H300 (260912-waa/sketch 058's " <>
+               "uniform-hue rotation) -- 260910-if9's C2 rotation itself never touched this " <>
+               "value; it is a later task's hue-only rotation, not a C2 regression."
     end
 
     test "dark's --color-neutral ink still clears the WCAG 4.5:1 text floor against --color-base-200 (pill fill) and --color-base-100 (the ground transparent-fill tones render against)" do

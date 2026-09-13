@@ -304,18 +304,18 @@
   /* off-ramp: nearest --pk-ramp-300 (#DCADF6), chroma tier (dE 0.0635 > 0.012) */
   --color-neutral: #B8A0E5;
   /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.1041 > 0.012) */
-  --color-neutral-content: #170A26;
+  --color-neutral-content: #160A27;
   /* off-ramp (D-Semantics): info/success/warning/error and their -content
      slots are other hues (H258/H162/H77/H7) -- they never join the brand
      ramp at H313.1 regardless of ΔE; carry no ramp reference at all. */
   --color-info: #7C9AD1;
-  --color-info-content: #170A26;
+  --color-info-content: #160A27;
   --color-success: #5FBE95;
-  --color-success-content: #170A26;
+  --color-success-content: #160A27;
   --color-warning: #D9A24B;
-  --color-warning-content: #170A26;
+  --color-warning-content: #160A27;
   --color-error: #E06B90;
-  --color-error-content: #170A26;
+  --color-error-content: #160A27;
   --radius-selector: 0.25rem;
   --radius-field: 0.25rem;
   --radius-box: 0.5rem;
@@ -335,9 +335,9 @@
   --color-base-100: #FFFFFF;
   --color-base-200: var(--pk-ramp-100);
   /* off-ramp: nearest --pk-ramp-200 (#EACEFA), chroma tier (dE 0.0239 > 0.012) */
-  --color-base-300: #E3D3F0;
+  --color-base-300: #DED4F3;
   /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0581 > 0.012) */
-  --color-base-content: #241238;
+  --color-base-content: #231339;
   /* D-HueMove: moves ~13deg off its shipped H300.1 onto the ramp's H313.1 --
      confirmed, not a checkpoint. Joins regardless of ΔE (forced JOIN). This
      is the SAME stop dark's --color-base-200 joins below -- see the ramp
@@ -350,12 +350,12 @@
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-secondary-content: #FFFFFF;
   /* off-ramp: nearest --pk-ramp-100 (#F6EAFD), chroma tier (dE 0.0266 > 0.012) */
-  --color-accent: #EDE1F7;
+  --color-accent: #E9E2F9;
   /* D-HueMove: same forced JOIN and same stop as --color-primary above --
      both roles carry the identical shipped hex (#3D096D) today. */
   --color-accent-content: var(--pk-ramp-900);
   /* off-ramp: nearest --pk-ramp-700 (#702093), chroma tier (dE 0.1462 > 0.012) */
-  --color-neutral: #6B5B7B;
+  --color-neutral: #675C7D;
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-neutral-content: #FFFFFF;
   /* off-ramp (D-Semantics): info/success/warning/error and their -content
@@ -366,7 +366,7 @@
   --color-success: #3F8F6B;
   --color-success-content: #FFFFFF;
   --color-warning: #B8862F;
-  --color-warning-content: #241238;
+  --color-warning-content: #231339;
   --color-error: #B23A5C;
   --color-error-content: #FFFFFF;
   --radius-selector: 0.25rem;

@@ -45,15 +45,15 @@
   /* Colors — from 01-UI-SPEC.md daisyUI theme overrides (light) */
   --color-bg: #FFFFFF;
   --color-surface: #F1ECFD;
-  --color-surface-2: #E3D3F0;
-  --color-text: #241238;
-  --color-text-muted: #6B5B7B;
+  --color-surface-2: #DED4F3;
+  --color-text: #231339;
+  --color-text-muted: #675C7D;
   --color-primary: #3C1269;
   --color-primary-content: #FFFFFF;
   --color-secondary: #7E4CA5;
-  --color-accent-bg: #EDE1F7;
+  --color-accent-bg: #E9E2F9;
   --color-accent-text: #3C1269;
-  --color-border: #E3D3F0;
+  --color-border: #DED4F3;
   --color-danger: #B23A5C;
   --color-success: #3F8F6B;
 
