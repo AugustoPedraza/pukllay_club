@@ -2616,6 +2616,125 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       refute h2_wrapped_in_anchor?
     end
+
+    test "all 7 filter-expressible shelves land on a grid holding exactly that shelf's games (shelf-vs-grid parity)",
+         %{conn: conn} do
+      a =
+        game_fixture(%{
+          name: "Fixture A",
+          tags: ["#CreaConexiones"],
+          weight_band: "descubre_el_hobby"
+        })
+
+      b =
+        game_fixture(%{
+          name: "Fixture B",
+          tags: ["#EquipoGanador"],
+          weight_band: "ingenio_estratega"
+        })
+
+      c =
+        game_fixture(%{
+          name: "Fixture C",
+          tags: ["#DuelosMemorables"],
+          weight_band: "nivel_experto"
+        })
+
+      _d =
+        game_fixture(%{
+          name: "Fixture D",
+          tags: [],
+          weight_band: "ingenio_estratega",
+          is_expansion: false
+        })
+
+      all_names = [a.name, b.name, c.name]
+
+      expectations = %{
+        "destacados_del_club" => all_names,
+        "crea_conexiones" => [a.name],
+        "equipo_ganador" => [b.name],
+        "duelos_memorables" => [c.name],
+        "descubre_el_hobby" => [a.name],
+        "ingenio_estratega" => [b.name],
+        "nivel_experto" => [c.name]
+      }
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      for {key, expected_names} <- expectations do
+        [href] =
+          html
+          |> LazyHTML.from_document()
+          |> LazyHTML.query("#carousel-#{key} .pk-row-header a.pk-row-link")
+          |> LazyHTML.attribute("href")
+
+        {:ok, _landed_view, landed_html} = live(conn, href)
+
+        grid = grid_html(landed_html)
+
+        for name <- expected_names do
+          assert grid =~ name, "expected #{key}'s landing grid to include #{name}"
+        end
+
+        for name <- all_names -- expected_names do
+          refute grid =~ name, "expected #{key}'s landing grid to exclude #{name}"
+        end
+      end
+    end
+
+    test "every linked shelf's href is a locally-rooted /?tags=/weight_bands= path with no bare '#', and destacados_del_club encodes all 3 editorial tags",
+         %{conn: conn} do
+      game_fixture(%{name: "Any Game", tags: ["#CreaConexiones"], weight_band: "descubre_el_hobby"})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+
+      linked_keys = ~w(
+        destacados_del_club crea_conexiones equipo_ganador duelos_memorables
+        descubre_el_hobby ingenio_estratega nivel_experto
+      )
+
+      for key <- linked_keys do
+        [href] = LazyHTML.query(doc, "#carousel-#{key} a.pk-row-link") |> LazyHTML.attribute("href")
+
+        assert String.starts_with?(href, "/?"), "expected #{key}'s href to start with /?"
+        refute href =~ "#", "expected #{key}'s href to hold no bare '#'"
+
+        "/?" <> query_string = href
+        decoded = Query.decode(query_string)
+
+        assert Map.keys(decoded) == ["tags"] or Map.keys(decoded) == ["weight_bands"],
+               "expected #{key}'s href to decode to only a tags or weight_bands key, got #{inspect(decoded)}"
+
+        if key == "destacados_del_club" do
+          editorial_tags = Enum.map(PukllayClub.Catalog.Vocabulary.editorial_tags(), & &1.tag)
+          assert Enum.sort(decoded["tags"]) == Enum.sort(editorial_tags)
+        end
+      end
+    end
+
+    test "recientemente_anadidos renders but has no header link or Ver todos cue", %{conn: conn} do
+      game_fixture(%{
+        name: "Fixture D",
+        tags: [],
+        weight_band: "ingenio_estratega",
+        is_expansion: false
+      })
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      row_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-recientemente_anadidos")
+        |> LazyHTML.to_html()
+
+      assert row_html != ""
+      refute row_html =~ "pk-row-link"
+      refute row_html =~ "Ver todos"
+    end
   end
 
   defp position(html, text) do
