@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
-Last activity: 2026-09-13 - Completed quick task 260913-3yi: WhatsApp reservation message: human-friendly wording + id-slug game URL
+Last activity: 2026-09-13 - Completed quick task 260913-4k1: Polish Reservar game UI/UX (single dialog, button hierarchy, a11y)
 
 ## Performance Metrics
 
@@ -315,6 +315,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260913-1s5 | Preview-sheet close button is a true 44px circle; share control inset from poster corner (right-3/top-3); filter pills drawn compact (28px / 32px chips) with an invisible 44px hit layer | 2026-09-13 | eb1f873 | complete (browser check pending) | [260913-1s5-polish-the-close-icon-isnt-a-circle-shar](./quick/260913-1s5-polish-the-close-icon-isnt-a-circle-shar/) |
 | 260913-2x6 | Game detail URLs use id-slug form (/juegos/137-catan): stdlib Slug.slugify + Phoenix.Param for Game; canonical/og:url/JSON-LD/sitemap/share emit it; GameSEO plug 301s bare/stale slugs (query preserved), live nav self-heals via push_patch | 2026-09-13 | 1f000d0 | complete | [260913-2x6-implement-id-slug-game-urls-juegos-137-c](./quick/260913-2x6-implement-id-slug-game-urls-juegos-137-c/) |
 | 260913-3yi | WhatsApp reservation message is human-friendly (`¡Hola! Soy {name}. Me gustaría reservar "{game}" para el próximo sábado en el club.`) and appends the game's id-slug URL; reservation helpers take the Game struct; preview wraps the URL on mobile | 2026-09-13 | 16d2bf5 | complete | [260913-3yi-whatsapp-reservation-message-human-frien](./quick/260913-3yi-whatsapp-reservation-message-human-frien/) |
+| 260913-4k1 | Reservar flow collapsed to one dialog (preview step dropped): always-visible name field + live server-built wa.me primary CTA, daisyUI bottom sheet on mobile / centered on sm+, one primary + ghost Cancelar, 44px targets, dialog a11y + focus in/return | 2026-09-13 | da07c44 | complete (browser check pending) | [260913-4k1-polish-reservar-game-ui-ux-improve-butto](./quick/260913-4k1-polish-reservar-game-ui-ux-improve-butto/) |
 
 ### Roadmap Evolution
 
