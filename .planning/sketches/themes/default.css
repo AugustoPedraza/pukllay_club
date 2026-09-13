@@ -50,7 +50,7 @@
   --color-text-muted: #675C7D;
   --color-primary: #3C1269;
   --color-primary-content: #FFFFFF;
-  --color-secondary: #7E4CA5;
+  --color-secondary: #7550AC;
   --color-accent-bg: #E9E2F9;
   --color-accent-text: #3C1269;
   --color-border: #DED4F3;
@@ -156,8 +156,8 @@
    every dark region's --color-bg/--color-surface/--color-surface-2/
    --color-text/--color-text-muted/--color-primary/--color-secondary/
    --color-accent-bg/--color-accent-text/--color-border. Light
-   --color-secondary stays #7E4CA5 (brand Violeta, deliberately
-   unrotated). This mirror still keeps resolved hexes, not `--pk-ramp-*`
+   --color-secondary is #7550AC (brand Violeta #7E4CA5
+   rotated to H300). This mirror still keeps resolved hexes, not `--pk-ramp-*`
    tokens (D2-i, quick task 260910-l7q Task 3 Decision 2) -- see app.css's
    own ramp block header comment for the full generator/audit provenance
    and `260912-waa-SUMMARY.md` for the before/after table. */

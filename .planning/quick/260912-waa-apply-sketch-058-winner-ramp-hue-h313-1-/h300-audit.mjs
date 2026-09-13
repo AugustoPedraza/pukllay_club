@@ -40,7 +40,7 @@
 //              writes app.css.
 //   --check    asserts the LIVE (already-edited) palette matches the
 //              README byte-for-byte, every rotation-set role is a fixed
-//              point of rotated(), light secondary is untouched, and
+//              point of rotated(), light secondary is the H300 Violeta, and
 //              every gated WCAG pair still passes. Prints every failure
 //              and exits 1 on any; exits 0 only when everything holds.
 
@@ -161,10 +161,11 @@ const SKETCH_058_DARK = {
   "pk-ink-brand": "#B797F0",
 };
 
-// Light secondary (brand manual Violeta) -- must stay unchanged (H308.1,
-// 8 degrees off the new uniform H300 ramp hue; the SUMMARY flags this for
-// the developer to revisit).
+// Light secondary: the brand manual's Violeta #7E4CA5 (H308.1) rotated to
+// H300 with L and C held, so both themes share one uniform hue (developer
+// follow-up to 260912-waa). rotated("#7E4CA5") === "#7550AC".
 const BRAND_VIOLETA = "#7E4CA5";
+const LIGHT_SECONDARY_H300 = "#7550AC";
 
 // Dark: the five README off-ramp roles (their own literal, not the ramp)
 // plus the near-black -content inks that carry the SAME literal across
@@ -187,17 +188,17 @@ const DARK_ROTATION_SET = [
 ];
 
 // Light: base-300, base-content (shared literal with warning-content, so
-// both move together), accent and neutral. Light secondary is
-// deliberately excluded (BRAND_VIOLETA, kept as-is) and light primary/
+// both move together), accent, neutral and secondary (BRAND_VIOLETA rotated
+// to LIGHT_SECONDARY_H300). Light primary/
 // accent-content are var(--pk-ramp-*) reads, so they follow the ramp
 // automatically and need no separate rotation entry here.
-const LIGHT_ROTATION_SET = ["base-300", "base-content", "warning-content", "accent", "neutral"];
+const LIGHT_ROTATION_SET = ["base-300", "base-content", "warning-content", "accent", "neutral", "secondary"];
 
 // Excluded from rotation entirely, with reasons (not iterated anywhere
 // above): #FFFFFF roles (achromatic -- no ramp/rotation stop invented for
 // white); the info/success/warning/error FILL roles in both themes
 // (D-Semantics, other hues, never join or rotate onto the brand ramp);
-// light secondary (BRAND_VIOLETA, the brand manual's own Violeta); every
+// every
 // role that is a var(--pk-ramp-*) read (light primary, light
 // accent-content, dark base-200, dark base-300, dark base-content, dark
 // primary -- these follow the ramp by construction); and
@@ -471,7 +472,7 @@ function runPropose(css) {
 
   const lightSecondary = palette.light.secondary;
   console.log(
-    `\nlight secondary (BRAND_VIOLETA): ${lightSecondary} (H${fmt(oklchHue(lightSecondary))}) -- must stay ${BRAND_VIOLETA}, ${lightSecondary === BRAND_VIOLETA ? "unchanged" : "DIFFERS"}`,
+    `\nlight secondary: ${lightSecondary} (H${fmt(oklchHue(lightSecondary))}) -- BRAND_VIOLETA ${BRAND_VIOLETA} rotates to ${rotated(BRAND_VIOLETA)}, expected ${LIGHT_SECONDARY_H300}`,
   );
 
   console.log(`\nassets/css/app.css was NOT modified by this script (propose mode).`);
@@ -536,11 +537,12 @@ function runCheck(css) {
     if (!matches) fail(`dark.${role} is ${shipped}, expected README ${readmeHex}`);
   }
 
-  // (d) light secondary equals BRAND_VIOLETA.
-  console.log("\n=== (d) light secondary (brand Violeta, kept unchanged) ===");
+  // (d) light secondary equals BRAND_VIOLETA rotated to H300.
+  console.log("\n=== (d) light secondary (brand Violeta rotated to H300) ===");
   const lightSecondary = palette.light.secondary;
-  console.log(`  light.secondary: ${lightSecondary} -- expected ${BRAND_VIOLETA} -- ${lightSecondary === BRAND_VIOLETA ? "MATCH" : "DIFF"}`);
-  if (lightSecondary !== BRAND_VIOLETA) fail(`light.secondary is ${lightSecondary}, expected ${BRAND_VIOLETA}`);
+  const expectedSecondary = rotated(BRAND_VIOLETA);
+  console.log(`  light.secondary: ${lightSecondary} -- expected ${expectedSecondary} -- ${lightSecondary === expectedSecondary ? "MATCH" : "DIFF"}`);
+  if (lightSecondary !== expectedSecondary || expectedSecondary !== LIGHT_SECONDARY_H300) fail(`light.secondary is ${lightSecondary}, expected ${LIGHT_SECONDARY_H300}`);
 
   // (e) every contrast pair passes.
   console.log("\n=== (e) contrast pairs ===");

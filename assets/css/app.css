@@ -260,12 +260,11 @@
                              #241238 -> #231339
      --color-accent:        #EDE1F7 -> #E9E2F9
      --color-neutral:       #6B5B7B -> #675C7D
+     --color-secondary:     #7E4CA5 -> #7550AC -- the brand manual's Violeta
+       (H308.1) rotated onto the uniform H300 hue at the developer's
+       request, so no purple in either theme sits off-hue.
 
    Kept unchanged, deliberately:
-     --color-secondary (light): #7E4CA5 -- the brand manual's own Violeta
-       (H308.1), 8 degrees off the new uniform H300 hue. Flagged in
-       260912-waa-SUMMARY.md for the developer to revisit -- not rotated
-       in this task.
      --pk-shadow-color: rgb(20 8 34) -- a fixed, theme-invariant near-black
        shadow (H302.5, L16.9), deliberately left alone; it is not a
        daisyUI theme role and was never in scope for a hue rotation.
@@ -431,7 +430,7 @@
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-primary-content: #FFFFFF;
   /* off-ramp: nearest --pk-ramp-600 (#7B2DCE), chroma tier (dE 0.0891 > 0.012) */
-  --color-secondary: #7E4CA5;
+  --color-secondary: #7550AC;
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-secondary-content: #FFFFFF;
   /* off-ramp: nearest --pk-ramp-100 (#F1ECFD), chroma tier (dE 0.0281 > 0.012) */
@@ -1186,7 +1185,7 @@
    --color-primary is the required token here in LIGHT mode, not
    --color-secondary — measured against --color-base-100 (this file's own
    daisyui-theme blocks): primary is 14.4:1 in light (#3D096D on
-   #FFFFFF), well clear of the 4.5:1 text floor; secondary (#7E4CA5)
+   #FFFFFF), well clear of the 4.5:1 text floor; secondary (#7550AC)
    measures only 3.1:1 in dark and would FAIL that floor.
 
    DARK mode does NOT render --color-primary as text — see the
