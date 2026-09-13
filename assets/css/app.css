@@ -1400,24 +1400,68 @@
   text-align: center;
 }
 
-/* WINDOWS #18 (debug session creator-pill-touch-target, quick 260912-rwv):
-   sketch 036 specified a real 44px touch height for interactive ("action")
-   chips, but the c33e7f1 port only carried cursor + transition into this
-   rule, dropping the floor. The two call sites that already reached 44px
-   (filter-modal chips, the active-filter chip) did so via a per-call-site
-   min-h-11 utility, which masked the gap for every other tappable pill:
-   CatalogLive.Show's creator_pills/1, GameChips.chip_row/1's linked
-   Mecánicas/Temáticas branch, GameChips.editorial_tags/1's hashtag links,
-   and GamePreview.facts_row/1's linked branches. Moving the floor into the
-   variant itself (rather than fixing each call site) means "tappable"
-   pill means 44px by construction, for these call sites and any future
-   one. Vertical centring at the new height comes from the base .pk-pill's
-   inline-flex + align-items:center, unmodified by this change. */
+/* WINDOWS #18 (debug session creator-pill-touch-target, quick 260912-rwv),
+   REVISED quick 260913-1s5: sketch 036 specified a real 44px touch height
+   for interactive ("action") chips, but the c33e7f1 port only carried
+   cursor + transition into this rule, dropping the floor. rwv's fix moved
+   the floor into the variant as a DRAWN `min-height: 44px` — every tappable
+   pill got a real touch target by construction, but the user then reported
+   the tappable filter pills as too big/rough, breaking the page's balance
+   (rwv's own SUMMARY explicitly left this visual acceptance unreviewed).
+
+   1s5 splits the floor in two: the pill's own visible box drops to a
+   compact 28px (dense, this rule) / 32px (comfortable,
+   `.pk-pill-comfortable.pk-pill-interactive` just below — both above WCAG
+   2.5.8's 24px minimum target size), and a transparent `::after` layer
+   (right below) supplies the full 44px hit area — vertical-only, never
+   horizontal, so side-by-side pills in the same row can never overlap each
+   other's tap area. `position: relative` here is load-bearing: it is what
+   the `::after` layer's absolute top/bottom percentages resolve against.
+
+   This is NOT the rejected 01.3-10 description-toggle overlay pattern (see
+   `.pk-desc-shell`'s own comment) — that overlay hung over unrelated
+   paragraph/grid content with no size constraint. This layer is bounded to
+   a fixed 44px band centred on the pill, and every row of tappable pills
+   carries a row-gap >= the layer's overhang ((44 - visible height) / 2 —
+   8px for 28px pills, 6px for 32px pills), pinned by this file's own
+   `.pk-poster-panel > .pk-facts-row` rule and `GameChips.editorial_tags/1`'s
+   `gap-y-2`, so a later row's invisible layer can never cover an earlier
+   row's visible pill. See quick 260913-1s5 for the full arithmetic. */
 .pk-pill-interactive {
+  position: relative;
   cursor: pointer;
-  min-height: 44px;
+  min-height: 28px;
   transition: border-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard);
+}
+
+/* The invisible 44px hit layer (quick 260913-1s5) — see the comment above.
+   `min(0px, calc(50% - 22px))` on both `top` and `bottom` centres a 44px
+   band on the pill: for a 28px pill that's `min(0px, -8px)` = -8px (an 8px
+   overhang each side); once the pill's own height reaches or exceeds 44px
+   (e.g. a wrapped `.pk-pill-large`), the expression clamps to 0px and the
+   layer collapses to the pill's own box instead of shrinking it. No
+   background, border, or z-index — it paints nothing, it only extends the
+   tappable area. */
+.pk-pill-interactive::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: min(0px, calc(50% - 22px));
+  bottom: min(0px, calc(50% - 22px));
+}
+
+/* Comfortable-size interactive floor (filter-modal chips, active-filter
+   chip) — 32px, taller than the dense 28px above since these chips already
+   carry more horizontal padding (`.pk-pill-comfortable`) and read better at
+   a slightly taller box. Must be a COMPOUND selector placed AFTER the plain
+   `.pk-pill-interactive` rule above: a plain `.pk-pill-comfortable` rule
+   sits earlier in this file at equal specificity and would lose to
+   `.pk-pill-interactive`'s 28px if this weren't a same-or-higher-specificity
+   compound declared later. */
+.pk-pill-comfortable.pk-pill-interactive {
+  min-height: 32px;
 }
 
 /* Quick task 260910-hdc (2026-09-10): reads `--pk-ink-brand` (not
@@ -4767,7 +4811,12 @@ body:has(#pk-no-js-marker[data-no-js]) #app-header {
    that shared line is the card's own padding, and is deliberate. */
 .pk-poster-panel > .pk-facts-row {
   flex-wrap: wrap;
-  row-gap: 4px;
+  /* 8px (was 4px, quick 260913-1s5): the linked facts pills now compose
+     `.pk-pill-interactive`'s compact 28px floor, whose invisible `::after`
+     hit layer overhangs 8px above/below — a smaller row gap would let a
+     wrapped second row's hit layer steal taps from the bottom of the first
+     row's visible pills. See `.pk-pill-interactive`'s own comment. */
+  row-gap: 8px;
   margin-bottom: 0;
 }
 

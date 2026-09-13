@@ -24,14 +24,21 @@ reaching for `md:`, `xl:`, or `2xl:` is a new convention and needs a reason.
 
 ## Touch targets
 
-`min-h-11` (44px) is this app's minimum for any tappable pill or button — live today on the
-nav-search filter trigger (`min-h-11 min-w-11`, `filter_modal.ex`), every facet pill and scalar
-chip (`badge min-h-11 px-3`, `filter_modal.ex`'s `chip_class/1` — the single source of that class
-list, so it can't drift out of sync across the badge/scalar-chip families), and every checklist
-row (`flex min-h-11 ...`, `filter_modal.ex`). Cited by class string rather than line number so the
+`min-h-11` (44px) is this app's minimum for any tappable button or non-pill control — live today
+on the nav-search filter trigger (`min-h-11 min-w-11`, `filter_modal.ex`) and every checklist row
+(`flex min-h-11 ...`, `filter_modal.ex`). Cited by class string rather than line number so the
 citation can't rot the next time the file is edited. See `ui-design-system`'s spacing scale for the
 owning rule; don't restate a second number here. C20 records a source disagreement — Material 3's
 48dp vs Apple HIG's 44pt — and this repo has standardized on the 44px/44pt figure.
+
+**Tappable pills are the one exception (quick 260913-1s5, revising quick 260912-rwv/WINDOWS #18):**
+a pill composing `pk-pill-interactive` gets its 44px hit area from a transparent `::after` layer
+(vertical-only, `app.css`) instead of a drawn `min-h-11` box — the pill's own VISIBLE box stays
+compact (28px dense, 32px `pk-pill-comfortable`). A tappable pill must NOT also carry `min-h-11`;
+doing so re-inflates the drawn box back to 44px, which is the exact "too big/rough" visual
+regression 1s5 fixed. Any row of tappable pills needs a `row-gap` >= `(44 - visible height) / 2`
+(8px for 28px pills, 6px for 32px pills) so a wrapped row's invisible hit layer can never cover the
+row above it.
 
 ## Touch vs pointer
 

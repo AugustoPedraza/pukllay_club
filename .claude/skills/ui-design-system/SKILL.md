@@ -60,9 +60,10 @@ table in `default.css`, checked by `check-theme-drift.sh`.
 - Chip/pill rows: `gap-1`; icon+text pairs: `gap-2`; grids/carousels: `gap-4`.
 - Muted/secondary text: `text-neutral text-sm` — this app's convention. Not
   `text-base-content/70`, which survives only in unmaintained boilerplate; don't propagate it.
-- Touch targets: add `min-h-11` to any tappable pill/button under 44px (see `filter_modal.ex`'s
-  `badge min-h-11 px-3` — the class combo `chip_class/1` produces for both the facet pill and the
-  scalar chip families).
+- Touch targets: add `min-h-11` to any tappable button/control under 44px. Tappable PILLS are the
+  exception (quick 260913-1s5) — `.pk-pill-interactive`'s own `::after` hit layer supplies the 44px
+  target, so a pill must never also carry `min-h-11` (that re-inflates its drawn box); see
+  `ux-responsive`'s Touch targets section for the full contract.
 - Page container: one `mx-auto max-w-{size} px-4 py-6 sm:px-6 lg:px-8` per page. Page width is
   each LiveView's own responsibility. `Layouts.app`'s inner wrapper deliberately declares no
   `max-w-*` so the page's own container is the one that wins — never add a width cap back to the

@@ -159,7 +159,7 @@ defmodule PukllayClubWeb.GameChips do
       |> assign(:overflow, overflow)
 
     ~H"""
-    <div :if={@tags != []} class={["flex flex-wrap gap-1", @class]}>
+    <div :if={@tags != []} class={["flex flex-wrap gap-x-1 gap-y-2", @class]}>
       <%= for tag <- @visible do %>
         <.link
           :if={@href_fun}
