@@ -146,7 +146,21 @@
    --color-surface now resolve to the IDENTICAL hex (#45105C) -- one
    physical swatch worn as a light-theme button fill and a dark-theme card
    surface, mirroring upstream's own --pk-ramp-900. See app.css's own ramp
-   block header comment for the full generator/audit provenance. */
+   block header comment for the full generator/audit provenance.
+
+   Re-derived (quick task 260912-waa, sketch 058): the shared
+   `--pk-ramp-*` ramp's hue moved H313.1 -> H300 (the brand manual's own
+   Lila Oscuro hue), holding each stop's own lightness -- every mirrored
+   hex above that reads a ramp stop or a rotated off-ramp role moved with
+   it: light --color-surface/--color-primary/--color-accent-text and
+   every dark region's --color-bg/--color-surface/--color-surface-2/
+   --color-text/--color-text-muted/--color-primary/--color-secondary/
+   --color-accent-bg/--color-accent-text/--color-border. Light
+   --color-secondary stays #7E4CA5 (brand Violeta, deliberately
+   unrotated). This mirror still keeps resolved hexes, not `--pk-ramp-*`
+   tokens (D2-i, quick task 260910-l7q Task 3 Decision 2) -- see app.css's
+   own ramp block header comment for the full generator/audit provenance
+   and `260912-waa-SUMMARY.md` for the before/after table. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-bg: #2E154E;
