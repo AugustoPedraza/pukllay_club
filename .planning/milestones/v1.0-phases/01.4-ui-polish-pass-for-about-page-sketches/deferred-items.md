@@ -12,7 +12,9 @@ task's changes are auto-fixed).
   modified by commit `fddc0f6` (an earlier, unrelated plan). Pre-existing
   drift, out of scope for this plan. Not fixed here; flag for a future
   formatting pass or `mix format` run.
-  status: acknowledged
+  Resolved in plan 01.5-04 (Task 2 phase close-out ran mix format on this file); re-confirmed
+  2026-09-13: mix format --check-formatted on layouts_test.exs exits 0 (quick task 260913-j8k).
+  status: resolved
 
 ## 01.4-12
 
@@ -26,4 +28,6 @@ task's changes are auto-fixed).
   `lib/pukllay_club_web/live/about_live.ex`,
   `test/pukllay_club_web/live/{about_live,catalog_live}_test.exs`) are
   individually clean under `mix format --check-formatted`.
-  status: acknowledged
+  Resolved in plan 01.5-04 (Task 2 phase close-out ran mix format on this file); re-confirmed
+  2026-09-13: mix format --check-formatted on layouts_test.exs exits 0 (quick task 260913-j8k).
+  status: resolved
