@@ -6,10 +6,10 @@ current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
 stopped_at: Phase 01.8 complete, ready to plan Phase 2
-last_updated: "2026-09-13T02:49:26.410Z"
-last_activity: 2026-09-12
+last_updated: "2026-09-13T17:12:50.928Z"
+last_activity: 2026-09-13
 last_activity_desc: "Completed quick task 260912-waa: Apply sketch 058 winner (ramp hue H313.1→H300) to app.css, both themes"
-state_head: 85ae2576c8e8d4fa3a5eb251efee9cb3d04a09fc
+state_head: ee932be27d60fc5bc4034ad51885e52655d90092
 progress:
   total_phases: 5
   completed_phases: 1
@@ -317,6 +317,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260913-3yi | WhatsApp reservation message is human-friendly (`¡Hola! Soy {name}. Me gustaría reservar "{game}" para el próximo sábado en el club.`) and appends the game's id-slug URL; reservation helpers take the Game struct; preview wraps the URL on mobile | 2026-09-13 | 16d2bf5 | complete | [260913-3yi-whatsapp-reservation-message-human-frien](./quick/260913-3yi-whatsapp-reservation-message-human-frien/) |
 | 260913-4k1 | Reservar flow collapsed to one dialog (preview step dropped): always-visible name field + live server-built wa.me primary CTA, daisyUI bottom sheet on mobile / centered on sm+, one primary + ghost Cancelar, 44px targets, dialog a11y + focus in/return | 2026-09-13 | da07c44 | complete (browser check pending) | [260913-4k1-polish-reservar-game-ui-ux-improve-butto](./quick/260913-4k1-polish-reservar-game-ui-ux-improve-butto/) |
 | 260913-j8k | Close stale UAT audit items (docs-only): 01.8 flaky-test + 01.4/01.5 format-drift deferred entries marked `status: resolved` with re-run evidence; 01.5-UAT tests 18/19 superseded by passing test 20, gaps normalized, file acknowledged — audit-uat 18 → 0 | 2026-09-13 | ea9ea7a | complete | [260913-j8k-close-stale-uat-audit-items-docs-only](./quick/260913-j8k-close-stale-uat-audit-items-docs-only/) |
+| 25 | Recompute 01.8-VERIFICATION.md covered_digest (deferred-items.md docs-only change in 338ff7e) | 2026-09-13 | 0511cf3 | — | — |
 
 ### Roadmap Evolution
 
