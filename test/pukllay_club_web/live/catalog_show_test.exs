@@ -2378,6 +2378,43 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert doc |> LazyHTML.query(".pk-poster-frame #detail-share-buybox") |> Enum.count() == 1
     end
 
+    # quick 260913-1s5: the share button was anchored 8px (top-2/right-2)
+    # from the poster's 8px-radius top-right corner, crowding it. Fix: a
+    # 12px inset (top-3/right-3), matching .pk-sheet-close's own 12px —
+    # still inside .pk-poster-frame, still the wrapper's own plain Tailwind
+    # offset utilities (no .pk-* rule targets this wrapper div).
+    test "the share wrapper is inset 12px (top-3/right-3), not the old 8px, and stays inside the poster frame",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      share_wrapper_class =
+        doc
+        |> LazyHTML.query(".pk-poster-frame > div")
+        |> Enum.find(fn el ->
+          case LazyHTML.attribute(el, "class") do
+            [class] -> class =~ "absolute"
+            _ -> false
+          end
+        end)
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      refute is_nil(share_wrapper_class), "expected .pk-poster-frame > div.absolute to exist"
+
+      tokens = String.split(share_wrapper_class)
+
+      assert "top-3" in tokens
+      assert "right-3" in tokens
+      refute "top-2" in tokens
+      refute "right-2" in tokens
+
+      assert doc |> LazyHTML.query(".pk-poster-frame #detail-share-buybox") |> Enum.count() == 1
+    end
+
     test "each dot dispatches select-image with the same phx-value-url the matching thumbnail dispatches, and the dot count equals the thumbnail count",
          %{conn: conn} do
       game =

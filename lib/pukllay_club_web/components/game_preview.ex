@@ -383,9 +383,9 @@ defmodule PukllayClubWeb.GamePreview do
           type="button"
           data-sheet-close
           aria-label="Cerrar"
-          class="pk-sheet-close btn btn-circle btn-sm min-h-11"
+          class="pk-sheet-close btn btn-circle min-h-11 min-w-11"
         >
-          <.icon name="hero-x-mark" />
+          <.icon name="hero-x-mark" class="size-5" />
         </button>
         <div id="game-preview-sheet-body" class="pk-sheet-body" phx-update="ignore"></div>
       </div>

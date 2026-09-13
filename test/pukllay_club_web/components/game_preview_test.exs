@@ -197,4 +197,52 @@ defmodule PukllayClubWeb.GamePreviewTest do
       assert html =~ ~s(aria-labelledby="game-preview-sheet-title")
     end
   end
+
+  # quick 260913-1s5: daisyUI's `.btn-circle` sets `width: var(--size);
+  # height: var(--size)`, and `.btn-sm` pins `--size` to 32px — while the
+  # `min-h-11` Tailwind utility stretched only the HEIGHT to 44px, leaving a
+  # 32x44 oval instead of a circle. Fix: drop `btn-sm`, add `min-w-11`
+  # alongside the existing `min-h-11`, matching the filter modal's and the
+  # lightbox's own close-button convention (equal-axis 44px floors).
+  describe "mobile sheet close button is a true circle (quick 260913-1s5)" do
+    test "the sheet close button carries equal-axis 44px circle tokens and no btn-sm" do
+      html = render_component(&GamePreview.preview_host/1, %{})
+
+      doc = LazyHTML.from_document(html)
+
+      class_list =
+        doc
+        |> LazyHTML.query("#game-preview-sheet button[data-sheet-close]")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      refute is_nil(class_list), "expected #game-preview-sheet button[data-sheet-close] to exist"
+
+      tokens = String.split(class_list)
+
+      assert "pk-sheet-close" in tokens
+      assert "btn" in tokens
+      assert "btn-circle" in tokens
+      assert "min-h-11" in tokens
+      assert "min-w-11" in tokens
+
+      refute "btn-sm" in tokens,
+             "btn-sm pins --size to 32px, which btn-circle uses for BOTH axes — keeping it " <>
+               "alongside min-h-11 is exactly what produced the 32x44 oval this task fixes."
+    end
+
+    test "the sheet close icon carries size-5, matching the filter modal / lightbox close convention" do
+      html = render_component(&GamePreview.preview_host/1, %{})
+
+      doc = LazyHTML.from_document(html)
+
+      icon_class =
+        doc
+        |> LazyHTML.query("#game-preview-sheet button[data-sheet-close] span")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert icon_class =~ "size-5"
+    end
+  end
 end

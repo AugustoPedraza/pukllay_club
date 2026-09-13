@@ -468,7 +468,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   <GamePreview.facts_row game={@game} linked={true} />
 
                   <div class="pk-poster-frame">
-                    <div class="absolute right-2 top-2 z-10">
+                    <div class="absolute right-3 top-3 z-10">
                       <.share_control id="detail-share-buybox" game={@game} />
                     </div>
 
