@@ -19,7 +19,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Carcassonne"})
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       assert count_occurrences(body, ~s(type="application/ld+json")) == 2
@@ -35,7 +35,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
          %{conn: conn} do
       game = game_fixture()
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       [policy] = get_resp_header(conn, "content-security-policy")
@@ -49,11 +49,11 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     test "two successive requests to the same URL return two different nonce values", %{conn: conn} do
       game = game_fixture()
 
-      conn1 = get(conn, ~p"/juegos/#{game.id}")
+      conn1 = get(conn, ~p"/juegos/#{game}")
       [policy1] = get_resp_header(conn1, "content-security-policy")
       [_, nonce1] = Regex.run(~r/'nonce-([^']+)'/, policy1)
 
-      conn2 = get(build_conn(), ~p"/juegos/#{game.id}")
+      conn2 = get(build_conn(), ~p"/juegos/#{game}")
       [policy2] = get_resp_header(conn2, "content-security-policy")
       [_, nonce2] = Regex.run(~r/'nonce-([^']+)'/, policy2)
 
@@ -63,7 +63,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     test "a game with nil min/max players and nil description omits those JSON-LD keys", %{conn: conn} do
       game = game_fixture(%{min_players: nil, max_players: nil, description: nil, cover_url: nil})
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       [_full, _nonce, payload] = game_json_ld_match(body)
@@ -79,7 +79,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Ataque</script><script>alert(1)</script> Total"})
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       assert count_occurrences(body, ~s(type="application/ld+json")) == 2
@@ -95,11 +95,11 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     test "two renders of the same game produce byte-identical Game JSON-LD payload bytes", %{conn: conn} do
       game = game_fixture()
 
-      conn1 = get(conn, ~p"/juegos/#{game.id}")
+      conn1 = get(conn, ~p"/juegos/#{game}")
       body1 = html_response(conn1, 200)
       [_full1, _nonce1, payload1] = game_json_ld_match(body1)
 
-      conn2 = get(build_conn(), ~p"/juegos/#{game.id}")
+      conn2 = get(build_conn(), ~p"/juegos/#{game}")
       body2 = html_response(conn2, 200)
       [_full2, _nonce2, payload2] = game_json_ld_match(body2)
 
@@ -112,7 +112,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Zombicide"})
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       assert count_occurrences(body, ~s(property="og:title")) == 1
@@ -129,8 +129,8 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
       game_a = game_fixture(%{name: "Catán"})
       game_b = game_fixture(%{name: "Carcassonne"})
 
-      body_a = conn |> get(~p"/juegos/#{game_a.id}") |> html_response(200)
-      body_b = build_conn() |> get(~p"/juegos/#{game_b.id}") |> html_response(200)
+      body_a = conn |> get(~p"/juegos/#{game_a}") |> html_response(200)
+      body_b = build_conn() |> get(~p"/juegos/#{game_b}") |> html_response(200)
 
       refute meta_name_content(body_a, "description") == meta_name_content(body_b, "description")
     end
@@ -139,7 +139,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
          %{conn: conn} do
       game = game_fixture(%{mechanics: [], weight_band: nil, description: nil})
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       description = meta_name_content(body, "description")
@@ -169,7 +169,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
       without_cover = game_fixture(%{cover_url: nil})
 
       for game <- [with_cover, without_cover] do
-        body = build_conn() |> get(~p"/juegos/#{game.id}") |> html_response(200)
+        body = build_conn() |> get(~p"/juegos/#{game}") |> html_response(200)
 
         og_image = meta_content(body, "og:image") || ""
         twitter_image = meta_content(body, "twitter:image") || ""
@@ -184,7 +184,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     test "og:image:width (1200) and og:image:height (630) both follow the og:image tag", %{conn: conn} do
       game = game_fixture()
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       image_idx = tag_index(body, ~s(property="og:image"))
@@ -204,7 +204,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
          %{conn: conn} do
       game = game_fixture()
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       # Built here (not hand-copied) so a future tag added to seo_tags.ex is
@@ -238,7 +238,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     test "twitter:title/description are never empty and equal their Open Graph counterparts", %{conn: conn} do
       game = game_fixture()
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       body = html_response(conn, 200)
 
       og_title = meta_content(body, "og:title")
@@ -254,7 +254,7 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
   end
 
   # Quick task 260913-2x6: id-slug URLs (/juegos/<id>-<slug>). Request paths
-  # here are PLAIN string literals, not `~p"/juegos/#{game.id}"` — the
+  # here are PLAIN string literals, not `~p"/juegos/#{game}"` — the
   # whole point is asserting the literal id-slug form the app is supposed
   # to serve/canonicalize, not deriving the expected value from the same
   # `Phoenix.Param` impl under test.

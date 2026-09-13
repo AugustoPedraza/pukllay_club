@@ -171,11 +171,14 @@ defmodule PukllayClub.Catalog do
 
   @doc """
   The single, explicitly-ordered source of truth for `sitemap.xml`'s
-  per-game entries (SEO-04). Selects only `:id` and `:updated_at` — the
-  minimum needed to build one `<url>` entry with its own `<lastmod>`.
-  Ordered by `:id` (a property of the query, not of Postgres' physical row
-  order) so two successive requests over unchanged data return
-  byte-identical documents.
+  per-game entries (SEO-04). Selects `Game` structs carrying only `:id`,
+  `:name` and `:updated_at` (quick task 260913-2x6 widened this from
+  `:id`/`:updated_at` alone: `:name` is now needed because
+  `SitemapController` interpolates the struct into `~p"/juegos/\#{game}"`,
+  which routes through the one `Phoenix.Param` impl and needs `:name` to
+  derive the slug). Ordered by `:id` (a property of the query, not of
+  Postgres' physical row order) so two successive requests over unchanged
+  data return byte-identical documents.
 
   There is no visibility, draft, or soft-delete column on this schema
   today (confirmed by direct read of `PukllayClub.Catalog.Game`) — every
@@ -183,11 +186,11 @@ defmodule PukllayClub.Catalog do
   here at the same time, or a hidden/draft game would still appear in the
   public sitemap.
   """
-  @spec sitemap_entries() :: [%{id: integer(), updated_at: NaiveDateTime.t() | DateTime.t()}]
+  @spec sitemap_entries() :: [Game.t()]
   def sitemap_entries do
     Repo.all(
       from g in Game,
-        select: %{id: g.id, updated_at: g.updated_at},
+        select: struct(g, [:id, :name, :updated_at]),
         order_by: [asc: g.id]
     )
   end

@@ -26,7 +26,7 @@ defmodule PukllayClubWeb.StructuredDataTest do
     test "GET /, GET /club and GET /juegos/:id each return exactly one LocalBusiness JSON-LD payload" do
       game = game_fixture()
 
-      for path <- [~p"/", ~p"/club", ~p"/juegos/#{game.id}"] do
+      for path <- [~p"/", ~p"/club", ~p"/juegos/#{game}"] do
         body = build_conn() |> get(path) |> html_response(200)
 
         local_business_payloads =
@@ -81,7 +81,7 @@ defmodule PukllayClubWeb.StructuredDataTest do
     test "GET /juegos/:id returns two JSON-LD script elements; GET / returns one" do
       game = game_fixture()
 
-      detail_body = build_conn() |> get(~p"/juegos/#{game.id}") |> html_response(200)
+      detail_body = build_conn() |> get(~p"/juegos/#{game}") |> html_response(200)
       index_body = build_conn() |> get(~p"/") |> html_response(200)
 
       assert count_occurrences(detail_body, ~s(type="application/ld+json")) == 2
@@ -91,7 +91,7 @@ defmodule PukllayClubWeb.StructuredDataTest do
     test "a game detail page's two JSON-LD payloads are Game and LocalBusiness, no duplicates" do
       game = game_fixture()
 
-      body = build_conn() |> get(~p"/juegos/#{game.id}") |> html_response(200)
+      body = build_conn() |> get(~p"/juegos/#{game}") |> html_response(200)
 
       types = body |> decode_json_ld_payloads() |> Enum.map(& &1["@type"]) |> Enum.sort()
 

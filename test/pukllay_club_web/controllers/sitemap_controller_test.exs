@@ -27,12 +27,17 @@ defmodule PukllayClubWeb.SitemapControllerTest do
       assert count_locs(body) == expected
     end
 
-    test "every game's absolute detail URL appears exactly once, with a lastmod date", %{conn: conn} do
+    test "every game's absolute detail URL is the id-slug form, appears exactly once, with a lastmod date",
+         %{conn: conn} do
       game = game_fixture(%{name: "Catán"})
 
       body = conn |> get(~p"/sitemap.xml") |> response(200)
 
-      detail_url = url(~p"/juegos/#{game.id}")
+      # Literal expectation (quick task 260913-2x6), not derived via
+      # `~p"/juegos/#{game}"` — asserts the actual id-slug bytes the
+      # sitemap is supposed to emit, not whatever the same `Phoenix.Param`
+      # impl under test happens to produce.
+      detail_url = PukllayClubWeb.Endpoint.url() <> "/juegos/#{game.id}-catan"
       assert occurrences(body, detail_url) == 1
 
       lastmod = Date.to_iso8601(NaiveDateTime.to_date(game.updated_at))
@@ -65,8 +70,8 @@ defmodule PukllayClubWeb.SitemapControllerTest do
 
       body = conn |> get(~p"/sitemap.xml") |> response(200)
 
-      assert occurrences(body, url(~p"/juegos/#{game_a.id}")) == 1
-      assert occurrences(body, url(~p"/juegos/#{game_b.id}")) == 1
+      assert occurrences(body, url(~p"/juegos/#{game_a}")) == 1
+      assert occurrences(body, url(~p"/juegos/#{game_b}")) == 1
     end
 
     test "with zero games the response is still 200 and still lists the catalog index", %{conn: conn} do
@@ -99,7 +104,7 @@ defmodule PukllayClubWeb.SitemapControllerTest do
       new_game = game_fixture(%{name: "Recién llegado"})
       second = conn |> get(~p"/sitemap.xml") |> response(200)
 
-      detail_url = url(~p"/juegos/#{new_game.id}")
+      detail_url = url(~p"/juegos/#{new_game}")
       refute first =~ detail_url
       assert second =~ detail_url
     end

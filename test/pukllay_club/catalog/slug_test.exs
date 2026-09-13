@@ -40,8 +40,8 @@ defmodule PukllayClub.Catalog.SlugTest do
       # 10th word falls exactly at character 60 (each "aaaaa-" unit is 6
       # chars), so slicing to 60 keeps that trailing dash — trimming AFTER
       # the cut is what removes it.
-      name = List.duplicate("aaaaa", 11) |> Enum.join(" ")
-      expected = List.duplicate("aaaaa", 10) |> Enum.join("-")
+      name = "aaaaa" |> List.duplicate(11) |> Enum.join(" ")
+      expected = "aaaaa" |> List.duplicate(10) |> Enum.join("-")
 
       slug = Slug.slugify(name)
 

@@ -499,7 +499,7 @@ defmodule PukllayClubWeb.LayoutsTest do
     test "the detail page's <main> carries pk-boundary-collapse", %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert main_class(html) =~ "pk-boundary-collapse"
     end
@@ -555,7 +555,7 @@ defmodule PukllayClubWeb.LayoutsTest do
     } do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       class = main_class(html)
       assert class =~ "pk-boundary-collapse"

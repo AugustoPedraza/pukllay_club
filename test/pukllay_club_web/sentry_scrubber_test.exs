@@ -104,7 +104,7 @@ defmodule PukllayClubWeb.SentryScrubberTest do
     test "a LiveView records Sentry breadcrumbs, and a blur breadcrumb keeps the event name and param key but not the typed name",
          %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
       render_blur(view, "validate-reservation", %{"value" => "Ana Pérez"})
 

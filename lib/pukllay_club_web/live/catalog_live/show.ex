@@ -1143,7 +1143,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # class-per-variant helper behind them all collapsed back to one shape
   # rather than being kept "in case" a second call site returns.
   defp share_control(assigns) do
-    assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game.id}"))
+    # `#{assigns.game}` (the struct, not `.id`) — quick task 260913-2x6:
+    # routes through the one `Phoenix.Param` impl on `Game` so the share
+    # URL carries the id-slug form.
+    assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game}"))
 
     ~H"""
     <div class="pk-share-wrap relative inline-block">

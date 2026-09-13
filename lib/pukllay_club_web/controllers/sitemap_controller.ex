@@ -11,11 +11,14 @@ defmodule PukllayClubWeb.SitemapController do
   escape function applied to every interpolated value (RESEARCH.md's Don't
   Hand-Roll table permits this shape as an alternative to a template).
   Emits no `<priority>`/`<changefreq>` — this catalog has no real signal to
-  base a fabricated value on.
+  base a fabricated value on. Quick task 260913-2x6: each `<loc>` is the
+  id-slug URL, built by interpolating the `Game` struct into
+  `~p"/juegos/\#{game}"` (the one `Phoenix.Param` impl), not a bare id.
   """
   use PukllayClubWeb, :controller
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Game
 
   def index(conn, _params) do
     entries = Catalog.sitemap_entries()
@@ -35,8 +38,11 @@ defmodule PukllayClubWeb.SitemapController do
     ])
   end
 
-  defp game_entry(%{id: id, updated_at: updated_at}) do
-    url_entry(url(~p"/juegos/#{id}"), lastmod(updated_at))
+  defp game_entry(%Game{updated_at: updated_at} = game) do
+    # Slug output is already restricted to [a-z0-9-] (T-2x6-05), but
+    # `escape/1` stays applied here as defense in depth — same as every
+    # other interpolated value in this document.
+    url_entry(url(~p"/juegos/#{game}"), lastmod(updated_at))
   end
 
   defp url_entry(loc, nil), do: ["<url><loc>", escape(loc), "</loc></url>"]
