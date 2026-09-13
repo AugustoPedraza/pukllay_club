@@ -3004,6 +3004,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute query =~ " "
       refute query =~ "é"
       refute query =~ "í"
+      refute query =~ "\n"
     end
 
     test "special characters cannot break out of the text= query parameter", %{conn: conn} do
@@ -3032,8 +3033,21 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
 
-      assert html =~ "quiero reservar"
-      assert html =~ "sábado en el club"
+      assert html =~ "Me gustaría reservar"
+
+      doc = LazyHTML.from_fragment(html)
+      [href] = doc |> LazyHTML.query("#reservation-modal a[href^='https://wa.me/']") |> LazyHTML.attribute("href")
+      query = href |> String.split("text=", parts: 2) |> List.last()
+      decoded = URI.decode_www_form(query)
+
+      game_url = url(~p"/juegos/#{game}")
+
+      assert decoded ==
+               ~s(¡Hola! Soy Ana. Me gustaría reservar "#{game.name}" para el próximo sábado en el club.) <>
+                 "\n\n" <> game_url
+
+      assert decoded =~ "/juegos/#{game.id}-"
+      refute decoded =~ ~r/presta|préstamo|alquil|llevar a casa/i
       refute html =~ ~r/presta|préstamo|alquil|llevar a casa/i
     end
 
