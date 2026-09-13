@@ -1109,7 +1109,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 :if={@reservation_name != "" and is_nil(@reservation_error)}
                 class="mt-4 space-y-3"
               >
-                <p class="text-sm text-base-content">
+                <p class="text-sm text-base-content whitespace-pre-line break-words">
                   {reservation_message(@reservation_name, @game)}
                 </p>
                 <a
@@ -1138,10 +1138,15 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # D-09/D-10 framing: asks the club to have the game set up at the next
   # Saturday session — never to lend/take it home. That FRAMING is the part
   # 01.1-05 approved (see 01.1-05-SUMMARY.md for the decision record) and it is
-  # unchanged here; the wording was loosened afterwards to drop the stilted
-  # "para jugarlo el próximo". Unlike everything else in this modal, this string
-  # is not UI chrome — it is the message a member actually SENDS to the club, so
+  # unchanged here. Unlike everything else in this modal, this string is not
+  # UI chrome — it is the message a member actually SENDS to the club, so
   # re-read it end to end before touching it again.
+  #
+  # Quick task 260913-3yi moved to the friendlier "Me gustaría reservar"
+  # phrasing with the game's own name quoted, and appends the game's id-slug
+  # URL (via the same `Phoenix.Param` idiom `share_control/1` already uses)
+  # so club staff reading the WhatsApp inbox can tap straight into the exact
+  # game page rather than guess from a name alone.
   defp reservation_message(name, %Game{} = game) do
     game_url = url(~p"/juegos/#{game}")
 
@@ -1150,7 +1155,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   end
 
   # Built entirely server-side (T-01.1-02) — URI.encode_www_form/1 percent-
-  # (or +-)encodes the ENTIRE message (visitor's name, quoted game name, and
+  # (or +-)encodes the whole message (visitor's name, quoted game name, and
   # the appended game URL, including its own separating newline) so nothing
   # can break out of the `text=` query parameter, superseding 01.1-RESEARCH.md's
   # client-side encodeURIComponent suggestion with a strictly stronger
