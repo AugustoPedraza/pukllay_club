@@ -253,6 +253,46 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     end
   end
 
+  # Quick task 260913-2x6: id-slug URLs (/juegos/<id>-<slug>). Request paths
+  # here are PLAIN string literals, not `~p"/juegos/#{game.id}"` — the
+  # whole point is asserting the literal id-slug form the app is supposed
+  # to serve/canonicalize, not deriving the expected value from the same
+  # `Phoenix.Param` impl under test.
+  describe "id-slug canonical URL (quick task 260913-2x6)" do
+    test "GET /juegos/<id>-<slug> returns 200 with canonical link, og:url and JSON-LD url all equal to the absolute id-slug URL",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+      expected = PukllayClubWeb.Endpoint.url() <> "/juegos/#{game.id}-catan"
+
+      conn = get(conn, "/juegos/#{game.id}-catan")
+      body = html_response(conn, 200)
+
+      assert canonical_href(body) == expected
+      assert meta_content(body, "og:url") == expected
+
+      [_full, _nonce, payload] = game_json_ld_match(body)
+      assert Jason.decode!(payload)["url"] == expected
+    end
+
+    test "GET /juegos/<id>abc (non-dash tail) renders the branded 404", %{conn: conn} do
+      game = game_fixture()
+
+      assert_error_sent(404, fn -> get(conn, "/juegos/#{game.id}abc") end)
+    end
+
+    test "GET /juegos/99999999999999999999-catan (out-of-bigint-range id) renders the branded 404",
+         %{conn: conn} do
+      assert_error_sent(404, fn -> get(conn, "/juegos/99999999999999999999-catan") end)
+    end
+  end
+
+  defp canonical_href(html) do
+    case Regex.run(~r/<link\s+rel="canonical"\s+href="([^"]*)"/, html) do
+      [_, value] -> value
+      nil -> nil
+    end
+  end
+
   # Phase 01.8-05 added a second, site-wide LocalBusiness JSON-LD script to
   # every page (including /juegos/:id) — this helper isolates the Game-typed
   # match among the (now two) script elements so this file's pre-existing

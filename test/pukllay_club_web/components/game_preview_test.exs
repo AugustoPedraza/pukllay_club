@@ -93,7 +93,7 @@ defmodule PukllayClubWeb.GamePreviewTest do
     test "the CTA is an outlined link to the game's detail page and carries no filled-button class" do
       html = render_component(&GamePreview.preview_body/1, game: @nivel_experto)
 
-      assert html =~ ~s(href="/juegos/1")
+      assert html =~ ~s(href="/juegos/1-juego-experto")
       assert html =~ "btn-outline"
       refute html =~ "btn btn-primary btn-sm"
     end

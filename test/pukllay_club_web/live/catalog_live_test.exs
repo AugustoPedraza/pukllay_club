@@ -177,7 +177,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      assert html =~ ~s(href="/juegos/#{game.id}")
+      assert html =~ ~s(href="/juegos/#{game.id}-juego-detalle")
     end
 
     test "renders inside its own max-w-7xl container, with no 672px ancestor cap", %{conn: conn} do

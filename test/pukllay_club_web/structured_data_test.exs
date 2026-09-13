@@ -97,6 +97,18 @@ defmodule PukllayClubWeb.StructuredDataTest do
 
       assert types == ["Game", "LocalBusiness"]
     end
+
+    # Quick task 260913-2x6: id-slug URLs — literal expectation, not derived
+    # from the same `Phoenix.Param` impl under test.
+    test "the Game JSON-LD payload's url is the absolute id-slug URL" do
+      game = game_fixture(%{name: "Catán"})
+
+      body = build_conn() |> get("/juegos/#{game.id}-catan") |> html_response(200)
+
+      payload = body |> decode_json_ld_payloads() |> Enum.find(&(&1["@type"] == "Game"))
+
+      assert payload["url"] == PukllayClubWeb.Endpoint.url() <> "/juegos/#{game.id}-catan"
+    end
   end
 
   describe "OG fallback asset (SHARE-04)" do

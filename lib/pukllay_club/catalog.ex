@@ -132,28 +132,42 @@ defmodule PukllayClub.Catalog do
     |> Repo.aggregate(:count)
   end
 
+  # Postgres' `bigint` range — the `games.id` primary key's real column
+  # type. A crafted id outside this range would otherwise reach Postgrex as
+  # a bound parameter and raise there (T-2x6-03); rejecting it here keeps
+  # the single 404 contract intact instead of risking a 500.
+  @max_bigint 9_223_372_036_854_775_807
+
   @doc """
   Fetches a single game by id, raising `Ecto.NoResultsError` for an unknown
   id. `Ecto.NoResultsError` implements `Plug.Exception` with a 404 status,
   so `CatalogLive.Show` renders the generated 404 page rather than a crash
   or a 500 (T-01-30).
 
-  A non-numeric id (e.g. `"abc"`) cannot be cast to the `:id` primary key
-  type — `Repo.get!/2` would otherwise raise `Ecto.Query.CastError`, which
-  does *not* implement `Plug.Exception` and would 500 instead of rendering
-  the branded 404. Parsing the id first and raising `Ecto.NoResultsError`
-  for anything that doesn't fully parse as an integer keeps the single
-  404 contract intact for every kind of bad id, not just the
-  numeric-but-nonexistent one.
+  Accepts either the bare `"<id>"` form or the id-slug `"<id>-<anything>"`
+  form (quick task 260913-2x6) — the slug tail is only for readability/SEO
+  and is never validated against the game's real current slug here; that
+  canonicalization check lives in `PukllayClubWeb.Plugs.GameSEO` and
+  `CatalogLive.Show.handle_params/3`, which compare the raw param against
+  `Phoenix.Param.to_param/1` and redirect/patch when it differs. A
+  non-numeric id, an id followed by anything other than a `-`, or an
+  integer outside Postgres' bigint range (T-2x6-03) all raise
+  `Ecto.NoResultsError` here — `Repo.get!/2` would otherwise raise
+  `Ecto.Query.CastError` for a non-numeric id, which does *not* implement
+  `Plug.Exception` and would 500 instead of rendering the branded 404.
   """
   def get_game!(id) when is_binary(id) do
     case Integer.parse(id) do
-      {int_id, ""} -> Repo.get!(Game, int_id)
+      {int_id, ""} -> fetch_by_id!(int_id)
+      {int_id, "-" <> _rest} -> fetch_by_id!(int_id)
       _ -> raise Ecto.NoResultsError, queryable: Game
     end
   end
 
   def get_game!(id), do: Repo.get!(Game, id)
+
+  defp fetch_by_id!(int_id) when int_id in 1..@max_bigint, do: Repo.get!(Game, int_id)
+  defp fetch_by_id!(_out_of_range), do: raise(Ecto.NoResultsError, queryable: Game)
 
   @doc """
   The single, explicitly-ordered source of truth for `sitemap.xml`'s
