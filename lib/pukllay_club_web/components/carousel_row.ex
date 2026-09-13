@@ -30,6 +30,16 @@ defmodule PukllayClubWeb.CarouselRow do
   every one of the 8 home-page callers leaves it unset, so those rows are
   byte-identical to before this attr existed.
 
+  `href` (quick task 260913-0h6): when set, turns the whole header into
+  the shelf's "see all" entry point — a real `<.link navigate={@href}>`
+  wrapping the title/subtitle plus a trailing "Ver todos" cue. This
+  replaces the removed trailing tile from quick task 260824-u5d, now
+  living in the header instead of a fourth rail item. `nil` (the default)
+  keeps every existing caller rendering exactly as before — `Juegos
+  similares` (`CatalogLive.Show`) and `Recientemente añadidos`
+  (`CatalogLive.Index`) have no filtered-landing destination, so they stay
+  plain, non-interactive headings.
+
   G-01-3: the rail's horizontal scroll is intentional — it is NOT the
   responsive `#games` grid. The always-visible `.pk-rail-wrap` edge-fade
   is the primary passive scroll cue (01-11); Netflix-style edge-overlay
@@ -59,6 +69,12 @@ defmodule PukllayClubWeb.CarouselRow do
   # render byte-identically — see catalog_show_test.exs's home-page
   # invariance test.
   attr :badge, :string, default: nil
+  # quick task 260913-0h6: the shelf's filtered-landing path. `nil` (every
+  # caller before this task, and `similares`/`recientemente_anadidos`
+  # forever) renders the plain heading below unchanged. Set, it wraps the
+  # heading in a real navigable anchor with a "Ver todos" cue — see the
+  # moduledoc paragraph above.
+  attr :href, :string, default: nil
 
   def carousel_row(assigns) do
     ~H"""
@@ -223,15 +239,35 @@ defmodule PukllayClubWeb.CarouselRow do
         }
       </script>
       <div class="pk-row-header mx-auto w-full max-w-7xl pk-gutter flex items-end justify-between gap-4">
-        <div class="space-y-1">
-          <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>
-            {@title}<span
-              :if={@badge}
-              class="badge badge-accent badge-sm rounded-full font-bold ml-2 align-middle"
-            >{@badge}</span>
-          </h2>
-          <p :if={@subtitle} class="text-neutral text-sm">{@subtitle}</p>
-        </div>
+        <.link
+          :if={@href}
+          navigate={@href}
+          class="pk-row-link"
+          aria-label={"#{@title}: ver todos los juegos"}
+          aria-describedby={@subtitle && "#{@id}-subtitle"}
+        >
+          <div class="min-w-0">
+            <.row_heading
+              title={@title}
+              variant={@variant}
+              badge={@badge}
+              subtitle={@subtitle}
+              subtitle_id={"#{@id}-subtitle"}
+            />
+          </div>
+          <span class="pk-row-cue" aria-hidden="true">
+            Ver todos
+            <CoreComponents.icon name="hero-chevron-right-mini" class="pk-row-cue-icon size-4" />
+          </span>
+        </.link>
+        <.row_heading
+          :if={!@href}
+          title={@title}
+          variant={@variant}
+          badge={@badge}
+          subtitle={@subtitle}
+          subtitle_id={"#{@id}-subtitle"}
+        />
       </div>
       <div data-rail-wrap class="pk-rail-wrap mx-auto w-full max-w-7xl pk-gutter">
         <button
@@ -277,6 +313,32 @@ defmodule PukllayClubWeb.CarouselRow do
         </button>
       </div>
     </section>
+    """
+  end
+
+  # The title/badge/subtitle block shared by both the linked (`.pk-row-link`
+  # anchor) and unlinked branches of the header above (quick task
+  # 260913-0h6) — one place declares this markup so the two branches can
+  # never drift on the h2 classes, hero colour or badge span. `subtitle_id`
+  # is always `"#{@id}-subtitle"` (the parent's own id, not this
+  # component's), so the linked branch's `aria-describedby` can point at it.
+  attr :title, :string, required: true
+  attr :variant, :atom, required: true
+  attr :badge, :string, default: nil
+  attr :subtitle, :string, default: nil
+  attr :subtitle_id, :string, required: true
+
+  defp row_heading(assigns) do
+    ~H"""
+    <div class="space-y-1">
+      <h2 class={["font-display text-2xl", @variant == :hero && "text-primary"]}>
+        {@title}<span
+          :if={@badge}
+          class="badge badge-accent badge-sm rounded-full font-bold ml-2 align-middle"
+        >{@badge}</span>
+      </h2>
+      <p :if={@subtitle} id={@subtitle_id} class="text-neutral text-sm">{@subtitle}</p>
+    </div>
     """
   end
 
