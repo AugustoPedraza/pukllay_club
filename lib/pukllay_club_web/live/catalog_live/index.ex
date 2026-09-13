@@ -1131,7 +1131,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
                   phx-value-scalar={chip.scalar}
                   phx-value-choice={chip.choice}
                   aria-label={chip.aria_label}
-                  class="pk-active-filter-chip pk-pill pk-pill-accent pk-pill-comfortable pk-pill-interactive min-h-11"
+                  class="pk-active-filter-chip pk-pill pk-pill-accent pk-pill-comfortable pk-pill-interactive"
                 >
                   {chip.label}<span class="pk-active-filter-chip-x" aria-hidden="true">×</span>
                 </button>

@@ -1042,6 +1042,12 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         assert "pk-pill-accent" in tokens
         assert "pk-pill-comfortable" in tokens
         assert "pk-pill-interactive" in tokens
+
+        refute "min-h-11" in tokens,
+               "an active-filter chip must not carry min-h-11 (quick 260913-1s5) — its 44px hit " <>
+                 "area now comes from .pk-pill-interactive's own ::after layer, and min-h-11 " <>
+                 "would re-inflate the chip's drawn box back to 44px over the new 32px " <>
+                 "comfortable floor."
       end
     end
   end

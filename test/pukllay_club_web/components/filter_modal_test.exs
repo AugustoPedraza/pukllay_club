@@ -161,6 +161,29 @@ defmodule PukllayClubWeb.FilterModalTest do
       # the migration onto the shared pill base).
       assert html =~ "aria-pressed"
       assert html =~ "pk-pill-selected"
+
+      # quick 260913-1s5: the selected chip still carries the comfortable
+      # size + interactive variant, but no longer a per-call-site min-h-11 —
+      # that utility re-inflates the drawn box to 44px over the new 32px
+      # comfortable floor. The 44px hit area now comes from
+      # .pk-pill-interactive's own ::after layer instead.
+      doc = LazyHTML.from_document(html)
+
+      selected_chip_class =
+        doc
+        |> LazyHTML.query(~s(button[phx-value-facet="weight_bands"]))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      tokens = String.split(selected_chip_class)
+
+      assert "pk-pill-comfortable" in tokens
+      assert "pk-pill-interactive" in tokens
+
+      refute "min-h-11" in tokens,
+             "a selected filter-modal chip must not carry min-h-11 — its 44px hit area comes " <>
+               "from .pk-pill-interactive's ::after layer, and min-h-11 would re-inflate the " <>
+               "chip's drawn box back to 44px over the new 32px comfortable floor."
     end
 
     # G-01.2-27 task 2: pins the two states apart so they cannot collapse
@@ -193,6 +216,13 @@ defmodule PukllayClubWeb.FilterModalTest do
         assert "pk-pill" in tokens
         assert "pk-pill-outline" in tokens
         refute "pk-pill-selected" in tokens
+
+        # quick 260913-1s5: same contract as the selected-chip case above —
+        # comfortable + interactive stay, min-h-11 goes (re-inflates the
+        # drawn box; the ::after hit layer supplies the 44px target now).
+        assert "pk-pill-comfortable" in tokens
+        assert "pk-pill-interactive" in tokens
+        refute "min-h-11" in tokens
       end
     end
 

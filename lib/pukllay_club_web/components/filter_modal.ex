@@ -530,12 +530,18 @@ defmodule PukllayClubWeb.FilterModal do
   # moved with the lift: `pk-pill-selected` now declares that same
   # `box-shadow` once, in the base's own variant block, which is why no
   # shadow utility appears in either returned list below any more.
+  #
+  # No `min-h-11` here (quick 260913-1s5, revising quick 260912-rwv/WINDOWS
+  # #18): the 44px touch target comes from `.pk-pill-interactive`'s own
+  # `::after` hit layer now, not a drawn height utility — a per-call-site
+  # `min-h-11` would re-inflate the chip's drawn box back to 44px over the
+  # new 32px `pk-pill-comfortable.pk-pill-interactive` compact floor.
   defp chip_class(true) do
-    ["pk-pill", "pk-pill-selected", "pk-pill-comfortable", "pk-pill-interactive", "min-h-11"]
+    ["pk-pill", "pk-pill-selected", "pk-pill-comfortable", "pk-pill-interactive"]
   end
 
   defp chip_class(false) do
-    ["pk-pill", "pk-pill-outline", "pk-pill-comfortable", "pk-pill-interactive", "min-h-11"]
+    ["pk-pill", "pk-pill-outline", "pk-pill-comfortable", "pk-pill-interactive"]
   end
 
   defp cta_label(1), do: "Ver 1 juego"
