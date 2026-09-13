@@ -654,6 +654,42 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # Quick task 260913-2x6 (T-2x6-04): live navigation to a non-canonical id
+  # never issues a fresh HTTP request, so `PukllayClubWeb.Plugs.GameSEO`
+  # never runs — `handle_params/3` is the only thing that can correct it.
+  # `render_patch/2` simulates the browser navigating (via patch) to the
+  # given path on the SAME already-mounted LiveView, which is exactly the
+  # "no HTTP request" scenario this task targets.
+  describe "canonical URL self-healing on live navigation (quick task 260913-2x6)" do
+    test "a patch to a non-canonical id, with a query string, is corrected in place to the canonical id-slug path",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      {:ok, view, _html} = live(conn, "/juegos/#{game.id}-catan")
+
+      render_patch(view, "/juegos/#{game.id}?from=q%3Dcatan")
+
+      assert_patch(view, "/juegos/#{game.id}-catan?from=q%3Dcatan")
+    end
+
+    test "a patch to the already-canonical path is a no-op — handle_params never issues a second patch",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      {:ok, view, _html} = live(conn, "/juegos/#{game.id}-catan")
+
+      render_patch(view, "/juegos/#{game.id}-catan")
+      # Consumes render_patch's own client-navigation message — confirms
+      # the simulated browser patch landed on the canonical path itself.
+      assert_patch(view, "/juegos/#{game.id}-catan")
+
+      # If handle_params's no-op branch were wrong and it issued its own
+      # push_patch on top of that, a second navigation message would be
+      # sitting in the mailbox here.
+      refute_patched(view)
+    end
+  end
+
   # 01.3-08 (UAT gap G-01.3-1 item 6 + sketch 042's inline-chevron toggle)
   # / 01.3-10 (gap closure G-01.3-4): pins the description's justify/clamp
   # mechanism and the icon-only toggle's collapsed/expanded contract. The

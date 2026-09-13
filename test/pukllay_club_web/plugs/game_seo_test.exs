@@ -286,6 +286,73 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     end
   end
 
+  # Quick task 260913-2x6 (T-2x6-01/02/04): request paths for deliberately
+  # non-canonical URLs are PLAIN string literals, never `~p"/juegos/#{game}"`
+  # — this suite exists specifically to assert what the plug does to a URL
+  # that ISN'T what the app's own Phoenix.Param impl would produce.
+  describe "canonical URL redirects (quick task 260913-2x6)" do
+    test "GET /juegos/<id> (bare id) redirects 301 to the canonical id-slug path", %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      conn = get(conn, "/juegos/#{game.id}")
+
+      assert redirected_to(conn, 301) == "/juegos/#{game.id}-catan"
+    end
+
+    test "GET /juegos/<id>-<stale-slug>?from=... redirects 301 to the current slug, query string byte-preserved",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      conn = get(conn, "/juegos/#{game.id}-nombre-viejo?from=q%3Dcatan")
+
+      assert redirected_to(conn, 301) == "/juegos/#{game.id}-catan?from=q%3Dcatan"
+    end
+
+    test "GET /juegos/<id>-<current-slug> renders 200 with no location header (no self-redirect)",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      conn = get(conn, "/juegos/#{game.id}-catan")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "location") == []
+    end
+
+    test "a game whose name has no letters/digits: bare id renders 200 (no loop); trailing-dash and junk-tail both 301 to the bare id",
+         %{conn: conn} do
+      game = game_fixture(%{name: "!!!"})
+
+      bare_conn = get(conn, "/juegos/#{game.id}")
+      assert bare_conn.status == 200
+      assert get_resp_header(bare_conn, "location") == []
+
+      for path <- ["/juegos/#{game.id}-", "/juegos/#{game.id}-x"] do
+        conn = get(build_conn(), path)
+        assert redirected_to(conn, 301) == "/juegos/#{game.id}"
+      end
+    end
+
+    test "the redirect Location is host-less and path-only even when the query string carries a schema-relative URL (open-redirect guard, T-2x6-01)",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      conn = get(conn, "/juegos/#{game.id}-x?next=//evil.example/path")
+
+      [location] = get_resp_header(conn, "location")
+      uri = URI.parse(location)
+
+      assert uri.host == nil
+      assert uri.path == "/juegos/#{game.id}-catan"
+    end
+
+    test "GET /juegos/999999999-catan and GET /juegos/999999999 both still render the branded 404 (unknown id, before any redirect decision)",
+         %{conn: _conn} do
+      for path <- ["/juegos/999999999-catan", "/juegos/999999999"] do
+        assert_error_sent(404, fn -> get(build_conn(), path) end)
+      end
+    end
+  end
+
   defp canonical_href(html) do
     case Regex.run(~r/<link\s+rel="canonical"\s+href="([^"]*)"/, html) do
       [_, value] -> value
