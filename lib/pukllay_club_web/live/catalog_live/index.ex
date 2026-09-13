@@ -803,6 +803,19 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
   defp row_subtitle(_unrecognized), do: nil
 
+  # quick task 260913-0h6: the shelf's filtered-landing path, one literal
+  # clause per key (mirrors row_subtitle/1's own pattern rather than a
+  # case, to keep Credo's cyclomatic-complexity check happy). Every href
+  # is built only from server-side shelf keys and Vocabulary constants,
+  # never from client input, and every landing param is re-validated by
+  # CatalogFilters.from_params/1's closed-Vocabulary whitelist — no new
+  # param key, no new parsing path.
+  defp row_href(:crea_conexiones), do: tag_href("#CreaConexiones")
+
+  defp row_href(_unrecognized), do: nil
+
+  defp tag_href(tag), do: ~p"/?tags=#{tag}"
+
   defp editorial_tag_meaning(tag) do
     Vocabulary.editorial_tags()
     |> Enum.find(&(&1.tag == tag))
@@ -1046,6 +1059,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
                 games={Map.fetch!(@streams, carousel_stream_name(row.key))}
                 variant={row_variant(row.key)}
                 subtitle={row_subtitle(row.key)}
+                href={row_href(row.key)}
                 empty={row.empty?}
                 row_key={to_string(row.key)}
                 exhausted={row.exhausted?}

@@ -909,6 +909,82 @@
   scroll-margin-top: calc(var(--pk-header-h, 4.5rem) + 1rem);
 }
 
+/* quick task 260913-0h6: the 7 filter-expressible shelf headers become
+   real anchors (see CarouselRow.carousel_row/1's href attr) landing on
+   the filtered ludoteca grid. `.pk-row-link`/`.pk-row-cue` are named
+   without "chip"/"pill" so the bespoke-chip drift gate
+   (catalog_live_test.exs) never has to reason about them — this is a
+   navigation control, not part of the chip/pill family. */
+.pk-row-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: 44px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-box);
+}
+
+.pk-row-link:focus-visible {
+  outline: 2px solid var(--pk-ink-brand);
+  outline-offset: 4px;
+}
+
+.pk-row-cue {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 12px 0 16px;
+  border: 1px solid var(--color-base-300);
+  border-radius: 9999px;
+  color: var(--pk-ink-brand);
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.pk-row-link:focus-visible .pk-row-cue {
+  border-color: var(--pk-ink-brand);
+  background-color: color-mix(in srgb, var(--pk-ink-brand) 8%, transparent);
+}
+
+/* Hover is pointer-fine-only (matches the carousel arrow gate above) so
+   touch devices never get a sticky hover state — the persistent bordered
+   cue is their affordance instead. */
+@media (hover: hover) and (pointer: fine) {
+  .pk-row-link:hover .pk-row-cue {
+    border-color: var(--pk-ink-brand);
+    background-color: color-mix(in srgb, var(--pk-ink-brand) 8%, transparent);
+  }
+
+  .pk-row-link:hover h2 {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.15em;
+  }
+}
+
+.pk-row-link:active .pk-row-cue {
+  border-color: var(--pk-ink-brand);
+  background-color: color-mix(in srgb, var(--pk-ink-brand) 14%, transparent);
+}
+
+.pk-row-cue-icon {
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+  .pk-row-link:hover .pk-row-cue-icon {
+    transform: translateX(3px);
+  }
+}
+
 .pk-rail-wrap {
   position: relative;
 }
@@ -6542,6 +6618,14 @@ body:has(#cierre) .pk-footer {
 
   .pk-shelf {
     margin-bottom: 2rem;
+  }
+
+  /* quick task 260913-0h6: joins the catalogue's existing Inter
+     14px/600 (>=481px) -> 12px/600 (<=480px) body-semibold density step
+     (ui-design-system's measured type inventory), no new type combo. */
+  .pk-row-cue {
+    font-size: 0.75rem;
+    padding: 0 10px 0 12px;
   }
 
   .pk-card-caption {
