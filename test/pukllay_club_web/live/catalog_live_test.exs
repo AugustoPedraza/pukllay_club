@@ -4,6 +4,9 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
 
+  alias Plug.Conn.Query
+  alias PukllayClubWeb.CarouselRow
+
   describe "GET /" do
     test "mounts for an unauthenticated visitor with no redirect (CATALOG-08)", %{conn: conn} do
       game_fixture()
@@ -2519,6 +2522,99 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
                "`#{selector}` declares its own font-size outside the pill system. Type size " <>
                  "lives on `.pk-pill` or a size variant, never on a bespoke chip rule."
       end
+    end
+  end
+
+  describe "tappable shelf headers filter the ludoteca (quick 260913-0h6)" do
+    test "Crea conexiones header is a single anchor with a %23-encoded tags href and correct a11y wiring",
+         %{conn: conn} do
+      game_fixture(%{name: "Crea Conexiones Game", tags: ["#CreaConexiones"]})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+
+      header_links =
+        LazyHTML.query(doc, "#carousel-crea_conexiones .pk-row-header a.pk-row-link")
+
+      assert Enum.count(header_links) == 1
+
+      [href] = LazyHTML.attribute(header_links, "href")
+      assert href =~ "%23"
+      refute href =~ "#"
+
+      "/?" <> query_string = href
+      assert Query.decode(query_string) == %{"tags" => "#CreaConexiones"}
+
+      link_html = LazyHTML.to_html(header_links)
+      assert link_html =~ "Crea conexiones"
+      assert link_html =~ "Ver todos"
+
+      [aria_label] = LazyHTML.attribute(header_links, "aria-label")
+      assert String.starts_with?(aria_label, "Crea conexiones")
+
+      [describedby] = LazyHTML.attribute(header_links, "aria-describedby")
+
+      subtitle_ids =
+        link_html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("p")
+        |> LazyHTML.attribute("id")
+
+      assert describedby in subtitle_ids
+    end
+
+    test "following the Crea conexiones header link lands on the Resultados grid holding only that shelf's games",
+         %{conn: conn} do
+      game_fixture(%{name: "Crea Conexiones Game", tags: ["#CreaConexiones"]})
+      game_fixture(%{name: "Duelos Only Game", tags: ["#DuelosMemorables"]})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      {:ok, _view, html} =
+        view
+        |> element("#carousel-crea_conexiones a.pk-row-link")
+        |> render_click()
+        |> follow_redirect(conn)
+
+      assert html =~ ~s(id="games")
+      assert html =~ "Resultados"
+      refute html =~ ~s(id="carousel-rows")
+
+      grid = grid_html(html)
+      assert grid =~ "Crea Conexiones Game"
+      refute grid =~ "Duelos Only Game"
+    end
+
+    test "carousel_row/1 rendered without href (CatalogLive.Show's 'similares' shape) has no pk-row-link and no Ver todos cue",
+         %{conn: _conn} do
+      game = game_fixture(%{name: "Similares Game"})
+
+      html =
+        render_component(&CarouselRow.carousel_row/1, %{
+          id: "similares",
+          title: "Juegos similares",
+          badge: nil,
+          games: [{"similares-#{game.id}", game}],
+          subtitle: "Otras opciones que te van a encantar",
+          empty: false,
+          row_key: "similares",
+          exhausted: true
+        })
+
+      header_html =
+        html |> LazyHTML.from_fragment() |> LazyHTML.query(".pk-row-header") |> LazyHTML.to_html()
+
+      refute header_html =~ "pk-row-link"
+      refute header_html =~ "Ver todos"
+
+      h2_wrapped_in_anchor? =
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(".pk-row-header a h2")
+        |> Enum.count() > 0
+
+      refute h2_wrapped_in_anchor?
     end
   end
 
