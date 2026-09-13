@@ -137,7 +137,8 @@
                                                as two levels of one hierarchy
     #3D096D on dark bg ....... FAIL         -> dark mode does NOT reuse the
                                                light primary; it ships its own
-                                               deep, saturated magenta-violet
+                                               deep, saturated violet (sketch
+                                               058, quick task 260912-waa)
                                                with white ink (see sketch 054
                                                provenance comment below) */
 /* Sketch 054 (2026-09-10), winner "A (Lifted Ladder) + W2 (Deep Jewel)".
@@ -223,7 +224,62 @@
    rotation is visible on the real page; the developer deferred any further
    label-ink change until after viewing it. See
    `.planning/quick/260910-if9-.../AUDIT.md` for the full costed option set
-   and `260910-if9-SUMMARY.md` for the recorded decision. */
+   and `260910-if9-SUMMARY.md` for the recorded decision.
+
+   UPDATED (quick task 260912-waa, sketch 058, 2026-09-12): the shared
+   ramp's hue moved H313.1 -> H300 -- the brand manual's own Lila Oscuro
+   hue -- per-stop lightness and k=0.85 held (see the ramp block's own
+   header comment below for the full method). Also applied per the
+   developer's own "keep consistency with light version to uniform color"
+   instruction: every other literal (non-var) purple role in BOTH theme
+   blocks rotated onto the same H300 hue, holding each role's own L and C.
+
+   Ramp stops (before -> after):
+     --pk-ramp-50:  #FAF5FE -> #F8F6FE      --pk-ramp-700: #702093 -> #6222A6
+     --pk-ramp-100: #F6EAFD -> #F1ECFD      --pk-ramp-800: #551670 -> #4A187F
+     --pk-ramp-200: #EACEFA -> #DFD3FA      --pk-ramp-900: #45105C -> #3C1269
+     --pk-ramp-300: #DCADF6 -> #CBB5F6      --pk-ramp-950: #380B4C -> #300D56
+     --pk-ramp-400: #CE89F3 -> #B896F3
+     --pk-ramp-500: #B739ED -> #9959ED
+     --pk-ramp-600: #8C2AB7 -> #7B2DCE
+
+   Dark off-ramp roles rotated (L, C held):
+     --color-base-100:      #361148 -> #2E154E
+     --color-secondary:     #642C77 -> #553384
+     --color-accent:        #3A1F47 -> #33224D
+     --color-accent-content:#EBD7F4 -> #E3D9F9
+     --color-neutral:       #C59CDC -> #B8A0E5
+     --color-neutral-content, --color-info-content, --color-success-content,
+     --color-warning-content, --color-error-content (same shared literal):
+                             #170A26 -> #160A27
+     --pk-ink-brand (dark):  #C791E5 -> #B797F0
+
+   Light off-ramp roles rotated (L, C held):
+     --color-base-300:      #E3D3F0 -> #DED4F3
+     --color-base-content, --color-warning-content (same shared literal):
+                             #241238 -> #231339
+     --color-accent:        #EDE1F7 -> #E9E2F9
+     --color-neutral:       #6B5B7B -> #675C7D
+     --color-secondary:     #7E4CA5 -> #7550AC -- the brand manual's Violeta
+       (H308.1) rotated onto the uniform H300 hue at the developer's
+       request, so no purple in either theme sits off-hue.
+
+   Kept unchanged, deliberately:
+     --pk-shadow-color: rgb(20 8 34) -- a fixed, theme-invariant near-black
+       shadow (H302.5, L16.9), deliberately left alone; it is not a
+       daisyUI theme role and was never in scope for a hue rotation.
+
+   Sketch 054's four pinned dark-mode contrast assertions, re-measured
+   post-rotation via h300-audit.mjs --check:
+     text (#F1ECFD) on bg (#2E154E) ............. 13.62:1 (floor 13.593)
+     muted (#B8A0E5) on bg (#2E154E) .............  6.90:1 (floor  6.847)
+     text (#F1ECFD) on surface (#3C1269) ......... 12.25:1 (floor 12.069)
+     primary-content (#FFFFFF) on primary (#7B2DCE) 6.76:1 (floor  6.696)
+   All four hold at or above their pinned floor; this rotation does not
+   reopen sketch 054's contrast decision, only its hue. See
+   `260912-waa-SUMMARY.md`
+   (`.planning/quick/260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-/`)
+   for the full before/after table and every other re-measured pair. */
 
 /* --pk-ramp-* (quick task 260910-l7q): the single shared OKLCh colour ramp
    both themes read from — a role's colour is a POSITION on this ramp
@@ -232,9 +288,9 @@
    immediately above the theme blocks that consume it — this IS the
    file's single upstream palette source, not a per-theme copy.
 
-   Envelope: FLAT (Task 3 Decision 1, option B) — one fixed hue (H313.1)
+   Envelope: FLAT (Task 3 Decision 1, option B) — one fixed hue (H300)
    and one safety factor `k=0.85` across all 11 stops:
-   `C = k · maxC(L, H313.1)`, where `maxC` is the maximum in-gamut sRGB
+   `C = k · maxC(L, H300)`, where `maxC` is the maximum in-gamut sRGB
    chroma at that lightness/hue (a bisection search — see `ramp-audit.mjs`).
    The developer picked FLAT over the plan's recommended ANCHORED envelope
    specifically because it is the only one of the two that delivers the
@@ -244,10 +300,22 @@
    prior value (hand-nudging anchor stops is ANCHORED's mechanism, not
    FLAT's).
 
+   UPDATED (quick task 260912-waa, sketch 058, 2026-09-12): the ramp's hue
+   moved H313.1 -> H300 -- the brand manual's own Lila Oscuro hue (#3D096D,
+   H300.1) -- the developer's picked winner "C" after comparing it
+   side-by-side against H313 (today), H305 and H292
+   (`.planning/sketches/058-dark-purple-hue/README.md`). Every stop below
+   holds the SAME OKLCh lightness the previous H313.1 ramp shipped with;
+   only the hue rotates and chroma is recomputed at that lightness against
+   the NEW hue's gamut ceiling (`k · maxC(L, H300)`). This is why stop 500
+   does not sit at the H300 gamut peak (that peak is L55.3 at H300 vs the
+   shipped L60.9) — the ramp deliberately holds each stop's own prior L
+   rather than re-deriving a fresh ladder at the new hue.
+
    THE HEADLINE RESULT (the developer's own motivating example, now
    structurally realised): light `--color-primary`, light
    `--color-accent-content` and dark `--color-base-200` ALL resolve to
-   `--pk-ramp-900` (#45105C) — one physical swatch worn as a light-theme
+   `--pk-ramp-900` (#3C1269) — one physical swatch worn as a light-theme
    button fill AND a dark-theme card surface. This is the "Reservar para
    el sábado" example from `260910-l7q-CONTEXT.md`, closed by construction
    rather than coincidence.
@@ -260,24 +328,29 @@
    stop and reason).
 
    Regenerate and re-audit with:
-     node .planning/quick/260910-l7q-redesign-the-light-dark-color-palette-as/ramp-audit.mjs
+     node .planning/quick/260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-/h300-audit.mjs --check
+   The archived H313.1 generator (`ramp-audit.mjs`, below) keeps its own
+   H313.1 history untouched and is NOT the current regenerate command.
    Full JOIN/OFF-RAMP audit, ΔE, and WCAG floor recheck for both the FLAT
-   and ANCHORED candidates live in that script's own output; the
-   developer's Task 3 answers and the reuse counts they were shown against
-   are recorded verbatim in `260910-l7q-SUMMARY.md`
-   (`.planning/quick/260910-l7q-redesign-the-light-dark-color-palette-as/`). */
+   and ANCHORED candidates at H313.1 live in that archived script's own
+   output; the developer's Task 3 answers and the reuse counts they were
+   shown against are recorded verbatim in `260910-l7q-SUMMARY.md`
+   (`.planning/quick/260910-l7q-redesign-the-light-dark-color-palette-as/`).
+   The H300 winner's own propose/--check output and re-measured WCAG
+   figures are recorded in `260912-waa-SUMMARY.md`
+   (`.planning/quick/260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-/`). */
 :root {
-  --pk-ramp-50: #FAF5FE;
-  --pk-ramp-100: #F6EAFD;
-  --pk-ramp-200: #EACEFA;
-  --pk-ramp-300: #DCADF6;
-  --pk-ramp-400: #CE89F3;
-  --pk-ramp-500: #B739ED;
-  --pk-ramp-600: #8C2AB7;
-  --pk-ramp-700: #702093;
-  --pk-ramp-800: #551670;
-  --pk-ramp-900: #45105C;
-  --pk-ramp-950: #380B4C;
+  --pk-ramp-50: #F8F6FE;
+  --pk-ramp-100: #F1ECFD;
+  --pk-ramp-200: #DFD3FA;
+  --pk-ramp-300: #CBB5F6;
+  --pk-ramp-400: #B896F3;
+  --pk-ramp-500: #9959ED;
+  --pk-ramp-600: #7B2DCE;
+  --pk-ramp-700: #6222A6;
+  --pk-ramp-800: #4A187F;
+  --pk-ramp-900: #3C1269;
+  --pk-ramp-950: #300D56;
 }
 
 @plugin "daisyui/packages/bundle/daisyui-theme" {
@@ -285,37 +358,37 @@
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0132 > 0.012) */
-  --color-base-100: #361148;
+  /* off-ramp: nearest --pk-ramp-950 (#300D56), chroma tier (dE 0.0208 > 0.012) */
+  --color-base-100: #2E154E;
   --color-base-200: var(--pk-ramp-900);
   --color-base-300: var(--pk-ramp-800);
   --color-base-content: var(--pk-ramp-100);
   --color-primary: var(--pk-ramp-600);
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-primary-content: #FFFFFF;
-  /* off-ramp: nearest --pk-ramp-700 (#702093), chroma tier (dE 0.0549 > 0.012) */
-  --color-secondary: #642C77;
+  /* off-ramp: nearest --pk-ramp-800 (#4A187F), chroma tier (dE 0.0604 > 0.012) */
+  --color-secondary: #553384;
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-secondary-content: #FFFFFF;
-  /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0465 > 0.012) */
-  --color-accent: #3A1F47;
-  /* off-ramp: nearest --pk-ramp-200 (#EACEFA), chroma tier (dE 0.0271 > 0.012) */
-  --color-accent-content: #EBD7F4;
-  /* off-ramp: nearest --pk-ramp-300 (#DCADF6), chroma tier (dE 0.0635 > 0.012) */
-  --color-neutral: #C59CDC;
-  /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.1041 > 0.012) */
-  --color-neutral-content: #170A26;
+  /* off-ramp: nearest --pk-ramp-950 (#300D56), chroma tier (dE 0.0524 > 0.012) */
+  --color-accent: #33224D;
+  /* off-ramp: nearest --pk-ramp-200 (#DFD3FA), chroma tier (dE 0.0174 > 0.012) */
+  --color-accent-content: #E3D9F9;
+  /* off-ramp: nearest --pk-ramp-400 (#B896F3), chroma tier (dE 0.0366 > 0.012) */
+  --color-neutral: #B8A0E5;
+  /* off-ramp: nearest --pk-ramp-950 (#300D56), chroma tier (dE 0.1063 > 0.012) */
+  --color-neutral-content: #160A27;
   /* off-ramp (D-Semantics): info/success/warning/error and their -content
      slots are other hues (H258/H162/H77/H7) -- they never join the brand
-     ramp at H313.1 regardless of ΔE; carry no ramp reference at all. */
+     ramp at H300 regardless of ΔE; carry no ramp reference at all. */
   --color-info: #7C9AD1;
-  --color-info-content: #170A26;
+  --color-info-content: #160A27;
   --color-success: #5FBE95;
-  --color-success-content: #170A26;
+  --color-success-content: #160A27;
   --color-warning: #D9A24B;
-  --color-warning-content: #170A26;
+  --color-warning-content: #160A27;
   --color-error: #E06B90;
-  --color-error-content: #170A26;
+  --color-error-content: #160A27;
   --radius-selector: 0.25rem;
   --radius-field: 0.25rem;
   --radius-box: 0.5rem;
@@ -334,39 +407,50 @@
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-base-100: #FFFFFF;
   --color-base-200: var(--pk-ramp-100);
-  /* off-ramp: nearest --pk-ramp-200 (#EACEFA), chroma tier (dE 0.0239 > 0.012) */
-  --color-base-300: #E3D3F0;
-  /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0581 > 0.012) */
-  --color-base-content: #241238;
-  /* D-HueMove: moves ~13deg off its shipped H300.1 onto the ramp's H313.1 --
-     confirmed, not a checkpoint. Joins regardless of ΔE (forced JOIN). This
-     is the SAME stop dark's --color-base-200 joins below -- see the ramp
-     block's own header comment for the headline result this is. */
+  /* off-ramp: nearest --pk-ramp-200 (#DFD3FA), chroma tier (dE 0.0111 -- at
+     or below the 0.012 JOIN threshold as of sketch 058's H300 rotation
+     (quick task 260912-waa); kept OFF-RAMP anyway per this comment's own
+     rule (a role's on/off-ramp membership is decided once, not
+     re-decided every time ΔE happens to cross the line) -- flagged in
+     260912-waa-SUMMARY.md as a future join candidate, not auto-joined
+     here) */
+  --color-base-300: #DED4F3;
+  /* off-ramp: nearest --pk-ramp-950 (#300D56), chroma tier (dE 0.0606 > 0.012) */
+  --color-base-content: #231339;
+  /* D-HueMove: moves ~13deg off its shipped H300.1 onto the ramp's H313.1
+     hue -- confirmed, not a checkpoint. Joins regardless of ΔE (forced
+     JOIN). This is the SAME stop dark's --color-base-200 joins below --
+     see the ramp block's own header comment for the headline result this
+     is. UPDATED (quick task 260912-waa, sketch 058): the ramp itself
+     rotated back to H300, 0.3 degrees from the brand manual's own Lila
+     Oscuro hue (#3D096D, H300.1) -- reversing the original 13-degree
+     move this comment describes; light --color-primary is once again,
+     for practical purposes, the brand manual's own hue. */
   --color-primary: var(--pk-ramp-900);
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-primary-content: #FFFFFF;
-  /* off-ramp: nearest --pk-ramp-600 (#8C2AB7), chroma tier (dE 0.0720 > 0.012) */
-  --color-secondary: #7E4CA5;
+  /* off-ramp: nearest --pk-ramp-600 (#7B2DCE), chroma tier (dE 0.0891 > 0.012) */
+  --color-secondary: #7550AC;
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-secondary-content: #FFFFFF;
-  /* off-ramp: nearest --pk-ramp-100 (#F6EAFD), chroma tier (dE 0.0266 > 0.012) */
-  --color-accent: #EDE1F7;
+  /* off-ramp: nearest --pk-ramp-100 (#F1ECFD), chroma tier (dE 0.0281 > 0.012) */
+  --color-accent: #E9E2F9;
   /* D-HueMove: same forced JOIN and same stop as --color-primary above --
      both roles carry the identical shipped hex (#3D096D) today. */
   --color-accent-content: var(--pk-ramp-900);
-  /* off-ramp: nearest --pk-ramp-700 (#702093), chroma tier (dE 0.1462 > 0.012) */
-  --color-neutral: #6B5B7B;
+  /* off-ramp: nearest --pk-ramp-700 (#6222A6), chroma tier (dE 0.1578 > 0.012) */
+  --color-neutral: #675C7D;
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-neutral-content: #FFFFFF;
   /* off-ramp (D-Semantics): info/success/warning/error and their -content
-     slots are other hues -- they never join the brand ramp at H313.1
+     slots are other hues -- they never join the brand ramp at H300
      regardless of ΔE; carry no ramp reference at all. */
   --color-info: #4C6FA5;
   --color-info-content: #FFFFFF;
   --color-success: #3F8F6B;
   --color-success-content: #FFFFFF;
   --color-warning: #B8862F;
-  --color-warning-content: #241238;
+  --color-warning-content: #231339;
   --color-error: #B23A5C;
   --color-error-content: #FFFFFF;
   --radius-selector: 0.25rem;
@@ -553,16 +637,20 @@
      collapsed that role's saturation to 38% of light theme's own branded
      ink (C0.151) — on dark's own saturated ground (base-200 C0.119) a
      C0.057 ink reads as grey-on-purple, i.e. "disabled." It also put two
-     purples in one theme: dark's `--color-primary` sits at H313.1 (the
-     developer-named correct brand hue, from the solid Sumate CTA fill)
-     while `--color-neutral` sits at H306.5 — 6.6 degrees apart at a 3.7x
-     chroma ratio.
+     purples in one theme: dark's `--color-primary` sat at H313.1 (the
+     developer-named correct brand hue at the time, from the solid Sumate
+     CTA fill) while `--color-neutral` sat at H306.5 — 6.6 degrees apart at
+     a 3.7x chroma ratio. UPDATED (quick task 260912-waa, sketch 058): the
+     shared ramp (and so `--color-primary`) has since rotated to H300 --
+     see the ramp block's own header comment -- so every figure in this
+     paragraph is history, not the current hue.
 
-     This token is dark's brand hue (H313.1) at a saturation matched to
-     light's own branded-ink role, so the branded-interactive role reads as
-     brand purple again instead of a second, greyer purple. It is an INK
-     role only — never a background fill, and it has no `-content`
-     counterpart (nothing paints solid with it).
+     This token is dark's brand hue (H300, moved from H313.1 by quick task
+     260912-waa/sketch 058) at a saturation matched to light's own
+     branded-ink role, so the branded-interactive role reads as brand
+     purple again instead of a second, greyer purple. It is an INK role
+     only — never a background fill, and it has no `-content` counterpart
+     (nothing paints solid with it).
 
      Light: a variable READ of `--color-primary`, not a copied hex, so
      light stays single-sourced from the brand manual (#3D096D, 14.4:1 as
@@ -570,14 +658,15 @@
   --pk-ink-brand: var(--color-primary);
 }
 
-/* --pk-ink-brand, dark (quick task 260910-hdc): #C791E5, OKLCh L74% C0.13
-   H313.1 — dark's brand hue taken exactly from the developer-locked
-   `--color-primary` (#8C2BB6, H313.1), at C0.13 (2.3x today's C0.057
-   `--color-neutral` ink, comparable to light's own branded-ink chroma of
-   C0.151). MEASURED CONSTRAINTS (WCAG 2.1, do not "improve" by eye):
-     #C791E5 on base-100 (#361148) ... 6.47:1
-     #C791E5 on base-200 (#45105C) ... 5.81:1
-     #C791E5 on base-300 (#551670) ... 4.96:1
+/* --pk-ink-brand, dark (quick task 260910-hdc; rotated to sketch 058's
+   H300 winner by quick task 260912-waa): #B797F0, OKLCh L73.9% C0.129
+   H299.8 — dark's brand hue at C0.13 (2.3x today's C0.057 `--color-neutral`
+   ink, comparable to light's own branded-ink chroma of C0.151).
+   MEASURED CONSTRAINTS (WCAG 2.1, do not "improve" by eye; re-measured
+   against the H300 base ladder by 260912-waa's h300-audit.mjs --check):
+     #B797F0 on base-100 (#2E154E) ... 6.52:1
+     #B797F0 on base-200 (#3C1269) ... 5.87:1
+     #B797F0 on base-300 (#4A187F) ... 5.03:1
    All three clear the 4.5:1 text floor (WCAG 1.4.3) and the 3:1 border
    floor (WCAG 1.4.11) with margin. CORRECTED (quick task 260910-l7q): the
    above three figures now match the FLAT-ramp base ladder actually shipping
@@ -586,11 +675,16 @@
    quick task rotated the ladder onto this same hue. Comment-only fix, no
    value change.
 
-   D-InkBrand (260910-l7q): this token's own OWN value stays standing --
-   its nearest ramp stop is `--pk-ramp-400` (#CE89F3), but folding in would
-   move the already-approved #C791E5 (a hue-only rotation is not available
-   here since this token IS the hue-canonical reference other roles rotate
-   onto), so per CONTEXT.md's own default rule it does NOT fold in. `:root
+   D-InkBrand (260910-l7q; sketch 058 note added by 260912-waa): this
+   token's own OWN value stays standing -- its nearest ramp stop is
+   `--pk-ramp-400` (#B896F3, dE 0.0057), but folding in would move the
+   already-approved #B797F0 (a hue-only rotation is not available here
+   since this token IS the hue-canonical reference other roles rotate
+   onto), so per CONTEXT.md's own default rule it does NOT fold in. Sketch
+   058 (quick task 260912-waa) rotated this token's hue from H313.1 to
+   H300 alongside the ramp and every other off-ramp role, holding its own
+   L and C -- it is a hue-only rotation of an existing off-ramp value, not
+   a fold-in. `:root
    [data-theme="dark"]`, not a bare `[data-theme="dark"]`: `data-theme` is
    set on `<html>` by `assets/js/theme.js`, so a bare attribute selector
    ties with `:root` on specificity and would depend on source order, while
@@ -598,7 +692,7 @@
    `.planning/sketches/themes/default.css` already uses for its own dark
    region. */
 :root[data-theme="dark"] {
-  --pk-ink-brand: #C791E5;
+  --pk-ink-brand: #B797F0;
 }
 
 .pk-gutter {
@@ -1091,7 +1185,7 @@
    --color-primary is the required token here in LIGHT mode, not
    --color-secondary — measured against --color-base-100 (this file's own
    daisyui-theme blocks): primary is 14.4:1 in light (#3D096D on
-   #FFFFFF), well clear of the 4.5:1 text floor; secondary (#7E4CA5)
+   #FFFFFF), well clear of the 4.5:1 text floor; secondary (#7550AC)
    measures only 3.1:1 in dark and would FAIL that floor.
 
    DARK mode does NOT render --color-primary as text — see the
@@ -1160,7 +1254,8 @@
    muted/quiet ink (C0.057 H306.5), never a brand ink, and reusing it here
    for this entire branded-interactive-ink role collapsed its saturation
    to 38% of light's own branded ink and put it 6.6 degrees off dark's
-   actual brand hue (H313.1, from `--color-primary`), which is why nav
+   actual brand hue (H300, from `--color-primary`; rotated from H313.1 by
+   sketch 058/quick task 260912-waa), which is why nav
    links, the editorial hashtag pills, and every other selector below read
    as "disabled" rather than interactive. This shared block's ONE `color`
    declaration now reads the new `--pk-ink-brand` token instead (see that
@@ -1424,9 +1519,11 @@
    the same hue, reads unmistakably as brand purple. Both `color` and
    `border-color` now read the new `--pk-ink-brand` token instead (see its
    provenance comment near the top of this file): dark's own brand hue
-   (H313.1, from `--color-primary`) at the branded-interactive-ink chroma
-   tier, still clearing the same 4.5:1/3:1 floors (6.43:1/4.89:1 measured
-   against base-100/base-300). `--color-neutral` remains this file's
+   (H300, from `--color-primary`; rotated from H313.1 by sketch 058/quick
+   task 260912-waa) at the branded-interactive-ink chroma tier, still
+   clearing the same 4.5:1/3:1 floors (6.52:1/5.03:1 measured against
+   base-100/base-300, re-measured post-rotation via h300-audit.mjs
+   --check). `--color-neutral` remains this file's
    correct token for the genuinely muted/quiet ink role — see Task 2 of
    this same quick task for that token's own dark-mode retune. */
 [data-theme="dark"] .pk-preview-cta,

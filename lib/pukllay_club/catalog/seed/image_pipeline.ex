@@ -37,13 +37,13 @@ defmodule PukllayClub.Catalog.Seed.ImagePipeline do
   @spanish_language_link "Spanish"
   @og_card_width 1200
   @og_card_height 630
-  # D-07: the letterbox background is the light theme's --color-primary,
+  # D-07: the letterbox background is the dark theme's --color-primary,
   # which resolves to --pk-ramp-600 in assets/css/app.css (verbatim:
-  # `--pk-ramp-600: #8C2AB7;`). The dark theme's own --color-primary
-  # (--pk-ramp-900) is deliberately not used — a static social-preview image
-  # can't be theme-aware, so this is the one correct literal, not a
-  # discretion call.
-  @og_card_background "#8C2AB7"
+  # `--pk-ramp-600: #7B2DCE;`, rotated to sketch 058's H300 by quick task
+  # 260912-waa). The light theme's own --color-primary (--pk-ramp-900) is
+  # deliberately not used — a static social-preview image can't be
+  # theme-aware, so this is the one correct literal, not a discretion call.
+  @og_card_background "#7B2DCE"
 
   @doc """
   Downloads `source_url`, resizes it to a #{@thumb_width}px-wide thumbnail

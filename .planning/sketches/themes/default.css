@@ -44,16 +44,16 @@
 :root {
   /* Colors — from 01-UI-SPEC.md daisyUI theme overrides (light) */
   --color-bg: #FFFFFF;
-  --color-surface: #F6EAFD;
-  --color-surface-2: #E3D3F0;
-  --color-text: #241238;
-  --color-text-muted: #6B5B7B;
-  --color-primary: #45105C;
+  --color-surface: #F1ECFD;
+  --color-surface-2: #DED4F3;
+  --color-text: #231339;
+  --color-text-muted: #675C7D;
+  --color-primary: #3C1269;
   --color-primary-content: #FFFFFF;
-  --color-secondary: #7E4CA5;
-  --color-accent-bg: #EDE1F7;
-  --color-accent-text: #45105C;
-  --color-border: #E3D3F0;
+  --color-secondary: #7550AC;
+  --color-accent-bg: #E9E2F9;
+  --color-accent-text: #3C1269;
+  --color-border: #DED4F3;
   --color-danger: #B23A5C;
   --color-success: #3F8F6B;
 
@@ -146,20 +146,34 @@
    --color-surface now resolve to the IDENTICAL hex (#45105C) -- one
    physical swatch worn as a light-theme button fill and a dark-theme card
    surface, mirroring upstream's own --pk-ramp-900. See app.css's own ramp
-   block header comment for the full generator/audit provenance. */
+   block header comment for the full generator/audit provenance.
+
+   Re-derived (quick task 260912-waa, sketch 058): the shared
+   `--pk-ramp-*` ramp's hue moved H313.1 -> H300 (the brand manual's own
+   Lila Oscuro hue), holding each stop's own lightness -- every mirrored
+   hex above that reads a ramp stop or a rotated off-ramp role moved with
+   it: light --color-surface/--color-primary/--color-accent-text and
+   every dark region's --color-bg/--color-surface/--color-surface-2/
+   --color-text/--color-text-muted/--color-primary/--color-secondary/
+   --color-accent-bg/--color-accent-text/--color-border. Light
+   --color-secondary is #7550AC (brand Violeta #7E4CA5
+   rotated to H300). This mirror still keeps resolved hexes, not `--pk-ramp-*`
+   tokens (D2-i, quick task 260910-l7q Task 3 Decision 2) -- see app.css's
+   own ramp block header comment for the full generator/audit provenance
+   and `260912-waa-SUMMARY.md` for the before/after table. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #361148;
-    --color-surface: #45105C;
-    --color-surface-2: #551670;
-    --color-text: #F6EAFD;
-    --color-text-muted: #C59CDC;
-    --color-primary: #8C2AB7;
+    --color-bg: #2E154E;
+    --color-surface: #3C1269;
+    --color-surface-2: #4A187F;
+    --color-text: #F1ECFD;
+    --color-text-muted: #B8A0E5;
+    --color-primary: #7B2DCE;
     --color-primary-content: #FFFFFF;
-    --color-secondary: #642C77;
-    --color-accent-bg: #3A1F47;
-    --color-accent-text: #EBD7F4;
-    --color-border: #551670;
+    --color-secondary: #553384;
+    --color-accent-bg: #33224D;
+    --color-accent-text: #E3D9F9;
+    --color-border: #4A187F;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -168,17 +182,17 @@
   }
 }
 :root[data-theme="dark"] {
-  --color-bg: #361148;
-  --color-surface: #45105C;
-  --color-surface-2: #551670;
-  --color-text: #F6EAFD;
-  --color-text-muted: #C59CDC;
-  --color-primary: #8C2AB7;
+  --color-bg: #2E154E;
+  --color-surface: #3C1269;
+  --color-surface-2: #4A187F;
+  --color-text: #F1ECFD;
+  --color-text-muted: #B8A0E5;
+  --color-primary: #7B2DCE;
   --color-primary-content: #FFFFFF;
-  --color-secondary: #642C77;
-  --color-accent-bg: #3A1F47;
-  --color-accent-text: #EBD7F4;
-  --color-border: #551670;
+  --color-secondary: #553384;
+  --color-accent-bg: #33224D;
+  --color-accent-text: #E3D9F9;
+  --color-border: #4A187F;
   --color-danger: #E06B90;
   --color-success: #5FBE95;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);

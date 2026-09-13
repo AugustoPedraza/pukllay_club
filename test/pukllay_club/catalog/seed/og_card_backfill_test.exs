@@ -9,8 +9,9 @@ defmodule PukllayClub.Catalog.Seed.OGCardBackfillTest do
   alias PukllayClub.Catalog.Seed.ImagePipeline
   alias PukllayClub.Catalog.Seed.OGCardBackfill
 
-  # `--pk-ramp-600` (D-07), read verbatim from assets/css/app.css.
-  @brand_hex_rgb [0x8C, 0x2A, 0xB7]
+  # `--pk-ramp-600` (D-07), read verbatim from assets/css/app.css. Rotated
+  # to sketch 058's H300 (#7B2DCE) by quick task 260912-waa.
+  @brand_hex_rgb [0x7B, 0x2D, 0xCE]
 
   defmodule FakeStorage do
     @moduledoc false

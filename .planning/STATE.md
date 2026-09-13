@@ -6,9 +6,10 @@ current_phase: 2
 current_phase_name: Natural-Language Spanish Search + Auth
 status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
 stopped_at: Phase 01.8 complete, ready to plan Phase 2
-last_updated: "2026-09-12T22:47:35.590Z"
+last_updated: "2026-09-13T02:49:26.410Z"
 last_activity: 2026-09-12
-state_head: eafc75618b134335e4b8c630dbe9d54939a2b2ca
+last_activity_desc: "Completed quick task 260912-waa: Apply sketch 058 winner (ramp hue H313.1→H300) to app.css, both themes"
+state_head: 85ae2576c8e8d4fa3a5eb251efee9cb3d04a09fc
 progress:
   total_phases: 5
   completed_phases: 1
@@ -35,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
-Last activity: 2026-09-12 - Completed quick task 260912-t3v: Record browser re-verification of WINDOWS #4, #7, #18 (PASS) in ledger and todo
+Last activity: 2026-09-12 - Completed quick task 260912-waa: Apply sketch 058 winner (ramp hue H313.1→H300) to app.css, both themes
 
 ## Performance Metrics
 
@@ -308,6 +309,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260912-rwu | Fix WINDOWS #7 (About photo rail stays paused after a dot click) | 2026-09-12 | 9bb1f5f | — | .planning/quick/260912-rwu-fix-windows-7-about-photo-rail-stays-paused-after-a-dot-clic |
 | 260912-rwv | Fix WINDOWS #18 (tappable pills under 44px) | 2026-09-12 | 5efd404 | — | .planning/quick/260912-rwv-fix-windows-18-tappable-pills-under-44px-read-the-diagnosed |
 | 260912-t3v | Record browser re-verification of WINDOWS #4, #7, #18 (PASS) in ledger and todo | 2026-09-12 | efc4c36 | complete | [260912-t3v-record-browser-re-verification-of-window](./quick/260912-t3v-record-browser-re-verification-of-window/) |
+| 260912-waa | Apply sketch 058 winner: shared ramp + dark and light off-ramp roles rotated H313.1→H300 (uniform hue in both themes; #7E4CA5 manual Violeta kept) | 2026-09-12 | 98f1e30 | complete | [260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-](./quick/260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-/) |
+| 18 | Rotate light secondary #7E4CA5 to H300 (#7550AC) for uniform hue | 2026-09-13 | 85ae257 | — | — |
 
 ### Roadmap Evolution
 
