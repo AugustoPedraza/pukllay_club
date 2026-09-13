@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 0
+open_count: 1
 waived_count: 1
 fixed_count: 25
-total_count: 26
-last_updated: 2026-09-13T00:04:47.676Z
+total_count: 27
+last_updated: 2026-09-13T02:42:53.734Z
 ---
 
 # Broken Windows Ledger
@@ -41,6 +41,7 @@ last_updated: 2026-09-13T00:04:47.676Z
 | 24 | 01.5 | unrun-verify | .planning/phases/01.5-about-page-cta-rhythm-header-morph-refinement-implement-sket/01.5-07-SUMMARY.md |  | Cierre band 70vh proportion + visual balance at 768px/1280px deferred to end-of-phase human walkthrough (coverage D6) | fixed | Browser-verified 2026-09-12: /quienes-somos #cierre at 768px light and dark; padding 80px/80px, group centred, no CTA bar; user judged balance and footer edge OK. | 2026-09-08T17:30:26.779Z | 2026-09-12T22:46:33.262Z |
 | 25 | quick-260910-efe | deviation | test/pukllay_club_web/live/catalog_show_test.exs | 4316 | Rewrote .pk-pill-tag WCAG contrast test to measure what actually renders per theme (--color-primary in light, dark-scoped --color-neutral override in dark) instead of a stale hardcoded-token comparison, after sketch 055 Option A changed dark's primary-as-text mechanism; 4.5:1 floor unchanged | waived | Accepted per quick-260910-efe SUMMARY.md: .pk-pill-tag contrast test deliberately rewritten (Rule 1 auto-fix) to measure the actually-rendered ink per theme after sketch 055 Option A's dark-scoped --color-neutral override made the old hardcoded --color-primary comparison structurally false; 4.5:1 WCAG floor unchanged, test passes (catalog_show_test.exs:4692) | 2026-09-10T14:35:17.674Z | 2026-09-12T20:35:55.391Z |
 | 26 | 01.8-05 | stub | priv/static/images/og-fallback.webp |  | OG-fallback branded share card (SHARE-04, D-04/D-05) not yet on disk -- blocked on a /gsd-sketch round (Task 2 checkpoint, gate=blocking-human); GET / and GET /club's og:image/twitter:image 404 until the sketch-approved asset lands | fixed |  | 2026-09-12T03:07:10.127Z | 2026-09-12T03:32:01.626Z |
+| 27 | quick-260912-waa | deviation | assets/css/app.css |  | Pre-existing WCAG gap unrelated to sketch 058: light theme's --color-success-content (#FFFFFF) on --color-success (#3F8F6B) measures 3.92:1, below the 4.5:1 text floor. Neither role is touched by this task's ramp/hue rotation (D-Semantics, out of scope); logged as a documented exception in h300-audit.mjs --check rather than silently fixed. | open |  | 2026-09-13T02:42:53.734Z |  |
 
 ````json
 [
@@ -355,6 +356,18 @@ last_updated: 2026-09-13T00:04:47.676Z
     "reason": "",
     "recorded_at": "2026-09-12T03:07:10.127Z",
     "resolved_at": "2026-09-12T03:32:01.626Z"
+  },
+  {
+    "id": 27,
+    "kind": "deviation",
+    "phase": "quick-260912-waa",
+    "file": "assets/css/app.css",
+    "line": null,
+    "description": "Pre-existing WCAG gap unrelated to sketch 058: light theme's --color-success-content (#FFFFFF) on --color-success (#3F8F6B) measures 3.92:1, below the 4.5:1 text floor. Neither role is touched by this task's ramp/hue rotation (D-Semantics, out of scope); logged as a documented exception in h300-audit.mjs --check rather than silently fixed.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-13T02:42:53.734Z",
+    "resolved_at": null
   }
 ]
 ````
