@@ -632,6 +632,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 <button
                   type="button"
                   phx-click="open-reservation"
+                  aria-haspopup="dialog"
                   class="btn btn-primary btn-lg min-h-11 w-full pk-poster-reserve"
                 >
                   {reservation_cta_label()}
@@ -909,6 +910,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               <button
                 type="button"
                 phx-click="open-reservation"
+                aria-haspopup="dialog"
                 class="btn btn-primary min-h-11 w-full"
               >
                 {reservation_cta_label()}
@@ -1061,30 +1063,42 @@ defmodule PukllayClubWeb.CatalogLive.Show do
         </div>
 
         <%!-- Reservation modal (SHELL-03, D-09/D-10, plan 01.1-05; collapsed
-        to a single dialog surface in quick task 260913-4k1): pure daisyUI
-        .modal/.modal-open/.modal-box/.modal-backdrop classes — no .pk-* CSS
-        needed, daisyUI's own modal is already the highest z-index (999) in
-        this page's overlay stack. Focus-trap/Escape reuse .Lightbox's exact
-        pattern above (T-01.1-16-style single mechanism, not a second
-        bespoke one). Server builds the wa.me link entirely —
-        reservation_url/3 below, never client-assembled (mirrors
-        .ShareButton's own T-01.1-08 rule). ONE dialog layer: the name field
-        and the primary CTA share this surface, there is no separate
-        preview/send step — WhatsApp itself shows the pre-filled message,
-        editable, before the member actually sends it. --%>
+        to a single dialog surface + polished to a bottom sheet in quick
+        task 260913-4k1): pure daisyUI .modal/.modal-open/.modal-box/
+        .modal-backdrop classes — no .pk-* CSS needed, daisyUI's own modal
+        is already the highest z-index (999) in this page's overlay stack.
+        Bottom sheet on phones, centered dialog from sm (FilterModal
+        precedent, filter_modal.ex ~149-235: modal-bottom sm:modal-middle
+        on the root, role/aria on the .modal-box). ONE dialog layer: the
+        name field, one primary "Reservar por WhatsApp" CTA and a ghost
+        Cancelar share this surface — there is no separate preview/send
+        step, since WhatsApp itself shows the pre-filled message, editable,
+        before the member actually sends it. Focus lands on the name field
+        (or the close button when reservations are closed) on open and
+        returns to the trigger on close; Tab is trapped; Escape/backdrop/X/
+        Cancelar all close it; Enter with a valid name clicks the same
+        server-built wa.me link (.ReservationModal below). No sticky
+        footer needed: header + one field + one action row never grows tall
+        enough to scroll the box. --%>
         <div
           :if={@reservation_open}
           id="reservation-modal"
-          class="modal modal-open"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reservation-modal-title"
+          class="modal modal-open modal-bottom sm:modal-middle"
           phx-hook=".ReservationModal"
         >
           <script :type={Phoenix.LiveView.ColocatedHook} name=".ReservationModal">
             export default {
               mounted() {
-                this.el.querySelector("input, a, button")?.focus()
+                // WAI-ARIA dialog pattern: remember what had focus before
+                // opening so it can be restored on close.
+                this.returnFocus = document.activeElement
+
+                const nameInput = this.el.querySelector("#reservation-nombre")
+                if (nameInput) {
+                  nameInput.focus()
+                } else {
+                  this.el.querySelector("[data-modal-close]")?.focus()
+                }
 
                 this.onKeydown = (e) => {
                   if (e.key === "Escape") {
@@ -1107,34 +1121,69 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   }
                 }
                 this.el.addEventListener("keydown", this.onKeydown)
+
+                // Enter with a valid name clicks the server-built wa.me
+                // link (never assembled in JS, T-01.1-08) instead of also
+                // letting LiveView's own window-level submit listener push
+                // "reserve" — that would fire a redundant round-trip.
+                this.onSubmit = (e) => {
+                  const sendLink = this.el.querySelector("a[data-reservation-send]")
+                  if (sendLink) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    sendLink.click()
+                  }
+                }
+                this.el.addEventListener("submit", this.onSubmit)
               },
               destroyed() {
                 this.el.removeEventListener("keydown", this.onKeydown)
+                this.el.removeEventListener("submit", this.onSubmit)
+                if (this.returnFocus?.isConnected) {
+                  this.returnFocus.focus({ preventScroll: true })
+                }
               }
             }
           </script>
-          <div class="modal-box">
-            <button
-              type="button"
-              phx-click="close-reservation"
-              aria-label="Cerrar"
-              class="btn btn-circle btn-ghost btn-sm absolute right-2 top-2"
-            >
-              <.icon name="hero-x-mark" class="size-5" />
-            </button>
-            <h3 id="reservation-modal-title" class="font-display text-xl pr-8">
-              {reservation_cta_label()}
-            </h3>
-
-            <p :if={is_nil(@reservation_number)} class="text-sm text-neutral mt-4">
-              Las reservas están cerradas por ahora. Escribinos y lo coordinamos.
-            </p>
+          <div
+            class="modal-box"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reservation-modal-title"
+            aria-describedby="reservation-modal-desc"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="space-y-1">
+                <h2 id="reservation-modal-title" class="font-display text-xl">
+                  {reservation_cta_label()}
+                </h2>
+                <p id="reservation-modal-desc" class="text-neutral text-sm">
+                  <%= if @reservation_number do %>
+                    Dejanos tu nombre y te abrimos WhatsApp con el mensaje listo para pedir
+                    <span class="font-semibold">{@game.name}</span>
+                    el próximo sábado en el club.
+                  <% else %>
+                    Las reservas están cerradas por ahora. Escribinos y lo coordinamos.
+                  <% end %>
+                </p>
+              </div>
+              <button
+                type="button"
+                phx-click="close-reservation"
+                aria-label="Cerrar"
+                data-modal-close
+                class="btn btn-ghost btn-circle min-h-11 min-w-11"
+              >
+                <.icon name="hero-x-mark" class="size-5" />
+              </button>
+            </div>
 
             <form
               :if={@reservation_number}
               id="reservation-form"
               phx-change="change-reservation"
               phx-submit="reserve"
+              novalidate
               class="mt-4 space-y-3"
             >
               <.input
@@ -1146,33 +1195,57 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 placeholder="¿Cómo te llamás?"
                 required
                 maxlength="60"
+                autocomplete="name"
+                autocapitalize="words"
+                enterkeyhint="send"
                 phx-blur="validate-reservation"
                 errors={if @reservation_error, do: [@reservation_error], else: []}
               />
-              <%!-- Known, accepted race (T-4k1-05): if the member taps this
-              CTA within one round-trip of their last keystroke, the href
-              may lag by a character — WhatsApp shows the message editable
-              before sending, so this is recoverable and preferable to
-              JS-side URL assembly (forbidden by T-01.1-08) or a lost tap. --%>
-              <a
-                :if={reservation_name_valid?(@reservation_name)}
-                href={reservation_url(@reservation_number, @reservation_name, @game)}
-                target="_blank"
-                rel="noopener noreferrer"
-                phx-click="close-reservation"
-                data-reservation-send
-                class="btn btn-primary min-h-11 w-full"
-              >
-                Reservar por WhatsApp
-              </a>
-              <button
-                :if={!reservation_name_valid?(@reservation_name)}
-                type="submit"
-                class="btn btn-primary min-h-11 w-full"
-              >
-                Reservar por WhatsApp
-              </button>
+              <div class="flex flex-col gap-2 sm:flex-row-reverse">
+                <%!-- Known, accepted race (T-4k1-05): if the member taps
+                this CTA within one round-trip of their last keystroke, the
+                href may lag by a character — WhatsApp shows the message
+                editable before sending, so this is recoverable and
+                preferable to JS-side URL assembly (forbidden by T-01.1-08)
+                or a lost tap. --%>
+                <a
+                  :if={reservation_name_valid?(@reservation_name)}
+                  href={reservation_url(@reservation_number, @reservation_name, @game)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  phx-click="close-reservation"
+                  data-reservation-send
+                  class="btn btn-primary min-h-11 w-full sm:w-auto"
+                >
+                  Reservar por WhatsApp <.icon name="hero-arrow-top-right-on-square" class="size-5" />
+                  <span class="sr-only">(se abre en WhatsApp)</span>
+                </a>
+                <button
+                  :if={!reservation_name_valid?(@reservation_name)}
+                  type="submit"
+                  class="btn btn-primary min-h-11 w-full sm:w-auto"
+                >
+                  Reservar por WhatsApp <.icon name="hero-arrow-top-right-on-square" class="size-5" />
+                </button>
+                <button
+                  type="button"
+                  phx-click="close-reservation"
+                  class="btn btn-ghost min-h-11 w-full sm:w-auto"
+                >
+                  Cancelar
+                </button>
+              </div>
             </form>
+
+            <div :if={is_nil(@reservation_number)} class="mt-4">
+              <button
+                type="button"
+                phx-click="close-reservation"
+                class="btn min-h-11 w-full sm:w-auto"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
           <div class="modal-backdrop" phx-click="close-reservation"></div>
         </div>
