@@ -1110,10 +1110,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 class="mt-4 space-y-3"
               >
                 <p class="text-sm text-base-content">
-                  {reservation_message(@reservation_name, @game.name)}
+                  {reservation_message(@reservation_name, @game)}
                 </p>
                 <a
-                  href={reservation_url(@reservation_number, @reservation_name, @game.name)}
+                  href={reservation_url(@reservation_number, @reservation_name, @game)}
                   target="_blank"
                   rel="noopener noreferrer"
                   class="btn btn-primary min-h-11 w-full"
@@ -1142,16 +1142,21 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # "para jugarlo el próximo". Unlike everything else in this modal, this string
   # is not UI chrome — it is the message a member actually SENDS to the club, so
   # re-read it end to end before touching it again.
-  defp reservation_message(name, game_name) do
-    "¡Hola! Soy #{name}, quiero reservar #{game_name} para el sábado en el club."
+  defp reservation_message(name, %Game{} = game) do
+    game_url = url(~p"/juegos/#{game}")
+
+    ~s(¡Hola! Soy #{name}. Me gustaría reservar "#{game.name}" para el próximo sábado en el club.) <>
+      "\n\n" <> game_url
   end
 
   # Built entirely server-side (T-01.1-02) — URI.encode_www_form/1 percent-
-  # (or +-)encodes the visitor's name so it cannot break out of the `text=`
-  # query parameter, superseding 01.1-RESEARCH.md's client-side
-  # encodeURIComponent suggestion with a strictly stronger mitigation.
-  defp reservation_url(number, name, game_name) do
-    "https://wa.me/" <> number <> "?text=" <> URI.encode_www_form(reservation_message(name, game_name))
+  # (or +-)encodes the ENTIRE message (visitor's name, quoted game name, and
+  # the appended game URL, including its own separating newline) so nothing
+  # can break out of the `text=` query parameter, superseding 01.1-RESEARCH.md's
+  # client-side encodeURIComponent suggestion with a strictly stronger
+  # mitigation. Arg 3 is the `Game` struct (not a bare name).
+  defp reservation_url(number, name, %Game{} = game) do
+    "https://wa.me/" <> number <> "?text=" <> URI.encode_www_form(reservation_message(name, game))
   end
 
   @doc false
