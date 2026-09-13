@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 2
 waived_count: 1
 fixed_count: 25
-total_count: 27
-last_updated: 2026-09-13T02:42:53.734Z
+total_count: 28
+last_updated: 2026-09-13T03:59:03.929Z
 ---
 
 # Broken Windows Ledger
@@ -42,6 +42,7 @@ last_updated: 2026-09-13T02:42:53.734Z
 | 25 | quick-260910-efe | deviation | test/pukllay_club_web/live/catalog_show_test.exs | 4316 | Rewrote .pk-pill-tag WCAG contrast test to measure what actually renders per theme (--color-primary in light, dark-scoped --color-neutral override in dark) instead of a stale hardcoded-token comparison, after sketch 055 Option A changed dark's primary-as-text mechanism; 4.5:1 floor unchanged | waived | Accepted per quick-260910-efe SUMMARY.md: .pk-pill-tag contrast test deliberately rewritten (Rule 1 auto-fix) to measure the actually-rendered ink per theme after sketch 055 Option A's dark-scoped --color-neutral override made the old hardcoded --color-primary comparison structurally false; 4.5:1 WCAG floor unchanged, test passes (catalog_show_test.exs:4692) | 2026-09-10T14:35:17.674Z | 2026-09-12T20:35:55.391Z |
 | 26 | 01.8-05 | stub | priv/static/images/og-fallback.webp |  | OG-fallback branded share card (SHARE-04, D-04/D-05) not yet on disk -- blocked on a /gsd-sketch round (Task 2 checkpoint, gate=blocking-human); GET / and GET /club's og:image/twitter:image 404 until the sketch-approved asset lands | fixed |  | 2026-09-12T03:07:10.127Z | 2026-09-12T03:32:01.626Z |
 | 27 | quick-260912-waa | deviation | assets/css/app.css |  | Pre-existing WCAG gap unrelated to sketch 058: light theme's --color-success-content (#FFFFFF) on --color-success (#3F8F6B) measures 3.92:1, below the 4.5:1 text floor. Neither role is touched by this task's ramp/hue rotation (D-Semantics, out of scope); logged as a documented exception in h300-audit.mjs --check rather than silently fixed. | open |  | 2026-09-13T02:42:53.734Z |  |
+| 28 | quick-260913-0h6 | deviation | test/pukllay_club_web/live/catalog_show_test.exs | 90 | Pre-existing flake, unrelated to this task: mechanic-chip-overflow test asserts absence of literal +7 in rendered HTML, but the page's CSP script nonce is a random base64 string that occasionally contains +7 by chance | open |  | 2026-09-13T03:59:03.929Z |  |
 
 ````json
 [
@@ -367,6 +368,18 @@ last_updated: 2026-09-13T02:42:53.734Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-13T02:42:53.734Z",
+    "resolved_at": null
+  },
+  {
+    "id": 28,
+    "kind": "deviation",
+    "phase": "quick-260913-0h6",
+    "file": "test/pukllay_club_web/live/catalog_show_test.exs",
+    "line": 90,
+    "description": "Pre-existing flake, unrelated to this task: mechanic-chip-overflow test asserts absence of literal +7 in rendered HTML, but the page's CSP script nonce is a random base64 string that occasionally contains +7 by chance",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-13T03:59:03.929Z",
     "resolved_at": null
   }
 ]

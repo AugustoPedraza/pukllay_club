@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
-Last activity: 2026-09-12 - Completed quick task 260912-waa: Apply sketch 058 winner (ramp hue H313.1→H300) to app.css, both themes
+Last activity: 2026-09-13 - Completed quick task 260913-0h6: Tappable shelf headers (Crea conexiones etc.) link to the filtered catalog
 
 ## Performance Metrics
 
@@ -311,6 +311,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260912-t3v | Record browser re-verification of WINDOWS #4, #7, #18 (PASS) in ledger and todo | 2026-09-12 | efc4c36 | complete | [260912-t3v-record-browser-re-verification-of-window](./quick/260912-t3v-record-browser-re-verification-of-window/) |
 | 260912-waa | Apply sketch 058 winner: shared ramp + dark and light off-ramp roles rotated H313.1→H300 (uniform hue in both themes; #7E4CA5 manual Violeta kept) | 2026-09-12 | 98f1e30 | complete | [260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-](./quick/260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-/) |
 | 18 | Rotate light secondary #7E4CA5 to H300 (#7550AC) for uniform hue | 2026-09-13 | 85ae257 | — | — |
+| 260913-0h6 | Home shelf headers (Crea conexiones + 6 more) are tappable "Ver todos ›" links into the pre-filtered catalog (tags / weight bands); Recientemente añadidos left unlinked | 2026-09-13 | 530451e | complete | [260913-0h6-crea-conexiones-sections-cannot-be-tappe](./quick/260913-0h6-crea-conexiones-sections-cannot-be-tappe/) |
 
 ### Roadmap Evolution
 
