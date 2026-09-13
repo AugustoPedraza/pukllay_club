@@ -2378,6 +2378,43 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert doc |> LazyHTML.query(".pk-poster-frame #detail-share-buybox") |> Enum.count() == 1
     end
 
+    # quick 260913-1s5: the share button was anchored 8px (top-2/right-2)
+    # from the poster's 8px-radius top-right corner, crowding it. Fix: a
+    # 12px inset (top-3/right-3), matching .pk-sheet-close's own 12px —
+    # still inside .pk-poster-frame, still the wrapper's own plain Tailwind
+    # offset utilities (no .pk-* rule targets this wrapper div).
+    test "the share wrapper is inset 12px (top-3/right-3), not the old 8px, and stays inside the poster frame",
+         %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+
+      doc = LazyHTML.from_document(html)
+
+      share_wrapper_class =
+        doc
+        |> LazyHTML.query(".pk-poster-frame > div")
+        |> Enum.find(fn el ->
+          case LazyHTML.attribute(el, "class") do
+            [class] -> class =~ "absolute"
+            _ -> false
+          end
+        end)
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      refute is_nil(share_wrapper_class), "expected .pk-poster-frame > div.absolute to exist"
+
+      tokens = String.split(share_wrapper_class)
+
+      assert "top-3" in tokens
+      assert "right-3" in tokens
+      refute "top-2" in tokens
+      refute "right-2" in tokens
+
+      assert doc |> LazyHTML.query(".pk-poster-frame #detail-share-buybox") |> Enum.count() == 1
+    end
+
     test "each dot dispatches select-image with the same phx-value-url the matching thumbnail dispatches, and the dot count equals the thumbnail count",
          %{conn: conn} do
       game =
@@ -4705,14 +4742,22 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   # this project's 44px touch-target minimum — because the base `.pk-pill`'s
   # dense geometry has no height floor and `.pk-pill-interactive` (c33e7f1)
   # never carried one either, unlike the two call sites that happened to
-  # append a per-call-site `min-h-11` utility. User-chosen fix (option A,
-  # restoring sketch 036's 44px interactive-chip contract): the floor moves
-  # INTO the variant that means "tappable", so every current and future
-  # call site gets it by construction. This describe block pins that floor
-  # plus its floor-only geometry (no fixed height/width/padding/font-size)
-  # and confirms the base's flex centring still applies at the taller
-  # height, for every tone including the zero-vertical-padding hashtag tone.
-  describe "pill system interactive touch-target floor (WINDOWS #18, quick 260912-rwv)" do
+  # append a per-call-site `min-h-11` utility. rwv's fix drew the whole 44px
+  # floor as the pill's own visible box (`min-height: 44px` directly on
+  # `.pk-pill-interactive`).
+  #
+  # quick 260913-1s5: the user then reported the tappable filter pills as
+  # too big/rough, breaking the page's balance — this is that visual
+  # acceptance (rwv's own SUMMARY explicitly left it unreviewed) coming back
+  # negative. Fix: the 44px floor moves OFF the drawn box and onto an
+  # invisible, vertical-only `::after` hit layer on the same variant — the
+  # pill itself draws a compact 28px (dense) / 32px (comfortable) box, but
+  # still accepts a tap across the full 44px band. Row gaps for every
+  # tappable-pill row are sized so a later row's invisible layer can never
+  # cover an earlier row's visible pill (the tap-hijack failure mode this
+  # repo already rejected once for the description toggle — see
+  # `.pk-desc-shell`'s own CSS comment, 01.3-10).
+  describe "pill system interactive touch-target floor — compact visual floor + 44px hit layer, quick 260913-1s5" do
     # `\s*\{` immediately after `pk-pill-interactive` means
     # `.pk-pill-interactive:hover {` can never be mistaken for this rule —
     # `:` follows immediately with no intervening whitespace, so the anchor
@@ -4722,6 +4767,27 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       case Regex.run(~r/(?m)^\.pk-pill-interactive\s*\{([^}]*)\}/s, css_source()) do
         [_, body] -> body
         nil -> flunk("No top-level `.pk-pill-interactive { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    # `::after` immediately follows the selector name — distinct anchor from
+    # `pk_pill_interactive_block/0` above, never matches the base rule.
+    defp pk_pill_interactive_after_block do
+      case Regex.run(~r/(?m)^\.pk-pill-interactive::after\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-pill-interactive::after { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    defp pk_pill_comfortable_interactive_block do
+      case Regex.run(~r/(?m)^\.pk-pill-comfortable\.pk-pill-interactive\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] ->
+          body
+
+        nil ->
+          flunk(
+            "No top-level `.pk-pill-comfortable.pk-pill-interactive { ... }` compound rule found in assets/css/app.css"
+          )
       end
     end
 
@@ -4739,23 +4805,38 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       end
     end
 
-    test "the top-level .pk-pill-interactive rule declares a 44px min-height touch floor" do
-      body = pk_pill_interactive_block()
-
-      assert body =~ ~r/min-height:\s*44px\s*;/,
-             "`.pk-pill-interactive` must declare `min-height: 44px;` — the 44px touch floor " <>
-               "diagnosed in .planning/debug/resolved/creator-pill-touch-target.md (WINDOWS #18) " <>
-               "must live on the tappable variant itself (user-chosen option A), so every call " <>
-               "site composing `pk-pill-interactive` (creator pills, Mecánicas/Temáticas links, " <>
-               "the masthead facts row, editorial hashtag links) reaches 44px by construction."
+    defp pk_poster_panel_facts_row_block do
+      case Regex.run(~r/(?m)^\.pk-poster-panel > \.pk-facts-row\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-poster-panel > .pk-facts-row { ... }` rule found in assets/css/app.css")
+      end
     end
 
-    test "the interactive variant adds only a height floor — no fixed height, max-height, width, padding, or font-size" do
+    test "the top-level .pk-pill-interactive rule declares a 28px compact visual floor (not the old 44px) plus position: relative" do
+      body = pk_pill_interactive_block()
+
+      assert body =~ ~r/min-height:\s*28px\s*;/,
+             "`.pk-pill-interactive` must declare `min-height: 28px;` — the compact visual floor " <>
+               "(quick 260913-1s5) that replaces rwv's 44px DRAWN box; the 44px touch target now " <>
+               "comes from the `::after` hit layer instead."
+
+      refute body =~ ~r/min-height:\s*44px\s*;/,
+             "`.pk-pill-interactive` must no longer draw a 44px box directly — that is exactly " <>
+               "the 'too big/rough' visual regression this task fixes; 44px must live on the " <>
+               "`::after` hit layer only."
+
+      assert body =~ ~r/position:\s*relative\s*;/,
+             "`.pk-pill-interactive` must declare `position: relative;` so its `::after` hit " <>
+               "layer's absolute top/bottom percentages resolve against the pill's own box, not " <>
+               "some ancestor's."
+    end
+
+    test "the interactive variant's drawn box adds only a height floor — no fixed height, max-height, width, padding, or font-size" do
       body = pk_pill_interactive_block()
 
       refute body =~ ~r/(?<![\w-])height\s*:/,
              "`.pk-pill-interactive` must not declare a bare `height` — only `min-height` (a " <>
-               "floor), so pill geometry above 44px is still driven by content, not clamped."
+               "floor), so pill geometry above the floor is still driven by content, not clamped."
 
       refute body =~ ~r/max-height/,
              "`.pk-pill-interactive` must not declare `max-height` — that would defeat the " <>
@@ -4775,26 +4856,132 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "or a size variant, never on the interactive behaviour variant."
     end
 
-    test "text stays vertically centred inside the taller pill — the base owns inline-flex + align-items:center, tones never override it" do
+    test "the ::after hit layer spans a 44px-tall, vertical-only band centred on the pill, with no horizontal bleed or paint" do
+      body = pk_pill_interactive_after_block()
+
+      assert body =~ ~r/content:\s*"";?/, "`.pk-pill-interactive::after` must declare `content: \"\";`"
+
+      assert body =~ ~r/position:\s*absolute\s*;/,
+             "`.pk-pill-interactive::after` must declare `position: absolute;` so it layers over " <>
+               "the relatively-positioned pill without affecting layout."
+
+      assert body =~ ~r/left:\s*0\s*;/, "`.pk-pill-interactive::after` must declare `left: 0;`"
+      assert body =~ ~r/right:\s*0\s*;/, "`.pk-pill-interactive::after` must declare `right: 0;`"
+
+      top_matches = Regex.scan(~r/top:\s*min\(0px,\s*calc\(50% - 22px\)\)\s*;?/, body)
+      bottom_matches = Regex.scan(~r/bottom:\s*min\(0px,\s*calc\(50% - 22px\)\)\s*;?/, body)
+
+      assert top_matches != [],
+             "`.pk-pill-interactive::after` must declare `top: min(0px, calc(50% - 22px));` — a " <>
+               "44px-tall band centred on the pill, collapsing to the pill's own box once the " <>
+               "pill is already taller than 44px."
+
+      assert bottom_matches != [],
+             "`.pk-pill-interactive::after` must declare `bottom: min(0px, calc(50% - 22px));` " <>
+               "— the same centring rule as `top`, so the layer is symmetric."
+
+      refute body =~ ~r/background/,
+             "`.pk-pill-interactive::after` must not paint a background — it is an invisible hit " <>
+               "layer only."
+
+      refute body =~ ~r/border(?!-)/,
+             "`.pk-pill-interactive::after` must not declare a border — it is an invisible hit " <>
+               "layer only."
+
+      refute body =~ ~r/z-index/,
+             "`.pk-pill-interactive::after` must not declare a z-index — it needs none to sit " <>
+               "above the pill's own (borderless) content."
+    end
+
+    test "the comfortable interactive compound rule raises the floor to 32px" do
+      body = pk_pill_comfortable_interactive_block()
+
+      assert body =~ ~r/min-height:\s*32px\s*;/,
+             "`.pk-pill-comfortable.pk-pill-interactive` must declare `min-height: 32px;` — the " <>
+               "comfortable-size compact floor (filter-modal chips, active-filter chips). It must " <>
+               "be a COMPOUND selector placed after the plain `.pk-pill-interactive` rule, because " <>
+               "a plain `.pk-pill-comfortable` rule sits earlier in the file at equal specificity " <>
+               "and would lose to the interactive rule's 28px."
+    end
+
+    test "text stays vertically centred inside the pill — the base owns inline-flex + align-items:center, tones never override it" do
       base = pk_pill_base_block()
       tag = pk_pill_tag_block()
 
       assert base =~ ~r/display:\s*inline-flex\s*;/,
              "`.pk-pill` must declare `display: inline-flex;` — the flex centring that keeps " <>
-               "text vertically centred inside a taller (44px min-height) pill."
+               "text vertically centred inside the pill at either the 28px or 32px compact floor."
 
       assert base =~ ~r/align-items:\s*center\s*;/,
              "`.pk-pill` must declare `align-items: center;` — required alongside inline-flex " <>
-               "so text centres vertically at the new 44px floor."
+               "so text centres vertically at the compact floor."
 
       refute tag =~ ~r/display\s*:/,
              "`.pk-pill-tag` (the hashtag tone, zero vertical padding) must not declare its " <>
                "own `display` — it must inherit the base's inline-flex, or its text would not " <>
-               "centre inside the 44px floor."
+               "centre inside the compact floor."
 
       refute tag =~ ~r/align-items\s*:/,
              "`.pk-pill-tag` must not declare its own `align-items` — it must inherit the " <>
-               "base's `center`, or hashtag link text would not centre inside the 44px floor."
+               "base's `center`, or hashtag link text would not centre inside the compact floor."
+    end
+
+    test "the masthead facts row's row-gap is at least the 28px pill's 8px hit-layer overhang" do
+      body = pk_poster_panel_facts_row_block()
+
+      assert body =~ ~r/row-gap:\s*8px\s*;/,
+             "`.pk-poster-panel > .pk-facts-row` must declare `row-gap: 8px;` — a 28px compact " <>
+               "pill's `::after` layer overhangs (44 - 28) / 2 = 8px above and below; a smaller " <>
+               "row gap would let a later row's invisible hit layer steal taps from the bottom " <>
+               "of an earlier row's visible pill."
+    end
+
+    test "editorial_tags/1's linked wrapper widens its row gap to gap-y-2, keeping the column gap at gap-x-1" do
+      html =
+        render_component(&GameChips.editorial_tags/1,
+          tags: ["#DuelosMemorables", "#CooperativoPuro"],
+          href_fun: fn tag -> "/?tags=" <> URI.encode_www_form(tag) end
+        )
+
+      doc = LazyHTML.from_document(html)
+
+      wrapper_class =
+        doc
+        |> LazyHTML.query("div")
+        |> Enum.find(fn el ->
+          case LazyHTML.attribute(el, "class") do
+            [class] -> class =~ "flex-wrap"
+            _ -> false
+          end
+        end)
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      refute is_nil(wrapper_class), "expected editorial_tags/1's wrapper div to render"
+
+      tokens = String.split(wrapper_class)
+
+      assert "flex" in tokens
+      assert "flex-wrap" in tokens
+      assert "gap-x-1" in tokens
+      assert "gap-y-2" in tokens
+
+      refute "gap-1" in tokens,
+             "the old `gap-1` (4px, both axes) must be gone — hashtag pills now draw 28px tall " <>
+               "with an 8px hit-layer overhang, so the old 4px row gap would let one row's " <>
+               "invisible layer cover the row above it."
+    end
+
+    test "editorial_tags/1 still appends a caller-supplied class alongside the new gap tokens" do
+      html =
+        render_component(&GameChips.editorial_tags/1,
+          tags: ["#DuelosMemorables"],
+          href_fun: fn tag -> "/?tags=" <> URI.encode_www_form(tag) end,
+          class: "pk-rhythm-8"
+        )
+
+      assert html =~ "pk-rhythm-8"
+      assert html =~ "gap-y-2"
     end
   end
 

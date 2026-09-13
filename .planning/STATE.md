@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
-Last activity: 2026-09-13 - Completed quick task 260913-0h6: Tappable shelf headers (Crea conexiones etc.) link to the filtered catalog
+Last activity: 2026-09-13 - Completed quick task 260913-1s5: Polish close button circle, share inset, compact filter pills
 
 ## Performance Metrics
 
@@ -312,6 +312,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260912-waa | Apply sketch 058 winner: shared ramp + dark and light off-ramp roles rotated H313.1→H300 (uniform hue in both themes; #7E4CA5 manual Violeta kept) | 2026-09-12 | 98f1e30 | complete | [260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-](./quick/260912-waa-apply-sketch-058-winner-ramp-hue-h313-1-/) |
 | 18 | Rotate light secondary #7E4CA5 to H300 (#7550AC) for uniform hue | 2026-09-13 | 85ae257 | — | — |
 | 260913-0h6 | Home shelf headers (Crea conexiones + 6 more) are tappable "Ver todos ›" links into the pre-filtered catalog (tags / weight bands); Recientemente añadidos left unlinked | 2026-09-13 | 530451e | complete | [260913-0h6-crea-conexiones-sections-cannot-be-tappe](./quick/260913-0h6-crea-conexiones-sections-cannot-be-tappe/) |
+| 260913-1s5 | Preview-sheet close button is a true 44px circle; share control inset from poster corner (right-3/top-3); filter pills drawn compact (28px / 32px chips) with an invisible 44px hit layer | 2026-09-13 | eb1f873 | complete (browser check pending) | [260913-1s5-polish-the-close-icon-isnt-a-circle-shar](./quick/260913-1s5-polish-the-close-icon-isnt-a-circle-shar/) |
 
 ### Roadmap Evolution
 
