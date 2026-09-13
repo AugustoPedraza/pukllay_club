@@ -267,17 +267,17 @@
    are recorded verbatim in `260910-l7q-SUMMARY.md`
    (`.planning/quick/260910-l7q-redesign-the-light-dark-color-palette-as/`). */
 :root {
-  --pk-ramp-50: #FAF5FE;
-  --pk-ramp-100: #F6EAFD;
-  --pk-ramp-200: #EACEFA;
-  --pk-ramp-300: #DCADF6;
-  --pk-ramp-400: #CE89F3;
-  --pk-ramp-500: #B739ED;
-  --pk-ramp-600: #8C2AB7;
-  --pk-ramp-700: #702093;
-  --pk-ramp-800: #551670;
-  --pk-ramp-900: #45105C;
-  --pk-ramp-950: #380B4C;
+  --pk-ramp-50: #F8F6FE;
+  --pk-ramp-100: #F1ECFD;
+  --pk-ramp-200: #DFD3FA;
+  --pk-ramp-300: #CBB5F6;
+  --pk-ramp-400: #B896F3;
+  --pk-ramp-500: #9959ED;
+  --pk-ramp-600: #7B2DCE;
+  --pk-ramp-700: #6222A6;
+  --pk-ramp-800: #4A187F;
+  --pk-ramp-900: #3C1269;
+  --pk-ramp-950: #300D56;
 }
 
 @plugin "daisyui/packages/bundle/daisyui-theme" {
@@ -286,7 +286,7 @@
   prefersdark: true;
   color-scheme: "dark";
   /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0132 > 0.012) */
-  --color-base-100: #361148;
+  --color-base-100: #2E154E;
   --color-base-200: var(--pk-ramp-900);
   --color-base-300: var(--pk-ramp-800);
   --color-base-content: var(--pk-ramp-100);
@@ -294,15 +294,15 @@
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-primary-content: #FFFFFF;
   /* off-ramp: nearest --pk-ramp-700 (#702093), chroma tier (dE 0.0549 > 0.012) */
-  --color-secondary: #642C77;
+  --color-secondary: #553384;
   /* off-ramp: achromatic white -- no ramp stop invented for white */
   --color-secondary-content: #FFFFFF;
   /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.0465 > 0.012) */
-  --color-accent: #3A1F47;
+  --color-accent: #33224D;
   /* off-ramp: nearest --pk-ramp-200 (#EACEFA), chroma tier (dE 0.0271 > 0.012) */
-  --color-accent-content: #EBD7F4;
+  --color-accent-content: #E3D9F9;
   /* off-ramp: nearest --pk-ramp-300 (#DCADF6), chroma tier (dE 0.0635 > 0.012) */
-  --color-neutral: #C59CDC;
+  --color-neutral: #B8A0E5;
   /* off-ramp: nearest --pk-ramp-950 (#380B4C), chroma tier (dE 0.1041 > 0.012) */
   --color-neutral-content: #170A26;
   /* off-ramp (D-Semantics): info/success/warning/error and their -content
@@ -598,7 +598,7 @@
    `.planning/sketches/themes/default.css` already uses for its own dark
    region. */
 :root[data-theme="dark"] {
-  --pk-ink-brand: #C791E5;
+  --pk-ink-brand: #B797F0;
 }
 
 .pk-gutter {

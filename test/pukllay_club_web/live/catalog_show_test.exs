@@ -5247,9 +5247,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # this to the ramp's real hex, so this assertion still proves "C2
       # itself never touched light" even though light's OWN value has since
       # moved for an unrelated, later, developer-approved reason.
-      assert token_value(light_block, "--color-base-200") == "#F6EAFD",
+      assert token_value(light_block, "--color-base-200") == "#F1ECFD",
              "light theme: --color-base-200 must resolve to the shared ramp's --pk-ramp-100 " <>
-               "stop (260910-l7q) -- C2 itself never touched this value."
+               "stop (260910-l7q, rotated to H300 by 260912-waa/sketch 058) -- C2 itself never " <>
+               "touched this value."
 
       assert token_value(light_block, "--color-base-300") == "#E3D3F0",
              "light theme: --color-base-300 must stay byte-identical -- C2 is dark-scoped only."
@@ -5346,10 +5347,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   # output for -- a different name would make that proof vacuous.
   describe "quick task 260910-l7q: shared OKLCh ramp invariants" do
     # Envelope constants as committed to the ramp block's own header
-    # comment in app.css (Task 3 Decision 1: FLAT, k=0.85, H313.1). A
-    # future change to either value must update both the CSS comment and
-    # these two module attributes together.
-    @l7q_ramp_hue 313.1
+    # comment in app.css (Task 3 Decision 1: FLAT, k=0.85). Sketch 058
+    # (quick task 260912-waa, 2026-09-12) moved the ramp's hue from H313.1
+    # to H300 -- the brand manual's Lila Oscuro hue -- holding each stop's
+    # own shipped OKLCh lightness (see h300-audit.mjs in that quick task's
+    # directory). A future change to either value must update both the CSS
+    # comment and these two module attributes together.
+    @l7q_ramp_hue 300
     @l7q_ramp_k 0.85
 
     # Roles DELIBERATELY off the ramp under the FLAT envelope Task 3 picked
@@ -5524,7 +5528,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
                "260910-hdc tripwire already uses."
     end
 
-    test "the ramp is a ramp: strictly monotone lightness, every stop within 2 degrees of H313.1, and no stop exceeds k * gamut-max chroma" do
+    test "the ramp is a ramp: strictly monotone lightness, every stop within 2 degrees of H300, and no stop exceeds k * gamut-max chroma" do
       stops = l7q_ramp_stops()
 
       assert length(stops) == 11, "Expected 11 ramp stops, found #{length(stops)}"
@@ -5545,11 +5549,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         # approaches it -- atan2(b, a) amplifies the same 8-bit hex
         # quantization step into a proportionally larger angle at low
         # chroma. Measured directly against this ramp's own near-white
-        # stop (--pk-ramp-50, C≈0.013): 2.6° off H313.1, purely from hex
-        # rounding, not a real hue drift. Every OTHER stop (C >= 0.028)
-        # measures within 0.4° of H313.1. 0.02 sits between the two, so it
-        # exempts only the one stop where hue is genuinely unmeasurable at
-        # hex precision, not a general escape hatch.
+        # stop (--pk-ramp-50, C≈0.011): 2.4° off H300 (quick task
+        # 260912-waa/sketch 058's hue, re-measured after the H313.1 -> H300
+        # move), purely from hex rounding, not a real hue drift. Every
+        # OTHER stop (C >= 0.023) measures within 0.7° of H300. 0.02 sits
+        # between the two, so it exempts only the one stop where hue is
+        # genuinely unmeasurable at hex precision, not a general escape
+        # hatch.
         if c >= 0.02 do
           hue = oklch_hue(hex)
           raw_delta = abs(hue - @l7q_ramp_hue)
