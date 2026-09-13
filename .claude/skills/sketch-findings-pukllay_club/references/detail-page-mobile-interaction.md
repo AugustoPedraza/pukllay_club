@@ -473,6 +473,13 @@ message → shows a preview plus a real, working `wa.me/{number}?text=...` link.
 number is hardcoded in the sketch only because a static mockup has no config layer** — in the real
 app this belongs in runtime env config, not a template literal.
 
+**Superseded in production (quick 260913-4k1):** the sketch's separate preview step was dropped.
+Production uses one bottom-sheet dialog (`modal modal-bottom sm:modal-middle`, centered from `sm`)
+holding the name field and a single primary "Reservar por WhatsApp" `<a href="https://wa.me/...">`
+whose `href` is rebuilt server-side on every `phx-change`, plus a ghost Cancelar and a 44px close —
+because WhatsApp already shows the pre-filled message, editable, for the member to review before
+actually sending it, a second in-app preview step was redundant friction, not a safety net.
+
 ## What to Avoid
 
 - Don't reserve dead `body` padding for a fixed bar without also collapsing it once the bar parks —

@@ -2923,6 +2923,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # Task 1 (quick 260913-4k1): the single dialog surface renders the same
+  # "Reservar por WhatsApp" label in BOTH the valid (real <a href="wa.me...">)
+  # and invalid (<button type="submit">) states, so label text is no longer
+  # a valid oracle for "is the link there" — every test below queries the
+  # anchor itself.
+  defp wa_me_anchor(html) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("#reservation-modal a[href^='https://wa.me/']")
+  end
+
   describe "reservation flow (SHELL-03, T-01.1-02)" do
     test "the buy-box trigger opens the reservation modal", %{conn: conn} do
       game = game_fixture()
@@ -2952,7 +2963,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       html = view |> form("#reservation-modal form", %{"nombre" => ""}) |> render_submit()
 
       assert html =~ "Falta tu nombre."
-      refute html =~ "Mandar por WhatsApp"
+      assert Enum.empty?(wa_me_anchor(html))
     end
 
     test "a whitespace-only name behaves identically to an empty one", %{conn: conn} do
@@ -2963,7 +2974,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       html = view |> form("#reservation-modal form", %{"nombre" => "   "}) |> render_submit()
 
       assert html =~ "Falta tu nombre."
-      refute html =~ "Mandar por WhatsApp"
+      assert Enum.empty?(wa_me_anchor(html))
     end
 
     test "a name over 60 graphemes produces a length message and no wa.me link", %{conn: conn} do
@@ -2975,7 +2986,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       html = view |> form("#reservation-modal form", %{"nombre" => too_long}) |> render_submit()
 
       assert html =~ "Ese nombre es muy largo."
-      refute html =~ "Mandar por WhatsApp"
+      assert Enum.empty?(wa_me_anchor(html))
     end
 
     test "a valid name produces a working wa.me link to the configured number", %{conn: conn} do
@@ -2987,6 +2998,77 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       configured_number = Application.get_env(:pukllay_club, :reservation_whatsapp_number)
       assert html =~ "https://wa.me/#{configured_number}?text="
+    end
+
+    test "render_change with a valid name renders a live wa.me anchor that closes the dialog on click, and typing never shows an error",
+         %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_change()
+
+      refute html =~ "Falta tu nombre."
+      anchor = html |> wa_me_anchor() |> Enum.at(0)
+
+      configured_number = Application.get_env(:pukllay_club, :reservation_whatsapp_number)
+      assert anchor |> LazyHTML.attribute("href") |> List.first() =~ "https://wa.me/#{configured_number}?text="
+      assert anchor |> LazyHTML.attribute("target") |> List.first() == "_blank"
+      assert anchor |> LazyHTML.attribute("rel") |> List.first() =~ "noopener"
+      assert anchor |> LazyHTML.attribute("phx-click") |> List.first() == "close-reservation"
+
+      html = view |> element("#reservation-modal a[href^='https://wa.me/']") |> render_click()
+      refute html =~ "reservation-modal"
+    end
+
+    test "render_change with an empty name never shows an error and renders a submit CTA instead of a link",
+         %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => ""}) |> render_change()
+
+      refute html =~ "Falta tu nombre."
+      assert Enum.empty?(wa_me_anchor(html))
+
+      doc = LazyHTML.from_fragment(html)
+      assert doc |> LazyHTML.query("#reservation-modal form button[type='submit']") |> Enum.count() == 1
+    end
+
+    test "a shown error is recomputed (not frozen) as the member keeps typing", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => ""}) |> render_submit()
+      assert html =~ "Falta tu nombre."
+      assert Enum.empty?(wa_me_anchor(html))
+
+      html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_change()
+      refute html =~ "Falta tu nombre."
+      refute Enum.empty?(wa_me_anchor(html))
+
+      view |> form("#reservation-modal form", %{"nombre" => ""}) |> render_submit()
+      too_long = String.duplicate("a", 61)
+      html = view |> form("#reservation-modal form", %{"nombre" => too_long}) |> render_change()
+
+      assert html =~ "Ese nombre es muy largo."
+      assert Enum.empty?(wa_me_anchor(html))
+    end
+
+    test "the name input stays rendered and there is exactly one .modal-box after a valid change or submit",
+         %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_change()
+
+      doc = LazyHTML.from_fragment(html)
+      assert doc |> LazyHTML.query("input[name='nombre']") |> Enum.count() == 1
+      assert doc |> LazyHTML.query("#reservation-modal .modal-box") |> Enum.count() == 1
+      refute html =~ "Me gustaría reservar"
     end
 
     test "the visitor's name and the game's name are percent-encoded in the wa.me link — no raw space or accented character survives",
@@ -3033,7 +3115,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
 
-      assert html =~ "Me gustaría reservar"
+      # No preview: the unencoded message never appears in the rendered
+      # page (Task 1, quick 260913-4k1) — it only exists percent-encoded
+      # inside the anchor's href, decoded and checked below.
+      refute html =~ "Me gustaría reservar"
 
       doc = LazyHTML.from_fragment(html)
       [href] = doc |> LazyHTML.query("#reservation-modal a[href^='https://wa.me/']") |> LazyHTML.attribute("href")
@@ -3062,7 +3147,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       assert html =~ "Las reservas están cerradas por ahora."
-      refute html =~ "Mandar por WhatsApp"
+      assert Enum.empty?(wa_me_anchor(html))
     end
 
     test "no reservation data is persisted anywhere — the app defines no schema for it", %{conn: conn} do
@@ -3110,7 +3195,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "a blur carries the typed name under \"value\", and the handler accepts it", %{view: view} do
       html = render_blur(view, "validate-reservation", %{"value" => "Ana"})
 
-      assert html =~ "Mandar por WhatsApp"
+      refute Enum.empty?(wa_me_anchor(html))
       refute html =~ "Falta tu nombre."
     end
 
@@ -3118,14 +3203,14 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       html = render_blur(view, "validate-reservation", %{"value" => ""})
 
       assert html =~ "Falta tu nombre."
-      refute html =~ "Mandar por WhatsApp"
+      assert Enum.empty?(wa_me_anchor(html))
     end
 
     test "a whitespace-only blur behaves identically to an empty one", %{view: view} do
       html = render_blur(view, "validate-reservation", %{"value" => "   "})
 
       assert html =~ "Falta tu nombre."
-      refute html =~ "Mandar por WhatsApp"
+      assert Enum.empty?(wa_me_anchor(html))
     end
 
     # Boundary neighbours around the 60-grapheme equivalence class: the single
@@ -3133,7 +3218,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "exactly 60 graphemes is accepted on blur", %{view: view} do
       html = render_blur(view, "validate-reservation", %{"value" => String.duplicate("a", 60)})
 
-      assert html =~ "Mandar por WhatsApp"
+      refute Enum.empty?(wa_me_anchor(html))
       refute html =~ "Ese nombre es muy largo."
     end
 
@@ -3141,7 +3226,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       html = render_blur(view, "validate-reservation", %{"value" => String.duplicate("a", 61)})
 
       assert html =~ "Ese nombre es muy largo."
-      refute html =~ "Mandar por WhatsApp"
+      assert Enum.empty?(wa_me_anchor(html))
     end
 
     # The markup half of the contract the handler's pattern depends on. If a
@@ -3177,7 +3262,151 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "submit still speaks form params (\"nombre\"), unlike blur", %{view: view} do
       html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
 
-      assert html =~ "Mandar por WhatsApp"
+      refute Enum.empty?(wa_me_anchor(html))
+    end
+  end
+
+  describe "reservation sheet polish (quick 260913-4k1)" do
+    test "the modal root is a bottom sheet (centered from sm) and the box carries dialog labelling",
+         %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+
+      html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+      doc = LazyHTML.from_fragment(html)
+
+      root_class = doc |> LazyHTML.query("#reservation-modal") |> LazyHTML.attribute("class") |> List.first()
+      assert root_class =~ "modal"
+      assert root_class =~ "modal-open"
+      assert root_class =~ "modal-bottom"
+      assert root_class =~ "sm:modal-middle"
+
+      assert doc |> LazyHTML.query("#reservation-modal .modal-box") |> Enum.count() == 1
+
+      box = doc |> LazyHTML.query("#reservation-modal .modal-box") |> Enum.at(0)
+      assert box |> LazyHTML.attribute("role") |> List.first() == "dialog"
+      assert box |> LazyHTML.attribute("aria-modal") |> List.first() == "true"
+      assert box |> LazyHTML.attribute("aria-labelledby") |> List.first() == "reservation-modal-title"
+      assert box |> LazyHTML.attribute("aria-describedby") |> List.first() == "reservation-modal-desc"
+
+      assert doc |> LazyHTML.query("h2#reservation-modal-title") |> Enum.count() == 1
+
+      desc = doc |> LazyHTML.query("#reservation-modal-desc") |> LazyHTML.to_html()
+      assert desc =~ game.name
+    end
+
+    test "the close button is a true 44px circle with an accessible name", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+
+      html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+      doc = LazyHTML.from_fragment(html)
+
+      close_class =
+        doc
+        |> LazyHTML.query("#reservation-modal button[aria-label='Cerrar']")
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert close_class =~ "btn-circle"
+      assert close_class =~ "min-h-11"
+      assert close_class =~ "min-w-11"
+
+      assert doc
+             |> LazyHTML.query("#reservation-modal button[aria-label='Cerrar'][data-modal-close]")
+             |> Enum.count() == 1
+    end
+
+    test "exactly one .btn-primary exists in both the empty-name and valid-name states, plus a ghost Cancelar",
+         %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      empty_html = view |> form("#reservation-modal form", %{"nombre" => ""}) |> render_change()
+      empty_doc = LazyHTML.from_fragment(empty_html)
+      assert empty_doc |> LazyHTML.query("#reservation-modal .btn-primary") |> Enum.count() == 1
+
+      valid_html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_change()
+      valid_doc = LazyHTML.from_fragment(valid_html)
+      assert valid_doc |> LazyHTML.query("#reservation-modal .btn-primary") |> Enum.count() == 1
+
+      cancel =
+        valid_doc
+        |> LazyHTML.query("#reservation-modal form button[type='button'].btn-ghost")
+        |> Enum.filter(fn el -> el |> LazyHTML.attribute("phx-click") |> List.first() == "close-reservation" end)
+
+      assert Enum.count(cancel) == 1
+
+      cancel_class = cancel |> Enum.at(0) |> LazyHTML.attribute("class") |> List.first()
+      assert cancel_class =~ "min-h-11"
+
+      html = view |> element("#reservation-modal form button[type='button'].btn-ghost") |> render_click()
+      refute html =~ "reservation-modal"
+    end
+
+    test "the form carries novalidate and the name input carries the mobile-friendly input attrs",
+         %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+
+      html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+      doc = LazyHTML.from_fragment(html)
+
+      assert doc |> LazyHTML.query("#reservation-form[novalidate]") |> Enum.count() == 1
+
+      input = doc |> LazyHTML.query("input[name='nombre']") |> Enum.at(0)
+      assert input |> LazyHTML.attribute("autocomplete") |> List.first() == "name"
+      assert input |> LazyHTML.attribute("autocapitalize") |> List.first() == "words"
+      assert input |> LazyHTML.attribute("enterkeyhint") |> List.first() == "send"
+    end
+
+    test "the valid-state anchor announces the external handoff via a sr-only span", %{conn: conn} do
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+      view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+
+      html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_change()
+      anchor_html = html |> wa_me_anchor() |> LazyHTML.to_html()
+
+      assert anchor_html =~ ~s(class="sr-only")
+    end
+
+    test "an unconfigured reservation number shows no .btn-primary and one min-h-11 close action",
+         %{conn: conn} do
+      original = Application.get_env(:pukllay_club, :reservation_whatsapp_number)
+      Application.put_env(:pukllay_club, :reservation_whatsapp_number, nil)
+      on_exit(fn -> Application.put_env(:pukllay_club, :reservation_whatsapp_number, original) end)
+
+      game = game_fixture()
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
+
+      html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
+      doc = LazyHTML.from_fragment(html)
+
+      assert html =~ "Las reservas están cerradas por ahora."
+      assert doc |> LazyHTML.query("#reservation-modal .btn-primary") |> Enum.count() == 0
+
+      close_buttons =
+        doc
+        |> LazyHTML.query("#reservation-modal button[type='button']")
+        |> Enum.filter(fn el -> el |> LazyHTML.attribute("phx-click") |> List.first() == "close-reservation" end)
+
+      close_button_classes = Enum.map(close_buttons, &(&1 |> LazyHTML.attribute("class") |> List.first()))
+      assert Enum.any?(close_button_classes, &(&1 =~ "min-h-11"))
+    end
+
+    test "both reservation triggers announce aria-haspopup=dialog", %{conn: conn} do
+      game = game_fixture()
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
+
+      doc = LazyHTML.from_document(html)
+      triggers = LazyHTML.query(doc, "button[phx-click='open-reservation']")
+      assert Enum.count(triggers) == 2
+
+      Enum.each(triggers, fn trigger ->
+        assert trigger |> LazyHTML.attribute("aria-haspopup") |> List.first() == "dialog"
+      end)
     end
   end
 
@@ -3229,6 +3458,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       assert dispatchable == [
                "carousel-load-more",
+               "change-reservation",
                "close-lightbox",
                "close-reservation",
                "close-search",
