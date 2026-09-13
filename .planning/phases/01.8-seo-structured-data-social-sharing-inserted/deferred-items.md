@@ -37,6 +37,16 @@ passing).
 debug/quick-task pass whenever `catalog_live_test.exs`/`catalog_show_test.exs`
 async isolation is next touched.
 
+**Resolved (2026-09-13, quick task 260913-j8k):** the flakiness no longer reproduces. Both
+`catalog_live_test.exs` and `catalog_show_test.exs` were run 3 consecutive times at seeds 808146,
+122102, and 449451 — each run reported 371 tests, 0 failures. A full-suite `mix test` (seed
+717366) then ran 1114 tests, 0 failures, versus the 26-failure baseline recorded above. No
+dedicated fix was needed in this task; the isolation issue was evidently eliminated by intervening
+test changes made in later plans/phases. Evidence verified live by the quick-task orchestrator on
+2026-09-13.
+
+status: resolved
+
 ## `og:image` has no non-WebP variant (latent finding, G-01.8-3 debug session)
 
 **Found during:** `.planning/debug/whatsapp-og-image-preview.md` (2026-09-12), while diagnosing

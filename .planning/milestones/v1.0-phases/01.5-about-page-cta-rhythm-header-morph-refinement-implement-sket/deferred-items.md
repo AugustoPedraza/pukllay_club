@@ -43,4 +43,5 @@ change. `mix quality` also surfaced 7 pre-existing Credo `Enum.count/1 == 0` war
 `Enum.empty?/1`) across `about_live_test.exs` (plans 01.5-02/03's own tests) and
 `about_header_morph_test.exs` (plan 01.5-01's own tests) — fixed the same way, same rationale.
 `mix quality` now exits 0.
-  status: acknowledged
+  Re-confirmed 2026-09-13 (quick task 260913-j8k): mix format --check-formatted on both named files exits 0.
+  status: resolved

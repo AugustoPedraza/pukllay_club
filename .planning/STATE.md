@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
-Last activity: 2026-09-13 - Completed quick task 260913-4k1: Polish Reservar game UI/UX (single dialog, button hierarchy, a11y)
+Last activity: 2026-09-13 - Completed quick task 260913-j8k: Close stale UAT audit items (docs-only)
 
 ## Performance Metrics
 
@@ -316,6 +316,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260913-2x6 | Game detail URLs use id-slug form (/juegos/137-catan): stdlib Slug.slugify + Phoenix.Param for Game; canonical/og:url/JSON-LD/sitemap/share emit it; GameSEO plug 301s bare/stale slugs (query preserved), live nav self-heals via push_patch | 2026-09-13 | 1f000d0 | complete | [260913-2x6-implement-id-slug-game-urls-juegos-137-c](./quick/260913-2x6-implement-id-slug-game-urls-juegos-137-c/) |
 | 260913-3yi | WhatsApp reservation message is human-friendly (`¡Hola! Soy {name}. Me gustaría reservar "{game}" para el próximo sábado en el club.`) and appends the game's id-slug URL; reservation helpers take the Game struct; preview wraps the URL on mobile | 2026-09-13 | 16d2bf5 | complete | [260913-3yi-whatsapp-reservation-message-human-frien](./quick/260913-3yi-whatsapp-reservation-message-human-frien/) |
 | 260913-4k1 | Reservar flow collapsed to one dialog (preview step dropped): always-visible name field + live server-built wa.me primary CTA, daisyUI bottom sheet on mobile / centered on sm+, one primary + ghost Cancelar, 44px targets, dialog a11y + focus in/return | 2026-09-13 | da07c44 | complete (browser check pending) | [260913-4k1-polish-reservar-game-ui-ux-improve-butto](./quick/260913-4k1-polish-reservar-game-ui-ux-improve-butto/) |
+| 260913-j8k | Close stale UAT audit items (docs-only): 01.8 flaky-test + 01.4/01.5 format-drift deferred entries marked `status: resolved` with re-run evidence; 01.5-UAT tests 18/19 superseded by passing test 20, gaps normalized, file acknowledged — audit-uat 18 → 0 | 2026-09-13 | ea9ea7a | complete | [260913-j8k-close-stale-uat-audit-items-docs-only](./quick/260913-j8k-close-stale-uat-audit-items-docs-only/) |
 
 ### Roadmap Evolution
 
