@@ -253,3 +253,64 @@ Details:
 - **G-01-7:** In all 4 combos the keyboard-focused input matches `:focus-visible`, with outline and
   box-shadow `none` on the input and both wrappers. The only focus indicator is the bottom border
   switching to `base-content`.
+
+### Re-verification (post-260912-rws)
+
+This block supersedes the first-session FAIL rows above for entries 4, 7 and 18. Each was closed
+by a targeted fix in quick-batch 260912-rws: 260912-rwt (192c6be) for 4, 260912-rwu (9bb1f5f) for
+7, 260912-rwv (5efd404) for 18. Per this todo's Recording results fallback, `node
+~/.claude/gsd-core/bin/gsd-tools.cjs windows fixed <id>` was attempted for all three and refused
+identically (`Error: Window <id> is already waived (resolved_at=...)`), so the ledger rows were
+flipped to `fixed` via the approved hand-edit fallback.
+
+Session run 2026-09-12 against the local dev server (`http://localhost:4000`), with the three
+fixes confirmed live (pill `min-height` 44px, drawer outside `#app-header` at z-index 551,
+carousel hook has `pauseThenResume`). Method:
+
+- Claude in Chrome with real mouse clicks and key presses.
+- 390px checks ran in a same-origin iframe (`innerWidth` 390).
+- 1440px checks ran in the real window (`innerWidth` 1440).
+- Reduced-motion and real touch-swipe checks ran in headless Google Chrome over raw CDP
+  (`Emulation.setEmulatedMedia`, `Input.dispatchTouchEvent`). The extension cannot open the
+  DevTools Rendering panel or produce touch input.
+
+| Entry | Route(s) | Width(s) | Theme(s) | Result |
+|-------|----------|----------|----------|--------|
+| 4 | `/quienes-somos` (regression smoke also on `/`) | 390 | dark, light | PASS: row flipped to `fixed` |
+| 7 | `/quienes-somos#fotos` | 1440, 390 | light (headless: default system) | PASS: row flipped to `fixed` |
+| 18 | `/juegos/179`, `/juegos/137` | 390 (1440 carried from first session) | light | PASS: row flipped to `fixed` |
+
+Details:
+
+- **4:** The drawer was opened by a real click after the dock (scrollY 500). The drawer is no
+  longer inside `#app-header` (z-index 551). 104 `elementFromPoint` samples all hit the drawer in
+  both themes. "Menú" and the morph-mark centre hit the drawer, and the sliver outside the panel
+  plus the Sumate bar hit the backdrop. Rows are 320×45 with chevrons, `aria-current="page"` is on
+  Quiénes Somos, `.pk-drawer-bottom` is pinned, and the footer shows only "Powered by BGG".
+  Regression smoke: focus on "Cerrar menú" and `aria-expanded="true"` on open; Escape on
+  `/quienes-somos` and a backdrop click on `/` close it, restore `inert` and return focus to
+  "Abrir menú".
+- **7:** At 1440px, with focus true throughout, a "Foto 2" dot click at 4.0s jumped the rail, and
+  autoplay resumed at 11.3s with a 4.5s cadence (first session: no resume in 44s). A dot click then
+  hover gave no advance for 20s (mouseenter cancels the pending resume), and mouse-off resumed
+  within 0.5s. At 390px a dot tap jumps the rail and autoplay resumes. Unfocused iframe document
+  for 15s: no advance (direct evidence for the `document.hasFocus()` guard). Real background tab
+  for about 95s: no advance. Include the caveat that `document.hasFocus()` read true while hidden
+  under automation, so Chrome's background-tab throttling, not the guard, stopped the rail there.
+  Reduced motion via CDP gave 0 advances in 20s at 1440 and 390, against a `no-preference` control
+  that advanced at 0.3/4.8/9.3/13.6s. A CDP touch swipe at 6.0s moved to the next slide, and the
+  next autoplay came at 13.4s instead of about 8.9s. Side observation, not a pass criterion and no
+  action taken: at 1440px the last two slides share max scroll, so dot 4 is active for only about
+  0.4s before dot 5.
+- **18:** On `/juegos/179` at 390px the "Antoine Bauza" and "Miguel Coimbra" pills measure 44px
+  (first session: 26.5px). Real taps land on `/?designers=Antoine+Bauza` and
+  `/?artists=Miguel+Coimbra`, each with "Resultados", the matching chip and 7 Wonders Duel. On
+  `/juegos/137` all 4 artist pills are 44px and wrap onto 2 rows in the 361px column, with no pill
+  overflow and 0 document horizontal overflow. 1440px style, hover and navigation passed in the
+  first session, and the fix only adds `min-height`.
+
+Screenshots (Chrome extension temp dir, not committed):
+`/tmp/claude-chrome-screenshots-qWv7xY/screenshot-1789256684627-16.png` (Entry 4, dark),
+`/tmp/claude-chrome-screenshots-qWv7xY/screenshot-1789256718550-17.png` (Entry 4, light),
+`/tmp/claude-chrome-screenshots-qWv7xY/screenshot-1789256768334-18.png` (Entry 18, 179 pills),
+`/tmp/claude-chrome-screenshots-qWv7xY/screenshot-1789256811548-19.png` (Entry 18, 137 artists wrap).

@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "WINDOWS entry 7 browser-verification FAIL — clicking/tapping a photo-rail dot on /quienes-somos pauses auto-advance permanently; it never resumes."
 created: 2026-09-12T23:30:00Z
-updated: 2026-09-12T23:53:00Z
+updated: 2026-09-12T23:21:01Z
 goal: find_root_cause_only
 ---
 
@@ -15,7 +15,7 @@ candidate_causes:
   - "code: dot pause path (onClick on this.el) has no resume; resume listeners are scoped to [data-rail], which excludes [data-dots]" (CONFIRMED)
   - "environment: document.hasFocus() false or prefers-reduced-motion matching suppresses the tick" (ELIMINATED)
 and_gate: "yes. The failure needs both (a) onClick setting paused=true with no timer and (b) the resume listeners (pointerdown/mouseleave) being on [data-rail] instead of an ancestor of the dots. Removing either one stops the permanent pause for pointer input. Keyboard dot activation (click with no pointerdown) depends on (a) alone."
-next_action: return ROOT CAUSE FOUND (diagnose-only; no fix applied)
+next_action: resolved by quick 260912-rwu — see Resolution section below
 
 ## Symptoms
 
@@ -98,6 +98,64 @@ relevant_files:
 ## Resolution
 
 root_cause: Two things combine. First, the AboutCarousel hook's onClick handler (about_live.ex:483-488, registered on #about-carousel) sets `this.paused = true` for dot clicks without arming any resume. Second, both resume paths, the WR-01 6s idle timeout in onPointerDown and the immediate resume in onMouseLeave, are registered only on `[data-rail]` (about_live.ex:530-532), and the `[data-dots]` container is a sibling of the rail, not a descendant (lines 550/591/592). A dot's pointerdown therefore never reaches onPointerDown, and no other code (the tick, focus/visibility handlers, onScroll) ever clears `paused`. Autoplay stays stopped until a mouse enters and leaves the rail. On touch or keyboard it stays stopped for the rest of the page's life.
-fix:
-verification:
-files_changed:
+fix: |
+  Resolved by quick 260912-rwu (GREEN commit 50550c1). Added one shared
+  `this.pauseThenResume` helper in the `.AboutCarousel` hook: it sets
+  `paused = true`, clears any pending `resumeTimer`, then arms a fresh
+  6000ms resume. Both `onClick` (registered on `this.el`, the ancestor that
+  contains BOTH `[data-rail]` and `[data-dots]`) and `onPointerDown`
+  (registered on `this.rail`, unchanged target) now call this helper
+  instead of assigning `paused` directly — so dot taps, mouse clicks on a
+  dot, keyboard Enter/Space on a dot (which fires `click` with no
+  `pointerdown`), and rail swipes all recover the same way. `mouseenter` /
+  `mouseleave` stayed on `this.rail`, unchanged; `mouseenter` still cancels
+  the pending resume timer, so a mouse resting on the rail after a dot
+  click keeps autoplay paused until the mouse actually leaves.
+verification: |
+  Source-contract ExUnit gate: test/pukllay_club_web/about_carousel_hook_test.exs
+  (new file, 15 tests) — observed RED against the unfixed hook (6 of 15
+  tests failed: dot-tap-calls-helper, keyboard-press-calls-helper,
+  onPointerDown-calls-helper, helper-clear-before-arm ordering, helper
+  contract, and the exactly-2-occurrences no-pause-only-path guard), then
+  GREEN after the fix (commit 50550c1). Re-run together with
+  about_header_morph_test.exs and about_live_test.exs: 156 tests, 0
+  failures.
+
+  Execution-level proof (Node 22.23.1, real hook source extracted verbatim
+  from the fixed about_live.ex, mounted against a DOM stub mirroring the
+  HEEx tree with real event bubbling and fake timers — scratchpad-only,
+  never committed), all 5 scenarios PASS:
+    K1 dot tap (pointerdown+click on dot 2 after 10s idle): paused
+      immediately, cleared at exactly tap+6000ms, 0 scrolls before the
+      resume, 2 autoplay scrolls in the following 9s (the two 4500ms
+      ticks).
+    K2 keyboard dot press (click on dot 2 with NO pointerdown): identical
+      resume timing to K1 — cleared at click+6000ms, 2 scrolls in the
+      following 9s.
+    K3 swipe after a dot tap (dot tap at t, rail-slide pointerdown at
+      t+3000): still paused at the ORIGINAL t+6000 and at t+8999, cleared
+      at t+9000 (6000ms after the LATER swipe) — confirms the swipe
+      restarts the window instead of racing the earlier timer.
+    K4 mouse resting on the rail after a dot click (click at t, mouseenter
+      at t+2000, held 20s with no mouseleave): 0 autoplay scrolls during
+      the entire 20s hover, still paused past the original 6s window, then
+      resumes immediately on mouseleave with 1 scroll on the next tick.
+    K5 control — rail swipe alone (unchanged WR-01 path): cleared at
+      swipe+6000ms, 2 scrolls in the following 9s.
+
+  `mix quality` (hex.audit, deps.audit, deps.unlock --check-unused, format
+  --check-formatted incl. Styler, credo --strict, sobelow, test
+  --warnings-as-errors) exits 0 — see quick 260912-rwu's SUMMARY.md for the
+  full tail output and test count.
+
+  Honesty notes: no live browser re-check at a real 390px viewport was
+  performed in this run — verification is the source-contract ExUnit gate
+  plus the out-of-tree Node execution of the real hook source described
+  above, both scoped to this quick item's own instruction set (a live
+  headless-Chrome pass was out of scope here). `.planning/WINDOWS.md` was
+  intentionally left untouched per this quick item's explicit instruction;
+  its entry #7 still needs a separate flip to fixed by whatever process
+  owns that file.
+files_changed: |
+  - lib/pukllay_club_web/live/about_live.ex
+  - test/pukllay_club_web/about_carousel_hook_test.exs

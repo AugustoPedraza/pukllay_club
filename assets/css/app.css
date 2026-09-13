@@ -1229,8 +1229,22 @@
   text-align: center;
 }
 
+/* WINDOWS #18 (debug session creator-pill-touch-target, quick 260912-rwv):
+   sketch 036 specified a real 44px touch height for interactive ("action")
+   chips, but the c33e7f1 port only carried cursor + transition into this
+   rule, dropping the floor. The two call sites that already reached 44px
+   (filter-modal chips, the active-filter chip) did so via a per-call-site
+   min-h-11 utility, which masked the gap for every other tappable pill:
+   CatalogLive.Show's creator_pills/1, GameChips.chip_row/1's linked
+   Mecánicas/Temáticas branch, GameChips.editorial_tags/1's hashtag links,
+   and GamePreview.facts_row/1's linked branches. Moving the floor into the
+   variant itself (rather than fixing each call site) means "tappable"
+   pill means 44px by construction, for these call sites and any future
+   one. Vertical centring at the new height comes from the base .pk-pill's
+   inline-flex + align-items:center, unmodified by this change. */
 .pk-pill-interactive {
   cursor: pointer;
+  min-height: 44px;
   transition: border-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard);
 }
@@ -2807,7 +2821,7 @@ body.pk-sheet-open {
   background: color-mix(in srgb, var(--color-base-100) 55%, transparent);
   opacity: 0;
   pointer-events: none;
-  z-index: 60;
+  z-index: 550;
   transition: opacity var(--duration-base) var(--ease-standard);
 }
 
@@ -2816,11 +2830,22 @@ body.pk-sheet-open {
   pointer-events: auto;
 }
 
-/* .pk-header-sticky's z-index: 50 creates a stacking context; the drawer is
-   a position: fixed child of it, so its z-index only needs to beat .pk-nav
-   within that context, not the page at large. position: sticky does not
-   create a containing block for fixed descendants, so viewport anchoring
-   here is safe without any transform/filter/contain/will-change hack. */
+/* WINDOWS #4: the drawer and .pk-drawer-backdrop are page-level siblings of
+   #app-header, NOT children of .pk-header-sticky — that header's z-index: 50
+   creates a stacking context, and while nested there the drawer composited at
+   root z 50 and lost to the root-level .pk-about-morph-mark (60) and the
+   z-50 flash toast (see .planning/debug/resolved/about-logo-over-nav-drawer.md).
+   They now compete in the ROOT context at 550 (backdrop) / 551 (panel),
+   inside the 500-700 overlay band — above .pk-portal (500) and below
+   .pk-sheet-backdrop/.pk-sheet (600/601) and .pk-lightbox (700), which are
+   mutually exclusive with an open drawer — colliding with none of them.
+   These values only work while the drawer has no stacking-context ancestor,
+   which nav_drawer_stacking_test.exs pins. Its containing block is the
+   viewport (position: sticky does not create a containing block for fixed
+   descendants, so no transform/filter/contain/will-change hack is needed
+   here either, now that the drawer's ancestor is the LiveView root, not the
+   sticky header). See .pk-drawer-backdrop above for the matching backdrop
+   tier. */
 .pk-drawer {
   display: none;
   position: fixed;
@@ -2829,7 +2854,7 @@ body.pk-sheet-open {
   bottom: 0;
   width: 82%;
   max-width: 20rem;
-  z-index: 61;
+  z-index: 551;
   background: var(--color-base-100);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--pk-shadow-color) 28%, transparent);
   padding: 1rem;

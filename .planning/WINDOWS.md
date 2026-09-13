@@ -1,10 +1,10 @@
 ---
 schema_version: 1
 open_count: 0
-waived_count: 4
-fixed_count: 22
+waived_count: 1
+fixed_count: 25
 total_count: 26
-last_updated: 2026-09-12T22:46:33.262Z
+last_updated: 2026-09-13T00:04:47.676Z
 ---
 
 # Broken Windows Ledger
@@ -18,10 +18,10 @@ last_updated: 2026-09-12T22:46:33.262Z
 | 1 | quick-260818-gdb | deviation | config/runtime.exs |  | Pre-existing unstaged formatting/sobelow issues (config/runtime.exs unformatted, low-confidence Traversal.FileModule findings in seed/csv_import.ex + seed/report.ex, a Software Design credo suggestion in core_components.ex) block 'mix quality passes clean' -- none touched by this plan; task's own files (layouts.ex, tests, SKILL.md) are individually clean. | fixed | Fixed 2026-09-12 in quick 260912-pnw (def1307): function-level sobelow_skip on reviewed operator-only seed paths; mix quality passes. | 2026-08-18T14:57:00.671Z | 2026-09-12T21:52:17.249Z |
 | 2 | quick-260822-2v9 | deviation | assets/css/app.css |  | Header row overflows horizontally at 375px (brand wordmark wraps, horizontal scrollbar) after the desktop header polish — narrow-viewport block confirmed byte-identical, out of scope per plan C-1, deliberately not fixed | fixed |  | 2026-08-22T05:30:01.096Z | 2026-09-12T20:35:45.479Z |
 | 3 | 01.1-09 | unrun-verify | lib/pukllay_club_web/components/layouts.ex |  | Task 1 human-check: drawer opens/traps focus/closes every way (Escape, close button, backdrop, link nav) on all three routes at 390px, absent+unreachable at 1440px -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | fixed | Browser-verified 2026-09-12: /, /quienes-somos, /juegos/179 at 390px (open focus+aria-expanded, Tab/Shift+Tab trap, Escape/close/backdrop/link close + focus return) and 1440px (hamburger display:none, drawer never tabbable). | 2026-08-22T14:11:54.024Z | 2026-09-12T22:46:33.262Z |
-| 4 | 01.1-09 | unrun-verify | assets/css/app.css |  | Task 2 human-check: drawer rows read as full-width tappable list with chevrons and left-accent active state, toggle+socials pinned hard to the panel's bottom edge, footer sheds toggle/socials but keeps copyright+BGG attribution at 390px -- deferred to end-of-phase visual verification | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Mobile drawer visual layout never exercised by a human UAT; residual risk accepted, re-check opportunistically. | 2026-08-22T14:11:54.190Z | 2026-09-12T21:18:08.436Z |
+| 4 | 01.1-09 | unrun-verify | assets/css/app.css |  | Task 2 human-check: drawer rows read as full-width tappable list with chevrons and left-accent active state, toggle+socials pinned hard to the panel's bottom edge, footer sheds toggle/socials but keeps copyright+BGG attribution at 390px -- deferred to end-of-phase visual verification | fixed | Browser re-verified 2026-09-12 after 260912-rws (260912-rwt): /quienes-somos 390px, dark and light; drawer now paints above the docked morph mark (104 hit-test samples), full-width chevron rows, bottom block pinned, footer shows only Powered by BGG; Escape and backdrop close return focus. | 2026-08-22T14:11:54.190Z | 2026-09-13T00:04:47.676Z |
 | 5 | 01.1-09 | unrun-verify | lib/pukllay_club_web/live/about_live.ex |  | Task 3 human-check: About sticky CTA bar stays pinned above the fold with the footer fully readable underneath at 390px scrolled to bottom, absent at 1440px and on other routes at every scroll position -- deferred to end-of-phase visual verification | fixed | Browser-verified 2026-09-12: /quienes-somos 390px (bar hidden at top, pinned after dock both directions, BGG line clears bar, Cierre Sumate hidden); absent at 1440px and on / and /juegos/179 at 390px. | 2026-08-22T14:11:54.347Z | 2026-09-12T22:46:33.262Z |
 | 6 | 01.1-02 | deviation | lib/pukllay_club_web/live/about_live.ex |  | Four photo-rail slides render as labelled placeholders (D-12, no real club photography exists yet) -- intentional per plan, resolves when real photos are swapped in (structural no-op) | fixed |  | 2026-08-22T14:30:46.847Z | 2026-09-12T20:35:45.695Z |
-| 7 | 01.1-02 | unrun-verify | lib/pukllay_club_web/live/about_live.ex |  | Photo rail human-check: dots scroll-sync, click-to-jump, auto-advance every 4.5s, pauses on pointer interaction/unfocused tab/reduced-motion -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). About photo rail interaction (dot sync, click-to-jump, auto-advance, pause) not human-verified; 01.4-UAT only checked photo content. Residual risk accepted. | 2026-08-22T14:30:53.492Z | 2026-09-12T21:18:08.832Z |
+| 7 | 01.1-02 | unrun-verify | lib/pukllay_club_web/live/about_live.ex |  | Photo rail human-check: dots scroll-sync, click-to-jump, auto-advance every 4.5s, pauses on pointer interaction/unfocused tab/reduced-motion -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | fixed | Browser re-verified 2026-09-12 after 260912-rws (260912-rwu): /quienes-somos#fotos at 1440px (real window) and 390px; dot click resumes autoplay after the 6s timer, hover holds the pause, unfocused document and reduced-motion (headless Chrome CDP) stop autoplay, touch swipe pauses then resumes. | 2026-08-22T14:30:53.492Z | 2026-09-13T00:04:47.676Z |
 | 8 | 01.1-03 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual human-check: at 1440px scroll /juegos/:id -- the poster column pins below the header with no overlap/gap and releases at the end of the masthead; at 390px the layout is a single column and the ficha tecnica is one column wide -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | fixed |  | 2026-08-22T19:27:49.892Z | 2026-09-12T20:35:45.907Z |
 | 9 | 01.1-04 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual human-check: at a real 390px viewport, the CTA bar is visible on first paint with no scroll, retracts during an active scroll and returns ~200ms after it stops, parks with the footer while body padding-bottom collapses in the same transition, and the title-echo bar fades in only after the h1 has fully scrolled past the header -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | fixed |  | 2026-08-22T20:00:25.349Z | 2026-09-12T20:35:46.113Z |
 | 10 | 01.1-04 | unrun-verify | assets/css/app.css |  | Manual human-check: the mobile CTA bar's computed backgroundColor is visibly distinct from its own outlined share button's background (verify via computed style, not by eye) -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase | fixed |  | 2026-08-22T20:00:32.776Z | 2026-09-12T20:35:46.320Z |
@@ -32,7 +32,7 @@ last_updated: 2026-09-12T22:46:33.262Z
 | 15 | 01.3-02 | todo | lib/pukllay_club/catalog/seed/bgg_client.ex |  | BggClient.fetch_batch/2 raises ArgumentError (:erlang.binary_to_integer("")) when called with an empty bgg_ids list, discovered via an ad hoc verification script during 01.3-02; not reachable through StatsEnricher's normal flow (chunk_every never yields an empty chunk from a non-empty candidate list) but is a latent crash if ever called with []; pre-existing 01.3-01 code, out of scope for this plan's no-code-changes constraint | fixed | Fixed 2026-09-12 in quick 260912-pnv (048f607): fetch_batch([], _) returns {:ok, []} without a request; regression test added. | 2026-08-30T23:17:30.601Z | 2026-09-12T21:52:17.249Z |
 | 16 | 01.3-04 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Human-check: open three game detail pages (short/long/unusual-title descriptions), confirm as a Spanish speaker the description reads naturally in Argentine Spanish (voseo), proper nouns/mechanic names survive untranslated, no stray escapes, and Ver mas/Ver menos still expands/collapses at mobile+desktop widths -- deferred to end-of-phase UAT per human_verify_mode: end-of-phase; text quality already reviewed by the executor against a 5-game sample (all 5 criteria incl. voseo) before the full batch ran | fixed |  | 2026-08-31T00:12:03.091Z | 2026-09-12T20:35:46.958Z |
 | 17 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | Manual visual verification of the D-03/D-04 reading-column rhythm and D-06 Avanzado group at 390px/1440px against 01.3-UI-SPEC.md not run interactively (no browser tool available to this executor); deferred to end-of-phase UAT per workflow.human_verify_mode: end-of-phase. | fixed |  | 2026-08-31T00:35:26.436Z | 2026-09-12T20:35:47.148Z |
-| 18 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode | waived | Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). 01.3-UAT test 1 confirmed 4 of 5 sub-items; only 'tappable creator pills' was never explicitly confirmed. Residual risk accepted. | 2026-08-31T20:19:55.896Z | 2026-09-12T21:18:09.464Z |
+| 18 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode | fixed | Browser re-verified 2026-09-12 after 260912-rws (260912-rwv): /juegos/179 and /juegos/137 at 390px; creator pills measure 44px, taps land on the Diseñador/Ilustrador filtered Resultados, Wingspan's 4 artist pills wrap with no overflow; 1440px style/hover/navigation passed in the first session. | 2026-08-31T20:19:55.896Z | 2026-09-13T00:04:47.676Z |
 | 19 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-08 Task 3 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify description justify + mid-word-cut risk (fallback pre-decided) + chevron/ellipsis ink alignment (translateY(-2px), tuned but unverified against real Inter render) + repeated tap round-trips, across 3 real games x 2 widths (390/1440) x 2 themes; if any of the 6 combos cuts mid-word, apply this plan's pre-decided fallback CSS (real -webkit-line-clamp:3 + trailing-sibling toggle, recorded in 01.3-08-PLAN.md's planner_note) rather than re-sketching. | fixed |  | 2026-08-31T20:39:49.123Z | 2026-09-12T20:35:47.351Z |
 | 20 | 01.3 | unrun-verify | lib/pukllay_club_web/live/catalog_live/show.ex |  | 01.3-10 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): verify on a real iOS/Mobile-Safari device (the engine G-01.3-4 reproduced on, not Blink) that the chevron sits inside the text column at 390px, the clipped third line ends on a whole word, tapping expands/collapses reliably across round trips, and the description stays justified at 390px/1440px, across light+dark theme and a short + long description game. | fixed |  | 2026-08-31T23:15:03.802Z | 2026-09-01T11:03:15.503Z |
 | 21 | 01.3-11 | unrun-verify | assets/css/app.css |  | 01.3-11 Task 2 human-check deferred to end-of-phase UAT (human_verify_mode=end-of-phase): at 390px, both light and dark theme, on a long game name with an accented capital and one that truncates, verify the sticky bar's title reads as a deliberate title (holds its own against the scroll-to-top button), stays on ONE line ending in an ellipsis, accented capitals render complete, and the bar's fill/border/button remain visually unchanged from before this plan. | fixed |  | 2026-08-31T23:29:56.119Z | 2026-09-01T02:15:46.887Z |
@@ -87,10 +87,10 @@ last_updated: 2026-09-12T22:46:33.262Z
     "file": "assets/css/app.css",
     "line": null,
     "description": "Task 2 human-check: drawer rows read as full-width tappable list with chevrons and left-accent active state, toggle+socials pinned hard to the panel's bottom edge, footer sheds toggle/socials but keeps copyright+BGG attribution at 390px -- deferred to end-of-phase visual verification",
-    "status": "waived",
-    "reason": "Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). Mobile drawer visual layout never exercised by a human UAT; residual risk accepted, re-check opportunistically.",
+    "status": "fixed",
+    "reason": "Browser re-verified 2026-09-12 after 260912-rws (260912-rwt): /quienes-somos 390px, dark and light; drawer now paints above the docked morph mark (104 hit-test samples), full-width chevron rows, bottom block pinned, footer shows only Powered by BGG; Escape and backdrop close return focus.",
     "recorded_at": "2026-08-22T14:11:54.190Z",
-    "resolved_at": "2026-09-12T21:18:08.436Z"
+    "resolved_at": "2026-09-13T00:04:47.676Z"
   },
   {
     "id": 5,
@@ -123,10 +123,10 @@ last_updated: 2026-09-12T22:46:33.262Z
     "file": "lib/pukllay_club_web/live/about_live.ex",
     "line": null,
     "description": "Photo rail human-check: dots scroll-sync, click-to-jump, auto-advance every 4.5s, pauses on pointer interaction/unfocused tab/reduced-motion -- no browser test runner in this suite, deferred to end-of-phase per human_verify_mode: end-of-phase",
-    "status": "waived",
-    "reason": "Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). About photo rail interaction (dot sync, click-to-jump, auto-advance, pause) not human-verified; 01.4-UAT only checked photo content. Residual risk accepted.",
+    "status": "fixed",
+    "reason": "Browser re-verified 2026-09-12 after 260912-rws (260912-rwu): /quienes-somos#fotos at 1440px (real window) and 390px; dot click resumes autoplay after the 6s timer, hover holds the pause, unfocused document and reduced-motion (headless Chrome CDP) stop autoplay, touch swipe pauses then resumes.",
     "recorded_at": "2026-08-22T14:30:53.492Z",
-    "resolved_at": "2026-09-12T21:18:08.832Z"
+    "resolved_at": "2026-09-13T00:04:47.676Z"
   },
   {
     "id": 8,
@@ -255,10 +255,10 @@ last_updated: 2026-09-12T22:46:33.262Z
     "file": "lib/pukllay_club_web/live/catalog_live/show.ex",
     "line": null,
     "description": "01.3-07 manual visual verification at 390px/1440px (hashtag position/tone, no divider, tappable creator pills, fact-grid pairing/stacking, Comunidad BGG label) deferred to end-of-phase UAT per workflow.human_verify_mode",
-    "status": "waived",
-    "reason": "Accepted by user 2026-09-12 to unblock /gsd-ship (260912-mxt follow-up). 01.3-UAT test 1 confirmed 4 of 5 sub-items; only 'tappable creator pills' was never explicitly confirmed. Residual risk accepted.",
+    "status": "fixed",
+    "reason": "Browser re-verified 2026-09-12 after 260912-rws (260912-rwv): /juegos/179 and /juegos/137 at 390px; creator pills measure 44px, taps land on the Diseñador/Ilustrador filtered Resultados, Wingspan's 4 artist pills wrap with no overflow; 1440px style/hover/navigation passed in the first session.",
     "recorded_at": "2026-08-31T20:19:55.896Z",
-    "resolved_at": "2026-09-12T21:18:09.464Z"
+    "resolved_at": "2026-09-13T00:04:47.676Z"
   },
   {
     "id": 19,

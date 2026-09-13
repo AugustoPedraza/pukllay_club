@@ -1,8 +1,8 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "WINDOWS entry 18 browser-verification FAIL — tappable creator pills on /juegos/:id render 26.5px tall, under the project's 44px touch-target minimum."
 created: 2026-09-12T23:30:00Z
-updated: 2026-09-13T00:05:00Z
+updated: 2026-09-13T00:20:00Z
 goal: find_root_cause_only
 ---
 
@@ -13,7 +13,7 @@ known_pattern_candidate: none (KB has no touch-target / pill-height entry; close
 hypothesis: CONFIRMED — creator_pills/1 renders the dense `.pk-pill` base with no height floor (11px x 1.5 line-height = 16.5 + 8 padding + 2 border = 26.5px); `.pk-pill-interactive` carries no min-height, and the 44px floor exists only as a per-call-site `min-h-11` utility that creator_pills/1 never received.
 test: done — live CDP measurement (26.5px, min-height auto) + injected min-height:44px (all fact-grid pills -> 44px, no wrap/overflow change)
 expecting: n/a
-next_action: return ROOT CAUSE FOUND (goal: find_root_cause_only) — no fix applied
+next_action: closed by quick task 260912-rwv (option A applied — min-height:44px added to `.pk-pill-interactive`); no further action
 
 reasoning_checkpoint:
   hypothesis: "Creator pills are 26.5px tall because `.pk-pill`'s dense geometry (11px/1.5 line-height, 4px vertical padding, 1px border) sums to 26.5px and neither `.pk-pill-interactive` nor creator_pills/1's class string supplies a min-height floor."
@@ -121,9 +121,74 @@ relevant_files:
   specialist_hint: general (mapped skill: engineering:debug)
   result: NOT RUN — the skill-invocation tool is not available in this session-manager context; diagnose-only session, no fix direction was applied. Review the fix options (A: min-height on `.pk-pill-interactive`; B: `min-h-11` on creator_pills/1; middle: `.pk-fact-col .pk-pill-interactive` scoped rule) when the fix is planned.
 
+- timestamp: 2026-09-13T00:20:00Z
+  specialist_hint: n/a — user decision, recorded post-diagnosis
+  result: User chose option A (min-height on `.pk-pill-interactive`) over option B (`min-h-11` on creator_pills/1 alone) and the scoped middle option (`.pk-fact-col .pk-pill-interactive`). Option A fixes every tappable-pill call site at once — creator pills, the Mecánicas/Temáticas links, the masthead facts row, and the editorial hashtag links — rather than patching one call site or one scoped region, and it restores sketch 036's original 44px interactive-chip contract that the c33e7f1 port dropped, closing the "AND-gate" so no future call site can compose `pk-pill-interactive` below 44px by omission.
+
 ## Resolution
 
 root_cause: (1) lib/pukllay_club_web/live/catalog_live/show.ex:1254 — creator_pills/1 composes `pk-pill pk-pill-outline pk-pill-interactive` with no size variant and no `min-h-11` (copied verbatim from GameChips.chip_row/1's linked branch), so the pill takes the dense base height 11px x 1.5 + 4px + 4px + 1px + 1px = 26.5px; (2) assets/css/app.css:1232 — `.pk-pill-interactive` declares only cursor + transition, so the pill system's "tappable" variant does not carry the 44px touch floor sketch 036 specified for interactive chips (dropped in the c33e7f1 port); the floor survives only as a per-call-site `min-h-11` utility on the filter-modal and active-filter chips, which is what makes those look correct and hid the gap. Same defect also hits GameChips.chip_row/1 links (Mecánicas/Temáticas, 26.5px), GamePreview.facts_row/1 links (26.5px) and editorial_tags/1 hashtag links (23px) — outside entry 18's scope.
-fix: (not applied — diagnose-only)
-verification: (not applicable — diagnose-only)
-files_changed: []
+fix: >
+  Quick task 260912-rwv, user-chosen option A: added a single `min-height: 44px;` declaration
+  (with a provenance comment above it) to the top-level `.pk-pill-interactive` rule in
+  assets/css/app.css, alongside its existing `cursor: pointer` and `transition`. This closes
+  AND-gate item 2 (the pill system's tappable variant now owns the 44px touch floor), which
+  makes AND-gate item 1 (creator_pills/1's missing per-call-site `min-h-11`) moot — for
+  creator_pills/1 and for every other current or future call site that composes
+  `pk-pill-interactive` (GameChips.chip_row/1's Mecánicas/Temáticas links,
+  GameChips.editorial_tags/1's hashtag links, GamePreview.facts_row/1's links). No markup was
+  changed at any call site. The redundant `min-h-11` Tailwind utilities on filter_modal.ex's
+  chip_class/1 and index.ex's active-filter chip were deliberately left in place (harmless,
+  out of scope — removing them would touch class strings pinned by existing tests). A new
+  CSS-source regression describe block ("pill system interactive touch-target floor") was
+  added to catalog_show_test.exs pinning the 44px floor, its floor-only geometry (no fixed
+  height/max-height/width/padding/font-size), and the base `.pk-pill`'s inline-flex +
+  align-items:center centring (with `.pk-pill-tag` overriding neither).
+verification: >
+  RED/GREEN TDD cycle (commits b207211 RED, 3e0989b GREEN in the 260912-rwv worktree branch):
+  Test A ("declares a 44px min-height touch floor") failed before the app.css edit (min-height
+  absent) and passed after it; Tests B (floor-only geometry) and C (base flex centring)
+  passed both before and after, as expected since neither assertion depended on the fix.
+  `git diff b207211^..3e0989b -- assets/css/app.css` shows only added lines, all at the
+  `.pk-pill-interactive` rule and its preceding comment. `mix test
+  test/pukllay_club_web/live/catalog_show_test.exs test/pukllay_club_web/stylesheet_integrity_test.exs`
+  — 218 tests, 0 failures (includes the unmodified pill tone-variant geometry gate).
+  `mix quality` — all seven steps exit 0, 1043 tests, 0 failures (hex.audit: no retired
+  packages; deps.audit: no vulnerabilities; credo --strict: 891 mods/funs, no issues; sobelow:
+  three pre-existing low-confidence findings unrelated to this change, no new findings).
+
+  Live 390px-viewport CDP probe (headless Chrome, mobile emulation, worktree's own dev server
+  on PORT=4010, throwaway scratchpad script, not committed):
+  - /juegos/137 (Wingspan): h1 confirms the page. All 16 `a.pk-pill-interactive` pills
+    (facts row x3, 13 chip-row/creator links) measure exactly 44px tall. The
+    "Ilustradores"/artist pill row spans 2 distinct top offsets (still wraps onto multiple
+    rows, unchanged from the pre-fix 26.5px-tall wrapping). Every chip-row pill's right edge
+    (max 314.2px) stays inside its `.pk-chip-row` container's right edge (376px) — no
+    overflow. `document.documentElement.scrollWidth` (390) equals `clientWidth` (390).
+  - /juegos/179 (7 Wonders Duel): h1 confirms the page. All 17 `a.pk-pill-interactive` pills
+    (facts row x3, hashtag, 13 chip-row/creator links) measure exactly 44px tall, including
+    creator pills (Antoine Bauza, Bruno Cathala, Miguel Coimbra — the three pills WINDOWS #18
+    originally reported at 26.5px) and Mecánicas/Temáticas links. Creator pills' single row
+    unchanged (artistRowCount 1). The `#DuelosMemorables` hashtag link measures 44px tall;
+    getComputedStyle reports `display: flex` (not literal `inline-flex`) because the element
+    is itself a flex item of its flex-wrap parent — Chrome's computed-style API reports the
+    spec's "blockified" used value for flex items that specify an inline `display`, which is
+    expected CSS behaviour, not a regression; the CSS-source test above already pins the
+    literal `display: inline-flex` declaration on `.pk-pill`. `align-items: center` reported
+    as-is. The hashtag's own box vertical midpoint (636.39px) matches its text node's
+    vertical midpoint (636.39px) exactly — confirms centring. scrollWidth (390) equals
+    clientWidth (390) — no overflow.
+  Blind spots remaining, honestly noted: real-device tap behaviour was not tested (box
+  geometry only, as in the original diagnosis); the developer's own visual acceptance of the
+  now visibly taller outline pills in the fact grid and masthead facts row has not been
+  reviewed — the fix trades a sub-44px tap target for a taller (per the earlier injected-fix
+  evidence, roughly +105px total) fact grid on mobile, which was flagged as the expected cost
+  during diagnosis but not yet signed off on visually.
+files_changed:
+  - assets/css/app.css
+  - test/pukllay_club_web/live/catalog_show_test.exs
+
+follow_up_note: >
+  The ux-responsive skill's "min-h-11 on every tappable pill" per-call-site wording predates
+  this variant-level floor (not edited by this quick task) — a future pass could update that
+  skill's guidance to point at `.pk-pill-interactive` instead of a per-call-site utility.

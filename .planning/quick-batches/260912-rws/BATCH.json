@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "batch_id": "260912-rws",
+  "created_at": "2026-09-12T23:05:44.031Z",
+  "options": {},
+  "base_revision": "c6f3b893f0b1147dee2ab4b799734b903c978d99",
+  "items": [
+    {
+      "quick_id": "260912-rwt",
+      "client_id": null,
+      "description": "Fix WINDOWS #4 (mobile nav drawer painted under the About floating isologo). Read the diagnosed session .planning/debug/about-logo-over-nav-drawer.md first; do not re-investigate. DECISION (user-chosen): move <.nav_drawer> (backdrop + aside#pk-nav-drawer) out of both #app-header branches to a page-level sibling, give .pk-drawer-backdrop/.pk-drawer z-indexes in the 500-700 overlay band without colliding with .pk-portal 500, .pk-sheet 600/601, .pk-lightbox 700; update the .CatalogNav hook drawer lookup (layouts.ex ~340-344, and its comments at layouts.ex:335-339) and rewrite the app.css:2819 comment. Regression test: CSS-source/markup test that the drawer is not inside #app-header and its page-level z-index beats #pk-about-morph-mark (60) and the flash toast (z-50). Fill in the session Resolution (fix, verification, files_changed), set status resolved and git mv it to .planning/debug/resolved/. Mobile-first (390px). mix quality must pass. Do NOT touch WINDOWS.md rows.",
+      "status": "complete",
+      "depends_on": [],
+      "planned_files": [
+        "lib/pukllay_club_web/components/layouts.ex",
+        "assets/css/app.css",
+        "test/pukllay_club_web/components/nav_drawer_stacking_test.exs",
+        ".planning/debug/about-logo-over-nav-drawer.md",
+        ".planning/debug/resolved/about-logo-over-nav-drawer.md"
+      ],
+      "directory": null,
+      "worktree": null,
+      "dispatched_worktree": null,
+      "dispatched_branch": null,
+      "dispatched_base": null,
+      "wave": 0,
+      "commit": "192c6be",
+      "failure_reason": null
+    },
+    {
+      "quick_id": "260912-rwu",
+      "client_id": null,
+      "description": "Fix WINDOWS #7 (About photo rail stays paused after a dot click). Read the diagnosed session .planning/debug/about-rail-dot-click-pause.md first; do not re-investigate. Fix: one shared pause-then-resume helper used by onClick and onPointerDown (covers keyboard dot presses too); keep mouseenter/mouseleave on the rail; mouseenter must cancel the pending 6s resume timer so autoplay does not resume while the mouse is on the rail. Regression tests for dot tap, keyboard dot press, and swipe after a dot tap. Fill in the session Resolution, set status resolved and git mv it to .planning/debug/resolved/. Mobile-first (390px). mix quality must pass. Do NOT touch WINDOWS.md rows.",
+      "status": "complete",
+      "depends_on": [],
+      "planned_files": [
+        "lib/pukllay_club_web/live/about_live.ex",
+        "test/pukllay_club_web/about_carousel_hook_test.exs",
+        ".planning/debug/about-rail-dot-click-pause.md",
+        ".planning/debug/resolved/about-rail-dot-click-pause.md"
+      ],
+      "directory": null,
+      "worktree": null,
+      "dispatched_worktree": null,
+      "dispatched_branch": null,
+      "dispatched_base": null,
+      "wave": 0,
+      "commit": "9bb1f5f",
+      "failure_reason": null
+    },
+    {
+      "quick_id": "260912-rwv",
+      "client_id": null,
+      "description": "Fix WINDOWS #18 (tappable pills under 44px). Read the diagnosed session .planning/debug/creator-pill-touch-target.md first; do not re-investigate. DECISION (user-chosen, option A): add min-height: 44px to .pk-pill-interactive in assets/css/app.css (fixes creator pills, Mecanicas/Tematicas links, facts row and hashtags). Regression test: a CSS-source test that the .pk-pill-interactive rule declares a 44px minimum height. Keep the Wingspan (/juegos/137) artist pills wrapping cleanly with no horizontal overflow at 390px. Fill in the session Resolution, set status resolved and git mv it to .planning/debug/resolved/. mix quality must pass. Do NOT touch WINDOWS.md rows.",
+      "status": "complete",
+      "depends_on": [],
+      "planned_files": [
+        "assets/css/app.css",
+        "test/pukllay_club_web/live/catalog_show_test.exs",
+        ".planning/debug/creator-pill-touch-target.md",
+        ".planning/debug/resolved/creator-pill-touch-target.md"
+      ],
+      "directory": null,
+      "worktree": null,
+      "dispatched_worktree": null,
+      "dispatched_branch": null,
+      "dispatched_base": null,
+      "wave": 1,
+      "commit": "5efd404",
+      "failure_reason": null
+    }
+  ]
+}

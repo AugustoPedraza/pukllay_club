@@ -4602,6 +4602,106 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     end
   end
 
+  # quick 260912-rwv (WINDOWS #18): debug session creator-pill-touch-target
+  # diagnosed that every tappable pill composing `pk-pill-interactive`
+  # (creator pills, Mecánicas/Temáticas links, masthead facts-row links,
+  # editorial hashtag links) rendered 26.5px tall (hashtags 23px) — under
+  # this project's 44px touch-target minimum — because the base `.pk-pill`'s
+  # dense geometry has no height floor and `.pk-pill-interactive` (c33e7f1)
+  # never carried one either, unlike the two call sites that happened to
+  # append a per-call-site `min-h-11` utility. User-chosen fix (option A,
+  # restoring sketch 036's 44px interactive-chip contract): the floor moves
+  # INTO the variant that means "tappable", so every current and future
+  # call site gets it by construction. This describe block pins that floor
+  # plus its floor-only geometry (no fixed height/width/padding/font-size)
+  # and confirms the base's flex centring still applies at the taller
+  # height, for every tone including the zero-vertical-padding hashtag tone.
+  describe "pill system interactive touch-target floor (WINDOWS #18, quick 260912-rwv)" do
+    # `\s*\{` immediately after `pk-pill-interactive` means
+    # `.pk-pill-interactive:hover {` can never be mistaken for this rule —
+    # `:` follows immediately with no intervening whitespace, so the anchor
+    # never matches at that position. Same idiom as the tone-variant gate
+    # and title_echo_block/0 above.
+    defp pk_pill_interactive_block do
+      case Regex.run(~r/(?m)^\.pk-pill-interactive\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-pill-interactive { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    defp pk_pill_base_block do
+      case Regex.run(~r/(?m)^\.pk-pill\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-pill { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    defp pk_pill_tag_block do
+      case Regex.run(~r/(?m)^\.pk-pill-tag\s*\{([^}]*)\}/s, css_source()) do
+        [_, body] -> body
+        nil -> flunk("No top-level `.pk-pill-tag { ... }` rule found in assets/css/app.css")
+      end
+    end
+
+    test "the top-level .pk-pill-interactive rule declares a 44px min-height touch floor" do
+      body = pk_pill_interactive_block()
+
+      assert body =~ ~r/min-height:\s*44px\s*;/,
+             "`.pk-pill-interactive` must declare `min-height: 44px;` — the 44px touch floor " <>
+               "diagnosed in .planning/debug/resolved/creator-pill-touch-target.md (WINDOWS #18) " <>
+               "must live on the tappable variant itself (user-chosen option A), so every call " <>
+               "site composing `pk-pill-interactive` (creator pills, Mecánicas/Temáticas links, " <>
+               "the masthead facts row, editorial hashtag links) reaches 44px by construction."
+    end
+
+    test "the interactive variant adds only a height floor — no fixed height, max-height, width, padding, or font-size" do
+      body = pk_pill_interactive_block()
+
+      refute body =~ ~r/(?<![\w-])height\s*:/,
+             "`.pk-pill-interactive` must not declare a bare `height` — only `min-height` (a " <>
+               "floor), so pill geometry above 44px is still driven by content, not clamped."
+
+      refute body =~ ~r/max-height/,
+             "`.pk-pill-interactive` must not declare `max-height` — that would defeat the " <>
+               "min-height floor for any pill whose content needs more room."
+
+      refute body =~ ~r/width/,
+             "`.pk-pill-interactive` must not declare `width`, `min-width`, or `max-width` — " <>
+               "the interactive variant owns a height floor only, so pill widths and per-row " <>
+               "wrapping (e.g. Wingspan's artist pills at 390px) cannot change."
+
+      refute body =~ ~r/padding/,
+             "`.pk-pill-interactive` must not declare `padding` — padding lives on `.pk-pill` " <>
+               "or a size variant, never on the interactive behaviour variant."
+
+      refute body =~ ~r/font-size/,
+             "`.pk-pill-interactive` must not declare `font-size` — type size lives on `.pk-pill` " <>
+               "or a size variant, never on the interactive behaviour variant."
+    end
+
+    test "text stays vertically centred inside the taller pill — the base owns inline-flex + align-items:center, tones never override it" do
+      base = pk_pill_base_block()
+      tag = pk_pill_tag_block()
+
+      assert base =~ ~r/display:\s*inline-flex\s*;/,
+             "`.pk-pill` must declare `display: inline-flex;` — the flex centring that keeps " <>
+               "text vertically centred inside a taller (44px min-height) pill."
+
+      assert base =~ ~r/align-items:\s*center\s*;/,
+             "`.pk-pill` must declare `align-items: center;` — required alongside inline-flex " <>
+               "so text centres vertically at the new 44px floor."
+
+      refute tag =~ ~r/display\s*:/,
+             "`.pk-pill-tag` (the hashtag tone, zero vertical padding) must not declare its " <>
+               "own `display` — it must inherit the base's inline-flex, or its text would not " <>
+               "centre inside the 44px floor."
+
+      refute tag =~ ~r/align-items\s*:/,
+             "`.pk-pill-tag` must not declare its own `align-items` — it must inherit the " <>
+               "base's `center`, or hashtag link text would not centre inside the 44px floor."
+    end
+  end
+
   # 01.3-07 (task 3 net-new coverage): CSS-source pins for the fact-grid
   # breakpoint, the .pk-text-col rhythm mechanism, and the .pk-pill-tag
   # hashtag contrast floor — three properties this restructure introduced
