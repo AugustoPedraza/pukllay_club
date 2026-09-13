@@ -20,7 +20,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           name: "Un título extraordinariamente largo que no debería truncarse en la página de detalle"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~
                "Un título extraordinariamente largo que no debería truncarse en la página de detalle"
@@ -30,7 +30,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{weight_band: "ingenio_estratega"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -43,7 +43,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{weight_band: "ingenio_estratega"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -72,7 +72,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           ]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       for label <- [
             "Tira dados",
@@ -101,7 +101,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           description: "Compite por colonizar la isla de Catán."
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       facts_html = doc |> LazyHTML.query(".pk-facts-row") |> LazyHTML.to_html()
@@ -134,7 +134,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           description: nil
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "Diseñadores"
       refute html =~ "Editorial"
@@ -151,7 +151,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           ]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "gallery-thumbnails"
       assert html =~ "gallery-1.webp"
@@ -163,7 +163,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture(%{gallery_urls: []})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "gallery-thumbnails"
     end
@@ -175,7 +175,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
         })
 
-      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game}")
       assert html =~ ~s(src="https://images.test.invalid/games/1/cover-large.webp")
 
       html2 =
@@ -196,7 +196,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
         })
 
-      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game}")
       assert html =~ ~s(src="https://images.test.invalid/games/1/cover-large.webp")
 
       html2 =
@@ -215,7 +215,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: []
         })
 
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       html2 = render_click(view, "select-image", %{"url" => "https://evil.example.com/x.jpg"})
 
@@ -268,7 +268,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "max-w-7xl"
       assert html =~ "pk-gutter"
@@ -279,7 +279,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Juego Detalle Shell"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "pk-nav-crumb"
 
@@ -298,7 +298,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       header_html =
         html
@@ -315,7 +315,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       header_html =
         html
@@ -333,7 +333,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       drawer_html =
         html
@@ -350,7 +350,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       drawer_html =
         html
@@ -364,7 +364,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "renders no .pk-about-cta-bar (About-scoped, 01.1-09)", %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "pk-about-cta-bar"
     end
@@ -373,7 +373,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -390,7 +390,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate", weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "Juegos similares"
       assert html =~ "Otros juegos del mismo nivel: Nivel experto"
@@ -401,7 +401,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Lonely", weight_band: "descubre_el_hobby"})
 
-      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "Juegos similares"
       assert view.module == Show
@@ -416,7 +416,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base Same Band", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate Same Band", weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "Juegos similares"
       refute html =~ "Ampliado"
@@ -432,7 +432,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game_fixture(%{name: "Other Band 1", weight_band: "nivel_experto"})
       game_fixture(%{name: "Other Band 2", weight_band: "ingenio_estratega"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "Juegos similares"
       assert html =~ "Ampliado"
@@ -446,7 +446,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base No Band", weight_band: nil})
       game_fixture(%{name: "Other 1", weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "Juegos similares"
       assert html =~ "Ampliado"
@@ -483,8 +483,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "descubre_el_hobby"
         })
 
-      {:ok, _view, html_present} = live(conn, ~p"/juegos/#{present.id}")
-      {:ok, _view, html_absent} = live(conn, ~p"/juegos/#{absent.id}")
+      {:ok, _view, html_present} = live(conn, ~p"/juegos/#{present}")
+      {:ok, _view, html_absent} = live(conn, ~p"/juegos/#{absent}")
 
       spec_present =
         html_present
@@ -555,8 +555,8 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           bgg_rank: nil
         })
 
-      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_id.id}")
-      {:ok, _view, html_without} = live(conn, ~p"/juegos/#{without_id.id}")
+      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_id}")
+      {:ok, _view, html_without} = live(conn, ~p"/juegos/#{without_id}")
 
       assert html_with =~ "boardgamegeek.com/boardgame/13"
       refute html_without =~ "boardgamegeek.com/boardgame"
@@ -580,7 +580,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           themes: []
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "pk-spec-list"
       refute html =~ "Comunidad BGG"
@@ -592,7 +592,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Con Valoración", bgg_rating: 7.4, bgg_id: 13, weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       bgg_html =
         html |> LazyHTML.from_document() |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
@@ -606,7 +606,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Sin Valoración", bgg_rating: nil, weight_band: "descubre_el_hobby"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       bgg_html =
         html |> LazyHTML.from_document() |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
@@ -632,7 +632,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           bgg_id: 77
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "pk-spec-list"
       assert html =~ "Comunidad BGG"
@@ -642,7 +642,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "clicking the description toggle expands and collapses the description", %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba."})
 
-      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game}")
       assert html =~ "pk-desc is-clamped"
       refute html =~ "is-expanded"
 
@@ -651,6 +651,42 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html3 = render_click(view, "toggle-description", %{})
       refute html3 =~ "is-expanded"
+    end
+  end
+
+  # Quick task 260913-2x6 (T-2x6-04): live navigation to a non-canonical id
+  # never issues a fresh HTTP request, so `PukllayClubWeb.Plugs.GameSEO`
+  # never runs — `handle_params/3` is the only thing that can correct it.
+  # `render_patch/2` simulates the browser navigating (via patch) to the
+  # given path on the SAME already-mounted LiveView, which is exactly the
+  # "no HTTP request" scenario this task targets.
+  describe "canonical URL self-healing on live navigation (quick task 260913-2x6)" do
+    test "a patch to a non-canonical id, with a query string, is corrected in place to the canonical id-slug path",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      {:ok, view, _html} = live(conn, "/juegos/#{game.id}-catan")
+
+      render_patch(view, "/juegos/#{game.id}?from=q%3Dcatan")
+
+      assert_patch(view, "/juegos/#{game.id}-catan?from=q%3Dcatan")
+    end
+
+    test "a patch to the already-canonical path is a no-op — handle_params never issues a second patch",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      {:ok, view, _html} = live(conn, "/juegos/#{game.id}-catan")
+
+      render_patch(view, "/juegos/#{game.id}-catan")
+      # Consumes render_patch's own client-navigation message — confirms
+      # the simulated browser patch landed on the canonical path itself.
+      assert_patch(view, "/juegos/#{game.id}-catan")
+
+      # If handle_params's no-op branch were wrong and it issued its own
+      # push_patch on top of that, a second navigation message would be
+      # sitting in the mailbox here.
+      refute_patched(view)
     end
   end
 
@@ -672,7 +708,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -695,7 +731,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       html = render_click(view, "toggle-description", %{})
       doc = LazyHTML.from_document(html)
@@ -718,7 +754,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
-      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert_collapsed = fn html ->
         doc = LazyHTML.from_document(html)
@@ -765,7 +801,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture(%{description: nil})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "pk-desc-shell"
       refute html =~ "pk-desc-toggle"
@@ -831,7 +867,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
-      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert_containment = fn html ->
         doc = LazyHTML.from_document(html)
@@ -862,7 +898,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
@@ -1059,7 +1095,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "gutter matches the toggle's markup-declared tap width", %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
@@ -1085,7 +1121,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "shell floor matches the toggle's markup-declared tap height", %{conn: conn} do
       game = game_fixture(%{description: "Una descripción de prueba para el juego."})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       toggle = LazyHTML.query(doc, "#game-description + button.pk-desc-toggle")
@@ -1153,7 +1189,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "renders a single illustrator as one filter-linked pill, not plain text", %{conn: conn} do
       game = game_fixture(%{artists: ["Klemens Franz"], weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       anchors = LazyHTML.query(doc, ".pk-fact-col dd a[href^='/?artists=']")
@@ -1173,7 +1209,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "ingenio_estratega"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       anchors = LazyHTML.query(doc, ".pk-fact-col dd a[href^='/?artists=']")
@@ -1187,7 +1223,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture(%{artists: [], weight_band: "descubre_el_hobby"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "Ilustradores"
     end
@@ -1196,7 +1232,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{artists: ["Loïc Billiau"], weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1230,7 +1266,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "descubre_el_hobby"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1255,7 +1291,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "descubre_el_hobby"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1275,7 +1311,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "nivel_experto"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       stats = LazyHTML.query(doc, ".pk-bgg-stat")
@@ -1301,7 +1337,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "ingenio_estratega"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       stats_html = doc |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
@@ -1338,7 +1374,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "descubre_el_hobby"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       bgg_html = doc |> LazyHTML.query(".pk-bgg-row") |> LazyHTML.to_html()
@@ -1361,7 +1397,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "nivel_experto"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1386,7 +1422,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: nil
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1399,7 +1435,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{description: "Una crónica de mercaderes.", tags: ["#CreaConexiones"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1423,7 +1459,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           tags: ["#CreaConexiones"]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       {title_idx, _} = :binary.match(html, "detail-title-block")
 
@@ -1454,7 +1490,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # masthead↔shelf separator regardless of whether any similar-games
       # bandmate exists (@loading short-circuits the emptiness check) —
       # the same technique the masthead↔shelf boundary tests below use.
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       html = html_response(conn, 200)
 
       doc = LazyHTML.from_document(html)
@@ -1474,7 +1510,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           tags: ["#CreaConexiones"]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1484,7 +1520,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "a game with publishers renders no publisher row anywhere", %{conn: conn} do
       game = game_fixture(%{publishers: ["Devir"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "Devir"
       refute html =~ "Editorial"
@@ -1507,7 +1543,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           bgg_rank: nil
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "pk-spec-list"
       refute html =~ "Comunidad BGG"
@@ -1530,7 +1566,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           bgg_rank: nil
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "pk-spec-list"
       assert html =~ "2001"
@@ -1545,7 +1581,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base Boundary", weight_band: "descubre_el_hobby"})
       game_fixture(%{name: "Bandmate Boundary", weight_band: "descubre_el_hobby"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1564,7 +1600,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Base Loading Boundary", weight_band: "nivel_experto"})
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       html = html_response(conn, 200)
 
       doc = LazyHTML.from_document(html)
@@ -1578,7 +1614,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base Boundary Shelf", weight_band: "descubre_el_hobby"})
       game_fixture(%{name: "Other Band Boundary", weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "Juegos similares"
       assert html =~ "Ampliado"
@@ -1595,7 +1631,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       class = doc |> LazyHTML.query("main") |> LazyHTML.attribute("class") |> List.first()
@@ -1621,7 +1657,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "the CTA bar, title-echo bar, and title block all render with their ids", %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ ~s(id="detail-cta-bar")
       assert html =~ ~s(id="detail-title-echo")
@@ -1641,7 +1677,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       title_echo_html = doc |> LazyHTML.query("#detail-title-echo") |> LazyHTML.to_html()
@@ -1668,7 +1704,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "the title-echo bar's title span carries pk-title-echo-name", %{conn: conn} do
       game = game_fixture(%{name: "Through the Ages: A New Story of Civilization"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1686,7 +1722,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -1715,7 +1751,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       # Phoenix qualifies a colocated hook's leading-dot name at render time
       # (".DetailChrome" -> "PukllayClubWeb.CatalogLive.Show.DetailChrome"),
@@ -1738,7 +1774,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
         })
 
-      {:ok, view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, html} = live(conn, ~p"/juegos/#{game}")
 
       lightbox_state = fn html ->
         doc = LazyHTML.from_document(html)
@@ -1784,7 +1820,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: []
         })
 
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       render_click(view, "open-lightbox", %{})
 
       html2 = render_click(view, "select-image", %{"url" => "https://evil.example.com/x.jpg"})
@@ -1804,7 +1840,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           ]
         })
 
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       # G-01.2-25: the chevrons compute their target against @lightbox_image,
       # which is only seeded once the lightbox actually opens (a visitor
@@ -1866,7 +1902,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           ]
         })
 
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       html = render_click(view, "open-lightbox", %{})
       doc = LazyHTML.from_document(html)
@@ -1941,7 +1977,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
         })
 
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       render_click(view, "open-lightbox", %{})
 
@@ -1991,7 +2027,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: []
         })
 
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       render_click(view, "open-lightbox", %{})
 
       html2 = render_click(view, "select-lightbox-image", %{"url" => "https://evil.example.com/x.jpg"})
@@ -2004,7 +2040,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{cover_url: "https://images.test.invalid/games/1/cover.webp"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ ~s(id="detail-lightbox-trigger")
     end
@@ -2014,7 +2050,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       one_image_game =
         game_fixture(%{cover_url: "https://images.test.invalid/games/1/cover.webp"})
 
-      {:ok, _view, html_one} = live(conn, ~p"/juegos/#{one_image_game.id}")
+      {:ok, _view, html_one} = live(conn, ~p"/juegos/#{one_image_game}")
 
       doc_one = LazyHTML.from_document(html_one)
       assert doc_one |> LazyHTML.query("#detail-lightbox [data-lightbox-prev]") |> Enum.count() == 0
@@ -2022,7 +2058,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       no_image_game = game_fixture(%{cover_url: nil, gallery_urls: []})
 
-      {:ok, _view, html_none} = live(conn, ~p"/juegos/#{no_image_game.id}")
+      {:ok, _view, html_none} = live(conn, ~p"/juegos/#{no_image_game}")
 
       doc_none = LazyHTML.from_document(html_none)
       assert doc_none |> LazyHTML.query("#detail-lightbox") |> Enum.count() == 1
@@ -2035,11 +2071,11 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     # removed — the poster's corner icon is now the page's sole share entry
     # point, so this test asserts on the one remaining control rather than
     # comparing two.
-    test "the one remaining share button renders with a data-share-url matching the canonical route",
+    test "the one remaining share button renders with a data-share-url matching the canonical id-slug route",
          %{conn: conn} do
       game = game_fixture(%{name: "Juego Compartido"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2047,14 +2083,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         doc |> LazyHTML.query("#detail-share-buybox") |> LazyHTML.attribute("data-share-url")
 
       assert buybox_url != []
-      assert hd(buybox_url) =~ ~p"/juegos/#{game.id}"
+      # Literal expectation (quick task 260913-2x6), not derived via
+      # `~p"/juegos/#{game}"` — asserts the actual id-slug bytes, not
+      # whatever the same `Phoenix.Param` impl under test happens to emit.
+      assert hd(buybox_url) == PukllayClubWeb.Endpoint.url() <> "/juegos/#{game.id}-juego-compartido"
       assert doc |> LazyHTML.query("#detail-share-ctabar") |> Enum.count() == 0
     end
 
     test "the share fallback's WhatsApp and X hrefs are percent-encoded", %{conn: conn} do
       game = game_fixture(%{name: "Catán: Edición Básica"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2094,7 +2133,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       poster_html =
         html |> LazyHTML.from_document() |> LazyHTML.query(".pk-poster-col") |> LazyHTML.to_html()
@@ -2114,7 +2153,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       poster_panel_class =
         html
@@ -2132,7 +2171,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       poster_html = doc |> LazyHTML.query(".pk-poster-col") |> LazyHTML.to_html()
@@ -2166,7 +2205,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       cover_button_html =
         html
@@ -2191,7 +2230,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       cta_bar_html =
         html |> LazyHTML.from_document() |> LazyHTML.query("#detail-cta-bar") |> LazyHTML.to_html()
@@ -2208,7 +2247,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
       cta_bar_html = doc |> LazyHTML.query("#detail-cta-bar") |> LazyHTML.to_html()
@@ -2247,7 +2286,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2275,7 +2314,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{min_players: 2, max_players: 4, weight_band: "ingenio_estratega"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2300,7 +2339,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2323,7 +2362,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2352,7 +2391,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2371,7 +2410,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2387,7 +2426,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2426,7 +2465,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           ]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2444,7 +2483,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{cover_url: nil, gallery_urls: []})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2471,7 +2510,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{weight_band: "nivel_experto"})
       game_fixture(%{weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2504,7 +2543,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{weight_band: "nivel_experto"})
       game_fixture(%{weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2533,7 +2572,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           themes: ["Economic"]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2544,7 +2583,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{tags: ["#CreaConexiones"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2599,7 +2638,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # (href_fun always passed) does render the linked shape inside the
       # scoped wrapper.
       game = game_fixture(%{designers: [], artists: [], mechanics: ["Dice Rolling"]})
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
       doc = LazyHTML.from_document(html)
 
       assert doc
@@ -2622,7 +2661,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           weight_band: "ingenio_estratega"
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2643,7 +2682,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2660,7 +2699,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2673,7 +2712,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       reserve_button_class =
         html
@@ -2690,7 +2729,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       aria_label =
         html
@@ -2718,7 +2757,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{min_players: 2, max_players: 4})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2729,7 +2768,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{description: "Una crónica de mercaderes.", tags: ["#CreaConexiones"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2742,7 +2781,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2769,7 +2808,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           tags: ["#CreaConexiones"]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       # Phase 01.8's Game JSON-LD block (`root.html.heex`, rendered inside
       # <head>) also carries this game's own description text verbatim, so
@@ -2793,7 +2832,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "no publisher row renders, and a publishers-only game renders no fact grid and no Comunidad BGG block",
          %{conn: conn} do
       with_publisher = game_fixture(%{publishers: ["Devir"]})
-      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_publisher.id}")
+      {:ok, _view, html_with} = live(conn, ~p"/juegos/#{with_publisher}")
       refute html_with =~ "Editorial"
 
       publishers_only =
@@ -2811,7 +2850,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           bgg_rank: nil
         })
 
-      {:ok, _view, html_only} = live(conn, ~p"/juegos/#{publishers_only.id}")
+      {:ok, _view, html_only} = live(conn, ~p"/juegos/#{publishers_only}")
       refute html_only =~ "pk-spec-list"
       refute html_only =~ "Comunidad BGG"
     end
@@ -2820,7 +2859,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{weight_band: "nivel_experto"})
       game_fixture(%{weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2831,7 +2870,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "the bar holds exactly one control", %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2851,7 +2890,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "gallery-thumbnails"
       assert html =~ "gallery-dots"
@@ -2868,7 +2907,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -2887,7 +2926,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   describe "reservation flow (SHELL-03, T-01.1-02)" do
     test "the buy-box trigger opens the reservation modal", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
@@ -2897,7 +2936,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "the mobile CTA-bar trigger opens the same reservation modal", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       html = view |> element("#detail-cta-bar button[phx-click='open-reservation']") |> render_click()
 
@@ -2907,7 +2946,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "an empty name produces a validation message and no wa.me link", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       html = view |> form("#reservation-modal form", %{"nombre" => ""}) |> render_submit()
@@ -2918,7 +2957,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "a whitespace-only name behaves identically to an empty one", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       html = view |> form("#reservation-modal form", %{"nombre" => "   "}) |> render_submit()
@@ -2929,7 +2968,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "a name over 60 graphemes produces a length message and no wa.me link", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       too_long = String.duplicate("a", 61)
@@ -2941,7 +2980,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "a valid name produces a working wa.me link to the configured number", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       html = view |> form("#reservation-modal form", %{"nombre" => "Ana Pérez"}) |> render_submit()
@@ -2953,7 +2992,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "the visitor's name and the game's name are percent-encoded in the wa.me link — no raw space or accented character survives",
          %{conn: conn} do
       game = game_fixture(%{name: "Río Grande"})
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       html = view |> form("#reservation-modal form", %{"nombre" => "José Pérez"}) |> render_submit()
@@ -2969,7 +3008,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "special characters cannot break out of the text= query parameter", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       html =
@@ -2988,7 +3027,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "the reservation message asks the club to set the game up on-site — never to lend or hand it over (D-09)",
          %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       html = view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
@@ -3004,7 +3043,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       on_exit(fn -> Application.put_env(:pukllay_club, :reservation_whatsapp_number, original) end)
 
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
@@ -3016,7 +3055,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute Code.ensure_loaded?(Reservation)
 
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
       view |> form("#reservation-modal form", %{"nombre" => "Ana"}) |> render_submit()
 
@@ -3048,7 +3087,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   describe "reservation blur contract (regression: Sentry ELIXIR-1, catalog-show-no-clause)" do
     setup %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
       %{view: view, game: game}
@@ -3153,7 +3192,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           ]
         })
 
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
       # Open the reservation modal so its own subtree is in the scanned markup.
       html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
@@ -3206,7 +3245,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     # still answer it, because that guard is one template attribute deep.
     test "carousel-load-more is answered (exhausted) instead of crashing the page", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       assert render_hook(view, "carousel-load-more", %{"row" => "similares"}) =~ game.name
       assert render_hook(view, "carousel-load-more", %{}) =~ game.name
@@ -3232,7 +3271,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base Exhausted", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate Exhausted", weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       shelf =
         html
@@ -3279,7 +3318,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "renders closed on arrival, with the native GET search form inside the morph", %{conn: conn} do
       game = game_fixture()
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert morph_closed?(html)
       assert html |> morph() |> Enum.count() == 1
@@ -3300,7 +3339,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "tapping the search icon opens the morph so the input becomes reachable", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       html = view |> element(".pk-search-morph-toggle") |> render_click()
 
@@ -3313,7 +3352,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "the close control closes it again, and the icon reopens it", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       assert view |> element(".pk-search-morph-toggle") |> render_click() |> morph_open?()
       assert view |> element(".pk-search-morph-close") |> render_click() |> morph_closed?()
@@ -3323,7 +3362,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "open-search is idempotent and close-search on an already-closed morph stays closed",
          %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       assert view |> render_click("close-search", %{}) |> morph_closed?()
       assert view |> render_click("open-search", %{}) |> morph_open?()
@@ -3332,7 +3371,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "an unrelated event does not strip an open morph shut", %{conn: conn} do
       game = game_fixture()
-      {:ok, view, _html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, view, _html} = live(conn, ~p"/juegos/#{game}")
 
       view |> element(".pk-search-morph-toggle") |> render_click()
 
@@ -3345,7 +3384,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{name: "Banded Game", weight_band: "ingenio_estratega"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -3358,7 +3397,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
          %{conn: conn} do
       game = game_fixture(%{name: "No Band Game", weight_band: nil})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -3372,7 +3411,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "each editorial tag links to ?tags=<tag>", %{conn: conn} do
       game = game_fixture(%{name: "Tagged Game", tags: ["#CreaConexiones", "#EquipoGanador"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "tags=%23CreaConexiones"
       assert html =~ "tags=%23EquipoGanador"
@@ -3381,7 +3420,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "each mechanic chip links to ?mechanics=<label>", %{conn: conn} do
       game = game_fixture(%{name: "Mechanic Game", mechanics: ["Dice Rolling"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "mechanics="
     end
@@ -3389,7 +3428,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "each theme chip links to ?themes=<label>", %{conn: conn} do
       game = game_fixture(%{name: "Theme Game", themes: ["Economic"]})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "themes="
     end
@@ -3399,7 +3438,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture(%{name: "Player Game", min_players: 2, max_players: 5})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "players=5"
     end
@@ -3408,7 +3447,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game =
         game_fixture(%{name: "Time Game", min_playtime: 30, max_playtime: 45, playing_time: nil})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       assert html =~ "max_playtime=45"
     end
@@ -3437,7 +3476,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base Disconnected", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate Disconnected", weight_band: "nivel_experto"})
 
-      conn = get(conn, ~p"/juegos/#{game.id}")
+      conn = get(conn, ~p"/juegos/#{game}")
       html = html_response(conn, 200)
 
       assert html =~ "similares-skeleton"
@@ -3448,7 +3487,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base Connected", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate Connected", weight_band: "nivel_experto"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       refute html =~ "similares-skeleton"
       assert html =~ "Bandmate Connected"
@@ -3460,10 +3499,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Base Footprint", weight_band: "nivel_experto"})
       game_fixture(%{name: "Bandmate Footprint", weight_band: "nivel_experto"})
 
-      disconnected_conn = get(conn, ~p"/juegos/#{game.id}")
+      disconnected_conn = get(conn, ~p"/juegos/#{game}")
       disconnected_html = html_response(disconnected_conn, 200)
 
-      {:ok, _view, connected_html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, connected_html} = live(conn, ~p"/juegos/#{game}")
 
       assert disconnected_html =~ "pk-card-poster"
       assert connected_html =~ "pk-card-poster"
@@ -3511,7 +3550,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture(%{name: "Direct Visit Game"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       crumb_href =
         html
@@ -3528,7 +3567,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     } do
       game = game_fixture(%{name: "Hostile From Game"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}?from=#{"https://evil.example"}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}?from=#{"https://evil.example"}")
 
       crumb_href =
         html
@@ -3827,7 +3866,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       game = game_fixture(%{name: "Title Echo Alignment Base", weight_band: "descubre_el_hobby"})
       game_fixture(%{name: "Title Echo Alignment Sibling", weight_band: "descubre_el_hobby"})
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 
@@ -4191,7 +4230,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
           gallery_urls: ["https://images.test.invalid/games/1/gallery-1.webp"]
         })
 
-      {:ok, _view, html} = live(conn, ~p"/juegos/#{game.id}")
+      {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
       doc = LazyHTML.from_document(html)
 

@@ -133,6 +133,38 @@ defmodule PukllayClubWeb.CatalogLive.Show do
      |> assign(:search_expanded, false)}
   end
 
+  # Quick task 260913-2x6 (T-2x6-04): the live-navigation half of the same
+  # canonicalization contract `PukllayClubWeb.Plugs.GameSEO` enforces over
+  # HTTP. Live navigation to a non-canonical id (e.g. a patch from within
+  # this same LiveView) never issues a fresh HTTP request, so the plug
+  # never runs — this handler is the only thing that can correct it.
+  #
+  # Must be `handle_params`, not `mount/3` — LiveView raises if
+  # `push_patch/2` is called during `mount/3`. Compares `id` against
+  # `Phoenix.Param.to_param/1` (the SAME canonical-param source the plug
+  # uses) with exact string equality; a match is a no-op. A mismatch
+  # issues a `replace: true` patch to the canonical path, so the browser's
+  # history entry is corrected in place rather than growing a new one. The
+  # patched navigation re-enters `handle_params/3` with the now-canonical
+  # id, which takes the no-op branch — this cannot loop.
+  @impl true
+  def handle_params(%{"id" => id}, uri, socket) do
+    canonical_id = Phoenix.Param.to_param(socket.assigns.game)
+
+    if id == canonical_id do
+      {:noreply, socket}
+    else
+      {:noreply, push_patch(socket, to: canonical_path(socket.assigns.game, uri), replace: true)}
+    end
+  end
+
+  defp canonical_path(game, uri) do
+    case URI.parse(uri).query do
+      query when query in [nil, ""] -> ~p"/juegos/#{game}"
+      query -> ~p"/juegos/#{game}" <> "?" <> query
+    end
+  end
+
   # header_inner/1 renders `.pk-search-morph.is-open` ONLY from this page's
   # :search_expanded assign (01.2-11: no client JS toggles the class), and
   # its toggle/close buttons dispatch open-search/close-search. These two
@@ -1143,7 +1175,10 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # class-per-variant helper behind them all collapsed back to one shape
   # rather than being kept "in case" a second call site returns.
   defp share_control(assigns) do
-    assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game.id}"))
+    # `#{assigns.game}` (the struct, not `.id`) — quick task 260913-2x6:
+    # routes through the one `Phoenix.Param` impl on `Game` so the share
+    # URL carries the id-slug form.
+    assigns = assign(assigns, :share_url, url(~p"/juegos/#{assigns.game}"))
 
     ~H"""
     <div class="pk-share-wrap relative inline-block">

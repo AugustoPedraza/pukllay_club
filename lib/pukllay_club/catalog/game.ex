@@ -102,3 +102,38 @@ defmodule PukllayClub.Catalog.Game do
     |> unique_constraint(:csv_row)
   end
 end
+
+# THE single canonical param for this schema (quick task 260913-2x6, see
+# `.planning/notes/game-url-slug-format.md`): every `~p"/juegos/#{game}"`
+# call site (GameCard/GamePreview detail links, `SEO.canonical_url/1`,
+# `SitemapController`, the detail page's share control) picks this up
+# automatically via `Phoenix.Param.to_param/1`, and
+# `PukllayClubWeb.Plugs.GameSEO`/`CatalogLive.Show.handle_params/3` compare
+# a request's raw `id` param against this exact function's output to decide
+# whether to redirect/patch — making it the one loop-proof source of truth
+# for "is this URL already canonical". Colocated with the `Game` schema
+# (rather than a separate file) as the idiomatic place for a schema's
+# `Phoenix.Param` impl.
+defimpl Phoenix.Param, for: PukllayClub.Catalog.Game do
+  alias PukllayClub.Catalog.Slug
+
+  # Mirrors Phoenix's own default `Phoenix.Param` impl for a struct with a
+  # nil `:id` — raising here (rather than emitting `"nil-<slug>"` or
+  # crashing later inside Ecto) surfaces a genuinely unpersisted/unloaded
+  # struct immediately, at the one call site responsible for building a URL
+  # from it.
+  def to_param(%{id: nil} = game) do
+    raise ArgumentError, "cannot build a Phoenix.Param for #{inspect(game.__struct__)} with a nil :id"
+  end
+
+  # Empty slug (e.g. a name of "!!!") falls back to the bare id, with no
+  # trailing dash — this is also what keeps the redirect/patch check
+  # loop-proof: the canonical output is always either "<id>" or
+  # "<id>-<[a-z0-9-]+>", never "<id>-".
+  def to_param(%{id: id, name: name}) do
+    case Slug.slugify(name) do
+      "" -> Integer.to_string(id)
+      slug -> "#{id}-#{slug}"
+    end
+  end
+end

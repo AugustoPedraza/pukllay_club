@@ -265,7 +265,10 @@ defmodule PukllayClubWeb.SEO do
   # `~p` — this is the one deliberate exception, and only for this path.
   defp fallback_image_url, do: PukllayClubWeb.Endpoint.url() <> @og_fallback_path
 
-  defp canonical_url(%Game{id: id}), do: url(~p"/juegos/#{id}")
+  # `~p"/juegos/#{game}"` (not `#{game.id}`) — routes through the one
+  # `Phoenix.Param` impl on `Game` (quick task 260913-2x6), so canonical
+  # link, og:url and the Game JSON-LD "url" all carry the id-slug form.
+  defp canonical_url(%Game{} = game), do: url(~p"/juegos/#{game}")
 
   defp image_for(game), do: OgCard.url_for(game) || game.cover_url
 

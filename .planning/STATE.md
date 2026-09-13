@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 2 — Natural-Language Spanish Search + Auth
 Plan: Not started
 Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
-Last activity: 2026-09-13 - Completed quick task 260913-1s5: Polish close button circle, share inset, compact filter pills
+Last activity: 2026-09-13 - Completed quick task 260913-2x6: Implement id-slug game URLs (/juegos/137-catan)
 
 ## Performance Metrics
 
@@ -313,6 +313,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 18 | Rotate light secondary #7E4CA5 to H300 (#7550AC) for uniform hue | 2026-09-13 | 85ae257 | — | — |
 | 260913-0h6 | Home shelf headers (Crea conexiones + 6 more) are tappable "Ver todos ›" links into the pre-filtered catalog (tags / weight bands); Recientemente añadidos left unlinked | 2026-09-13 | 530451e | complete | [260913-0h6-crea-conexiones-sections-cannot-be-tappe](./quick/260913-0h6-crea-conexiones-sections-cannot-be-tappe/) |
 | 260913-1s5 | Preview-sheet close button is a true 44px circle; share control inset from poster corner (right-3/top-3); filter pills drawn compact (28px / 32px chips) with an invisible 44px hit layer | 2026-09-13 | eb1f873 | complete (browser check pending) | [260913-1s5-polish-the-close-icon-isnt-a-circle-shar](./quick/260913-1s5-polish-the-close-icon-isnt-a-circle-shar/) |
+| 260913-2x6 | Game detail URLs use id-slug form (/juegos/137-catan): stdlib Slug.slugify + Phoenix.Param for Game; canonical/og:url/JSON-LD/sitemap/share emit it; GameSEO plug 301s bare/stale slugs (query preserved), live nav self-heals via push_patch | 2026-09-13 | 1f000d0 | complete | [260913-2x6-implement-id-slug-game-urls-juegos-137-c](./quick/260913-2x6-implement-id-slug-game-urls-juegos-137-c/) |
 
 ### Roadmap Evolution
 
