@@ -66,13 +66,23 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   strings/`dataset` values (T-01.1-08) — share intent hrefs are built
   server-side in HEEx with `URI.encode_www_form/1`.
 
-  Reservation flow (SHELL-03's reservation half, D-09/D-10, plan 01.1-05):
-  the buy-box and mobile-bar CTAs both dispatch `open-reservation`, which
-  opens a name-capture modal. `reservation_url/3` builds the destination
-  link entirely server-side (T-01.1-02) — the visitor's name is
-  percent-encoded via `URI.encode_www_form/1` before it ever reaches the
-  query string, and is never persisted, logged, or sent anywhere else. The
-  destination number comes from `Application.get_env(:pukllay_club,
+  Reservation flow (SHELL-03's reservation half, D-09/D-10, plan 01.1-05;
+  collapsed to a single dialog surface in quick task 260913-4k1): the
+  buy-box and mobile-bar CTAs both dispatch `open-reservation`, which opens
+  ONE name-capture dialog — the name field and the primary "Reservar por
+  WhatsApp" CTA live on the same surface, with no separate preview/send
+  step. The form carries both `phx-blur="validate-reservation"` (errors,
+  B12: validate after the action, never while typing) and
+  `phx-change="change-reservation"` (keeps the CTA's `href` in sync with
+  the typed name on every keystroke, and — while an error is already shown
+  — recomputes it live so it clears the moment the name becomes valid).
+  While the name is valid the CTA renders as a real `<a href="https://wa.me/...">`
+  built by `reservation_url/3` entirely server-side (T-01.1-02) — the
+  visitor's name is percent-encoded via `URI.encode_www_form/1` before it
+  ever reaches the query string, and is never persisted, logged, or sent
+  anywhere else; while invalid it renders as a same-looking
+  `<button type="submit">` instead, so `reserve` still gets the final say.
+  The destination number comes from `Application.get_env(:pukllay_club,
   :reservation_whatsapp_number)`, a runtime-configured value distinct from
   `PukllayClubWeb.ClubLinks`' group-invite URL — a different WhatsApp
   destination for a different purpose.
@@ -287,8 +297,16 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   end
 
   # Validate on blur only (ux-patterns B12: "validate after the action —
-  # blur/submit — not while typing"). No phx-change is wired on the form
-  # for this reason; only the name input's own phx-blur reaches here.
+  # blur/submit — not while typing"). Only the name input's own phx-blur
+  # reaches THIS handler.
+  #
+  # Quick task 260913-4k1: the form now also carries a phx-change, but it is
+  # bound to change-reservation below, not to this handler. That is a real
+  # form event (params keyed "nombre", like reserve, not the blur payload
+  # described next) whose only jobs are (a) keeping the server-built wa.me
+  # href in sync with the name as it's typed and (b) recomputing an
+  # ALREADY-shown error so it can clear the moment the name becomes valid —
+  # it never reveals a NEW error purely from typing, so B12 still holds.
   #
   # The params key is "value", NOT "nombre", and that is load-bearing. A
   # `phx-blur` is not a form event: nothing serializes the <form>, so the
@@ -324,6 +342,28 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     {:noreply, assign_reservation_name(socket, name)}
   end
 
+  # Real form event (phx-change, params keyed "nombre" like reserve above —
+  # never the blur payload's "value" key). Typing never REVEALS an error:
+  # the trimmed name always updates so the CTA's href stays live, but
+  # :reservation_error only gets recomputed when one is already showing, so
+  # a shown error clears as soon as the member fixes it (B12: reward early,
+  # punish late) and stays silent otherwise.
+  @impl true
+  def handle_event("change-reservation", %{"nombre" => name}, socket) do
+    trimmed = String.trim(name)
+
+    socket = assign(socket, :reservation_name, trimmed)
+
+    socket =
+      if socket.assigns.reservation_error do
+        assign(socket, :reservation_error, reservation_name_error(trimmed))
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
   defp assign_reservation_name(socket, name) do
     trimmed = String.trim(name)
 
@@ -339,6 +379,11 @@ defmodule PukllayClubWeb.CatalogLive.Show do
       "Ese nombre es muy largo."
     end
   end
+
+  # Used by the template to pick which shape the primary CTA renders as —
+  # a real wa.me <a> when true, a <button type="submit"> otherwise (Task 1,
+  # quick 260913-4k1).
+  defp reservation_name_valid?(name), do: is_nil(reservation_name_error(name))
 
   @impl true
   def render(assigns) do
@@ -1015,14 +1060,18 @@ defmodule PukllayClubWeb.CatalogLive.Show do
           </button>
         </div>
 
-        <%!-- Reservation modal (SHELL-03, D-09/D-10, plan 01.1-05): pure
-        daisyUI .modal/.modal-open/.modal-box/.modal-backdrop classes — no
-        .pk-* CSS needed, daisyUI's own modal is already the highest
-        z-index (999) in this page's overlay stack. Focus-trap/Escape reuse
-        .Lightbox's exact pattern above (T-01.1-16-style single mechanism,
-        not a second bespoke one). Server builds the wa.me link entirely —
+        <%!-- Reservation modal (SHELL-03, D-09/D-10, plan 01.1-05; collapsed
+        to a single dialog surface in quick task 260913-4k1): pure daisyUI
+        .modal/.modal-open/.modal-box/.modal-backdrop classes — no .pk-* CSS
+        needed, daisyUI's own modal is already the highest z-index (999) in
+        this page's overlay stack. Focus-trap/Escape reuse .Lightbox's exact
+        pattern above (T-01.1-16-style single mechanism, not a second
+        bespoke one). Server builds the wa.me link entirely —
         reservation_url/3 below, never client-assembled (mirrors
-        .ShareButton's own T-01.1-08 rule). --%>
+        .ShareButton's own T-01.1-08 rule). ONE dialog layer: the name field
+        and the primary CTA share this surface, there is no separate
+        preview/send step — WhatsApp itself shows the pre-filled message,
+        editable, before the member actually sends it. --%>
         <div
           :if={@reservation_open}
           id="reservation-modal"
@@ -1081,47 +1130,49 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               Las reservas están cerradas por ahora. Escribinos y lo coordinamos.
             </p>
 
-            <div :if={@reservation_number}>
-              <div
-                :if={@reservation_name == "" or @reservation_error}
-                class="mt-4"
+            <form
+              :if={@reservation_number}
+              id="reservation-form"
+              phx-change="change-reservation"
+              phx-submit="reserve"
+              class="mt-4 space-y-3"
+            >
+              <.input
+                type="text"
+                id="reservation-nombre"
+                name="nombre"
+                label="Tu nombre"
+                value={@reservation_name}
+                placeholder="¿Cómo te llamás?"
+                required
+                maxlength="60"
+                phx-blur="validate-reservation"
+                errors={if @reservation_error, do: [@reservation_error], else: []}
+              />
+              <%!-- Known, accepted race (T-4k1-05): if the member taps this
+              CTA within one round-trip of their last keystroke, the href
+              may lag by a character — WhatsApp shows the message editable
+              before sending, so this is recoverable and preferable to
+              JS-side URL assembly (forbidden by T-01.1-08) or a lost tap. --%>
+              <a
+                :if={reservation_name_valid?(@reservation_name)}
+                href={reservation_url(@reservation_number, @reservation_name, @game)}
+                target="_blank"
+                rel="noopener noreferrer"
+                phx-click="close-reservation"
+                data-reservation-send
+                class="btn btn-primary min-h-11 w-full"
               >
-                <form phx-submit="reserve">
-                  <.input
-                    type="text"
-                    id="reservation-nombre"
-                    name="nombre"
-                    label="Tu nombre"
-                    value={@reservation_name}
-                    placeholder="¿Cómo te llamás?"
-                    required
-                    maxlength="60"
-                    phx-blur="validate-reservation"
-                    errors={if @reservation_error, do: [@reservation_error], else: []}
-                  />
-                  <button type="submit" class="btn btn-primary min-h-11 w-full mt-2">
-                    Seguir
-                  </button>
-                </form>
-              </div>
-
-              <div
-                :if={@reservation_name != "" and is_nil(@reservation_error)}
-                class="mt-4 space-y-3"
+                Reservar por WhatsApp
+              </a>
+              <button
+                :if={!reservation_name_valid?(@reservation_name)}
+                type="submit"
+                class="btn btn-primary min-h-11 w-full"
               >
-                <p class="text-sm text-base-content whitespace-pre-line break-words">
-                  {reservation_message(@reservation_name, @game)}
-                </p>
-                <a
-                  href={reservation_url(@reservation_number, @reservation_name, @game)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="btn btn-primary min-h-11 w-full"
-                >
-                  Mandar por WhatsApp
-                </a>
-              </div>
-            </div>
+                Reservar por WhatsApp
+              </button>
+            </form>
           </div>
           <div class="modal-backdrop" phx-click="close-reservation"></div>
         </div>
