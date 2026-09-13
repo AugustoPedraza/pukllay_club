@@ -5,6 +5,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
   import PukllayClub.CatalogFixtures
 
   alias Plug.Conn.Query
+  alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.CarouselRow
 
   describe "GET /" do
@@ -2685,7 +2686,25 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
     test "every linked shelf's href is a locally-rooted /?tags=/weight_bands= path with no bare '#', and destacados_del_club encodes all 3 editorial tags",
          %{conn: conn} do
-      game_fixture(%{name: "Any Game", tags: ["#CreaConexiones"], weight_band: "descubre_el_hobby"})
+      # One game per editorial tag/weight band so all 7 linked shelves
+      # render (carousel_row/1 renders nothing at all for an empty shelf).
+      game_fixture(%{
+        name: "Fixture A",
+        tags: ["#CreaConexiones"],
+        weight_band: "descubre_el_hobby"
+      })
+
+      game_fixture(%{
+        name: "Fixture B",
+        tags: ["#EquipoGanador"],
+        weight_band: "ingenio_estratega"
+      })
+
+      game_fixture(%{
+        name: "Fixture C",
+        tags: ["#DuelosMemorables"],
+        weight_band: "nivel_experto"
+      })
 
       {:ok, _view, html} = live(conn, ~p"/")
 
@@ -2697,7 +2716,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       )
 
       for key <- linked_keys do
-        [href] = LazyHTML.query(doc, "#carousel-#{key} a.pk-row-link") |> LazyHTML.attribute("href")
+        [href] = doc |> LazyHTML.query("#carousel-#{key} a.pk-row-link") |> LazyHTML.attribute("href")
 
         assert String.starts_with?(href, "/?"), "expected #{key}'s href to start with /?"
         refute href =~ "#", "expected #{key}'s href to hold no bare '#'"
@@ -2709,7 +2728,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
                "expected #{key}'s href to decode to only a tags or weight_bands key, got #{inspect(decoded)}"
 
         if key == "destacados_del_club" do
-          editorial_tags = Enum.map(PukllayClub.Catalog.Vocabulary.editorial_tags(), & &1.tag)
+          editorial_tags = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
           assert Enum.sort(decoded["tags"]) == Enum.sort(editorial_tags)
         end
       end

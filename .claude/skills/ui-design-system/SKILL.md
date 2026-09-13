@@ -111,7 +111,7 @@ row and the footer's own contribution to the Inter/12px/400 and Inter/14px/400 r
 | Combo | Tier | Source |
 |---|---|---|
 | Bebas Neue / 24px / 400 | heading | `font-display text-2xl` — header wordmark (every width), plus the footer wordmark at ≥481px only; every carousel row title, main-grid heading, empty-state heading (one shared Tailwind utility pair, not independently-declared). **Retired at ≤480px:** the footer-scoped Bebas Neue/20px/400 SIZE exception 260901-ty6 introduced no longer has a source — the footer lockup does not render at all below 480px (sketch 044) |
-| Inter / 14px / 600 (≥481px) → 12px / 600 (≤480px) | body, semibold emphasis | `.pk-nav-links a`, `.pk-card-caption h3`, `.pk-chip`, `.pk-see-all` — one tier, one deliberate narrow-viewport density step, unaffected by this footer change |
+| Inter / 14px / 600 (≥481px) → 12px / 600 (≤480px) | body, semibold emphasis | `.pk-nav-links a`, `.pk-card-caption h3`, `.pk-chip`, `.pk-see-all` (retired, quick 260913-0h6 — the affordance moved into `.pk-row-cue`), `.pk-row-cue` — one tier, one deliberate narrow-viewport density step, unaffected by this footer change |
 | Inter / 14px / 400 | body | `text-neutral text-sm` regular copy (e.g. the main-grid result-count line). The footer links' former 14px landing here (260901-ty6) is gone at ≤480px — `.pk-footer-links a` does not render below 480px anymore (sketch 044) |
 | Inter / 12px / 400 | muted | brand tagline (`text-xs text-neutral`). At ≤480px only the header's instance renders — the footer's own tagline is hidden with the rest of its lockup (sketch 044) |
 | Inter / 16px / 400 (≥481px only) | body | `.pk-footer-links a` (FAQ/Contacto/Juntadas) — inherited, not independently declared, unchanged at ≥481px |
@@ -175,8 +175,8 @@ Class inventory by group:
 
 | Group | Classes |
 |---|---|
-| Page and shelf layout | `--pk-gutter`, `.pk-gutter`, `.pk-page`, `.pk-shelf` |
-| Rail and edge-fade | `.pk-rail-wrap` (+`::before`/`::after`), `.pk-rail` (+`::-webkit-scrollbar`), `.pk-poster-card` (+`.is-hero`), `.pk-see-all` |
+| Page and shelf layout | `--pk-gutter`, `.pk-gutter`, `.pk-page`, `.pk-shelf`, `.pk-row-link`, `.pk-row-cue` (+`.pk-row-cue-icon`) |
+| Rail and edge-fade | `.pk-rail-wrap` (+`::before`/`::after`), `.pk-rail` (+`::-webkit-scrollbar`), `.pk-poster-card` (+`.is-hero`) |
 | Card (resting state) | `.pk-card`, `.pk-card-poster`, `.pk-card-caption` |
 | Preview surfaces (hover portal + mobile sheet) | `.pk-facts-row`, `.pk-fact`, `.pk-difficulty`, `.pk-difficulty-dot` (+`.is-filled`), `.pk-preview-poster`, `.pk-preview-body`, `.pk-preview-title`, `.pk-preview-text`, `.pk-preview-cta`, `.pk-portal` (+`.is-visible`), `.pk-sheet-backdrop` (+`.is-visible`), `.pk-sheet` (+`.is-open`), `.pk-sheet-body`, `.pk-sheet-handle`, `.pk-sheet-close`, `body.pk-sheet-open` |
 | Nav and chips | `.pk-header`, `.pk-header-sticky`, `.pk-nav` (+`.is-scrolled`), `.pk-nav-links`, `.pk-nav-search`, `.pk-chip-nav` (+`::-webkit-scrollbar`), `.pk-chip` (+`.is-active`), `.pk-chip-spacer` |
@@ -195,7 +195,7 @@ Class inventory by group:
 | `Layouts` | `brand_logo/1` | —. Optional: `tagline` (string, default `"JUEGOS DE MESA MODERNOS"`) — the footer is the one call site that overrides it. `mark` (bool, default `true`) — when `false`, omits the isologo `<img>` pair entirely and demotes the wordmark to the muted colour tier via `pk-brand-quiet`; the footer is the one call site that passes `false` (D-A/D-B, 260823-snj) so the mark belongs to the header alone. Renders a theme-aware isologo pair toggled by the `dark:` variant, gated at compile time on both `priv/static/images/isologo-light.png` and `isologo-dark.png` existing (falls back to wordmark-only if either is missing) |
 | `GameCard` | `game_card/1` | `id`, `game` |
 | `FilterModal` | `filter_modal/1` | `id`, `facet_options`. Optional: `mechanics`/`themes`/`weight_bands`/`tags` (lists, default `[]`), `players`/`max_playtime` (integers, default `nil`), `open` (bool, default `false`), `q` (string, default `""`), `total` (integer, default `0`), `filters_active` (bool, default `false`) |
-| `CarouselRow` | `carousel_row/1` | `id`, `title`, `games`. Optional: `variant` (`:standard`/`:hero`), `subtitle`, `see_all_row` |
+| `CarouselRow` | `carousel_row/1` | `id`, `title`, `games`. Optional: `variant` (`:standard`/`:hero`), `subtitle`, `badge`, `href` (quick 260913-0h6 — renders the header as a `.pk-row-link` with a "Ver todos" cue landing on the shelf's filtered grid; `CatalogLive.Index` passes it for the 7 filter-expressible shelves, `nil` for `recientemente_anadidos` and `CatalogLive.Show`'s `similares`) |
 | `CarouselRow` | `skeleton_card/1` | `id` |
 | `GamePreview` | `preview_body/1` | `game` — the shared body cloned by both the portal and the sheet |
 | `GamePreview` | `preview_template/1` | `game` — wraps `preview_body/1` in an inert `<template>` |

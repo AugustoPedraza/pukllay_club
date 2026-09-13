@@ -810,11 +810,33 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # never from client input, and every landing param is re-validated by
   # CatalogFilters.from_params/1's closed-Vocabulary whitelist — no new
   # param key, no new parsing path.
+  # Same derivation Catalog.row_query("destacados_del_club") uses, so the
+  # shelf and its own filtered landing can never drift on which tags
+  # count as "destacados". Encoded via the verified-routes keyword form so
+  # it produces a repeated-key ?tags=...&tags=... list, which
+  # CatalogFilters.parse_list_param/2 already accepts.
+  defp row_href(:destacados_del_club) do
+    tags = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
+    ~p"/?#{[tags: tags]}"
+  end
+
   defp row_href(:crea_conexiones), do: tag_href("#CreaConexiones")
+  defp row_href(:equipo_ganador), do: tag_href("#EquipoGanador")
+  defp row_href(:duelos_memorables), do: tag_href("#DuelosMemorables")
+  defp row_href(:descubre_el_hobby), do: band_href("descubre_el_hobby")
+  defp row_href(:ingenio_estratega), do: band_href("ingenio_estratega")
+  defp row_href(:nivel_experto), do: band_href("nivel_experto")
+
+  # No URL filter reproduces "newest non-expansion additions" (no sort
+  # alone flips filters_active?/1, and there's no expansion-flag facet),
+  # so this header stays a plain heading instead of becoming a dead or
+  # misleading link.
+  defp row_href(:recientemente_anadidos), do: nil
 
   defp row_href(_unrecognized), do: nil
 
   defp tag_href(tag), do: ~p"/?tags=#{tag}"
+  defp band_href(band), do: ~p"/?weight_bands=#{band}"
 
   defp editorial_tag_meaning(tag) do
     Vocabulary.editorial_tags()
