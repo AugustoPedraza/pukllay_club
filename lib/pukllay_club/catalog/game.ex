@@ -71,6 +71,15 @@ defmodule PukllayClub.Catalog.Game do
     # aware of the column without ever touching its value.
     field :search_vector, :string, load_in_query: false
 
+    # Public-chips data source (D-17, 01.8.1-11) — filled by
+    # `PukllayClub.Catalog.put_section_names/1` on every public read that
+    # feeds a chip or preview, never cast/persisted. Names of the game's
+    # visible (non-hidden, non-featured) `:manual` sections, ordered by
+    # section position — the replacement for the retired hashtag-facet
+    # chips. `games.tags` itself is untouched (D-22 option A: frozen
+    # history, not a live chip source any more).
+    field :section_names, {:array, :string}, virtual: true, default: []
+
     # Staff-only physical storage location (D-10, D-11, 01.8.1-09) — at
     # most one shelf per game, no in-shelf position. `nil` means unplaced
     # ("Sin ubicar"). Never rendered on any public page (D-16).

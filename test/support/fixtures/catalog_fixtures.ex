@@ -34,7 +34,12 @@ defmodule PukllayClub.CatalogFixtures do
       year_published: 1995,
       weight_band: "ingenio_estratega",
       bgg_weight: 2.3,
-      tags: ["#CreaConexiones"],
+      # `tags` has no default (01.8.1-11, D-17/D-22): `games.tags` is
+      # frozen history under the D-22 option-A decision — public chips now
+      # come from section membership (`PukllayClub.SectionsFixtures`), not
+      # this field, so a default value here would be misleading. Pass
+      # `tags:` explicitly only for a test that specifically exercises the
+      # historical column itself.
       # Raw BGG mechanic/category values (Vocabulary-covered where possible)
       # rather than pre-translated Spanish, so 01-05's facet/glossary tests
       # exercise the same translation path production data goes through.

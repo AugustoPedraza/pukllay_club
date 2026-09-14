@@ -39,16 +39,6 @@ defmodule PukllayClub.Catalog.Vocabulary do
     }
   ]
 
-  # -- Editorial hashtags (D-06, 01-VOCABULARY.md section 4) ------------------
-  #
-  # Verbatim club strings — never renamed or reframed.
-
-  @editorial_tags [
-    %{tag: "#CreaConexiones", meaning: "Reglas simples, familiar / diversión garantizada"},
-    %{tag: "#EquipoGanador", meaning: "Cooperativo"},
-    %{tag: "#DuelosMemorables", meaning: "Solo 2 jugadores"}
-  ]
-
   # -- Mechanic glossary (35 terms, 01-VOCABULARY.md section 3a) --------------
   #
   # The last 10 entries (Area Movement .. Trading) were added during 01-06's
@@ -156,9 +146,6 @@ defmodule PukllayClub.Catalog.Vocabulary do
       index -> index + 1
     end
   end
-
-  @doc "Returns the 3 editorial hashtags, each with `:tag` (verbatim) and `:meaning`."
-  def editorial_tags, do: @editorial_tags
 
   @doc "Returns the Spanish chip label for a covered BGG mechanic, or `nil` if uncovered."
   def mechanic_label(raw), do: Map.get(@mechanics, raw)

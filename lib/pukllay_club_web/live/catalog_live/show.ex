@@ -660,7 +660,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
                 </div>
 
-                <%!-- Sketch 042's winner: hashtags sit right after the
+                <%!-- Sketch 042's winner: chips sit right after the
                 title, before the description — NOT between the description
                 and a divider as the UAT text itself suggested (see this
                 plan's <planner_note> departure #1). The divider sketch 042
@@ -669,12 +669,17 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 doing all the separating work the line used to help with.
                 class="pk-rhythm-8" (not pk-reading-section) ties this row
                 tightly to the title via .pk-text-col's own child-margin
-                rhythm rule, not the section gap. --%>
-                <GameChips.editorial_tags
-                  tags={@game.tags}
-                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
-                  class="pk-rhythm-8"
-                />
+                rhythm rule, not the section gap.
+
+                01.8.1-11 (D-17, D-22 option A): the data source switched
+                from the retired `games.tags` hashtag facet to
+                `@game.section_names` — the game's visible hand-picked
+                section names. No `href_fun` here: unlike a hashtag, a
+                section name alone carries no id to link to (`section_names`
+                is `{:array, :string}`, not id/name pairs), so these chips
+                render as plain, unlinked pills — `GameChips.editorial_tags/1`
+                itself, its markup and classes, are unchanged. --%>
+                <GameChips.editorial_tags tags={@game.section_names} class="pk-rhythm-8" />
 
                 <%!-- G-01.2-10 task 3 / 01.3-08 / 01.3-10 (gap closure
                 G-01.3-4): description wrapper's spacing class is its own

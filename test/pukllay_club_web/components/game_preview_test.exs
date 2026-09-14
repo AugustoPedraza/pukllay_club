@@ -17,7 +17,7 @@ defmodule PukllayClubWeb.GamePreviewTest do
     max_playtime: 90,
     min_age: 10,
     weight_band: "nivel_experto",
-    tags: ["#CreaConexiones"]
+    section_names: ["Crea conexiones"]
   }
 
   @descubre_el_hobby %{@nivel_experto | weight_band: "descubre_el_hobby"}
@@ -59,15 +59,15 @@ defmodule PukllayClubWeb.GamePreviewTest do
       refute html =~ "10 años"
     end
 
-    test "the editorial tag span carries data-sheet-only when the game has tags" do
+    test "the section-name span carries data-sheet-only when the game belongs to a section (D-17, 01.8.1-11)" do
       html = render_component(&GamePreview.preview_body/1, game: @nivel_experto)
 
       assert html =~ ~s(data-sheet-only)
-      assert html =~ "#CreaConexiones"
+      assert html =~ "Crea conexiones"
     end
 
-    test "a game with no editorial tags emits no tag span" do
-      game = %{@nivel_experto | tags: []}
+    test "a game with no section membership emits no section-name span" do
+      game = %{@nivel_experto | section_names: []}
       html = render_component(&GamePreview.preview_body/1, game: game)
 
       refute html =~ "data-sheet-only"

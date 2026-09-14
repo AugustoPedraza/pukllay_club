@@ -120,6 +120,7 @@ defmodule PukllayClub.Catalog do
     |> limit(^(Map.get(opts, :limit) || @default_limit))
     |> offset(^(Map.get(opts, :offset) || 0))
     |> Repo.all()
+    |> put_section_names()
   end
 
   @doc """
@@ -416,7 +417,9 @@ defmodule PukllayClub.Catalog do
   def get_published_game!(id), do: fetch_published_by_id!(id)
 
   defp fetch_published_by_id!(int_id) when int_id in 1..@max_bigint do
-    Repo.one!(from(g in Game, where: g.id == ^int_id and g.status == :published))
+    from(g in Game, where: g.id == ^int_id and g.status == :published)
+    |> Repo.one!()
+    |> put_section_names()
   end
 
   defp fetch_published_by_id!(_out_of_range), do: raise(Ecto.NoResultsError, queryable: Game)
@@ -543,33 +546,33 @@ defmodule PukllayClub.Catalog do
   def similar_games(%Game{id: id, weight_band: weight_band, mechanics: mechanics, themes: themes}) do
     band_order = band_preference_order(weight_band)
 
-    Repo.all(
-      from(g in Game,
-        where: g.id != ^id and g.status == :published,
-        order_by: [
-          asc:
-            fragment(
-              "coalesce(array_position(?, ?), 99)",
-              type(^band_order, {:array, :string}),
-              g.weight_band
-            ),
-          desc:
-            fragment(
-              """
-              (2 * cardinality(array(select unnest(?) intersect select unnest(?)))) +
-              cardinality(array(select unnest(?) intersect select unnest(?)))
-              """,
-              g.mechanics,
-              type(^mechanics, {:array, :string}),
-              g.themes,
-              type(^themes, {:array, :string})
-            ),
-          asc: g.name,
-          asc: g.id
-        ],
-        limit: ^@similares_limit
-      )
+    from(g in Game,
+      where: g.id != ^id and g.status == :published,
+      order_by: [
+        asc:
+          fragment(
+            "coalesce(array_position(?, ?), 99)",
+            type(^band_order, {:array, :string}),
+            g.weight_band
+          ),
+        desc:
+          fragment(
+            """
+            (2 * cardinality(array(select unnest(?) intersect select unnest(?)))) +
+            cardinality(array(select unnest(?) intersect select unnest(?)))
+            """,
+            g.mechanics,
+            type(^mechanics, {:array, :string}),
+            g.themes,
+            type(^themes, {:array, :string})
+          ),
+        asc: g.name,
+        asc: g.id
+      ],
+      limit: ^@similares_limit
     )
+    |> Repo.all()
+    |> put_section_names()
   end
 
   # G-01.2-7: nearest-band-first ordering, derived from
@@ -625,6 +628,47 @@ defmodule PukllayClub.Catalog do
         order_by: [desc: s.featured, asc: s.position],
         select: %{id: s.id, name: s.name}
     )
+  end
+
+  @doc """
+  Fills `Game.section_names` (a virtual field, D-17, 01.8.1-11) — the
+  chips/preview data source that replaced the retired `games.tags`
+  hashtag facet (D-22 option A: `tags` stays frozen history, never read
+  by a public surface again). Accepts a single `%Game{}` or a list, and
+  returns the same shape back with `:section_names` populated: the names
+  of each game's visible (non-hidden, non-featured) `:manual` sections,
+  ordered by section `position`.
+
+  ONE query for the whole list — never one per game (T-01.8.1-53) — so
+  every public read that feeds a chip or preview (`get_published_game!/1`,
+  `filter_games/1`, `fetch_section_page/3` — covering both
+  `list_home_sections/0` and `section_page/3` — and `similar_games/1`)
+  costs exactly one extra query for its own page, not N.
+  """
+  def put_section_names(games) when is_list(games) do
+    names_by_game_id = section_names_by_game_id(Enum.map(games, & &1.id))
+
+    Enum.map(games, fn game -> %{game | section_names: Map.get(names_by_game_id, game.id, [])} end)
+  end
+
+  def put_section_names(%Game{} = game) do
+    [game] = put_section_names([game])
+    game
+  end
+
+  defp section_names_by_game_id([]), do: %{}
+
+  defp section_names_by_game_id(ids) do
+    SectionGame
+    |> join(:inner, [sg], s in Section, on: s.id == sg.section_id)
+    |> where(
+      [sg, s],
+      sg.game_id in ^ids and s.kind == :manual and s.hidden == false and s.featured == false
+    )
+    |> order_by([sg, s], asc: s.position)
+    |> select([sg, s], {sg.game_id, s.name})
+    |> Repo.all()
+    |> Enum.group_by(fn {game_id, _name} -> game_id end, fn {_game_id, name} -> name end)
   end
 
   @doc """
@@ -712,7 +756,7 @@ defmodule PukllayClub.Catalog do
         |> limit(^(effective + 1))
         |> Repo.all()
 
-      games = Enum.take(rows, effective)
+      games = rows |> Enum.take(effective) |> put_section_names()
       exhausted? = length(rows) <= effective or offset + effective >= ceiling
 
       {games, exhausted?}

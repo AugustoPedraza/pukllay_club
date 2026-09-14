@@ -296,6 +296,54 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
+  describe "put_section_names/1 — public chips data source (D-17, 01.8.1-11)" do
+    test "fills a single game's virtual field with its visible manual sections' names, ordered by position" do
+      first = section_fixture(%{name: "Crea conexiones", position: 1})
+      second = section_fixture(%{name: "Spiel des Jahres", position: 2})
+      game = game_fixture(%{name: "Chipped Game"})
+      add_game_to_section(second, game)
+      add_game_to_section(first, game)
+
+      assert Catalog.put_section_names(game).section_names == ["Crea conexiones", "Spiel des Jahres"]
+    end
+
+    test "omits a hidden section's name" do
+      hidden = section_fixture(%{name: "Hidden Section", hidden: true})
+      game = game_fixture()
+      add_game_to_section(hidden, game)
+
+      assert Catalog.put_section_names(game).section_names == []
+    end
+
+    test "omits the featured section's name" do
+      featured = Repo.get_by!(Section, name: "Destacados del club")
+      game = game_fixture()
+      add_game_to_section(featured, game)
+
+      assert Catalog.put_section_names(game).section_names == []
+    end
+
+    test "omits a weight_band-kind section's name (chips come from manual membership only)" do
+      band_section = Repo.get_by!(Section, name: "Ingenio estratega")
+      game = game_fixture(%{weight_band: "ingenio_estratega"})
+
+      assert Catalog.put_section_names(game).section_names == []
+      refute band_section.name in Catalog.put_section_names(game).section_names
+    end
+
+    test "accepts a list of games and fills each independently, in one query" do
+      section = section_fixture(%{name: "Shared Section"})
+      a = game_fixture(%{name: "A"})
+      b = game_fixture(%{name: "B"})
+      add_game_to_section(section, a)
+
+      [a_result, b_result] = Catalog.put_section_names([a, b])
+
+      assert a_result.section_names == ["Shared Section"]
+      assert b_result.section_names == []
+    end
+  end
+
   describe "filter_games/1 — mechanic/theme facets (D-14)" do
     test "two mechanic labels return games matching EITHER (OR within facet)" do
       game_fixture(%{name: "Only Dice", mechanics: ["Dice Rolling"]})
