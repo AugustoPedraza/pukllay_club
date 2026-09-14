@@ -103,4 +103,39 @@ defmodule PukllayClubWeb.Admin.StaffLiveTest do
       refute Accounts.get_user_by_email(email)
     end
   end
+
+  describe "remove staff (D-33, T-01.8.1-07 Task 2)" do
+    test "Quitar opens a confirmation and Cancelar closes it without deleting", %{conn: conn} do
+      staff = staff_fixture()
+      conn = log_in_user(conn, owner_fixture())
+      {:ok, lv, _html} = live(conn, ~p"/admin/staff")
+
+      html = lv |> element("#staff-#{staff.id} button", "Quitar") |> render_click()
+      assert html =~ "¿Quitar a #{staff.email} del staff?"
+      assert html =~ "Va a perder acceso al panel de inmediato."
+
+      html = lv |> element("button", "Cancelar") |> render_click()
+      refute html =~ "¿Quitar"
+      assert Accounts.get_user_by_email(staff.email)
+    end
+
+    test "confirming Quitar removes the staff member and their session is revoked immediately", %{
+      conn: conn
+    } do
+      staff = staff_fixture()
+      staff_conn = log_in_user(build_conn(), staff)
+
+      conn = log_in_user(conn, owner_fixture())
+      {:ok, lv, _html} = live(conn, ~p"/admin/staff")
+
+      lv |> element("#staff-#{staff.id} button", "Quitar") |> render_click()
+      html = lv |> element("#confirm-remove-btn") |> render_click()
+
+      assert html =~ "Quitaste a #{staff.email} del staff."
+      refute Accounts.get_user_by_email(staff.email)
+
+      conn2 = get(staff_conn, ~p"/admin")
+      assert redirected_to(conn2) == ~p"/admin/ingresar"
+    end
+  end
 end

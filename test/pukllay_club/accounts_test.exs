@@ -152,6 +152,36 @@ defmodule PukllayClub.AccountsTest do
     end
   end
 
+  describe "remove_staff/2 (D-33, T-01.8.1-34)" do
+    test "the owner removes a staff member and gets back their tokens" do
+      owner = owner_fixture()
+      staff = staff_fixture()
+      Accounts.generate_user_session_token(staff)
+
+      assert {:ok, tokens} = Accounts.remove_staff(Scope.for_user(owner), staff.id)
+      assert length(tokens) == 1
+      refute Accounts.get_user_by_email(staff.email)
+      refute Repo.get_by(UserToken, user_id: staff.id)
+    end
+
+    test "a staff scope is rejected" do
+      staff = staff_fixture()
+      other = staff_fixture()
+      assert Accounts.remove_staff(Scope.for_user(staff), other.id) == {:error, :unauthorized}
+    end
+
+    test "refuses to remove another owner" do
+      owner = owner_fixture()
+      other_owner = owner_fixture()
+      assert Accounts.remove_staff(Scope.for_user(owner), other_owner.id) == {:error, :unauthorized}
+    end
+
+    test "refuses self-removal" do
+      owner = owner_fixture()
+      assert Accounts.remove_staff(Scope.for_user(owner), owner.id) == {:error, :unauthorized}
+    end
+  end
+
   describe "sudo_mode?/2" do
     test "validates the authenticated_at time" do
       now = DateTime.utc_now()

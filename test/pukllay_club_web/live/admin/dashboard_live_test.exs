@@ -99,6 +99,24 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
     end
   end
 
+  describe "Staff card (D-35, T-01.8.1-07 Task 2)" do
+    test "renders for the owner", %{conn: conn} do
+      conn = log_in_user(conn, "owner@example.com" |> Accounts.create_owner() |> elem(1))
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Staff"
+      assert html =~ ~s(href="/admin/staff")
+    end
+
+    test "does not render for a staff member" do
+      staff = staff_fixture()
+      conn = log_in_user(build_conn(), staff)
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      refute html =~ "/admin/staff"
+    end
+  end
+
   describe "User.staff?/1 (T-01.8.1-02)" do
     test "true for :owner and :staff, false for nil" do
       assert Accounts.User.staff?(%Accounts.User{role: :owner})
