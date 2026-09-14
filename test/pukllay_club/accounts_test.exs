@@ -389,6 +389,19 @@ defmodule PukllayClub.AccountsTest do
       assert user_token.sent_to == user.email
       assert user_token.context == "login"
     end
+
+    test "invited (unconfirmed) users get the staff-invite subject in voseo", %{user: user} do
+      {:ok, email} = Accounts.deliver_login_instructions(user, &"http://example.com/#{&1}")
+      assert email.subject == "Te invitaron al staff de Pukllay Club"
+      assert email.text_body =~ "15 minutos"
+    end
+
+    test "confirmed users get the log-in subject in voseo" do
+      user = staff_fixture()
+      {:ok, email} = Accounts.deliver_login_instructions(user, &"http://example.com/#{&1}")
+      assert email.subject == "Tu link para entrar a Pukllay Club"
+      assert email.text_body =~ "15 minutos"
+    end
   end
 
   describe "inspect/2 for the User module" do

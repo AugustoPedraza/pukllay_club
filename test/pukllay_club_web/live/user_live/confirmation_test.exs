@@ -60,12 +60,10 @@ defmodule PukllayClubWeb.UserLive.ConfirmationTest do
       # log out, new conn
       conn = build_conn()
 
-      {:ok, _lv, html} =
-        conn
-        |> live(~p"/admin/ingresar/#{token}")
-        |> follow_redirect(conn, ~p"/admin/ingresar")
+      {:ok, _lv, html} = live(conn, ~p"/admin/ingresar/#{token}")
 
-      assert html =~ "Magic link is invalid or it has expired"
+      assert html =~ "El link venció o ya se usó. Pedí uno nuevo."
+      assert html =~ "Enviarme otro link"
     end
 
     test "logs confirmed user in without changing confirmed_at", %{
@@ -92,21 +90,24 @@ defmodule PukllayClubWeb.UserLive.ConfirmationTest do
       # log out, new conn
       conn = build_conn()
 
-      {:ok, _lv, html} =
-        conn
-        |> live(~p"/admin/ingresar/#{token}")
-        |> follow_redirect(conn, ~p"/admin/ingresar")
+      {:ok, _lv, html} = live(conn, ~p"/admin/ingresar/#{token}")
 
-      assert html =~ "Magic link is invalid or it has expired"
+      assert html =~ "El link venció o ya se usó. Pedí uno nuevo."
+      assert html =~ "Enviarme otro link"
     end
 
-    test "raises error for invalid token", %{conn: conn} do
-      {:ok, _lv, html} =
-        conn
-        |> live(~p"/admin/ingresar/invalid-token")
+    test "renders the expired-link state for an invalid token (UI-SPEC E11)", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin/ingresar/invalid-token")
+
+      assert html =~ "El link venció o ya se usó. Pedí uno nuevo."
+
+      {:ok, _login_lv, login_html} =
+        lv
+        |> element("a", "Enviarme otro link")
+        |> render_click()
         |> follow_redirect(conn, ~p"/admin/ingresar")
 
-      assert html =~ "Magic link is invalid or it has expired"
+      assert login_html =~ "Ingresar al panel"
     end
   end
 end

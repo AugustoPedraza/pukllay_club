@@ -47,7 +47,7 @@ defmodule PukllayClubWeb.UserSessionControllerTest do
         })
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "The link is invalid or it has expired."
+               "El link venció o ya se usó. Pedí uno nuevo."
 
       assert redirected_to(conn) == ~p"/admin/ingresar"
     end
@@ -63,6 +63,9 @@ defmodule PukllayClubWeb.UserSessionControllerTest do
 
       refute get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/admin/ingresar"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "El link venció o ya se usó. Pedí uno nuevo."
     end
   end
 
@@ -71,6 +74,7 @@ defmodule PukllayClubWeb.UserSessionControllerTest do
       conn = conn |> log_in_user(user) |> delete(~p"/admin/salir")
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Sesión cerrada."
     end
 
     test "succeeds even if the user is not logged in", %{conn: conn} do
