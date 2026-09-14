@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.1
 current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 status: executing
-stopped_at: Completed 01.8.1-04-PLAN.md
-last_updated: "2026-09-14T10:20:27.709Z"
+stopped_at: Completed 01.8.1-03-PLAN.md
+last_updated: "2026-09-14T10:37:55.298Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 01.8.1 execution started
-state_head: 0576dfe2321af226c9df8fa55a01d1272787bc94
+state_head: 7042bb53ae77945a0f4adce8a0819922822f07f4
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 26
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
-Plan: 2 of 14
+Plan: 3 of 14
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 01.8.1 execution started
 
@@ -119,6 +119,7 @@ Last activity: 2026-09-13 — Phase 01.8.1 execution started
 | Phase 01.8 P06 | 15min | 3 tasks | 8 files |
 | Phase 01.8 P07 | 20 min | 2 tasks | 2 files |
 | Phase 01.8.1 P04 | 25min | 3 tasks | 16 files |
+| Phase 01.8.1 P03 | 15min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -230,6 +231,8 @@ Recent decisions affecting current work:
 - [Phase 01.8]: 01.8-05: Task 3's served-response gate parses the real rendered og:image meta tag content rather than calling SEO.site_default/1 directly, exercising tag-emission-to-Plug.Static-serving end to end; found and fixed an attribute-order-agnostic regex bug (LiveView's phx-r debug attribute interposes between the tag name and property=)
 - [Phase 01.8]: 01.8-06: seo_tags/1 rebuilt as a plain Elixir markup function (not a HEEx component) so LiveView's phx-r root-tag attribute can never interpose before property=/name= again; root.html.heex calls it as a safe expression — 01.8-05's order-agnostic served-response regex helpers reversed back to strict form, since that loosening is exactly what let production keep serving WhatsApp-unparseable markup while the suite stayed green (G-01.8-3)
 - [Phase 01.8.1]: 01.8.1-04: Retired the CSV seed path outright (mix catalog.seed, CsvImport, HashtagNormalizer, ExpansionClassifier, Catalog.upsert_game!/1, nimble_csv) per D-09's user-selected 'remove' option; made mix catalog.translate_descriptions' still-English filter unconditional (candidates/0); rewrote AGENTS.md's catalog data runbook
+- [Phase 01.8.1]: 01.8.1-03: Resend chosen as production email provider (D-36), over Brevo/Postmark, after re-checking current free-tier limits on Resend's own pricing page
+- [Phase 01.8.1]: 01.8.1-03: Resend's SPF and bounce MX live on the delegated send.pukllay.club subdomain, not the root domain's TXT record as the plan's verification literally specified — correct provider behavior, documented in domain-and-dns.md
 
 ### Pending Todos
 
@@ -367,8 +370,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T02:25:14.254Z
-Stopped at: Completed 01.8.1-04-PLAN.md
+Last session: 2026-09-14T10:37:55.030Z
+Stopped at: Completed 01.8.1-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
