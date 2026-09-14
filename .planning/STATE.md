@@ -3,13 +3,13 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.1
-current_phase_name: staff-admin-ludoteca-shelves-curated-destacados
-status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
+current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
+status: executing
 stopped_at: Phase 01.8.1 UI-SPEC approved
-last_updated: "2026-09-14T00:23:19.877Z"
+last_updated: "2026-09-14T01:23:25.070Z"
 last_activity: 2026-09-13
-last_activity_desc: "Completed quick task 260912-waa: Apply sketch 058 winner (ramp hue H313.1→H300) to app.css, both themes"
-state_head: de13958e4c992b517a5b6e0d8d1a7c5c452551de
+last_activity_desc: Phase 01.8.1 execution started
+state_head: 4785c030e52ee001e1a671311b774924178400bc
 progress:
   total_phases: 6
   completed_phases: 2
@@ -33,10 +33,10 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.1 (staff-admin-ludoteca-shelves-curated-destacados) — READY TO EXECUTE
-Plan: Not started
-Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
-Last activity: 2026-09-13 - Completed quick task 260913-j8k: Close stale UAT audit items (docs-only)
+Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
+Plan: 1 of 14
+Status: Executing Phase 01.8.1
+Last activity: 2026-09-13 — Phase 01.8.1 execution started
 
 ## Performance Metrics
 

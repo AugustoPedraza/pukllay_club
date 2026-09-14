@@ -134,14 +134,14 @@ prioritized ahead of Phase 2/3 for Saturday operations and a living home page.
   4. Staff manage the home page's sections: create, rename, reorder and hide them; each is hand-picked (type-ahead add, ↑/↓, remove) or automatic by rule (difficulty band, recently added), the first is a hand-picked featured hero capped at ~20 games, empty sections are hidden, and the catalog filter offers a sections facet *(rewritten 2026-09-13 per 01.8.1-CONTEXT.md D-17..D-28 — supersedes "rename the first carousel; all other rows remain automatic")*
   5. Staff can see games whose CSV `weight_band` disagrees with their `bgg_weight`, and either correct the band or explicitly keep it
 
-**Plans:** 14 plans
+**Plans:** 2/14 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 01.8.1-01-PLAN.md — Tracer: invite-only magic-link staff sign-in via `phx.gen.auth` (registration/password/settings removed), role gate, `/admin` dashboard shell, owner release command (SC-1)
-- [ ] 01.8.1-02-PLAN.md — `games.status` draft/published/retired with a `published` deploy default, published-only public reads everywhere (checkpoint: retired-URL behavior) (SC-2)
+- [x] 01.8.1-01-PLAN.md — Tracer: invite-only magic-link staff sign-in via `phx.gen.auth` (registration/password/settings removed), role gate, `/admin` dashboard shell, owner release command (SC-1)
+- [x] 01.8.1-02-PLAN.md — `games.status` draft/published/retired with a `published` deploy default, published-only public reads everywhere (checkpoint: retired-URL behavior) (SC-2)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -243,7 +243,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 01.8.1 → 2 → 
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
 | 01.7. Production Catalog Data & Security Hardening | 5/5 | Complete    | 2026-09-11 |
 | 01.8. SEO, Structured Data & Social Sharing | 7/7 | Complete    | 2026-09-12 |
-| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 0/14 | Planned | - |
+| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 2/14 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
