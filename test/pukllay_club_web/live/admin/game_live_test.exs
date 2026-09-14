@@ -96,4 +96,137 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
                live(conn, ~p"/admin/juegos/#{game.id}/editar")
     end
   end
+
+  describe "GameLive.Form — status actions (D-04, D-08)" do
+    setup :register_and_log_in_staff
+
+    test "on a draft's form, Publicar saves pending changes and publishes it", %{conn: conn} do
+      game = game_fixture(%{status: :draft, name: "Sin publicar"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      html =
+        render_submit(lv, "save", %{
+          "game" => %{"name" => "Ya listo"},
+          "_action" => "publish"
+        })
+
+      assert html =~ "Juego publicado."
+      updated = Catalog.get_game!(game.id)
+      assert updated.status == :published
+      assert updated.name == "Ya listo"
+    end
+
+    test "on a published game, Retirar opens the confirmation and confirming retires it", %{
+      conn: conn
+    } do
+      game = game_fixture(%{status: :published, name: "Se retira"})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      refute html =~ "¿Retirar"
+
+      html = render_click(lv, "retire")
+      assert html =~ "¿Retirar Se retira?"
+
+      html = render_click(lv, "confirm-retire")
+      assert html =~ "Juego retirado."
+      assert Catalog.get_game!(game.id).status == :retired
+    end
+
+    test "cancelling the retire confirmation leaves the game published", %{conn: conn} do
+      game = game_fixture(%{status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "retire")
+      render_click(lv, "cancel-retire")
+
+      assert Catalog.get_game!(game.id).status == :published
+    end
+
+    test "on a retired game, Restaurar restores it", %{conn: conn} do
+      game = game_fixture(%{status: :retired})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      html = render_click(lv, "restore")
+
+      assert html =~ "Juego restaurado."
+      assert Catalog.get_game!(game.id).status == :published
+    end
+  end
+
+  describe "GameLive.Index — list, filter, search, load more (D-09 Task 2)" do
+    setup :register_and_log_in_staff
+
+    test "lists games by name with a status badge", %{conn: conn} do
+      game_fixture(%{name: "Borrador Uno", status: :draft})
+      game_fixture(%{name: "Publicado Uno", status: :published})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      assert html =~ "Borrador Uno"
+      assert html =~ "Publicado Uno"
+      assert html =~ "Borrador"
+      assert html =~ "Publicado"
+    end
+
+    test "?estado=borrador shows only drafts", %{conn: conn} do
+      game_fixture(%{name: "Borrador Uno", status: :draft})
+      game_fixture(%{name: "Publicado Uno", status: :published})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=borrador")
+
+      assert html =~ "Borrador Uno"
+      refute html =~ "Publicado Uno"
+    end
+
+    test "an unknown estado value shows all games", %{conn: conn} do
+      game_fixture(%{name: "Uno", status: :draft})
+      game_fixture(%{name: "Dos", status: :published})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=bogus")
+
+      assert html =~ "Uno"
+      assert html =~ "Dos"
+    end
+
+    test "typing in the search box narrows by name case-insensitively", %{conn: conn} do
+      game_fixture(%{name: "Catán"})
+      game_fixture(%{name: "Carcassonne"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = lv |> form("#admin-games-search", q: "cat") |> render_change()
+
+      assert html =~ "Catán"
+      refute html =~ "Carcassonne"
+    end
+
+    test "with 60 games, the first render shows 50 rows and Cargar más appends the rest", %{
+      conn: conn
+    } do
+      for n <- 1..60 do
+        game_fixture(%{name: "Juego #{String.pad_leading(to_string(n), 3, "0")}"})
+      end
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos")
+      assert count_occurrences(html, "Juego ") == 50
+
+      html = render_click(lv, "load-more")
+      assert count_occurrences(html, "Juego ") == 60
+    end
+
+    test "the Borradores filter with zero drafts shows the empty state", %{conn: conn} do
+      game_fixture(%{status: :published})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=borrador")
+
+      assert html =~ "Ningún juego en borrador"
+      assert html =~ "Agregá un juego pegando su ID o link de BGG."
+    end
+  end
+
+  defp count_occurrences(text, substring) do
+    text |> String.split(substring) |> length() |> Kernel.-(1)
+  end
 end

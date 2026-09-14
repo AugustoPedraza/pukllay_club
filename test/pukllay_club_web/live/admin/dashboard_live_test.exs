@@ -3,6 +3,7 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
 
   import Phoenix.LiveViewTest
   import PukllayClub.AccountsFixtures
+  import PukllayClub.CatalogFixtures
 
   alias PukllayClub.Accounts
 
@@ -71,6 +72,30 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
 
       assert {:halt, _socket} =
                PukllayClubWeb.UserAuth.on_mount(:require_staff, %{}, %{}, socket)
+    end
+  end
+
+  describe "Juegos card (D-35, D-09 Task 2)" do
+    setup :register_and_log_in_staff
+
+    test "links to /admin/juegos and shows a borradores badge when N > 0", %{conn: conn} do
+      game_fixture(%{status: :draft})
+      game_fixture(%{status: :draft})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Juegos"
+      assert html =~ ~s(href="/admin/juegos")
+      assert html =~ "2 borradores"
+    end
+
+    test "omits the badge when there are no drafts", %{conn: conn} do
+      game_fixture(%{status: :published})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Juegos"
+      refute html =~ "borradores"
     end
   end
 
