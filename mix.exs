@@ -105,7 +105,6 @@ defmodule PukllayClub.MixProject do
       {:image, "~> 0.72.0"},
       {:ex_aws, "~> 2.7"},
       {:ex_aws_s3, "~> 2.5"},
-      {:nimble_csv, "~> 1.3"},
       {:instructor_lite, "~> 1.3"}
     ]
   end

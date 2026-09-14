@@ -3,9 +3,12 @@ defmodule PukllayClub.Catalog.Game do
   A single club board game row.
 
   Mirrors `priv/repo/migrations/*_create_games.exs`. `csv_row` is the
-  seed-task natural key (see `PukllayClub.Catalog.upsert_game!/1`); `bgg_id`
-  is nullable because ~9% of the club's CSV rows carry no BGG id (D-18) and
-  `enrichment_status` records why.
+  historical natural key from the retired CSV seed pipeline (D-09) — the
+  ~434 games imported that way keep their original `csv_row` value, but no
+  current write path reads or writes rows through it; the database is now
+  the sole source of truth and `/admin` is the only editing surface.
+  `bgg_id` is nullable because ~9% of the club's original CSV rows carried
+  no BGG id (D-18) and `enrichment_status` records why.
   """
   use Ecto.Schema
 
@@ -48,10 +51,12 @@ defmodule PukllayClub.Catalog.Game do
     # column and was already public; the admin add-game flow (plan 06) sets
     # `:draft` explicitly on insert, never relying on this default.
     field :status, Ecto.Enum, values: [:draft, :published, :retired], default: :published
-    # Real, queryable expansion/promo flag (G-01-5) — derived at seed time
-    # by `PukllayClub.Catalog.Seed.ExpansionClassifier` and backfilled for
-    # pre-existing rows by the `add_games_is_expansion` migration. See that
-    # module's moduledoc for the marker + reviewed-override rules.
+    # Real, queryable expansion/promo flag (G-01-5), staff-editable in the
+    # admin (D-07, club-owned field). Originally derived at seed time by
+    # the CSV seed's (retired, D-09) `ExpansionClassifier` and backfilled
+    # for pre-existing rows by the `add_games_is_expansion` migration; any
+    # value set from here on is an admin edit and must never be overwritten
+    # by an offline task.
     field :is_expansion, :boolean, default: false
     # Postgres-generated `tsvector` column (01-04 migration) — Ecto never
     # writes it (never cast in `seed_changeset/2`) and never loads it back
@@ -68,9 +73,15 @@ defmodule PukllayClub.Catalog.Game do
   end
 
   @doc """
-  Changeset used by the seed pipeline (`PukllayClub.Catalog.upsert_game!/1`).
-  Casts every column; requires only `:name` and `:csv_row` since most fields
-  are legitimately absent for a not-yet-enriched or `BGG_ID`-less row.
+  Changeset historically used by the retired CSV seed pipeline (D-09; the
+  full-row `Catalog.upsert_game!/1` upsert it fed no longer exists). Casts
+  every column; requires only `:name` and `:csv_row` since most fields were
+  legitimately absent for a not-yet-enriched or `BGG_ID`-less imported row.
+  No current write path uses this changeset for a club-owned field — the
+  narrow-allowlist offline tasks (`StatsEnricher`, `GalleryBackfill`,
+  `OGCardBackfill`) and the admin write path each cast their own explicit
+  field list instead. Still used by `PukllayClub.CatalogFixtures.game_fixture/1`
+  to build test rows with every column castable at once.
   """
   def seed_changeset(game, attrs) do
     game

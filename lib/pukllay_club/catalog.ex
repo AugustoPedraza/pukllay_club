@@ -1,7 +1,16 @@
 defmodule PukllayClub.Catalog do
   @moduledoc """
-  The Catalog context — the only module `CatalogLive.Index` (and the seed
-  pipeline) reads/writes `PukllayClub.Catalog.Game` rows through.
+  The Catalog context — the only module `PukllayClub.Catalog.Game` rows are
+  read/written through, whether from the public catalog UI
+  (`CatalogLive.Index`) or the admin. **The database is the sole source of
+  truth (D-09):** the CSV seed path (`mix catalog.seed`,
+  `Catalog.Seed.CsvImport`, and the full-row `upsert_game!/1` upsert) was
+  retired in phase 01.8.1 and must never be reintroduced — a replace-all
+  upsert would silently revert any admin edit. `/admin` is the only editing
+  surface for club-owned fields; the surviving offline tasks
+  (`StatsEnricher`, `GalleryBackfill`, `OGCardBackfill`,
+  `catalog.translate_descriptions`) write through narrow allowlists that
+  never touch a club-owned column.
 
   `filter_games/1` is the single composed query serving CATALOG-02
   (filter), CATALOG-03 (search), and CATALOG-04 (sort) together, per
@@ -67,26 +76,6 @@ defmodule PukllayClub.Catalog do
     |> order_by([g], asc: g.name)
     |> limit(^limit)
     |> Repo.all()
-  end
-
-  @doc """
-  Inserts or updates a game row, upserting on the `:csv_row` unique index
-  (the seed task's natural key — see the migration/schema for why this is
-  `csv_row` and not `bgg_id`, D-02/D-19).
-  """
-  def upsert_game!(attrs) do
-    %Game{}
-    |> Game.seed_changeset(attrs)
-    |> Repo.insert!(
-      # `:search_vector` (01-04) is a Postgres GENERATED ALWAYS column —
-      # it can only ever be set to DEFAULT, so it must be excluded here too,
-      # not just `:id`/`:inserted_at`, or a re-run's `ON CONFLICT DO UPDATE`
-      # tries `SET search_vector = EXCLUDED.search_vector` and Postgres
-      # raises `(generated_always) column "search_vector" can only be
-      # updated to DEFAULT`.
-      on_conflict: {:replace_all_except, [:id, :inserted_at, :search_vector]},
-      conflict_target: :csv_row
-    )
   end
 
   @doc """
@@ -419,8 +408,11 @@ defmodule PukllayClub.Catalog do
   to surface almost exclusively expansions/promos — the club's source
   export happens to cluster every expansion/promo entry as one contiguous
   block at the tail of the sheet. `recent_query/0` now filters on
-  `is_expansion == false`; see `PukllayClub.Catalog.Seed.ExpansionClassifier`
-  for how that flag is derived. The `is_expansion` column now exists on
+  `is_expansion == false`; `is_expansion` is a staff-editable, club-owned
+  field (D-07) — originally derived for the historically-imported rows by
+  the CSV seed's (retired, D-09) `ExpansionClassifier`, but every value
+  from here on is set by an admin edit and must never be overwritten by an
+  offline task. The `is_expansion` column now exists on
   every game and could be filtered elsewhere too, but Phase 1 deliberately
   scopes the exclusion to this one carousel row — `filter_games/1`,
   `count_games/1`, and every other carousel row are untouched, so an
