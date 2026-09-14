@@ -230,9 +230,9 @@
   <h3>Admin shell: the winner from sketch 059</h3>
   <ul>
     <li><b>One header, every state:</b> menu button + logo + wordmark, exactly like a signed-out visitor sees it, on phone and desktop. No mode label, no avatar and no dots in the header.</li>
-    <li><b>One drawer:</b> signed out it has SITIO. Signed in (admin or public) it's always PANEL (every section, with counts) → SITIO → TU CUENTA. Theme is pinned to the drawer's bottom edge (the list scrolls above it), so it never moves.</li>
-    <li><b>Tab bar (admin only):</b> Panel · Juegos · Secciones · Estantes · Cuenta. Cuenta (avatar with a green ring) is the signed-in signal and opens the account sheet with the same TU CUENTA rows as the drawer. Desktop shows every section in one row under the header, with Cuenta at the end.</li>
-    <li><b>Cerrar sesión:</b> confirmed inside the same sheet with the same row layout (a standalone sheet when started from the drawer). Then "Cerrando sesión…" → Ingresar + "Cerraste sesión".</li>
+    <li><b>One drawer:</b> signed out it has SITIO. Signed in (admin or public) it's always PANEL (every section, with counts) → SITIO. There's no account block in the drawer; your account lives only in the Cuenta tab. Theme is pinned to the drawer's bottom edge (the list scrolls above it), so it never moves.</li>
+    <li><b>Tab bar (admin only):</b> Panel · Juegos · Secciones · Estantes · Cuenta. Cuenta (avatar with a green ring) is the signed-in signal and opens the account sheet (TU CUENTA: your account, Ver el sitio público, Cerrar sesión). Desktop shows every section in one row under the header, with Cuenta at the end.</li>
+    <li><b>Cerrar sesión:</b> confirmed inside the same sheet with the same row layout. Then "Cerrando sesión…" → Ingresar + "Cerraste sesión".</li>
     <li><b>Navigation:</b> header and tabs stay put and only the page content swaps. Tapping the active tab again goes back to that tab's main screen. Sheets close with the backdrop, Esc or a swipe down, and focus returns to what opened them. No footer on admin.</li>
     <li>Page contents are placeholders; they get designed in 060–063.</li>
   </ul>
@@ -309,7 +309,7 @@ const panelRows = () => {
 const siteRows = () => row({ nav: 'pub:inicio', icon: 'home', label: 'Inicio', on: S.mode !== 'admin' }) + row({ nav: 'pub:about', icon: 'about', label: 'Quiénes Somos' });
 const accountRows = () =>
   row({ avatar: true, label: USER.email, sub: `Sesión iniciada · ${S.role === 'owner' ? 'Dueña' : 'Staff'}`, isStatic: true }) +
-  (S.mode === 'admin' ? row({ nav: 'pub:inicio', icon: 'ext', label: 'Ver el sitio público' }) : row({ nav: 'panel', icon: 'panel', label: 'Ir al panel' })) +
+  row({ nav: 'pub:inicio', icon: 'ext', label: 'Ver el sitio público' }) +
   row({ act: 'ask-logout', icon: 'logout', label: 'Cerrar sesión', tone: 'danger' });
 const confirmStep = (cancelAct) => '<div class="group-label">Cerrar sesión</div>' +
   `<p class="sheet-text">Vas a salir de <b>${USER.email}</b>. Para volver a entrar, te mandamos un link por mail.</p>
@@ -328,14 +328,13 @@ const header = () => `<header class="hdr"><div class="hdr-in">
   <a class="brand" data-nav="pub:inicio"><img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt=""><span class="word">Pukllay Club</span></a>
   </div></header>`;
 
-// Same drawer in every signed-in state; signed out simply has no PANEL / TU CUENTA groups.
+// Same drawer in every signed-in state (PANEL → SITIO); signed out has SITIO only. Account lives only in the Cuenta tab.
 const drawer = () => `<div class="backdrop" data-act="close"></div>
   <aside class="drawer" aria-label="Menú">
     <div class="drawer-top"><span></span><button class="icon-btn" data-act="close" aria-label="Cerrar menú">${ic('x')}</button></div>
     <div class="drawer-body">
       ${signedIn() ? group('Panel', panelRows()) : ''}
       ${group('Sitio', siteRows())}
-      ${signedIn() ? group('Tu cuenta', accountRows()) : ''}
     </div>
     <div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>
   </aside>`;
@@ -358,8 +357,6 @@ const accountSheet = () => `<div class="sheet" id="sheet-account" role="dialog" 
     <div class="step step-account">${group('Tu cuenta', accountRows())}</div>
     <div class="step step-confirm" aria-hidden="true" inert>${confirmStep('cancel-logout')}</div>
   </div></div>`;
-const confirmSheet = () => `<div class="sheet center" id="sheet-logout" role="alertdialog" aria-modal="true" aria-label="Cerrar sesión">
-  <div class="grab"></div>${confirmStep('close')}</div>`;
 
 /* ---------------- page bodies (placeholders) ---------------- */
 function pageHead() {
@@ -401,7 +398,7 @@ function render() {
   device.className = 'device' + (desk ? ' desk' : '') + (admin ? ' has-tabs' : '');
   const body = admin ? adminBody() : S.mode === 'public' ? publicBody() : loginBody();
   device.innerHTML = `<div class="scroller">${header()}${admin && desk ? tabBar() : ''}<main id="main">${body}</main></div>
-    ${admin && !desk ? tabBar() : ''}${drawer()}${admin ? accountSheet() : ''}${signedIn() ? confirmSheet() : ''}
+    ${admin && !desk ? tabBar() : ''}${drawer()}${admin ? accountSheet() : ''}
     <div class="toast" id="toast">${ic('check')}<span></span></div>`;
   document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.m === S.mode));
   if (S.toast) { showToast(S.toast); S.toast = null; }
@@ -523,7 +520,7 @@ document.addEventListener('click', e => {
   else if (a === 'open-account') openEl('#sheet-account', t);
   else if (a === 'ask-logout') {
     const sh = t.closest('.sheet');
-    if (sh && sh.querySelector('.step-confirm')) setStep(sh, 'confirm'); else openEl('#sheet-logout', returnFocus || t);
+    setStep(sh, 'confirm');
   }
   else if (a === 'cancel-logout') setStep(t.closest('.sheet'), 'account');
   else if (a === 'close') closeAll();

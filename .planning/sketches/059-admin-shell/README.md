@@ -191,3 +191,11 @@ And remove the other variants."
   a dropdown panel).
 - Account sheet / confirm step / swipe / Esc / focus / soft content swap unchanged from the
   consistency round.
+
+## Drawer trim (2026-09-14)
+Developer: "inside the drawer, not need of 'tu cuenta' section". Removed the TU CUENTA group from the
+drawer in every state. Drawer is now PANEL → SITIO when signed in, SITIO when signed out; theme stays
+pinned at the bottom. Account + Cerrar sesión live only in the admin tab bar's Cuenta sheet (its
+"Ver el sitio público" row is fixed; the "Ir al panel" variant and the standalone drawer confirm sheet
+were removed as unused). Consequence, accepted: on a public page while signed in, signing out means
+going to the panel (drawer → PANEL) first, then Cuenta.
