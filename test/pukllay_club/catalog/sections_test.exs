@@ -103,4 +103,84 @@ defmodule PukllayClub.Catalog.SectionsTest do
       assert updated.sort == :recent
     end
   end
+
+  describe "create_section/1 (D-17, \"Crear sección\")" do
+    test "creates a manual, non-featured, not-hidden section at the last position" do
+      max_position_before =
+        Sections.list_sections() |> Enum.map(& &1.position) |> Enum.max(fn -> 0 end)
+
+      assert {:ok, section} = Sections.create_section(%{name: "Spiel des Jahres"})
+
+      assert section.kind == :manual
+      assert section.sort == :manual
+      assert section.featured == false
+      assert section.hidden == false
+      assert section.position > max_position_before
+    end
+
+    test "rejects a blank name" do
+      assert {:error, changeset} = Sections.create_section(%{name: ""})
+      assert "can't be blank" in errors_on(changeset).name
+    end
+
+    test "rejects a 41-character name" do
+      assert {:error, changeset} = Sections.create_section(%{name: String.duplicate("a", 41)})
+      assert "should be at most 40 character(s)" in errors_on(changeset).name
+    end
+  end
+
+  describe "move_section/2 (D-18, D-19)" do
+    test "moving a non-featured section down swaps it with its next non-featured neighbour" do
+      a = section_fixture(%{name: "A", position: 100})
+      b = section_fixture(%{name: "B", position: 101})
+
+      assert {:ok, moved} = Sections.move_section(a, :down)
+      assert moved.position == 101
+
+      assert Sections.get_section!(b.id).position == 100
+    end
+
+    test "moving the first non-featured section up is a no-op" do
+      # The migration backfill already seeds non-featured sections at
+      # positions 1-7 (and the featured one at 0) — these fixtures use
+      # deliberately far-below-everything positions so "first" is
+      # unambiguous regardless of that pre-existing data.
+      first = section_fixture(%{name: "Primera", position: -1000})
+      _second = section_fixture(%{name: "Segunda", position: -999})
+
+      assert {:ok, unchanged} = Sections.move_section(first, :up)
+      assert unchanged.position == first.position
+    end
+
+    test "moving the last non-featured section down is a no-op" do
+      _first = section_fixture(%{name: "Primera", position: 100_000})
+      last = section_fixture(%{name: "Última", position: 100_001})
+
+      assert {:ok, unchanged} = Sections.move_section(last, :down)
+      assert unchanged.position == last.position
+    end
+
+    test "the featured section can never be moved" do
+      featured = Repo.get_by!(Section, featured: true)
+      original_position = featured.position
+
+      assert {:ok, unchanged} = Sections.move_section(featured, :up)
+      assert unchanged.position == original_position
+
+      assert {:ok, unchanged} = Sections.move_section(featured, :down)
+      assert unchanged.position == original_position
+    end
+
+    test "a non-featured section's neighbour search ignores the featured section's own position" do
+      # The featured section's real position (0, per the migration
+      # backfill) is smaller than this fixture's own -2000 — moving the
+      # (now genuinely first) non-featured section up must still be a
+      # no-op, never swap with the featured row.
+      first_non_featured = section_fixture(%{name: "Primera no destacada", position: -2000})
+
+      assert {:ok, unchanged} = Sections.move_section(first_non_featured, :up)
+      assert unchanged.position == first_non_featured.position
+      assert Repo.get_by!(Section, featured: true).position != first_non_featured.position
+    end
+  end
 end

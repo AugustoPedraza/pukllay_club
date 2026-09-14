@@ -5,6 +5,15 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
   sort rule. `:id` is parsed defensively with `Integer.parse/1`
   (T-01-37/T-01.8.1-46 convention), mirroring
   `Admin.ShelfLive.Assign`'s own `:id` handling.
+
+  The sort select's options depend on the section's own `kind` (D-19,
+  D-20, D-21 — enforced server-side by `Section.settings_changeset/2`,
+  mirrored here only for the UI's own affordance): a `:manual` section
+  may pick any sort; a `:weight_band` section never sees `A mano` (D-20 —
+  membership always comes from the game's own `weight_band`, a manual
+  pick order makes no sense without a manual member list); a `:recent`
+  section has no select at all, just a fixed "Orden: más recientes
+  primero" line (D-21 — the ordering IS the automatic rule).
   """
   use PukllayClubWeb, :live_view
 
@@ -54,6 +63,17 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
     end
   end
 
+  defp sort_options(:weight_band) do
+    [
+      {"Por nombre", :name},
+      {"Por peso BGG", :bgg_weight},
+      {"Por puntaje BGG", :bgg_rating},
+      {"Recientes", :recent}
+    ]
+  end
+
+  defp sort_options(_manual), do: [{"A mano", :manual} | sort_options(:weight_band)]
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -79,8 +99,23 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
           <.input field={@form[:subtitle]} type="text" label="Subtítulo" />
           <.input field={@form[:hidden]} type="checkbox" label="Ocultar en la home" />
 
+          <p :if={@section.kind == :recent} class="text-neutral text-sm">
+            Orden: más recientes primero
+          </p>
+          <.input
+            :if={@section.kind != :recent}
+            field={@form[:sort]}
+            type="select"
+            label="Orden"
+            options={sort_options(@section.kind)}
+          />
+
           <.button variant="primary">Guardar cambios</.button>
         </.form>
+
+        <p :if={@section.kind == :weight_band} class="text-neutral text-sm">
+          Los juegos de esta sección salen de su nivel.
+        </p>
       </div>
     </Layouts.app>
     """
