@@ -5,6 +5,20 @@ defmodule PukllayClubWeb.UserLive.Confirmation do
   alias PukllayClub.Accounts
 
   @impl true
+  def render(%{user: nil} = assigns) do
+    ~H"""
+    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse>
+      <div class="mx-auto max-w-sm space-y-4 text-center">
+        <.header>Ingresar al panel</.header>
+        <p>El link venció o ya se usó. Pedí uno nuevo.</p>
+        <.button navigate={~p"/admin/ingresar"} variant="primary" class="w-full">
+          Enviarme otro link
+        </.button>
+      </div>
+    </Layouts.app>
+    """
+  end
+
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse>
@@ -32,17 +46,19 @@ defmodule PukllayClubWeb.UserLive.Confirmation do
     """
   end
 
+  # UI-SPEC E11: an expired/already-used token renders the error state
+  # in-page (a "user: nil" render clause above) rather than the generator's
+  # default flash-and-redirect — this is the D-31 in-page expired-link state.
   @impl true
   def mount(%{"token" => token}, _session, socket) do
-    if user = Accounts.get_user_by_magic_link_token(token) do
-      form = to_form(%{"token" => token}, as: "user")
+    case Accounts.get_user_by_magic_link_token(token) do
+      nil ->
+        {:ok, assign(socket, user: nil, form: nil, trigger_submit: false)}
 
-      {:ok, assign(socket, user: user, form: form, trigger_submit: false), temporary_assigns: [form: nil]}
-    else
-      {:ok,
-       socket
-       |> put_flash(:error, "Magic link is invalid or it has expired.")
-       |> push_navigate(to: ~p"/admin/ingresar")}
+      user ->
+        form = to_form(%{"token" => token}, as: "user")
+
+        {:ok, assign(socket, user: user, form: form, trigger_submit: false), temporary_assigns: [form: nil]}
     end
   end
 

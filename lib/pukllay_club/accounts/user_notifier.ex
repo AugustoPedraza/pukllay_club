@@ -49,35 +49,42 @@ defmodule PukllayClub.Accounts.UserNotifier do
     end
   end
 
+  # Voseo Argentine Spanish (D-31, T-01.8.1-04). Both variants resolve to the
+  # same 15-minute magic-link token (`@magic_link_validity_in_minutes` in the
+  # generated `UserToken`) — the copy states that duration explicitly rather
+  # than leaving it implicit, and both state that nothing happens if the
+  # recipient didn't ask for the email.
   defp deliver_magic_link_instructions(user, url) do
-    deliver(user.email, "Log in instructions", """
+    deliver(user.email, "Tu link para entrar a Pukllay Club", """
 
     ==============================
 
-    Hi #{user.email},
+    Hola,
 
-    You can log into your account by visiting the URL below:
+    Entrá a tu cuenta del panel de Pukllay Club visitando el link de abajo.
+    El link vence en 15 minutos.
 
     #{url}
 
-    If you didn't request this email, please ignore this.
+    Si no pediste este email, no hace falta que hagas nada.
 
     ==============================
     """)
   end
 
   defp deliver_confirmation_instructions(user, url) do
-    deliver(user.email, "Confirmation instructions", """
+    deliver(user.email, "Te invitaron al staff de Pukllay Club", """
 
     ==============================
 
-    Hi #{user.email},
+    Hola,
 
-    You can confirm your account by visiting the URL below:
+    Te invitaron a formar parte del staff de Pukllay Club. Entrá al panel
+    visitando el link de abajo. El link vence en 15 minutos.
 
     #{url}
 
-    If you didn't create an account with us, please ignore this.
+    Si no esperabas esta invitación, no hace falta que hagas nada.
 
     ==============================
     """)

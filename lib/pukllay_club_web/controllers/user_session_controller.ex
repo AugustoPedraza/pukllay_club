@@ -24,7 +24,7 @@ defmodule PukllayClubWeb.UserSessionController do
 
       _ ->
         conn
-        |> put_flash(:error, "The link is invalid or it has expired.")
+        |> put_flash(:error, "El link venció o ya se usó. Pedí uno nuevo.")
         |> redirect(to: ~p"/admin/ingresar")
     end
   end
@@ -34,13 +34,13 @@ defmodule PukllayClubWeb.UserSessionController do
   # path (D-31/D-33, T-01.8.1-03).
   defp create(conn, _params, _info) do
     conn
-    |> put_flash(:error, "The link is invalid or it has expired.")
+    |> put_flash(:error, "El link venció o ya se usó. Pedí uno nuevo.")
     |> redirect(to: ~p"/admin/ingresar")
   end
 
   def delete(conn, _params) do
     conn
-    |> put_flash(:info, "Logged out successfully.")
+    |> put_flash(:info, "Sesión cerrada.")
     |> UserAuth.log_out_user()
   end
 end

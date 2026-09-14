@@ -3,6 +3,7 @@ defmodule PukllayClubWeb.UserLive.Login do
   use PukllayClubWeb, :live_view
 
   alias PukllayClub.Accounts
+  alias PukllayClub.Accounts.User
 
   @impl true
   def render(assigns) do
@@ -60,17 +61,23 @@ defmodule PukllayClubWeb.UserLive.Login do
     {:ok, assign(socket, form: form, trigger_submit: false)}
   end
 
+  # T-01.8.1-04 (D-31, UI-SPEC E11): identical neutral copy whether the
+  # address belongs to staff, a non-staff user, or nobody at all — response
+  # shape must never reveal whether an address exists. Delivery is gated
+  # server-side on `User.staff?/1` so a future Phase 2 member account never
+  # receives a staff magic link either.
   @impl true
   def handle_event("submit_magic", %{"user" => %{"email" => email}}, socket) do
-    if user = Accounts.get_user_by_email(email) do
+    user = Accounts.get_user_by_email(email)
+
+    if user && User.staff?(user) do
       Accounts.deliver_login_instructions(
         user,
         &url(~p"/admin/ingresar/#{&1}")
       )
     end
 
-    info =
-      "If your email is in our system, you will receive instructions for logging in shortly."
+    info = "Si el email es del staff, te llegó un link para entrar. Revisá tu casilla."
 
     {:noreply,
      socket
