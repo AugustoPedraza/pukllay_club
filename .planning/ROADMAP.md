@@ -131,15 +131,53 @@ prioritized ahead of Phase 2/3 for Saturday operations and a living home page.
   1. Staff sign in via passwordless magic link (`phx.gen.auth`, staff role); registration is invite-only — no public sign-up path exists, and `/admin` routes reject non-staff
   2. Staff can add, edit, and remove games in the ludoteca
   3. Each game carries a shelf-level storage location; staff can bulk-assign locations on a phone by picking a shelf and tapping the games on it, and can view games listed in shelf order (pick/restore list)
-  4. Staff can rename the first home carousel and hand-pick + order its games; all other carousel rows remain automatic
+  4. Staff manage the home page's sections: create, rename, reorder and hide them; each is hand-picked (type-ahead add, ↑/↓, remove) or automatic by rule (difficulty band, recently added), the first is a hand-picked featured hero capped at ~20 games, empty sections are hidden, and the catalog filter offers a sections facet *(rewritten 2026-09-13 per 01.8.1-CONTEXT.md D-17..D-28 — supersedes "rename the first carousel; all other rows remain automatic")*
   5. Staff can see games whose CSV `weight_band` disagrees with their `bgg_weight`, and either correct the band or explicitly keep it
 
-**Plans:** 0 plans
+**Plans:** 14 plans
 **UI hint**: yes
 
 Plans:
+**Wave 1**
 
-- [ ] TBD (run /gsd-plan-phase 01.8.1 to break down)
+- [ ] 01.8.1-01-PLAN.md — Tracer: invite-only magic-link staff sign-in via `phx.gen.auth` (registration/password/settings removed), role gate, `/admin` dashboard shell, owner release command (SC-1)
+- [ ] 01.8.1-02-PLAN.md — `games.status` draft/published/retired with a `published` deploy default, published-only public reads everywhere (checkpoint: retired-URL behavior) (SC-2)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 01.8.1-03-PLAN.md — Production email: provider decision checkpoint, Swoosh HTTP adapter + `MAILER_API_KEY` plumbing, SPF/DKIM/DMARC (human action) (SC-1, D-36)
+- [ ] 01.8.1-04-PLAN.md — Retire the CSV seed path and clobbering upsert (checkpoint: remove vs disable), guard remaining backfills, rewrite the AGENTS.md runbook (D-09)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 01.8.1-05-PLAN.md — Juegos admin: edit club-owned fields, publish/retire/restore, list with search + Cargar más, public Admin/Editar affordances (SC-2)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 01.8.1-06-PLAN.md — Add a game by BGG ID: Oban, async enrichment worker reusing BGG/R2/OG/Gemini modules, live-updating draft row (SC-2)
+- [ ] 01.8.1-07-PLAN.md — Owner invites (max 3) and removes staff with immediate session disconnect (SC-1)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 01.8.1-08-PLAN.md — Add-by-BGG hardening: failure + Reintentar, duplicate rejection, BGG URL/expansions, production enrichment secrets (SC-2)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 01.8.1-09-PLAN.md — Shelves + phone-first walk-the-shelf tap-to-assign with undo, pick/restore list, staff-only location (SC-3)
+- [ ] 01.8.1-10-PLAN.md — DB-driven home sections: tags→sections backfill migration (checkpoint: fate of `games.tags`), featured hero, hide-empty (SC-4)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 01.8.1-11-PLAN.md — Sections filter facet + `?sections=` landing, public chips per the `games.tags` decision (SC-4)
+- [ ] 01.8.1-12-PLAN.md — Staff section management: create/rename/reorder/hide, sort rules, phone member picker, featured cap (SC-4)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 01.8.1-13-PLAN.md — Band audit with shared `Vocabulary.implied_weight_band/1`, correct / drift-aware keep, complete dashboard (SC-5)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 01.8.1-14-PLAN.md — Production rollout: pre-deploy baseline, green PR, merge + owner creation (human action), live smoke verification (SC-1..SC-5)
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
@@ -205,7 +243,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 01.8.1 → 2 → 
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
 | 01.7. Production Catalog Data & Security Hardening | 5/5 | Complete    | 2026-09-11 |
 | 01.8. SEO, Structured Data & Social Sharing | 7/7 | Complete    | 2026-09-12 |
-| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 0/TBD | Not started | - |
+| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 0/14 | Planned | - |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
