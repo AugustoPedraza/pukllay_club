@@ -21,7 +21,7 @@
     {
       "number": "01.8.1",
       "name": "Staff Admin — Ludoteca, Shelves & Curated Destacados",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "2",
@@ -44,5 +44,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 01.8.1 of 6 · executing"
   },
-  "updated_at": "2026-09-14T01:23:25.095Z"
+  "updated_at": "2026-09-14T02:24:45.041Z"
 }
