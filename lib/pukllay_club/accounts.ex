@@ -6,10 +6,13 @@ defmodule PukllayClub.Accounts do
   import Ecto.Query, warn: false
 
   ## Database getters
+  alias PukllayClub.Accounts.Scope
   alias PukllayClub.Accounts.User
   alias PukllayClub.Accounts.UserNotifier
   alias PukllayClub.Accounts.UserToken
   alias PukllayClub.Repo
+
+  @max_staff 3
 
   @doc """
   Gets a user by email.
@@ -89,6 +92,82 @@ defmodule PukllayClub.Accounts do
     |> Ecto.Changeset.put_change(:role, :owner)
     |> Repo.insert()
   end
+
+  ## Staff (D-32, D-33)
+
+  @doc """
+  Invites a new staff member by email.
+
+  Only the owner may invite (D-33) — returns `{:error, :unauthorized}` for
+  any other scope, checked here directly (not just at the LiveView mount)
+  so this holds even if `Admin.StaffLive.Index` is bypassed (T-01.8.1-32).
+  The roster is capped at #{@max_staff} invited staff plus the owner; once
+  reached, returns `{:error, :staff_limit_reached}` instead of inserting.
+
+  On success, inserts an unconfirmed `%User{role: :staff}` (no password) via
+  `User.email_changeset/2` — the same shape `create_owner/1` uses. This
+  function does not send the invite email: the caller delivers it via
+  `deliver_login_instructions/2` and, if delivery fails, rolls the insert
+  back via `delete_invited_user/1` (UI-SPEC "Error state (invite email
+  failed)").
+
+  ## Examples
+
+      iex> invite_staff(owner_scope, "nueva@example.com")
+      {:ok, %User{role: :staff, confirmed_at: nil}}
+
+      iex> invite_staff(staff_scope, "nueva@example.com")
+      {:error, :unauthorized}
+
+  """
+  def invite_staff(%Scope{user: %User{} = user}, email) do
+    cond do
+      not User.owner?(user) ->
+        {:error, :unauthorized}
+
+      count_staff() >= @max_staff ->
+        {:error, :staff_limit_reached}
+
+      true ->
+        %User{}
+        |> User.email_changeset(%{email: email})
+        |> Ecto.Changeset.put_change(:role, :staff)
+        |> Repo.insert()
+    end
+  end
+
+  defp count_staff, do: Repo.aggregate(from(u in User, where: u.role == :staff), :count)
+
+  @doc """
+  Lists every account (owner then invited staff, ordered by email within
+  each), for the owner-only staff roster (D-33, UI-SPEC E9).
+
+  Returns `{:error, :unauthorized}` for a non-owner scope (defense in depth
+  — `Admin.StaffLive.Index` also redirects a non-owner at mount).
+
+  ## Examples
+
+      iex> list_staff(owner_scope)
+      [%User{role: :owner}, %User{role: :staff}, ...]
+
+  """
+  def list_staff(%Scope{user: %User{} = user}) do
+    if User.owner?(user) do
+      # ":owner" sorts before ":staff" lexicographically, so plain ascending
+      # order on the enum's underlying string already puts the owner first.
+      Repo.all(from(u in User, order_by: [asc: u.role, asc: u.email]))
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  @doc """
+  Deletes a still-unconfirmed invited user — the rollback `invite_staff/2`'s
+  caller uses when `deliver_login_instructions/2` fails right after the
+  insert, so a failed invite email never leaves an orphaned staff row
+  (UI-SPEC "Error state (invite email failed)").
+  """
+  def delete_invited_user(%User{} = user), do: Repo.delete(user)
 
   @doc """
   Checks whether the user is in sudo mode.
@@ -278,8 +357,18 @@ defmodule PukllayClub.Accounts do
   def deliver_login_instructions(%User{} = user, magic_link_url_fun) when is_function(magic_link_url_fun, 1) do
     {encoded_token, user_token} = UserToken.build_email_token(user, "login")
     Repo.insert!(user_token)
-    UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
+    notifier().deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
   end
+
+  @doc false
+  # Test-only override seam for the invite-email delivery-failure path
+  # (`Admin.StaffLive.Index`'s rollback via `delete_invited_user/1`).
+  # `Swoosh.Adapters.Test` (config/test.exs) always succeeds, so there is no
+  # real way to make `deliver_login_instructions/2` fail in test without
+  # this indirection — a test sets `Application.put_env(:pukllay_club,
+  # :accounts_notifier, SomeFakeNotifier)` (and resets it in `on_exit/1`) to
+  # simulate a failed send. Never set outside a test.
+  def notifier, do: Application.get_env(:pukllay_club, :accounts_notifier, UserNotifier)
 
   @doc """
   Deletes the signed token with the given context.

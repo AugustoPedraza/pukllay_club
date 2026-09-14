@@ -99,6 +99,7 @@ defmodule PukllayClubWeb.Router do
       live "/", DashboardLive, :index
       live "/juegos", GameLive.Index, :index
       live "/juegos/:id/editar", GameLive.Form, :edit
+      live "/staff", StaffLive.Index, :index
     end
   end
 

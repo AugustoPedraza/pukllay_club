@@ -4,6 +4,7 @@ defmodule PukllayClub.AccountsTest do
   import PukllayClub.AccountsFixtures
 
   alias PukllayClub.Accounts
+  alias PukllayClub.Accounts.Scope
   alias PukllayClub.Accounts.User
   alias PukllayClub.Accounts.UserToken
 
@@ -86,6 +87,68 @@ defmodule PukllayClub.AccountsTest do
       assert is_nil(user.hashed_password)
       assert is_nil(user.confirmed_at)
       assert is_nil(user.password)
+    end
+  end
+
+  describe "invite_staff/2 (D-32, D-33, T-01.8.1-32)" do
+    test "an owner invites a new unconfirmed staff user" do
+      scope = Scope.for_user(owner_fixture())
+      email = unique_user_email()
+
+      assert {:ok, user} = Accounts.invite_staff(scope, email)
+      assert user.email == email
+      assert user.role == :staff
+      refute user.confirmed_at
+      refute user.hashed_password
+    end
+
+    test "a staff scope is rejected" do
+      scope = Scope.for_user(staff_fixture())
+      assert Accounts.invite_staff(scope, unique_user_email()) == {:error, :unauthorized}
+    end
+
+    test "refuses a fourth invite once 3 staff already exist" do
+      scope = Scope.for_user(owner_fixture())
+      for _ <- 1..3, do: staff_fixture()
+
+      assert Accounts.invite_staff(scope, unique_user_email()) == {:error, :staff_limit_reached}
+    end
+
+    test "returns a changeset error for an email already in use" do
+      scope = Scope.for_user(owner_fixture())
+      %{email: email} = staff_fixture()
+
+      assert {:error, changeset} = Accounts.invite_staff(scope, email)
+      assert "has already been taken" in errors_on(changeset).email
+    end
+  end
+
+  describe "list_staff/1 (D-33, UI-SPEC E9)" do
+    test "returns the owner first, then staff ordered by email" do
+      owner = owner_fixture()
+      scope = Scope.for_user(owner)
+      b = staff_fixture(%{email: "b-#{unique_user_email()}"})
+      a = staff_fixture(%{email: "a-#{unique_user_email()}"})
+
+      assert Enum.map(Accounts.list_staff(scope), & &1.email) == [
+               owner.email,
+               a.email,
+               b.email
+             ]
+    end
+
+    test "a staff scope is rejected" do
+      scope = Scope.for_user(staff_fixture())
+      assert Accounts.list_staff(scope) == {:error, :unauthorized}
+    end
+  end
+
+  describe "delete_invited_user/1 (invite rollback)" do
+    test "deletes the given user" do
+      {:ok, user} = Accounts.invite_staff(Scope.for_user(owner_fixture()), unique_user_email())
+
+      assert {:ok, _} = Accounts.delete_invited_user(user)
+      refute Accounts.get_user_by_email(user.email)
     end
   end
 
