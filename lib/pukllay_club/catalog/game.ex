@@ -16,7 +16,7 @@ defmodule PukllayClub.Catalog.Game do
 
   alias PukllayClub.Catalog.Vocabulary
 
-  @enrichment_statuses ~w(pending enriched no_bgg_id bgg_missing)
+  @enrichment_statuses ~w(pending enriched no_bgg_id bgg_missing failed)
 
   schema "games" do
     field :name, :string

@@ -184,6 +184,43 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
     end
   end
 
+  describe "GameLive.Form — failed enrichment retry (D-03)" do
+    setup :register_and_log_in_staff
+
+    test "a failed draft shows the error alert and Reintentar button", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "failed"
+        })
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert html =~ "Error al traer datos de BGG."
+      assert html =~ "Reintentar"
+    end
+
+    test "clicking Reintentar re-enqueues enrichment and clears the error", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "failed"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      html = render_click(lv, "retry-enrichment", %{"game-id" => to_string(game.id)})
+
+      refute html =~ "Error al traer datos de BGG."
+      assert Catalog.get_game!(game.id).enrichment_status == "pending"
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+  end
+
   describe "GameLive.Index — list, filter, search, load more (D-09 Task 2)" do
     setup :register_and_log_in_staff
 
@@ -377,6 +414,52 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       html = render(lv)
       assert html =~ "On Mars"
       refute html =~ "cargando"
+    end
+  end
+
+  describe "GameLive.Index — failed enrichment retry (D-03)" do
+    setup :register_and_log_in_staff
+
+    test "a failed draft's row shows the error alert and Reintentar button", %{conn: conn} do
+      game_fixture(%{
+        bgg_id: 184_267,
+        name: "Juego #184267",
+        status: :draft,
+        enrichment_status: "failed"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      assert html =~ "Error al traer datos de BGG."
+      assert html =~ "Reintentar"
+    end
+
+    test "clicking Reintentar re-enqueues enrichment and the row returns to the cargando state", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "failed"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "retry-enrichment", %{"game-id" => to_string(game.id)})
+
+      assert html =~ "Juego #184267 (cargando…)"
+      refute html =~ "Error al traer datos de BGG."
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+
+    test "an unparseable game-id is ignored rather than raising", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "retry-enrichment", %{"game-id" => "not-a-number"})
+
+      assert is_binary(html)
     end
   end
 

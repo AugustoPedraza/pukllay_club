@@ -241,6 +241,30 @@ defmodule PukllayClub.Catalog do
   end
 
   @doc """
+  Re-enqueues enrichment for a `"failed"` draft (D-03) — sets
+  `enrichment_status` back to `"pending"` and inserts a fresh
+  `EnrichGameWorker` job in one `Ecto.Multi`, so the row is never left
+  stuck between "failed" and "pending" if the insert somehow failed.
+  Returns `{:error, :not_failed}` for any other `enrichment_status`
+  without touching the row — Reintentar only ever applies to a genuinely
+  failed record.
+  """
+  @spec retry_enrichment(Game.t()) :: {:ok, Game.t()} | {:error, :not_failed}
+  def retry_enrichment(%Game{enrichment_status: "failed"} = game) do
+    Multi.new()
+    |> Multi.update(:game, Game.enrichment_changeset(game, %{enrichment_status: "pending"}))
+    |> Oban.insert(:enrich_job, fn %{game: game} ->
+      EnrichGameWorker.new(%{game_id: game.id})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{game: game}} -> {:ok, game}
+    end
+  end
+
+  def retry_enrichment(%Game{}), do: {:error, :not_failed}
+
+  @doc """
   Admin listing of games (D-09 Task 2) — unlike every public read path,
   this has NO status filter by default: staff see drafts, published, and
   retired games together. Accepts `:status` (`:draft | :published |

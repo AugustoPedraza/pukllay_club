@@ -16,7 +16,11 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   LiveView re-fetches and `stream_insert/3`s that one row live — no page
   reload. While a draft's `enrichment_status` is `"pending"` its row shows
   `Juego #<bgg_id> (cargando…)` next to a flat skeleton in place of a
-  thumbnail (UI-SPEC E2 loading).
+  thumbnail (UI-SPEC E2 loading). When it is `"failed"` (D-03 — BGG
+  fetching exhausted its retries, BGG had no matching item, or
+  credentials are missing) the row instead shows the
+  `Error al traer datos de BGG.` alert with a `Reintentar` button that
+  re-enqueues enrichment via `Catalog.retry_enrichment/1`.
   """
   use PukllayClubWeb, :live_view
 
@@ -109,6 +113,24 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
      |> stream(:games, games, at: -1)}
   end
 
+  # D-03: `game-id` (never the reserved `value` key — project memory rule)
+  # is parsed defensively even though the button only ever renders a real
+  # integer id, so a malformed/tampered client payload is ignored rather
+  # than crashing the LiveView.
+  @impl true
+  def handle_event("retry-enrichment", %{"game-id" => game_id}, socket) do
+    case Integer.parse(game_id) do
+      {int_id, ""} ->
+        case int_id |> Catalog.get_game!() |> Catalog.retry_enrichment() do
+          {:ok, updated} -> {:noreply, stream_insert(socket, :games, updated)}
+          {:error, :not_failed} -> {:noreply, socket}
+        end
+
+      _not_an_integer ->
+        {:noreply, socket}
+    end
+  end
+
   @impl true
   def handle_info({:game_enriched, game_id}, socket) do
     {:noreply, stream_insert(socket, :games, Catalog.get_game!(game_id))}
@@ -154,6 +176,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   defp empty_body(_status), do: "Probá con otro filtro o con otra búsqueda."
 
   defp pending?(game), do: game.enrichment_status == "pending"
+  defp failed?(game), do: game.enrichment_status == "failed"
 
   defp game_label(%{enrichment_status: "pending", bgg_id: bgg_id}), do: "Juego ##{bgg_id} (cargando…)"
   defp game_label(%{name: name}), do: name
@@ -240,7 +263,19 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
                   alt=""
                   class="size-10 shrink-0 rounded-box object-cover"
                 />
-                <span class="truncate">{game_label(game)}</span>
+                <div class="min-w-0">
+                  <span class="truncate block">{game_label(game)}</span>
+                  <div :if={failed?(game)} class="alert alert-error mt-1 py-1">
+                    <span>Error al traer datos de BGG.</span>
+                    <.button
+                      variant="secondary"
+                      phx-click="retry-enrichment"
+                      phx-value-game-id={game.id}
+                    >
+                      Reintentar
+                    </.button>
+                  </div>
+                </div>
               </div>
             </:col>
             <:col :let={{_id, game}} label="Estado">

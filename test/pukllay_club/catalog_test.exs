@@ -1,5 +1,6 @@
 defmodule PukllayClub.CatalogTest do
   use PukllayClub.DataCase, async: true
+  use Oban.Testing, repo: PukllayClub.Repo
 
   import Ecto.Query
   import PukllayClub.CatalogFixtures
@@ -7,6 +8,7 @@ defmodule PukllayClub.CatalogTest do
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Repo
+  alias PukllayClub.Workers.EnrichGameWorker
 
   describe "published-only public reads (D-04, D-08)" do
     # Table-driven over every public read function that must exclude
@@ -959,6 +961,25 @@ defmodule PukllayClub.CatalogTest do
       assert length(result_ids) == 5
       assert Enum.sort(result_ids) == Enum.sort(Enum.map(others, & &1.id))
       refute base.id in result_ids
+    end
+  end
+
+  describe "retry_enrichment/1 (D-03)" do
+    test "on a non-failed game returns {:error, :not_failed} without touching the row" do
+      game = game_fixture(%{enrichment_status: "pending"})
+
+      assert Catalog.retry_enrichment(game) == {:error, :not_failed}
+      assert Catalog.get_game!(game.id).enrichment_status == "pending"
+    end
+
+    test "on a failed game sets it back to pending and enqueues exactly one new enrichment job" do
+      game =
+        game_fixture(%{bgg_id: 184_267, status: :draft, enrichment_status: "failed"})
+
+      assert {:ok, updated} = Catalog.retry_enrichment(game)
+      assert updated.enrichment_status == "pending"
+
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
     end
   end
 

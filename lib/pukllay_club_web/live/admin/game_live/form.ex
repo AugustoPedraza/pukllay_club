@@ -17,6 +17,12 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   below the form — values only, no inputs, no changeset field for any of
   them.
 
+  A failed draft (D-03 — `enrichment_status == "failed"`, from an
+  exhausted BGG retry, a missing BGG item, or missing credentials) shows
+  the `Error al traer datos de BGG.` alert at the top with a `Reintentar`
+  button that calls `Catalog.retry_enrichment/1`, putting the game back
+  into `"pending"` and re-enqueuing its `EnrichGameWorker` job.
+
   Status actions (D-04, D-08): a draft's primary action is `Publicar`,
   which is a second `type="submit"` button on the SAME form carrying
   `name="_action" value="publish"` — the browser includes the activated
@@ -112,6 +118,29 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
     end
   end
 
+  # D-03: `game-id` (never the reserved `value` key — project memory rule)
+  # is parsed defensively even though this screen only ever renders one
+  # game's own id.
+  @impl true
+  def handle_event("retry-enrichment", %{"game-id" => game_id}, socket) do
+    case Integer.parse(game_id) do
+      {int_id, ""} ->
+        case int_id |> Catalog.get_game!() |> Catalog.retry_enrichment() do
+          {:ok, updated} ->
+            {:noreply,
+             socket
+             |> assign(:game, updated)
+             |> assign(:form, to_form(Catalog.change_game_admin(updated)))}
+
+          {:error, :not_failed} ->
+            {:noreply, socket}
+        end
+
+      _not_an_integer ->
+        {:noreply, socket}
+    end
+  end
+
   # "publish" is the "_action" value the Publicar submitter carries;
   # anything else (the plain "Guardar cambios" submit, or no submitter
   # name at all) is the ordinary save flash.
@@ -140,6 +169,8 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   defp status_badge_label(:draft), do: "Borrador"
   defp status_badge_label(:published), do: "Publicado"
   defp status_badge_label(:retired), do: "Retirado"
+
+  defp failed?(game), do: game.enrichment_status == "failed"
 
   defp players_text(%{min_players: nil, max_players: nil}), do: "—"
   defp players_text(%{min_players: min, max_players: max}) when min == max, do: to_string(min || max)
@@ -180,6 +211,13 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
             </.link>
           </:actions>
         </.header>
+
+        <div :if={failed?(@game)} class="alert alert-error">
+          <span>Error al traer datos de BGG.</span>
+          <.button variant="secondary" phx-click="retry-enrichment" phx-value-game-id={@game.id}>
+            Reintentar
+          </.button>
+        </div>
 
         <.form for={@form} id="game-form" phx-change="validate" phx-submit="save" class="space-y-2">
           <.input field={@form[:name]} type="text" label="Nombre" />

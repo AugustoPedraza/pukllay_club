@@ -5,6 +5,7 @@ defmodule PukllayClub.Workers.EnrichGameWorkerTest do
   import PukllayClub.CatalogFixtures
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Seed
   alias PukllayClub.Catalog.Seed.BggClient
   alias PukllayClub.Catalog.Seed.ImagePipeline
   alias PukllayClub.Catalog.Seed.TranslatedDescription
@@ -103,7 +104,7 @@ defmodule PukllayClub.Workers.EnrichGameWorkerTest do
       assert Catalog.get_game!(game.id).name == "Nombre elegido por el staff"
     end
 
-    test "returns an Oban-visible error when BGG has no matching item" do
+    test "cancels immediately and marks the game failed when BGG has no matching item (D-03)" do
       Req.Test.stub(BggClient, fn conn ->
         conn
         |> Plug.Conn.put_resp_content_type("text/xml")
@@ -113,7 +114,14 @@ defmodule PukllayClub.Workers.EnrichGameWorkerTest do
       game =
         game_fixture(%{bgg_id: 999_999_999, status: :draft, enrichment_status: "pending"})
 
-      assert {:error, :bgg_missing} = perform_job(EnrichGameWorker, %{"game_id" => game.id})
+      Phoenix.PubSub.subscribe(PukllayClub.PubSub, "admin:games")
+
+      assert {:cancel, :bgg_missing} =
+               perform_job(EnrichGameWorker, %{"game_id" => game.id}, attempt: 1, max_attempts: 3)
+
+      assert Catalog.get_game!(game.id).enrichment_status == "failed"
+      assert_received {:game_enriched, game_id}
+      assert game_id == game.id
     end
 
     test "broadcasts {:game_enriched, game_id} on \"admin:games\" after a successful enrichment" do
@@ -125,6 +133,81 @@ defmodule PukllayClub.Workers.EnrichGameWorkerTest do
 
       assert_received {:game_enriched, game_id}
       assert game_id == game.id
+    end
+  end
+
+  describe "backoff/1 (D-03)" do
+    test "grows linearly at 30 seconds per attempt" do
+      assert EnrichGameWorker.backoff(%Oban.Job{attempt: 1}) == 30
+      assert EnrichGameWorker.backoff(%Oban.Job{attempt: 2}) == 60
+      assert EnrichGameWorker.backoff(%Oban.Job{attempt: 3}) == 90
+    end
+  end
+
+  describe "perform/1 — failure and retry (D-03)" do
+    test "an earlier attempt returns {:error, _} without marking the game failed" do
+      Req.Test.stub(BggClient, fn conn -> Plug.Conn.send_resp(conn, 500, "boom") end)
+
+      game = game_fixture(%{bgg_id: 184_267, status: :draft, enrichment_status: "pending"})
+
+      assert {:error, _reason} =
+               perform_job(EnrichGameWorker, %{"game_id" => game.id}, attempt: 1, max_attempts: 3)
+
+      assert Catalog.get_game!(game.id).enrichment_status == "pending"
+    end
+
+    test "the last allowed attempt marks the game failed and broadcasts" do
+      Req.Test.stub(BggClient, fn conn -> Plug.Conn.send_resp(conn, 500, "boom") end)
+
+      game = game_fixture(%{bgg_id: 184_267, status: :draft, enrichment_status: "pending"})
+
+      Phoenix.PubSub.subscribe(PukllayClub.PubSub, "admin:games")
+
+      assert {:error, _reason} =
+               perform_job(EnrichGameWorker, %{"game_id" => game.id}, attempt: 3, max_attempts: 3)
+
+      assert Catalog.get_game!(game.id).enrichment_status == "failed"
+      assert_received {:game_enriched, game_id}
+      assert game_id == game.id
+    end
+
+    test "missing credentials cancel immediately and mark the game failed, never logging the credentials struct" do
+      previous_env = System.get_env("BGG_API_TOKEN")
+      previous_cfg = Application.get_env(:pukllay_club, Seed)
+
+      System.delete_env("BGG_API_TOKEN")
+      Application.put_env(:pukllay_club, Seed, Keyword.delete(previous_cfg, :bgg_api_token))
+
+      on_exit(fn ->
+        if previous_env, do: System.put_env("BGG_API_TOKEN", previous_env)
+        Application.put_env(:pukllay_club, Seed, previous_cfg)
+      end)
+
+      game = game_fixture(%{bgg_id: 184_267, status: :draft, enrichment_status: "pending"})
+
+      assert {:cancel, {:missing_credentials, ["BGG_API_TOKEN"]}} =
+               perform_job(EnrichGameWorker, %{"game_id" => game.id}, attempt: 1, max_attempts: 3)
+
+      assert Catalog.get_game!(game.id).enrichment_status == "failed"
+    end
+
+    test "Catalog.retry_enrichment/1 followed by perform_job re-enriches a previously failed game" do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "failed"
+        })
+
+      assert {:ok, pending} = Catalog.retry_enrichment(game)
+      assert pending.enrichment_status == "pending"
+
+      assert :ok = perform_job(EnrichGameWorker, %{"game_id" => pending.id})
+
+      updated = Catalog.get_game!(pending.id)
+      assert updated.enrichment_status == "enriched"
+      assert updated.name == "On Mars"
     end
   end
 
