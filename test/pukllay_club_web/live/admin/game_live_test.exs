@@ -509,10 +509,10 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
     end
   end
 
-  describe "GameLive.Index — duplicate BGG id rejection (D-03)" do
+  describe "GameLive.Index — known BGG id warns, then allows an edition (D-03 revised)" do
     setup :register_and_log_in_staff
 
-    test "pasting the id of an existing game (including a retired one) shows the duplicate message and a link", %{
+    test "pasting a known BGG id warns, then Sí, agregar edición adds an edition", %{
       conn: conn
     } do
       existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
@@ -524,9 +524,14 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
         |> form("#add-game-form", bgg_id: "184267")
         |> render_submit()
 
-      assert html =~ "Este juego ya está en la ludoteca."
+      assert html =~ "Ya tenés Ya en la ludoteca con este BGG ID. ¿Es otra edición?"
       assert html =~ ~p"/admin/juegos/#{existing.id}/editar"
       assert Catalog.count_admin_games() == 1
+
+      html = lv |> element("#confirm-edition") |> render_click()
+
+      assert html =~ "Edición agregada como borrador."
+      assert Catalog.count_admin_games() == 2
     end
 
     test "pasting a BGG game URL adds a draft (D-01, not only a bare id)", %{conn: conn} do
@@ -541,6 +546,88 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
 
       assert html =~ "Juego agregado como borrador."
       assert Catalog.count_admin_games() == 1
+    end
+
+    test "both add buttons carry phx-disable-with (IN-B-02)", %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      assert has_element?(lv, "#add-game-form button[phx-disable-with]")
+
+      lv
+      |> form("#add-game-form", bgg_id: "184267")
+      |> render_submit()
+
+      assert has_element?(lv, "#confirm-edition[phx-disable-with]")
+    end
+
+    test "Cancelar removes the prompt without creating anything", %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv
+      |> form("#add-game-form", bgg_id: "184267")
+      |> render_submit()
+
+      assert has_element?(lv, "#edition-prompt")
+
+      lv |> element("#cancel-edition") |> render_click()
+
+      refute has_element?(lv, "#edition-prompt")
+      assert Catalog.count_admin_games() == 1
+    end
+
+    test "multi-edition copy joins names naturally (Patchwork y Patchwork Andino)", %{
+      conn: conn
+    } do
+      _patchwork = game_fixture(%{bgg_id: 163_412, name: "Patchwork"})
+      _andino = game_fixture(%{bgg_id: 163_412, name: "Patchwork Andino"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "163412")
+        |> render_submit()
+
+      assert html =~ "Ya tenés Patchwork y Patchwork Andino con este BGG ID. ¿Es otra edición?"
+    end
+
+    test "a double-tap on confirm-edition creates exactly one new game", %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv
+      |> form("#add-game-form", bgg_id: "184267")
+      |> render_submit()
+
+      render_click(lv, "confirm-edition", %{})
+      render_click(lv, "confirm-edition", %{})
+
+      assert Catalog.count_admin_games() == 2
+    end
+
+    test "a stale confirm in a second tab re-warns instead of duplicating", %{conn: conn} do
+      existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv1, _html} = live(conn, ~p"/admin/juegos")
+      {:ok, lv2, _html} = live(conn, ~p"/admin/juegos")
+
+      lv1 |> form("#add-game-form", bgg_id: "184267") |> render_submit()
+      lv2 |> form("#add-game-form", bgg_id: "184267") |> render_submit()
+
+      lv1 |> element("#confirm-edition") |> render_click()
+      assert Catalog.count_admin_games() == 2
+
+      html = lv2 |> element("#confirm-edition") |> render_click()
+      assert Catalog.count_admin_games() == 2
+
+      edition = Repo.get_by!(Game, bgg_id: 184_267, status: :draft)
+      assert html =~ existing.name
+      assert html =~ edition.name
     end
   end
 

@@ -21,6 +21,14 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   credentials are missing) the row instead shows the
   `Error al traer datos de BGG.` alert with a `Reintentar` button that
   re-enqueues enrichment via `Catalog.retry_enrichment/1`.
+
+  **D-03 (revised 2026-09-14, gap CR-B-01): a known BGG id warns, then
+  allows an edition.** Pasting a BGG id that already belongs to any game
+  shows those games ("Ya tenés {nombres} con este BGG ID. ¿Es otra
+  edición?", each linked to its editor) via the `:edition_prompt` assign,
+  and only an explicit `"confirm-edition"` click inserts the new draft —
+  the acknowledged ids always come from that server-side assign, never
+  from client params (T-01.8.1-69). See `Catalog.add_game_from_bgg/2`.
   """
   use PukllayClubWeb, :live_view
 
@@ -44,7 +52,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
      |> assign(:total, 0)
      |> assign(:bgg_id_input, "")
      |> assign(:bgg_id_error, nil)
-     |> assign(:bgg_duplicate_game, nil)
+     |> assign(:edition_prompt, nil)
      |> stream(:games, [])}
   end
 
@@ -92,26 +100,61 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
          socket
          |> assign(:bgg_id_input, "")
          |> assign(:bgg_id_error, nil)
-         |> assign(:bgg_duplicate_game, nil)
+         |> assign(:edition_prompt, nil)
          |> put_flash(:info, "Juego agregado como borrador.")
          |> push_patch(to: filter_path(:draft, ""))}
 
-      # D-03: a BGG id already claimed by any game (draft, published, or
-      # retired) — link to the existing editor instead of a generic
-      # field error.
-      {:error, {:duplicate, existing}} ->
+      # D-03 (revised 2026-09-14): a BGG id already claimed by any game
+      # (draft, published, or retired) — warn and show every current
+      # holder instead of rejecting outright; only an explicit
+      # "confirm-edition" click inserts a new edition.
+      {:existing_editions, games} ->
         {:noreply,
          socket
          |> assign(:bgg_id_input, bgg_id)
          |> assign(:bgg_id_error, nil)
-         |> assign(:bgg_duplicate_game, existing)}
+         |> assign(:edition_prompt, %{input: bgg_id, games: games})}
 
       {:error, _reason} ->
         {:noreply,
          socket
          |> assign(:bgg_id_input, bgg_id)
          |> assign(:bgg_id_error, "Pegá un número de BGG o el link del juego.")
-         |> assign(:bgg_duplicate_game, nil)}
+         |> assign(:edition_prompt, nil)}
+    end
+  end
+
+  # T-01.8.1-69: acknowledged ids come ONLY from the server-side
+  # `:edition_prompt` assign — never from client params — so a forged
+  # `confirm-edition` payload can't claim an id it was never shown.
+  @impl true
+  def handle_event("confirm-edition", _params, %{assigns: %{edition_prompt: nil}} = socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("confirm-edition", _params, socket) do
+    %{edition_prompt: prompt} = socket.assigns
+
+    case Catalog.add_game_from_bgg(prompt.input, acknowledged_game_ids: Enum.map(prompt.games, & &1.id)) do
+      {:ok, _game} ->
+        {:noreply,
+         socket
+         |> assign(:bgg_id_input, "")
+         |> assign(:bgg_id_error, nil)
+         |> assign(:edition_prompt, nil)
+         |> put_flash(:info, "Edición agregada como borrador.")
+         |> push_patch(to: filter_path(:draft, ""))}
+
+      # A stale prompt (double-tap, a second tab) never inserts again — it
+      # just re-warns with whatever the current holder set now is.
+      {:existing_editions, games} ->
+        {:noreply, assign(socket, :edition_prompt, %{prompt | games: games})}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> assign(:bgg_id_error, "Pegá un número de BGG o el link del juego.")
+         |> assign(:edition_prompt, nil)}
     end
   end
 
@@ -194,6 +237,23 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   defp game_label(%{enrichment_status: "pending", bgg_id: bgg_id}), do: "Juego ##{bgg_id} (cargando…)"
   defp game_label(%{name: name}), do: name
 
+  # D-03 (revised): natural Spanish list join for the edition-prompt
+  # heading — "A", "A y B", "A, B y C". Names render through HEEx
+  # escaping via the `<p>` interpolation, never raw.
+  defp edition_names(games) do
+    games
+    |> Enum.map(& &1.name)
+    |> join_with_y()
+  end
+
+  defp join_with_y([name]), do: name
+  defp join_with_y([a, b]), do: "#{a} y #{b}"
+
+  defp join_with_y(names) do
+    {last, rest} = List.pop_at(names, -1)
+    Enum.join(rest, ", ") <> " y " <> last
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -219,11 +279,19 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
           <.button variant="primary">Agregar juego</.button>
         </form>
 
-        <div :if={@bgg_duplicate_game} class="alert alert-error">
-          <span>Este juego ya está en la ludoteca.</span>
-          <.link navigate={~p"/admin/juegos/#{@bgg_duplicate_game.id}/editar"} class="link">
-            Ver juego
-          </.link>
+        <div :if={@edition_prompt} id="edition-prompt" role="alert" class="alert alert-warning flex-col items-start gap-3">
+          <p>Ya tenés {edition_names(@edition_prompt.games)} con este BGG ID. ¿Es otra edición?</p>
+          <ul class="flex flex-col gap-1">
+            <li :for={game <- @edition_prompt.games} class="flex items-center gap-2">
+              <.link navigate={~p"/admin/juegos/#{game.id}/editar"} class="link">{game.name}</.link>
+              <span class={status_badge_class(game.status)}>{status_badge_label(game.status)}</span>
+            </li>
+          </ul>
+          <div class="flex flex-wrap gap-2">
+            <.button id="confirm-edition" variant="secondary" phx-click="confirm-edition">
+              Sí, agregar edición
+            </.button>
+          </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-4">

@@ -252,50 +252,107 @@ defmodule PukllayClub.Catalog do
   defp validate_bgg_range(id) when id >= 1 and id <= @max_bgg_id, do: {:ok, id}
   defp validate_bgg_range(_out_of_range), do: :error
 
+  # T-01.8.1-73: the first key of the two-int4 `pg_advisory_xact_lock(int,
+  # int)` form (distinct from the single-bigint form Postgres also
+  # supports — the two forms live in separate advisory-lock key spaces,
+  # `objsubid` 2 vs 1 in `pg_locks`, so this namespace can never collide
+  # with a future single-bigint advisory lock elsewhere in this app). The
+  # second key is always the parsed BGG id.
+  @bgg_id_lock_namespace 8_811_015
+
   @doc """
   Creates a `:draft` game from staff-pasted BGG input — a bare id or a BGG
   URL, via `parse_bgg_input/1` (D-01) — and enqueues its background
-  enrichment job in the same transaction, either both the row and the job
+  enrichment job in the same transaction: either both the row and the job
   exist, or neither does. Unparseable input returns
   `{:error, :invalid_bgg_id}` before any database work happens.
 
-  An id already belonging to ANY game — draft, published, or retired —
-  is rejected up front as `{:error, {:duplicate, existing_game}}` (D-03):
-  nothing is inserted, and the caller renders a link to the existing
-  game's editor instead of creating a second row for the same BGG entry.
+  **D-03 (revised 2026-09-14, gap CR-B-01, user decision): a known BGG id
+  is a WARNING, not a rejection.** Games legitimately share a BGG id when
+  they are editions of one another (BGG 163412: "Patchwork" / "Patchwork
+  Andino") — `games.bgg_id` is intentionally NOT unique, and a unique or
+  partial-unique index on it is wrong for this project (it would reject
+  those real editions and fail the production migration). Adding an id
+  that already belongs to any game — draft, published, or retired —
+  inserts nothing and returns `{:existing_editions, games}`: every game
+  currently holding that id, ordered by `:id` ascending, never empty. A
+  caller confirms an edition via `acknowledged_game_ids:` (the ids it just
+  showed the user); the insert proceeds only when every current holder's
+  id is in that list (`MapSet.subset?/2`). A repeated confirm that no
+  longer covers every current holder (double-tap, a stale second tab)
+  returns the refreshed `{:existing_editions, games}` list instead of
+  inserting again — one staff action can never produce two drafts.
 
-  Returns `{:ok, game}` with the inserted draft, or `{:error, changeset}`
-  if `Game.draft_changeset/2` itself rejects the parsed id (defensive —
-  the range check in `parse_bgg_input/1` already prevents most invalid
-  input from reaching it).
+  A per-BGG-id `pg_advisory_xact_lock(#{@bgg_id_lock_namespace}, bgg_id)`
+  serializes same-id callers across processes (two tabs, two staff): it is
+  taken FIRST, inside the same `Ecto.Multi`/transaction as the editions
+  re-check, insert, and job enqueue, so the re-check always runs as a
+  fresh READ COMMITTED read that sees whatever a prior lock holder just
+  committed. **In sandboxed tests the xact lock is held until the test's
+  own sandbox transaction ends — any test calling this function must live
+  in an `async: false` module**, and a test that wants to observe the
+  lock/race itself needs a real (unboxed) connection — see
+  `test/pukllay_club/catalog/bgg_editions_test.exs`.
+
+  Returns `{:ok, game}` with the inserted draft, `{:existing_editions,
+  games}` when not every current holder was acknowledged, or `{:error,
+  changeset}` if `Game.draft_changeset/2` itself rejects the parsed id
+  (defensive — the range check in `parse_bgg_input/1` already prevents
+  most invalid input from reaching it).
   """
-  @spec add_game_from_bgg(String.t()) ::
-          {:ok, Game.t()} | {:error, :invalid_bgg_id | {:duplicate, Game.t()} | Ecto.Changeset.t()}
-  def add_game_from_bgg(bgg_id) when is_binary(bgg_id) do
+  @spec add_game_from_bgg(String.t(), keyword()) ::
+          {:ok, Game.t()}
+          | {:existing_editions, [Game.t(), ...]}
+          | {:error, :invalid_bgg_id | Ecto.Changeset.t()}
+  def add_game_from_bgg(bgg_id, opts \\ []) when is_binary(bgg_id) do
+    acknowledged_game_ids = Keyword.get(opts, :acknowledged_game_ids, [])
+
     case parse_bgg_input(bgg_id) do
-      {:ok, bgg_id_int} -> insert_draft_or_reject_duplicate(bgg_id_int)
+      {:ok, bgg_id_int} -> insert_draft_with_edition_check(bgg_id_int, acknowledged_game_ids)
       :error -> {:error, :invalid_bgg_id}
     end
   end
 
-  defp insert_draft_or_reject_duplicate(bgg_id_int) do
-    if existing = Repo.get_by(Game, bgg_id: bgg_id_int) do
-      {:error, {:duplicate, existing}}
-    else
-      insert_draft_and_enqueue(bgg_id_int)
-    end
-  end
-
-  defp insert_draft_and_enqueue(bgg_id_int) do
+  defp insert_draft_with_edition_check(bgg_id_int, acknowledged_game_ids) do
     Multi.new()
+    |> Multi.run(:bgg_id_lock, fn repo, _changes ->
+      repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [@bgg_id_lock_namespace, bgg_id_int])
+      {:ok, :locked}
+    end)
+    |> Multi.run(:editions_check, fn repo, _changes ->
+      check_bgg_id_editions(repo, bgg_id_int, acknowledged_game_ids)
+    end)
     |> Multi.insert(:game, Game.draft_changeset(%Game{}, %{bgg_id: bgg_id_int}))
     |> Oban.insert(:enrich_job, fn %{game: game} ->
       EnrichGameWorker.new(%{game_id: game.id})
     end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{game: game}} -> {:ok, game}
-      {:error, :game, changeset, _changes_so_far} -> {:error, changeset}
+      {:ok, %{game: game}} ->
+        {:ok, game}
+
+      {:error, :editions_check, {:existing_editions, games}, _changes_so_far} ->
+        {:existing_editions, games}
+
+      {:error, :game, changeset, _changes_so_far} ->
+        {:error, changeset}
+    end
+  end
+
+  # Runs AFTER the lock, as its own statement inside the same transaction,
+  # so READ COMMITTED gives it a fresh snapshot that includes whatever a
+  # lock holder just committed (T-01.8.1-68). No status filter — draft,
+  # published, and retired games all count as an existing edition holder.
+  defp check_bgg_id_editions(repo, bgg_id_int, acknowledged_game_ids) do
+    games =
+      repo.all(from(g in Game, where: g.bgg_id == ^bgg_id_int, order_by: [asc: g.id]))
+
+    existing_ids = MapSet.new(games, & &1.id)
+
+    if MapSet.subset?(existing_ids, MapSet.new(acknowledged_game_ids)) do
+      {:ok, :acknowledged}
+    else
+      {:error, {:existing_editions, games}}
     end
   end
 

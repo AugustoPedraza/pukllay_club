@@ -250,12 +250,5 @@ defmodule PukllayClub.Workers.EnrichGameWorkerTest do
       assert {:ok, game} = Catalog.add_game_from_bgg("https://boardgamegeek.com/boardgame/266192/wingspan")
       assert game.bgg_id == 266_192
     end
-
-    test "rejects an id already belonging to any game, including a retired one (D-03)" do
-      existing = game_fixture(%{bgg_id: 266_192, status: :retired})
-
-      assert {:error, {:duplicate, ^existing}} = Catalog.add_game_from_bgg("266192")
-      assert Catalog.count_admin_games() == 1
-    end
   end
 end
