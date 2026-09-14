@@ -7,7 +7,8 @@ Every production secret is a GitHub **repository** secret, read by the workflows
 
 | GitHub secret | Used by | Becomes (in the container / job) | Notes |
 |---|---|---|---|
-| `SECRET_KEY_BASE`, `DATABASE_URL`, `SENTRY_DSN`, `POSTGRES_PASSWORD` | `deploy.yml` | same names | Phase 0 |
+| `SECRET_KEY_BASE`, `DATABASE_URL`, `SENTRY_DSN` | `deploy.yml` | same names | Phase 0 |
+| `POSTGRES_PASSWORD` | `deploy.yml`, `backup.yml` | same name | db accessory + `pg_dump` |
 | `DEPLOY_HOST`, `DEPLOY_SSH_KEY` | `deploy.yml`, `backup.yml` | — | SSH to the GCP host |
 | `MAILER_API_KEY` | `deploy.yml` | `MAILER_API_KEY` | Resend sending key (01.8.1-03); boot fails without it |
 | `BGG_API_TOKEN`, `R2_ACCOUNT_ID`, `R2_CATALOG_BUCKET`, `GEMINI_API_KEY` | `deploy.yml` | same names | Add-by-BGG enrichment (01.8.1-08) |
