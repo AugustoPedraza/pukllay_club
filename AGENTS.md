@@ -119,6 +119,15 @@ section membership, shelf location, Spanish description). The old CSV import tas
 phase 01.8.1 and must not be reintroduced — a replace-all upsert would silently revert every staff
 edit the next time anyone ran it.
 
+`games.bgg_id` is intentionally **NOT unique** — editions of one game share a BGG id (BGG 163412:
+Patchwork / Patchwork Andino). Adding a known BGG id in `/admin/juegos` warns ("Ya tenés {nombre}
+con este BGG ID. ¿Es otra edición?") and needs an explicit "Sí, agregar edición" before it inserts
+anything (D-03, revised 2026-09-14). Duplicate double-submits are prevented by
+`Catalog.add_game_from_bgg/2`'s per-BGG-id advisory lock, not by a database constraint. **Never add
+a unique or partial-unique index on `bgg_id`** — it would reject real editions and fail the
+production migration on the existing Patchwork pair;
+`test/pukllay_club/catalog/bgg_editions_test.exs` guards this.
+
 The one-time restore that originally populated production's `games` table (01.7 D-01/D-03) remains
 a historical record only — see
 `.planning/phases/01.7-production-catalog-data-security-hardening-inserted/01.7-SEED-RESTORE.md`
