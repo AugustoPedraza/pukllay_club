@@ -17,6 +17,10 @@ config :phoenix,
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
+# Oban runs in manual testing mode (Oban.Testing) — jobs are inserted but
+# never auto-executed by a real queue; tests call `perform_job/2` explicitly.
+config :pukllay_club, Oban, testing: :manual
+
 # Obviously-fake credentials for the D-02 catalog seed pipeline so its unit
 # tests run in CI without real BGG/R2 access, with a stable URL host to
 # assert against.
@@ -70,7 +74,3 @@ config :pukllay_club, :reservation_whatsapp_number, "5491100000000"
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
-
-# Oban runs in manual testing mode (Oban.Testing) — jobs are inserted but
-# never auto-executed by a real queue; tests call `perform_job/2` explicitly.
-config :pukllay_club, Oban, testing: :manual

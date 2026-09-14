@@ -9,6 +9,14 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   `nil` catch-all for anything unrecognized — never an atom built from
   the client-supplied param (T-01-37 convention, same shape as
   `PukllayClub.Catalog`'s own `row_query/1`).
+
+  Subscribes to the `"admin:games"` PubSub topic (D-01, 01.8.1-06) once
+  connected: `Workers.EnrichGameWorker` broadcasts `{:game_enriched, id}`
+  after a staff-added draft's background enrichment finishes, and this
+  LiveView re-fetches and `stream_insert/3`s that one row live — no page
+  reload. While a draft's `enrichment_status` is `"pending"` its row shows
+  `Juego #<bgg_id> (cargando…)` next to a flat skeleton in place of a
+  thumbnail (UI-SPEC E2 loading).
   """
   use PukllayClubWeb, :live_view
 
@@ -18,6 +26,10 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(PukllayClub.PubSub, "admin:games")
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "Juegos")
@@ -97,6 +109,11 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
      |> stream(:games, games, at: -1)}
   end
 
+  @impl true
+  def handle_info({:game_enriched, game_id}, socket) do
+    {:noreply, stream_insert(socket, :games, Catalog.get_game!(game_id))}
+  end
+
   defp filter_path(status, q) do
     params =
       %{}
@@ -135,6 +152,11 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
 
   defp empty_body(:draft), do: "Agregá un juego pegando su ID o link de BGG."
   defp empty_body(_status), do: "Probá con otro filtro o con otra búsqueda."
+
+  defp pending?(game), do: game.enrichment_status == "pending"
+
+  defp game_label(%{enrichment_status: "pending", bgg_id: bgg_id}), do: "Juego ##{bgg_id} (cargando…)"
+  defp game_label(%{name: name}), do: name
 
   @impl true
   def render(assigns) do
@@ -210,7 +232,16 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
             row_click={fn {_id, game} -> JS.navigate(~p"/admin/juegos/#{game.id}/editar") end}
           >
             <:col :let={{_id, game}} label="Nombre">
-              <span class="truncate">{game.name}</span>
+              <div class="flex items-center gap-2">
+                <div :if={pending?(game)} class="skeleton size-10 shrink-0 rounded-box"></div>
+                <img
+                  :if={!pending?(game) and game.thumbnail_url}
+                  src={game.thumbnail_url}
+                  alt=""
+                  class="size-10 shrink-0 rounded-box object-cover"
+                />
+                <span class="truncate">{game_label(game)}</span>
+              </div>
             </:col>
             <:col :let={{_id, game}} label="Estado">
               <span class={status_badge_class(game.status)}>{status_badge_label(game.status)}</span>

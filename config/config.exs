@@ -30,6 +30,17 @@ config :phoenix_live_view,
   # the attribute set on all root tags. Used for Phoenix.LiveView.ColocatedCSS.
   root_tag_attribute: "phx-r"
 
+# Oban (D-01, 01.8.1-06): the app's first background job runner. Concurrency
+# of 1 on the `enrichment` queue bounds image-processing (libvips) memory on
+# the 1 GB production e2-micro host — running two enrichment jobs at once
+# risked OOM on that box. Pruner keeps `oban_jobs` from growing unbounded
+# (completed/cancelled/discarded jobs older than 7 days are removed).
+config :pukllay_club, Oban,
+  engine: Oban.Engines.Basic,
+  repo: PukllayClub.Repo,
+  queues: [enrichment: 1],
+  plugins: [{Oban.Plugins.Pruner, max_age: 604_800}]
+
 # Configure the mailer
 #
 # By default it uses the "Local" adapter which stores the emails
@@ -78,17 +89,6 @@ config :pukllay_club, :scopes,
 config :pukllay_club,
   ecto_repos: [PukllayClub.Repo],
   generators: [timestamp_type: :utc_datetime]
-
-# Oban (D-01, 01.8.1-06): the app's first background job runner. Concurrency
-# of 1 on the `enrichment` queue bounds image-processing (libvips) memory on
-# the 1 GB production e2-micro host — running two enrichment jobs at once
-# risked OOM on that box. Pruner keeps `oban_jobs` from growing unbounded
-# (completed/cancelled/discarded jobs older than 7 days are removed).
-config :pukllay_club, Oban,
-  engine: Oban.Engines.Basic,
-  repo: PukllayClub.Repo,
-  queues: [enrichment: 1],
-  plugins: [{Oban.Plugins.Pruner, max_age: 604_800}]
 
 # Configure Sentry crash reporting. The DSN itself is sourced from the
 # SENTRY_DSN runtime env var (config/runtime.exs) — never a literal value

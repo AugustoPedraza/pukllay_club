@@ -1,5 +1,11 @@
 defmodule PukllayClubWeb.Admin.GameLiveTest do
-  use PukllayClubWeb.ConnCase, async: true
+  # async: false (01.8.1-06 Task 2, Rule 3): the add-game/enrichment tests
+  # below stub `:catalog_storage`/`:enrichment_translate_call` via global
+  # `Application.put_env/3` — the same reason `OGCardBackfillTest` uses
+  # `async: false` — so this file can no longer safely run concurrently
+  # with itself under `async: true` without racing another async file that
+  # reads those same keys.
+  use PukllayClubWeb.ConnCase, async: false
   use Oban.Testing, repo: PukllayClub.Repo
 
   import Phoenix.LiveViewTest
@@ -8,10 +14,26 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Seed.BggClient
+  alias PukllayClub.Catalog.Seed.ImagePipeline
+  alias PukllayClub.Catalog.Seed.TranslatedDescription
   alias PukllayClub.Repo
   alias PukllayClub.Workers.EnrichGameWorker
 
   @bgg_fixture File.read!("test/support/fixtures/bgg_thing_on_mars.xml")
+
+  defmodule FakeStorage do
+    @moduledoc false
+    @behaviour PukllayClub.Catalog.Seed.Storage
+
+    @impl true
+    def put(_credentials, key, binary, _opts) do
+      Process.put({:fake_storage_put, key}, byte_size(binary))
+      {:ok, "https://images.test.invalid/#{key}"}
+    end
+
+    @impl true
+    def list_keys(_credentials, _prefix), do: {:ok, []}
+  end
 
   describe "GameLive.Form — edit screen (D-07, T-01.8.1-21)" do
     setup :register_and_log_in_staff
@@ -236,6 +258,53 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
   describe "GameLive.Index — add game by BGG id (D-01, 01.8.1-06)" do
     setup :register_and_log_in_staff
 
+    setup do
+      previous_storage = Application.get_env(:pukllay_club, :catalog_storage)
+      previous_translate_call = Application.get_env(:pukllay_club, :enrichment_translate_call)
+      Application.put_env(:pukllay_club, :catalog_storage, FakeStorage)
+
+      Application.put_env(:pukllay_club, :enrichment_translate_call, fn _params, _opts ->
+        {:ok, %TranslatedDescription{description_es: "Descripción en español."}}
+      end)
+
+      on_exit(fn ->
+        if previous_storage do
+          Application.put_env(:pukllay_club, :catalog_storage, previous_storage)
+        else
+          Application.delete_env(:pukllay_club, :catalog_storage)
+        end
+
+        if previous_translate_call do
+          Application.put_env(:pukllay_club, :enrichment_translate_call, previous_translate_call)
+        else
+          Application.delete_env(:pukllay_club, :enrichment_translate_call)
+        end
+      end)
+
+      :ok
+    end
+
+    defp stub_bgg_fixture do
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, @bgg_fixture)
+      end)
+    end
+
+    defp stub_cover_image do
+      Req.Test.stub(ImagePipeline, fn conn ->
+        png =
+          800
+          |> Image.new!(600, color: [10, 20, 30])
+          |> Image.write!(:memory, suffix: ".png")
+
+        conn
+        |> Plug.Conn.put_resp_content_type("image/png")
+        |> Plug.Conn.send_resp(200, png)
+      end)
+    end
+
     test "an invalid id shows a field error and adds nothing", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
@@ -248,14 +317,8 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       assert Catalog.count_admin_games() == 0
     end
 
-    test "a valid id adds a draft row; after perform_job, re-rendering shows the BGG name", %{
-      conn: conn
-    } do
-      Req.Test.stub(BggClient, fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("text/xml")
-        |> Plug.Conn.send_resp(200, @bgg_fixture)
-      end)
+    test "a valid id adds a draft row showing the cargando placeholder and a skeleton", %{conn: conn} do
+      stub_bgg_fixture()
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
@@ -265,7 +328,21 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
         |> render_submit()
 
       assert html =~ "Juego agregado como borrador."
-      assert html =~ "Juego #184267"
+      assert html =~ "Juego #184267 (cargando…)"
+      assert html =~ "skeleton"
+    end
+
+    test "after perform_job runs the full pipeline, re-rendering (mount) shows the BGG name", %{
+      conn: conn
+    } do
+      stub_bgg_fixture()
+      stub_cover_image()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv
+      |> form("#add-game-form", bgg_id: "184267")
+      |> render_submit()
 
       game = Repo.get_by!(Game, bgg_id: 184_267)
       assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
@@ -274,6 +351,32 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
 
       {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=borrador")
       assert html =~ "On Mars"
+      refute html =~ "cargando"
+    end
+
+    test "a {:game_enriched, id} broadcast updates the open LiveView's row live, no reload", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          enrichment_status: "pending",
+          status: :draft,
+          thumbnail_url: nil,
+          cover_url: nil
+        })
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos")
+      assert html =~ "Juego #184267 (cargando…)"
+
+      game
+      |> Ecto.Changeset.change(name: "On Mars", enrichment_status: "enriched")
+      |> Repo.update!()
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+
+      html = render(lv)
+      assert html =~ "On Mars"
+      refute html =~ "cargando"
     end
   end
 
