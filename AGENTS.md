@@ -51,6 +51,12 @@ which is exactly how G-01.8-3 (an attribute interposed before `property=`/`name=
 `phx-r` root-tag stamping) shipped to production while every one of those three validators passed.
 See `.planning/debug/whatsapp-og-image-preview.md` for the full diagnosis.
 
+## Domain & DNS
+
+`pukllay.club` is registered at Spaceship, and its DNS is hosted there too. DNS is not managed from
+this repo. `docs/runbooks/domain-and-dns.md` records the registrar, expiry date, current records
+and how to verify them. Update it whenever a DNS record changes.
+
 ## Non-Goals (Phase 0)
 
 Phase 0 is the deploy pipeline only — a proven walking skeleton, not gold-plating:
