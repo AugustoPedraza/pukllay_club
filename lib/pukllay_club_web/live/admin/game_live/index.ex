@@ -159,6 +159,11 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   end
 
   @impl true
+  def handle_event("cancel-edition", _params, socket) do
+    {:noreply, assign(socket, :edition_prompt, nil)}
+  end
+
+  @impl true
   def handle_event("load-more", _params, socket) do
     %{status: status, q: q, offset: offset} = socket.assigns
     games = Catalog.list_admin_games(status: status, q: q, limit: @page_size, offset: offset)
@@ -276,10 +281,15 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
               errors={if @bgg_id_error, do: [@bgg_id_error], else: []}
             />
           </div>
-          <.button variant="primary">Agregar juego</.button>
+          <.button variant="primary" phx-disable-with="Agregando…">Agregar juego</.button>
         </form>
 
-        <div :if={@edition_prompt} id="edition-prompt" role="alert" class="alert alert-warning flex-col items-start gap-3">
+        <div
+          :if={@edition_prompt}
+          id="edition-prompt"
+          role="alert"
+          class="alert alert-warning flex-col items-start gap-3"
+        >
           <p>Ya tenés {edition_names(@edition_prompt.games)} con este BGG ID. ¿Es otra edición?</p>
           <ul class="flex flex-col gap-1">
             <li :for={game <- @edition_prompt.games} class="flex items-center gap-2">
@@ -288,9 +298,15 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
             </li>
           </ul>
           <div class="flex flex-wrap gap-2">
-            <.button id="confirm-edition" variant="secondary" phx-click="confirm-edition">
+            <.button
+              id="confirm-edition"
+              variant="secondary"
+              phx-click="confirm-edition"
+              phx-disable-with="Agregando…"
+            >
               Sí, agregar edición
             </.button>
+            <.button id="cancel-edition" phx-click="cancel-edition">Cancelar</.button>
           </div>
         </div>
 
