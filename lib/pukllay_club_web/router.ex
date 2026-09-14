@@ -102,6 +102,8 @@ defmodule PukllayClubWeb.Router do
       live "/staff", StaffLive.Index, :index
       live "/estantes", ShelfLive.Index, :index
       live "/estantes/:id/asignar", ShelfLive.Assign, :assign
+      live "/secciones", SectionLive.Index, :index
+      live "/secciones/:id", SectionLive.Edit, :edit
     end
   end
 
