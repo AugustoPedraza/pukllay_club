@@ -24,6 +24,8 @@ defmodule PukllayClub.Catalog do
 
   alias Ecto.Multi
   alias PukllayClub.Catalog.Game
+  alias PukllayClub.Catalog.Section
+  alias PukllayClub.Catalog.SectionGame
   alias PukllayClub.Catalog.Vocabulary
   alias PukllayClub.Repo
   alias PukllayClub.Workers.EnrichGameWorker
@@ -48,6 +50,9 @@ defmodule PukllayClub.Catalog do
   @carousel_limit 20
   @carousel_page_size 10
   @carousel_infinite_scroll_max 30
+  # D-26: the featured section's own ceiling — capped at ~20 total,
+  # never the @carousel_infinite_scroll_max every other section gets.
+  @featured_max 20
   @similares_limit 12
   @allowed_sorts [
     :name_asc,
@@ -601,155 +606,152 @@ defmodule PukllayClub.Catalog do
   end
 
   @doc """
-  The fixed, hardcoded D-09 carousel rows, in order: `Destacados del club`
-  (any editorial hashtag, initial page capped at #{@carousel_limit}), one
-  row per editorial hashtag, one row per weight band, then `Recientemente
-  añadidos`. Each row is `%{key:, title:, games:, offset:, exhausted?:}` —
-  `offset`/`exhausted?` seed the in-row infinite-scroll pagination
-  (`carousel_page/3`) a connected `CatalogLive.Index` mount turns into
-  per-row streams; `games` is kept on this map (rather than dropped) so
-  existing callers of this function still get a plain list back.
+  The home page's staff-owned sections (D-17..D-28), replacing the retired
+  hardcoded 8-row dispatch (`carousel_row_specs/0`/`row_query/1`). Loads
+  every non-hidden section ordered featured-first then by `position`
+  (D-18), fetches each section's first page through `fetch_section_page/3`
+  — the featured section capped at `@featured_max` games (D-26), every
+  other section capped at `@carousel_infinite_scroll_max` — and drops any
+  section whose first page comes back empty (D-24: no published members,
+  or every member is draft/retired).
 
-  Both this function and `carousel_page/3` route through the same
-  `row_query/1` dispatch (via `carousel_row_specs/0`) so page 1 and every
-  later page are always built from the identical predicate — the single
-  most likely silent bug in in-row pagination is page 1 and page N
-  silently diverging onto two different `WHERE` clauses.
-
-  **Recorded limitation:** the club export has no acquisition date, so
-  after a single bulk seed `Recientemente añadidos` is effectively
-  reverse-CSV order (`inserted_at` desc, `csv_row` desc tie-break) — a real
-  acquisition date is Phase 4 admin territory (D-10).
-
-  **G-01-5:** that same reverse-CSV ordering is exactly why this row used
-  to surface almost exclusively expansions/promos — the club's source
-  export happens to cluster every expansion/promo entry as one contiguous
-  block at the tail of the sheet. `recent_query/0` now filters on
-  `is_expansion == false`; `is_expansion` is a staff-editable, club-owned
-  field (D-07) — originally derived for the historically-imported rows by
-  the CSV seed's (retired, D-09) `ExpansionClassifier`, but every value
-  from here on is set by an admin edit and must never be overwritten by an
-  offline task. The `is_expansion` column now exists on
-  every game and could be filtered elsewhere too, but Phase 1 deliberately
-  scopes the exclusion to this one carousel row — `filter_games/1`,
-  `count_games/1`, and every other carousel row are untouched, so an
-  expansion the club physically owns remains searchable and present in the
-  main grid.
-
-  The row set is intentionally hardcoded — no configuration table, no
-  admin form, no dynamic registry. D-10 defers that to Phase 4.
+  Each row is `%{key:, section_id:, title:, subtitle:, kind:, rule_value:,
+  featured?:, games:, offset:, exhausted?:}` — `key` is the client-facing
+  `"section-<id>"` string `section_page/3` accepts back; `section_id` is
+  the raw integer used to derive this row's LiveView stream name
+  (`carousel_section_<id>`), never built from client input (T-01.8.1-46).
   """
-  def list_carousel_rows do
-    Enum.map(carousel_row_specs(), fn {key, title} ->
-      {games, exhausted?} = fetch_row_page(Atom.to_string(key), 0, @carousel_limit)
-      %{key: key, title: title, games: games, offset: length(games), exhausted?: exhausted?}
-    end)
+  def list_home_sections do
+    Section
+    |> where([s], s.hidden == false)
+    |> order_by([s], desc: s.featured, asc: s.position)
+    |> Repo.all()
+    |> Enum.map(&build_home_section/1)
+    |> Enum.reject(&(&1.games == []))
+  end
+
+  defp build_home_section(section) do
+    initial_limit = min(@carousel_limit, ceiling_for(section))
+    {games, exhausted?} = fetch_section_page(section, 0, initial_limit)
+
+    %{
+      key: "section-#{section.id}",
+      section_id: section.id,
+      title: section.name,
+      subtitle: section.subtitle,
+      kind: section.kind,
+      rule_value: section.rule_value,
+      featured?: section.featured,
+      games: games,
+      offset: length(games),
+      exhausted?: exhausted?
+    }
   end
 
   @doc """
-  Next page for one carousel row (quick task 260824-u5d, in-row horizontal
-  infinite scroll). Returns `{:ok, {games, exhausted?}}` for a known
-  `key` string, `:error` for an unrecognised one — never builds an atom
-  from `key` (T-01-37 convention). `exhausted?` is true once the row's
-  underlying category truly runs out OR the `@carousel_infinite_scroll_max`
-  ceiling is reached, whichever comes first.
+  Next page for one home-page section (quick task 260824-u5d's in-row
+  infinite scroll, ported to sections). `key` must be a `"section-<id>"`
+  string with `id` parsed via a literal prefix match + `Integer.parse/1` —
+  the client-sent key is never converted into an atom (T-01-37/T-01.8.1-46).
+  Returns `{:ok, {games, exhausted?}}` for a known, non-hidden section id,
+  `:error` for anything else (unknown id, a hidden section, or a malformed
+  key).
   """
-  def carousel_page(key, offset, limit \\ @carousel_page_size)
+  def section_page(key, offset, limit \\ @carousel_page_size)
 
-  def carousel_page(key, offset, limit) when is_integer(offset) and offset >= 0 do
-    case row_query(key) do
-      nil -> :error
-      _query -> {:ok, fetch_row_page(key, offset, limit)}
+  def section_page("section-" <> id_string, offset, limit)
+      when is_integer(offset) and offset >= 0 do
+    with {id, ""} <- Integer.parse(id_string),
+         %Section{hidden: false} = section <- Repo.get(Section, id) do
+      {:ok, fetch_section_page(section, offset, limit)}
+    else
+      _ -> :error
     end
   end
 
-  # `limit + 1` over-fetch: one extra row tells us whether more exist,
-  # with no second COUNT query per row. Also makes the *initial*
-  # exhausted? correct for free — a row shorter than @carousel_limit is
-  # exhausted at first paint (e.g. Duelos memorables' 19 games).
-  #
-  # The request is clamped against the ceiling BEFORE touching the
-  # database: when the ceiling is already reached (or would be exceeded),
-  # `effective` is 0 and no query runs at all — a client cannot force
-  # unbounded queries by repeatedly scrolling an exhausted rail.
-  defp fetch_row_page(key, offset, limit) do
-    allowed = max(@carousel_infinite_scroll_max - offset, 0)
+  def section_page(_key, _offset, _limit), do: :error
+
+  # Same `limit + 1` over-fetch shape the retired `fetch_row_page/3`
+  # carried: one extra row tells us whether more exist, with no second
+  # COUNT query. The request is clamped against this section's own
+  # ceiling BEFORE touching the database — a client cannot force an
+  # unbounded query by repeatedly requesting an exhausted rail.
+  defp fetch_section_page(section, offset, limit) do
+    ceiling = ceiling_for(section)
+    allowed = max(ceiling - offset, 0)
     effective = min(limit, allowed)
 
     if effective == 0 do
       {[], true}
     else
       rows =
-        key
-        |> row_query()
+        section
+        |> section_query()
         |> offset(^offset)
         |> limit(^(effective + 1))
         |> Repo.all()
 
       games = Enum.take(rows, effective)
-      exhausted? = length(rows) <= effective or offset + effective >= @carousel_infinite_scroll_max
+      exhausted? = length(rows) <= effective or offset + effective >= ceiling
 
       {games, exhausted?}
     end
   end
 
-  # Ordered `{key_atom, title}` pairs for the 8 fixed D-09 rows — the
-  # single source `list_carousel_rows/0` maps over, so the row set and
-  # its order live in exactly one place.
-  defp carousel_row_specs do
-    [
-      {:destacados_del_club, "Destacados del club"},
-      {:crea_conexiones, "Crea conexiones"},
-      {:equipo_ganador, "Equipo ganador"},
-      {:duelos_memorables, "Duelos memorables"},
-      {:descubre_el_hobby, "Descubre el hobby"},
-      {:ingenio_estratega, "Ingenio estratega"},
-      {:nivel_experto, "Nivel experto"},
-      {:recientemente_anadidos, "Recientemente añadidos"}
-    ]
-  end
+  # D-26: the featured section is capped at @featured_max; every other
+  # section keeps the pre-existing @carousel_infinite_scroll_max ceiling.
+  defp ceiling_for(%Section{featured: true}), do: @featured_max
+  defp ceiling_for(%Section{featured: false}), do: @carousel_infinite_scroll_max
 
-  # Literal-string clauses with a final catch-all — the T-01-37 convention
-  # already used by `facet_assign_key/1` in `CatalogLive.Index`. The
-  # client sends a STRING row key (`carousel-load-more`'s payload); never
-  # `String.to_atom/1` it. Both `list_carousel_rows/0` and
-  # `carousel_page/3` route through this one dispatch.
-  defp row_query("destacados_del_club") do
-    tags_query(Enum.map(Vocabulary.editorial_tags(), & &1.tag))
-  end
-
-  defp row_query("crea_conexiones"), do: tags_query(["#CreaConexiones"])
-  defp row_query("equipo_ganador"), do: tags_query(["#EquipoGanador"])
-  defp row_query("duelos_memorables"), do: tags_query(["#DuelosMemorables"])
-  defp row_query("descubre_el_hobby"), do: weight_band_query("descubre_el_hobby")
-  defp row_query("ingenio_estratega"), do: weight_band_query("ingenio_estratega")
-  defp row_query("nivel_experto"), do: weight_band_query("nivel_experto")
-  defp row_query("recientemente_anadidos"), do: recent_query()
-  defp row_query(_unrecognized), do: nil
-
-  # The limit is lifted out of these queries (unlike pre-260824-u5d) so one
-  # paginator (`fetch_row_page/3`) serves both the initial page and every
-  # increment. An `:id` tiebreaker is added after `:name` on the two
-  # name-ordered helpers below — there is no unique index on `name`, so
+  # Dispatches on the section's own `kind`/`sort` (loaded from the
+  # database, never client input). `manual` joins `section_games`;
+  # `weight_band` filters on the game's own `weight_band` column;
+  # `recent` filters non-expansions. Every variant keeps
+  # `status == :published` (D-24, T-01.8.1-47) and ends its `order_by`
+  # with a `g.id` tiebreaker — there is no unique index on `name`, so
   # without it Postgres could order tied rows differently between page 1
-  # and page 2 and silently duplicate one card while skipping another.
-  # `recent_query/0` already tiebreaks on `csv_row` and needs nothing.
-  defp tags_query(tags) do
-    from g in Game,
-      where: fragment("? && ?", g.tags, type(^tags, {:array, :string})) and g.status == :published,
-      order_by: [asc: g.name, asc: g.id]
+  # and page 2 and silently duplicate one card while skipping another
+  # (the same reasoning the retired `tags_query/1`/`weight_band_query/1`
+  # carried).
+  defp section_query(%Section{kind: :manual, id: id, sort: sort}) do
+    from(g in Game,
+      join: sg in SectionGame,
+      on: sg.game_id == g.id and sg.section_id == ^id,
+      where: g.status == :published
+    )
+    |> manual_order_by(sort)
   end
 
-  defp weight_band_query(band) do
-    from g in Game,
-      where: g.weight_band == ^band and g.status == :published,
-      order_by: [asc: g.name, asc: g.id]
+  defp section_query(%Section{kind: :weight_band, rule_value: band, sort: sort}) do
+    from(g in Game, where: g.weight_band == ^band and g.status == :published)
+    |> automatic_order_by(sort)
   end
 
-  defp recent_query do
-    from g in Game,
-      where: g.is_expansion == false and g.status == :published,
-      order_by: [desc: g.inserted_at, desc: g.csv_row]
+  defp section_query(%Section{kind: :recent, sort: sort}) do
+    from(g in Game, where: g.is_expansion == false and g.status == :published)
+    |> automatic_order_by(sort)
+  end
+
+  defp manual_order_by(query, :manual) do
+    from [g, sg] in query, order_by: [asc: sg.position, asc: g.id]
+  end
+
+  defp manual_order_by(query, sort), do: automatic_order_by(query, sort)
+
+  defp automatic_order_by(query, :name) do
+    from g in query, order_by: [asc: g.name, asc: g.id]
+  end
+
+  defp automatic_order_by(query, :bgg_weight) do
+    from g in query, order_by: [asc_nulls_last: g.bgg_weight, asc: g.id]
+  end
+
+  defp automatic_order_by(query, :bgg_rating) do
+    from g in query, order_by: [desc_nulls_last: g.bgg_rating, asc: g.id]
+  end
+
+  defp automatic_order_by(query, :recent) do
+    from g in query, order_by: [desc: g.inserted_at, asc: g.id]
   end
 
   defp normalize_opts(opts), do: Map.new(opts)

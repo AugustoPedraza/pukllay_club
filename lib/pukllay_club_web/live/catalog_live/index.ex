@@ -188,27 +188,27 @@ defmodule PukllayClubWeb.CatalogLive.Index do
 
   # Connected-mount-only (never also in handle_params/3, see the comment on
   # mount/3 above about accumulating stream diffs across two stream/4 calls
-  # issued before the first render flush) construction of the 8 per-row
-  # carousel streams plus their metadata (quick task 260824-u5d, in-row
-  # infinite scroll). Per-row stream names are mandatory, not stylistic —
-  # the 8 rows genuinely overlap (a tagged game sits in up to 4 rows at
-  # once), so one shared stream name would emit the same DOM id in four
-  # different rails. The atom is derived only from Catalog's own
-  # server-side row list, never from client input.
+  # issued before the first render flush) construction of the per-section
+  # streams plus their metadata (quick task 260824-u5d's in-row infinite
+  # scroll, ported to DB-driven sections in 01.8.1-10). Per-section stream
+  # names are mandatory, not stylistic — a game can belong to many
+  # sections at once, so one shared stream name would emit the same DOM id
+  # in more than one rail. The stream name is derived only from the
+  # section's own server-loaded id, never from client input (T-01.8.1-46).
   defp assign_carousel_rows(socket, true), do: assign(socket, :carousel_rows, [])
 
   defp assign_carousel_rows(socket, false) do
-    rows = Catalog.list_carousel_rows()
+    rows = Catalog.list_home_sections()
 
     socket =
       Enum.reduce(rows, socket, fn row, acc ->
-        stream(acc, carousel_stream_name(row.key), row.games)
+        stream(acc, carousel_stream_name(row.section_id), row.games)
       end)
 
     assign(socket, :carousel_rows, Enum.map(rows, &carousel_row_metadata/1))
   end
 
-  # The games themselves now live only in the per-row streams — this
+  # The games themselves now live only in the per-section streams — this
   # metadata map carries everything else `carousel_row/1`'s render and
   # `handle_event("carousel-load-more", ...)` need: `empty?` is the one
   # shared non-stream emptiness signal both the chip-nav filter below and
@@ -218,17 +218,22 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp carousel_row_metadata(row) do
     %{
       key: row.key,
+      section_id: row.section_id,
       title: row.title,
+      subtitle: row.subtitle,
+      kind: row.kind,
+      rule_value: row.rule_value,
+      featured?: row.featured?,
       offset: row.offset,
       exhausted?: row.exhausted?,
       empty?: row.games == []
     }
   end
 
-  defp carousel_stream_name(key), do: :"carousel_#{key}"
+  defp carousel_stream_name(section_id), do: :"carousel_section_#{section_id}"
 
   defp find_carousel_row(rows, row_key) do
-    Enum.find(rows, &(Atom.to_string(&1.key) == row_key))
+    Enum.find(rows, &(&1.key == row_key))
   end
 
   defp update_carousel_row(socket, key, changes) do
@@ -405,11 +410,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         {:reply, %{exhausted: true}, socket}
 
       row ->
-        case Catalog.carousel_page(row_key, row.offset) do
+        case Catalog.section_page(row_key, row.offset) do
           {:ok, {games, exhausted?}} ->
             socket =
               socket
-              |> stream(carousel_stream_name(row.key), games, at: -1)
+              |> stream(carousel_stream_name(row.section_id), games, at: -1)
               |> update_carousel_row(row.key, offset: row.offset + length(games), exhausted?: exhausted?)
 
             {:reply, %{exhausted: exhausted?}, socket}
@@ -581,11 +586,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   end
 
   defp refresh_carousel_rows(socket) do
-    rows = Catalog.list_carousel_rows()
+    rows = Catalog.list_home_sections()
 
     socket =
       Enum.reduce(rows, socket, fn row, acc ->
-        stream(acc, carousel_stream_name(row.key), row.games, reset: true)
+        stream(acc, carousel_stream_name(row.section_id), row.games, reset: true)
       end)
 
     socket
@@ -780,79 +785,26 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     ]
   end
 
-  # Ranks the curated row above the other 7 by colour (G-01-4) — never by a
-  # fourth type size, per ui-design-system's 3-level cap.
-  defp row_variant(:destacados_del_club), do: :hero
-  defp row_variant(_key), do: :standard
+  # Ranks the featured section above the rest by colour (G-01-4) — never
+  # by a fourth type size, per ui-design-system's 3-level cap. D-18: the
+  # featured section is the only one that ever gets the hero treatment.
+  defp row_variant(%{featured?: true}), do: :hero
+  defp row_variant(%{featured?: false}), do: :standard
 
-  # One plain-Spanish line per D-09 row so all 8 shelves read as 8 distinct
-  # things (G-01-4). Six of the eight reuse already-user-reviewed D-05/D-06
-  # copy from Vocabulary; :destacados_del_club and :recientemente_anadidos
-  # are newly authored here and flagged in the SUMMARY for review. Any
-  # unmatched key degrades to a bare heading rather than crashing.
-  defp row_subtitle(:crea_conexiones), do: editorial_tag_meaning("#CreaConexiones")
-  defp row_subtitle(:equipo_ganador), do: editorial_tag_meaning("#EquipoGanador")
-  defp row_subtitle(:duelos_memorables), do: editorial_tag_meaning("#DuelosMemorables")
-  defp row_subtitle(:descubre_el_hobby), do: weight_band_descriptor("descubre_el_hobby")
-  defp row_subtitle(:ingenio_estratega), do: weight_band_descriptor("ingenio_estratega")
-  defp row_subtitle(:nivel_experto), do: weight_band_descriptor("nivel_experto")
+  # quick task 260913-0h6, narrowed by 01.8.1-10 (D-26, D-28): only a
+  # weight_band section's header links out, to the existing
+  # `?weight_bands=` filtered landing — the sections facet a manual
+  # section's own header would need (D-27) doesn't exist yet, so those
+  # (including the featured section) and the automatic recent section stay
+  # plain, non-interactive headings until a later plan adds it. Every href
+  # is built only from the section's own server-loaded `rule_value`, never
+  # from client input, and the landing param is re-validated by
+  # CatalogFilters.from_params/1's closed-Vocabulary whitelist.
+  defp row_href(%{kind: :weight_band, rule_value: band}), do: band_href(band)
+  defp row_href(%{kind: :recent}), do: nil
+  defp row_href(%{kind: :manual}), do: nil
 
-  defp row_subtitle(:destacados_del_club), do: "La selección del club — los juegos que más recomendamos ahora mismo."
-
-  defp row_subtitle(:recientemente_anadidos), do: "Las incorporaciones más nuevas a la ludoteca."
-
-  defp row_subtitle(_unrecognized), do: nil
-
-  # quick task 260913-0h6: the shelf's filtered-landing path, one literal
-  # clause per key (mirrors row_subtitle/1's own pattern rather than a
-  # case, to keep Credo's cyclomatic-complexity check happy). Every href
-  # is built only from server-side shelf keys and Vocabulary constants,
-  # never from client input, and every landing param is re-validated by
-  # CatalogFilters.from_params/1's closed-Vocabulary whitelist — no new
-  # param key, no new parsing path.
-  # Same derivation Catalog.row_query("destacados_del_club") uses, so the
-  # shelf and its own filtered landing can never drift on which tags
-  # count as "destacados". Encoded via the verified-routes keyword form so
-  # it produces a repeated-key ?tags=...&tags=... list, which
-  # CatalogFilters.parse_list_param/2 already accepts.
-  defp row_href(:destacados_del_club) do
-    tags = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
-    ~p"/?#{[tags: tags]}"
-  end
-
-  defp row_href(:crea_conexiones), do: tag_href("#CreaConexiones")
-  defp row_href(:equipo_ganador), do: tag_href("#EquipoGanador")
-  defp row_href(:duelos_memorables), do: tag_href("#DuelosMemorables")
-  defp row_href(:descubre_el_hobby), do: band_href("descubre_el_hobby")
-  defp row_href(:ingenio_estratega), do: band_href("ingenio_estratega")
-  defp row_href(:nivel_experto), do: band_href("nivel_experto")
-
-  # No URL filter reproduces "newest non-expansion additions" (no sort
-  # alone flips filters_active?/1, and there's no expansion-flag facet),
-  # so this header stays a plain heading instead of becoming a dead or
-  # misleading link.
-  defp row_href(:recientemente_anadidos), do: nil
-
-  defp row_href(_unrecognized), do: nil
-
-  defp tag_href(tag), do: ~p"/?tags=#{tag}"
   defp band_href(band), do: ~p"/?weight_bands=#{band}"
-
-  defp editorial_tag_meaning(tag) do
-    Vocabulary.editorial_tags()
-    |> Enum.find(&(&1.tag == tag))
-    |> case do
-      %{meaning: meaning} -> meaning
-      nil -> nil
-    end
-  end
-
-  defp weight_band_descriptor(value) do
-    case Vocabulary.weight_band(value) do
-      %{descriptor: descriptor} -> descriptor
-      nil -> nil
-    end
-  end
 
   # One derived list feeding BOTH the mobile chip row (:subnav) AND the
   # desktop mega-menu (:nav_menu) — sketch-findings' single most load-bearing
@@ -863,7 +815,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp index_rows(assigns) do
     assigns.carousel_rows
     |> Enum.reject(& &1.empty?)
-    |> Enum.map(fn row -> %{key: row.key, title: row.title, subtitle: row_subtitle(row.key)} end)
+    |> Enum.map(fn row -> %{key: row.key, title: row.title, subtitle: row.subtitle} end)
   end
 
   # "Toda la ludoteca" is a false claim once filters narrow the result
@@ -1079,12 +1031,12 @@ defmodule PukllayClubWeb.CatalogLive.Index do
                 :key={row.key}
                 id={"carousel-#{row.key}"}
                 title={row.title}
-                games={Map.fetch!(@streams, carousel_stream_name(row.key))}
-                variant={row_variant(row.key)}
-                subtitle={row_subtitle(row.key)}
-                href={row_href(row.key)}
+                games={Map.fetch!(@streams, carousel_stream_name(row.section_id))}
+                variant={row_variant(row)}
+                subtitle={row.subtitle}
+                href={row_href(row)}
                 empty={row.empty?}
-                row_key={to_string(row.key)}
+                row_key={row.key}
                 exhausted={row.exhausted?}
               />
             <% end %>

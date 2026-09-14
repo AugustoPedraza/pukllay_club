@@ -3896,13 +3896,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html =
         render_component(&CarouselRow.carousel_row/1, %{
-          id: "carousel-destacados_del_club",
+          id: "carousel-section-1",
           title: "Destacados del club",
           games: [{"g-#{game.id}", game}],
           variant: :hero,
           subtitle: "Los favoritos del club",
           empty: false,
-          row_key: "destacados_del_club",
+          row_key: "section-1",
           exhausted: true
         })
 
