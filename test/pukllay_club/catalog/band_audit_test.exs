@@ -4,6 +4,7 @@ defmodule PukllayClub.Catalog.BandAuditTest do
   import PukllayClub.CatalogFixtures
 
   alias PukllayClub.Catalog.BandAudit
+  alias PukllayClub.Repo
 
   describe "mismatches/0 (D-29)" do
     test "includes a non-retired game whose weight_band disagrees with its BGG-implied band" do
@@ -82,6 +83,44 @@ defmodule PukllayClub.Catalog.BandAuditTest do
 
       assert corrected.band_reviewed_band == nil
       assert corrected.band_reviewed_at == nil
+    end
+  end
+
+  describe "keep_band/1 (D-30)" do
+    test "stores the game's current implied band and a timestamp, leaving weight_band untouched" do
+      game = game_fixture(%{weight_band: "ingenio_estratega", bgg_weight: 3.8})
+
+      assert {:ok, kept} = BandAudit.keep_band(game.id)
+      assert kept.weight_band == "ingenio_estratega"
+      assert kept.band_reviewed_band == "nivel_experto"
+      assert %DateTime{} = kept.band_reviewed_at
+      assert BandAudit.mismatches() == []
+    end
+
+    test "re-surfaces the game once bgg_weight drifts to imply a different band than the snapshot" do
+      game = game_fixture(%{weight_band: "ingenio_estratega", bgg_weight: 3.8})
+      {:ok, _kept} = BandAudit.keep_band(game.id)
+
+      assert BandAudit.mismatches() == []
+
+      # Implied band unchanged (still nivel_experto) -> stays hidden.
+      game |> Ecto.Changeset.change(bgg_weight: 3.9) |> Repo.update!()
+      assert BandAudit.mismatches() == []
+
+      # Implied band now descubre_el_hobby, different from the "nivel_experto"
+      # snapshot -> re-surfaces.
+      game |> Ecto.Changeset.change(bgg_weight: 1.2) |> Repo.update!()
+      assert [%{id: id}] = BandAudit.mismatches()
+      assert id == game.id
+    end
+
+    test "a bgg_weight change back to matching the club weight_band also stays hidden" do
+      game = game_fixture(%{weight_band: "ingenio_estratega", bgg_weight: 3.8})
+      {:ok, _kept} = BandAudit.keep_band(game.id)
+
+      game |> Ecto.Changeset.change(bgg_weight: 2.0) |> Repo.update!()
+
+      assert BandAudit.mismatches() == []
     end
   end
 end
