@@ -50,6 +50,63 @@ defmodule PukllayClub.Catalog.Shelves do
   defp normalize_attrs(attrs), do: Map.new(attrs)
 
   @doc """
+  Renames a shelf (D-10) — same 40-character cap as `create_shelf/1`
+  (`Shelf.changeset/2`). Returns `{:ok, shelf}` / `{:error, changeset}`.
+  """
+  def rename_shelf(%Shelf{} = shelf, name) do
+    shelf
+    |> Shelf.changeset(%{name: name})
+    |> Repo.update()
+  end
+
+  @doc """
+  Swaps `shelf`'s walking-order position with its immediate neighbour in
+  `direction` (`:up` moves it earlier, `:down` moves it later) — D-10. A
+  no-op at either end of the list (moving the first shelf up, or the last
+  shelf down) rather than an error, since the UI never disables those
+  buttons (prefer enabled-and-no-op over disabled). Both updates happen
+  inside one transaction so a concurrent reorder (T-01.8.1-44, accepted
+  low-severity risk) can never leave two shelves sharing a position.
+  """
+  def move_shelf(%Shelf{position: original_position} = shelf, direction) when direction in [:up, :down] do
+    case neighbor(shelf, direction) do
+      nil ->
+        {:ok, shelf}
+
+      neighbor ->
+        Repo.transaction(fn ->
+          {:ok, shelf} = update_position(shelf, neighbor.position)
+          {:ok, _neighbor} = update_position(neighbor, original_position)
+          shelf
+        end)
+    end
+  end
+
+  defp update_position(%Shelf{} = shelf, position) do
+    shelf
+    |> Shelf.changeset(%{position: position})
+    |> Repo.update()
+  end
+
+  defp neighbor(%Shelf{position: position}, :up) do
+    Repo.one(
+      from s in Shelf,
+        where: s.position < ^position,
+        order_by: [desc: s.position],
+        limit: 1
+    )
+  end
+
+  defp neighbor(%Shelf{position: position}, :down) do
+    Repo.one(
+      from s in Shelf,
+        where: s.position > ^position,
+        order_by: [asc: s.position],
+        limit: 1
+    )
+  end
+
+  @doc """
   Assigns `game_id` to `shelf_id` (D-12/D-14) — a single `Repo.update/1`
   through `Game.admin_changeset/2`'s cast allowlist, restricted here to
   `:shelf_id` alone. Returns `{:ok, game, previous_shelf}` — `previous_shelf`
@@ -148,5 +205,40 @@ defmodule PukllayClub.Catalog.Shelves do
     |> String.replace("\\", "\\\\")
     |> String.replace("%", "\\%")
     |> String.replace("_", "\\_")
+  end
+
+  @doc """
+  The Saturday pick/restore list (D-15, UI-SPEC E5 zero-one-many): every
+  non-retired game grouped by shelf in walking order, names ordered inside
+  each group, followed by a final `{:unplaced, games}` group. An empty
+  shelf still appears as `{shelf, []}` — a shelf with nothing on it yet is
+  exactly what a Saturday pick/restore run needs to see, not something to
+  hide. `q` optionally filters games by name (same escaped ILIKE as
+  `search_games/1`) without hiding a shelf's own heading — a shelf with
+  zero matches under an active filter still renders, empty.
+  """
+  @spec pick_list(String.t() | nil) :: [{Shelf.t(), [Game.t()]} | {:unplaced, [Game.t()]}]
+  def pick_list(q \\ nil) do
+    games =
+      Game
+      |> where([g], g.status != :retired)
+      |> maybe_filter_pick_name(q)
+      |> order_by([g], asc: g.name, asc: g.id)
+      |> Repo.all()
+
+    games_by_shelf = Enum.group_by(games, & &1.shelf_id)
+
+    shelf_groups =
+      Enum.map(list_shelves(), fn shelf ->
+        {shelf, Map.get(games_by_shelf, shelf.id, [])}
+      end)
+
+    shelf_groups ++ [{:unplaced, Map.get(games_by_shelf, nil, [])}]
+  end
+
+  defp maybe_filter_pick_name(query, q) when q in [nil, ""], do: query
+
+  defp maybe_filter_pick_name(query, q) do
+    where(query, [g], ilike(g.name, ^("%" <> escape_ilike(q) <> "%")))
   end
 end

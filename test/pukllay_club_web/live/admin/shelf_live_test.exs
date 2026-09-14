@@ -145,4 +145,116 @@ defmodule PukllayClubWeb.Admin.ShelfLiveTest do
       assert html =~ "No se pudo guardar"
     end
   end
+
+  describe "renaming a shelf from the assign screen header (D-10)" do
+    setup :register_and_log_in_staff
+
+    test "Renombrar opens a modal; a valid rename persists", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "L1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/#{shelf.id}/asignar")
+
+      html = lv |> element("button", "Renombrar") |> render_click()
+      assert html =~ "Renombrar estante"
+
+      html =
+        lv
+        |> form("#rename-shelf-form", %{name: "L1 (Cooperativos)"})
+        |> render_submit()
+
+      assert html =~ "Asignando a L1 (Cooperativos)"
+      assert Shelves.get_shelf!(shelf.id).name == "L1 (Cooperativos)"
+    end
+
+    test "a 41-character name shows a field error and does not save", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "L1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/#{shelf.id}/asignar")
+      lv |> element("button", "Renombrar") |> render_click()
+
+      html =
+        lv
+        |> form("#rename-shelf-form", %{name: String.duplicate("a", 41)})
+        |> render_submit()
+
+      assert html =~ "should be at most 40 character"
+      assert Shelves.get_shelf!(shelf.id).name == "L1"
+    end
+  end
+
+  describe "ShelfLive.Index — Estantes management (D-10, UI-SPEC E5)" do
+    setup :register_and_log_in_staff
+
+    test "shows the empty state with no shelves, then creates L1 and L2 in order",
+         %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin/estantes")
+      assert html =~ "Todavía no creaste estantes."
+
+      html = lv |> form("#create-shelf-form", %{name: "L1"}) |> render_submit()
+      assert html =~ "L1"
+
+      html = lv |> form("#create-shelf-form", %{name: "L2"}) |> render_submit()
+      refute html =~ "Todavía no creaste estantes."
+      assert html =~ "L1"
+      assert html =~ "L2"
+      assert Enum.map(Shelves.list_shelves(), & &1.name) == ["L1", "L2"]
+    end
+
+    test "rejects a duplicate name with a field error", %{conn: conn} do
+      shelf_fixture(%{name: "L1"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      html = lv |> form("#create-shelf-form", %{name: "L1"}) |> render_submit()
+
+      assert html =~ "has already been taken"
+    end
+
+    test "↓ on L1 swaps it below L2; ↑ on the new top shelf (L2) is a no-op", %{conn: conn} do
+      l1 = shelf_fixture(%{name: "L1"})
+      l2 = shelf_fixture(%{name: "L2"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+
+      html =
+        lv
+        |> element("button[phx-value-shelf-id='#{l1.id}'][aria-label='Bajar L1']")
+        |> render_click()
+
+      assert Enum.map(Shelves.list_shelves(), & &1.name) == ["L2", "L1"]
+      assert html =~ "L2"
+
+      html =
+        lv
+        |> element("button[phx-value-shelf-id='#{l2.id}'][aria-label='Subir L2']")
+        |> render_click()
+
+      assert Enum.map(Shelves.list_shelves(), & &1.name) == ["L2", "L1"]
+      assert html =~ "L1"
+    end
+
+    test "?vista=lista shows groups L1/L2 (empty group still titled) and Sin ubicar, filterable",
+         %{conn: conn} do
+      l1 = shelf_fixture(%{name: "L1"})
+      _l2 = shelf_fixture(%{name: "L2"})
+      catan = game_fixture(%{name: "Catán"})
+      _wingspan = game_fixture(%{name: "Wingspan"})
+      {:ok, _game, nil} = Shelves.assign_game(catan.id, l1.id)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/estantes?vista=lista")
+
+      assert html =~ "L1"
+      assert html =~ "L2"
+      assert html =~ "Sin ubicar"
+      assert html =~ "Catán"
+      assert html =~ "Wingspan"
+
+      html = lv |> form("#pick-list-filter", %{q: "cat"}) |> render_change()
+
+      assert html =~ "L1"
+      assert html =~ "L2"
+      assert html =~ "Sin ubicar"
+      assert html =~ "Catán"
+      refute html =~ "Wingspan"
+    end
+  end
 end

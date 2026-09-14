@@ -6,6 +6,7 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
   import PukllayClub.CatalogFixtures
 
   alias PukllayClub.Accounts
+  alias PukllayClub.Catalog.Shelves
 
   describe "the tracer: /admin/ingresar magic link to a staff-gated /admin (T-01.8.1-01)" do
     test "an owner requests a magic link, confirms it, and lands on /admin", %{conn: conn} do
@@ -96,6 +97,35 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
 
       assert html =~ "Juegos"
       refute html =~ "borradores"
+    end
+  end
+
+  describe "Estantes card (D-35, 01.8.1-09)" do
+    setup :register_and_log_in_staff
+
+    test "shows a badge-warning N/total ubicados while games remain unplaced", %{conn: conn} do
+      shelf = PukllayClub.ShelvesFixtures.shelf_fixture()
+      placed = game_fixture()
+      _unplaced = game_fixture()
+      {:ok, _game, nil} = Shelves.assign_game(placed.id, shelf.id)
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Estantes"
+      assert html =~ ~s(href="/admin/estantes")
+      assert html =~ "1/2 ubicados"
+      assert html =~ "badge-warning"
+    end
+
+    test "omits the badge once every game is placed", %{conn: conn} do
+      shelf = PukllayClub.ShelvesFixtures.shelf_fixture()
+      game = game_fixture()
+      {:ok, _game, nil} = Shelves.assign_game(game.id, shelf.id)
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Estantes"
+      refute html =~ "ubicados"
     end
   end
 

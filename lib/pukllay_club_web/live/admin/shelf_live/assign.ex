@@ -41,6 +41,9 @@ defmodule PukllayClubWeb.Admin.ShelfLive.Assign do
          |> assign(:q, "")
          |> assign(:search_results, [])
          |> assign(:toast, nil)
+         |> assign(:rename_open, false)
+         |> assign(:rename_input, shelf.name)
+         |> assign(:rename_error, nil)
          |> load_lists()}
 
       _not_an_integer ->
@@ -88,6 +91,38 @@ defmodule PukllayClubWeb.Admin.ShelfLive.Assign do
       end
     else
       {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("open-rename", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:rename_open, true)
+     |> assign(:rename_input, socket.assigns.shelf.name)
+     |> assign(:rename_error, nil)}
+  end
+
+  @impl true
+  def handle_event("cancel-rename", _params, socket) do
+    {:noreply, assign(socket, :rename_open, false)}
+  end
+
+  @impl true
+  def handle_event("rename", %{"name" => name}, socket) do
+    case Shelves.rename_shelf(socket.assigns.shelf, name) do
+      {:ok, shelf} ->
+        {:noreply,
+         socket
+         |> assign(:shelf, shelf)
+         |> assign(:page_title, "Asignando a #{shelf.name}")
+         |> assign(:rename_open, false)
+         |> assign(:rename_error, nil)
+         |> load_lists()}
+
+      {:error, changeset} ->
+        error = changeset.errors |> translate_errors(:name) |> List.first()
+        {:noreply, socket |> assign(:rename_input, name) |> assign(:rename_error, error)}
     end
   end
 
@@ -191,6 +226,7 @@ defmodule PukllayClubWeb.Admin.ShelfLive.Assign do
             <span class={progress_class(@placed, @total)}>{@placed}/{@total} ubicados</span>
           </:subtitle>
           <:actions>
+            <.button variant="secondary" phx-click="open-rename">Renombrar</.button>
             <.link navigate={~p"/admin/juegos"} class="text-sm text-neutral">
               ← Volver
             </.link>
@@ -232,6 +268,32 @@ defmodule PukllayClubWeb.Admin.ShelfLive.Assign do
             Todos los juegos ya tienen un estante.
           </p>
           <.game_tap_button :for={game <- @unplaced_games} game={game} />
+        </div>
+      </div>
+
+      <div :if={@rename_open} class="modal modal-open" role="dialog" aria-modal="true">
+        <div class="modal-box">
+          <h3 class="font-display text-xl">Renombrar estante</h3>
+          <form id="rename-shelf-form" phx-submit="rename" class="space-y-2 py-4">
+            <.input
+              type="text"
+              id="rename-shelf-name"
+              name="name"
+              value={@rename_input}
+              label="Nombre del estante"
+              errors={if @rename_error, do: [@rename_error], else: []}
+            />
+            <div class="modal-action">
+              <button
+                type="button"
+                phx-click="cancel-rename"
+                class="btn btn-outline btn-primary pk-btn-secondary"
+              >
+                Cancelar
+              </button>
+              <.button variant="primary">Guardar cambios</.button>
+            </div>
+          </form>
         </div>
       </div>
 

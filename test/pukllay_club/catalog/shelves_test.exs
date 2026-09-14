@@ -106,6 +106,76 @@ defmodule PukllayClub.Catalog.ShelvesTest do
     end
   end
 
+  describe "rename_shelf/2 (D-10)" do
+    test "renames a shelf" do
+      shelf = shelf_fixture(%{name: "L1"})
+      assert {:ok, renamed} = Shelves.rename_shelf(shelf, "L1 (Cooperativos)")
+      assert renamed.name == "L1 (Cooperativos)"
+    end
+
+    test "rejects a name over 40 characters" do
+      shelf = shelf_fixture()
+      assert {:error, changeset} = Shelves.rename_shelf(shelf, String.duplicate("a", 41))
+      assert "should be at most 40 character(s)" in errors_on(changeset).name
+    end
+  end
+
+  describe "move_shelf/2 (D-10)" do
+    test "swaps position with the neighbour in the given direction" do
+      l1 = shelf_fixture(%{name: "L1"})
+      _l2 = shelf_fixture(%{name: "L2"})
+      l3 = shelf_fixture(%{name: "L3"})
+
+      assert {:ok, _} = Shelves.move_shelf(l3, :up)
+      assert Enum.map(Shelves.list_shelves(), & &1.name) == ["L1", "L3", "L2"]
+
+      assert {:ok, _} = Shelves.move_shelf(l1, :down)
+      assert Enum.map(Shelves.list_shelves(), & &1.name) == ["L3", "L1", "L2"]
+    end
+
+    test "is a no-op at either end of the list" do
+      l1 = shelf_fixture(%{name: "L1"})
+      l2 = shelf_fixture(%{name: "L2"})
+
+      assert {:ok, _} = Shelves.move_shelf(l1, :up)
+      assert Enum.map(Shelves.list_shelves(), & &1.name) == ["L1", "L2"]
+
+      assert {:ok, _} = Shelves.move_shelf(l2, :down)
+      assert Enum.map(Shelves.list_shelves(), & &1.name) == ["L1", "L2"]
+    end
+  end
+
+  describe "pick_list/1 (D-15, UI-SPEC E5 zero-one-many)" do
+    test "groups non-retired games by shelf in walking order, plus a final :unplaced group" do
+      l1 = shelf_fixture(%{name: "L1"})
+      l2 = shelf_fixture(%{name: "L2"})
+      catan = game_fixture(%{name: "Catán"})
+      _empty_shelf_has_no_games = l2
+      unplaced = game_fixture(%{name: "Wingspan"})
+      _retired = game_fixture(%{name: "Retired", status: :retired})
+
+      {:ok, _game, nil} = Shelves.assign_game(catan.id, l1.id)
+
+      groups = Shelves.pick_list()
+
+      assert [{^l1, [catan_row]}, {^l2, []}, {:unplaced, [unplaced_row]}] = groups
+      assert catan_row.id == catan.id
+      assert unplaced_row.id == unplaced.id
+    end
+
+    test "filters games by name without hiding an empty shelf's own heading" do
+      l1 = shelf_fixture(%{name: "L1"})
+      catan = game_fixture(%{name: "Catán"})
+      _wingspan = game_fixture(%{name: "Wingspan"})
+      {:ok, _game, nil} = Shelves.assign_game(catan.id, l1.id)
+
+      groups = Shelves.pick_list("cat")
+
+      assert [{^l1, [catan_row]}, {:unplaced, []}] = groups
+      assert catan_row.id == catan.id
+    end
+  end
+
   describe "deleting a shelf nilifies its games' shelf_id" do
     test "on_delete: :nilify_all" do
       shelf = shelf_fixture()

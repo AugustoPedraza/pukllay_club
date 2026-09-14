@@ -39,6 +39,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   use PukllayClubWeb, :live_view
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Shelves
   alias PukllayClub.Catalog.Vocabulary
 
   @impl true
@@ -50,6 +51,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
      |> assign(:page_title, game.name)
      |> assign(:game, game)
      |> assign(:confirm_retire, false)
+     |> assign(:shelves, Shelves.list_shelves())
      |> assign(:form, to_form(Catalog.change_game_admin(game)))}
   end
 
@@ -162,6 +164,10 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
     Enum.map(Vocabulary.weight_bands(), &{&1.label, &1.value})
   end
 
+  defp shelf_options(shelves) do
+    Enum.map(shelves, &{&1.name, &1.id})
+  end
+
   defp status_badge_class(:draft), do: "badge badge-warning"
   defp status_badge_class(:published), do: "badge badge-success"
   defp status_badge_class(:retired), do: "badge badge-neutral"
@@ -230,6 +236,13 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
             options={weight_band_options()}
           />
           <.input field={@form[:is_expansion]} type="checkbox" label="Es expansión" />
+          <.input
+            field={@form[:shelf_id]}
+            type="select"
+            label="Estante"
+            prompt="Sin ubicar"
+            options={shelf_options(@shelves)}
+          />
           <.input field={@form[:description]} type="textarea" label="Descripción en español" />
 
           <div class="flex flex-wrap gap-2 pt-2">

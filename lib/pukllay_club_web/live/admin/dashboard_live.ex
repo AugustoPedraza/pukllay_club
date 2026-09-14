@@ -5,13 +5,15 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
   Mobile-first: a single-column card grid (`grid-cols-1 sm:grid-cols-2`)
   with no filled primary button on the page itself. `#admin-cards`' D-35
   order is Juegos, Estantes, Secciones, Revisar niveles, Staff — plan
-  01.8.1-05 added Juegos; this plan (01.8.1-07) appends Staff, rendered
-  only for the owner (D-35); the remaining two are later plans' additions.
+  01.8.1-05 added Juegos, 01.8.1-07 appended Staff, and this plan
+  (01.8.1-09) inserts Estantes second; Secciones and Revisar niveles are
+  later plans' additions.
   """
   use PukllayClubWeb, :live_view
 
   alias PukllayClub.Accounts.User
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Shelves
 
   @impl true
   def render(assigns) do
@@ -27,6 +29,15 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
             <span class="font-display text-xl">Juegos</span>
             <span :if={@draft_count > 0} class="badge badge-warning">
               {@draft_count} borradores
+            </span>
+          </.link>
+          <.link
+            navigate={~p"/admin/estantes"}
+            class="rounded-box bg-base-200 p-4 min-h-11 flex items-center justify-between gap-2"
+          >
+            <span class="font-display text-xl">Estantes</span>
+            <span :if={@placed < @total} class="badge badge-warning">
+              {@placed}/{@total} ubicados
             </span>
           </.link>
           <.link
@@ -47,6 +58,12 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :draft_count, Catalog.count_admin_games(status: :draft))}
+    {placed, total} = Shelves.location_progress()
+
+    {:ok,
+     socket
+     |> assign(:draft_count, Catalog.count_admin_games(status: :draft))
+     |> assign(:placed, placed)
+     |> assign(:total, total)}
   end
 end

@@ -10,6 +10,7 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
 
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
+  import PukllayClub.ShelvesFixtures
 
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Game
@@ -114,6 +115,25 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       assert_raise Ecto.NoResultsError, fn ->
         Catalog.get_published_game!(to_string(game.id))
       end
+    end
+
+    test "the shelf select saves shelf_id and never leaks it onto the public page", %{
+      conn: conn
+    } do
+      shelf = shelf_fixture(%{name: "Estante-Test-Ludoteca"})
+      game = game_fixture()
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      assert html =~ "Estante-Test-Ludoteca"
+
+      lv
+      |> form("#game-form", game: %{shelf_id: to_string(shelf.id)})
+      |> render_submit()
+
+      assert Catalog.get_game!(game.id).shelf_id == shelf.id
+
+      conn = get(conn, ~p"/juegos/#{game}")
+      refute html_response(conn, 200) =~ "Estante-Test-Ludoteca"
     end
   end
 
