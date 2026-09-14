@@ -6,7 +6,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   unmodified. Reads exclusively through `PukllayClub.Catalog`, never
   `Repo` directly.
 
-  Filter state (`:q`, `:mechanics`, `:themes`, `:weight_bands`, `:tags`,
+  Filter state (`:q`, `:mechanics`, `:themes`, `:weight_bands`, `:sections`,
   `:players`, `:max_playtime`, `:min_age`, `:sort`, `:offset`, `:total`)
   lives in assigns. Every filter-changing event funnels through
   `apply_filters/1` — the one place that decides pagination-reset
@@ -68,7 +68,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:mechanics, [])
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
-      |> assign(:tags, [])
+      |> assign(:sections, [])
       |> assign(:designers, [])
       |> assign(:artists, [])
       |> assign(:players, nil)
@@ -163,7 +163,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         |> assign(:mechanics, filters.mechanics)
         |> assign(:themes, filters.themes)
         |> assign(:weight_bands, filters.weight_bands)
-        |> assign(:tags, filters.tags)
+        |> assign(:sections, filters.sections)
         |> assign(:designers, filters.designers)
         |> assign(:artists, filters.artists)
         |> assign(:players, filters.players)
@@ -194,7 +194,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
-  defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
+  defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], sections: []}
 
   # Connected-mount-only (never also in handle_params/3, see the comment on
   # mount/3 above about accumulating stream diffs across two stream/4 calls
@@ -328,16 +328,25 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # checkbox), silently clobbering any `phx-value-value` binding. See the
   # `FilterModal` moduledoc for the full mechanism — this key must stay in
   # sync with the `phx-value-choice` attributes there.
+  #
+  # D-27: `sections` is the one facet whose stored values are integers, not
+  # the raw string every other facet keeps verbatim (a section id, unlike a
+  # mechanic/theme label or weight-band value, has no closed-Vocabulary
+  # string form) — `toggle_facet_value/2` converts it with `Integer.parse/1`
+  # before it ever reaches the assign, and a non-integer choice for that
+  # facet is a silent no-op rather than storing a string a later
+  # `Catalog.filter_games(sections: ...)` call could not use.
   def handle_event("toggle-facet", %{"facet" => facet, "choice" => value}, socket) do
-    case facet_assign_key(facet) do
-      nil ->
-        {:noreply, socket}
+    with key when not is_nil(key) <- facet_assign_key(facet),
+         parsed_value when not is_nil(parsed_value) <- toggle_facet_value(facet, value) do
+      current = Map.get(socket.assigns, key, [])
 
-      key ->
-        current = Map.get(socket.assigns, key, [])
-        updated = if value in current, do: List.delete(current, value), else: [value | current]
+      updated =
+        if parsed_value in current, do: List.delete(current, parsed_value), else: [parsed_value | current]
 
-        {:noreply, socket |> assign(key, updated) |> apply_filters()}
+      {:noreply, socket |> assign(key, updated) |> apply_filters()}
+    else
+      _no_match -> {:noreply, socket}
     end
   end
 
@@ -385,7 +394,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:mechanics, [])
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
-      |> assign(:tags, [])
+      |> assign(:sections, [])
       |> assign(:designers, [])
       |> assign(:artists, [])
       |> assign(:players, nil)
@@ -477,10 +486,19 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
+  defp toggle_facet_value("sections", value) do
+    case Integer.parse(value) do
+      {n, ""} -> n
+      _invalid -> nil
+    end
+  end
+
+  defp toggle_facet_value(_facet, value), do: value
+
   defp facet_assign_key("mechanics"), do: :mechanics
   defp facet_assign_key("themes"), do: :themes
   defp facet_assign_key("weight_bands"), do: :weight_bands
-  defp facet_assign_key("tags"), do: :tags
+  defp facet_assign_key("sections"), do: :sections
   # 01.3-06: literal clauses only, never a dynamic-atom conversion from
   # client input (T-01-37) — a creator-pill chip's `toggle-facet`
   # removal routes through the same dispatcher as every other facet, so
@@ -505,7 +523,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       mechanics: assigns.mechanics,
       themes: assigns.themes,
       weight_bands: assigns.weight_bands,
-      tags: assigns.tags,
+      sections: assigns.sections,
       designers: assigns.designers,
       artists: assigns.artists,
       players: assigns.players,
@@ -626,7 +644,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # visitor can't otherwise see once the search control is collapsed.
   defp active_filter_count(assigns) do
     length(assigns.mechanics) + length(assigns.themes) + length(assigns.weight_bands) +
-      length(assigns.tags) + length(assigns.designers) + length(assigns.artists) +
+      length(assigns.sections) + length(assigns.designers) + length(assigns.artists) +
       Enum.count([assigns.players, assigns.max_playtime, assigns.min_age], &(not is_nil(&1)))
   end
 
@@ -640,7 +658,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # already-shipped `toggle-facet`/`toggle-scalar` handlers with the value
   # that is currently selected, which those handlers already treat as a
   # removal — no new server-side parsing, no new dynamic-key surface.
-  # Removal for mechanics/themes/weight_bands/tags routes through
+  # Removal for mechanics/themes/weight_bands/sections routes through
   # `facet_assign_key/1`; players/max_playtime through
   # `scalar_assign_key/1`; the query chip has no equivalent toggle and
   # dispatches the new parameterless `clear-query` handler instead.
@@ -650,7 +668,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     facet_chips(assigns.mechanics, "mechanics", "Mecánica") ++
       facet_chips(assigns.themes, "themes", "Temática") ++
       weight_band_chips(assigns.weight_bands) ++
-      tag_chips(assigns.tags) ++
+      section_chips(assigns.sections, assigns.facet_options.sections) ++
       creator_chips(assigns.designers, "designers", "Diseñador") ++
       creator_chips(assigns.artists, "artists", "Ilustrador") ++
       scalar_chips(assigns) ++
@@ -697,22 +715,33 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
-  # Editorial hashtags render verbatim (never renamed/reframed — same
-  # convention as GameChips.editorial_tags/1). "Etiqueta" is this chip's
-  # facet-name prefix since the modal itself has no rendered section for
-  # this facet to match against (sketch 019 Round 3 cut it, still
-  # deliberately unreturned — see FilterModal's moduledoc).
-  defp tag_chips(selected) do
-    Enum.map(selected, fn tag ->
-      %{
-        event: "toggle-facet",
-        facet: "tags",
-        scalar: nil,
-        choice: tag,
-        label: "Etiqueta: #{tag}",
-        aria_label: "Quitar filtro: Etiqueta — #{tag}"
-      }
-    end)
+  # D-27: `selected` is a list of section ids (integers); `options` is
+  # `@facet_options.sections` (`%{id:, name:}` maps) — the only place this
+  # module knows a section's display name. An id with no matching entry in
+  # `options` (a section hidden/deleted/emptied out from under an already-
+  # applied filter) is skipped rather than rendering a chip with no label,
+  # per the plan's own behavior note.
+  defp section_chips(selected, options) do
+    selected
+    |> Enum.map(&section_chip(&1, options))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp section_chip(id, options) do
+    case Enum.find(options, &(&1.id == id)) do
+      nil ->
+        nil
+
+      %{name: name} ->
+        %{
+          event: "toggle-facet",
+          facet: "sections",
+          scalar: nil,
+          choice: to_string(id),
+          label: "Sección: #{name}",
+          aria_label: "Quitar filtro: Sección — #{name}"
+        }
+    end
   end
 
   # Creator filter chips for the :designers/:artists socket assigns,
@@ -801,18 +830,21 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp row_variant(%{featured?: true}), do: :hero
   defp row_variant(%{featured?: false}), do: :standard
 
-  # quick task 260913-0h6, narrowed by 01.8.1-10 (D-26, D-28): only a
-  # weight_band section's header links out, to the existing
-  # `?weight_bands=` filtered landing — the sections facet a manual
-  # section's own header would need (D-27) doesn't exist yet, so those
-  # (including the featured section) and the automatic recent section stay
-  # plain, non-interactive headings until a later plan adds it. Every href
-  # is built only from the section's own server-loaded `rule_value`, never
-  # from client input, and the landing param is re-validated by
-  # CatalogFilters.from_params/1's closed-Vocabulary whitelist.
+  # quick task 260913-0h6, narrowed by 01.8.1-10 (D-26, D-28), restored by
+  # 01.8.1-11 (D-27, D-28) now that the sections facet exists: a
+  # weight_band section's header links to the existing `?weight_bands=`
+  # filtered landing, and a manual section's header (including the
+  # featured section) links to its own `/?sections=<id>` landing — the
+  # deep link the retired hardcoded hashtag rows had. Only the automatic
+  # `:recent` section stays a plain, non-interactive heading (it has no
+  # facet of its own to land on). Every href is built only from the
+  # section's own server-loaded `rule_value`/`section_id`, never from
+  # client input, and re-validated on the receiving end by
+  # CatalogFilters.from_params/1 (closed-Vocabulary whitelist for
+  # `weight_bands`, bound-and-parameterize for `sections`).
   defp row_href(%{kind: :weight_band, rule_value: band}), do: band_href(band)
   defp row_href(%{kind: :recent}), do: nil
-  defp row_href(%{kind: :manual}), do: nil
+  defp row_href(%{kind: :manual, section_id: id}), do: ~p"/?#{[sections: [id]]}"
 
   defp band_href(band), do: ~p"/?weight_bands=#{band}"
 
@@ -858,7 +890,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     assigns.mechanics != [] or
       assigns.themes != [] or
       assigns.weight_bands != [] or
-      assigns.tags != [] or
+      assigns.sections != [] or
       assigns.designers != [] or
       assigns.artists != []
   end
@@ -1275,7 +1307,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           mechanics={@mechanics}
           themes={@themes}
           weight_bands={@weight_bands}
-          tags={@tags}
+          sections={@sections}
           players={@players}
           max_playtime={@max_playtime}
           open={@filters_open}

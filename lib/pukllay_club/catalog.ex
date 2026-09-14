@@ -95,7 +95,8 @@ defmodule PukllayClub.Catalog do
   and pagination together (CATALOG-02/03/04, D-14/D-15).
 
   Accepts a map or keyword list with `:q`, `:mechanics` (Spanish labels),
-  `:themes` (Spanish labels), `:weight_bands`, `:tags`, `:designers`,
+  `:themes` (Spanish labels), `:weight_bands`, `:sections` (D-27, bound
+  positive integers — see `maybe_filter_sections/2`), `:designers`,
   `:artists`, `:players`, `:max_playtime`, `:min_age`, `:sort`, `:limit`
   (default #{@default_limit}), `:offset` (default 0). Always applies
   `LIMIT` — never returns an unbounded result set (T-01-22).
@@ -593,16 +594,37 @@ defmodule PukllayClub.Catalog do
 
   @doc """
   Pill options for the filter drawer: mechanic/theme Spanish labels, weight
-  bands, and editorial tags — every value the vocabulary exposes as a
-  filterable facet.
+  bands, and sections (D-27) — every value the vocabulary/database exposes
+  as a filterable facet. `sections` lists non-hidden `:manual` sections
+  with at least one published member, featured first then by `position` —
+  the same ordering `list_home_sections/0` uses for the home page itself —
+  computed with one `exists` subquery per section row rather than an N+1
+  membership check (T-01.8.1-53).
   """
   def facet_options do
     %{
       mechanics: Vocabulary.mechanic_options(),
       themes: Vocabulary.theme_options(),
       weight_bands: Vocabulary.weight_bands(),
-      editorial_tags: Vocabulary.editorial_tags()
+      sections: section_facet_options()
     }
+  end
+
+  defp section_facet_options do
+    Repo.all(
+      from s in Section,
+        as: :section,
+        where: s.kind == :manual and s.hidden == false,
+        where:
+          exists(
+            from sg in SectionGame,
+              join: g in Game,
+              on: g.id == sg.game_id,
+              where: sg.section_id == parent_as(:section).id and g.status == :published
+          ),
+        order_by: [desc: s.featured, asc: s.position],
+        select: %{id: s.id, name: s.name}
+    )
   end
 
   @doc """
@@ -762,7 +784,7 @@ defmodule PukllayClub.Catalog do
     |> maybe_filter_mechanics(Map.get(opts, :mechanics))
     |> maybe_filter_themes(Map.get(opts, :themes))
     |> maybe_filter_weight_bands(Map.get(opts, :weight_bands))
-    |> maybe_filter_tags(Map.get(opts, :tags))
+    |> maybe_filter_sections(Map.get(opts, :sections))
     |> maybe_filter_designers(Map.get(opts, :designers))
     |> maybe_filter_artists(Map.get(opts, :artists))
     |> maybe_filter_players(Map.get(opts, :players))
@@ -809,10 +831,24 @@ defmodule PukllayClub.Catalog do
     from g in query, where: g.weight_band in ^bands
   end
 
-  defp maybe_filter_tags(query, tags) when tags in [nil, []], do: query
+  # D-27, T-01.8.1-50/T-01.8.1-51: `ids` are bound integers by the time they
+  # reach here (`CatalogFilters.from_params/1`'s `parse_id_list_param/1`
+  # already parsed/deduped/capped them) — never string-interpolated. The
+  # subquery restricts to `:manual`, non-hidden sections so a hidden
+  # section's id, or a `:weight_band`/`:recent` section's id, matches no
+  # game (an automatic section has no `section_games` rows at all).
+  defp maybe_filter_sections(query, ids) when ids in [nil, []], do: query
 
-  defp maybe_filter_tags(query, tags) do
-    from g in query, where: fragment("? && ?", g.tags, type(^tags, {:array, :string}))
+  defp maybe_filter_sections(query, ids) do
+    from g in query,
+      where:
+        g.id in subquery(
+          from sg in SectionGame,
+            join: s in Section,
+            on: s.id == sg.section_id,
+            where: sg.section_id in ^ids and s.kind == :manual and s.hidden == false,
+            select: sg.game_id
+        )
   end
 
   # Open-text, whole-name array-membership filters (01.3-06, T-01.3-06-01) —

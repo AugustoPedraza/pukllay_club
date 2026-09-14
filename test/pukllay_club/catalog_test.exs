@@ -203,6 +203,99 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
+  describe "filter_games/1 — sections facet (D-27)" do
+    test "returns only published members of a non-hidden manual section" do
+      section = section_fixture(%{kind: :manual})
+      in_section = game_fixture(%{name: "In Section"})
+      outside = game_fixture(%{name: "Outside"})
+      add_game_to_section(section, in_section)
+
+      results = [sections: [section.id]] |> Catalog.filter_games() |> Enum.map(& &1.name)
+
+      assert results == [in_section.name]
+      refute outside.name in results
+    end
+
+    test "a hidden section's id returns nothing" do
+      section = section_fixture(%{kind: :manual, hidden: true})
+      game = game_fixture(%{name: "Hidden Section Game"})
+      add_game_to_section(section, game)
+
+      assert Catalog.filter_games(sections: [section.id]) == []
+    end
+
+    test "a weight_band-kind section's id returns nothing (manual-only facet)" do
+      section =
+        Repo.get_by!(Section, name: "Ingenio estratega")
+
+      game_fixture(%{name: "Weight Band Game", weight_band: "ingenio_estratega"})
+
+      assert Catalog.filter_games(sections: [section.id]) == []
+    end
+
+    test "a nonexistent section id returns nothing" do
+      assert Catalog.filter_games(sections: [999_999]) == []
+    end
+
+    test "two section ids return the union" do
+      section_a = section_fixture(%{kind: :manual})
+      section_b = section_fixture(%{kind: :manual})
+      a_game = game_fixture(%{name: "A Section Game"})
+      b_game = game_fixture(%{name: "B Section Game"})
+      add_game_to_section(section_a, a_game)
+      add_game_to_section(section_b, b_game)
+
+      results = [sections: [section_a.id, section_b.id]] |> Catalog.filter_games() |> Enum.map(& &1.name)
+
+      assert Enum.sort(results) == Enum.sort([a_game.name, b_game.name])
+    end
+
+    test "count_games/1 matches filter_games/1's result count" do
+      section = section_fixture(%{kind: :manual})
+      add_game_to_section(section, game_fixture(%{name: "Counted Game"}))
+      game_fixture(%{name: "Uncounted Game"})
+
+      assert Catalog.count_games(sections: [section.id]) == 1
+    end
+  end
+
+  describe "facet_options/0 — sections facet (D-27)" do
+    test "includes non-hidden manual sections with at least one published game, featured first then position" do
+      featured = Repo.get_by!(Section, name: "Destacados del club")
+      manual_a = section_fixture(%{name: "Manual A", position: 100})
+      manual_b = section_fixture(%{name: "Manual B", position: 50})
+      hidden = section_fixture(%{name: "Hidden Manual", hidden: true, position: 1})
+      empty = section_fixture(%{name: "Empty Manual", position: 2})
+      weight_band_section = Repo.get_by!(Section, name: "Ingenio estratega")
+
+      add_game_to_section(featured, game_fixture(%{name: "Featured Facet Game"}))
+      add_game_to_section(manual_a, game_fixture(%{name: "Manual A Game"}))
+      add_game_to_section(manual_b, game_fixture(%{name: "Manual B Game"}))
+      add_game_to_section(hidden, game_fixture(%{name: "Hidden Facet Game"}))
+
+      ids = Enum.map(Catalog.facet_options().sections, & &1.id)
+
+      assert ids == [featured.id, manual_b.id, manual_a.id]
+      refute empty.id in ids
+      refute hidden.id in ids
+      refute weight_band_section.id in ids
+    end
+
+    test "entries carry :id and :name only" do
+      section = section_fixture(%{name: "Named Facet Section"})
+      add_game_to_section(section, game_fixture())
+
+      assert %{id: id, name: "Named Facet Section"} =
+               Enum.find(Catalog.facet_options().sections, &(&1.id == section.id))
+
+      assert is_integer(id)
+    end
+
+    test "no longer returns editorial_tags" do
+      refute Map.has_key?(Catalog.facet_options(), :editorial_tags)
+    end
+  end
+
   describe "filter_games/1 — mechanic/theme facets (D-14)" do
     test "two mechanic labels return games matching EITHER (OR within facet)" do
       game_fixture(%{name: "Only Dice", mechanics: ["Dice Rolling"]})

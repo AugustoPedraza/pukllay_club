@@ -5,7 +5,7 @@ defmodule PukllayClubWeb.FilterModalTest do
 
   alias PukllayClubWeb.FilterModal
 
-  @empty_facet_options %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
+  @empty_facet_options %{mechanics: [], themes: [], weight_bands: [], sections: []}
 
   describe "filter_modal/1 rendering" do
     test "closed by default: renders without the modal-open class" do
@@ -141,7 +141,7 @@ defmodule PukllayClubWeb.FilterModalTest do
             mechanics: [],
             themes: [],
             weight_bands: [%{value: "ingenio_estratega", label: "Ingenio estratega"}],
-            editorial_tags: []
+            sections: []
           },
           weight_bands: ["ingenio_estratega"]
         })
@@ -197,7 +197,7 @@ defmodule PukllayClubWeb.FilterModalTest do
             mechanics: [],
             themes: [],
             weight_bands: [%{value: "ingenio_estratega", label: "Ingenio estratega"}],
-            editorial_tags: []
+            sections: []
           }
         })
 
@@ -279,7 +279,18 @@ defmodule PukllayClubWeb.FilterModalTest do
       assert html =~ "¿Qué juego buscas?"
     end
 
-    test "the editorial-hashtag group renders nowhere, even when editorial_tags is non-empty" do
+    test "the Secciones card renders nothing when facet_options.sections is empty" do
+      html =
+        render_component(&FilterModal.filter_modal/1, %{
+          id: "filter-modal",
+          facet_options: @empty_facet_options
+        })
+
+      refute html =~ "Secciones"
+      refute html =~ ~s(phx-value-facet="sections")
+    end
+
+    test "the Secciones card renders one pill per section, selected pill reflected in aria-pressed" do
       html =
         render_component(&FilterModal.filter_modal/1, %{
           id: "filter-modal",
@@ -287,14 +298,36 @@ defmodule PukllayClubWeb.FilterModalTest do
             mechanics: [],
             themes: [],
             weight_bands: [],
-            editorial_tags: [%{tag: "#CreaConexiones", meaning: "x"}]
+            sections: [%{id: 3, name: "Crea conexiones"}, %{id: 5, name: "Spiel des Jahres"}]
           },
-          tags: ["#CreaConexiones"]
+          sections: [3]
         })
 
-      refute html =~ "CreaConexiones"
-      refute html =~ ~s(phx-value-facet="tags")
-      refute html =~ "Destacados"
+      assert html =~ "Secciones"
+      assert html =~ "Crea conexiones"
+      assert html =~ "Spiel des Jahres"
+      assert html =~ ~s(phx-value-facet="sections")
+      assert html =~ ~s(phx-value-choice="3")
+      assert html =~ ~s(phx-value-choice="5")
+      refute html =~ "phx-value-value"
+
+      doc = LazyHTML.from_document(html)
+
+      selected_class =
+        doc
+        |> LazyHTML.query(~s(button[phx-value-facet="sections"][phx-value-choice="3"]))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      unselected_class =
+        doc
+        |> LazyHTML.query(~s(button[phx-value-facet="sections"][phx-value-choice="5"]))
+        |> LazyHTML.attribute("class")
+        |> List.first()
+
+      assert "pk-pill-selected" in String.split(selected_class)
+      refute "pk-pill-selected" in String.split(unselected_class)
+      assert "pk-pill-outline" in String.split(unselected_class)
     end
 
     test "Jugadores, Duración máxima, Nivel, and the disclosure each sit inside a rounded, surface-tinted card" do
@@ -328,7 +361,7 @@ defmodule PukllayClubWeb.FilterModalTest do
             mechanics: ["Tira dados"],
             themes: [],
             weight_bands: [],
-            editorial_tags: []
+            sections: []
           },
           mechanics: ["Tira dados"]
         })
@@ -344,7 +377,7 @@ defmodule PukllayClubWeb.FilterModalTest do
             mechanics: [],
             themes: ["Fantasía"],
             weight_bands: [],
-            editorial_tags: []
+            sections: []
           },
           themes: ["Fantasía"]
         })
@@ -360,7 +393,7 @@ defmodule PukllayClubWeb.FilterModalTest do
             mechanics: ["Tira dados"],
             themes: [],
             weight_bands: [],
-            editorial_tags: []
+            sections: []
           }
         })
 
@@ -377,7 +410,7 @@ defmodule PukllayClubWeb.FilterModalTest do
             mechanics: ["Tira dados", "Coloca trabajadores"],
             themes: [],
             weight_bands: [],
-            editorial_tags: []
+            sections: []
           },
           mechanics: ["Tira dados", "Coloca trabajadores"]
         })

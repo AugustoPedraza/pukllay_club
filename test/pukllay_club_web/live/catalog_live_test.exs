@@ -2358,6 +2358,74 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "?sections= filters the catalog to a hand-picked section (D-27, tracer)" do
+    test "?sections=<id> lands the catalog already filtered to that section's published games",
+         %{conn: conn} do
+      section = section_fixture(%{kind: :manual})
+      in_section = game_fixture(%{name: "Section Member Game"})
+      outside = game_fixture(%{name: "Outside Section Game"})
+      add_game_to_section(section, in_section)
+
+      {:ok, _view, html} = live(conn, ~p"/?sections=#{section.id}")
+
+      grid = grid_html(html)
+      assert grid =~ in_section.name
+      refute grid =~ outside.name
+      assert html =~ "Resultados"
+    end
+
+    test "renders a removable 'Sección: <name>' chip that returns to the section rows on removal",
+         %{conn: conn} do
+      section = section_fixture(%{name: "Chip Section"})
+      add_game_to_section(section, game_fixture(%{name: "Chip Section Game"}))
+
+      {:ok, view, html} = live(conn, ~p"/?sections=#{section.id}")
+
+      assert html =~ "Sección: Chip Section"
+
+      html =
+        view
+        |> element(~s(button.pk-active-filter-chip[phx-value-facet="sections"][phx-value-choice="#{section.id}"]))
+        |> render_click()
+
+      refute html =~ "Sección: Chip Section"
+      refute html =~ ~s(id="games")
+    end
+
+    test "a hidden section id, a weight_band section id, and a nonexistent id all match nothing, never raise",
+         %{conn: conn} do
+      hidden = section_fixture(%{hidden: true})
+      weight_band_section = Repo.get_by!(Section, name: "Ingenio estratega")
+      game_fixture(%{name: "Untouched Game", weight_band: "ingenio_estratega"})
+
+      for id <- [hidden.id, weight_band_section.id, 999_999] do
+        assert {:ok, _view, html} = live(conn, ~p"/?sections=#{id}")
+        refute grid_html(html) =~ "Untouched Game"
+      end
+    end
+
+    test "the open filter modal renders a Secciones cluster; toggling a pill updates the live result count",
+         %{conn: conn} do
+      section = section_fixture(%{name: "Toggle Section"})
+      add_game_to_section(section, game_fixture(%{name: "Toggle Section Game"}))
+      game_fixture(%{name: "Not In Section Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      open_html = render_click(view, "open-filters", %{})
+      assert open_html =~ "Secciones"
+      assert open_html =~ "Toggle Section"
+
+      # settle_surface/1 is a no-op while the modal is open (D-01/D-02,
+      # Task 2 G-01.2-4), so the background grid doesn't flip yet — the
+      # modal's own live "Ver N juegos" CTA is what proves the toggle
+      # already narrowed the result set.
+      html = render_click(view, "toggle-facet", %{"facet" => "sections", "choice" => to_string(section.id)})
+
+      assert html =~ "Ver 1 juego"
+    end
+  end
+
   # G-01.2-9 gap closure (01.2-16, Task 3): pins the three connections that
   # are invisible to the compiler and therefore the ones a future refactor
   # would quietly break — the page-loading annotation, the results
@@ -2582,7 +2650,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
-  describe "tappable shelf headers filter the ludoteca (quick 260913-0h6, narrowed by 01.8.1-10 D-26/D-28)" do
+  describe "tappable shelf headers filter the ludoteca (260913-0h6, 01.8.1-10, 01.8.1-11 D-27)" do
     test "a weight-band header is a single anchor with a weight_bands href and correct a11y wiring",
          %{conn: conn} do
       game_fixture(%{name: "Hobby Header Game", weight_band: "descubre_el_hobby"})
@@ -2745,22 +2813,36 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       end
     end
 
-    test "a manual section's header renders no link and no Ver todos cue (deferred to a later plan's sections facet)",
+    test "a hand-picked (manual) section's header links to its own /?sections=<id> landing (D-27, D-28)",
          %{conn: conn} do
       featured = Repo.get_by!(Section, featured: true)
-      add_game_to_section(featured, game_fixture(%{name: "Featured Header Game", weight_band: nil}))
+      game = game_fixture(%{name: "Featured Header Game", weight_band: nil})
+      add_game_to_section(featured, game)
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      row_html =
-        html
-        |> LazyHTML.from_document()
-        |> LazyHTML.query("#carousel-section-#{featured.id}")
-        |> LazyHTML.to_html()
+      doc = LazyHTML.from_document(html)
 
-      assert row_html != ""
-      refute row_html =~ "pk-row-link"
-      refute row_html =~ "Ver todos"
+      header_links =
+        LazyHTML.query(doc, "#carousel-section-#{featured.id} .pk-row-header a.pk-row-link")
+
+      assert Enum.count(header_links) == 1
+
+      [href] = LazyHTML.attribute(header_links, "href")
+      assert String.starts_with?(href, "/?")
+      refute href =~ "#"
+
+      "/?" <> query_string = href
+      decoded = Query.decode(query_string)
+      assert decoded["sections"] in [to_string(featured.id), [to_string(featured.id)]]
+
+      link_html = LazyHTML.to_html(header_links)
+      assert link_html =~ "Destacados del club"
+      assert link_html =~ "Ver todos"
+
+      {:ok, _landed_view, landed_html} = live(conn, href)
+      grid = grid_html(landed_html)
+      assert grid =~ game.name
     end
 
     test "recientemente añadidos renders but has no header link or Ver todos cue", %{conn: conn} do

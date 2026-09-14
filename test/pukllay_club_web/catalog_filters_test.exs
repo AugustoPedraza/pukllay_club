@@ -58,7 +58,7 @@ defmodule PukllayClubWeb.CatalogFiltersTest do
         mechanics: [],
         themes: [],
         weight_bands: [],
-        tags: [],
+        sections: [],
         players: nil,
         max_playtime: nil,
         min_age: nil,
@@ -96,7 +96,7 @@ defmodule PukllayClubWeb.CatalogFiltersTest do
       assert Map.has_key?(filters, :mechanics)
       assert Map.has_key?(filters, :themes)
       assert Map.has_key?(filters, :weight_bands)
-      assert Map.has_key?(filters, :tags)
+      assert Map.has_key?(filters, :sections)
       assert Map.has_key?(filters, :players)
       assert Map.has_key?(filters, :max_playtime)
       assert Map.has_key?(filters, :min_age)
@@ -148,6 +148,64 @@ defmodule PukllayClubWeb.CatalogFiltersTest do
     end
   end
 
+  describe "from_params/1 — sections bound-and-parameterize contract (D-27, T-01.8.1-50)" do
+    test "keeps only positive integers, in order, dropping non-numeric and non-positive values" do
+      filters = CatalogFilters.from_params(%{"sections" => ["3", "x", "-1", "5"]})
+
+      assert filters.sections == [3, 5]
+    end
+
+    test "'tags' is no longer a recognised key" do
+      filters = CatalogFilters.from_params(%{"tags" => ["#CreaConexiones"]})
+
+      refute Map.has_key?(filters, :tags)
+    end
+
+    test "a comma-separated value parses the same way as a repeated-key list" do
+      filters = CatalogFilters.from_params(%{"sections" => "3,5"})
+
+      assert filters.sections == [3, 5]
+    end
+
+    test "more than 20 ids keeps only the first 20" do
+      long_list = Enum.map(1..50, &to_string/1)
+
+      filters = CatalogFilters.from_params(%{"sections" => long_list})
+
+      assert filters.sections == Enum.to_list(1..20)
+    end
+
+    test "duplicate ids are de-duped" do
+      filters = CatalogFilters.from_params(%{"sections" => ["3", "3", "5"]})
+
+      assert filters.sections == [3, 5]
+    end
+
+    test "a partially-numeric string like '3x' is rejected outright, not truncated to 3" do
+      filters = CatalogFilters.from_params(%{"sections" => ["3x"]})
+
+      assert filters.sections == []
+    end
+
+    test "a nested array value drops to [] without raising" do
+      filters = CatalogFilters.from_params(%{"sections" => [["nested"]]})
+
+      assert filters.sections == []
+    end
+
+    test "to_query/1 and from_params/1 round-trip a sections list" do
+      filters = CatalogFilters.from_params(%{"sections" => ["3", "5"]})
+
+      round_tripped =
+        filters
+        |> CatalogFilters.to_query()
+        |> Query.decode()
+        |> CatalogFilters.from_params()
+
+      assert round_tripped.sections == filters.sections
+    end
+  end
+
   describe "to_query/1 and from_params/1 — idempotence" do
     test "re-feeding to_query/1's output through decode + from_params produces the same map" do
       filters = %{
@@ -155,7 +213,7 @@ defmodule PukllayClubWeb.CatalogFiltersTest do
         mechanics: ["Tira dados"],
         themes: [],
         weight_bands: ["nivel_experto"],
-        tags: [],
+        sections: [3, 5],
         designers: ["Uwe Rosenberg"],
         artists: [],
         players: 4,

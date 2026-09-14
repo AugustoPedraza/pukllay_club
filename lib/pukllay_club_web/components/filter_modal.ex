@@ -18,18 +18,19 @@ defmodule PukllayClubWeb.FilterModal do
   filtros` ghost (no border/fill at rest) button (disabled whenever no
   filter or query is active) and a `Ver N juegos` primary CTA.
 
-  **Editorial-hashtag group cut, deliberately (sketch 019 Round 3,
-  quick-260824-eqc).** The `Destacados` facet-pill section that used to
-  render `@facet_options.editorial_tags` here is GONE — not a bug, not an
-  oversight. Sketch 019's design review moved it out of the modal's
-  primary group pending a future decision on how it should return (e.g. a
-  different presentation than a flat pill row). `facet_options/0` still
-  returns `editorial_tags`, `attr :tags` and its `tags={@tags}` pass-
-  through are still declared below, and `?tags=`/`clear-filters` still
-  work exactly as before — only the UI control is gone. Do NOT re-add the
-  old flat pill section here as a "fix"; that reintroduces exactly what
-  this pass deliberately removed. A future design pass owns bringing it
-  back, not a bug report.
+  **Editorial-hashtag group cut, superseded by a Secciones facet (D-27,
+  01.8.1-11).** Sketch 019 Round 3 (quick-260824-eqc) removed the old flat
+  `Destacados` pill row rendering `@facet_options.editorial_tags` — the
+  hashtag vocabulary itself is retired (01.8.1-10/11 migrated it into
+  staff-owned `sections`). D-27 (a user decision) brings a facet back for
+  the replacement concept: the `Secciones` card below, directly after
+  Nivel, lists the visible hand-picked sections and reuses the same
+  pill-cluster markup and `toggle-facet` event Nivel already uses — this
+  is a planner assumption (no UI-SPEC exists for this facet), since a
+  future design pass may want a different presentation. It deliberately
+  does NOT resurrect the old flat hashtag pill row FilterModal's prior
+  moduledoc warned against reintroducing (RESEARCH.md anti-pattern) — this
+  is a new facet over a new concept, not that one coming back.
 
   The disclosure auto-expands whenever a mechanic or theme is already
   selected, so re-opening the modal never hides an active choice — see
@@ -138,7 +139,7 @@ defmodule PukllayClubWeb.FilterModal do
   attr :mechanics, :list, default: []
   attr :themes, :list, default: []
   attr :weight_bands, :list, default: []
-  attr :tags, :list, default: []
+  attr :sections, :list, default: []
   attr :players, :integer, default: nil
   attr :max_playtime, :integer, default: nil
   attr :open, :boolean, default: false
@@ -280,6 +281,26 @@ defmodule PukllayClubWeb.FilterModal do
                 value={band.value}
                 label={band.label}
                 selected={band.value in @weight_bands}
+              />
+            </div>
+          </section>
+
+          <%!-- D-27: reuses the Nivel cluster's own markup/pill component and
+          `toggle-facet` event verbatim — the choice value is the section's
+          own database id (as a string; CatalogLive.Index's `toggle-facet`
+          clause parses it back with `Integer.parse/1`). Omitted entirely
+          when there is nothing to show (an empty catalog, or every manual
+          section hidden/empty), matching every other facet card's implicit
+          "nothing to filter by" behavior. --%>
+          <section :if={@facet_options.sections != []} class="rounded-box bg-base-200 p-4">
+            <h3 class="mb-2 text-sm font-semibold">Secciones</h3>
+            <div class="flex flex-wrap gap-2">
+              <.facet_pill
+                :for={section <- @facet_options.sections}
+                facet="sections"
+                value={to_string(section.id)}
+                label={section.name}
+                selected={section.id in @sections}
               />
             </div>
           </section>
