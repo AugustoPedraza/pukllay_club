@@ -4,6 +4,8 @@ defmodule PukllayClubWeb.Admin.BandAuditLiveTest do
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
 
+  alias PukllayClub.Catalog.Game
+
   describe "the tracer: a mis-banded game appears at /admin/niveles and Corregir fixes it" do
     setup :register_and_log_in_staff
 
@@ -33,7 +35,7 @@ defmodule PukllayClubWeb.Admin.BandAuditLiveTest do
       assert html =~ "Nivel corregido."
       refute html =~ "Terra Mystica"
 
-      updated = PukllayClub.Repo.get!(PukllayClub.Catalog.Game, game.id)
+      updated = PukllayClub.Repo.get!(Game, game.id)
       assert updated.weight_band == "nivel_experto"
     end
 
@@ -64,7 +66,7 @@ defmodule PukllayClubWeb.Admin.BandAuditLiveTest do
       assert html =~ "Nivel mantenido."
       refute html =~ "Terra Mystica"
 
-      updated = PukllayClub.Repo.get!(PukllayClub.Catalog.Game, game.id)
+      updated = PukllayClub.Repo.get!(Game, game.id)
       assert updated.weight_band == "ingenio_estratega"
       assert updated.band_reviewed_band == "nivel_experto"
     end

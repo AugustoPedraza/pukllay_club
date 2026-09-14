@@ -77,7 +77,7 @@ defmodule PukllayClub.Catalog.BandAuditTest do
 
       game
       |> Ecto.Changeset.change(band_reviewed_band: "nivel_experto", band_reviewed_at: DateTime.utc_now(:second))
-      |> PukllayClub.Repo.update!()
+      |> Repo.update!()
 
       {:ok, corrected} = BandAudit.correct_band(game.id)
 
