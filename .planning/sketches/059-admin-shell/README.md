@@ -199,3 +199,11 @@ pinned at the bottom. Account + Cerrar sesión live only in the admin tab bar's 
 "Ver el sitio público" row is fixed; the "Ir al panel" variant and the standalone drawer confirm sheet
 were removed as unused). Consequence, accepted: on a public page while signed in, signing out means
 going to the panel (drawer → PANEL) first, then Cuenta.
+
+## Back row scope (2026-09-14)
+"‹ Panel" was rendered on every non-Panel page. With the tab bar + drawer, Juegos/Secciones/Estantes/
+Revisar niveles/Staff are siblings of Panel (reached from a tab or drawer row), not children — the back
+row implied a false hierarchy and duplicated the Panel tab. Applied the existing `page-shell.md` rule
+(crumb/back only for genuine drill-downs): no back row on tab/drawer-level pages, so titles sit at the
+same height across tabs; back row only on drill-downs (Secciones → Destacados "‹ Secciones"; later
+Juegos → editar "‹ Juegos", Estantes → asignar "‹ Estantes").

@@ -233,6 +233,7 @@
     <li><b>One drawer:</b> signed out it has SITIO. Signed in (admin or public) it's always PANEL (every section, with counts) → SITIO. There's no account block in the drawer; your account lives only in the Cuenta tab. Theme is pinned to the drawer's bottom edge (the list scrolls above it), so it never moves.</li>
     <li><b>Tab bar (admin only):</b> Panel · Juegos · Secciones · Estantes · Cuenta. Cuenta (avatar with a green ring) is the signed-in signal and opens the account sheet (TU CUENTA: your account, Ver el sitio público, Cerrar sesión). Desktop shows every section in one row under the header, with Cuenta at the end.</li>
     <li><b>Cerrar sesión:</b> confirmed inside the same sheet with the same row layout. Then "Cerrando sesión…" → Ingresar + "Cerraste sesión".</li>
+    <li><b>Back row only on real drill-downs:</b> Secciones → Destacados shows "‹ Secciones". Pages reached from a tab or the drawer (Panel, Juegos, Secciones, Estantes, Revisar niveles, Staff) have no back row, so their titles line up at the same height.</li>
     <li><b>Navigation:</b> header and tabs stay put and only the page content swaps. Tapping the active tab again goes back to that tab's main screen. Sheets close with the backdrop, Esc or a swipe down, and focus returns to what opened them. No footer on admin.</li>
     <li>Page contents are placeholders; they get designed in 060–063.</li>
   </ul>
@@ -361,7 +362,9 @@ const accountSheet = () => `<div class="sheet" id="sheet-account" role="dialog" 
 /* ---------------- page bodies (placeholders) ---------------- */
 function pageHead() {
   const sc = SCREENS[S.screen];
-  const parent = sc.parent || (S.screen === 'panel' ? null : 'panel');
+  // Back row only for genuine drill-downs (page-shell.md rule). Pages reached from a tab or the
+  // drawer are siblings of Panel, not children, so they get no "‹ Panel".
+  const parent = sc.parent || null;
   return `${parent ? `<button class="back" data-nav="${parent}">${ic('chevL')}${SCREENS[parent].title}</button>` : ''}
     <h1 class="ptitle">${sc.title}</h1>${sc.sub ? `<p class="psub">${sc.sub}</p>` : '<div style="height:12px"></div>'}`;
 }
