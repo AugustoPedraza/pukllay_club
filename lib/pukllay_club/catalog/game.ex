@@ -14,6 +14,8 @@ defmodule PukllayClub.Catalog.Game do
 
   import Ecto.Changeset
 
+  alias PukllayClub.Catalog.Vocabulary
+
   @enrichment_statuses ~w(pending enriched no_bgg_id bgg_missing)
 
   schema "games" do
@@ -129,6 +131,31 @@ defmodule PukllayClub.Catalog.Game do
     game
     |> cast(attrs, [:status])
     |> validate_required([:status])
+  end
+
+  @doc """
+  Changeset for the D-07 admin edit screen
+  (`Catalog.change_game_admin/2`, `Catalog.update_game_admin/2`) — casts
+  exactly the five club-owned fields staff may edit: `:name`, `:units`,
+  `:weight_band`, `:is_expansion`, `:description`. Every BGG-derived fact
+  (players, playtime, age, mechanics, themes, designers, artists,
+  publishers, rating, rank, `bgg_weight`, images) is read-only in the
+  admin and is never cast here — `status` changes only through
+  `status_changeset/2`'s dedicated transition functions
+  (`Catalog.publish_game/1`, `retire_game/1`, `restore_game/1`).
+
+  `validate_inclusion/3`/`validate_number/3` skip a `nil` value by
+  Ecto's own `validate_change/3` contract, so a blank `weight_band` (the
+  select's `Sin nivel` prompt) and a blank `units` both pass through
+  unvalidated rather than needing an explicit `allow_nil` branch.
+  """
+  def admin_changeset(game, attrs) do
+    game
+    |> cast(attrs, [:name, :units, :weight_band, :is_expansion, :description])
+    |> validate_required([:name])
+    |> validate_length(:name, max: 255)
+    |> validate_number(:units, greater_than: 0)
+    |> validate_inclusion(:weight_band, Enum.map(Vocabulary.weight_bands(), & &1.value))
   end
 end
 

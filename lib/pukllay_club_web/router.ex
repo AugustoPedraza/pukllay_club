@@ -97,6 +97,7 @@ defmodule PukllayClubWeb.Router do
         {PukllayClubWeb.UserAuth, :require_staff}
       ] do
       live "/", DashboardLive, :index
+      live "/juegos/:id/editar", GameLive.Form, :edit
     end
   end
 

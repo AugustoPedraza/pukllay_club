@@ -166,6 +166,28 @@ defmodule PukllayClub.Catalog do
   defp fetch_by_id!(_out_of_range), do: raise(Ecto.NoResultsError, queryable: Game)
 
   @doc """
+  Builds an admin edit changeset for `game` (D-07) — the five club-owned
+  fields only, via `Game.admin_changeset/2`. Used by
+  `PukllayClubWeb.Admin.GameLive.Form` for both the initial form and live
+  `phx-change="validate"` re-validation.
+  """
+  def change_game_admin(%Game{} = game, attrs \\ %{}) do
+    Game.admin_changeset(game, attrs)
+  end
+
+  @doc """
+  Persists an admin edit to `game` (D-07) via `Game.admin_changeset/2`.
+  Returns `{:ok, game}` / `{:error, changeset}`. BGG-derived fields
+  submitted in `attrs` are silently ignored — `Game.admin_changeset/2`'s
+  cast allowlist is the enforcement point (T-01.8.1-21).
+  """
+  def update_game_admin(%Game{} = game, attrs) do
+    game
+    |> Game.admin_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
   Fetches a single **published** game by id, raising `Ecto.NoResultsError`
   for an unknown id, a non-numeric id, an id outside Postgres' bigint
   range, OR a `:draft`/`:retired` game (D-04, D-08, RESEARCH.md Pitfall 2).
