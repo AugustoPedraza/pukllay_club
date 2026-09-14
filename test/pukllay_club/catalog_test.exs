@@ -968,7 +968,7 @@ defmodule PukllayClub.CatalogTest do
       published = game_fixture(%{name: "B Publicado", status: :published})
       retired = game_fixture(%{name: "C Retirado", status: :retired})
 
-      ids = Catalog.list_admin_games() |> Enum.map(& &1.id)
+      ids = Enum.map(Catalog.list_admin_games(), & &1.id)
 
       assert draft.id in ids
       assert published.id in ids
@@ -981,25 +981,25 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "Publicado", status: :published})
       game_fixture(%{name: "Retirado", status: :retired})
 
-      assert Catalog.list_admin_games(status: :draft) |> Enum.map(& &1.name) == ["Borrador"]
+      assert [status: :draft] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Borrador"]
       assert Catalog.count_admin_games(status: :draft) == 1
-      assert Catalog.list_admin_games(status: :published) |> Enum.map(& &1.name) == ["Publicado"]
-      assert Catalog.list_admin_games(status: :retired) |> Enum.map(& &1.name) == ["Retirado"]
+      assert [status: :published] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Publicado"]
+      assert [status: :retired] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Retirado"]
     end
 
     test ":q searches by name, case-insensitively" do
       game_fixture(%{name: "Catán"})
       game_fixture(%{name: "Carcassonne"})
 
-      assert Catalog.list_admin_games(q: "cat") |> Enum.map(& &1.name) == ["Catán"]
-      assert Catalog.list_admin_games(q: "CATÁN") |> Enum.map(& &1.name) == ["Catán"]
+      assert [q: "cat"] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Catán"]
+      assert [q: "CATÁN"] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Catán"]
     end
 
     test "T-01.8.1-23: a literal % or _ in :q is escaped, not treated as an ILIKE wildcard" do
       game_fixture(%{name: "100% Juego"})
       game_fixture(%{name: "Otro Juego"})
 
-      assert Catalog.list_admin_games(q: "100%") |> Enum.map(& &1.name) == ["100% Juego"]
+      assert [q: "100%"] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["100% Juego"]
     end
 
     test "results are ordered by name then id, with :limit/:offset paging over the full set" do
@@ -1007,9 +1007,9 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "Alfa"})
       game_fixture(%{name: "Medio"})
 
-      assert Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Alfa", "Medio", "Zeta"]
-      assert Catalog.list_admin_games(limit: 2) |> Enum.map(& &1.name) == ["Alfa", "Medio"]
-      assert Catalog.list_admin_games(limit: 2, offset: 2) |> Enum.map(& &1.name) == ["Zeta"]
+      assert Enum.map(Catalog.list_admin_games(), & &1.name) == ["Alfa", "Medio", "Zeta"]
+      assert [limit: 2] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Alfa", "Medio"]
+      assert [limit: 2, offset: 2] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Zeta"]
     end
   end
 end
