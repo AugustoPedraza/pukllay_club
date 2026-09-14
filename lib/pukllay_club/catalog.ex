@@ -27,6 +27,11 @@ defmodule PukllayClub.Catalog do
   alias PukllayClub.Repo
 
   @default_limit 24
+  # Admin Juegos list (D-09 Task 2) page size — the UI-SPEC's own E1
+  # truth ("~400 rows via `Cargar más`") calls for a larger first page
+  # than the public catalog's @default_limit, matching the plan's own
+  # acceptance behavior ("With 60 games, the first render shows 50 rows").
+  @admin_default_limit 50
   # @carousel_limit is the initial per-row page size on first paint —
   # unchanged by quick task 260824-u5d, so first-paint query cost stays
   # identical to before in-row infinite scroll existed.
@@ -185,6 +190,72 @@ defmodule PukllayClub.Catalog do
     game
     |> Game.admin_changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc """
+  Admin listing of games (D-09 Task 2) — unlike every public read path,
+  this has NO status filter by default: staff see drafts, published, and
+  retired games together. Accepts `:status` (`:draft | :published |
+  :retired | nil` — `nil` means "all"), `:q` (case-insensitive `ilike`
+  name search, `\\`/`%`/`_` escaped before wrapping in `%...%` so a
+  literal percent/underscore in a game's name cannot be used to widen the
+  match, T-01-20/T-01.8.1-23), `:limit` (default #{@admin_default_limit})
+  and `:offset`. Always ordered `[asc: g.name, asc: g.id]` — the `:id`
+  tiebreaker keeps `Cargar más` pagination stable across pages, same
+  convention as every other paginated read in this module.
+  """
+  def list_admin_games(opts \\ []) do
+    opts = normalize_opts(opts)
+    limit = Map.get(opts, :limit, @admin_default_limit)
+    offset = Map.get(opts, :offset, 0)
+
+    Game
+    |> admin_filtered_query(opts)
+    |> order_by([g], asc: g.name, asc: g.id)
+    |> limit(^limit)
+    |> offset(^offset)
+    |> Repo.all()
+  end
+
+  @doc """
+  Total count of games matching `list_admin_games/1`'s same `:status`/`:q`
+  predicates, ignoring `:limit`/`:offset` — drives the dashboard's
+  `{N} borradores` badge (`count_admin_games(status: :draft)`, D-35) and
+  the Juegos list's `Cargar más` exhaustion check.
+  """
+  def count_admin_games(opts \\ []) do
+    opts = normalize_opts(opts)
+
+    Game
+    |> admin_filtered_query(opts)
+    |> Repo.aggregate(:count)
+  end
+
+  defp admin_filtered_query(query, opts) do
+    query
+    |> maybe_filter_admin_status(Map.get(opts, :status))
+    |> maybe_search_admin_name(Map.get(opts, :q))
+  end
+
+  defp maybe_filter_admin_status(query, nil), do: query
+  defp maybe_filter_admin_status(query, status), do: from(g in query, where: g.status == ^status)
+
+  defp maybe_search_admin_name(query, q) when q in [nil, ""], do: query
+
+  defp maybe_search_admin_name(query, q) do
+    pattern = "%" <> escape_ilike(q) <> "%"
+    from g in query, where: ilike(g.name, ^pattern)
+  end
+
+  # T-01.8.1-23: `%`/`_` are ILIKE wildcards and `\` is the escape
+  # character itself — each must be escaped before this value is wrapped
+  # in `%...%`, or a game named e.g. "100%" would match every row via an
+  # unintended wildcard rather than a literal substring.
+  defp escape_ilike(value) do
+    value
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
   end
 
   @doc """
