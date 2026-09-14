@@ -20,32 +20,37 @@ Registrar, dates and nameservers were confirmed from the `.club` registry RDAP r
 | Name | Type | Value | Purpose |
 |------|------|-------|---------|
 | `pukllay.club` | A | `34.41.63.138` | GCP e2-micro reserved external IP; kamal-proxy terminates TLS there (Let's Encrypt HTTP-01, so the A record must keep pointing at the host) |
+| `resend._domainkey.pukllay.club` | TXT | `p=MIGf...` (Resend's DKIM public key) | DKIM signing for outbound mail from Resend |
+| `send.pukllay.club` | CNAME | `send.forge.rmta.net.` | Resend's MAIL FROM / return-path subdomain — this is where SPF and the bounce-handling MX actually live, **not** the root domain |
+| `send.pukllay.club` | TXT (via the CNAME) | `v=spf1 ip4:52.3.252.119 ip4:44.222.39.36 ip4:199.249.231.0/24 ~all` | SPF for the `send` subdomain (Resend's return-path) |
+| `send.pukllay.club` | MX (via the CNAME) | `10 feedback.forge.rmta.net.` | Resend's bounce/feedback handling for the `send` subdomain |
+| `_dmarc.pukllay.club` | TXT | `v=DMARC1; p=none;` | DMARC policy, monitor-only (`p=none`, no `rua=` reporting address configured) |
 
-As of 2026-09-14 there are **no MX or TXT records** — so no SPF, DKIM or DMARC yet, and the domain
-receives no email.
+The root `pukllay.club` deliberately has **no SPF TXT record of its own** — Resend uses the `send`
+subdomain as its MAIL FROM / return-path, so SPF, and the bounce MX, live there instead. This is
+correct for Resend's setup, not a gap.
 
-### Pending: transactional email via Resend (phase 01.8.1, plan 03, D-36)
+### Transactional email via Resend (phase 01.8.1, plan 03, D-36) — live
 
 Production magic-link and invite emails are sent through Resend (`Swoosh.Adapters.Resend`,
-`MAILER_API_KEY`). Before the domain can send, add in Spaceship's DNS editor exactly what Resend's
-domain page shows for `pukllay.club`:
+`MAILER_API_KEY`). The domain is verified in the Resend dashboard, the records above are published,
+and a sending-only API key is stored as the `MAILER_API_KEY` GitHub secret (set 2026-09-14, never
+committed). A production boot without that secret fails by design (`config/runtime.exs`).
 
-- **SPF** — a TXT record with Resend's `include:`. A domain may have only **one** SPF record: if one
-  exists by then, merge the `include:` into it instead of adding a second.
-- **DKIM** — the TXT/CNAME host and value Resend shows.
-- **DMARC** — TXT at `_dmarc.pukllay.club`: `v=DMARC1; p=none; rua=mailto:<an inbox you read>`.
-
-Then wait for Resend to show the domain verified, create a sending-only API key, and store it with
-`gh secret set MAILER_API_KEY` (paste at the prompt; never commit it). A production boot without that
-secret fails by design. Once done, update the table above with the real records.
+Real end-to-end delivery (a magic-link email actually landing in a Gmail inbox) is proven at deploy
+time in plan 01.8.1-14, once the whole phase is deployed — this file only tracks that the DNS/account
+side is done.
 
 ## 3. Verifying
 
 ```bash
-dig +short NS pukllay.club           # launch1/launch2.spaceship.net
-dig +short A pukllay.club            # 34.41.63.138
-dig +short TXT pukllay.club          # SPF v=spf1 ... (after the Resend step)
-dig +short TXT _dmarc.pukllay.club   # v=DMARC1 ... (after the Resend step)
+dig +short NS pukllay.club                       # launch1/launch2.spaceship.net
+dig +short A pukllay.club                        # 34.41.63.138
+dig +short TXT resend._domainkey.pukllay.club    # Resend's DKIM p=... key
+dig +short TXT send.pukllay.club                 # SPF v=spf1 ... (on the send subdomain, not root)
+dig +short MX send.pukllay.club                  # 10 feedback.forge.rmta.net.
+dig +short TXT _dmarc.pukllay.club                # v=DMARC1; p=none;
+gh secret list | grep MAILER_API_KEY             # confirms the secret is set (value never shown)
 # Registrar + registration/expiry dates, straight from the .club registry:
 curl -s https://rdap.nic.club/domain/pukllay.club \
   | jq '{registrar: [.entities[] | select(.roles|index("registrar")) | .vcardArray[1][] | select(.[0]=="fn") | .[3]], events: .events}'
