@@ -961,4 +961,55 @@ defmodule PukllayClub.CatalogTest do
       refute base.id in result_ids
     end
   end
+
+  describe "list_admin_games/1, count_admin_games/1 (D-09 Task 2)" do
+    test "with no :status opt, returns games of every status (unlike every public read)" do
+      draft = game_fixture(%{name: "A Borrador", status: :draft})
+      published = game_fixture(%{name: "B Publicado", status: :published})
+      retired = game_fixture(%{name: "C Retirado", status: :retired})
+
+      ids = Catalog.list_admin_games() |> Enum.map(& &1.id)
+
+      assert draft.id in ids
+      assert published.id in ids
+      assert retired.id in ids
+      assert Catalog.count_admin_games() == 3
+    end
+
+    test ":status filters to exactly that lifecycle state" do
+      game_fixture(%{name: "Borrador", status: :draft})
+      game_fixture(%{name: "Publicado", status: :published})
+      game_fixture(%{name: "Retirado", status: :retired})
+
+      assert Catalog.list_admin_games(status: :draft) |> Enum.map(& &1.name) == ["Borrador"]
+      assert Catalog.count_admin_games(status: :draft) == 1
+      assert Catalog.list_admin_games(status: :published) |> Enum.map(& &1.name) == ["Publicado"]
+      assert Catalog.list_admin_games(status: :retired) |> Enum.map(& &1.name) == ["Retirado"]
+    end
+
+    test ":q searches by name, case-insensitively" do
+      game_fixture(%{name: "Catán"})
+      game_fixture(%{name: "Carcassonne"})
+
+      assert Catalog.list_admin_games(q: "cat") |> Enum.map(& &1.name) == ["Catán"]
+      assert Catalog.list_admin_games(q: "CATÁN") |> Enum.map(& &1.name) == ["Catán"]
+    end
+
+    test "T-01.8.1-23: a literal % or _ in :q is escaped, not treated as an ILIKE wildcard" do
+      game_fixture(%{name: "100% Juego"})
+      game_fixture(%{name: "Otro Juego"})
+
+      assert Catalog.list_admin_games(q: "100%") |> Enum.map(& &1.name) == ["100% Juego"]
+    end
+
+    test "results are ordered by name then id, with :limit/:offset paging over the full set" do
+      game_fixture(%{name: "Zeta"})
+      game_fixture(%{name: "Alfa"})
+      game_fixture(%{name: "Medio"})
+
+      assert Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Alfa", "Medio", "Zeta"]
+      assert Catalog.list_admin_games(limit: 2) |> Enum.map(& &1.name) == ["Alfa", "Medio"]
+      assert Catalog.list_admin_games(limit: 2, offset: 2) |> Enum.map(& &1.name) == ["Zeta"]
+    end
+  end
 end
