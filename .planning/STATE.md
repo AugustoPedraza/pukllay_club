@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.1
-current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
+current_phase_name: staff-admin-ludoteca-shelves-curated-destacados
 status: executing
 stopped_at: Completed 01.8.1-13-PLAN.md
-last_updated: "2026-09-14T15:50:14.122Z"
+last_updated: "2026-09-14T17:06:49.609Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 01.8.1 execution started
-state_head: a4622a8808c022eb575c70f703320888556d5827
+state_head: a379c7abb771bd9ce17c1e948335576f04ab2deb
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 26
+  total_plans: 27
   completed_plans: 25
 ---
 
@@ -33,7 +33,7 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
+Phase: 01.8.1 (staff-admin-ludoteca-shelves-curated-destacados) — READY TO EXECUTE
 Plan: 13 of 14
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 01.8.1 execution started
