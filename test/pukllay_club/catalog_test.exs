@@ -8,6 +8,182 @@ defmodule PukllayClub.CatalogTest do
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Repo
 
+  describe "published-only public reads (D-04, D-08)" do
+    # Table-driven over every public read function that must exclude
+    # draft/retired games (RESEARCH.md Pitfall 2). Each case seeds one
+    # published, one draft, and one retired game sharing the same weight
+    # band, tag, and mechanics, then asserts the published game's presence
+    # and the draft/retired games' absence via that specific read function.
+    setup do
+      shared = %{
+        weight_band: "ingenio_estratega",
+        tags: ["#EquipoGanador"],
+        mechanics: ["Dice Rolling"],
+        themes: ["Economic"],
+        is_expansion: false
+      }
+
+      published = game_fixture(Map.merge(shared, %{name: "Published Game", status: :published}))
+      draft = game_fixture(Map.merge(shared, %{name: "Draft Game", status: :draft}))
+      retired = game_fixture(Map.merge(shared, %{name: "Retired Game", status: :retired}))
+
+      %{published: published, draft: draft, retired: retired}
+    end
+
+    test "list_games/1 excludes draft and retired games", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      ids = Catalog.list_games() |> Enum.map(& &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "filter_games/1 excludes draft and retired games", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      ids = Catalog.filter_games() |> Enum.map(& &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "count_games/1 counts only the published game", %{published: _p, draft: _d, retired: _r} do
+      assert Catalog.count_games() == 1
+    end
+
+    test "list_carousel_rows/0 excludes draft and retired games from every row", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      rows = Catalog.list_carousel_rows()
+      all_ids = rows |> Enum.flat_map(& &1.games) |> Enum.map(& &1.id)
+
+      assert published.id in all_ids
+      refute draft.id in all_ids
+      refute retired.id in all_ids
+    end
+
+    test "carousel_page/3 excludes draft and retired games", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      {:ok, {games, _exhausted?}} = Catalog.carousel_page("equipo_ganador", 0)
+      ids = Enum.map(games, & &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "similar_games/1 excludes draft and retired candidates", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      # A separate viewed game in the same band so `published`/`draft`/
+      # `retired` are all candidates, never the viewed game itself.
+      viewed = game_fixture(%{name: "Viewed", weight_band: "ingenio_estratega"})
+
+      ids = viewed |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "sitemap_entries/0 excludes draft and retired games", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      ids = Catalog.sitemap_entries() |> Enum.map(& &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "get_game!/1 (unfiltered admin read) still returns a draft and a retired game", %{
+      draft: draft,
+      retired: retired
+    } do
+      assert Catalog.get_game!(to_string(draft.id)).id == draft.id
+      assert Catalog.get_game!(to_string(retired.id)).id == retired.id
+    end
+
+    test "get_published_game!/1 raises Ecto.NoResultsError for a draft or retired id", %{
+      draft: draft,
+      retired: retired
+    } do
+      assert_raise Ecto.NoResultsError, fn -> Catalog.get_published_game!(to_string(draft.id)) end
+      assert_raise Ecto.NoResultsError, fn -> Catalog.get_published_game!(to_string(retired.id)) end
+    end
+
+    test "get_published_game!/1 returns a published game", %{published: published} do
+      assert Catalog.get_published_game!(to_string(published.id)).id == published.id
+    end
+  end
+
+  describe "status transitions (D-04, D-08)" do
+    test "publish_game/1 moves a draft game to published, making it appear in filter_games/1" do
+      game = game_fixture(%{name: "Recién publicado", status: :draft})
+
+      refute game.id in Enum.map(Catalog.filter_games(), & &1.id)
+
+      assert {:ok, published} = Catalog.publish_game(game)
+      assert published.status == :published
+      assert game.id in Enum.map(Catalog.filter_games(), & &1.id)
+    end
+
+    test "publish_game/1 moves a retired game to published" do
+      game = game_fixture(%{name: "Vuelve", status: :retired})
+
+      assert {:ok, published} = Catalog.publish_game(game)
+      assert published.status == :published
+    end
+
+    test "retire_game/1 moves a published game to retired, removing it from filter_games/1" do
+      game = game_fixture(%{name: "Se retira", status: :published})
+
+      assert game.id in Enum.map(Catalog.filter_games(), & &1.id)
+
+      assert {:ok, retired} = Catalog.retire_game(game)
+      assert retired.status == :retired
+      refute game.id in Enum.map(Catalog.filter_games(), & &1.id)
+    end
+
+    test "restore_game/1 on a retired game moves it back to published, reappearing in filter_games/1" do
+      game = game_fixture(%{name: "Restaurado", status: :retired})
+
+      refute game.id in Enum.map(Catalog.filter_games(), & &1.id)
+
+      assert {:ok, restored} = Catalog.restore_game(game)
+      assert restored.status == :published
+      assert game.id in Enum.map(Catalog.filter_games(), & &1.id)
+    end
+
+    test "restore_game/1 on a non-retired game returns an error tuple without changing status" do
+      game = game_fixture(%{name: "No estaba retirado", status: :published})
+
+      assert Catalog.restore_game(game) == {:error, :not_retired}
+    end
+
+    test "a game inserted without an explicit status is published" do
+      game = game_fixture(%{name: "Sin status explícito"})
+
+      assert game.status == :published
+    end
+  end
+
   describe "filter_games/1 — no options" do
     test "returns games ordered by name, limited to the default page size" do
       game_fixture(%{name: "Zeta"})

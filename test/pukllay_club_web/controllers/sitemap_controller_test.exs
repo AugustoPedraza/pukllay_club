@@ -50,6 +50,22 @@ defmodule PukllayClubWeb.SitemapControllerTest do
       assert body =~ "<loc>#{url(~p"/")}</loc>"
     end
 
+    test "draft and retired games are excluded from both the entry count and the loc list (D-04, D-08)",
+         %{conn: conn} do
+      published = game_fixture(%{name: "Publicado", status: :published})
+      draft = game_fixture(%{name: "Borrador", status: :draft})
+      retired = game_fixture(%{name: "Retirado", status: :retired})
+
+      body = conn |> get(~p"/sitemap.xml") |> response(200)
+
+      expected = Catalog.count_games() + 1
+      assert count_locs(body) == expected
+
+      assert body =~ url(~p"/juegos/#{published}")
+      refute body =~ url(~p"/juegos/#{draft}")
+      refute body =~ url(~p"/juegos/#{retired}")
+    end
+
     test "no entry carries a priority or changefreq element", %{conn: conn} do
       game_fixture()
 
