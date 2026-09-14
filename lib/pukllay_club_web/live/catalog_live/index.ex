@@ -920,6 +920,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     ~H"""
     <Layouts.app
       flash={@flash}
+      current_scope={@current_scope}
       fullbleed
       sticky
       bottom_collapse

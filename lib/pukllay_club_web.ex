@@ -66,6 +66,15 @@ defmodule PukllayClubWeb do
       # policy and why it is written that way.
       on_mount {Sentry.LiveViewHook, scrubber: {PukllayClubWeb.SentryScrubber, :scrub, []}}
 
+      # Phase 01.8.1 (D-34): every LiveView now carries @current_scope (nil
+      # for a visitor) without restructuring the public routes into a
+      # live_session — keeping live navigation between "/" and "/juegos/:id"
+      # untouched. Safe on an already-authenticated route too (the router's
+      # :require_staff live_session already mounts the same assign via its
+      # own hooks): the underlying helper builds on `assign_new/3`, so a
+      # second call here is always a no-op.
+      on_mount {PukllayClubWeb.UserAuth, :mount_current_scope}
+
       unquote(html_helpers())
     end
   end

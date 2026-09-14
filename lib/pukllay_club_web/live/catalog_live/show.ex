@@ -395,6 +395,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     (sketch 017's own page switcher marks no drawer link active here). --%>
     <Layouts.app
       flash={@flash}
+      current_scope={@current_scope}
       fullbleed
       sticky
       search_expanded={@search_expanded}
@@ -642,6 +643,16 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               </div>
 
               <div class="pk-text-col">
+                <%!-- D-34: staff-only jump straight into this game's admin
+                editor. Visitors (staff_session?/1 false — nil current_scope
+                or a non-staff role) render nothing here. --%>
+                <.button
+                  :if={staff_session?(@current_scope)}
+                  navigate={~p"/admin/juegos/#{@game.id}/editar"}
+                  variant="secondary"
+                >
+                  Editar
+                </.button>
                 <%!-- Sketch 042 (27 rounds): the title is its own reading
                 section (always renders, no :if — the wrapper only ever
                 needs one for a conditional child). --%>
@@ -1488,6 +1499,14 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # labels the reading column's chip rows already use, not the raw
   # `game.mechanics`/`game.themes` codes. No nil-dereference path exists
   # for any of the five.
+  # D-34: nil for a visitor (mount_current_scope/2's default), a real
+  # Scope for a signed-in one. Mirrors Layouts.staff_session?/1 (each
+  # module keeps its own tiny private predicate rather than sharing one —
+  # UI-SPEC's Component Inventory explicitly declines a wrapper component
+  # for a 3-clause check like this).
+  defp staff_session?(nil), do: false
+  defp staff_session?(scope), do: PukllayClub.Accounts.User.staff?(scope.user)
+
   defp fact_grid?(game, mechanic_labels, theme_labels) do
     not is_nil(game.year_published) or
       game.designers != [] or

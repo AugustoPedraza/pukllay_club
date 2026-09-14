@@ -58,7 +58,14 @@ defmodule PukllayClubWeb.AboutLive do
     trailing margin + .pk-footer's own top margin), the exact stack
     app.css's `main.pk-bottom-collapse` comment records as measured on the
     catalog page before its own 260902-il3 fix. --%>
-    <Layouts.app flash={@flash} fullbleed sticky bottom_collapse active_nav={:quienes_somos}>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      fullbleed
+      sticky
+      bottom_collapse
+      active_nav={:quienes_somos}
+    >
       <:nav_links>
         <.link navigate={~p"/"}>Inicio</.link>
         <.link navigate={~p"/quienes-somos"} aria-current="page">Quiénes Somos</.link>
