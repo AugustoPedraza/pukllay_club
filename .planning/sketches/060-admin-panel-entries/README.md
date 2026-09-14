@@ -22,7 +22,7 @@ Secciones → no count; Revisar niveles → `BandAudit.count_mismatches`; Staff 
 From the repo root: `python3 -m http.server 8765`, then open
 http://127.0.0.1:8765/.planning/sketches/060-admin-panel-entries/index.html
 
-Top bar: variant A/B/C plus shell state. Tools (bottom-left): theme, phone/desktop, role (owner/staff),
+Top bar: shell state only (final design; variants removed). Tools (bottom-left): theme, phone/desktop, role (owner/staff),
 **Datos: Con pendientes / Todo al día**.
 
 ## Variants
@@ -70,7 +70,7 @@ so this still needs a visual look.
 
 ## Winner: C, "Qué se hace en cada una" (2026-09-14)
 The developer picked C ("C looks clean") and asked to remove the other variants and rename three things.
-`index.html` now contains only the final design (A–E are recoverable from git history of this sketch).
+`index.html` now contains only the final design. A–E were never committed, so the round descriptions above are their only record.
 
 - **Entries:** CATÁLOGO (Juegos, Web, Estantes) → MANTENIMIENTO (Revisar niveles, Staff; Staff is owner-only).
   Each entry is the one row: icon · name + a line teaching what the section is for · pending-count bubble ·
