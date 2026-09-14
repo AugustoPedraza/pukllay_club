@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.1
 current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 status: executing
-stopped_at: Completed 01.8.1-10-PLAN.md
-last_updated: "2026-09-14T14:19:22.576Z"
+stopped_at: Completed 01.8.1-11-PLAN.md
+last_updated: "2026-09-14T14:57:07.234Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 01.8.1 execution started
-state_head: fad08863e77e5905eef294b639760f4592a349cc
+state_head: 99b5603589e9e138c67ad72461cb0071a0554f8d
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 26
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
-Plan: 10 of 14
+Plan: 11 of 14
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 01.8.1 execution started
 
@@ -126,6 +126,7 @@ Last activity: 2026-09-13 — Phase 01.8.1 execution started
 | Phase 01.8.1 P08 | ~50min | 2 tasks | 14 files |
 | Phase 01.8.1 P09 | ~36min | 3 tasks | 15 files |
 | Phase 01.8.1 P10 | 150min | 3 tasks | 11 files |
+| Phase 01.8.1 P11 | 100min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -249,6 +250,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.1]: 01.8.1-09: shelves table + games.shelf_id (nullable, on_delete: nilify_all) back a phone-first walk-the-shelf tap-to-assign screen with type-ahead search, move-with-undo, error-revert toast, plus an Estantes management/pick-restore screen and dashboard card — every write a single Repo.update/1, staff-only (D-16 negative test). — D-10..D-16: at most one shelf per game, no in-shelf position, staff-managed shelves never hardcoded
 - [Phase 01.8.1]: 01.8.1-10: D-22 checkpoint resolved option A — games.tags stays frozen history, public hashtag chips switch to section names in plan 11; the migration never drops the column
 - [Phase 01.8.1]: 01.8.1-10: row_href/1 links only weight_band-kind sections to ?weight_bands=; manual sections (including featured) and the recent section render plain headings until plan 11's sections facet exists, narrowing quick task 260913-0h6's tappable-header feature
+- [Phase 01.8.1]: 01.8.1-11: D-22 option A executed — games.tags stays frozen history; public hashtag chips switch to Catalog.put_section_names/1's section membership (Game.section_names virtual field); no column-drop migration created — User's plan-10 checkpoint decision; section chips render unlinked since section_names carries names only, no section id
 
 ### Pending Todos
 
@@ -387,8 +389,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T14:14:39.162Z
-Stopped at: Completed 01.8.1-10-PLAN.md
+Last session: 2026-09-14T14:57:07.149Z
+Stopped at: Completed 01.8.1-11-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
