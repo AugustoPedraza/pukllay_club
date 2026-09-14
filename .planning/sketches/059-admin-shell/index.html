@@ -88,6 +88,7 @@
   .avatar.lg { width: 44px; height: 44px; font-size: 16px; }
   .avatar.plain { box-shadow: none; }
   .avatar.sm { width: 26px; height: 26px; font-size: 11px; }
+  .dlink .avatar.sm { box-shadow: none; width: 28px; height: 28px; }
   .dock button[data-tab="account"].open-now .tab-ico { background: var(--color-accent-bg); }
   .dot.attn { background: var(--color-secondary); }
 
@@ -183,7 +184,7 @@
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 60; background: var(--color-bg);
     border-radius: 18px 18px 0 0; padding: 8px 16px 20px; box-shadow: var(--shadow-lg);
     transform: translateY(105%); transition: transform var(--duration-slow) var(--ease-out-soft);
-    max-height: 85%; overflow-y: auto;
+    max-height: 85%; overflow-y: auto; overflow-x: hidden;
   }
   .sheet.open { transform: translateY(0); }
   .desk .sheet { left: auto; right: 24px; bottom: auto; top: 60px; width: 340px; border-radius: var(--radius-lg); transform: translateY(-8px); opacity: 0; pointer-events: none; transition: opacity var(--duration-base), transform var(--duration-base); }
@@ -206,40 +207,29 @@
   .btn.danger:hover { filter: brightness(1.07); }
 
 
-  /* ---- Cerrar sesión confirm (polished) ---- */
-  .sheet { padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px)); }
+  /* ---- shared row anatomy (drawer + sheets) ---- */
+  .sheet { padding-bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); }
+  .sheet .group-label { margin-top: 4px; }
+  .sheet .dlinks { margin: 0 -16px; }
+  .dlink .slot { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .dlink .lbl .sub { display: block; font-size: 12px; font-weight: 400; color: var(--color-text-muted); margin-top: 1px; }
+  .dlink.static { cursor: default; }
+  .dlink.static:hover, .dlink.static:active { background: none; }
+  .dlink.danger, .dlink.danger .ico { color: var(--color-danger); }
+  :root[data-theme="dark"] .dlink.danger, :root[data-theme="dark"] .dlink.danger .ico { color: #F2A3B8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dlink.danger, :root:not([data-theme="light"]) .dlink.danger .ico { color: #F2A3B8; } }
+  .dlink[disabled] { cursor: progress; }
+  .dlink[disabled]:not(.danger) { opacity: .4; }
+  .sheet-text { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.5; margin: 0 0 8px; }
+  .sheet-text b { color: var(--color-text); font-weight: 600; overflow-wrap: anywhere; }
   .steps { position: relative; transition: height var(--duration-slow) var(--ease-out-soft); }
   .steps.animating { overflow: hidden; }
   .step { transition: opacity var(--duration-base) var(--ease-standard), transform var(--duration-slow) var(--ease-out-soft); }
   .step[aria-hidden="true"] { position: absolute; top: 0; left: 0; right: 0; opacity: 0; pointer-events: none; }
   .step-account[aria-hidden="true"] { transform: translateX(-24px); }
   .step-confirm[aria-hidden="true"] { transform: translateX(24px); }
-  .confirm { text-align: center; padding: 4px 4px 0; }
-  .confirm .c-ico {
-    width: 52px; height: 52px; border-radius: 50%; margin: 6px auto 14px; display: flex; align-items: center; justify-content: center;
-    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg)); color: var(--color-danger);
-  }
-  .confirm .c-ico svg { width: 26px; height: 26px; }
-  .sheet .confirm h3 { font-family: var(--font-sans); font-size: 1.125rem; font-weight: 700; letter-spacing: 0; margin: 0 0 6px; color: var(--color-text); }
-  .sheet .confirm p { text-wrap: balance; max-width: 38ch; margin: 0 auto 20px; line-height: 1.5; }
-  .sheet .confirm p.c-who { margin: 0 auto 4px; max-width: none; }
-  .confirm .c-email { color: var(--color-text); font-weight: 600; overflow-wrap: anywhere; }
-  .confirm .sheet-actions { gap: 4px; }
-  .confirm .btn { min-height: 48px; font-size: var(--text-base); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-  .confirm .btn svg { width: 20px; height: 20px; }
-  .btn.danger-soft {
-    background: color-mix(in srgb, var(--color-danger) 10%, var(--color-bg));
-    border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border)); color: var(--color-danger);
-  }
-  .btn.danger-soft:hover { background: color-mix(in srgb, var(--color-danger) 16%, var(--color-bg)); }
-  .btn.ghost { border-color: transparent; background: transparent; color: var(--color-text-muted); }
-  .btn.ghost:hover { color: var(--color-text); background: var(--color-surface); }
-  .btn[disabled] { cursor: progress; }
-  .btn.ghost[disabled] { opacity: .4; }
-  .btn .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+  .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  :root[data-theme="dark"] .btn.danger-soft, :root[data-theme="dark"] .confirm .c-ico { color: #F2A3B8; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.danger-soft, :root:not([data-theme="light"]) .confirm .c-ico { color: #F2A3B8; } }
   @media (prefers-reduced-motion: reduce) { .step, .steps { transition: none; } }
   .desk .sheet.center { width: 380px; }
 
@@ -377,7 +367,7 @@ const activeTop = () => SCREENS[S.screen].parent || S.screen;
 
 function dlink(key, { icon, label, count, on }) {
   return `<button class="dlink ${on ? 'on' : ''}" data-nav="${key}">
-    ${ic(icon, 'ico')}<span class="lbl">${label}</span>${count ? `<span class="count">${count}</span>` : ''}${ic('chevR', 'chev')}</button>`;
+    <span class="slot">${ic(icon, 'ico')}</span><span class="lbl">${label}</span>${count ? `<span class="count">${count}</span>` : ''}${ic('chevR', 'chev')}</button>`;
 }
 const adminLinks = (withPanel = true) => {
   const top = S.mode === 'admin' ? activeTop() : null;
@@ -405,27 +395,39 @@ function drawer(inner) {
   </aside>`;
 }
 
-/* Cerrar sesión confirm — quiet, centered, says WHO is signing out; soft-danger (not solid CTA). */
-const confirmBody = (cancelAct) => `<div class="confirm">
-  <div class="c-ico">${ic('logout')}</div>
-  <h3 id="confirm-title">¿Cerrar sesión?</h3>
-  <p class="c-who"><span class="c-email">${USER.email}</span></p>
-  <p>Para volver a entrar, te mandamos un link por mail.</p>
-  <div class="sheet-actions">
-    <button class="btn danger-soft" data-act="logout">${ic('logout')}<span>Cerrar sesión</span></button>
-    <button class="btn ghost" data-act="${cancelAct}">Cancelar</button>
-  </div></div>`;
-// Standalone version (drawer entry points: variants A, B and public pages): its own sheet.
-const confirmSheet = () => `<div class="sheet center" id="sheet-logout" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
-  <div class="grab"></div>${confirmBody('close')}</div>`;
-// Stepped version: the account sheet turns into the confirm step in place (no second sheet).
+/* ONE row anatomy for the drawer AND every sheet (developer feedback: each option looked different).
+   [28px slot: icon or avatar] [label (+ optional secondary line)] [optional count] [optional chevron]
+   Only a tone class changes (danger); nothing gets its own card, border or button chrome. */
+function row({ act, nav, icon, avatar, label, sub, tone = '', chev = true, isStatic = false }) {
+  const tag = isStatic ? 'div' : 'button';
+  const attrs = isStatic ? '' : (act ? `data-act="${act}"` : `data-nav="${nav}"`);
+  const slot = avatar ? `<span class="slot"><span class="avatar sm">${USER.initials}</span></span>` : `<span class="slot">${ic(icon, 'ico')}</span>`;
+  return `<${tag} class="dlink ${tone} ${isStatic ? 'static' : ''}" ${attrs}>${slot}
+    <span class="lbl">${label}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
+    ${chev && !isStatic ? ic('chevR', 'chev') : ''}</${tag}>`;
+}
+const roleLabel = () => S.role === 'owner' ? 'Dueña' : 'Staff';
+const identityRow = () => row({ avatar: true, label: USER.email, sub: `Sesión iniciada · ${roleLabel()}`, isStatic: true });
+const accountRows = (inAdmin) => identityRow() +
+  (inAdmin ? row({ nav: 'pub:inicio', icon: 'ext', label: 'Ver el sitio público' }) : row({ nav: 'panel', icon: 'panel', label: 'Ir al panel' })) +
+  row({ act: 'ask-logout', icon: 'logout', label: 'Cerrar sesión', tone: 'danger' });
+const confirmStep = (cancelAct) => `<div class="group-label">Cerrar sesión</div>
+  <p class="sheet-text">Vas a salir de <b>${USER.email}</b>. Para volver a entrar, te mandamos un link por mail.</p>
+  <div class="dlinks">
+    ${row({ act: 'logout', icon: 'logout', label: 'Sí, cerrar sesión', tone: 'danger', chev: false })}
+    ${row({ act: cancelAct, icon: 'chevL', label: 'Cancelar', chev: false })}
+  </div>`;
+// Drawer bottom is IDENTICAL in every state (public, signed-in public, admin): theme never moves.
+const drawerBottom = () => `<div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>`;
+// Standalone confirm (entry point = drawer on public pages / variant A)
+const confirmSheet = () => `<div class="sheet center" id="sheet-logout" role="alertdialog" aria-modal="true" aria-label="Cerrar sesión">
+  <div class="grab"></div>${confirmStep('close')}</div>`;
+// Account sheet (C2 "Cuenta" tab): two steps with the same anatomy — label, content, rows
 const accountSheet = () => `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu cuenta">
   <div class="grab"></div>
   <div class="steps">
-    <div class="step step-account">${accountCard()}
-      <div class="dlinks" style="margin:8px -16px 4px">${dlink('pub:inicio', { icon: 'ext', label: 'Ver el sitio público' })}</div>
-      ${logoutBtn()}<div class="divider"></div>${themeRow()}</div>
-    <div class="step step-confirm" aria-hidden="true" inert>${confirmBody('cancel-logout')}</div>
+    <div class="step step-account"><div class="group-label">Tu cuenta</div><div class="dlinks">${accountRows(true)}</div></div>
+    <div class="step step-confirm" aria-hidden="true" inert>${confirmStep('cancel-logout')}</div>
   </div></div>`;
 
 /* ---------------- page bodies ---------------- */
@@ -530,10 +532,9 @@ function variantC() {
     const hdr = `<header class="hdr"><div class="hdr-in">
       <button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú">${ic('bars')}${signed ? '<span class="dot"></span>' : ''}</button>
       ${brand()}<span class="spacer"></span></div></header>`;
-    const dInner = signed
-      ? `${accountCard()}<div class="dlinks" style="margin-top:12px">${siteLinks()}${dlink('panel', { icon: 'panel', label: 'Ir al panel' })}</div>
-         <div class="drawer-bottom"><div class="divider"></div>${logoutBtn()}<div class="divider"></div>${themeRow()}</div>`
-      : `<div class="dlinks" style="margin-top:8px">${siteLinks()}</div><div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>`;
+    const dInner = `<div class="group-label" style="margin-top:4px">Sitio</div><div class="dlinks">${siteLinks()}</div>
+      ${signed ? `<div class="group-label">Tu cuenta</div><div class="dlinks">${accountRows(false)}</div>` : ''}
+      ${drawerBottom()}`;
     return `<div class="scroller">${hdr}<main>${S.mode === 'out' ? loginBody() : publicBody()}</main></div>${drawer(dInner)}${confirmSheet()}`;
   }
   const top = activeTop();
@@ -588,7 +589,8 @@ function variantD() {
       <span class="tab-ico"><span class="avatar sm">${USER.initials}</span></span><span class="tab-lbl">Cuenta</span></button>`}
     </nav>`;
   const dInner = `<div class="group-label" style="margin-top:4px">Panel</div><div class="dlinks">${adminLinks()}</div>
-    <div class="group-label">Sitio</div><div class="dlinks">${siteLinks()}</div>`;
+    <div class="group-label">Sitio</div><div class="dlinks">${siteLinks()}</div>
+    ${drawerBottom()}`;
   const account = accountSheet();
   return `<div class="scroller">${hdr}${desk ? dock : ''}<main id="c-main">${pageHead({ backStyle: 'back' })}${adminBody()}</main></div>
     ${desk ? '' : dock}${drawer(dInner)}${account}${confirmSheet()}`;
@@ -597,7 +599,8 @@ function variantD() {
 const NOTES = {
   D: `<h3>C2 — C's tab bar + the public-style drawer on top; your account is the last tab</h3><ul>
     <li><b>Top:</b> the same hamburger as the public site. The drawer lists <i>all</i> admin sections (with counts) plus the site links. It holds no account or logout, so it's navigation only.</li>
-    <li><b>Tab bar:</b> Panel · Juegos · Secciones · Estantes · <b>Cuenta</b>. Cuenta is your avatar with the green ring, so the signed-in cue sits under your thumb. It opens the account sheet: Ver el sitio público, <b>Cerrar sesión</b>, theme.</li>
+    <li><b>Tab bar:</b> Panel · Juegos · Secciones · Estantes · <b>Cuenta</b>. Cuenta is your avatar with the green ring, so the signed-in cue sits under your thumb. It opens the account sheet, which uses the same rows as the drawer: TU CUENTA → your account → Ver el sitio público → <b>Cerrar sesión</b>. Confirming happens in the same sheet with the same rows.</li>
+    <li><b>Theme</b> always sits at the bottom of the drawer, in every state (admin, public signed in, signed out), so it never moves when you sign in.</li>
     <li><b>Revisar niveles / Staff</b> are only reachable from the drawer. A purple dot on the hamburger signals when something in there needs attention (7 discrepancias). Green is kept for "signed in".</li>
     <li>On Niveles/Staff no tab is highlighted; the drawer row shows where you are instead.</li>
     <li><b>Desktop:</b> same as C (every section inline, avatar top right, no hamburger).</li>
@@ -646,18 +649,23 @@ function setStep(sh, name) {
   void steps.offsetHeight; steps.style.height = to.offsetHeight + 'px';
   clearTimeout(steps._t); steps._t = setTimeout(() => { steps.style.height = ''; steps.classList.remove('animating'); }, 300);
   // focus: the safe choice (Cancelar) on confirm; back on the logout row when cancelling
-  const f = name === 'confirm' ? to.querySelector('.ghost') : to.querySelector('.logout');
+  const f = name === 'confirm' ? to.querySelector('[data-act="cancel-logout"]') : to.querySelector('[data-act="ask-logout"]');
   f && f.focus({ preventScroll: true });
 }
-function resetSteps() {
-  device.querySelectorAll('.steps').forEach(steps => setTimeout(() => {
-    if (steps.closest('.sheet.open')) return;
-    steps.querySelectorAll('.step').forEach(st => { const acc = st.classList.contains('step-account'); acc ? st.removeAttribute('aria-hidden') : st.setAttribute('aria-hidden', 'true'); st.inert = !acc; });
-    steps.style.height = '';
-  }, 300));
+// Reset a stepped sheet to its first step — done synchronously when OPENING (the sheet is off-screen),
+// so a quick reopen can never show a stale confirm step.
+function resetSteps(sh) {
+  sh.querySelectorAll('.steps').forEach(steps => {
+    clearTimeout(steps._t); steps.classList.remove('animating'); steps.style.height = '';
+    steps.querySelectorAll('.step').forEach(st => {
+      const first = st.classList.contains('step-account');
+      st.style.transition = 'none';
+      first ? st.removeAttribute('aria-hidden') : st.setAttribute('aria-hidden', 'true'); st.inert = !first;
+      void st.offsetWidth; st.style.transition = '';
+    });
+  });
 }
 function closeAll() {
-  resetSteps();
   const had = device.querySelector('.drawer.open,.sheet.open');
   device.querySelectorAll('.open').forEach(el => { el.classList.remove('open'); el.style.transform = ''; });
   if (had && returnFocus && document.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
@@ -667,6 +675,7 @@ function openEl(sel, withBackdrop = true, opener = null) {
   const keep = returnFocus || opener;
   closeAll(); returnFocus = keep;
   const el = device.querySelector(sel); if (!el) return;
+  resetSteps(el);
   void el.offsetWidth; el.classList.add('open'); if (withBackdrop) device.querySelector('.backdrop').classList.add('open');
   const first = el.querySelector('button:not([disabled]), a, input'); first && first.focus({ preventScroll: true });
 }
@@ -752,8 +761,8 @@ document.addEventListener('click', e => {
   else if (a === 'close') closeAll();
   else if (a === 'logout') {
     // brief in-progress state so the tap is acknowledged, then land on Ingresar with a toast
-    t.disabled = true; t.innerHTML = '<span class="spin"></span><span>Cerrando sesión…</span>';
-    t.closest('.sheet-actions').querySelector('.ghost').disabled = true;
+    t.disabled = true; t.querySelector('.slot').innerHTML = '<span class="spin"></span>'; t.querySelector('.lbl').textContent = 'Cerrando sesión…';
+    t.closest('.dlinks').querySelectorAll('.dlink').forEach(b => { if (b !== t) b.disabled = true; });
     setTimeout(() => { closeAll(); setTimeout(() => { S.mode = 'out'; S.toast = 'Cerraste sesión'; render(); }, 220); }, 550);
   }
   else if (a === 'login') { S.mode = 'admin'; S.screen = 'panel'; S.toast = 'Entraste como ' + USER.email; render(); }

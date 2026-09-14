@@ -110,7 +110,7 @@ bottom option". Added as tab **C2** (variant key `D`); C is kept for comparison.
 Browser-verified: tab/drawer active-state sync through content-only swaps, account tab → logout →
 Ingresar, no horizontal overflow on any screen, desktop, zero JS errors. **Developer picked C2 over C** — C2 is the winner.
 
-## Polish round: Cerrar sesión confirm (2026-09-14)
+## Polish round: Cerrar sesión confirm (2026-09-14) — SUPERSEDED by the consistency round below
 Developer flagged the logout bottom sheet as needing polish. Problems found in the original:
 solid red CTA-style button (contradicts the "no CTA look in admin" direction from G-01.8.1-2b),
 Bebas all-caps "¿CERRAR SESIÓN?" shouting, left-aligned copy with an orphan wrap, no indication of
@@ -135,3 +135,36 @@ Polished pattern (shared by every entry point):
 - Dark theme: danger text/icon lightened (#F2A3B8) for contrast on the dark ground.
 
 Browser-verified light + dark, phone + desktop, variants A and C2, zero JS errors.
+
+## Consistency round: one row system + theme never moves (2026-09-14)
+Developer rejected the polish round: "every option displayed on the profile bottom sheet looks
+different" (tinted account card, chevron list row, bordered red button, divider, icon row — then a
+centered icon card for the confirm), and the theme switcher changed place with login state (public:
+drawer bottom; admin C2: inside the account sheet) — "violates the rhythm".
+
+Fix — one anatomy everywhere (drawer, account sheet, confirm step, public drawer when signed in):
+- **Row:** `[28px slot: icon or avatar] [label (+ optional secondary line)] [count] [chevron]`, 48px,
+  full-bleed hover tint. The ONLY variation is a `danger` tone (text + icon color). No cards, borders,
+  filled/soft buttons, or centered layouts inside sheets.
+- **Group label** (small uppercase, same as drawer "PANEL"/"SITIO") heads every block: "TU CUENTA",
+  "CERRAR SESIÓN".
+- **Account sheet:** TU CUENTA → identity row (avatar + email + "Sesión iniciada · Dueña", static) →
+  Ver el sitio público › → Cerrar sesión › (danger; chevron because it leads to a step).
+- **Confirm step (same sheet):** CERRAR SESIÓN → one muted line naming the account → rows
+  "Sí, cerrar sesión" (danger, no chevron) and "‹ Cancelar" (no chevron). Loading replaces the row icon
+  with a spinner + "Cerrando sesión…"; the other row dims.
+- **Public drawer signed in:** SITIO rows → TU CUENTA group with the exact same three rows (Ir al panel
+  instead of Ver el sitio público). Drawer logout opens the same confirm step as a standalone sheet.
+- **Theme switcher:** always the drawer's bottom block (divider + 3 icons), identical in admin, public
+  signed-in and signed-out — measured 16px from the drawer bottom in all three. Removed from the account
+  sheet.
+
+Bugs found and fixed this round:
+- Reopening Cuenta shortly after closing could show the stale confirm step (reset ran on a delayed
+  timer after close) → reset now runs synchronously on open while the sheet is off-screen.
+- Hidden step's translateX offset produced a horizontal scrollbar inside the sheet → `overflow-x: hidden`.
+- (Testing artifact, not a bug: CSS transitions pause in a backgrounded automation tab, so mid-transition
+  offsets were measured until the tab was foregrounded.)
+
+Principle for 060-063: inside admin, a control keeps the same place and the same row/label anatomy
+regardless of state (signed in/out, step, page); variation is expressed by tone or content only.
