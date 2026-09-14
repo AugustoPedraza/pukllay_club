@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.1
-current_phase_name: staff-admin-ludoteca-shelves-curated-destacados
+current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 status: executing
-stopped_at: Completed 01.8.1-13-PLAN.md
-last_updated: "2026-09-14T17:06:49.609Z"
-last_activity: 2026-09-13
+stopped_at: Completed 01.8.1-15-PLAN.md
+last_updated: "2026-09-14T18:02:07.257Z"
+last_activity: 2026-09-14
 last_activity_desc: Phase 01.8.1 execution started
-state_head: a379c7abb771bd9ce17c1e948335576f04ab2deb
+state_head: 6e70d7e2dc6ff7c68985f858ed20d494d6a49e19
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 27
-  completed_plans: 25
+  completed_plans: 26
 ---
 
 Total Phases: 9
@@ -33,10 +33,10 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.1 (staff-admin-ludoteca-shelves-curated-destacados) — READY TO EXECUTE
-Plan: 13 of 14
+Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
+Plan: 2 of 15
 Status: Ready to execute
-Last activity: 2026-09-13 — Phase 01.8.1 execution started
+Last activity: 2026-09-14 — Phase 01.8.1 execution started
 
 ## Performance Metrics
 
@@ -129,6 +129,7 @@ Last activity: 2026-09-13 — Phase 01.8.1 execution started
 | Phase 01.8.1 P11 | 100min | 2 tasks | 16 files |
 | Phase 01.8.1 P12 | 52min | 3 tasks | 12 files |
 | Phase 01.8.1 P13 | 30min | 2 tasks | 11 files |
+| Phase 01.8.1 P15 | 62min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -257,6 +258,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.1]: 01.8.1-12: Admin.GameLive.Form's Secciones fieldset is hand-written raw checkboxes (game[section_ids][]), not CoreComponents.input/1 — section membership isn't a Game schema field, applied via Sections.set_game_sections/2 after the game itself saves so a featured_full error never reverts the game's own changes — Keeps membership assignment decoupled from Game.admin_changeset/2's narrow cast allowlist (T-01.8.1-21) while still giving staff one combined save action.
 - [Phase 01.8.1]: 01.8.1-13: keep_band/1 snapshots the game's CURRENT implied band + timestamp (not a boolean flag, RESEARCH.md A4) so a later bgg_weight drift to a different implied band re-surfaces the game in the audit
 - [Phase 01.8.1]: 01.8.1-13: BandAudit.mismatches/0 computes the weight-band mismatch entirely in Elixir via Vocabulary.implied_weight_band/1 (never a second threshold copy in SQL); Revisar niveles inserted fourth in the dashboard's fixed D-35 card order, completing it
+- [Phase 01.8.1]: Implemented D-03 revised via a per-BGG-id pg_advisory_xact_lock(8_811_015, bgg_id) as the first Ecto.Multi step, with the existing-editions re-check as its own subsequent Multi.run step (fresh READ COMMITTED read); acknowledged_game_ids always sourced server-side from :edition_prompt, never client params (T-01.8.1-69); no unique index added to games.bgg_id (rejected fix), guarded by an automated pg_indexes test.
 
 ### Pending Todos
 
@@ -395,8 +397,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T15:50:14.048Z
-Stopped at: Completed 01.8.1-13-PLAN.md
+Last session: 2026-09-14T18:01:48.618Z
+Stopped at: Completed 01.8.1-15-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
