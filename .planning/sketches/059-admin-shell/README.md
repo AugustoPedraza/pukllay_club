@@ -2,7 +2,7 @@
 sketch: 059
 name: admin-shell
 question: "How does a signed-in staff member navigate admin on a phone, know they're authenticated, and sign out?"
-winner: "C2"
+winner: "C2 (final, single design)"
 tags: [admin, shell, drawer, session, logout, navigation, phase-01.8.1, mobile-first]
 ---
 
@@ -168,3 +168,26 @@ Bugs found and fixed this round:
 
 Principle for 060-063: inside admin, a control keeps the same place and the same row/label anatomy
 regardless of state (signed in/out, step, page); variation is expressed by tone or content only.
+
+## Final round: one header for every state + other variants removed (2026-09-14)
+Developer: "be sure that header doesn't show that weird 'Panel'… same header as not logged in user.
+And remove the other variants."
+
+- **index.html now contains only the final shell** (no variant tabs; A/B/C and the earlier C2 code
+  are recoverable from git at commit `0329962`). Top bar switches state only: Admin / Sitio público
+  con sesión / Sin sesión; tools: theme, phone/desktop, role.
+- **Header identical in all 6 states** (phone + desktop × signed out / public signed in / admin):
+  hamburger + isologo + "Pukllay Club" wordmark. Removed: the PANEL mode pill, the desktop header
+  avatar, the phone wordmark-hiding in admin, the green signed-in dot and the purple attention dot on
+  the hamburger. Verified by comparing the header markup across all 6 states (one unique signature).
+- **Drawer identical whenever signed in** (admin or public): PANEL (every section + counts) → SITIO →
+  TU CUENTA (identity, Ver el sitio público / Ir al panel, Cerrar sesión). Signed out: SITIO only.
+- **Theme block pinned to the drawer's bottom edge**: the signed-in drawer (11 rows) overflowed a phone,
+  pushing the theme switcher below the fold (−34px). The list now scrolls inside `.drawer-body` and
+  `.drawer-bottom` is fixed — theme measured 16px from the drawer bottom in all 6 states.
+- **Signed-in signal** now lives only in the tab bar's Cuenta avatar (green ring) in admin and in the
+  drawer's TU CUENTA group everywhere — never in the header.
+- **Desktop** tab row under the header: every section + Cuenta at the end (opens the account sheet as
+  a dropdown panel).
+- Account sheet / confirm step / swipe / Esc / focus / soft content swap unchanged from the
+  consistency round.

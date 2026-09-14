@@ -7,31 +7,27 @@
 <link rel="stylesheet" href="../themes/default.css">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); padding-top: 96px; color: var(--color-text); }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); }
   :root[data-theme="dark"] body { background: #140a22; }
   button { font: inherit; color: inherit; }
 
   /* ================= sketch chrome (not part of the design) ================= */
-  #variant-nav {
+  #state-nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
     background: #1b1026; color: #fff; font-family: system-ui, sans-serif; font-size: 13px;
-    padding: 8px 12px; display: flex; flex-direction: column; gap: 6px;
+    padding: 8px 12px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
   }
-  #variant-nav .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-  #variant-nav .lbl { opacity: .6; margin-right: 4px; }
-  .vtab, .stab {
-    background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.25);
-    border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px;
-  }
-  .vtab.active, .stab.active { background: #fff; color: #1b1026; border-color: #fff; }
+  #state-nav .lbl { opacity: .6; margin-right: 4px; }
+  .stab { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+  .stab.active { background: #fff; color: #1b1026; border-color: #fff; }
   #sketch-tools {
     position: fixed; bottom: 12px; left: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
-    background: rgba(0,0,0,.75); color: #fff; padding: 8px 10px; border-radius: 8px; opacity: .45;
-    transition: opacity .2s; display: flex; flex-direction: column; gap: 6px;
+    background: rgba(0,0,0,.75); color: #fff; padding: 8px 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px;
   }
-  #sketch-tools:hover { opacity: 1; }
   #sketch-tools button { background: #333; color: #fff; border: 0; border-radius: 4px; padding: 3px 7px; cursor: pointer; }
   #sketch-tools button.on { background: #fff; color: #000; }
+  #tools-body { display: none; flex-direction: column; gap: 6px; }
+  #tools-body.show { display: flex; }
   .notes { max-width: 760px; margin: 16px auto 80px; padding: 0 16px; font-family: system-ui; font-size: 13px; color: #3b3347; line-height: 1.5; }
   :root[data-theme="dark"] .notes { color: #cfc3e2; }
   .notes h3 { margin: 0 0 4px; font-size: 14px; }
@@ -43,82 +39,92 @@
     width: 375px; max-width: 100%; height: 740px; background: var(--color-bg);
     border-radius: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.28); overflow: hidden;
     position: relative; display: flex; flex-direction: column;
-    transition: width var(--duration-slow) var(--ease-out-soft);
   }
   .device.desk { width: 1180px; border-radius: 10px; height: 760px; }
   .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; }
+  .has-tabs .scroller { padding-bottom: 72px; }
+  .desk.has-tabs .scroller { padding-bottom: 0; }
 
-  /* ================= shared shell pieces ================= */
-  .hdr {
-    position: sticky; top: 0; z-index: 20; background: var(--color-bg);
-    border-bottom: 1px solid var(--color-border);
-  }
+  /* ================= header — ONE header for every state (signed out, public signed in, admin) ================= */
+  .hdr { position: sticky; top: 0; z-index: 20; background: var(--color-bg); border-bottom: 1px solid var(--color-border); }
   .hdr-in { display: flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 56px; max-width: 1280px; margin: 0 auto; }
   .desk .hdr-in { padding: 6px 32px; }
   .icon-btn {
-    width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
-    border: 0; background: transparent; border-radius: var(--radius-md); cursor: pointer; position: relative;
-    color: var(--color-text); transition: background var(--duration-fast) var(--ease-standard);
+    width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; position: relative;
+    border: 0; background: transparent; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text);
+    transition: background var(--duration-fast) var(--ease-standard);
   }
   .icon-btn:hover { background: var(--color-surface); }
   .icon-btn:active { transform: scale(.96); }
   .icon-btn svg { width: 24px; height: 24px; }
-  .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--color-text); cursor: pointer; flex-shrink: 0; }
+  .brand { display: flex; align-items: center; gap: 8px; color: var(--color-text); cursor: pointer; flex-shrink: 0; text-decoration: none; }
   .brand img { height: 28px; width: auto; display: block; }
   .brand .img-dark { display: none; }
   :root[data-theme="dark"] .brand .img-light { display: none; }
   :root[data-theme="dark"] .brand .img-dark { display: block; }
   .brand .word { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .02em; line-height: 1; white-space: nowrap; }
-  .spacer { flex: 1; }
-  .desk-links { display: none; gap: 20px; margin-left: 16px; }
-  .desk .desk-links { display: flex; }
-  .desk-links a { font-size: var(--text-sm); font-weight: 600; color: var(--color-text-muted); text-decoration: none; padding: 16px 0 13px; border-bottom: 3px solid transparent; cursor: pointer; }
-  .desk-links a.on { color: var(--color-primary); border-color: var(--color-primary); }
-  :root[data-theme="dark"] .desk-links a.on { color: var(--color-accent-text); border-color: var(--color-accent-text); }
 
-  /* signed-in dot on the hamburger (variant A) */
-  .dot { position: absolute; top: 9px; right: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--color-success); box-shadow: 0 0 0 2px var(--color-bg); }
-
-  /* avatar */
-  .avatar {
-    width: 32px; height: 32px; border-radius: 50%; background: var(--color-accent-bg); color: var(--color-accent-text);
-    font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3.5px var(--color-success); flex-shrink: 0;
-  }
-  .avatar.lg { width: 44px; height: 44px; font-size: 16px; }
-  .avatar.plain { box-shadow: none; }
-  .avatar.sm { width: 26px; height: 26px; font-size: 11px; }
-  .dlink .avatar.sm { box-shadow: none; width: 28px; height: 28px; }
-  .dock button[data-tab="account"].open-now .tab-ico { background: var(--color-accent-bg); }
-  .dot.attn { background: var(--color-secondary); }
-
-  /* mode label */
-  .mode-pill { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 2px 8px; white-space: nowrap; }
-
-  /* page head */
+  /* ================= page ================= */
   main { max-width: 760px; margin: 0 auto; padding: 16px 16px 32px; }
   .desk main { padding: 28px 32px 48px; }
+  #main { transition: opacity var(--duration-fast) var(--ease-standard); }
+  #main.swapping { opacity: 0; }
   .back {
     display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin: -8px 0 -4px -10px; padding: 0 10px 0 4px;
     color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; border: 0; background: none; cursor: pointer; border-radius: var(--radius-md);
   }
   .back:hover { color: var(--color-text); background: var(--color-surface); }
   .back svg { width: 18px; height: 18px; }
-  .crumb { font-size: var(--text-sm); color: var(--color-text-muted); display: flex; gap: 6px; align-items: center; min-height: 28px; }
-  .crumb a { color: inherit; cursor: pointer; text-decoration: none; }
-  .crumb a:hover { color: var(--color-text); text-decoration: underline; }
-  .ptitle { font-family: var(--font-display); font-size: 2rem; letter-spacing: .02em; line-height: 1.05; margin: 4px 0 2px; }
+  .ptitle { font-family: var(--font-display); font-size: 2rem; letter-spacing: .02em; line-height: 1.05; margin: 4px 0 2px; font-weight: 400; }
   .psub { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 16px; }
-
-  /* neutral placeholder body — rows are designed in 060-062, kept plain here on purpose */
-  .ph-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background: var(--color-bg); }
+  /* neutral placeholder bodies — page contents are designed in 060-063 */
+  .ph-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
   .ph-list li { padding: 13px 14px; border-top: 1px solid var(--color-border); font-size: var(--text-sm); display: flex; justify-content: space-between; gap: 12px; }
   .ph-list li:first-child { border-top: 0; }
   .ph-list li span:last-child { color: var(--color-text-muted); white-space: nowrap; }
   .ph-note { font-size: 11px; color: var(--color-text-muted); margin: 10px 2px 0; font-style: italic; }
-  .fake-shelf h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 18px 0 8px; letter-spacing: .02em; }
+  .fake-shelf h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 18px 0 8px; letter-spacing: .02em; font-weight: 400; }
   .fake-rail { display: flex; gap: 10px; overflow: hidden; }
   .fake-poster { flex: 0 0 104px; height: 146px; border-radius: var(--radius-md); background: var(--color-surface-2); }
+  .login { max-width: 360px; margin: 40px auto 0; }
+  .field label { display: block; font-size: var(--text-sm); font-weight: 600; margin-bottom: 6px; }
+  .field input { width: 100%; min-height: 48px; border-radius: var(--radius-md); border: 1px solid var(--color-surface-2); background: var(--color-bg); color: var(--color-text); padding: 0 14px; font-size: var(--text-base); }
+  .login .btn { width: 100%; margin-top: 12px; min-height: 44px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface); font-weight: 600; cursor: pointer; }
+
+  /* ================= ONE row anatomy: drawer + every sheet ================= */
+  .group-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); margin: 16px 0 4px; }
+  .dlinks { display: flex; flex-direction: column; margin: 0 -16px; }
+  .dlink {
+    display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; border: 0; background: none; width: 100%;
+    text-align: left; font-size: var(--text-base); font-weight: 500; cursor: pointer; border-left: 3px solid transparent; color: var(--color-text);
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .dlink:hover { background: var(--color-surface); }
+  .dlink:active { background: var(--color-surface-2); }
+  .dlink .slot { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .dlink .ico { width: 22px; height: 22px; color: var(--color-text-muted); }
+  .dlink .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dlink .lbl .sub { display: block; font-size: 12px; font-weight: 400; color: var(--color-text-muted); margin-top: 1px; }
+  .dlink .chev { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
+  .dlink .count { font-size: 12px; font-weight: 700; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: var(--radius-full); padding: 2px 8px; }
+  .dlink.on { background: var(--color-surface); border-left-color: var(--color-primary); font-weight: 700; }
+  .dlink.on .ico, .dlink.on .chev { color: var(--color-primary); }
+  :root[data-theme="dark"] .dlink.on { border-left-color: var(--color-accent-text); }
+  :root[data-theme="dark"] .dlink.on .ico, :root[data-theme="dark"] .dlink.on .chev { color: var(--color-accent-text); }
+  .dlink.static { cursor: default; }
+  .dlink.static:hover, .dlink.static:active { background: none; }
+  .dlink.danger, .dlink.danger .ico { color: var(--color-danger); }
+  :root[data-theme="dark"] .dlink.danger, :root[data-theme="dark"] .dlink.danger .ico { color: #F2A3B8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dlink.danger, :root:not([data-theme="light"]) .dlink.danger .ico { color: #F2A3B8; } }
+  .dlink[disabled] { cursor: progress; }
+  .dlink[disabled]:not(.danger) { opacity: .4; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent-bg); color: var(--color-accent-text);
+    font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .avatar.ring { width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3.5px var(--color-success); }
+  .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ================= drawer ================= */
   .backdrop {
@@ -127,162 +133,82 @@
   }
   .backdrop.open { opacity: 1; pointer-events: auto; }
   .drawer {
-    position: absolute; top: 0; bottom: 0; right: 0; width: 84%; max-width: 360px; z-index: 50;
-    background: var(--color-bg); display: flex; flex-direction: column; padding: 8px 16px 16px;
+    position: absolute; top: 0; bottom: 0; right: 0; width: 84%; max-width: 360px; z-index: 50; background: var(--color-bg);
+    display: flex; flex-direction: column; padding: 8px 0 max(16px, env(safe-area-inset-bottom)); overflow: hidden; box-shadow: var(--shadow-lg);
     transform: translateX(100%); transition: transform var(--duration-slow) var(--ease-out-soft);
-    box-shadow: var(--shadow-lg); overflow-y: auto;
   }
   .drawer.open { transform: translateX(0); }
-  .drawer-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; min-height: 48px; }
-  .group-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); margin: 16px 0 4px; }
-  .dlinks { display: flex; flex-direction: column; margin: 0 -16px; }
-  .dlink {
-    display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; border: 0; background: none; width: 100%;
-    text-align: left; font-size: var(--text-base); font-weight: 500; cursor: pointer; border-left: 3px solid transparent;
-    transition: background var(--duration-fast) var(--ease-standard);
-  }
-  .dlink:hover { background: var(--color-surface); }
-  .dlink:active { background: var(--color-surface-2); }
-  .dlink .ico { width: 22px; height: 22px; color: var(--color-text-muted); flex-shrink: 0; }
-  .dlink .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dlink .chev { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
-  .dlink.on { background: var(--color-surface); border-left-color: var(--color-primary); font-weight: 700; }
-  .dlink.on .ico, .dlink.on .chev { color: var(--color-primary); }
-  :root[data-theme="dark"] .dlink.on .ico, :root[data-theme="dark"] .dlink.on .chev { color: var(--color-accent-text); }
-  :root[data-theme="dark"] .dlink.on { border-left-color: var(--color-accent-text); }
-  .count { font-size: 12px; font-weight: 700; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: var(--radius-full); padding: 2px 8px; white-space: nowrap; }
+  .drawer-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-bottom: 4px; padding: 0 8px 0 16px; flex-shrink: 0; }
+  /* list scrolls; the theme block is pinned to the drawer's bottom edge, so it sits in the same visible spot in every state */
+  .drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 8px; }
+  .drawer-bottom { flex-shrink: 0; padding: 0 16px; }
+  .drawer-bottom .divider { margin-top: 0; }
   .divider { height: 1px; background: var(--color-border); margin: 12px 0; }
-  .drawer-bottom { margin-top: auto; padding-top: 8px; }
   .theme-row { display: flex; justify-content: center; gap: 4px; }
   .theme-row .icon-btn { color: var(--color-text-muted); }
   .theme-row .icon-btn svg { width: 20px; height: 20px; }
 
-  /* account card (A drawer, C sheet) */
-  .account {
-    display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-lg);
-    background: var(--color-surface); margin-top: 4px;
-  }
-  .account .who { min-width: 0; flex: 1; }
-  .account .email { font-weight: 600; font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .account .state { font-size: 12px; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-  .account .state i { width: 7px; height: 7px; border-radius: 50%; background: var(--color-success); display: inline-block; }
-
-  /* logout row — explicit label + icon, never a bare "Salir" */
-  .logout {
-    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 12px; margin-top: 4px;
-    border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); cursor: pointer;
-    font-weight: 600; font-size: var(--text-sm); color: var(--color-danger); text-align: left;
-    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast);
-  }
-  .logout:hover { background: color-mix(in srgb, var(--color-danger) 8%, var(--color-bg)); border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border)); }
-  .logout:active { transform: scale(.99); }
-  .logout svg { width: 20px; height: 20px; }
-  :root[data-theme="dark"] .logout { color: #F2A3B8; }
-
   /* ================= bottom sheet ================= */
   .sheet {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 60; background: var(--color-bg);
-    border-radius: 18px 18px 0 0; padding: 8px 16px 20px; box-shadow: var(--shadow-lg);
+    border-radius: 18px 18px 0 0; padding: 8px 16px max(16px, calc(env(safe-area-inset-bottom) + 8px)); box-shadow: var(--shadow-lg);
     transform: translateY(105%); transition: transform var(--duration-slow) var(--ease-out-soft);
     max-height: 85%; overflow-y: auto; overflow-x: hidden;
   }
   .sheet.open { transform: translateY(0); }
-  .desk .sheet { left: auto; right: 24px; bottom: auto; top: 60px; width: 340px; border-radius: var(--radius-lg); transform: translateY(-8px); opacity: 0; pointer-events: none; transition: opacity var(--duration-base), transform var(--duration-base); }
-  .desk .sheet.open { transform: none; opacity: 1; pointer-events: auto; }
-  .desk .sheet.center { left: 50%; right: auto; top: 30%; transform: translate(-50%, -8px); }
-  .desk .sheet.center.open { transform: translate(-50%, 0); }
-  .grab { width: 36px; height: 4px; border-radius: 4px; background: var(--color-border); margin: 4px auto 12px; }
-  .desk .grab { display: none; }
-  .sheet h3 { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: .02em; margin: 4px 0 6px; font-weight: 400; }
-  .sheet p { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 16px; line-height: 1.45; }
-  .sheet-actions { display: flex; flex-direction: column; gap: 8px; }
-  .btn {
-    min-height: 44px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg);
-    font-weight: 600; font-size: var(--text-sm); cursor: pointer; padding: 0 16px;
-    transition: background var(--duration-fast) var(--ease-standard);
-  }
-  .btn:hover { background: var(--color-surface); }
-  .btn:active { transform: scale(.99); }
-  .btn.danger { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
-  .btn.danger:hover { filter: brightness(1.07); }
-
-
-  /* ---- shared row anatomy (drawer + sheets) ---- */
-  .sheet { padding-bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); }
+  .sheet.dragging { transition: none; }
   .sheet .group-label { margin-top: 4px; }
-  .sheet .dlinks { margin: 0 -16px; }
-  .dlink .slot { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  .dlink .lbl .sub { display: block; font-size: 12px; font-weight: 400; color: var(--color-text-muted); margin-top: 1px; }
-  .dlink.static { cursor: default; }
-  .dlink.static:hover, .dlink.static:active { background: none; }
-  .dlink.danger, .dlink.danger .ico { color: var(--color-danger); }
-  :root[data-theme="dark"] .dlink.danger, :root[data-theme="dark"] .dlink.danger .ico { color: #F2A3B8; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dlink.danger, :root:not([data-theme="light"]) .dlink.danger .ico { color: #F2A3B8; } }
-  .dlink[disabled] { cursor: progress; }
-  .dlink[disabled]:not(.danger) { opacity: .4; }
+  .grab { width: 36px; height: 4px; border-radius: 4px; background: var(--color-border); margin: 4px auto 12px; }
   .sheet-text { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.5; margin: 0 0 8px; }
   .sheet-text b { color: var(--color-text); font-weight: 600; overflow-wrap: anywhere; }
+  .desk .sheet { left: auto; right: 32px; bottom: auto; top: 112px; width: 340px; border-radius: var(--radius-lg); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity var(--duration-base), transform var(--duration-base); }
+  .desk .sheet.open { opacity: 1; pointer-events: auto; transform: none; }
+  .desk .sheet.center { left: 50%; right: auto; top: 30%; transform: translate(-50%, -8px); }
+  .desk .sheet.center.open { transform: translate(-50%, 0); }
+  .desk .grab { display: none; }
   .steps { position: relative; transition: height var(--duration-slow) var(--ease-out-soft); }
   .steps.animating { overflow: hidden; }
   .step { transition: opacity var(--duration-base) var(--ease-standard), transform var(--duration-slow) var(--ease-out-soft); }
   .step[aria-hidden="true"] { position: absolute; top: 0; left: 0; right: 0; opacity: 0; pointer-events: none; }
   .step-account[aria-hidden="true"] { transform: translateX(-24px); }
   .step-confirm[aria-hidden="true"] { transform: translateX(24px); }
-  .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .step, .steps { transition: none; } }
-  .desk .sheet.center { width: 380px; }
+  @media (prefers-reduced-motion: reduce) { .step, .steps, .sheet, .drawer, #main { transition: none; } }
 
-  /* ================= variant C: bottom tab bar ================= */
-  .dock {
+  /* ================= tab bar (admin only) ================= */
+  .tabs {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--color-bg);
     border-top: 1px solid var(--color-border); display: flex; padding: 4px 4px max(10px, env(safe-area-inset-bottom));
   }
-  .dock button {
-    flex: 1; min-width: 0; min-height: 52px; isolation: isolate; -webkit-tap-highlight-color: transparent;
-    transition: color var(--duration-fast) var(--ease-standard), transform var(--duration-fast); border: 0; background: none; cursor: pointer; display: flex; flex-direction: column;
+  .tabs button {
+    flex: 1; min-width: 0; min-height: 52px; border: 0; background: none; cursor: pointer; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted);
-    border-radius: var(--radius-md); position: relative;
+    border-radius: var(--radius-md); -webkit-tap-highlight-color: transparent;
+    transition: color var(--duration-fast) var(--ease-standard), transform var(--duration-fast);
   }
-  .dock button svg { width: 24px; height: 24px; }
-  .dock button.on { color: var(--color-primary); }
-  :root[data-theme="dark"] .dock button.on { color: var(--color-accent-text); }
-  .dock button:hover { color: var(--color-text); }
-  .dock .tab-ico { position: relative; width: 56px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 15px; transition: background var(--duration-base) var(--ease-out-soft); }
-  .dock button.on .tab-ico { background: var(--color-accent-bg); }
-  .dock button.on .tab-lbl { font-weight: 700; }
-  :root[data-theme="dark"] .dock button.on .tab-ico { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dock button.on .tab-ico { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); } }
-  .dock .tab-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dock button:active { transform: scale(.96); }
-  .dock .badge-dot.small { min-width: 8px; width: 8px; height: 8px; padding: 0; top: 4px; left: 34px; }
-  .dock .badge-dot { position: absolute; top: 0; left: 30px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--color-secondary); color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
-  .has-dock .scroller { padding-bottom: 72px; }
-  .desk .dock { position: sticky; top: 57px; bottom: auto; border-top: 0; border-bottom: 1px solid var(--color-border); justify-content: safe center; gap: 8px; padding: 0 16px; order: -1; overflow-x: auto; }
-  .desk .dock button { flex: 0 0 auto; flex-direction: row; min-height: 44px; padding: 0 14px; font-size: 13px; gap: 8px; }
-  .desk .dock button svg { width: 18px; height: 18px; }
-  .desk .dock .tab-ico { width: auto; height: auto; background: none !important; }
-  .desk .dock button { border-radius: var(--radius-full); }
-  .desk .dock button.on { background: var(--color-accent-bg); }
-  .desk .dock .badge-dot { position: static; margin-left: 6px; }
-  .desk.has-dock .scroller { padding-bottom: 0; }
-
-  #c-main { transition: opacity var(--duration-fast) var(--ease-standard); }
-  #c-main.swapping { opacity: 0; }
-  .sheet.dragging { transition: none; }
-
-  /* ================= signed-out: ingresar ================= */
-  .login { max-width: 360px; margin: 40px auto 0; }
-  .field label { display: block; font-size: var(--text-sm); font-weight: 600; margin-bottom: 6px; }
-  .field input { width: 100%; min-height: 48px; border-radius: var(--radius-md); border: 1px solid var(--color-surface-2); background: var(--color-bg); color: var(--color-text); padding: 0 14px; font-size: var(--text-base); }
-  .field input:focus { outline: 2px solid var(--color-primary); outline-offset: 1px; }
-  .login .btn { width: 100%; margin-top: 12px; background: var(--color-surface); }
+  .tabs button:hover { color: var(--color-text); }
+  .tabs button:active { transform: scale(.96); }
+  .tabs button svg { width: 24px; height: 24px; }
+  .tabs .tab-ico { position: relative; width: 56px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 15px; transition: background var(--duration-base) var(--ease-out-soft); }
+  .tabs .tab-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs button.on { color: var(--color-primary); }
+  .tabs button.on .tab-ico { background: var(--color-accent-bg); }
+  .tabs button.on .tab-lbl { font-weight: 700; }
+  :root[data-theme="dark"] .tabs button.on { color: var(--color-accent-text); }
+  :root[data-theme="dark"] .tabs button.on .tab-ico { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabs button.on .tab-ico { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); } }
+  .tabs .badge { position: absolute; top: 0; left: 30px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--color-secondary); color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+  .desk .tabs { position: sticky; top: 57px; bottom: auto; border-top: 0; border-bottom: 1px solid var(--color-border); justify-content: safe center; gap: 8px; padding: 0 16px; overflow-x: auto; }
+  .desk .tabs button { flex: 0 0 auto; flex-direction: row; min-height: 44px; padding: 0 14px; font-size: 13px; gap: 8px; border-radius: var(--radius-full); }
+  .desk .tabs button svg { width: 18px; height: 18px; }
+  .desk .tabs .tab-ico { width: auto; height: auto; background: none !important; }
+  .desk .tabs button.on { background: var(--color-accent-bg); }
+  .desk .tabs .badge { position: static; margin-left: 6px; }
 
   /* ================= toast ================= */
   .toast {
-    position: absolute; left: 50%; top: 68px; z-index: 70; transform: translate(-50%, -12px); opacity: 0;
+    position: absolute; left: 50%; top: 68px; z-index: 70; transform: translate(-50%, -12px); opacity: 0; pointer-events: none;
     background: var(--color-text); color: var(--color-bg); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius-full);
-    padding: 10px 16px; display: flex; gap: 8px; align-items: center; white-space: nowrap; pointer-events: none;
+    padding: 10px 16px; display: flex; gap: 8px; align-items: center; white-space: nowrap;
     transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft);
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -291,34 +217,37 @@
 </head>
 <body>
 
-<div id="variant-nav">
-  <div class="row">
-    <span class="lbl">Variante</span>
-    <button class="vtab" data-v="A">A: Drawer carries the account</button>
-    <button class="vtab" data-v="B">B: Avatar + account sheet</button>
-    <button class="vtab" data-v="C">C: Bottom tab bar</button>
-    <button class="vtab" data-v="D">C2: C + top drawer, account in tab bar ★ Winner</button>
-  </div>
-  <div class="row">
-    <span class="lbl">Estado</span>
-    <button class="stab active" data-m="admin">Admin (sesión iniciada)</button>
-    <button class="stab" data-m="public">Sitio público con sesión</button>
-    <button class="stab" data-m="out">Sin sesión</button>
-  </div>
+<div id="state-nav">
+  <span class="lbl">Sketch 059 · Admin shell · Estado</span>
+  <button class="stab active" data-m="admin">Admin (sesión iniciada)</button>
+  <button class="stab" data-m="public">Sitio público con sesión</button>
+  <button class="stab" data-m="out">Sin sesión</button>
 </div>
 
 <div class="stage"><div class="device" id="device"></div></div>
 
-<div class="notes" id="notes"></div>
+<div class="notes">
+  <h3>Admin shell: the winner from sketch 059</h3>
+  <ul>
+    <li><b>One header, every state:</b> menu button + logo + wordmark, exactly like a signed-out visitor sees it, on phone and desktop. No mode label, no avatar and no dots in the header.</li>
+    <li><b>One drawer:</b> signed out it has SITIO. Signed in (admin or public) it's always PANEL (every section, with counts) → SITIO → TU CUENTA. Theme is pinned to the drawer's bottom edge (the list scrolls above it), so it never moves.</li>
+    <li><b>Tab bar (admin only):</b> Panel · Juegos · Secciones · Estantes · Cuenta. Cuenta (avatar with a green ring) is the signed-in signal and opens the account sheet with the same TU CUENTA rows as the drawer. Desktop shows every section in one row under the header, with Cuenta at the end.</li>
+    <li><b>Cerrar sesión:</b> confirmed inside the same sheet with the same row layout (a standalone sheet when started from the drawer). Then "Cerrando sesión…" → Ingresar + "Cerraste sesión".</li>
+    <li><b>Navigation:</b> header and tabs stay put and only the page content swaps. Tapping the active tab again goes back to that tab's main screen. Sheets close with the backdrop, Esc or a swipe down, and focus returns to what opened them. No footer on admin.</li>
+    <li>Page contents are placeholders; they get designed in 060–063.</li>
+  </ul>
+</div>
 
-<div id="sketch-tools"><button id="tools-toggle" style="align-self:flex-end">⚙ tools</button><div id="tools-body" style="display:none;flex-direction:column;gap:6px">
-  <div>Tema: <button data-theme-set="light">☀</button> <button data-theme-set="dark">☾</button> <button data-theme-set="system">Sistema</button></div>
-  <div>Vista: <button data-vp="phone" class="on">Teléfono</button> <button data-vp="desk">Escritorio</button></div>
-  <div>Rol: <button data-role="owner" class="on">Dueño</button> <button data-role="staff">Staff</button></div>
-</div></div>
+<div id="sketch-tools">
+  <button id="tools-toggle" style="align-self:flex-start">⚙ tools</button>
+  <div id="tools-body">
+    <div>Tema: <button data-theme-set="light">☀</button> <button data-theme-set="dark">☾</button> <button data-theme-set="system">Sistema</button></div>
+    <div>Vista: <button data-vp="phone" class="on">Teléfono</button> <button data-vp="desk">Escritorio</button></div>
+    <div>Rol: <button data-role="owner" class="on">Dueña</button> <button data-role="staff">Staff</button></div>
+  </div>
+</div>
 
 <script>
-/* ---------------- icons (heroicons outline paths) ---------------- */
 const P = {
   bars: 'M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5',
   x: 'M6 18 18 6M6 6l12 12',
@@ -345,315 +274,161 @@ const ic = (n, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none"
 /* ---------------- fake data ---------------- */
 const USER = { email: 'lucia.mamani@gmail.com', initials: 'LM' };
 const SCREENS = {
-  panel:     { title: 'Panel', icon: 'panel', sub: 'Qué querés hacer hoy' },
-  juegos:    { title: 'Juegos', icon: 'juegos', count: '12', short: '12' },
-  secciones: { title: 'Secciones', icon: 'secciones' },
-  estantes:  { title: 'Estantes', icon: 'estantes', count: '84', short: '84' },
-  niveles:   { title: 'Revisar niveles', icon: 'niveles', count: '7', short: '7' },
-  staff:     { title: 'Staff', icon: 'staff', ownerOnly: true },
-  destacados:{ title: 'Destacados', parent: 'secciones', sub: 'Elegida a mano · 6 juegos' },
+  panel:      { title: 'Panel', icon: 'panel', sub: 'Qué querés hacer hoy' },
+  juegos:     { title: 'Juegos', icon: 'juegos', count: '12' },
+  secciones:  { title: 'Secciones', icon: 'secciones' },
+  estantes:   { title: 'Estantes', icon: 'estantes', count: '84' },
+  niveles:    { title: 'Revisar niveles', icon: 'niveles', count: '7' },
+  staff:      { title: 'Staff', icon: 'staff', ownerOnly: true },
+  destacados: { title: 'Destacados', parent: 'secciones', sub: 'Elegida a mano · 6 juegos' },
 };
-const ADMIN_ORDER = ['juegos', 'secciones', 'estantes', 'niveles', 'staff'];
+const SECTION_ORDER = ['juegos', 'secciones', 'estantes', 'niveles', 'staff'];
+const PHONE_TABS = ['panel', 'juegos', 'secciones', 'estantes'];
+const S = { mode: 'admin', screen: 'panel', vp: 'phone', role: 'owner', toast: null };
 
-const S = { v: 'D', mode: 'admin', screen: 'panel', vp: 'phone', role: 'owner', toast: null };
-
-/* ---------------- building blocks ---------------- */
-const brand = (mark = true, word = true) => `<a class="brand" data-go-public="1">
-  ${mark ? `<img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt="">` : ''}
-  ${word ? `<span class="word">Pukllay Club</span>` : ''}</a>`;
-
-const visibleAdmin = () => ADMIN_ORDER.filter(k => !(SCREENS[k].ownerOnly && S.role !== 'owner'));
+const sections = () => SECTION_ORDER.filter(k => !(SCREENS[k].ownerOnly && S.role !== 'owner'));
 const activeTop = () => SCREENS[S.screen].parent || S.screen;
+const signedIn = () => S.mode !== 'out';
 
-function dlink(key, { icon, label, count, on }) {
-  return `<button class="dlink ${on ? 'on' : ''}" data-nav="${key}">
-    <span class="slot">${ic(icon, 'ico')}</span><span class="lbl">${label}</span>${count ? `<span class="count">${count}</span>` : ''}${ic('chevR', 'chev')}</button>`;
+/* ---------------- ONE row anatomy ----------------
+   [28px slot: icon or avatar] [label (+ secondary line)] [count] [chevron]; only a tone class varies. */
+function row({ act, nav, icon, avatar, label, sub, count, tone = '', chev = true, isStatic = false, on = false }) {
+  const tag = isStatic ? 'div' : 'button';
+  const attrs = isStatic ? '' : (act ? `data-act="${act}"` : `data-nav="${nav}"`);
+  const slot = avatar ? `<span class="avatar">${USER.initials}</span>` : ic(icon, 'ico');
+  return `<${tag} class="dlink ${tone} ${isStatic ? 'static' : ''} ${on ? 'on' : ''}" ${attrs} ${on ? 'aria-current="page"' : ''}>
+    <span class="slot">${slot}</span><span class="lbl">${label}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
+    ${count ? `<span class="count">${count}</span>` : ''}${chev && !isStatic ? ic('chevR', 'chev') : ''}</${tag}>`;
 }
-const adminLinks = (withPanel = true) => {
+const group = (label, rows) => `<div class="group-label">${label}</div><div class="dlinks">${rows}</div>`;
+
+const panelRows = () => {
   const top = S.mode === 'admin' ? activeTop() : null;
-  return (withPanel ? dlink('panel', { icon: 'panel', label: 'Panel', on: top === 'panel' }) : '') +
-    visibleAdmin().map(k => dlink(k, { icon: SCREENS[k].icon, label: SCREENS[k].title, count: SCREENS[k].count, on: top === k })).join('');
+  return ['panel', ...sections()].map(k => row({ nav: k, icon: SCREENS[k].icon, label: SCREENS[k].title, count: SCREENS[k].count, on: top === k })).join('');
 };
-const siteLinks = () => {
-  const on = S.mode !== 'admin';
-  return dlink('pub:inicio', { icon: 'home', label: 'Inicio', on }) + dlink('pub:about', { icon: 'about', label: 'Quiénes Somos' });
-};
-const accountCard = () => `<div class="account"><span class="avatar lg plain">${USER.initials}</span>
-  <div class="who"><div class="email">${USER.email}</div>
-  <div class="state"><i></i>Sesión iniciada · ${S.role === 'owner' ? 'Dueña' : 'Staff'}</div></div></div>`;
-const logoutBtn = () => `<button class="logout" data-act="ask-logout">${ic('logout')}Cerrar sesión</button>`;
+const siteRows = () => row({ nav: 'pub:inicio', icon: 'home', label: 'Inicio', on: S.mode !== 'admin' }) + row({ nav: 'pub:about', icon: 'about', label: 'Quiénes Somos' });
+const accountRows = () =>
+  row({ avatar: true, label: USER.email, sub: `Sesión iniciada · ${S.role === 'owner' ? 'Dueña' : 'Staff'}`, isStatic: true }) +
+  (S.mode === 'admin' ? row({ nav: 'pub:inicio', icon: 'ext', label: 'Ver el sitio público' }) : row({ nav: 'panel', icon: 'panel', label: 'Ir al panel' })) +
+  row({ act: 'ask-logout', icon: 'logout', label: 'Cerrar sesión', tone: 'danger' });
+const confirmStep = (cancelAct) => '<div class="group-label">Cerrar sesión</div>' +
+  `<p class="sheet-text">Vas a salir de <b>${USER.email}</b>. Para volver a entrar, te mandamos un link por mail.</p>
+   <div class="dlinks">
+     ${row({ act: 'logout', icon: 'logout', label: 'Sí, cerrar sesión', tone: 'danger', chev: false })}
+     ${row({ act: cancelAct, icon: 'chevL', label: 'Cancelar', chev: false })}
+   </div>`;
 const themeRow = () => `<div class="theme-row" role="group" aria-label="Tema">
   <button class="icon-btn" data-theme-set="system" aria-label="Sistema">${ic('computer')}</button>
   <button class="icon-btn" data-theme-set="light" aria-label="Claro">${ic('sun')}</button>
   <button class="icon-btn" data-theme-set="dark" aria-label="Oscuro">${ic('moon')}</button></div>`;
 
-function drawer(inner) {
-  return `<div class="backdrop" data-act="close"></div>
+/* ---------------- shell pieces ---------------- */
+const header = () => `<header class="hdr"><div class="hdr-in">
+  <button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú" aria-haspopup="dialog">${ic('bars')}</button>
+  <a class="brand" data-nav="pub:inicio"><img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt=""><span class="word">Pukllay Club</span></a>
+  </div></header>`;
+
+// Same drawer in every signed-in state; signed out simply has no PANEL / TU CUENTA groups.
+const drawer = () => `<div class="backdrop" data-act="close"></div>
   <aside class="drawer" aria-label="Menú">
-    <div class="drawer-top">${brand(true, false)}<button class="icon-btn" data-act="close" aria-label="Cerrar menú">${ic('x')}</button></div>
-    ${inner}
+    <div class="drawer-top"><span></span><button class="icon-btn" data-act="close" aria-label="Cerrar menú">${ic('x')}</button></div>
+    <div class="drawer-body">
+      ${signedIn() ? group('Panel', panelRows()) : ''}
+      ${group('Sitio', siteRows())}
+      ${signedIn() ? group('Tu cuenta', accountRows()) : ''}
+    </div>
+    <div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>
   </aside>`;
+
+function tabBar() {
+  const top = activeTop();
+  const keys = S.vp === 'desk' ? ['panel', ...sections()] : PHONE_TABS;
+  return `<nav class="tabs" aria-label="Secciones del panel">
+    ${keys.map(k => `<button data-nav="${k}" data-tab="${k}" class="${top === k ? 'on' : ''}" ${top === k ? 'aria-current="page"' : ''}>
+      <span class="tab-ico">${ic(SCREENS[k].icon)}${k === 'juegos' ? `<span class="badge">${SCREENS[k].count}</span>` : ''}</span>
+      <span class="tab-lbl">${SCREENS[k].title}</span></button>`).join('')}
+    <button data-act="open-account" data-tab="account" aria-haspopup="dialog" aria-label="Tu cuenta (sesión iniciada)">
+      <span class="tab-ico"><span class="avatar ring">${USER.initials}</span></span><span class="tab-lbl">Cuenta</span></button>
+  </nav>`;
 }
 
-/* ONE row anatomy for the drawer AND every sheet (developer feedback: each option looked different).
-   [28px slot: icon or avatar] [label (+ optional secondary line)] [optional count] [optional chevron]
-   Only a tone class changes (danger); nothing gets its own card, border or button chrome. */
-function row({ act, nav, icon, avatar, label, sub, tone = '', chev = true, isStatic = false }) {
-  const tag = isStatic ? 'div' : 'button';
-  const attrs = isStatic ? '' : (act ? `data-act="${act}"` : `data-nav="${nav}"`);
-  const slot = avatar ? `<span class="slot"><span class="avatar sm">${USER.initials}</span></span>` : `<span class="slot">${ic(icon, 'ico')}</span>`;
-  return `<${tag} class="dlink ${tone} ${isStatic ? 'static' : ''}" ${attrs}>${slot}
-    <span class="lbl">${label}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
-    ${chev && !isStatic ? ic('chevR', 'chev') : ''}</${tag}>`;
-}
-const roleLabel = () => S.role === 'owner' ? 'Dueña' : 'Staff';
-const identityRow = () => row({ avatar: true, label: USER.email, sub: `Sesión iniciada · ${roleLabel()}`, isStatic: true });
-const accountRows = (inAdmin) => identityRow() +
-  (inAdmin ? row({ nav: 'pub:inicio', icon: 'ext', label: 'Ver el sitio público' }) : row({ nav: 'panel', icon: 'panel', label: 'Ir al panel' })) +
-  row({ act: 'ask-logout', icon: 'logout', label: 'Cerrar sesión', tone: 'danger' });
-const confirmStep = (cancelAct) => `<div class="group-label">Cerrar sesión</div>
-  <p class="sheet-text">Vas a salir de <b>${USER.email}</b>. Para volver a entrar, te mandamos un link por mail.</p>
-  <div class="dlinks">
-    ${row({ act: 'logout', icon: 'logout', label: 'Sí, cerrar sesión', tone: 'danger', chev: false })}
-    ${row({ act: cancelAct, icon: 'chevL', label: 'Cancelar', chev: false })}
-  </div>`;
-// Drawer bottom is IDENTICAL in every state (public, signed-in public, admin): theme never moves.
-const drawerBottom = () => `<div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>`;
-// Standalone confirm (entry point = drawer on public pages / variant A)
-const confirmSheet = () => `<div class="sheet center" id="sheet-logout" role="alertdialog" aria-modal="true" aria-label="Cerrar sesión">
-  <div class="grab"></div>${confirmStep('close')}</div>`;
-// Account sheet (C2 "Cuenta" tab): two steps with the same anatomy — label, content, rows
 const accountSheet = () => `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu cuenta">
   <div class="grab"></div>
   <div class="steps">
-    <div class="step step-account"><div class="group-label">Tu cuenta</div><div class="dlinks">${accountRows(true)}</div></div>
+    <div class="step step-account">${group('Tu cuenta', accountRows())}</div>
     <div class="step step-confirm" aria-hidden="true" inert>${confirmStep('cancel-logout')}</div>
   </div></div>`;
+const confirmSheet = () => `<div class="sheet center" id="sheet-logout" role="alertdialog" aria-modal="true" aria-label="Cerrar sesión">
+  <div class="grab"></div>${confirmStep('close')}</div>`;
 
-/* ---------------- page bodies ---------------- */
-function pageHead({ backStyle }) {
+/* ---------------- page bodies (placeholders) ---------------- */
+function pageHead() {
   const sc = SCREENS[S.screen];
-  const parentKey = sc.parent || (S.screen === 'panel' ? null : 'panel');
-  let nav = '';
-  if (parentKey) {
-    if (backStyle === 'crumb' && S.vp === 'desk') {
-      const trail = sc.parent ? `<a data-nav="panel">Panel</a><span>/</span><a data-nav="${sc.parent}">${SCREENS[sc.parent].title}</a>` : `<a data-nav="panel">Panel</a>`;
-      nav = `<div class="crumb">${trail}<span>/</span><span>${sc.title}</span></div>`;
-    } else {
-      nav = `<button class="back" data-nav="${parentKey}">${ic('chevL')}${SCREENS[parentKey].title}</button>`;
-    }
-  }
-  return `${nav}<h1 class="ptitle">${sc.title}</h1>${sc.sub ? `<p class="psub">${sc.sub}</p>` : '<div style="height:12px"></div>'}`;
+  const parent = sc.parent || (S.screen === 'panel' ? null : 'panel');
+  return `${parent ? `<button class="back" data-nav="${parent}">${ic('chevL')}${SCREENS[parent].title}</button>` : ''}
+    <h1 class="ptitle">${sc.title}</h1>${sc.sub ? `<p class="psub">${sc.sub}</p>` : '<div style="height:12px"></div>'}`;
 }
-
 function adminBody() {
   const rows = {
-    panel: visibleAdmin().map(k => [SCREENS[k].title, SCREENS[k].count || '']),
+    panel: sections().map(k => [SCREENS[k].title, SCREENS[k].count || '', k]),
     juegos: [['Catan', 'Publicado'], ['Las Mansiones de la Locura: Segunda Edición', 'Borrador'], ['Azul', 'Publicado'], ['Dixit', 'Publicado'], ['Terraforming Mars', 'Borrador']],
-    secciones: [['Destacados', 'Elegida a mano'], ['Para empezar', 'Por nivel'], ['Recién llegados', 'Recientes'], ['Para jugar de a dos', 'Elegida a mano'], ['Juegos de fiesta', 'Elegida a mano']],
+    secciones: [['Destacados', 'Elegida a mano', 'destacados'], ['Para empezar', 'Por nivel'], ['Recién llegados', 'Recientes'], ['Para jugar de a dos', 'Elegida a mano'], ['Juegos de fiesta', 'Elegida a mano']],
     destacados: [['Wingspan', ''], ['Cascadia', ''], ['Just One', ''], ['Heat: Pedal to the Metal', ''], ['Azul', ''], ['Codenames', '']],
     estantes: [['Estante A — familiares', '64 juegos'], ['Estante B — estrategia', '58 juegos'], ['Estante C — fiesta', '41 juegos'], ['Sin ubicar', '84 juegos']],
     niveles: [['Brass: Birmingham', 'Intermedio → Experto'], ['Carcassonne', 'Inicial → Familiar'], ['Root', 'Familiar → Experto']],
     staff: [['lucia.mamani@gmail.com', 'Dueña'], ['nico.cruz@gmail.com', 'Activo'], ['flor.tolaba@gmail.com', 'Invitado']],
   }[S.screen];
-  const note = S.screen === 'panel'
-    ? 'Las filas del Panel se diseñan en el sketch 060 — acá solo importa el marco.'
-    : 'El cuerpo de la pantalla se diseña en los sketches 060–062.';
-  const clickable = { panel: true, secciones: true };
-  return `<ul class="ph-list">${rows.map(([a, b], i) => {
-    const target = S.screen === 'panel' ? visibleAdmin()[i] : (S.screen === 'secciones' && i === 0 ? 'destacados' : null);
-    return `<li ${target ? `data-nav="${target}" style="cursor:pointer"` : ''}><span>${a}</span><span>${b}</span></li>`;
-  }).join('')}</ul><p class="ph-note">${note}</p>`;
+  return `${pageHead()}<ul class="ph-list">${rows.map(([a, b, go]) => `<li ${go ? `data-nav="${go}" style="cursor:pointer"` : ''}><span>${a}</span><span>${b}</span></li>`).join('')}</ul>
+    <p class="ph-note">Contenido de ejemplo: el cuerpo de cada pantalla se diseña en los sketches 060–063.</p>`;
 }
+const publicBody = () => ['Destacados', 'Para empezar', 'Recién llegados'].map(t => `<div class="fake-shelf"><h2>${t}</h2><div class="fake-rail">${'<div class="fake-poster"></div>'.repeat(8)}</div></div>`).join('') +
+  `<p class="ph-note">Catálogo público (sin cambios).</p>`;
+const loginBody = () => `<div class="login"><h1 class="ptitle" style="text-align:center">Ingresar al panel</h1>
+  <p class="psub" style="text-align:center">Te mandamos un link por mail para entrar.</p>
+  <div class="field"><label for="em">Email</label><input id="em" type="email" placeholder="tu@email.com"></div>
+  <button class="btn" data-act="login">Enviarme el link</button>
+  <p class="ph-note" style="text-align:center">El flujo de ingreso se diseña en el sketch 063. Tocá el botón para simular que entraste.</p></div>`;
 
-function publicBody() {
-  return `<div class="fake-shelf"><h2>Destacados</h2><div class="fake-rail">${'<div class="fake-poster"></div>'.repeat(8)}</div></div>
-    <div class="fake-shelf"><h2>Para empezar</h2><div class="fake-rail">${'<div class="fake-poster"></div>'.repeat(8)}</div></div>
-    <div class="fake-shelf"><h2>Recién llegados</h2><div class="fake-rail">${'<div class="fake-poster"></div>'.repeat(8)}</div></div>
-    <p class="ph-note">Catálogo público (sin cambios) — mirá cómo se nota que estás con sesión iniciada.</p>`;
-}
-
-function loginBody() {
-  return `<div class="login"><h1 class="ptitle" style="text-align:center">Ingresar al panel</h1>
-    <p class="psub" style="text-align:center">Te mandamos un link por mail para entrar.</p>
-    <div class="field"><label for="em">Email</label><input id="em" type="email" placeholder="tu@email.com"></div>
-    <button class="btn" data-act="login">Enviarme el link</button>
-    <p class="ph-note" style="text-align:center">El flujo completo de ingreso se diseña en el sketch 063. Tocá el botón para simular que entraste.</p></div>`;
-}
-
-/* ---------------- variants ---------------- */
-function variantA() {
-  const signed = S.mode !== 'out';
-  const hdr = `<header class="hdr"><div class="hdr-in">
-    <button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú">${ic('bars')}${signed ? '<span class="dot" title="Sesión iniciada"></span>' : ''}</button>
-    ${brand()}
-    ${S.mode === 'admin' ? `<div class="desk-links">${['panel', ...visibleAdmin()].map(k => `<a data-nav="${k}" class="${activeTop() === k ? 'on' : ''}">${SCREENS[k].title}</a>`).join('')}</div>` : ''}
-    <span class="spacer"></span></div></header>`;
-  const body = S.mode === 'out' ? loginBody() : S.mode === 'public' ? publicBody() : pageHead({ backStyle: 'crumb' }) + adminBody();
-  const dInner = signed
-    ? `${accountCard()}<div class="group-label">Panel</div><div class="dlinks">${adminLinks()}</div>
-       <div class="group-label">Sitio</div><div class="dlinks">${siteLinks()}</div>
-       <div class="drawer-bottom"><div class="divider"></div>${logoutBtn()}<div class="divider"></div>${themeRow()}</div>`
-    : `<div class="dlinks" style="margin-top:8px">${siteLinks()}</div><div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>`;
-  return `<div class="scroller">${hdr}<main>${body}</main></div>${drawer(dInner)}${confirmSheet()}`;
-}
-
-function variantB() {
-  const signed = S.mode !== 'out';
-  const inAdmin = S.mode === 'admin';
-  const hdr = `<header class="hdr"><div class="hdr-in">
-    <button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú">${ic('bars')}</button>
-    ${brand(true, !inAdmin || S.vp === 'desk')}
-    ${inAdmin ? `<span class="mode-pill">Panel</span>` : ''}
-    ${inAdmin ? `<div class="desk-links">${['panel', ...visibleAdmin()].map(k => `<a data-nav="${k}" class="${activeTop() === k ? 'on' : ''}">${SCREENS[k].title}</a>`).join('')}</div>` : ''}
-    <span class="spacer"></span>
-    ${signed ? `<button class="icon-btn" data-act="open-account" aria-label="Tu cuenta">${`<span class="avatar">${USER.initials}</span>`}</button>` : ''}
-    </div></header>`;
-  const body = S.mode === 'out' ? loginBody() : S.mode === 'public' ? publicBody() : pageHead({ backStyle: 'back' }) + adminBody();
-  const dInner = inAdmin
-    ? `<div class="group-label" style="margin-top:4px">Panel</div><div class="dlinks">${adminLinks()}</div>
-       <div class="group-label">Sitio</div><div class="dlinks">${siteLinks()}</div>
-       <div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>`
-    : `<div class="dlinks" style="margin-top:8px">${siteLinks()}${signed ? dlink('panel', { icon: 'panel', label: 'Panel' }) : ''}</div>
-       <div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>`;
-  const acct = `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu cuenta">
-    <div class="grab"></div>${accountCard()}
-    <div class="dlinks" style="margin:12px -16px 4px">
-      ${inAdmin ? dlink('pub:inicio', { icon: 'ext', label: 'Ver el sitio público' }) : dlink('panel', { icon: 'panel', label: 'Ir al panel' })}
-    </div>${logoutBtn()}</div>`;
-  return `<div class="scroller">${hdr}<main>${body}</main></div>${drawer(dInner)}${signed ? acct : ''}${confirmSheet()}`;
-}
-
-function variantC() {
-  const signed = S.mode !== 'out';
-  const inAdmin = S.mode === 'admin';
-  if (!inAdmin) {
-    // public / signed-out: public shell; drawer gets the A-style account block when signed in
-    const hdr = `<header class="hdr"><div class="hdr-in">
-      <button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú">${ic('bars')}${signed ? '<span class="dot"></span>' : ''}</button>
-      ${brand()}<span class="spacer"></span></div></header>`;
-    const dInner = `<div class="group-label" style="margin-top:4px">Sitio</div><div class="dlinks">${siteLinks()}</div>
-      ${signed ? `<div class="group-label">Tu cuenta</div><div class="dlinks">${accountRows(false)}</div>` : ''}
-      ${drawerBottom()}`;
-    return `<div class="scroller">${hdr}<main>${S.mode === 'out' ? loginBody() : publicBody()}</main></div>${drawer(dInner)}${confirmSheet()}`;
-  }
-  const top = activeTop();
-  const desk = S.vp === 'desk';
-  // Phone: 4 tabs + Más. Desktop: every section inline, no overflow.
-  const tabs = desk ? ['panel', ...visibleAdmin()] : ['panel', 'juegos', 'secciones', 'estantes'];
-  const moreKeys = visibleAdmin().filter(k => !tabs.includes(k));
-  const moreOn = moreKeys.includes(top);
-  const moreAttention = moreKeys.some(k => SCREENS[k].short);
-  const hdr = `<header class="hdr"><div class="hdr-in">
-    ${brand(true, desk)}<span class="mode-pill">Panel</span><span class="spacer"></span>
-    <button class="icon-btn" data-act="open-account" aria-label="Tu cuenta (sesión iniciada)" aria-haspopup="dialog"><span class="avatar">${USER.initials}</span></button>
-    </div></header>`;
-  const tabBtn = k => `<button data-nav="${k}" data-tab="${k}" class="${top === k ? 'on' : ''}" ${top === k ? 'aria-current="page"' : ''}>
-      <span class="tab-ico">${ic(SCREENS[k].icon)}${SCREENS[k].short && k !== 'estantes' ? `<span class="badge-dot">${SCREENS[k].short}</span>` : ''}</span>
-      <span class="tab-lbl">${SCREENS[k].title}</span></button>`;
-  const dock = `<nav class="dock" aria-label="Secciones del panel">
-    ${tabs.map(tabBtn).join('')}
-    ${moreKeys.length ? `<button data-act="open-more" data-tab="more" class="${moreOn ? 'on' : ''}" aria-haspopup="dialog">
-      <span class="tab-ico">${ic('more')}${moreAttention ? '<span class="badge-dot small"></span>' : ''}</span><span class="tab-lbl">Más</span></button>` : ''}
-    </nav>`;
-  const more = `<div class="sheet" id="sheet-more" role="dialog" aria-modal="true" aria-label="Más secciones">
-    <div class="grab"></div>
-    <div class="dlinks">${moreKeys.map(k => dlink(k, { icon: SCREENS[k].icon, label: SCREENS[k].title, count: SCREENS[k].count, on: top === k })).join('')}</div>
-    </div>`;
-  const account = accountSheet();
-  return `<div class="scroller">${hdr}${desk ? dock : ''}<main id="c-main">${pageHead({ backStyle: 'back' })}${adminBody()}</main></div>
-    ${desk ? '' : dock}<div class="backdrop" data-act="close"></div>${more}${account}${confirmSheet()}`;
-}
-
-
-/* C2 — synthesis requested after C won: keep the public-style hamburger drawer at the top
-   (full admin section list + site links), move the account/profile into the tab bar's last slot. */
-function variantD() {
-  if (S.mode !== 'admin') return variantC(); // public / signed-out behave exactly like C
-  const top = activeTop();
-  const desk = S.vp === 'desk';
-  const tabs = desk ? ['panel', ...visibleAdmin()] : ['panel', 'juegos', 'secciones', 'estantes'];
-  const drawerOnly = visibleAdmin().filter(k => !tabs.includes(k));
-  const drawerAttention = drawerOnly.some(k => SCREENS[k].short);
-  const hdr = `<header class="hdr"><div class="hdr-in">
-    ${desk ? '' : `<button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú" aria-haspopup="dialog">${ic('bars')}${drawerAttention ? '<span class="dot attn" title="Hay algo para revisar"></span>' : ''}</button>`}
-    ${brand(true, desk)}<span class="mode-pill">Panel</span><span class="spacer"></span>
-    ${desk ? `<button class="icon-btn" data-act="open-account" aria-label="Tu cuenta (sesión iniciada)" aria-haspopup="dialog"><span class="avatar">${USER.initials}</span></button>` : ''}
-    </div></header>`;
-  const tabBtn = k => `<button data-nav="${k}" data-tab="${k}" class="${top === k ? 'on' : ''}" ${top === k ? 'aria-current="page"' : ''}>
-      <span class="tab-ico">${ic(SCREENS[k].icon)}${SCREENS[k].short && k !== 'estantes' ? `<span class="badge-dot">${SCREENS[k].short}</span>` : ''}</span>
-      <span class="tab-lbl">${SCREENS[k].title}</span></button>`;
-  const dock = `<nav class="dock" aria-label="Secciones del panel">
-    ${tabs.map(tabBtn).join('')}
-    ${desk ? '' : `<button data-act="open-account" data-tab="account" aria-haspopup="dialog" aria-label="Tu cuenta (sesión iniciada)">
-      <span class="tab-ico"><span class="avatar sm">${USER.initials}</span></span><span class="tab-lbl">Cuenta</span></button>`}
-    </nav>`;
-  const dInner = `<div class="group-label" style="margin-top:4px">Panel</div><div class="dlinks">${adminLinks()}</div>
-    <div class="group-label">Sitio</div><div class="dlinks">${siteLinks()}</div>
-    ${drawerBottom()}`;
-  const account = accountSheet();
-  return `<div class="scroller">${hdr}${desk ? dock : ''}<main id="c-main">${pageHead({ backStyle: 'back' })}${adminBody()}</main></div>
-    ${desk ? '' : dock}${drawer(dInner)}${account}${confirmSheet()}`;
-}
-
-const NOTES = {
-  D: `<h3>C2 — C's tab bar + the public-style drawer on top; your account is the last tab</h3><ul>
-    <li><b>Top:</b> the same hamburger as the public site. The drawer lists <i>all</i> admin sections (with counts) plus the site links. It holds no account or logout, so it's navigation only.</li>
-    <li><b>Tab bar:</b> Panel · Juegos · Secciones · Estantes · <b>Cuenta</b>. Cuenta is your avatar with the green ring, so the signed-in cue sits under your thumb. It opens the account sheet, which uses the same rows as the drawer: TU CUENTA → your account → Ver el sitio público → <b>Cerrar sesión</b>. Confirming happens in the same sheet with the same rows.</li>
-    <li><b>Theme</b> always sits at the bottom of the drawer, in every state (admin, public signed in, signed out), so it never moves when you sign in.</li>
-    <li><b>Revisar niveles / Staff</b> are only reachable from the drawer. A purple dot on the hamburger signals when something in there needs attention (7 discrepancias). Green is kept for "signed in".</li>
-    <li>On Niveles/Staff no tab is highlighted; the drawer row shows where you are instead.</li>
-    <li><b>Desktop:</b> same as C (every section inline, avatar top right, no hamburger).</li>
-    <li>Tradeoff vs C: the four main sections appear twice (tabs + drawer), and the overflow sections take 2 taps from a menu at the top of the screen instead of Más at the bottom.</li></ul>`,
-  A: `<h3>A — Same public header; the drawer holds the account and admin links</h3><ul>
-    <li><b>Signed in:</b> a green dot on the hamburger (on every page) plus an account card at the top of the drawer (email + "Sesión iniciada · Dueña").</li>
-    <li><b>Drawer:</b> Panel group (with counts) → Sitio group → <b>Cerrar sesión</b> as a clear row with an icon → theme. The drawer is shell-owned, so it's the same on public pages.</li>
-    <li><b>Admin pages:</b> no footer. "‹ Panel" back row on phone, breadcrumb on desktop (admin pages are drill-downs, same rule as Detalle). Desktop gets inline admin links.</li>
-    <li>Easiest to build: the existing <code>nav_drawer/1</code> just gets two new blocks.</li></ul>`,
-  B: `<h3>B — Header shows a "Panel" label and your avatar; account opens in a sheet</h3><ul>
-    <li><b>Signed in:</b> an avatar with a green ring at the top right of every page (public too), replacing the hidden gear. It's the most familiar cue: the avatar means you're signed in.</li>
-    <li><b>Avatar → sheet</b> (dropdown on desktop): account card, "Ver el sitio público" / "Ir al panel", <b>Cerrar sesión</b>.</li>
-    <li><b>Drawer</b> is navigation only: the admin sections when you're in admin, public links when you're not.</li>
-    <li>The "PANEL" label next to the logo tells you which mode you're in. On phone the wordmark is hidden in admin to make room.</li></ul>`,
-  C: `<h3>C — Admin gets its own bottom tab bar ★ winner (polished)</h3><ul>
-    <li><b>Tabs:</b> Panel · Juegos · Secciones · Estantes · Más. The first tab is "Panel", not "Inicio", so it can't be confused with the public home. Desktop shows every section inline, with no Más.</li>
-    <li><b>Seamless navigation:</b> the header and tab bar stay put, and only the page content swaps (100ms fade, scroll resets to top). This is how a LiveView <code>navigate</code> behaves inside one admin <code>live_session</code> layout.</li>
-    <li><b>Tap the active tab again:</b> goes back to that tab's root (Destacados → Secciones), or scrolls to the top if you're already there.</li>
-    <li><b>Avatar</b> (green ring = signed in) opens the <b>account sheet</b>: account card, Ver el sitio público, <b>Cerrar sesión</b>, theme. <b>Más</b> opens only the overflow sections (Revisar niveles, Staff) and shows a dot when something needs attention. Each sheet has one job.</li>
-    <li><b>Sheets:</b> close by tapping the backdrop, pressing Esc, or swiping down. Focus moves into the sheet and returns to the button that opened it. The tab bar respects the safe area.</li>
-    <li><b>Public pages while signed in</b> keep the normal shell; the drawer gets an account card, Ir al panel, and Cerrar sesión.</li></ul>`,
-};
-
-/* ---------------- render + events ---------------- */
+/* ---------------- render ---------------- */
 const device = document.getElementById('device');
-function fitNav() { document.body.style.paddingTop = (document.getElementById('variant-nav').offsetHeight + 8) + 'px'; }
+function fitNav() { document.body.style.paddingTop = (document.getElementById('state-nav').offsetHeight + 8) + 'px'; }
 window.addEventListener('resize', fitNav);
+
 function render() {
   fitNav();
-  device.className = 'device' + (S.vp === 'desk' ? ' desk' : '') + (['C','D'].includes(S.v) && S.mode === 'admin' ? ' has-dock' : '');
-  device.innerHTML = ({ A: variantA, B: variantB, C: variantC, D: variantD })[S.v]() + `<div class="toast" id="toast">${ic('check')}<span></span></div>`;
-  document.getElementById('notes').innerHTML = NOTES[S.v];
-  document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('active', b.dataset.v === S.v));
+  const admin = S.mode === 'admin';
+  const desk = S.vp === 'desk';
+  device.className = 'device' + (desk ? ' desk' : '') + (admin ? ' has-tabs' : '');
+  const body = admin ? adminBody() : S.mode === 'public' ? publicBody() : loginBody();
+  device.innerHTML = `<div class="scroller">${header()}${admin && desk ? tabBar() : ''}<main id="main">${body}</main></div>
+    ${admin && !desk ? tabBar() : ''}${drawer()}${admin ? accountSheet() : ''}${signedIn() ? confirmSheet() : ''}
+    <div class="toast" id="toast">${ic('check')}<span></span></div>`;
   document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.m === S.mode));
   if (S.toast) { showToast(S.toast); S.toast = null; }
 }
-let returnFocus = null;
-function setStep(sh, name) {
-  const steps = sh.querySelector('.steps'); if (!steps) return;
-  const from = steps.querySelector('.step:not([aria-hidden="true"])');
-  const to = steps.querySelector('.step-' + name);
-  if (!to || from === to) return;
-  steps.style.height = from.offsetHeight + 'px'; steps.classList.add('animating');
-  from.setAttribute('aria-hidden', 'true'); from.inert = true;
-  to.removeAttribute('aria-hidden'); to.inert = false;
-  void steps.offsetHeight; steps.style.height = to.offsetHeight + 'px';
-  clearTimeout(steps._t); steps._t = setTimeout(() => { steps.style.height = ''; steps.classList.remove('animating'); }, 300);
-  // focus: the safe choice (Cancelar) on confirm; back on the logout row when cancelling
-  const f = name === 'confirm' ? to.querySelector('[data-act="cancel-logout"]') : to.querySelector('[data-act="ask-logout"]');
-  f && f.focus({ preventScroll: true });
+
+/* Header, tabs and drawer persist; only the page content swaps (LiveView navigate inside one live_session layout). */
+function softSwap() {
+  const main = device.querySelector('#main');
+  if (!main || S.mode !== 'admin') return render();
+  main.classList.add('swapping');
+  setTimeout(() => {
+    const top = activeTop();
+    main.innerHTML = adminBody();
+    device.querySelectorAll('.tabs [data-tab]').forEach(b => {
+      if (b.dataset.tab === 'account') return;
+      const on = b.dataset.tab === top; b.classList.toggle('on', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+    device.querySelectorAll('.drawer .dlink[data-nav]').forEach(b => {
+      const on = b.dataset.nav === top; b.classList.toggle('on', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+    device.querySelector('.scroller').scrollTop = 0;
+    main.classList.remove('swapping');
+  }, 100);
 }
-// Reset a stepped sheet to its first step — done synchronously when OPENING (the sheet is off-screen),
-// so a quick reopen can never show a stale confirm step.
+
+/* ---------------- overlays ---------------- */
+let returnFocus = null;
 function resetSteps(sh) {
   sh.querySelectorAll('.steps').forEach(steps => {
     clearTimeout(steps._t); steps.classList.remove('animating'); steps.style.height = '';
@@ -665,46 +440,47 @@ function resetSteps(sh) {
     });
   });
 }
+function setStep(sh, name) {
+  const steps = sh && sh.querySelector('.steps'); if (!steps) return;
+  const from = steps.querySelector('.step:not([aria-hidden="true"])');
+  const to = steps.querySelector('.step-' + name);
+  if (!to || from === to) return;
+  steps.style.height = from.offsetHeight + 'px'; steps.classList.add('animating');
+  from.setAttribute('aria-hidden', 'true'); from.inert = true;
+  to.removeAttribute('aria-hidden'); to.inert = false;
+  void steps.offsetHeight; steps.style.height = to.offsetHeight + 'px';
+  clearTimeout(steps._t); steps._t = setTimeout(() => { steps.style.height = ''; steps.classList.remove('animating'); }, 300);
+  const f = to.querySelector(name === 'confirm' ? '[data-act="cancel-logout"]' : '[data-act="ask-logout"]');
+  f && f.focus({ preventScroll: true });
+}
 function closeAll() {
   const had = device.querySelector('.drawer.open,.sheet.open');
   device.querySelectorAll('.open').forEach(el => { el.classList.remove('open'); el.style.transform = ''; });
   if (had && returnFocus && document.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
   if (had) returnFocus = null;
 }
-function openEl(sel, withBackdrop = true, opener = null) {
+function openEl(sel, opener) {
   const keep = returnFocus || opener;
   closeAll(); returnFocus = keep;
   const el = device.querySelector(sel); if (!el) return;
   resetSteps(el);
-  void el.offsetWidth; el.classList.add('open'); if (withBackdrop) device.querySelector('.backdrop').classList.add('open');
-  const first = el.querySelector('button:not([disabled]), a, input'); first && first.focus({ preventScroll: true });
+  void el.offsetWidth; el.classList.add('open'); device.querySelector('.backdrop').classList.add('open');
+  const first = el.querySelector('button:not([disabled])'); first && first.focus({ preventScroll: true });
 }
-/* Variant C: header + tab bar persist; only the page content swaps (as a LiveView
-   navigate inside one live_session layout would). Soft fade, scroll reset, tab state patched. */
-function softSwap() {
-  const main = device.querySelector('#c-main');
-  if (!main || !['C','D'].includes(S.v) || S.mode !== 'admin') return render();
-  main.classList.add('swapping');
-  setTimeout(() => {
-    const top = activeTop();
-    main.innerHTML = pageHead({ backStyle: 'back' }) + adminBody();
-    device.querySelectorAll('.dock [data-tab]').forEach(b => {
-      const on = b.dataset.tab === top || (b.dataset.tab === 'more' && !device.querySelector(`.dock [data-tab="${top}"]`));
-      if (b.dataset.tab === 'account') return;
-      b.classList.toggle('on', on); on && b.dataset.tab !== 'more' ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
-    });
-    device.querySelectorAll('#sheet-more .dlink, .drawer .dlink').forEach(b => b.classList.toggle('on', b.dataset.nav === top));
-    device.querySelector('.scroller').scrollTop = 0;
-    main.classList.remove('swapping');
-  }, 100);
+function showToast(msg) {
+  const t = device.querySelector('#toast'); t.querySelector('span').textContent = msg;
+  void t.offsetWidth; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600);
 }
-/* Drag a bottom sheet down to dismiss (phone only). */
+function setTheme(v) { if (v === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v; }
+
+/* swipe a bottom sheet down to dismiss (phone) */
 let drag = null, suppressClick = false;
 device.addEventListener('pointerdown', e => {
   const sh = e.target.closest('.sheet.open'); if (!sh || S.vp === 'desk') return;
   if (!e.target.closest('.grab') && sh.scrollTop > 0) return;
-  if (e.target.closest('button') && !e.target.closest('.grab')) { drag = { sh, y: e.clientY, dy: 0, pending: true }; return; }
-  drag = { sh, y: e.clientY, dy: 0, pending: false }; sh.classList.add('dragging');
+  const onButton = e.target.closest('button') && !e.target.closest('.grab');
+  drag = { sh, y: e.clientY, dy: 0, pending: !!onButton };
+  if (!onButton) sh.classList.add('dragging');
 });
 window.addEventListener('pointermove', e => {
   if (!drag) return; const dy = Math.max(0, e.clientY - drag.y);
@@ -717,62 +493,53 @@ window.addEventListener('pointerup', () => {
   if (dy > 8) { suppressClick = true; setTimeout(() => suppressClick = false, 0); }
   if (dy > 80) closeAll(); else sh.style.transform = '';
 });
-function showToast(msg) {
-  const t = device.querySelector('#toast'); t.querySelector('span').textContent = msg;
-  void t.offsetWidth; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600);
-}
-function setTheme(v) {
-  if (v === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v;
-}
 
+/* ---------------- events ---------------- */
 document.addEventListener('click', e => {
   if (suppressClick) { e.stopPropagation(); e.preventDefault(); return; }
-  const t = e.target.closest('[data-v],[data-m],[data-vp],[data-role],[data-theme-set],[data-act],[data-nav],[data-go-public]');
+  const t = e.target.closest('[data-m],[data-vp],[data-role],[data-theme-set],[data-act],[data-nav]');
   if (!t) return;
-  if (t.dataset.v) { S.v = t.dataset.v; return render(); }
-  if (t.dataset.m) { S.mode = t.dataset.m; if (S.mode === 'admin') S.screen = 'panel'; return render(); }
+  if (t.dataset.m) { S.mode = t.dataset.m; S.screen = 'panel'; return render(); }
   if (t.dataset.vp) { S.vp = t.dataset.vp; document.querySelectorAll('[data-vp]').forEach(b => b.classList.toggle('on', b === t)); return render(); }
   if (t.dataset.role) { S.role = t.dataset.role; if (S.screen === 'staff' && S.role !== 'owner') S.screen = 'panel'; document.querySelectorAll('[data-role]').forEach(b => b.classList.toggle('on', b === t)); return render(); }
   if (t.dataset.themeSet) return setTheme(t.dataset.themeSet);
-  if (t.dataset.goPublic) { if (S.mode !== 'out') { S.mode = 'public'; render(); } return; }
   if (t.dataset.nav) {
     const n = t.dataset.nav;
-    if (n.startsWith('pub:')) { if (n === 'pub:about') { closeAll(); showToast('Quiénes Somos (sin cambios)'); return; } S.mode = S.mode === 'out' ? 'out' : 'public'; closeAll(); setTimeout(render, 180); return; }
     const wasOpen = !!device.querySelector('.drawer.open,.sheet.open');
-    // Re-tapping the active tab pops to that tab's root (or scrolls to top when already there).
+    if (n === 'pub:about') { closeAll(); return showToast('Quiénes Somos (sin cambios)'); }
+    if (n === 'pub:inicio') { if (S.mode === 'out') { closeAll(); return; } S.mode = 'public'; closeAll(); return setTimeout(render, wasOpen ? 200 : 0); }
+    // re-tapping the active tab pops to that tab's root, or scrolls to top if already there
     if (t.dataset.tab && S.mode === 'admin' && activeTop() === n) {
       if (S.screen !== n) { S.screen = n; return softSwap(); }
       return device.querySelector('.scroller').scrollTo({ top: 0, behavior: 'smooth' });
     }
-    const canSoft = ['C','D'].includes(S.v) && S.mode === 'admin';
+    const fromAdmin = S.mode === 'admin';
     S.mode = 'admin'; S.screen = n; closeAll();
-    // C swaps content underneath the closing sheet (no wait); other variants re-render after the close animation.
-    if (canSoft) softSwap(); else setTimeout(render, wasOpen ? 180 : 0); return;
+    // inside admin: swap content under the closing overlay; entering admin: rebuild after it closes
+    return fromAdmin ? softSwap() : setTimeout(render, wasOpen ? 200 : 0);
   }
   const a = t.dataset.act;
-  if (a === 'open-drawer') openEl('.drawer', true, t);
-  else if (a === 'open-account') openEl('#sheet-account', true, t);
-  else if (a === 'open-more') openEl('#sheet-more', true, t);
+  if (a === 'open-drawer') openEl('.drawer', t);
+  else if (a === 'open-account') openEl('#sheet-account', t);
   else if (a === 'ask-logout') {
     const sh = t.closest('.sheet');
-    if (sh && sh.querySelector('.step-confirm')) setStep(sh, 'confirm'); else openEl('#sheet-logout', true, t);
+    if (sh && sh.querySelector('.step-confirm')) setStep(sh, 'confirm'); else openEl('#sheet-logout', returnFocus || t);
   }
   else if (a === 'cancel-logout') setStep(t.closest('.sheet'), 'account');
   else if (a === 'close') closeAll();
   else if (a === 'logout') {
-    // brief in-progress state so the tap is acknowledged, then land on Ingresar with a toast
     t.disabled = true; t.querySelector('.slot').innerHTML = '<span class="spin"></span>'; t.querySelector('.lbl').textContent = 'Cerrando sesión…';
     t.closest('.dlinks').querySelectorAll('.dlink').forEach(b => { if (b !== t) b.disabled = true; });
-    setTimeout(() => { closeAll(); setTimeout(() => { S.mode = 'out'; S.toast = 'Cerraste sesión'; render(); }, 220); }, 550);
+    setTimeout(() => { closeAll(); setTimeout(() => { S.mode = 'out'; S.screen = 'panel'; S.toast = 'Cerraste sesión'; render(); }, 220); }, 550);
   }
   else if (a === 'login') { S.mode = 'admin'; S.screen = 'panel'; S.toast = 'Entraste como ' + USER.email; render(); }
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  const sh = device.querySelector('.sheet.open .step-confirm:not([aria-hidden="true"])');
-  if (sh) setStep(sh.closest('.sheet'), 'account'); else closeAll();
+  const confirm = device.querySelector('.sheet.open .step-confirm:not([aria-hidden="true"])');
+  if (confirm) setStep(confirm.closest('.sheet'), 'account'); else closeAll();
 });
-document.getElementById('tools-toggle').addEventListener('click', () => { const b = document.getElementById('tools-body'); b.style.display = b.style.display === 'none' ? 'flex' : 'none'; });
+document.getElementById('tools-toggle').addEventListener('click', () => document.getElementById('tools-body').classList.toggle('show'));
 render();
 </script>
 </body>
