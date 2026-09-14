@@ -35,7 +35,7 @@ defmodule PukllayClub.CatalogTest do
       draft: draft,
       retired: retired
     } do
-      ids = Catalog.list_games() |> Enum.map(& &1.id)
+      ids = Enum.map(Catalog.list_games(), & &1.id)
 
       assert published.id in ids
       refute draft.id in ids
@@ -47,7 +47,7 @@ defmodule PukllayClub.CatalogTest do
       draft: draft,
       retired: retired
     } do
-      ids = Catalog.filter_games() |> Enum.map(& &1.id)
+      ids = Enum.map(Catalog.filter_games(), & &1.id)
 
       assert published.id in ids
       refute draft.id in ids
@@ -105,7 +105,7 @@ defmodule PukllayClub.CatalogTest do
       draft: draft,
       retired: retired
     } do
-      ids = Catalog.sitemap_entries() |> Enum.map(& &1.id)
+      ids = Enum.map(Catalog.sitemap_entries(), & &1.id)
 
       assert published.id in ids
       refute draft.id in ids
