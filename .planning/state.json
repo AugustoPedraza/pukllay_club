@@ -6,7 +6,7 @@
     {
       "number": "1",
       "name": "Catalog v1 (+ 01.1–01.6)",
-      "status": "complete"
+      "status": "pending"
     },
     {
       "number": "01.7",
@@ -17,6 +17,11 @@
       "number": "01.8",
       "name": "SEO, Structured Data & Social Sharing",
       "status": "complete"
+    },
+    {
+      "number": "01.8.1",
+      "name": "Staff Admin — Ludoteca, Shelves & Curated Destacados",
+      "status": "pending"
     },
     {
       "number": "2",
@@ -35,9 +40,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step (plan phase 2)",
-    "reason": "Phase 2 of 5 — needs a plan"
+    "command": "/gsd:progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-09-12T16:35:00.000Z"
+  "updated_at": "2026-09-14T00:23:19.914Z"
 }
