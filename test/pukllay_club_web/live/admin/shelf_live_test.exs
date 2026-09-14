@@ -1,6 +1,7 @@
 defmodule PukllayClubWeb.Admin.ShelfLiveTest do
   use PukllayClubWeb.ConnCase, async: true
 
+  import Ecto.Query
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
   import PukllayClub.ShelvesFixtures
@@ -51,6 +52,97 @@ defmodule PukllayClubWeb.Admin.ShelfLiveTest do
       {:ok, _lv, html} = live(conn, ~p"/admin/estantes/#{shelf.id}/asignar")
       assert html =~ "text-success"
       assert html =~ "1/1 ubicados"
+    end
+  end
+
+  describe "type-ahead search, move-with-undo, error revert (D-13, D-14, UI-SPEC E4)" do
+    setup :register_and_log_in_staff
+
+    test "searching shows matches whether placed or not, and a placed match shows its shelf",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "L1"})
+      shelf_b = shelf_fixture(%{name: "L2"})
+      placed = game_fixture(%{name: "Catán"})
+      _unplaced = game_fixture(%{name: "Carcassonne"})
+      {:ok, _game, nil} = Shelves.assign_game(placed.id, shelf_a.id)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/#{shelf_b.id}/asignar")
+
+      html = lv |> form("#assign-search", %{q: "ca"}) |> render_change()
+
+      assert html =~ "Catán"
+      assert html =~ "en L1"
+      assert html =~ "Carcassonne"
+    end
+
+    test "tapping a placed match moves it and shows Movido desde ... Deshacer; Deshacer reverts",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "L1"})
+      shelf_b = shelf_fixture(%{name: "L2"})
+      game = game_fixture(%{name: "Catán"})
+      {:ok, _game, nil} = Shelves.assign_game(game.id, shelf_a.id)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/#{shelf_b.id}/asignar")
+      lv |> form("#assign-search", %{q: "cat"}) |> render_change()
+
+      html =
+        lv
+        |> element("button[phx-value-game-id='#{game.id}']", "Catán")
+        |> render_click()
+
+      assert html =~ "Movido desde L1"
+      assert html =~ "Deshacer"
+      assert shelf_b.id |> Shelves.games_on_shelf() |> Enum.map(& &1.id) == [game.id]
+
+      html = lv |> element("button", "Deshacer") |> render_click()
+
+      refute html =~ "Deshacer"
+      assert shelf_a.id |> Shelves.games_on_shelf() |> Enum.map(& &1.id) == [game.id]
+      assert Shelves.games_on_shelf(shelf_b.id) == []
+    end
+
+    test "tapping a game already on the current shelf is a no-op with no toast", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "L1"})
+      game = game_fixture(%{name: "Catán"})
+      {:ok, _game, nil} = Shelves.assign_game(game.id, shelf.id)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/#{shelf.id}/asignar")
+      lv |> form("#assign-search", %{q: "cat"}) |> render_change()
+
+      html =
+        lv
+        |> element("button[phx-value-game-id='#{game.id}']", "Catán")
+        |> render_click()
+
+      refute html =~ "Movido desde"
+      refute html =~ "toast-bottom"
+    end
+
+    test "a failed save reverts and shows No se pudo guardar with a working Reintentar",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "L1"})
+      game = game_fixture(%{name: "Catán"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/#{shelf.id}/asignar")
+
+      # Simulate the shelf disappearing mid-session (e.g. deleted by another
+      # staff member) — the LiveView's own `@shelf.id` is now stale, so the
+      # next assign attempt hits the `shelf_id` foreign key constraint.
+      PukllayClub.Repo.delete_all(from(s in PukllayClub.Catalog.Shelf, where: s.id == ^shelf.id))
+
+      html =
+        lv
+        |> element("button[phx-value-game-id='#{game.id}']", "Catán")
+        |> render_click()
+
+      assert html =~ "No se pudo guardar"
+      assert html =~ "Reintentar"
+      assert PukllayClub.Catalog.get_game!(game.id).shelf_id == nil
+
+      # Reintentar re-sends the same assignment — still fails the same way,
+      # since the shelf still doesn't exist, but must not crash.
+      html = lv |> element("button", "Reintentar") |> render_click()
+      assert html =~ "No se pudo guardar"
     end
   end
 end

@@ -94,21 +94,59 @@ defmodule PukllayClub.Catalog.Shelves do
     {placed, total}
   end
 
-  @doc "Non-retired games with no shelf yet, ordered by name (D-12/D-13)."
+  @doc """
+  Non-retired games with no shelf yet, ordered by name (D-12/D-13).
+  Preloads `:shelf` (always `nil` here) so callers rendering a game with
+  `Admin.ShelfLive.Assign`'s shared tap-button component never hit an
+  `Ecto.Association.NotLoaded` truthy-check bug when checking `game.shelf`.
+  """
   def unplaced_games do
-    Repo.all(
-      from g in Game,
-        where: g.status != :retired and is_nil(g.shelf_id),
-        order_by: [asc: g.name, asc: g.id]
+    from(g in Game,
+      where: g.status != :retired and is_nil(g.shelf_id),
+      order_by: [asc: g.name, asc: g.id]
     )
+    |> Repo.all()
+    |> Repo.preload(:shelf)
   end
 
-  @doc "Non-retired games currently placed on `shelf_id`, ordered by name."
+  @doc "Non-retired games currently placed on `shelf_id`, ordered by name. Preloads `:shelf`."
   def games_on_shelf(shelf_id) do
-    Repo.all(
-      from g in Game,
-        where: g.status != :retired and g.shelf_id == ^shelf_id,
-        order_by: [asc: g.name, asc: g.id]
+    from(g in Game,
+      where: g.status != :retired and g.shelf_id == ^shelf_id,
+      order_by: [asc: g.name, asc: g.id]
     )
+    |> Repo.all()
+    |> Repo.preload(:shelf)
+  end
+
+  @doc """
+  Type-ahead search (D-13) across every non-retired game (placed or not),
+  by name — the same escaped ILIKE convention as `Catalog.list_admin_games/1`
+  (T-01.8.1-23: `%`/`_`/`\\` escaped before wrapping in `%...%`, so a
+  literal percent/underscore in a game's name cannot widen the match).
+  Preloads `:shelf` so a placed match can render its current shelf name
+  inline. Capped at 20 results (T-01-22).
+  """
+  @spec search_games(String.t()) :: [Game.t()]
+  def search_games(q) when is_binary(q) and q != "" do
+    pattern = "%" <> escape_ilike(q) <> "%"
+
+    Game
+    |> where([g], g.status != :retired)
+    |> where([g], ilike(g.name, ^pattern))
+    |> order_by([g], asc: g.name, asc: g.id)
+    |> limit(20)
+    |> Repo.all()
+    |> Repo.preload(:shelf)
+  end
+
+  def search_games(_blank), do: []
+
+  # Mirrors `PukllayClub.Catalog`'s own `escape_ilike/1` (T-01.8.1-23).
+  defp escape_ilike(value) do
+    value
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
   end
 end

@@ -83,6 +83,29 @@ defmodule PukllayClub.Catalog.ShelvesTest do
     end
   end
 
+  describe "search_games/1 (D-13)" do
+    test "matches non-retired games whether placed or not, preloading shelf" do
+      shelf = shelf_fixture(%{name: "L2"})
+      catan = game_fixture(%{name: "Catán"})
+      camel_up = game_fixture(%{name: "Camel Up"})
+      _other = game_fixture(%{name: "Wingspan"})
+      _retired = game_fixture(%{name: "Catán Junior", status: :retired})
+
+      {:ok, _game, nil} = Shelves.assign_game(catan.id, shelf.id)
+
+      results = Shelves.search_games("cat")
+      assert Enum.map(results, & &1.id) == [catan.id]
+      assert hd(results).shelf.name == "L2"
+
+      results = Shelves.search_games("ca")
+      assert results |> Enum.map(& &1.id) |> Enum.sort() == Enum.sort([catan.id, camel_up.id])
+    end
+
+    test "returns [] for a blank query" do
+      assert Shelves.search_games("") == []
+    end
+  end
+
   describe "deleting a shelf nilifies its games' shelf_id" do
     test "on_delete: :nilify_all" do
       shelf = shelf_fixture()
