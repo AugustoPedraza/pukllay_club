@@ -34,6 +34,13 @@ the About page's scroll-morphed isologo (045's mechanic), which floats alone wit
 until it docks into the header. Scoped to a companion-wordmark treatment on that float; the hero
 copy itself and meta/OG tags are separate, non-visual follow-ups outside sketch scope.
 
+**Admin UI redesign (2026-09-14, sketches 059-063).** Phase 01.8.1 UAT rejected the whole staff
+admin UI (G-01.8.1-admin-ux). Direction: same brand, quieter tool — iOS Settings grouped lists,
+Shopify/Square mobile admin, Linear/Notion mobile as references; mobile-first; no footer on admin.
+Core staff action: curating dynamic sections, then adding games by BGG ID. Planned sequence: 059
+shell, 060 panel affordance, 061 forms + filters, 062 list rows (incl. section editor), 063 auth
+flow (ingresar → logout).
+
 ## Reference Points
 
 Airbnb-style card grid (big image, minimal chrome), Netflix web/SmartTV catalog (row-first
@@ -85,6 +92,7 @@ navigation, poster-primary cards, focus/hover expand-to-reveal-details pattern).
 
 | # | Name | Design Question | Winner | Tags |
 |---|------|----------------|--------|------|
+| 059 | admin-shell | Phase 01.8.1 admin redesign (G-01.8.1-admin-ux, 1a/1b/1d): how does signed-in staff navigate admin on a phone, know they're authenticated, and sign out? A drawer-carries-account / B avatar+account sheet / C bottom tab bar. No footer on admin (decided at intake) | **C — bottom tab bar**, polished: Panel·Juegos·Secciones·Estantes·Más (desktop: all inline); persistent header+tabs with content-only swap; avatar → account sheet (Cerrar sesión), Más → overflow sections only; swipe/Esc/backdrop dismiss with focus return; re-tap pops to root; dark active-tab contrast fixed | admin, shell, drawer, session, logout, phase-01.8.1 |
 | 058 | dark-purple-hue | Dark-theme purple reads fuchsia. The shared `--pk-ramp-*` is fixed at OKLCh H313.1 (taken from dark's CTA fill), while the brand manual sits at H300.1/H308.1. Which hue should the ramp use? Compares H313 (today) / H305 / H300 / H292 with only hue changing and all WCAG pairs within ±0.1:1 | **C — H300** (brand manual Lila Oscuro hue). Picked over A (H313, today) side by side: A's CTA/ramp-500/brand ink read fuchsia, C's read violet. Contrast unchanged. Dark primary `#8C2AB7→#7B2DCE`, ink `#C791E5→#B797F0`, base-100 `#361148→#2E154E`; full ramp + role table in README. Production change is a separate quick task | dark-mode, color, hue, palette, ramp, brand |
 | 057 | og-fallback-share-card | How should the isologo + wordmark compose on a solid brand-color 1200x630 canvas (D-04, Phase 01.8 plan 05 Task 2 checkpoint), and which ramp step should that background be? | B — Centered stacked, ramp-800 (#551670) background, isologo-dark.png (white mark) + "PUKLLAY CLUB" wordmark + a developer-added tagline ("Tu club de juegos de mesa modernos — Jujuy") beyond the original scope. Shipped to `priv/static/images/og-fallback.webp`, verified 1200x630 via the app's own image library | seo, share-card, branding, phase-01.8 |
 | 056 | dark-cta-contrast-fix | The dark-mode outline-primary CTAs (Sumate hero/closing, catalog preview CTA, Reintentar retry) fail WCAG contrast at 2.08-2.34:1 — solid fill everywhere, split by role, or an ink swap like the 17 rules already fixed today? (quick task 260910-gck, blocking checkpoint) | B — split by role: solid fill (white on `#8C2BB6`, 6.70:1) for the two Sumate CTAs; ink-swap to `--color-neutral` (7.00:1/6.21:1) for the genuinely secondary preview-CTA/Reintentar buttons | dark-mode, contrast, accessibility, wcag, cta, quick-task-260910-gck |
