@@ -79,4 +79,24 @@ defmodule PukllayClub.Catalog.BandAudit do
     })
     |> Repo.update()
   end
+
+  @doc """
+  Knowingly keeps `game_id`'s current `weight_band` — stores its
+  BGG-implied band at review time plus a timestamp, leaving `weight_band`
+  itself untouched. `mismatches/0` re-surfaces the game only if
+  `bgg_weight` later implies a different band than this snapshot (D-30).
+  Returns `{:ok, game}` / `{:error, changeset}`.
+  """
+  @spec keep_band(integer()) :: {:ok, Game.t()} | {:error, Ecto.Changeset.t()}
+  def keep_band(game_id) do
+    game = Repo.get!(Game, game_id)
+    implied = Vocabulary.implied_weight_band(game.bgg_weight)
+
+    game
+    |> Game.band_review_changeset(%{
+      band_reviewed_band: implied,
+      band_reviewed_at: DateTime.utc_now(:second)
+    })
+    |> Repo.update()
+  end
 end
