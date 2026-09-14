@@ -14,6 +14,7 @@ defmodule PukllayClubWeb.Admin.StaffLive.Index do
 
   alias PukllayClub.Accounts
   alias PukllayClub.Accounts.User
+  alias PukllayClubWeb.UserAuth
 
   @impl true
   def mount(_params, _session, socket) do
@@ -27,6 +28,7 @@ defmodule PukllayClubWeb.Admin.StaffLive.Index do
        |> assign(:page_title, "Staff")
        |> assign(:email_input, "")
        |> assign(:email_error, nil)
+       |> assign(:confirm_remove, nil)
        |> assign(:other_count, length(users) - 1)
        |> stream(:staff, users)}
     else
@@ -51,6 +53,36 @@ defmodule PukllayClubWeb.Admin.StaffLive.Index do
          socket
          |> assign(:email_input, email)
          |> assign(:email_error, first_error(changeset, :email))}
+    end
+  end
+
+  @impl true
+  def handle_event("ask-remove", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :confirm_remove, Accounts.get_user!(id))}
+  end
+
+  @impl true
+  def handle_event("cancel-remove", _params, socket) do
+    {:noreply, assign(socket, :confirm_remove, nil)}
+  end
+
+  @impl true
+  def handle_event("confirm-remove", _params, socket) do
+    target = socket.assigns.confirm_remove
+
+    case Accounts.remove_staff(socket.assigns.current_scope, target.id) do
+      {:ok, tokens} ->
+        UserAuth.disconnect_sessions(tokens)
+
+        {:noreply,
+         socket
+         |> stream_delete(:staff, target)
+         |> assign(:confirm_remove, nil)
+         |> assign(:other_count, socket.assigns.other_count - 1)
+         |> put_flash(:info, "Quitaste a #{target.email} del staff.")}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, :confirm_remove, nil)}
     end
   end
 
@@ -134,7 +166,39 @@ defmodule PukllayClubWeb.Admin.StaffLive.Index do
           <:col :let={{_id, user}} label="Estado">
             {estado_label(user)}
           </:col>
+          <:action :let={{_id, user}}>
+            <.button
+              :if={user.role == :staff}
+              phx-click="ask-remove"
+              phx-value-id={user.id}
+              variant="secondary"
+            >
+              Quitar
+            </.button>
+          </:action>
         </.table>
+      </div>
+
+      <%!-- ux-patterns B11: warn before a destructive action commits — a
+      server-rendered confirm modal, mirroring GameLive.Form's Retirar flow. --%>
+      <div :if={@confirm_remove} class="modal modal-open" role="dialog" aria-modal="true">
+        <div class="modal-box">
+          <h3 class="font-display text-xl">¿Quitar a {@confirm_remove.email} del staff?</h3>
+          <p class="py-4 text-neutral text-sm">
+            Va a perder acceso al panel de inmediato.
+          </p>
+          <div class="modal-action">
+            <.button phx-click="cancel-remove" variant="secondary">Cancelar</.button>
+            <button
+              id="confirm-remove-btn"
+              type="button"
+              phx-click="confirm-remove"
+              class="btn btn-error"
+            >
+              Quitar
+            </button>
+          </div>
+        </div>
       </div>
     </Layouts.app>
     """

@@ -170,6 +170,41 @@ defmodule PukllayClub.Accounts do
   def delete_invited_user(%User{} = user), do: Repo.delete(user)
 
   @doc """
+  Removes a staff member's account (D-33), revoking their panel access.
+
+  Returns `{:error, :unauthorized}` unless the scope user is the owner AND
+  the target exists with role `:staff` AND is not the scope user itself —
+  the owner can never remove themself or another owner (T-01.8.1-34).
+
+  On success returns `{:ok, tokens}`: the target's tokens, snapshotted
+  before the delete (which cascades to `users_tokens` via
+  `on_delete: :delete_all`) so the caller can broadcast-disconnect them via
+  `PukllayClubWeb.UserAuth.disconnect_sessions/1` — deleting the user row
+  alone does not sever an already-open LiveView socket.
+
+  ## Examples
+
+      iex> remove_staff(owner_scope, staff.id)
+      {:ok, [%UserToken{}, ...]}
+
+      iex> remove_staff(owner_scope, owner.id)
+      {:error, :unauthorized}
+
+  """
+  def remove_staff(%Scope{user: %User{} = actor}, user_id) do
+    with true <- User.owner?(actor),
+         %User{role: :staff} = target when target.id != actor.id <- Repo.get(User, user_id) do
+      Repo.transact(fn ->
+        tokens = Repo.all_by(UserToken, user_id: target.id)
+        {:ok, _deleted} = Repo.delete(target)
+        {:ok, tokens}
+      end)
+    else
+      _ -> {:error, :unauthorized}
+    end
+  end
+
+  @doc """
   Checks whether the user is in sudo mode.
 
   The user is in sudo mode when the last authentication was done no further

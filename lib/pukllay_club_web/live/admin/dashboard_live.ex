@@ -4,12 +4,13 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
 
   Mobile-first: a single-column card grid (`grid-cols-1 sm:grid-cols-2`)
   with no filled primary button on the page itself. `#admin-cards`' D-35
-  order is Juegos, Estantes, Secciones, Revisar niveles, Staff — this
-  plan (01.8.1-05) adds the first card, Juegos; the remaining four are
-  later plans' own additions to this same grid.
+  order is Juegos, Estantes, Secciones, Revisar niveles, Staff — plan
+  01.8.1-05 added Juegos; this plan (01.8.1-07) appends Staff, rendered
+  only for the owner (D-35); the remaining two are later plans' additions.
   """
   use PukllayClubWeb, :live_view
 
+  alias PukllayClub.Accounts.User
   alias PukllayClub.Catalog
 
   @impl true
@@ -27,6 +28,13 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
             <span :if={@draft_count > 0} class="badge badge-warning">
               {@draft_count} borradores
             </span>
+          </.link>
+          <.link
+            :if={User.owner?(@current_scope.user)}
+            navigate={~p"/admin/staff"}
+            class="rounded-box bg-base-200 p-4 min-h-11 flex items-center justify-between gap-2"
+          >
+            <span class="font-display text-xl">Staff</span>
           </.link>
         </div>
         <.link href={~p"/admin/salir"} method="delete" class="text-sm text-neutral">
