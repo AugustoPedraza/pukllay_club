@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.1
 current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 status: executing
-stopped_at: Completed 01.8.1-03-PLAN.md
-last_updated: "2026-09-14T10:37:55.298Z"
+stopped_at: Completed 01.8.1-05-PLAN.md
+last_updated: "2026-09-14T11:30:40.892Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 01.8.1 execution started
-state_head: 7042bb53ae77945a0f4adce8a0819922822f07f4
+state_head: 92681ac43732c0fbea59e1008c9c5caef9d1fd2a
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 26
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
-Plan: 3 of 14
+Plan: 4 of 14
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 01.8.1 execution started
 
@@ -120,6 +120,7 @@ Last activity: 2026-09-13 — Phase 01.8.1 execution started
 | Phase 01.8 P07 | 20 min | 2 tasks | 2 files |
 | Phase 01.8.1 P04 | 25min | 3 tasks | 16 files |
 | Phase 01.8.1 P03 | 15min | 3 tasks | 8 files |
+| Phase 01.8.1 P05 | ~110min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -233,6 +234,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.1]: 01.8.1-04: Retired the CSV seed path outright (mix catalog.seed, CsvImport, HashtagNormalizer, ExpansionClassifier, Catalog.upsert_game!/1, nimble_csv) per D-09's user-selected 'remove' option; made mix catalog.translate_descriptions' still-English filter unconditional (candidates/0); rewrote AGENTS.md's catalog data runbook
 - [Phase 01.8.1]: 01.8.1-03: Resend chosen as production email provider (D-36), over Brevo/Postmark, after re-checking current free-tier limits on Resend's own pricing page
 - [Phase 01.8.1]: 01.8.1-03: Resend's SPF and bounce MX live on the delegated send.pukllay.club subdomain, not the root domain's TXT record as the plan's verification literally specified — correct provider behavior, documented in domain-and-dns.md
+- [Phase 01.8.1]: 01.8.1-05: Publicar is a same-form submit button carrying name="_action" value="publish" (the browser includes the activated submitter's name/value in the serialized form payload), so save-then-publish is one round trip through a single handle_event("save", ...) rather than two LiveView events
+- [Phase 01.8.1]: 01.8.1-05: Admin.GameLive.Index has no status filter by default (list_admin_games/1/count_admin_games/1 deliberately do not reuse Catalog's public base_filtered_query/2's non-optional published_only/1 predicate) -- the inverse of every public read, since staff must see drafts/published/retired together
 
 ### Pending Todos
 
@@ -370,8 +373,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T10:37:55.030Z
-Stopped at: Completed 01.8.1-03-PLAN.md
+Last session: 2026-09-14T11:30:40.612Z
+Stopped at: Completed 01.8.1-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
