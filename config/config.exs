@@ -57,6 +57,11 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
   pubsub_server: PukllayClub.PubSub,
   live_view: [signing_salt: "dmrfmHVT"]
 
+# Single source for the outbound sender identity (D-36) — UserNotifier reads
+# this via Application.fetch_env!/2 rather than hardcoding a `from` tuple, so
+# the address is declared exactly once across every environment.
+config :pukllay_club, :mail_from, {"Pukllay Club", "no-responder@pukllay.club"}
+
 config :pukllay_club, :scopes,
   user: [
     default: true,

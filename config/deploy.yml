@@ -66,6 +66,9 @@ env:
     - SECRET_KEY_BASE
     - DATABASE_URL
     - SENTRY_DSN
+    # Resend HTTP API key (D-36) — production magic-link/invite emails,
+    # since GCP blocks outbound port 25 on this host.
+    - MAILER_API_KEY
 
 accessories:
   db:

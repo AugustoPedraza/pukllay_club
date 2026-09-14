@@ -5,12 +5,14 @@ defmodule PukllayClub.Accounts.UserNotifier do
   alias PukllayClub.Accounts.User
   alias PukllayClub.Mailer
 
-  # Delivers the email using the application mailer.
+  # Delivers the email using the application mailer. The sender is declared
+  # exactly once, in config (:pukllay_club, :mail_from) — never a literal
+  # here (D-36).
   defp deliver(recipient, subject, body) do
     email =
       new()
       |> to(recipient)
-      |> from({"PukllayClub", "contact@example.com"})
+      |> from(Application.fetch_env!(:pukllay_club, :mail_from))
       |> subject(subject)
       |> text_body(body)
 

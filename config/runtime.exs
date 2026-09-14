@@ -172,6 +172,33 @@ if config_env() == :prod do
     """
   end
 
+  # Production transactional email (D-36). GCP blocks outbound port 25 on the
+  # e2-micro, so SMTP is out — Resend's HTTP API (via Swoosh's Resend
+  # adapter, already api_client: Swoosh.ApiClient.Req from config/prod.exs)
+  # sends every magic-link/invite email instead. Required at boot (like
+  # DATABASE_URL/R2_PUBLIC_BASE_URL above) rather than defaulted: a deploy
+  # without this key must fail its health check so the previous container
+  # keeps serving, rather than silently shipping a login that can never
+  # email anyone.
+  mailer_api_key =
+    case System.get_env("MAILER_API_KEY") do
+      value when value in [nil, ""] ->
+        raise """
+        environment variable MAILER_API_KEY is missing.
+        Required so production can send magic-link/invite emails via the
+        Resend HTTP API (SMTP is blocked on this host). Add it to GitHub
+        repo secrets and config/deploy.yml's env.secret list before the next
+        deploy — never as a literal value in git.
+        """
+
+      value ->
+        value
+    end
+
+  config :pukllay_club, PukllayClub.Mailer,
+    adapter: Swoosh.Adapters.Resend,
+    api_key: mailer_api_key
+
   config :pukllay_club, :reservation_whatsapp_number, normalized_reservation_number
 
   # ## SSL Support
@@ -208,19 +235,7 @@ if config_env() == :prod do
 
   # ## Configuring the mailer
   #
-  # In production you need to configure the mailer to use a different adapter.
-  # Here is an example configuration for Mailgun:
-  #
-  #     config :pukllay_club, PukllayClub.Mailer,
-  #       adapter: Swoosh.Adapters.Mailgun,
-  #       api_key: System.get_env("MAILGUN_API_KEY"),
-  #       domain: System.get_env("MAILGUN_DOMAIN")
-  #
-  # Most non-SMTP adapters require an API client. Swoosh supports Req, Hackney,
-  # and Finch out-of-the-box. This configuration is typically done at
-  # compile-time in your config/prod.exs:
-  #
-  #     config :swoosh, :api_client, Swoosh.ApiClient.Req
-  #
-  # See https://swoosh.hexdocs.pm/Swoosh.html#module-installation for details.
+  # See the PukllayClub.Mailer config above (MAILER_API_KEY, D-36) — the
+  # Resend adapter is configured there, alongside the other required-env
+  # reads for this block.
 end

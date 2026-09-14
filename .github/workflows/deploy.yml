@@ -242,6 +242,7 @@ jobs:
           DATABASE_URL=$DATABASE_URL
           SENTRY_DSN=$SENTRY_DSN
           POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          MAILER_API_KEY=$MAILER_API_KEY
           EOF
 
       - name: Deploy with Kamal
@@ -257,6 +258,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          MAILER_API_KEY: ${{ secrets.MAILER_API_KEY }}
         # Steady-state CI-driven deploy (D-02). `kamal setup` (which also
         # boots kamal-proxy + the db accessory + obtains the Let's Encrypt
         # cert) was used only for plan 00-05's one-time first bring-up on
