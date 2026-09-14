@@ -4,7 +4,9 @@ defmodule PukllayClubWeb.Admin.BandAuditLive do
   every non-retired game whose club `weight_band` disagrees with the band
   implied by its `bgg_weight` (`Catalog.BandAudit.mismatches/0`), side by
   side with the evidence (current band, BGG weight, implied band), so
-  staff can fix a mis-banded game in one tap (Corregir).
+  staff can fix a mis-banded game in one tap (Corregir) or knowingly keep
+  it (Mantener) with drift detection. With no mismatches, shows a
+  positive/celebratory empty state (UI-SPEC E8 empty) — no CTA needed.
   """
   use PukllayClubWeb, :live_view
 
@@ -16,22 +18,44 @@ defmodule PukllayClubWeb.Admin.BandAuditLive do
     {:ok,
      socket
      |> assign(:page_title, "Revisar niveles")
-     |> assign(:mismatches, BandAudit.mismatches())}
+     |> assign(:loading, not connected?(socket))
+     |> load_mismatches()}
+  end
+
+  defp load_mismatches(socket) do
+    if socket.assigns.loading do
+      socket
+    else
+      assign(socket, :mismatches, BandAudit.mismatches())
+    end
   end
 
   @impl true
   def handle_event("correct", %{"game-id" => game_id}, socket) do
+    with_parsed_game_id(game_id, socket, fn int_id ->
+      {:ok, _game} = BandAudit.correct_band(int_id)
+
+      socket
+      |> put_flash(:info, "Nivel corregido.")
+      |> load_mismatches()
+    end)
+  end
+
+  @impl true
+  def handle_event("keep", %{"game-id" => game_id}, socket) do
+    with_parsed_game_id(game_id, socket, fn int_id ->
+      {:ok, _game} = BandAudit.keep_band(int_id)
+
+      socket
+      |> put_flash(:info, "Nivel mantenido.")
+      |> load_mismatches()
+    end)
+  end
+
+  defp with_parsed_game_id(game_id, socket, fun) do
     case Integer.parse(game_id) do
-      {int_id, ""} ->
-        {:ok, _game} = BandAudit.correct_band(int_id)
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Nivel corregido.")
-         |> assign(:mismatches, BandAudit.mismatches())}
-
-      _not_an_integer ->
-        {:noreply, socket}
+      {int_id, ""} -> {:noreply, fun.(int_id)}
+      _not_an_integer -> {:noreply, socket}
     end
   end
 
@@ -56,7 +80,15 @@ defmodule PukllayClubWeb.Admin.BandAuditLive do
           <:subtitle>Juegos cuyo nivel no coincide con su peso en BGG.</:subtitle>
         </.header>
 
-        <.table id="band-mismatches" rows={@mismatches}>
+        <div :if={@loading} class="space-y-2">
+          <div :for={_n <- 1..4} class="skeleton h-10 w-full"></div>
+        </div>
+
+        <div :if={!@loading and @mismatches == []} class="text-center py-12">
+          <h2 class="font-display text-xl">Todo en orden — no hay discrepancias de nivel.</h2>
+        </div>
+
+        <.table :if={!@loading and @mismatches != []} id="band-mismatches" rows={@mismatches}>
           <:col :let={game} label="Juego">
             <div class="flex items-center gap-2">
               <span class="badge badge-warning shrink-0">Revisar</span>
@@ -73,6 +105,9 @@ defmodule PukllayClubWeb.Admin.BandAuditLive do
           <:action :let={game}>
             <.button variant="secondary" phx-click="correct" phx-value-game-id={game.id}>
               Corregir
+            </.button>
+            <.button variant="secondary" phx-click="keep" phx-value-game-id={game.id}>
+              Mantener
             </.button>
           </:action>
         </.table>

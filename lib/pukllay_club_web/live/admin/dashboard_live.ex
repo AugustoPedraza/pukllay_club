@@ -6,15 +6,16 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
   with no filled primary button on the page itself. `#admin-cards`' D-35
   order is Juegos, Estantes, Secciones, Revisar niveles, Staff — plan
   01.8.1-05 added Juegos, 01.8.1-07 appended Staff, 01.8.1-09 inserted
-  Estantes second, and this plan (01.8.1-12) inserts Secciones third
-  (no pending-work badge — a section always has *something* to curate,
-  there's no "N left" count that makes sense here). Revisar niveles is a
-  later plan's own addition.
+  Estantes second, 01.8.1-12 inserted Secciones third (no pending-work
+  badge — a section always has *something* to curate, there's no "N left"
+  count that makes sense here), and this plan (01.8.1-13) inserts Revisar
+  niveles fourth, completing the fixed order.
   """
   use PukllayClubWeb, :live_view
 
   alias PukllayClub.Accounts.User
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.BandAudit
   alias PukllayClub.Catalog.Shelves
 
   @impl true
@@ -49,6 +50,15 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
             <span class="font-display text-xl">Secciones</span>
           </.link>
           <.link
+            navigate={~p"/admin/niveles"}
+            class="rounded-box bg-base-200 p-4 min-h-11 flex items-center justify-between gap-2"
+          >
+            <span class="font-display text-xl">Revisar niveles</span>
+            <span :if={@mismatches_count > 0} class="badge badge-warning">
+              {@mismatches_count} discrepancias
+            </span>
+          </.link>
+          <.link
             :if={User.owner?(@current_scope.user)}
             navigate={~p"/admin/staff"}
             class="rounded-box bg-base-200 p-4 min-h-11 flex items-center justify-between gap-2"
@@ -72,6 +82,7 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
      socket
      |> assign(:draft_count, Catalog.count_admin_games(status: :draft))
      |> assign(:placed, placed)
-     |> assign(:total, total)}
+     |> assign(:total, total)
+     |> assign(:mismatches_count, BandAudit.count_mismatches())}
   end
 end
