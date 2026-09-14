@@ -659,8 +659,7 @@ defmodule PukllayClub.Catalog do
   """
   def section_page(key, offset, limit \\ @carousel_page_size)
 
-  def section_page("section-" <> id_string, offset, limit)
-      when is_integer(offset) and offset >= 0 do
+  def section_page("section-" <> id_string, offset, limit) when is_integer(offset) and offset >= 0 do
     with {id, ""} <- Integer.parse(id_string),
          %Section{hidden: false} = section <- Repo.get(Section, id) do
       {:ok, fetch_section_page(section, offset, limit)}
@@ -714,22 +713,22 @@ defmodule PukllayClub.Catalog do
   # (the same reasoning the retired `tags_query/1`/`weight_band_query/1`
   # carried).
   defp section_query(%Section{kind: :manual, id: id, sort: sort}) do
-    from(g in Game,
-      join: sg in SectionGame,
-      on: sg.game_id == g.id and sg.section_id == ^id,
-      where: g.status == :published
+    manual_order_by(
+      from(g in Game,
+        join: sg in SectionGame,
+        on: sg.game_id == g.id and sg.section_id == ^id,
+        where: g.status == :published
+      ),
+      sort
     )
-    |> manual_order_by(sort)
   end
 
   defp section_query(%Section{kind: :weight_band, rule_value: band, sort: sort}) do
-    from(g in Game, where: g.weight_band == ^band and g.status == :published)
-    |> automatic_order_by(sort)
+    automatic_order_by(from(g in Game, where: g.weight_band == ^band and g.status == :published), sort)
   end
 
   defp section_query(%Section{kind: :recent, sort: sort}) do
-    from(g in Game, where: g.is_expansion == false and g.status == :published)
-    |> automatic_order_by(sort)
+    automatic_order_by(from(g in Game, where: g.is_expansion == false and g.status == :published), sort)
   end
 
   defp manual_order_by(query, :manual) do

@@ -24,6 +24,16 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   placeholders (no DB round-trip on that pass), then the connected
   websocket mount replaces it with real carousel/grid data. It is set once
   in `mount/3` and never toggled again by any `handle_event`.
+
+  The unfiltered landing's carousel rows are staff-owned database sections
+  (`PukllayClub.Catalog.Section`, D-17..D-28, 01.8.1-10), not a hardcoded
+  row list — `Catalog.list_home_sections/0` decides which sections exist,
+  their order (featured first, D-18), and their titles/subtitles. This
+  module only renders whatever it is handed: `carousel_stream_name/1`
+  derives each row's LiveView stream name from the section's own
+  server-loaded id, and `Catalog.section_page/3` — which never converts
+  the client-sent row key into an atom (T-01-37) — serves every
+  subsequent in-row page from the identical predicate page 1 used.
   """
   use PukllayClubWeb, :live_view
 

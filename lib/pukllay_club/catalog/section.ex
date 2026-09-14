@@ -24,6 +24,8 @@ defmodule PukllayClub.Catalog.Section do
 
   import Ecto.Changeset
 
+  alias PukllayClub.Catalog.SectionGame
+
   @kinds [:manual, :weight_band, :recent]
   @sorts [:manual, :name, :bgg_weight, :bgg_rating, :recent]
 
@@ -37,8 +39,8 @@ defmodule PukllayClub.Catalog.Section do
     field :rule_value, :string
     field :sort, Ecto.Enum, values: @sorts, default: :name
 
-    has_many :section_games, PukllayClub.Catalog.SectionGame
-    many_to_many :games, PukllayClub.Catalog.Game, join_through: PukllayClub.Catalog.SectionGame
+    has_many :section_games, SectionGame
+    many_to_many :games, PukllayClub.Catalog.Game, join_through: SectionGame
 
     timestamps()
   end

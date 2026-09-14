@@ -568,6 +568,32 @@ defmodule PukllayClub.CatalogTest do
       assert MapSet.size(MapSet.union(page1_ids, page2_ids)) == 25
     end
 
+    test "page 1 and page 2 stay duplicate-free and gap-free even when two members share a name (D-26 :id tiebreaker)" do
+      section = section_fixture(%{kind: :manual, sort: :name})
+
+      for n <- 1..25 do
+        # Every member shares the exact same name — the :id tiebreaker
+        # (asc: g.name, asc: g.id) is the only thing that can keep page 1
+        # and page 2 from silently duplicating or skipping a member.
+        game = game_fixture(%{name: "Tied Name", weight_band: nil})
+        add_game_to_section(section, game)
+        _ = n
+      end
+
+      key = "section-#{section.id}"
+      assert {:ok, {page1, false}} = Catalog.section_page(key, 0, 20)
+      assert {:ok, {page2, true}} = Catalog.section_page(key, 20)
+
+      assert length(page1) == 20
+      assert length(page2) == 5
+
+      page1_ids = MapSet.new(page1, & &1.id)
+      page2_ids = MapSet.new(page2, & &1.id)
+
+      assert MapSet.disjoint?(page1_ids, page2_ids)
+      assert MapSet.size(MapSet.union(page1_ids, page2_ids)) == 25
+    end
+
     test "a section with fewer games than the limit is exhausted on its first page" do
       section = section_fixture(%{kind: :manual, sort: :name})
 
@@ -640,6 +666,47 @@ defmodule PukllayClub.CatalogTest do
     test "a well-formed key for a hidden section returns :error (T-01.8.1-47)" do
       section = section_fixture(%{kind: :manual, sort: :name, hidden: true})
       assert Catalog.section_page("section-#{section.id}", 0) == :error
+    end
+
+    test "the featured section is capped at ~20 games (D-26); load-more returns nothing further" do
+      featured = Repo.get_by!(Section, featured: true)
+
+      for n <- 1..25 do
+        game =
+          game_fixture(%{name: "Featured #{String.pad_leading(to_string(n), 2, "0")}", weight_band: nil})
+
+        add_game_to_section(featured, game)
+      end
+
+      key = "section-#{featured.id}"
+      assert {:ok, {page1, true}} = Catalog.section_page(key, 0, 20)
+      assert length(page1) == 20
+
+      assert {:ok, {[], true}} = Catalog.section_page(key, 20)
+    end
+
+    test "a weight_band section never contains a game of another band" do
+      hobby_section = Repo.get_by!(Section, name: "Descubre el hobby")
+      hobby_game = game_fixture(%{name: "Hobby Only", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Only", weight_band: "nivel_experto"})
+
+      {:ok, {games, _exhausted?}} = Catalog.section_page("section-#{hobby_section.id}", 0)
+      ids = Enum.map(games, & &1.id)
+
+      assert hobby_game.id in ids
+      assert Enum.all?(games, &(&1.weight_band == "descubre_el_hobby"))
+    end
+
+    test "the recent section never contains an expansion" do
+      recent_section = Repo.get_by!(Section, name: "Recientemente añadidos")
+      base = game_fixture(%{name: "Base Only", weight_band: nil, is_expansion: false})
+      game_fixture(%{name: "Expansion Only(expa)", weight_band: nil, is_expansion: true})
+
+      {:ok, {games, _exhausted?}} = Catalog.section_page("section-#{recent_section.id}", 0)
+      ids = Enum.map(games, & &1.id)
+
+      assert base.id in ids
+      assert Enum.all?(games, &(&1.is_expansion == false))
     end
   end
 
