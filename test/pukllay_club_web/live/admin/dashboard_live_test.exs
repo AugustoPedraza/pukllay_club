@@ -154,6 +154,55 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
     end
   end
 
+  describe "Revisar niveles card (D-35, 01.8.1-13)" do
+    setup :register_and_log_in_staff
+
+    test "shows a badge-warning N discrepancias when count_mismatches/0 > 0", %{conn: conn} do
+      game_fixture(%{weight_band: "ingenio_estratega", bgg_weight: 3.8})
+      game_fixture(%{weight_band: "descubre_el_hobby", bgg_weight: 4.0})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Revisar niveles"
+      assert html =~ ~s(href="/admin/niveles")
+      assert html =~ "2 discrepancias"
+      assert html =~ "badge-warning"
+    end
+
+    test "omits the badge when there are no mismatches", %{conn: conn} do
+      game_fixture(%{weight_band: "ingenio_estratega", bgg_weight: 2.3})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Revisar niveles"
+      refute html =~ "discrepancias"
+    end
+
+    test "renders fourth, between Secciones and Staff (D-35 fixed card order)", %{conn: conn} do
+      conn = log_in_user(conn, "owner@example.com" |> Accounts.create_owner() |> elem(1))
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      secciones_at = html |> :binary.match("Secciones") |> elem(0)
+      niveles_at = html |> :binary.match("Revisar niveles") |> elem(0)
+      staff_at = html |> :binary.match("Staff") |> elem(0)
+
+      assert secciones_at < niveles_at
+      assert niveles_at < staff_at
+    end
+
+    test "a staff member sees the first four cards (no owner-only Staff card)" do
+      staff = staff_fixture()
+      conn = log_in_user(build_conn(), staff)
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Juegos"
+      assert html =~ "Estantes"
+      assert html =~ "Secciones"
+      assert html =~ "Revisar niveles"
+      refute html =~ "/admin/staff"
+    end
+  end
+
   describe "Staff card (D-35, T-01.8.1-07 Task 2)" do
     test "renders for the owner", %{conn: conn} do
       conn = log_in_user(conn, "owner@example.com" |> Accounts.create_owner() |> elem(1))

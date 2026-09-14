@@ -48,6 +48,43 @@ defmodule PukllayClubWeb.Admin.BandAuditLiveTest do
     end
   end
 
+  describe "Mantener stores a drift-aware override (D-30)" do
+    setup :register_and_log_in_staff
+
+    test "pressing Mantener removes the row and flashes Nivel mantenido.", %{conn: conn} do
+      game = game_fixture(%{name: "Terra Mystica", weight_band: "ingenio_estratega", bgg_weight: 3.8})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/niveles")
+
+      html =
+        lv
+        |> element("button[phx-value-game-id='#{game.id}']", "Mantener")
+        |> render_click()
+
+      assert html =~ "Nivel mantenido."
+      refute html =~ "Terra Mystica"
+
+      updated = PukllayClub.Repo.get!(PukllayClub.Catalog.Game, game.id)
+      assert updated.weight_band == "ingenio_estratega"
+      assert updated.band_reviewed_band == "nivel_experto"
+    end
+  end
+
+  describe "positive empty state (E8 empty)" do
+    setup :register_and_log_in_staff
+
+    test "with no mismatches shows Todo en orden and no table or action buttons", %{conn: conn} do
+      game_fixture(%{weight_band: "ingenio_estratega", bgg_weight: 2.3})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/niveles")
+
+      assert html =~ "Todo en orden — no hay discrepancias de nivel."
+      refute html =~ "Corregir"
+      refute html =~ "Mantener"
+      refute html =~ "<table"
+    end
+  end
+
   describe "role gate" do
     test "GET /admin/niveles with no session redirects to /admin/ingresar", %{conn: conn} do
       conn = get(conn, ~p"/admin/niveles")
