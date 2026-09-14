@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.1
 current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 status: executing
-stopped_at: Completed 01.8.1-12-PLAN.md
-last_updated: "2026-09-14T15:30:33.140Z"
+stopped_at: Completed 01.8.1-13-PLAN.md
+last_updated: "2026-09-14T15:50:14.122Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 01.8.1 execution started
-state_head: c0474b6333c61b5868d0a673d2e857ec300a8793
+state_head: a4622a8808c022eb575c70f703320888556d5827
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 26
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
-Plan: 12 of 14
+Plan: 13 of 14
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 01.8.1 execution started
 
@@ -128,6 +128,7 @@ Last activity: 2026-09-13 — Phase 01.8.1 execution started
 | Phase 01.8.1 P10 | 150min | 3 tasks | 11 files |
 | Phase 01.8.1 P11 | 100min | 2 tasks | 16 files |
 | Phase 01.8.1 P12 | 52min | 3 tasks | 12 files |
+| Phase 01.8.1 P13 | 30min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -254,6 +255,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.1]: 01.8.1-11: D-22 option A executed — games.tags stays frozen history; public hashtag chips switch to Catalog.put_section_names/1's section membership (Game.section_names virtual field); no column-drop migration created — User's plan-10 checkpoint decision; section chips render unlinked since section_names carries names only, no section id
 - [Phase 01.8.1]: 01.8.1-12: Section kind is immutable and drives sort validation server-side (settings_changeset/2 reads kind off the struct, not attrs); the featured cap (D-26) is checked inside the same transaction as the SectionGame insert, closing T-01.8.1-56 — Keeps kind/sort coupling correct without trusting client input, and closes the documented concurrent-add race in one transaction rather than a separate pre-check.
 - [Phase 01.8.1]: 01.8.1-12: Admin.GameLive.Form's Secciones fieldset is hand-written raw checkboxes (game[section_ids][]), not CoreComponents.input/1 — section membership isn't a Game schema field, applied via Sections.set_game_sections/2 after the game itself saves so a featured_full error never reverts the game's own changes — Keeps membership assignment decoupled from Game.admin_changeset/2's narrow cast allowlist (T-01.8.1-21) while still giving staff one combined save action.
+- [Phase 01.8.1]: 01.8.1-13: keep_band/1 snapshots the game's CURRENT implied band + timestamp (not a boolean flag, RESEARCH.md A4) so a later bgg_weight drift to a different implied band re-surfaces the game in the audit
+- [Phase 01.8.1]: 01.8.1-13: BandAudit.mismatches/0 computes the weight-band mismatch entirely in Elixir via Vocabulary.implied_weight_band/1 (never a second threshold copy in SQL); Revisar niveles inserted fourth in the dashboard's fixed D-35 card order, completing it
 
 ### Pending Todos
 
@@ -392,8 +395,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T15:30:33.060Z
-Stopped at: Completed 01.8.1-12-PLAN.md
+Last session: 2026-09-14T15:50:14.048Z
+Stopped at: Completed 01.8.1-13-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
