@@ -5,9 +5,11 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
   Mobile-first: a single-column card grid (`grid-cols-1 sm:grid-cols-2`)
   with no filled primary button on the page itself. `#admin-cards`' D-35
   order is Juegos, Estantes, Secciones, Revisar niveles, Staff — plan
-  01.8.1-05 added Juegos, 01.8.1-07 appended Staff, and this plan
-  (01.8.1-09) inserts Estantes second; Secciones and Revisar niveles are
-  later plans' additions.
+  01.8.1-05 added Juegos, 01.8.1-07 appended Staff, 01.8.1-09 inserted
+  Estantes second, and this plan (01.8.1-12) inserts Secciones third
+  (no pending-work badge — a section always has *something* to curate,
+  there's no "N left" count that makes sense here). Revisar niveles is a
+  later plan's own addition.
   """
   use PukllayClubWeb, :live_view
 
@@ -39,6 +41,12 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
             <span :if={@placed < @total} class="badge badge-warning">
               {@placed}/{@total} ubicados
             </span>
+          </.link>
+          <.link
+            navigate={~p"/admin/secciones"}
+            class="rounded-box bg-base-200 p-4 min-h-11 flex items-center justify-between gap-2"
+          >
+            <span class="font-display text-xl">Secciones</span>
           </.link>
           <.link
             :if={User.owner?(@current_scope.user)}

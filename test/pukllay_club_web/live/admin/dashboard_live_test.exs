@@ -129,6 +129,31 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
     end
   end
 
+  describe "Secciones card (D-35, 01.8.1-12)" do
+    setup :register_and_log_in_staff
+
+    test "links to /admin/secciones with no pending badge", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert html =~ "Secciones"
+      assert html =~ ~s(href="/admin/secciones")
+    end
+
+    test "renders third, between Estantes and Staff (D-35 fixed card order)", %{conn: conn} do
+      conn = log_in_user(conn, "owner@example.com" |> Accounts.create_owner() |> elem(1))
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      juegos_at = html |> :binary.match("Juegos") |> elem(0)
+      estantes_at = html |> :binary.match("Estantes") |> elem(0)
+      secciones_at = html |> :binary.match("Secciones") |> elem(0)
+      staff_at = html |> :binary.match("Staff") |> elem(0)
+
+      assert juegos_at < estantes_at
+      assert estantes_at < secciones_at
+      assert secciones_at < staff_at
+    end
+  end
+
   describe "Staff card (D-35, T-01.8.1-07 Task 2)" do
     test "renders for the owner", %{conn: conn} do
       conn = log_in_user(conn, "owner@example.com" |> Accounts.create_owner() |> elem(1))

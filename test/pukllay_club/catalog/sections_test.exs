@@ -183,4 +183,135 @@ defmodule PukllayClub.Catalog.SectionsTest do
       assert Repo.get_by!(Section, featured: true).position != first_non_featured.position
     end
   end
+
+  describe "add_game/2 (D-25, D-26, T-01.8.1-56)" do
+    test "appends at the next position" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      game_a = game_fixture(%{name: "A"})
+      game_b = game_fixture(%{name: "B"})
+
+      assert {:ok, _section} = Sections.add_game(section, game_a.id)
+      assert {:ok, _section} = Sections.add_game(section, game_b.id)
+
+      assert section |> Sections.section_members() |> Enum.map(& &1.game_id) == [
+               game_a.id,
+               game_b.id
+             ]
+    end
+
+    test "adding the same game twice returns {:error, :already_member}" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      game = game_fixture()
+
+      assert {:ok, _section} = Sections.add_game(section, game.id)
+      assert {:error, :already_member} = Sections.add_game(section, game.id)
+    end
+
+    test "adding to a weight_band section returns {:error, :automatic_section}" do
+      section = section_fixture(%{kind: :weight_band, rule_value: "nivel_experto", sort: :name})
+      game = game_fixture()
+
+      assert {:error, :automatic_section} = Sections.add_game(section, game.id)
+    end
+
+    test "adding to a recent section returns {:error, :automatic_section}" do
+      section = section_fixture(%{kind: :recent, sort: :recent})
+      game = game_fixture()
+
+      assert {:error, :automatic_section} = Sections.add_game(section, game.id)
+    end
+
+    test "the featured section with 20 members returns {:error, :featured_full} on a 21st add" do
+      featured = Repo.get_by!(Section, featured: true)
+
+      for _ <- 1..20 do
+        {:ok, _section} = Sections.add_game(featured, game_fixture().id)
+      end
+
+      assert {:error, :featured_full} = Sections.add_game(featured, game_fixture().id)
+    end
+
+    test "a manual (non-featured) section with 20 members accepts a 21st" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+
+      for _ <- 1..20 do
+        {:ok, _section} = Sections.add_game(section, game_fixture().id)
+      end
+
+      assert {:ok, _section} = Sections.add_game(section, game_fixture().id)
+    end
+  end
+
+  describe "remove_game/2 (D-25)" do
+    test "removes and re-packs positions densely" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      game_a = game_fixture(%{name: "A"})
+      game_b = game_fixture(%{name: "B"})
+      game_c = game_fixture(%{name: "C"})
+      {:ok, _} = Sections.add_game(section, game_a.id)
+      {:ok, _} = Sections.add_game(section, game_b.id)
+      {:ok, _} = Sections.add_game(section, game_c.id)
+
+      assert {:ok, _section} = Sections.remove_game(section, game_b.id)
+
+      members = Sections.section_members(section)
+      assert Enum.map(members, & &1.game_id) == [game_a.id, game_c.id]
+      assert Enum.map(members, & &1.position) == [1, 2]
+    end
+  end
+
+  describe "move_game/3 (D-25)" do
+    test "swaps with the previous member" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      game_a = game_fixture(%{name: "A"})
+      game_b = game_fixture(%{name: "B"})
+      {:ok, _} = Sections.add_game(section, game_a.id)
+      {:ok, _} = Sections.add_game(section, game_b.id)
+
+      assert {:ok, _section} = Sections.move_game(section, game_b.id, :up)
+
+      assert section |> Sections.section_members() |> Enum.map(& &1.game_id) == [
+               game_b.id,
+               game_a.id
+             ]
+    end
+
+    test "moving the first member up is a no-op" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      game_a = game_fixture(%{name: "A"})
+      {:ok, _} = Sections.add_game(section, game_a.id)
+
+      assert {:ok, _section} = Sections.move_game(section, game_a.id, :up)
+      assert section |> Sections.section_members() |> Enum.map(& &1.game_id) == [game_a.id]
+    end
+  end
+
+  describe "set_game_sections/2 (D-07)" do
+    test "adds missing memberships and removes unchecked ones" do
+      section_a = section_fixture(%{kind: :manual, sort: :manual})
+      section_b = section_fixture(%{kind: :manual, sort: :manual})
+      game = game_fixture()
+      {:ok, _} = Sections.add_game(section_a, game.id)
+
+      assert {:ok, _ids} = Sections.set_game_sections(game.id, [section_b.id])
+
+      refute Enum.any?(Sections.section_members(section_a), &(&1.game_id == game.id))
+      assert Enum.any?(Sections.section_members(section_b), &(&1.game_id == game.id))
+    end
+
+    test "returns {:error, :featured_full} without adding to any other requested section" do
+      featured = Repo.get_by!(Section, featured: true)
+      other = section_fixture(%{kind: :manual, sort: :manual})
+      game = game_fixture()
+
+      for _ <- 1..20 do
+        {:ok, _section} = Sections.add_game(featured, game_fixture().id)
+      end
+
+      assert {:error, :featured_full} =
+               Sections.set_game_sections(game.id, [other.id, featured.id])
+
+      refute Enum.any?(Sections.section_members(other), &(&1.game_id == game.id))
+    end
+  end
 end

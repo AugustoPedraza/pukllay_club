@@ -7,6 +7,7 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Section
+  alias PukllayClub.Catalog.Sections
   alias PukllayClub.Repo
 
   describe "SectionLive.Index — anonymous access" do
@@ -207,8 +208,101 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
       lv |> form("#section-form", section: %{sort: "name"}) |> render_submit()
 
-      home_row = Catalog.list_home_sections() |> Enum.find(&(&1.section_id == section.id))
+      home_row = Enum.find(Catalog.list_home_sections(), &(&1.section_id == section.id))
       assert Enum.map(home_row.games, & &1.name) == ["Alfa", "Zeta"]
+    end
+  end
+
+  describe "SectionLive.Edit — member picker (D-25)" do
+    setup :register_and_log_in_staff
+
+    test "typing a name lists matching non-retired games not already a member; tapping adds it",
+         %{conn: conn} do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      already_in = game_fixture(%{name: "Carcassonne en la sección"})
+      add_game_to_section(section, already_in)
+      matching = game_fixture(%{name: "Carcassonne"})
+      _retired = game_fixture(%{name: "Carcassonne Retirado", status: :retired})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
+
+      lv |> form("#section-member-search", %{q: "carc"}) |> render_change()
+
+      # A search RESULT button (add-game) excludes both an existing
+      # member and a retired game — the member list below (unconditional)
+      # is a separate assertion.
+      assert has_element?(lv, "button[phx-click='add-game'][phx-value-game-id='#{matching.id}']")
+      refute has_element?(lv, "button[phx-click='add-game'][phx-value-game-id='#{already_in.id}']")
+      refute has_element?(lv, "button[phx-click='add-game']", "Carcassonne Retirado")
+
+      html =
+        lv
+        |> element("button[phx-value-game-id='#{matching.id}']", "Carcassonne")
+        |> render_click()
+
+      assert html =~ "Carcassonne en la sección"
+      assert html =~ "Carcassonne"
+    end
+
+    test "a member row shows ↑/↓ and Quitar when sort is manual", %{conn: conn} do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      game = game_fixture(%{name: "Catán"})
+      add_game_to_section(section, game)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
+
+      assert has_element?(lv, "button[aria-label='Subir Catán']")
+      assert has_element?(lv, "button[aria-label='Bajar Catán']")
+      assert has_element?(lv, "button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
+    end
+
+    test "a member row hides ↑/↓ when sort is not manual", %{conn: conn} do
+      section = section_fixture(%{kind: :manual, sort: :name})
+      game = game_fixture(%{name: "Catán"})
+      add_game_to_section(section, game)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
+
+      refute has_element?(lv, "button[aria-label='Subir Catán']")
+      refute has_element?(lv, "button[aria-label='Bajar Catán']")
+      assert has_element?(lv, "button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
+    end
+
+    test "Quitar removes the game without a confirmation", %{conn: conn} do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      game = game_fixture(%{name: "Catán"})
+      add_game_to_section(section, game)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones/#{section.id}")
+      assert html =~ "Catán"
+
+      html =
+        lv
+        |> element("button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
+        |> render_click()
+
+      refute html =~ "Catán"
+    end
+
+    test "at 20 members the featured screen shows the cap message", %{conn: conn} do
+      featured = Repo.get_by!(Section, featured: true)
+
+      for _ <- 1..20 do
+        {:ok, _section} = Sections.add_game(featured, game_fixture().id)
+      end
+
+      extra = game_fixture(%{name: "Juego 21"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{featured.id}")
+
+      lv |> form("#section-member-search", %{q: "Juego 21"}) |> render_change()
+
+      html =
+        lv
+        |> element("button[phx-value-game-id='#{extra.id}']", "Juego 21")
+        |> render_click()
+
+      assert html =~ "La sección destacada ya tiene 20 juegos. Quitá uno para agregar otro."
     end
   end
 end

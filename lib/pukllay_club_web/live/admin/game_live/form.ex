@@ -35,10 +35,21 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   — no undo toast, per `ux-patterns` B11 ("warn before the action
   commits"). Restaurar has no confirmation (reversible, routine — UI-SPEC
   Color contract).
+
+  A `Secciones` fieldset (D-07) lists every hand-picked (`:manual`)
+  section as a checkbox — the featured section included, since it is
+  still `:manual`. Section membership isn't a `Game` schema field, so it
+  travels as a plain `game[section_ids][]` checkbox list outside
+  `Game.admin_changeset/2`'s cast allowlist, and is applied via
+  `Sections.set_game_sections/2` right after the game itself saves. A
+  `{:error, :featured_full}` from that call surfaces as a flash error —
+  the game's own field changes are already saved by that point, so this
+  never blocks or reverts them.
   """
   use PukllayClubWeb, :live_view
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Sections
   alias PukllayClub.Catalog.Shelves
   alias PukllayClub.Catalog.Vocabulary
 
@@ -52,8 +63,12 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
      |> assign(:game, game)
      |> assign(:confirm_retire, false)
      |> assign(:shelves, Shelves.list_shelves())
+     |> assign(:manual_sections, manual_sections())
+     |> assign(:selected_section_ids, MapSet.new(Sections.member_section_ids(game.id)))
      |> assign(:form, to_form(Catalog.change_game_admin(game)))}
   end
+
+  defp manual_sections, do: Enum.filter(Sections.list_sections(), &(&1.kind == :manual))
 
   @impl true
   def handle_event("validate", %{"game" => params}, socket) do
@@ -74,7 +89,8 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
          |> assign(:game, game)
          |> assign(:page_title, game.name)
          |> assign(:form, to_form(Catalog.change_game_admin(game)))
-         |> after_save(Map.get(full_params, "_action"))}
+         |> after_save(Map.get(full_params, "_action"))
+         |> apply_section_ids(game, params)}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -160,6 +176,31 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
   defp after_save(socket, _action), do: put_flash(socket, :info, "Cambios guardados.")
 
+  # D-07: `section_ids` isn't a `Game` schema field (never cast by
+  # `Game.admin_changeset/2`), so it's applied separately, after the game
+  # itself is already saved — `set_game_sections/2` owns its own
+  # transaction and the featured cap check (D-26).
+  defp apply_section_ids(socket, game, params) do
+    section_ids = params |> Map.get("section_ids", []) |> Enum.flat_map(&parse_id/1)
+
+    case Sections.set_game_sections(game.id, section_ids) do
+      {:ok, _section_ids} ->
+        assign(socket, :selected_section_ids, MapSet.new(section_ids))
+
+      {:error, :featured_full} ->
+        socket
+        |> put_flash(:error, "La sección destacada ya tiene 20 juegos.")
+        |> assign(:selected_section_ids, MapSet.new(Sections.member_section_ids(game.id)))
+    end
+  end
+
+  defp parse_id(value) do
+    case Integer.parse(value) do
+      {int_id, ""} -> [int_id]
+      _not_an_integer -> []
+    end
+  end
+
   defp weight_band_options do
     Enum.map(Vocabulary.weight_bands(), &{&1.label, &1.value})
   end
@@ -244,6 +285,20 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
             options={shelf_options(@shelves)}
           />
           <.input field={@form[:description]} type="textarea" label="Descripción en español" />
+
+          <fieldset :if={@manual_sections != []} class="fieldset mb-2">
+            <legend class="label mb-1">Secciones</legend>
+            <label :for={section <- @manual_sections} class="flex items-center gap-2 min-h-11">
+              <input
+                type="checkbox"
+                name="game[section_ids][]"
+                value={section.id}
+                checked={section.id in @selected_section_ids}
+                class="checkbox checkbox-sm"
+              />
+              {section.name}
+            </label>
+          </fieldset>
 
           <div class="flex flex-wrap gap-2 pt-2">
             <%!-- D-04/D-08: exactly one primary action per lifecycle state.

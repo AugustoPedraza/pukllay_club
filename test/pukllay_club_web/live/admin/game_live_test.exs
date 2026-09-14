@@ -10,10 +10,13 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
 
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
+  import PukllayClub.SectionsFixtures
   import PukllayClub.ShelvesFixtures
 
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Game
+  alias PukllayClub.Catalog.Section
+  alias PukllayClub.Catalog.Sections
   alias PukllayClub.Catalog.Seed.BggClient
   alias PukllayClub.Catalog.Seed.ImagePipeline
   alias PukllayClub.Catalog.Seed.TranslatedDescription
@@ -134,6 +137,75 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
 
       conn = get(conn, ~p"/juegos/#{game}")
       refute html_response(conn, 200) =~ "Estante-Test-Ludoteca"
+    end
+  end
+
+  describe "GameLive.Form — Secciones checkboxes (D-07)" do
+    setup :register_and_log_in_staff
+
+    test "lists every manual section as a checkbox, pre-checked for current membership", %{
+      conn: conn
+    } do
+      section_a = section_fixture(%{name: "Sección A"})
+      section_b = section_fixture(%{name: "Sección B"})
+      game = game_fixture()
+      add_game_to_section(section_a, game)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert html =~ "Sección A"
+      assert html =~ "Sección B"
+
+      assert has_element?(lv, "input[value='#{section_a.id}'][checked]")
+      refute has_element?(lv, "input[value='#{section_b.id}'][checked]")
+    end
+
+    test "checking two sections and saving makes the game a member of both", %{conn: conn} do
+      section_a = section_fixture(%{name: "Sección A"})
+      section_b = section_fixture(%{name: "Sección B"})
+      game = game_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      lv
+      |> form("#game-form", game: %{section_ids: [to_string(section_a.id), to_string(section_b.id)]})
+      |> render_submit()
+
+      member_ids = Sections.member_section_ids(game.id)
+      assert Enum.sort(member_ids) == Enum.sort([section_a.id, section_b.id])
+    end
+
+    test "unchecking a section removes membership", %{conn: conn} do
+      section = section_fixture(%{name: "Sección Única"})
+      game = game_fixture()
+      add_game_to_section(section, game)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      lv |> form("#game-form", game: %{section_ids: []}) |> render_submit()
+
+      assert Sections.member_section_ids(game.id) == []
+    end
+
+    test "a featured_full error surfaces as a form-level flash without reverting the game's own save",
+         %{conn: conn} do
+      featured = Repo.get_by!(Section, featured: true)
+
+      for _ <- 1..20 do
+        {:ok, _section} = Sections.add_game(featured, game_fixture().id)
+      end
+
+      game = game_fixture(%{name: "Sin publicar todavía"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      html =
+        lv
+        |> form("#game-form", game: %{name: "Nombre nuevo", section_ids: [to_string(featured.id)]})
+        |> render_submit()
+
+      assert html =~ "La sección destacada ya tiene 20 juegos."
+      assert Catalog.get_game!(game.id).name == "Nombre nuevo"
     end
   end
 

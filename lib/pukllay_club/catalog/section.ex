@@ -78,9 +78,7 @@ defmodule PukllayClub.Catalog.Section do
   end
 
   defp validate_sort_for_kind(changeset, :weight_band) do
-    validate_exclusion(changeset, :sort, [:manual],
-      message: "no admite orden manual — el nivel define los miembros"
-    )
+    validate_exclusion(changeset, :sort, [:manual], message: "no admite orden manual — el nivel define los miembros")
   end
 
   defp validate_sort_for_kind(changeset, :recent) do

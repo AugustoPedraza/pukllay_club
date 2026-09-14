@@ -17,7 +17,14 @@ defmodule PukllayClub.Catalog.Sections do
   import Ecto.Query
 
   alias PukllayClub.Catalog.Section
+  alias PukllayClub.Catalog.SectionGame
   alias PukllayClub.Repo
+
+  # D-26: the featured section is capped at ~20 hand-picked games; every
+  # other manual section is uncapped. Checked inside the same transaction
+  # as the insert (T-01.8.1-56) so two concurrent adds can never push the
+  # featured section past the cap.
+  @featured_cap 20
 
   @doc """
   Every section (hidden included), featured first then by `position`
@@ -130,5 +137,168 @@ defmodule PukllayClub.Catalog.Sections do
         order_by: [asc: s.position],
         limit: 1
     )
+  end
+
+  @doc """
+  A `:manual` section's members (D-25), ordered by `position` (the order
+  the phone picker's ↑/↓ controls manage), preloading `:game`.
+  `:weight_band`/`:recent` sections always return `[]` — their membership
+  is derived at read time from the game's own columns, never from
+  `section_games` rows (see `Catalog.section_query/1`).
+  """
+  def section_members(%Section{} = section) do
+    SectionGame
+    |> where([sg], sg.section_id == ^section.id)
+    |> order_by([sg], asc: sg.position, asc: sg.id)
+    |> Repo.all()
+    |> Repo.preload(:game)
+  end
+
+  @doc """
+  The manual section ids `game_id` currently belongs to (D-07) — used by
+  `Admin.GameLive.Form` to pre-check its Secciones fieldset.
+  """
+  def member_section_ids(game_id) do
+    SectionGame
+    |> where([sg], sg.game_id == ^game_id)
+    |> select([sg], sg.section_id)
+    |> Repo.all()
+  end
+
+  @doc """
+  Adds `game_id` to `section` at the next position (D-25). Only
+  `:manual` sections accept members — `:weight_band`/`:recent` sections
+  return `{:error, :automatic_section}` (their membership is a rule, D-20/
+  D-21, never a hand pick). Returns `{:error, :already_member}` for a
+  game already in the section, and `{:error, :featured_full}` when the
+  featured section already holds `@featured_cap` games (D-26) — the count
+  check and the insert run inside the same transaction (T-01.8.1-56).
+  """
+  def add_game(%Section{kind: :manual} = section, game_id) do
+    Repo.transaction(fn ->
+      cond do
+        already_member?(section.id, game_id) ->
+          Repo.rollback(:already_member)
+
+        section.featured and member_count(section.id) >= @featured_cap ->
+          Repo.rollback(:featured_full)
+
+        true ->
+          Repo.insert!(%SectionGame{section_id: section.id, game_id: game_id, position: next_member_position(section.id)})
+          section
+      end
+    end)
+  end
+
+  def add_game(%Section{}, _game_id), do: {:error, :automatic_section}
+
+  defp already_member?(section_id, game_id) do
+    Repo.exists?(from sg in SectionGame, where: sg.section_id == ^section_id and sg.game_id == ^game_id)
+  end
+
+  defp member_count(section_id) do
+    Repo.aggregate(from(sg in SectionGame, where: sg.section_id == ^section_id), :count)
+  end
+
+  defp next_member_position(section_id) do
+    case Repo.one(from sg in SectionGame, where: sg.section_id == ^section_id, select: max(sg.position)) do
+      nil -> 1
+      max -> max + 1
+    end
+  end
+
+  @doc """
+  Removes `game_id` from `section` and re-packs the remaining members'
+  `position` values densely (1..n, no gaps) — D-25. Safe to call even if
+  `game_id` was never a member (a no-op delete). Returns `{:ok, section}`.
+  """
+  def remove_game(%Section{} = section, game_id) do
+    Repo.transaction(fn ->
+      Repo.delete_all(from(sg in SectionGame, where: sg.section_id == ^section.id and sg.game_id == ^game_id))
+      repack_positions(section.id)
+      section
+    end)
+  end
+
+  defp repack_positions(section_id) do
+    SectionGame
+    |> where([sg], sg.section_id == ^section_id)
+    |> order_by([sg], asc: sg.position, asc: sg.id)
+    |> Repo.all()
+    |> Enum.with_index(1)
+    |> Enum.each(fn {row, index} -> update_member_position(row, index) end)
+  end
+
+  @doc """
+  Swaps `game_id`'s member position in `section` with its immediate
+  neighbour (D-25) — `:up` moves it earlier, `:down` moves it later. A
+  no-op at either end of the member list, and for a `game_id` that isn't
+  a member. Returns `{:ok, section}`.
+  """
+  def move_game(%Section{} = section, game_id, direction) when direction in [:up, :down] do
+    members = section_members(section)
+
+    case {Enum.find_index(members, &(&1.game_id == game_id)), direction} do
+      {nil, _direction} ->
+        {:ok, section}
+
+      {0, :up} ->
+        {:ok, section}
+
+      {index, :down} when index == length(members) - 1 ->
+        {:ok, section}
+
+      {index, :up} ->
+        swap_member_positions(Enum.at(members, index), Enum.at(members, index - 1))
+        {:ok, section}
+
+      {index, :down} ->
+        swap_member_positions(Enum.at(members, index), Enum.at(members, index + 1))
+        {:ok, section}
+    end
+  end
+
+  defp swap_member_positions(%SectionGame{position: a_position} = a, %SectionGame{position: b_position} = b) do
+    Repo.transaction(fn ->
+      {:ok, a} = update_member_position(a, b_position)
+      {:ok, _b} = update_member_position(b, a_position)
+      a
+    end)
+  end
+
+  defp update_member_position(%SectionGame{} = member, position) do
+    member
+    |> change(position: position)
+    |> Repo.update()
+  end
+
+  @doc """
+  Sets `game_id`'s manual section membership to exactly `section_ids`
+  (D-07, the game form's Secciones checkboxes) — adds any missing
+  membership at that section's own end (respecting the featured cap,
+  D-26) and removes any unchecked one, re-packing positions, all inside
+  one transaction. Returns `{:ok, section_ids}` / `{:error,
+  :featured_full}` (surfaced by `Admin.GameLive.Form` as a form-level
+  error — the plan's own only documented failure mode for this path).
+  """
+  def set_game_sections(game_id, section_ids) when is_list(section_ids) do
+    Repo.transaction(fn ->
+      current_ids = member_section_ids(game_id)
+
+      for section_id <- current_ids -- section_ids do
+        section_id |> get_section!() |> remove_game(game_id)
+      end
+
+      for section_id <- section_ids -- current_ids, do: add_or_rollback(section_id, game_id)
+
+      section_ids
+    end)
+  end
+
+  defp add_or_rollback(section_id, game_id) do
+    case section_id |> get_section!() |> add_game(game_id) do
+      {:ok, _section} -> :ok
+      {:error, reason} -> Repo.rollback(reason)
+    end
   end
 end
