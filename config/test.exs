@@ -3,6 +3,9 @@ import Config
 # Print only warnings and errors during test
 config :logger, level: :warning
 
+# Only in tests, remove the complexity from the password hashing algorithm
+config :pbkdf2_elixir, :rounds, 1
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 

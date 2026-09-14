@@ -1,0 +1,85 @@
+defmodule PukllayClubWeb.Admin.DashboardLiveTest do
+  use PukllayClubWeb.ConnCase, async: true
+
+  import Phoenix.LiveViewTest
+  import PukllayClub.AccountsFixtures
+
+  alias PukllayClub.Accounts
+
+  describe "the tracer: /admin/ingresar magic link to a staff-gated /admin (T-01.8.1-01)" do
+    test "an owner requests a magic link, confirms it, and lands on /admin", %{conn: conn} do
+      user = "owner@example.com" |> Accounts.create_owner() |> elem(1)
+
+      {:ok, login_lv, _html} = live(conn, ~p"/admin/ingresar")
+
+      {:ok, _login_lv, _html} =
+        login_lv
+        |> form("#login_form_magic", user: %{email: user.email})
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/admin/ingresar")
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_login_instructions(user, url)
+        end)
+
+      {:ok, confirm_lv, _html} = live(conn, ~p"/admin/ingresar/#{token}")
+
+      form = form(confirm_lv, "#login_form", %{"user" => %{"token" => token}})
+      render_submit(form)
+      conn = follow_trigger_action(form, conn)
+
+      assert redirected_to(conn) == ~p"/admin"
+
+      conn = get(recycle(conn), ~p"/admin")
+      assert html_response(conn, 200) =~ "Panel"
+    end
+
+    test "GET /admin with no session redirects to /admin/ingresar", %{conn: conn} do
+      conn = get(conn, ~p"/admin")
+      assert redirected_to(conn) == ~p"/admin/ingresar"
+    end
+  end
+
+  describe "role gate (D-33, T-01.8.1-02)" do
+    test "a signed-in non-staff scope is rejected by the :require_staff_user plug", %{
+      conn: conn
+    } do
+      non_staff = %Accounts.User{id: -1, role: nil}
+
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> Plug.Conn.assign(:current_scope, Accounts.Scope.for_user(non_staff))
+        |> PukllayClubWeb.UserAuth.require_staff_user([])
+
+      assert conn.halted
+      assert redirected_to(conn) == ~p"/"
+    end
+
+    test "a signed-in non-staff scope is rejected by the :require_staff on_mount hook" do
+      non_staff = %Accounts.User{id: -1, role: nil}
+
+      socket = %Phoenix.LiveView.Socket{
+        endpoint: PukllayClubWeb.Endpoint,
+        assigns: %{
+          __changed__: %{},
+          flash: %{},
+          current_scope: Accounts.Scope.for_user(non_staff)
+        }
+      }
+
+      assert {:halt, _socket} =
+               PukllayClubWeb.UserAuth.on_mount(:require_staff, %{}, %{}, socket)
+    end
+  end
+
+  describe "User.staff?/1 (T-01.8.1-02)" do
+    test "true for :owner and :staff, false for nil" do
+      assert Accounts.User.staff?(%Accounts.User{role: :owner})
+      assert Accounts.User.staff?(%Accounts.User{role: :staff})
+      refute Accounts.User.staff?(%Accounts.User{role: nil})
+      refute Accounts.User.staff?(nil)
+    end
+  end
+end
