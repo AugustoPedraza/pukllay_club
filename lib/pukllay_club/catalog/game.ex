@@ -85,6 +85,12 @@ defmodule PukllayClub.Catalog.Game do
     # ("Sin ubicar"). Never rendered on any public page (D-16).
     belongs_to :shelf, PukllayClub.Catalog.Shelf
 
+    # Band-audit "keep" override snapshot (D-30, 01.8.1-13, migration
+    # `add_band_review_to_games`) — see `Game.band_review_changeset/2` and
+    # `PukllayClub.Catalog.BandAudit`. `nil`/`nil` means never reviewed.
+    field :band_reviewed_band, :string
+    field :band_reviewed_at, :utc_datetime
+
     timestamps()
   end
 
@@ -242,6 +248,20 @@ defmodule PukllayClub.Catalog.Game do
     |> validate_number(:units, greater_than: 0)
     |> validate_inclusion(:weight_band, Enum.map(Vocabulary.weight_bands(), & &1.value))
     |> foreign_key_constraint(:shelf_id)
+  end
+
+  @doc """
+  Changeset for the D-30 band-audit actions
+  (`PukllayClub.Catalog.BandAudit.correct_band/1`, `keep_band/1`) — casts
+  only `:weight_band, :band_reviewed_band, :band_reviewed_at`, never any
+  other field. `correct_band/1` sets `:weight_band` to the implied band and
+  clears both review fields back to `nil`; `keep_band/1` leaves
+  `:weight_band` untouched and sets the review snapshot instead.
+  """
+  def band_review_changeset(game, attrs) do
+    game
+    |> cast(attrs, [:weight_band, :band_reviewed_band, :band_reviewed_at])
+    |> validate_inclusion(:weight_band, Enum.map(Vocabulary.weight_bands(), & &1.value))
   end
 end
 
