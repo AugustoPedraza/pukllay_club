@@ -205,6 +205,44 @@
   .btn.danger { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
   .btn.danger:hover { filter: brightness(1.07); }
 
+
+  /* ---- Cerrar sesión confirm (polished) ---- */
+  .sheet { padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px)); }
+  .steps { position: relative; transition: height var(--duration-slow) var(--ease-out-soft); }
+  .steps.animating { overflow: hidden; }
+  .step { transition: opacity var(--duration-base) var(--ease-standard), transform var(--duration-slow) var(--ease-out-soft); }
+  .step[aria-hidden="true"] { position: absolute; top: 0; left: 0; right: 0; opacity: 0; pointer-events: none; }
+  .step-account[aria-hidden="true"] { transform: translateX(-24px); }
+  .step-confirm[aria-hidden="true"] { transform: translateX(24px); }
+  .confirm { text-align: center; padding: 4px 4px 0; }
+  .confirm .c-ico {
+    width: 52px; height: 52px; border-radius: 50%; margin: 6px auto 14px; display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg)); color: var(--color-danger);
+  }
+  .confirm .c-ico svg { width: 26px; height: 26px; }
+  .sheet .confirm h3 { font-family: var(--font-sans); font-size: 1.125rem; font-weight: 700; letter-spacing: 0; margin: 0 0 6px; color: var(--color-text); }
+  .sheet .confirm p { text-wrap: balance; max-width: 38ch; margin: 0 auto 20px; line-height: 1.5; }
+  .sheet .confirm p.c-who { margin: 0 auto 4px; max-width: none; }
+  .confirm .c-email { color: var(--color-text); font-weight: 600; overflow-wrap: anywhere; }
+  .confirm .sheet-actions { gap: 4px; }
+  .confirm .btn { min-height: 48px; font-size: var(--text-base); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  .confirm .btn svg { width: 20px; height: 20px; }
+  .btn.danger-soft {
+    background: color-mix(in srgb, var(--color-danger) 10%, var(--color-bg));
+    border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border)); color: var(--color-danger);
+  }
+  .btn.danger-soft:hover { background: color-mix(in srgb, var(--color-danger) 16%, var(--color-bg)); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--color-text-muted); }
+  .btn.ghost:hover { color: var(--color-text); background: var(--color-surface); }
+  .btn[disabled] { cursor: progress; }
+  .btn.ghost[disabled] { opacity: .4; }
+  .btn .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  :root[data-theme="dark"] .btn.danger-soft, :root[data-theme="dark"] .confirm .c-ico { color: #F2A3B8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.danger-soft, :root:not([data-theme="light"]) .confirm .c-ico { color: #F2A3B8; } }
+  @media (prefers-reduced-motion: reduce) { .step, .steps { transition: none; } }
+  .desk .sheet.center { width: 380px; }
+
   /* ================= variant C: bottom tab bar ================= */
   .dock {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--color-bg);
@@ -367,13 +405,27 @@ function drawer(inner) {
   </aside>`;
 }
 
-const confirmSheet = () => `<div class="sheet center" id="sheet-logout" role="dialog" aria-modal="true">
-  <div class="grab"></div>
-  <h3>¿Cerrar sesión?</h3>
-  <p>Para volver a entrar vas a necesitar un link nuevo por mail.</p>
+/* Cerrar sesión confirm — quiet, centered, says WHO is signing out; soft-danger (not solid CTA). */
+const confirmBody = (cancelAct) => `<div class="confirm">
+  <div class="c-ico">${ic('logout')}</div>
+  <h3 id="confirm-title">¿Cerrar sesión?</h3>
+  <p class="c-who"><span class="c-email">${USER.email}</span></p>
+  <p>Para volver a entrar, te mandamos un link por mail.</p>
   <div class="sheet-actions">
-    <button class="btn danger" data-act="logout">Cerrar sesión</button>
-    <button class="btn" data-act="close">Cancelar</button>
+    <button class="btn danger-soft" data-act="logout">${ic('logout')}<span>Cerrar sesión</span></button>
+    <button class="btn ghost" data-act="${cancelAct}">Cancelar</button>
+  </div></div>`;
+// Standalone version (drawer entry points: variants A, B and public pages): its own sheet.
+const confirmSheet = () => `<div class="sheet center" id="sheet-logout" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="grab"></div>${confirmBody('close')}</div>`;
+// Stepped version: the account sheet turns into the confirm step in place (no second sheet).
+const accountSheet = () => `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu cuenta">
+  <div class="grab"></div>
+  <div class="steps">
+    <div class="step step-account">${accountCard()}
+      <div class="dlinks" style="margin:8px -16px 4px">${dlink('pub:inicio', { icon: 'ext', label: 'Ver el sitio público' })}</div>
+      ${logoutBtn()}<div class="divider"></div>${themeRow()}</div>
+    <div class="step step-confirm" aria-hidden="true" inert>${confirmBody('cancel-logout')}</div>
   </div></div>`;
 
 /* ---------------- page bodies ---------------- */
@@ -507,10 +559,7 @@ function variantC() {
     <div class="grab"></div>
     <div class="dlinks">${moreKeys.map(k => dlink(k, { icon: SCREENS[k].icon, label: SCREENS[k].title, count: SCREENS[k].count, on: top === k })).join('')}</div>
     </div>`;
-  const account = `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu cuenta">
-    <div class="grab"></div>${accountCard()}
-    <div class="dlinks" style="margin:8px -16px 4px">${dlink('pub:inicio', { icon: 'ext', label: 'Ver el sitio público' })}</div>
-    ${logoutBtn()}<div class="divider"></div>${themeRow()}</div>`;
+  const account = accountSheet();
   return `<div class="scroller">${hdr}${desk ? dock : ''}<main id="c-main">${pageHead({ backStyle: 'back' })}${adminBody()}</main></div>
     ${desk ? '' : dock}<div class="backdrop" data-act="close"></div>${more}${account}${confirmSheet()}`;
 }
@@ -540,10 +589,7 @@ function variantD() {
     </nav>`;
   const dInner = `<div class="group-label" style="margin-top:4px">Panel</div><div class="dlinks">${adminLinks()}</div>
     <div class="group-label">Sitio</div><div class="dlinks">${siteLinks()}</div>`;
-  const account = `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu cuenta">
-    <div class="grab"></div>${accountCard()}
-    <div class="dlinks" style="margin:8px -16px 4px">${dlink('pub:inicio', { icon: 'ext', label: 'Ver el sitio público' })}</div>
-    ${logoutBtn()}<div class="divider"></div>${themeRow()}</div>`;
+  const account = accountSheet();
   return `<div class="scroller">${hdr}${desk ? dock : ''}<main id="c-main">${pageHead({ backStyle: 'back' })}${adminBody()}</main></div>
     ${desk ? '' : dock}${drawer(dInner)}${account}${confirmSheet()}`;
 }
@@ -589,7 +635,29 @@ function render() {
   if (S.toast) { showToast(S.toast); S.toast = null; }
 }
 let returnFocus = null;
+function setStep(sh, name) {
+  const steps = sh.querySelector('.steps'); if (!steps) return;
+  const from = steps.querySelector('.step:not([aria-hidden="true"])');
+  const to = steps.querySelector('.step-' + name);
+  if (!to || from === to) return;
+  steps.style.height = from.offsetHeight + 'px'; steps.classList.add('animating');
+  from.setAttribute('aria-hidden', 'true'); from.inert = true;
+  to.removeAttribute('aria-hidden'); to.inert = false;
+  void steps.offsetHeight; steps.style.height = to.offsetHeight + 'px';
+  clearTimeout(steps._t); steps._t = setTimeout(() => { steps.style.height = ''; steps.classList.remove('animating'); }, 300);
+  // focus: the safe choice (Cancelar) on confirm; back on the logout row when cancelling
+  const f = name === 'confirm' ? to.querySelector('.ghost') : to.querySelector('.logout');
+  f && f.focus({ preventScroll: true });
+}
+function resetSteps() {
+  device.querySelectorAll('.steps').forEach(steps => setTimeout(() => {
+    if (steps.closest('.sheet.open')) return;
+    steps.querySelectorAll('.step').forEach(st => { const acc = st.classList.contains('step-account'); acc ? st.removeAttribute('aria-hidden') : st.setAttribute('aria-hidden', 'true'); st.inert = !acc; });
+    steps.style.height = '';
+  }, 300));
+}
 function closeAll() {
+  resetSteps();
   const had = device.querySelector('.drawer.open,.sheet.open');
   device.querySelectorAll('.open').forEach(el => { el.classList.remove('open'); el.style.transform = ''; });
   if (had && returnFocus && document.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
@@ -676,12 +744,25 @@ document.addEventListener('click', e => {
   if (a === 'open-drawer') openEl('.drawer', true, t);
   else if (a === 'open-account') openEl('#sheet-account', true, t);
   else if (a === 'open-more') openEl('#sheet-more', true, t);
-  else if (a === 'ask-logout') openEl('#sheet-logout');
+  else if (a === 'ask-logout') {
+    const sh = t.closest('.sheet');
+    if (sh && sh.querySelector('.step-confirm')) setStep(sh, 'confirm'); else openEl('#sheet-logout', true, t);
+  }
+  else if (a === 'cancel-logout') setStep(t.closest('.sheet'), 'account');
   else if (a === 'close') closeAll();
-  else if (a === 'logout') { closeAll(); setTimeout(() => { S.mode = 'out'; S.toast = 'Cerraste sesión'; render(); }, 200); }
+  else if (a === 'logout') {
+    // brief in-progress state so the tap is acknowledged, then land on Ingresar with a toast
+    t.disabled = true; t.innerHTML = '<span class="spin"></span><span>Cerrando sesión…</span>';
+    t.closest('.sheet-actions').querySelector('.ghost').disabled = true;
+    setTimeout(() => { closeAll(); setTimeout(() => { S.mode = 'out'; S.toast = 'Cerraste sesión'; render(); }, 220); }, 550);
+  }
   else if (a === 'login') { S.mode = 'admin'; S.screen = 'panel'; S.toast = 'Entraste como ' + USER.email; render(); }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const sh = device.querySelector('.sheet.open .step-confirm:not([aria-hidden="true"])');
+  if (sh) setStep(sh.closest('.sheet'), 'account'); else closeAll();
+});
 document.getElementById('tools-toggle').addEventListener('click', () => { const b = document.getElementById('tools-body'); b.style.display = b.style.display === 'none' ? 'flex' : 'none'; });
 render();
 </script>

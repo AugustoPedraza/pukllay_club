@@ -109,3 +109,29 @@ bottom option". Added as tab **C2** (variant key `D`); C is kept for comparison.
 
 Browser-verified: tab/drawer active-state sync through content-only swaps, account tab → logout →
 Ingresar, no horizontal overflow on any screen, desktop, zero JS errors. **Developer picked C2 over C** — C2 is the winner.
+
+## Polish round: Cerrar sesión confirm (2026-09-14)
+Developer flagged the logout bottom sheet as needing polish. Problems found in the original:
+solid red CTA-style button (contradicts the "no CTA look in admin" direction from G-01.8.1-2b),
+Bebas all-caps "¿CERRAR SESIÓN?" shouting, left-aligned copy with an orphan wrap, no indication of
+WHICH account signs out, a jarring double animation (account sheet slides down while a second
+sheet slides up), and no acknowledgement after tapping.
+
+Polished pattern (shared by every entry point):
+- **One sheet, two steps (C/C2):** the account sheet turns into the confirm step in place — content
+  slides/fades horizontally and the sheet height animates; no second sheet. Entry points from a drawer
+  (A, public pages) open the same confirm content as a standalone sheet (desktop: centered dialog).
+- **Content:** centered; soft danger-tinted logout icon; "¿Cerrar sesión?" in Inter 700 (not display
+  type); the account email on its own line; one balanced line "Para volver a entrar, te mandamos un
+  link por mail."
+- **Buttons:** "Cerrar sesión" = soft danger (tinted background, danger text + icon, 48px), not a solid
+  fill; "Cancelar" = ghost text button. Destructive first, Cancel last (thumb-closest).
+- **Keyboard/focus:** opening the confirm step focuses Cancelar (the safe choice); Cancelar or Esc steps
+  BACK to the account step (focus returns to the Cerrar sesión row) rather than closing everything;
+  backdrop/swipe close the whole sheet and reset it to the account step.
+- **Feedback:** tap → button shows spinner + "Cerrando sesión…", Cancelar disabled/dimmed → sheet closes
+  → Ingresar page with "Cerraste sesión" toast. `role="alertdialog"` on the standalone sheet;
+  hidden step is `inert`; `prefers-reduced-motion` disables the step animation; safe-area bottom padding.
+- Dark theme: danger text/icon lightened (#F2A3B8) for contrast on the dark ground.
+
+Browser-verified light + dark, phone + desktop, variants A and C2, zero JS errors.
