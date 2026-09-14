@@ -6,10 +6,10 @@ current_phase: 01.8.1
 current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 status: executing
 stopped_at: Completed 01.8.1-10-PLAN.md
-last_updated: "2026-09-14T14:14:39.238Z"
+last_updated: "2026-09-14T14:19:22.576Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 01.8.1 execution started
-state_head: 2612bff0a92bef27617806a263130ad1561a4adf
+state_head: fad08863e77e5905eef294b639760f4592a349cc
 progress:
   total_phases: 6
   completed_phases: 0
@@ -340,6 +340,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260913-j8k | Close stale UAT audit items (docs-only): 01.8 flaky-test + 01.4/01.5 format-drift deferred entries marked `status: resolved` with re-run evidence; 01.5-UAT tests 18/19 superseded by passing test 20, gaps normalized, file acknowledged — audit-uat 18 → 0 | 2026-09-13 | ea9ea7a | complete | [260913-j8k-close-stale-uat-audit-items-docs-only](./quick/260913-j8k-close-stale-uat-audit-items-docs-only/) |
 | 25 | Recompute 01.8-VERIFICATION.md covered_digest (deferred-items.md docs-only change in 338ff7e) | 2026-09-13 | 0511cf3 | — | — |
 | 26 | Document pukllay.club registrar (Spaceship) and DNS runbook | 2026-09-14 | 0576dfe | — | — |
+| 27 | Deploy uses catalog-scoped R2 token; production secrets runbook | 2026-09-14 | fad0886 | — | — |
 
 ### Roadmap Evolution
 
