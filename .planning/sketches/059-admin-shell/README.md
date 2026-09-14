@@ -2,7 +2,7 @@
 sketch: 059
 name: admin-shell
 question: "How does a signed-in staff member navigate admin on a phone, know they're authenticated, and sign out?"
-winner: "C"
+winner: "C2"
 tags: [admin, shell, drawer, session, logout, navigation, phase-01.8.1, mobile-first]
 ---
 
@@ -108,5 +108,4 @@ bottom option". Added as tab **C2** (variant key `D`); C is kept for comparison.
   shipped public drawer, kept for consistency.
 
 Browser-verified: tab/drawer active-state sync through content-only swaps, account tab → logout →
-Ingresar, no horizontal overflow on any screen, desktop, zero JS errors. Winner still recorded as C
-pending the developer's C vs C2 call.
+Ingresar, no horizontal overflow on any screen, desktop, zero JS errors. **Developer picked C2 over C** — C2 is the winner.
