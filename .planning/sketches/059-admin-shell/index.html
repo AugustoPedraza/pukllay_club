@@ -87,6 +87,9 @@
   }
   .avatar.lg { width: 44px; height: 44px; font-size: 16px; }
   .avatar.plain { box-shadow: none; }
+  .avatar.sm { width: 26px; height: 26px; font-size: 11px; }
+  .dock button[data-tab="account"].open-now .tab-ico { background: var(--color-accent-bg); }
+  .dot.attn { background: var(--color-secondary); }
 
   /* mode label */
   .mode-pill { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 2px 8px; white-space: nowrap; }
@@ -266,6 +269,7 @@
     <button class="vtab" data-v="A">A: Drawer carries the account</button>
     <button class="vtab" data-v="B">B: Avatar + account sheet</button>
     <button class="vtab" data-v="C">C: Bottom tab bar ★ Winner</button>
+    <button class="vtab" data-v="D">C2: C + top drawer, account in tab bar</button>
   </div>
   <div class="row">
     <span class="lbl">Estado</span>
@@ -511,7 +515,47 @@ function variantC() {
     ${desk ? '' : dock}<div class="backdrop" data-act="close"></div>${more}${account}${confirmSheet()}`;
 }
 
+
+/* C2 — synthesis requested after C won: keep the public-style hamburger drawer at the top
+   (full admin section list + site links), move the account/profile into the tab bar's last slot. */
+function variantD() {
+  if (S.mode !== 'admin') return variantC(); // public / signed-out behave exactly like C
+  const top = activeTop();
+  const desk = S.vp === 'desk';
+  const tabs = desk ? ['panel', ...visibleAdmin()] : ['panel', 'juegos', 'secciones', 'estantes'];
+  const drawerOnly = visibleAdmin().filter(k => !tabs.includes(k));
+  const drawerAttention = drawerOnly.some(k => SCREENS[k].short);
+  const hdr = `<header class="hdr"><div class="hdr-in">
+    ${desk ? '' : `<button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú" aria-haspopup="dialog">${ic('bars')}${drawerAttention ? '<span class="dot attn" title="Hay algo para revisar"></span>' : ''}</button>`}
+    ${brand(true, desk)}<span class="mode-pill">Panel</span><span class="spacer"></span>
+    ${desk ? `<button class="icon-btn" data-act="open-account" aria-label="Tu cuenta (sesión iniciada)" aria-haspopup="dialog"><span class="avatar">${USER.initials}</span></button>` : ''}
+    </div></header>`;
+  const tabBtn = k => `<button data-nav="${k}" data-tab="${k}" class="${top === k ? 'on' : ''}" ${top === k ? 'aria-current="page"' : ''}>
+      <span class="tab-ico">${ic(SCREENS[k].icon)}${SCREENS[k].short && k !== 'estantes' ? `<span class="badge-dot">${SCREENS[k].short}</span>` : ''}</span>
+      <span class="tab-lbl">${SCREENS[k].title}</span></button>`;
+  const dock = `<nav class="dock" aria-label="Secciones del panel">
+    ${tabs.map(tabBtn).join('')}
+    ${desk ? '' : `<button data-act="open-account" data-tab="account" aria-haspopup="dialog" aria-label="Tu cuenta (sesión iniciada)">
+      <span class="tab-ico"><span class="avatar sm">${USER.initials}</span></span><span class="tab-lbl">Cuenta</span></button>`}
+    </nav>`;
+  const dInner = `<div class="group-label" style="margin-top:4px">Panel</div><div class="dlinks">${adminLinks()}</div>
+    <div class="group-label">Sitio</div><div class="dlinks">${siteLinks()}</div>`;
+  const account = `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu cuenta">
+    <div class="grab"></div>${accountCard()}
+    <div class="dlinks" style="margin:8px -16px 4px">${dlink('pub:inicio', { icon: 'ext', label: 'Ver el sitio público' })}</div>
+    ${logoutBtn()}<div class="divider"></div>${themeRow()}</div>`;
+  return `<div class="scroller">${hdr}${desk ? dock : ''}<main id="c-main">${pageHead({ backStyle: 'back' })}${adminBody()}</main></div>
+    ${desk ? '' : dock}${drawer(dInner)}${account}${confirmSheet()}`;
+}
+
 const NOTES = {
+  D: `<h3>C2 — C's tab bar + the public-style drawer on top; your account is the last tab</h3><ul>
+    <li><b>Top:</b> the same hamburger as the public site. The drawer lists <i>all</i> admin sections (with counts) plus the site links. It holds no account or logout, so it's navigation only.</li>
+    <li><b>Tab bar:</b> Panel · Juegos · Secciones · Estantes · <b>Cuenta</b>. Cuenta is your avatar with the green ring, so the signed-in cue sits under your thumb. It opens the account sheet: Ver el sitio público, <b>Cerrar sesión</b>, theme.</li>
+    <li><b>Revisar niveles / Staff</b> are only reachable from the drawer. A purple dot on the hamburger signals when something in there needs attention (7 discrepancias). Green is kept for "signed in".</li>
+    <li>On Niveles/Staff no tab is highlighted; the drawer row shows where you are instead.</li>
+    <li><b>Desktop:</b> same as C (every section inline, avatar top right, no hamburger).</li>
+    <li>Tradeoff vs C: the four main sections appear twice (tabs + drawer), and the overflow sections take 2 taps from a menu at the top of the screen instead of Más at the bottom.</li></ul>`,
   A: `<h3>A — Same public header; the drawer holds the account and admin links</h3><ul>
     <li><b>Signed in:</b> a green dot on the hamburger (on every page) plus an account card at the top of the drawer (email + "Sesión iniciada · Dueña").</li>
     <li><b>Drawer:</b> Panel group (with counts) → Sitio group → <b>Cerrar sesión</b> as a clear row with an icon → theme. The drawer is shell-owned, so it's the same on public pages.</li>
@@ -537,8 +581,8 @@ function fitNav() { document.body.style.paddingTop = (document.getElementById('v
 window.addEventListener('resize', fitNav);
 function render() {
   fitNav();
-  device.className = 'device' + (S.vp === 'desk' ? ' desk' : '') + (S.v === 'C' && S.mode === 'admin' ? ' has-dock' : '');
-  device.innerHTML = ({ A: variantA, B: variantB, C: variantC })[S.v]() + `<div class="toast" id="toast">${ic('check')}<span></span></div>`;
+  device.className = 'device' + (S.vp === 'desk' ? ' desk' : '') + (['C','D'].includes(S.v) && S.mode === 'admin' ? ' has-dock' : '');
+  device.innerHTML = ({ A: variantA, B: variantB, C: variantC, D: variantD })[S.v]() + `<div class="toast" id="toast">${ic('check')}<span></span></div>`;
   document.getElementById('notes').innerHTML = NOTES[S.v];
   document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('active', b.dataset.v === S.v));
   document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.m === S.mode));
@@ -562,16 +606,17 @@ function openEl(sel, withBackdrop = true, opener = null) {
    navigate inside one live_session layout would). Soft fade, scroll reset, tab state patched. */
 function softSwap() {
   const main = device.querySelector('#c-main');
-  if (!main || S.v !== 'C' || S.mode !== 'admin') return render();
+  if (!main || !['C','D'].includes(S.v) || S.mode !== 'admin') return render();
   main.classList.add('swapping');
   setTimeout(() => {
     const top = activeTop();
     main.innerHTML = pageHead({ backStyle: 'back' }) + adminBody();
     device.querySelectorAll('.dock [data-tab]').forEach(b => {
       const on = b.dataset.tab === top || (b.dataset.tab === 'more' && !device.querySelector(`.dock [data-tab="${top}"]`));
+      if (b.dataset.tab === 'account') return;
       b.classList.toggle('on', on); on && b.dataset.tab !== 'more' ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
     });
-    device.querySelectorAll('#sheet-more .dlink').forEach(b => b.classList.toggle('on', b.dataset.nav === top));
+    device.querySelectorAll('#sheet-more .dlink, .drawer .dlink').forEach(b => b.classList.toggle('on', b.dataset.nav === top));
     device.querySelector('.scroller').scrollTop = 0;
     main.classList.remove('swapping');
   }, 100);
@@ -622,7 +667,7 @@ document.addEventListener('click', e => {
       if (S.screen !== n) { S.screen = n; return softSwap(); }
       return device.querySelector('.scroller').scrollTo({ top: 0, behavior: 'smooth' });
     }
-    const canSoft = S.v === 'C' && S.mode === 'admin';
+    const canSoft = ['C','D'].includes(S.v) && S.mode === 'admin';
     S.mode = 'admin'; S.screen = n; closeAll();
     // C swaps content underneath the closing sheet (no wait); other variants re-render after the close animation.
     if (canSoft) softSwap(); else setTimeout(render, wasOpen ? 180 : 0); return;

@@ -90,3 +90,23 @@ Polish pass, browser-verified (phone + desktop, light + dark, owner + staff role
 - The tab bar needs real bottom padding on `<main>` (~72px + safe area) so the last row isn't covered.
 - Drawer bug (G-01.8.1-1b) is not answered by this sketch; diagnose it separately. Check the shipped
   hook for rAF/visibility-dependent wiring (see "Bugs found while building").
+
+## Synthesis round: C2 — C + top drawer, account in the tab bar (2026-09-14)
+Requested after C won: "keep the drawer menu on the top and move the profile icon to the more
+bottom option". Added as tab **C2** (variant key `D`); C is kept for comparison.
+
+- Header: public-style hamburger (same as the public shell) + mark + PANEL label; no header avatar.
+- Drawer: navigation only — every admin section with counts + Sitio links (no account/logout).
+- Tab bar: Panel · Juegos · Secciones · Estantes · **Cuenta** (avatar with green signed-in ring) →
+  account sheet (Ver el sitio público, Cerrar sesión, theme).
+- Revisar niveles / Staff live only in the drawer; a purple dot on the hamburger flags pending work
+  there (green stays reserved for "signed in").
+- On Niveles/Staff no tab is highlighted; the drawer row carries the active state.
+- Desktop identical to C (all sections inline, avatar top-right, no hamburger).
+- Tradeoff: main sections duplicated in tabs + drawer; overflow sections move from a bottom (thumb)
+  target to a top one. Drawer slides from the right while the hamburger sits left — matches the
+  shipped public drawer, kept for consistency.
+
+Browser-verified: tab/drawer active-state sync through content-only swaps, account tab → logout →
+Ingresar, no horizontal overflow on any screen, desktop, zero JS errors. Winner still recorded as C
+pending the developer's C vs C2 call.
