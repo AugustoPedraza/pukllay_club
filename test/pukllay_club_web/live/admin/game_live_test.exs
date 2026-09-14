@@ -417,6 +417,41 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
     end
   end
 
+  describe "GameLive.Index — duplicate BGG id rejection (D-03)" do
+    setup :register_and_log_in_staff
+
+    test "pasting the id of an existing game (including a retired one) shows the duplicate message and a link", %{
+      conn: conn
+    } do
+      existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "184267")
+        |> render_submit()
+
+      assert html =~ "Este juego ya está en la ludoteca."
+      assert html =~ ~p"/admin/juegos/#{existing.id}/editar"
+      assert Catalog.count_admin_games() == 1
+    end
+
+    test "pasting a BGG game URL adds a draft (D-01, not only a bare id)", %{conn: conn} do
+      stub_bgg_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "https://boardgamegeek.com/boardgame/184267/on-mars")
+        |> render_submit()
+
+      assert html =~ "Juego agregado como borrador."
+      assert Catalog.count_admin_games() == 1
+    end
+  end
+
   describe "GameLive.Index — failed enrichment retry (D-03)" do
     setup :register_and_log_in_staff
 

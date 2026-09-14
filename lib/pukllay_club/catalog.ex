@@ -194,36 +194,88 @@ defmodule PukllayClub.Catalog do
     |> Repo.update()
   end
 
+  # Postgres' `integer` range — the `games.bgg_id` column's real column
+  # type (D-01, 01.8.1-08). A parsed id outside this range can never be a
+  # real BGG id worth accepting.
+  @max_bgg_id 2_147_483_647
+
   @doc """
-  Creates a `:draft` game from a pasted BGG id string (D-01, 01.8.1-06) and
-  enqueues its background enrichment job in the same transaction — either
-  both the row and the job exist, or neither does. `bgg_id` must be a
-  string of ASCII digits only; anything else (blank, non-numeric, a full
-  BGG URL — that parsing is plan 08's task) returns
-  `{:error, :invalid_bgg_id}` before any database work happens. Duplicate
-  BGG id rejection is also plan 08's task; this function does not check for
-  one.
+  Parses staff-pasted BGG input (D-01, 01.8.1-08): either a bare BGG id
+  (digits only, surrounding whitespace trimmed) or a full BGG URL —
+  `boardgamegeek.com`/`www.boardgamegeek.com` only, path starting
+  `/boardgame/<digits>` or `/boardgameexpansion/<digits>` (`URI.parse/1`
+  for the host check, T-01.8.1-37: an off-host URL is never accepted, so a
+  crafted URL can never reach `BggClient` with an id it wasn't meant to
+  have). The extracted digits are cast with `Integer.parse/1` and must
+  fall in `1..#{@max_bgg_id}` (the `games.bgg_id` integer column's real
+  range) — `"0"`, an id above that range, and anything else return
+  `:error`.
+  """
+  @spec parse_bgg_input(String.t()) :: {:ok, pos_integer()} | :error
+  def parse_bgg_input(input) when is_binary(input) do
+    trimmed = String.trim(input)
+
+    with :error <- parse_bgg_digits(trimmed) do
+      parse_bgg_url(trimmed)
+    end
+  end
+
+  defp parse_bgg_digits(value) do
+    if value != "" and String.match?(value, ~r/^[0-9]+$/) do
+      validate_bgg_range(String.to_integer(value))
+    else
+      :error
+    end
+  end
+
+  @allowed_bgg_hosts ["boardgamegeek.com", "www.boardgamegeek.com"]
+
+  defp parse_bgg_url(value) do
+    uri = URI.parse(value)
+
+    with true <- uri.host in @allowed_bgg_hosts,
+         path when is_binary(path) <- uri.path,
+         [_match, digits] <- Regex.run(~r{^/(?:boardgame|boardgameexpansion)/([0-9]+)}, path) do
+      validate_bgg_range(String.to_integer(digits))
+    else
+      _no_match -> :error
+    end
+  end
+
+  defp validate_bgg_range(id) when id >= 1 and id <= @max_bgg_id, do: {:ok, id}
+  defp validate_bgg_range(_out_of_range), do: :error
+
+  @doc """
+  Creates a `:draft` game from staff-pasted BGG input — a bare id or a BGG
+  URL, via `parse_bgg_input/1` (D-01) — and enqueues its background
+  enrichment job in the same transaction, either both the row and the job
+  exist, or neither does. Unparseable input returns
+  `{:error, :invalid_bgg_id}` before any database work happens.
+
+  An id already belonging to ANY game — draft, published, or retired —
+  is rejected up front as `{:error, {:duplicate, existing_game}}` (D-03):
+  nothing is inserted, and the caller renders a link to the existing
+  game's editor instead of creating a second row for the same BGG entry.
 
   Returns `{:ok, game}` with the inserted draft, or `{:error, changeset}`
   if `Game.draft_changeset/2` itself rejects the parsed id (defensive —
-  the digits-only guard above already prevents most invalid input from
-  reaching it).
+  the range check in `parse_bgg_input/1` already prevents most invalid
+  input from reaching it).
   """
-  @spec add_game_from_bgg(String.t()) :: {:ok, Game.t()} | {:error, :invalid_bgg_id | Ecto.Changeset.t()}
+  @spec add_game_from_bgg(String.t()) ::
+          {:ok, Game.t()} | {:error, :invalid_bgg_id | {:duplicate, Game.t()} | Ecto.Changeset.t()}
   def add_game_from_bgg(bgg_id) when is_binary(bgg_id) do
-    case parse_bgg_id(bgg_id) do
-      {:ok, bgg_id_int} -> insert_draft_and_enqueue(bgg_id_int)
+    case parse_bgg_input(bgg_id) do
+      {:ok, bgg_id_int} -> insert_draft_or_reject_duplicate(bgg_id_int)
       :error -> {:error, :invalid_bgg_id}
     end
   end
 
-  defp parse_bgg_id(bgg_id) do
-    trimmed = String.trim(bgg_id)
-
-    if trimmed != "" and String.match?(trimmed, ~r/^[0-9]+$/) do
-      {:ok, String.to_integer(trimmed)}
+  defp insert_draft_or_reject_duplicate(bgg_id_int) do
+    if existing = Repo.get_by(Game, bgg_id: bgg_id_int) do
+      {:error, {:duplicate, existing}}
     else
-      :error
+      insert_draft_and_enqueue(bgg_id_int)
     end
   end
 

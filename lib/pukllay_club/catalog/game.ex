@@ -149,12 +149,14 @@ defmodule PukllayClub.Catalog.Game do
   @doc """
   Changeset the background enrichment job (`PukllayClub.Workers.EnrichGameWorker`,
   `PukllayClub.Catalog.Enrichment.enrich/2`) persists BGG-derived facts
-  through (D-02). Casts every BGG-derived column plus `:enrichment_status`,
-  and `:name`/`:description` — the two club-owned-value exceptions the
-  caller only includes in `attrs` when the club-owned-value rules (D-07)
-  allow it: `:name` only when it still equals the `Juego #<bgg_id>`
-  placeholder, `:description` only when the current value is nil/blank.
-  Never casts `:status` — a draft stays a draft until staff publish it.
+  through (D-02, D-01/01.8.1-08). Casts every BGG-derived column plus
+  `:enrichment_status`, and `:name`/`:description`/`:is_expansion` — the
+  three club-owned-value exceptions the caller only includes in `attrs`
+  when the club-owned-value rules (D-07) allow it: `:name` only when it
+  still equals the `Juego #<bgg_id>` placeholder, `:description` only
+  when the current value is nil/blank, and `:is_expansion` only on that
+  same still-placeholder first enrichment. Never casts `:status` — a
+  draft stays a draft until staff publish it.
   """
   def enrichment_changeset(game, attrs) do
     cast(
@@ -182,7 +184,8 @@ defmodule PukllayClub.Catalog.Game do
         :bgg_payload,
         :enrichment_status,
         :name,
-        :description
+        :description,
+        :is_expansion
       ]
     )
   end

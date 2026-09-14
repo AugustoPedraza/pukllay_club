@@ -104,6 +104,24 @@ defmodule PukllayClub.Workers.EnrichGameWorkerTest do
       assert Catalog.get_game!(game.id).name == "Nombre elegido por el staff"
     end
 
+    test "a freshly-added draft's is_expansion is set from BGG's own classification (D-01, 01.8.1-08)" do
+      expansion_xml =
+        ~s(<?xml version="1.0"?><items><item type="boardgameexpansion" id="290837">) <>
+          ~s(<name type="primary" sortindex="1" value="Some Expansion" /></item></items>)
+
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, expansion_xml)
+      end)
+
+      {:ok, game} = Catalog.add_game_from_bgg("290837")
+
+      assert :ok = perform_job(EnrichGameWorker, %{"game_id" => game.id})
+
+      assert Catalog.get_game!(game.id).is_expansion == true
+    end
+
     test "cancels immediately and marks the game failed when BGG has no matching item (D-03)" do
       Req.Test.stub(BggClient, fn conn ->
         conn
@@ -225,7 +243,19 @@ defmodule PukllayClub.Workers.EnrichGameWorkerTest do
     test "returns {:error, :invalid_bgg_id} for non-numeric input" do
       assert {:error, :invalid_bgg_id} = Catalog.add_game_from_bgg("abc")
       assert {:error, :invalid_bgg_id} = Catalog.add_game_from_bgg("")
-      assert {:error, :invalid_bgg_id} = Catalog.add_game_from_bgg("https://boardgamegeek.com/boardgame/266192")
+      assert {:error, :invalid_bgg_id} = Catalog.add_game_from_bgg("https://evil.example/boardgame/1")
+    end
+
+    test "accepts a BGG URL (D-01/01.8.1-08), not only a bare id" do
+      assert {:ok, game} = Catalog.add_game_from_bgg("https://boardgamegeek.com/boardgame/266192/wingspan")
+      assert game.bgg_id == 266_192
+    end
+
+    test "rejects an id already belonging to any game, including a retired one (D-03)" do
+      existing = game_fixture(%{bgg_id: 266_192, status: :retired})
+
+      assert {:error, {:duplicate, ^existing}} = Catalog.add_game_from_bgg("266192")
+      assert Catalog.count_admin_games() == 1
     end
   end
 end

@@ -109,6 +109,7 @@ defmodule PukllayClub.Catalog.Enrichment do
         |> attrs_from_bgg_item()
         |> Map.merge(image_attrs)
         |> maybe_put_name(game, item)
+        |> maybe_put_is_expansion(game, item)
         |> maybe_translate_description(game, credentials)
         |> Map.put(:enrichment_status, "enriched")
 
@@ -142,6 +143,18 @@ defmodule PukllayClub.Catalog.Enrichment do
   defp maybe_put_name(attrs, %Game{bgg_id: bgg_id, name: name}, item) do
     if name == placeholder_name(bgg_id) do
       Map.put(attrs, :name, item.name)
+    else
+      attrs
+    end
+  end
+
+  # D-01/D-07, 01.8.1-08: `is_expansion` only ever comes from BGG on that
+  # SAME still-placeholder first enrichment that also accepts the BGG
+  # name — a game staff has already touched (renamed, or a later
+  # re-enrichment) never has this club-owned field overwritten.
+  defp maybe_put_is_expansion(attrs, %Game{bgg_id: bgg_id, name: name}, item) do
+    if name == placeholder_name(bgg_id) do
+      Map.put(attrs, :is_expansion, item.type == "boardgameexpansion")
     else
       attrs
     end

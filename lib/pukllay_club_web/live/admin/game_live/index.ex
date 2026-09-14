@@ -44,6 +44,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
      |> assign(:total, 0)
      |> assign(:bgg_id_input, "")
      |> assign(:bgg_id_error, nil)
+     |> assign(:bgg_duplicate_game, nil)
      |> stream(:games, [])}
   end
 
@@ -91,14 +92,26 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
          socket
          |> assign(:bgg_id_input, "")
          |> assign(:bgg_id_error, nil)
+         |> assign(:bgg_duplicate_game, nil)
          |> put_flash(:info, "Juego agregado como borrador.")
          |> push_patch(to: filter_path(:draft, ""))}
+
+      # D-03: a BGG id already claimed by any game (draft, published, or
+      # retired) — link to the existing editor instead of a generic
+      # field error.
+      {:error, {:duplicate, existing}} ->
+        {:noreply,
+         socket
+         |> assign(:bgg_id_input, bgg_id)
+         |> assign(:bgg_id_error, nil)
+         |> assign(:bgg_duplicate_game, existing)}
 
       {:error, _reason} ->
         {:noreply,
          socket
          |> assign(:bgg_id_input, bgg_id)
-         |> assign(:bgg_id_error, "Pegá un número de BGG o el link del juego.")}
+         |> assign(:bgg_id_error, "Pegá un número de BGG o el link del juego.")
+         |> assign(:bgg_duplicate_game, nil)}
     end
   end
 
@@ -205,6 +218,13 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
           </div>
           <.button variant="primary">Agregar juego</.button>
         </form>
+
+        <div :if={@bgg_duplicate_game} class="alert alert-error">
+          <span>Este juego ya está en la ludoteca.</span>
+          <.link navigate={~p"/admin/juegos/#{@bgg_duplicate_game.id}/editar"} class="link">
+            Ver juego
+          </.link>
+        </div>
 
         <div class="flex flex-wrap items-center gap-4">
           <nav class="flex flex-wrap gap-1" aria-label="Filtrar por estado">

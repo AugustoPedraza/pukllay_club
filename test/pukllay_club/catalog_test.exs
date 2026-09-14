@@ -964,6 +964,32 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
+  describe "parse_bgg_input/1 (D-01, 01.8.1-08)" do
+    test "a bare digits-only id parses, surrounding whitespace trimmed" do
+      assert Catalog.parse_bgg_input("266192") == {:ok, 266_192}
+      assert Catalog.parse_bgg_input(" 266192 ") == {:ok, 266_192}
+    end
+
+    test "a BGG game or expansion URL parses to its id" do
+      assert Catalog.parse_bgg_input("https://boardgamegeek.com/boardgame/266192/wingspan") ==
+               {:ok, 266_192}
+
+      assert Catalog.parse_bgg_input("https://www.boardgamegeek.com/boardgameexpansion/290837/x") ==
+               {:ok, 290_837}
+    end
+
+    test "an off-host URL is rejected (T-01.8.1-37)" do
+      assert Catalog.parse_bgg_input("https://evil.example/boardgame/1") == :error
+    end
+
+    test "non-numeric, zero, empty, and out-of-range input are rejected" do
+      assert Catalog.parse_bgg_input("abc") == :error
+      assert Catalog.parse_bgg_input("0") == :error
+      assert Catalog.parse_bgg_input("") == :error
+      assert Catalog.parse_bgg_input("2147483648") == :error
+    end
+  end
+
   describe "retry_enrichment/1 (D-03)" do
     test "on a non-failed game returns {:error, :not_failed} without touching the row" do
       game = game_fixture(%{enrichment_status: "pending"})
