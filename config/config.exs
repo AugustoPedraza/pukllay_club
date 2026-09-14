@@ -79,6 +79,17 @@ config :pukllay_club,
   ecto_repos: [PukllayClub.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Oban (D-01, 01.8.1-06): the app's first background job runner. Concurrency
+# of 1 on the `enrichment` queue bounds image-processing (libvips) memory on
+# the 1 GB production e2-micro host — running two enrichment jobs at once
+# risked OOM on that box. Pruner keeps `oban_jobs` from growing unbounded
+# (completed/cancelled/discarded jobs older than 7 days are removed).
+config :pukllay_club, Oban,
+  engine: Oban.Engines.Basic,
+  repo: PukllayClub.Repo,
+  queues: [enrichment: 1],
+  plugins: [{Oban.Plugins.Pruner, max_age: 604_800}]
+
 # Configure Sentry crash reporting. The DSN itself is sourced from the
 # SENTRY_DSN runtime env var (config/runtime.exs) — never a literal value
 # here or in git. When SENTRY_DSN is unset (local dev/test), Sentry's `dsn`

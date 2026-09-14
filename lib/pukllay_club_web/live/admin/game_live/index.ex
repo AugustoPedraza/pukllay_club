@@ -26,6 +26,8 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
      |> assign(:q, "")
      |> assign(:offset, 0)
      |> assign(:total, 0)
+     |> assign(:bgg_id_input, "")
+     |> assign(:bgg_id_error, nil)
      |> stream(:games, [])}
   end
 
@@ -63,6 +65,25 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   @impl true
   def handle_event("search", %{"q" => q}, socket) do
     {:noreply, push_patch(socket, to: filter_path(socket.assigns.status, q))}
+  end
+
+  @impl true
+  def handle_event("add-game", %{"bgg_id" => bgg_id}, socket) do
+    case Catalog.add_game_from_bgg(bgg_id) do
+      {:ok, _game} ->
+        {:noreply,
+         socket
+         |> assign(:bgg_id_input, "")
+         |> assign(:bgg_id_error, nil)
+         |> put_flash(:info, "Juego agregado como borrador.")
+         |> push_patch(to: filter_path(:draft, ""))}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> assign(:bgg_id_input, bgg_id)
+         |> assign(:bgg_id_error, "Pegá un número de BGG o el link del juego.")}
+    end
   end
 
   @impl true
@@ -121,6 +142,24 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
     <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse>
       <div class="mx-auto w-full max-w-4xl space-y-6">
         <.header>Juegos</.header>
+
+        <form
+          id="add-game-form"
+          phx-submit="add-game"
+          class="rounded-box border border-base-300 bg-base-200 p-4 flex flex-wrap items-end gap-3"
+        >
+          <div class="flex-1 min-w-48">
+            <.input
+              type="text"
+              id="add-game-bgg-id"
+              name="bgg_id"
+              value={@bgg_id_input}
+              label="ID o link de BGG"
+              errors={if @bgg_id_error, do: [@bgg_id_error], else: []}
+            />
+          </div>
+          <.button variant="primary">Agregar juego</.button>
+        </form>
 
         <div class="flex flex-wrap items-center gap-4">
           <nav class="flex flex-wrap gap-1" aria-label="Filtrar por estado">

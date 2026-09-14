@@ -117,9 +117,74 @@ defmodule PukllayClub.Catalog.Game do
       :enrichment_status,
       :is_expansion
     ])
-    |> validate_required([:name, :csv_row])
+    |> validate_required([:name])
     |> validate_inclusion(:enrichment_status, @enrichment_statuses)
     |> unique_constraint(:csv_row)
+  end
+
+  @doc """
+  Changeset for a staff-initiated add-by-BGG-id (D-01, 01.8.1-06). Casts
+  only `:bgg_id`, requiring a positive integer, and puts the fixed initial
+  state every new draft starts in: `status: :draft` (never public until
+  `Catalog.publish_game/1`), `enrichment_status: "pending"` (the background
+  job has not run yet), and a placeholder `name` the enrichment job later
+  replaces with the real BGG name — see `enrichment_changeset/2`'s
+  club-owned-value rules.
+  """
+  def draft_changeset(game, attrs) do
+    game
+    |> cast(attrs, [:bgg_id])
+    |> validate_required([:bgg_id])
+    |> validate_number(:bgg_id, greater_than: 0)
+    |> put_change(:status, :draft)
+    |> put_change(:enrichment_status, "pending")
+    |> then(fn changeset ->
+      case get_field(changeset, :bgg_id) do
+        nil -> changeset
+        bgg_id -> put_change(changeset, :name, "Juego ##{bgg_id}")
+      end
+    end)
+  end
+
+  @doc """
+  Changeset the background enrichment job (`PukllayClub.Workers.EnrichGameWorker`,
+  `PukllayClub.Catalog.Enrichment.enrich/2`) persists BGG-derived facts
+  through (D-02). Casts every BGG-derived column plus `:enrichment_status`,
+  and `:name`/`:description` — the two club-owned-value exceptions the
+  caller only includes in `attrs` when the club-owned-value rules (D-07)
+  allow it: `:name` only when it still equals the `Juego #<bgg_id>`
+  placeholder, `:description` only when the current value is nil/blank.
+  Never casts `:status` — a draft stays a draft until staff publish it.
+  """
+  def enrichment_changeset(game, attrs) do
+    cast(
+      game,
+      attrs,
+      [
+        :year_published,
+        :min_players,
+        :max_players,
+        :min_playtime,
+        :max_playtime,
+        :playing_time,
+        :min_age,
+        :bgg_weight,
+        :bgg_rating,
+        :bgg_rank,
+        :mechanics,
+        :themes,
+        :designers,
+        :artists,
+        :publishers,
+        :thumbnail_url,
+        :cover_url,
+        :gallery_urls,
+        :bgg_payload,
+        :enrichment_status,
+        :name,
+        :description
+      ]
+    )
   end
 
   @doc """

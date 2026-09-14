@@ -22,9 +22,11 @@ defmodule PukllayClub.Catalog do
 
   import Ecto.Query
 
+  alias Ecto.Multi
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Vocabulary
   alias PukllayClub.Repo
+  alias PukllayClub.Workers.EnrichGameWorker
 
   @default_limit 24
   # Admin Juegos list (D-09 Task 2) page size — the UI-SPEC's own E1
@@ -190,6 +192,52 @@ defmodule PukllayClub.Catalog do
     game
     |> Game.admin_changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc """
+  Creates a `:draft` game from a pasted BGG id string (D-01, 01.8.1-06) and
+  enqueues its background enrichment job in the same transaction — either
+  both the row and the job exist, or neither does. `bgg_id` must be a
+  string of ASCII digits only; anything else (blank, non-numeric, a full
+  BGG URL — that parsing is plan 08's task) returns
+  `{:error, :invalid_bgg_id}` before any database work happens. Duplicate
+  BGG id rejection is also plan 08's task; this function does not check for
+  one.
+
+  Returns `{:ok, game}` with the inserted draft, or `{:error, changeset}`
+  if `Game.draft_changeset/2` itself rejects the parsed id (defensive —
+  the digits-only guard above already prevents most invalid input from
+  reaching it).
+  """
+  @spec add_game_from_bgg(String.t()) :: {:ok, Game.t()} | {:error, :invalid_bgg_id | Ecto.Changeset.t()}
+  def add_game_from_bgg(bgg_id) when is_binary(bgg_id) do
+    case parse_bgg_id(bgg_id) do
+      {:ok, bgg_id_int} -> insert_draft_and_enqueue(bgg_id_int)
+      :error -> {:error, :invalid_bgg_id}
+    end
+  end
+
+  defp parse_bgg_id(bgg_id) do
+    trimmed = String.trim(bgg_id)
+
+    if trimmed != "" and String.match?(trimmed, ~r/^[0-9]+$/) do
+      {:ok, String.to_integer(trimmed)}
+    else
+      :error
+    end
+  end
+
+  defp insert_draft_and_enqueue(bgg_id_int) do
+    Multi.new()
+    |> Multi.insert(:game, Game.draft_changeset(%Game{}, %{bgg_id: bgg_id_int}))
+    |> Oban.insert(:enrich_job, fn %{game: game} ->
+      EnrichGameWorker.new(%{game_id: game.id})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{game: game}} -> {:ok, game}
+      {:error, :game, changeset, _changes_so_far} -> {:error, changeset}
+    end
   end
 
   @doc """

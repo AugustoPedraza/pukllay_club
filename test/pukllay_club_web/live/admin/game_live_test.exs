@@ -1,10 +1,17 @@
 defmodule PukllayClubWeb.Admin.GameLiveTest do
   use PukllayClubWeb.ConnCase, async: true
+  use Oban.Testing, repo: PukllayClub.Repo
 
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Game
+  alias PukllayClub.Catalog.Seed.BggClient
+  alias PukllayClub.Repo
+  alias PukllayClub.Workers.EnrichGameWorker
+
+  @bgg_fixture File.read!("test/support/fixtures/bgg_thing_on_mars.xml")
 
   describe "GameLive.Form — edit screen (D-07, T-01.8.1-21)" do
     setup :register_and_log_in_staff
@@ -223,6 +230,50 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
 
       assert html =~ "Ningún juego en borrador"
       assert html =~ "Agregá un juego pegando su ID o link de BGG."
+    end
+  end
+
+  describe "GameLive.Index — add game by BGG id (D-01, 01.8.1-06)" do
+    setup :register_and_log_in_staff
+
+    test "an invalid id shows a field error and adds nothing", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "not-a-number")
+        |> render_submit()
+
+      assert html =~ "Pegá un número de BGG o el link del juego."
+      assert Catalog.count_admin_games() == 0
+    end
+
+    test "a valid id adds a draft row; after perform_job, re-rendering shows the BGG name", %{
+      conn: conn
+    } do
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, @bgg_fixture)
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "184267")
+        |> render_submit()
+
+      assert html =~ "Juego agregado como borrador."
+      assert html =~ "Juego #184267"
+
+      game = Repo.get_by!(Game, bgg_id: 184_267)
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+
+      assert :ok = perform_job(EnrichGameWorker, %{"game_id" => game.id})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=borrador")
+      assert html =~ "On Mars"
     end
   end
 
