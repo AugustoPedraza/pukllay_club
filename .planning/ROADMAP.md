@@ -134,7 +134,7 @@ prioritized ahead of Phase 2/3 for Saturday operations and a living home page.
   4. Staff manage the home page's sections: create, rename, reorder and hide them; each is hand-picked (type-ahead add, ↑/↓, remove) or automatic by rule (difficulty band, recently added), the first is a hand-picked featured hero capped at ~20 games, empty sections are hidden, and the catalog filter offers a sections facet *(rewritten 2026-09-13 per 01.8.1-CONTEXT.md D-17..D-28 — supersedes "rename the first carousel; all other rows remain automatic")*
   5. Staff can see games whose CSV `weight_band` disagrees with their `bgg_weight`, and either correct the band or explicitly keep it
 
-**Plans:** 7/14 plans executed
+**Plans:** 8/14 plans executed
 **UI hint**: yes
 
 Plans:
@@ -159,7 +159,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 01.8.1-08-PLAN.md — Add-by-BGG hardening: failure + Reintentar, duplicate rejection, BGG URL/expansions, production enrichment secrets (SC-2)
+- [x] 01.8.1-08-PLAN.md — Add-by-BGG hardening: failure + Reintentar, duplicate rejection, BGG URL/expansions, production enrichment secrets (SC-2)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
@@ -243,7 +243,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 01.8.1 → 2 → 
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
 | 01.7. Production Catalog Data & Security Hardening | 5/5 | Complete    | 2026-09-11 |
 | 01.8. SEO, Structured Data & Social Sharing | 7/7 | Complete    | 2026-09-12 |
-| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 7/14 | In Progress|  |
+| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 8/14 | In Progress|  |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |

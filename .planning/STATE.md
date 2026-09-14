@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.1
 current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 status: executing
-stopped_at: Completed 01.8.1-07-PLAN.md
-last_updated: "2026-09-14T12:27:20.833Z"
+stopped_at: Completed 01.8.1-08-PLAN.md
+last_updated: "2026-09-14T12:57:53.938Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 01.8.1 execution started
-state_head: 757d13bb7d330c5052e4be6507ff7ada78243353
+state_head: b3d66334a9679b71bc5dd045acad130d31e0d9e3
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 26
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
-Plan: 6 of 14
+Plan: 7 of 14
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 01.8.1 execution started
 
@@ -123,6 +123,7 @@ Last activity: 2026-09-13 — Phase 01.8.1 execution started
 | Phase 01.8.1 P05 | ~110min | 3 tasks | 16 files |
 | Phase 01.8.1 P06 | ~50min | 2 tasks | 15 files |
 | Phase 01.8.1 P07 | 16min | 2 tasks | 7 files |
+| Phase 01.8.1 P08 | ~50min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -241,6 +242,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.1]: 01.8.1-06: Oban wired for the first time (queue enrichment:1, oban_jobs migration pinned to v14); add_game_from_bgg/1 inserts a draft + enqueues its enrichment job atomically via Ecto.Multi + Oban.insert/3; Enrichment.enrich/2 reuses BggClient/ImagePipeline/DescriptionTranslator unchanged, applying D-07 club-owned-value rules so every retry is idempotent; EnrichGameWorker broadcasts {:game_enriched, id} on admin:games for live row updates
 - [Phase 01.8.1]: 01.8.1-07: Accounts.notifier/0 is a test-only Application-env seam letting StaffLiveTest simulate an invite-email delivery failure, since Swoosh.Adapters.Test always succeeds
 - [Phase 01.8.1]: 01.8.1-07: remove_staff/2 snapshots the target's tokens via Repo.all_by/2 before Repo.delete/1 inside one Repo.transact/1 (on_delete: :delete_all means tokens vanish the instant the user row does), so UserAuth.disconnect_sessions/1 has something to broadcast against
+- [Phase 01.8.1]: 01.8.1-08: EnrichGameWorker.backoff/1 linear (attempt*30s, not Oban's exponential default) so max_attempts exhausts within ~90s and staff see Reintentar promptly
+- [Phase 01.8.1]: 01.8.1-08: Credentials.env_var_names/0 added as the single source of truth deploy_secrets_contract_test.exs introspects, instead of hardcoding a second copy of the required-secret list
 
 ### Pending Todos
 
@@ -378,8 +381,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T12:27:11.247Z
-Stopped at: Completed 01.8.1-07-PLAN.md
+Last session: 2026-09-14T12:57:53.832Z
+Stopped at: Completed 01.8.1-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
