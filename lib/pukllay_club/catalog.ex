@@ -63,6 +63,7 @@ defmodule PukllayClub.Catalog do
     limit = Keyword.get(opts, :limit, @default_limit)
 
     Game
+    |> published_only()
     |> order_by([g], asc: g.name)
     |> limit(^limit)
     |> Repo.all()
@@ -141,8 +142,14 @@ defmodule PukllayClub.Catalog do
   @doc """
   Fetches a single game by id, raising `Ecto.NoResultsError` for an unknown
   id. `Ecto.NoResultsError` implements `Plug.Exception` with a 404 status,
-  so `CatalogLive.Show` renders the generated 404 page rather than a crash
-  or a 500 (T-01-30).
+  so a caller rendering it as a Plug/LiveView error surfaces the generated
+  404 page rather than a crash or a 500 (T-01-30).
+
+  **This is the unfiltered ADMIN read (D-04/D-08)** — it returns a `:draft`
+  or `:retired` game exactly as readily as a `:published` one, so a game can
+  still be opened for editing regardless of its lifecycle status. Every
+  PUBLIC read path must use `get_published_game!/1` instead; see that
+  function's own @doc.
 
   Accepts either the bare `"<id>"` form or the id-slug `"<id>-<anything>"`
   form (quick task 260913-2x6) — the slug tail is only for readability/SEO
@@ -170,6 +177,77 @@ defmodule PukllayClub.Catalog do
   defp fetch_by_id!(_out_of_range), do: raise(Ecto.NoResultsError, queryable: Game)
 
   @doc """
+  Fetches a single **published** game by id, raising `Ecto.NoResultsError`
+  for an unknown id, a non-numeric id, an id outside Postgres' bigint
+  range, OR a `:draft`/`:retired` game (D-04, D-08, RESEARCH.md Pitfall 2).
+  `Ecto.NoResultsError` implements `Plug.Exception` (404), so
+  `PukllayClubWeb.Plugs.GameSEO` and `CatalogLive.Show.mount/3` both render
+  the branded 404 for a drafted or retired game's URL — identical to an
+  unknown id (T-01.8.1-12: this is the one open decision this plan's
+  checkpoint settled).
+
+  Deliberately its OWN function with its own private `fetch_published_by_id!/1`
+  — never a boolean flag threaded through `get_game!/1` — so the published
+  predicate cannot accidentally be forgotten/inverted at a call site
+  (RESEARCH.md Pitfall 2's explicit warning). Mirrors `get_game!/1`'s exact
+  id-parsing contract (bare id, id-slug, non-numeric, out-of-bigint) so the
+  two functions only ever differ by the `status` predicate.
+  """
+  def get_published_game!(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int_id, ""} -> fetch_published_by_id!(int_id)
+      {int_id, "-" <> _rest} -> fetch_published_by_id!(int_id)
+      _ -> raise Ecto.NoResultsError, queryable: Game
+    end
+  end
+
+  def get_published_game!(id), do: fetch_published_by_id!(id)
+
+  defp fetch_published_by_id!(int_id) when int_id in 1..@max_bigint do
+    Repo.one!(from(g in Game, where: g.id == ^int_id and g.status == :published))
+  end
+
+  defp fetch_published_by_id!(_out_of_range), do: raise(Ecto.NoResultsError, queryable: Game)
+
+  @doc """
+  Moves `game` to `:published` from any other status (D-04, D-08) — used
+  both for a staff-drafted game's first publish and for un-retiring one
+  (though `restore_game/1` is the dedicated retired -> published entry
+  point for that second case). Returns `{:ok, game}` / `{:error, changeset}`.
+  """
+  def publish_game(%Game{} = game) do
+    game
+    |> Game.status_changeset(%{status: :published})
+    |> Repo.update()
+  end
+
+  @doc """
+  Moves `game` to `:retired` from any status (D-08's soft delete) — a
+  retired game disappears from every public surface `:draft` already did
+  (T-01.8.1-12), restorable via `restore_game/1`. Returns `{:ok, game}` /
+  `{:error, changeset}`.
+  """
+  def retire_game(%Game{} = game) do
+    game
+    |> Game.status_changeset(%{status: :retired})
+    |> Repo.update()
+  end
+
+  @doc """
+  Restores a `:retired` game back to `:published` (D-08). A game that is
+  not currently retired returns `{:error, :not_retired}` rather than
+  silently succeeding — restore is defined only as the retired -> published
+  transition, `publish_game/1` is the entry point for draft -> published.
+  """
+  def restore_game(%Game{status: :retired} = game) do
+    game
+    |> Game.status_changeset(%{status: :published})
+    |> Repo.update()
+  end
+
+  def restore_game(%Game{}), do: {:error, :not_retired}
+
+  @doc """
   The single, explicitly-ordered source of truth for `sitemap.xml`'s
   per-game entries (SEO-04). Selects `Game` structs carrying only `:id`,
   `:name` and `:updated_at` (quick task 260913-2x6 widened this from
@@ -180,16 +258,18 @@ defmodule PukllayClub.Catalog do
   Postgres' physical row order) so two successive requests over unchanged
   data return byte-identical documents.
 
-  There is no visibility, draft, or soft-delete column on this schema
-  today (confirmed by direct read of `PukllayClub.Catalog.Game`) — every
-  row is selected. A future phase adding such a column must add a filter
-  here at the same time, or a hidden/draft game would still appear in the
-  public sitemap.
+  **Filters to `:published` games only (D-04, D-08).** This function's own
+  moduledoc used to warn that a future visibility/draft/soft-delete column
+  would need a filter added here "at the same time, or a hidden/draft game
+  would still appear in the public sitemap" (RESEARCH.md Pitfall 2) — this
+  plan's `add_status_to_games` migration is that column, and this is that
+  filter.
   """
   @spec sitemap_entries() :: [Game.t()]
   def sitemap_entries do
     Repo.all(
       from g in Game,
+        where: g.status == :published,
         select: struct(g, [:id, :name, :updated_at]),
         order_by: [asc: g.id]
     )
@@ -242,13 +322,18 @@ defmodule PukllayClub.Catalog do
   Anything semantic beyond mechanics/themes overlap (embeddings,
   natural-language matching) belongs to Phase 2's hybrid search
   (SEARCH-01..04), not here.
+
+  **Candidates are filtered to `:published` games only (D-04, D-08)** — the
+  viewed game itself is excluded by `where: g.id != ^id` regardless of its
+  own status (it is already resolved via `get_published_game!/1` by the
+  caller, so it can only reach here already published).
   """
   def similar_games(%Game{id: id, weight_band: weight_band, mechanics: mechanics, themes: themes}) do
     band_order = band_preference_order(weight_band)
 
     Repo.all(
       from(g in Game,
-        where: g.id != ^id,
+        where: g.id != ^id and g.status == :published,
         order_by: [
           asc:
             fragment(
@@ -442,19 +527,19 @@ defmodule PukllayClub.Catalog do
   # `recent_query/0` already tiebreaks on `csv_row` and needs nothing.
   defp tags_query(tags) do
     from g in Game,
-      where: fragment("? && ?", g.tags, type(^tags, {:array, :string})),
+      where: fragment("? && ?", g.tags, type(^tags, {:array, :string})) and g.status == :published,
       order_by: [asc: g.name, asc: g.id]
   end
 
   defp weight_band_query(band) do
     from g in Game,
-      where: g.weight_band == ^band,
+      where: g.weight_band == ^band and g.status == :published,
       order_by: [asc: g.name, asc: g.id]
   end
 
   defp recent_query do
     from g in Game,
-      where: g.is_expansion == false,
+      where: g.is_expansion == false and g.status == :published,
       order_by: [desc: g.inserted_at, desc: g.csv_row]
   end
 
@@ -462,6 +547,7 @@ defmodule PukllayClub.Catalog do
 
   defp base_filtered_query(query, opts) do
     query
+    |> published_only()
     |> maybe_search(Map.get(opts, :q))
     |> maybe_filter_mechanics(Map.get(opts, :mechanics))
     |> maybe_filter_themes(Map.get(opts, :themes))
@@ -473,6 +559,16 @@ defmodule PukllayClub.Catalog do
     |> maybe_filter_playtime(Map.get(opts, :max_playtime))
     |> maybe_filter_age(Map.get(opts, :min_age))
   end
+
+  # D-04, D-08, RESEARCH.md Pitfall 2: the single non-optional published
+  # predicate every public read composes with — never a `maybe_*` predicate,
+  # since it is never conditional. Applied at the head of
+  # `base_filtered_query/2` (covering `filter_games/1`/`count_games/1`
+  # together) and directly by every other public read below
+  # (`list_games/1`, `sitemap_entries/0`, `similar_games/1`,
+  # `tags_query/1`, `weight_band_query/1`, `recent_query/0`) so a draft or
+  # retired game can never leak through any read path in this module.
+  defp published_only(query), do: from(g in query, where: g.status == :published)
 
   defp maybe_search(query, q) when q in [nil, ""], do: query
 

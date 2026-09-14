@@ -196,6 +196,21 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       assert html =~ "pk-footer"
     end
+
+    # Phase 01.8.1-02 (D-04, D-08): the games.status lifecycle. A visitor's
+    # rendered home page shows a published game's title and never a
+    # retired (or draft) game's title, across the carousels/grid this page
+    # renders through Catalog.list_carousel_rows/0 and Catalog.filter_games/1.
+    test "shows a published game's title and never a retired game's title (D-04, D-08)",
+         %{conn: conn} do
+      game_fixture(%{name: "Juego Publicado Visible", status: :published})
+      game_fixture(%{name: "Juego Retirado Invisible", status: :retired})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "Juego Publicado Visible"
+      refute html =~ "Juego Retirado Invisible"
+    end
   end
 
   describe "live filtering, search, sort, and pagination (D-12, D-14, D-15, CATALOG-02/03/04)" do
