@@ -264,6 +264,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       assert body =~ "Juego no encontrado"
     end
 
+    # Phase 01.8.1-02: the games.status lifecycle (D-04, D-08). A retired or
+    # draft game's URL 404s through this LiveView's own mount/3, identical
+    # to an unknown id — Catalog.get_published_game!/1 is the single choke
+    # point that makes both cases raise Ecto.NoResultsError.
+    test "a retired game's detail URL renders the branded 404 end-to-end", %{conn: conn} do
+      game = game_fixture(%{name: "Catán", status: :retired})
+
+      {404, _headers, body} =
+        assert_error_sent(404, fn ->
+          get(conn, ~p"/juegos/#{game}")
+        end)
+
+      assert body =~ "Juego no encontrado"
+    end
+
+    test "a draft game's detail URL renders the branded 404 end-to-end", %{conn: conn} do
+      game = game_fixture(%{name: "Catán", status: :draft})
+
+      {404, _headers, body} =
+        assert_error_sent(404, fn ->
+          get(conn, ~p"/juegos/#{game}")
+        end)
+
+      assert body =~ "Juego no encontrado"
+    end
+
     test "renders inside the shared capped-inner container (max-w-7xl + pk-gutter), with no 672px ancestor cap",
          %{conn: conn} do
       game = game_fixture()

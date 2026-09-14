@@ -12,8 +12,16 @@ defmodule PukllayClub.CatalogFixtures do
 
   @doc """
   Inserts a `Game` row with sane Spanish defaults, overridable via `attrs`.
+
+  Accepts an optional `:status` attr (default `:published`, D-04/D-08) —
+  applied separately from `seed_changeset/2` (which never casts `:status`,
+  see `Game.seed_changeset/2`) via `Ecto.Changeset.put_change/3`, so most
+  callers never need to think about it while a test that needs a draft or
+  retired game can pass `status: :draft`/`status: :retired`.
   """
   def game_fixture(attrs \\ %{}) do
+    {status, attrs} = Map.pop(attrs, :status, :published)
+
     default_attrs = %{
       name: "Catán",
       csv_row: System.unique_integer([:positive]),
@@ -43,6 +51,7 @@ defmodule PukllayClub.CatalogFixtures do
 
     %Game{}
     |> Game.seed_changeset(Map.merge(default_attrs, attrs))
+    |> Ecto.Changeset.put_change(:status, status)
     |> Repo.insert!()
   end
 end

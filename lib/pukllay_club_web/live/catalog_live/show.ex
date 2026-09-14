@@ -3,10 +3,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   Game detail page (CATALOG-05/06/07 full picture, CATALOG-08 public/no
   auth). Reached from `PukllayClubWeb.GameCard`'s `Ver detalles` CTA.
 
-  `mount/3` loads the game via `Catalog.get_game!/1`, which raises
-  `Ecto.NoResultsError` for an unknown id — Phoenix renders the branded
-  404 page (`PukllayClubWeb.ErrorHTML`'s `404.html.heex`, 01.1-07) for that
-  case rather than crashing (T-01-30).
+  `mount/3` loads the game via `Catalog.get_published_game!/1`, which
+  raises `Ecto.NoResultsError` for an unknown id, a non-numeric id, OR a
+  `:draft`/`:retired` game (D-04, D-08) — Phoenix renders the branded
+  404 page (`PukllayClubWeb.ErrorHTML`'s `404.html.heex`, 01.1-07) for
+  every one of those cases rather than crashing or leaking an unpublished
+  game (T-01-30, T-01.8.1-12).
 
   `:loading` (01.1-07) mirrors `CatalogLive.Index`'s own two-phase mount
   trick: `not Phoenix.LiveView.connected?/1` of the socket, set once in
@@ -99,7 +101,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   @impl true
   def mount(%{"id" => id} = params, _session, socket) do
-    game = Catalog.get_game!(id)
+    game = Catalog.get_published_game!(id)
     # 01.1-07: the same disconnected/connected two-phase mount trick
     # CatalogLive.Index already uses. :loading is set once here and never
     # toggled by an event; the disconnected static render skips the

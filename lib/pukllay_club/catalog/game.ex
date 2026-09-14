@@ -41,6 +41,13 @@ defmodule PukllayClub.Catalog.Game do
     field :gallery_urls, {:array, :string}, default: []
     field :bgg_payload, :map
     field :enrichment_status, :string, default: "pending"
+    # Lifecycle status (D-04/D-08, migration `add_status_to_games`) — every
+    # public read path in `PukllayClub.Catalog` filters on this; the admin
+    # read path (`get_game!/1`) does not. Defaults to `:published` because
+    # every pre-existing row (the ~434-game live catalog) predates this
+    # column and was already public; the admin add-game flow (plan 06) sets
+    # `:draft` explicitly on insert, never relying on this default.
+    field :status, Ecto.Enum, values: [:draft, :published, :retired], default: :published
     # Real, queryable expansion/promo flag (G-01-5) — derived at seed time
     # by `PukllayClub.Catalog.Seed.ExpansionClassifier` and backfilled for
     # pre-existing rows by the `add_games_is_expansion` migration. See that
@@ -100,6 +107,17 @@ defmodule PukllayClub.Catalog.Game do
     |> validate_required([:name, :csv_row])
     |> validate_inclusion(:enrichment_status, @enrichment_statuses)
     |> unique_constraint(:csv_row)
+  end
+
+  @doc """
+  Changeset for the D-04/D-08 lifecycle transitions
+  (`Catalog.publish_game/1`, `Catalog.retire_game/1`, `Catalog.restore_game/1`)
+  — casts and validates only `:status`, never any other field.
+  """
+  def status_changeset(game, attrs) do
+    game
+    |> cast(attrs, [:status])
+    |> validate_required([:status])
   end
 end
 
