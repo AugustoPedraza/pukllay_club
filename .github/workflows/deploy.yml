@@ -267,8 +267,15 @@ jobs:
           MAILER_API_KEY: ${{ secrets.MAILER_API_KEY }}
           BGG_API_TOKEN: ${{ secrets.BGG_API_TOKEN }}
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          # The app's R2 key is the catalog-bucket token, stored under its own
+          # GitHub secret names. The repo-level R2_ACCESS_KEY_ID /
+          # R2_SECRET_ACCESS_KEY secrets are the backup-bucket token that
+          # backup.yml uses, and that token cannot write to the catalog bucket.
+          # Inside the container the variable names stay R2_ACCESS_KEY_ID /
+          # R2_SECRET_ACCESS_KEY (what Catalog.Seed.Credentials reads).
+          # See docs/runbooks/production-secrets.md.
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_CATALOG_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_CATALOG_SECRET_ACCESS_KEY }}
           R2_CATALOG_BUCKET: ${{ secrets.R2_CATALOG_BUCKET }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         # Steady-state CI-driven deploy (D-02). `kamal setup` (which also
