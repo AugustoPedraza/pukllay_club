@@ -3,6 +3,9 @@ import Config
 # Print only warnings and errors during test
 config :logger, level: :warning
 
+# Only in tests, remove the complexity from the password hashing algorithm
+config :pbkdf2_elixir, :rounds, 1
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
@@ -13,6 +16,10 @@ config :phoenix,
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
+
+# Oban runs in manual testing mode (Oban.Testing) — jobs are inserted but
+# never auto-executed by a real queue; tests call `perform_job/2` explicitly.
+config :pukllay_club, Oban, testing: :manual
 
 # Obviously-fake credentials for the D-02 catalog seed pipeline so its unit
 # tests run in CI without real BGG/R2 access, with a stable URL host to

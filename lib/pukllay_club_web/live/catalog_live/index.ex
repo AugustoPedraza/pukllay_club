@@ -6,7 +6,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   unmodified. Reads exclusively through `PukllayClub.Catalog`, never
   `Repo` directly.
 
-  Filter state (`:q`, `:mechanics`, `:themes`, `:weight_bands`, `:tags`,
+  Filter state (`:q`, `:mechanics`, `:themes`, `:weight_bands`, `:sections`,
   `:players`, `:max_playtime`, `:min_age`, `:sort`, `:offset`, `:total`)
   lives in assigns. Every filter-changing event funnels through
   `apply_filters/1` — the one place that decides pagination-reset
@@ -24,6 +24,16 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   placeholders (no DB round-trip on that pass), then the connected
   websocket mount replaces it with real carousel/grid data. It is set once
   in `mount/3` and never toggled again by any `handle_event`.
+
+  The unfiltered landing's carousel rows are staff-owned database sections
+  (`PukllayClub.Catalog.Section`, D-17..D-28, 01.8.1-10), not a hardcoded
+  row list — `Catalog.list_home_sections/0` decides which sections exist,
+  their order (featured first, D-18), and their titles/subtitles. This
+  module only renders whatever it is handed: `carousel_stream_name/1`
+  derives each row's LiveView stream name from the section's own
+  server-loaded id, and `Catalog.section_page/3` — which never converts
+  the client-sent row key into an atom (T-01-37) — serves every
+  subsequent in-row page from the identical predicate page 1 used.
   """
   use PukllayClubWeb, :live_view
 
@@ -58,7 +68,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:mechanics, [])
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
-      |> assign(:tags, [])
+      |> assign(:sections, [])
       |> assign(:designers, [])
       |> assign(:artists, [])
       |> assign(:players, nil)
@@ -153,7 +163,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         |> assign(:mechanics, filters.mechanics)
         |> assign(:themes, filters.themes)
         |> assign(:weight_bands, filters.weight_bands)
-        |> assign(:tags, filters.tags)
+        |> assign(:sections, filters.sections)
         |> assign(:designers, filters.designers)
         |> assign(:artists, filters.artists)
         |> assign(:players, filters.players)
@@ -184,31 +194,31 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
-  defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], editorial_tags: []}
+  defp empty_facet_options, do: %{mechanics: [], themes: [], weight_bands: [], sections: []}
 
   # Connected-mount-only (never also in handle_params/3, see the comment on
   # mount/3 above about accumulating stream diffs across two stream/4 calls
-  # issued before the first render flush) construction of the 8 per-row
-  # carousel streams plus their metadata (quick task 260824-u5d, in-row
-  # infinite scroll). Per-row stream names are mandatory, not stylistic —
-  # the 8 rows genuinely overlap (a tagged game sits in up to 4 rows at
-  # once), so one shared stream name would emit the same DOM id in four
-  # different rails. The atom is derived only from Catalog's own
-  # server-side row list, never from client input.
+  # issued before the first render flush) construction of the per-section
+  # streams plus their metadata (quick task 260824-u5d's in-row infinite
+  # scroll, ported to DB-driven sections in 01.8.1-10). Per-section stream
+  # names are mandatory, not stylistic — a game can belong to many
+  # sections at once, so one shared stream name would emit the same DOM id
+  # in more than one rail. The stream name is derived only from the
+  # section's own server-loaded id, never from client input (T-01.8.1-46).
   defp assign_carousel_rows(socket, true), do: assign(socket, :carousel_rows, [])
 
   defp assign_carousel_rows(socket, false) do
-    rows = Catalog.list_carousel_rows()
+    rows = Catalog.list_home_sections()
 
     socket =
       Enum.reduce(rows, socket, fn row, acc ->
-        stream(acc, carousel_stream_name(row.key), row.games)
+        stream(acc, carousel_stream_name(row.section_id), row.games)
       end)
 
     assign(socket, :carousel_rows, Enum.map(rows, &carousel_row_metadata/1))
   end
 
-  # The games themselves now live only in the per-row streams — this
+  # The games themselves now live only in the per-section streams — this
   # metadata map carries everything else `carousel_row/1`'s render and
   # `handle_event("carousel-load-more", ...)` need: `empty?` is the one
   # shared non-stream emptiness signal both the chip-nav filter below and
@@ -218,17 +228,22 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp carousel_row_metadata(row) do
     %{
       key: row.key,
+      section_id: row.section_id,
       title: row.title,
+      subtitle: row.subtitle,
+      kind: row.kind,
+      rule_value: row.rule_value,
+      featured?: row.featured?,
       offset: row.offset,
       exhausted?: row.exhausted?,
       empty?: row.games == []
     }
   end
 
-  defp carousel_stream_name(key), do: :"carousel_#{key}"
+  defp carousel_stream_name(section_id), do: :"carousel_section_#{section_id}"
 
   defp find_carousel_row(rows, row_key) do
-    Enum.find(rows, &(Atom.to_string(&1.key) == row_key))
+    Enum.find(rows, &(&1.key == row_key))
   end
 
   defp update_carousel_row(socket, key, changes) do
@@ -313,16 +328,25 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # checkbox), silently clobbering any `phx-value-value` binding. See the
   # `FilterModal` moduledoc for the full mechanism — this key must stay in
   # sync with the `phx-value-choice` attributes there.
+  #
+  # D-27: `sections` is the one facet whose stored values are integers, not
+  # the raw string every other facet keeps verbatim (a section id, unlike a
+  # mechanic/theme label or weight-band value, has no closed-Vocabulary
+  # string form) — `toggle_facet_value/2` converts it with `Integer.parse/1`
+  # before it ever reaches the assign, and a non-integer choice for that
+  # facet is a silent no-op rather than storing a string a later
+  # `Catalog.filter_games(sections: ...)` call could not use.
   def handle_event("toggle-facet", %{"facet" => facet, "choice" => value}, socket) do
-    case facet_assign_key(facet) do
-      nil ->
-        {:noreply, socket}
+    with key when not is_nil(key) <- facet_assign_key(facet),
+         parsed_value when not is_nil(parsed_value) <- toggle_facet_value(facet, value) do
+      current = Map.get(socket.assigns, key, [])
 
-      key ->
-        current = Map.get(socket.assigns, key, [])
-        updated = if value in current, do: List.delete(current, value), else: [value | current]
+      updated =
+        if parsed_value in current, do: List.delete(current, parsed_value), else: [parsed_value | current]
 
-        {:noreply, socket |> assign(key, updated) |> apply_filters()}
+      {:noreply, socket |> assign(key, updated) |> apply_filters()}
+    else
+      _no_match -> {:noreply, socket}
     end
   end
 
@@ -370,7 +394,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       |> assign(:mechanics, [])
       |> assign(:themes, [])
       |> assign(:weight_bands, [])
-      |> assign(:tags, [])
+      |> assign(:sections, [])
       |> assign(:designers, [])
       |> assign(:artists, [])
       |> assign(:players, nil)
@@ -405,11 +429,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
         {:reply, %{exhausted: true}, socket}
 
       row ->
-        case Catalog.carousel_page(row_key, row.offset) do
+        case Catalog.section_page(row_key, row.offset) do
           {:ok, {games, exhausted?}} ->
             socket =
               socket
-              |> stream(carousel_stream_name(row.key), games, at: -1)
+              |> stream(carousel_stream_name(row.section_id), games, at: -1)
               |> update_carousel_row(row.key, offset: row.offset + length(games), exhausted?: exhausted?)
 
             {:reply, %{exhausted: exhausted?}, socket}
@@ -462,10 +486,19 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
+  defp toggle_facet_value("sections", value) do
+    case Integer.parse(value) do
+      {n, ""} -> n
+      _invalid -> nil
+    end
+  end
+
+  defp toggle_facet_value(_facet, value), do: value
+
   defp facet_assign_key("mechanics"), do: :mechanics
   defp facet_assign_key("themes"), do: :themes
   defp facet_assign_key("weight_bands"), do: :weight_bands
-  defp facet_assign_key("tags"), do: :tags
+  defp facet_assign_key("sections"), do: :sections
   # 01.3-06: literal clauses only, never a dynamic-atom conversion from
   # client input (T-01-37) — a creator-pill chip's `toggle-facet`
   # removal routes through the same dispatcher as every other facet, so
@@ -490,7 +523,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
       mechanics: assigns.mechanics,
       themes: assigns.themes,
       weight_bands: assigns.weight_bands,
-      tags: assigns.tags,
+      sections: assigns.sections,
       designers: assigns.designers,
       artists: assigns.artists,
       players: assigns.players,
@@ -581,11 +614,11 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   end
 
   defp refresh_carousel_rows(socket) do
-    rows = Catalog.list_carousel_rows()
+    rows = Catalog.list_home_sections()
 
     socket =
       Enum.reduce(rows, socket, fn row, acc ->
-        stream(acc, carousel_stream_name(row.key), row.games, reset: true)
+        stream(acc, carousel_stream_name(row.section_id), row.games, reset: true)
       end)
 
     socket
@@ -611,7 +644,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # visitor can't otherwise see once the search control is collapsed.
   defp active_filter_count(assigns) do
     length(assigns.mechanics) + length(assigns.themes) + length(assigns.weight_bands) +
-      length(assigns.tags) + length(assigns.designers) + length(assigns.artists) +
+      length(assigns.sections) + length(assigns.designers) + length(assigns.artists) +
       Enum.count([assigns.players, assigns.max_playtime, assigns.min_age], &(not is_nil(&1)))
   end
 
@@ -625,7 +658,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   # already-shipped `toggle-facet`/`toggle-scalar` handlers with the value
   # that is currently selected, which those handlers already treat as a
   # removal — no new server-side parsing, no new dynamic-key surface.
-  # Removal for mechanics/themes/weight_bands/tags routes through
+  # Removal for mechanics/themes/weight_bands/sections routes through
   # `facet_assign_key/1`; players/max_playtime through
   # `scalar_assign_key/1`; the query chip has no equivalent toggle and
   # dispatches the new parameterless `clear-query` handler instead.
@@ -635,7 +668,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     facet_chips(assigns.mechanics, "mechanics", "Mecánica") ++
       facet_chips(assigns.themes, "themes", "Temática") ++
       weight_band_chips(assigns.weight_bands) ++
-      tag_chips(assigns.tags) ++
+      section_chips(assigns.sections, assigns.facet_options.sections) ++
       creator_chips(assigns.designers, "designers", "Diseñador") ++
       creator_chips(assigns.artists, "artists", "Ilustrador") ++
       scalar_chips(assigns) ++
@@ -682,22 +715,33 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     end
   end
 
-  # Editorial hashtags render verbatim (never renamed/reframed — same
-  # convention as GameChips.editorial_tags/1). "Etiqueta" is this chip's
-  # facet-name prefix since the modal itself has no rendered section for
-  # this facet to match against (sketch 019 Round 3 cut it, still
-  # deliberately unreturned — see FilterModal's moduledoc).
-  defp tag_chips(selected) do
-    Enum.map(selected, fn tag ->
-      %{
-        event: "toggle-facet",
-        facet: "tags",
-        scalar: nil,
-        choice: tag,
-        label: "Etiqueta: #{tag}",
-        aria_label: "Quitar filtro: Etiqueta — #{tag}"
-      }
-    end)
+  # D-27: `selected` is a list of section ids (integers); `options` is
+  # `@facet_options.sections` (`%{id:, name:}` maps) — the only place this
+  # module knows a section's display name. An id with no matching entry in
+  # `options` (a section hidden/deleted/emptied out from under an already-
+  # applied filter) is skipped rather than rendering a chip with no label,
+  # per the plan's own behavior note.
+  defp section_chips(selected, options) do
+    selected
+    |> Enum.map(&section_chip(&1, options))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp section_chip(id, options) do
+    case Enum.find(options, &(&1.id == id)) do
+      nil ->
+        nil
+
+      %{name: name} ->
+        %{
+          event: "toggle-facet",
+          facet: "sections",
+          scalar: nil,
+          choice: to_string(id),
+          label: "Sección: #{name}",
+          aria_label: "Quitar filtro: Sección — #{name}"
+        }
+    end
   end
 
   # Creator filter chips for the :designers/:artists socket assigns,
@@ -780,79 +824,29 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     ]
   end
 
-  # Ranks the curated row above the other 7 by colour (G-01-4) — never by a
-  # fourth type size, per ui-design-system's 3-level cap.
-  defp row_variant(:destacados_del_club), do: :hero
-  defp row_variant(_key), do: :standard
+  # Ranks the featured section above the rest by colour (G-01-4) — never
+  # by a fourth type size, per ui-design-system's 3-level cap. D-18: the
+  # featured section is the only one that ever gets the hero treatment.
+  defp row_variant(%{featured?: true}), do: :hero
+  defp row_variant(%{featured?: false}), do: :standard
 
-  # One plain-Spanish line per D-09 row so all 8 shelves read as 8 distinct
-  # things (G-01-4). Six of the eight reuse already-user-reviewed D-05/D-06
-  # copy from Vocabulary; :destacados_del_club and :recientemente_anadidos
-  # are newly authored here and flagged in the SUMMARY for review. Any
-  # unmatched key degrades to a bare heading rather than crashing.
-  defp row_subtitle(:crea_conexiones), do: editorial_tag_meaning("#CreaConexiones")
-  defp row_subtitle(:equipo_ganador), do: editorial_tag_meaning("#EquipoGanador")
-  defp row_subtitle(:duelos_memorables), do: editorial_tag_meaning("#DuelosMemorables")
-  defp row_subtitle(:descubre_el_hobby), do: weight_band_descriptor("descubre_el_hobby")
-  defp row_subtitle(:ingenio_estratega), do: weight_band_descriptor("ingenio_estratega")
-  defp row_subtitle(:nivel_experto), do: weight_band_descriptor("nivel_experto")
+  # quick task 260913-0h6, narrowed by 01.8.1-10 (D-26, D-28), restored by
+  # 01.8.1-11 (D-27, D-28) now that the sections facet exists: a
+  # weight_band section's header links to the existing `?weight_bands=`
+  # filtered landing, and a manual section's header (including the
+  # featured section) links to its own `/?sections=<id>` landing — the
+  # deep link the retired hardcoded hashtag rows had. Only the automatic
+  # `:recent` section stays a plain, non-interactive heading (it has no
+  # facet of its own to land on). Every href is built only from the
+  # section's own server-loaded `rule_value`/`section_id`, never from
+  # client input, and re-validated on the receiving end by
+  # CatalogFilters.from_params/1 (closed-Vocabulary whitelist for
+  # `weight_bands`, bound-and-parameterize for `sections`).
+  defp row_href(%{kind: :weight_band, rule_value: band}), do: band_href(band)
+  defp row_href(%{kind: :recent}), do: nil
+  defp row_href(%{kind: :manual, section_id: id}), do: ~p"/?#{[sections: [id]]}"
 
-  defp row_subtitle(:destacados_del_club), do: "La selección del club — los juegos que más recomendamos ahora mismo."
-
-  defp row_subtitle(:recientemente_anadidos), do: "Las incorporaciones más nuevas a la ludoteca."
-
-  defp row_subtitle(_unrecognized), do: nil
-
-  # quick task 260913-0h6: the shelf's filtered-landing path, one literal
-  # clause per key (mirrors row_subtitle/1's own pattern rather than a
-  # case, to keep Credo's cyclomatic-complexity check happy). Every href
-  # is built only from server-side shelf keys and Vocabulary constants,
-  # never from client input, and every landing param is re-validated by
-  # CatalogFilters.from_params/1's closed-Vocabulary whitelist — no new
-  # param key, no new parsing path.
-  # Same derivation Catalog.row_query("destacados_del_club") uses, so the
-  # shelf and its own filtered landing can never drift on which tags
-  # count as "destacados". Encoded via the verified-routes keyword form so
-  # it produces a repeated-key ?tags=...&tags=... list, which
-  # CatalogFilters.parse_list_param/2 already accepts.
-  defp row_href(:destacados_del_club) do
-    tags = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
-    ~p"/?#{[tags: tags]}"
-  end
-
-  defp row_href(:crea_conexiones), do: tag_href("#CreaConexiones")
-  defp row_href(:equipo_ganador), do: tag_href("#EquipoGanador")
-  defp row_href(:duelos_memorables), do: tag_href("#DuelosMemorables")
-  defp row_href(:descubre_el_hobby), do: band_href("descubre_el_hobby")
-  defp row_href(:ingenio_estratega), do: band_href("ingenio_estratega")
-  defp row_href(:nivel_experto), do: band_href("nivel_experto")
-
-  # No URL filter reproduces "newest non-expansion additions" (no sort
-  # alone flips filters_active?/1, and there's no expansion-flag facet),
-  # so this header stays a plain heading instead of becoming a dead or
-  # misleading link.
-  defp row_href(:recientemente_anadidos), do: nil
-
-  defp row_href(_unrecognized), do: nil
-
-  defp tag_href(tag), do: ~p"/?tags=#{tag}"
   defp band_href(band), do: ~p"/?weight_bands=#{band}"
-
-  defp editorial_tag_meaning(tag) do
-    Vocabulary.editorial_tags()
-    |> Enum.find(&(&1.tag == tag))
-    |> case do
-      %{meaning: meaning} -> meaning
-      nil -> nil
-    end
-  end
-
-  defp weight_band_descriptor(value) do
-    case Vocabulary.weight_band(value) do
-      %{descriptor: descriptor} -> descriptor
-      nil -> nil
-    end
-  end
 
   # One derived list feeding BOTH the mobile chip row (:subnav) AND the
   # desktop mega-menu (:nav_menu) — sketch-findings' single most load-bearing
@@ -863,7 +857,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
   defp index_rows(assigns) do
     assigns.carousel_rows
     |> Enum.reject(& &1.empty?)
-    |> Enum.map(fn row -> %{key: row.key, title: row.title, subtitle: row_subtitle(row.key)} end)
+    |> Enum.map(fn row -> %{key: row.key, title: row.title, subtitle: row.subtitle} end)
   end
 
   # "Toda la ludoteca" is a false claim once filters narrow the result
@@ -896,7 +890,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     assigns.mechanics != [] or
       assigns.themes != [] or
       assigns.weight_bands != [] or
-      assigns.tags != [] or
+      assigns.sections != [] or
       assigns.designers != [] or
       assigns.artists != []
   end
@@ -920,6 +914,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
     ~H"""
     <Layouts.app
       flash={@flash}
+      current_scope={@current_scope}
       fullbleed
       sticky
       bottom_collapse
@@ -1078,12 +1073,12 @@ defmodule PukllayClubWeb.CatalogLive.Index do
                 :key={row.key}
                 id={"carousel-#{row.key}"}
                 title={row.title}
-                games={Map.fetch!(@streams, carousel_stream_name(row.key))}
-                variant={row_variant(row.key)}
-                subtitle={row_subtitle(row.key)}
-                href={row_href(row.key)}
+                games={Map.fetch!(@streams, carousel_stream_name(row.section_id))}
+                variant={row_variant(row)}
+                subtitle={row.subtitle}
+                href={row_href(row)}
                 empty={row.empty?}
-                row_key={to_string(row.key)}
+                row_key={row.key}
                 exhausted={row.exhausted?}
               />
             <% end %>
@@ -1312,7 +1307,7 @@ defmodule PukllayClubWeb.CatalogLive.Index do
           mechanics={@mechanics}
           themes={@themes}
           weight_bands={@weight_bands}
-          tags={@tags}
+          sections={@sections}
           players={@players}
           max_playtime={@max_playtime}
           open={@filters_open}

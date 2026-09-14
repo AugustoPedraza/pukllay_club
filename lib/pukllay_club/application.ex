@@ -19,6 +19,7 @@ defmodule PukllayClub.Application do
     children = [
       PukllayClubWeb.Telemetry,
       PukllayClub.Repo,
+      {Oban, Application.fetch_env!(:pukllay_club, Oban)},
       {DNSCluster, query: Application.get_env(:pukllay_club, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: PukllayClub.PubSub},
       # Start a worker by calling: PukllayClub.Worker.start_link(arg)

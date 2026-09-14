@@ -30,6 +30,17 @@ config :phoenix_live_view,
   # the attribute set on all root tags. Used for Phoenix.LiveView.ColocatedCSS.
   root_tag_attribute: "phx-r"
 
+# Oban (D-01, 01.8.1-06): the app's first background job runner. Concurrency
+# of 1 on the `enrichment` queue bounds image-processing (libvips) memory on
+# the 1 GB production e2-micro host — running two enrichment jobs at once
+# risked OOM on that box. Pruner keeps `oban_jobs` from growing unbounded
+# (completed/cancelled/discarded jobs older than 7 days are removed).
+config :pukllay_club, Oban,
+  engine: Oban.Engines.Basic,
+  repo: PukllayClub.Repo,
+  queues: [enrichment: 1],
+  plugins: [{Oban.Plugins.Pruner, max_age: 604_800}]
+
 # Configure the mailer
 #
 # By default it uses the "Local" adapter which stores the emails
@@ -56,6 +67,24 @@ config :pukllay_club, PukllayClubWeb.Endpoint,
   ],
   pubsub_server: PukllayClub.PubSub,
   live_view: [signing_salt: "dmrfmHVT"]
+
+# Single source for the outbound sender identity (D-36) — UserNotifier reads
+# this via Application.fetch_env!/2 rather than hardcoding a `from` tuple, so
+# the address is declared exactly once across every environment.
+config :pukllay_club, :mail_from, {"Pukllay Club", "no-responder@pukllay.club"}
+
+config :pukllay_club, :scopes,
+  user: [
+    default: true,
+    module: PukllayClub.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :id,
+    schema_table: :users,
+    test_data_fixture: PukllayClub.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
 
 config :pukllay_club,
   ecto_repos: [PukllayClub.Repo],

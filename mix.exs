@@ -67,6 +67,7 @@ defmodule PukllayClub.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:pbkdf2_elixir, "~> 2.0"},
       {:phoenix, "~> 1.8.9"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
@@ -104,8 +105,8 @@ defmodule PukllayClub.MixProject do
       {:image, "~> 0.72.0"},
       {:ex_aws, "~> 2.7"},
       {:ex_aws_s3, "~> 2.5"},
-      {:nimble_csv, "~> 1.3"},
-      {:instructor_lite, "~> 1.3"}
+      {:instructor_lite, "~> 1.3"},
+      {:oban, "~> 2.24"}
     ]
   end
 

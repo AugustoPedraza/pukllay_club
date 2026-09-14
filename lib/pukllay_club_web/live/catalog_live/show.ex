@@ -3,10 +3,12 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   Game detail page (CATALOG-05/06/07 full picture, CATALOG-08 public/no
   auth). Reached from `PukllayClubWeb.GameCard`'s `Ver detalles` CTA.
 
-  `mount/3` loads the game via `Catalog.get_game!/1`, which raises
-  `Ecto.NoResultsError` for an unknown id — Phoenix renders the branded
-  404 page (`PukllayClubWeb.ErrorHTML`'s `404.html.heex`, 01.1-07) for that
-  case rather than crashing (T-01-30).
+  `mount/3` loads the game via `Catalog.get_published_game!/1`, which
+  raises `Ecto.NoResultsError` for an unknown id, a non-numeric id, OR a
+  `:draft`/`:retired` game (D-04, D-08) — Phoenix renders the branded
+  404 page (`PukllayClubWeb.ErrorHTML`'s `404.html.heex`, 01.1-07) for
+  every one of those cases rather than crashing or leaking an unpublished
+  game (T-01-30, T-01.8.1-12).
 
   `:loading` (01.1-07) mirrors `CatalogLive.Index`'s own two-phase mount
   trick: `not Phoenix.LiveView.connected?/1` of the socket, set once in
@@ -99,7 +101,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
 
   @impl true
   def mount(%{"id" => id} = params, _session, socket) do
-    game = Catalog.get_game!(id)
+    game = Catalog.get_published_game!(id)
     # 01.1-07: the same disconnected/connected two-phase mount trick
     # CatalogLive.Index already uses. :loading is set once here and never
     # toggled by an event; the disconnected static render skips the
@@ -393,6 +395,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     (sketch 017's own page switcher marks no drawer link active here). --%>
     <Layouts.app
       flash={@flash}
+      current_scope={@current_scope}
       fullbleed
       sticky
       search_expanded={@search_expanded}
@@ -640,6 +643,16 @@ defmodule PukllayClubWeb.CatalogLive.Show do
               </div>
 
               <div class="pk-text-col">
+                <%!-- D-34: staff-only jump straight into this game's admin
+                editor. Visitors (staff_session?/1 false — nil current_scope
+                or a non-staff role) render nothing here. --%>
+                <.button
+                  :if={staff_session?(@current_scope)}
+                  navigate={~p"/admin/juegos/#{@game.id}/editar"}
+                  variant="secondary"
+                >
+                  Editar
+                </.button>
                 <%!-- Sketch 042 (27 rounds): the title is its own reading
                 section (always renders, no :if — the wrapper only ever
                 needs one for a conditional child). --%>
@@ -647,7 +660,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                   <h1 id="detail-title-block" class="font-display text-3xl">{@game.name}</h1>
                 </div>
 
-                <%!-- Sketch 042's winner: hashtags sit right after the
+                <%!-- Sketch 042's winner: chips sit right after the
                 title, before the description — NOT between the description
                 and a divider as the UAT text itself suggested (see this
                 plan's <planner_note> departure #1). The divider sketch 042
@@ -656,12 +669,17 @@ defmodule PukllayClubWeb.CatalogLive.Show do
                 doing all the separating work the line used to help with.
                 class="pk-rhythm-8" (not pk-reading-section) ties this row
                 tightly to the title via .pk-text-col's own child-margin
-                rhythm rule, not the section gap. --%>
-                <GameChips.editorial_tags
-                  tags={@game.tags}
-                  href_fun={fn tag -> ~p"/?tags=#{tag}" end}
-                  class="pk-rhythm-8"
-                />
+                rhythm rule, not the section gap.
+
+                01.8.1-11 (D-17, D-22 option A): the data source switched
+                from the retired `games.tags` hashtag facet to
+                `@game.section_names` — the game's visible hand-picked
+                section names. No `href_fun` here: unlike a hashtag, a
+                section name alone carries no id to link to (`section_names`
+                is `{:array, :string}`, not id/name pairs), so these chips
+                render as plain, unlinked pills — `GameChips.editorial_tags/1`
+                itself, its markup and classes, are unchanged. --%>
+                <GameChips.editorial_tags tags={@game.section_names} class="pk-rhythm-8" />
 
                 <%!-- G-01.2-10 task 3 / 01.3-08 / 01.3-10 (gap closure
                 G-01.3-4): description wrapper's spacing class is its own
@@ -1486,6 +1504,14 @@ defmodule PukllayClubWeb.CatalogLive.Show do
   # labels the reading column's chip rows already use, not the raw
   # `game.mechanics`/`game.themes` codes. No nil-dereference path exists
   # for any of the five.
+  # D-34: nil for a visitor (mount_current_scope/2's default), a real
+  # Scope for a signed-in one. Mirrors Layouts.staff_session?/1 (each
+  # module keeps its own tiny private predicate rather than sharing one —
+  # UI-SPEC's Component Inventory explicitly declines a wrapper component
+  # for a 3-clause check like this).
+  defp staff_session?(nil), do: false
+  defp staff_session?(scope), do: PukllayClub.Accounts.User.staff?(scope.user)
+
   defp fact_grid?(game, mechanic_labels, theme_labels) do
     not is_nil(game.year_published) or
       game.designers != [] or

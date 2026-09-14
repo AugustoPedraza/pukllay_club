@@ -1,6 +1,8 @@
 defmodule PukllayClubWeb.Router do
   use PukllayClubWeb, :router
 
+  import PukllayClubWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,7 @@ defmodule PukllayClubWeb.Router do
     plug :put_root_layout, html: {PukllayClubWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_scope_for_user
     plug :put_csp
     plug PukllayClubWeb.Plugs.SiteSEO
   end
@@ -34,6 +37,15 @@ defmodule PukllayClubWeb.Router do
     plug PukllayClubWeb.Plugs.GameSEO
   end
 
+  # Phase 01.8.1 (D-33): staff role gate, layered on top of the generator's
+  # own :require_authenticated_user. Runs after it in the pipe_through list
+  # below, so an unauthenticated request is redirected to /admin/ingresar
+  # before this plug ever runs.
+  pipeline :require_staff do
+    plug :require_authenticated_user
+    plug :require_staff_user
+  end
+
   scope "/", PukllayClubWeb do
     pipe_through :browser
 
@@ -58,6 +70,42 @@ defmodule PukllayClubWeb.Router do
     pipe_through :sitemap
 
     get "/sitemap.xml", SitemapController, :index
+  end
+
+  # Phase 01.8.1 (D-34): staff sign-in — unlinked, unauthenticated. Mirrors
+  # the generator's own :current_user scope shape.
+  scope "/admin", PukllayClubWeb do
+    pipe_through [:browser]
+
+    live_session :admin_login,
+      on_mount: [{PukllayClubWeb.UserAuth, :mount_current_scope}] do
+      live "/ingresar", UserLive.Login, :new
+      live "/ingresar/:token", UserLive.Confirmation, :new
+    end
+
+    post "/ingresar", UserSessionController, :create
+    delete "/salir", UserSessionController, :delete
+  end
+
+  # Phase 01.8.1 (D-33/D-35): the staff-gated admin area.
+  scope "/admin", PukllayClubWeb.Admin do
+    pipe_through [:browser, :require_staff]
+
+    live_session :require_staff,
+      on_mount: [
+        {PukllayClubWeb.UserAuth, :require_authenticated},
+        {PukllayClubWeb.UserAuth, :require_staff}
+      ] do
+      live "/", DashboardLive, :index
+      live "/juegos", GameLive.Index, :index
+      live "/juegos/:id/editar", GameLive.Form, :edit
+      live "/staff", StaffLive.Index, :index
+      live "/estantes", ShelfLive.Index, :index
+      live "/estantes/:id/asignar", ShelfLive.Assign, :assign
+      live "/secciones", SectionLive.Index, :index
+      live "/secciones/:id", SectionLive.Edit, :edit
+      live "/niveles", BandAuditLive, :index
+    end
   end
 
   # Other scopes may use custom stacks.

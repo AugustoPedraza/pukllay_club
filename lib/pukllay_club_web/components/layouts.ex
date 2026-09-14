@@ -519,6 +519,7 @@ defmodule PukllayClubWeb.Layouts do
         crumb={@crumb}
         nav_menu={@nav_menu}
         search_expanded={@search_expanded}
+        current_scope={@current_scope}
       />
     </div>
     <div :if={!@sticky} id="app-header" class="pk-header">
@@ -528,6 +529,7 @@ defmodule PukllayClubWeb.Layouts do
         crumb={@crumb}
         nav_menu={@nav_menu}
         search_expanded={@search_expanded}
+        current_scope={@current_scope}
       />
     </div>
 
@@ -547,7 +549,7 @@ defmodule PukllayClubWeb.Layouts do
     so LiveView continues to mount/patch it normally; .CatalogNav's hook reaches
     it by id.
     --%>
-    <.nav_drawer active_nav={@active_nav} />
+    <.nav_drawer active_nav={@active_nav} current_scope={@current_scope} />
 
     <%!--
     G-01.2-8 gap closure (01.2-15). Replaces the stock `phx.new` `#client-error`
@@ -692,6 +694,7 @@ defmodule PukllayClubWeb.Layouts do
   attr :crumb, :list, required: true
   attr :nav_menu, :list, required: true
   attr :search_expanded, :boolean, default: false
+  attr :current_scope, :map, default: nil
 
   defp header_inner(assigns) do
     ~H"""
@@ -724,6 +727,19 @@ defmodule PukllayClubWeb.Layouts do
           {render_slot(@nav_links)}
         </div>
         {render_slot(@nav_menu)}
+        <%!-- D-34: a one-tap way into /admin for a signed-in staff/owner
+        session — nothing renders here for a visitor (staff_session?/1
+        false). Sits immediately before the search morph, hidden at
+        <=480px (app.css's PK block) since mobile staff use the drawer's
+        own Admin row instead. --%>
+        <.link
+          :if={staff_session?(@current_scope)}
+          navigate={~p"/admin"}
+          class="pk-nav-admin min-h-11 min-w-11"
+          aria-label="Admin"
+        >
+          <.icon name="hero-cog-6-tooth" class="size-5" />
+        </.link>
         <%!-- Open/closed state is server-owned (01.2-11): the class list is
         computed from @search_expanded on every render, so no LiveView patch
         (a query flipping, a filter-badge count appearing, a nav_menu/subnav
@@ -830,6 +846,7 @@ defmodule PukllayClubWeb.Layouts do
   # pinned theme-toggle/social bottom block) is filled in by plan 01.1-09
   # Task 2 — Task 1 ships the empty `.pk-drawer-bottom` placeholder only.
   attr :active_nav, :atom, default: nil
+  attr :current_scope, :map, default: nil
 
   defp nav_drawer(assigns) do
     ~H"""
@@ -855,6 +872,13 @@ defmodule PukllayClubWeb.Layouts do
         <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
           Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
         </.link>
+        <%!-- D-34: mobile staff's one entry into /admin — the header's own
+        .pk-nav-admin icon link is hidden at this same breakpoint (app.css),
+        so this drawer row is the sole mobile path. Nothing renders for a
+        visitor. --%>
+        <.link :if={staff_session?(@current_scope)} navigate={~p"/admin"}>
+          Admin <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
       </nav>
       <div class="pk-drawer-bottom">
         <div class="pk-drawer-divider"></div>
@@ -868,6 +892,13 @@ defmodule PukllayClubWeb.Layouts do
     </aside>
     """
   end
+
+  # D-34: `current_scope` is `nil` for a visitor (every LiveView's own
+  # `mount_current_scope/2` default), a real `Scope` struct for a signed-in
+  # one — never a bare `false`/missing key, so the two-clause match below
+  # is exhaustive.
+  defp staff_session?(nil), do: false
+  defp staff_session?(scope), do: PukllayClub.Accounts.User.staff?(scope.user)
 
   @doc """
   The "Sumate" join CTA — the club's WhatsApp group invite link.

@@ -42,11 +42,33 @@ defmodule PukllayClub.Catalog.VocabularyTest do
     end
   end
 
-  describe "editorial_tags/0" do
-    test "returns the 3 club hashtags verbatim, in order" do
-      tags = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
+  describe "implied_weight_band/1 (D-29)" do
+    test "nil weight implies nil (no band)" do
+      assert Vocabulary.implied_weight_band(nil) == nil
+    end
 
-      assert tags == ["#CreaConexiones", "#EquipoGanador", "#DuelosMemorables"]
+    test "below 1.9 implies descubre_el_hobby" do
+      assert Vocabulary.implied_weight_band(1.0) == "descubre_el_hobby"
+      assert Vocabulary.implied_weight_band(1.89) == "descubre_el_hobby"
+    end
+
+    test "1.9 through 3.1 inclusive implies ingenio_estratega" do
+      assert Vocabulary.implied_weight_band(1.9) == "ingenio_estratega"
+      assert Vocabulary.implied_weight_band(2.5) == "ingenio_estratega"
+      assert Vocabulary.implied_weight_band(3.1) == "ingenio_estratega"
+    end
+
+    test "above 3.1 implies nivel_experto" do
+      assert Vocabulary.implied_weight_band(3.11) == "nivel_experto"
+      assert Vocabulary.implied_weight_band(4.5) == "nivel_experto"
+    end
+
+    test "every returned band value is a real weight_bands/0 value" do
+      known_values = Enum.map(Vocabulary.weight_bands(), & &1.value)
+
+      for weight <- [1.0, 1.89, 1.9, 2.5, 3.1, 3.11, 4.5] do
+        assert Vocabulary.implied_weight_band(weight) in known_values
+      end
     end
   end
 

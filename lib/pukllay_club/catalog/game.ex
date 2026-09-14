@@ -3,15 +3,20 @@ defmodule PukllayClub.Catalog.Game do
   A single club board game row.
 
   Mirrors `priv/repo/migrations/*_create_games.exs`. `csv_row` is the
-  seed-task natural key (see `PukllayClub.Catalog.upsert_game!/1`); `bgg_id`
-  is nullable because ~9% of the club's CSV rows carry no BGG id (D-18) and
-  `enrichment_status` records why.
+  historical natural key from the retired CSV seed pipeline (D-09) — the
+  ~434 games imported that way keep their original `csv_row` value, but no
+  current write path reads or writes rows through it; the database is now
+  the sole source of truth and `/admin` is the only editing surface.
+  `bgg_id` is nullable because ~9% of the club's original CSV rows carried
+  no BGG id (D-18) and `enrichment_status` records why.
   """
   use Ecto.Schema
 
   import Ecto.Changeset
 
-  @enrichment_statuses ~w(pending enriched no_bgg_id bgg_missing)
+  alias PukllayClub.Catalog.Vocabulary
+
+  @enrichment_statuses ~w(pending enriched no_bgg_id bgg_missing failed)
 
   schema "games" do
     field :name, :string
@@ -41,10 +46,19 @@ defmodule PukllayClub.Catalog.Game do
     field :gallery_urls, {:array, :string}, default: []
     field :bgg_payload, :map
     field :enrichment_status, :string, default: "pending"
-    # Real, queryable expansion/promo flag (G-01-5) — derived at seed time
-    # by `PukllayClub.Catalog.Seed.ExpansionClassifier` and backfilled for
-    # pre-existing rows by the `add_games_is_expansion` migration. See that
-    # module's moduledoc for the marker + reviewed-override rules.
+    # Lifecycle status (D-04/D-08, migration `add_status_to_games`) — every
+    # public read path in `PukllayClub.Catalog` filters on this; the admin
+    # read path (`get_game!/1`) does not. Defaults to `:published` because
+    # every pre-existing row (the ~434-game live catalog) predates this
+    # column and was already public; the admin add-game flow (plan 06) sets
+    # `:draft` explicitly on insert, never relying on this default.
+    field :status, Ecto.Enum, values: [:draft, :published, :retired], default: :published
+    # Real, queryable expansion/promo flag (G-01-5), staff-editable in the
+    # admin (D-07, club-owned field). Originally derived at seed time by
+    # the CSV seed's (retired, D-09) `ExpansionClassifier` and backfilled
+    # for pre-existing rows by the `add_games_is_expansion` migration; any
+    # value set from here on is an admin edit and must never be overwritten
+    # by an offline task.
     field :is_expansion, :boolean, default: false
     # Postgres-generated `tsvector` column (01-04 migration) — Ecto never
     # writes it (never cast in `seed_changeset/2`) and never loads it back
@@ -57,13 +71,39 @@ defmodule PukllayClub.Catalog.Game do
     # aware of the column without ever touching its value.
     field :search_vector, :string, load_in_query: false
 
+    # Public-chips data source (D-17, 01.8.1-11) — filled by
+    # `PukllayClub.Catalog.put_section_names/1` on every public read that
+    # feeds a chip or preview, never cast/persisted. Names of the game's
+    # visible (non-hidden, non-featured) `:manual` sections, ordered by
+    # section position — the replacement for the retired hashtag-facet
+    # chips. `games.tags` itself is untouched (D-22 option A: frozen
+    # history, not a live chip source any more).
+    field :section_names, {:array, :string}, virtual: true, default: []
+
+    # Staff-only physical storage location (D-10, D-11, 01.8.1-09) — at
+    # most one shelf per game, no in-shelf position. `nil` means unplaced
+    # ("Sin ubicar"). Never rendered on any public page (D-16).
+    belongs_to :shelf, PukllayClub.Catalog.Shelf
+
+    # Band-audit "keep" override snapshot (D-30, 01.8.1-13, migration
+    # `add_band_review_to_games`) — see `Game.band_review_changeset/2` and
+    # `PukllayClub.Catalog.BandAudit`. `nil`/`nil` means never reviewed.
+    field :band_reviewed_band, :string
+    field :band_reviewed_at, :utc_datetime
+
     timestamps()
   end
 
   @doc """
-  Changeset used by the seed pipeline (`PukllayClub.Catalog.upsert_game!/1`).
-  Casts every column; requires only `:name` and `:csv_row` since most fields
-  are legitimately absent for a not-yet-enriched or `BGG_ID`-less row.
+  Changeset historically used by the retired CSV seed pipeline (D-09; the
+  full-row `Catalog.upsert_game!/1` upsert it fed no longer exists). Casts
+  every column; requires only `:name` and `:csv_row` since most fields were
+  legitimately absent for a not-yet-enriched or `BGG_ID`-less imported row.
+  No current write path uses this changeset for a club-owned field — the
+  narrow-allowlist offline tasks (`StatsEnricher`, `GalleryBackfill`,
+  `OGCardBackfill`) and the admin write path each cast their own explicit
+  field list instead. Still used by `PukllayClub.CatalogFixtures.game_fixture/1`
+  to build test rows with every column castable at once.
   """
   def seed_changeset(game, attrs) do
     game
@@ -97,9 +137,131 @@ defmodule PukllayClub.Catalog.Game do
       :enrichment_status,
       :is_expansion
     ])
-    |> validate_required([:name, :csv_row])
+    |> validate_required([:name])
     |> validate_inclusion(:enrichment_status, @enrichment_statuses)
     |> unique_constraint(:csv_row)
+  end
+
+  @doc """
+  Changeset for a staff-initiated add-by-BGG-id (D-01, 01.8.1-06). Casts
+  only `:bgg_id`, requiring a positive integer, and puts the fixed initial
+  state every new draft starts in: `status: :draft` (never public until
+  `Catalog.publish_game/1`), `enrichment_status: "pending"` (the background
+  job has not run yet), and a placeholder `name` the enrichment job later
+  replaces with the real BGG name — see `enrichment_changeset/2`'s
+  club-owned-value rules.
+  """
+  def draft_changeset(game, attrs) do
+    game
+    |> cast(attrs, [:bgg_id])
+    |> validate_required([:bgg_id])
+    |> validate_number(:bgg_id, greater_than: 0)
+    |> put_change(:status, :draft)
+    |> put_change(:enrichment_status, "pending")
+    |> then(fn changeset ->
+      case get_field(changeset, :bgg_id) do
+        nil -> changeset
+        bgg_id -> put_change(changeset, :name, "Juego ##{bgg_id}")
+      end
+    end)
+  end
+
+  @doc """
+  Changeset the background enrichment job (`PukllayClub.Workers.EnrichGameWorker`,
+  `PukllayClub.Catalog.Enrichment.enrich/2`) persists BGG-derived facts
+  through (D-02, D-01/01.8.1-08). Casts every BGG-derived column plus
+  `:enrichment_status`, and `:name`/`:description`/`:is_expansion` — the
+  three club-owned-value exceptions the caller only includes in `attrs`
+  when the club-owned-value rules (D-07) allow it: `:name` only when it
+  still equals the `Juego #<bgg_id>` placeholder, `:description` only
+  when the current value is nil/blank, and `:is_expansion` only on that
+  same still-placeholder first enrichment. Never casts `:status` — a
+  draft stays a draft until staff publish it.
+  """
+  def enrichment_changeset(game, attrs) do
+    cast(
+      game,
+      attrs,
+      [
+        :year_published,
+        :min_players,
+        :max_players,
+        :min_playtime,
+        :max_playtime,
+        :playing_time,
+        :min_age,
+        :bgg_weight,
+        :bgg_rating,
+        :bgg_rank,
+        :mechanics,
+        :themes,
+        :designers,
+        :artists,
+        :publishers,
+        :thumbnail_url,
+        :cover_url,
+        :gallery_urls,
+        :bgg_payload,
+        :enrichment_status,
+        :name,
+        :description,
+        :is_expansion
+      ]
+    )
+  end
+
+  @doc """
+  Changeset for the D-04/D-08 lifecycle transitions
+  (`Catalog.publish_game/1`, `Catalog.retire_game/1`, `Catalog.restore_game/1`)
+  — casts and validates only `:status`, never any other field.
+  """
+  def status_changeset(game, attrs) do
+    game
+    |> cast(attrs, [:status])
+    |> validate_required([:status])
+  end
+
+  @doc """
+  Changeset for the D-07 admin edit screen
+  (`Catalog.change_game_admin/2`, `Catalog.update_game_admin/2`) — casts
+  the five club-owned fields staff may edit (`:name`, `:units`,
+  `:weight_band`, `:is_expansion`, `:description`) plus `:shelf_id` (D-10,
+  01.8.1-09 — also reused directly by `Catalog.Shelves.assign_game/2`,
+  restricting `attrs` to that one key). Every BGG-derived fact (players,
+  playtime, age, mechanics, themes, designers, artists, publishers,
+  rating, rank, `bgg_weight`, images) is read-only in the admin and is
+  never cast here — `status` changes only through `status_changeset/2`'s
+  dedicated transition functions (`Catalog.publish_game/1`, `retire_game/1`,
+  `restore_game/1`).
+
+  `validate_inclusion/3`/`validate_number/3` skip a `nil` value by
+  Ecto's own `validate_change/3` contract, so a blank `weight_band` (the
+  select's `Sin nivel` prompt), a blank `units`, and a blank `shelf_id`
+  (unassigning) all pass through unvalidated rather than needing an
+  explicit `allow_nil` branch.
+  """
+  def admin_changeset(game, attrs) do
+    game
+    |> cast(attrs, [:name, :units, :weight_band, :is_expansion, :description, :shelf_id])
+    |> validate_required([:name])
+    |> validate_length(:name, max: 255)
+    |> validate_number(:units, greater_than: 0)
+    |> validate_inclusion(:weight_band, Enum.map(Vocabulary.weight_bands(), & &1.value))
+    |> foreign_key_constraint(:shelf_id)
+  end
+
+  @doc """
+  Changeset for the D-30 band-audit actions
+  (`PukllayClub.Catalog.BandAudit.correct_band/1`, `keep_band/1`) — casts
+  only `:weight_band, :band_reviewed_band, :band_reviewed_at`, never any
+  other field. `correct_band/1` sets `:weight_band` to the implied band and
+  clears both review fields back to `nil`; `keep_band/1` leaves
+  `:weight_band` untouched and sets the review snapshot instead.
+  """
+  def band_review_changeset(game, attrs) do
+    game
+    |> cast(attrs, [:weight_band, :band_reviewed_band, :band_reviewed_at])
+    |> validate_inclusion(:weight_band, Enum.map(Vocabulary.weight_bands(), & &1.value))
   end
 end
 

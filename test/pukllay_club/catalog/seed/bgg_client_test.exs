@@ -17,7 +17,9 @@ defmodule PukllayClub.Catalog.Seed.BggClientTest do
       credentials: credentials
     } do
       Req.Test.stub(BggClient, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
         assert Plug.Conn.get_req_header(conn, "authorization") == ["Bearer test-token"]
+        assert conn.query_params["type"] == "boardgame,boardgameexpansion"
 
         conn
         |> Plug.Conn.put_resp_content_type("text/xml")
@@ -27,6 +29,7 @@ defmodule PukllayClub.Catalog.Seed.BggClientTest do
       assert {:ok, [item]} = BggClient.fetch_batch([184_267], credentials)
 
       assert item.bgg_id == 184_267
+      assert item.type == "boardgame"
       assert item.name == "On Mars"
       assert item.year_published == 2020
       assert item.min_players == 1
@@ -118,6 +121,29 @@ defmodule PukllayClub.Catalog.Seed.BggClientTest do
 
       assert {:ok, []} = BggClient.fetch_batch([], credentials)
       refute_received {:bgg_request_made, _}
+    end
+
+    test "an item with type=\"boardgameexpansion\" carries its type through parsing (D-01/01.8.1-08)", %{
+      credentials: credentials
+    } do
+      expansion_xml = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+      <item type="boardgameexpansion" id="290837">
+      <name type="primary" sortindex="1" value="Some Expansion" />
+      </item>
+      </items>
+      """
+
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, expansion_xml)
+      end)
+
+      assert {:ok, [item]} = BggClient.fetch_batch([290_837], credentials)
+      assert item.bgg_id == 290_837
+      assert item.type == "boardgameexpansion"
     end
 
     test "retries a 429 response and succeeds on the next attempt", %{credentials: credentials} do

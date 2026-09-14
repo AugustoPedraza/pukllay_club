@@ -51,6 +51,12 @@ which is exactly how G-01.8-3 (an attribute interposed before `property=`/`name=
 `phx-r` root-tag stamping) shipped to production while every one of those three validators passed.
 See `.planning/debug/whatsapp-og-image-preview.md` for the full diagnosis.
 
+## Domain & DNS
+
+`pukllay.club` is registered at Spaceship, and its DNS is hosted there too. DNS is not managed from
+this repo. `docs/runbooks/domain-and-dns.md` records the registrar, expiry date, current records
+and how to verify them. Update it whenever a DNS record changes.
+
 ## Non-Goals (Phase 0)
 
 Phase 0 is the deploy pipeline only — a proven walking skeleton, not gold-plating:
@@ -104,74 +110,125 @@ custom classes must fully style the input
 - Ensure **clean typography, spacing, and layout balance** for a refined, premium look
 - Focus on **delightful details** like hover effects, loading states, and smooth page transitions
 
-## Production data seeding
+## Catalog data: la base es la fuente de verdad
 
-Production's `games` table is the developer's dev-machine seed pipeline's data, restored over a
-manual SSH tunnel — never seeded directly on the production host, and BGG/R2/Gemini credentials
-never touch that host or Kamal (SEED-01/SEED-02, D-04/D-05). Two procedures exist: the one-time
-restore already performed, and the repeatable re-seed path for every time after.
+The database is the single source of truth for the catalog (D-09, phase 01.8.1). `/admin` is the
+only editing surface for club-owned fields (name, units, `weight_band`, `is_expansion`, tags,
+section membership, shelf location, Spanish description). The old CSV import task, its
+`Catalog.Seed.CsvImport` module, and the full-row `Catalog.upsert_game!/1` upsert were removed in
+phase 01.8.1 and must not be reintroduced — a replace-all upsert would silently revert every staff
+edit the next time anyone ran it.
 
-### One-time restore (already performed, D-01/D-03)
-
-Plan 01.7-01 restored the dev-seeded catalog into production's previously-empty `games` table.
-The full command sequence, connection derivation, and every verification figure are recorded in
+The one-time restore that originally populated production's `games` table (01.7 D-01/D-03) remains
+a historical record only — see
 `.planning/phases/01.7-production-catalog-data-security-hardening-inserted/01.7-SEED-RESTORE.md`
-— read that file for the actual commands rather than re-deriving them. In outline:
+for the actual commands, including the lesson any future manual restore must not skip: verify the
+dump's own `setval` line actually restored `games_id_seq` before trusting the restore, since a
+skipped check doesn't fail at restore time — it fails later, as a primary-key collision on the next
+write.
 
-1. Read production's resolved `DATABASE_URL` (role/host/database only, password supplied
-   directly by the developer) from Kamal's own env file on the host — `.kamal/secrets` locally
-   only ever holds a placeholder (D-08).
-2. Open a foreground SSH local port-forward bound to `127.0.0.1` on a non-default local port
-   (`ssh -f -N -L 127.0.0.1:15432:localhost:5432 deploy@<host>`), since the dev machine's own
-   Postgres already owns the default port.
-3. `pg_dump --data-only --table=games` the dev database, then restore through the tunnel with
-   `psql -h 127.0.0.1 -p 15432 ... pukllay_club_prod < dump.sql`.
-4. **Verify the dump's own `setval` line restored the sequence** — `grep setval dump.sql` before
-   restoring, then confirm `games_id_seq`'s `last_value` is `>= max(games.id)` in production after.
-   This is the step a hurried re-seed would skip, and skipping it doesn't fail at restore time —
-   it fails later, as a primary-key collision on the next write.
-5. Close the tunnel once verification passes.
+Five offline, developer-machine tasks remain and are safe to keep running against production over
+the same manual SSH tunnel as before — none of them writes a club-owned field:
 
-### Future re-seed path (D-04)
+- `mix catalog.enrich_bgg_stats` — re-fetches BGG stats/artists for every game with a `bgg_id`
+- `mix catalog.backfill_artists` — fills `artists` from each game's already-stored `bgg_payload`
+- `mix catalog.backfill_gallery` — clears stale `gallery_urls` entries
+- `mix catalog.backfill_og_cards` — regenerates the letterboxed OG share card
+- `mix catalog.translate_descriptions` — translates a game's description to Spanish via Gemini,
+  unconditionally skipping any game whose stored description no longer reads as English
+  (D-06/D-07), so a staff-edited Spanish description can never be re-translated over
 
-To re-run the seed pipeline against production — for example, after a catalog CSV update — open
-the same foreground SSH local port-forward as above, then run `mix catalog.seed` and its
-companion tasks (`mix catalog.enrich_bgg_stats`, `mix catalog.backfill_artists`,
-`mix catalog.backfill_gallery`) locally, each with a one-shot inline `DATABASE_URL` pointed at the
-forward's local end:
+Running any of these against production still needs the same three load-bearing tunnel
+constraints:
 
-```
-DATABASE_URL="ecto://postgres:<password>@127.0.0.1:15432/pukllay_club_prod" mix catalog.seed
-```
-
-Three constraints, all load-bearing:
-
-- **`DATABASE_URL` is supplied inline for that single command only — never exported into a shell
-  profile.** An exported value silently retargets every later `mix` invocation in that shell,
+- **Open a foreground SSH local port-forward** (`ssh -f -N -L 127.0.0.1:15432:localhost:5432
+  deploy@<host>`) and supply `DATABASE_URL` inline for that single command only — never export it
+  into a shell profile, or it silently retargets every later `mix` invocation in that shell,
   including an unrelated local `mix test` or `mix ecto.migrate` run, to production.
-- **BGG, R2, and Gemini credentials resolve from the developer's gitignored
+- **BGG, R2, and Gemini credentials for a local run resolve from the developer's gitignored
   `config/dev.secret.exs`** through `PukllayClub.Catalog.Seed.Credentials` (env-var-first, then
-  `Application` config) exactly as they do for a normal dev seed run. They never touch the
-  production host and never route through Kamal — that is a standing decision from plan 01-01,
-  not a preference for this runbook.
-- **Production is only reachable at all while the forward from step 2 above is open** — a
-  deliberate, foreground, manual act, not something any CI job or scheduled task does on your
-  behalf.
+  `Application` config). They never touch the production host directly and never route through
+  Kamal for a developer-initiated run — that is a standing decision from plan 01-01, not a
+  preference for this runbook.
+- **Production is only reachable at all while the SSH forward above is open** — a deliberate,
+  foreground, manual act, not something any CI job or scheduled task does on your behalf.
 
-**Consequence that makes a careless re-seed expensive:** a full `mix catalog.seed` run rewrites
-every touched game's `description` from BGG's English source, reverting the club's curated
-Argentine-Spanish text to English. After any full re-seed, run
-`mix catalog.translate_descriptions --only-english` to re-translate every row the seed reverted —
-this is not optional cleanup, it is the reason D-01 chose the dump-and-restore path over a fresh
-re-derivation pipeline for the one-time restore in the first place. The Spanish voice is
-member-facing product, not internal metadata.
+Production now enriches a staff-added game itself, through an Oban worker (D-02, phase 01.8.1
+plans 06-08) — this deliberately reverses 01.7 D-04's "credentials never touch the production
+host" decision, per 01.8.1 D-02. `BGG_API_TOKEN`, the R2 write keys, and `GEMINI_API_KEY` now also
+live in GitHub repo secrets (for CI) and Kamal `env.secret` (for the running app), the same
+pattern the app's other production secrets already follow.
 
-**Considered and deliberately not adopted:** a GitHub Actions workflow for this re-seed path,
-modelled on the existing nightly backup workflow's SSH pattern (`.github/workflows/backup.yml`).
-At this project's cadence — a re-seed is an occasional, deliberate, developer-initiated act, not
-a scheduled one — the added CI/secrets-in-GitHub surface area was not worth automating. A future
-reader should treat this as a decision, not an oversight.
+The owner account is created once, over SSH, with:
 
+```
+bin/pukllay_club eval 'PukllayClub.Release.create_owner("owner@example.com")'
+```
+
+(D-32) — see `PukllayClub.Release.create_owner/1`, which delegates to `Accounts.create_owner/1`
+inside `Ecto.Migrator.with_repo/2`.
+
+
+<!-- phoenix-gen-auth-start -->
+## Authentication
+
+- **Always** handle authentication flow at the router level with proper redirects
+- **Always** be mindful of where to place routes. `phx.gen.auth` creates multiple router plugs and `live_session` scopes:
+  - A plug `:fetch_current_scope_for_user` that is included in the default browser pipeline
+  - A plug `:require_authenticated_user` that redirects to the log in page when the user is not authenticated
+  - A `live_session :current_user` scope - for routes that need the current user but don't require authentication, similar to `:fetch_current_scope_for_user`
+  - A `live_session :require_authenticated_user` scope - for routes that require authentication, similar to the plug with the same name
+  - In both cases, a `@current_scope` is assigned to the Plug connection and LiveView socket
+  - A plug `redirect_if_user_is_authenticated` that redirects to a default path in case the user is authenticated - useful for a registration page that should only be shown to unauthenticated users
+- **Always let the user know in which router scopes, `live_session`, and pipeline you are placing the route, AND SAY WHY**
+- `phx.gen.auth` assigns the `current_scope` assign - it **does not assign a `current_user` assign**
+- Always pass the assign `current_scope` to context modules as first argument. When performing queries, use `current_scope.user` to filter the query results
+- To derive/access `current_user` in templates, **always use the `@current_scope.user`**, never use **`@current_user`** in templates or LiveViews
+- **Never** duplicate `live_session` names. A `live_session :current_user` can only be defined __once__ in the router, so all routes for the `live_session :current_user`  must be grouped in a single block
+- Anytime you hit `current_scope` errors or the logged in session isn't displaying the right content, **always double check the router and ensure you are using the correct plug and `live_session` as described below**
+
+### Routes that require authentication
+
+LiveViews that require login should **always be placed inside the __existing__ `live_session :require_authenticated_user` block**:
+
+    scope "/", AppWeb do
+      pipe_through [:browser, :require_authenticated_user]
+
+      live_session :require_authenticated_user,
+        on_mount: [{PukllayClubWeb.UserAuth, :require_authenticated}] do
+        # phx.gen.auth generated routes
+        live "/users/settings", UserLive.Settings, :edit
+        live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+        # our own routes that require logged in user
+        live "/", MyLiveThatRequiresAuth, :index
+      end
+    end
+
+Controller routes must be placed in a scope that sets the `:require_authenticated_user` plug:
+
+    scope "/", AppWeb do
+      pipe_through [:browser, :require_authenticated_user]
+
+      get "/", MyControllerThatRequiresAuth, :index
+    end
+
+### Routes that work with or without authentication
+
+LiveViews that can work with or without authentication, **always use the __existing__ `:current_user` scope**, ie:
+
+    scope "/", MyAppWeb do
+      pipe_through [:browser]
+
+      live_session :current_user,
+        on_mount: [{PukllayClubWeb.UserAuth, :mount_current_scope}] do
+        # our own routes that work with or without authentication
+        live "/", PublicLive
+      end
+    end
+
+Controllers automatically have the `current_scope` available if they use the `:browser` pipeline.
+
+<!-- phoenix-gen-auth-end -->
 
 <!-- usage-rules-start -->
 <!-- usage_rules-start -->

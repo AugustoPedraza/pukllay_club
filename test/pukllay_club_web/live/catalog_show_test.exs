@@ -3,6 +3,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
+  import PukllayClub.SectionsFixtures
 
   alias Plug.Conn.Query
   alias PukllayClub.Catalog.Reservation
@@ -259,6 +260,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       {404, _headers, body} =
         assert_error_sent(404, fn ->
           get(conn, ~p"/juegos/abc")
+        end)
+
+      assert body =~ "Juego no encontrado"
+    end
+
+    # Phase 01.8.1-02: the games.status lifecycle (D-04, D-08). A retired or
+    # draft game's URL 404s through this LiveView's own mount/3, identical
+    # to an unknown id — Catalog.get_published_game!/1 is the single choke
+    # point that makes both cases raise Ecto.NoResultsError.
+    test "a retired game's detail URL renders the branded 404 end-to-end", %{conn: conn} do
+      game = game_fixture(%{name: "Catán", status: :retired})
+
+      {404, _headers, body} =
+        assert_error_sent(404, fn ->
+          get(conn, ~p"/juegos/#{game}")
+        end)
+
+      assert body =~ "Juego no encontrado"
+    end
+
+    test "a draft game's detail URL renders the branded 404 end-to-end", %{conn: conn} do
+      game = game_fixture(%{name: "Catán", status: :draft})
+
+      {404, _headers, body} =
+        assert_error_sent(404, fn ->
+          get(conn, ~p"/juegos/#{game}")
         end)
 
       assert body =~ "Juego no encontrado"
@@ -1433,7 +1460,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   describe "reading column reorder — title, hashtags, description, fact grid, BGG (01.3-07)" do
     test "title's section -> hashtag row -> description's section, ordered siblings not a substring match",
          %{conn: conn} do
-      game = game_fixture(%{description: "Una crónica de mercaderes.", tags: ["#CreaConexiones"]})
+      game =
+        %{description: "Una crónica de mercaderes."}
+        |> game_fixture()
+        |> add_to_manual_section()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
@@ -1452,12 +1482,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "hashtags render after title, before description; Mecánicas/Temáticas still after description (sketch 042)",
          %{conn: conn} do
       game =
-        game_fixture(%{
+        %{
           description: "Una crónica de mercaderes.",
           mechanics: ["Dice Rolling"],
-          themes: ["Economic"],
-          tags: ["#CreaConexiones"]
-        })
+          themes: ["Economic"]
+        }
+        |> game_fixture()
+        |> add_to_manual_section()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
@@ -1474,7 +1505,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {mechanics_idx, _} = :binary.match(html, "Mecánicas")
       {themes_idx, _} = :binary.match(html, "Temáticas")
-      {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
+      {hashtag_idx, _} = :binary.match(html, "Crea conexiones")
 
       assert title_idx < hashtag_idx
       assert hashtag_idx < description_idx
@@ -1502,13 +1533,14 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "no h2.pk-section-heading renders anywhere — Mecánicas/Temáticas/Ficha técnica headings are gone (sketch 040)",
          %{conn: conn} do
       game =
-        game_fixture(%{
+        %{
           weight_band: "ingenio_estratega",
           description: "Una crónica.",
           mechanics: ["Dice Rolling"],
-          themes: ["Economic"],
-          tags: ["#CreaConexiones"]
-        })
+          themes: ["Economic"]
+        }
+        |> game_fixture()
+        |> add_to_manual_section()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
@@ -2581,7 +2613,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "the editorial hashtag row does NOT carry pk-chip-row — the two rows stay separately styled",
          %{conn: conn} do
-      game = game_fixture(%{tags: ["#CreaConexiones"]})
+      game = add_to_manual_section(game_fixture())
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
@@ -2654,12 +2686,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "the reading column (editorial hashtags, Mecánicas, Temáticas) and the facts row render from pk-pill, never a daisyUI badge class",
          %{conn: conn} do
       game =
-        game_fixture(%{
+        %{
           mechanics: ["Dice Rolling"],
           themes: ["Economic"],
-          tags: ["#CreaConexiones"],
           weight_band: "ingenio_estratega"
-        })
+        }
+        |> game_fixture()
+        |> add_to_manual_section()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
@@ -2766,7 +2799,10 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
     test "the description's section immediately follows the title's section and the hashtag row (01.3-07 reorder)",
          %{conn: conn} do
-      game = game_fixture(%{description: "Una crónica de mercaderes.", tags: ["#CreaConexiones"]})
+      game =
+        %{description: "Una crónica de mercaderes."}
+        |> game_fixture()
+        |> add_to_manual_section()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
@@ -2801,12 +2837,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     test "the chip rows still render after the description; the editorial hashtags render before it (01.3-07 reorder)",
          %{conn: conn} do
       game =
-        game_fixture(%{
+        %{
           description: "Una crónica.",
           mechanics: ["Dice Rolling"],
-          themes: ["Economic"],
-          tags: ["#CreaConexiones"]
-        })
+          themes: ["Economic"]
+        }
+        |> game_fixture()
+        |> add_to_manual_section()
 
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
@@ -2822,7 +2859,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       {mechanics_idx, _} = :binary.match(html, "Mecánicas")
       {themes_idx, _} = :binary.match(html, "Temáticas")
-      {hashtag_idx, _} = :binary.match(html, "#CreaConexiones")
+      {hashtag_idx, _} = :binary.match(html, "Crea conexiones")
 
       assert description_idx < mechanics_idx
       assert description_idx < themes_idx
@@ -2932,6 +2969,17 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
     html
     |> LazyHTML.from_fragment()
     |> LazyHTML.query("#reservation-modal a[href^='https://wa.me/']")
+  end
+
+  # 01.8.1-11 (D-17, D-22): public chips now come from a game's visible
+  # hand-picked section membership, not `games.tags` (frozen history under
+  # the D-22 option-A decision) — this is the test-side equivalent of a
+  # staff member adding `game` to a manual section, standing in for the
+  # retired `tags:` fixture attr wherever a test needs a chip to render.
+  defp add_to_manual_section(game, name \\ "Crea conexiones") do
+    section = section_fixture(%{name: name})
+    add_game_to_section(section, game)
+    game
   end
 
   describe "reservation flow (SHELL-03, T-01.1-02)" do
@@ -3652,13 +3700,21 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       refute html =~ "pk-difficulty"
     end
 
-    test "each editorial tag links to ?tags=<tag>", %{conn: conn} do
-      game = game_fixture(%{name: "Tagged Game", tags: ["#CreaConexiones", "#EquipoGanador"]})
-
+    test "section chips render as plain (unlinked) pills — section_names carries no id to link to (D-17, 01.8.1-11)",
+         %{conn: conn} do
+      game = game_fixture(%{name: "Sectioned Game"})
+      add_to_manual_section(game, "Crea conexiones")
+      add_to_manual_section(game, "Equipo ganador dos")
       {:ok, _view, html} = live(conn, ~p"/juegos/#{game}")
 
-      assert html =~ "tags=%23CreaConexiones"
-      assert html =~ "tags=%23EquipoGanador"
+      doc = LazyHTML.from_document(html)
+      chip_spans = LazyHTML.query(doc, ".pk-text-col span.pk-pill-tag")
+      chip_links = LazyHTML.query(doc, ".pk-text-col a.pk-pill-tag")
+
+      assert Enum.count(chip_spans) == 2
+      assert Enum.empty?(chip_links)
+      assert html =~ "Crea conexiones"
+      assert html =~ "Equipo ganador dos"
     end
 
     test "each mechanic chip links to ?mechanics=<label>", %{conn: conn} do
@@ -3870,13 +3926,13 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
 
       html =
         render_component(&CarouselRow.carousel_row/1, %{
-          id: "carousel-destacados_del_club",
+          id: "carousel-section-1",
           title: "Destacados del club",
           games: [{"g-#{game.id}", game}],
           variant: :hero,
           subtitle: "Los favoritos del club",
           empty: false,
-          row_key: "destacados_del_club",
+          row_key: "section-1",
           exhausted: true
         })
 
