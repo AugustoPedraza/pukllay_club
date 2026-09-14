@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.1
 current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
 status: executing
-stopped_at: Completed 01.8.1-06-PLAN.md
-last_updated: "2026-09-14T12:09:15.944Z"
+stopped_at: Completed 01.8.1-07-PLAN.md
+last_updated: "2026-09-14T12:27:20.833Z"
 last_activity: 2026-09-13
 last_activity_desc: Phase 01.8.1 execution started
-state_head: e13c57b7c3c110fe84b4e07a020dc64ae88ad3d0
+state_head: 757d13bb7d330c5052e4be6507ff7ada78243353
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 26
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
-Plan: 5 of 14
+Plan: 6 of 14
 Status: Ready to execute
 Last activity: 2026-09-13 — Phase 01.8.1 execution started
 
@@ -122,6 +122,7 @@ Last activity: 2026-09-13 — Phase 01.8.1 execution started
 | Phase 01.8.1 P03 | 15min | 3 tasks | 8 files |
 | Phase 01.8.1 P05 | ~110min | 3 tasks | 16 files |
 | Phase 01.8.1 P06 | ~50min | 2 tasks | 15 files |
+| Phase 01.8.1 P07 | 16min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -238,6 +239,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.1]: 01.8.1-05: Publicar is a same-form submit button carrying name="_action" value="publish" (the browser includes the activated submitter's name/value in the serialized form payload), so save-then-publish is one round trip through a single handle_event("save", ...) rather than two LiveView events
 - [Phase 01.8.1]: 01.8.1-05: Admin.GameLive.Index has no status filter by default (list_admin_games/1/count_admin_games/1 deliberately do not reuse Catalog's public base_filtered_query/2's non-optional published_only/1 predicate) -- the inverse of every public read, since staff must see drafts/published/retired together
 - [Phase 01.8.1]: 01.8.1-06: Oban wired for the first time (queue enrichment:1, oban_jobs migration pinned to v14); add_game_from_bgg/1 inserts a draft + enqueues its enrichment job atomically via Ecto.Multi + Oban.insert/3; Enrichment.enrich/2 reuses BggClient/ImagePipeline/DescriptionTranslator unchanged, applying D-07 club-owned-value rules so every retry is idempotent; EnrichGameWorker broadcasts {:game_enriched, id} on admin:games for live row updates
+- [Phase 01.8.1]: 01.8.1-07: Accounts.notifier/0 is a test-only Application-env seam letting StaffLiveTest simulate an invite-email delivery failure, since Swoosh.Adapters.Test always succeeds
+- [Phase 01.8.1]: 01.8.1-07: remove_staff/2 snapshots the target's tokens via Repo.all_by/2 before Repo.delete/1 inside one Repo.transact/1 (on_delete: :delete_all means tokens vanish the instant the user row does), so UserAuth.disconnect_sessions/1 has something to broadcast against
 
 ### Pending Todos
 
@@ -375,8 +378,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T12:09:15.864Z
-Stopped at: Completed 01.8.1-06-PLAN.md
+Last session: 2026-09-14T12:27:11.247Z
+Stopped at: Completed 01.8.1-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
