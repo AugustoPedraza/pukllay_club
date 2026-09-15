@@ -207,3 +207,11 @@ row implied a false hierarchy and duplicated the Panel tab. Applied the existing
 (crumb/back only for genuine drill-downs): no back row on tab/drawer-level pages, so titles sit at the
 same height across tabs; back row only on drill-downs (Secciones → Destacados "‹ Secciones"; later
 Juegos → editar "‹ Juegos", Estantes → asignar "‹ Estantes").
+
+## Button system from sketch 064 applied (2026-09-15)
+The admin now uses one button system everywhere. It's S3 Contorno, weight-tuned; see `064-admin-button-system/README.md`. The identical CSS block ("064: admin button system") is appended to this sketch's `<style>`, scoped with `#device`, so it overrides the older local `.obtn`/`.tbtn` rules.
+- **One anatomy:** 44px · 8px radius · 14px/600 · 16px icon · 8px gap.
+- **Principal** (`.obtn`/`.b-pri`) is a 1px primary outline. **Secundaria** (`.b-sec`) is a 1px neutral outline (`--stroke`, ≥ 3:1, shared with text fields). **Terciaria** (`.tbtn`) is secondary-purple text. **Peligro** (`.tbtn.danger`) is danger text.
+- **No disabled buttons, and Principal is last in its row.**
+- Login "Enviarme el link" moved from a grey filled `.btn` to a full-width Principal.
+Checked by `064-admin-button-system/audit-admin.js`.

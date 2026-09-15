@@ -530,7 +530,8 @@
   .switch:checked { background: var(--color-primary); }
   .switch:checked::after { transform: translateX(18px); }
   .switch:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-  .saverow { display: flex; justify-content: flex-end; margin-top: 16px; }
+  .saverow { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 16px; }
+  .dirty-note { margin-right: auto; font-size: 12px; font-weight: 600; color: var(--color-accent-text); }
 
   /* Estantes: progress + view switch */
   .prog { margin: 0 0 16px; }
@@ -545,6 +546,47 @@
   .renform .tbtn { font-size: 13px; }
   .disclose .chev { transform: rotate(90deg); transition: transform var(--duration-base) var(--ease-out-soft); }
   .disclose[aria-expanded="true"] .chev { transform: rotate(-90deg); }
+
+  /* ================= 064: admin button system (S3 Contorno, weight-tuned) — identical block in 059–063 =================
+     One anatomy: 44px · radius-md · 14px/600 · 16px icon · 8px gap. The role is the only thing that changes the paint:
+       Principal  .obtn / .b-pri  1px primary stroke, primary label — at most one per block, last in its row
+       Secundaria .b-sec          1px neutral --stroke (≥ 3:1, the same token as text fields), text-color label
+       Terciaria  .tbtn           no stroke, secondary-purple label (one step lighter than Principal)
+       Peligro    .tbtn.danger    no stroke, danger label — never Principal, confirms in a sheet
+     No disabled buttons (Guardar only shows with changes; submits validate on tap). Sheets keep 059 rows.
+     Scoped with #device so it wins over each sketch's older local .obtn/.tbtn rules. */
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  #device :is(.obtn, .tbtn, .b-pri, .b-sec):not(.snack .tbtn) { min-height: 44px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+  #device :is(.obtn, .tbtn, .b-pri, .b-sec) svg:not(.spin) { width: 16px; height: 16px; }
+  #device :is(.obtn, .b-pri, .b-sec) { padding: 0 16px; border: 1px solid; background: var(--color-bg); opacity: 1; }
+  #device :is(.obtn, .b-pri) { border-color: var(--color-primary); color: var(--color-primary); }
+  #device :is(.obtn, .b-pri):hover { background: color-mix(in srgb, var(--color-primary) 7%, var(--color-bg)); }
+  :root[data-theme="dark"] #device :is(.obtn, .b-pri) { border-color: var(--color-accent-text); color: var(--color-accent-text); background: transparent; }
+  :root[data-theme="dark"] #device :is(.obtn, .b-pri):hover { background: color-mix(in srgb, var(--color-accent-text) 10%, transparent); }
+  #device .b-sec { border-color: var(--stroke); color: var(--color-text); }
+  #device .b-sec:hover { background: var(--color-surface); }
+  :root[data-theme="dark"] #device .b-sec { background: transparent; }
+  :root[data-theme="dark"] #device .b-sec:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); }
+  #device .tbtn:not(.b-pri):not(.b-sec):not(.snack .tbtn) { padding: 0 12px; border: 0; background: none; color: var(--ter); }
+  #device .tbtn:not(.b-pri):not(.b-sec):not(.snack .tbtn):hover { background: color-mix(in srgb, var(--ter) 10%, transparent); }
+  /* Peligro repeats the Terciaria selector chain so it outranks it (plain .tbtn.danger lost to the :not() chain) */
+  #device .tbtn.danger:not(.b-pri):not(.b-sec):not(.snack .tbtn) { color: var(--color-danger); }
+  #device .tbtn.danger:not(.b-pri):not(.b-sec):not(.snack .tbtn):hover { background: color-mix(in srgb, var(--color-danger) 9%, transparent); }
+  :root[data-theme="dark"] #device .tbtn.danger:not(.b-pri):not(.b-sec):not(.snack .tbtn) { color: #F2A3B8; }
+  #device :is(.obtn, .tbtn, .b-pri, .b-sec):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  :root[data-theme="dark"] #device :is(.obtn, .tbtn, .b-pri, .b-sec):focus-visible { outline-color: var(--color-accent-text); }
+  #device .btn-block { width: 100%; }
+  /* text fields share the Secundaria stroke (1px, ≥ 3:1); in-place editors (063 title/description/number) keep their soft look */
+  #device :is(.tin, .field input):not(.desc-in):not(.num):not(.title-in) { border: 1px solid var(--stroke); }
+  #device :is(.tin, .field input):not(.desc-in):not(.num):not(.title-in):focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] #device :is(.tin, .field input):not(.desc-in):not(.num):not(.title-in):focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  #device :is(.tin, .field input).invalid { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  #device .banner-actions { gap: 8px; }
+  /* the -8px pull is for borderless text buttons; an outlined button ends the row on the content edge */
+  #device .banner-actions:has(> :is(.obtn, .b-pri, .b-sec):last-child) { margin-right: 0; }
 </style>
 </head>
 <body>
@@ -832,7 +874,7 @@ const addHtml = () => `<form class="jsec" id="add-form" novalidate>
       <input id="add-in" class="tin ${J.err ? 'invalid' : ''}" type="text" name="bgg_id" value="${esc(J.add)}" placeholder="ID o link de BGG"
         autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done"
         ${J.err ? 'aria-invalid="true"' : ''} aria-describedby="add-err" ${J.adding ? 'readonly' : ''}>
-      <button type="submit" class="obtn" id="add-btn" ${!J.add.trim() && !J.adding ? 'disabled' : ''} ${J.adding ? 'aria-busy="true"' : ''}>
+      <button type="submit" class="obtn" id="add-btn" ${J.adding ? 'aria-busy="true"' : ''}>
         ${J.adding ? '<span class="spin sm"></span>Agregando' : 'Agregar'}</button>
     </div>
     <p class="ferr" id="add-err" role="alert">${J.err || ''}</p>
@@ -845,7 +887,7 @@ function promptHtml() {
   return `<div class="banner" role="alert">
     <p class="banner-text">Ya tenés ${joinY(names)} con este BGG ID. ¿Es otra edición?</p>
     <div class="glist">${p.games.map(g => gameRow(g, { compact: true })).join('')}</div>
-    <div class="banner-actions"><button type="button" class="tbtn" data-act="j-cancel">Cancelar</button><button type="button" class="tbtn" data-act="j-confirm">Sí, agregar edición</button></div>
+    <div class="banner-actions"><button type="button" class="tbtn" data-act="j-cancel">Cancelar</button><button type="button" class="tbtn b-sec" data-act="j-confirm">Sí, agregar edición</button></div>
   </div>`;
 }
 
@@ -901,7 +943,7 @@ function refreshAdd() {
   if (!inp) return;
   inp.classList.toggle('invalid', !!J.err); J.err ? inp.setAttribute('aria-invalid', 'true') : inp.removeAttribute('aria-invalid');
   inp.readOnly = J.adding;
-  btn.disabled = !J.add.trim() && !J.adding; J.adding ? btn.setAttribute('aria-busy', 'true') : btn.removeAttribute('aria-busy');
+  J.adding ? btn.setAttribute('aria-busy', 'true') : btn.removeAttribute('aria-busy');
   btn.innerHTML = J.adding ? '<span class="spin sm"></span>Agregando' : 'Agregar';
   err.textContent = J.err || '';
   $('#jprompt').innerHTML = promptHtml();
@@ -1046,12 +1088,12 @@ function lhead(label, scope, canOrder, right = '') {
   const btn = V.variant === 'B' && canOrder ? `<button type="button" class="tbtn" data-act="v-order" data-scope="${scope}" aria-pressed="${on}">${on ? 'Listo' : 'Ordenar'}</button>` : right;
   return `<div class="lhead"><span class="group-label">${label}</span>${btn}</div>${on ? '<p class="lhint">Usá las flechas para cambiar el orden. Se guarda con cada toque.</p>' : ''}`;
 }
-/* 061's add pattern: group label = field label, outlined 44px field + outlined submit (disabled while empty) */
+/* 061's add pattern: group label = field label, 44px field + Principal submit. 064: never disabled — empty submits show the error; when the form can't be used (staff full) the button is not rendered */
 const addForm = ({ id, label, ph, value, err, btn, busy, type = 'text', disabled = false, help = '' }) => `<form class="jsec" id="${id}-form" novalidate>
     <label class="group-label" for="${id}">${label}</label>
     <div class="addrow"><input id="${id}" class="tin ${err ? 'invalid' : ''}" type="${type}" value="${esc(value)}" placeholder="${ph}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"
       ${err ? 'aria-invalid="true"' : ''} aria-describedby="${id}-err" ${disabled ? 'disabled' : ''} ${busy ? 'readonly' : ''}>
-    <button type="submit" class="obtn" ${(!value.trim() && !busy) || disabled ? 'disabled' : ''} ${busy ? 'aria-busy="true"' : ''}>${busy ? `<span class="spin sm"></span>${busy}` : btn}</button></div>
+    ${disabled ? '' : `<button type="submit" class="obtn" ${busy ? 'aria-busy="true"' : ''}>${busy ? `<span class="spin sm"></span>${busy}` : btn}</button>`}</div>
     <p class="ferr" id="${id}-err" role="alert">${err || ''}</p>${help ? `<p class="fhelp">${help}</p>` : ''}</form>`;
 const sfield = (id, ph, value) => `<div class="sfield" role="search">${ic('search', 'ico-l')}<label class="sr" for="${id}">${ph}</label>
     <input id="${id}" type="search" value="${esc(value)}" placeholder="${ph}" autocomplete="off" enterkeyhint="search">
@@ -1112,7 +1154,7 @@ function secBody() {
         <input type="checkbox" role="switch" id="ed-show" class="switch" ${e.hidden ? '' : 'checked'}></label>
       ${order}
     </div>
-    <div class="saverow"><button type="button" class="obtn" data-act="v-save-sec" ${dirty ? '' : 'disabled'}>Guardar cambios</button></div>
+    ${dirty ? '<div class="saverow"><span class="dirty-note">Cambios sin guardar</span><button type="button" class="obtn" data-act="v-save-sec">Guardar cambios</button></div>' : ''}
   </section>`;
   let games;
   if (s.kind === 'weight_band') games = `<section class="jsec"><div class="group-label" style="margin:0 0 4px">Juegos</div>
@@ -1352,7 +1394,7 @@ function vAct(t) {
       if (V.variant === 'A') { patch(); const i = $('#ren-in'); i.focus(); return i.select(); }
       openAct(`<div class="step step-account"><form id="ren-form" novalidate><label class="group-label" for="ren-in" style="display:block">Renombrar estante</label>
         <input id="ren-in" class="tin full" value="${esc(V.ren)}" autocomplete="off" enterkeyhint="done"><p class="ferr" role="alert"></p>
-        <div class="banner-actions"><button type="button" class="tbtn" data-act="v-cancel-rename">Cancelar</button><button type="submit" class="tbtn">Guardar</button></div></form></div>`, t);
+        <div class="banner-actions"><button type="button" class="tbtn" data-act="v-cancel-rename">Cancelar</button><button type="submit" class="tbtn b-pri">Guardar</button></div></form></div>`, t);
       { const i = $('#ren-in'); i.focus(); return i.select(); }
     case 'v-cancel-rename': V.renaming = false; V.renErr = null; closeAll(); return patch();
     case 'v-assign': $('#snack').classList.remove('show'); return assign(id);
@@ -1383,14 +1425,14 @@ function vAct(t) {
 function submitV(id) {
   if (id === 'ren-form') return submitRename();
   if (id === 'sec-new-form') {
-    const name = V.newSec.trim(); if (!name) return;
+    const name = V.newSec.trim(); if (!name) { V.newSecErr = 'Poné un nombre.'; patch(); return $('#sec-new').focus(); }
     if (V.sections.some(s => norm(s.name) === norm(name))) { V.newSecErr = 'Ya hay una sección con ese nombre.'; patch(); return $('#sec-new').focus(); }
     const s = { id: Date.now(), name, sub: '', kind: 'manual', sort: 'manual', members: [] };
     V.sections.push(s); V.newSec = ''; V.newSecErr = null; V.cur = s.id; V.ed = null; V.memQ = ''; S.screen = 'seccion'; softSwap();
     return setTimeout(() => { snack('Sección creada. Agregale juegos.'); $('#mem-q')?.focus({ preventScroll: true }); }, 140);
   }
   if (id === 'shelf-new-form') {
-    const name = V.newShelf.trim(); if (!name) return;
+    const name = V.newShelf.trim(); if (!name) { V.newShelfErr = 'Poné un nombre.'; patch(); return $('#shelf-new').focus(); }
     if (V.shelves.some(s => norm(s.name) === norm(name))) { V.newShelfErr = 'Ya hay un estante con ese nombre.'; patch(); return $('#shelf-new').focus(); }
     const sh = { id: Date.now(), name, base: 0 }; V.shelves.push(sh); V.newShelf = ''; V.newShelfErr = null; patch(); flashKey('e' + sh.id);
     return snack('Estante creado al final del recorrido');
@@ -1409,7 +1451,7 @@ const publicBody = () => ['Destacados', 'Para empezar', 'Recién llegados'].map(
 const loginBody = () => `<div class="login"><h1 class="ptitle" style="text-align:center">Ingresar a Admin</h1>
   <p class="psub" style="text-align:center">Te mandamos un link por mail para entrar.</p>
   <div class="field"><label for="em">Email</label><input id="em" type="email" placeholder="tu@email.com"></div>
-  <button class="btn" data-act="login">Enviarme el link</button>
+  <button class="btn b-pri btn-block" data-act="login">Enviarme el link</button>
   <p class="ph-note" style="text-align:center">El flujo de ingreso se diseña en el sketch 063. Tocá el botón para simular que entraste.</p></div>`;
 
 const NOTES = `<h3>Sketch 062: Admin list rows (Web, sección, Estantes, Asignar, Revisar niveles, Staff)</h3><ul>

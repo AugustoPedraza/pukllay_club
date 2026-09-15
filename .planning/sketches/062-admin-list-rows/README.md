@@ -115,3 +115,15 @@ Carry forward to 063 and the gap-closure plan:
 - Everything under "Shared by both variants" above also applies: the Estantes view switch, "Mostrar en el inicio" as a switch, Sin ubicar first on
   Asignar with "En este estante" collapsed, the Asignar back link going to Estantes, and Staff slot counts.
 - Still open: whether "Nueva sección" should move below the Web list. Dark mode and desktop haven't been checked visually yet.
+
+## Button system from sketch 064 applied (2026-09-15)
+The admin now uses one button system everywhere. It's S3 Contorno, weight-tuned; see `064-admin-button-system/README.md`. The identical CSS block ("064: admin button system") is appended to this sketch's `<style>`, scoped with `#device`, so it overrides the older local `.obtn`/`.tbtn` rules.
+- **One anatomy:** 44px · 8px radius · 14px/600 · 16px icon · 8px gap.
+- **Principal** (`.obtn`/`.b-pri`) is a 1px primary outline. **Secundaria** (`.b-sec`) is a 1px neutral outline (`--stroke`, ≥ 3:1, shared with text fields). **Terciaria** (`.tbtn`) is secondary-purple text. **Peligro** (`.tbtn.danger`) is danger text.
+- **No disabled buttons, and Principal is last in its row.**
+- The add forms (Crear, Invitar, Agregar) are never disabled. An empty "Crear" now says "Poné un nombre." Invitar is not rendered when the staff is full (the help line explains why).
+- "Guardar cambios" only appears with changes, next to a "Cambios sin guardar" note.
+- The rename sheet's "Guardar" moved from a text button to Principal.
+- "Sí, agregar edición" is Secundaria.
+- The login moved to a Principal button.
+Checked by `064-admin-button-system/audit-admin.js`.

@@ -76,6 +76,28 @@ Verified in headless Chrome, 30 of 30 checks. New since round 1:
 - Terciaria labels lighter than Principal labels.
 - Only one system left.
 
+## Applied to 059–063 (2026-09-15)
+The identical "064: admin button system" CSS block is appended to every admin sketch, scoped with `#device`. Per-sketch changes are listed in each sketch's README:
+- **Logins (059–062)** → a full-width Principal.
+- **061/062:** add forms are never disabled; empty names/values error on submit; "Sí, agregar edición" → Secundaria.
+- **062 only:** "Guardar cambios" only with changes; the rename sheet's Guardar → Principal; Invitar hidden (not disabled) when the staff is full.
+- **063:** Estado role matrix with status on top; "Agregar a una fila" → Secundaria; "Ver más" → Terciaria.
+
+**Cross-sketch audit:** `audit-admin.js` loads every admin sketch and walks 25 screens/states in light and dark.
+- **Screens:** logins, Juegos + the edition prompt, Web, Estantes, Asignar, Niveles, Staff (+ an empty invite), the rename sheet, a dirty section editor, and 063 draft/published/retired, clean/dirty and BGG failed.
+- **Every visible action button:**
+  - 44px, 8px radius, 14px/600, not disabled;
+  - outlined roles have a 1px stroke and text roles none;
+  - the role actually renders its paint (Peligro red, Terciaria `--ter`), which catches specificity losses;
+  - label ≥ 4.5:1;
+  - outlined buttons stay inside their container's content edge;
+  - at most one Principal per action row, and it's last.
+- **Text fields:** 1px stroke ≥ 3:1.
+
+Result: 89 of 89. Run: `python3 -m http.server 8765 &` then `node .planning/sketches/064-admin-button-system/audit-admin.js`.
+
+Still open (not part of the button work): 059–062 still declare some 500/700 font weights (only 063 was normalized to the app's 400/600 in its R11).
+
 ## What to Look For
 - In Estado (borrador con cambios), can you tell in half a second which button publishes?
 - Does Retirar feel far enough from Guardar (publicado con cambios)?

@@ -569,8 +569,26 @@ Verified in headless Chrome, 60 of 60 checks. Per-variant checks are replaced by
 - **Desktop:** the closed preview fills the first grid row; open uses the 2-column grid.
 - **Kept:** the R9–R11 checks and all V2 flows. Dark checked.
 
+## Button system from sketch 064 applied (2026-09-15)
+The admin now uses one button system everywhere. It's S3 Contorno, weight-tuned; see `064-admin-button-system/README.md`. The identical CSS block ("064: admin button system") is appended to this sketch's `<style>`, scoped with `#device`, so it overrides the older local `.obtn`/`.tbtn` rules.
+- **One anatomy:** 44px · 8px radius · 14px/600 · 16px icon · 8px gap.
+- **Principal** (`.obtn`/`.b-pri`) is a 1px primary outline. **Secundaria** (`.b-sec`) is a 1px neutral outline (`--stroke`, ≥ 3:1, shared with text fields). **Terciaria** (`.tbtn`) is secondary-purple text. **Peligro** (`.tbtn.danger`) is danger text.
+- **No disabled buttons, and Principal is last in its row.**
+- **Estado** follows the 064 role matrix. The status is on top and one action row sits below it:
+  - Borrador: [Publicar]; with changes: [Guardar (Secundaria)] [Publicar].
+  - Publicado: Retirar de la web (Peligro); with changes: Retirar … [Guardar].
+  - Retirado: [Restaurar (Secundaria)]; with changes: [Restaurar] [Guardar].
+  - The disabled "Guardar" is gone; the status line says "Todo guardado" / "Nadie lo ve en la web todavía".
+- "+ Agregar a una fila" is Secundaria. "Ver más" and "Ver en BoardGameGeek" are Terciaria.
+- `verify.js`: the "no lines" check exempts outlined buttons (they're controls). There are 3 new checks (the Estado matrix, no disabled buttons, status above actions), 63 checks in total.
+- Fixed while applying:
+  - `#device .r6` never matched, because `.r6` sits on `#device` itself.
+  - Peligro lost to the Terciaria `:not()` chain and rendered purple.
+  - An outlined button at the end of an action row spilled 4–8px past the content edge.
+Checked by `064-admin-button-system/audit-admin.js`.
+
 ## How to verify (headless)
-`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 60 checks:
+`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 63 checks:
 - **Layout:** no overflow in every status, zero lines in the page body, section order, the band holds only club + estado, the band is full-bleed, identical labels.
 - **Flows:** publish → Deshacer, retire confirm, Nivel/Estante sheets, description edit, units validation, leave guard, BGG expand, failed → Reintentar.
 - **Rounds 9–12:** D1 divider, En el inicio rows, the 1 | 2 | Más control, no "copia" wording, the C2 Agregar button, and the Datos de BGG preview / Ver más.

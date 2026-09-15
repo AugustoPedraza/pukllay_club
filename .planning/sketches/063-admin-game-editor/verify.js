@@ -30,13 +30,23 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
   const overflow = () => J(() => { const s = document.querySelector('.scroller'); return s.scrollWidth > s.clientWidth + 1; });
   const shot = async n => (await p.$('#device')).screenshot({ path: `${OUT}/${n}.png` });
   const scrollTo = (sel, off) => J(([sel, off]) => { const sc = document.querySelector('.scroller'); sc.scrollTop += document.querySelector(sel).getBoundingClientRect().top - sc.getBoundingClientRect().top - off; }, [sel, off]);
-  /* borders are still banned in the page body; the R10 divider is a 1px background (.zl), so it isn't a "line" here */
-  const lines = () => J(() => [...document.querySelectorAll('#main *')].filter(el => { const cs = getComputedStyle(el); return ['Top','Bottom','Left','Right'].some(sd => parseFloat(cs['border' + sd + 'Width']) > 0 && cs['border' + sd + 'Style'] !== 'none' && cs['border' + sd + 'Color'] !== 'rgba(0, 0, 0, 0)' && !el.matches('.obtn')); }).length);
+  /* decorative borders are still banned in the page body; 064's outlined buttons (.obtn/.b-pri/.b-sec) are controls, not lines; the R10 divider is a 1px background (.zl) */
+  const lines = () => J(() => [...document.querySelectorAll('#main *')].filter(el => { const cs = getComputedStyle(el); return ['Top','Bottom','Left','Right'].some(sd => parseFloat(cs['border' + sd + 'Width']) > 0 && cs['border' + sd + 'Style'] !== 'none' && cs['border' + sd + 'Color'] !== 'rgba(0, 0, 0, 0)' && !el.matches('.obtn, .b-pri, .b-sec')); }).length);
   const noCopias = () => J(() => !/copia/i.test(document.getElementById('device').innerText));
   const units = () => J(() => +E.ed.units);
 
   ok(await J(() => !document.querySelector('[data-v8],[data-nav7],[data-layout],[data-pen],[data-club],#intstrip,.v1-side,#segwrap,#ed-units,[data-filas],[data-units],.mh-list,.pk-pill-auto,.thead .tags-row,#u-open,[data-div],.zone-int.band,.zone-cap,.ghead,[data-cta],[data-bggui],.sec-act,.cta3,.bgg-toggle,.lock6')), 'no leftovers (earlier rounds, F1/F3, U1/U3, D0/D2/D3, C1/C3, B1/B2)');
   ok(await J(() => document.querySelectorAll('#state-nav .var-nav').length === 2), 'single design: the top bar switches Estado only');
+  /* 064 button system in Estado: roles per state, Guardar only with changes, nothing disabled */
+  const estado = () => J(() => [...document.querySelectorAll('#ebar .eactions button')].map(b => (b.matches('.obtn,.b-pri') ? 'pri' : b.matches('.b-sec') ? 'sec' : b.matches('.danger') ? 'dan' : 'ter') + ':' + b.textContent.trim()).join(','));
+  const matrix = [];
+  for (const st of ['draft', 'published', 'retired']) {
+    await click(`[data-status="${st}"]`); matrix.push(await estado());
+    await click('#u-set' + (st === 'draft' ? 2 : 1)); matrix.push(await estado());
+  }
+  ok(matrix.join(' / ') === 'pri:Publicar / sec:Guardar,pri:Publicar / dan:Retirar de la web / dan:Retirar,pri:Guardar / sec:Restaurar / sec:Restaurar,pri:Guardar', '064 Estado matrix: ' + matrix.join(' / '));
+  ok(await J(() => ![...document.querySelectorAll('#device button')].some(b => b.disabled && !b.closest('.sheet:not(.open)'))), '064: no disabled buttons on the page');
+  ok(await J(() => { const b = document.querySelector('#ebar'); const s = b.querySelector('.bst').getBoundingClientRect(), a = b.querySelector('.eactions').getBoundingClientRect(); return a.top >= s.bottom; }), '064: Estado status on top, actions row below');
 
   /* layout per status (D1 divider is the only one) */
   for (const st of ['draft', 'published', 'retired']) {
