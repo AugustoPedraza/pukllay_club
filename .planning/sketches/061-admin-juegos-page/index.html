@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 061 — Admin Juegos Page</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); }
+  :root[data-theme="dark"] body { background: #140a22; }
+  button, input { font: inherit; color: inherit; }
+
+  /* ================= sketch chrome (not part of the design) ================= */
+  #state-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #1b1026; color: #fff; font-family: system-ui, sans-serif; font-size: 13px;
+    padding: 8px 12px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  }
+  #state-nav .lbl { opacity: .6; margin-right: 4px; }
+  .stab { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+  .stab.active { background: #fff; color: #1b1026; border-color: #fff; }
+  #sketch-tools {
+    position: fixed; bottom: 12px; left: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,.75); color: #fff; padding: 8px 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px;
+  }
+  #sketch-tools button { background: #333; color: #fff; border: 0; border-radius: 4px; padding: 3px 7px; cursor: pointer; }
+  #sketch-tools button.on { background: #fff; color: #000; }
+  #tools-body { display: none; flex-direction: column; gap: 6px; }
+  #tools-body.show { display: flex; }
+  .notes { max-width: 760px; margin: 16px auto 80px; padding: 0 16px; font-family: system-ui; font-size: 13px; color: #3b3347; line-height: 1.5; }
+  :root[data-theme="dark"] .notes { color: #cfc3e2; }
+  .notes h3 { margin: 0 0 4px; font-size: 14px; }
+  .notes ul { margin: 4px 0 0; padding-left: 18px; }
+
+  /* ================= device frame ================= */
+  .stage { display: flex; justify-content: center; padding: 8px 12px 0; }
+  .device {
+    width: 375px; max-width: 100%; height: 740px; background: var(--color-bg);
+    border-radius: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.28); overflow: hidden;
+    position: relative; display: flex; flex-direction: column;
+  }
+  .device.desk { width: 1180px; border-radius: 10px; height: 760px; }
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; }
+  .has-tabs .scroller { padding-bottom: 72px; }
+  .desk.has-tabs .scroller { padding-bottom: 0; }
+
+  /* ================= header — ONE header for every state (signed out, public signed in, admin) ================= */
+  .hdr { position: sticky; top: 0; z-index: 20; background: var(--color-bg); border-bottom: 1px solid var(--color-border); }
+  .hdr-in { display: flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 56px; max-width: 1280px; margin: 0 auto; }
+  .desk .hdr-in { padding: 6px 32px; }
+  .icon-btn {
+    width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; position: relative;
+    border: 0; background: transparent; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text);
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .icon-btn:hover { background: var(--color-surface); }
+  .icon-btn:active { transform: scale(.96); }
+  .icon-btn svg { width: 24px; height: 24px; }
+  .brand { display: flex; align-items: center; gap: 8px; color: var(--color-text); cursor: pointer; flex-shrink: 0; text-decoration: none; }
+  .brand img { height: 28px; width: auto; display: block; }
+  .brand .img-dark { display: none; }
+  :root[data-theme="dark"] .brand .img-light { display: none; }
+  :root[data-theme="dark"] .brand .img-dark { display: block; }
+  .brand .word { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .02em; line-height: 1; white-space: nowrap; }
+
+  /* ================= page ================= */
+  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 32px; }
+  .desk main { padding: 28px 32px 48px; }
+  #main { transition: opacity var(--duration-fast) var(--ease-standard); }
+  #main.swapping { opacity: 0; }
+  .back {
+    display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin: -8px 0 -4px -10px; padding: 0 10px 0 4px;
+    color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; border: 0; background: none; cursor: pointer; border-radius: var(--radius-md);
+  }
+  .back:hover { color: var(--color-text); background: var(--color-surface); }
+  .back svg { width: 18px; height: 18px; }
+  .ptitle { font-family: var(--font-display); font-size: 2rem; letter-spacing: .02em; line-height: 1.05; margin: 4px 0 2px; font-weight: 400; }
+  .psub { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 16px; }
+  /* neutral placeholder bodies — page contents are designed in 060-063 */
+  .ph-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+  .ph-list li { padding: 13px 14px; border-top: 1px solid var(--color-border); font-size: var(--text-sm); display: flex; justify-content: space-between; gap: 12px; }
+  .ph-list li:first-child { border-top: 0; }
+  .ph-list li span:last-child { color: var(--color-text-muted); white-space: nowrap; }
+  .ph-note { font-size: 11px; color: var(--color-text-muted); margin: 10px 2px 0; font-style: italic; }
+  .fake-shelf h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 18px 0 8px; letter-spacing: .02em; font-weight: 400; }
+  .fake-rail { display: flex; gap: 10px; overflow: hidden; }
+  .fake-poster { flex: 0 0 104px; height: 146px; border-radius: var(--radius-md); background: var(--color-surface-2); }
+  .login { max-width: 360px; margin: 40px auto 0; }
+  .field label { display: block; font-size: var(--text-sm); font-weight: 600; margin-bottom: 6px; }
+  .field input { width: 100%; min-height: 48px; border-radius: var(--radius-md); border: 1px solid var(--color-surface-2); background: var(--color-bg); color: var(--color-text); padding: 0 14px; font-size: var(--text-base); }
+  .login .btn { width: 100%; margin-top: 12px; min-height: 44px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface); font-weight: 600; cursor: pointer; }
+
+  /* ================= ONE row anatomy: drawer + every sheet ================= */
+  .group-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); margin: 16px 0 4px; }
+  .dlinks { display: flex; flex-direction: column; margin: 0 -16px; }
+  .dlink {
+    display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; border: 0; background: none; width: 100%;
+    text-align: left; font-size: var(--text-base); font-weight: 500; cursor: pointer; border-left: 3px solid transparent; color: var(--color-text);
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .dlink:hover { background: var(--color-surface); }
+  .dlink:active { background: var(--color-surface-2); }
+  .dlink .slot { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .dlink .ico { width: 22px; height: 22px; color: var(--color-text-muted); }
+  .dlink .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dlink .lbl .sub { display: block; font-size: 12px; font-weight: 400; color: var(--color-text-muted); margin-top: 1px; }
+  .dlink:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  /* ================= 060: Admin home — minimal dashboard of boxes ================= */
+  .dash { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+  .desk .dash { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .box {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; text-align: center; cursor: pointer; color: var(--color-text);
+    padding: 12px 14px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg);
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard), transform var(--duration-fast);
+  }
+  .box:hover { background: var(--color-surface); border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border)); }
+  .box:active { transform: scale(.985); background: var(--color-surface-2); }
+  .box:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .box-head { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; min-height: 24px; font-size: var(--text-base); font-weight: 600; color: var(--color-text); }
+  .box-head .ico { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted); }
+  .box-head .name { min-width: 0; line-height: 1.3; }
+  .box-num { font-size: 1.375rem; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--color-text); }
+  .meter { align-self: stretch; height: 4px; border-radius: 2px; background: var(--color-surface-2); overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--color-primary); border-radius: 2px; }
+  :root[data-theme="dark"] .meter i { background: var(--color-accent-text); }
+  .box-foot { font-size: 12px; color: var(--color-text-muted); min-height: 20px; display: flex; align-items: center; justify-content: center; }
+  .pend { font-size: 12px; font-weight: 700; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: var(--radius-full); padding: 2px 8px; white-space: nowrap; }
+  .var-nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; width: 100%; }
+  .dlink .chev { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
+  .dlink .count { font-size: 12px; font-weight: 700; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: var(--radius-full); padding: 2px 8px; }
+  .dlink.on { background: var(--color-surface); border-left-color: var(--color-primary); font-weight: 700; }
+  .dlink.on .ico, .dlink.on .chev { color: var(--color-primary); }
+  :root[data-theme="dark"] .dlink.on { border-left-color: var(--color-accent-text); }
+  :root[data-theme="dark"] .dlink.on .ico, :root[data-theme="dark"] .dlink.on .chev { color: var(--color-accent-text); }
+  .dlink.static { cursor: default; }
+  .dlink.static:hover, .dlink.static:active { background: none; }
+  .dlink.danger, .dlink.danger .ico { color: var(--color-danger); }
+  :root[data-theme="dark"] .dlink.danger, :root[data-theme="dark"] .dlink.danger .ico { color: #F2A3B8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dlink.danger, :root:not([data-theme="light"]) .dlink.danger .ico { color: #F2A3B8; } }
+  .dlink[disabled] { cursor: progress; }
+  .dlink[disabled]:not(.danger) { opacity: .4; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent-bg); color: var(--color-accent-text);
+    font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .avatar.ring { width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3.5px var(--color-success); }
+  .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ================= drawer ================= */
+  .backdrop {
+    position: absolute; inset: 0; z-index: 40; background: color-mix(in srgb, var(--color-text) 38%, transparent);
+    opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: absolute; top: 0; bottom: 0; right: 0; width: 84%; max-width: 360px; z-index: 50; background: var(--color-bg);
+    display: flex; flex-direction: column; padding: 8px 0 max(16px, env(safe-area-inset-bottom)); overflow: hidden; box-shadow: var(--shadow-lg);
+    transform: translateX(100%); transition: transform var(--duration-slow) var(--ease-out-soft);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-bottom: 4px; padding: 0 8px 0 16px; flex-shrink: 0; }
+  /* list scrolls; the theme block is pinned to the drawer's bottom edge, so it sits in the same visible spot in every state */
+  .drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 8px; }
+  .drawer-bottom { flex-shrink: 0; padding: 0 16px; }
+  .drawer-bottom .divider { margin-top: 0; }
+  .divider { height: 1px; background: var(--color-border); margin: 12px 0; }
+  .theme-row { display: flex; justify-content: center; gap: 4px; }
+  .theme-row .icon-btn { color: var(--color-text-muted); }
+  .theme-row .icon-btn svg { width: 20px; height: 20px; }
+
+  /* ================= bottom sheet ================= */
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 60; background: var(--color-bg);
+    border-radius: 18px 18px 0 0; padding: 8px 16px max(16px, calc(env(safe-area-inset-bottom) + 8px)); box-shadow: var(--shadow-lg);
+    transform: translateY(105%); transition: transform var(--duration-slow) var(--ease-out-soft);
+    max-height: 85%; overflow-y: auto; overflow-x: hidden;
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet.dragging { transition: none; }
+  .sheet .group-label { margin-top: 4px; }
+  .grab { width: 36px; height: 4px; border-radius: 4px; background: var(--color-border); margin: 4px auto 12px; }
+  .sheet-text { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.5; margin: 0 0 8px; }
+  .sheet-text b { color: var(--color-text); font-weight: 600; overflow-wrap: anywhere; }
+  .desk .sheet { left: auto; right: 32px; bottom: auto; top: 112px; width: 340px; border-radius: var(--radius-lg); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity var(--duration-base), transform var(--duration-base); }
+  .desk .sheet.open { opacity: 1; pointer-events: auto; transform: none; }
+  .desk .sheet.center { left: 50%; right: auto; top: 30%; transform: translate(-50%, -8px); }
+  .desk .sheet.center.open { transform: translate(-50%, 0); }
+  .desk .grab { display: none; }
+  .steps { position: relative; transition: height var(--duration-slow) var(--ease-out-soft); }
+  .steps.animating { overflow: hidden; }
+  .step { transition: opacity var(--duration-base) var(--ease-standard), transform var(--duration-slow) var(--ease-out-soft); }
+  .step[aria-hidden="true"] { position: absolute; top: 0; left: 0; right: 0; opacity: 0; pointer-events: none; }
+  .step-account[aria-hidden="true"] { transform: translateX(-24px); }
+  .step-confirm[aria-hidden="true"] { transform: translateX(24px); }
+  @media (prefers-reduced-motion: reduce) { .step, .steps, .sheet, .drawer, #main { transition: none; } }
+
+  /* ================= tab bar (admin only) ================= */
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--color-bg);
+    border-top: 1px solid var(--color-border); display: flex; padding: 4px 4px max(10px, env(safe-area-inset-bottom));
+  }
+  .tabs button {
+    flex: 1; min-width: 0; min-height: 52px; border: 0; background: none; cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted);
+    border-radius: var(--radius-md); -webkit-tap-highlight-color: transparent;
+    transition: color var(--duration-fast) var(--ease-standard), transform var(--duration-fast);
+  }
+  .tabs button:hover { color: var(--color-text); }
+  .tabs button:active { transform: scale(.96); }
+  .tabs button svg { width: 24px; height: 24px; }
+  .tabs .tab-ico { position: relative; width: 56px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 15px; transition: background var(--duration-base) var(--ease-out-soft); }
+  .tabs .tab-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs button.on { color: var(--color-primary); }
+  .tabs button.on .tab-ico { background: var(--color-accent-bg); }
+  .tabs button.on .tab-lbl { font-weight: 700; }
+  :root[data-theme="dark"] .tabs button.on { color: var(--color-accent-text); }
+  :root[data-theme="dark"] .tabs button.on .tab-ico { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabs button.on .tab-ico { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); } }
+  .tabs .badge { position: absolute; top: 0; left: 30px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--color-secondary); color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+  .desk .tabs { position: sticky; top: 57px; bottom: auto; border-top: 0; border-bottom: 1px solid var(--color-border); justify-content: safe center; gap: 8px; padding: 0 16px; overflow-x: auto; }
+  .desk .tabs button { flex: 0 0 auto; flex-direction: row; min-height: 44px; padding: 0 14px; font-size: 13px; gap: 8px; border-radius: var(--radius-full); }
+  .desk .tabs button svg { width: 18px; height: 18px; }
+  .desk .tabs .tab-ico { width: auto; height: auto; background: none !important; }
+  .desk .tabs button.on { background: var(--color-accent-bg); }
+  .desk .tabs .badge { position: static; margin-left: 6px; }
+
+  /* ================= toast ================= */
+  .toast {
+    position: absolute; left: 50%; top: 68px; z-index: 70; transform: translate(-50%, -12px); opacity: 0; pointer-events: none;
+    background: var(--color-text); color: var(--color-bg); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius-full);
+    padding: 10px 16px; display: flex; gap: 8px; align-items: center; white-space: nowrap;
+    transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast svg { width: 18px; height: 18px; }
+
+  /* ================= 061: Juegos page ================= */
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .jsec + .jsec { margin-top: 20px; }
+  .jsec > .group-label { display: block; margin: 0 0 6px; }
+
+  /* Add form: outlined text field + outlined (never filled) submit — Material "outlined button" */
+  .addrow { display: flex; gap: 8px; align-items: stretch; }
+  .tin {
+    flex: 1; min-width: 0; height: 48px; padding: 0 14px; font-size: var(--text-base); color: var(--color-text);
+    background: var(--color-bg); border: 1px solid var(--color-surface-2); border-radius: var(--radius-md);
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast);
+  }
+  .tin::placeholder { color: var(--color-text-muted); }
+  .tin:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] .tin:focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  .tin.invalid { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  .obtn {
+    flex-shrink: 0; min-height: 48px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: var(--text-sm); font-weight: 600; color: var(--color-text); background: transparent; cursor: pointer;
+    border: 1px solid var(--color-surface-2); border-radius: var(--radius-md);
+    transition: background var(--duration-fast) var(--ease-standard), opacity var(--duration-fast), transform var(--duration-fast);
+  }
+  .obtn:hover:not(:disabled) { background: var(--color-surface); }
+  .obtn:active:not(:disabled) { transform: scale(.97); background: var(--color-surface-2); }
+  .obtn:disabled { opacity: .45; cursor: not-allowed; }
+  .obtn[aria-busy="true"] { opacity: 1; cursor: progress; }
+  .obtn:focus-visible, .tbtn:focus-visible, .chip:focus-visible, .seg button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .ferr { margin: 6px 2px 0; font-size: 13px; color: var(--color-danger); min-height: 0; }
+  :root[data-theme="dark"] .ferr, :root[data-theme="dark"] .err-t { color: #F2A3B8; }
+  .ferr:empty { display: none; }
+
+  /* Text button (Material "text button"): row-level secondary actions — Reintentar, Cancelar, Mostrar más */
+  .tbtn {
+    min-height: 44px; padding: 0 12px; border: 0; background: none; cursor: pointer; border-radius: var(--radius-md);
+    font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); flex-shrink: 0;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  :root[data-theme="dark"] .tbtn { color: var(--color-accent-text); }
+  .tbtn:hover { background: var(--color-surface); }
+  .tbtn:active { background: var(--color-surface-2); }
+
+  /* Edition warning: inline banner (Material banner) — text, the matching games as rows, two text actions */
+  .banner { margin-top: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 12px 16px 4px; background: var(--color-surface); }
+  .banner-text { margin: 0 0 4px; font-size: var(--text-sm); line-height: 1.45; }
+  .banner .glist { margin: 0 -16px; }
+  .banner .grow { min-height: 52px; background: none; }
+  .banner .grow:hover { background: var(--color-surface-2); }
+  .banner .thumb { width: 36px; height: 36px; font-size: 14px; }
+  .banner .grow::before { left: 64px; }
+  .banner-actions { display: flex; justify-content: flex-end; gap: 4px; margin: 4px -8px 0 0; }
+
+  /* Search: filled pill with leading magnifier + clear — the universal mobile search field */
+  .sfield { position: relative; }
+  .sfield .ico-l { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--color-text-muted); pointer-events: none; }
+  .sfield input {
+    width: 100%; height: 44px; border: 1px solid transparent; border-radius: var(--radius-full); background: var(--color-surface);
+    padding: 0 44px 0 42px; font-size: var(--text-base); color: var(--color-text);
+  }
+  .sfield input::placeholder { color: var(--color-text-muted); }
+  .sfield input::-webkit-search-cancel-button { display: none; }
+  .sfield input:focus { outline: none; border-color: var(--color-primary); }
+  :root[data-theme="dark"] .sfield input:focus { border-color: var(--color-accent-text); }
+  .sfield .clear { position: absolute; right: 0; top: 0; width: 44px; height: 44px; border: 0; background: none; cursor: pointer; color: var(--color-text-muted); display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .sfield .clear svg { width: 18px; height: 18px; }
+  .sfield .clear[hidden] { display: none; }
+
+  /* A1 — Material 3 filter chips: 32px drawn, 44px hit area via ::after, check icon when selected, horizontal scroll */
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 8px -16px 0; padding: 6px 16px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    position: relative; flex: 0 0 auto; height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--color-surface-2); border-radius: var(--radius-md); background: transparent; cursor: pointer;
+    font-size: var(--text-sm); font-weight: 500; color: var(--color-text); white-space: nowrap;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast);
+  }
+  .chip::after { content: ''; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px; }
+  .chip:hover { background: var(--color-surface); }
+  .chip svg { width: 16px; height: 16px; margin-left: -4px; }
+  .chip.on { background: var(--color-accent-bg); border-color: transparent; color: var(--color-accent-text); font-weight: 600; padding-left: 12px; }
+  .chip .n { font-size: 12px; font-weight: 600; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .chip.on .n { color: inherit; }
+
+  /* A2 — iOS segmented control (scope bar under the search field) */
+  .seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 2px; margin-top: 10px; background: var(--color-surface); border-radius: 10px; }
+  .seg button {
+    min-height: 40px; border: 0; background: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--color-text);
+    padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast);
+  }
+  .seg button.on { background: var(--color-bg); box-shadow: 0 1px 3px rgba(0,0,0,.14); font-weight: 700; }
+  :root[data-theme="dark"] .seg button.on { background: var(--color-surface-2); }
+
+  /* Result summary + list */
+  .jsum { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 14px 0 2px; font-size: 13px; color: var(--color-text-muted); }
+  .glist { display: flex; flex-direction: column; margin: 0 -16px; }
+  /* ONE row anatomy (same as the drawer .dlink): slot · name + status line · trailing (chevron or one text action) */
+  .grow {
+    position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 68px; padding: 8px 8px 8px 16px;
+    border: 0; background: none; text-align: left; color: var(--color-text); font-size: var(--text-base); cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: background var(--duration-fast) var(--ease-standard);
+  }
+  button.grow { padding-right: 12px; }
+  .grow::before { content: ''; position: absolute; top: 0; left: 76px; right: 0; height: 1px; background: var(--color-border); }
+  .grow:first-child::before { display: none; }
+  button.grow:hover { background: var(--color-surface); }
+  button.grow:active { background: var(--color-surface-2); }
+  button.grow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  div.grow { cursor: default; }
+  .grow.flash { animation: flash 1.2s var(--ease-standard); }
+  @keyframes flash { 0% { background: var(--color-accent-bg); } 100% { background: transparent; } }
+  .thumb {
+    --h: 270; width: 48px; height: 48px; flex-shrink: 0; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
+    background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); font-weight: 700; font-size: 18px;
+  }
+  :root[data-theme="dark"] .thumb { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  .thumb.skel { background: var(--color-surface-2); animation: pulse 1.2s ease-in-out infinite; }
+  .thumb.warn { background: var(--color-surface); color: var(--color-danger); border: 1px dashed var(--color-surface-2); }
+  .thumb.warn svg { width: 22px; height: 22px; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  .gtxt { flex: 1; min-width: 0; }
+  /* G-01.8.1-3: long names WRAP (no nowrap/ellipsis, no clamp) — the row grows, the page never scrolls sideways */
+  .gname { display: block; line-height: 1.3; font-weight: 500; overflow-wrap: anywhere; }
+  .gsub { display: flex; align-items: center; flex-wrap: wrap; gap: 0 6px; margin-top: 3px; font-size: 13px; color: var(--color-text-muted); line-height: 1.35; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--color-text-muted); }
+  .dot.draft { background: #D9892B; }
+  .dot.published { background: var(--color-success); }
+  .dot.retired { background: transparent; box-shadow: inset 0 0 0 1.5px var(--color-text-muted); }
+  .st-draft { color: var(--color-text); font-weight: 600; }
+  .err-t { color: var(--color-danger); }
+  .spin.sm { width: 12px; height: 12px; border-width: 1.5px; }
+  .grow .chev { width: 18px; height: 18px; color: var(--color-text-muted); flex-shrink: 0; }
+  .skel-line { display: block; height: 12px; border-radius: 6px; background: var(--color-surface-2); animation: pulse 1.2s ease-in-out infinite; }
+
+  .more { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 0 4px; border-top: 1px solid var(--color-border); margin: 0 -16px; }
+  .more .cap { font-size: 12px; color: var(--color-text-muted); }
+
+  .empty { text-align: center; padding: 40px 16px 24px; }
+  .empty svg { width: 36px; height: 36px; color: var(--color-text-muted); }
+  .empty h2 { font-size: var(--text-base); font-weight: 600; margin: 8px 0 4px; }
+  .empty p { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 8px; }
+
+  /* Snackbar (Material): bottom, above the tab bar; replaces the flash banner */
+  .snack {
+    position: absolute; left: 12px; right: 12px; bottom: 84px; z-index: 70; display: flex; align-items: center; gap: 8px; min-height: 48px;
+    padding: 4px 8px 4px 16px; border-radius: var(--radius-md); background: var(--color-text); color: var(--color-bg); font-size: var(--text-sm);
+    box-shadow: var(--shadow-md); opacity: 0; transform: translateY(12px); pointer-events: none;
+    transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft);
+  }
+  .snack.show { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; padding: 8px 0; }
+  .snack .tbtn { color: var(--color-accent-bg); }
+  .desk .snack { left: 50%; right: auto; bottom: 24px; width: 420px; transform: translate(-50%, 12px); }
+  .desk .snack.show { transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { .snack, .grow.flash, .thumb.skel, .skel-line { transition: none; animation: none; } }
+
+  /* ================= Round 2: polished hierarchy (.polish on the device; tools → Escala toggles it) =================
+     Tier 1 page title (22px/700 sans, the page's anchor) → tier 2 brand (chrome: 24px logo, 17px wordmark)
+     → tier 3 section labels (11px caps) → body (15px names, 16px input text so iOS doesn't zoom) → meta (12px).
+     One control height (44px) for every field and button; 8px spacing grid; bigger gap between groups than inside them. */
+  .polish .hdr-in { min-height: 52px; padding-block: 4px; }
+  .polish .brand { gap: 6px; }
+  .polish .brand img { height: 24px; }
+  .polish .brand .word { font-size: 1.05rem; letter-spacing: .03em; }
+  .polish main { padding-top: 12px; }
+  .polish .ptitle { font-family: var(--font-sans); font-size: 1.375rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; margin: 4px 0 0; }
+  .polish .ptitle + div[style] { height: 16px !important; }
+  .polish .jsec + .jsec { margin-top: 24px; }
+  .polish .jsec > .group-label { margin-bottom: 8px; }
+  /* Round 3: field text + placeholder 14px (matches body scale); control height stays 44px (touch minimum).
+     iOS zooms on focus under 16px → handled at implementation via the viewport meta (see README). */
+  .polish .tin { height: 44px; padding: 0 12px; font-size: 14px; }
+  .polish .obtn { min-height: 44px; padding: 0 12px; font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
+  .polish .obtn:not(:disabled) { color: var(--color-text); }
+  .polish .sfield input { font-size: 14px; }
+  .polish .sfield .ico-l { width: 16px; height: 16px; left: 14px; }
+  .polish .sfield .clear svg { width: 16px; height: 16px; }
+  .polish .ferr { font-size: 12px; margin-top: 4px; }
+  .polish .sfield input { padding-left: 38px; }
+  .polish .chips { margin-top: 4px; }
+  .polish .chip { font-size: 13px; padding: 0 10px; }
+  .polish .chip.on { padding-left: 10px; }
+  .polish .chip svg { width: 14px; height: 14px; margin-left: -2px; }
+  .polish .jsum { font-size: 12px; margin: 8px 0 0; }
+  .polish .grow { min-height: 60px; padding-block: 8px; }
+  .polish .grow::before { left: 68px; }
+  .polish .thumb { width: 40px; height: 40px; font-size: 15px; border-radius: 6px; }
+  .polish .thumb.warn svg { width: 18px; height: 18px; }
+  .polish .gname { font-size: 15px; line-height: 1.3; }
+  .polish .gsub { font-size: 12px; margin-top: 2px; gap: 0 5px; }
+  .polish .dot { width: 7px; height: 7px; }
+  .polish .grow .chev { width: 16px; height: 16px; }
+  .polish .grow .tbtn { font-size: 13px; }
+  .polish .banner { padding: 10px 12px 2px; }
+  .polish .banner-text { font-size: 13px; }
+  .polish .banner .glist { margin: 0 -12px; }
+  .polish .banner .grow { min-height: 48px; }
+  .polish .banner .thumb { width: 32px; height: 32px; font-size: 13px; }
+  .polish .banner .grow::before { left: 56px; }
+  .polish .more { padding-top: 8px; }
+  .polish .more .tbtn { font-size: 13px; }
+  .polish .more .cap { font-size: 11px; }
+  .polish .empty { padding-top: 32px; }
+  .polish .empty svg { width: 28px; height: 28px; }
+  .polish .empty h2 { font-size: 15px; }
+  .polish .empty p { font-size: 13px; }
+  .polish .snack { font-size: 13px; min-height: 44px; }
+</style>
+</head>
+<body>
+
+<div id="state-nav">
+  <div class="var-nav">
+    <span class="lbl">Sketch 061 · Juegos · Filtro</span>
+    <button class="stab active" data-fstyle="chips">A1: Chips de filtro (Material) ★ Elegida</button>
+    <button class="stab" data-fstyle="seg">A2: Control segmentado (iOS)</button>
+  </div>
+</div>
+
+<div class="stage"><div class="device" id="device"></div></div>
+
+<div class="notes" id="notes"></div>
+<div id="sketch-tools">
+  <button id="tools-toggle" style="align-self:flex-start">⚙ tools</button>
+  <div id="tools-body">
+    <div>Tema: <button data-theme-set="light">☀</button> <button data-theme-set="dark">☾</button> <button data-theme-set="system">Sistema</button></div>
+    <div>Vista: <button data-vp="phone" class="on">Teléfono</button> <button data-vp="desk">Escritorio</button></div>
+    <div>Rol: <button data-role="owner" class="on">Dueña</button> <button data-role="staff">Staff</button></div>
+    <div>Datos: <button data-jdata="full" class="on">Con borradores</button> <button data-jdata="nodrafts">Sin borradores</button></div>
+    <div>Escala: <button data-polish="1" class="on">Pulida</button> <button data-polish="0">Antes</button></div>
+    <div>Simular: <button data-act="j-sim-load">Carga inicial</button></div>
+  </div>
+</div>
+
+<script>
+const P = {
+  bars: 'M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5',
+  x: 'M6 18 18 6M6 6l12 12',
+  chevR: 'm8.25 4.5 7.5 7.5-7.5 7.5',
+  chevL: 'M15.75 19.5 8.25 12l7.5-7.5',
+  logout: 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9',
+  home: 'm2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25',
+  panel: 'M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z',
+  juegos: 'm21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
+  secciones: 'M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418', // globe (Web)
+  estantes: 'M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25',
+  niveles: 'M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75',
+  staff: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z',
+  about: 'M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z',
+  ext: 'M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25',
+  more: 'M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z',
+  sun: 'M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z',
+  moon: 'M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z',
+  computer: 'M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25',
+  check: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  search: 'm21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z',
+  warn: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z',
+  tick: 'm4.5 12.75 6 6 9-13.5',
+};
+const ic = (n, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+
+/* ---------------- fake data ---------------- */
+const USER = { email: 'lucia.mamani@gmail.com', initials: 'LM' };
+const SCREENS = {
+  panel:      { title: 'Admin', icon: 'panel' },
+  juegos:     { title: 'Juegos', icon: 'juegos' },
+  secciones:  { title: 'Web', icon: 'secciones' },  // curates which rows show on the public web
+  estantes:   { title: 'Estantes', icon: 'estantes' },
+  niveles:    { title: 'Revisar niveles', icon: 'niveles' },
+  staff:      { title: 'Staff', icon: 'staff', ownerOnly: true },
+  destacados: { title: 'Destacados', parent: 'secciones', sub: 'Elegida a mano · 6 juegos' },
+};
+const SECTION_ORDER = ['juegos', 'secciones', 'estantes', 'niveles', 'staff'];
+const PHONE_TABS = ['panel', 'juegos', 'secciones', 'estantes'];
+const S = { mode: 'admin', screen: 'juegos', vp: 'phone', role: 'owner', toast: null, pend: true };
+
+/* Real dashboard data (dashboard_live.ex): drafts, shelf placement progress, band mismatches.
+   A count pill ALWAYS means "pending work" — in the drawer, the tab badge and the Admin page. */
+const DATA = () => S.pend
+  ? { drafts: 3, published: 409, total: 412, placed: 328, mismatches: 7, sections: 5, staff: 3 }
+  : { drafts: 0, published: 412, total: 412, placed: 412, mismatches: 0, sections: 5, staff: 3 };
+function cnt(k) {
+  const d = DATA();
+  const n = { juegos: jCount('draft'), estantes: d.total - d.placed, niveles: d.mismatches }[k] || 0;
+  return n ? String(n) : '';
+}
+
+const home = () => 'panel';
+const topKeys = () => ['panel', ...sections()];
+const sections = () => SECTION_ORDER.filter(k => !(SCREENS[k].ownerOnly && S.role !== 'owner'));
+const activeTop = () => SCREENS[S.screen].parent || S.screen;
+const signedIn = () => S.mode !== 'out';
+
+/* ---------------- ONE row anatomy ----------------
+   [28px slot: icon or avatar] [label (+ secondary line)] [count] [chevron]; only a tone class varies. */
+function row({ act, nav, icon, avatar, label, sub, count, tone = '', chev = true, isStatic = false, on = false }) {
+  const tag = isStatic ? 'div' : 'button';
+  const attrs = isStatic ? '' : (act ? `data-act="${act}"` : `data-nav="${nav}"`);
+  const slot = avatar ? `<span class="avatar">${USER.initials}</span>` : ic(icon, 'ico');
+  return `<${tag} class="dlink ${tone} ${isStatic ? 'static' : ''} ${on ? 'on' : ''}" ${attrs} ${on ? 'aria-current="page"' : ''}>
+    <span class="slot">${slot}</span><span class="lbl">${label}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
+    ${count ? `<span class="count" aria-label="${count} pendientes">${count}</span>` : ''}${chev && !isStatic ? ic('chevR', 'chev') : ''}</${tag}>`;
+}
+const group = (label, rows) => `<div class="group-label">${label}</div><div class="dlinks">${rows}</div>`;
+
+/* Drawer never repeats the nav menu (tab bar). Admin: only sections the tab bar lacks (phone: Revisar niveles,
+   Staff; desktop: none, the tab row holds everything). Public page signed in: no tab bar, so one way in: "Ir a Admin". */
+const drawerAdminKeys = () => {
+  if (S.mode !== 'admin') return ['panel'];
+  const inNav = S.vp === 'desk' ? topKeys() : PHONE_TABS;
+  return topKeys().filter(k => !inNav.includes(k));
+};
+const panelRows = () => {
+  const top = S.mode === 'admin' ? activeTop() : null;
+  return drawerAdminKeys().map(k => row({ nav: k, icon: SCREENS[k].icon, label: S.mode === 'admin' ? SCREENS[k].title : 'Ir a Admin', count: cnt(k), on: top === k })).join('');
+};
+const siteRows = () => row({ nav: 'pub:inicio', icon: 'home', label: 'Inicio', on: S.mode !== 'admin' }) + row({ nav: 'pub:about', icon: 'about', label: 'Quiénes Somos' });
+const accountRows = () =>
+  row({ avatar: true, label: USER.email, sub: `Sesión iniciada · ${S.role === 'owner' ? 'Dueña' : 'Staff'}`, isStatic: true }) +
+  row({ nav: 'pub:inicio', icon: 'ext', label: 'Ver el sitio público' }) +
+  row({ act: 'ask-logout', icon: 'logout', label: 'Cerrar sesión', tone: 'danger' });
+const confirmStep = (cancelAct) => '<div class="group-label">Cerrar sesión</div>' +
+  `<p class="sheet-text">Vas a salir de <b>${USER.email}</b>. Para volver a entrar, te mandamos un link por mail.</p>
+   <div class="dlinks">
+     ${row({ act: 'logout', icon: 'logout', label: 'Sí, cerrar sesión', tone: 'danger', chev: false })}
+     ${row({ act: cancelAct, icon: 'chevL', label: 'Cancelar', chev: false })}
+   </div>`;
+const themeRow = () => `<div class="theme-row" role="group" aria-label="Tema">
+  <button class="icon-btn" data-theme-set="system" aria-label="Sistema">${ic('computer')}</button>
+  <button class="icon-btn" data-theme-set="light" aria-label="Claro">${ic('sun')}</button>
+  <button class="icon-btn" data-theme-set="dark" aria-label="Oscuro">${ic('moon')}</button></div>`;
+
+/* ---------------- shell pieces ---------------- */
+const header = () => `<header class="hdr"><div class="hdr-in">
+  <button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú" aria-haspopup="dialog">${ic('bars')}</button>
+  <a class="brand" data-nav="pub:inicio"><img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt=""><span class="word">Pukllay Club</span></a>
+  </div></header>`;
+
+// Same drawer in every signed-in state (ADMIN → SITIO); signed out has SITIO only. Account lives only in the Perfil tab.
+const drawer = () => `<div class="backdrop" data-act="close"></div>
+  <aside class="drawer" aria-label="Menú">
+    <div class="drawer-top"><span></span><button class="icon-btn" data-act="close" aria-label="Cerrar menú">${ic('x')}</button></div>
+    <div class="drawer-body">
+      ${signedIn() && drawerAdminKeys().length ? group('Admin', panelRows()) : ''}
+      ${group('Sitio', siteRows())}
+    </div>
+    <div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>
+  </aside>`;
+
+function tabBar() {
+  const top = activeTop();
+  const keys = S.vp === 'desk' ? topKeys() : PHONE_TABS;
+  return `<nav class="tabs" aria-label="Secciones de Admin">
+    ${keys.map(k => `<button data-nav="${k}" data-tab="${k}" class="${top === k ? 'on' : ''}" ${top === k ? 'aria-current="page"' : ''}>
+      <span class="tab-ico">${ic(SCREENS[k].icon)}${cnt(k) ? `<span class="badge">${cnt(k)}</span>` : ''}</span>
+      <span class="tab-lbl">${SCREENS[k].title}</span></button>`).join('')}
+    <button data-act="open-account" data-tab="account" aria-haspopup="dialog" aria-label="Tu perfil (sesión iniciada)">
+      <span class="tab-ico"><span class="avatar ring">${USER.initials}</span></span><span class="tab-lbl">Perfil</span></button>
+  </nav>`;
+}
+
+const accountSheet = () => `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu perfil">
+  <div class="grab"></div>
+  <div class="steps">
+    <div class="step step-account">${group('Tu perfil', accountRows())}</div>
+    <div class="step step-confirm" aria-hidden="true" inert>${confirmStep('cancel-logout')}</div>
+  </div></div>`;
+
+/* ---------------- page bodies (placeholders) ---------------- */
+function pageHead() {
+  const sc = SCREENS[S.screen];
+  // Back row only for genuine drill-downs (page-shell.md rule). Pages reached from a tab or the
+  // drawer are siblings of Admin, not children, so they get no "‹ Admin".
+  const parent = sc.parent || null;
+  return `${parent ? `<button class="back" data-nav="${parent}">${ic('chevL')}${SCREENS[parent].title}</button>` : ''}
+    <h1 class="ptitle">${sc.title}</h1>${sc.sub ? `<p class="psub">${sc.sub}</p>` : S.screen === 'panel' ? '' : '<div style="height:12px"></div>'}`;
+}
+/* ================= 060: the Admin home page — a minimal dashboard of boxes =================
+   ONE box anatomy, centered: [icon · name] → big number → (optional meter) → one note line. 2 columns (desktop 3).
+   The whole box is the tap target (border tint on hover, press scale, focus ring). No filled buttons.
+   Pending work = the same accent count bubble used in the drawer and tab badges; otherwise a muted foot line. */
+const nf = n => n.toLocaleString('es-AR');
+/* Box = name → number → ONE line that adds meaning. The line never repeats the name as a unit
+   ("Juegos · 412 juegos"); it says what's pending or what the number means for this section. */
+function boxData(k) {
+  const d = DATA(), unplaced = d.total - d.placed;
+  return {
+    juegos:    { num: nf(jCount('all')), note: jCount('draft') ? `${jCount('draft')} borradores` : 'Todos publicados', pend: !!jCount('draft') },
+    secciones: { num: d.sections, note: 'filas en el inicio' },
+    estantes:  { num: `${Math.round(d.placed / d.total * 100)}%`, meter: d.placed / d.total, note: unplaced ? `${nf(unplaced)} sin ubicar` : 'Todos ubicados', pend: !!unplaced },
+    niveles:   { num: d.mismatches, note: d.mismatches ? 'no coinciden con BGG' : 'Todo coincide con BGG', pend: !!d.mismatches },
+    staff:     { num: d.staff, note: '1 invitación pendiente' },
+  }[k];
+}
+function box(k) {
+  const b = boxData(k);
+  return `<button class="box" data-nav="${k}">
+    <span class="box-head">${ic(SCREENS[k].icon, 'ico')}<span class="name">${SCREENS[k].title}</span></span>
+    <span class="box-num">${b.num}</span>
+    ${b.meter != null ? `<span class="meter" aria-hidden="true"><i style="width:${b.meter * 100}%"></i></span>` : ''}
+    <span class="box-foot">${b.pend ? `<span class="pend">${b.note}</span>` : b.note}</span>
+  </button>`;
+}
+const panelBody = () => `<div class="dash">${sections().map(box).join('')}</div>`;
+
+/* ================= 061: Juegos — add form + search/filter + list, one row anatomy ================= */
+const STATUS = { draft: 'Borrador', published: 'Publicado', retired: 'Retirado' };
+const FILTERS = [['all', 'Todos'], ['draft', 'Borradores'], ['published', 'Publicados'], ['retired', 'Retirados']];
+const HIDDEN_PUBLISHED = 396; // games beyond the first page (list_admin_games pages by 50; the sketch fakes the rest)
+const SEED = [
+  { name: 'Terraforming Mars', bgg: 167791, status: 'draft', year: 2016, pl: '1–5', hue: 18 },
+  { name: 'Las Mansiones de la Locura: Segunda Edición', bgg: 205059, status: 'draft', year: 2016, pl: '1–5', hue: 280 },
+  { name: null, bgg: 318977, status: 'draft', enr: 'failed' },
+  { name: 'Azul', bgg: 230802, status: 'published', year: 2017, pl: '2–4', hue: 200 },
+  { name: 'Brass: Birmingham', bgg: 224517, status: 'published', year: 2018, pl: '2–4', hue: 30 },
+  { name: 'Catan', bgg: 13, status: 'published', year: 1995, pl: '3–4', hue: 40 },
+  { name: 'Catan: Edición Aniversario 25 Años', bgg: 13, status: 'retired', year: 2020, pl: '3–4', hue: 44 },
+  { name: 'Twilight Imperium: Cuarta Edición — La Profecía de los Reyes (expansión)', bgg: 377470, status: 'published', year: 2024, pl: '3–8', hue: 230 },
+  { name: 'Cascadia', bgg: 295947, status: 'published', year: 2021, pl: '1–4', hue: 140 },
+  { name: 'Dixit', bgg: 39856, status: 'published', year: 2008, pl: '3–8', hue: 330 },
+  { name: 'Heat: Pedal to the Metal', bgg: 366013, status: 'published', year: 2022, pl: '1–6', hue: 0 },
+  { name: 'Codenames', bgg: 178900, status: 'retired', year: 2015, pl: '2–8', hue: 350 },
+];
+const POOL = [['Wingspan', 2019, '1–5', 90], ['Just One', 2018, '3–7', 55], ['Carcassonne', 2000, '2–5', 100], ['Root', 2018, '2–4', 25],
+  ['Pandemic', 2008, '2–4', 190], ['7 Wonders', 2010, '2–7', 45], ['Ticket to Ride', 2004, '2–5', 210], ['Splendor', 2014, '2–4', 260]];
+const BGG_LOOKUP = { 174430: ['Gloomhaven', 2017, '1–4', 15], 318977: ['Frosthaven', 2023, '1–4', 190],342942: ['Ark Nova', 2021, '1–4', 120], 266192: ['Wingspan', 2019, '1–5', 90] };
+let gid = 0;
+const mk = g => ({ id: ++gid, enr: 'ok', ...g });
+const J = { games: SEED.map(mk), filter: 'all', q: '', add: '', err: null, adding: false, prompt: null, loaded: 0, loading: false, fstyle: 'chips', data: 'full', polish: true };
+
+const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const visibleGames = () => J.data === 'nodrafts' ? J.games.filter(g => g.status !== 'draft') : J.games;
+function jCount(st) {
+  const gs = visibleGames();
+  const local = st === 'all' ? gs.length : gs.filter(g => g.status === st).length;
+  return local + ((st === 'all' || st === 'published') ? HIDDEN_PUBLISHED - J.loaded : 0);
+}
+function matches() {
+  const q = norm(J.q.trim());
+  return visibleGames().filter(g => (J.filter === 'all' || g.status === J.filter) &&
+    (!q || norm(g.name).includes(q) || String(g.bgg) === q));
+}
+/* "174430", "https://boardgamegeek.com/boardgame/174430/gloomhaven" → 174430; anything else → null */
+function parseBgg(v) {
+  v = v.trim();
+  if (/^\d{1,7}$/.test(v)) return +v;
+  const m = v.match(/boardgamegeek\.com\/boardgame(?:expansion)?\/(\d+)/i);
+  return m ? +m[1] : null;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const joinY = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1];
+
+function gameRow(g, { compact = false } = {}) {
+  const pending = g.enr === 'pending', failed = g.enr === 'failed';
+  const name = esc(g.name || `Juego #${g.bgg}`);
+  const slot = pending ? '<span class="thumb skel" aria-hidden="true"></span>'
+    : failed ? `<span class="thumb warn" aria-hidden="true">${ic('warn')}</span>`
+    : `<span class="thumb" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
+  const status = `<span class="dot ${g.status}"></span><span class="${g.status === 'draft' ? 'st-draft' : ''}">${STATUS[g.status]}</span>`;
+  const sub = pending ? '<span class="spin sm"></span>Trayendo datos de BGG…'
+    : failed ? '<span class="err-t">Error al traer datos de BGG</span>'
+    : compact ? status : `${status}<span>·</span><span>${g.year}</span><span>·</span><span>${g.pl} jug.</span>`;
+  const txt = `<span class="gtxt"><span class="gname">${name}</span><span class="gsub">${sub}</span></span>`;
+  if (pending) return `<div class="grow" data-gid="${g.id}" aria-busy="true">${slot}${txt}</div>`;
+  if (failed) return `<div class="grow" data-gid="${g.id}">${slot}${txt}<button type="button" class="tbtn" data-act="j-retry" data-game-id="${g.id}">Reintentar</button></div>`;
+  return `<button type="button" class="grow" data-act="j-open" data-game-id="${g.id}" data-gid="${g.id}">${slot}${txt}${ic('chevR', 'chev')}</button>`;
+}
+
+const addHtml = () => `<form class="jsec" id="add-form" novalidate>
+    <label class="group-label" for="add-in">Agregar juego</label>
+    <div class="addrow">
+      <input id="add-in" class="tin ${J.err ? 'invalid' : ''}" type="text" name="bgg_id" value="${esc(J.add)}" placeholder="ID o link de BGG"
+        autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done"
+        ${J.err ? 'aria-invalid="true"' : ''} aria-describedby="add-err" ${J.adding ? 'readonly' : ''}>
+      <button type="submit" class="obtn" id="add-btn" ${!J.add.trim() && !J.adding ? 'disabled' : ''} ${J.adding ? 'aria-busy="true"' : ''}>
+        ${J.adding ? '<span class="spin sm"></span>Agregando' : 'Agregar'}</button>
+    </div>
+    <p class="ferr" id="add-err" role="alert">${J.err || ''}</p>
+    <div id="jprompt">${promptHtml()}</div>
+  </form>`;
+
+function promptHtml() {
+  const p = J.prompt; if (!p) return '';
+  const names = p.games.map(g => `<b>${esc(g.name)}</b>`);
+  return `<div class="banner" role="alert">
+    <p class="banner-text">Ya tenés ${joinY(names)} con este BGG ID. ¿Es otra edición?</p>
+    <div class="glist">${p.games.map(g => gameRow(g, { compact: true })).join('')}</div>
+    <div class="banner-actions"><button type="button" class="tbtn" data-act="j-cancel">Cancelar</button><button type="button" class="tbtn" data-act="j-confirm">Sí, agregar edición</button></div>
+  </div>`;
+}
+
+const searchHtml = () => `<div class="sfield" role="search">
+    ${ic('search', 'ico-l')}
+    <label class="sr" for="q-in">Buscar juegos</label>
+    <input id="q-in" type="search" value="${esc(J.q)}" placeholder="Buscar por nombre" autocomplete="off" enterkeyhint="search">
+    <button type="button" class="clear" data-act="j-clear" aria-label="Borrar búsqueda" ${J.q ? '' : 'hidden'}>${ic('x')}</button>
+  </div>`;
+
+function filtersHtml() {
+  if (J.fstyle === 'seg') {
+    return `<div class="seg" role="radiogroup" aria-label="Filtrar por estado">${FILTERS.map(([k, l]) =>
+      `<button type="button" role="radio" aria-checked="${J.filter === k}" class="${J.filter === k ? 'on' : ''}" data-act="j-filter" data-f="${k}">${l}</button>`).join('')}</div>`;
+  }
+  return `<div class="chips" role="group" aria-label="Filtrar por estado">${FILTERS.map(([k, l]) => {
+    const on = J.filter === k, n = k === 'draft' ? jCount('draft') : 0;
+    return `<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="j-filter" data-f="${k}">
+      ${on ? ic('tick') : ''}${l}${n ? `<span class="n">${n}</span>` : ''}</button>`;
+  }).join('')}</div>`;
+}
+
+function listHtml() {
+  if (J.loading) {
+    const sk = '<div class="grow"><span class="thumb skel"></span><span class="gtxt"><span class="skel-line" style="width:70%"></span><span class="skel-line" style="width:40%;margin-top:8px"></span></span></div>';
+    return `<div class="jsum"><span class="skel-line" style="width:80px"></span></div><div class="glist" aria-busy="true">${sk.repeat(7)}</div>`;
+  }
+  const gs = matches();
+  const total = J.q ? gs.length : jCount(J.filter);
+  if (!gs.length) {
+    if (J.q) return `<div class="empty">${ic('search')}<h2>Sin resultados para “${esc(J.q)}”</h2>
+      <p>${J.filter === 'all' ? 'Revisá cómo está escrito el nombre.' : `No hay ${FILTERS.find(f => f[0] === J.filter)[1].toLowerCase()} con ese nombre.`}</p>
+      <button class="tbtn" data-act="j-clear">Borrar búsqueda</button></div>`;
+    return `<div class="empty">${ic('juegos')}<h2>${J.filter === 'draft' ? 'No hay borradores' : 'No hay juegos con este filtro'}</h2>
+      <p>${J.filter === 'draft' ? 'Los juegos que agregues desde BGG aparecen acá hasta que los publiques.' : 'Probá con otro filtro.'}</p></div>`;
+  }
+  const label = J.q ? `${total} ${total === 1 ? 'resultado' : 'resultados'}`
+    : { all: 'juegos', draft: total === 1 ? 'borrador' : 'borradores', published: total === 1 ? 'publicado' : 'publicados', retired: total === 1 ? 'retirado' : 'retirados' }[J.filter];
+  const more = !J.q && total > gs.length
+    ? `<div class="more"><button class="tbtn" data-act="j-more">Mostrar más</button><span class="cap">${nf(gs.length)} de ${nf(total)}</span></div>` : '';
+  return `<div class="jsum" aria-live="polite"><span>${J.q ? label : `${nf(total)} ${label}`}</span></div>
+    <div class="glist">${gs.map(g => gameRow(g)).join('')}</div>${more}`;
+}
+
+const juegosBody = () => `${pageHead()}${addHtml()}
+  <section class="jsec" aria-label="Lista de juegos">${searchHtml()}<div id="jfilters">${filtersHtml()}</div><div id="jlist">${listHtml()}</div></section>`;
+
+/* partial re-renders keep focus + keyboard in the inputs (LiveView patches the same way) */
+const $ = sel => device.querySelector(sel);
+function refreshList() { const l = $('#jlist'); if (l) l.innerHTML = listHtml(); const f = $('#jfilters'); if (f) f.innerHTML = filtersHtml(); syncBadges(); }
+function refreshAdd() {
+  const inp = $('#add-in'), btn = $('#add-btn'), err = $('#add-err');
+  if (!inp) return;
+  inp.classList.toggle('invalid', !!J.err); J.err ? inp.setAttribute('aria-invalid', 'true') : inp.removeAttribute('aria-invalid');
+  inp.readOnly = J.adding;
+  btn.disabled = !J.add.trim() && !J.adding; J.adding ? btn.setAttribute('aria-busy', 'true') : btn.removeAttribute('aria-busy');
+  btn.innerHTML = J.adding ? '<span class="spin sm"></span>Agregando' : 'Agregar';
+  err.textContent = J.err || '';
+  $('#jprompt').innerHTML = promptHtml();
+}
+function syncBadges() {
+  device.querySelectorAll('.tabs [data-tab="juegos"] .tab-ico').forEach(t => {
+    const b = t.querySelector('.badge'), n = cnt('juegos');
+    if (n && b) b.textContent = n; else if (n) t.insertAdjacentHTML('beforeend', `<span class="badge">${n}</span>`); else if (b) b.remove();
+  });
+}
+function flashRow(id) { const r = $(`.glist [data-gid="${id}"]`); if (r) { r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash'); } }
+function snack(msg, action) {
+  const s = $('#snack'); if (!s) return;
+  s.querySelector('span').textContent = msg;
+  const b = s.querySelector('.tbtn'); b.hidden = !action; if (action) { b.textContent = action.label; b.dataset.act = action.act; b.dataset.gameId = action.id || ''; }
+  clearTimeout(s._t); s.classList.remove('show'); void s.offsetWidth; s.classList.add('show');
+  s._t = setTimeout(() => s.classList.remove('show'), 4000);
+}
+
+/* Oban EnrichGameWorker → PubSub {:game_enriched, id} → stream_insert. BGG id 999999 always fails (demo). */
+function enrichLater(g) {
+  setTimeout(() => {
+    if (g.bgg !== 999999) {
+      const [name, year, pl, hue] = BGG_LOOKUP[g.bgg] || [`Juego de BGG ${g.bgg}`, 2023, '2–4', (g.bgg * 37) % 360];
+      Object.assign(g, { name, year, pl, hue, enr: 'ok' });
+    } else g.enr = 'failed';
+    if (S.screen === 'juegos') { refreshList(); flashRow(g.id); }
+  }, 2600);
+}
+function insertDraft(bgg) {
+  const g = mk({ name: null, bgg, status: 'draft', enr: 'pending' });
+  J.games.unshift(g);
+  J.add = ''; J.err = null; J.prompt = null; J.adding = false;
+  J.filter = 'draft'; J.q = ''; // mirrors push_patch(filter_path(:draft, "")) in the shipped LiveView
+  const q = $('#q-in'); if (q) { q.value = ''; $('.sfield .clear').hidden = true; }
+  $('#add-in').value = '';
+  refreshAdd(); refreshList(); flashRow(g.id);
+  enrichLater(g);
+  return g;
+}
+function submitAdd() {
+  if (J.adding) return;
+  const bgg = parseBgg(J.add);
+  if (!bgg) { J.err = 'Pegá un número de BGG o el link del juego.'; J.prompt = null; refreshAdd(); $('#add-in').focus(); return; }
+  J.err = null; J.adding = true; J.prompt = null; refreshAdd();
+  setTimeout(() => {
+    const holders = J.games.filter(g => g.bgg === bgg && g.enr === 'ok');
+    if (holders.length) { J.adding = false; J.prompt = { bgg, games: holders }; refreshAdd(); $('#jprompt [data-act="j-cancel"]').focus({ preventScroll: true }); return; }
+    insertDraft(bgg); snack('Juego agregado como borrador');
+  }, 600);
+}
+
+function adminBody() {
+  if (S.screen === 'panel') return pageHead() + panelBody();
+  if (S.screen === 'juegos') return juegosBody();
+  const rows = {
+    juegos: [['Catan', 'Publicado'], ['Las Mansiones de la Locura: Segunda Edición', 'Borrador'], ['Azul', 'Publicado'], ['Dixit', 'Publicado'], ['Terraforming Mars', 'Borrador']],
+    secciones: [['Destacados', 'Elegida a mano', 'destacados'], ['Para empezar', 'Por nivel'], ['Recién llegados', 'Recientes'], ['Para jugar de a dos', 'Elegida a mano'], ['Juegos de fiesta', 'Elegida a mano']],
+    destacados: [['Wingspan', ''], ['Cascadia', ''], ['Just One', ''], ['Heat: Pedal to the Metal', ''], ['Azul', ''], ['Codenames', '']],
+    estantes: [['Estante A — familiares', '64 juegos'], ['Estante B — estrategia', '58 juegos'], ['Estante C — fiesta', '41 juegos'], ['Sin ubicar', '84 juegos']],
+    niveles: [['Brass: Birmingham', 'Intermedio → Experto'], ['Carcassonne', 'Inicial → Familiar'], ['Root', 'Familiar → Experto']],
+    staff: [['lucia.mamani@gmail.com', 'Dueña'], ['nico.cruz@gmail.com', 'Activo'], ['flor.tolaba@gmail.com', 'Invitado']],
+  }[S.screen];
+  return `${pageHead()}<ul class="ph-list">${rows.map(([a, b, go]) => `<li ${go ? `data-nav="${go}" style="cursor:pointer"` : ''}><span>${a}</span><span>${b}</span></li>`).join('')}</ul>
+    <p class="ph-note">Contenido de ejemplo: el cuerpo de cada pantalla se diseña en los sketches 060–063.</p>`;
+}
+const publicBody = () => ['Destacados', 'Para empezar', 'Recién llegados'].map(t => `<div class="fake-shelf"><h2>${t}</h2><div class="fake-rail">${'<div class="fake-poster"></div>'.repeat(8)}</div></div>`).join('') +
+  `<p class="ph-note">Catálogo público (sin cambios).</p>`;
+const loginBody = () => `<div class="login"><h1 class="ptitle" style="text-align:center">Ingresar a Admin</h1>
+  <p class="psub" style="text-align:center">Te mandamos un link por mail para entrar.</p>
+  <div class="field"><label for="em">Email</label><input id="em" type="email" placeholder="tu@email.com"></div>
+  <button class="btn" data-act="login">Enviarme el link</button>
+  <p class="ph-note" style="text-align:center">El flujo de ingreso se diseña en el sketch 063. Tocá el botón para simular que entraste.</p></div>`;
+
+const NOTES = `<h3>Sketch 061: Juegos (layout A, stacked)</h3><ul>
+  <li><b>Try it:</b> paste <code>174430</code> or <code>https://boardgamegeek.com/boardgame/342942/ark-nova</code> → a draft row appears with "Trayendo datos de BGG…" and fills in about 2.5 seconds later. <code>13</code> (Catan) → the "¿Es otra edición?" warning. <code>hola</code> → an error message under the field. <code>999999</code> → the row ends in "Reintentar".</li>
+  <li><b>Add form (2b):</b> the group label doubles as the field label, the placeholder says what to paste, and the submit is an <i>outlined</i> button that stays disabled while the field is empty. The error appears on submit, never while typing. Success shows a snackbar at the bottom, and the list switches to Borradores with the new row highlighted.</li>
+  <li><b>Filters (2c):</b> A1 uses Material filter chips (outline at rest, tonal + check when selected, scrolls sideways). A2 uses an iOS segmented control. Neither uses a filled primary color, so neither reads as a button to act on. The chips include the draft count; the segmented control has no room for one.</li>
+  <li><b>Rows (2a, 3):</b> no table. Each row is thumb · name + status line · chevron, the same anatomy as the drawer rows. Long names wrap onto more lines instead of widening the page. A failed row swaps the chevron for one "Reintentar" text button, and a row still loading can't be tapped.</li>
+  <li><b>Paging:</b> a quiet "Mostrar más" text button with "12 de 408". <i>tools → Simular → Carga inicial</i> shows skeleton rows with the same shape as the real ones.</li></ul>`;
+
+/* ---------------- render ---------------- */
+const device = document.getElementById('device');
+function fitNav() { document.body.style.paddingTop = (document.getElementById('state-nav').offsetHeight + 8) + 'px'; }
+window.addEventListener('resize', fitNav);
+
+function render() {
+  fitNav();
+  const admin = S.mode === 'admin';
+  const desk = S.vp === 'desk';
+  device.className = 'device' + (desk ? ' desk' : '') + (admin ? ' has-tabs' : '') + (J.polish ? ' polish' : '');
+  const body = admin ? adminBody() : S.mode === 'public' ? publicBody() : loginBody();
+  device.innerHTML = `<div class="scroller">${header()}${admin && desk ? tabBar() : ''}<main id="main">${body}</main></div>
+    ${admin && !desk ? tabBar() : ''}${drawer()}${admin ? accountSheet() : ''}
+    <div class="toast" id="toast">${ic('check')}<span></span></div>
+    <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button></div>`;
+  document.querySelectorAll('.stab[data-fstyle]').forEach(b => b.classList.toggle('active', b.dataset.fstyle === J.fstyle));
+  document.getElementById('notes').innerHTML = NOTES;
+  if (S.toast) { showToast(S.toast); S.toast = null; }
+}
+
+/* Header, tabs and drawer persist; only the page content swaps (LiveView navigate inside one live_session layout). */
+function softSwap() {
+  const main = device.querySelector('#main');
+  if (!main || S.mode !== 'admin') return render();
+  main.classList.add('swapping');
+  setTimeout(() => {
+    const top = activeTop();
+    main.innerHTML = adminBody();
+    device.querySelectorAll('.tabs [data-tab]').forEach(b => {
+      if (b.dataset.tab === 'account') return;
+      const on = b.dataset.tab === top; b.classList.toggle('on', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+    device.querySelectorAll('.drawer .dlink[data-nav]').forEach(b => {
+      const on = b.dataset.nav === top; b.classList.toggle('on', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+    device.querySelector('.scroller').scrollTop = 0;
+    main.classList.remove('swapping');
+  }, 100);
+}
+
+/* ---------------- overlays ---------------- */
+let returnFocus = null;
+function resetSteps(sh) {
+  sh.querySelectorAll('.steps').forEach(steps => {
+    clearTimeout(steps._t); steps.classList.remove('animating'); steps.style.height = '';
+    steps.querySelectorAll('.step').forEach(st => {
+      const first = st.classList.contains('step-account');
+      st.style.transition = 'none';
+      first ? st.removeAttribute('aria-hidden') : st.setAttribute('aria-hidden', 'true'); st.inert = !first;
+      void st.offsetWidth; st.style.transition = '';
+    });
+  });
+}
+function setStep(sh, name) {
+  const steps = sh && sh.querySelector('.steps'); if (!steps) return;
+  const from = steps.querySelector('.step:not([aria-hidden="true"])');
+  const to = steps.querySelector('.step-' + name);
+  if (!to || from === to) return;
+  steps.style.height = from.offsetHeight + 'px'; steps.classList.add('animating');
+  from.setAttribute('aria-hidden', 'true'); from.inert = true;
+  to.removeAttribute('aria-hidden'); to.inert = false;
+  void steps.offsetHeight; steps.style.height = to.offsetHeight + 'px';
+  clearTimeout(steps._t); steps._t = setTimeout(() => { steps.style.height = ''; steps.classList.remove('animating'); }, 300);
+  const f = to.querySelector(name === 'confirm' ? '[data-act="cancel-logout"]' : '[data-act="ask-logout"]');
+  f && f.focus({ preventScroll: true });
+}
+function closeAll() {
+  const had = device.querySelector('.drawer.open,.sheet.open');
+  device.querySelectorAll('.open').forEach(el => { el.classList.remove('open'); el.style.transform = ''; });
+  if (had && returnFocus && document.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
+  if (had) returnFocus = null;
+}
+function openEl(sel, opener) {
+  const keep = returnFocus || opener;
+  closeAll(); returnFocus = keep;
+  const el = device.querySelector(sel); if (!el) return;
+  resetSteps(el);
+  void el.offsetWidth; el.classList.add('open'); device.querySelector('.backdrop').classList.add('open');
+  const first = el.querySelector('button:not([disabled])'); first && first.focus({ preventScroll: true });
+}
+function showToast(msg) {
+  const t = device.querySelector('#toast'); t.querySelector('span').textContent = msg;
+  void t.offsetWidth; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600);
+}
+function setTheme(v) { if (v === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v; }
+
+/* swipe a bottom sheet down to dismiss (phone) */
+let drag = null, suppressClick = false;
+device.addEventListener('pointerdown', e => {
+  const sh = e.target.closest('.sheet.open'); if (!sh || S.vp === 'desk') return;
+  if (!e.target.closest('.grab') && sh.scrollTop > 0) return;
+  const onButton = e.target.closest('button') && !e.target.closest('.grab');
+  drag = { sh, y: e.clientY, dy: 0, pending: !!onButton };
+  if (!onButton) sh.classList.add('dragging');
+});
+window.addEventListener('pointermove', e => {
+  if (!drag) return; const dy = Math.max(0, e.clientY - drag.y);
+  if (drag.pending) { if (dy < 8) return; drag.pending = false; drag.sh.classList.add('dragging'); }
+  drag.dy = dy; drag.sh.style.transform = `translateY(${dy}px)`;
+});
+window.addEventListener('pointerup', () => {
+  if (!drag) return; const { sh, dy, pending } = drag; drag = null; sh.classList.remove('dragging');
+  if (pending) return;
+  if (dy > 8) { suppressClick = true; setTimeout(() => suppressClick = false, 0); }
+  if (dy > 80) closeAll(); else sh.style.transform = '';
+});
+
+/* ---------------- events ---------------- */
+document.addEventListener('click', e => {
+  if (suppressClick) { e.stopPropagation(); e.preventDefault(); return; }
+  const t = e.target.closest('[data-fstyle],[data-jdata],[data-pend],[data-m],[data-vp],[data-role],[data-theme-set],[data-act],[data-nav]');
+  if (!t) return;
+  if (t.dataset.polish) { J.polish = t.dataset.polish === '1'; document.querySelectorAll('[data-polish]').forEach(b => b.classList.toggle('on', b === t)); device.classList.toggle('polish', J.polish); return; }
+  if (t.dataset.fstyle) { J.fstyle = t.dataset.fstyle; document.querySelectorAll('.stab[data-fstyle]').forEach(b => b.classList.toggle('active', b === t)); return refreshList(); }
+  if (t.dataset.jdata) {
+    J.data = t.dataset.jdata; document.querySelectorAll('[data-jdata]').forEach(b => b.classList.toggle('on', b === t));
+    return S.screen === 'juegos' ? refreshList() : render();
+  }
+  if (t.dataset.act && t.dataset.act.startsWith('j-')) {
+    const a = t.dataset.act, g = J.games.find(x => x.id === +t.dataset.gameId);
+    if (a === 'j-filter') { J.filter = t.dataset.f; refreshList(); const f = $(`#jfilters [data-f="${J.filter}"]`); f && f.focus({ preventScroll: true }); }
+    else if (a === 'j-clear') { J.q = ''; $('#q-in').value = ''; $('.sfield .clear').hidden = true; refreshList(); $('#q-in').focus(); }
+    else if (a === 'j-more') { const add = POOL.splice(0, 6).map(([name, year, pl, hue]) => mk({ name, bgg: 1000 + gid, status: 'published', year, pl, hue })); J.games.push(...add); J.loaded += add.length; refreshList(); }
+    else if (a === 'j-retry' && g) { g.enr = 'pending'; refreshList(); enrichLater(g); }
+    else if (a === 'j-open' && g) snack(`Abre el editor de ${g.name}`);
+    else if (a === 'j-cancel') { J.prompt = null; refreshAdd(); $('#add-in').focus(); }
+    else if (a === 'j-confirm') { insertDraft(J.prompt.bgg); snack('Edición agregada como borrador'); }
+    else if (a === 'j-sim-load') { if (S.screen !== 'juegos') { S.screen = 'juegos'; render(); } J.loading = true; refreshList(); setTimeout(() => { J.loading = false; refreshList(); }, 1400); }
+    return;
+  }
+  if (t.dataset.pend) { S.pend = t.dataset.pend === '1'; document.querySelectorAll('[data-pend]').forEach(b => b.classList.toggle('on', b === t)); return render(); }
+  if (t.dataset.m) { S.mode = t.dataset.m; S.screen = home(); return render(); }
+  if (t.dataset.vp) { S.vp = t.dataset.vp; document.querySelectorAll('[data-vp]').forEach(b => b.classList.toggle('on', b === t)); return render(); }
+  if (t.dataset.role) { S.role = t.dataset.role; if (S.screen === 'staff' && S.role !== 'owner') S.screen = home(); document.querySelectorAll('[data-role]').forEach(b => b.classList.toggle('on', b === t)); return render(); }
+  if (t.dataset.themeSet) return setTheme(t.dataset.themeSet);
+  if (t.dataset.nav) {
+    const n = t.dataset.nav;
+    const wasOpen = !!device.querySelector('.drawer.open,.sheet.open');
+    if (n === 'pub:about') { closeAll(); return showToast('Quiénes Somos (sin cambios)'); }
+    if (n === 'pub:inicio') { if (S.mode === 'out') { closeAll(); return; } S.mode = 'public'; closeAll(); return setTimeout(render, wasOpen ? 200 : 0); }
+    // re-tapping the active tab pops to that tab's root, or scrolls to top if already there
+    if (t.dataset.tab && S.mode === 'admin' && activeTop() === n) {
+      if (S.screen !== n) { S.screen = n; return softSwap(); }
+      return device.querySelector('.scroller').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    const fromAdmin = S.mode === 'admin';
+    S.mode = 'admin'; S.screen = n; closeAll();
+    // inside admin: swap content under the closing overlay; entering admin: rebuild after it closes
+    return fromAdmin ? softSwap() : setTimeout(render, wasOpen ? 200 : 0);
+  }
+  const a = t.dataset.act;
+  if (a === 'open-drawer') openEl('.drawer', t);
+  else if (a === 'open-account') openEl('#sheet-account', t);
+  else if (a === 'ask-logout') {
+    const sh = t.closest('.sheet');
+    setStep(sh, 'confirm');
+  }
+  else if (a === 'cancel-logout') setStep(t.closest('.sheet'), 'account');
+  else if (a === 'close') closeAll();
+  else if (a === 'logout') {
+    t.disabled = true; t.querySelector('.slot').innerHTML = '<span class="spin"></span>'; t.querySelector('.lbl').textContent = 'Cerrando sesión…';
+    t.closest('.dlinks').querySelectorAll('.dlink').forEach(b => { if (b !== t) b.disabled = true; });
+    setTimeout(() => { closeAll(); setTimeout(() => { S.mode = 'out'; S.screen = home(); S.toast = 'Cerraste sesión'; render(); }, 220); }, 550);
+  }
+  else if (a === 'login') { S.mode = 'admin'; S.screen = home(); S.toast = 'Entraste como ' + USER.email; render(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const confirm = device.querySelector('.sheet.open .step-confirm:not([aria-hidden="true"])');
+  if (confirm) setStep(confirm.closest('.sheet'), 'account'); else closeAll();
+});
+/* Juegos inputs: add field only enables its button (validation waits for submit, ux-patterns B12);
+   search filters live with a 300ms debounce (phx-debounce="300"). */
+let qTimer;
+document.addEventListener('input', e => {
+  if (e.target.id === 'add-in') {
+    J.add = e.target.value;
+    if (J.err || J.prompt) { J.err = null; J.prompt = null; }
+    refreshAdd();
+  } else if (e.target.id === 'q-in') {
+    J.q = e.target.value; $('.sfield .clear').hidden = !J.q;
+    clearTimeout(qTimer); qTimer = setTimeout(refreshList, 300);
+  }
+});
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'add-form') return;
+  e.preventDefault(); submitAdd();
+});
+document.getElementById('tools-toggle').addEventListener('click', () => document.getElementById('tools-body').classList.toggle('show'));
+render();
+</script>
+</body>
+</html>
