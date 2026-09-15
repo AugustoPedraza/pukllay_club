@@ -2,7 +2,7 @@
 sketch: 063
 name: admin-game-editor
 question: "On /admin/juegos/:id/editar, how do the editable club fields sit next to the read-only BGG facts, and where do Publicar / Retirar / Restaurar live per status so the lifecycle action is clear without looking like a CTA?"
-winner: "R8 V2 (final, single design): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
+winner: "R8 V2 + R9 F2 (En el inicio list section) + U2 (1 | 2 | Más units): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
 tags: [admin, juegos, editor, form, lifecycle, status, bgg, sections, shelf, bottom-sheet, phase-01.8.1, mobile-first]
 ---
 
@@ -422,10 +422,52 @@ Verified in headless Chrome, 30 of 30 checks (favicon 404 ignored):
 - **Filas wording:** "En el inicio: …" / "No aparece en ninguna fila del inicio". The sheet is "Filas del inicio".
 - **Still open:** the light-mode unchecked switch tint (062); iOS focus-zoom on fields under 16px (061); Deshacer for Publicar needs a draft transition.
 
+## Round 9: where the game shows + Unidades control (2026-09-15)
+Developer: "better representation of the sections where a game can be found" and "Replace 'copias' for unidades. A pick number isn't too mobile friendly. Also the values could be 1 (99% of the times) and rarely more than 2."
+
+Built on the committed V2; everything under "Winner: R8 V2" still stands. The top bar has two independent switches. "Sections" is read as the **home rows** ("filas", the manual sections + the automatic level and recent rows), not the physical Estante.
+"Copias" didn't appear anywhere in the sketch or the app (`form.ex` already labels it "Unidades"). The wording is now "1 unidad / N unidades" everywhere, and a check fails if "copia" ever shows up.
+
+**Filas** (shared data: home order Destacados → the 3 level rows → manual rows → Recientemente añadidos; hidden manual rows never show on the home):
+- **F1: Etiquetas.** The same line under the title, now listing every row: manual rows as accent tags, automatic ones as muted ✦ tags, plus a key line "✦ automática, por su nivel o por ser nuevo · y en 1 fila oculta". The lead is status-aware ("Al publicarlo, en el inicio:" / "Retirado. Al restaurarlo, en el inicio:"). This is the least change, but on a phone it wraps to 2–3 lines.
+- **F2: Lista.** The line under the title is gone; there's a new **En el inicio** section after Descripción (desktop: right column, under Descripción). The box has one row per home row the game is in, with a slot icon (★ Destacados, list for manual, ✦ automatic), the name, and why it's there ("Elegida a mano · 18 de 20 juegos", "Automática · cambia con el Nivel", "Automática · mientras sea de los 20 más nuevos", "Elegida a mano · fila oculta en el inicio").
+  - Manual rows carry ✎ and open the Filas del inicio sheet. Automatic rows are static.
+  - The last row, "+ Sumar a otra fila ›", opens the same sheet.
+  - A draft or retired game gets a note at the top of the box, and retired rows are dimmed.
+- **F3: Mini inicio.** The same section drawn as the home page in miniature: all 7 home rows in order, each with a strip of cover tiles (5 on phone, 9 on desktop), the game's cover marked (taller, ringed) in the rows it's in, plus a short why ("Elegida a mano / Por su nivel / Por ser de los más nuevos").
+  - Rows it isn't in stay visible but muted, which teaches that only one level row applies.
+  - A hidden-row membership is a sentence under the list. The "+ Elegir filas a mano ›" row opens the sheet.
+  - Draft: grey ring. Retired: greyscale cover + note.
+
+**Unidades** (no typed number field anymore; `units` still casts as an integer ≥ 1, so the "Unidades tiene que ser 1 o más" error can't happen from the UI):
+- **U1: Stepper.** A "− 1 +" control in the En el club row: 32px soft-fill circles with 44px hit areas, and − disabled at 1. When − disables, focus moves to +.
+- **U2: 1 | 2 | Más.** A segmented control in the row (iOS-style, no strokes). "Más" sets 3 and turns the third segment into an inline "− 3 +" stepper. Stepping below 3 folds back to the "2" segment.
+- **U3: Hoja.** A "Unidades · 1 unidad ✎" value row (same anatomy as Estante), opening a sheet: "Cuántas cajas de este juego tiene el club." → 1 unidad (Lo más común) / 2 unidades / 3 o más (turns into a stepper row) → Listo.
+
+Verified in headless Chrome, 75 of 75 checks (favicon 404 ignored):
+- **Layout, every Filas variant × every Estado:** no overflow and zero lines. The order is título → portada → descripción → (en el inicio) → BGG → band (club → estado). Filas appear in exactly one place, always in the public part, and section labels are identical.
+- **Filas:** F1 pills show manual vs ✦ automatic, and the draft lead is correct. F2 rows follow home order, manual rows are editable while automatic ones explain why, changing Nivel moves the level row, and Sumar adds a row. F3 shows 7 rows with 3 marked, the tile columns line up, and the retired note + hidden row appear.
+- **Unidades:** no "copia" wording in any variant.
+  - U1: − disabled at 1, dirty state, focus handoff, hit-area room.
+  - U2: default 1, tap 2, Más → stepper, folding back to 2.
+  - U3: value row, sheet, pick 2, 3 o más → stepper.
+- **All V2 flows still pass.** The units validation check became a name validation check.
+- Dark (F2/F3/U2/U3) and desktop (all three Filas) show no overflow, with club | estado side by side.
+
+**Winner: F2 + U2** (developer: "F2 + U2"). F1, F3, U1 and U3 are removed in Round 10; this section and the Round 9 commit are their record.
+
+Fixed while building:
+- The new state modifier `st-draft` collided with the existing bold `.st-draft` status label, so it's renamed `fst-*`.
+- F1's ✎ wrapped onto its own line, so it moved inside the tag list.
+- The marked tile in F3 was wider and pushed its row's tiles out of line, so it's now taller only (there's a check for this).
+- Static rows in a box no longer tint on hover (the U2 segmented track disappeared).
+- `verify.js`'s `scrollTo` ignored the current scroll position, so screenshots after the first scroll were framed wrong.
+
 ## How to verify (headless)
-`verify.js` in this folder is the headless-Chrome check used for the final V2. It runs 30 checks:
+`verify.js` in this folder is the headless-Chrome check for V2 + the Round 9 variants. It runs 75 checks:
 - **Layout:** no overflow in every status, zero lines in the page body, section order, the band holds only club + estado, the band is full-bleed, identical labels.
 - **Flows:** publish → Deshacer, retire confirm, Nivel/Estante sheets, description edit, units validation, leave guard, BGG expand, failed → Reintentar.
+- **Round 9:** every Filas variant × Estado, Filas content, the three Unidades controls, and no "copia" wording.
 - **Views:** dark and desktop.
 
 ```
