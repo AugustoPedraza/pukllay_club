@@ -121,8 +121,7 @@
   .box-head { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; min-height: 24px; font-size: var(--text-sm); font-weight: 600; color: var(--color-text-muted); }
   .box-head .ico { width: 18px; height: 18px; flex-shrink: 0; }
   .box-head .name { min-width: 0; line-height: 1.3; }
-  .box-num { font-size: 1.75rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-  .box-unit { display: block; margin-top: 2px; font-size: var(--text-sm); font-weight: 400; color: var(--color-text-muted); letter-spacing: 0; }
+  .box-num { font-size: 2rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
   .meter { align-self: stretch; height: 4px; border-radius: 2px; background: var(--color-surface-2); overflow: hidden; }
   .meter i { display: block; height: 100%; background: var(--color-primary); border-radius: 2px; }
   :root[data-theme="dark"] .meter i { background: var(--color-accent-text); }
@@ -405,27 +404,29 @@ function pageHead() {
     <h1 class="ptitle">${sc.title}</h1>${sc.sub ? `<p class="psub">${sc.sub}</p>` : S.screen === 'panel' ? '' : '<div style="height:12px"></div>'}`;
 }
 /* ================= 060: the Admin home page — a minimal dashboard of boxes =================
-   ONE box anatomy, centered: [icon · name] → big number → unit → (optional meter) → foot line. 2 columns (desktop 3).
+   ONE box anatomy, centered: [icon · name] → big number → (optional meter) → one note line. 2 columns (desktop 3).
    The whole box is the tap target (border tint on hover, press scale, focus ring). No filled buttons.
    Pending work = the same accent count bubble used in the drawer and tab badges; otherwise a muted foot line. */
 const nf = n => n.toLocaleString('es-AR');
+/* Box = name → number → ONE line that adds meaning. The line never repeats the name as a unit
+   ("Juegos · 412 juegos"); it says what's pending or what the number means for this section. */
 function boxData(k) {
   const d = DATA(), unplaced = d.total - d.placed;
   return {
-    juegos:    { num: nf(d.total), unit: 'juegos', foot: d.drafts ? `${d.drafts} borradores` : 'Todos publicados', pend: !!d.drafts },
-    secciones: { num: d.sections, unit: 'filas en el inicio', foot: 'Destacados y 4 más' },
-    estantes:  { num: `${Math.round(d.placed / d.total * 100)}%`, unit: 'ubicados', meter: d.placed / d.total, foot: unplaced ? `${nf(unplaced)} sin ubicar` : 'Todos ubicados', pend: !!unplaced },
-    niveles:   { num: d.mismatches, unit: 'discrepancias', foot: d.mismatches ? 'Por revisar' : 'Todo coincide con BGG', pend: !!d.mismatches },
-    staff:     { num: d.staff, unit: 'personas', foot: '1 invitación pendiente' },
+    juegos:    { num: nf(d.total), note: d.drafts ? `${d.drafts} borradores` : 'Todos publicados', pend: !!d.drafts },
+    secciones: { num: d.sections, note: 'filas en el inicio' },
+    estantes:  { num: `${Math.round(d.placed / d.total * 100)}%`, meter: d.placed / d.total, note: unplaced ? `${nf(unplaced)} sin ubicar` : 'Todos ubicados', pend: !!unplaced },
+    niveles:   { num: d.mismatches, note: d.mismatches ? 'no coinciden con BGG' : 'Todo coincide con BGG', pend: !!d.mismatches },
+    staff:     { num: d.staff, note: '1 invitación pendiente' },
   }[k];
 }
 function box(k) {
   const b = boxData(k);
   return `<button class="box" data-nav="${k}">
     <span class="box-head">${ic(SCREENS[k].icon, 'ico')}<span class="name">${SCREENS[k].title}</span></span>
-    <span class="box-num">${b.num}<span class="box-unit">${b.unit}</span></span>
+    <span class="box-num">${b.num}</span>
     ${b.meter != null ? `<span class="meter" aria-hidden="true"><i style="width:${b.meter * 100}%"></i></span>` : ''}
-    <span class="box-foot">${b.pend ? `<span class="pend">${b.foot}</span>` : b.foot}</span>
+    <span class="box-foot">${b.pend ? `<span class="pend">${b.note}</span>` : b.note}</span>
   </button>`;
 }
 const panelBody = () => `<div class="dash">${sections().map(box).join('')}</div>`;
@@ -453,7 +454,7 @@ const loginBody = () => `<div class="login"><h1 class="ptitle" style="text-align
 
 const NOTES = `<h3>Admin home: minimal dashboard (final)</h3><ul>
   <li><b>2-column grid of boxes</b> (3 columns on desktop), so all five fit on a phone without scrolling. With the owner's five boxes, Staff sits alone on the last row.</li>
-  <li><b>One box layout, centered:</b> icon + name, then a big number, the unit under it, a progress bar (Estantes only) and a bottom line. No chevron. The whole box is the tap target: it tints on hover, shrinks slightly on press and shows a focus ring.</li>
+  <li><b>One box layout, centered:</b> icon + name, a big number, a progress bar (Estantes only) and one note that adds information without repeating the name ("Juegos · 412 · 3 borradores", not "412 juegos"). No chevron. The whole box is the tap target: it tints on hover, shrinks slightly on press and shows a focus ring.</li>
   <li><b>Pending work</b> uses the same accent bubble as the drawer counts and tab badges; everything else is muted. <i>tools → Datos → Todo al día</i> shows it with nothing pending.</li>
   <li><b>Drawer never repeats the tab bar:</b> on phone, ADMIN holds only Revisar niveles and Staff. On desktop there's no ADMIN group. On a public page while signed in, there's a single "Ir a Admin" row.</li></ul>`;
 

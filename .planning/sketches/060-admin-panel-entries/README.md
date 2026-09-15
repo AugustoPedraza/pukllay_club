@@ -2,7 +2,7 @@
 sketch: 060
 name: admin-panel-entries
 question: "How should the Admin home page's entries read as tappable and surface pending work, using only the 059 shell's one row anatomy?"
-winner: "B (final, single design) — centered 2-column dashboard boxes, no chevron"
+winner: "B (final, single design) — centered 2-column dashboard boxes: name → number → one note; no chevron"
 tags: [admin, dashboard, boxes, affordance, pending-work, drawer, naming, phase-01.8.1, mobile-first]
 ---
 
@@ -143,3 +143,22 @@ design (A, the full-width list, was never committed; it's described in round 3 a
 
 Verified (JS + screenshot): equal box widths on phone/desktop, no chevrons, no clipped text, no horizontal
 overflow, box → Revisar niveles and Admin tab → back to 5 boxes, all-clear foot lines, zero console errors.
+
+## Redundancy trim (2026-09-14)
+Developer: "For the boxes, there is redundancy. Like Juegos and then 412 juegos again. Same for the rest. Make it
+simple and more meaningful."
+
+The unit line under the number is removed. Each box is now **name → number → one note**, and the note must add
+information, never restate the name:
+
+| Box | Number | Note (pending pill when there's work) | All clear |
+|---|---|---|---|
+| Juegos | 412 | **3 borradores** | Todos publicados |
+| Web | 5 | filas en el inicio | — |
+| Estantes | 80% + meter | **84 sin ubicar** | 100% · Todos ubicados |
+| Revisar niveles | 7 | **no coinciden con BGG** | 0 · Todo coincide con BGG |
+| Staff (owner) | 3 | 1 invitación pendiente | — |
+
+Web keeps "filas en el inicio" because "Web · 5" means nothing on its own. The duplicate "Destacados y 4 más"
+line was dropped. The number grew to 2rem now that it stands alone. Verified: no clipped text or overflow in either
+data state, zero console errors.
