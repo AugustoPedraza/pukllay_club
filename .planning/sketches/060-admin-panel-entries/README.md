@@ -2,7 +2,7 @@
 sketch: 060
 name: admin-panel-entries
 question: "How should the Admin home page's entries read as tappable and surface pending work, using only the 059 shell's one row anatomy?"
-winner: "B (final, single design) — centered 2-column dashboard boxes: name → number → one note; no chevron"
+winner: "B layout (final, single design) — centered 2-column boxes, icon beside name (A), name → number → one note; no chevron"
 tags: [admin, dashboard, boxes, affordance, pending-work, drawer, naming, phase-01.8.1, mobile-first]
 ---
 
@@ -173,3 +173,17 @@ Developer: "It needs a better balance on the 'what' and its number. The number n
 
 Verified in light and dark: "Revisar niveles" still fits on one line in a 167px box, no clipped text or overflow, zero
 console errors.
+
+## Icon treatment round (2026-09-14)
+Developer: "Variants? without icons?" The box layout is settled; this round only varies the icon:
+
+- **A: Ícono al lado:** the current design, a muted 20px icon left of the name (matches tab bar/drawer icons).
+  Box height 110–122px.
+- **B: Sin ícono:** name → number → note only. The tab bar already carries the icons. Same height as A.
+- **C: Ícono arriba:** a muted 24px icon stacked above the name. More symmetric when centered, but +25px per box
+  (135–147px), and the five boxes get close to the tab bar on a phone.
+
+Verified all three: no clipped text or overflow, zero console errors.
+
+**Picked: A, icon beside the name.** B and C were removed from `index.html` (never committed; described above).
+A keeps a section's icon identical across the Admin box, the drawer row and the tab bar.
