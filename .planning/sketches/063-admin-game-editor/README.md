@@ -2,7 +2,7 @@
 sketch: 063
 name: admin-game-editor
 question: "On /admin/juegos/:id/editar, how do the editable club fields sit next to the read-only BGG facts, and where do Publicar / Retirar / Restaurar live per status so the lifecycle action is clear without looking like a CTA?"
-winner: "R6 (final, single design): mirror of the public page · EN LA WEB / SOLO PARA EL CLUB groups · one label + soft-box section anatomy · ✎ in a soft circle · compact club rows · inline Estado below the content · Datos de BGG collapsed"
+winner: "R8 V2 (final, single design): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
 tags: [admin, juegos, editor, form, lifecycle, status, bgg, sections, shelf, bottom-sheet, phase-01.8.1, mobile-first]
 ---
 
@@ -320,3 +320,104 @@ Verified in headless Chrome, 29 of 29 checks (favicon 404 ignored):
   - The light-mode unchecked switch tint (from 062).
   - iOS focus-zoom on fields under 16px (061 note).
   - Deshacer for Publicar needs a draft transition.
+
+## Round 7: tabs vs jump control for the two groups (2026-09-15)
+Developer:
+- "The 'filas' needs to be meanninfu.. And the sections are clear."
+- "What if we use 'TABS | TABS' for that? what is standardt for this? My only concern is that WHat we're editing could be lost."
+
+Built on the committed R6. The top bar has "Ronda 7 · dos partes". Shared by both:
+- **Filas wording:** "**En el inicio:** Destacados del club ✎". Empty: "No aparece en ninguna fila del inicio ✎". The sheet is "Filas del inicio", using the same words as the Web tab.
+- **Title + filas stay above the control** as the page identity (always visible).
+- **One segmented control** (👁 En la web | eye-slash Solo para el club), sticky under the header on phone and under the tab row on desktop. It gets a soft shadow once stuck.
+
+Variants:
+- **T1: Pestañas.**
+  - Both panels are in ONE form, and switching only toggles `hidden`. In LiveView this is `JS.show/hide` (or a client-only assign) inside the same `<.form>`, never separate routes/LiveViews. So nothing typed is lost.
+  - A purple dot marks a tab with unsaved changes, and a red dot marks a tab with errors. Saving with an error in the hidden tab switches to it and focuses the field.
+  - Estado (lifecycle + Guardar) is shared below both panels. A sub-line explains the current tab.
+  - `role="tablist"`, with arrow keys switching tabs. Switching while stuck scrolls so the panel starts right under the control.
+- **T2: Salto (todo visible).**
+  - Nothing is hidden: the R6 page with the group headers. Tapping a segment smooth-scrolls to the group, and a scroll-spy highlights the group you're in.
+  - The last group gets a min-height so a jump can bring it to the top on a short page. Without it, the page ends first and the group lands mid-screen (caught by a test). The cost is empty space at the bottom when you jump there.
+
+Verified in headless Chrome, 26 of 26 checks (favicon 404 ignored):
+- **Filas wording:** filled and empty.
+- **T1:** no overflow in 3 statuses. Panel visibility and the shared Estado work, and edits survive switching tabs (description + units). Dots behave correctly: unsaved changes in En la web, unsaved changes in Solo para el club, and an error that auto-switches to its tab and focuses the field. Saving clears the dots, and arrow keys work.
+- **Both:** the control sticks under the header, and a tab switch while stuck shows the panel start.
+- **T2:** nothing hidden; the tap jumps to the group and highlights it; the scroll-spy updates at the top and at the end; tapping back scrolls up.
+- **Other:** dark; desktop sticky under the tab row for both variants; no JS errors.
+
+Fixed while building:
+- 062's `.seg.two` 24px bottom margin left a blank strip under the control.
+- The "En el inicio:" line sat 2px left of the title edge.
+
+## Round 8: no tabs, three ways to separate public vs internal (2026-09-15)
+Developer: "neither feels correct. Alternatives without tabs?" → "build all three variants"
+
+R7 (T1 tabs / T2 jump control) is rejected and removed; its description above is the only record. Built on R6 with the "En el inicio:" filas wording.
+The top bar has "Ronda 8 · sin pestañas":
+
+- **V1: Contenido + barra lateral** (Shopify / WooCommerce / WordPress "Publicar" box, the standard admin editor pattern).
+  - **Desktop:** a wide public column (title, filas, Portada | Descripción + Datos de BGG) and a sticky 320px sidebar on a faint neutral ground. The sidebar has a caption "Solo para el club / no se muestra en la web", then **Estado first** (Publicar/Retirar/Restaurar + Guardar), then En el club.
+  - **Phone:** the sidebar stacks after the content under the same caption, with En el club, then Estado, so Guardar ends the page.
+- **V2: Zona interna con otro fondo.** One continuous page. Everything public sits on the normal ground. The internal part (En el club + Estado) sits in a **full-bleed muted neutral band** that starts with the same caption and runs to the end of the page.
+  - The boxes inside the band turn white, so they contrast with the band.
+  - You can tell you've left "the game page" by the background alone.
+  - Desktop: En el club | Estado side by side inside the band.
+- **V3: Resumen interno arriba.** Under the title and filas, one muted line summarizes everything internal: "● Publicado · Estante B · 2 unidades" + "Solo para el club", with ✎ and a "cambios sin guardar" note when internal fields are dirty.
+  - Tapping it opens a sheet: "SOLO PARA EL CLUB · NO SE MUESTRA EN LA WEB" → the status → the lifecycle row (Publicar / Retirar de la web › confirm step / Restaurar) → EN EL CLUB (Estante › picker that returns to this sheet, Unidades, Expansión) → Listo.
+  - The page below is the pure public preview, ending with a save box ("Cambios sin guardar · Guarda todo lo del juego, también lo del club" + Guardar).
+  - A units error on save reopens the sheet.
+
+Verified in headless Chrome, 30 of 30 checks (favicon 404 ignored):
+- **All variants:** no overflow in 3 statuses × 3 variants on phone and desktop; filas wording kept.
+- **V1:** phone order is content → the club part; desktop sidebar on the right with Estado first, and it stays sticky on scroll.
+- **V2:** the band is full-bleed, tinted, and holds En el club + Estado.
+- **V3:**
+  - The strip sits between the title and Portada, with no internal sections on the page.
+  - Editing in the sheet updates the strip and the save box, and the estante picker returns to the sheet.
+  - A units error reopens the sheet; Publicar from the sheet saves then publishes.
+  - The retire confirm step focuses Cancelar.
+- **Other:** dark; no JS errors.
+
+Polish while building:
+- The V1 sidebar caption now uses two lines.
+- The V2 band goes full-bleed on desktop (box-shadow + clip-path).
+- The V3 sheet's status dot aligns with the 28px row slot.
+
+## Winner: R8 V2, internal zone on a different background (2026-09-15)
+Developer: "v2 is better".
+
+`index.html` now holds only V2. V1 (sidebar) and V3 (summary strip + sheet) and their code are removed, as are R7's tabs and jump control. None of them were committed; the rounds above are their record.
+The top bar switches Estado only.
+
+**Final page (phone):**
+- ‹ Juegos … Ver en la ludoteca ↗
+- Name edited in place in Bebas ✎ → "En el inicio: Destacados del club ✎" (or "No aparece en ninguna fila del inicio ✎")
+- **Portada:** pills with the Nivel pill ✎ + poster
+- **Descripción:** the paragraph with ✎; tap → textarea
+- **Datos de BGG:** 🔒 "Sincronizados con BoardGameGeek" collapsed; opens to the fact grid, Comunidad BGG and Ver en BoardGameGeek
+- **Full-bleed muted band** (rounded top), captioned "Solo para el club · no se muestra en la web":
+  - **En el club:** Estante ✎, Unidades, Es una expansión
+  - **Estado:** status · Cambios sin guardar / Todo guardado · Publicar / Retirar (in-sheet confirm) / Restaurar · Guardar
+
+**Desktop:** Portada on the left, Descripción + Datos de BGG on the right. The band runs the full width with En el club | Estado side by side.
+
+Verified in headless Chrome, 30 of 30 checks (favicon 404 ignored):
+- Single design with no leftovers.
+- In every status: no overflow, zero lines in the page body, the order title → portada → descripción → BGG → band (club → estado), and the band holds only club + estado.
+- The band is full-bleed; section labels are identical.
+- Flows: dirty state; Publicar saves + publishes → Deshacer; Retirar confirm focuses Cancelar; BGG suggestion in the Nivel sheet; estante pick; description edit; units validation focuses the field; leave guard; BGG expands.
+- Failed state; dark; desktop with no overflow and club | estado side by side in the band.
+
+### Carry forward to the gap-closure plan (GameLive.Form), replacing the R6 list above where it differs
+- **Two zones by background:** public content on the page ground mirrors `CatalogLive.Show`. Internal content (`shelf_id`, `units`, `is_expansion` + the lifecycle/save box) sits in one full-bleed muted band captioned "Solo para el club · no se muestra en la web". It's the last thing on the page, and Guardar is the last control.
+- **No tabs, no jump control, no sticky save bar.** Nothing is hidden, and one `<.form>` wraps both zones.
+- **Everything else from R6 stands:**
+  - The section anatomy: a 13px/700 label over a soft box, 24px apart, white boxes inside the band, no lines.
+  - The ✎ soft-circle rule and in-place title/description editing.
+  - The Nivel/Estante/Filas sheets, with the BGG suggestion only in the Nivel sheet.
+  - Datos de BGG collapsed; lifecycle saves first + Deshacer; the unsaved-changes guard.
+- **Filas wording:** "En el inicio: …" / "No aparece en ninguna fila del inicio". The sheet is "Filas del inicio".
+- **Still open:** the light-mode unchecked switch tint (062); iOS focus-zoom on fields under 16px (061); Deshacer for Publicar needs a draft transition.

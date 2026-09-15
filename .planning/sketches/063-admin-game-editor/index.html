@@ -834,13 +834,35 @@
   .r6 .grp .thead + .sec { margin-top: 0; }
   .desk.r6 .mast.int { align-items: start; }
   .desk.r6 .grp-pub .mast .tcol .sec + .sec { margin-top: 24px; }
+
+  /* R7 keeps: filas lead */
+  .tags-lead { font-size: 13px; color: var(--color-text-muted); margin-right: 2px; }
+  .tags { align-items: baseline; }
+  .tags:has(.tags-lead) { margin-left: 0; }
+
+  /* ================= R8: no-tab separation ================= */
+  .r6 .mast + .sec, .r6 .thead + .sec { margin-top: 0; }
+  .r6 .thead { margin-bottom: 20px; }
+  .zone-cap { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; color: var(--color-text-muted); }
+  .zone-cap b { color: var(--color-text); font-weight: 700; }
+  .zone-cap .gico { background: var(--color-surface); }
+  /* V2: full-bleed muted band */
+  .zone-int { margin: 40px -16px -32px; padding: 20px 16px 32px; background: color-mix(in srgb, var(--color-text) 5%, var(--color-bg)); border-radius: 20px 20px 0 0; }
+  .desk .zone-int { margin: 40px -32px -48px; padding: 24px 32px 48px; }
+  .zone-int > .sec + .sec { margin-top: 24px; }
+  .zone-int .sbox, .zone-int .ebar.inline { background: var(--color-bg); }
+  .zone-int .sbox.rows .tin.num { background: var(--color-surface) !important; }
+  .zone-int .sbox.rows .srow:hover { background: var(--color-surface); }
+  :root[data-theme="dark"] .zone-int { background: color-mix(in srgb, #000 28%, var(--color-bg)); }
+  .desk .zone-int { margin: 40px 0 -48px; padding: 24px 0 48px; border-radius: 0; box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--color-text) 5%, var(--color-bg)); clip-path: inset(0 -100vmax); }
+  :root[data-theme="dark"] .desk .zone-int { box-shadow: 0 0 0 100vmax color-mix(in srgb, #000 28%, var(--color-bg)); }
 </style>
 </head>
 <body>
 
 <div id="state-nav">
   <div class="var-nav">
-    <span class="lbl">Sketch 063 · Editor de juego (final)</span>
+    <span class="lbl">Sketch 063 · Editor de juego (final: zona interna con otro fondo)</span>
   </div>
   <div class="var-nav">
     <span class="lbl">Estado</span>
@@ -1125,9 +1147,10 @@ function titleField() {
 function tagsRow() {
   const names = MANUAL.filter(s => E.ed.secs.includes(s.id) && !s.hidden).map(s => s.name);
   const hiddenOnly = MANUAL.some(s => E.ed.secs.includes(s.id) && s.hidden);
+  /* R7: the line says what the tags are — rows of the public home page (same words as the Web tab) */
   return `<button type="button" class="tags-row" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="Filas del inicio. Editar">
-    ${names.length ? `<span class="tags">${names.map(n => `<span class="pk-pill pk-pill-tag">${esc(n)}</span>`).join('')}</span>`
-      : `<span class="tags-empty">${hiddenOnly ? 'Solo en filas ocultas' : 'Sin filas elegidas'}</span>`}${pen('pen-row')}</button>`;
+    ${names.length ? `<span class="tags"><span class="tags-lead">En el inicio:</span>${names.map(n => `<span class="pk-pill pk-pill-tag">${esc(n)}</span>`).join('')}</span>`
+      : `<span class="tags-empty">${hiddenOnly ? 'Solo en filas ocultas del inicio' : 'No aparece en ninguna fila del inicio'}</span>`}${pen('pen-row')}</button>`;
 }
 /* description reads like the public paragraph; tap turns it into the text box, blur turns it back */
 /* ---- B: sticky bottom bar (the admin twin of the public mobile Reservar bar) ---- */
@@ -1179,14 +1202,22 @@ function bggBox() {
 const groupHead = kind => kind === 'pub'
   ? `<div class="ghead ghead-pub"><span class="gico" aria-hidden="true">${ic('eye')}</span><h2 class="gh-t">En la web</h2><span class="gh-s">Lo ven los socios en la ficha</span></div>`
   : `<div class="ghead ghead-int"><span class="gico" aria-hidden="true">${ic('eyeSlash')}</span><h2 class="gh-t">Solo para el club</h2><span class="gh-s">No se muestra en la web</span></div>`;
+/* ================= Final (R8 V2): zones by background =================
+   One continuous page. Everything public sits on the normal ground (título + filas, Portada, Descripción, Datos de BGG);
+   the internal part (En el club, Estado with lifecycle + Guardar) is a full-bleed muted band that runs to the end of the page,
+   captioned "Solo para el club · no se muestra en la web". No tabs, nothing hidden, Guardar is the last control. */
+const PUB_F = ['name', 'band', 'desc'], INT_F = ['shelf', 'units', 'exp'];
+const dirtyOf = fields => fields.some(k => String(E.saved[k]) !== String(E.ed[k])) || (fields === PUB_F && [...E.saved.secs].sort().join() !== [...E.ed.secs].sort().join());
+const pubBody = desk => desk
+  ? `<div class="mast"><div class="pcol">${imageBox()}</div><div class="tcol">${descBox()}${bggBox()}</div></div>`
+  : `${imageBox()}${descBox()}${bggBox()}`;
+const zoneCap = () => `<p class="zone-cap"><span class="gico" aria-hidden="true">${ic('eyeSlash')}</span><span class="zc-t"><b>Solo para el club</b><span class="zc-s"><span class="zc-sep"> · </span>no se muestra en la web</span></span></p>`;
+
 function editBody() {
   const desk = S.vp === 'desk';
   const head = `<div class="thead">${titleField()}${tagsRow()}</div>`;
-  if (desk) return `${editHead()}<section class="grp grp-pub" aria-label="En la web">${groupHead('pub')}${head}
-      <div class="mast"><div class="pcol">${imageBox()}</div><div class="tcol">${descBox()}${bggBox()}</div></div></section>
-    <section class="grp grp-int" aria-label="Solo para el club">${groupHead('int')}<div class="mast int"><div class="pcol">${clubBox()}</div><div class="tcol">${estadoBox()}</div></div></section>`;
-  return `${editHead()}<section class="grp grp-pub" aria-label="En la web">${groupHead('pub')}${head}${imageBox()}${descBox()}${bggBox()}</section>
-    <section class="grp grp-int" aria-label="Solo para el club">${groupHead('int')}${clubBox()}${estadoBox()}</section>`;
+  const inner = desk ? `<div class="mast int"><div class="pcol">${clubBox()}</div><div class="tcol">${estadoBox()}</div></div>` : `${clubBox()}${estadoBox()}`;
+  return `${editHead()}${head}${pubBody(desk)}<section class="zone-int" aria-label="Solo para el club">${zoneCap()}${inner}</section>`;
 }
 
 /* Filas del inicio: the manual sections behind the tags under the title */
@@ -1347,12 +1378,10 @@ function eAct(t) {
 }
 
 const NOTES = `<h3>Sketch 063 · Editor de juego (final)</h3><ul>
-  <li><b>Like the public game page:</b> facts pills with an <b>editable Nivel pill</b> (tinted, or dashed "+ Nivel" when empty) in a soft poster block, then the name edited in place in Bebas (✎), then the section tags + "Editar filas" (a sheet with switches and the 20-game cap), then the description.</li>
-  <li><b>EN EL CLUB</b> (Estante, Unidades, Es una expansión) is a soft block: under the poster on desktop, after the description on phone.</li>
-  <li><b>Read-only BGG data</b> (Año · Diseñadores · Ilustradores · Mecánicas · Temáticas · Comunidad BGG) is a soft block headed "🔒 Datos de BGG · no se editan" with Ver en BGG.</li>
-  <li><b>Bottom bar:</b> status + "Cambios sin guardar / Todo guardado", a lifecycle text button (Publicar · Retirar with an in-sheet confirm · Restaurar) and an outlined Guardar. Every lifecycle change saves pending changes first and offers Deshacer.</li>
-  <li><b>No lines:</b> the page body has no borders or dividers. The only stroke is the Nivel pill's outline.</li>
-  <li><b>Try:</b> switch Estado in the top bar, tap the Nivel pill, clear the name and tap Guardar, Editar filas with <i>tools → Destacados lleno</i>, edit then ‹ Juegos (unsaved-changes sheet), and <i>BGG Falló</i> → Reintentar. Check phone, desktop and dark.</li></ul>`;
+  <li><b>Public part</b> (normal background, mirrors the game page): title ✎, "En el inicio: …" ✎ → Portada (pills with the Nivel pill ✎ + poster) → Descripción ✎ (tap to edit) → Datos de BGG (read-only, collapsed).</li>
+  <li><b>Internal part</b> is a full-width muted band captioned "Solo para el club · no se muestra en la web": En el club (Estante ✎, Unidades, Expansión) → Estado (status · Cambios sin guardar · Publicar / Retirar (confirm) / Restaurar · Guardar). Guardar is always the last control.</li>
+  <li><b>One section anatomy:</b> a 13px/700 label over a soft box, 24px apart. Inside the band, the boxes turn white. No lines anywhere.</li>
+  <li><b>Try:</b> switch Estado in the top bar, tap the Nivel pill (the BGG suggestion is in the sheet), "En el inicio" ✎ with <i>tools → Destacados lleno</i>, edit the description, clear the title and tap Guardar, change something then ‹ Juegos (unsaved-changes sheet), and <i>BGG Falló</i> → Reintentar. Check phone, desktop and dark.</li></ul>`;
 
 /* ---------------- render ---------------- */
 const device = document.getElementById('device');
