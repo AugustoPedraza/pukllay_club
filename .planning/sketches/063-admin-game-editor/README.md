@@ -421,3 +421,19 @@ Verified in headless Chrome, 30 of 30 checks (favicon 404 ignored):
   - Datos de BGG collapsed; lifecycle saves first + Deshacer; the unsaved-changes guard.
 - **Filas wording:** "En el inicio: …" / "No aparece en ninguna fila del inicio". The sheet is "Filas del inicio".
 - **Still open:** the light-mode unchecked switch tint (062); iOS focus-zoom on fields under 16px (061); Deshacer for Publicar needs a draft transition.
+
+## How to verify (headless)
+`verify.js` in this folder is the headless-Chrome check used for the final V2. It runs 30 checks:
+- **Layout:** no overflow in every status, zero lines in the page body, section order, the band holds only club + estado, the band is full-bleed, identical labels.
+- **Flows:** publish → Deshacer, retire confirm, Nivel/Estante sheets, description edit, units validation, leave guard, BGG expand, failed → Reintentar.
+- **Views:** dark and desktop.
+
+```
+python3 -m http.server 8765 &          # from the repo root
+node .planning/sketches/063-admin-game-editor/verify.js
+```
+
+It uses the system Chrome (`channel: 'chrome'`) and finds `playwright-core` in `node_modules` or the npx cache; set `PLAYWRIGHT_CORE` to override.
+Screenshots go to `$SHOTS_DIR` (default `<tmp>/sketch-063-shots`). The exit code is 1 if any check fails.
+
+When refining, update the assertions that encode a rule you change (for example, the order check or the "zero lines" check) instead of deleting them.
