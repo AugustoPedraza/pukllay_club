@@ -2,7 +2,7 @@
 sketch: 063
 name: admin-game-editor
 question: "On /admin/juegos/:id/editar, how do the editable club fields sit next to the read-only BGG facts, and where do Publicar / Retirar / Restaurar live per status so the lifecycle action is clear without looking like a CTA?"
-winner: "R8 V2 + R9 F2 (En el inicio list section) + U2 (1 | 2 | Más units) + R10 D1 (centered labeled divider instead of the grey band): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
+winner: "R8 V2 + R9 F2 (En el inicio list section) + U2 (1 | 2 | Más units) + R10 D1 (centered labeled divider instead of the grey band) + R12 C2 (Agregar a una fila button closing the box) + B3 (Datos de BGG · Solo lectura label): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
 tags: [admin, juegos, editor, form, lifecycle, status, bgg, sections, shelf, bottom-sheet, phase-01.8.1, mobile-first]
 ---
 
@@ -524,11 +524,34 @@ Verified in headless Chrome, 91 of 91 checks. The 7 new R11 checks:
 
 Phone, dark and desktop screenshots were reviewed.
 
+## Round 12: only D1; the En el inicio action and Datos de BGG simplified (2026-09-15)
+Developer: "remove the other dividers, keep only D1. and improve the CTA for 'sumar a otra fila' and Datos BGG (it has too much text that make it harder to understand instead of easy)".
+
+**D1 only:** D0 (band), D2 and D3 and their CSS/JS are removed from `index.html` and `verify.js`; commit `59a187f` is their record.
+
+The top bar has two switches:
+- **En el inicio · acción.** The old "+ Sumar a otra fila ›" row, with a plus *and* a chevron, is gone. All three variants say "Agregar a una fila" or "Editar":
+  - **C1: "Editar" on the label's line.** A text button right-aligned with the box edge, the iOS/Material list-header action pattern. The rows lose their ✎, so the whole list is edited from one place. The label → box gap stays 8px (the button is absolutely positioned with a 44px hit area).
+  - **C2: A button closing the box.** A soft full-width "+ Agregar a una fila" button (40px, page-ground fill) as the box's last element. ✎ stays on manual rows.
+  - **C3: A text button under the box.** "+ Agregar a una fila" sits left, just below the box. ✎ stays on manual rows.
+- **Datos de BGG.** The closed row was a title plus a two-line explanation; now it's **one short line**. "Vienen de BoardGameGeek y se actualizan solos." moved inside the open box, right above "Ver en BoardGameGeek".
+  - **B1: Una línea.** 🔒 "Ver año, autores y mecánicas" ⌄.
+  - **B2: Vista previa.** 🔒 "2018 · Martin Wallace y 2 más" ⌄. Real data instead of a description.
+  - **B3: Candado en la etiqueta.** The label reads "Datos de BGG 🔒 Solo lectura" and the row "Año, autores y mecánicas" ⌄, with no lock in the row.
+
+**Winner: C2 + B3** (developer: "C2 + B3, but it should show some real information the same way a public game has, and show the collapsible"). Round 13 builds that.
+
+Verified in headless Chrome, 80 of 80 checks (the 11 per-divider checks are gone):
+- **D1:** no band, boxes match, two line halves at content width, centered label + note, and the segmented track is visible.
+- **Every CTA variant:** exactly one CTA in its place, with ✎ only where that variant keeps it; a hit area of at least 44×40; it opens Filas del inicio; no overflow or lines. C1 is centered on the label line and aligned to the box edge, and label → box is still 8px.
+- **Every BGG variant:** one short line with no sub line and no ellipsis; read-only said exactly once (lock or label); B2 previews real data; the open body has the facts + the sync note.
+- **Kept:** the R9 flows, the R11 type/rhythm checks and all V2 flows. Dark and desktop for all three pairings.
+
 ## How to verify (headless)
-`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 91 checks:
+`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 80 checks:
 - **Layout:** no overflow in every status, zero lines in the page body, section order, the band holds only club + estado, the band is full-bleed, identical labels.
 - **Flows:** publish → Deshacer, retire confirm, Nivel/Estante sheets, description edit, units validation, leave guard, BGG expand, failed → Reintentar.
-- **Rounds 9–10:** every divider × Estado, divider width and caption, En el inicio rows, the 1 | 2 | Más control, and no "copia" wording.
+- **Rounds 9–12:** D1 divider, En el inicio rows, the 1 | 2 | Más control, no "copia" wording, every En el inicio action and Datos de BGG variant.
 - **Type + rhythm (R11):** real fonts load, 400/600 only, title = public h1, 8px-grid gaps, one-line row meta.
 - **Views:** dark and desktop.
 

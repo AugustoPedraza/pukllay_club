@@ -844,22 +844,10 @@
   /* ================= R8: no-tab separation ================= */
   .r6 .mast + .sec, .r6 .thead + .sec { margin-top: 0; }
   .r6 .thead { margin-bottom: 20px; }
-  .zone-cap { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; color: var(--color-text-muted); }
-  .zone-cap b { color: var(--color-text); font-weight: 600; }
-  .zone-cap .gico { background: var(--color-surface); }
-  /* V2: full-bleed muted band (kept as the D0 reference in Round 10) */
-  .zone-int { margin-top: 40px; }
   .zone-int > .sec + .sec { margin-top: 24px; }
-  .zone-int.band { margin: 40px -16px -32px; padding: 20px 16px 32px; background: color-mix(in srgb, var(--color-text) 5%, var(--color-bg)); border-radius: 20px 20px 0 0; }
-  .zone-int.band .sbox, .zone-int.band .ebar.inline { background: var(--color-bg); }
-  .zone-int.band .sbox.rows .srow:hover { background: var(--color-surface); }
-  :root[data-theme="dark"] .zone-int.band { background: color-mix(in srgb, #000 28%, var(--color-bg)); }
-  .desk .zone-int.band { margin: 40px 0 -48px; padding: 24px 0 48px; border-radius: 0; box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--color-text) 5%, var(--color-bg)); clip-path: inset(0 -100vmax); }
-  :root[data-theme="dark"] .desk .zone-int.band { box-shadow: 0 0 0 100vmax color-mix(in srgb, #000 28%, var(--color-bg)); }
 
-  /* ================= R10: divider instead of the band =================
-     The internal part stays on the page ground with the same surface boxes as the public part; only a divider marks the switch.
-     The line is a 1px background (not a border), content width, one color token for all three. */
+  /* ================= R10 (D1): the internal part is marked by a centered labeled divider =================
+     It stays on the page ground with the same surface boxes as the public part. The line is a 1px background (not a border), content width. */
   .r6 .thead, .r6 .grp-pub .thead { margin-bottom: 24px; }
   .zdiv { display: flex; align-items: center; gap: 12px; margin: 0; }
   .zl { flex: 1; height: 1px; background: var(--color-border); }
@@ -867,19 +855,9 @@
   .zd-t { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--color-text); white-space: nowrap; }
   .zd-t svg { width: 16px; height: 16px; color: var(--color-text-muted); }
   .zd-s { margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted); }
-  /* D1: centered label on the line */
-  .zone-int.d1 { margin-top: 40px; }
-  .d1 .zd-s { text-align: center; margin-bottom: 24px; }
+  .zone-int { margin-top: 40px; }
+  .zone-int .zd-s { text-align: center; margin-bottom: 24px; }
   /* D2: line, then the group header (same anatomy as the R6 group header) */
-  .zone-int.d2 { margin-top: 40px; }
-  .d2 .zdiv { margin-bottom: 24px; }
-  .d2 .ghead { margin-bottom: 16px; }
-  .d2 .gico { background: var(--color-surface); }
-  /* D3: label first, dotted line runs to the edge */
-  .zone-int.d3 { margin-top: 44px; }
-  .d3 .zl { background: repeating-linear-gradient(90deg, var(--color-surface-2) 0 4px, transparent 4px 8px); height: 2px; border-radius: 1px; }
-  .d3 .zd-s { margin-bottom: 20px; padding-left: 22px; }
-  :root[data-theme="dark"] .d3 .zl { background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--color-text) 35%, transparent) 0 4px, transparent 4px 8px); }
 
   /* ================= R9: where the game shows (Filas) + Unidades control ================= */
   /* En el inicio (F2): one row per home row */
@@ -908,17 +886,17 @@
   .stp:disabled { opacity: .35; cursor: default; }
   .stp:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
   .stp-n { min-width: 24px; text-align: center; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .sheet .stp, .zone-int.band .stp { background: var(--color-surface); }
+  .sheet .stp { background: var(--color-surface); }
   .useg { display: inline-flex; gap: 2px; padding: 2px; background: var(--color-surface); border-radius: 10px; flex-shrink: 0; }
   .useg > button, .useg > .ustep { position: relative; min-width: 44px; height: 34px; border: 0; background: none; border-radius: 8px; cursor: pointer;
     font-size: 14px; font-weight: 400; color: var(--color-text); padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; transition: background var(--duration-fast); }
   .useg > button::before { content: ''; position: absolute; inset: -5px 0; }
   .useg > .on { background: var(--color-bg); box-shadow: 0 1px 3px rgba(0,0,0,.14); font-weight: 600; }
   :root[data-theme="dark"] .useg > .on { background: var(--color-surface-2); }
-  .zone-int:not(.band) .useg { background: var(--color-surface-2); }
-  .zone-int:not(.band) .useg > .on { background: var(--color-bg); }
-  :root[data-theme="dark"] .zone-int:not(.band) .useg { background: color-mix(in srgb, #000 30%, var(--color-surface)); }
-  :root[data-theme="dark"] .zone-int:not(.band) .useg > .on { background: var(--color-surface-2); }
+  .zone-int .useg { background: var(--color-surface-2); }
+  .zone-int .useg > .on { background: var(--color-bg); }
+  :root[data-theme="dark"] .zone-int .useg { background: color-mix(in srgb, #000 30%, var(--color-surface)); }
+  :root[data-theme="dark"] .zone-int .useg > .on { background: var(--color-surface-2); }
   .useg > button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
   .useg > .ustep { padding: 0 2px; cursor: default; }
   .ustep .stp { width: 26px; height: 26px; background: none; }
@@ -926,21 +904,50 @@
   .ustep .stp svg { width: 14px; height: 14px; }
   .ustep .stp-n { min-width: 18px; font-size: 14px; }
   .r6 .sbox.rows .srow.urow { min-height: 48px; }
-  .r6 .sbox.rows .srow.static:hover, .zone-int.band .sbox.rows .srow.static:hover { background: none; }
+  .r6 .sbox.rows .srow.static:hover { background: none; }
+
+  /* ================= R12: En el inicio action + Datos de BGG in one line ================= */
+  .filas6 { position: relative; }
+  /* C1: text button on the label's line (iOS/Material list-header action); 44px hit, label→box gap untouched */
+  .polish .sec-act { position: absolute; top: -13px; right: -12px; font-size: 13px; }
+  /* C2: soft full-width button closing the box */
+  .cta2-wrap { padding: 4px 12px 8px; }
+  .cta2 { width: 100%; min-height: 40px; border: 0; border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-primary); font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: background var(--duration-fast), transform var(--duration-fast); }
+  .cta2 svg, .cta3 svg { width: 16px; height: 16px; }
+  .cta2:hover { background: var(--color-surface-2); }
+  .cta2:active { transform: scale(.98); }
+  .cta2:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  :root[data-theme="dark"] .cta2 { color: var(--color-accent-text); background: color-mix(in srgb, #000 22%, var(--color-surface)); }
+  /* C3: text button under the box, aligned with the box's content edge */
+  .polish .cta3 { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 -8px 4px; font-size: 13px; }
+  /* B1–B3: one line */
+  .r6 .bgg-toggle { min-height: 48px; }
+  .r6 .bgg-toggle .gname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bgg-foot { margin: 12px 0 0; font-size: 12px; color: var(--color-text-muted); }
+  .bgg-foot + .bgg-link, .bgg-body > .bgg-link { margin-top: 0; }
+  /* B3: read-only said once, beside the section label */
+  .sec-note { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--color-text-muted); vertical-align: 1px; }
+  .sec-note svg { width: 12px; height: 12px; }
 </style>
 </head>
 <body>
 
 <div id="state-nav">
   <div class="var-nav">
-    <span class="lbl">Sketch 063 · Editor de juego · Ronda 10: separar lo interno</span>
+    <span class="lbl">Sketch 063 · Editor de juego · Ronda 12: acción de filas + Datos de BGG</span>
   </div>
   <div class="var-nav">
-    <span class="lbl">Separador</span>
-    <button class="stab active" data-div="d1">D1 · Línea con rótulo ★</button>
-    <button class="stab" data-div="d2">D2 · Línea + encabezado</button>
-    <button class="stab" data-div="d3">D3 · Rótulo + punteado</button>
-    <button class="stab" data-div="d0">V2 · Banda gris (actual)</button>
+    <span class="lbl">En el inicio · acción</span>
+    <button class="stab active" data-cta="c1">C1 · "Editar" en la etiqueta</button>
+    <button class="stab" data-cta="c2">C2 · Botón al pie de la caja ★</button>
+    <button class="stab" data-cta="c3">C3 · Botón de texto debajo</button>
+  </div>
+  <div class="var-nav">
+    <span class="lbl">Datos de BGG</span>
+    <button class="stab active" data-bggui="b1">B1 · Una línea</button>
+    <button class="stab" data-bggui="b2">B2 · Vista previa</button>
+    <button class="stab" data-bggui="b3">B3 · Candado en la etiqueta ★</button>
   </div>
   <div class="var-nav">
     <span class="lbl">Estado</span>
@@ -1150,7 +1157,7 @@ const ST = {
   retired:   { label: 'Retirado',  sub: 'No se ve en la web',            hint: 'Restaurar' },
 };
 const clone = o => ({ ...o, secs: [...o.secs] });
-const E = { div: 'd1', layout: 'r6', bggOpen: false, descEdit: false, pen: 'chip', status: 'draft', saved: null, ed: null, errs: {}, saving: false, failed: false, retrying: false,
+const E = { cta: 'c1', bggui: 'b1', layout: 'r6', bggOpen: false, descEdit: false, pen: 'chip', status: 'draft', saved: null, ed: null, errs: {}, saving: false, failed: false, retrying: false,
   featFull: false, secErr: null, undo: null, pendingNav: null };
 function seed(st) { E.descEdit = false; E.bggOpen = false; E.status = st; E.saved = clone(SEEDS[st]); E.ed = clone(SEEDS[st]); E.errs = {}; E.secErr = null; E.saving = false; }
 seed('draft');
@@ -1246,17 +1253,19 @@ const filasNote = () => E.status === 'draft' ? 'Es un borrador: aparece en estas
 
 /* En el inicio: a section with one row per home row the game is in (why it's there), + Sumar a otra fila */
 function filasList() {
-  const note = filasNote();
+  const note = filasNote(), c1 = E.cta === 'c1';
   const r = row => {
     const body = `<span class="fslot ${row.manual ? 'man' : ''}" aria-hidden="true">${ic(row.manual === 1 ? 'star' : row.manual ? 'listq' : 'sparkle')}</span>${txt(esc(row.name), whyRow(row), row.hidden)}`;
-    return row.manual ? `<button type="button" class="srow frow9" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="${esc(row.name)}. Editar filas">${body}${pen('pen-row')}</button>`
+    /* C1 edits the whole list from the label, so rows carry no ✎; C2/C3 keep ✎ on manual rows */
+    return row.manual && !c1 ? `<button type="button" class="srow frow9" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="${esc(row.name)}. Editar filas">${body}${pen('pen-row')}</button>`
       : `<div class="srow static frow9">${body}</div>`;
   };
-  return `<div class="sbox rows filas-box fst-${E.status}">${note ? `<p class="fnote">${note}</p>` : ''}${homeRows().map(r).join('')}
-    <button type="button" class="srow frow9 add" data-act="e-secs-sheet" aria-haspopup="dialog"><span class="fslot add" aria-hidden="true">${ic('plus')}</span><span class="gtxt"><span class="gname">Sumar a otra fila</span></span>${ic('chevR', 'chev')}</button></div>`;
+  const foot = E.cta === 'c2' ? `<div class="cta2-wrap"><button type="button" class="cta2" data-act="e-secs-sheet" aria-haspopup="dialog">${ic('plus')}Agregar a una fila</button></div>` : '';
+  const below = E.cta === 'c3' ? `<button type="button" class="tbtn cta3" data-act="e-secs-sheet" aria-haspopup="dialog">${ic('plus')}Agregar a una fila</button>` : '';
+  return `<div class="sbox rows filas-box fst-${E.status}">${note ? `<p class="fnote">${note}</p>` : ''}${homeRows().map(r).join('')}${foot}</div>${below}`;
 }
 
-const filasBox = () => sec('En el inicio', filasList(), 'filas6');
+const filasBox = () => sec('En el inicio', filasList() + (E.cta === 'c1' ? '<button type="button" class="tbtn sec-act" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="Editar filas del inicio">Editar</button>' : ''), 'filas6');
 
 /* ---- Unidades: 1 almost always, rarely more than 2. No free-typed number field. ---- */
 const stepper = (n, min, idp, cls = '') => `<span class="stepper ${cls}" role="group" aria-label="Unidades">
@@ -1291,6 +1300,7 @@ function barHtml() {
 
 /* ================= R6: one section anatomy — label above + soft box, same padding everywhere =================
    Order: título + filas → imagen → En el club → Descripción → Estado (inline, not sticky) → Datos de BGG (plegado, al final). */
+const secH = (labelHtml, name, body, cls = '') => `<section class="sec ${cls}" aria-label="${name}"><h2 class="sec-label">${labelHtml}</h2>${body}</section>`;
 const sec = (label, body, cls = '') => `<section class="sec ${cls}" aria-label="${label}"><h2 class="sec-label">${label}</h2>${body}</section>`;
 function descBox() {
   if (E.descEdit) return sec('Descripción', `<label class="sr" for="ed-desc">Descripción</label><textarea id="ed-desc" class="tin full area desc-in sbox" placeholder="Contá de qué se trata en pocas líneas. La leen los socios en la ficha.">${esc(E.ed.desc)}</textarea>`, 'dfield6');
@@ -1313,19 +1323,23 @@ function bggBox() {
   const body = E.failed ? '<p class="lnote" style="margin:0">Todavía no hay datos de BGG para este juego. Tocá Reintentar arriba.</p>' : `
     <dl class="spec"><div class="srowd"><dt>Año</dt><dd>${BGG.year}</dd></div><div class="fcols">${Object.keys(CREATORS).map(col).join('')}</div></dl>
     <div class="comm"><div class="dt-label">Comunidad BGG</div><div class="comm-row"><span><b>8,6</b>Valoración</span><span><b>${w2(BGG.w)}</b>Peso</span><span><b>#1</b>Ranking</span></div></div>
+    <p class="bgg-foot">Vienen de BoardGameGeek y se actualizan solos.</p>
     <button type="button" class="tbtn bgg-link" data-act="e-bgg">Ver en BoardGameGeek${ic('ext', 'tico')}</button>`;
-  return sec('Datos de BGG', `<div class="sbox bgg6 ${E.bggOpen ? 'open' : ''}">
-    <button type="button" class="srow bgg-toggle" data-act="e-bgg-toggle" aria-expanded="${E.bggOpen}" aria-controls="bgg-body">
-      <span class="lock6" aria-hidden="true">${ic('lock')}</span><span class="gtxt"><span class="gname">Sincronizados con BoardGameGeek</span><span class="gsub">No se editan acá · año, autores, mecánicas y más</span></span>${ic('chevDown', 'chev')}</button>
+  /* R12: the closed row is one short line; "read-only" is said by the lock (B1/B2) or the label (B3), and the longer
+     explanation moves inside the open body, next to the link to BGG */
+  const d = CREATORS.Diseñadores;
+  const line = E.failed ? 'Sin datos todavía' : E.bggui === 'b2' ? `${BGG.year} · ${d[d.length - 1]} y ${d.length - 1} más` : E.bggui === 'b3' ? 'Año, autores y mecánicas' : 'Ver año, autores y mecánicas';
+  const slot = E.bggui === 'b3' ? '' : `<span class="lock6" aria-hidden="true">${ic('lock')}</span>`;
+  const label = E.bggui === 'b3' ? `Datos de BGG<span class="sec-note">${ic('lock')}Solo lectura</span>` : 'Datos de BGG';
+  return secH(label, 'Datos de BGG', `<div class="sbox bgg6 ${E.bggOpen ? 'open' : ''}">
+    <button type="button" class="srow bgg-toggle ${slot ? '' : 'noslot'}" data-act="e-bgg-toggle" aria-expanded="${E.bggOpen}" aria-controls="bgg-body" aria-label="Datos de BGG, solo lectura: ${line}">
+      ${slot}<span class="gtxt"><span class="gname">${line}</span></span>${ic('chevDown', 'chev')}</button>
     ${E.bggOpen ? `<div class="bgg-body" id="bgg-body">${body}</div>` : ''}</div>`, 'bgg6s');
 }
 
 /* Two visibility groups, public first:
    EN LA WEB (members see it): título + filas, Portada, Descripción, Datos de BGG (read-only, collapsed, last of the group)
    SOLO PARA EL CLUB (never public): En el club, Estado (lifecycle + Guardar — always the last thing on the page) */
-const groupHead = kind => kind === 'pub'
-  ? `<div class="ghead ghead-pub"><span class="gico" aria-hidden="true">${ic('eye')}</span><h2 class="gh-t">En la web</h2><span class="gh-s">Lo ven los socios en la ficha</span></div>`
-  : `<div class="ghead ghead-int"><span class="gico" aria-hidden="true">${ic('eyeSlash')}</span><h2 class="gh-t">Solo para el club</h2><span class="gh-s">No se muestra en la web</span></div>`;
 /* ================= Final (R8 V2): zones by background =================
    One continuous page. Everything public sits on the normal ground (título + filas, Portada, Descripción, Datos de BGG);
    the internal part (En el club, Estado with lifecycle + Guardar) is a full-bleed muted band that runs to the end of the page,
@@ -1335,21 +1349,14 @@ const dirtyOf = fields => fields.some(k => String(E.saved[k]) !== String(E.ed[k]
 const pubBody = desk => desk
   ? `<div class="mast"><div class="pcol">${imageBox()}</div><div class="tcol">${descBox()}${filasBox()}${bggBox()}</div></div>`
   : `${imageBox()}${descBox()}${filasBox()}${bggBox()}`;
-const bandCap = () => `<p class="zone-cap"><span class="gico" aria-hidden="true">${ic('eyeSlash')}</span><span class="zc-t"><b>Solo para el club</b><span class="zc-s"><span class="zc-sep"> · </span>no se muestra en la web</span></span></p>`;
 
-/* R10: how the internal part is marked off — D0 is the V2 band, D1–D3 are dividers on the normal ground */
-function zoneCap() {
-  const t = `<span class="zd-t">${ic('eyeSlash')}Solo para el club</span>`;
-  if (E.div === 'd1') return `<div class="zdiv" role="separator" aria-hidden="true"><span class="zl"></span>${t}<span class="zl"></span></div><p class="zd-s">No se muestra en la web</p>`;
-  if (E.div === 'd2') return `<div class="zdiv" role="separator"><span class="zl"></span></div>${groupHead('int')}`;
-  if (E.div === 'd3') return `<div class="zdiv" aria-hidden="true">${t}<span class="zl"></span></div><p class="zd-s">No se muestra en la web</p>`;
-  return bandCap();
-}
+/* R10 (D1): the internal part is marked off by a centered labeled divider */
+const zoneCap = () => `<div class="zdiv" role="separator" aria-hidden="true"><span class="zl"></span><span class="zd-t">${ic('eyeSlash')}Solo para el club</span><span class="zl"></span></div><p class="zd-s">No se muestra en la web</p>`;
 function editBody() {
   const desk = S.vp === 'desk';
   const head = `<div class="thead">${titleField()}</div>`;
   const inner = desk ? `<div class="mast int"><div class="pcol">${clubBox()}</div><div class="tcol">${estadoBox()}</div></div>` : `${clubBox()}${estadoBox()}`;
-  return `${editHead()}${head}${pubBody(desk)}<section class="zone-int ${E.div === 'd0' ? 'band' : E.div}" aria-label="Solo para el club">${zoneCap()}${inner}</section>`;
+  return `${editHead()}${head}${pubBody(desk)}<section class="zone-int" aria-label="Solo para el club">${zoneCap()}${inner}</section>`;
 }
 
 /* Filas del inicio: the manual sections behind the tags under the title */
@@ -1512,9 +1519,9 @@ function eAct(t) {
   }
 }
 
-const NOTES = `<h3>Ronda 10 · separating the internal part without the grey band (top bar)</h3><ul>
-  <li>Built on V2 + R9 (En el inicio list, Unidades 1 | 2 | Más). En el club and Estado now sit on the normal ground with the same boxes as the public part; only a divider marks the switch.</li>
-  <li><b>D1 Línea con rótulo</b>: a centered label on a hairline, "No se muestra en la web" under it. <b>D2 Línea + encabezado</b>: a hairline, then the R6 group header (icon circle + title + note). <b>D3 Rótulo + punteado</b>: label first, a dotted line to the edge. <b>V2 Banda gris</b> is the current band, for comparison.</li></ul>
+const NOTES = `<h3>Ronda 12 · the action in En el inicio + Datos de BGG in one line (top bar)</h3><ul>
+  <li><b>En el inicio · acción</b>: <b>C1</b> puts "Editar" on the label's line and removes the ✎ from rows, so the whole list is edited in one place. <b>C2</b> ends the box with a soft full-width "+ Agregar a una fila" button. <b>C3</b> puts a "+ Agregar a una fila" text button under the box.</li>
+  <li><b>Datos de BGG</b>: the closed row is one line. <b>B1</b> is 🔒 "Ver año, autores y mecánicas". <b>B2</b> is 🔒 a preview of the real data ("2018 · Martin Wallace y 2 más"). <b>B3</b> has no lock in the row; the label says "Datos de BGG 🔒 Solo lectura" and the row reads "Año, autores y mecánicas". In all three, "Vienen de BoardGameGeek y se actualizan solos." moved inside the open box, next to the link.</li></ul>
   <h3>Sketch 063 · Editor de juego (V2 base)</h3><ul>
   <li><b>Public part</b> (normal background, mirrors the game page): title ✎, "En el inicio: …" ✎ → Portada (pills with the Nivel pill ✎ + poster) → Descripción ✎ (tap to edit) → Datos de BGG (read-only, collapsed).</li>
   <li><b>Internal part</b> (V2: a full-width muted band; Round 10: see the Separador switch), captioned "Solo para el club · no se muestra en la web": En el club (Estante ✎, Unidades, Expansión) → Estado (status · Cambios sin guardar · Publicar / Retirar (confirm) / Restaurar · Guardar). Guardar is always the last control.</li>
@@ -1536,7 +1543,8 @@ function render() {
     <div class="toast" id="toast">${ic('check')}<span></span></div>
     <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button></div>`;
   document.querySelectorAll('.stab[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === E.status));
-  document.querySelectorAll('.stab[data-div]').forEach(b => b.classList.toggle('active', b.dataset.div === E.div));
+  document.querySelectorAll('.stab[data-cta]').forEach(b => b.classList.toggle('active', b.dataset.cta === E.cta));
+  document.querySelectorAll('.stab[data-bggui]').forEach(b => b.classList.toggle('active', b.dataset.bggui === E.bggui));
   document.getElementById('notes').innerHTML = NOTES;
 }
 /* Header, tabs and drawer persist; only the page content swaps (LiveView navigate inside one live_session layout). */
@@ -1635,9 +1643,10 @@ function refreshSecs(focusId) {
 function markOn(attr, t) { document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.toggle('on', b === t)); }
 document.addEventListener('click', e => {
   if (suppressClick) { e.stopPropagation(); e.preventDefault(); return; }
-  const t = e.target.closest('[data-status],[data-div],[data-bgg],[data-feat],[data-vp],[data-theme-set],[data-act],[data-nav]');
+  const t = e.target.closest('[data-status],[data-cta],[data-bggui],[data-bgg],[data-feat],[data-vp],[data-theme-set],[data-act],[data-nav]');
   if (!t) return;
-  if (t.dataset.div) { E.div = t.dataset.div; closeAll(); return render(); }
+  if (t.dataset.cta) { E.cta = t.dataset.cta; closeAll(); return render(); }
+  if (t.dataset.bggui) { E.bggui = t.dataset.bggui; closeAll(); return render(); }
   if (t.dataset.status) { seed(t.dataset.status); S.screen = 'editar'; closeAll(); return render(); }
   if (t.dataset.bgg) { E.failed = t.dataset.bgg === 'failed'; markOn('data-bgg', t); return patch(); }
   if (t.dataset.feat) { E.featFull = t.dataset.feat === '1'; E.secErr = null; markOn('data-feat', t); return patch(); }
