@@ -160,5 +160,16 @@ information, never restate the name:
 | Staff (owner) | 3 | 1 invitación pendiente | — |
 
 Web keeps "filas en el inicio" because "Web · 5" means nothing on its own. The duplicate "Destacados y 4 más"
-line was dropped. The number grew to 2rem now that it stands alone. Verified: no clipped text or overflow in either
+line was dropped. Verified: no clipped text or overflow in either
 data state, zero console errors.
+
+## Name/number balance (2026-09-14)
+Developer: "It needs a better balance on the 'what' and its number. The number now is too heavy."
+
+- **Name** (the "what"): 14px muted → **16px / 600, text color**; icon 18 → **20px**, muted.
+- **Number:** 32px / 700 → **22px / 600** (tabular). The name and number now read as a pair (16 : 22) instead of a
+  small label under a headline figure.
+- The note line is unchanged (12px, muted or pending pill).
+
+Verified in light and dark: "Revisar niveles" still fits on one line in a 167px box, no clipped text or overflow, zero
+console errors.
