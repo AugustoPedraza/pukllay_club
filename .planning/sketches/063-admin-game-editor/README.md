@@ -1,0 +1,322 @@
+---
+sketch: 063
+name: admin-game-editor
+question: "On /admin/juegos/:id/editar, how do the editable club fields sit next to the read-only BGG facts, and where do Publicar / Retirar / Restaurar live per status so the lifecycle action is clear without looking like a CTA?"
+winner: "R6 (final, single design): mirror of the public page · EN LA WEB / SOLO PARA EL CLUB groups · one label + soft-box section anatomy · ✎ in a soft circle · compact club rows · inline Estado below the content · Datos de BGG collapsed"
+tags: [admin, juegos, editor, form, lifecycle, status, bgg, sections, shelf, bottom-sheet, phase-01.8.1, mobile-first]
+---
+
+# Sketch 063: Admin Game Editor
+
+## Design Question
+The shipped `GameLive.Form` (`/admin/juegos/:id/editar`) is a stacked daisyUI form: a filled primary "Publicar" beside
+"Guardar cambios", Retirar/Restaurar as loose secondary buttons below the form, a `.modal` confirm, and a `bg-base-200`
+box of BGG facts. This sketch applies the 059–062 decisions and tests one open question:
+**where the lifecycle action lives** for each status (borrador / publicado / retirado).
+
+Real data comes from `form.ex` and `Game.admin_changeset/2`:
+- The changeset casts only name, units, weight_band, is_expansion, description and shelf_id.
+- `section_ids` (manual sections only) are applied after save, and the featured cap raises `:featured_full`.
+- D-04: Publicar saves pending changes, then publishes (`_action=publish`).
+- D-08: Retirar is confirmed first, and Restaurar is `:retired → :published` only.
+- D-03: the failed-enrichment alert has Reintentar.
+- `Vocabulary.implied_weight_band/1` thresholds are used for the Nivel suggestion.
+
+## How to View
+From the repo root: `python3 -m http.server 8765`, then open
+http://127.0.0.1:8765/.planning/sketches/063-admin-game-editor/index.html
+
+- **Top bar:** variant (A/B/C) and **Estado** (Borrador / Publicado / Retirado, which reseeds the game).
+- **Tools (bottom-left):**
+  - theme
+  - phone/desktop
+  - **BGG:** Datos OK / Falló
+  - **Destacados:** Con lugar / Lleno (20)
+
+## Shared by all variants
+- **Head.** A "‹ Juegos" drill-down back row (059 rule), then a 48px thumb, a 22px/700 title and a 12px meta line (year · BGG id).
+  - The title shows the *saved* name. The shipped app only updates `page_title` on save.
+  - Failed enrichment shows an inline error banner under the head, with a Reintentar text button.
+- **DATOS DEL CLUB** holds exactly the six fields the changeset casts, and nothing else looks editable:
+  - **Nombre:** outlined 44px field. Helper line: "Así aparece en la ludoteca. En BGG: “Brass: Birmingham”."
+  - **Nivel:** a row that opens a picker sheet. The row's meta line teaches: "BGG sugiere **Nivel experto** · peso 3,86" or a green "Coincide con BGG".
+    The sheet explains what a level is, gives each band's plain-Spanish description and marks "Sugerido por BGG". "Sin nivel" says it won't appear in any level row.
+  - **Estante:** a row that opens a picker sheet (shelves in walking order + Sin ubicar). A divider, then an "Administrar estantes ›" row links to Estantes.
+    Unplaced shows the pending orange dot + bold "Sin ubicar" (061 status convention).
+  - **Unidades:** a row with a 72px number field.
+  - **Es una expansión:** a switch.
+  - **Descripción en español:** a textarea with "La leen los socios en la ficha del juego."
+- **EN LA WEB:** yes, the editor shows which Web rows the game belongs to.
+  - A status-aware note: a draft says rows apply once published; a retired game says it isn't visible.
+  - Published only: a "Ver en la ludoteca" row (`/juegos/:slug`, external icon).
+  - Every manual section is a **positive switch** row: "Destacados del club · 18 de 20 juegos", or "Oculta en el inicio · 3 juegos" for a hidden row.
+  - The 20-game cap blocks the switch inline: "Destacados del club ya tiene 20 juegos. Quitá uno desde Web para sumar este."
+    The shipped app only raised a flash after the rest of the form had saved.
+  - Automatic rows are explained, not switchable: "Además aparece solo en **Ingenio estratega** (por su nivel) y **Recientemente añadidos**…"
+- **DATOS DE BGG (read-only):** group label + "Ver en BGG ↗" text button, then a lock note: "Vienen de BoardGameGeek y se actualizan solos. No se editan acá."
+  - A key/value list: 12px muted key, 13px value that wraps. No borders, inputs or chevrons, so it never reads as tappable.
+  - Order follows the shipped `.list`: Jugadores, Duración, Edad mínima, Mecánicas, Temáticas, Diseñadores, Ilustradores, Editorial, Valoración, Ranking, Peso.
+  - "Plegados" (tools) folds it behind one disclosure row.
+- **Desktop:** club fields + web on the left, BGG facts as a **sticky 360px right column**. That's the literal answer to "sit next to".
+- **Save:** outlined "Guardar cambios", disabled until something changes, with an accent "Cambios sin guardar" note beside it.
+  - Validation runs on save only: "Poné un nombre." and "Unidades tiene que ser 1 o más." Errors clear as you edit.
+  - Saving shows a spinner, then a "Cambios guardados" snackbar.
+- **Leaving with unsaved changes** (‹ Juegos or any tab) opens the "CAMBIOS SIN GUARDAR" sheet: Guardar y salir / Descartar cambios (danger) / Seguir editando (focused).
+- **Lifecycle, same rules everywhere:**
+  - Publicar and Restaurar act immediately.
+  - Retirar always goes through the in-sheet confirm, with Cancelar focused. The copy names the game and says it can be restored.
+  - Any lifecycle change saves pending valid changes first ("Guardado y publicado") and shows a **Deshacer** snackbar.
+
+## Variants (lifecycle placement only)
+- **A: Fila de estado arriba → hoja.** An ESTADO group directly under the head holds one row: dot tile · **Borrador** / "Nadie lo ve en la web todavía" · muted hint "Publicar" · ›.
+  - The row opens a sheet titled "ESTADO · Borrador": Publicar (the sub line says it also saves your changes) / Cancelar.
+  - Published: "Retirar de la web ›" (danger) steps to the confirm in the same sheet. Retired: Restaurar / Cancelar.
+  - Guardar cambios sits at the end of the club + web groups.
+  - Status is the first thing you read. The action is two taps and never on the page itself.
+- **B: Barra fija abajo.** A 60px bar sits on the tab bar.
+  - Left: status (dot + label) with "Cambios sin guardar / Todo guardado". Right: one lifecycle **text** button (Publicar · red Retirar · Restaurar) + outlined Guardar.
+  - On desktop the bar is sticky at the bottom of the content.
+  - Save and lifecycle are always one tap away from any field, at the cost of 60px more bottom chrome (136px with the tab bar). The red "Retirar" also sits next to Guardar.
+- **C: Al final del formulario.** Status goes in the head's meta line ("Retirado · 2018 · BGG 224517").
+  - An ESTADO group is the very last block, after the BGG data: a static status row + one action row (Publicar with tinted eye tile, Retirar de la web › danger, or Restaurar).
+  - This is the iOS "Eliminar contacto" pattern and the closest to the shipped layout. It's calm, but for a draft the main next step is at the bottom of a long page.
+
+## What to Look For
+- Draft: is it obvious the game isn't live yet and that Publicar is the next step? Compare A (top row), B (always in the bar) and C (meta line + bottom).
+- Published: does Retirar feel safely out of the way (A: sheet, C: bottom) or dangerously close to Guardar (B)?
+- Does the BGG block read as clearly read-only next to the club fields, on phone (stacked below) and desktop (right column)?
+- Nivel's "BGG sugiere…" line: helpful teaching, or noise when staff chose on purpose?
+- EN LA WEB: are switches the right control for section membership? Is the automatic-rows sentence clear to a new staff member?
+- B's two bottom bars on a small phone: acceptable or too much chrome?
+
+## Verification (build pass)
+A scripted headless Chrome run passed 38 of 39 checks. The only failure was a `/favicon.ico` 404 from the static server root, not the sketch. It covered:
+- All 3 variants × 3 statuses: no horizontal overflow at 375px or on desktop.
+- A: dirty name → Publicar from the sheet saves then publishes ("Guardado y publicado"), and Deshacer returns to draft.
+- A: the Retirar confirm step focuses Cancelar, then retires.
+- Validation errors show on save and clear on edit.
+- The leave guard opens with Seguir editando focused, and Descartar lands on Juegos.
+- Band pick shows "Coincide con BGG", shelf pick works, the featured cap blocks the switch, and section switches mark the form dirty.
+- B: the bar sits flush on the tab bar, shows dirty text, runs unit validation and saves. Retirar confirm → Restaurar appears in the bar. The last BGG fact is not covered by the bar.
+- C: the publish sub line reflects dirty state.
+- Failed → Reintentar recovers, and folded facts expand.
+
+Screenshots were reviewed for phone light, phone dark, desktop and the sheets.
+
+Fixed while building:
+- The status row in A spanned both desktop columns. It moved into the left column.
+- Dark mode: the unchecked switch looked "on" (lavender track) → muted track. The number spinner was light → `color-scheme: dark`.
+- Sketch frame: focus/`scrollIntoView` scrolled the `overflow:hidden` device and uncovered off-screen sheets → the frame's scroll is pinned. The real app scrolls the page, so this is sketch-only.
+
+**Still open:** the light-mode unchecked switch (from 062) is also lavender-tinted. Worth checking against daisyUI's `toggle` when implementing.
+
+## Implementation notes
+- Undo for Publicar is new backend work (`status_changeset(%{status: :draft})`), since there's no draft transition today. Undo for Retirar/Restaurar reuses existing functions.
+- Lifecycle actions saving pending changes first extends the shipped Publicar behavior to Retirar/Restaurar, which currently ignore the form.
+- The featured-cap check moves from save-time flash to toggle time. It still needs the server check (D-26) on save.
+- The leave guard needs a `phx-hook` or a server-side dirty flag with an intercepted `navigate`. LiveView has no built-in unsaved-changes guard.
+- On mobile, hide the tab bar (and B's bar) while a field has focus (059 note).
+
+## Round 2: the editor looks like the game's public page (2026-09-15)
+Developer: "Can the form looks closer to how the game is displayed? I think that will give better rythm."
+
+Round 1 was a generic settings form: grouped rows, a key/value table for BGG data, and a 22px Inter title. Now the editor follows
+`CatalogLive.Show` (sketches 032–043, `detail-page-layout.md`): the same order and components, with values copied from
+`assets/css/app.css` (`.pk-facts-row`, `.pk-pill*`, `.pk-poster-panel`, `.pk-fact-col dt`, `.pk-bgg-*`, `.pk-detail-masthead`).
+
+| Public page | Editor |
+|---|---|
+| Facts pills (players · time · level) in the poster panel | Same pills. **Nivel is the editable one:** accent tint with difficulty dots, and dashed "+ Nivel" when empty. It opens the Nivel sheet, with "BGG sugiere Nivel experto · peso 3,86" under the row. |
+| Poster (1:1.05) | Same panel. The phone crops the poster to 16:10 so the title stays near the fold; desktop keeps 1:1.05. Failed BGG shows a dashed "Sin imagen de BGG". |
+| Title, Bebas `text-3xl` | **Name edited in place in the same display type**, with a dashed underline and ✎. It focuses to a solid primary underline. |
+| Section tags (`section_names`, `.pk-pill-tag`) | The same tags, exactly as members see them. "Editar filas" / "Elegir filas" opens the **Filas del inicio** sheet: switches, the 20-game cap error, the automatic-rows sentence and Listo. |
+| Description (justified) | A textarea in the same 15px/1.5 justified text, under a public-style uppercase label. |
+| Reservar (buy-box slot under the poster) | **EN EL CLUB:** Estante ›, Unidades, Es una expansión. These fields are never public. They sit under the poster on desktop and after the description on phone. |
+| Fact grid: Año · Diseñadores · Ilustradores · Mecánicas · Temáticas as outline pills | Identical, but **read-only**, under one line: 🔒 "De BoardGameGeek · se actualiza solo" + Ver en BGG. It has no borders, inputs or chevrons. |
+| Comunidad BGG: 8,6 Valoración · 3,86 Peso · #1 Ranking | Identical. |
+
+- **"Guardar cambios"** follows the last editable block: after EN EL CLUB on phone, and under the description on desktop.
+- **"Ver en la ludoteca ↗"** moved to the back row (published only).
+- **Edad mínima and Editorial** aren't shown, same as the public page. Say so if staff need to check them here.
+- **Lifecycle variants A/B/C are unchanged** and still open. B's bar now reads as the admin twin of the public mobile Reservar bar.
+
+Fixed while building:
+- 062's `.empty` empty-state class clashed with the empty pill/poster: 36px icons and centered padding → renamed `is-empty`.
+- The Nivel pill wrapped to a second line (8–11px over) → dropped the ▾. The tint is the cue, and the 44px hit area is vertical-only so it no longer causes overflow.
+- On desktop the pill spilled past the 20rem panel → wraps like the public desktop row.
+- The sticky poster column slid over the desktop tab row and hid EN EL CLUB mid-scroll → no longer sticky, and tabs sit on `z-index` 19.
+- The editable pill in dark mode read like a read-only one → accent border.
+
+Verified in headless Chrome: 38 of 39 checks pass, and the only failure is the static server's `/favicon.ico` 404. Checks cover:
+- All variants × statuses, with no overflow on phone or desktop.
+- Pills fit on one line on phone for every level, and stay inside the panel on desktop.
+- The sections sheet: the cap blocks the switch, and switching a row on shows its tag under the title and marks the form dirty.
+- The BGG block has no controls apart from Ver en BGG.
+- Publish, retire, restore and undo; the leave guard; validation.
+
+Screenshots were reviewed for phone light, phone dark, desktop and the sheets.
+
+## Round 3: B picked, fewer lines (2026-09-15)
+Developer: "B feels better, but still I found the form complex full of lines and dividers."
+
+**Lifecycle placement: B (Barra fija abajo) ★ picked.** It's now the default tab. A and C stay in the file for comparison.
+
+Round 2 had 25 bordered elements in the page body: the poster panel border and shadow, the title's dashed underline, the textarea and number strokes,
+EN EL CLUB's group borders and row dividers, the divider above the BGG block, outline pills, and the bar's top border. Round 3 compares two ways to remove them
+(top bar → "Ronda 3 · menos líneas"; R2 is still there):
+
+- **B1: Sin líneas.** No strokes or dividers. Whitespace and the public-style uppercase labels (DESCRIPCIÓN, EN EL CLUB, AÑO…) separate the groups.
+  - The poster sits bare under the pills (proximity only, the sketch 037 principle).
+  - The title shows no underline until hover or focus (✎ stays as the cue).
+  - The description and Unidades become filled fields that get a primary stroke only on focus.
+  - EN EL CLUB rows are separated by spacing, and the BGG pills are filled instead of outlined.
+  - The bottom bar lifts with a shadow instead of a border.
+- **B2: Bloques suaves.** Same as B1, but groups become soft tinted blocks with no strokes: the poster panel, EN EL CLUB (rows inside, no dividers) and the BGG block. The pills inside the blocks are white.
+
+Measured: bordered elements in the page body went 25 → 1 in both versions. The one left is the Nivel pill's accent outline, which is kept on purpose as the edit cue.
+No overflow on phone or desktop, light or dark, and zero JS errors. The existing test script still passes.
+
+Copy: the read-only line is shortened to "Datos de BGG · no se editan" so it stays on one line on phone.
+
+## Final design: B + B2, other variants removed (2026-09-15)
+Developer: "B2 feels better. Remove the another variants and let me check again."
+
+`index.html` now holds only one design. A, C, R2 and B1 were never committed, so the rounds above are their only record. The top bar switches Estado only.
+- **Layout:** the Round 2 mirror of the public game page.
+- **Lifecycle:** B's bottom bar (status + "Cambios sin guardar / Todo guardado" + Publicar · Retirar with an in-sheet confirm · Restaurar + outlined Guardar).
+- **Surfaces:** B2's soft blocks. The poster panel, EN EL CLUB and the BGG data are tinted `surface` blocks with no strokes. Fields are filled and get an outline only on focus.
+  - The failed-BGG banner is now fill-only too.
+  - The only stroke left in the page body is the Nivel pill's accent outline.
+
+Cleanup while removing variants:
+- The unprefixed final CSS lost to earlier Round 2 rules (same specificity, earlier in the file) and brought 4–5 strokes back → moved the block to the end of the stylesheet.
+- Dead code for the A status row/sheet, C's Estado group and the inline save row was deleted.
+
+Verified in headless Chrome with a fresh test script, 32 of 32 checks passing (favicon 404 ignored):
+- Every status: no overflow on phone or desktop, ≤1 stroke in the body, the right lifecycle button in the bar.
+- Publicar saves then publishes → Deshacer. The Retirar confirm focuses Cancelar → Restaurar.
+- Validation; the leave guard → Juegos (no bar there).
+- The Nivel/Estante pickers; the sections sheet cap and the tag under the title.
+- Failed → Reintentar; the bar never covers the BGG block; zero JS errors.
+
+Screenshots were reviewed for phone light, phone dark, desktop and the failed state.
+
+## Round 4: title first, BGG suggestion in the sheet, one pencil rule (2026-09-15)
+Developer:
+- "The title first, then bellow the image block."
+- "What the BGG suggest as weight is inside the bottom sheet, not on the block."
+- "I like the pencil icon as affordance… Should that be consistent. Maybe the pencil can be polished to improve its balance."
+
+- **Order:** ‹ Juegos → **title + section tags** → image block (pills + poster) → description → EN EL CLUB → BGG data. On desktop the title and tags span the full width above the two columns.
+- **BGG weight suggestion** is removed from the block. It lives only in the Nivel sheet ("El peso en BGG (3,86) sugiere **Nivel experto**" + "Sugerido por BGG" on that option). The Nivel pill is now a plain pill like its neighbours, and the pencil is its only cue.
+- **Pencil rule (answer: yes, consistent):** ✎ marks every value shown the way members see it that turns editable on tap.
+  - **Título:** the input sizes to its text through an inline-grid mirror, so ✎ follows the name instead of parking at the far edge. ✎ hides while typing.
+  - **Nivel pill:** ✎ inside the pill.
+  - **Filas:** the whole tag line is the button, with ✎ after the tags ("Sin filas elegidas ✎" when empty). This replaces the "Editar filas" text button.
+  - **Descripción:** now reads like the public justified paragraph, with ✎ after the last word. Tap it → filled text box, blur → paragraph again.
+  - **Estante:** ✎ replaces the chevron.
+  - **Real controls get no pencil** (the Unidades number, the Expansión switch): the control is already the affordance, and a ✎ there would be noise.
+- **Pencil polish.** The 24px outline pencil read thin and floated at the field edge. It's now the heroicons 16 *solid* pencil, in accent-text color, sized to the text it follows (title 16px, rows 13px, pill 10px). Two treatments to compare (top bar → "Lápiz"):
+  - **P1: Glifo:** the bare solid glyph.
+  - **P2: Círculo suave:** the same glyph in a soft accent circle (28px title, 22px rows). The pill keeps the bare glyph, because a circle inside a pill overflowed the row and looked nested.
+
+Fixed while building: with ✎ inside it, the Nivel pill overflowed the phone pill row by 12–14px ("Descubre el hobby" / "Ingenio estratega") → phone panel padding 12px, pill gap 4px, Nivel pill padding 7–8px. Measured: every level fits.
+
+Verified in headless Chrome, 39 of 39 checks (favicon 404 ignored). On top of the Round 3 checks:
+- The title block sits above the image block, and the title pencil follows the name.
+- No BGG hint on the block.
+- Tap description → textarea focused; blur → paragraph with the edit, dirty.
+- ✎ present on title, Nivel, filas, descripción and estante, with no chevron on Estante.
+- P2 has no overflow and its pills fit.
+
+Screenshots were reviewed for P1/P2 phone, desktop and dark.
+
+## Round 5: EN EL CLUB lighter (2026-09-15)
+Developer: "En el club block and its content looks big breaking the balance."
+
+The Round 4 block (180px on phone) used full settings rows: 15px labels, a 72×44px white number box and a 44×26px switch. It was visually heavier than
+the description above and the BGG block below. Top bar → "Ronda 5 · En el club":
+- **Actual:** Round 4 (180px).
+- **C1: Como la ficha:** the BGG block's anatomy, so the two soft blocks read as a pair (159px).
+  - Small uppercase labels over plain 15px values.
+  - ESTANTE spans the full width: "Estante B — estrategia ✎", tap for the sheet.
+  - UNIDADES and EXPANSIÓN sit side by side. Unidades is a compact − 1 + stepper: 26px round buttons with a 44px hit area, "−" disabled at 1, and the number is still typeable.
+  - Expansión is a small 36×22 switch with a "Sí/No" label.
+- **C2: Filas compactas:** the same three rows at 40px, 14px labels, a 52×30 number field and the small switch (152px).
+
+Verified: 44 of 44 checks (favicon ignored).
+- The C1 stepper + → 3 marks the form dirty, and − stops at 1 (disabled).
+- The C1 switch shows "Sí".
+- No overflow in any of the three options.
+- Screenshots for C1 and C2 on phone, C1 in dark.
+
+## Round 6: P2 + C2 picked; one section anatomy, inline Estado, BGG collapsed (2026-09-15)
+Developer:
+- "P2 and C2. But the field label should improve its balance to be noticed. Same for boxes. Must to enforce consistency to keep rhtym."
+- "Since bgg data is 'sync' externally and can't be 'edited' should be collapsed and the beginning?"
+- "Also the 'stycky' at bottom 'state' could be below the description, leavning the collapsed bgg data at the very bottom."
+- "Remove the rest of variants and show that as a new variant."
+
+**Removed:** P1 (bare glyph), C1 (fact-grid club block) and the Round 4 "Actual" club rows. The top bar has two tabs:
+- **R5 (baseline):** the P2 pencil in a soft circle, C2 compact club rows, the sticky bottom bar. Round 4 order.
+- **R6 (new, default):**
+  - **One section anatomy, enforced:** every section is a **label (13px / 700, full text color) above a soft box** (surface fill, radius-lg, 12/16px padding; row boxes 4px + 16px rows), with **24px between every section**. It applies to Portada, En el club, Descripción, Estado and Datos de BGG. Verified by computed style: the 5 labels are identical, the 5 boxes are identical, and every gap is 24px.
+    - Round 5's 12px uppercase muted labels were too quiet.
+    - The labels inside the BGG box (Año, Diseñadores…) keep the public small-caps `dt` style, because they label values, not sections.
+  - **Order (phone):** título + filas → Portada → **En el club** → Descripción → **Estado** → **Datos de BGG**.
+    - En el club moved above the description so every editable field comes before Guardar.
+    - Desktop: the Portada column on the left; En el club, Descripción and Estado on the right; Datos de BGG full width below.
+  - **Estado inline:** the former sticky bar content (status · Cambios sin guardar / Todo guardado · Publicar / Retirar / Restaurar · Guardar) sits in its own box right below the description. There's no sticky chrome, so only the tab bar sits at the bottom.
+  - **Datos de BGG collapsed at the very bottom:** one disclosure row (🔒 "Sincronizados con BoardGameGeek · No se editan acá · año, autores, mecánicas y más" ⌄) expands to the fact grid, Comunidad BGG and "Ver en BoardGameGeek ↗".
+    - The developer asked "at the beginning?" and then placed it at the very bottom. Bottom is what's built: it's reference data you rarely check while editing.
+  - The description sits in its box as the public paragraph with ✎ (tap → textarea in the same box). The club rows have no dividers.
+
+Trade-off to watch: with Estado no longer sticky, editing the title at the top means scrolling down to Guardar. The unsaved-changes guard on leaving still catches forgotten saves.
+
+Verified in headless Chrome, 26 of 26 checks (favicon 404 ignored):
+- Only the R5/R6 switches exist, and R6 has no sticky bar.
+- The order holds in all 3 statuses, with no overflow.
+- Labels, boxes and gaps are identical (computed), and the club rows have no dividers.
+- BGG is collapsed by default and expands to 4 fact columns.
+- The inline Estado reflects dirty state, and publish saves, then publishes. The retire confirm focuses Cancelar.
+- Description box edit and units validation.
+- The BGG suggestion appears only in the Nivel sheet.
+- Failed state; dark; desktop with no overflow; R5 baseline intact.
+
+## Winner: R6, grouped by visibility (2026-09-15)
+Developer: "R6 is better. Remove the rest. Be sure to have the 'sections' correctly into the form: all what is public and 'private/internal' together."
+
+`index.html` now holds only R6. The R5 baseline and its dead helpers were removed, and no variant switches are left (the top bar switches Estado only). Sections are grouped by who sees them:
+
+- **EN LA WEB** (👁 "Lo ven los socios en la ficha"): título + filas → Portada → Descripción → Datos de BGG (read-only, collapsed, last in the group).
+- **SOLO PARA EL CLUB** (eye-slash icon, "No se muestra en la web"): En el club → Estado. Estado, with the lifecycle action and Guardar, is always the last thing on the page.
+
+Changes from Round 6:
+- Datos de BGG moved into the public group because members see that data on the game page. Round 6 had it at the very bottom of the page; it's now at the end of its group.
+- Estado moved into the internal group, still after every editable field.
+
+Group header: a 28px tinted icon circle, a 15px/700 title and a 12px muted explanation on one line. That's one step above the 13px/700 section labels, with 40px before the internal group and 24px between sections inside a group.
+Desktop: public group = full-width title, Portada on the left, Descripción + Datos de BGG on the right. Internal group = En el club on the left, Estado on the right.
+
+Verified in headless Chrome, 29 of 29 checks (favicon 404 ignored):
+- Single design; order and group membership hold in all 3 statuses.
+- Section labels and boxes are identical (computed); 24px gaps inside groups.
+- No sticky bar; BGG collapses and expands.
+- Inline Estado dirty state, publish, retire confirm; description box edit; units validation; the BGG suggestion only in the Nivel sheet.
+- Failed state; dark; on desktop the internal group sits below the public group; no overflow.
+
+### Carry forward to the gap-closure plan (GameLive.Form)
+- **Mirror `CatalogLive.Show`:** reuse its pill / poster / fact-grid components. Don't style a separate form.
+- **Visibility groups:** EN LA WEB first, SOLO PARA EL CLUB second. Inside each group, a section = a 13px/700 label over a `surface` box (radius-lg, 12/16px padding). No borders or dividers in the page body.
+- **✎ rule:** a soft-circle solid pencil on every value shown the way members see it (title, Nivel pill, filas, descripción, estante). Real controls (Unidades number, Expansión switch) get none.
+- **Editing in place:**
+  - The title is edited in place in display type; the input sizes to its text.
+  - The description is a paragraph that turns into a textarea on tap.
+  - Nivel, Estante and filas open 059 bottom sheets. The BGG weight suggestion lives only in the Nivel sheet.
+- **Estado box:** status + "Cambios sin guardar / Todo guardado" + the lifecycle text button (Publicar / Retirar → in-sheet confirm / Restaurar) + outlined Guardar. Every lifecycle change saves pending changes first and offers Deshacer.
+- **Datos de BGG:** read-only, collapsed disclosure: 🔒 "Sincronizados con BoardGameGeek".
+- **Unsaved-changes guard** on leaving: needs a hook, since LiveView has none built in.
+- **Still open:**
+  - The light-mode unchecked switch tint (from 062).
+  - iOS focus-zoom on fields under 16px (061 note).
+  - Deshacer for Publicar needs a draft transition.
