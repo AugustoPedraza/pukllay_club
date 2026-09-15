@@ -2,7 +2,7 @@
 sketch: 063
 name: admin-game-editor
 question: "On /admin/juegos/:id/editar, how do the editable club fields sit next to the read-only BGG facts, and where do Publicar / Retirar / Restaurar live per status so the lifecycle action is clear without looking like a CTA?"
-winner: "R8 V2 + R9 F2 (En el inicio list section) + U2 (1 | 2 | Más units) + R10 D1 (centered labeled divider instead of the grey band) + R12 C2 (Agregar a una fila button closing the box) + B3 (Datos de BGG · Solo lectura label): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
+winner: "R8 V2 + R9 F2 (En el inicio list section) + U2 (1 | 2 | Más units) + R10 D1 (centered labeled divider instead of the grey band) + R12 C2 (Agregar a una fila button closing the box) + B3 (Datos de BGG · Solo lectura label) + R13 (BGG box previews real facts like the public page, Ver más / Ver menos): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
 tags: [admin, juegos, editor, form, lifecycle, status, bgg, sections, shelf, bottom-sheet, phase-01.8.1, mobile-first]
 ---
 
@@ -547,11 +547,33 @@ Verified in headless Chrome, 80 of 80 checks (the 11 per-divider checks are gone
 - **Every BGG variant:** one short line with no sub line and no ellipsis; read-only said exactly once (lock or label); B2 previews real data; the open body has the facts + the sync note.
 - **Kept:** the R9 flows, the R11 type/rhythm checks and all V2 flows. Dark and desktop for all three pairings.
 
+## Round 13: Datos de BGG shows real data, with a collapse (2026-09-15)
+Built on C2 + B3 (committed `d11f952`). C1, C3, B1 and B2 and both switches are removed; the top bar switches Estado only again.
+
+- **En el inicio** ends with the soft full-width "+ Agregar a una fila" button (C2). ✎ stays on manual rows.
+- **Datos de BGG:**
+  - **Label:** "Datos de BGG 🔒 Solo lectura" (B3), the only place read-only is said.
+  - **Closed:** the box shows real data **the way the public game page does** (`CatalogLive.Show`: Año row, then the fact grid's pill columns), limited to the grid's first row. Phone: Año + Diseñadores. Desktop: Año + Diseñadores | Ilustradores, so the 2-column grid isn't half empty.
+  - **Toggle:** "Ver más ⌄" at the bottom of the box, reusing the public description's "Ver más / Ver menos" wording. It's a full-width 44px text button with `aria-expanded`/`aria-controls`, and focus stays on it after toggling.
+  - **Open:** every public fact (Año, Diseñadores, Ilustradores, Mecánicas, Temáticas), Comunidad BGG, "Vienen de BoardGameGeek y se actualizan solos." and "Ver en BoardGameGeek ↗", then "Ver menos ⌃".
+  - **BGG failed:** no toggle, just "Todavía no hay datos de BGG para este juego. Tocá Reintentar arriba."
+
+Implementation note: this is the public page's fact markup (`pk-spec-list`, `pk-fact-cols`, `creator_pills`, `GameChips.chip_row`, the Comunidad BGG block) rendered unlinked inside the admin box. The "Ver más" state is a client-only toggle (`JS.toggle` or a LiveView assign) that limits the grid to its first row.
+
+Verified in headless Chrome, 60 of 60 checks. Per-variant checks are replaced by the checks for the single design:
+- **C2:** closes the box, is ≥ 40px and opens Filas del inicio.
+- **B3 label.**
+- **Closed:** exactly Año 2018 + 3 Diseñadores pills; "Ver más" at the bottom, `aria-expanded=false`, 44px.
+- **Open:** all public facts + Comunidad + sync note + link, "Ver menos", focus kept; no overflow or lines; folds back.
+- **Failed:** no toggle.
+- **Desktop:** the closed preview fills the first grid row; open uses the 2-column grid.
+- **Kept:** the R9–R11 checks and all V2 flows. Dark checked.
+
 ## How to verify (headless)
-`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 80 checks:
+`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 60 checks:
 - **Layout:** no overflow in every status, zero lines in the page body, section order, the band holds only club + estado, the band is full-bleed, identical labels.
 - **Flows:** publish → Deshacer, retire confirm, Nivel/Estante sheets, description edit, units validation, leave guard, BGG expand, failed → Reintentar.
-- **Rounds 9–12:** D1 divider, En el inicio rows, the 1 | 2 | Más control, no "copia" wording, every En el inicio action and Datos de BGG variant.
+- **Rounds 9–12:** D1 divider, En el inicio rows, the 1 | 2 | Más control, no "copia" wording, the C2 Agregar button, and the Datos de BGG preview / Ver más.
 - **Type + rhythm (R11):** real fonts load, 400/600 only, title = public h1, 8px-grid gaps, one-line row meta.
 - **Views:** dark and desktop.
 

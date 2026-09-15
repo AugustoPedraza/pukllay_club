@@ -1,11 +1,11 @@
-/* Headless-Chrome check for sketch 063 (V2 + R9 F2/U2 + R10 D1 + R11 type + Ronda 12 CTA/BGG variants). Asserts layout rules from README "Winner: R8 V2",
-   "Round 9"–"Round 12", and exercises the editor flows.
+/* Headless-Chrome check for sketch 063 (V2 + R9 F2/U2 + R10 D1 + R11 type + R12 C2/B3 + Ronda 13 BGG preview). Asserts layout rules from README "Winner: R8 V2",
+   "Round 9"–"Round 13", and exercises the editor flows.
    Run from the repo root:
      python3 -m http.server 8765 &            # serves the sketch (fonts/logo load via relative paths)
      node .planning/sketches/063-admin-game-editor/verify.js
    Env: PLAYWRIGHT_CORE=/path/to/node_modules/playwright-core (auto-detected from node_modules or the npx cache otherwise)
         SKETCH_URL (default http://127.0.0.1:8765/.planning/sketches/063-admin-game-editor/index.html)
-        SHOTS_DIR  (default <os tmp>/sketch-063-shots) — screenshots for a visual pass (phone per CTA/BGG variant, dark, failed, desktop)
+        SHOTS_DIR  (default <os tmp>/sketch-063-shots) — screenshots for a visual pass (phone En el inicio + BGG closed/open, dark, failed, desktop)
    Uses the system Chrome (channel: 'chrome'); no browser download needed. Prints PASS/FAIL per check; the /favicon.ico 404 is ignored. */
 const fs = require('fs'), path = require('path'), os = require('os');
 function loadPlaywright() {
@@ -19,7 +19,6 @@ const { chromium } = loadPlaywright();
 const URL = process.env.SKETCH_URL || 'http://127.0.0.1:8765/.planning/sketches/063-admin-game-editor/index.html';
 const OUT = process.env.SHOTS_DIR || path.join(os.tmpdir(), 'sketch-063-shots'); fs.mkdirSync(OUT, { recursive: true });
 const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
-const CTAS = ['c1', 'c2', 'c3'], BGGS = ['b1', 'b2', 'b3'];
 (async () => {
   const b = await chromium.launch({ channel: 'chrome', headless: true });
   const p = await b.newPage({ viewport: { width: 1300, height: 1000 } });
@@ -36,8 +35,8 @@ const CTAS = ['c1', 'c2', 'c3'], BGGS = ['b1', 'b2', 'b3'];
   const noCopias = () => J(() => !/copia/i.test(document.getElementById('device').innerText));
   const units = () => J(() => +E.ed.units);
 
-  ok(await J(() => !document.querySelector('[data-v8],[data-nav7],[data-layout],[data-pen],[data-club],#intstrip,.v1-side,#segwrap,#ed-units,[data-filas],[data-units],.mh-list,.pk-pill-auto,.thead .tags-row,#u-open,[data-div],.zone-int.band,.zone-cap,.ghead')), 'no leftovers (earlier rounds, F1/F3, U1/U3, D0/D2/D3)');
-  ok(await J(() => document.querySelectorAll('.stab[data-cta]').length === 3 && document.querySelectorAll('.stab[data-bggui]').length === 3 && E.cta === 'c1' && E.bggui === 'b1'), 'R12 switches: 3 CTA × 3 BGG, C1/B1 default');
+  ok(await J(() => !document.querySelector('[data-v8],[data-nav7],[data-layout],[data-pen],[data-club],#intstrip,.v1-side,#segwrap,#ed-units,[data-filas],[data-units],.mh-list,.pk-pill-auto,.thead .tags-row,#u-open,[data-div],.zone-int.band,.zone-cap,.ghead,[data-cta],[data-bggui],.sec-act,.cta3,.bgg-toggle,.lock6')), 'no leftovers (earlier rounds, F1/F3, U1/U3, D0/D2/D3, C1/C3, B1/B2)');
+  ok(await J(() => document.querySelectorAll('#state-nav .var-nav').length === 2), 'single design: the top bar switches Estado only');
 
   /* layout per status (D1 divider is the only one) */
   for (const st of ['draft', 'published', 'retired']) {
@@ -54,35 +53,27 @@ const CTAS = ['c1', 'c2', 'c3'], BGGS = ['b1', 'b2', 'b3'];
   ok(await J(() => { const u = document.querySelector('.useg'), o = u.querySelector('.on'); return getComputedStyle(u).backgroundColor !== getComputedStyle(u.closest('.sbox')).backgroundColor && getComputedStyle(o).backgroundColor !== getComputedStyle(u).backgroundColor; }), 'Unidades segmented track visible on its box');
   ok(await J(() => [...document.querySelectorAll('.sec-label')].map(l => getComputedStyle(l).font).every((f, i, a) => f === a[0])), 'section labels identical');
 
-  /* R12: En el inicio action variants */
+  /* R12 C2: Agregar a una fila closes the En el inicio box */
   await click('[data-status="published"]');
-  for (const c of CTAS) {
-    await click(`[data-cta="${c}"]`);
-    const shape = await J(() => ({ secAct: document.querySelectorAll('.filas6 .sec-act').length, cta2: document.querySelectorAll('.filas6 .sbox .cta2').length, cta3: document.querySelectorAll('.filas6 > .cta3').length,
-      rowPens: document.querySelectorAll('.filas6 .frow9 .pen').length, oldRow: document.querySelectorAll('.frow9.add').length, text: document.querySelector('.filas6').textContent }));
-    ok(shape.oldRow === 0 && !/Sumar a otra fila/.test(shape.text) && (c === 'c1' ? shape.secAct === 1 && shape.rowPens === 0 : c === 'c2' ? shape.cta2 === 1 && shape.rowPens === 1 : shape.cta3 === 1 && shape.rowPens === 1), `${c}: one CTA in its place (C1 label action, no row ✎; C2/C3 keep ✎ on manual rows)`);
-    const sel = c === 'c1' ? '.filas6 .sec-act' : c === 'c2' ? '.filas6 .cta2' : '.filas6 .cta3';
-    ok(await J(sel => { const r = document.querySelector(sel).getBoundingClientRect(); return r.height >= 40 && r.width >= 44; }, sel), `${c}: CTA hit area ≥ 44×40`);
-    if (c === 'c1') ok(await J(() => { const a = document.querySelector('.filas6 .sec-act').getBoundingClientRect(), l = document.querySelector('.filas6 .sec-label').getBoundingClientRect(), box = document.querySelector('.filas6 .sbox').getBoundingClientRect();
-      return Math.abs((a.top + a.bottom) / 2 - (l.top + l.bottom) / 2) <= 2 && Math.abs(a.right - 12 - box.right) <= 1; }), 'c1: Editar centered on the label line, text aligned to the box edge');
-    ok(!(await overflow()) && (await lines()) === 0, `${c}: no overflow, no lines`);
-    await click(sel); ok(await J(() => /Filas del inicio/.test(document.querySelector('#sheet-act.open')?.textContent || '')), `${c}: CTA opens Filas del inicio`); await click('#sheet-act [data-act="e-close"]');
-    await scrollTo('.filas6', 60); await shot(`${c}-phone`);
-  }
-  ok(await J(() => { E.cta = 'c1'; render(); return true; }) && await J(() => { const s = document.querySelector('.filas6'); return Math.round(s.querySelector('.sbox').getBoundingClientRect().top - s.querySelector('.sec-label').getBoundingClientRect().bottom) === 8; }), 'c1: label → box still 8px');
+  ok(await J(() => { const b = document.querySelector('.filas6 .sbox .cta2-wrap:last-child .cta2'), r = b?.getBoundingClientRect();
+    return !!b && r.height >= 40 && document.querySelectorAll('.filas6 .frow9 .pen').length === 1 && !/Sumar a otra fila/.test(document.querySelector('.filas6').textContent); }), 'C2: "+ Agregar a una fila" closes the box (≥40px); ✎ only on the manual row');
+  await click('.filas6 .cta2'); ok(await J(() => /Filas del inicio/.test(document.querySelector('#sheet-act.open')?.textContent || '')), 'C2: opens Filas del inicio'); await click('#sheet-act [data-act="e-close"]');
+  await scrollTo('.filas6', 60); await shot('filas-phone');
 
-  /* R12: Datos de BGG variants */
-  for (const g of BGGS) {
-    await click(`[data-bggui="${g}"]`); await click('[data-status="published"]');
-    ok(await J(() => { const t = document.querySelector('.bgg-toggle'), n = t.querySelector('.gname'); return !t.querySelector('.gsub') && n.getClientRects().length === 1 && n.scrollWidth <= n.clientWidth + 1 && t.getBoundingClientRect().height <= 48 && n.textContent.length <= 32; }), `${g}: closed row is one short line (no sub line, no ellipsis)`);
-    ok(await J(g => { const lock = !!document.querySelector('.bgg-toggle .lock6'), note = document.querySelector('.bgg6s .sec-label .sec-note'); return g === 'b3' ? !lock && /Solo lectura/.test(note?.textContent || '') : lock && !note; }, g), `${g}: read-only said once (${g === 'b3' ? 'label' : 'lock in the row'})`);
-    ok(await J(g => g !== 'b2' || /^2018 · Martin Wallace y 2 más$/.test(document.querySelector('.bgg-toggle .gname').textContent), g), `${g}: text ${g === 'b2' ? 'previews real data' : 'names what opens'}`);
-    await scrollTo('.bgg6s', 80); await shot(`${g}-phone`);
-    await click('[data-act="e-bgg-toggle"]');
-    ok(await J(() => /Vienen de BoardGameGeek y se actualizan solos/.test(document.querySelector('.bgg-body .bgg-foot')?.textContent || '') && document.querySelectorAll('.fcol').length === 4), `${g}: open body has facts + the sync note next to the link`);
-    await scrollTo('.bgg6s', 80); await shot(`${g}-open`); await click('[data-act="e-bgg-toggle"]');
-  }
-  await click('[data-bggui="b1"]');
+  /* R13: Datos de BGG — B3 label + the public page's fact layout, preview + Ver más / Ver menos */
+  ok(await J(() => /^Datos de BGG\s*Solo lectura$/.test(document.querySelector('.bgg6s .sec-label').textContent.trim()) && !!document.querySelector('.bgg6s .sec-label .sec-note svg')), 'B3: label "Datos de BGG 🔒 Solo lectura" (read-only said once)');
+  ok(await J(() => { const b = document.querySelector('.bgg6s .sbox'); const dts = [...b.querySelectorAll('dt')].map(d => d.textContent);
+    return dts.join('|') === 'Año|Diseñadores' && /2018/.test(b.querySelector('.srowd dd').textContent) && b.querySelectorAll('.fcol .pk-pill-outline').length === 3 && !b.querySelector('.comm,.bgg-link,.bgg-foot'); }), 'closed: real data like the public page — Año 2018 + Diseñadores as 3 pills, nothing else');
+  ok(await J(() => { const m = document.querySelector('.bgg-more'); return m.getAttribute('aria-expanded') === 'false' && /^Ver más$/.test(m.textContent.trim()) && m.getBoundingClientRect().height >= 44 && m === m.parentElement.lastElementChild; }), 'closed: "Ver más" disclosure at the bottom of the box (aria-expanded=false, 44px)');
+  await scrollTo('.bgg6s', 60); await shot('bgg-closed');
+  await click('.bgg-more');
+  ok(await J(() => { const b = document.querySelector('.bgg6s .sbox'); return [...b.querySelectorAll('dt')].map(d => d.textContent).join('|') === 'Año|Diseñadores|Ilustradores|Mecánicas|Temáticas'
+    && /Comunidad BGG/.test(b.textContent) && /Vienen de BoardGameGeek y se actualizan solos/.test(b.textContent) && !!b.querySelector('.bgg-link') && document.querySelector('.bgg-more').getAttribute('aria-expanded') === 'true' && /^Ver menos$/.test(document.querySelector('.bgg-more').textContent.trim()) && document.activeElement.classList.contains('bgg-more'); }),
+    'open: every public fact + Comunidad BGG + sync note + link, "Ver menos", focus stays on the toggle');
+  ok(!(await overflow()) && (await lines()) === 0, 'open: no overflow, no lines');
+  await scrollTo('.bgg6s', 60); await shot('bgg-open');
+  await click('.bgg-more'); ok(await J(() => document.querySelectorAll('.bgg6s dt').length === 2), 'Ver menos folds back to the preview');
+  await click('[data-bgg="failed"]'); ok(await J(() => !document.querySelector('.bgg-more') && /Todavía no hay datos de BGG/.test(document.querySelector('.bgg6s').textContent)), 'failed: no toggle, a plain no-data note'); await click('[data-bgg="ok"]');
 
   /* R11 type + rhythm: the fonts the app ships, and one 8px-grid vertical rhythm */
   await click('[data-status="published"]'); await J(() => document.fonts.ready);
@@ -102,7 +93,6 @@ const CTAS = ['c1', 'c2', 'c3'], BGGS = ['b1', 'b2', 'b3'];
   /* En el inicio (R9 F2) */
   await click('[data-status="published"]');
   ok(await J(() => [...document.querySelectorAll('.filas6 .frow9:not(.add) .gname')].map(x => x.textContent).join('|') === 'Destacados del club|Ingenio estratega|Recientemente añadidos'), 'En el inicio: one row per home row, in home order');
-  await click('[data-cta="c2"]');
   ok(await J(() => { const r = [...document.querySelectorAll('.filas6 .frow9:not(.add)')]; return r[0].tagName === 'BUTTON' && r[1].tagName === 'DIV' && /cambia con el Nivel/.test(r[1].textContent); }), 'En el inicio (C2): manual rows editable (✎), automatic rows explain why');
   await click('[data-act="e-band-sheet"]'); await click('#sheet-act [data-v="e"]');
   ok(await J(() => /Nivel experto/.test(document.querySelector('.filas6').textContent) && !/Ingenio estratega/.test(document.querySelector('.filas6').textContent)), 'En el inicio: changing Nivel moves the level row');
@@ -137,14 +127,12 @@ const CTAS = ['c1', 'c2', 'c3'], BGGS = ['b1', 'b2', 'b3'];
 
   /* dark + desktop */
   await J(() => document.documentElement.dataset.theme = 'dark');
-  for (const [c, g] of [['c1', 'b1'], ['c2', 'b2'], ['c3', 'b3']]) { await click(`[data-cta="${c}"]`); await click(`[data-bggui="${g}"]`); await click('[data-status="published"]'); await scrollTo('.filas6', 60); await shot(`dark-${c}-${g}`); }
+  await click('[data-status="published"]'); await scrollTo('.filas6', 60); await shot('dark-filas-bgg'); await click('.bgg-more'); await scrollTo('.bgg6s', 60); await shot('dark-bgg-open'); await click('.bgg-more');
   await J(() => delete document.documentElement.dataset.theme);
   await click('[data-vp="desk"]');
-  for (const [c, g] of [['c1', 'b1'], ['c2', 'b2'], ['c3', 'b3']]) {
-    await click(`[data-cta="${c}"]`); await click(`[data-bggui="${g}"]`); await click('[data-status="published"]'); ok(!(await overflow()), `desk ${c}/${g} no overflow`);
-    await scrollTo('.filas6', 140); await shot(`desk-${c}-${g}`);
-    ok(await J(() => { const t = document.querySelector('.bgg-toggle .gname'); return t.getClientRects().length === 1; }), `desk ${c}/${g}: BGG row one line`);
-  }
+  await click('[data-status="published"]'); ok(!(await overflow()), 'desk no overflow'); await scrollTo('.filas6', 140); await shot('desk-closed');
+  ok(await J(() => [...document.querySelectorAll('.bgg6s dt')].map(d => d.textContent).join('|') === 'Año|Diseñadores|Ilustradores'), 'desk closed: preview fills the first grid row (Diseñadores | Ilustradores)');
+  await click('.bgg-more'); ok(!(await overflow()) && await J(() => getComputedStyle(document.querySelector('.bgg6s .fcols')).gridTemplateColumns.split(' ').length === 2), 'desk open: facts in the public 2-column grid'); await scrollTo('.bgg6s', 140); await shot('desk-open'); await click('.bgg-more');
   ok(await J(() => { const c = document.querySelector('.zone-int .club6').getBoundingClientRect(), e = document.querySelector('.zone-int .est6').getBoundingClientRect(); return e.left > c.right; }), 'desk: club | estado side by side');
   ok(errs.length === 0, 'no JS errors ' + errs.join(' | '));
   console.log(log.join('\n')); console.log(`\n${log.filter(l => l.startsWith('PASS')).length}/${log.length} passed · screenshots in ${OUT}`); await b.close();

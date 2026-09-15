@@ -792,7 +792,7 @@
   .polish.r6 .tin.desc-in.sbox { padding: 12px 16px; background: var(--color-surface); border: 1px solid var(--color-primary); }
   .r6 .sbox.rows { padding: 4px 0; overflow: hidden; }
   .r6 .sbox.rows .srow { min-height: 40px; padding: 4px 16px; }
-  .r6 .sbox.rows .srow .gname, .r6 .bgg-toggle .gname { font-size: 14px; }
+  .r6 .sbox.rows .srow .gname { font-size: 14px; }
   .r6 .sbox.rows .srow .val { font-size: 13px; }
   .polish.r6 .sbox.rows .tin.num { height: 30px; width: 52px; flex-basis: 52px; font-size: 14px; background: var(--color-bg); border-color: transparent; }
   .polish.r6 .sbox.rows .tin.num:focus { border-color: var(--color-primary); }
@@ -805,12 +805,6 @@
   .r6 .ebar.inline .obtn:disabled { background: transparent; border-color: var(--color-surface-2); }
   /* Datos de BGG: collapsed disclosure row inside the box */
   .r6 .bgg6 { padding: 4px 0; overflow: hidden; }
-  .r6 .bgg-toggle { min-height: 52px; padding: 6px 16px; }
-  .r6 .bgg-toggle:hover { background: var(--color-surface-2); }
-  .r6 .bgg-toggle .chev { width: 16px; height: 16px; color: var(--color-text-muted); transition: transform var(--duration-base) var(--ease-out-soft); }
-  .r6 .bgg6.open .bgg-toggle .chev { transform: rotate(180deg); }
-  .r6 .lock6 { width: 28px; height: 28px; border-radius: 50%; background: var(--color-bg); color: var(--color-text-muted); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .r6 .lock6 svg { width: 14px; height: 14px; }
   .r6 .bgg-body { padding: 8px 16px 8px; }
   .r6 .bgg-body .fcol .pk-pill-outline { background: var(--color-bg); border-color: transparent; }
   .r6 .bgg-body .comm { margin-top: 1rem; }
@@ -908,24 +902,28 @@
 
   /* ================= R12: En el inicio action + Datos de BGG in one line ================= */
   .filas6 { position: relative; }
-  /* C1: text button on the label's line (iOS/Material list-header action); 44px hit, label→box gap untouched */
-  .polish .sec-act { position: absolute; top: -13px; right: -12px; font-size: 13px; }
   /* C2: soft full-width button closing the box */
   .cta2-wrap { padding: 4px 12px 8px; }
   .cta2 { width: 100%; min-height: 40px; border: 0; border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-primary); font-size: 13px; font-weight: 600;
     display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: background var(--duration-fast), transform var(--duration-fast); }
-  .cta2 svg, .cta3 svg { width: 16px; height: 16px; }
+  .cta2 svg { width: 16px; height: 16px; }
   .cta2:hover { background: var(--color-surface-2); }
   .cta2:active { transform: scale(.98); }
   .cta2:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
   :root[data-theme="dark"] .cta2 { color: var(--color-accent-text); background: color-mix(in srgb, #000 22%, var(--color-surface)); }
-  /* C3: text button under the box, aligned with the box's content edge */
-  .polish .cta3 { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 -8px 4px; font-size: 13px; }
-  /* B1–B3: one line */
-  .r6 .bgg-toggle { min-height: 48px; }
-  .r6 .bgg-toggle .gname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bgg-foot { margin: 12px 0 0; font-size: 12px; color: var(--color-text-muted); }
-  .bgg-foot + .bgg-link, .bgg-body > .bgg-link { margin-top: 0; }
+  /* R13: Datos de BGG — public-style facts, preview + Ver más / Ver menos */
+  .r6 .bgg6 { padding: 0; }
+  .r6 .bgg6 .bgg-body { padding: 12px 16px 0; }
+  .bgg-foot { margin: 16px 0 0; font-size: 12px; color: var(--color-text-muted); }
+  .r6 .bgg-body > .bgg-link { margin: 0 0 0 -12px; }
+  .bgg-more { width: 100%; min-height: 44px; border: 0; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;
+    font-size: 13px; font-weight: 600; color: var(--color-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); transition: background var(--duration-fast); }
+  .bgg-more:hover { background: var(--color-surface-2); }
+  .bgg-more:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .bgg-more .chev { width: 16px; height: 16px; transition: transform var(--duration-base) var(--ease-out-soft); }
+  .bgg6.open .bgg-more .chev { transform: rotate(180deg); }
+  :root[data-theme="dark"] .bgg-more { color: var(--color-accent-text); }
+  .bgg-empty { margin: 0; padding: 12px 16px; }
   /* B3: read-only said once, beside the section label */
   .sec-note { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--color-text-muted); vertical-align: 1px; }
   .sec-note svg { width: 12px; height: 12px; }
@@ -935,19 +933,7 @@
 
 <div id="state-nav">
   <div class="var-nav">
-    <span class="lbl">Sketch 063 · Editor de juego · Ronda 12: acción de filas + Datos de BGG</span>
-  </div>
-  <div class="var-nav">
-    <span class="lbl">En el inicio · acción</span>
-    <button class="stab active" data-cta="c1">C1 · "Editar" en la etiqueta</button>
-    <button class="stab" data-cta="c2">C2 · Botón al pie de la caja ★</button>
-    <button class="stab" data-cta="c3">C3 · Botón de texto debajo</button>
-  </div>
-  <div class="var-nav">
-    <span class="lbl">Datos de BGG</span>
-    <button class="stab active" data-bggui="b1">B1 · Una línea</button>
-    <button class="stab" data-bggui="b2">B2 · Vista previa</button>
-    <button class="stab" data-bggui="b3">B3 · Candado en la etiqueta ★</button>
+    <span class="lbl">Sketch 063 · Editor de juego · Ronda 13: Datos de BGG con vista previa</span>
   </div>
   <div class="var-nav">
     <span class="lbl">Estado</span>
@@ -1157,7 +1143,7 @@ const ST = {
   retired:   { label: 'Retirado',  sub: 'No se ve en la web',            hint: 'Restaurar' },
 };
 const clone = o => ({ ...o, secs: [...o.secs] });
-const E = { cta: 'c1', bggui: 'b1', layout: 'r6', bggOpen: false, descEdit: false, pen: 'chip', status: 'draft', saved: null, ed: null, errs: {}, saving: false, failed: false, retrying: false,
+const E = { layout: 'r6', bggOpen: false, descEdit: false, pen: 'chip', status: 'draft', saved: null, ed: null, errs: {}, saving: false, failed: false, retrying: false,
   featFull: false, secErr: null, undo: null, pendingNav: null };
 function seed(st) { E.descEdit = false; E.bggOpen = false; E.status = st; E.saved = clone(SEEDS[st]); E.ed = clone(SEEDS[st]); E.errs = {}; E.secErr = null; E.saving = false; }
 seed('draft');
@@ -1253,19 +1239,18 @@ const filasNote = () => E.status === 'draft' ? 'Es un borrador: aparece en estas
 
 /* En el inicio: a section with one row per home row the game is in (why it's there), + Sumar a otra fila */
 function filasList() {
-  const note = filasNote(), c1 = E.cta === 'c1';
+  const note = filasNote();
   const r = row => {
     const body = `<span class="fslot ${row.manual ? 'man' : ''}" aria-hidden="true">${ic(row.manual === 1 ? 'star' : row.manual ? 'listq' : 'sparkle')}</span>${txt(esc(row.name), whyRow(row), row.hidden)}`;
-    /* C1 edits the whole list from the label, so rows carry no ✎; C2/C3 keep ✎ on manual rows */
-    return row.manual && !c1 ? `<button type="button" class="srow frow9" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="${esc(row.name)}. Editar filas">${body}${pen('pen-row')}</button>`
+    return row.manual ? `<button type="button" class="srow frow9" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="${esc(row.name)}. Editar filas">${body}${pen('pen-row')}</button>`
       : `<div class="srow static frow9">${body}</div>`;
   };
-  const foot = E.cta === 'c2' ? `<div class="cta2-wrap"><button type="button" class="cta2" data-act="e-secs-sheet" aria-haspopup="dialog">${ic('plus')}Agregar a una fila</button></div>` : '';
-  const below = E.cta === 'c3' ? `<button type="button" class="tbtn cta3" data-act="e-secs-sheet" aria-haspopup="dialog">${ic('plus')}Agregar a una fila</button>` : '';
-  return `<div class="sbox rows filas-box fst-${E.status}">${note ? `<p class="fnote">${note}</p>` : ''}${homeRows().map(r).join('')}${foot}</div>${below}`;
+  /* R12 C2: a soft full-width button closes the box */
+  return `<div class="sbox rows filas-box fst-${E.status}">${note ? `<p class="fnote">${note}</p>` : ''}${homeRows().map(r).join('')}
+    <div class="cta2-wrap"><button type="button" class="cta2" data-act="e-secs-sheet" aria-haspopup="dialog">${ic('plus')}Agregar a una fila</button></div></div>`;
 }
 
-const filasBox = () => sec('En el inicio', filasList() + (E.cta === 'c1' ? '<button type="button" class="tbtn sec-act" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="Editar filas del inicio">Editar</button>' : ''), 'filas6');
+const filasBox = () => sec('En el inicio', filasList(), 'filas6');
 
 /* ---- Unidades: 1 almost always, rarely more than 2. No free-typed number field. ---- */
 const stepper = (n, min, idp, cls = '') => `<span class="stepper ${cls}" role="group" aria-label="Unidades">
@@ -1319,22 +1304,21 @@ function clubBox() {
 const imageBox = () => sec('Portada', posterPanel(), 'img6');
 const estadoBox = () => sec('Estado', barHtml(), 'est6');
 function bggBox() {
+  /* R13: "Solo lectura" on the label (R12 B3). The box shows the data the way the public page does (CatalogLive.Show:
+     Año row → fact columns of pills → Comunidad BGG), closed to a preview (Año + the first row of the fact grid: Diseñadores, + Ilustradores on desktop) with the public
+     description's "Ver más / Ver menos" toggle at the bottom. */
+  const label = `Datos de BGG<span class="sec-note">${ic('lock')}Solo lectura</span>`;
+  if (E.failed) return secH(label, 'Datos de BGG', '<div class="sbox bgg6"><p class="lnote bgg-empty">Todavía no hay datos de BGG para este juego. Tocá Reintentar arriba.</p></div>', 'bgg6s');
+  /* closed = the first row of the public fact grid: 1 column on phone, 2 on desktop */
+  const open = E.bggOpen, keys = open ? Object.keys(CREATORS) : Object.keys(CREATORS).slice(0, S.vp === 'desk' ? 2 : 1);
   const col = k => `<div class="fcol"><dt>${k}</dt><dd>${CREATORS[k].map(n => `<span class="pk-pill pk-pill-outline">${esc(n)}</span>`).join('')}</dd></div>`;
-  const body = E.failed ? '<p class="lnote" style="margin:0">Todavía no hay datos de BGG para este juego. Tocá Reintentar arriba.</p>' : `
-    <dl class="spec"><div class="srowd"><dt>Año</dt><dd>${BGG.year}</dd></div><div class="fcols">${Object.keys(CREATORS).map(col).join('')}</div></dl>
+  const rest = open ? `
     <div class="comm"><div class="dt-label">Comunidad BGG</div><div class="comm-row"><span><b>8,6</b>Valoración</span><span><b>${w2(BGG.w)}</b>Peso</span><span><b>#1</b>Ranking</span></div></div>
     <p class="bgg-foot">Vienen de BoardGameGeek y se actualizan solos.</p>
-    <button type="button" class="tbtn bgg-link" data-act="e-bgg">Ver en BoardGameGeek${ic('ext', 'tico')}</button>`;
-  /* R12: the closed row is one short line; "read-only" is said by the lock (B1/B2) or the label (B3), and the longer
-     explanation moves inside the open body, next to the link to BGG */
-  const d = CREATORS.Diseñadores;
-  const line = E.failed ? 'Sin datos todavía' : E.bggui === 'b2' ? `${BGG.year} · ${d[d.length - 1]} y ${d.length - 1} más` : E.bggui === 'b3' ? 'Año, autores y mecánicas' : 'Ver año, autores y mecánicas';
-  const slot = E.bggui === 'b3' ? '' : `<span class="lock6" aria-hidden="true">${ic('lock')}</span>`;
-  const label = E.bggui === 'b3' ? `Datos de BGG<span class="sec-note">${ic('lock')}Solo lectura</span>` : 'Datos de BGG';
-  return secH(label, 'Datos de BGG', `<div class="sbox bgg6 ${E.bggOpen ? 'open' : ''}">
-    <button type="button" class="srow bgg-toggle ${slot ? '' : 'noslot'}" data-act="e-bgg-toggle" aria-expanded="${E.bggOpen}" aria-controls="bgg-body" aria-label="Datos de BGG, solo lectura: ${line}">
-      ${slot}<span class="gtxt"><span class="gname">${line}</span></span>${ic('chevDown', 'chev')}</button>
-    ${E.bggOpen ? `<div class="bgg-body" id="bgg-body">${body}</div>` : ''}</div>`, 'bgg6s');
+    <button type="button" class="tbtn bgg-link" data-act="e-bgg">Ver en BoardGameGeek${ic('ext', 'tico')}</button>` : '';
+  return secH(label, 'Datos de BGG', `<div class="sbox bgg6 ${open ? 'open' : ''}">
+    <div class="bgg-body" id="bgg-body"><dl class="spec"><div class="srowd"><dt>Año</dt><dd>${BGG.year}</dd></div><div class="fcols">${keys.map(col).join('')}</div></dl>${rest}</div>
+    <button type="button" class="bgg-more" data-act="e-bgg-toggle" aria-expanded="${open}" aria-controls="bgg-body">${open ? 'Ver menos' : 'Ver más'}${ic('chevDown', 'chev')}</button></div>`, 'bgg6s');
 }
 
 /* Two visibility groups, public first:
@@ -1519,9 +1503,9 @@ function eAct(t) {
   }
 }
 
-const NOTES = `<h3>Ronda 12 · the action in En el inicio + Datos de BGG in one line (top bar)</h3><ul>
-  <li><b>En el inicio · acción</b>: <b>C1</b> puts "Editar" on the label's line and removes the ✎ from rows, so the whole list is edited in one place. <b>C2</b> ends the box with a soft full-width "+ Agregar a una fila" button. <b>C3</b> puts a "+ Agregar a una fila" text button under the box.</li>
-  <li><b>Datos de BGG</b>: the closed row is one line. <b>B1</b> is 🔒 "Ver año, autores y mecánicas". <b>B2</b> is 🔒 a preview of the real data ("2018 · Martin Wallace y 2 más"). <b>B3</b> has no lock in the row; the label says "Datos de BGG 🔒 Solo lectura" and the row reads "Año, autores y mecánicas". In all three, "Vienen de BoardGameGeek y se actualizan solos." moved inside the open box, next to the link.</li></ul>
+const NOTES = `<h3>Ronda 13 · Datos de BGG shows real data (built on C2 + B3)</h3><ul>
+  <li>The label reads "Datos de BGG 🔒 Solo lectura". Closed, the box shows <b>Año + Diseñadores</b> exactly the way the public game page does (Año row, pill column), then "Ver más ⌄". Open, it adds Ilustradores, Mecánicas, Temáticas, Comunidad BGG, "Vienen de BoardGameGeek y se actualizan solos." and "Ver en BoardGameGeek", then "Ver menos ⌃".</li>
+  <li>En el inicio ends with the "+ Agregar a una fila" button (C2). Try <i>tools → BGG Falló</i> for the no-data state.</li></ul>
   <h3>Sketch 063 · Editor de juego (V2 base)</h3><ul>
   <li><b>Public part</b> (normal background, mirrors the game page): title ✎, "En el inicio: …" ✎ → Portada (pills with the Nivel pill ✎ + poster) → Descripción ✎ (tap to edit) → Datos de BGG (read-only, collapsed).</li>
   <li><b>Internal part</b> (V2: a full-width muted band; Round 10: see the Separador switch), captioned "Solo para el club · no se muestra en la web": En el club (Estante ✎, Unidades, Expansión) → Estado (status · Cambios sin guardar · Publicar / Retirar (confirm) / Restaurar · Guardar). Guardar is always the last control.</li>
@@ -1543,8 +1527,6 @@ function render() {
     <div class="toast" id="toast">${ic('check')}<span></span></div>
     <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button></div>`;
   document.querySelectorAll('.stab[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === E.status));
-  document.querySelectorAll('.stab[data-cta]').forEach(b => b.classList.toggle('active', b.dataset.cta === E.cta));
-  document.querySelectorAll('.stab[data-bggui]').forEach(b => b.classList.toggle('active', b.dataset.bggui === E.bggui));
   document.getElementById('notes').innerHTML = NOTES;
 }
 /* Header, tabs and drawer persist; only the page content swaps (LiveView navigate inside one live_session layout). */
@@ -1643,10 +1625,8 @@ function refreshSecs(focusId) {
 function markOn(attr, t) { document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.toggle('on', b === t)); }
 document.addEventListener('click', e => {
   if (suppressClick) { e.stopPropagation(); e.preventDefault(); return; }
-  const t = e.target.closest('[data-status],[data-cta],[data-bggui],[data-bgg],[data-feat],[data-vp],[data-theme-set],[data-act],[data-nav]');
+  const t = e.target.closest('[data-status],[data-bgg],[data-feat],[data-vp],[data-theme-set],[data-act],[data-nav]');
   if (!t) return;
-  if (t.dataset.cta) { E.cta = t.dataset.cta; closeAll(); return render(); }
-  if (t.dataset.bggui) { E.bggui = t.dataset.bggui; closeAll(); return render(); }
   if (t.dataset.status) { seed(t.dataset.status); S.screen = 'editar'; closeAll(); return render(); }
   if (t.dataset.bgg) { E.failed = t.dataset.bgg === 'failed'; markOn('data-bgg', t); return patch(); }
   if (t.dataset.feat) { E.featFull = t.dataset.feat === '1'; E.secErr = null; markOn('data-feat', t); return patch(); }
