@@ -587,6 +587,9 @@ The admin now uses one button system everywhere. It's S3 Contorno, weight-tuned;
   - An outlined button at the end of an action row spilled 4–8px past the content edge.
 Checked by `064-admin-button-system/audit-admin.js`.
 
+## Tab bar weight after R11 (2026-09-15)
+R11's 700→600 normalization made active and inactive tab labels both 600. Inactive tab labels are now 400 and the active one 600, the same as 059–062 (see their "Font weights normalized" notes). This is checked by `064-admin-button-system/audit-admin.js`.
+
 ## How to verify (headless)
 `verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 63 checks:
 - **Layout:** no overflow in every status, zero lines in the page body, section order, the band holds only club + estado, the band is full-bleed, identical labels.

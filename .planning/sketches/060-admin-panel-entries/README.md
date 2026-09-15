@@ -195,3 +195,11 @@ The admin now uses one button system everywhere. It's S3 Contorno, weight-tuned;
 - **No disabled buttons, and Principal is last in its row.**
 - Login "Enviarme el link" moved from a grey filled `.btn` to a full-width Principal.
 Checked by `064-admin-button-system/audit-admin.js`.
+
+## Font weights normalized to what the app ships (2026-09-15)
+The app self-hosts Inter **400 and 600 only** (`assets/css/app.css`), so a declared 500 rendered as 400 and 700 as 600. The sketch's balance was never what ships. This is the same fix 063 got in its R11.
+- Every `font-weight: 700` is now 600 and every `500` is now 400. `b, strong, h1–h4, th` are pinned to 600, because their browser default is 700.
+- **One state pair collapsed and was re-separated:** tab labels were 600 with the active one at 700, so both became 600. Inactive tab labels are now 400 and the active one stays 600. The other state pairs still differ: drawer rows, chips and the segmented control are all 400 → 600.
+- Row names (`.gname`) went from 500 to 400, matching 063's rows.
+
+Checked by `064-admin-button-system/audit-admin.js`: real Inter 400/600 loads, every visible element is 400 or 600, text is Inter or Bebas only, and the active tab label outweighs the inactive ones.

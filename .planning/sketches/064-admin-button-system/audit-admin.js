@@ -5,6 +5,7 @@
    For each screen × light/dark it checks every visible action button (.obtn / .tbtn / .b-pri / .b-sec, snackbar action excluded):
      44px tall · 8px radius · 14px/600 · not disabled · outlined roles 1px stroke, text roles none · label ≥ 4.5:1
      at most one Principal per action row, and it is the last button in that row · text fields 1px stroke ≥ 3:1
+   Also: every visible element declares weight 400 or 600 (the only Inter faces the app ships) and text renders in Inter/Bebas Neue.
    Env: PLAYWRIGHT_CORE, BASE (default http://127.0.0.1:8765/.planning/sketches/), SHOTS_DIR (default <tmp>/admin-button-audit). */
 const fs = require('fs'), path = require('path'), os = require('os');
 function loadPlaywright() {
@@ -80,8 +81,18 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
         }
         const fields = [...dev.querySelectorAll('.tin, .field input')].filter(el => vis(el) && !el.matches('.desc-in, .num, .title-in') && document.activeElement !== el);
         for (const f of fields) { const cs = getComputedStyle(f); if (f.classList.contains('invalid')) continue; const w = parseFloat(cs.borderTopWidth); const c = Math.min(cr(rgb(cs.borderTopColor), bgOf(f)), cr(rgb(cs.borderTopColor), bgOf(f.parentElement))); if (w !== 1 || c < 3) bad.push(`field ${f.id || f.placeholder}: stroke ${w}px ${c.toFixed(2)}:1`); }
+        /* type: only the weights the app ships (Inter 400/600, Bebas 400), and only real Inter/Bebas faces */
+        const wbad = [...new Set([...dev.querySelectorAll('*')].filter(el => vis(el) && !['400', '600'].includes(getComputedStyle(el).fontWeight)).map(el => `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}=${getComputedStyle(el).fontWeight}`))];
+        if (wbad.length) bad.push('weights outside 400/600: ' + wbad.slice(0, 6).join(', '));
+        const fbad = [...new Set([...dev.querySelectorAll('*')].filter(el => vis(el) && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && !/^(Inter|"Bebas Neue")/.test(getComputedStyle(el).fontFamily)).map(el => getComputedStyle(el).fontFamily.split(',')[0]))];
+        if (fbad.length) bad.push('text in other font families: ' + fbad.join(', '));
+        /* state pairs must still differ by weight after normalizing (600/700 pairs collapse to 600/600) */
+        const tabs = [...dev.querySelectorAll('.tabs button .tab-lbl')].filter(vis);
+        const on = tabs.filter(t => t.closest('button').classList.contains('on')), off = tabs.filter(t => !t.closest('button').classList.contains('on'));
+        if (on.length && off.length && !(+getComputedStyle(on[0]).fontWeight > +getComputedStyle(off[0]).fontWeight)) bad.push(`active tab label weight ${getComputedStyle(on[0]).fontWeight} not above inactive ${getComputedStyle(off[0]).fontWeight}`);
         return { n: btns.length, roles: btns.map(el => role(el) + ':' + (el.textContent.trim() || '·')), fields: fields.length, bad, setupErr: window.__setupErr || null };
       });
+      if (theme === 'light' && name === screens[0][0]) ok(await p.evaluate(() => [...document.fonts].filter(f => f.status === 'loaded').some(f => f.family.replace(/"/g, '') === 'Inter' && f.weight === '600') && document.fonts.check('600 14px Inter') && document.fonts.check('400 14px Inter')), `${sketch}: real self-hosted Inter 400/600 loaded`);
       ok(!a.setupErr, `${sketch} ${name} ${theme}: setup ran ${a.setupErr || ''}`);
       ok(a.bad.length === 0, `${sketch} ${name} ${theme}: ${a.n} buttons, ${a.fields} fields follow the system ${a.bad.join(' · ')}`);
       if (theme === 'light') log.push(`     roles: ${a.roles.join(' ')}`);

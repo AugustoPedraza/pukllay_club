@@ -94,9 +94,9 @@ The identical "064: admin button system" CSS block is appended to every admin sk
   - at most one Principal per action row, and it's last.
 - **Text fields:** 1px stroke ≥ 3:1.
 
-Result: 89 of 89. Run: `python3 -m http.server 8765 &` then `node .planning/sketches/064-admin-button-system/audit-admin.js`.
+Since the font-weight pass, the audit also checks type: real Inter 400/600 loads in every sketch, every visible element is 400 or 600, text is Inter or Bebas Neue only, and the active tab label outweighs the inactive ones. Result: 94 of 94. Run: `python3 -m http.server 8765 &` then `node .planning/sketches/064-admin-button-system/audit-admin.js`.
 
-Still open (not part of the button work): 059–062 still declare some 500/700 font weights (only 063 was normalized to the app's 400/600 in its R11).
+059–062 font weights are now normalized to the app's 400/600 too; see each sketch's README.
 
 ## What to Look For
 - In Estado (borrador con cambios), can you tell in half a second which button publishes?
