@@ -2,7 +2,7 @@
 sketch: 063
 name: admin-game-editor
 question: "On /admin/juegos/:id/editar, how do the editable club fields sit next to the read-only BGG facts, and where do Publicar / Retirar / Restaurar live per status so the lifecycle action is clear without looking like a CTA?"
-winner: "R8 V2 + R9 F2 (En el inicio list section) + U2 (1 | 2 | Más units): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
+winner: "R8 V2 + R9 F2 (En el inicio list section) + U2 (1 | 2 | Más units) + R10 D1 (centered labeled divider instead of the grey band): public page mirror on the normal ground, internal part (En el club + Estado) in a full-bleed muted band captioned Solo para el club · no se muestra en la web; no tabs"
 tags: [admin, juegos, editor, form, lifecycle, status, bgg, sections, shelf, bottom-sheet, phase-01.8.1, mobile-first]
 ---
 
@@ -463,11 +463,31 @@ Fixed while building:
 - Static rows in a box no longer tint on hover (the U2 segmented track disappeared).
 - `verify.js`'s `scrollTo` ignored the current scroll position, so screenshots after the first scroll were framed wrong.
 
+## Round 10: a divider instead of the grey band (2026-09-15)
+Developer: "F2 + U2. But now I need the 'full gray' area for internal stuff be improved. That gray is weird and breaks balance. What some kind of divider?"
+
+Round 9 is committed with F2 + U2 marked ★ (`295eba2`). F1, F3, U1 and U3 and their code are now removed from `index.html`.
+The top bar has one switch, **Separador**. In D1–D3, En el club and Estado sit on the normal page ground with the **same surface boxes as the public part**; only a divider marks the switch to internal content. This lifts R8's "no lines" rule for this one divider. The line is a 1px background, not a border, and spans the content width (not full-bleed).
+- **D1: Línea con rótulo.** A hairline with a centered "eye-slash Solo para el club" label on it, and "No se muestra en la web" centered below. 44px above, 20px below.
+- **D2: Línea + encabezado.** A plain hairline, then the R6 group header (28px icon circle, 15px/700 "Solo para el club", 12px "No se muestra en la web"). It reads as a new chapter, with the most weight of the three.
+- **D3: Rótulo + punteado.** The label comes first, left-aligned, then a dotted line runs to the right edge, with "No se muestra en la web" under the label. It's the lightest; the dots hint at "off the public page".
+- **V2: Banda gris.** The R8 band, kept for comparison.
+
+**Winner: D1** (developer: "D1").
+
+Also fixed: the Unidades segmented track was invisible once its box sat on the page ground (the track and box shared the surface color). Off the band, the track is now surface-2 with a bg thumb; dark mode has its own tones.
+
+Verified in headless Chrome, 84 of 84 checks (favicon 404 ignored):
+- **Every divider × Estado:** no overflow, no border lines, the section order, and the internal part holds only club + estado.
+- **D1–D3:** no band background and the internal boxes match the public boxes; the divider spans the content width; the caption wording; the segmented track stays visible. D0 is still full-bleed.
+- **Kept:** the R9 checks (En el inicio rows, Nivel moves the level row, Sumar, the retired note; Unidades 1 → 2 → Más stepper → back to 2; no "copia") and all V2 flows.
+- Dark and desktop for every divider, with club | estado side by side.
+
 ## How to verify (headless)
-`verify.js` in this folder is the headless-Chrome check for V2 + the Round 9 variants. It runs 75 checks:
+`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 84 checks:
 - **Layout:** no overflow in every status, zero lines in the page body, section order, the band holds only club + estado, the band is full-bleed, identical labels.
 - **Flows:** publish → Deshacer, retire confirm, Nivel/Estante sheets, description edit, units validation, leave guard, BGG expand, failed → Reintentar.
-- **Round 9:** every Filas variant × Estado, Filas content, the three Unidades controls, and no "copia" wording.
+- **Rounds 9–10:** every divider × Estado, divider width and caption, En el inicio rows, the 1 | 2 | Más control, and no "copia" wording.
 - **Views:** dark and desktop.
 
 ```

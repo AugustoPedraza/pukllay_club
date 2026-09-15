@@ -846,25 +846,41 @@
   .zone-cap { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; color: var(--color-text-muted); }
   .zone-cap b { color: var(--color-text); font-weight: 700; }
   .zone-cap .gico { background: var(--color-surface); }
-  /* V2: full-bleed muted band */
-  .zone-int { margin: 40px -16px -32px; padding: 20px 16px 32px; background: color-mix(in srgb, var(--color-text) 5%, var(--color-bg)); border-radius: 20px 20px 0 0; }
-  .desk .zone-int { margin: 40px -32px -48px; padding: 24px 32px 48px; }
+  /* V2: full-bleed muted band (kept as the D0 reference in Round 10) */
+  .zone-int { margin-top: 40px; }
   .zone-int > .sec + .sec { margin-top: 24px; }
-  .zone-int .sbox, .zone-int .ebar.inline { background: var(--color-bg); }
-  .zone-int .sbox.rows .tin.num { background: var(--color-surface) !important; }
-  .zone-int .sbox.rows .srow:hover { background: var(--color-surface); }
-  :root[data-theme="dark"] .zone-int { background: color-mix(in srgb, #000 28%, var(--color-bg)); }
-  .desk .zone-int { margin: 40px 0 -48px; padding: 24px 0 48px; border-radius: 0; box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--color-text) 5%, var(--color-bg)); clip-path: inset(0 -100vmax); }
-  :root[data-theme="dark"] .desk .zone-int { box-shadow: 0 0 0 100vmax color-mix(in srgb, #000 28%, var(--color-bg)); }
+  .zone-int.band { margin: 40px -16px -32px; padding: 20px 16px 32px; background: color-mix(in srgb, var(--color-text) 5%, var(--color-bg)); border-radius: 20px 20px 0 0; }
+  .zone-int.band .sbox, .zone-int.band .ebar.inline { background: var(--color-bg); }
+  .zone-int.band .sbox.rows .srow:hover { background: var(--color-surface); }
+  :root[data-theme="dark"] .zone-int.band { background: color-mix(in srgb, #000 28%, var(--color-bg)); }
+  .desk .zone-int.band { margin: 40px 0 -48px; padding: 24px 0 48px; border-radius: 0; box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--color-text) 5%, var(--color-bg)); clip-path: inset(0 -100vmax); }
+  :root[data-theme="dark"] .desk .zone-int.band { box-shadow: 0 0 0 100vmax color-mix(in srgb, #000 28%, var(--color-bg)); }
+
+  /* ================= R10: divider instead of the band =================
+     The internal part stays on the page ground with the same surface boxes as the public part; only a divider marks the switch.
+     The line is a 1px background (not a border), content width, one color token for all three. */
+  .zdiv { display: flex; align-items: center; gap: 12px; margin: 0; }
+  .zl { flex: 1; height: 1px; background: var(--color-border); }
+  :root[data-theme="dark"] .zl { background: color-mix(in srgb, var(--color-text) 16%, transparent); }
+  .zd-t { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--color-text); white-space: nowrap; }
+  .zd-t svg { width: 16px; height: 16px; color: var(--color-text-muted); }
+  .zd-s { margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted); }
+  /* D1: centered label on the line */
+  .zone-int.d1 { margin-top: 44px; }
+  .d1 .zd-s { text-align: center; margin-bottom: 20px; }
+  /* D2: line, then the group header (same anatomy as the R6 group header) */
+  .zone-int.d2 { margin-top: 40px; }
+  .d2 .zdiv { margin-bottom: 24px; }
+  .d2 .ghead { margin-bottom: 16px; }
+  .d2 .gico { background: var(--color-surface); }
+  /* D3: label first, dotted line runs to the edge */
+  .zone-int.d3 { margin-top: 44px; }
+  .d3 .zl { background: repeating-linear-gradient(90deg, var(--color-surface-2) 0 4px, transparent 4px 8px); height: 2px; border-radius: 1px; }
+  .d3 .zd-s { margin-bottom: 20px; padding-left: 22px; }
+  :root[data-theme="dark"] .d3 .zl { background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--color-text) 35%, transparent) 0 4px, transparent 4px 8px); }
 
   /* ================= R9: where the game shows (Filas) + Unidades control ================= */
-  /* F1: the tag line lists every row, automatic ones marked with ✦ */
-  .pk-pill-auto { background: transparent; border-color: transparent; color: var(--color-text-muted); font-size: .875rem; font-weight: 400; padding: 0 3px; gap: 3px; }
-  .pk-pill-auto .pico { width: 11px; height: 11px; }
-  .tags-row.fst-retired .tags .pk-pill { opacity: .55; }
-  .f1-key { display: flex; align-items: center; gap: 4px; margin: 0; font-size: 12px; color: var(--color-text-muted); }
-  .f1-key .pico { width: 11px; height: 11px; }
-  /* F2 + F3 share the section box */
+  /* En el inicio (F2): one row per home row */
   .fnote { margin: 0; padding: 8px 16px 4px; font-size: 12px; color: var(--color-text-muted); line-height: 1.4; }
   .fslot { width: 28px; height: 28px; border-radius: 50%; background: var(--color-surface-2); color: var(--color-text-muted); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .fslot svg { width: 15px; height: 15px; }
@@ -878,28 +894,8 @@
   .frow9.add .gname { color: var(--color-primary); font-weight: 600; }
   .frow9 .chev { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
   .filas-box.fst-retired .frow9:not(.add) { opacity: .55; }
-  /* F3: mini home — every home row in order, the game's cover marked where it sits */
-  .mh-list { list-style: none; margin: 0; padding: 4px 16px 4px; display: flex; flex-direction: column; }
-  .mh-row { display: flex; align-items: center; gap: 12px; min-height: 30px; }
-  .mh-row.in { min-height: 42px; }
-  .mh-name { flex: 1; min-width: 0; font-size: 13px; line-height: 1.25; color: var(--color-text-muted); }
-  .mh-row.in .mh-name { color: var(--color-text); font-weight: 600; }
-  .mh-name small { display: block; font-size: 11px; font-weight: 400; color: var(--color-text-muted); margin-top: 1px; }
-  .mh-rail { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .mh-rail i { width: 15px; height: 20px; border-radius: 3px; background: var(--color-surface-2); }
-  .mh-row.out .mh-rail i { opacity: .45; }
-  .mh-rail i.me { height: 26px; background: linear-gradient(160deg, hsl(30 55% 42%), hsl(30 45% 20%)); box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3.5px var(--color-primary); }
-  :root[data-theme="dark"] .mh-rail i.me { box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3.5px var(--color-accent-text); }
-  .mh.fst-draft .mh-rail i.me { opacity: .75; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3.5px var(--color-text-muted); }
-  .mh.fst-retired .mh-row.in .mh-name { color: var(--color-text-muted); }
-  .mh.fst-retired .mh-rail i.me { filter: grayscale(1); opacity: .5; box-shadow: none; }
-  .desk .mh-rail { gap: 8px; }
-  .desk .mh-rail i { width: 20px; height: 28px; }
-  .desk .mh-rail i.me { height: 36px; }
-  .mh-hidden { margin: 0; padding: 0 16px 4px; font-size: 12px; color: var(--color-text-muted); }
-  .mh-row .mi-hid { font-weight: 400; }
 
-  /* Unidades: stepper (U1), segmented 1 | 2 | Más (U2), value row + sheet (U3) — soft fills, no strokes */
+  /* Unidades (U2): segmented 1 | 2 | Más; Más turns into an inline stepper — soft fills, no strokes */
   .stepper { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
   .stp { position: relative; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--color-surface); color: var(--color-text); cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center; transition: background var(--duration-fast) var(--ease-standard), transform var(--duration-fast); }
@@ -910,13 +906,17 @@
   .stp:disabled { opacity: .35; cursor: default; }
   .stp:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
   .stp-n { min-width: 24px; text-align: center; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .sheet .stp, .zone-int .stp { background: var(--color-surface); }
+  .sheet .stp, .zone-int.band .stp { background: var(--color-surface); }
   .useg { display: inline-flex; gap: 2px; padding: 2px; background: var(--color-surface); border-radius: 10px; flex-shrink: 0; }
   .useg > button, .useg > .ustep { position: relative; min-width: 44px; height: 34px; border: 0; background: none; border-radius: 8px; cursor: pointer;
     font-size: 14px; font-weight: 500; color: var(--color-text); padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; transition: background var(--duration-fast); }
   .useg > button::before { content: ''; position: absolute; inset: -5px 0; }
   .useg > .on { background: var(--color-bg); box-shadow: 0 1px 3px rgba(0,0,0,.14); font-weight: 700; }
   :root[data-theme="dark"] .useg > .on { background: var(--color-surface-2); }
+  .zone-int:not(.band) .useg { background: var(--color-surface-2); }
+  .zone-int:not(.band) .useg > .on { background: var(--color-bg); }
+  :root[data-theme="dark"] .zone-int:not(.band) .useg { background: color-mix(in srgb, #000 30%, var(--color-surface)); }
+  :root[data-theme="dark"] .zone-int:not(.band) .useg > .on { background: var(--color-surface-2); }
   .useg > button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
   .useg > .ustep { padding: 0 2px; cursor: default; }
   .ustep .stp { width: 26px; height: 26px; background: none; }
@@ -924,27 +924,21 @@
   .ustep .stp svg { width: 14px; height: 14px; }
   .ustep .stp-n { min-width: 18px; font-size: 14px; }
   .r6 .sbox.rows .srow.urow { min-height: 48px; }
-  .r6 .sbox.rows .srow.static:hover, .zone-int .sbox.rows .srow.static:hover { background: none; }
-  .dlink.umore .lbl { flex: 1; }
+  .r6 .sbox.rows .srow.static:hover, .zone-int.band .sbox.rows .srow.static:hover { background: none; }
 </style>
 </head>
 <body>
 
 <div id="state-nav">
   <div class="var-nav">
-    <span class="lbl">Sketch 063 · Editor de juego · Ronda 9 (sobre V2)</span>
+    <span class="lbl">Sketch 063 · Editor de juego · Ronda 10: separar lo interno</span>
   </div>
   <div class="var-nav">
-    <span class="lbl">Filas</span>
-    <button class="stab" data-filas="f1">F1 · Etiquetas</button>
-    <button class="stab active" data-filas="f2">F2 · Lista ★</button>
-    <button class="stab" data-filas="f3">F3 · Mini inicio</button>
-  </div>
-  <div class="var-nav">
-    <span class="lbl">Unidades</span>
-    <button class="stab" data-units="u1">U1 · − 1 +</button>
-    <button class="stab active" data-units="u2">U2 · 1 | 2 | Más ★</button>
-    <button class="stab" data-units="u3">U3 · Hoja</button>
+    <span class="lbl">Separador</span>
+    <button class="stab active" data-div="d1">D1 · Línea con rótulo ★</button>
+    <button class="stab" data-div="d2">D2 · Línea + encabezado</button>
+    <button class="stab" data-div="d3">D3 · Rótulo + punteado</button>
+    <button class="stab" data-div="d0">V2 · Banda gris (actual)</button>
   </div>
   <div class="var-nav">
     <span class="lbl">Estado</span>
@@ -1154,7 +1148,7 @@ const ST = {
   retired:   { label: 'Retirado',  sub: 'No se ve en la web',            hint: 'Restaurar' },
 };
 const clone = o => ({ ...o, secs: [...o.secs] });
-const E = { filas: 'f2', unitsUi: 'u2', layout: 'r6', bggOpen: false, descEdit: false, pen: 'chip', status: 'draft', saved: null, ed: null, errs: {}, saving: false, failed: false, retrying: false,
+const E = { div: 'd1', layout: 'r6', bggOpen: false, descEdit: false, pen: 'chip', status: 'draft', saved: null, ed: null, errs: {}, saving: false, failed: false, retrying: false,
   featFull: false, secErr: null, undo: null, pendingNav: null };
 function seed(st) { E.descEdit = false; E.bggOpen = false; E.status = st; E.saved = clone(SEEDS[st]); E.ed = clone(SEEDS[st]); E.errs = {}; E.secErr = null; E.saving = false; }
 seed('draft');
@@ -1245,20 +1239,10 @@ const homeRows = () => HOME.filter(inRow);
 const whyRow = r => r.manual === 1 ? `Elegida a mano · ${featCount()} de 20 juegos` : r.manual ? (r.hidden ? 'Elegida a mano · fila oculta en el inicio' : 'Elegida a mano')
   : r.band ? 'Automática · cambia con el Nivel' : 'Automática · mientras sea de los 20 más nuevos';
 
-/* F1: same line under the title, now listing every row; automatic ones carry ✦ */
-function tagsRow() {
-  const rows = homeRows(), vis = rows.filter(r => !r.hidden), st = E.status;
-  const pill = r => r.manual ? `<span class="pk-pill pk-pill-tag">${esc(r.name)}</span>` : `<span class="pk-pill pk-pill-auto">${ic('sparkle', 'pico')}${esc(r.name)}</span>`;
-  const lead = st === 'draft' ? 'Al publicarlo, en el inicio:' : st === 'retired' ? 'Retirado. Al restaurarlo, en el inicio:' : 'En el inicio:';
-  const extra = rows.some(r => r.hidden) ? ' · y en 1 fila oculta' : '';
-  return `<button type="button" class="tags-row fst-${st}" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="Filas del inicio. Editar">
-    <span class="tags"><span class="tags-lead">${lead}</span>${vis.map(pill).join('')}${pen('pen-row')}</span></button>
-    <p class="f1-key">${ic('sparkle', 'pico')}automática, por su nivel o por ser nuevo${extra}</p>`;
-}
 const filasNote = () => E.status === 'draft' ? 'Es un borrador: aparece en estas filas cuando lo publiques.'
   : E.status === 'retired' ? 'Está retirado: hoy no se ve en ninguna fila. Al restaurarlo vuelve a estas.' : '';
 
-/* F2: a section with one row per home row the game is in (why it's there), + Sumar a otra fila */
+/* En el inicio: a section with one row per home row the game is in (why it's there), + Sumar a otra fila */
 function filasList() {
   const note = filasNote();
   const r = row => {
@@ -1270,56 +1254,25 @@ function filasList() {
     <button type="button" class="srow frow9 add" data-act="e-secs-sheet" aria-haspopup="dialog"><span class="fslot add" aria-hidden="true">${ic('plus')}</span><span class="gtxt"><span class="gname">Sumar a otra fila</span></span>${ic('chevR', 'chev')}</button></div>`;
 }
 
-/* F3: the home page in miniature — every row in order, the game's cover marked in the rows it's in */
-function miniHome() {
-  const st = E.status;
-  const lead = st === 'draft' ? 'Al publicarlo, aparece donde está marcada la portada.' : st === 'retired' ? 'Está retirado: hoy no aparece en el inicio. Al restaurarlo vuelve a estas filas.' : 'Así se ve hoy en el inicio, en este orden.';
-  const pos = { m1: 1, bd: 2, bi: 2, be: 2, m2: 3, m3: 3, rc: 0 };
-  const rail = r => `<span class="mh-rail" aria-hidden="true">${(S.vp === 'desk' ? [0, 1, 2, 3, 4, 5, 6, 7, 8] : [0, 1, 2, 3, 4]).map(i => `<i class="${inRow(r) && i === pos[r.key] ? 'me' : ''}"></i>`).join('')}</span>`;
-  const why = r => r.manual ? 'Elegida a mano' : r.band ? 'Por su nivel' : 'Por ser de los más nuevos';
-  const li = r => `<li class="mh-row ${inRow(r) ? 'in' : 'out'}"><span class="mh-name">${esc(r.name)}${inRow(r) ? `<small>${why(r)}</small>` : '<span class="sr"> (no está)</span>'}</span>${rail(r)}</li>`;
-  const hid = HOME.filter(r => r.hidden && inRow(r));
-  return `<div class="sbox rows filas-box mh fst-${st}"><p class="fnote">${lead}</p>
-    <ol class="mh-list" aria-label="Filas del inicio, en orden">${HOME.filter(r => !r.hidden).map(li).join('')}</ol>
-    ${hid.length ? `<p class="mh-hidden">También en ${hid.map(r => `<b>${esc(r.name)}</b>`).join(', ')} (fila oculta, no se ve en el inicio).</p>` : ''}
-    <button type="button" class="srow frow9 add" data-act="e-secs-sheet" aria-haspopup="dialog"><span class="fslot add" aria-hidden="true">${ic('plus')}</span><span class="gtxt"><span class="gname">Elegir filas a mano</span></span>${ic('chevR', 'chev')}</button></div>`;
-}
-const filasBox = () => E.filas === 'f1' ? '' : sec('En el inicio', E.filas === 'f2' ? filasList() : miniHome(), 'filas6');
+const filasBox = () => sec('En el inicio', filasList(), 'filas6');
 
 /* ---- Unidades: 1 almost always, rarely more than 2. No free-typed number field. ---- */
-const uTxt = n => +n === 1 ? '1 unidad' : `${n} unidades`;
 const stepper = (n, min, idp, cls = '') => `<span class="stepper ${cls}" role="group" aria-label="Unidades">
   <button type="button" class="stp" id="${idp}dec" data-act="e-units-dec" data-min="${min}" aria-label="Una unidad menos" ${n <= min ? 'disabled' : ''}>${ic('minus')}</button>
   <output class="stp-n" aria-live="polite">${n}</output>
   <button type="button" class="stp" id="${idp}inc" data-act="e-units-inc" aria-label="Una unidad más">${ic('plus')}</button></span>`;
 function unitsRow() {
   const n = +E.ed.units, lab = '<span class="gtxt"><span class="gname" id="u-lbl">Unidades</span></span>';
-  if (E.unitsUi === 'u1') return `<div class="srow static urow">${lab}${stepper(n, 1, 'u-')}</div>`;
-  if (E.unitsUi === 'u2') {
     const b = k => `<button type="button" role="radio" id="u-set${k}" aria-checked="${n === k}" class="${n === k ? 'on' : ''}" data-act="e-units-set" data-n="${k}">${k}</button>`;
     const more = n >= 3 ? `<span class="ustep on">${stepper(n, 2, 'u-')}</span>`
       : `<button type="button" role="radio" id="u-set3" aria-checked="false" data-act="e-units-set" data-n="3" aria-label="Más de 2">Más</button>`;
     return `<div class="srow static urow">${lab}<span class="useg" role="radiogroup" aria-labelledby="u-lbl">${b(1)}${b(2)}${more}</span></div>`;
-  }
-  return `<button type="button" class="srow" id="u-open" data-act="e-units-sheet" aria-haspopup="dialog">${lab}<span class="val" id="units-val">${uTxt(n)}</span>${pen('pen-row')}</button>`;
-}
-function unitsSheet() {
-  const n = +E.ed.units;
-  const r = k => row({ act: 'e-units-pick', extra: `data-n="${k}" aria-pressed="${n === k}"`, icon: n === k ? 'tick' : 'blank', label: uTxt(k), sub: k === 1 ? 'Lo más común' : '', chev: false });
-  const more = n >= 3
-    ? `<div class="dlink static umore"><span class="slot">${ic('tick', 'ico')}</span><span class="lbl">Más</span>${stepper(n, 3, 'us-')}</div>`
-    : row({ act: 'e-units-set', extra: 'data-n="3" id="us-set3"', icon: 'blank', label: '3 o más', chev: false });
-  return `<div class="step step-account usheet"><div class="group-label">Unidades</div>
-    <p class="sheet-text">Cuántas cajas de este juego tiene el club.</p>
-    <div class="dlinks">${r(1)}${r(2)}${more}</div>
-    <div class="banner-actions"><button type="button" class="tbtn" data-act="e-close">Listo</button></div></div>`;
 }
 function setUnits(n, from) {
   E.ed.units = Math.max(1, n); delete E.errs.units;
-  const steps = $('#sheet-act.open .steps'); if (steps && steps.querySelector('.usheet')) steps.innerHTML = unitsSheet();
   patch();
   const id = from && from.id, again = id && document.getElementById(id);
-  const target = again && !again.disabled ? again : document.getElementById((id || '').replace(/(dec|set3)$/, 'inc')) || document.getElementById(id && id.startsWith('us-') ? 'us-inc' : 'u-inc') || document.getElementById('u-set' + E.ed.units);
+  const target = again && !again.disabled ? again : document.getElementById((id || '').replace(/(dec|set3)$/, 'inc')) || document.getElementById('u-inc') || document.getElementById('u-set' + E.ed.units);
   target?.focus({ preventScroll: true });
 }
 /* description reads like the public paragraph; tap turns it into the text box, blur turns it back */
@@ -1380,13 +1333,21 @@ const dirtyOf = fields => fields.some(k => String(E.saved[k]) !== String(E.ed[k]
 const pubBody = desk => desk
   ? `<div class="mast"><div class="pcol">${imageBox()}</div><div class="tcol">${descBox()}${filasBox()}${bggBox()}</div></div>`
   : `${imageBox()}${descBox()}${filasBox()}${bggBox()}`;
-const zoneCap = () => `<p class="zone-cap"><span class="gico" aria-hidden="true">${ic('eyeSlash')}</span><span class="zc-t"><b>Solo para el club</b><span class="zc-s"><span class="zc-sep"> · </span>no se muestra en la web</span></span></p>`;
+const bandCap = () => `<p class="zone-cap"><span class="gico" aria-hidden="true">${ic('eyeSlash')}</span><span class="zc-t"><b>Solo para el club</b><span class="zc-s"><span class="zc-sep"> · </span>no se muestra en la web</span></span></p>`;
 
+/* R10: how the internal part is marked off — D0 is the V2 band, D1–D3 are dividers on the normal ground */
+function zoneCap() {
+  const t = `<span class="zd-t">${ic('eyeSlash')}Solo para el club</span>`;
+  if (E.div === 'd1') return `<div class="zdiv" role="separator" aria-hidden="true"><span class="zl"></span>${t}<span class="zl"></span></div><p class="zd-s">No se muestra en la web</p>`;
+  if (E.div === 'd2') return `<div class="zdiv" role="separator"><span class="zl"></span></div>${groupHead('int')}`;
+  if (E.div === 'd3') return `<div class="zdiv" aria-hidden="true">${t}<span class="zl"></span></div><p class="zd-s">No se muestra en la web</p>`;
+  return bandCap();
+}
 function editBody() {
   const desk = S.vp === 'desk';
-  const head = `<div class="thead">${titleField()}${E.filas === 'f1' ? tagsRow() : ''}</div>`;
+  const head = `<div class="thead">${titleField()}</div>`;
   const inner = desk ? `<div class="mast int"><div class="pcol">${clubBox()}</div><div class="tcol">${estadoBox()}</div></div>` : `${clubBox()}${estadoBox()}`;
-  return `${editHead()}${head}${pubBody(desk)}<section class="zone-int" aria-label="Solo para el club">${zoneCap()}${inner}</section>`;
+  return `${editHead()}${head}${pubBody(desk)}<section class="zone-int ${E.div === 'd0' ? 'band' : E.div}" aria-label="Solo para el club">${zoneCap()}${inner}</section>`;
 }
 
 /* Filas del inicio: the manual sections behind the tags under the title */
@@ -1532,8 +1493,6 @@ function eAct(t) {
     case 'e-units-dec': return setUnits(Math.max(+t.dataset.min || 1, +E.ed.units - 1), t);
     case 'e-units-inc': return setUnits(+E.ed.units + 1, t);
     case 'e-units-set': return setUnits(+t.dataset.n, t);
-    case 'e-units-sheet': return openAct(unitsSheet(), t);
-    case 'e-units-pick': E.ed.units = +t.dataset.n; closeAll(); return patch();
     case 'e-undo': { const u = E.undo; E.undo = null; $('#snack').classList.remove('show'); return u && u(); }
     case 'e-band-sheet': return openAct(bandSheet(), t);
     case 'e-pick-band': E.ed.band = t.dataset.v || null; closeAll(); return patch();
@@ -1551,12 +1510,12 @@ function eAct(t) {
   }
 }
 
-const NOTES = `<h3>Ronda 9 · two refinement axes on top of V2 (top bar)</h3><ul>
-  <li><b>Filas</b>: where the game shows on the home page. <b>F1 Etiquetas</b> keeps the line under the title but lists every row, with ✦ on automatic ones (level, recent). <b>F2 Lista</b> is an "En el inicio" section after Descripción with one row per home row and why it's there, plus "Sumar a otra fila". <b>F3 Mini inicio</b> is the same section drawn as the home page in miniature: every row in order, with the cover marked where the game sits. Try all 3 Estados, change the Nivel, and toggle rows.</li>
-  <li><b>Unidades</b>: no typed number field; 1 is the usual value. <b>U1</b> is a − 1 + stepper. <b>U2</b> is a 1 | 2 | Más segmented control, where Más turns into a stepper. <b>U3</b> is a "1 unidad ✎" row that opens a sheet (1 · 2 · 3 o más).</li></ul>
+const NOTES = `<h3>Ronda 10 · separating the internal part without the grey band (top bar)</h3><ul>
+  <li>Built on V2 + R9 (En el inicio list, Unidades 1 | 2 | Más). En el club and Estado now sit on the normal ground with the same boxes as the public part; only a divider marks the switch.</li>
+  <li><b>D1 Línea con rótulo</b>: a centered label on a hairline, "No se muestra en la web" under it. <b>D2 Línea + encabezado</b>: a hairline, then the R6 group header (icon circle + title + note). <b>D3 Rótulo + punteado</b>: label first, a dotted line to the edge. <b>V2 Banda gris</b> is the current band, for comparison.</li></ul>
   <h3>Sketch 063 · Editor de juego (V2 base)</h3><ul>
   <li><b>Public part</b> (normal background, mirrors the game page): title ✎, "En el inicio: …" ✎ → Portada (pills with the Nivel pill ✎ + poster) → Descripción ✎ (tap to edit) → Datos de BGG (read-only, collapsed).</li>
-  <li><b>Internal part</b> is a full-width muted band captioned "Solo para el club · no se muestra en la web": En el club (Estante ✎, Unidades, Expansión) → Estado (status · Cambios sin guardar · Publicar / Retirar (confirm) / Restaurar · Guardar). Guardar is always the last control.</li>
+  <li><b>Internal part</b> (V2: a full-width muted band; Round 10: see the Separador switch), captioned "Solo para el club · no se muestra en la web": En el club (Estante ✎, Unidades, Expansión) → Estado (status · Cambios sin guardar · Publicar / Retirar (confirm) / Restaurar · Guardar). Guardar is always the last control.</li>
   <li><b>One section anatomy:</b> a 13px/700 label over a soft box, 24px apart. Inside the band, the boxes turn white. No lines anywhere.</li>
   <li><b>Try:</b> switch Estado in the top bar, tap the Nivel pill (the BGG suggestion is in the sheet), "En el inicio" ✎ with <i>tools → Destacados lleno</i>, edit the description, clear the title and tap Guardar, change something then ‹ Juegos (unsaved-changes sheet), and <i>BGG Falló</i> → Reintentar. Check phone, desktop and dark.</li></ul>`;
 
@@ -1575,8 +1534,7 @@ function render() {
     <div class="toast" id="toast">${ic('check')}<span></span></div>
     <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button></div>`;
   document.querySelectorAll('.stab[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === E.status));
-  document.querySelectorAll('.stab[data-filas]').forEach(b => b.classList.toggle('active', b.dataset.filas === E.filas));
-  document.querySelectorAll('.stab[data-units]').forEach(b => b.classList.toggle('active', b.dataset.units === E.unitsUi));
+  document.querySelectorAll('.stab[data-div]').forEach(b => b.classList.toggle('active', b.dataset.div === E.div));
   document.getElementById('notes').innerHTML = NOTES;
 }
 /* Header, tabs and drawer persist; only the page content swaps (LiveView navigate inside one live_session layout). */
@@ -1675,10 +1633,9 @@ function refreshSecs(focusId) {
 function markOn(attr, t) { document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.toggle('on', b === t)); }
 document.addEventListener('click', e => {
   if (suppressClick) { e.stopPropagation(); e.preventDefault(); return; }
-  const t = e.target.closest('[data-status],[data-filas],[data-units],[data-bgg],[data-feat],[data-vp],[data-theme-set],[data-act],[data-nav]');
+  const t = e.target.closest('[data-status],[data-div],[data-bgg],[data-feat],[data-vp],[data-theme-set],[data-act],[data-nav]');
   if (!t) return;
-  if (t.dataset.filas) { E.filas = t.dataset.filas; closeAll(); return render(); }
-  if (t.dataset.units) { E.unitsUi = t.dataset.units; closeAll(); return render(); }
+  if (t.dataset.div) { E.div = t.dataset.div; closeAll(); return render(); }
   if (t.dataset.status) { seed(t.dataset.status); S.screen = 'editar'; closeAll(); return render(); }
   if (t.dataset.bgg) { E.failed = t.dataset.bgg === 'failed'; markOn('data-bgg', t); return patch(); }
   if (t.dataset.feat) { E.featFull = t.dataset.feat === '1'; E.secErr = null; markOn('data-feat', t); return patch(); }
