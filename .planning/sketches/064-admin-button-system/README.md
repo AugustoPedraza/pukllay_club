@@ -52,6 +52,30 @@ The top bar has **Sistema** (S1 / S2 / S3), **Vista** (Teléfono / Todas) and **
 - **S2: Tonal.** Principal = a strong primary tint (a white-text tint in dark); Secundaria = primary-tinted outline; Terciaria = text. daisyUI: `btn btn-soft btn-primary` / `btn btn-outline btn-primary` / `btn btn-ghost`. No solid fill, but on the lavender boxes the tonal Principal sits close to the box color.
 - **S3: Contorno (the 061 rule, tightened).** Principal = 1.5px primary outline with primary text; Secundaria = neutral outline; Terciaria = text. daisyUI: `btn btn-outline btn-primary` / `btn btn-outline` / `btn btn-ghost`. The closest to today; Principal and Secundaria differ only by border color and weight.
 
+## Winner: S3 Contorno, weight-tuned (round 2, 2026-09-15)
+Developer: "S3 looks better. Just be sure that has the correct weight so don't look unbalanced."
+
+S1 and S2 and the Sistema switch are removed (commit `bf17cf7` is their record). What was unbalanced in S3, and the fix:
+- **Stroke widths were mixed:** Principal had 1.5px (heavy and blurry at 1x density), Secundaria 1px. Now there's **one 1px stroke for every outline**: Principal, Secundaria and text fields.
+- **Secundaria was too faint:** a surface-2 stroke at about 1.4:1 made "Sí, agregar edición" and "Guardar" read as white cards or inputs. Secundaria and fields now share one neutral token, `--stroke` (text mixed into bg: 58% light, 42% dark), at **≥ 3:1** (WCAG 1.4.11). Measured 3.7:1 light, 3.1:1 dark.
+- **Text buttons competed with Principal:** they used the same primary color and weight. Terciaria now uses `--color-secondary` (dark: `--color-text-muted`), one step lighter but still ≥ 4.5:1.
+
+The resulting ladder, measured:
+
+| Role | Stroke | Label contrast | daisyUI |
+|------|--------|----------------|---------|
+| Principal | 1px primary, 12.2:1 (dark 10.5) | 14.2:1 | `btn btn-outline btn-primary` |
+| Secundaria | 1px neutral `--stroke`, 3.7:1 (dark 3.1) | text color | `btn btn-outline` with a neutral border |
+| Terciaria | none | ≤ 6.0:1 (secondary purple) | `btn btn-ghost` |
+| Peligro | none | danger | `btn btn-ghost text-error` |
+
+Verified in headless Chrome, 30 of 30 checks. New since round 1:
+- One stroke width across Principal, Secundaria and fields.
+- Secundaria and field strokes ≥ 3:1, and the same token.
+- Principal stroke more than 1.5× stronger than Secundaria.
+- Terciaria labels lighter than Principal labels.
+- Only one system left.
+
 ## What to Look For
 - In Estado (borrador con cambios), can you tell in half a second which button publishes?
 - Does Retirar feel far enough from Guardar (publicado con cambios)?
@@ -59,7 +83,7 @@ The top bar has **Sistema** (S1 / S2 / S3), **Vista** (Teléfono / Todas) and **
 - Check dark mode, and the "Todas" view for the whole admin side by side.
 
 ## Verification
-`verify.js` runs 44 checks in headless Chrome for every system × light/dark:
+`verify.js` (round 1 version) ran 44 checks in headless Chrome for every system × light/dark:
 - no overflow at 420px;
 - every button is 44px / 8px radius / 14px 600;
 - no disabled buttons;

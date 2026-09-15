@@ -26,27 +26,37 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
     const lum = c => [c.r, c.g, c.b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((s, v, i) => s + v * [.2126, .7152, .0722][i], 0);
     const bgOf = el => { let stack = []; for (let n = el; n; n = n.parentElement) { const c = rgb(getComputedStyle(n).backgroundColor); if (c.a > 0) { stack.push(c); if (c.a === 1) break; } } let base = { r: 255, g: 255, b: 255 }; for (const c of stack.reverse()) base = { r: c.r * c.a + base.r * (1 - c.a), g: c.g * c.a + base.g * (1 - c.a), b: c.b * c.a + base.b * (1 - c.a) }; return base; };
     const btns = [...document.querySelectorAll('.btn')];
-    const res = btns.map(el => { const cs = getComputedStyle(el), r = el.getBoundingClientRect(), fg = rgb(cs.color), bg = bgOf(el); const L1 = lum(fg), L2 = lum(bg); return { role: el.dataset.role, label: el.textContent.trim(), h: Math.round(r.height), radius: cs.borderRadius, font: cs.fontSize + '/' + cs.fontWeight, ratio: (Math.max(L1, L2) + .05) / (Math.min(L1, L2) + .05), disabled: el.disabled }; });
+    const cr = (a, b) => { const L1 = lum(a), L2 = lum(b); return (Math.max(L1, L2) + .05) / (Math.min(L1, L2) + .05); };
+    const stroke = el => { const cs = getComputedStyle(el); const w = parseFloat(cs.borderTopWidth); if (!w || cs.borderTopStyle === 'none') return { w: 0, c: 0 }; const c = rgb(cs.borderTopColor), inside = bgOf(el), outside = bgOf(el.parentElement); return { w, c: Math.min(cr(c, inside), cr(c, outside)), color: cs.borderTopColor }; };
+    const res = btns.map(el => { const cs = getComputedStyle(el), r = el.getBoundingClientRect(), fg = rgb(cs.color), bg = bgOf(el); return { role: el.dataset.role, label: el.textContent.trim(), h: Math.round(r.height), radius: cs.borderRadius, font: cs.fontSize + '/' + cs.fontWeight, ratio: cr(fg, bg), disabled: el.disabled, stroke: stroke(el) }; });
+    const fields = [...document.querySelectorAll('.field')].map(stroke);
     const cards = [...document.querySelectorAll('[data-moment]')].map(c => ({ cap: c.querySelector('.cap').textContent, pri: c.querySelectorAll('.b-pri').length, dan: c.querySelectorAll('.b-pri.b-dan').length }));
     const paint = role => { const el = document.querySelector('.b-' + role); const cs = getComputedStyle(el); return cs.backgroundColor + '|' + cs.boxShadow + '|' + cs.color; };
-    return { res, cards, paints: ['pri', 'sec', 'ter', 'dan'].map(paint), overflow: document.documentElement.scrollWidth > innerWidth + 1 };
+    return { res, fields, cards, paints: ['pri', 'sec', 'ter', 'dan'].map(paint), overflow: document.documentElement.scrollWidth > innerWidth + 1 };
   });
   for (const theme of ['light', 'dark']) {
     await click(`[data-theme-set="${theme}"]`);
-    for (const s of ['s1', 's2', 's3']) {
-      await click(`[data-sys="${s}"]`); const a = await audit(); const tag = `${s} ${theme}`;
+    { const s = 's3'; const a = await audit(); const tag = `S3 ${theme}`;
       ok(!a.overflow, `${tag}: no horizontal overflow at 420px`);
       ok(a.res.every(x => x.h === 44 && x.radius === '8px' && x.font === '14px/600'), `${tag}: every button is 44px / 8px radius / 14px 600 ` + a.res.filter(x => !(x.h === 44 && x.radius === '8px' && x.font === '14px/600')).map(x => x.label + ' ' + x.h + ' ' + x.radius + ' ' + x.font).join(', '));
       ok(a.res.every(x => !x.disabled), `${tag}: no disabled buttons`);
       ok(a.cards.every(c => c.pri <= 1 && c.dan === 0), `${tag}: at most one Principal per block; Peligro is never Principal`);
       ok(new Set(a.paints).size === 4, `${tag}: the four roles are painted four different ways`);
+      ok(await J(() => !document.querySelector('[data-sys]')), `${tag}: single system (S3), no switch`);
       const low = a.res.filter(x => x.ratio < 4.5); ok(low.length === 0, `${tag}: every button label ≥ 4.5:1 contrast ` + low.map(x => `${x.label} ${x.ratio.toFixed(2)}`).join(', '));
+      /* weight ladder (round 2) */
+      const by = r => a.res.filter(x => x.role === r);
+      ok([...by('pri'), ...by('sec')].every(x => x.stroke.w === 1) && a.fields.every(f => f.w === 1) && [...by('ter'), ...by('dan')].every(x => x.stroke.w === 0), `${tag}: one stroke width — 1px on Principal, Secundaria and fields; none on text roles`);
+      ok(by('sec').every(x => x.stroke.c >= 3) && a.fields.every(f => f.c >= 3), `${tag}: Secundaria + field strokes ≥ 3:1 (WCAG 1.4.11) ` + [...by('sec').map(x => x.stroke.c), ...a.fields.map(f => f.c)].map(v => v.toFixed(2)).join(','));
+      ok(Math.min(...by('pri').map(x => x.stroke.c)) > Math.max(...by('sec').map(x => x.stroke.c)) * 1.5, `${tag}: Principal stroke clearly stronger than Secundaria (${Math.min(...by('pri').map(x => x.stroke.c)).toFixed(1)} vs ${Math.max(...by('sec').map(x => x.stroke.c)).toFixed(1)})`);
+      ok(by('sec')[0].stroke.color === a.fields.map(f => f.color)[0], `${tag}: Secundaria uses the field stroke token`);
+      ok(Math.min(...by('pri').map(x => x.ratio)) > Math.max(...by('ter').map(x => x.ratio)), `${tag}: Terciaria labels lighter than Principal labels (${Math.min(...by('pri').map(x => x.ratio)).toFixed(1)} vs ≤${Math.max(...by('ter').map(x => x.ratio)).toFixed(1)})`);
       await p.screenshot({ path: `${OUT}/${s}-${theme}-top.png`, fullPage: false });
       await J(() => scrollTo(0, document.querySelectorAll('[data-moment]')[7].offsetTop - 60)); await p.screenshot({ path: `${OUT}/${s}-${theme}-mid.png` });
       await J(() => scrollTo(0, document.querySelectorAll('[data-moment]')[12].offsetTop - 60)); await p.screenshot({ path: `${OUT}/${s}-${theme}-end.png` }); await J(() => scrollTo(0, 0));
     }
   }
-  await click('[data-theme-set="light"]'); await click('[data-sys="s1"]');
+  await click('[data-theme-set="light"]');
   ok(await J(() => { const t = [...document.querySelectorAll('[data-moment]')].filter(c => /Editor · Estado/.test(c.textContent));
     const roles = t.map(c => [...c.querySelectorAll('.btn')].map(x => x.dataset.role + ':' + x.textContent.trim()).join(','));
     return roles.join(' / ') === 'pri:Publicar / sec:Guardar,pri:Publicar / dan:Retirar de la web / dan:Retirar,pri:Guardar / sec:Restaurar'; }), 'Estado: Guardar only with changes; Publicar is the draft Principal; Retirar is Peligro; Restaurar Secundaria');
@@ -55,7 +65,8 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
   ok(await J(() => document.getElementById('f-add').getAttribute('aria-invalid') === 'true' && /Pegá un ID/.test(document.getElementById('f-add-err').textContent) && document.activeElement.id === 'f-add'), 'Agregar with an empty field validates on tap (not disabled) and focuses the field');
   await p.fill('#f-add', '224517'); ok(await J(() => !document.getElementById('f-add-err').textContent), 'typing clears the error');
   await p.setViewportSize({ width: 1300, height: 1000 }); await click('[data-vp="desk"]');
-  for (const s of ['s1', 's2', 's3']) { await click(`[data-sys="${s}"]`); ok(!(await J(() => document.documentElement.scrollWidth > innerWidth + 1)), `desk ${s}: no overflow`); await p.screenshot({ path: `${OUT}/${s}-desk.png` }); }
+  ok(!(await J(() => document.documentElement.scrollWidth > innerWidth + 1)), 'desk: no overflow'); await p.screenshot({ path: `${OUT}/desk.png` });
+  await click('[data-theme-set="dark"]'); await p.screenshot({ path: `${OUT}/desk-dark.png` });
   ok(errs.length === 0, 'no JS errors ' + errs.join(' | '));
   console.log(log.join('\n')); console.log(`\n${log.filter(l => l.startsWith('PASS')).length}/${log.length} passed · screenshots in ${OUT}`); await b.close();
   process.exitCode = log.some(l => l.startsWith('FAIL')) ? 1 : 0;

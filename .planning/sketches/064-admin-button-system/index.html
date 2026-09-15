@@ -44,7 +44,7 @@
   .dot.draft { background: #D9892B; } .dot.published { background: var(--color-success); } .dot.retired { box-shadow: inset 0 0 0 1.5px var(--color-text-muted); }
   .dirty { color: var(--color-accent-text); font-weight: 600; }
   .ptitle { font-size: 22px; font-weight: 600; margin: 0; line-height: 1.2; }
-  .field { width: 100%; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--color-surface-2); border-radius: var(--radius-md); background: var(--color-bg); font-size: 14px; }
+  .field { width: 100%; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--stroke); border-radius: var(--radius-md); background: var(--color-bg); font-size: 14px; }
   .field:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
   .field.invalid { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
   :root[data-theme="dark"] .field { color-scheme: dark; }
@@ -86,33 +86,31 @@
   .btn.block { width: 100%; }
   /* text roles pull their padding into the gutter so their label aligns with content edges */
   .b-ter, .b-dan { padding: 0 12px; }
-  .b-ter { color: var(--color-primary); }
-  :root[data-theme="dark"] .b-ter { color: var(--color-accent-text); }
+  .b-ter { color: var(--ter); }
   .b-ter:hover { background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
   :root[data-theme="dark"] .b-ter:hover { background: color-mix(in srgb, var(--color-accent-text) 12%, transparent); }
   .b-dan { color: var(--color-danger); }
   .b-dan:hover { background: color-mix(in srgb, var(--color-danger) 9%, transparent); }
 
-  /* S1 — Relleno (Material 3 filled / tonal / text · daisyUI btn-primary / btn-soft btn-primary / btn-ghost) */
-  .s1 .b-pri { background: var(--color-primary); color: var(--color-primary-content); }
-  .s1 .b-pri:hover { background: color-mix(in srgb, #000 12%, var(--color-primary)); box-shadow: 0 1px 3px rgba(0,0,0,.2); }
-  .s1 .b-sec { background: var(--color-surface-2); color: var(--color-primary); }
-  :root[data-theme="dark"] .s1 .b-sec { color: var(--color-text); }
-  .s1 .b-sec:hover { background: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface-2)); }
-  /* S2 — Tonal (strong tonal / outlined / text · daisyUI btn-soft btn-primary / btn-outline / btn-ghost) */
-  .s2 .b-pri { background: color-mix(in srgb, var(--color-primary) 22%, var(--color-bg)); color: var(--color-primary); }
-  :root[data-theme="dark"] .s2 .b-pri { background: color-mix(in srgb, var(--color-primary) 55%, var(--color-bg)); color: #fff; }
-  .s2 .b-pri:hover { background: color-mix(in srgb, var(--color-primary) 30%, var(--color-bg)); }
-  .s2 .b-sec { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 40%, transparent); color: var(--color-primary); }
-  :root[data-theme="dark"] .s2 .b-sec { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-text) 45%, transparent); color: var(--color-accent-text); }
-  .s2 .b-sec:hover { background: color-mix(in srgb, var(--color-primary) 6%, transparent); }
-  /* S3 — Contorno (today's 061 rule, tightened: primary outline / neutral outline / text · daisyUI btn-outline btn-primary / btn-outline / btn-ghost) */
-  .s3 .b-pri { box-shadow: inset 0 0 0 1.5px var(--color-primary); color: var(--color-primary); background: var(--color-bg); }
-  :root[data-theme="dark"] .s3 .b-pri { box-shadow: inset 0 0 0 1.5px var(--color-accent-text); color: var(--color-accent-text); background: transparent; }
-  .s3 .b-pri:hover { background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg)); }
-  .s3 .b-sec { box-shadow: inset 0 0 0 1px var(--color-surface-2); color: var(--color-text); background: var(--color-bg); }
-  :root[data-theme="dark"] .s3 .b-sec { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 30%, transparent); background: transparent; }
-  .s3 .b-sec:hover { background: var(--color-surface); }
+  /* S3 Contorno, weight-tuned (round 2). One stroke width (1px) for every outline — buttons AND fields — so nothing
+     looks heavier by accident; emphasis comes from stroke/label COLOR, stepped down one level per role:
+       Principal   1px primary stroke  · primary label        (stroke ≈ 12:1)
+       Secundaria  1px neutral stroke  · text-color label     (stroke ≥ 3:1 — WCAG 1.4.11; same token as fields)
+       Terciaria   no stroke           · secondary-purple label (lighter than the Principal label, still ≥ 4.5:1)
+       Peligro     no stroke           · danger label
+     daisyUI: btn btn-outline btn-primary / btn btn-outline (neutral border) / btn btn-ghost (secondary text) / btn btn-ghost text-error */
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  .b-pri, .b-sec { border: 1px solid; background: var(--color-bg); }
+  .b-pri { border-color: var(--color-primary); color: var(--color-primary); }
+  .b-pri:hover { background: color-mix(in srgb, var(--color-primary) 7%, var(--color-bg)); }
+  :root[data-theme="dark"] .b-pri { border-color: var(--color-accent-text); color: var(--color-accent-text); background: transparent; }
+  :root[data-theme="dark"] .b-pri:hover { background: color-mix(in srgb, var(--color-accent-text) 10%, transparent); }
+  .b-sec { border-color: var(--stroke); color: var(--color-text); }
+  .b-sec:hover { background: var(--color-surface); }
+  :root[data-theme="dark"] .b-sec { background: transparent; }
+  :root[data-theme="dark"] .b-sec:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); }
 
   /* ---------- layout rules shared by all systems ---------- */
   /* action row: right-aligned, 8px apart, reading order = low → high emphasis (Principal last, nearest the thumb on the right) */
@@ -134,11 +132,7 @@
 </head>
 <body>
 <div id="nav">
-  <div class="grp"><span class="lbl">Sketch 064 · Sistema de botones</span></div>
-  <div class="grp"><span class="lbl">Sistema</span>
-    <button class="stab active" data-sys="s1">S1 · Relleno</button>
-    <button class="stab" data-sys="s2">S2 · Tonal</button>
-    <button class="stab" data-sys="s3">S3 · Contorno (regla 061) ★</button></div>
+  <div class="grp"><span class="lbl">Sketch 064 · Sistema de botones · S3 Contorno ★ (peso ajustado)</span></div>
   <div class="grp"><span class="lbl">Vista</span>
     <button class="stab active" data-vp="phone">Teléfono</button><button class="stab" data-vp="desk">Todas</button></div>
   <div class="grp"><span class="lbl">Tema</span>
@@ -147,7 +141,7 @@
 <div class="wrap" id="wrap">
   <div class="intro">
     <h1>One button anatomy and four roles, applied to every action in the admin (059–063)</h1>
-    Only the paint changes between systems. Shared rules:
+    S3 Contorno, weight-tuned: 1px strokes everywhere, and emphasis steps down by color (primary outline → neutral outline → lighter text).
     <ul>
       <li><b>Anatomy:</b> 44px tall, 8px radius, 14px/600 label, 16px icon, 8px between buttons.</li>
       <li><b>Roles:</b> Principal (one per block, the step the page asks for), Secundaria, Terciaria (dismiss, navigation, disclosure, links ↗), Peligro (never Principal, always confirmed in a sheet).</li>
@@ -175,7 +169,7 @@ const estado = (st, label, line, actions) => `<h2 class="sec-label">Estado</h2><
   <div><div class="st">${dot(st)}${label}</div><div class="meta ${line === 'Cambios sin guardar' ? 'dirty' : ''}">${line}</div></div>
   <div class="actions">${actions}</div></div>`;
 
-const S = { sys: 's1', vp: 'phone' };
+const S = { vp: 'phone' };
 const M = () => [
   /* 063 · Estado — the reported case. Guardar only with changes; Publicar is the draft's Principal (it also saves). */
   card('Editor · Estado', 'borrador, sin cambios', estado('draft', 'Borrador', 'Nadie lo ve en la web todavía', B('pri', 'Publicar', { msg: 'Juego publicado' }))),
@@ -212,15 +206,13 @@ const M = () => [
 
 const grid = document.getElementById('grid'), wrap = document.getElementById('wrap');
 function render() {
-  wrap.className = 'wrap ' + S.sys + (S.vp === 'desk' ? ' desk' : '');
+  wrap.className = 'wrap' + (S.vp === 'desk' ? ' desk' : '');
   grid.innerHTML = M().join('');
-  document.querySelectorAll('[data-sys]').forEach(b => b.classList.toggle('active', b.dataset.sys === S.sys));
   document.querySelectorAll('[data-vp]').forEach(b => b.classList.toggle('active', b.dataset.vp === S.vp));
 }
 function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 1800); }
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-sys],[data-vp],[data-theme-set],[data-act]'); if (!t) return;
-  if (t.dataset.sys) { S.sys = t.dataset.sys; return render(); }
+  const t = e.target.closest('[data-vp],[data-theme-set],[data-act]'); if (!t) return;
   if (t.dataset.vp) { S.vp = t.dataset.vp; return render(); }
   if (t.dataset.themeSet) { document.documentElement.dataset.theme = t.dataset.themeSet; return; }
   e.preventDefault();
