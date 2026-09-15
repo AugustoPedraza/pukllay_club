@@ -63,6 +63,21 @@ const DIVS = ['d1', 'd2', 'd3', 'd0'];
   ok(await J(() => [...document.querySelectorAll('.sec-label')].map(l => getComputedStyle(l).font).every((f, i, a) => f === a[0])), 'section labels identical');
   await click('[data-div="d1"]');
 
+  /* R11 type + rhythm: the fonts the app ships, and one 8px-grid vertical rhythm */
+  await click('[data-status="published"]'); await J(() => document.fonts.ready);
+  ok(await J(() => ['400 14px Inter', '600 14px Inter', '30px "Bebas Neue"'].every(f => document.fonts.check(f)) && [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/"/g, '') + ' ' + f.weight).sort().join() === 'Bebas Neue 400,Inter 400,Inter 600'), 'real self-hosted Inter 400/600 + Bebas Neue load (no system fallback)');
+  ok(await J(() => [...document.querySelectorAll('#device *')].every(el => ['400', '600'].includes(getComputedStyle(el).fontWeight))), 'every element declares 400 or 600 (the only Inter weights the app ships)');
+  ok(await J(() => [...document.querySelectorAll('#main *')].filter(el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).every(el => { const f = getComputedStyle(el).fontFamily; return /^Inter|^"Bebas Neue"/.test(f); })), 'page text uses Inter or Bebas Neue only');
+  ok(await J(() => { const t = getComputedStyle(document.querySelector('#ed-name')); return t.fontSize === '30px' && t.lineHeight === '36px' && (t.letterSpacing === 'normal' || t.letterSpacing === '0px'); }), 'title matches public h1 (font-display text-3xl: 30/36, no tracking)');
+  ok(await J(() => { const a = getComputedStyle(document.querySelector('.eback-row .back')).fontSize, b = getComputedStyle(document.querySelector('.eback-row .tbtn')).fontSize; return a === b; }), 'back row: ‹ Juegos and Ver en la ludoteca share one size');
+  ok(await J(() => { const secs = [...document.querySelectorAll('#main .sec')]; const r = el => el.getBoundingClientRect();
+    const labelBox = secs.every(s => Math.round(r(s.querySelector('.sec-label').nextElementSibling).top - r(s.querySelector('.sec-label')).bottom) === 8);
+    const pub = ['.thead', '.img6', '.dfield6', '.filas6', '.bgg6s'].map(x => document.querySelector(x)); const pubGaps = pub.slice(1).every((s, i) => Math.round(r(s).top - r(pub[i]).bottom) === 24);
+    const z = document.querySelector('.zone-int'), cap = z.querySelector('.zd-s'), club = z.querySelector('.club6'), est = z.querySelector('.est6');
+    return labelBox && pubGaps && Math.round(r(z).top - r(pub[4]).bottom) === 40 && Math.round(r(club).top - r(cap).bottom) === 24 && Math.round(r(est).top - r(club).bottom) === 24; }),
+    'rhythm: label→box 8px; title and every section 24px apart; divider 40px above, 24px to En el club');
+  ok(await J(() => [...document.querySelectorAll('.filas6 .frow9 .gsub, .est6 .bl2')].every(el => el.getClientRects().length && el.getBoundingClientRect().height < 20)), 'row meta lines fit on one line at 375px');
+
   /* En el inicio (R9 F2) */
   await click('[data-status="published"]');
   ok(await J(() => [...document.querySelectorAll('.filas6 .frow9:not(.add) .gname')].map(x => x.textContent).join('|') === 'Destacados del club|Ingenio estratega|Recientemente añadidos'), 'En el inicio: one row per home row, in home order');

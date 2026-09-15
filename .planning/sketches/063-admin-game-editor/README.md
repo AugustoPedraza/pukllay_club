@@ -483,11 +483,53 @@ Verified in headless Chrome, 84 of 84 checks (favicon 404 ignored):
 - **Kept:** the R9 checks (En el inicio rows, Nivel moves the level row, Sumar, the retired note; Unidades 1 → 2 → Más stepper → back to 2; no "copia") and all V2 flows.
 - Dark and desktop for every divider, with club | estado side by side.
 
+## Round 11: real fonts, balance and rhythm check (2026-09-15)
+Developer: "D1. Now double check that sketch use the correct fonts to get a correct balance and rhythm."
+
+**Root cause (shared theme bug):** `themes/default.css` declared Inter as `src: local("Inter")` only. Inter isn't installed on this machine, so **every sketch rendered all sans text in the system fallback (Noto Sans)**. CDP `CSS.getPlatformFontsForNode` confirmed that; only Bebas Neue (which already had a `url()`, fixed in 050) loaded.
+Separately, the app (`assets/css/app.css`) self-hosts **Inter 400 and 600 only**. The sketch declared 500 in 5 places and 700 in 16. In the app those render as 400 and 600, so the sketch's balance was never what ships.
+
+Fixed:
+- **Theme:** Inter now mirrors `app.css` exactly: self-hosted `inter-400/600-latin(+ext).woff2` from `priv/static/fonts`, no `local()`, plus Bebas latin-ext. This is a shared file, so every sketch now renders real Inter; earlier sketches were judged against Noto Sans metrics.
+- **063 weights:** 700 → 600, 500 → 400, and `b, strong` pinned to 600. Every element now declares 400 or 600. **Section labels are 13px/600** (the R6/R8 carry-forward said 700, which the app can't render).
+- **Title:** matches the public `h1.font-display.text-3xl`: 30px / 36px line-height, no letter-spacing (it was 34.5px line-height with .02em tracking).
+- **Rhythm on one 8px grid:**
+  - Title → Portada was 20px; it's now 24px like every other section gap.
+  - The D1 divider was 44px above / 20px below; it's now 40px above / 24px to En el club.
+  - Label → box stays 8px.
+- **Balance, which real Inter's wider metrics exposed:**
+  - "Automática · mientras sea de los 20 más nuevos" wrapped to two lines, so it's now "Automática · de los 20 más nuevos".
+  - The back row mixed 14px "‹ Juegos" with 13px "Ver en la ludoteca"; both are 14px now.
+
+Measured type scale (phone, published):
+
+| Role | Font | Size / line-height | Weight |
+|------|------|--------------------|--------|
+| Title | Bebas Neue | 30 / 36 | 400 |
+| Description | Inter | 15 / 22.5 | 400 |
+| Back row, segmented selected | Inter | 14 / 21 | 600 |
+| Row name | Inter | 14 / 18.2 | 400 |
+| Section label, divider label, text buttons, status | Inter | 13 | 600 |
+| Row value | Inter | 13 / 19.5 | 400 |
+| Meta, dt labels | Inter | 12 | 400 |
+| Pills (mirroring the public page) | Inter | 11–12 | 600 |
+
+Verified in headless Chrome, 91 of 91 checks. The 7 new R11 checks:
+- Only Inter 400/600 + Bebas 400 load, with no fallback.
+- Every element is 400 or 600, and page text is Inter or Bebas only.
+- The title matches the public h1.
+- The back row uses one size.
+- The rhythm: label→box 8, sections 24, divider 40/24.
+- Row meta fits on one line at 375px.
+
+Phone, dark and desktop screenshots were reviewed.
+
 ## How to verify (headless)
-`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 84 checks:
+`verify.js` in this folder is the headless-Chrome check for V2 + R9 (F2/U2) + the Round 10 dividers. It runs 91 checks:
 - **Layout:** no overflow in every status, zero lines in the page body, section order, the band holds only club + estado, the band is full-bleed, identical labels.
 - **Flows:** publish → Deshacer, retire confirm, Nivel/Estante sheets, description edit, units validation, leave guard, BGG expand, failed → Reintentar.
 - **Rounds 9–10:** every divider × Estado, divider width and caption, En el inicio rows, the 1 | 2 | Más control, and no "copia" wording.
+- **Type + rhythm (R11):** real fonts load, 400/600 only, title = public h1, 8px-grid gaps, one-line row meta.
 - **Views:** dark and desktop.
 
 ```
