@@ -2,8 +2,8 @@
 sketch: 060
 name: admin-panel-entries
 question: "How should the Admin home page's entries read as tappable and surface pending work, using only the 059 shell's one row anatomy?"
-winner: "C (final, single design — renamed: Admin / Perfil / Web)"
-tags: [admin, panel, dashboard, affordance, list-rows, pending-work, phase-01.8.1, mobile-first]
+winner: "B (final, single design) — centered 2-column dashboard boxes, no chevron"
+tags: [admin, dashboard, boxes, affordance, pending-work, drawer, naming, phase-01.8.1, mobile-first]
 ---
 
 # Sketch 060: Admin Panel Entries
@@ -96,3 +96,50 @@ Staff; logout → "Ingresar a Admin" → login lands on Admin; no horizontal ove
 - There is a "Web" tab (curates public rows) next to the drawer's SITIO group (public links) and the Perfil
   sheet's "Ver el sitio público". Watch whether staff confuse "Web" (edit) with "Sitio" (visit).
 - Mirror the shipped `dashboard_live.ex` counts: drafts, `location_progress` unplaced, band mismatches.
+
+## Round 3: dashboard boxes + drawer without duplicates (2026-09-14)
+Developer: "Admin page content should be a list of 'boxes' with a simple minimalistic dashboard. On the
+drawer menu, not menu option navigation since is accessible from nav menu."
+
+This supersedes C's row list (and its teaching lines) and overrides 059's "no cards" rule for this page
+only. The one-anatomy principle still applies: every box uses the same box anatomy.
+
+- **Box anatomy:** [icon · name · chevron] → big number + unit (Inter 700, tabular) → optional meter
+  (Estantes only) → foot line. Outline-only (`--color-bg` fill, 1px border, radius-lg). The whole box is the
+  tap target: surface tint + primary-tinted border on hover, scale .985 on press, focus ring. No filled buttons.
+  - Juegos: **412** juegos · pill "3 borradores" / "Todos publicados"
+  - Web: **5** filas en el inicio · "Destacados y 4 más"
+  - Estantes: **80%** ubicados · meter · pill "84 sin ubicar" / "Todos ubicados"
+  - Revisar niveles: **7** discrepancias · pill "Por revisar" / "Todo coincide con BGG"
+  - Staff (owner): **3** personas · "1 invitación pendiente"
+- **Pending work** = the same accent pill as the drawer counts and tab badges; everything else is muted.
+- **Variants:** A: list of full-width boxes (number + unit on one line); B: 2-column grid on phone (equal
+  columns, unit under the number, names wrap). Desktop: 3 columns for both.
+- **Drawer never repeats the nav menu:** phone admin → ADMIN holds only Revisar niveles + Staff (what the tab
+  bar lacks); desktop admin → no ADMIN group (the tab row has every section); public page signed in → ADMIN
+  holds a single "Ir a Admin" row (no tab bar there, so it's the only way in); signed out → SITIO only.
+
+Bugs found and fixed this round: B's grid columns were unequal (157 vs 176px) because `1fr` lets long
+content widen a track → `minmax(0, 1fr)`; "Revisar niveles" was ellipsized in B → names wrap in tiles.
+First pass used a lavender `--color-surface` fill on every box, which read heavy → outline-only.
+
+Verified (JS + screenshots, light + dark): drawer contents in all four contexts, box → section with the tab
+synced, drawer Revisar niveles active with no tab highlighted, staff role (4 boxes, drawer only Revisar
+niveles), no horizontal overflow, zero console errors.
+
+## Winner: B, centered 2-column dashboard (2026-09-14)
+Developer: "B and not need of arrow. Show me centered content of its boxes." `index.html` now holds only this
+design (A, the full-width list, was never committed; it's described in round 3 above).
+
+- **Grid:** `repeat(2, minmax(0, 1fr))`, 10px gap on phone (measured 167px boxes at 375px); 3 columns, 16px gap
+  on desktop. With the owner's 5 boxes, Staff sits alone on the last row. All five fit above the phone tab bar.
+- **Box (centered, no chevron):** icon + name (wraps if long) → big number (Inter 700, tabular) → unit on
+  its own line → meter stretched full width (Estantes only) → foot line / pending pill. The whole box is the
+  tap target: outline-only at rest, surface tint + primary-tinted border on hover, scale .985 on press,
+  focus ring. With no chevron, the tap affordance comes from box shape + hover/press, so implement both
+  (`active:scale`, hover tint) rather than dropping them.
+- Everything else from round 3 stands: pending pill = the same accent bubble as the drawer counts and tab
+  badges; the drawer never repeats the tab bar; renames Admin / Perfil / Web.
+
+Verified (JS + screenshot): equal box widths on phone/desktop, no chevrons, no clipped text, no horizontal
+overflow, box → Revisar niveles and Admin tab → back to 5 boxes, all-clear foot lines, zero console errors.
