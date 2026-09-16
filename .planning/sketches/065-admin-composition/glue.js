@@ -36,7 +36,8 @@ function adminBody() {
   return ({
     panel: () => pageHead() + panelBody(),
     juegos: juegosBody, secciones: webBody, seccion: secBody, estantes: estBody,
-    asignar: asgBody, niveles: nivBody, staff: staffBody, editar: editBody,
+    /* 065 R8: `asignar` is gone — an expanded estante on the Estantes page does its job. */
+    niveles: nivBody, staff: staffBody, editar: editBody,
   })[S.screen]();
 }
 const publicBody = () => ['Destacados del club', 'Descubre el hobby', 'Recientemente añadidos'].map(t =>
@@ -112,6 +113,25 @@ function patch() {
 /* typing only touches what depends on "dirty" (LiveView would diff the same way) */
 function sync() { const bar = $('#ebar'); if (bar) bar.outerHTML = barHtml(); }
 function refreshList() { const l = $('#jlist'); if (l) l.innerHTML = listHtml(); const f = $('#jfilters'); if (f) f.innerHTML = filtersHtml(); syncBadges(); }
+/* 065 R7: the same rule for 062's three searches. They used to debounce into patch(), which rebuilds
+   main.innerHTML — so every keystroke destroyed the focused input, built a new node and put the caret
+   back: the blink the developer saw on Estantes, and the same on a sección and on Asignar. 061 had
+   already solved it for Juegos (refreshList swaps #jlist and #jfilters and never touches #q-in), which
+   is how LiveView would diff it too. One region per search; the field is never in it.
+   Identical to the copy in 062's own page — build.js throws if the two ever drift apart.
+   065 R8: two searches, not three — `asg-q` went with the Asignar screen, and `lista-q` inherited its
+   job ("buscar cualquier juego") on top of its own. */
+const QREG = { 'mem-q': ['mem-results', memResHtml], 'lista-q': ['est-groups', estGroupsHtml] };
+/* 065 R7b: each query re-derives which estantes are open, so a manual toggle never leaks from one
+   query into the next. 065 R8: a query now replaces the groups with a flat result list, so this also
+   means leaving a search returns the page to the estantes shut.
+   Called from the input path, not from refreshQ, which the toggles themselves go through. */
+function resetGrps() { V.grpOpen = {}; V.grpShown = {}; V.gameOpen = null; V.adding = null; V.addShown = 0; V.tileOn = null; V.railAt = {}; }
+function refreshQ(id) {
+  const reg = QREG[id]; if (!reg) return patch();
+  const el = document.getElementById(reg[0]); if (!el) return patch();
+  el.innerHTML = reg[1]();
+}
 function refreshAdd() {
   const inp = $('#add-in'), btn = $('#add-btn'), err = $('#add-err');
   if (!inp) return;
@@ -267,9 +287,12 @@ const WALK = [
   { k: 'juegos', label: '‹ Juegos', run: () => go('juegos') },
   { k: 'secciones', label: 'Web', run: () => go('secciones') },
   { k: 'seccion', label: 'sección', run: () => { V.cur = 1; V.ed = null; V.memQ = ''; go('seccion'); } },
-  { k: 'estantes', label: 'Estantes', run: () => go('estantes') },
-  { k: 'asignar', label: 'Asignar', run: () => { V.curShelf = 1; V.asgQ = ''; V.onShelfOpen = false; go('asignar'); } },
-  { k: 'perfil', label: 'Perfil', run: () => { go('asignar'); setTimeout(() => openEl('#sheet-account', device.querySelector('[data-act="open-account"]')), 160); } },
+  { k: 'estantes', label: 'Estantes', run: () => { V.listaQ = ''; resetGrps(); go('estantes'); } },
+  /* 065 R8: the walk's 8th stop was Estantes › Asignar, a drill-down that no longer exists. What
+     inherited its job is an EXPANDED estante on the same page, so the stop stays and the navigation
+     goes away — which is the whole point of the round. */
+  { k: 'estantes', label: 'Estante abierto', run: () => { V.listaQ = ''; resetGrps(); V.grpOpen.s1 = true; go('estantes'); } },
+  { k: 'perfil', label: 'Perfil', run: () => { go('estantes'); setTimeout(() => openEl('#sheet-account', device.querySelector('[data-act="open-account"]')), 160); } },
 ];
 let walkAt = -1;
 function renderWalk() {
@@ -294,7 +317,7 @@ document.addEventListener('click', e => {
   if (t.dataset.bgg) { E.failed = t.dataset.bgg === 'failed'; markOn('data-bgg', t); return patch(); }
   if (t.dataset.pend) {
     S.pend = t.dataset.pend === '1';
-    Object.assign(V, seed062(S.pend), { ed: null, ordering: null, memQ: '', listaQ: '', asgQ: '', memErr: null, invErr: null });
+    Object.assign(V, seed062(S.pend), { ed: null, ordering: null, memQ: '', listaQ: '', memErr: null, invErr: null }); resetGrps();
     J.data = S.pend ? 'full' : 'nodrafts';
     if (!V.sections.some(s => s.id === V.cur)) V.cur = 1;
     if (!V.shelves.some(s => s.id === V.curShelf)) V.curShelf = 1;
@@ -373,13 +396,13 @@ document.addEventListener('input', e => {
   /* --- 062 lists --- */
   if (V_FIELDS[id]) { const [k, err] = V_FIELDS[id]; V[k] = el.value; V[err] = null; return patch(); }
   if (QMAP[id]) {
-    V[QMAP[id]] = el.value; if (id === 'mem-q') V.memErr = null;
+    V[QMAP[id]] = el.value; if (id === 'mem-q') V.memErr = null; if (id === 'lista-q') resetGrps();
     const c = el.parentElement.querySelector('.clear'); if (c) c.hidden = !el.value;
-    clearTimeout(qTimer); qTimer = setTimeout(patch, 300); return;
+    clearTimeout(qTimer); qTimer = setTimeout(() => refreshQ(id), 300); return;
   }
-  if (V.ed && id === 'ed-name') { V.ed.name = el.value; return patch(); }
-  if (V.ed && id === 'ed-sub') { V.ed.sub = el.value; return patch(); }
-  if (V.ed && id === 'ed-sort') { V.ed.sort = el.value; return patch(); }
+  if (V.ed && id === 'ed-name') { V.ed.name = el.value; return syncSecBar(); }
+  if (V.ed && id === 'ed-sub') { V.ed.sub = el.value; return syncSecBar(); }
+  if (V.ed && id === 'ed-sort') { V.ed.sort = el.value; return syncSecBar(); }
   if (V.ed && id === 'ed-show') { V.ed.hidden = !el.checked; return patch(); }
   if (id === 'ren-in') { V.ren = el.value; if (V.renErr) { V.renErr = null; el.classList.remove('invalid'); const f = el.closest('form').querySelector('.ferr'); if (f) f.textContent = ''; } return; }
   /* --- 061 Juegos --- */
@@ -396,6 +419,7 @@ document.getElementById('tools-toggle').addEventListener('click', () => document
 const NOTES = `<h3>Sketch 065 · el admin completo, compuesto</h3><ul>
   <li><b>No es un rediseño.</b> El CSS es el de 063 y cada página viene entera de su sketch (060 Admin, 061 Juegos, 062 Web/Estantes/Asignar/Niveles/Staff, 063 editor). <code>build.js</code> los recorta de los archivos originales: si acá algo se ve mal, se arregla en el sketch de origen y se vuelve a generar.</li>
   <li><b>El recorrido</b> de la barra de arriba camina Admin → Juegos → editor → ‹ Juegos → Web → sección → Estantes → Asignar → Perfil, que es lo que esta hoja viene a revisar.</li>
+  <li><b>Estantes (R9):</b> <i>tools → Estantes (R9)</i> cambia entre <b>A</b> (la lista de la ronda 8, la que ganó), <b>B</b> (los juegos del estante como riel horizontal) y <b>C</b> (riel como mapa sobre la lista). Abrí <i>Estante D — expertos</i> (162 cajas) y probá llegar al medio; después buscá <code>dixit</code> y tocá la fila.</li>
   <li><b>Teclado:</b> tocá cualquier campo (o <i>tools → Teclado</i>) para ver qué pasa con la barra de pestañas, con una hoja abierta y con el título y la descripción del editor.</li></ul>`;
 
 S.screen = 'panel';

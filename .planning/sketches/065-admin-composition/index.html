@@ -530,7 +530,6 @@
   .lhint { margin: 0 0 4px; font-size: 12px; color: var(--color-text-muted); }
   .lnote { font-size: 13px; color: var(--color-text-muted); margin: 4px 0 0; line-height: 1.45; }
   .lnote b { color: var(--color-text); font-weight: 600; }
-  .lcap { font-size: 12px; color: var(--color-text-muted); margin: 4px 0 0 52px; }
   .grp + .grp { margin-top: 20px; }
   .fhelp { margin: 6px 2px 0; font-size: 12px; color: var(--color-text-muted); line-height: 1.4; }
   .ferr:not(:empty) + .fhelp { display: none; }
@@ -568,7 +567,6 @@
   .switch:checked { background: var(--color-primary); }
   .switch:checked::after { transform: translateX(18px); }
   .switch:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-  .saverow { display: flex; justify-content: flex-end; margin-top: 16px; }
 
   /* Estantes: progress + view switch */
   .prog { margin: 0 0 16px; }
@@ -618,8 +616,6 @@
   .srow.danger .gname { color: var(--color-danger); }
   :root[data-theme="dark"] .srow.danger .gname, :root[data-theme="dark"] .slot40.danger { color: #F2A3B8; }
   .srow .val.hint { color: var(--color-text-muted); font-weight: 600; }
-  .saverow { align-items: center; gap: 12px; }
-  .dirty-note { margin-right: auto; font-size: 12px; font-weight: 600; color: var(--color-accent-text); }
 
   /* read-only BGG facts: no borders, no chevrons, muted keys — values only */
   .ro-note { display: flex; gap: 6px; align-items: flex-start; font-size: 12px; color: var(--color-text-muted); margin: 0 0 6px; line-height: 1.4; }
@@ -637,12 +633,8 @@
     position: absolute; left: 0; right: 0; bottom: 67px; z-index: 25; display: flex; align-items: center; gap: 2px; min-height: 60px;
     padding: 8px 12px 8px 16px; background: var(--color-bg); border-top: 1px solid var(--color-border); box-shadow: 0 -4px 12px rgba(0,0,0,.04);
   }
-  .ebar .bst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-  .ebar .bl1 { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
-  .ebar .bl2 { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ebar .bl2.dirty { color: var(--color-accent-text); font-weight: 600; }
-  .polish .ebar .tbtn { font-size: 13px; }
-  .ebar .obtn { margin-left: 4px; }
+  /* .bst / .bl1 / .bl2 / .eactions and the whole inline variant live in the "065 R7: one save bar"
+     block at the end of this stylesheet — the sección in 062 uses the same component. */
   .has-bar .scroller { padding-bottom: 136px; }
   .has-bar .snack { bottom: 144px; }
   .desk .ebar { position: sticky; bottom: 0; padding-inline: max(32px, calc((100% - 1120px) / 2 + 32px)); }
@@ -723,9 +715,7 @@
   .club { margin-top: 1.5rem; }
   .club .sgroup { margin-top: 0; }
   .desk .club .sgroup { margin: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
-  .desk .pcol .saverow { margin-top: 12px; }
   .srow .val { max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
-  .tcol > .saverow { margin-top: 12px; }
 
   .bggm { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
   .ro-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-muted); margin: -8px 0 12px; }
@@ -841,11 +831,7 @@
   .polish.r6 .sbox.rows .tin.num:focus { border-color: var(--color-primary); }
   .r6 .sbox.rows .srow:hover { background: var(--color-surface-2); }
   .r6 .club6 .ferr:empty { display: none; }
-  /* Estado: the former sticky bar, inline in the same box */
-  .r6 .ebar.inline { position: static; box-shadow: none; border: 0; background: var(--color-surface); border-radius: var(--radius-lg); min-height: 0; padding: 8px 8px 8px 16px; }
-  .desk.r6 .ebar.inline { position: static; padding-inline: 16px 8px; }
-  .r6 .ebar.inline .obtn { background: var(--color-bg); border-color: transparent; }
-  .r6 .ebar.inline .obtn:disabled { background: transparent; border-color: var(--color-surface-2); }
+  /* Estado: the former sticky bar, inline in the same box — see "065 R7: one save bar" at the end */
   /* Datos de BGG: collapsed disclosure row inside the box */
   .r6 .bgg6 { padding: 4px 0; overflow: hidden; }
   .r6 .bgg-body { padding: 8px 16px 8px; }
@@ -1073,21 +1059,383 @@
   #device .banner-actions { gap: 8px; }
   /* the -8px pull is for borderless text buttons; an outlined button ends the row on the content edge */
   #device .banner-actions:has(> :is(.obtn, .b-pri, .b-sec):last-child) { margin-right: 0; }
-  /* 063 Estado under the 064 system: status on top, one action row below (right-aligned, Principal last) */
-  /* Estado's rhythm. A borderless text button hides 14px of padding above and below its label, so the
-     declared 8px gap read as ~22px of dead space between "Todo guardado" and "Retirar de la web", and
-     the box bottom as ~26px. With an all-text action row the button's own padding IS the rhythm, so
-     the gap and the bottom padding go to zero; the moment the row carries an outlined button — which
-     has a real border to keep off the box edge — both come back. */
-  #device.r6 .ebar.inline { flex-direction: column; align-items: stretch; gap: 0; padding: 12px 16px 0; }
-  #device.r6 .ebar.inline:has(.eactions > :is(.obtn, .b-pri, .b-sec)) { gap: 12px; padding-bottom: 12px; }   /* 12px is .ppanel's internal gap — the editor's box rhythm */
+  /* 063 Estado under the 064 system: status on top, one action row below (right-aligned, Principal
+     last) — the whole inline bar, its rhythm and its action row are in the "065 R7: one save bar"
+     block that closes this stylesheet, because a sección uses the same component. */
+  #device .cta2 { width: 100%; }
+  #device .tbtn.bgg-more { width: 100%; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  /* ================= 065 R7: one save bar, one settings panel — identical block in 062/063 =================
+     Three developer notes on a sección, and all three were one thing each: a second implementation.
+
+     1. THE AJUSTES BLOCK HAD TWO SURFACES. A 13px section label, then Nombre and Subtítulo bare on the
+        page background, then a soft --color-surface box holding the two setting rows — one labelled
+        block, two surface treatments, and gaps of 8 / 6 / 12 / 6 / 16px down its middle. The fields
+        join the box as field rows, so the section is ONE surface on ONE rhythm: 12px between every
+        child and 12px above the first and below the last (.ppanel's internal gap, 063 R6 #5).
+        This is also what tells the form apart from the search under it. Round 4 gave the search field
+        the same ANATOMY as every other field on purpose, so anatomy cannot be the thing that separates
+        them — grouping is. The form is now in a panel and the search is the only field left on the
+        page background.
+
+     2. THE ADMIN HAD TWO SAVE BARS. 063 built .ebar.inline — a soft surface block with a status line
+        (.bl1 and its dot over .bl2) and its actions (.eactions, Principal last), with round 6's rhythm
+        rule baked in. 062 built .saverow — a 12px accent note and an outlined button floating loose on
+        the page background, 16px under the settings box. Same job, two components, one tap apart in the
+        walk. This block is the whole definition of the one that survived; build.js throws if 062 and
+        063 ever drift apart again.
+        Rhythm: a borderless text button hides 14px of padding above and below its label, so with an
+        all-text action row the button's own padding IS the rhythm and the gap and the bottom padding go
+        to 0; the moment the row carries an outlined button — which has a real border to keep off the
+        box edge — both come back at 12px. A bar with no action row at all (a sección with nothing left
+        to save) keeps the full 12px.
+
+     3. "ORDENAR" READ AS PURE TEXT. A mode toggle that changes what the whole list below it does is not
+        a Terciaria text link. lhead's control is a real outlined button in both states — Secundaria to
+        enter the mode, Principal ("Listo") to leave it — and an outlined control ends on the row's
+        content edge instead of being pulled 12px out the way a borderless label is. */
+  #device main .sgroup.apanel { margin: 0; padding: 12px 0; display: flex; flex-direction: column; gap: 12px; }
+  #device main .sgroup.apanel > * { padding: 0 16px; }
+  #device main .sgroup.apanel .flabel { margin: 0 0 6px; }
+  #device main .sgroup.apanel .srow { min-height: 40px; }
+  #device .ebar.inline { position: static; display: flex; flex-direction: column; align-items: stretch;
+    min-height: 0; gap: 12px; padding: 12px 16px; border: 0; box-shadow: none;
+    background: var(--color-surface); border-radius: var(--radius-lg); }
+  #device .ebar.inline:has(.eactions):not(:has(.eactions > :is(.obtn, .b-pri, .b-sec))) { gap: 0; padding-bottom: 0; }
+  #device .ebar .bst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  #device .ebar .bl1 { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  #device .ebar .bl2 { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #device .ebar .bl2.dirty { color: var(--color-accent-text); font-weight: 600; }
   #device .ebar .eactions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
   #device .ebar .eactions .push { margin-right: auto; margin-left: -12px; }
   #device .ebar .eactions > .tbtn:first-child:not(.b-pri):not(.b-sec) { margin-left: -12px; }
   #device .ebar .eactions > .tbtn:last-child:not(.b-pri):not(.b-sec) { margin-right: -12px; }
-  #device.r6 .ebar.inline .obtn { background: var(--color-bg); }
-  #device .cta2 { width: 100%; }
-  #device .tbtn.bgg-more { width: 100%; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  #device .ebar .obtn { margin-left: 4px; }
+  #device .ebar.inline .obtn { background: var(--color-bg); }
+  /* two soft blocks in one section need a seam: dropping .saverow's 16px margin left the bar butting
+     straight against the settings panel at 0px. 12px — the panel's own rhythm — keeps them one group. */
+  #device main .sgroup.apanel + .ebar.inline { margin-top: 12px; }
+  #device .lhead > :is(.obtn, .b-pri, .b-sec) { margin: 0; }
+  /* ================= 065 R7b: one control for "pick one of N", one grouped list — identical block in 062/063 =================
+     Three more developer notes on Estantes, and again none of them was a matter of taste.
+
+     1. "ESTANTES | JUEGOS POR ESTANTE" FILLED FELT WEIRD — and measured, it is a WCAG failure, not a
+        preference. The track was filled with --color-surface, which round 4 established is what a soft
+        content BLOCK is made of in this admin, and the SELECTED segment was --color-bg, the page
+        background: so the chosen option read as a hole punched in a block. Selected vs track measured
+        1.16:1 light and 1.17:1 dark — WCAG 1.4.11 sets a 3:1 floor for the state of a UI component, so
+        the selected state was effectively invisible in BOTH themes, not just dark. It was also the last
+        10px shape in a control stack where chips, the Agregar field and the search field are all 8px
+        (round 4 killed the search pill for exactly that and missed this one, because nothing audited
+        it), and its first label repeated the page title word for word.
+        The job is "pick one of N, and change what the list below shows" — which is the job 061 already
+        compared a segmented control (A2) against filter chips (A1) for, and chose CHIPS. So the view
+        switch IS the chip row, markup included; .seg survives only as 061's rejected A2 variant. A chip
+        carries its state on four channels — a tick glyph at 11.27:1, 600 weight, the accent fill and
+        the accent label — where the segment had only a 1.16:1 fill.
+        What the chips owed: a chip's own OUTLINE was 1.42:1 light / 1.30:1 dark, and the selected chip
+        had `border-color: transparent`, so the control's boundary was under the same 3:1 floor. Every
+        chip now carries 064's field/Secundaria stroke — one token for one job — and the state stays on
+        the tick, the fill and the weight.
+
+     2. THE GROUPED SHELF VIEW DID NOT SCALE. Every group rendered `games.slice(0, 4)` and then a
+        dead-end "y 64 más" caption: 1702px = 2.30 screens for FOUR shelves, 16 of 412 games (3.9%),
+        and no way to expand any of it. The mobile standard for "many groups × many items on a small
+        screen" is collapsed groups that expand in place (iOS grouped tables, Material expansion
+        panels) — and this admin already ships that component: Asignar's `.grow.disclose`, which
+        round 5 ruled names its own block and therefore satisfies L1. So a group is one disclosure row
+        carrying its count, its games open in place, and a group with more rows than one page offers the
+        same "Mostrar más" the unplaced list already offers instead of a caption that leads nowhere.
+        The groups then have to read as ONE list rather than as 13 separate blocks, so the 20px gap
+        between them goes and the hairline over a group header runs full-bleed (a content row's hairline
+        starts at 76px, past the thumb) — the grouped-table seam.
+
+     3. .lcap IS GONE. "y N más" was a second, mute answer to "there is more here" next to .more's
+        "Mostrar más" + "8 de 68" — and the mute one was on the only two lists you could not page. */
+  #device .chip { border-color: var(--stroke); }
+  #device .chip.on { border-color: var(--stroke); }
+  /* 065 R8: the `.chips.vista` rule went with the view switch — see the R8 block below. The chip
+     fixes above survive on 061's four filter chips, which is where the component still has a job. */
+  #device main .grp + .grp { margin-top: 0; }
+  #device main .grp + .grp > .glist > .disclose::before { display: block; left: 0; }
+  #device main .grp .gnote { margin: 0 16px 12px 76px; }
+  /* ================= 065 R8: ONE Estantes page — identical block in 062/063 =================
+     Round 7b split Estantes into two views behind a chip control. Round 8 retires that control after
+     ONE round, and the measurement is the finding: neither view could answer the page's own first
+     question. "Recorrido" had no search field at all and put the "Nuevo estante" form between the
+     progress line and the first estante, 368px down the page. "Contenido" could say WHICH estante held
+     a game — tab, chip, type — but never where ON it, because a group opened to `G.filter(place===sid)`,
+     catalogue order, not shelf order, with nothing saying so. A control that lasts one round is a
+     finding about its premise, not an embarrassment: two views was the wrong premise.
+
+     THE PREMISE THIS PAGE NOW RESTS ON: the order of the games on an estante IS their physical
+     left-to-right order on the shelf. Everything follows from it — the zone is a game's index read
+     back in words, the neighbours are the slots either side of it, and Ordenar moves a real box, which
+     is why its hint says so.
+
+     WHAT THE PARTS ARE. `.gacts` is an estante's own action strip, which exists only while the estante
+     is open: the bulk job (Agregar juegos) as Secundaria on the left and the estante's options as an
+     `.ibtn` on the right, on the grouped-table seam (`.more`'s own full-bleed hairline). `.pacts` is a
+     page-level secondary action — "Nuevo estante", demoted out of the page body so it stops competing
+     with the finding job. `.gexp` is what a game row opens to: the precise half of the answer, indented
+     to the row's own text column so it reads as that row's continuation and not as a new row. */
+  #device main .gacts { display: flex; align-items: center; gap: 8px; margin: 0 -16px; padding: 10px 16px 2px; border-top: 1px solid var(--color-border); }
+  #device main .gacts .push { margin-left: auto; }
+  /* R10: 8px, not 20. "Nuevo estante" is a Terciaria text action now (rule 2: a page-level action is
+     never Principal and never outlined), and a borderless button hides 14px of padding above its
+     label — so 20px of margin put the LABEL 34px below the block above it, where the outlined button's
+     box edge had sat at 20. 8 + 14 = 22px to the label, which is the same optical distance the outline
+     used to hold. This is round 6 #5's rule ("the button's own padding IS the rhythm") applied to the
+     one action row that had never been measured against it. */
+  #device main .pacts { display: flex; margin-top: 8px; }
+  #device main .pacts .tbtn { margin-left: -12px; }
+  /* a row's expansion is that row's continuation: it starts on the row's text column (40px slot +
+     12px gap past the 16px page edge = 68px, the same line the row hairline starts on) and carries no
+     hairline of its own, so the group still reads as one list. */
+  /* a game row discloses ITSELF, so it gets .gdisc and not .disclose — .disclose names a block, and
+     L1 plus every "this is a group heading" selector leans on that. Same chevron, different job. */
+  #device main .grow.gdisc .chev { transform: rotate(90deg); transition: transform var(--duration-base) var(--ease-out-soft); }
+  #device main .grow.gdisc[aria-expanded="true"] .chev { transform: rotate(-90deg); }
+  #device main .gexp { padding: 0 16px 10px 68px; display: flex; flex-direction: column; gap: 6px; }
+  #device main .gexp .nbr { margin: 0; font-size: 13px; line-height: 1.35; color: var(--color-text); }
+  /* R10: gap 0, not 4 — see the R10 block. Two borderless text actions already hold 12px of their own
+     padding on each side, and round 6 #5's rule is that that padding IS the rhythm. */
+  #device main .gexp .gxacts { display: flex; flex-wrap: wrap; gap: 0; margin-left: -12px; }
+  #device main .grow.gopen { background: var(--color-surface); }
+  #device main .grow.gopen::before, #device main .grow.gopen + .gexp + .grow::before { display: block; }
+  /* the group's own notes sit on the same 68px text column as its rows — R7b put .gnote at 76px, which
+     is the UNPOLISHED hairline; every row on this page is .polish, whose hairline is at 68. */
+  #device main .grp .gnote { margin: 0 16px 10px 68px; }
+  #device main .grp .glist > .gnote { margin-top: 8px; }
+  /* A STATUS MARKER INSIDE A META ITEM. Round 8 put "Sin ubicar" inside a .mi so the separator logic
+     would give it its "·", and measuring the result caught a bug the eye could not: .dot declares
+     7×7px and has no `display`, so as a direct child of the FLEX .gsub it was blockified and drawn —
+     but inside an inline .mi it is an inline non-replaced box, where width and height do not apply.
+     It measured 0px wide. inline-block restores the box; vertical-align centres it on the text. */
+  #device main .gsub .mi .dot { display: inline-block; vertical-align: -1px; margin-right: 5px; }
+  /* ================= 065 R9: the estante as a RAIL — identical block in 062/063 =================
+     Developer: "what if we use carousel(horizontal scrolable) to represent that physical position,
+     maybe been inspired by Apple iBooks?" — the answer to R8's own open complaint: inside an expanded
+     estante the zone word is identical on every row (5 consecutive rows measured reading "Más a la
+     izquierda"), because the list order already carries the position and the words only restate it.
+     So: stop TELLING the position and SHOW it.
+
+     THIS IS THE APP'S OWN CAROUSEL, TRANSPLANTED — not a second one. Every number and every
+     behaviour below comes from `lib/pukllay_club_web/components/carousel_row.ex` +
+     `assets/css/app.css`'s `.pk-rail`/`.pk-rail-wrap`, and from the four sketches that decided them:
+       · 022-C  the arrows are `@media (hover: hover) and (pointer: fine)` only and are REMOVED FROM
+                LAYOUT on touch (`display: none`), never merely hidden — no dead tap target over the
+                swipe area. They are also gated on `[data-overflows]`, which the rail's own script
+                writes: the device condition and the content condition COMBINE, neither replaces the
+                other.
+       · 023-B  free momentum: no `scroll-snap-type`, and `scroll-behavior: auto` on purpose, because
+                the arrow scroller assigns `scrollLeft` every animation frame and the browser's own
+                smooth-scroll mode would start a competing animation per assignment.
+       · 024-A  NO position/pagination indicator. Edge-fade only. See the README's round-9 "024
+                verdict" — this block adds none, and what that costs is measured rather than argued.
+       · 025-B  shimmer is scoped to repopulation; nothing here repopulates, so nothing here shimmers.
+     THE CO-DEPENDENT MEASUREMENT SET (carousel_row.ex's moduledoc: the edge-fade width, the rail gap,
+     the card width and the side gutter "only work when declared together in one CSS location"). All
+     four are declared here, once, as custom properties on the wrap:
+       card 96px · gap 10px · fade 16px · gutter 16px
+     Three are production's ≤480px values verbatim. The FOURTH is the one that changes: the catalogue's
+     `--pk-gutter` is 14px at ≤480px, and this admin page's is 16px (`main`'s padding). Consequence,
+     measured rather than assumed: at the 375px device the 4th tile starts at 16+3×106 = 334 and is cut
+     at 375, so 41px of it shows and 16 of those sit under the fade — a 25px clear sliver of peek.
+     Production's 14px gutter would leave 27px. The set survives the swap with 2px less peek; asserted,
+     because a fade wider than the peek swallows the very cue it exists to create.
+     GHOST SLOTS, i.e. fixture honesty at rail density. A shelf is an ordered array of slots (R8) and
+     only 36 of the 412 games are named in this sketch, so most slots are real boxes whose titles this
+     sketch does not render. A rail shows many at once, so this is the round where that shows. NO COVER
+     MAY IMPLY A GAME THAT DOES NOT EXIST: a run of unnamed slots is not drawn as covers at all. It
+     collapses into ONE hatched band whose width is the run's REAL length × the tile pitch — so the
+     rail's geometry, its scrollWidth and every distance measured on it stay true — carrying a sticky
+     caption that says exactly what it is ("153 cajas sin título en este boceto"). Sticky, so it is
+     still on screen while you scroll through the stretch it describes. */
+  #device main .erail-wrap {
+    --etile: 96px; --egap: 10px; --efade: 16px; --egut: 16px;
+    position: relative; margin: 0 -16px;
+  }
+  #device main .erail {
+    display: flex; gap: var(--egap); overflow-x: auto; padding: 8px var(--egut);
+    /* 023-B, and the reason it is explicit: see the block header. */
+    scroll-behavior: auto; scrollbar-width: none;
+    /* a horizontal overscroll cannot chain out to the page or trigger the back gesture; both pan axes
+       stay available, because a single-axis `pan-x` would stop a vertical swipe that starts on a tile
+       from scrolling the page — production makes the same trade and says so. */
+    overscroll-behavior-x: contain; touch-action: manipulation;
+  }
+  #device main .erail::-webkit-scrollbar { display: none; }
+  #device main .erail-wrap::before, #device main .erail-wrap::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: var(--efade); z-index: 4; pointer-events: none;
+  }
+  #device main .erail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  #device main .erail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  /* 022-C. z-index 5 over the fade's 4, or the glyph renders under the gradient it overlays. */
+  #device main .erail-btn {
+    position: absolute; top: 0; bottom: 0; width: 44px; z-index: 5; display: none;
+    align-items: center; justify-content: center; border: 0; background: transparent;
+    color: var(--color-text); cursor: pointer; padding: 0;
+  }
+  #device main .erail-btn[data-dir="-1"] { left: 0; }
+  #device main .erail-btn[data-dir="1"] { right: 0; }
+  #device main .erail-btn svg { width: 28px; height: 28px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+  @media (hover: hover) and (pointer: fine) {
+    #device main .erail-wrap[data-overflows="true"] .erail-btn { display: flex; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
+    #device main .erail-wrap[data-overflows="true"]:hover .erail-btn,
+    #device main .erail-wrap[data-overflows="true"] .erail-btn:focus-visible { opacity: 1; }
+  }
+  /* A TILE. The admin's floor is 44px and its list rows use a 40px thumb; a production rail card is
+     poster-sized. 96px wide is the catalogue's own ≤480px card width, and it is what keeps the
+     co-dependent set intact — so the cover is the list's `.thumb` gradient at poster scale, not a new
+     surface. `aspect-ratio: 1/1.05` is `.pk-card-poster`'s. */
+  #device main .etile {
+    flex: 0 0 auto; width: var(--etile); display: flex; flex-direction: column; gap: 6px;
+    border: 0; background: none; padding: 0; text-align: left; color: var(--color-text);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  #device main .etile .ecover {
+    --h: 270; width: var(--etile); aspect-ratio: 1 / 1.05; border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    /* R10, and W1 caught it the first round the rail actually shipped: the letter is a STAND-IN for
+       cover art (in production every tile is an <img> and carries no type at all), and at 28px/600 it
+       outweighed the page title "Estantes" at 22px/600 — five of them at once, on a page whose title
+       is supposed to lead. A placeholder does not get to outrank the page. 21px, under the title. */
+    background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); font-weight: 600; font-size: 21px;
+  }
+  :root[data-theme="dark"] #device main .etile .ecover { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  #device main .etile .ecap {
+    font-size: 12px; line-height: 1.3; color: var(--color-text-muted);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  #device main .etile:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 8px; }
+  /* THE MARKED TILE. 1.4.11 is a 3:1 floor on a component's own state, and the obvious ring fails it:
+     `--color-primary` measures 2.35:1 against the dark page background (#7B2DCE on #2E154E) — the
+     exact failure round 7 caught in a control that looked fine. So the mark is R7b's chip answer,
+     which already had to solve this: FOUR channels, not one — 064's `--stroke` as the boundary (4.3:1
+     light / 3.49:1 dark), a tick glyph, the accent fill behind the caption, and 600 weight. */
+  #device main .etile.on .ecover { outline: 2px solid var(--stroke); outline-offset: 2px; }
+  #device main .etile.on .ecap { font-weight: 600; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: 4px; padding: 1px 4px; margin: 0 -4px; }
+  #device main .etile .emark { display: none; }
+  #device main .etile.on .emark {
+    display: flex; align-items: center; justify-content: center; position: absolute; top: -6px; right: -6px;
+    width: 20px; height: 20px; border-radius: 50%; background: var(--color-accent-bg); color: var(--color-accent-text);
+    box-shadow: 0 0 0 2px var(--color-bg);
+  }
+  #device main .etile .emark svg { width: 13px; height: 13px; stroke-width: 2.4; }
+  /* the honest band over a run of slots this sketch cannot name — see the block header. */
+  #device main .egap {
+    flex: 0 0 auto; position: relative; border-radius: 6px; display: flex; align-items: center;
+    background: repeating-linear-gradient(135deg, var(--color-surface) 0 6px, var(--color-surface-2) 6px 12px);
+    border: 1px dashed var(--stroke);
+  }
+  /* sticky at the GUTTER, not at 0: at 0 the caption would sit under the 16px edge-fade, which is the
+     same arithmetic that governs the peek. */
+  #device main .egap .gcap {
+    position: sticky; left: var(--egut); padding: 4px 8px; font-size: 11px; line-height: 1.25; font-weight: 600;
+    color: var(--color-text-muted); background: var(--color-bg); border-radius: 4px; white-space: nowrap;
+  }
+  /* what a marked tile opens: the game's name and the two jobs an R8 row carried. It is the row's
+     `.gexp` with the rail above it instead of a sentence inside it, so it keeps `.gexp`'s anatomy. */
+  #device main .epanel { padding: 4px 16px 10px; display: flex; flex-direction: column; gap: 6px; }
+  #device main .epanel .ename { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 600; }
+  /* R10: gap 0, not 4 — two borderless text actions are already 12px of padding apart on each side,
+     and round 6 #5's rule is that that padding IS the rhythm. See the R10 block. */
+  #device main .epanel .gxacts { display: flex; flex-wrap: wrap; gap: 0; margin-left: -12px; }
+  #device main .epanel .emove { display: flex; align-items: center; gap: 4px; }
+  /* a rail inside a row's expansion: .gexp indents to the row's own 68px text column, and a rail is
+     full-bleed by definition — its fade sits at the page's own edges, the way the catalogue rail's fade
+     sits at the shell column edges. So it reaches back out: the ONE place a -68px margin appears, and
+     it is the rail recipe asserting itself over the expansion indent rather than a nudge.
+  */
+  #device main .gexp .erail-wrap { margin: 0 -16px 0 -68px; }
+  /* the rail has no rows to hang a note on, so its note sits on the page's own text edge instead of the
+     list's 68px hairline column. */
+  #device main .grp .gnote.grail { margin: 0 16px 8px; }
+  /* ---- 065 R10: THE ZONE BAR — the three zone words, promoted from description to navigation -------
+     R9 shipped nothing here and wrote down what would have to be true for a rail to need a position
+     control: 024's premise is "either end is one fling away", which holds for the catalogue's 8–10
+     cards and is simply false at 162 boxes, where the edge-fade can tell THREE positions apart and 39
+     of 41 sampled offsets are the same one. R10 promotes B against that measurement, so the cost is
+     now ours: 27 arrow presses (or 8–15 flings) to the middle of Estante D.
+     THE FIX USES NO NEW VOCABULARY. R9's census retired the zone word as a DESCRIPTION — inside an
+     expanded estante it was identical on every row of 60–91% of pages. As NAVIGATION the same three
+     words are exactly right, because they name the only three positions the fade could ever
+     distinguish: the two ends and the middle. The fade says which of the three you are in; the bar
+     lets you GO there. One tap to the middle of 162 boxes instead of 27 presses.
+     THE 024 EXCEPTION, SCOPED: the rail itself still carries no indicator and no per-tile ordinal —
+     the bar is a sibling OUTSIDE the rail, it has three states and not 162, and it only exists past
+     ZONE_NAV_MIN boxes. Under that length nothing is added and 024 is untouched, which is every rail
+     the catalogue ships.
+     IT IS THE ADMIN'S OWN "PICK ONE OF N" CONTROL, not a fourth component: R7b ruled that job is the
+     chip row (a segmented track failed 1.4.11 at 1.16:1) and this is that markup, with the chip's own
+     state channels — the accent fill, the accent label, 600 weight and R7b's --stroke boundary — plus
+     aria-current. No tick glyph, because the current zone changes while you fling and a glyph that
+     appears and disappears would shift the labels under your thumb.
+     ONE THING IT DOES NOT INHERIT: 061's filter chip is a 32px box with a ::after that bleeds its hit
+     area to 44px. A zone jump is a target you hit one-handed standing at a real shelf, so it is a real
+     44px box and the ::after is pulled back to the box, so it cannot bleed into the rail above it. */
+  #device main .ezones { display: flex; gap: 8px; overflow: visible; margin: 0; padding: 0 0 8px; }
+  #device main .ezones .chip { flex: 1 1 0; min-width: 0; height: 44px; justify-content: center; }
+  #device main .ezones .chip::after { top: 0; bottom: 0; }
+  /* ================= 065 R10: ONE action system — identical block in 062/063 =================
+     Developer: "Those too big and kill balance … there are 'text actions' like 'Ver en la ludoteca'
+     and 'Quitar del estante'. We need a consistent way to represent actions everywhere with its
+     corresponding hierachy and correct balance to fix the currently broken rythm."
+
+     064 wrote down the PAINT of a role (Principal / Secundaria / Terciaria / Peligro) and nothing
+     about WHICH SHAPE a role takes in which place, so each place invented one. The census of all 113
+     visible action controls across 25 admin surfaces found 25 context×role pairs and, in five of them,
+     the same role rendering two ways. The rule this block lands:
+
+       THE CONTEXT PICKS THE ANATOMY; THE ROLE PICKS THE PAINT.
+
+     There are exactly four anatomies and no fifth:
+       A1  outlined   44px · 16px side padding · 1px stroke · 8px radius · 14px/600 · inset 0 on BOTH
+                      sides (the stroke ends on the content edge) · 8px between two of them
+       A2  text       44px · 12px side padding · no stroke · 14px/600 · pulled −12px so the LABEL, not
+                      the box, lands on the content edge · 0 between two of them (round 6 #5: their own
+                      padding IS the rhythm) · centred and unpulled in the one pagination context
+       A3  icon       44×44 borderless circle · 18px glyph · pulled −12px so the GLYPH lands on the edge
+       A4  sheet row  48px · full-bleed · 16px/400 · 22px leading icon · commit first with `tick`,
+                      Cancelar last with `chevL` (R7b) — a sheet has no buttons at all
+
+     And the rules the audit enforces (064/audit-admin.js, checks A1–A9):
+       1. at most ONE outlined action per block (064's one-Principal rule, widened: three equal
+          outlines and no Principal is what "kills the balance");
+       2. a PAGE-level action is never Principal and never outlined — it sits under content it does not
+          belong to, so it is A2;
+       3. a ROW-level action (a row, its trailing controls, its expansion, a marked tile's panel) is
+          never outlined;
+       4. a block's MODE control is outlined in both states — Secundaria to enter, Principal to leave
+          (round 7's .lhead decision, now .gacts's too);
+       5. a destructive action is never Principal, is A2/A3/A4 only, and confirms in a sheet;
+       6. 44px floor on everything tappable, a row that opens a sheet included;
+       7. A1 never pulls, A2/A3 always pull on the side that touches the block edge.
+
+     WHAT WAS ACTUALLY WRONG, measured (all three were invisible to every existing check):
+       · `.pacts` applied the borderless −12px pull to an OUTLINED Secundaria, so "Nuevo estante" hung
+         its stroke 12px past the page's left content edge. 064's audit measured only the right edge.
+       · the estante's options `.ibtn` sat at inset 0 while every row arrow directly above it sat at
+         −12, so two identical 18px glyphs were 12px out of line down one column.
+       · "the space between two text actions" was 4px in `.gxacts`, 8px in `.eactions` and
+         `.banner-actions`, and 0 inside a save bar with no outline — four answers to round 6 #5's one
+         rule, which had only ever been applied where round 6 happened to look. */
+  /* rule 7, first half. R7 wrote it for .lhead alone; every A1 context is told now. */
+  #device :is(.lhead, .pacts, .gacts, .eactions, .banner-actions, .cta2-wrap, .addrow) > :is(.obtn, .b-pri, .b-sec) { margin-left: 0; margin-right: 0; }
+  /* rule 7, second half: the two borderless controls that had never been pulled.
+     · the estante's options .ibtn sat at inset 0 while every row arrow above it sat at -12.
+     · `.banner.err .banner-actions { margin: 0 }` cancelled the strip's pull, so 063's lone Reintentar
+       had its label 12px inside the banner's content edge while 061's Cancelar, in the same class, sat
+       on it. The container's pull is dropped for good and the pull is put on the BUTTON, where it
+       belongs: an outlined last child then ends on the edge and a borderless one puts its label there. */
+  #device main .gacts > .ibtn:last-child { margin-right: -12px; }
+  #device .banner-actions { margin-right: 0; }
+  #device .banner-actions > .tbtn:not(.b-pri):not(.b-sec):last-child { margin-right: -12px; }
+  /* rule 6, the 44px floor on anything you tap. Two panels declared 40px for rows that OPEN A SHEET
+     — R7's settings panel in a sección ("Orden · A mano") and the editor's own row boxes ("Estante ·
+     Sin ubicar") — and nothing audited either, because 064's audit only ever looked at buttons. A
+     static row is left alone: it is text, not a target. */
+  #device main :is(.sgroup, .sbox.rows) :is(button, label, a).srow { min-height: 44px; }
 
 /* ================= 065 only: what a composed walk needs =================
    Nothing here restyles a page. It covers the two things no single sketch could own:
@@ -1210,7 +1558,7 @@ const SCREENS = {
   niveles:    { title: 'Revisar niveles', icon: 'niveles' },
   staff:      { title: 'Staff', icon: 'staff', ownerOnly: true },
   seccion:    { title: 'Sección', parent: 'secciones' },   // drill-down: /admin/secciones/:id
-  asignar:    { title: 'Asignar', parent: 'estantes' },    // drill-down: /admin/estantes/:id/asignar
+  /* 065 R8: `asignar` is gone — an expanded estante on the Estantes page does its job. */
 };
 const SECTION_ORDER = ['juegos', 'secciones', 'estantes', 'niveles', 'staff'];
 const PHONE_TABS = ['panel', 'juegos', 'secciones', 'estantes'];
@@ -1225,9 +1573,13 @@ const signedIn = () => S.mode !== 'out';
 
 /* ---------------- ONE row anatomy ----------------
    [28px slot: icon or avatar] [label (+ secondary line)] [count] [chevron]; only a tone class varies. */
-function row({ act, nav, icon, avatar, avatarText, label, sub, count, tone = '', chev = true, isStatic = false, on = false, extra = '', wrap = false }) {
+/* 065 R7b: `type`. A sheet's actions are rows in its .dlinks, never a button footer — so the rename
+   sheet's committing row has to BE the form's submit, or Enter would stop committing from the keyboard.
+   Everything else is type="button", which is also what stops a row that merely closes a sheet from
+   submitting a form it happens to sit inside. A row with neither act nor nav carries only its extras. */
+function row({ act, nav, icon, avatar, avatarText, label, sub, count, tone = '', chev = true, isStatic = false, on = false, extra = '', wrap = false, type = 'button' }) {
   const tag = isStatic ? 'div' : 'button';
-  const attrs = isStatic ? '' : (act ? `data-act="${act}" ${extra}` : `data-nav="${nav}"`);
+  const attrs = isStatic ? '' : `type="${type}" ` + (act ? `data-act="${act}" ${extra}` : nav ? `data-nav="${nav}"` : extra);
   const slot = avatar || avatarText ? `<span class="avatar">${avatarText || USER.initials}</span>` : ic(icon, 'ico');
   return `<${tag} class="dlink ${tone} ${isStatic ? 'static' : ''} ${on ? 'on' : ''}" ${attrs} ${on ? 'aria-current="page"' : ''}>
     <span class="slot">${slot}</span><span class="lbl ${wrap ? 'wrap' : ''}">${label}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
@@ -1575,12 +1927,58 @@ const G = [
 ].map(([name, year, pl, hue], i) => ({ id: 100 + i, name, year, pl, hue }));
 const gById = id => G.find(g => g.id === id);
 
+/* 065 R7b: the shelf fixture is derived from the shelf COUNT, so the same page can be measured with 4
+   shelves or with 12 without its numbers going dishonest. Two invariants hold at any n:
+     · every shelf really holds some of the games this sketch renders (round-robin over the first 20),
+       so a group that claims a count can always expand to real rows. Before this, "Estante D —
+       expertos" claimed 157 juegos and rendered 0 — harmless while the view only ever showed the first
+       four games of a group, and a lie the moment you can expand it;
+     · the hidden bases still sum to placed − 20, so sum(shelfCount) === placedN() at every n.
+   At n = 4 it reproduces the seeded 60 / 54 / 37 / 157 exactly. */
+function shelfFixture(pend, n) {
+  const NAMES = ['Estante A — familiares', 'Estante B — estrategia', 'Estante C — fiesta', 'Estante D — expertos'];
+  const W = [60, 54, 37, pend ? 157 : 225];
+  const SUM = W.reduce((a, b) => a + b, 0);
+  const w = Array.from({ length: n }, (_, i) => W[i % W.length]);
+  const tot = w.reduce((a, b) => a + b, 0);
+  let left = SUM;
+  return w.map((x, i) => {
+    const base = i === n - 1 ? left : Math.round(SUM * x / tot);
+    left -= base;
+    return { id: i + 1, name: NAMES[i] || `Estante ${String.fromCharCode(65 + i)} — sin nombre`, base };
+  });
+}
+/* 065 R8 — THE PREMISE: the order of the games on an estante IS their physical left-to-right order on
+   the shelf. A game's zone ("al medio") is derived from its index in that order, and moving a game in
+   this list means moving the actual box. So a shelf cannot be a count with a bag of games in it: it is
+   an ORDERED array of slots, and a slot is either one of the 36 games this sketch names (its id) or a
+   slot that really exists on the shelf and whose title the sketch does not render (null).
+   FIXTURE HONESTY. A zone and a pair of neighbours are only meaningful if the shelf's full ordered
+   contents exist, so they do: sum of the array lengths IS placedN(). The named games sit in ONE
+   CONTIGUOUS RUN per shelf at a per-shelf offset (start / middle / end, cycling), which buys three
+   things: every index — and therefore every zone — is real at any shelf length; every named game has
+   at least one named neighbour; and all three zones plus both shelf ends are exercised by the fixture.
+   A row never claims a neighbour it does not have — nbrLine() says "Después de X", "Primero del
+   estante" or "El 27 de 54 del estante" instead. */
+function shelfOrders(shelves, place) {
+  const ord = {};
+  shelves.forEach((sh, k) => {
+    const mine = G.filter(g => place[g.id] === sh.id).map(g => g.id);
+    const n = sh.base + mine.length, room = n - mine.length;
+    const off = [0, Math.floor(room / 2), room][k % 3];
+    const a = Array(n).fill(null);
+    mine.forEach((id, j) => { a[off + j] = id; });
+    ord[sh.id] = a;
+  });
+  return ord;
+}
 /* Seeded exactly like 20260914150000_create_sections.exs (names, subtitles, kinds, sorts); counts are fake. */
-function seed062(pend) {
+function seed062(pend, nShelves = 4) {
+  const shelves = shelfFixture(pend, nShelves);
   const place = {};
-  G.forEach((g, i) => { place[g.id] = i < 20 ? [1, 1, 2, 2, 3][i % 5] : (pend ? null : 4); });
+  G.forEach((g, i) => { place[g.id] = i < 20 ? shelves[i % nShelves].id : (pend ? null : shelves[nShelves - 1].id); });
   return {
-    place,
+    place, shelves, order: shelfOrders(shelves, place),
     sections: [
       { id: 1, name: 'Destacados del club', sub: 'La selección del club — los juegos que más recomendamos ahora mismo.', featured: true, kind: 'manual', sort: 'manual', members: [114, 102, 107, 106, 100, 101, 115, 127, 128, 129, 130, 103, 119, 120, 108, 121, 123, 131] },
       { id: 2, name: 'Crea conexiones', sub: 'Reglas simples, familiar / diversión garantizada', kind: 'manual', sort: 'name', members: [105, 107, 121, 122, 123, 133, 119, 100, 112] },
@@ -1591,9 +1989,6 @@ function seed062(pend) {
       { id: 7, name: 'Nivel experto', sub: 'Reglas largas y decisiones profundas. Para mesas con experiencia.', kind: 'weight_band', band: 'e', sort: 'name', n: 93 },
       { id: 8, name: 'Recientemente añadidos', sub: 'Las incorporaciones más nuevas a la ludoteca.', kind: 'recent', sort: 'recent', n: 20 },
     ],
-    // base = games on the shelf beyond the ones this sketch renders (412 total)
-    shelves: [{ id: 1, name: 'Estante A — familiares', base: 60 }, { id: 2, name: 'Estante B — estrategia', base: 54 },
-      { id: 3, name: 'Estante C — fiesta', base: 37 }, { id: 4, name: 'Estante D — expertos', base: pend ? 157 : 225 }],
     hiddenUnplaced: pend ? 68 : 0,
     mis: pend ? [{ g: 101, band: 'i', w: 3.86 }, { g: 108, band: 'i', w: 1.89 }, { g: 109, band: 'i', w: 3.78 }, { g: 100, band: 'i', w: 1.76 },
       { g: 104, band: 'i', w: 1.24 }, { g: 115, band: 'i', w: 3.26 }, { g: 106, band: 'e', w: 2.18 }] : [],
@@ -1601,16 +1996,29 @@ function seed062(pend) {
       ...(pend ? [{ email: 'flor.tolaba@gmail.com', role: 'staff', st: 'pending', note: 'enviada ayer' }] : [])],
   };
 }
-const V = { variant: 'B', ordering: null, cur: 1, curShelf: 1, vista: 'cards', ed: null,
-  newSec: '', newSecErr: null, newShelf: '', newShelfErr: null, memQ: '', memErr: null, listaQ: '', asgQ: '',
-  onShelfOpen: false, renaming: false, ren: '', renErr: null, inv: '', invErr: null, inviting: false, failNext: false, undo: null, ...seed062(true) };
-const QMAP = { 'mem-q': 'memQ', 'lista-q': 'listaQ', 'asg-q': 'asgQ' };
+const V = { variant: 'B', ordering: null, cur: 1, curShelf: 1, ed: null,
+  newSec: '', newSecErr: null, newShelf: '', newShelfErr: null, memQ: '', memErr: null, listaQ: '',
+  renaming: false, ren: '', renErr: null, inv: '', invErr: null, inviting: false, failNext: false, undo: null,
+  /* 065 R7b: which estantes are open, and how many rows each one has paged in.
+     065 R8: plus which game row is expanded, and which estante is in "agregar juegos" mode. */
+  /* 065 R9 measured three Estantes variants behind a `V.est` switch. 065 R10: the developer chose B
+     (the rail) against that measurement — "For estantes, I want option B(riel). remove the another
+     variants." — so A and C are deleted and the switch with them. What is left is the rail's own
+     state: which tile is marked, where each rail is scrolled and which zone that scroll is in, so a
+     patch() throws away neither the offset nor the zone bar's readout. */
+  tileOn: null, railAt: {}, zoneAt: {},
+  grpOpen: {}, grpShown: {}, gameOpen: null, adding: null, addShown: 0, ...seed062(true) };
+const QMAP = { 'mem-q': 'memQ', 'lista-q': 'listaQ' };
 
 const curSec = () => V.sections.find(x => x.id === V.cur);
 const shelfById = id => V.shelves.find(s => s.id === id);
-const localOn = sid => G.filter(g => V.place[g.id] === sid);
+/* 065 R8: a shelf's contents come from its ORDER, not from a filter over G — the array is the physical
+   left-to-right order and it is what every count, zone and neighbour is read off. */
+const ordOf = sid => V.order[sid] || (V.order[sid] = []);
+const localOn = sid => ordOf(sid).filter(x => x != null).map(gById);
+const idxOn = (sid, gid) => ordOf(sid).indexOf(gid);
 const unplacedLocal = () => G.filter(g => V.place[g.id] == null);
-const shelfCount = s => s.base + localOn(s.id).length;
+const shelfCount = s => ordOf(s.id).length;
 const unplacedN = () => V.hiddenUnplaced + unplacedLocal().length;
 const placedN = () => TOTAL - unplacedN();
 const initials = e => { const p = e.split('@')[0].split(/[._-]/); return (p[0][0] + (p[1] ? p[1][0] : p[0][1] || '')).toUpperCase(); };
@@ -1631,9 +2039,14 @@ const staticRow = ({ key, slot, name, sub, trail = '' }) => `<div class="grow" d
 const moveBtns = (scope, id, i, n, label) =>
   `<button type="button" class="ibtn" data-act="v-move" data-scope="${scope}" data-id="${id}" data-dir="-1" aria-label="Subir ${esc(label)}" ${i === 0 ? 'disabled' : ''}>${ic('chevUp')}</button>` +
   `<button type="button" class="ibtn" data-act="v-move" data-scope="${scope}" data-id="${id}" data-dir="1" aria-label="Bajar ${esc(label)}" ${i === n - 1 ? 'disabled' : ''}>${ic('chevDown')}</button>`;
+/* 065 R7: the reorder toggle is a real button, not a text link. It changes what every row in the list
+   below it does, which is not a Terciaria job — so it is Secundaria to enter the mode (outlined, neutral
+   stroke) and Principal to leave it ("Listo": outlined, primary stroke, the one action that finishes the
+   block's job). Both states carry a 1px stroke, so the affordance never depends on the label alone, and
+   the change lands here so all three pages that render an lhead move together. */
 function lhead(label, scope, canOrder, right = '') {
   const on = V.ordering === scope;
-  const btn = V.variant === 'B' && canOrder ? `<button type="button" class="tbtn" data-act="v-order" data-scope="${scope}" aria-pressed="${on}">${on ? 'Listo' : 'Ordenar'}</button>` : right;
+  const btn = V.variant === 'B' && canOrder ? `<button type="button" class="tbtn ${on ? 'b-pri' : 'b-sec'}" data-act="v-order" data-scope="${scope}" aria-pressed="${on}">${on ? 'Listo' : 'Ordenar'}</button>` : right;
   return `<div class="lhead"><span class="group-label">${label}</span>${btn}</div>${on ? '<p class="lhint">Usá las flechas para cambiar el orden. Se guarda con cada toque.</p>' : ''}`;
 }
 /* 061's add pattern: group label = field label, 44px field + Principal submit. 064: never disabled — empty submits show the error; when the form can't be used (staff full) the button is not rendered */
@@ -1680,10 +2093,33 @@ function memRow(s, g, i, n) {
   if (V.ordering === 'members') return splitRow({ ...base, trail: moveBtns('members', g.id, i, n, g.name) });
   return tapRow({ ...base, act: 'v-mem-sheet', attrs: `data-id="${g.id}" aria-label="Opciones de ${esc(g.name)}"`, trail: ic('more', 'chev') });
 }
+/* 065 R7: the sección's save bar IS the game editor's (063 barHtml → .ebar.inline). Before this the
+   admin had two components for one job: the editor's soft block with a status line and its actions, and
+   062's .saverow — a bare accent note and an outlined button floating loose on the page background.
+   What is true here and not in the editor: a sección has no draft/published lifecycle, so the status
+   line's own job is the save state, and the dot carries it exactly as "Borrador" does in a Juegos row.
+   Guardar is Principal per 064, and it is the editor's one-word label, not "Guardar cambios". */
+const secDirty = () => { const s = curSec(), e = V.ed; return !!e && (e.name !== s.name || e.sub !== (s.sub || '') || e.hidden !== !!s.hidden || e.sort !== s.sort); };
+const secBar = (dirty = secDirty()) => `<div class="ebar inline" id="sec-bar" role="region" aria-label="Estado y guardado">
+  <div class="bst"><span class="bl1"><span class="dot ${dirty ? 'draft' : 'published'}"></span>${dirty ? 'Cambios sin guardar' : 'Todo guardado'}</span></div>
+  ${dirty ? '<div class="eactions"><button type="button" class="obtn" data-act="v-save-sec">Guardar</button></div>' : ''}</div>`;
+/* and typing in Nombre or Subtítulo only touches what depends on "dirty" — the bar — exactly the way
+   063's sync() replaces #ebar while you type the game's name. patch() would rebuild the field. */
+function syncSecBar() { const b = $('#sec-bar'); if (b) b.outerHTML = secBar(); }
+/* 065 R7: the results of the "Buscar un juego para agregar" field, alone in their own region so typing
+   can replace them without touching the field — see refreshQ(). */
+function memResHtml() {
+  const s = curSec(), q = norm(V.memQ.trim());
+  const results = q ? G.filter(g => !s.members.includes(g.id) && norm(g.name).includes(q)).slice(0, 6) : [];
+  const res = !q ? '' : results.length
+    ? `<div class="glist" style="margin-top:4px" aria-label="Resultados">${results.map(g => tapRow({ key: 'r' + g.id, act: 'v-add-mem', attrs: `data-id="${g.id}" aria-label="Agregar ${esc(g.name)}"`, slot: thumbOf(g), name: esc(g.name), sub: meta(g.year, `${g.pl} jug.`), trail: ic('plusC', 'trail-ico') })).join('')}</div><div class="divider" style="margin:4px 0 8px"></div>`
+    : `<p class="lnote" style="margin:8px 2px 12px">Sin resultados para “${esc(V.memQ)}”.</p>`;
+  return `<p class="ferr" role="alert">${V.memErr || ''}</p>${res}`;
+}
 function secBody() {
   const s = curSec();
   if (!V.ed) V.ed = { name: s.name, sub: s.sub || '', hidden: !!s.hidden, sort: s.sort };
-  const e = V.ed, dirty = e.name !== s.name || e.sub !== (s.sub || '') || e.hidden !== !!s.hidden || e.sort !== s.sort;
+  const e = V.ed, dirty = secDirty();
   const n = s.kind === 'manual' ? s.members.length : s.n;
   const order = s.kind === 'recent'
     ? `<div class="srow static"><span class="gtxt"><span class="gname">Orden</span></span><span class="val">Más recientes primero</span></div>`
@@ -1691,18 +2127,23 @@ function secBody() {
       ? `<button type="button" class="srow" data-act="v-sort-sheet" aria-haspopup="dialog"><span class="gtxt"><span class="gname">Orden</span></span><span class="val">${SORTS[e.sort]}</span>${ic('chevR', 'chev')}</button>`
       : '';
   const orderSelect = s.kind !== 'recent' && V.variant === 'A'
-    ? `<label class="flabel" for="ed-sort" style="margin-top:16px">Orden</label><select id="ed-sort" class="tin full sel">${sortKeys(s).map(k => `<option value="${k}" ${e.sort === k ? 'selected' : ''}>${SORTS[k]}</option>`).join('')}</select>` : '';
+    ? `<div class="afield"><label class="flabel" for="ed-sort">Orden</label><select id="ed-sort" class="tin full sel">${sortKeys(s).map(k => `<option value="${k}" ${e.sort === k ? 'selected' : ''}>${SORTS[k]}</option>`).join('')}</select></div>` : '';
+  /* 065 R7: ONE surface for the whole Ajustes block. The two fields used to sit bare on the page
+     background above a soft box holding the two setting rows — one labelled block, two surface
+     treatments, and five different gaps. They are field rows in the same panel now, on the panel's one
+     12px rhythm, which is also what tells this form apart from the search field further down (round 4
+     deliberately gave the search the same field anatomy, so grouping is the only lever left). */
   const settings = `<section class="jsec" aria-label="Ajustes">
-    <div class="group-label" style="margin:0 0 8px">Ajustes</div>
-    <label class="flabel" for="ed-name">Nombre</label><input id="ed-name" class="tin full" value="${esc(e.name)}" autocomplete="off">
-    <label class="flabel" for="ed-sub">Subtítulo</label><input id="ed-sub" class="tin full" value="${esc(e.sub)}" autocomplete="off" placeholder="Una línea que explique la fila">
-    ${orderSelect}
-    <div class="sgroup">
+    <div class="group-label">Ajustes</div>
+    <div class="sgroup apanel">
+      <div class="afield"><label class="flabel" for="ed-name">Nombre</label><input id="ed-name" class="tin full" value="${esc(e.name)}" autocomplete="off"></div>
+      <div class="afield"><label class="flabel" for="ed-sub">Subtítulo</label><input id="ed-sub" class="tin full" value="${esc(e.sub)}" autocomplete="off" placeholder="Una línea que explique la fila"></div>
+      ${orderSelect}
       <label class="srow" for="ed-show"><span class="gtxt"><span class="gname">Mostrar en el inicio</span><span class="gsub">${e.hidden ? 'Oculta: nadie la ve en la web' : 'Se ve si tiene juegos publicados'}</span></span>
         <input type="checkbox" role="switch" id="ed-show" class="switch" ${e.hidden ? '' : 'checked'}></label>
       ${order}
     </div>
-    ${dirty ? '<div class="saverow"><span class="dirty-note">Cambios sin guardar</span><button type="button" class="obtn" data-act="v-save-sec">Guardar cambios</button></div>' : ''}
+    ${secBar(dirty)}
   </section>`;
   let games;
   if (s.kind === 'weight_band') games = `<section class="jsec"><div class="group-label" style="margin:0 0 4px">Juegos</div>
@@ -1711,15 +2152,9 @@ function secBody() {
     <p class="lnote">Muestra solos los <b>20 juegos agregados más recientemente</b>.</p></section>`;
   else {
     const ms = s.sort === 'name' ? [...s.members].map(gById).sort((a, b) => a.name.localeCompare(b.name, 'es')) : s.members.map(gById);
-    const q = norm(V.memQ.trim());
-    const results = q ? G.filter(g => !s.members.includes(g.id) && norm(g.name).includes(q)).slice(0, 6) : [];
-    const resHtml = !q ? '' : results.length
-      ? `<div class="glist" style="margin-top:4px" aria-label="Resultados">${results.map(g => tapRow({ key: 'r' + g.id, act: 'v-add-mem', attrs: `data-id="${g.id}" aria-label="Agregar ${esc(g.name)}"`, slot: thumbOf(g), name: esc(g.name), sub: meta(g.year, `${g.pl} jug.`), trail: ic('plusC', 'trail-ico') })).join('')}</div><div class="divider" style="margin:4px 0 8px"></div>`
-      : `<p class="lnote" style="margin:8px 2px 12px">Sin resultados para “${esc(V.memQ)}”.</p>`;
     games = `<section class="jsec">${lhead(`Juegos · ${n}${s.featured ? ' de 20' : ''}`, 'members', s.sort === 'manual')}
       ${sfield('mem-q', 'Buscar un juego para agregar', V.memQ)}
-      <p class="ferr" role="alert">${V.memErr || ''}</p>
-      ${resHtml}
+      <div id="mem-results">${memResHtml()}</div>
       ${s.sort !== 'manual' ? `<div class="jsum"><span>Ordenados ${SORTS[s.sort].toLowerCase()}. Para ordenarlos vos, elegí “A mano”.</span></div>` : ''}
       ${ms.length ? `<div class="glist ${V.ordering === 'members' ? 'ordering' : ''}">${ms.map((g, i) => memRow(s, g, i, ms.length)).join('')}</div>`
         : `<div class="empty">${ic('listq')}<h2>Todavía no tiene juegos</h2><p>Buscá un juego arriba para agregarlo. La fila aparece en el inicio cuando tenga uno publicado.</p></div>`}
@@ -1728,69 +2163,389 @@ function secBody() {
   return head(s.name, { parent: 'secciones', sub: secMeta(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() }) + settings + games;
 }
 
-/* ---- Estantes ---- */
+/* ---- Estantes: ONE page (065 R8) ------------------------------------------------------------
+   Round 7b gave this page a `Recorrido | Contenido` chip control. Round 8 RETIRES it after one round,
+   and the measurement is why: neither view could answer the page's own first question. "Recorrido"
+   listed the estantes with no search field at all; "Contenido" could tell you WHICH estante held a
+   game (3 taps: tab, chip, type) but never WHERE on it — a group opened to `G.filter(place === sid)`,
+   catalogue order, not shelf order, and nothing said so. So the answer to "what is next to Catan" was
+   not slow, it was unavailable, and the five rows that looked like an answer were in the wrong order.
+   Two views was the wrong premise, not the wrong labels.
+   /admin/estantes/:id/asignar is retired with it. Everything it did is here: ubicar an unplaced game
+   (an estante's "Agregar juegos" mode, and "Ubicar en…" from a Sin ubicar row), search any game (the
+   one search field, which now also answers "where is it"), the progress line, and Renombrar — which
+   keeps a sheet, reached from the estante's own options. */
 const progHtml = () => `<div class="prog"><div class="prog-line"><span>${nf(placedN())} de ${nf(TOTAL)} juegos ubicados</span>
   ${unplacedN() ? `<span class="pend">${nf(unplacedN())} sin ubicar</span>` : '<span>Todos ubicados</span>'}</div>
   <span class="meter" aria-hidden="true"><i style="width:${placedN() / TOTAL * 100}%"></i></span></div>`;
 function shelfRow(sh, i) {
   const n = V.shelves.length;
   const base = { key: 'e' + sh.id, slot: slotIco('estantes'), name: esc(sh.name), sub: meta(`${nf(shelfCount(sh))} juegos`) };
-  if (V.variant === 'A') return splitRow({ ...base, act: 'v-open-shelf', attrs: `data-id="${sh.id}"`, trail: moveBtns('estantes', sh.id, i, n, sh.name) });
-  if (V.ordering === 'estantes') return splitRow({ ...base, trail: moveBtns('estantes', sh.id, i, n, sh.name) });
-  return tapRow({ ...base, act: 'v-open-shelf', attrs: `data-id="${sh.id}"` });
-}
-function estBody() {
-  const seg = `<div class="seg two" role="radiogroup" aria-label="Vista">${[['cards', 'Estantes'], ['lista', 'Juegos por estante']].map(([k, l]) =>
-    `<button type="button" role="radio" aria-checked="${V.vista === k}" class="${V.vista === k ? 'on' : ''}" data-act="v-vista" data-v="${k}">${l}</button>`).join('')}</div>`;
-  if (V.vista === 'cards') return `${head('Estantes')}${progHtml()}${seg}
-    ${addForm({ id: 'shelf-new', label: 'Nuevo estante', ph: 'Nombre del estante', value: V.newShelf, err: V.newShelfErr, btn: 'Crear' })}
-    <section class="jsec">${lhead('Orden de recorrido', 'estantes', true)}
-      <div class="glist ${V.ordering === 'estantes' ? 'ordering' : ''}">${V.shelves.map(shelfRow).join('')}</div>
-      <p class="lnote">Tocá un estante para ubicar juegos en él.</p></section>`;
-  // ?vista=lista — pick/restore list, walking order, "Sin ubicar" last; the filter never hides a group's heading (E5)
-  const q = norm(V.listaQ.trim());
-  const groups = [...V.shelves.map(sh => ({ name: sh.name, games: localOn(sh.id), n: shelfCount(sh) })), { name: 'Sin ubicar', games: unplacedLocal(), n: unplacedN(), pend: true }];
-  const grp = g => {
-    const gs = q ? g.games.filter(x => norm(x.name).includes(q)) : g.games.slice(0, 4);
-    const count = g.pend && g.n ? `<span class="pend">${nf(g.n)}</span>` : `<span class="gcount">${nf(g.n)}</span>`;
-    return `<div class="grp"><div class="lhead"><span class="group-label">${esc(g.name)}</span>${count}</div>
-      ${gs.length ? `<div class="glist">${gs.map(x => staticRow({ key: 'l' + x.id, slot: thumbOf(x), name: esc(x.name), sub: meta(x.year, `${x.pl} jug.`) })).join('')}</div>
-      ${!q && g.n > gs.length ? `<p class="lcap">y ${nf(g.n - gs.length)} más</p>` : ''}` : `<p class="lnote">${q ? 'Ninguno con ese nombre.' : 'Sin juegos.'}</p>`}</div>`;
-  };
-  return `${head('Estantes')}${progHtml()}${seg}${sfield('lista-q', 'Buscar por nombre', V.listaQ)}<div style="height:16px"></div>${groups.map(grp).join('')}`;
+  if (V.variant === 'A') return splitRow({ ...base, act: 'v-toggle-grp', attrs: `data-grp="s${sh.id}"`, trail: moveBtns('estantes', sh.id, i, n, sh.name) });
+  return splitRow({ ...base, trail: moveBtns('estantes', sh.id, i, n, sh.name) });
 }
 
-/* ---- Estantes › Asignar (walk the shelf) ---- */
-function asgBody() {
-  const sh = shelfById(V.curShelf), q = norm(V.asgQ.trim());
-  const title = V.variant === 'A' && V.renaming
-    ? `<h1 class="sr">${esc(sh.name)}</h1><form id="ren-form" class="renform" novalidate><label class="flabel" for="ren-in">Nombre del estante</label>
-        <div class="addrow"><input id="ren-in" class="tin ${V.renErr ? 'invalid' : ''}" value="${esc(V.ren)}" autocomplete="off" enterkeyhint="done">
-        <button type="button" class="tbtn" data-act="v-cancel-rename">Cancelar</button><button type="submit" class="obtn">Guardar</button></div>
-        <p class="ferr" role="alert">${V.renErr || ''}</p></form>`
-    : `<div class="trow"><h1 class="ptitle">${esc(sh.name)}</h1><button type="button" class="tbtn" data-act="v-rename">Renombrar</button></div>`;
-  let list;
-  if (q) {
-    const rs = G.filter(g => norm(g.name).includes(q));
-    list = `<section class="jsec"><div class="lhead"><span class="group-label">Resultados</span><span class="gcount">${rs.length}</span></div>
-      ${rs.length ? `<div class="glist">${rs.map(g => V.place[g.id] === sh.id
-        ? staticRow({ key: 'a' + g.id, slot: thumbOf(g), name: esc(g.name), sub: meta('Ya está en este estante'), trail: ic('tick', 'trail-ico ok') })
-        : tapRow({ key: 'a' + g.id, act: 'v-assign', attrs: `data-id="${g.id}" aria-label="Ubicar ${esc(g.name)} en ${esc(sh.name)}"`, slot: thumbOf(g), name: esc(g.name),
-            sub: V.place[g.id] ? meta(`En ${esc(shelfById(V.place[g.id]).name)}`) : '<span class="dot draft"></span><span class="st-draft">Sin ubicar</span>', trail: ic('plusC', 'trail-ico') })).join('')}</div>`
-        : `<div class="empty">${ic('search')}<h2>Sin resultados para “${esc(V.asgQ)}”</h2><button class="tbtn" data-act="v-clear" data-for="asg-q">Borrar búsqueda</button></div>`}</section>`;
-  } else {
-    const un = unplacedLocal();
-    list = `<section class="jsec"><div class="lhead"><span class="group-label">Sin ubicar</span>${unplacedN() ? `<span class="pend">${nf(unplacedN())}</span>` : ''}</div>
-      ${un.length ? `<div class="glist">${un.map(g => tapRow({ key: 'a' + g.id, act: 'v-assign', attrs: `data-id="${g.id}" aria-label="Ubicar ${esc(g.name)} en ${esc(sh.name)}"`, slot: thumbOf(g), name: esc(g.name), sub: meta(g.year, `${g.pl} jug.`), trail: ic('plusC', 'trail-ico') })).join('')}</div>
-        ${V.hiddenUnplaced ? `<div class="more"><button class="tbtn" data-act="v-more">Mostrar más</button><span class="cap">${un.length} de ${nf(unplacedN())}</span></div>` : ''}`
-        : `<div class="empty">${ic('check')}<h2>Todos los juegos tienen estante</h2><p>Si llega uno nuevo, aparece acá para ubicarlo.</p></div>`}</section>`;
+/* THE ZONES. The order of the games on an estante IS their physical left-to-right order, so a game's
+   zone is nothing but its index read back in words — thirds of the shelf, by the game's centre, so a
+   shelf of one or two boxes still gets a true answer instead of a rounding artefact.
+   WORDING is the developer's own: "al medio", "más a la izquierda", "más a la derecha".
+   HOW MANY: three, and the same three at every shelf length — see the README. A zone over a 162-box
+   estante points at 54 boxes, which is why the zone is never the whole answer: it says which end to
+   walk to, and the row's expansion says which box. Splitting it finer buys precision the eye cannot
+   use at a shelf and costs one vocabulary per shelf length. */
+const ZONES = ['Más a la izquierda', 'Al medio', 'Más a la derecha'];
+const zoneAt = (i, n) => ZONES[Math.min(2, Math.max(0, Math.floor((i + 0.5) * 3 / n)))];
+/* and the precise half of the answer. A row never claims a neighbour it does not have: the shelf's
+   ordered slots exist, but only 36 of the 412 games are named in this sketch, so an adjacent slot can
+   be one the sketch does not render — and then the line says what it does know. */
+function nbrLine(sid, i) {
+  const a = ordOf(sid), n = a.length;
+  const L = i > 0 && a[i - 1] != null ? gById(a[i - 1]).name : null;
+  const R = i < n - 1 && a[i + 1] != null ? gById(a[i + 1]).name : null;
+  if (i === 0) return R ? `Primero del estante, antes de ${esc(R)}` : 'Primero del estante';
+  if (i === n - 1) return L ? `Último del estante, después de ${esc(L)}` : 'Último del estante';
+  if (L && R) return `Entre ${esc(L)} y ${esc(R)}`;
+  if (L) return `Después de ${esc(L)}`;
+  if (R) return `Antes de ${esc(R)}`;
+  return `El ${nf(i + 1)} de ${nf(n)} del estante`;
+}
+const SIN_MARK = '<span class="dot draft"></span><span class="st-draft">Sin ubicar</span>';
+/* R8: a placed game's meta line LEADS with the zone and then carries EXACTLY ONE more thing: whatever
+   the context does not already say. In a search result that is the estante (there is no group heading
+   to carry it); inside an estante's own group that is the año (repeating the heading would be its
+   ninth copy on the screen). R9 kept the second half and dropped the first inside a group — see the
+   next comment. Measured, and this is why it is one and not both: zona · estante · año wrapped
+   6 of 13 result rows into four different row heights and cost 872px, where zona · estante wraps none
+   and costs 806px. The año's job — telling two editions of one game apart (round 3) — is not the job a
+   "where is it" row is being asked. */
+/* 065 R10: THE ZONE WORDS HAVE TWO JOBS NOW, and only two.
+   · On a SEARCH-RESULT row they are description, and R9's census kept them there: thirteen results come
+     from thirteen estantes in relevance order, there is no order to read, and the zone is the only
+     thing that says which end to walk to. R9's B had dropped it, which is exactly why B's collapsed row
+     told you LESS than A's before you tapped. Promoting B without putting it back would have shipped
+     that regression, so the shipped page is the combination: `zona · estante` on the search row, the
+     rail inside the expansion.
+   · Inside an expanded estante they are NAVIGATION — the three jump targets of the zone bar. There are
+     no rows left in there to describe, and the census's reason for retiring the word as description
+     (one word covers every row of 60–91% of pages) is the same reason it is right as navigation: the
+     three words name the only three positions a rail's edge-fade can ever tell apart.
+   065 R9 CLOSED ROUND 8'S OPEN ITEM, and it is a measurement, not a preference: INSIDE an expanded
+   estante the zone word is dropped, because the list order already is the position and the word only
+   restated it. Measured on this fixture, all four estantes: 20 rendered rows, 20 zone words, and 0
+   rows where the word told that row apart from the row above it — 5 consecutive "Más a la izquierda"
+   on Estante D was the developer's own complaint. Generalised past the fixture (the named games sit in
+   one run per shelf, so the fixture's 100% is partly its own doing): a page of 8 consecutive boxes
+   spans 8/65 = 12% of Estante B and 8/162 = 5% of Estante D, where a zone spans 33% — so a page
+   straddles a zone boundary in only 16 of 58 start positions on a 65-box shelf (**72% of pages carry
+   one word on every row**) and 16 of 155 on a 162-box one (**90%**). A label that is the same on
+   every row of nine pages out of ten is not telling you anything the order was not.
+   IN A SEARCH RESULT IT STAYS. There is no order to read there — thirteen results from thirteen
+   estantes are in query-relevance order — so the zone is the only thing that says which end to walk
+   to, and it keeps the first slot the developer asked for ("the positional should be first").
+   R10: and a row inside an expanded estante is not a subject any more — there are no rows in there. */
+const zoneSub = (g, sid, withShelf) =>
+  withShelf
+    ? meta(zoneAt(idxOn(sid, g.id), ordOf(sid).length), esc(shelfById(sid).name))
+    : meta(g.year);
+
+/* ================= 065 R9/R10: the estante IS a RAIL =================
+   Developer, R9: "what if we use carousel(horizontal scrolable) to represent that physical position,
+   maybe been inspired by Apple iBooks?" — R9 built three variants and MEASURED THE RAIL AS THE LOSER
+   (27 arrow presses or 8–15 flings to the middle of a 162-box estante, against 2 taps of search; the
+   edge-fade tells 3 positions apart over 162 boxes). Developer, R10: "For estantes, I want option
+   B(riel). remove the another variants." — a developer override of a measured verdict, recorded the
+   way round 6's "copia" reversal was, with R9's numbers left standing in the README rather than
+   rewritten to make the rail look like it won.
+   So the costs R9 charged against the rail are now real problems this file owns, and the one the
+   override makes due is reaching the middle of 162 boxes. See the ZONE BAR below and the R10 CSS block.
+   See the CSS block of the same name for where every number and behaviour comes from (022-C arrows,
+   023-B physics, 024-A no indicator on the rail itself, 025-B shimmer) and for the fixture-honesty rule
+   this code implements: a run of slots this sketch cannot name is ONE hatched band of the run's real
+   width, never a row of anonymous covers. */
+/* THE ZONE BAR. 024's premise — "either end is one fling away" — is what R9's verdict said would have
+   to be false before a rail could earn a position control, and at 162 boxes it is: R9 measured a fling
+   at ~592–1340px over a 343px rail, so one fling crosses 5–12 boxes and two cross 10–25. Somewhere
+   around 30 the premise dies, which is the number R9's own verdict named ("024 holds unchanged up to
+   roughly the length you can fling end-to-end (~30 boxes at this card width)"). Under it the bar does
+   not render at all and 024 is untouched, which covers every rail the catalogue ships (8–10 cards). */
+const ZONE_NAV_MIN = 30;
+const zoneNav = n => n > ZONE_NAV_MIN;
+/* the jump targets are the LITERAL three words: the shelf's left end, its middle box, its right end.
+   That is what makes them cost no new vocabulary — and it is also what makes them the right three, since
+   they are exactly the three positions 024-A's edge-fade can distinguish and cannot reach. */
+const ZONE_JUMP = ['Izquierda', 'Medio', 'Derecha'];
+const zoneSlot = (z, n) => z === 0 ? 0 : z === 2 ? n - 1 : Math.floor((n - 1) / 2);
+const railZone = sid => V.zoneAt[sid] ?? 0;
+function zonesHtml(sid) {
+  const n = ordOf(sid).length, sh = shelfById(sid);
+  if (!zoneNav(n)) return '';
+  const cur = railZone(sid);
+  /* R7b's chip row, not a fourth component: the job is "pick one of N and change what is below", and
+     that is the control R7b chose for it. No tick glyph — the current zone changes while you fling and
+     a glyph that appears and disappears would shift the labels under your thumb — so the state is the
+     accent fill, the accent label, 600 weight, R7b's --stroke boundary and aria-current. */
+  return `<div class="chips ezones" role="group" aria-label="Ir a una zona de ${esc(sh.name)}">${ZONE_JUMP.map((lbl, i) =>
+    `<button type="button" class="chip ${i === cur ? 'on' : ''}" data-act="v-zone" data-sid="${sid}" data-z="${i}"
+      ${i === cur ? 'aria-current="true"' : ''} aria-label="Ir a ${ZONES[i].toLowerCase()} de ${esc(sh.name)}">${lbl}</button>`).join('')}</div>`;
+}
+const railRuns = sid => {
+  const a = ordOf(sid), out = [];
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] != null) { out.push({ k: 'g', i, id: a[i] }); continue; }
+    const s = i; while (i + 1 < a.length && a[i + 1] == null) i++;
+    out.push({ k: 'x', i: s, n: i - s + 1 });
   }
-  const on = localOn(sh.id);
-  const onShelf = `<section class="jsec"><div class="glist">
-      <button type="button" class="grow disclose" data-act="v-toggle-on" aria-expanded="${V.onShelfOpen}">${slotIco('estantes')}${txt('En este estante', meta(`${nf(shelfCount(sh))} juegos`))}${ic('chevR', 'chev')}</button>
-      ${V.onShelfOpen ? on.map(g => staticRow({ key: 'o' + g.id, slot: thumbOf(g), name: esc(g.name), sub: meta(g.year, `${g.pl} jug.`) })).join('') : ''}
-    </div>${V.onShelfOpen && sh.base ? `<p class="lcap">y ${nf(sh.base)} más</p>` : ''}</section>`;
-  return `${head(sh.name, { parent: 'estantes', extra: title })}${progHtml()}${sfield('asg-q', 'Buscar cualquier juego', V.asgQ)}<div style="height:8px"></div>${list}${onShelf}`;
+  return out;
+};
+/* THE TILE'S ACCESSIBLE NAME SAYS THE POSITION IN WORDS, and this is not a leftover: a rail's whole
+   claim is that the eye reads position off the geometry, and a screen reader has no geometry to read.
+   So "caja 29 de 59" is mandatory here — the zone words do not disappear for an AT user when the rail
+   replaces them, they become the only channel left. Measured in the README's round-9 table. */
+function railHtml(sid, { mark = null } = {}) {
+  const runs = railRuns(sid), n = ordOf(sid).length, sh = shelfById(sid);
+  const firstG = runs.find(r => r.k === 'g');
+  const rove = mark != null ? mark : firstG ? firstG.i : null;   /* roving tabindex: ONE tab stop */
+  const tiles = runs.map(r => {
+    if (r.k === 'x') return `<div class="egap" data-run="${r.i}" data-n="${r.n}"
+      style="width:calc(${r.n} * (var(--etile) + var(--egap)) - var(--egap))"><span class="gcap">${nf(r.n)} caja${r.n === 1 ? '' : 's'} sin título en este boceto</span></div>`;
+    const g = gById(r.id), on = mark === r.i;
+    return `<button type="button" class="etile ${on ? 'on' : ''}" data-act="v-tile" data-sid="${sid}" data-slot="${r.i}"
+      tabindex="${r.i === rove ? 0 : -1}" aria-pressed="${on}" aria-label="${esc(g.name)}, caja ${nf(r.i + 1)} de ${nf(n)}"
+      ><span class="ecover" style="--h:${g.hue}">${esc(g.name[0])}<span class="emark">${ic('tick')}</span></span><span class="ecap">${esc(g.name)}</span></button>`;
+  }).join('');
+  /* 022-C: rendered, but `display:none` outside `(hover: hover) and (pointer: fine)` AND outside
+     `[data-overflows="true"]` — the device condition and the content condition combine. */
+  const arrow = dir => `<button type="button" class="erail-btn" data-act="v-rail" data-sid="${sid}" data-dir="${dir}"
+    aria-label="Desplazar hacia la ${dir < 0 ? 'izquierda' : 'derecha'}">${ic(dir < 0 ? 'chevL' : 'chevR')}</button>`;
+  return `<div class="erail-wrap" data-sid="${sid}">${arrow(-1)}
+    <div class="erail" data-rail="${sid}" role="group" aria-label="${esc(sh ? sh.name : '')}, de izquierda a derecha">${tiles}</div>
+    ${arrow(1)}</div>${(scheduleRailSync(), '')}`;
+}
+/* what a marked tile opens: the game's name and the two jobs an R8 row carried, in `.gexp`'s anatomy.
+   Ordering swaps them for ← / →, which is the one thing the rail buys outright: an arrow that points
+   the way the box actually moves, where R8's ↑ / ↓ pointed a way no shelf has. */
+const moveLR = (scope, id, i, n, label) =>
+  `<button type="button" class="ibtn" data-act="v-move" data-scope="${scope}" data-id="${id}" data-dir="-1" aria-label="Mover ${esc(label)} a la izquierda" ${i === 0 ? 'disabled' : ''}>${ic('chevL')}</button>` +
+  `<button type="button" class="ibtn" data-act="v-move" data-scope="${scope}" data-id="${id}" data-dir="1" aria-label="Mover ${esc(label)} a la derecha" ${i === n - 1 ? 'disabled' : ''}>${ic('chevR')}</button>`;
+function ePanel(sid, slot) {
+  const id = ordOf(sid)[slot], g = id == null ? null : gById(id);
+  if (!g) return '';
+  const ordering = V.ordering === 'sh' + sid;
+  return `<div class="epanel"><p class="ename">${esc(g.name)}</p>
+    ${ordering ? `<div class="emove">${moveLR('sh' + sid, g.id, slot, ordOf(sid).length, g.name)}</div>`
+      : `<div class="gxacts"><button type="button" class="tbtn" data-act="v-view-game" data-id="${g.id}">Ver en la ludoteca</button>
+        <button type="button" class="tbtn danger" data-act="v-rm-shelf" data-id="${g.id}" data-sid="${sid}">Quitar del estante</button></div>`}</div>`;
+}
+/* ---- the rail's runtime: overflow flag, remembered offset, eased arrow scroll, roving focus ----
+   One scheduled sync, called from railHtml() itself, so this works identically in 062 and in the
+   composed 065 without either sketch's patch()/render() having to know a rail exists. */
+let railSyncQ = null;
+function scheduleRailSync() { if (!railSyncQ) railSyncQ = setTimeout(() => { railSyncQ = null; syncRails(); }, 0); }
+/* the co-dependent set is declared ONCE, in CSS; JS reads it back rather than holding a second copy. */
+function railGeom(wrap) {
+  const cs = getComputedStyle(wrap), px = k => parseFloat(cs.getPropertyValue(k));
+  const tile = px('--etile'), gap = px('--egap');
+  return { tile, gap, pitch: tile + gap, gut: px('--egut'), fade: px('--efade') };
+}
+const railX = (wrap, slot) => { const g = railGeom(wrap); return g.gut + slot * g.pitch; };
+function syncRails() {
+  document.querySelectorAll('#device main .erail-wrap').forEach(wrap => {
+    const rail = wrap.querySelector('.erail'), sid = +wrap.dataset.sid;
+    wrap.dataset.overflows = String(rail.scrollWidth > rail.clientWidth);
+    if (V.railAt[sid] != null) rail.scrollLeft = V.railAt[sid];
+    syncZoneBar(wrap, rail, sid);
+    if (!rail._wired) {
+      rail._wired = true;
+      rail.addEventListener('scroll', () => { V.railAt[sid] = rail.scrollLeft; syncZoneBar(wrap, rail, sid); }, { passive: true });
+      rail.addEventListener('keydown', e => railKey(e, wrap, rail, sid));
+    }
+  });
+}
+/* 065 R10: the zone bar's readout follows the rail without a re-render — the same way `data-overflows`
+   does — because it changes on every frame of a fling and patch() would throw the scroll away.
+   The zone is read off the box at the rail's CENTRE, not its left edge, so the readout says which third
+   you are LOOKING AT rather than which third the viewport happens to start in. */
+function syncZoneBar(wrap, rail, sid) {
+  const n = ordOf(sid).length; if (!zoneNav(n)) return;
+  const g = railGeom(wrap);
+  const at = Math.round((rail.scrollLeft + rail.clientWidth / 2 - g.gut) / g.pitch - 0.5);
+  const z = ZONES.indexOf(zoneAt(Math.max(0, Math.min(n - 1, at)), n));
+  V.zoneAt[sid] = z;
+  document.querySelectorAll(`#device main .ezones [data-act="v-zone"][data-sid="${sid}"]`).forEach(b => {
+    const on = +b.dataset.z === z;
+    b.classList.toggle('on', on);
+    on ? b.setAttribute('aria-current', 'true') : b.removeAttribute('aria-current');
+  });
+}
+/* 023-B's own curve, and the reason it is a solver and not `scroll-behavior: smooth`: this assigns
+   scrollLeft every frame, so the browser's smooth mode would start a competing animation per
+   assignment. The bezier is --ease-standard's twin (0.4,0,0.2,1) — an ease-IN-out, because a click
+   starts from rest and any ease-out's maximal t=0 velocity reads as a teleport (the debug note
+   `carousel-scroll-easing-jump` measured 341px in the first painted frame). 200ms, 0.85 of a width. */
+const railEase = (() => {
+  const [x1, y1, x2, y2] = [0.4, 0, 0.2, 1];
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const xAt = u => ((ax * u + bx) * u + cx) * u, dxAt = u => (3 * ax * u + 2 * bx) * u + cx;
+  return t => {
+    if (t <= 0) return 0; if (t >= 1) return 1;
+    let u = t;
+    for (let i = 0; i < 8; i++) { const d = dxAt(u); if (d < 1e-6) break; const err = xAt(u) - t; if (Math.abs(err) < 1e-6) break; u -= err / d; }
+    return ((ay * u + by) * u + cy) * u;
+  };
+})();
+let railFrame = null;
+function railGlide(rail, sid, to) {
+  const max = rail.scrollWidth - rail.clientWidth, end = Math.max(0, Math.min(max, to)), from = rail.scrollLeft;
+  cancelAnimationFrame(railFrame);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { rail.scrollLeft = V.railAt[sid] = end; return; }
+  const t0 = performance.now();
+  const step = now => {
+    const t = Math.min(1, (now - t0) / 200);
+    rail.scrollLeft = V.railAt[sid] = from + (end - from) * railEase(t);
+    if (t < 1) railFrame = requestAnimationFrame(step);
+  };
+  railFrame = requestAnimationFrame(step);
+}
+function railBump(sid, dir) {
+  const wrap = document.querySelector(`#device main .erail-wrap[data-sid="${sid}"]`); if (!wrap) return;
+  const rail = wrap.querySelector('.erail');
+  railGlide(rail, sid, rail.scrollLeft + dir * rail.clientWidth * 0.85);
+}
+/* centre a slot, so "search → the rail is already on the answer" lands with its neighbours on BOTH
+   sides rather than the answer pinned to one edge. */
+function railTo(sid, slot, { smooth = true } = {}) {
+  const wrap = document.querySelector(`#device main .erail-wrap[data-sid="${sid}"]`); if (!wrap) return;
+  const rail = wrap.querySelector('.erail'), g = railGeom(wrap);
+  const to = railX(wrap, slot) - (rail.clientWidth - g.tile) / 2;
+  smooth ? railGlide(rail, sid, to) : (rail.scrollLeft = V.railAt[sid] = Math.max(0, to));
+}
+/* ROVING TABINDEX. A rail is not keyboard-trivial the way a vertical list is: one focusable card per
+   game would put up to 162 tab stops between the estante and whatever follows it. So the rail is ONE
+   tab stop and ← → Inicio Fin move inside it — the listbox pattern, and about 20 lines the list got
+   for free. Measured as a cost in the README, not hidden. */
+function railKey(e, wrap, rail, sid) {
+  const tiles = [...rail.querySelectorAll('.etile')];
+  const at = tiles.indexOf(document.activeElement); if (at < 0) return;
+  const to = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: tiles.length - 1 }[e.key];
+  if (to == null) return;
+  e.preventDefault();
+  const el = tiles[Math.max(0, Math.min(tiles.length - 1, to))];
+  tiles.forEach(t => { t.tabIndex = t === el ? 0 : -1; });
+  el.focus({ preventScroll: true });
+  railTo(sid, +el.dataset.slot);
+}
+
+const GRP_PAGE = 8;
+const moreRow = (act, extra, shown, total, what) =>
+  `<div class="more"><button type="button" class="tbtn" data-act="${act}" ${extra}>Mostrar más</button><span class="cap">${nf(shown)} de ${nf(total)}${what ? ' ' + what : ''}</span></div>`;
+
+/* ONE game row, three states. A row that is not on a shelf offers the one thing it needs — a shelf.
+   065 R8: the row EXPANDS in place to its neighbours; the sheet variant is recorded in the README. */
+function estGameRow(g, sid, { withShelf = false } = {}) {
+  const key = 'l' + g.id;
+  if (sid == null) return tapRow({ key, act: 'v-place-sheet', attrs: `data-id="${g.id}" aria-label="Ubicar ${esc(g.name)}"`,
+    slot: thumbOf(g), name: esc(g.name), sub: meta(SIN_MARK, g.year), trail: ic('plusC', 'trail-ico') });
+  const base = { key, slot: thumbOf(g), name: esc(g.name), sub: zoneSub(g, sid, withShelf) };
+  /* 065 R10: the "ordering" state of a placed row is gone with the vertical list — a box is reordered
+     on the rail now, with ← / →, which is the one thing R9 measured the rail winning outright (R8's
+     ↑ / ↓ pointed a way no shelf has). resetGrps() clears V.ordering, so a search can never render a
+     row that offers a move in an order the search is not showing. */
+  if (V.gx === 'sheet') return tapRow({ ...base, act: 'v-game-sheet', attrs: `data-id="${g.id}" data-sid="${sid}" aria-label="Opciones de ${esc(g.name)}"`, trail: ic('more', 'chev') });
+  const open = V.gameOpen === g.id;
+  /* .gdisc, not .disclose: a .disclose row names a BLOCK (round 5, and L1 leans on it), and a game row
+     names only itself. Same chevron behaviour, different job — so every selector that means "this
+     group heading" keeps meaning it. */
+  return `<button type="button" class="grow gdisc ${open ? 'gopen' : ''}" data-key="${key}" data-act="v-game-exp" data-id="${g.id}" data-sid="${sid}"
+      aria-expanded="${open}" aria-label="${esc(g.name)}: dónde está en el estante">${thumbOf(g)}${txt(esc(g.name), zoneSub(g, sid, withShelf))}${ic('chevR', 'chev')}</button>
+    ${open ? `<div class="gexp">${expBody(g, sid)}
+      <div class="gxacts"><button type="button" class="tbtn" data-act="v-view-game" data-id="${g.id}">Ver en la ludoteca</button>
+      <button type="button" class="tbtn danger" data-act="v-rm-shelf" data-id="${g.id}" data-sid="${sid}">Quitar del estante</button></div></div>` : ''}`;
+}
+/* WHAT A SEARCH-RESULT ROW EXPANDS TO — the flow that answers both halves of the developer's question
+   at once: search a game → tap the row → the estante's own rail opens ALREADY SCROLLED TO THAT GAME AND
+   MARKED, with its real neighbours on either side and no words at all. The collapsed row above it still
+   says `zona · estante`, so the picture is the precise half and the words are the coarse half, which is
+   the pairing R9 measured and B had thrown away.
+   NO ZONE BAR HERE, and that is the rule rather than an omission: the bar belongs to BROWSING a shelf,
+   and this rail is already on the answer. Offering navigation on top of it only invites losing it. */
+function expBody(g, sid) {
+  const i = idxOn(sid, g.id);
+  setTimeout(() => railTo(sid, i, { smooth: false }), 0);
+  return railHtml(sid, { mark: i });
+}
+
+/* one estante: a disclosure row that names itself and carries its count (round 5 — a disclosure row
+   IS its block's label, so L1 holds without a heading above it), and opens IN PLACE to its games in
+   physical order. Open, it also carries the two jobs the retired Asignar screen used to own. */
+function grpShelf(sh) {
+  const key = 's' + sh.id, n = shelfCount(sh);
+  const open = !!V.grpOpen[key], adding = V.adding === sh.id, ordering = V.ordering === 'sh' + sh.id;
+  const hdr = `<button type="button" class="grow disclose" data-key="e${sh.id}" data-act="v-toggle-grp" data-grp="${key}" aria-expanded="${open}">${slotIco('estantes')}${txt(esc(sh.name), meta(`${nf(n)} juegos`))}${ic('chevR', 'chev')}</button>`;
+  if (!open) return `<div class="grp"><div class="glist">${hdr}</div></div>`;
+  if (adding) {
+    const un = unplacedLocal(), shown = un.slice(0, V.addShown || GRP_PAGE), total = unplacedN();
+    return `<div class="grp"><div class="glist">${hdr}
+      <p class="lnote gnote">Tocá un juego y va al final de ${esc(sh.name)}. Ponelo ahí en el estante de verdad.</p>
+      ${shown.map(g => tapRow({ key: 'u' + g.id, act: 'v-assign', attrs: `data-id="${g.id}" data-sid="${sh.id}" aria-label="Ubicar ${esc(g.name)} en ${esc(sh.name)}"`,
+        slot: thumbOf(g), name: esc(g.name), sub: meta(g.year), trail: ic('plusC', 'trail-ico') })).join('')
+        || '<p class="lnote gnote">Todos los juegos tienen estante.</p>'}</div>
+      ${shown.length < total ? moreRow('v-add-more', `data-sid="${sh.id}"`, shown.length, total, 'sin ubicar') : ''}
+      <div class="gacts"><button type="button" class="tbtn b-pri" data-act="v-add-done">Listo</button></div></div>`;
+  }
+  /* 065 R10: the estante's games ARE the rail — there is no vertical list, so there is no "Mostrar
+     más", no paging and no zone word to repeat on every row. A marked tile opens the panel that
+     carries the row's two jobs; the zone bar above carries the navigation the rail owes past 30 boxes.
+     The `.gacts` strip is the block's ONE action foot (R10 rule 1: at most one outlined action per
+     block, and rule 4: a block's mode control is outlined in both states — Secundaria to enter,
+     Principal to leave). */
+  const mark = V.tileOn && V.tileOn.sid === sh.id ? V.tileOn.slot : null;
+  return `<div class="grp"><div class="glist">${hdr}</div>
+    ${ordering ? '<p class="lnote gnote grail">Las flechas mueven el juego un lugar en el estante. Movés la caja de verdad, así que hacelo también en el estante.</p>' : ''}
+    ${zonesHtml(sh.id)}
+    ${railHtml(sh.id, { mark })}
+    ${mark != null ? ePanel(sh.id, mark) : '<p class="lnote gnote grail">Tocá una caja para ver cuál es y qué podés hacer con ella.</p>'}
+    <div class="gacts">${ordering
+      ? '<button type="button" class="tbtn b-pri" data-act="v-order" data-scope="sh' + sh.id + '" aria-pressed="true">Listo</button>'
+      : `<button type="button" class="tbtn b-sec" data-act="v-add-mode" data-sid="${sh.id}">Agregar juegos</button>
+         <button type="button" class="ibtn push" data-act="v-shelf-sheet" data-id="${sh.id}" aria-haspopup="dialog" aria-label="Opciones de ${esc(sh.name)}">${ic('more')}</button>`}</div></div>`;
+}
+/* "Sin ubicar" is not an estante, so it is its own block after them rather than a fourteenth group
+   inside a list labelled "Estantes del club". It is a queue of work, and its rows ask for a shelf. */
+function grpSin() {
+  const key = 'sin', open = !!V.grpOpen[key], n = unplacedN();
+  const un = unplacedLocal(), shown = open ? un.slice(0, V.grpShown[key] || GRP_PAGE) : [];
+  /* ONE element that is both the page block and the group: L1 reads a block's label off
+     `:scope > .glist > .disclose`, so wrapping the disclosure in a second box would hide the name it
+     already carries and the block would read as unlabelled. */
+  return `<section class="jsec grp"><div class="glist">
+    <button type="button" class="grow disclose" data-act="v-toggle-grp" data-grp="${key}" aria-expanded="${open}">${slotIco('niveles')}${txt('Sin ubicar', meta(n ? `${nf(n)} juegos` : 'ninguno'))}${ic('chevR', 'chev')}</button>
+    ${open ? (shown.map(g => estGameRow(g, null)).join('')
+      || `<p class="lnote gnote">Todos los juegos tienen estante. Si llega uno nuevo, aparece acá.</p>`) : ''}</div>
+    ${open && shown.length < n ? moreRow('v-grp-more', `data-grp="${key}"`, shown.length, n) : ''}</section>`;
+}
+/* SEARCH. Round 7b filtered the groups and kept all 13 headings on the page, because the heading was
+   the only thing that could tell you which estante a hit was on. The row says it now — zone, estante,
+   año — so a query answers the question in ONE row instead of thirteen headings and a hunt. */
+function estSearchHtml() {
+  const q = norm(V.listaQ.trim());
+  const rs = G.filter(g => norm(g.name).includes(q));
+  if (!rs.length) return `<section class="jsec"><div class="empty">${ic('search')}<h2>Sin resultados para “${esc(V.listaQ)}”</h2>
+    <button type="button" class="tbtn" data-act="v-clear" data-for="lista-q">Borrar búsqueda</button></div></section>`;
+  return `<section class="jsec"><div class="lhead"><span class="group-label">Resultados</span><span class="gcount">${rs.length}</span></div>
+    <div class="glist">${rs.map(g => estGameRow(g, V.place[g.id] ?? null, { withShelf: true })).join('')}</div></section>`;
+}
+function estGroupsHtml() {
+  if (norm(V.listaQ.trim())) return estSearchHtml();
+  const ordering = V.ordering === 'estantes';
+  return `<section class="jsec">${lhead('Estantes del club', 'estantes', true)}
+    <div class="glist ${ordering ? 'ordering' : ''}">${ordering ? V.shelves.map(shelfRow).join('') : ''}</div>
+    ${ordering ? '' : V.shelves.map(grpShelf).join('')}</section>${grpSin()}`;
+}
+function estBody() {
+  return `${head('Estantes')}${progHtml()}${sfield('lista-q', 'Buscar un juego', V.listaQ)}
+    <div style="height:16px"></div><div id="est-groups">${estGroupsHtml()}</div>
+    <div class="pacts"><button type="button" class="tbtn" data-act="v-new-shelf" aria-haspopup="dialog">${ic('plus')}Nuevo estante</button></div>`;
 }
 
 /* ---- Revisar niveles ---- */
@@ -1828,6 +2583,24 @@ function staffBody() {
 }
 
 function move(scope, id, dir) {
+  /* 065 R8: `sh<id>` reorders the games ON an estante, which is a physical move of a box — so it swaps
+     two ADJACENT SLOTS of the shelf's order, never "the next game I happen to render". When the
+     neighbouring slot is one of the 376 games this sketch does not name, the visible list does not
+     change while the row's zone and neighbour line do; the row flashes so the change is visible. */
+  if (/^sh\d+$/.test(scope)) {
+    const sid = +scope.slice(2);
+    const a = ordOf(sid), i = a.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= a.length) return;
+    [a[i], a[j]] = [a[j], a[i]];
+    /* 065 R10: the mark follows the box. The rail is the list now, so a move changes which SLOT holds
+       the game you are moving — leave V.tileOn on the old slot and the panel would name its neighbour. */
+    if (V.tileOn && V.tileOn.sid === sid && V.tileOn.slot === i) V.tileOn = { sid, slot: j };
+    patch(); flashKey('l' + id);
+    const sel = d => $(`[data-act="v-move"][data-scope="${scope}"][data-id="${id}"][data-dir="${d}"]`);
+    const b = sel(dir) && !sel(dir).disabled ? sel(dir) : sel(-dir);
+    if (b) { b.focus({ preventScroll: true }); b.scrollIntoView({ block: 'nearest' }); }
+    return;
+  }
   const arr = scope === 'secciones' ? V.sections : scope === 'estantes' ? V.shelves : curSec().members;
   const key = { secciones: 's', estantes: 'e', members: 'm' }[scope];
   const idx = scope === 'members' ? arr.indexOf(id) : arr.findIndex(x => x.id === id), j = idx + dir;
@@ -1838,17 +2611,33 @@ function move(scope, id, dir) {
   const b = sel(dir) && !sel(dir).disabled ? sel(dir) : sel(-dir);
   if (b) { b.focus({ preventScroll: true }); b.scrollIntoView({ block: 'nearest' }); }
 }
-function assign(id) {
-  const sid = V.curShelf, prev = V.place[id] ?? null, g = gById(id), sh = shelfById(sid);
-  if (prev === sid) return;
-  const inSearch = !!V.asgQ.trim();
+/* 065 R8: ubicar a game now has a POSITION, because a shelf is an ordered array of slots. A box you
+   carry over goes at the far right end, which is the only honest default and what the snackbar says. */
+function assign(id, sid) {
+  const prev = V.place[id] ?? null, g = gById(id), sh = shelfById(sid);
+  if (prev === sid || !sh) return;
   const commit = () => {
-    if (V.failNext) { V.failNext = false; V.undo = null; patch(); return snack('No se pudo guardar', { label: 'Reintentar', act: 'v-assign', id }); }
-    V.place[id] = sid; patch(); if (inSearch) flashKey('a' + id);
-    V.undo = () => { V.place[id] = prev; patch(); flashKey('a' + id); };
-    snack(prev == null ? `Ubicaste ${g.name}` : `Movido desde ${shelfById(prev).name}`, { label: 'Deshacer', act: 'v-undo' });
+    if (V.failNext) { V.failNext = false; V.undo = null; patch(); return snack('No se pudo guardar', { label: 'Reintentar', act: 'v-assign', id, sid }); }
+    const from = prev != null ? ordOf(prev) : null, fi = from ? from.indexOf(id) : -1;
+    if (from && fi >= 0) from.splice(fi, 1);
+    V.place[id] = sid; ordOf(sid).push(id); patch(); flashKey('l' + id);
+    V.undo = () => { const a = ordOf(sid); a.splice(a.indexOf(id), 1); V.place[id] = prev; if (from && fi >= 0) from.splice(fi, 0, id); patch(); flashKey('l' + id); };
+    snack(prev == null ? `${g.name} va al final de ${sh.name}` : `Movido desde ${shelfById(prev).name} al final de ${sh.name}`, { label: 'Deshacer', act: 'v-undo' });
   };
-  inSearch ? commit() : leave('a' + id, commit);
+  leave('u' + id, commit);
+}
+/* and taking one off a shelf sends it back to Sin ubicar — the slot closes up, which is what happens
+   when you take a box out and push the rest together. */
+function unplace(id, sid) {
+  const g = gById(id), a = ordOf(sid), i = a.indexOf(id); if (i < 0) return;
+  /* 065 R10: the marked tile goes with the box — the slot closes up behind it, so that slot now holds
+     a different game and the panel would be naming the wrong one. */
+  V.gameOpen = null; V.tileOn = null; closeAll();
+  leave('l' + id, () => {
+    a.splice(i, 1); V.place[id] = null; patch();
+    V.undo = () => { ordOf(sid).splice(i, 0, id); V.place[id] = sid; patch(); flashKey('l' + id); };
+    snack(`${g.name} quedó sin ubicar`, { label: 'Deshacer', act: 'v-undo' });
+  });
 }
 function decide(id, correct) {
   const idx = V.mis.findIndex(m => m.g === id), m = V.mis[idx]; if (!m) return;
@@ -1885,11 +2674,81 @@ function vAct(t) {
   const a = t.dataset.act, id = +t.dataset.id;
   switch (a) {
     case 'v-open-sec': V.cur = id; V.ed = null; V.memQ = ''; V.memErr = null; V.ordering = null; S.screen = 'seccion'; return softSwap();
-    case 'v-open-shelf': V.curShelf = id; V.asgQ = ''; V.onShelfOpen = false; V.renaming = false; V.ordering = null; S.screen = 'asignar'; return softSwap();
-    case 'v-order': V.ordering = V.ordering === t.dataset.scope ? null : t.dataset.scope; patch(); return $(`[data-act="v-order"][data-scope="${t.dataset.scope}"]`)?.focus({ preventScroll: true });
+    case 'v-order': V.ordering = V.ordering === t.dataset.scope ? null : t.dataset.scope;
+      if (/^sh\d+$/.test(t.dataset.scope)) { V.grpOpen['s' + t.dataset.scope.slice(2)] = true; V.gameOpen = null; V.adding = null; }
+      if (t.closest('.sheet')) closeAll();
+      patch(); return $(`[data-act="v-order"][data-scope="${t.dataset.scope}"]`)?.focus({ preventScroll: true });
     case 'v-move': return move(t.dataset.scope, id, +t.dataset.dir);
-    case 'v-clear': { V[QMAP[t.dataset.for]] = ''; patch(); return document.getElementById(t.dataset.for)?.focus(); }
-    case 'v-vista': V.vista = t.dataset.v; V.ordering = null; return patch();
+    case 'v-clear': { V[QMAP[t.dataset.for]] = ''; if (t.dataset.for === 'lista-q') resetGrps(); patch(); return document.getElementById(t.dataset.for)?.focus(); }
+    /* 065 R7b: an estante opens in place. Only #est-groups is replaced — the search field above it is
+       never rebuilt (R7 C5), and focus stays on the row you tapped. */
+    case 'v-toggle-grp': { const k = t.dataset.grp, open = t.getAttribute('aria-expanded') === 'true';
+      V.grpOpen[k] = !open; if (open) { delete V.grpShown[k]; V.gameOpen = null; if (V.adding === +k.slice(1)) V.adding = null; if (V.ordering === 'sh' + k.slice(1)) V.ordering = null; }
+      refreshQ('lista-q'); return $(`[data-act="v-toggle-grp"][data-grp="${k}"]`)?.focus({ preventScroll: true }); }
+    /* 065 R10: "Sin ubicar" is the only list left that pages — an estante's games are a rail now and it
+       shows the whole shelf at once, so no estante has a "Mostrar más" to reach this. */
+    case 'v-grp-more': { const k = t.dataset.grp, cur = V.grpShown[k] || GRP_PAGE;
+      /* this sketch names 36 of the 412 games, so once the named rows run out the button says what the
+         app would do rather than pretending to render rows that do not exist here */
+      const pool = unplacedLocal().length;
+      if (cur >= pool) return snack('Carga los siguientes 50 juegos sin ubicar');
+      V.grpShown[k] = cur + GRP_PAGE; refreshQ('lista-q');
+      return $(`[data-act="v-grp-more"][data-grp="${k}"]`)?.focus({ preventScroll: true }); }
+    /* 065 R8: the row expands to the precise half of its answer — its neighbours. One at a time, so an
+       open row never scrolls the one you are reading off the screen. */
+    case 'v-game-exp': { V.gameOpen = V.gameOpen === id ? null : id; refreshQ('lista-q');
+      return $(`[data-act="v-game-exp"][data-id="${id}"]`)?.focus({ preventScroll: true }); }
+    /* 065 R9 — the rail's two events. A tile marks itself and centres, so the tap that identifies a box
+       is also the tap that brings its neighbours into view on BOTH sides; the arrow is 022-C's
+       pointer-fine control and moves 0.85 of a rail width on 023-B's curve, without a re-render. */
+    case 'v-tile': { const sid = +t.dataset.sid, slot = +t.dataset.slot;
+      const same = V.tileOn && V.tileOn.sid === sid && V.tileOn.slot === slot;
+      V.tileOn = same ? null : { sid, slot };
+      refreshQ('lista-q');
+      if (!same) railTo(sid, slot);
+      return document.querySelector(`.etile[data-sid="${sid}"][data-slot="${slot}"]`)?.focus({ preventScroll: true }); }
+    case 'v-rail': return railBump(+t.dataset.sid, +t.dataset.dir);
+    /* 065 R10: the zone bar. One tap to the left end, the middle box or the right end of the shelf —
+       the three positions 024-A's edge-fade can tell apart and cannot reach. No re-render: the rail
+       glides on 023-B's curve and its own scroll handler moves the readout. */
+    case 'v-zone': { const sid = +t.dataset.sid, n = ordOf(sid).length;
+      return railTo(sid, zoneSlot(+t.dataset.z, n)); }
+    case 'v-game-sheet': { const g = gById(id), sid = +t.dataset.sid, i = idxOn(sid, g.id);
+      return openAct(`<div class="step step-account"><div class="group-label">${esc(g.name)}</div>
+        <p class="sheet-text">${zoneAt(i, ordOf(sid).length)} de <b>${esc(shelfById(sid).name)}</b>. ${nbrLine(sid, i)}.</p><div class="dlinks">
+        ${row({ act: 'v-view-game', extra: `data-id="${id}"`, icon: 'ext', label: 'Ver en la ludoteca' })}
+        ${row({ act: 'v-rm-shelf', extra: `data-id="${id}" data-sid="${sid}"`, icon: 'minusC', label: 'Quitar del estante', tone: 'danger', chev: false })}
+        ${row({ act: 'v-close', icon: 'chevL', label: 'Cancelar', chev: false })}</div></div>`, t); }
+    case 'v-rm-shelf': return unplace(id, +t.dataset.sid);
+    /* the bulk job — 84 juegos sin ubicar — is a MODE on the estante, the way Ordenar is: the group's
+       own list becomes the unplaced games, so the progress line, the count and the tab badge all stay
+       on screen while you work through them. A sheet cannot hold 84 rows and cannot show the meter. */
+    case 'v-add-mode': { const sid = +t.dataset.sid; V.adding = sid; V.addShown = GRP_PAGE; V.gameOpen = null; V.ordering = null;
+      V.grpOpen['s' + sid] = true; patch(); return $(`[data-act="v-add-done"]`)?.focus({ preventScroll: true }); }
+    case 'v-add-done': { const sid = V.adding; V.adding = null; V.addShown = 0; patch();
+      return $(`[data-act="v-add-mode"][data-sid="${sid}"]`)?.focus({ preventScroll: true }); }
+    case 'v-add-more': { const cur = V.addShown || GRP_PAGE;
+      if (cur >= unplacedLocal().length) return snack('Carga los siguientes 50 juegos sin ubicar');
+      V.addShown = cur + GRP_PAGE; patch(); return $('[data-act="v-add-more"]')?.focus({ preventScroll: true }); }
+    /* a Sin ubicar row asks for the one thing it is missing. Ubicar from here is the single-game path;
+       "Agregar juegos" on an estante is the bulk one. */
+    case 'v-place-sheet': { const g = gById(id);
+      return openAct(`<div class="step step-account"><div class="group-label">Ubicar ${esc(g.name)}</div>
+        <p class="sheet-text">Va al final del estante que elijas. Poné la caja ahí.</p><div class="dlinks">
+        ${V.shelves.map(sh => row({ act: 'v-place', extra: `data-id="${id}" data-sid="${sh.id}"`, icon: 'estantes', label: esc(sh.name), sub: `${nf(shelfCount(sh))} juegos`, chev: false })).join('')}
+        ${row({ act: 'v-close', icon: 'chevL', label: 'Cancelar', chev: false })}</div></div>`, t); }
+    case 'v-place': closeAll(); return assign(id, +t.dataset.sid);
+    case 'v-shelf-sheet': { const sh = shelfById(id);
+      return openAct(`<div class="step step-account"><div class="group-label">${esc(sh.name)}</div><div class="dlinks">
+        ${row({ act: 'v-order', extra: `data-scope="sh${sh.id}"`, icon: 'bars', label: 'Ordenar los juegos', sub: 'El orden es el orden real del estante', wrap: true, chev: false })}
+        ${row({ act: 'v-rename', extra: `data-id="${sh.id}"`, icon: 'pencil', label: 'Renombrar estante', chev: false })}
+        ${row({ act: 'v-close', icon: 'chevL', label: 'Cancelar', chev: false })}</div></div>`, t); }
+    case 'v-new-shelf': { V.newShelf = ''; V.newShelfErr = null;
+      openAct(`<div class="step step-account"><label class="group-label" for="shelf-new" style="display:block">Nuevo estante</label>
+        <form id="shelf-new-form" novalidate><input id="shelf-new" class="tin full" value="" placeholder="Nombre del estante" autocomplete="off" enterkeyhint="done"><p class="ferr" role="alert"></p>
+        <div class="dlinks">${row({ icon: 'tick', label: 'Crear', chev: false, type: 'submit' })}
+        ${row({ act: 'v-close', icon: 'chevL', label: 'Cancelar', chev: false })}</div></form></div>`, t);
+      return $('#shelf-new')?.focus(); }
     case 'v-sort-sheet': return openAct(`<div class="step step-account"><div class="group-label">Orden</div><div class="dlinks">${sortKeys(curSec()).map(k =>
       row({ act: 'v-pick-sort', extra: `data-v="${k}" aria-pressed="${V.ed.sort === k}"`, icon: V.ed.sort === k ? 'tick' : 'blank', label: SORTS[k], chev: false })).join('')}</div></div>`, t);
     case 'v-pick-sort': V.ed.sort = t.dataset.v; closeAll(); return patch();
@@ -1912,16 +2771,26 @@ function vAct(t) {
     }
     case 'v-undo': { const u = V.undo; V.undo = null; $('#snack').classList.remove('show'); return u && u(); }
     case 'v-rename':
+      /* 065 R8: Renombrar used to be a text button beside the Asignar screen's title. With that screen
+         retired it is a row in the estante's own options sheet — and it KEEPS a sheet, because a sheet
+         with a text field in it is the surface K3 measures against the soft keyboard. */
+      if (id) V.curShelf = id;
       V.renaming = true; V.ren = shelfById(V.curShelf).name; V.renErr = null;
-      if (V.variant === 'A') { patch(); const i = $('#ren-in'); i.focus(); return i.select(); }
-      openAct(`<div class="step step-account"><form id="ren-form" novalidate><label class="group-label" for="ren-in" style="display:block">Renombrar estante</label>
-        <input id="ren-in" class="tin full" value="${esc(V.ren)}" autocomplete="off" enterkeyhint="done"><p class="ferr" role="alert"></p>
-        <div class="banner-actions"><button type="button" class="tbtn" data-act="v-cancel-rename">Cancelar</button><button type="submit" class="tbtn b-pri">Guardar</button></div></form></div>`, t);
+      if (V.variant === 'A') { closeAll(); patch(); const i = $('#ren-in'); i.focus(); return i.select(); }
+      /* 065 R7b: a sheet's actions are ROWS in its .dlinks, never a button footer. This was the only
+         sheet in the admin with a Cancelar/Guardar button pair (063's Filas sheet had the other
+         footer, a lone "Listo"), so the outlined Principal became the same quiet 48px row "Sí, quitar"
+         already is: the committing row first with `tick`, Cancelar last with `chevL`.
+         The committing row IS the form's submit, so Enter still commits from the keyboard, and the
+         inline .ferr still reports without closing the sheet. The label is a sibling of the form, not
+         a child of it, so the sheet keeps the one shell R6 measured (11px caps label, 4px, first block). */
+      openAct(`<div class="step step-account"><label class="group-label" for="ren-in" style="display:block">Renombrar estante</label>
+        <form id="ren-form" novalidate><input id="ren-in" class="tin full" value="${esc(V.ren)}" autocomplete="off" enterkeyhint="done"><p class="ferr" role="alert"></p>
+        <div class="dlinks">${row({ icon: 'tick', label: 'Guardar', chev: false, type: 'submit' })}
+        ${row({ act: 'v-cancel-rename', icon: 'chevL', label: 'Cancelar', chev: false })}</div></form></div>`, t);
       { const i = $('#ren-in'); i.focus(); return i.select(); }
     case 'v-cancel-rename': V.renaming = false; V.renErr = null; closeAll(); return patch();
-    case 'v-assign': $('#snack').classList.remove('show'); return assign(id);
-    case 'v-toggle-on': V.onShelfOpen = !V.onShelfOpen; patch(); return $('[data-act="v-toggle-on"]')?.focus({ preventScroll: true });
-    case 'v-more': return snack('Carga los siguientes 50 juegos sin ubicar');
+    case 'v-assign': $('#snack').classList.remove('show'); return assign(id, +t.dataset.sid);
     case 'v-correct': case 'v-keep': return decide(id, a === 'v-correct');
     case 'v-niv-sheet': {
       const m = V.mis.find(x => x.g === id), g = gById(id), imp = implied(m.w), from = BANDS[m.band].label, to = BANDS[imp].label;
@@ -1953,10 +2822,20 @@ function submitV(id) {
     V.sections.push(s); V.newSec = ''; V.newSecErr = null; V.cur = s.id; V.ed = null; V.memQ = ''; S.screen = 'seccion'; softSwap();
     return setTimeout(() => { snack('Sección creada. Agregale juegos.'); $('#mem-q')?.focus({ preventScroll: true }); }, 140);
   }
+  /* 065 R8: "Nuevo estante" is a sheet, so its validation reports INSIDE the sheet and keeps it open —
+     the same rule the rename sheet already follows, driven from the same inline .ferr. Creating a
+     shelf is a once-a-year act next to "where is this game", so it no longer sits in the page body
+     pushing the first estante 368px down. */
   if (id === 'shelf-new-form') {
-    const name = V.newShelf.trim(); if (!name) { V.newShelfErr = 'Poné un nombre.'; patch(); return $('#shelf-new').focus(); }
-    if (V.shelves.some(s => norm(s.name) === norm(name))) { V.newShelfErr = 'Ya hay un estante con ese nombre.'; patch(); return $('#shelf-new').focus(); }
-    const sh = { id: Date.now(), name, base: 0 }; V.shelves.push(sh); V.newShelf = ''; V.newShelfErr = null; patch(); flashKey('e' + sh.id);
+    const inp = document.getElementById('shelf-new'), name = (inp ? inp.value : V.newShelf).trim();
+    const err = !name ? 'Poné un nombre.' : V.shelves.some(s => norm(s.name) === norm(name)) ? 'Ya hay un estante con ese nombre.' : null;
+    if (err) {
+      V.newShelfErr = err;
+      const e = $('#sheet-act .ferr'); if (e) { e.textContent = err; inp.classList.add('invalid'); inp.focus(); return; }
+      patch(); return $('#shelf-new')?.focus();
+    }
+    const sh = { id: Date.now(), name, base: 0 }; V.shelves.push(sh); V.order[sh.id] = [];
+    V.newShelf = ''; V.newShelfErr = null; closeAll(); patch(); flashKey('e' + sh.id);
     return snack('Estante creado al final del recorrido');
   }
   if (id === 'inv-in-form') {
@@ -2116,7 +2995,10 @@ function filasList() {
 
 const filasBox = () => sec('En el inicio', filasList(), 'filas6');
 
-/* ---- Unidades: 1 almost always, rarely more than 2. No free-typed number field. ---- */
+/* ---- Copias: 1 almost always, rarely more than 2. No free-typed number field. ----
+   The label was "Unidades" through rounds 9-13 and verify.js actively banned the word "copia".
+   The developer reversed it (2026-09-16): "copias" is what a club says about having two of a game;
+   "unidades" reads like retail stock. The schema field stays `units` — this is copy, not code. */
 const stepper = (n, min, idp, cls = '') => `<span class="stepper ${cls}" role="group" aria-label="Copias">
   <button type="button" class="stp" id="${idp}dec" data-act="e-units-dec" data-min="${min}" aria-label="Una copia menos" ${n <= min ? 'disabled' : ''}>${ic('minus')}</button>
   <output class="stp-n" aria-live="polite">${n}</output>
@@ -2230,7 +3112,7 @@ function secsSheet() {
     <div class="sgroup sheet-sg">${MANUAL.map(sw).join('')}</div>
     <p class="ferr" role="alert">${E.secErr || ''}</p>
     <p class="sheet-text" style="margin-top:8px">${lead} ${joinY(auto)}.</p>
-    <div class="banner-actions"><button type="button" class="tbtn" data-act="e-close">Listo</button></div></div>`;
+    <div class="dlinks">${row({ act: 'e-close', icon: 'tick', label: 'Listo', chev: false })}</div></div>`;
 }
 
 
@@ -2369,7 +3251,8 @@ function adminBody() {
   return ({
     panel: () => pageHead() + panelBody(),
     juegos: juegosBody, secciones: webBody, seccion: secBody, estantes: estBody,
-    asignar: asgBody, niveles: nivBody, staff: staffBody, editar: editBody,
+    /* 065 R8: `asignar` is gone — an expanded estante on the Estantes page does its job. */
+    niveles: nivBody, staff: staffBody, editar: editBody,
   })[S.screen]();
 }
 const publicBody = () => ['Destacados del club', 'Descubre el hobby', 'Recientemente añadidos'].map(t =>
@@ -2445,6 +3328,25 @@ function patch() {
 /* typing only touches what depends on "dirty" (LiveView would diff the same way) */
 function sync() { const bar = $('#ebar'); if (bar) bar.outerHTML = barHtml(); }
 function refreshList() { const l = $('#jlist'); if (l) l.innerHTML = listHtml(); const f = $('#jfilters'); if (f) f.innerHTML = filtersHtml(); syncBadges(); }
+/* 065 R7: the same rule for 062's three searches. They used to debounce into patch(), which rebuilds
+   main.innerHTML — so every keystroke destroyed the focused input, built a new node and put the caret
+   back: the blink the developer saw on Estantes, and the same on a sección and on Asignar. 061 had
+   already solved it for Juegos (refreshList swaps #jlist and #jfilters and never touches #q-in), which
+   is how LiveView would diff it too. One region per search; the field is never in it.
+   Identical to the copy in 062's own page — build.js throws if the two ever drift apart.
+   065 R8: two searches, not three — `asg-q` went with the Asignar screen, and `lista-q` inherited its
+   job ("buscar cualquier juego") on top of its own. */
+const QREG = { 'mem-q': ['mem-results', memResHtml], 'lista-q': ['est-groups', estGroupsHtml] };
+/* 065 R7b: each query re-derives which estantes are open, so a manual toggle never leaks from one
+   query into the next. 065 R8: a query now replaces the groups with a flat result list, so this also
+   means leaving a search returns the page to the estantes shut.
+   Called from the input path, not from refreshQ, which the toggles themselves go through. */
+function resetGrps() { V.grpOpen = {}; V.grpShown = {}; V.gameOpen = null; V.adding = null; V.addShown = 0; V.tileOn = null; V.railAt = {}; }
+function refreshQ(id) {
+  const reg = QREG[id]; if (!reg) return patch();
+  const el = document.getElementById(reg[0]); if (!el) return patch();
+  el.innerHTML = reg[1]();
+}
 function refreshAdd() {
   const inp = $('#add-in'), btn = $('#add-btn'), err = $('#add-err');
   if (!inp) return;
@@ -2600,9 +3502,12 @@ const WALK = [
   { k: 'juegos', label: '‹ Juegos', run: () => go('juegos') },
   { k: 'secciones', label: 'Web', run: () => go('secciones') },
   { k: 'seccion', label: 'sección', run: () => { V.cur = 1; V.ed = null; V.memQ = ''; go('seccion'); } },
-  { k: 'estantes', label: 'Estantes', run: () => go('estantes') },
-  { k: 'asignar', label: 'Asignar', run: () => { V.curShelf = 1; V.asgQ = ''; V.onShelfOpen = false; go('asignar'); } },
-  { k: 'perfil', label: 'Perfil', run: () => { go('asignar'); setTimeout(() => openEl('#sheet-account', device.querySelector('[data-act="open-account"]')), 160); } },
+  { k: 'estantes', label: 'Estantes', run: () => { V.listaQ = ''; resetGrps(); go('estantes'); } },
+  /* 065 R8: the walk's 8th stop was Estantes › Asignar, a drill-down that no longer exists. What
+     inherited its job is an EXPANDED estante on the same page, so the stop stays and the navigation
+     goes away — which is the whole point of the round. */
+  { k: 'estantes', label: 'Estante abierto', run: () => { V.listaQ = ''; resetGrps(); V.grpOpen.s1 = true; go('estantes'); } },
+  { k: 'perfil', label: 'Perfil', run: () => { go('estantes'); setTimeout(() => openEl('#sheet-account', device.querySelector('[data-act="open-account"]')), 160); } },
 ];
 let walkAt = -1;
 function renderWalk() {
@@ -2627,7 +3532,7 @@ document.addEventListener('click', e => {
   if (t.dataset.bgg) { E.failed = t.dataset.bgg === 'failed'; markOn('data-bgg', t); return patch(); }
   if (t.dataset.pend) {
     S.pend = t.dataset.pend === '1';
-    Object.assign(V, seed062(S.pend), { ed: null, ordering: null, memQ: '', listaQ: '', asgQ: '', memErr: null, invErr: null });
+    Object.assign(V, seed062(S.pend), { ed: null, ordering: null, memQ: '', listaQ: '', memErr: null, invErr: null }); resetGrps();
     J.data = S.pend ? 'full' : 'nodrafts';
     if (!V.sections.some(s => s.id === V.cur)) V.cur = 1;
     if (!V.shelves.some(s => s.id === V.curShelf)) V.curShelf = 1;
@@ -2706,13 +3611,13 @@ document.addEventListener('input', e => {
   /* --- 062 lists --- */
   if (V_FIELDS[id]) { const [k, err] = V_FIELDS[id]; V[k] = el.value; V[err] = null; return patch(); }
   if (QMAP[id]) {
-    V[QMAP[id]] = el.value; if (id === 'mem-q') V.memErr = null;
+    V[QMAP[id]] = el.value; if (id === 'mem-q') V.memErr = null; if (id === 'lista-q') resetGrps();
     const c = el.parentElement.querySelector('.clear'); if (c) c.hidden = !el.value;
-    clearTimeout(qTimer); qTimer = setTimeout(patch, 300); return;
+    clearTimeout(qTimer); qTimer = setTimeout(() => refreshQ(id), 300); return;
   }
-  if (V.ed && id === 'ed-name') { V.ed.name = el.value; return patch(); }
-  if (V.ed && id === 'ed-sub') { V.ed.sub = el.value; return patch(); }
-  if (V.ed && id === 'ed-sort') { V.ed.sort = el.value; return patch(); }
+  if (V.ed && id === 'ed-name') { V.ed.name = el.value; return syncSecBar(); }
+  if (V.ed && id === 'ed-sub') { V.ed.sub = el.value; return syncSecBar(); }
+  if (V.ed && id === 'ed-sort') { V.ed.sort = el.value; return syncSecBar(); }
   if (V.ed && id === 'ed-show') { V.ed.hidden = !el.checked; return patch(); }
   if (id === 'ren-in') { V.ren = el.value; if (V.renErr) { V.renErr = null; el.classList.remove('invalid'); const f = el.closest('form').querySelector('.ferr'); if (f) f.textContent = ''; } return; }
   /* --- 061 Juegos --- */
@@ -2729,6 +3634,7 @@ document.getElementById('tools-toggle').addEventListener('click', () => document
 const NOTES = `<h3>Sketch 065 · el admin completo, compuesto</h3><ul>
   <li><b>No es un rediseño.</b> El CSS es el de 063 y cada página viene entera de su sketch (060 Admin, 061 Juegos, 062 Web/Estantes/Asignar/Niveles/Staff, 063 editor). <code>build.js</code> los recorta de los archivos originales: si acá algo se ve mal, se arregla en el sketch de origen y se vuelve a generar.</li>
   <li><b>El recorrido</b> de la barra de arriba camina Admin → Juegos → editor → ‹ Juegos → Web → sección → Estantes → Asignar → Perfil, que es lo que esta hoja viene a revisar.</li>
+  <li><b>Estantes (R9):</b> <i>tools → Estantes (R9)</i> cambia entre <b>A</b> (la lista de la ronda 8, la que ganó), <b>B</b> (los juegos del estante como riel horizontal) y <b>C</b> (riel como mapa sobre la lista). Abrí <i>Estante D — expertos</i> (162 cajas) y probá llegar al medio; después buscá <code>dixit</code> y tocá la fila.</li>
   <li><b>Teclado:</b> tocá cualquier campo (o <i>tools → Teclado</i>) para ver qué pasa con la barra de pestañas, con una hoja abierta y con el título y la descripción del editor.</li></ul>`;
 
 S.screen = 'panel';

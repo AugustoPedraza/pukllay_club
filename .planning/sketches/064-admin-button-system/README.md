@@ -121,3 +121,113 @@ It also checks:
 - desktop has no overflow.
 
 The first run showed 3 false contrast failures: `color-mix()` backgrounds come back as `color(srgb 0–1)` and were parsed as 0–255. The parser is fixed; real contrast passes.
+
+## Round 10 — the other half of the system: which anatomy, in which context (from sketch 065, 2026-09-16)
+
+Developer: *"Those too big and kill balance. and also, there are 'text actions' like 'Ver en la
+ludoteca' and 'Quitar del estante'. We need a consistent way to represent actions everywhere with its
+corresponding hierachy and correct balance to fix the currently broken rythm."*
+
+This sketch wrote down the **paint** of a role — Principal / Secundaria / Terciaria / Peligro — and
+said nothing about the **shape** a role takes in which place. So each place invented one. A census of
+**every visible action control on 25 admin surfaces (113 of them, 25 context × role pairs)** found the
+same role rendering two different ways in seven places, none of which any check could see, because
+this file only ever looked at buttons and only ever at their right edge.
+
+> **THE CONTEXT PICKS THE ANATOMY; THE ROLE PICKS THE PAINT.**
+
+### Four anatomies, and no fifth
+
+| | anatomy | measured | roles it carries |
+|---|---|---|---|
+| **A1** | outlined | 44px · 16px side padding · 1px stroke · 8px radius · 14px/600 · **inset 0 on both sides** (the stroke ends on the content edge) · **8px** between two of them | Principal, Secundaria |
+| **A2** | text | 44px · 12px side padding · no stroke · 14px/600 · **pulled −12px** so the *label* lands on the content edge · **0** between two of them (round 6 #5: their own padding *is* the rhythm) · centred and unpulled in pagination only | Terciaria, Peligro |
+| **A3** | icon | 44×44 borderless circle · 18px glyph · **pulled −12px** so the *glyph* lands on the content edge | Terciaria, Peligro |
+| **A4** | sheet row | 48px · full-bleed · 16px/400 · 22px leading icon · commit first with `tick`, Cancelar last with `chevL` — **a sheet has no buttons at all** (065 R7b) | all four, by order + icon + tone |
+
+Two things sit beside the four rather than inside them, and both are named so they cannot be mistaken
+for drift: the **chip row** is the admin's "pick one of N" control (065 R7b), and the **back control**
+is page chrome — a leading-glyph navigation control with its own 4/10px padding and −10px pull,
+identical on every drill-down, which 065's `D1` has asserted since round 1.
+
+### Context × role → anatomy
+
+| context | Principal | Secundaria | Terciaria | Peligro |
+|---|---|---|---|---|
+| **page strip** `.pacts` | never | **never** | **A2** | never |
+| **block head** `.lhead` | A1 (*Listo*) | A1 (*Ordenar*) | A2 | never |
+| **block foot** `.gacts` | A1 (*Listo*) | A1 (*Agregar juegos*) | A2 | A3, far right |
+| **save bar** `.eactions` | A1, last | A1 | A2 | A2, far left |
+| **inline form** `.addrow` | A1, beside its field | — | — | — |
+| **banner** `.banner-actions` | A1, last | A1 | A2 | A2 |
+| **box foot** `.cta2-wrap`, `.bgg-more-wrap` | never | A1, full width | A2, full width | never |
+| **row, its trail, its expansion** `.gtrail` · `.gxacts` · `.epanel` · `.ractions` | **never** | **never** | A2 / A3 | A2 / A3 |
+| **pagination** `.more` | never | never | A2, centred — the one A2 that is not pulled | never |
+| **sheet** `.dlinks` | A4, first, `tick` | A4 | A4 | A4 danger; Cancelar last |
+
+### The rules, and what each one was for
+
+1. **At most one outlined action per block** — widening this sketch's own "at most one Principal per
+   block". A block may hold one Principal *and* one Secundaria (063's Estado matrix, `[Guardar]
+   [Publicar]`, is exactly that); it may never hold two of one rank. Three equal Secundarias and no
+   Principal is the shape of "too big and kill balance": the page shouts three times and asks nothing.
+2. **A page-level action is never Principal and never outlined.** It sits under content it does not
+   belong to, so it is A2.
+3. **A row-level action is never outlined.**
+4. **A block's mode control is outlined in both states** — Secundaria to enter, Principal to leave.
+   This is round 7's `.lhead` decision (*"a mode toggle that changes what the whole list below it does
+   is not a Terciaria text link"*), and it **still holds under a system**: `.gacts` now follows it too,
+   and the two outlines left on the Estantes page are one per block, each inside the block it acts on.
+5. **A destructive action is never Principal, is A2/A3/A4 only, and confirms in a sheet.**
+6. **44px floor on everything tappable**, a row that opens a sheet included — measured on the **hit
+   box**, not the drawn box.
+7. **A1 never pulls; A2/A3 always pull −12px on the side that touches the block edge.** Round 7 wrote
+   this for `.lhead` alone; every context is told now.
+
+### What was actually wrong
+
+1. **`.pacts` applied the borderless −12px pull to an outlined Secundaria**, so "Nuevo estante" hung
+   its stroke **12px past the page's left content edge**. This audit measured only the right edge.
+2. **The estante's options `.ibtn` sat at inset 0** while every row arrow above it sat at −12 — two
+   identical 18px glyphs **12px out of line** down one column.
+3. **"The space between two text actions" had four answers** — 4px, 8px, 8px, 0 — against round 6 #5's
+   one rule, applied only where round 6 happened to look. This is the "broken rhythm".
+4. **`.banner.err .banner-actions { margin: 0 }`** cancelled the strip's pull, so 063's lone
+   "Reintentar" had its label 12px inside the banner's content edge while 061's "Cancelar", same class,
+   sat on it. The container's pull is dropped and the pull is on the **button**, where an outlined last
+   child then ends on the edge and a borderless one puts its label there.
+5. **Two panels declared 40px for rows that open a sheet** — `.sgroup.apanel` ("Orden · A mano") and
+   `.r6 .sbox.rows` ("Estante · Sin ubicar"): **6 tap targets under the floor**, unaudited because this
+   file only measured buttons.
+6. **`.ebar .obtn { margin-left: 4px }`** gave a save bar's outlined last action two left margins,
+   depending on whether it was `.obtn` or `.b-pri`.
+7. **The editor's back row held two anatomies for one context × role** — the back control beside a real
+   Terciaria action. Fixed by naming the back control its own role rather than by changing either.
+
+**And one non-finding, recorded because it nearly went in as real:** 061's filter chip is a 32px pill
+whose `::after` bleeds its hit area to **44px**. Reading the drawn box reports a legal target as under
+the floor — the same harness-trap shape as round 1's three false contrast failures. The floor check
+measures the `::after` box.
+
+### `audit-admin.js`: 106 → **154 of 154**
+
+The 48 new checks are one per screen × theme, and they are **`A1`–`A9`** inside the page-side pass:
+
+- **A2** an outlined action's stroke is inside its block's content edge on **both** sides;
+- **A3** a borderless action at a block edge puts its *label or glyph* there (−12), never its box —
+  skipped for a full-width bar, where the box *is* the strip;
+- **A4** at most one Principal and one Secundaria outlined per block;
+- **A5** no outlined action in `.pacts`, at row level, in pagination or in a sheet;
+- **A6** 0px between two text actions, 8px between two outlined ones;
+- **A7** a destructive action is never outlined;
+- **A8** every tap target — buttons, icon buttons, `.cta2`, sheet rows, setting rows, chips and list
+  rows — clears 44px, measured on the hit box;
+- **A9** a sheet renders no buttons, and Cancelar is its last row.
+
+The selector set grew too: `.cta2`, `.ibtn`, `.dlink`, `button.srow` / `label.srow` / `a.srow`, `.chip`
+and `.grow` were all outside every previous check.
+
+The cross-page half — *the same context × role must have the same anatomy on every page of one walk* —
+is `M1`–`M6` in `065/verify.js`, because only a composition can see it. Both halves exist on purpose:
+round 4 and round 9 each found a control nothing audited, and a rule that lives only in the composition
+drifts the moment a sketch is edited on its own.

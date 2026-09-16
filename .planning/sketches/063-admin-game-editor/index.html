@@ -526,7 +526,6 @@
   .lhint { margin: 0 0 4px; font-size: 12px; color: var(--color-text-muted); }
   .lnote { font-size: 13px; color: var(--color-text-muted); margin: 4px 0 0; line-height: 1.45; }
   .lnote b { color: var(--color-text); font-weight: 600; }
-  .lcap { font-size: 12px; color: var(--color-text-muted); margin: 4px 0 0 52px; }
   .grp + .grp { margin-top: 20px; }
   .fhelp { margin: 6px 2px 0; font-size: 12px; color: var(--color-text-muted); line-height: 1.4; }
   .ferr:not(:empty) + .fhelp { display: none; }
@@ -564,7 +563,6 @@
   .switch:checked { background: var(--color-primary); }
   .switch:checked::after { transform: translateX(18px); }
   .switch:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-  .saverow { display: flex; justify-content: flex-end; margin-top: 16px; }
 
   /* Estantes: progress + view switch */
   .prog { margin: 0 0 16px; }
@@ -614,8 +612,6 @@
   .srow.danger .gname { color: var(--color-danger); }
   :root[data-theme="dark"] .srow.danger .gname, :root[data-theme="dark"] .slot40.danger { color: #F2A3B8; }
   .srow .val.hint { color: var(--color-text-muted); font-weight: 600; }
-  .saverow { align-items: center; gap: 12px; }
-  .dirty-note { margin-right: auto; font-size: 12px; font-weight: 600; color: var(--color-accent-text); }
 
   /* read-only BGG facts: no borders, no chevrons, muted keys — values only */
   .ro-note { display: flex; gap: 6px; align-items: flex-start; font-size: 12px; color: var(--color-text-muted); margin: 0 0 6px; line-height: 1.4; }
@@ -633,12 +629,8 @@
     position: absolute; left: 0; right: 0; bottom: 67px; z-index: 25; display: flex; align-items: center; gap: 2px; min-height: 60px;
     padding: 8px 12px 8px 16px; background: var(--color-bg); border-top: 1px solid var(--color-border); box-shadow: 0 -4px 12px rgba(0,0,0,.04);
   }
-  .ebar .bst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-  .ebar .bl1 { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
-  .ebar .bl2 { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ebar .bl2.dirty { color: var(--color-accent-text); font-weight: 600; }
-  .polish .ebar .tbtn { font-size: 13px; }
-  .ebar .obtn { margin-left: 4px; }
+  /* .bst / .bl1 / .bl2 / .eactions and the whole inline variant live in the "065 R7: one save bar"
+     block at the end of this stylesheet — the sección in 062 uses the same component. */
   .has-bar .scroller { padding-bottom: 136px; }
   .has-bar .snack { bottom: 144px; }
   .desk .ebar { position: sticky; bottom: 0; padding-inline: max(32px, calc((100% - 1120px) / 2 + 32px)); }
@@ -719,9 +711,7 @@
   .club { margin-top: 1.5rem; }
   .club .sgroup { margin-top: 0; }
   .desk .club .sgroup { margin: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
-  .desk .pcol .saverow { margin-top: 12px; }
   .srow .val { max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
-  .tcol > .saverow { margin-top: 12px; }
 
   .bggm { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
   .ro-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-muted); margin: -8px 0 12px; }
@@ -837,11 +827,7 @@
   .polish.r6 .sbox.rows .tin.num:focus { border-color: var(--color-primary); }
   .r6 .sbox.rows .srow:hover { background: var(--color-surface-2); }
   .r6 .club6 .ferr:empty { display: none; }
-  /* Estado: the former sticky bar, inline in the same box */
-  .r6 .ebar.inline { position: static; box-shadow: none; border: 0; background: var(--color-surface); border-radius: var(--radius-lg); min-height: 0; padding: 8px 8px 8px 16px; }
-  .desk.r6 .ebar.inline { position: static; padding-inline: 16px 8px; }
-  .r6 .ebar.inline .obtn { background: var(--color-bg); border-color: transparent; }
-  .r6 .ebar.inline .obtn:disabled { background: transparent; border-color: var(--color-surface-2); }
+  /* Estado: the former sticky bar, inline in the same box — see "065 R7: one save bar" at the end */
   /* Datos de BGG: collapsed disclosure row inside the box */
   .r6 .bgg6 { padding: 4px 0; overflow: hidden; }
   .r6 .bgg-body { padding: 8px 16px 8px; }
@@ -1069,21 +1055,383 @@
   #device .banner-actions { gap: 8px; }
   /* the -8px pull is for borderless text buttons; an outlined button ends the row on the content edge */
   #device .banner-actions:has(> :is(.obtn, .b-pri, .b-sec):last-child) { margin-right: 0; }
-  /* 063 Estado under the 064 system: status on top, one action row below (right-aligned, Principal last) */
-  /* Estado's rhythm. A borderless text button hides 14px of padding above and below its label, so the
-     declared 8px gap read as ~22px of dead space between "Todo guardado" and "Retirar de la web", and
-     the box bottom as ~26px. With an all-text action row the button's own padding IS the rhythm, so
-     the gap and the bottom padding go to zero; the moment the row carries an outlined button — which
-     has a real border to keep off the box edge — both come back. */
-  #device.r6 .ebar.inline { flex-direction: column; align-items: stretch; gap: 0; padding: 12px 16px 0; }
-  #device.r6 .ebar.inline:has(.eactions > :is(.obtn, .b-pri, .b-sec)) { gap: 12px; padding-bottom: 12px; }   /* 12px is .ppanel's internal gap — the editor's box rhythm */
+  /* 063 Estado under the 064 system: status on top, one action row below (right-aligned, Principal
+     last) — the whole inline bar, its rhythm and its action row are in the "065 R7: one save bar"
+     block that closes this stylesheet, because a sección uses the same component. */
+  #device .cta2 { width: 100%; }
+  #device .tbtn.bgg-more { width: 100%; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  /* ================= 065 R7: one save bar, one settings panel — identical block in 062/063 =================
+     Three developer notes on a sección, and all three were one thing each: a second implementation.
+
+     1. THE AJUSTES BLOCK HAD TWO SURFACES. A 13px section label, then Nombre and Subtítulo bare on the
+        page background, then a soft --color-surface box holding the two setting rows — one labelled
+        block, two surface treatments, and gaps of 8 / 6 / 12 / 6 / 16px down its middle. The fields
+        join the box as field rows, so the section is ONE surface on ONE rhythm: 12px between every
+        child and 12px above the first and below the last (.ppanel's internal gap, 063 R6 #5).
+        This is also what tells the form apart from the search under it. Round 4 gave the search field
+        the same ANATOMY as every other field on purpose, so anatomy cannot be the thing that separates
+        them — grouping is. The form is now in a panel and the search is the only field left on the
+        page background.
+
+     2. THE ADMIN HAD TWO SAVE BARS. 063 built .ebar.inline — a soft surface block with a status line
+        (.bl1 and its dot over .bl2) and its actions (.eactions, Principal last), with round 6's rhythm
+        rule baked in. 062 built .saverow — a 12px accent note and an outlined button floating loose on
+        the page background, 16px under the settings box. Same job, two components, one tap apart in the
+        walk. This block is the whole definition of the one that survived; build.js throws if 062 and
+        063 ever drift apart again.
+        Rhythm: a borderless text button hides 14px of padding above and below its label, so with an
+        all-text action row the button's own padding IS the rhythm and the gap and the bottom padding go
+        to 0; the moment the row carries an outlined button — which has a real border to keep off the
+        box edge — both come back at 12px. A bar with no action row at all (a sección with nothing left
+        to save) keeps the full 12px.
+
+     3. "ORDENAR" READ AS PURE TEXT. A mode toggle that changes what the whole list below it does is not
+        a Terciaria text link. lhead's control is a real outlined button in both states — Secundaria to
+        enter the mode, Principal ("Listo") to leave it — and an outlined control ends on the row's
+        content edge instead of being pulled 12px out the way a borderless label is. */
+  #device main .sgroup.apanel { margin: 0; padding: 12px 0; display: flex; flex-direction: column; gap: 12px; }
+  #device main .sgroup.apanel > * { padding: 0 16px; }
+  #device main .sgroup.apanel .flabel { margin: 0 0 6px; }
+  #device main .sgroup.apanel .srow { min-height: 40px; }
+  #device .ebar.inline { position: static; display: flex; flex-direction: column; align-items: stretch;
+    min-height: 0; gap: 12px; padding: 12px 16px; border: 0; box-shadow: none;
+    background: var(--color-surface); border-radius: var(--radius-lg); }
+  #device .ebar.inline:has(.eactions):not(:has(.eactions > :is(.obtn, .b-pri, .b-sec))) { gap: 0; padding-bottom: 0; }
+  #device .ebar .bst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  #device .ebar .bl1 { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  #device .ebar .bl2 { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #device .ebar .bl2.dirty { color: var(--color-accent-text); font-weight: 600; }
   #device .ebar .eactions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
   #device .ebar .eactions .push { margin-right: auto; margin-left: -12px; }
   #device .ebar .eactions > .tbtn:first-child:not(.b-pri):not(.b-sec) { margin-left: -12px; }
   #device .ebar .eactions > .tbtn:last-child:not(.b-pri):not(.b-sec) { margin-right: -12px; }
-  #device.r6 .ebar.inline .obtn { background: var(--color-bg); }
-  #device .cta2 { width: 100%; }
-  #device .tbtn.bgg-more { width: 100%; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  #device .ebar .obtn { margin-left: 4px; }
+  #device .ebar.inline .obtn { background: var(--color-bg); }
+  /* two soft blocks in one section need a seam: dropping .saverow's 16px margin left the bar butting
+     straight against the settings panel at 0px. 12px — the panel's own rhythm — keeps them one group. */
+  #device main .sgroup.apanel + .ebar.inline { margin-top: 12px; }
+  #device .lhead > :is(.obtn, .b-pri, .b-sec) { margin: 0; }
+  /* ================= 065 R7b: one control for "pick one of N", one grouped list — identical block in 062/063 =================
+     Three more developer notes on Estantes, and again none of them was a matter of taste.
+
+     1. "ESTANTES | JUEGOS POR ESTANTE" FILLED FELT WEIRD — and measured, it is a WCAG failure, not a
+        preference. The track was filled with --color-surface, which round 4 established is what a soft
+        content BLOCK is made of in this admin, and the SELECTED segment was --color-bg, the page
+        background: so the chosen option read as a hole punched in a block. Selected vs track measured
+        1.16:1 light and 1.17:1 dark — WCAG 1.4.11 sets a 3:1 floor for the state of a UI component, so
+        the selected state was effectively invisible in BOTH themes, not just dark. It was also the last
+        10px shape in a control stack where chips, the Agregar field and the search field are all 8px
+        (round 4 killed the search pill for exactly that and missed this one, because nothing audited
+        it), and its first label repeated the page title word for word.
+        The job is "pick one of N, and change what the list below shows" — which is the job 061 already
+        compared a segmented control (A2) against filter chips (A1) for, and chose CHIPS. So the view
+        switch IS the chip row, markup included; .seg survives only as 061's rejected A2 variant. A chip
+        carries its state on four channels — a tick glyph at 11.27:1, 600 weight, the accent fill and
+        the accent label — where the segment had only a 1.16:1 fill.
+        What the chips owed: a chip's own OUTLINE was 1.42:1 light / 1.30:1 dark, and the selected chip
+        had `border-color: transparent`, so the control's boundary was under the same 3:1 floor. Every
+        chip now carries 064's field/Secundaria stroke — one token for one job — and the state stays on
+        the tick, the fill and the weight.
+
+     2. THE GROUPED SHELF VIEW DID NOT SCALE. Every group rendered `games.slice(0, 4)` and then a
+        dead-end "y 64 más" caption: 1702px = 2.30 screens for FOUR shelves, 16 of 412 games (3.9%),
+        and no way to expand any of it. The mobile standard for "many groups × many items on a small
+        screen" is collapsed groups that expand in place (iOS grouped tables, Material expansion
+        panels) — and this admin already ships that component: Asignar's `.grow.disclose`, which
+        round 5 ruled names its own block and therefore satisfies L1. So a group is one disclosure row
+        carrying its count, its games open in place, and a group with more rows than one page offers the
+        same "Mostrar más" the unplaced list already offers instead of a caption that leads nowhere.
+        The groups then have to read as ONE list rather than as 13 separate blocks, so the 20px gap
+        between them goes and the hairline over a group header runs full-bleed (a content row's hairline
+        starts at 76px, past the thumb) — the grouped-table seam.
+
+     3. .lcap IS GONE. "y N más" was a second, mute answer to "there is more here" next to .more's
+        "Mostrar más" + "8 de 68" — and the mute one was on the only two lists you could not page. */
+  #device .chip { border-color: var(--stroke); }
+  #device .chip.on { border-color: var(--stroke); }
+  /* 065 R8: the `.chips.vista` rule went with the view switch — see the R8 block below. The chip
+     fixes above survive on 061's four filter chips, which is where the component still has a job. */
+  #device main .grp + .grp { margin-top: 0; }
+  #device main .grp + .grp > .glist > .disclose::before { display: block; left: 0; }
+  #device main .grp .gnote { margin: 0 16px 12px 76px; }
+  /* ================= 065 R8: ONE Estantes page — identical block in 062/063 =================
+     Round 7b split Estantes into two views behind a chip control. Round 8 retires that control after
+     ONE round, and the measurement is the finding: neither view could answer the page's own first
+     question. "Recorrido" had no search field at all and put the "Nuevo estante" form between the
+     progress line and the first estante, 368px down the page. "Contenido" could say WHICH estante held
+     a game — tab, chip, type — but never where ON it, because a group opened to `G.filter(place===sid)`,
+     catalogue order, not shelf order, with nothing saying so. A control that lasts one round is a
+     finding about its premise, not an embarrassment: two views was the wrong premise.
+
+     THE PREMISE THIS PAGE NOW RESTS ON: the order of the games on an estante IS their physical
+     left-to-right order on the shelf. Everything follows from it — the zone is a game's index read
+     back in words, the neighbours are the slots either side of it, and Ordenar moves a real box, which
+     is why its hint says so.
+
+     WHAT THE PARTS ARE. `.gacts` is an estante's own action strip, which exists only while the estante
+     is open: the bulk job (Agregar juegos) as Secundaria on the left and the estante's options as an
+     `.ibtn` on the right, on the grouped-table seam (`.more`'s own full-bleed hairline). `.pacts` is a
+     page-level secondary action — "Nuevo estante", demoted out of the page body so it stops competing
+     with the finding job. `.gexp` is what a game row opens to: the precise half of the answer, indented
+     to the row's own text column so it reads as that row's continuation and not as a new row. */
+  #device main .gacts { display: flex; align-items: center; gap: 8px; margin: 0 -16px; padding: 10px 16px 2px; border-top: 1px solid var(--color-border); }
+  #device main .gacts .push { margin-left: auto; }
+  /* R10: 8px, not 20. "Nuevo estante" is a Terciaria text action now (rule 2: a page-level action is
+     never Principal and never outlined), and a borderless button hides 14px of padding above its
+     label — so 20px of margin put the LABEL 34px below the block above it, where the outlined button's
+     box edge had sat at 20. 8 + 14 = 22px to the label, which is the same optical distance the outline
+     used to hold. This is round 6 #5's rule ("the button's own padding IS the rhythm") applied to the
+     one action row that had never been measured against it. */
+  #device main .pacts { display: flex; margin-top: 8px; }
+  #device main .pacts .tbtn { margin-left: -12px; }
+  /* a row's expansion is that row's continuation: it starts on the row's text column (40px slot +
+     12px gap past the 16px page edge = 68px, the same line the row hairline starts on) and carries no
+     hairline of its own, so the group still reads as one list. */
+  /* a game row discloses ITSELF, so it gets .gdisc and not .disclose — .disclose names a block, and
+     L1 plus every "this is a group heading" selector leans on that. Same chevron, different job. */
+  #device main .grow.gdisc .chev { transform: rotate(90deg); transition: transform var(--duration-base) var(--ease-out-soft); }
+  #device main .grow.gdisc[aria-expanded="true"] .chev { transform: rotate(-90deg); }
+  #device main .gexp { padding: 0 16px 10px 68px; display: flex; flex-direction: column; gap: 6px; }
+  #device main .gexp .nbr { margin: 0; font-size: 13px; line-height: 1.35; color: var(--color-text); }
+  /* R10: gap 0, not 4 — see the R10 block. Two borderless text actions already hold 12px of their own
+     padding on each side, and round 6 #5's rule is that that padding IS the rhythm. */
+  #device main .gexp .gxacts { display: flex; flex-wrap: wrap; gap: 0; margin-left: -12px; }
+  #device main .grow.gopen { background: var(--color-surface); }
+  #device main .grow.gopen::before, #device main .grow.gopen + .gexp + .grow::before { display: block; }
+  /* the group's own notes sit on the same 68px text column as its rows — R7b put .gnote at 76px, which
+     is the UNPOLISHED hairline; every row on this page is .polish, whose hairline is at 68. */
+  #device main .grp .gnote { margin: 0 16px 10px 68px; }
+  #device main .grp .glist > .gnote { margin-top: 8px; }
+  /* A STATUS MARKER INSIDE A META ITEM. Round 8 put "Sin ubicar" inside a .mi so the separator logic
+     would give it its "·", and measuring the result caught a bug the eye could not: .dot declares
+     7×7px and has no `display`, so as a direct child of the FLEX .gsub it was blockified and drawn —
+     but inside an inline .mi it is an inline non-replaced box, where width and height do not apply.
+     It measured 0px wide. inline-block restores the box; vertical-align centres it on the text. */
+  #device main .gsub .mi .dot { display: inline-block; vertical-align: -1px; margin-right: 5px; }
+  /* ================= 065 R9: the estante as a RAIL — identical block in 062/063 =================
+     Developer: "what if we use carousel(horizontal scrolable) to represent that physical position,
+     maybe been inspired by Apple iBooks?" — the answer to R8's own open complaint: inside an expanded
+     estante the zone word is identical on every row (5 consecutive rows measured reading "Más a la
+     izquierda"), because the list order already carries the position and the words only restate it.
+     So: stop TELLING the position and SHOW it.
+
+     THIS IS THE APP'S OWN CAROUSEL, TRANSPLANTED — not a second one. Every number and every
+     behaviour below comes from `lib/pukllay_club_web/components/carousel_row.ex` +
+     `assets/css/app.css`'s `.pk-rail`/`.pk-rail-wrap`, and from the four sketches that decided them:
+       · 022-C  the arrows are `@media (hover: hover) and (pointer: fine)` only and are REMOVED FROM
+                LAYOUT on touch (`display: none`), never merely hidden — no dead tap target over the
+                swipe area. They are also gated on `[data-overflows]`, which the rail's own script
+                writes: the device condition and the content condition COMBINE, neither replaces the
+                other.
+       · 023-B  free momentum: no `scroll-snap-type`, and `scroll-behavior: auto` on purpose, because
+                the arrow scroller assigns `scrollLeft` every animation frame and the browser's own
+                smooth-scroll mode would start a competing animation per assignment.
+       · 024-A  NO position/pagination indicator. Edge-fade only. See the README's round-9 "024
+                verdict" — this block adds none, and what that costs is measured rather than argued.
+       · 025-B  shimmer is scoped to repopulation; nothing here repopulates, so nothing here shimmers.
+     THE CO-DEPENDENT MEASUREMENT SET (carousel_row.ex's moduledoc: the edge-fade width, the rail gap,
+     the card width and the side gutter "only work when declared together in one CSS location"). All
+     four are declared here, once, as custom properties on the wrap:
+       card 96px · gap 10px · fade 16px · gutter 16px
+     Three are production's ≤480px values verbatim. The FOURTH is the one that changes: the catalogue's
+     `--pk-gutter` is 14px at ≤480px, and this admin page's is 16px (`main`'s padding). Consequence,
+     measured rather than assumed: at the 375px device the 4th tile starts at 16+3×106 = 334 and is cut
+     at 375, so 41px of it shows and 16 of those sit under the fade — a 25px clear sliver of peek.
+     Production's 14px gutter would leave 27px. The set survives the swap with 2px less peek; asserted,
+     because a fade wider than the peek swallows the very cue it exists to create.
+     GHOST SLOTS, i.e. fixture honesty at rail density. A shelf is an ordered array of slots (R8) and
+     only 36 of the 412 games are named in this sketch, so most slots are real boxes whose titles this
+     sketch does not render. A rail shows many at once, so this is the round where that shows. NO COVER
+     MAY IMPLY A GAME THAT DOES NOT EXIST: a run of unnamed slots is not drawn as covers at all. It
+     collapses into ONE hatched band whose width is the run's REAL length × the tile pitch — so the
+     rail's geometry, its scrollWidth and every distance measured on it stay true — carrying a sticky
+     caption that says exactly what it is ("153 cajas sin título en este boceto"). Sticky, so it is
+     still on screen while you scroll through the stretch it describes. */
+  #device main .erail-wrap {
+    --etile: 96px; --egap: 10px; --efade: 16px; --egut: 16px;
+    position: relative; margin: 0 -16px;
+  }
+  #device main .erail {
+    display: flex; gap: var(--egap); overflow-x: auto; padding: 8px var(--egut);
+    /* 023-B, and the reason it is explicit: see the block header. */
+    scroll-behavior: auto; scrollbar-width: none;
+    /* a horizontal overscroll cannot chain out to the page or trigger the back gesture; both pan axes
+       stay available, because a single-axis `pan-x` would stop a vertical swipe that starts on a tile
+       from scrolling the page — production makes the same trade and says so. */
+    overscroll-behavior-x: contain; touch-action: manipulation;
+  }
+  #device main .erail::-webkit-scrollbar { display: none; }
+  #device main .erail-wrap::before, #device main .erail-wrap::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: var(--efade); z-index: 4; pointer-events: none;
+  }
+  #device main .erail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  #device main .erail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  /* 022-C. z-index 5 over the fade's 4, or the glyph renders under the gradient it overlays. */
+  #device main .erail-btn {
+    position: absolute; top: 0; bottom: 0; width: 44px; z-index: 5; display: none;
+    align-items: center; justify-content: center; border: 0; background: transparent;
+    color: var(--color-text); cursor: pointer; padding: 0;
+  }
+  #device main .erail-btn[data-dir="-1"] { left: 0; }
+  #device main .erail-btn[data-dir="1"] { right: 0; }
+  #device main .erail-btn svg { width: 28px; height: 28px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+  @media (hover: hover) and (pointer: fine) {
+    #device main .erail-wrap[data-overflows="true"] .erail-btn { display: flex; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
+    #device main .erail-wrap[data-overflows="true"]:hover .erail-btn,
+    #device main .erail-wrap[data-overflows="true"] .erail-btn:focus-visible { opacity: 1; }
+  }
+  /* A TILE. The admin's floor is 44px and its list rows use a 40px thumb; a production rail card is
+     poster-sized. 96px wide is the catalogue's own ≤480px card width, and it is what keeps the
+     co-dependent set intact — so the cover is the list's `.thumb` gradient at poster scale, not a new
+     surface. `aspect-ratio: 1/1.05` is `.pk-card-poster`'s. */
+  #device main .etile {
+    flex: 0 0 auto; width: var(--etile); display: flex; flex-direction: column; gap: 6px;
+    border: 0; background: none; padding: 0; text-align: left; color: var(--color-text);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  #device main .etile .ecover {
+    --h: 270; width: var(--etile); aspect-ratio: 1 / 1.05; border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    /* R10, and W1 caught it the first round the rail actually shipped: the letter is a STAND-IN for
+       cover art (in production every tile is an <img> and carries no type at all), and at 28px/600 it
+       outweighed the page title "Estantes" at 22px/600 — five of them at once, on a page whose title
+       is supposed to lead. A placeholder does not get to outrank the page. 21px, under the title. */
+    background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); font-weight: 600; font-size: 21px;
+  }
+  :root[data-theme="dark"] #device main .etile .ecover { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  #device main .etile .ecap {
+    font-size: 12px; line-height: 1.3; color: var(--color-text-muted);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  #device main .etile:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 8px; }
+  /* THE MARKED TILE. 1.4.11 is a 3:1 floor on a component's own state, and the obvious ring fails it:
+     `--color-primary` measures 2.35:1 against the dark page background (#7B2DCE on #2E154E) — the
+     exact failure round 7 caught in a control that looked fine. So the mark is R7b's chip answer,
+     which already had to solve this: FOUR channels, not one — 064's `--stroke` as the boundary (4.3:1
+     light / 3.49:1 dark), a tick glyph, the accent fill behind the caption, and 600 weight. */
+  #device main .etile.on .ecover { outline: 2px solid var(--stroke); outline-offset: 2px; }
+  #device main .etile.on .ecap { font-weight: 600; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: 4px; padding: 1px 4px; margin: 0 -4px; }
+  #device main .etile .emark { display: none; }
+  #device main .etile.on .emark {
+    display: flex; align-items: center; justify-content: center; position: absolute; top: -6px; right: -6px;
+    width: 20px; height: 20px; border-radius: 50%; background: var(--color-accent-bg); color: var(--color-accent-text);
+    box-shadow: 0 0 0 2px var(--color-bg);
+  }
+  #device main .etile .emark svg { width: 13px; height: 13px; stroke-width: 2.4; }
+  /* the honest band over a run of slots this sketch cannot name — see the block header. */
+  #device main .egap {
+    flex: 0 0 auto; position: relative; border-radius: 6px; display: flex; align-items: center;
+    background: repeating-linear-gradient(135deg, var(--color-surface) 0 6px, var(--color-surface-2) 6px 12px);
+    border: 1px dashed var(--stroke);
+  }
+  /* sticky at the GUTTER, not at 0: at 0 the caption would sit under the 16px edge-fade, which is the
+     same arithmetic that governs the peek. */
+  #device main .egap .gcap {
+    position: sticky; left: var(--egut); padding: 4px 8px; font-size: 11px; line-height: 1.25; font-weight: 600;
+    color: var(--color-text-muted); background: var(--color-bg); border-radius: 4px; white-space: nowrap;
+  }
+  /* what a marked tile opens: the game's name and the two jobs an R8 row carried. It is the row's
+     `.gexp` with the rail above it instead of a sentence inside it, so it keeps `.gexp`'s anatomy. */
+  #device main .epanel { padding: 4px 16px 10px; display: flex; flex-direction: column; gap: 6px; }
+  #device main .epanel .ename { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 600; }
+  /* R10: gap 0, not 4 — two borderless text actions are already 12px of padding apart on each side,
+     and round 6 #5's rule is that that padding IS the rhythm. See the R10 block. */
+  #device main .epanel .gxacts { display: flex; flex-wrap: wrap; gap: 0; margin-left: -12px; }
+  #device main .epanel .emove { display: flex; align-items: center; gap: 4px; }
+  /* a rail inside a row's expansion: .gexp indents to the row's own 68px text column, and a rail is
+     full-bleed by definition — its fade sits at the page's own edges, the way the catalogue rail's fade
+     sits at the shell column edges. So it reaches back out: the ONE place a -68px margin appears, and
+     it is the rail recipe asserting itself over the expansion indent rather than a nudge.
+  */
+  #device main .gexp .erail-wrap { margin: 0 -16px 0 -68px; }
+  /* the rail has no rows to hang a note on, so its note sits on the page's own text edge instead of the
+     list's 68px hairline column. */
+  #device main .grp .gnote.grail { margin: 0 16px 8px; }
+  /* ---- 065 R10: THE ZONE BAR — the three zone words, promoted from description to navigation -------
+     R9 shipped nothing here and wrote down what would have to be true for a rail to need a position
+     control: 024's premise is "either end is one fling away", which holds for the catalogue's 8–10
+     cards and is simply false at 162 boxes, where the edge-fade can tell THREE positions apart and 39
+     of 41 sampled offsets are the same one. R10 promotes B against that measurement, so the cost is
+     now ours: 27 arrow presses (or 8–15 flings) to the middle of Estante D.
+     THE FIX USES NO NEW VOCABULARY. R9's census retired the zone word as a DESCRIPTION — inside an
+     expanded estante it was identical on every row of 60–91% of pages. As NAVIGATION the same three
+     words are exactly right, because they name the only three positions the fade could ever
+     distinguish: the two ends and the middle. The fade says which of the three you are in; the bar
+     lets you GO there. One tap to the middle of 162 boxes instead of 27 presses.
+     THE 024 EXCEPTION, SCOPED: the rail itself still carries no indicator and no per-tile ordinal —
+     the bar is a sibling OUTSIDE the rail, it has three states and not 162, and it only exists past
+     ZONE_NAV_MIN boxes. Under that length nothing is added and 024 is untouched, which is every rail
+     the catalogue ships.
+     IT IS THE ADMIN'S OWN "PICK ONE OF N" CONTROL, not a fourth component: R7b ruled that job is the
+     chip row (a segmented track failed 1.4.11 at 1.16:1) and this is that markup, with the chip's own
+     state channels — the accent fill, the accent label, 600 weight and R7b's --stroke boundary — plus
+     aria-current. No tick glyph, because the current zone changes while you fling and a glyph that
+     appears and disappears would shift the labels under your thumb.
+     ONE THING IT DOES NOT INHERIT: 061's filter chip is a 32px box with a ::after that bleeds its hit
+     area to 44px. A zone jump is a target you hit one-handed standing at a real shelf, so it is a real
+     44px box and the ::after is pulled back to the box, so it cannot bleed into the rail above it. */
+  #device main .ezones { display: flex; gap: 8px; overflow: visible; margin: 0; padding: 0 0 8px; }
+  #device main .ezones .chip { flex: 1 1 0; min-width: 0; height: 44px; justify-content: center; }
+  #device main .ezones .chip::after { top: 0; bottom: 0; }
+  /* ================= 065 R10: ONE action system — identical block in 062/063 =================
+     Developer: "Those too big and kill balance … there are 'text actions' like 'Ver en la ludoteca'
+     and 'Quitar del estante'. We need a consistent way to represent actions everywhere with its
+     corresponding hierachy and correct balance to fix the currently broken rythm."
+
+     064 wrote down the PAINT of a role (Principal / Secundaria / Terciaria / Peligro) and nothing
+     about WHICH SHAPE a role takes in which place, so each place invented one. The census of all 113
+     visible action controls across 25 admin surfaces found 25 context×role pairs and, in five of them,
+     the same role rendering two ways. The rule this block lands:
+
+       THE CONTEXT PICKS THE ANATOMY; THE ROLE PICKS THE PAINT.
+
+     There are exactly four anatomies and no fifth:
+       A1  outlined   44px · 16px side padding · 1px stroke · 8px radius · 14px/600 · inset 0 on BOTH
+                      sides (the stroke ends on the content edge) · 8px between two of them
+       A2  text       44px · 12px side padding · no stroke · 14px/600 · pulled −12px so the LABEL, not
+                      the box, lands on the content edge · 0 between two of them (round 6 #5: their own
+                      padding IS the rhythm) · centred and unpulled in the one pagination context
+       A3  icon       44×44 borderless circle · 18px glyph · pulled −12px so the GLYPH lands on the edge
+       A4  sheet row  48px · full-bleed · 16px/400 · 22px leading icon · commit first with `tick`,
+                      Cancelar last with `chevL` (R7b) — a sheet has no buttons at all
+
+     And the rules the audit enforces (064/audit-admin.js, checks A1–A9):
+       1. at most ONE outlined action per block (064's one-Principal rule, widened: three equal
+          outlines and no Principal is what "kills the balance");
+       2. a PAGE-level action is never Principal and never outlined — it sits under content it does not
+          belong to, so it is A2;
+       3. a ROW-level action (a row, its trailing controls, its expansion, a marked tile's panel) is
+          never outlined;
+       4. a block's MODE control is outlined in both states — Secundaria to enter, Principal to leave
+          (round 7's .lhead decision, now .gacts's too);
+       5. a destructive action is never Principal, is A2/A3/A4 only, and confirms in a sheet;
+       6. 44px floor on everything tappable, a row that opens a sheet included;
+       7. A1 never pulls, A2/A3 always pull on the side that touches the block edge.
+
+     WHAT WAS ACTUALLY WRONG, measured (all three were invisible to every existing check):
+       · `.pacts` applied the borderless −12px pull to an OUTLINED Secundaria, so "Nuevo estante" hung
+         its stroke 12px past the page's left content edge. 064's audit measured only the right edge.
+       · the estante's options `.ibtn` sat at inset 0 while every row arrow directly above it sat at
+         −12, so two identical 18px glyphs were 12px out of line down one column.
+       · "the space between two text actions" was 4px in `.gxacts`, 8px in `.eactions` and
+         `.banner-actions`, and 0 inside a save bar with no outline — four answers to round 6 #5's one
+         rule, which had only ever been applied where round 6 happened to look. */
+  /* rule 7, first half. R7 wrote it for .lhead alone; every A1 context is told now. */
+  #device :is(.lhead, .pacts, .gacts, .eactions, .banner-actions, .cta2-wrap, .addrow) > :is(.obtn, .b-pri, .b-sec) { margin-left: 0; margin-right: 0; }
+  /* rule 7, second half: the two borderless controls that had never been pulled.
+     · the estante's options .ibtn sat at inset 0 while every row arrow above it sat at -12.
+     · `.banner.err .banner-actions { margin: 0 }` cancelled the strip's pull, so 063's lone Reintentar
+       had its label 12px inside the banner's content edge while 061's Cancelar, in the same class, sat
+       on it. The container's pull is dropped for good and the pull is put on the BUTTON, where it
+       belongs: an outlined last child then ends on the edge and a borderless one puts its label there. */
+  #device main .gacts > .ibtn:last-child { margin-right: -12px; }
+  #device .banner-actions { margin-right: 0; }
+  #device .banner-actions > .tbtn:not(.b-pri):not(.b-sec):last-child { margin-right: -12px; }
+  /* rule 6, the 44px floor on anything you tap. Two panels declared 40px for rows that OPEN A SHEET
+     — R7's settings panel in a sección ("Orden · A mano") and the editor's own row boxes ("Estante ·
+     Sin ubicar") — and nothing audited either, because 064's audit only ever looked at buttons. A
+     static row is left alone: it is text, not a target. */
+  #device main :is(.sgroup, .sbox.rows) :is(button, label, a).srow { min-height: 44px; }
 </style>
 </head>
 <body>
@@ -1160,7 +1508,7 @@ const SCREENS = {
   niveles:    { title: 'Revisar niveles', icon: 'niveles' },
   staff:      { title: 'Staff', icon: 'staff', ownerOnly: true },
   seccion:    { title: 'Sección', parent: 'secciones' },   // drill-down: /admin/secciones/:id
-  asignar:    { title: 'Asignar', parent: 'estantes' },    // drill-down: /admin/estantes/:id/asignar
+  /* 065 R8: `asignar` is gone — an expanded estante on the Estantes page does its job. */
 };
 const SECTION_ORDER = ['juegos', 'secciones', 'estantes', 'niveles', 'staff'];
 const PHONE_TABS = ['panel', 'juegos', 'secciones', 'estantes'];
@@ -1175,9 +1523,13 @@ const signedIn = () => S.mode !== 'out';
 
 /* ---------------- ONE row anatomy ----------------
    [28px slot: icon or avatar] [label (+ secondary line)] [count] [chevron]; only a tone class varies. */
-function row({ act, nav, icon, avatar, avatarText, label, sub, count, tone = '', chev = true, isStatic = false, on = false, extra = '', wrap = false }) {
+/* 065 R7b: `type`. A sheet's actions are rows in its .dlinks, never a button footer — so the rename
+   sheet's committing row has to BE the form's submit, or Enter would stop committing from the keyboard.
+   Everything else is type="button", which is also what stops a row that merely closes a sheet from
+   submitting a form it happens to sit inside. A row with neither act nor nav carries only its extras. */
+function row({ act, nav, icon, avatar, avatarText, label, sub, count, tone = '', chev = true, isStatic = false, on = false, extra = '', wrap = false, type = 'button' }) {
   const tag = isStatic ? 'div' : 'button';
-  const attrs = isStatic ? '' : (act ? `data-act="${act}" ${extra}` : `data-nav="${nav}"`);
+  const attrs = isStatic ? '' : `type="${type}" ` + (act ? `data-act="${act}" ${extra}` : nav ? `data-nav="${nav}"` : extra);
   const slot = avatar || avatarText ? `<span class="avatar">${avatarText || USER.initials}</span>` : ic(icon, 'ico');
   return `<${tag} class="dlink ${tone} ${isStatic ? 'static' : ''} ${on ? 'on' : ''}" ${attrs} ${on ? 'aria-current="page"' : ''}>
     <span class="slot">${slot}</span><span class="lbl ${wrap ? 'wrap' : ''}">${label}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
@@ -1526,7 +1878,7 @@ function secsSheet() {
     <div class="sgroup sheet-sg">${MANUAL.map(sw).join('')}</div>
     <p class="ferr" role="alert">${E.secErr || ''}</p>
     <p class="sheet-text" style="margin-top:8px">${lead} ${joinY(auto)}.</p>
-    <div class="banner-actions"><button type="button" class="tbtn" data-act="e-close">Listo</button></div></div>`;
+    <div class="dlinks">${row({ act: 'e-close', icon: 'tick', label: 'Listo', chev: false })}</div></div>`;
 }
 
 /* ---- placeholder pages (other admin screens live in 060-062) ---- */
