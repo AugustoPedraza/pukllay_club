@@ -2,19 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
-current_phase: 01.8.1
-current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
-status: executing
-stopped_at: Completed 01.8.1-15-PLAN.md
-last_updated: "2026-09-14T18:02:07.257Z"
-last_activity: 2026-09-14
-last_activity_desc: Phase 01.8.1 execution started
-state_head: 6e70d7e2dc6ff7c68985f858ed20d494d6a49e19
+current_phase: 01.8.2
+current_phase_name: Admin UI/UX Redesign
+status: planning
+stopped_at: Phase 01.8.1 complete, ready to plan Phase 01.8.2
+last_updated: "2026-09-16T20:29:49.080Z"
+last_activity: 2026-09-16
+last_activity_desc: Phase 01.8.1 complete, transitioned to Phase 01.8.2
+state_head: 07f133b0fbd213722be68f137086ddc74fb917b6
 progress:
-  total_phases: 6
-  completed_phases: 0
+  total_phases: 7
+  completed_phases: 4
   total_plans: 27
-  completed_plans: 26
+  completed_plans: 27
+  percent: 57
 ---
 
 Total Phases: 9
@@ -33,16 +34,16 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
-Plan: 2 of 15
-Status: Ready to execute
-Last activity: 2026-09-14 — Phase 01.8.1 execution started
+Phase: 01.8.2 — Admin UI/UX Redesign
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-16 — Phase 01.8.1 complete, transitioned to Phase 01.8.2
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 88
+- Total plans completed: 103
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -59,6 +60,7 @@ Last activity: 2026-09-14 — Phase 01.8.1 execution started
 | 01.4 | 11 | - | - |
 | 01.7 | 5 | - | - |
 | 01.8 | 7 | - | - |
+| 01.8.1 | 15 | - | - |
 
 **Recent Trend:**
 
@@ -363,6 +365,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.7 inserted after Phase 01.6 (milestone v1.1): Production Catalog Data & Security Hardening — production's live DB is empty of games, and the now-public repo/passed-around link needs baseline cookie/HSTS/CSP/CSRF hardening plus a one-time full-git-history secrets sweep. Numbered as a decimal insertion continuing the 01.N convention so Phase 2/3/4 keep their numbers and scope.
 - Phase 01.8 inserted after Phase 01.7 (milestone v1.1): SEO, Structured Data & Social Sharing — per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, real image `alt` text. Split from 01.7 because its UAT (share a live game link, run Rich Results Test) requires production to already hold the real catalog, and because its verification mode (crawler/social-preview) is entirely different from 01.7's (operator/`curl -I`/production data).
 - Phase 01.8.1 inserted after Phase 01.8: Staff Admin — Ludoteca, Shelves & Curated Destacados (prioritized ahead of Phase 2/3; from /gsd-explore) (URGENT)
+- Phase 01.8.2 inserted after Phase 01.8.1: Admin UI/UX Redesign — implement sketches 059–065 (scope: .planning/notes/admin-redesign-scope.md)
 
 ## Deferred Items
 
@@ -398,7 +401,7 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-09-14T18:01:48.618Z
-Stopped at: Completed 01.8.1-15-PLAN.md
+Stopped at: Phase 01.8.1 complete, ready to plan Phase 01.8.2
 Resume file: None
 
 ## Operator Next Steps
