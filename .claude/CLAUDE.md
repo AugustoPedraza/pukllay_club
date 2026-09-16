@@ -218,6 +218,66 @@ protected-`main` remotes), enforce this manually:
 - **After the PR merges on GitHub**, sync local `main` back before starting new work:
   `git fetch origin && git checkout main && git merge --ff-only origin/main`.
 
+## GSD Decimal-Phase Resume Bug
+
+**Root cause (verified 2026-09-16):** `execute-phase.md`'s `safe_resume_gate` — the guard
+that is supposed to stop `/gsd-execute-phase` from re-running a plan that is already
+partially executed — cannot see partially-executed plans in this repo's decimal-numbered
+phases (`01.7`, `01.8`, `01.8.1`). It fails twice over, and both failures are silent.
+
+First, the gate computes the phase number with base-10 forced arithmetic:
+
+```
+PHASE_N=$((10#{phase_number}))
+```
+
+Against a decimal phase number that is not integer arithmetic at all, so the shell aborts:
+
+```
+$ PHASE_N=$((10#01.8.1))
+zsh: bad floating point constant
+```
+
+Second, even if that arithmetic somehow resolved, the gate's anchored commit-scope regex
+would still find nothing. It searches for a scope shaped like `feat(1-14):`:
+
+```
+^[a-z]+\((0*PHASE_N)-(0*PLAN_N)\):
+```
+
+But real commits in this repo are scoped with the full decimal phase — `feat(01.8.1-14):`
+— so the anchored pattern matches zero commits. Verified empirically against commit
+`0baeafc` on 2026-09-16: `git log --grep='^[a-z]+\((0*1)-(0*14)\):'` returns nothing,
+while `git log --grep='01.8.1-14'` returns the commit.
+
+**Consequence:** a plan that has real, already-landed production commits but no
+`SUMMARY.md` is **not** detected as partially executed. The `has_summary` filter only
+skips plans that *have* a summary, so `execute-phase` happily dispatches a fresh executor
+that re-runs the plan from Task 1.
+
+**The concrete near-miss this was found by:** plan `01.8.1-14` (production rollout) —
+Task 1 captures a **pre**-deploy baseline via `--baseline` into
+`01.8.1-prod-baseline.json` (`sitemap_count: 435`). Re-running Task 1 *after* the deploy
+would overwrite that file with the post-deploy count, which would make Task 3's
+`--expect-baseline` comparison pass trivially — silently destroying the only check that
+proves the one-way `games.status` migration did not unpublish the live catalog.
+
+Until GSD handles decimal phase numbers, work around it manually:
+
+- **For a half-executed plan in a decimal phase, do NOT run a bare `/gsd-execute-phase`.**
+  The resume guard is blind there; it will restart the plan at Task 1.
+- **Do NOT "fix" it by writing the SUMMARY first either.** That flips the plan to the
+  other failure mode: `has_summary` then skips the plan entirely, so its remaining
+  unexecuted tasks are silently never run.
+- **Use the recovery path `safe_resume_gate` itself documents** — "close out manually:
+  inspect commits, write SUMMARY.md, then update STATE/ROADMAP". In practice: inspect
+  what actually landed, run the remaining tasks' steps directly by hand, and only then
+  write the SUMMARY covering all tasks.
+
+This shares a root shape with the `branching_strategy: "none"` mismatch documented in the
+section above: GSD assumptions that simply do not hold for this repo's decimal-insertion
+phase convention. Expect more of these wherever GSD parses a phase number as an integer.
+
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 
 ## Conventions
