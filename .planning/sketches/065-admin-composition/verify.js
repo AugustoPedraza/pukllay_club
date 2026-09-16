@@ -204,14 +204,26 @@ window.__kb = () => {
     ok(tops.length === 1, `D3 page titles start at the same height ${withBack ? 'under a back row' : 'with no back row'} (${grp.map(([n, m]) => n + ':' + m.titleTop).join(' ')})`);
   }
 
-  /* --- D4 section labels: one label style for "a labelled block" --- */
-  const styles = {};
+  /* --- D4 labels: two ranked tiers, one style each ---------------------------------------------
+     A SECTION label names a block on the page; a FIELD label names one input inside it. Before the
+     composition there were three styles doing these two jobs (11px caps muted, 12px sentence muted,
+     13px sentence full colour) with no rank between them. Now: section 13px/600 in full colour,
+     field one size step down and muted, so "Ajustes / Nombre / Subtítulo" reads as a heading with
+     two fields under it rather than three near-identical lines. */
+  const tier = l => ['group-label', 'sec-label'].includes(l.cls) ? 'section' : 'field';
+  const styles = { section: {}, field: {} };
   for (const [n, m] of seen) for (const l of m.labels) {
-    const k = `${l.size}/${l.weight}/${l.transform}/${l.tracking}`;
-    (styles[k] = styles[k] || []).push(`${n}:${l.cls}“${l.text}”`);
+    const k = `${l.size}/${l.weight}/${l.transform}`;
+    const t = styles[tier(l)];
+    (t[k] = t[k] || []).push(`${n}:${l.cls}“${l.text}”`);
   }
-  ok(Object.keys(styles).length === 1,
-    `D4 one section-label style across the admin (${Object.entries(styles).map(([k, v]) => k + ' ← ' + v.slice(0, 3).join(', ')).join('  |  ')})`);
+  for (const [name, set] of Object.entries(styles)) {
+    if (!Object.keys(set).length) continue;
+    ok(Object.keys(set).length === 1,
+      `D4 one ${name}-label style across the admin (${Object.entries(set).map(([k, v]) => k + ' ← ' + v.slice(0, 3).join(', ')).join('  |  ')})`);
+  }
+  const secSize = parseFloat(Object.keys(styles.section)[0] || '0'), fldSize = parseFloat(Object.keys(styles.field)[0] || '0');
+  ok(!fldSize || fldSize < secSize, `D4 a field label reads under a section label, not beside it (section ${secSize}px, field ${fldSize}px)`);
 
   /* --- D5 list rows: one row height + one slot size per row kind --- */
   const heights = {};
@@ -379,6 +391,102 @@ window.__kb = () => {
       `S1 ${theme}: the edition banner states every status (${st.banner.map(x => x.text).join(', ')})`);
   }
   await p.evaluate(() => delete document.documentElement.dataset.theme);
+
+  /* ================= R. alignment and rhythm (065 R6) =================
+     Eight things the developer caught by eye; each is measured here so it cannot come back. */
+  await p.evaluate(() => { openEditor(J.games.find(g => g.bgg === 224517)); });
+  await p.waitForTimeout(400);
+  await p.evaluate(() => { E.bggOpen = true; patch(); });
+  await p.waitForTimeout(300);
+  const R = await p.evaluate(() => {
+    const rr = e => e.getBoundingClientRect(), cs = e => getComputedStyle(e);
+    const main = document.querySelector('#main');
+    /* the row content edge every end-of-row control lands on */
+    const edge = (() => { const r = document.querySelector('.club6 .sbox .srow'); return +(rr(r).right - parseFloat(cs(r).paddingRight)).toFixed(1); })();
+    const pens = [...main.querySelectorAll('.pen')].map(e => ({ cls: e.className.replace('pen ', '').trim(), right: +rr(e).right.toFixed(1) }));
+    /* a section label's inline note must sit on the label's own baseline */
+    const lbl = main.querySelector('.bgg6s .sec-label'), note = lbl.querySelector('.sec-note');
+    const baseOf = host => { const q = document.createElement('span'); q.textContent = 'x';
+      q.style.cssText = 'display:inline-block;width:0;overflow:hidden'; host.appendChild(q);
+      const v = rr(q).bottom; q.remove(); return v; };
+    const lblBase = (() => { const q = document.createElement('span'); q.textContent = 'x';
+      q.style.cssText = 'display:inline-block;width:0;overflow:hidden'; lbl.insertBefore(q, lbl.firstChild);
+      const v = rr(q).bottom; q.remove(); return v; })();
+    const noteBase = baseOf(note);
+    /* the control that collapses a box must be separated from the content it collapses */
+    const body = main.querySelector('.bgg-body'), more = main.querySelector('.bgg-more');
+    const moreGap = +(rr(more).top - (rr(body).bottom - parseFloat(cs(body).paddingBottom))).toFixed(1);
+    /* the segmented control's cells */
+    const seg = [...main.querySelector('.useg').children].map(k => +rr(k).width.toFixed(1));
+    const copiesLabel = main.querySelector('#u-lbl').textContent.trim();
+    /* Estado */
+    const ebar = main.querySelector('.ebar.inline'), bst = ebar.querySelector('.bst'), acts = ebar.querySelector('.eactions');
+    const last = [...acts.querySelectorAll('button')].pop();
+    const outlined = last.matches('.obtn, .b-pri, .b-sec');
+    return { edge, pens, baselineDelta: +(noteBase - lblBase).toFixed(1), moreGap, seg, copiesLabel,
+      estado: { labelRight: +(rr(last).right - (outlined ? 0 : 12)).toFixed(1),
+        contentEdge: +(rr(ebar).right - parseFloat(cs(ebar).paddingRight)).toFixed(1),
+        top: +(rr(acts).top + (outlined ? 0 : 14) - rr(bst).bottom).toFixed(1),
+        bottom: +(rr(ebar).bottom - (rr(acts).bottom - (outlined ? 0 : 14))).toFixed(1) } };
+  });
+  /* R1 — a pencil is either ON the row content edge or clearly away from it (following its own text).
+     The Nivel pencil used to sit 7.7px inside the line, close enough to read as a miss. */
+  const nearMiss = R.pens.filter(x => x.right < R.edge - 0.5 && x.right > R.edge - 24);
+  ok(nearMiss.length === 0, `R1 no pencil almost-but-not-quite hits the ${R.edge}px row edge (${R.pens.map(x => x.cls + ':' + x.right).join(' ')})`);
+  ok(R.pens.some(x => Math.abs(x.right - R.edge) <= 0.5), 'R1 the end-of-row pencils do sit on that edge');
+  /* R2 — "Solo lectura" on the label's baseline, not floating above it */
+  ok(Math.abs(R.baselineDelta) <= 2, `R2 the lock note sits on the section label's baseline (off by ${R.baselineDelta}px)`);
+  /* R3 — the collapse control is separated from what it collapses */
+  ok(R.moreGap >= 8, `R3 "Ver más" is split off from the content it collapses (${R.moreGap}px above it)`);
+  /* R4 — equal cells, and the club's word */
+  ok(new Set(R.seg).size === 1, `R4 the Copias cells are one width (${R.seg.join(' / ')})`);
+  ok(R.copiesLabel === 'Copias', `R4 the label reads Copias, not Unidades (“${R.copiesLabel}”)`);
+  /* R5 — Estado: the action's label lands on the content edge, and the box breathes evenly */
+  ok(Math.abs(R.estado.labelRight - R.estado.contentEdge) <= 0.5,
+    `R5 Estado's action label lands on the box content edge (${R.estado.labelRight} vs ${R.estado.contentEdge})`);
+  ok(Math.abs(R.estado.top - R.estado.bottom) <= 2,
+    `R5 Estado breathes evenly above and below its action (${R.estado.top} / ${R.estado.bottom})`);
+
+  /* --- R6 every bottom sheet is built the same way --- */
+  const SHEETS = {
+    perfil: "go('panel'); setTimeout(()=>openEl('#sheet-account',document.querySelector('[data-act=open-account]')),150);",
+    nivel: "openEditor(J.games.find(g=>g.bgg===224517)); setTimeout(()=>document.querySelector('[data-act=\"e-band-sheet\"]').click(),250);",
+    estante: "openEditor(J.games.find(g=>g.bgg===224517)); setTimeout(()=>document.querySelector('[data-act=\"e-shelf-sheet\"]').click(),250);",
+    filas: "openEditor(J.games.find(g=>g.bgg===224517)); setTimeout(()=>document.querySelector('[data-act=\"e-secs-sheet\"]').click(),250);",
+    miembro: "V.cur=1;V.ed=null;go('seccion'); setTimeout(()=>document.querySelector('[data-act=\"v-mem-sheet\"]').click(),320);",
+    nivelar: "Object.assign(V, seed062(true)); " + "go('niveles'); setTimeout(()=>document.querySelector('[data-act=\"v-niv-sheet\"]').click(),320);",
+  };
+  const shell = {};
+  for (const [name, setup] of Object.entries(SHEETS)) {
+    await p.evaluate(() => closeAll());
+    await p.evaluate(x => { try { (0, eval)(x); } catch (e) {} }, setup);
+    await p.waitForTimeout(700);
+    const sh = await p.evaluate(() => {
+      const el = document.querySelector('.sheet.open'); if (!el) return null;
+      const cs = e => getComputedStyle(e), rr = e => e.getBoundingClientRect();
+      const step = el.querySelector('.step:not([aria-hidden="true"])') || el;
+      const lbl = step.querySelector('.group-label');
+      const first = [...step.children].find(c => c !== lbl && rr(c).height);
+      const rows = [...step.querySelectorAll('.dlink, .srow')].filter(r => rr(r).height);
+      return { pad: cs(el).padding, grab: cs(el.querySelector('.grab')).margin,
+        label: lbl ? `${cs(lbl).fontSize}/${cs(lbl).fontWeight}/${cs(lbl).textTransform}` : null,
+        labelGap: (lbl && first) ? Math.round(rr(first).top - rr(lbl).bottom) : null,
+        minRow: [...new Set(rows.map(r => cs(r).minHeight))].sort().join(','),
+        rowInset: Math.round(rr(rows[0]).left - rr(el).left),
+        navRowsMissingChev: rows.filter(r => /Ver (el sitio|en la)/.test(r.textContent) && !r.querySelector('.chev')).map(r => r.textContent.trim().slice(0, 22)) };
+    });
+    ok(!!sh, `R6 ${name}: the sheet opens`);
+    if (sh) shell[name] = sh;
+  }
+  for (const key of ['pad', 'grab', 'label', 'labelGap', 'minRow', 'rowInset']) {
+    const vals = {};
+    for (const [n, v] of Object.entries(shell)) (vals[String(v[key])] = vals[String(v[key])] || []).push(n);
+    ok(Object.keys(vals).length === 1,
+      `R6 every sheet shares one ${key} (${Object.entries(vals).map(([k, v]) => k + ' ← ' + v.join(',')).join('  |  ')})`);
+  }
+  const noChev = Object.entries(shell).filter(([, v]) => v.navRowsMissingChev.length);
+  ok(noChev.length === 0, `R6 a sheet row that navigates away carries a chevron (${noChev.map(([n, v]) => n + ':' + v.navRowsMissingChev.join('')).join(' ') || 'ok'})`);
+  await p.evaluate(() => closeAll());
 
   /* ================= 2. the mobile keyboard (059/061 flagged, never tested) ================= */
   await p.reload(); await p.waitForLoadState('load'); await p.evaluate(() => document.fonts.ready);

@@ -2,7 +2,7 @@
 sketch: 065
 name: admin-composition
 question: "Do the five admin pages designed on their own hold together as one app in a continuous walk — Admin → Juegos → editor → ‹ back → Web → sección → Estantes → Asignar → Perfil — or has drift crept in?"
-winner: "composition (no variants) — 5 rounds: 11 drift bugs, weight balance, what a list row says, one field anatomy, one list label; plus the mobile keyboard 059/061 never tested"
+winner: "composition (no variants) — 6 rounds: 11 drift bugs, weight balance, what a list row says, one field anatomy, one list label, alignment + sheet rhythm; plus the mobile keyboard 059/061 never tested"
 tags: [admin, consistency, composition, shell, rhythm, labels, weight, status, fields, counters, keyboard, mobile-first, phase-01.8.1]
 ---
 
@@ -24,7 +24,7 @@ event layer, the walk, and the phone keyboard.
 ```
 node .planning/sketches/065-admin-composition/build.js     # regenerate after editing 059–063
 python3 -m http.server 8765 &                              # from the repo root
-node .planning/sketches/065-admin-composition/verify.js    # 141 checks
+node .planning/sketches/065-admin-composition/verify.js    # 164 checks
 ```
 
 ## How to View
@@ -297,6 +297,28 @@ assertion accepts it explicitly rather than being loosened.
 Asserted by `verify.js`: **L1** every block holding a list carries a visible label or a disclosure
 row that names it, on every page of the walk.
 
+## Round 6 — alignment and rhythm, eight things caught by eye (2026-09-16)
+
+| # | What | Root cause | Fix |
+|---|---|---|---|
+| 1 | The Nivel pencil broke the right alignment line | `justify-content: space-between` pinned the pill to the box's content edge, so its pencil — 7px inside the pill — landed at **357.8** where every other end-of-row pencil sits at **365.5**. Close enough to read as a miss. | The facts row groups left (`flex-start`, wrap), as it already did on desktop and on the public page. Nothing in that row claims the line now. |
+| 2 | "Datos de BGG 🔒 Solo lectura" not aligned | `.sec-note` was an `inline-flex` whose first item is an `<svg>`. An SVG has no baseline, so the note aligned by its box edge and rode ~4px above the label's. | Plain `inline`, with the icon on `vertical-align: -2px`. Off by 1.3px now. |
+| 3 | "Ver más" wasn't split off as the collapse control | `.bgg-body` ended exactly where `.bgg-more` began — zero seam between the content and the thing that collapses it. | It takes the footer treatment `.cta2` already gives "Agregar a una fila": a soft full-width button on `--color-bg` inside the surface box, 12px clear of the last fact. |
+| 4 | **Unidades → Copias**, and 1 \| 2 \| Más lopsided | `min-width: 44px` made the cells 44 / 44 / **47.9** — "Más" is wider than a digit. | One `width: 48px` for all three. And the label is **Copias**: a club says it has two *copias* of a game; *unidades* reads like retail stock. The schema field stays `units` — this is copy, not code. |
+| 5 | Estado broke the rhythm | A borderless text button hides 14px of padding above and below its label, so the declared 8px gap read as **~22px** of dead space and the box bottom as ~26px — and the label stopped 12px short of the content edge. | With an all-text action row the button's own padding *is* the rhythm (gap and bottom padding go to 0 → an even 14/14); the moment the row carries an outlined button, which has a real border to keep off the edge, both come back at 12px — `.ppanel`'s internal gap. A trailing text button is pulled out 12px so its label lands on the content edge, the same rule already applied to a leading one. |
+| 6 | Web's "filas sin juegos" note buried | It sat *after* eight rows, as a footnote to a rule you needed *before* scanning. | Moved directly under "Filas del inicio" as the section's hint, and reworded: *"Una fila sin juegos publicados no se ve en el inicio, aunque esté acá."* It steps aside while Ordenar mode shows its own hint. |
+| 7 | sección unbalanced, content overlapping | **A regression from round 1.** Unifying `.sgroup` into the editor's soft box also set `margin: 0`, dropping its `16px` top margin — so the box butted straight into the Subtítulo field above it. And "Ajustes" (section) and "Nombre" (field) were both 13px/600, separated only by colour, so three near-identical lines stacked. | Top margin restored. Field labels step down to **12px/600 muted** — one size under the 13px section label, so the rank is legible. |
+| 8 | Sheet rhythm inconsistent | The filas sheet's switch rows were `.srow` at 56px while every other sheet's rows are `.dlink` at 48px; and "Ver en la ludoteca" had no chevron while "Ver el sitio público" — which does the same thing, navigate away — had one. | `48px` for sheet rows everywhere; the chevron rule is *a row that leads somewhere carries one, a row that acts in place does not*. |
+
+Every sheet now shares one shell, measured: padding `8px 16px 16px`, grab `4px auto 12px`, an 11px caps label 4px above its first block, 48px rows, full-bleed.
+
+Asserted by `verify.js`: **R1** a pencil is either on the row's content edge or clearly away from it
+(no near-misses); **R2** a label's inline note sits on its baseline; **R3** a box's collapse control is
+separated from what it collapses; **R4** the Copias cells are one width and the label is Copias;
+**R5** Estado's action lands on the content edge and the box breathes evenly; **R6** every sheet
+shares one padding, grab, label style, first gap, row minimum and inset, and a navigating row carries
+a chevron. **D4** now asserts *two ranked tiers* of label rather than one style.
+
 ## Left as settled
 - **The editor's title is 30px Bebas** while every page title is 22px Inter. That is 063's deliberate
   mirror of the public game page, and the walk did not argue against it — it now at least starts at
@@ -309,7 +331,7 @@ row that names it, on every page of the walk.
   rather than drift.
 
 ## Verification
-`verify.js` — 141 checks in headless Chrome, phone (420px) light and dark, then desktop at 1440px.
+`verify.js` — 164 checks in headless Chrome, phone (420px) light and dark, then desktop at 1440px.
 
 - **the walk** (10 stops): no horizontal overflow, every page opens at the top, at most one tab lit,
   and the lit tab follows the page into its drill-downs (editor → Juegos, sección → Web, Asignar →
@@ -327,6 +349,7 @@ row that names it, on every page of the walk.
 - **W1–W4** the weight balance (round 2);
 - **F1** one field anatomy (round 4);
 - **L1** every list block names itself (round 5);
+- **R1–R6** alignment and sheet rhythm (round 6);
 - **S1–S4** status marks the exception (round 3).
 
 063's `verify.js` (63/63) and 064's `audit-admin.js` (94/94) still pass with every upstream fix in.

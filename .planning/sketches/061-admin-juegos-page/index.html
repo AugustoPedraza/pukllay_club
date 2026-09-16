@@ -493,12 +493,17 @@
     font-size: 13px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
     color: var(--color-text); margin: 0 0 8px;
   }
+  /* A FIELD label must read under a section label, not beside it. At 13px/600 muted next to a
+     13px/600 section label only colour separated them, so "Ajustes / Nombre / Subtítulo" stacked as
+     three near-identical lines. One size step down settles the rank. */
   #device main :is(.flabel, .field label) {
-    font-size: 13px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
+    font-size: 12px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
     color: var(--color-text-muted);
   }
   #device main .lhead :is(.sec-label, .group-label) { margin: 0; }
-  #device main .sgroup { margin: 0; border: 0; padding: 4px 0; overflow: hidden;
+  /* the 16px top margin is load-bearing: without it the box butts straight into the field above it
+     (the Subtítulo input in a sección sat directly on this box's top edge) */
+  #device main .sgroup { margin: 16px 0 0; border: 0; padding: 4px 0; overflow: hidden;
     background: var(--color-surface); border-radius: var(--radius-lg); }
   #device main .sgroup .srow { min-height: 40px; padding: 4px 16px; }
   #device main .sgroup .srow + .srow { border-top: 0; }
@@ -517,6 +522,12 @@
      this it jumped up to 7px between drill-downs, because a 44px control centred the 26px title
      inside its row while a bare title started at the row's top. */
   #device main .trow > .ptitle, #device main .tline > .tfield { align-self: flex-start; }
+
+  /* One bottom-sheet rhythm everywhere. Every sheet is 8px/16px/16px with a 4px-auto-12px grab, an
+     11px caps group label, 4px to its first block and 8px between blocks — but the filas sheet's
+     switch rows were .srow at 56px while every other sheet's rows are .dlink at 48px, so one sheet
+     scrolled to a different beat. 48px everywhere. */
+  #device .sheet .srow { min-height: 48px; padding-block: 4px; }
 
   /* ================= 064: admin button system (S3 Contorno, weight-tuned) — identical block in 059–063 =================
      One anatomy: 44px · radius-md · 14px/600 · 16px icon · 8px gap. The role is the only thing that changes the paint:

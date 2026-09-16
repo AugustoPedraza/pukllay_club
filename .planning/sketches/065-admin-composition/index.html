@@ -675,7 +675,11 @@
   .pk-pill-tag { background: transparent; border-color: transparent; color: var(--color-primary); font-size: .875rem; font-weight: 400; padding: 0 3px; }
   :root[data-theme="dark"] .pk-pill-tag { color: var(--color-accent-text); }
   .pico { width: 12px; height: 12px; flex-shrink: 0; }
-  .ppanel .pk-facts-row { flex-wrap: nowrap; }
+  /* Grouped left, not pinned to the edge. space-between pushed the Nivel pill flush against the box's
+     content edge, so its pencil — 7px inside the pill — missed by 7.7px the vertical line every other
+     pencil in the editor sits on (365.5px, the row content edge). Nothing in this row claims that line
+     now, and it matches how the same pills group on desktop and on the public page. */
+  .ppanel .pk-facts-row { flex-wrap: wrap; justify-content: flex-start; gap: 8px 6px; }
   .desk .ppanel .pk-facts-row { flex-wrap: wrap; justify-content: flex-start; }
   :root[data-theme="dark"] .pk-pill-edit { border-color: color-mix(in srgb, var(--color-accent-text) 55%, transparent); color: var(--color-accent-text); }
   .pk-difficulty { display: inline-flex; align-items: center; gap: 3px; margin-right: 2px; }
@@ -921,8 +925,10 @@
   .stp-n { min-width: 24px; text-align: center; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .sheet .stp { background: var(--color-surface); }
   .useg { display: inline-flex; gap: 2px; padding: 2px; background: var(--color-surface); border-radius: 10px; flex-shrink: 0; }
-  .useg > button, .useg > .ustep { position: relative; min-width: 44px; height: 34px; border: 0; background: none; border-radius: 8px; cursor: pointer;
-    font-size: 14px; font-weight: 400; color: var(--color-text); padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; transition: background var(--duration-fast); }
+  /* one width for all three cells: "Más" is wider than "1" or "2", so min-width alone left the
+     track at 44 / 44 / 48 and the control read lopsided */
+  .useg > button, .useg > .ustep { position: relative; width: 48px; flex: 0 0 48px; height: 34px; border: 0; background: none; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 400; color: var(--color-text); padding: 0 4px; display: inline-flex; align-items: center; justify-content: center; transition: background var(--duration-fast); }
   .useg > button::before { content: ''; position: absolute; inset: -5px 0; }
   .useg > .on { background: var(--color-bg); box-shadow: 0 1px 3px rgba(0,0,0,.14); font-weight: 600; }
   :root[data-theme="dark"] .useg > .on { background: var(--color-surface-2); }
@@ -931,7 +937,7 @@
   :root[data-theme="dark"] .zone-int .useg { background: color-mix(in srgb, #000 30%, var(--color-surface)); }
   :root[data-theme="dark"] .zone-int .useg > .on { background: var(--color-surface-2); }
   .useg > button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
-  .useg > .ustep { padding: 0 2px; cursor: default; }
+  .useg > .ustep { width: auto; flex: 0 0 auto; min-width: 48px; padding: 0 2px; cursor: default; }
   .ustep .stp { width: 26px; height: 26px; background: none; }
   .ustep .stp::before { inset: -9px -2px; }
   .ustep .stp svg { width: 14px; height: 14px; }
@@ -952,20 +958,30 @@
   :root[data-theme="dark"] .cta2 { color: var(--color-accent-text); background: color-mix(in srgb, #000 22%, var(--color-surface)); }
   /* R13: Datos de BGG — public-style facts, preview + Ver más / Ver menos */
   .r6 .bgg6 { padding: 0; }
-  .r6 .bgg6 .bgg-body { padding: 12px 16px 0; }
+  .r6 .bgg6 .bgg-body { padding: 12px 16px 8px; }
   .bgg-foot { margin: 16px 0 0; font-size: 12px; color: var(--color-text-muted); }
   .r6 .bgg-body > .bgg-link { margin: 0 0 0 -12px; }
-  .bgg-more { width: 100%; min-height: 44px; border: 0; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;
-    font-size: 13px; font-weight: 600; color: var(--color-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); transition: background var(--duration-fast); }
+  /* the box's footer control, the same anatomy .cta2 gives "Agregar a una fila": a soft full-width
+     button on --color-bg inside the surface box, with real space above it. Before this it sat flush
+     against the last fact with no seam, so nothing said it was the thing that collapses the box. */
+  .bgg-more-wrap { padding: 4px 12px 8px; }
+  .bgg-more { width: 100%; min-height: 40px; border: 0; border-radius: var(--radius-md); background: var(--color-bg); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: var(--color-primary); transition: background var(--duration-fast), transform var(--duration-fast); }
   .bgg-more:hover { background: var(--color-surface-2); }
-  .bgg-more:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .bgg-more:active { transform: scale(.98); }
+  .bgg-more:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  :root[data-theme="dark"] .bgg-more { color: var(--color-accent-text); background: color-mix(in srgb, #000 22%, var(--color-surface)); }
   .bgg-more .chev { width: 16px; height: 16px; transition: transform var(--duration-base) var(--ease-out-soft); }
   .bgg6.open .bgg-more .chev { transform: rotate(180deg); }
   :root[data-theme="dark"] .bgg-more { color: var(--color-accent-text); }
   .bgg-empty { margin: 0; padding: 12px 16px; }
   /* B3: read-only said once, beside the section label */
-  .sec-note { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--color-text-muted); vertical-align: 1px; }
-  .sec-note svg { width: 12px; height: 12px; }
+  /* plain inline, so "Solo lectura" sits on the section label's own baseline. As an inline-flex its
+     first item was the <svg>, which has no baseline, so the whole note aligned by its box edge and
+     rode ~4px high next to "Datos de BGG". */
+  .sec-note { margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--color-text-muted); white-space: nowrap; }
+  .sec-note svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 3px; }
 
   /* ================= 065: one label per job — identical block in 060–063 =================
      Composing the whole admin (sketch 065) turned up three answers to "this is a labelled block
@@ -981,12 +997,17 @@
     font-size: 13px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
     color: var(--color-text); margin: 0 0 8px;
   }
+  /* A FIELD label must read under a section label, not beside it. At 13px/600 muted next to a
+     13px/600 section label only colour separated them, so "Ajustes / Nombre / Subtítulo" stacked as
+     three near-identical lines. One size step down settles the rank. */
   #device main :is(.flabel, .field label) {
-    font-size: 13px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
+    font-size: 12px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
     color: var(--color-text-muted);
   }
   #device main .lhead :is(.sec-label, .group-label) { margin: 0; }
-  #device main .sgroup { margin: 0; border: 0; padding: 4px 0; overflow: hidden;
+  /* the 16px top margin is load-bearing: without it the box butts straight into the field above it
+     (the Subtítulo input in a sección sat directly on this box's top edge) */
+  #device main .sgroup { margin: 16px 0 0; border: 0; padding: 4px 0; overflow: hidden;
     background: var(--color-surface); border-radius: var(--radius-lg); }
   #device main .sgroup .srow { min-height: 40px; padding: 4px 16px; }
   #device main .sgroup .srow + .srow { border-top: 0; }
@@ -1005,6 +1026,12 @@
      this it jumped up to 7px between drill-downs, because a 44px control centred the 26px title
      inside its row while a bare title started at the row's top. */
   #device main .trow > .ptitle, #device main .tline > .tfield { align-self: flex-start; }
+
+  /* One bottom-sheet rhythm everywhere. Every sheet is 8px/16px/16px with a 4px-auto-12px grab, an
+     11px caps group label, 4px to its first block and 8px between blocks — but the filas sheet's
+     switch rows were .srow at 56px while every other sheet's rows are .dlink at 48px, so one sheet
+     scrolled to a different beat. 48px everywhere. */
+  #device .sheet .srow { min-height: 48px; padding-block: 4px; }
 
   /* ================= 064: admin button system (S3 Contorno, weight-tuned) — identical block in 059–063 =================
      One anatomy: 44px · radius-md · 14px/600 · 16px icon · 8px gap. The role is the only thing that changes the paint:
@@ -1047,10 +1074,17 @@
   /* the -8px pull is for borderless text buttons; an outlined button ends the row on the content edge */
   #device .banner-actions:has(> :is(.obtn, .b-pri, .b-sec):last-child) { margin-right: 0; }
   /* 063 Estado under the 064 system: status on top, one action row below (right-aligned, Principal last) */
-  #device.r6 .ebar.inline { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 16px; }
+  /* Estado's rhythm. A borderless text button hides 14px of padding above and below its label, so the
+     declared 8px gap read as ~22px of dead space between "Todo guardado" and "Retirar de la web", and
+     the box bottom as ~26px. With an all-text action row the button's own padding IS the rhythm, so
+     the gap and the bottom padding go to zero; the moment the row carries an outlined button — which
+     has a real border to keep off the box edge — both come back. */
+  #device.r6 .ebar.inline { flex-direction: column; align-items: stretch; gap: 0; padding: 12px 16px 0; }
+  #device.r6 .ebar.inline:has(.eactions > :is(.obtn, .b-pri, .b-sec)) { gap: 12px; padding-bottom: 12px; }   /* 12px is .ppanel's internal gap — the editor's box rhythm */
   #device .ebar .eactions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
   #device .ebar .eactions .push { margin-right: auto; margin-left: -12px; }
   #device .ebar .eactions > .tbtn:first-child:not(.b-pri):not(.b-sec) { margin-left: -12px; }
+  #device .ebar .eactions > .tbtn:last-child:not(.b-pri):not(.b-sec) { margin-right: -12px; }
   #device.r6 .ebar.inline .obtn { background: var(--color-bg); }
   #device .cta2 { width: 100%; }
   #device .tbtn.bgg-more { width: 100%; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
@@ -1634,8 +1668,8 @@ function secRow(s) {
 const webBody = () => `${head('Web', { sub: 'Elegí qué filas se ven en el inicio y en qué orden.' })}
   ${addForm({ id: 'sec-new', label: 'Nueva sección', ph: 'Nombre de la sección', value: V.newSec, err: V.newSecErr, btn: 'Crear' })}
   <section class="jsec">${lhead('Filas del inicio', 'secciones', true)}
-    <div class="glist ${V.ordering === 'secciones' ? 'ordering' : ''}">${V.sections.map(secRow).join('')}</div>
-    <p class="lnote">Las filas sin juegos publicados no se ven en el inicio.</p></section>`;
+    ${V.ordering === 'secciones' ? '' : '<p class="lhint">Una fila sin juegos publicados no se ve en el inicio, aunque esté acá.</p>'}
+    <div class="glist ${V.ordering === 'secciones' ? 'ordering' : ''}">${V.sections.map(secRow).join('')}</div></section>`;
 
 /* ---- Web › sección (settings + members) ---- */
 function memRow(s, g, i, n) {
@@ -1867,7 +1901,7 @@ function vAct(t) {
       return snack(`Agregaste ${gById(id).name}`);
     }
     case 'v-mem-sheet': { const g = gById(id); return openAct(`<div class="step step-account"><div class="group-label">${esc(g.name)}</div><div class="dlinks">
-      ${row({ act: 'v-view-game', extra: `data-id="${id}"`, icon: 'ext', label: 'Ver en la ludoteca', chev: false })}
+      ${row({ act: 'v-view-game', extra: `data-id="${id}"`, icon: 'ext', label: 'Ver en la ludoteca' })}
       ${row({ act: 'v-rm-mem', extra: `data-id="${id}"`, icon: 'minusC', label: 'Quitar de la sección', tone: 'danger', chev: false })}</div></div>`, t); }
     case 'v-view-game': closeAll(); return snack(`Abre ${gById(id).name} en la ludoteca`);
     case 'v-rm-mem': {
@@ -1986,7 +2020,7 @@ function dirty() {
 function validate() {
   E.errs = {};
   if (!E.ed.name.trim()) E.errs.name = 'Poné un nombre.';
-  if (!/^\d+$/.test(String(E.ed.units).trim()) || +E.ed.units < 1) E.errs.units = 'Unidades tiene que ser 1 o más.';
+  if (!/^\d+$/.test(String(E.ed.units).trim()) || +E.ed.units < 1) E.errs.units = 'Tiene que haber 1 copia o más.';
   return !Object.keys(E.errs).length;
 }
 const featBase = () => E.featFull ? (E.saved.secs.includes(1) ? 19 : 20) : 17;
@@ -2083,12 +2117,12 @@ function filasList() {
 const filasBox = () => sec('En el inicio', filasList(), 'filas6');
 
 /* ---- Unidades: 1 almost always, rarely more than 2. No free-typed number field. ---- */
-const stepper = (n, min, idp, cls = '') => `<span class="stepper ${cls}" role="group" aria-label="Unidades">
-  <button type="button" class="stp" id="${idp}dec" data-act="e-units-dec" data-min="${min}" aria-label="Una unidad menos" ${n <= min ? 'disabled' : ''}>${ic('minus')}</button>
+const stepper = (n, min, idp, cls = '') => `<span class="stepper ${cls}" role="group" aria-label="Copias">
+  <button type="button" class="stp" id="${idp}dec" data-act="e-units-dec" data-min="${min}" aria-label="Una copia menos" ${n <= min ? 'disabled' : ''}>${ic('minus')}</button>
   <output class="stp-n" aria-live="polite">${n}</output>
-  <button type="button" class="stp" id="${idp}inc" data-act="e-units-inc" aria-label="Una unidad más">${ic('plus')}</button></span>`;
+  <button type="button" class="stp" id="${idp}inc" data-act="e-units-inc" aria-label="Una copia más">${ic('plus')}</button></span>`;
 function unitsRow() {
-  const n = +E.ed.units, lab = '<span class="gtxt"><span class="gname" id="u-lbl">Unidades</span></span>';
+  const n = +E.ed.units, lab = '<span class="gtxt"><span class="gname" id="u-lbl">Copias</span></span>';
     const b = k => `<button type="button" role="radio" id="u-set${k}" aria-checked="${n === k}" class="${n === k ? 'on' : ''}" data-act="e-units-set" data-n="${k}">${k}</button>`;
     const more = n >= 3 ? `<span class="ustep on">${stepper(n, 2, 'u-')}</span>`
       : `<button type="button" role="radio" id="u-set3" aria-checked="false" data-act="e-units-set" data-n="3" aria-label="Más de 2">Más</button>`;
@@ -2154,7 +2188,7 @@ function bggBox() {
     <button type="button" class="tbtn bgg-link" data-act="e-bgg">Ver en BoardGameGeek${ic('ext', 'tico')}</button>` : '';
   return secH(label, 'Datos de BGG', `<div class="sbox bgg6 ${open ? 'open' : ''}">
     <div class="bgg-body" id="bgg-body"><dl class="spec"><div class="srowd"><dt>Año</dt><dd>${BGG.year}</dd></div><div class="fcols">${keys.map(col).join('')}</div></dl>${rest}</div>
-    <button type="button" class="tbtn bgg-more" data-act="e-bgg-toggle" aria-expanded="${open}" aria-controls="bgg-body">${open ? 'Ver menos' : 'Ver más'}${ic('chevDown', 'chev')}</button></div>`, 'bgg6s');
+    <div class="bgg-more-wrap"><button type="button" class="tbtn bgg-more" data-act="e-bgg-toggle" aria-expanded="${open}" aria-controls="bgg-body">${open ? 'Ver menos' : 'Ver más'}${ic('chevDown', 'chev')}</button></div></div>`, 'bgg6s');
 }
 
 /* Two visibility groups, public first:

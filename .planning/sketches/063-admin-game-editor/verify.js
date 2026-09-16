@@ -32,7 +32,10 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
   const scrollTo = (sel, off) => J(([sel, off]) => { const sc = document.querySelector('.scroller'); sc.scrollTop += document.querySelector(sel).getBoundingClientRect().top - sc.getBoundingClientRect().top - off; }, [sel, off]);
   /* decorative borders are still banned in the page body; 064's outlined buttons (.obtn/.b-pri/.b-sec) are controls, not lines; the R10 divider is a 1px background (.zl) */
   const lines = () => J(() => [...document.querySelectorAll('#main *')].filter(el => { const cs = getComputedStyle(el); return ['Top','Bottom','Left','Right'].some(sd => parseFloat(cs['border' + sd + 'Width']) > 0 && cs['border' + sd + 'Style'] !== 'none' && cs['border' + sd + 'Color'] !== 'rgba(0, 0, 0, 0)' && !el.matches('.obtn, .b-pri, .b-sec')); }).length);
-  const noCopias = () => J(() => !/copia/i.test(document.getElementById('device').innerText));
+  /* Reversed 2026-09-16: the label was "Unidades" and this used to assert the word "copia" never
+     appeared. The developer changed the copy — a club says it has two COPIAS of a game; "unidades"
+     reads like retail stock. The schema field is still `units`; this is copy, not code. */
+  const saysCopias = () => J(() => { const t = document.getElementById('device').innerText; return /Copias/.test(t) && !/Unidades/i.test(t); });
   const units = () => J(() => +E.ed.units);
 
   ok(await J(() => !document.querySelector('[data-v8],[data-nav7],[data-layout],[data-pen],[data-club],#intstrip,.v1-side,#segwrap,#ed-units,[data-filas],[data-units],.mh-list,.pk-pill-auto,.thead .tags-row,#u-open,[data-div],.zone-int.band,.zone-cap,.ghead,[data-cta],[data-bggui],.sec-act,.cta3,.bgg-toggle,.lock6')), 'no leftovers (earlier rounds, F1/F3, U1/U3, D0/D2/D3, C1/C3, B1/B2)');
@@ -60,7 +63,7 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
   ok(await J(() => { const m = document.querySelector('#main').getBoundingClientRect(), row = document.querySelector('.zone-int .zdiv').getBoundingClientRect(), pad = parseFloat(getComputedStyle(document.querySelector('#main')).paddingLeft);
     return Math.abs(row.left - (m.left + pad)) <= 1 && Math.abs(row.right - (m.right - pad)) <= 1 && document.querySelectorAll('.zone-int .zl').length === 2; }), 'D1: two line halves span the content width');
   ok(await J(() => { const t = document.querySelector('.zone-int .zd-t').getBoundingClientRect(), z = document.querySelector('.zone-int .zdiv').getBoundingClientRect(); return Math.abs((t.left + t.right) / 2 - (z.left + z.right) / 2) <= 2 && /No se muestra en la web/.test(document.querySelector('.zone-int .zd-s').textContent); }), 'D1: label centered, note under it');
-  ok(await J(() => { const u = document.querySelector('.useg'), o = u.querySelector('.on'); return getComputedStyle(u).backgroundColor !== getComputedStyle(u.closest('.sbox')).backgroundColor && getComputedStyle(o).backgroundColor !== getComputedStyle(u).backgroundColor; }), 'Unidades segmented track visible on its box');
+  ok(await J(() => { const u = document.querySelector('.useg'), o = u.querySelector('.on'); return getComputedStyle(u).backgroundColor !== getComputedStyle(u.closest('.sbox')).backgroundColor && getComputedStyle(o).backgroundColor !== getComputedStyle(u).backgroundColor; }), 'Copias segmented track visible on its box');
   ok(await J(() => [...document.querySelectorAll('.sec-label')].map(l => getComputedStyle(l).font).every((f, i, a) => f === a[0])), 'section labels identical');
 
   /* R12 C2: Agregar a una fila closes the En el inicio box */
@@ -110,14 +113,14 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
   ok(await J(() => /Crea conexiones/.test(document.querySelector('.filas6').textContent)), 'En el inicio: Agregar a una fila → switch adds the row');
   await click('[data-status="retired"]'); ok(await J(() => /retirado/i.test(document.querySelector('.filas6 .fnote').textContent)), 'En el inicio: retired note');
 
-  /* Unidades (R9 U2) */
-  await click('[data-status="draft"]'); ok(await noCopias(), 'no "copia(s)" wording');
-  ok(await J(() => document.querySelector('.useg .on').textContent === '1'), 'Unidades: 1 selected by default');
-  await click('#u-set2'); ok((await units()) === 2 && await J(() => document.querySelector('#ebar .bl2').textContent === 'Cambios sin guardar'), 'Unidades: tap 2, dirty');
-  await click('#u-set3'); ok((await units()) === 3 && await J(() => !!document.querySelector('.useg .ustep.on .stp-n')), 'Unidades: Más → 3 with an inline stepper');
+  /* Copias (R9 U2, renamed 2026-09-16) */
+  await click('[data-status="draft"]'); ok(await saysCopias(), 'the label is "Copias", and "Unidades" is gone');
+  ok(await J(() => document.querySelector('.useg .on').textContent === '1'), 'Copias: 1 selected by default');
+  await click('#u-set2'); ok((await units()) === 2 && await J(() => document.querySelector('#ebar .bl2').textContent === 'Cambios sin guardar'), 'Copias: tap 2, dirty');
+  await click('#u-set3'); ok((await units()) === 3 && await J(() => !!document.querySelector('.useg .ustep.on .stp-n')), 'Copias: Más → 3 with an inline stepper');
   await scrollTo('.zone-int', 200); await shot('units-more');
-  await click('#u-inc'); ok((await units()) === 4, 'Unidades: stepper + → 4'); await click('#u-dec'); await click('#u-dec');
-  ok((await units()) === 2 && await J(() => !document.querySelector('.ustep') && document.querySelector('.useg .on').textContent === '2'), 'Unidades: − below 3 folds back to the 2 segment');
+  await click('#u-inc'); ok((await units()) === 4, 'Copias: stepper + → 4'); await click('#u-dec'); await click('#u-dec');
+  ok((await units()) === 2 && await J(() => !document.querySelector('.ustep') && document.querySelector('.useg .on').textContent === '2'), 'Copias: − below 3 folds back to the 2 segment');
 
   /* V2 flows */
   await click('[data-status="draft"]'); await p.fill('#ed-name', 'Brass (ES)'); await wait(100);

@@ -621,3 +621,9 @@ identical shared block "065: one label per job" is appended to 059–063; the ch
 - **Weight balance (round 2).** `.err-t` was 400 while `.st-draft` was 600, so "Error al traer datos
   de BGG" — the row with a Reintentar next to it — read quieter than a "Borrador" status. Both 600
   now. Dashboard box weights as in 060.
+- **Round 6 (alignment + rhythm, from sketch 065).** See 065's README for the full table. Here:
+  The facts row groups left so the Nivel pencil no longer near-misses the row edge; `.sec-note` is
+  plain inline so "Solo lectura" sits on the label's baseline; "Ver más" becomes a `.cta2`-style box
+  footer; **Unidades → Copias** with three equal 48px cells (verify.js used to ban the word "copia" —
+  the developer reversed that on 2026-09-16; the schema field stays `units`); Estado's gap and bottom
+  padding collapse when its action row is all text, since a borderless button carries its own 14px.

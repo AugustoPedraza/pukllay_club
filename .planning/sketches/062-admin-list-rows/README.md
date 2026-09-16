@@ -176,3 +176,7 @@ identical shared block "065: one label per job" is appended to 059–063; the ch
   set (`card-interaction.md`: don't create two parallel vocabularies), with "del club" earning its
   keep against the BGG-sourced Agregar block right above. The result count stays below the chips that
   change it.
+- **Round 6 (alignment + rhythm, from sketch 065).** See 065's README for the full table. Here:
+  Web's "filas sin juegos" rule moved above the list as its hint; "Ver en la ludoteca" gained the
+  chevron every other navigating sheet row has; field labels step down to 12px/600 muted; `.sgroup`'s
+  16px top margin restored (a round-1 regression that made the sección box butt into the field above).
