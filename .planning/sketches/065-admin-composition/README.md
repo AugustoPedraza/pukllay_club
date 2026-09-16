@@ -2,7 +2,7 @@
 sketch: 065
 name: admin-composition
 question: "Do the five admin pages designed on their own hold together as one app in a continuous walk — Admin → Juegos → editor → ‹ back → Web → sección → Estantes → Asignar → Perfil — or has drift crept in?"
-winner: "composition (no variants) — 4 rounds: 11 drift bugs, weight balance, what a list row says, one field anatomy; plus the mobile keyboard 059/061 never tested"
+winner: "composition (no variants) — 5 rounds: 11 drift bugs, weight balance, what a list row says, one field anatomy, one list label; plus the mobile keyboard 059/061 never tested"
 tags: [admin, consistency, composition, shell, rhythm, labels, weight, status, fields, counters, keyboard, mobile-first, phase-01.8.1]
 ---
 
@@ -24,7 +24,7 @@ event layer, the walk, and the phone keyboard.
 ```
 node .planning/sketches/065-admin-composition/build.js     # regenerate after editing 059–063
 python3 -m http.server 8765 &                              # from the repo root
-node .planning/sketches/065-admin-composition/verify.js    # 133 checks
+node .planning/sketches/065-admin-composition/verify.js    # 141 checks
 ```
 
 ## How to View
@@ -260,6 +260,43 @@ Asserted by `verify.js`: **F1** every text field on a page shares one anatomy (h
 width, background), with 063's in-place editors (title, description, units) exempt exactly as 064
 exempts them.
 
+## Round 5 — the Juegos list gets a name (2026-09-15)
+
+Juegos was the only page in the admin with an unlabelled block: "Agregar juego" named the add form,
+then the search, the filters and 412 rows sat under no heading at all — while Web labels **Filas del
+inicio**, Estantes **Orden de recorrido**, Staff **Equipo**, Asignar **Sin ubicar**, and a sección
+**Ajustes** / **Juegos · 18 de 20**. Every one of those pages is [action-label form] then
+[content-label list]; Juegos had only the first half.
+
+**Wording.** Four were rendered in place and compared:
+
+| | verdict |
+|---|---|
+| **Juegos del club** | **picked** |
+| Catálogo | cleanest to look at — one word, no repetition — but it invents a *third* name for a set the app already calls "Juegos" (tab, page title, drawer) |
+| Todos los juegos | correct only while the Todos chip is selected; tap Borradores and the label is wrong |
+| Fichas de juego | precise but jargon |
+
+"Catálogo" lost to a rule this project already wrote down, in `card-interaction.md`: *"inventing a
+second, different vocabulary just for this indicator when the app already has an official 3-tier band
+name elsewhere creates two parallel vocabularies for the same concept. Reuse the existing one."* The
+same reasoning applies to the name of the collection. So the label reuses the official word and
+qualifies it — and **"del club" earns its keep on this page specifically**, because the block right
+above it adds games *from BGG*. "Juegos del club" is the ones you already have, as opposed to the one
+you are about to pull in.
+
+The count line stays where it is. It is a *result* count — it follows the search and the chips that
+change it, so it belongs after them, not in the section head where 062's `lhead` puts a static count.
+
+**The new rule found a second one.** Asserting it across the walk flagged Asignar's "En este estante"
+block as unlabelled too — but that one is a **collapsible header that is also the control**
+("En este estante · 68 juegos ⌄"), so it names itself and a label above it would only repeat it. The
+rule is *every block that holds a list names itself*, and a disclosure row satisfies that; the
+assertion accepts it explicitly rather than being loosened.
+
+Asserted by `verify.js`: **L1** every block holding a list carries a visible label or a disclosure
+row that names it, on every page of the walk.
+
 ## Left as settled
 - **The editor's title is 30px Bebas** while every page title is 22px Inter. That is 063's deliberate
   mirror of the public game page, and the walk did not argue against it — it now at least starts at
@@ -272,7 +309,7 @@ exempts them.
   rather than drift.
 
 ## Verification
-`verify.js` — 133 checks in headless Chrome, phone (420px) light and dark, then desktop at 1440px.
+`verify.js` — 141 checks in headless Chrome, phone (420px) light and dark, then desktop at 1440px.
 
 - **the walk** (10 stops): no horizontal overflow, every page opens at the top, at most one tab lit,
   and the lit tab follows the page into its drill-downs (editor → Juegos, sección → Web, Asignar →
@@ -289,6 +326,7 @@ exempts them.
 - **K1–K4** the four keyboard questions above;
 - **W1–W4** the weight balance (round 2);
 - **F1** one field anatomy (round 4);
+- **L1** every list block names itself (round 5);
 - **S1–S4** status marks the exception (round 3).
 
 063's `verify.js` (63/63) and 064's `audit-admin.js` (94/94) still pass with every upstream fix in.

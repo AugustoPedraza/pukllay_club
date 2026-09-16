@@ -183,3 +183,9 @@ identical shared block "065: one label per job" is appended to 059–063; the ch
   system (8px, 1px `--stroke`, page background) via that block's own `:is()` list; the magnifier and
   clear button carry "search". 064's field audit selector now includes `.sfield input`, which it
   never covered.
+- **Round 5 (list label, from sketch 065).** Juegos was the only admin page with an unlabelled block:
+  "Agregar juego" named the form, the search + filters + 412 rows named nothing. The list is now
+  **"Juegos del club"** — reusing the official word rather than inventing a third name for the same
+  set (`card-interaction.md`: don't create two parallel vocabularies), with "del club" earning its
+  keep against the BGG-sourced Agregar block right above. The result count stays below the chips that
+  change it.

@@ -92,6 +92,19 @@ window.__m = () => {
       return { id: el.id || el.placeholder, h: Math.round(el.getBoundingClientRect().height),
         r: c.borderTopLeftRadius, bw: c.borderTopWidth, bg: c.backgroundColor };
     });
+  /* Every block that holds a list names itself. Juegos was the only one that did not — its search,
+     filters and 412 rows sat under no heading while Web labels "Filas del inicio", Estantes "Orden de
+     recorrido", Staff "Equipo" and Asignar "Sin ubicar". */
+  const listBlocks = [...main.querySelectorAll('section, .jsec, .grp')].filter(el => vis(el) && el.querySelector('.glist'))
+    .filter(el => !el.parentElement.closest('section, .jsec, .grp'))
+    .map(el => {
+      const l = el.querySelector(':scope > .group-label, :scope > .sec-label, :scope > .lhead > .group-label, :scope > .lhead > .sec-label');
+      /* a collapsible list names itself with its own disclosure row ("En este estante · 68 juegos"),
+         which is both the header AND the control — a label above it would only repeat it. */
+      const disc = el.querySelector(':scope > .glist > .disclose');
+      return { has: !!(l && vis(l)) || !!(disc && vis(disc)),
+        text: l ? l.textContent.trim().slice(0, 24) : disc ? disc.querySelector('.gname')?.textContent.trim().slice(0, 24) + ' ⌄' : null };
+    });
   const err = main.querySelector('.err-t'), stt = main.querySelector('.st-pill.draft, .st-draft');
   const pri = [...main.querySelectorAll('.obtn, .b-pri')].filter(vis).map(el => ({
     text: el.textContent.trim(), top: Math.round(el.getBoundingClientRect().top - mainTop) }));
@@ -114,7 +127,7 @@ window.__m = () => {
     headHasSub,
     headToBody: (lastHead && firstBody) ? Math.round(firstBody.getBoundingClientRect().top - lastHead.getBoundingClientRect().bottom) : null,
     headEnd: lastHead ? Math.round(lastHead.getBoundingClientRect().bottom - mainTop) : null,
-    labels, rows, pri, badges, drawerCounts, runs, boxes, fields2,
+    labels, rows, pri, badges, drawerCounts, runs, boxes, fields2, listBlocks,
     errW: err ? +cs(err).fontWeight : null, stW: stt ? +cs(stt).fontWeight : null,
     overflowX: dev.querySelector('.scroller').scrollWidth - dev.querySelector('.scroller').clientWidth,
     tabsVisible: tabs.top < devR.bottom - 4,
@@ -287,6 +300,15 @@ window.__kb = () => {
   const invites = await p.evaluate(() => V.staff.filter(x => x.st === 'pending').length);
   ok(staffBox.foot.replace(/\D/g, '') === String(invites) || (!invites && !/pendiente/.test(staffBox.foot)),
     `D6 the Admin box for Staff agrees (“${staffBox.foot}” vs ${invites} invitación pendiente)`);
+
+  /* --- L1 every block that holds a list names itself --- */
+  for (const [n, m] of seen) {
+    if (!m.listBlocks.length) continue;
+    const bare = m.listBlocks.filter(b => !b.has);
+    ok(bare.length === 0, `L1 ${n}: every list block has a visible label (${m.listBlocks.map(b => b.text || '«sin etiqueta»').join(' · ')})`);
+  }
+  ok(by('2-juegos').listBlocks.some(b => b.text === 'Juegos del club'),
+    `L1 the Juegos list is named (${by('2-juegos').listBlocks.map(b => b.text).join(', ')})`);
 
   /* --- F1 one field anatomy ------------------------------------------------------------------
      Buscar and Agregar sit 24px apart, same size, same type. The search field used to be a filled

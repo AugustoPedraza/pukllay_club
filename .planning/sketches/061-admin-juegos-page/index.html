@@ -895,7 +895,9 @@ function listHtml() {
 }
 
 const juegosBody = () => `${pageHead()}${addHtml()}
-  <section class="jsec" aria-label="Lista de juegos">${searchHtml()}<div id="jfilters">${filtersHtml()}</div><div id="jlist">${listHtml()}</div></section>`;
+  <section class="jsec" aria-labelledby="jlist-lbl">
+    <div class="group-label" id="jlist-lbl">Juegos del club</div>
+    ${searchHtml()}<div id="jfilters">${filtersHtml()}</div><div id="jlist">${listHtml()}</div></section>`;
 
 /* partial re-renders keep focus + keyboard in the inputs (LiveView patches the same way) */
 const $ = sel => device.querySelector(sel);
