@@ -1,12 +1,198 @@
 defmodule PukllayClub.CatalogTest do
   use PukllayClub.DataCase, async: true
+  use Oban.Testing, repo: PukllayClub.Repo
 
   import Ecto.Query
   import PukllayClub.CatalogFixtures
+  import PukllayClub.SectionsFixtures
 
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Game
+  alias PukllayClub.Catalog.Section
   alias PukllayClub.Repo
+  alias PukllayClub.Workers.EnrichGameWorker
+
+  describe "published-only public reads (D-04, D-08)" do
+    # Table-driven over every public read function that must exclude
+    # draft/retired games (RESEARCH.md Pitfall 2). Each case seeds one
+    # published, one draft, and one retired game sharing the same weight
+    # band, tag, and mechanics, then asserts the published game's presence
+    # and the draft/retired games' absence via that specific read function.
+    setup do
+      shared = %{
+        weight_band: "ingenio_estratega",
+        tags: ["#EquipoGanador"],
+        mechanics: ["Dice Rolling"],
+        themes: ["Economic"],
+        is_expansion: false
+      }
+
+      published = game_fixture(Map.merge(shared, %{name: "Published Game", status: :published}))
+      draft = game_fixture(Map.merge(shared, %{name: "Draft Game", status: :draft}))
+      retired = game_fixture(Map.merge(shared, %{name: "Retired Game", status: :retired}))
+
+      section = section_fixture(%{name: "Shared Setup Section"})
+      add_game_to_section(section, published)
+      add_game_to_section(section, draft)
+      add_game_to_section(section, retired)
+
+      %{published: published, draft: draft, retired: retired, section: section}
+    end
+
+    test "list_games/1 excludes draft and retired games", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      ids = Enum.map(Catalog.list_games(), & &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "filter_games/1 excludes draft and retired games", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      ids = Enum.map(Catalog.filter_games(), & &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "count_games/1 counts only the published game", %{published: _p, draft: _d, retired: _r} do
+      assert Catalog.count_games() == 1
+    end
+
+    test "list_home_sections/0 excludes draft and retired games from every row", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      rows = Catalog.list_home_sections()
+      all_ids = rows |> Enum.flat_map(& &1.games) |> Enum.map(& &1.id)
+
+      assert published.id in all_ids
+      refute draft.id in all_ids
+      refute retired.id in all_ids
+    end
+
+    test "section_page/3 excludes draft and retired games", %{
+      published: published,
+      draft: draft,
+      retired: retired,
+      section: section
+    } do
+      {:ok, {games, _exhausted?}} = Catalog.section_page("section-#{section.id}", 0)
+      ids = Enum.map(games, & &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "similar_games/1 excludes draft and retired candidates", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      # A separate viewed game in the same band so `published`/`draft`/
+      # `retired` are all candidates, never the viewed game itself.
+      viewed = game_fixture(%{name: "Viewed", weight_band: "ingenio_estratega"})
+
+      ids = viewed |> Catalog.similar_games() |> Enum.map(& &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "sitemap_entries/0 excludes draft and retired games", %{
+      published: published,
+      draft: draft,
+      retired: retired
+    } do
+      ids = Enum.map(Catalog.sitemap_entries(), & &1.id)
+
+      assert published.id in ids
+      refute draft.id in ids
+      refute retired.id in ids
+    end
+
+    test "get_game!/1 (unfiltered admin read) still returns a draft and a retired game", %{
+      draft: draft,
+      retired: retired
+    } do
+      assert Catalog.get_game!(to_string(draft.id)).id == draft.id
+      assert Catalog.get_game!(to_string(retired.id)).id == retired.id
+    end
+
+    test "get_published_game!/1 raises Ecto.NoResultsError for a draft or retired id", %{
+      draft: draft,
+      retired: retired
+    } do
+      assert_raise Ecto.NoResultsError, fn -> Catalog.get_published_game!(to_string(draft.id)) end
+      assert_raise Ecto.NoResultsError, fn -> Catalog.get_published_game!(to_string(retired.id)) end
+    end
+
+    test "get_published_game!/1 returns a published game", %{published: published} do
+      assert Catalog.get_published_game!(to_string(published.id)).id == published.id
+    end
+  end
+
+  describe "status transitions (D-04, D-08)" do
+    test "publish_game/1 moves a draft game to published, making it appear in filter_games/1" do
+      game = game_fixture(%{name: "Recién publicado", status: :draft})
+
+      refute game.id in Enum.map(Catalog.filter_games(), & &1.id)
+
+      assert {:ok, published} = Catalog.publish_game(game)
+      assert published.status == :published
+      assert game.id in Enum.map(Catalog.filter_games(), & &1.id)
+    end
+
+    test "publish_game/1 moves a retired game to published" do
+      game = game_fixture(%{name: "Vuelve", status: :retired})
+
+      assert {:ok, published} = Catalog.publish_game(game)
+      assert published.status == :published
+    end
+
+    test "retire_game/1 moves a published game to retired, removing it from filter_games/1" do
+      game = game_fixture(%{name: "Se retira", status: :published})
+
+      assert game.id in Enum.map(Catalog.filter_games(), & &1.id)
+
+      assert {:ok, retired} = Catalog.retire_game(game)
+      assert retired.status == :retired
+      refute game.id in Enum.map(Catalog.filter_games(), & &1.id)
+    end
+
+    test "restore_game/1 on a retired game moves it back to published, reappearing in filter_games/1" do
+      game = game_fixture(%{name: "Restaurado", status: :retired})
+
+      refute game.id in Enum.map(Catalog.filter_games(), & &1.id)
+
+      assert {:ok, restored} = Catalog.restore_game(game)
+      assert restored.status == :published
+      assert game.id in Enum.map(Catalog.filter_games(), & &1.id)
+    end
+
+    test "restore_game/1 on a non-retired game returns an error tuple without changing status" do
+      game = game_fixture(%{name: "No estaba retirado", status: :published})
+
+      assert Catalog.restore_game(game) == {:error, :not_retired}
+    end
+
+    test "a game inserted without an explicit status is published" do
+      game = game_fixture(%{name: "Sin status explícito"})
+
+      assert game.status == :published
+    end
+  end
 
   describe "filter_games/1 — no options" do
     test "returns games ordered by name, limited to the default page size" do
@@ -14,6 +200,147 @@ defmodule PukllayClub.CatalogTest do
       game_fixture(%{name: "Alfa"})
 
       assert Enum.map(Catalog.filter_games(), & &1.name) == ["Alfa", "Zeta"]
+    end
+  end
+
+  describe "filter_games/1 — sections facet (D-27)" do
+    test "returns only published members of a non-hidden manual section" do
+      section = section_fixture(%{kind: :manual})
+      in_section = game_fixture(%{name: "In Section"})
+      outside = game_fixture(%{name: "Outside"})
+      add_game_to_section(section, in_section)
+
+      results = [sections: [section.id]] |> Catalog.filter_games() |> Enum.map(& &1.name)
+
+      assert results == [in_section.name]
+      refute outside.name in results
+    end
+
+    test "a hidden section's id returns nothing" do
+      section = section_fixture(%{kind: :manual, hidden: true})
+      game = game_fixture(%{name: "Hidden Section Game"})
+      add_game_to_section(section, game)
+
+      assert Catalog.filter_games(sections: [section.id]) == []
+    end
+
+    test "a weight_band-kind section's id returns nothing (manual-only facet)" do
+      section =
+        Repo.get_by!(Section, name: "Ingenio estratega")
+
+      game_fixture(%{name: "Weight Band Game", weight_band: "ingenio_estratega"})
+
+      assert Catalog.filter_games(sections: [section.id]) == []
+    end
+
+    test "a nonexistent section id returns nothing" do
+      assert Catalog.filter_games(sections: [999_999]) == []
+    end
+
+    test "two section ids return the union" do
+      section_a = section_fixture(%{kind: :manual})
+      section_b = section_fixture(%{kind: :manual})
+      a_game = game_fixture(%{name: "A Section Game"})
+      b_game = game_fixture(%{name: "B Section Game"})
+      add_game_to_section(section_a, a_game)
+      add_game_to_section(section_b, b_game)
+
+      results = [sections: [section_a.id, section_b.id]] |> Catalog.filter_games() |> Enum.map(& &1.name)
+
+      assert Enum.sort(results) == Enum.sort([a_game.name, b_game.name])
+    end
+
+    test "count_games/1 matches filter_games/1's result count" do
+      section = section_fixture(%{kind: :manual})
+      add_game_to_section(section, game_fixture(%{name: "Counted Game"}))
+      game_fixture(%{name: "Uncounted Game"})
+
+      assert Catalog.count_games(sections: [section.id]) == 1
+    end
+  end
+
+  describe "facet_options/0 — sections facet (D-27)" do
+    test "includes non-hidden manual sections with at least one published game, featured first then position" do
+      featured = Repo.get_by!(Section, name: "Destacados del club")
+      manual_a = section_fixture(%{name: "Manual A", position: 100})
+      manual_b = section_fixture(%{name: "Manual B", position: 50})
+      hidden = section_fixture(%{name: "Hidden Manual", hidden: true, position: 1})
+      empty = section_fixture(%{name: "Empty Manual", position: 2})
+      weight_band_section = Repo.get_by!(Section, name: "Ingenio estratega")
+
+      add_game_to_section(featured, game_fixture(%{name: "Featured Facet Game"}))
+      add_game_to_section(manual_a, game_fixture(%{name: "Manual A Game"}))
+      add_game_to_section(manual_b, game_fixture(%{name: "Manual B Game"}))
+      add_game_to_section(hidden, game_fixture(%{name: "Hidden Facet Game"}))
+
+      ids = Enum.map(Catalog.facet_options().sections, & &1.id)
+
+      assert ids == [featured.id, manual_b.id, manual_a.id]
+      refute empty.id in ids
+      refute hidden.id in ids
+      refute weight_band_section.id in ids
+    end
+
+    test "entries carry :id and :name only" do
+      section = section_fixture(%{name: "Named Facet Section"})
+      add_game_to_section(section, game_fixture())
+
+      assert %{id: id, name: "Named Facet Section"} =
+               Enum.find(Catalog.facet_options().sections, &(&1.id == section.id))
+
+      assert is_integer(id)
+    end
+
+    test "no longer returns editorial_tags" do
+      refute Map.has_key?(Catalog.facet_options(), :editorial_tags)
+    end
+  end
+
+  describe "put_section_names/1 — public chips data source (D-17, 01.8.1-11)" do
+    test "fills a single game's virtual field with its visible manual sections' names, ordered by position" do
+      first = section_fixture(%{name: "Crea conexiones", position: 1})
+      second = section_fixture(%{name: "Spiel des Jahres", position: 2})
+      game = game_fixture(%{name: "Chipped Game"})
+      add_game_to_section(second, game)
+      add_game_to_section(first, game)
+
+      assert Catalog.put_section_names(game).section_names == ["Crea conexiones", "Spiel des Jahres"]
+    end
+
+    test "omits a hidden section's name" do
+      hidden = section_fixture(%{name: "Hidden Section", hidden: true})
+      game = game_fixture()
+      add_game_to_section(hidden, game)
+
+      assert Catalog.put_section_names(game).section_names == []
+    end
+
+    test "omits the featured section's name" do
+      featured = Repo.get_by!(Section, name: "Destacados del club")
+      game = game_fixture()
+      add_game_to_section(featured, game)
+
+      assert Catalog.put_section_names(game).section_names == []
+    end
+
+    test "omits a weight_band-kind section's name (chips come from manual membership only)" do
+      band_section = Repo.get_by!(Section, name: "Ingenio estratega")
+      game = game_fixture(%{weight_band: "ingenio_estratega"})
+
+      assert Catalog.put_section_names(game).section_names == []
+      refute band_section.name in Catalog.put_section_names(game).section_names
+    end
+
+    test "accepts a list of games and fills each independently, in one query" do
+      section = section_fixture(%{name: "Shared Section"})
+      a = game_fixture(%{name: "A"})
+      b = game_fixture(%{name: "B"})
+      add_game_to_section(section, a)
+
+      [a_result, b_result] = Catalog.put_section_names([a, b])
+
+      assert a_result.section_names == ["Shared Section"]
+      assert b_result.section_names == []
     end
   end
 
@@ -291,78 +618,86 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
-  describe "list_carousel_rows/0 (D-09)" do
-    test "returns the fixed rows in order, each with a key, a Spanish title, and its games" do
-      game_fixture(%{name: "Tag Game", tags: ["#CreaConexiones"]})
-      game_fixture(%{name: "Band Game", weight_band: "nivel_experto"})
-      game_fixture(%{name: "Recent Game"})
+  describe "list_home_sections/0 (D-17..D-28, 01.8.1-10)" do
+    test "each returned row carries a key, a Spanish title, and its games; a manual section only shows hand-picked members" do
+      crea = Repo.get_by!(Section, name: "Crea conexiones")
+      tag_game = game_fixture(%{name: "Tag Game", weight_band: nil})
+      add_game_to_section(crea, tag_game)
 
-      rows = Catalog.list_carousel_rows()
+      band_game = game_fixture(%{name: "Band Game", weight_band: "nivel_experto"})
 
-      assert Enum.map(rows, & &1.key) == [
-               :destacados_del_club,
-               :crea_conexiones,
-               :equipo_ganador,
-               :duelos_memorables,
-               :descubre_el_hobby,
-               :ingenio_estratega,
-               :nivel_experto,
-               :recientemente_anadidos
-             ]
+      rows = Catalog.list_home_sections()
 
       assert Enum.all?(rows, &is_binary(&1.title))
       assert Enum.all?(rows, &is_list(&1.games))
+      assert Enum.all?(rows, &String.starts_with?(&1.key, "section-"))
 
-      destacados = Enum.find(rows, &(&1.key == :destacados_del_club))
-      assert destacados.title == "Destacados del club"
+      crea_row = Enum.find(rows, &(&1.title == "Crea conexiones"))
+      assert Enum.map(crea_row.games, & &1.id) == [tag_game.id]
+
+      nivel_row = Enum.find(rows, &(&1.title == "Nivel experto"))
+      assert band_game.id in Enum.map(nivel_row.games, & &1.id)
+
+      refute Enum.any?(rows, &(&1.title == "Equipo ganador"))
+      refute Enum.any?(rows, &(&1.title == "Duelos memorables"))
+      refute Enum.any?(rows, &(&1.title == "Destacados del club"))
     end
 
-    test "the recientemente_anadidos row excludes expansions but includes base games (G-01-5)" do
-      base = game_fixture(%{name: "Base Game", is_expansion: false})
-      game_fixture(%{name: "Some Expansion(expa)", is_expansion: true})
+    test "the featured section renders first, with featured?: true, once it has a published member (D-18, D-23)" do
+      featured = Repo.get_by!(Section, featured: true)
+      game = game_fixture(%{name: "Featured Game", weight_band: nil})
+      add_game_to_section(featured, game)
 
-      rows = Catalog.list_carousel_rows()
-      recent = Enum.find(rows, &(&1.key == :recientemente_anadidos))
+      [first_row | _] = Catalog.list_home_sections()
+
+      assert first_row.title == "Destacados del club"
+      assert first_row.featured? == true
+      assert Enum.map(first_row.games, & &1.id) == [game.id]
+    end
+
+    test "a section with every member draft or retired is hidden (D-24)" do
+      crea = Repo.get_by!(Section, name: "Crea conexiones")
+      draft = game_fixture(%{name: "Draft Game", weight_band: nil, status: :draft})
+      add_game_to_section(crea, draft)
+
+      refute Enum.any?(Catalog.list_home_sections(), &(&1.title == "Crea conexiones"))
+    end
+
+    test "the recent section excludes expansions but includes base games (G-01-5)" do
+      base = game_fixture(%{name: "Base Game", weight_band: nil, is_expansion: false})
+      game_fixture(%{name: "Some Expansion(expa)", weight_band: nil, is_expansion: true})
+
+      recent = Enum.find(Catalog.list_home_sections(), &(&1.title == "Recientemente añadidos"))
       recent_ids = Enum.map(recent.games, & &1.id)
 
       assert base.id in recent_ids
       assert Enum.all?(recent.games, &(&1.is_expansion == false))
     end
 
-    test "the other seven carousel rows are unaffected by is_expansion" do
-      game_fixture(%{
-        name: "Expansion Tag Game(expa)",
-        is_expansion: true,
-        tags: ["#CreaConexiones"]
-      })
-
+    test "weight-band sections are unaffected by is_expansion" do
       game_fixture(%{
         name: "Expansion Band Game(expa)",
         is_expansion: true,
         weight_band: "nivel_experto"
       })
 
-      rows = Catalog.list_carousel_rows()
-
-      tag_row = Enum.find(rows, &(&1.key == :crea_conexiones))
-      assert Enum.any?(tag_row.games, &(&1.name == "Expansion Tag Game(expa)"))
-
-      band_row = Enum.find(rows, &(&1.key == :nivel_experto))
+      band_row = Enum.find(Catalog.list_home_sections(), &(&1.title == "Nivel experto"))
       assert Enum.any?(band_row.games, &(&1.name == "Expansion Band Game(expa)"))
     end
   end
 
-  describe "carousel_page/3 — in-row infinite scroll pagination (quick task 260824-u5d)" do
+  describe "section_page/3 — in-row infinite scroll pagination (quick task 260824-u5d, ported to sections 01.8.1-10)" do
     test "page 2 continues from page 1 with no overlap and no gap" do
+      section = section_fixture(%{kind: :manual, sort: :name})
+
       for n <- 1..25 do
-        game_fixture(%{
-          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
-          tags: ["#EquipoGanador"]
-        })
+        game = game_fixture(%{name: "Winner #{String.pad_leading(to_string(n), 2, "0")}", weight_band: nil})
+        add_game_to_section(section, game)
       end
 
-      assert {:ok, {page1, false}} = Catalog.carousel_page("equipo_ganador", 0, 20)
-      assert {:ok, {page2, true}} = Catalog.carousel_page("equipo_ganador", 20)
+      key = "section-#{section.id}"
+      assert {:ok, {page1, false}} = Catalog.section_page(key, 0, 20)
+      assert {:ok, {page2, true}} = Catalog.section_page(key, 20)
 
       assert length(page1) == 20
       assert length(page2) == 5
@@ -374,62 +709,145 @@ defmodule PukllayClub.CatalogTest do
       assert MapSet.size(MapSet.union(page1_ids, page2_ids)) == 25
     end
 
-    test "a category with fewer games than the limit is exhausted on its first page" do
-      for n <- 1..5, do: game_fixture(%{name: "Duel #{n}", tags: ["#DuelosMemorables"]})
+    test "page 1 and page 2 stay duplicate-free and gap-free even when two members share a name (D-26 :id tiebreaker)" do
+      section = section_fixture(%{kind: :manual, sort: :name})
 
-      assert {:ok, {games, true}} = Catalog.carousel_page("duelos_memorables", 0, 20)
+      for n <- 1..25 do
+        # Every member shares the exact same name — the :id tiebreaker
+        # (asc: g.name, asc: g.id) is the only thing that can keep page 1
+        # and page 2 from silently duplicating or skipping a member.
+        game = game_fixture(%{name: "Tied Name", weight_band: nil})
+        add_game_to_section(section, game)
+        _ = n
+      end
+
+      key = "section-#{section.id}"
+      assert {:ok, {page1, false}} = Catalog.section_page(key, 0, 20)
+      assert {:ok, {page2, true}} = Catalog.section_page(key, 20)
+
+      assert length(page1) == 20
+      assert length(page2) == 5
+
+      page1_ids = MapSet.new(page1, & &1.id)
+      page2_ids = MapSet.new(page2, & &1.id)
+
+      assert MapSet.disjoint?(page1_ids, page2_ids)
+      assert MapSet.size(MapSet.union(page1_ids, page2_ids)) == 25
+    end
+
+    test "a section with fewer games than the limit is exhausted on its first page" do
+      section = section_fixture(%{kind: :manual, sort: :name})
+
+      for n <- 1..5 do
+        game = game_fixture(%{name: "Duel #{n}", weight_band: nil})
+        add_game_to_section(section, game)
+      end
+
+      assert {:ok, {games, true}} = Catalog.section_page("section-#{section.id}", 0, 20)
       assert length(games) == 5
     end
 
-    test "list_carousel_rows/0 marks a row shorter than the initial page exhausted on first paint" do
-      for n <- 1..5, do: game_fixture(%{name: "Duel #{n}", tags: ["#DuelosMemorables"]})
+    test "list_home_sections/0 marks a row shorter than the initial page exhausted on first paint" do
+      section = section_fixture(%{kind: :manual, sort: :name})
 
-      rows = Catalog.list_carousel_rows()
-      duelos = Enum.find(rows, &(&1.key == :duelos_memorables))
-
-      assert duelos.exhausted? == true
-      assert duelos.offset == 5
-    end
-
-    test "paging stops at the 30-game ceiling even when the category holds far more" do
-      for n <- 1..40 do
-        game_fixture(%{
-          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
-          tags: ["#EquipoGanador"]
-        })
+      for n <- 1..5 do
+        game = game_fixture(%{name: "Duel #{n}", weight_band: nil})
+        add_game_to_section(section, game)
       end
 
-      assert {:ok, {_page1, false}} = Catalog.carousel_page("equipo_ganador", 0, 20)
-      assert {:ok, {page2, true}} = Catalog.carousel_page("equipo_ganador", 20, 10)
+      rows = Catalog.list_home_sections()
+      row = Enum.find(rows, &(&1.section_id == section.id))
+
+      assert row.exhausted? == true
+      assert row.offset == 5
+    end
+
+    test "paging stops at the 30-game ceiling even when the section holds far more" do
+      section = section_fixture(%{kind: :manual, sort: :name})
+
+      for n <- 1..40 do
+        game = game_fixture(%{name: "Winner #{String.pad_leading(to_string(n), 2, "0")}", weight_band: nil})
+        add_game_to_section(section, game)
+      end
+
+      key = "section-#{section.id}"
+      assert {:ok, {_page1, false}} = Catalog.section_page(key, 0, 20)
+      assert {:ok, {page2, true}} = Catalog.section_page(key, 20, 10)
 
       assert length(page2) == 10
     end
 
     test "a fetch that would cross the ceiling is clamped to the remaining allowance" do
+      section = section_fixture(%{kind: :manual, sort: :name})
+
       for n <- 1..40 do
-        game_fixture(%{
-          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
-          tags: ["#EquipoGanador"]
-        })
+        game = game_fixture(%{name: "Winner #{String.pad_leading(to_string(n), 2, "0")}", weight_band: nil})
+        add_game_to_section(section, game)
       end
 
-      assert {:ok, {games, true}} = Catalog.carousel_page("equipo_ganador", 25, 10)
+      assert {:ok, {games, true}} = Catalog.section_page("section-#{section.id}", 25, 10)
       assert length(games) == 5
     end
 
     test "a fetch-more request issued at or beyond the ceiling returns no games" do
+      section = section_fixture(%{kind: :manual, sort: :name})
+
       for n <- 1..40 do
-        game_fixture(%{
-          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
-          tags: ["#EquipoGanador"]
-        })
+        game = game_fixture(%{name: "Winner #{String.pad_leading(to_string(n), 2, "0")}", weight_band: nil})
+        add_game_to_section(section, game)
       end
 
-      assert {:ok, {[], true}} = Catalog.carousel_page("equipo_ganador", 30, 10)
+      assert {:ok, {[], true}} = Catalog.section_page("section-#{section.id}", 30, 10)
     end
 
     test "an unrecognised row key returns :error rather than raising" do
-      assert Catalog.carousel_page("not-a-real-row", 0) == :error
+      assert Catalog.section_page("not-a-real-row", 0) == :error
+    end
+
+    test "a well-formed key for a hidden section returns :error (T-01.8.1-47)" do
+      section = section_fixture(%{kind: :manual, sort: :name, hidden: true})
+      assert Catalog.section_page("section-#{section.id}", 0) == :error
+    end
+
+    test "the featured section is capped at ~20 games (D-26); load-more returns nothing further" do
+      featured = Repo.get_by!(Section, featured: true)
+
+      for n <- 1..25 do
+        game =
+          game_fixture(%{name: "Featured #{String.pad_leading(to_string(n), 2, "0")}", weight_band: nil})
+
+        add_game_to_section(featured, game)
+      end
+
+      key = "section-#{featured.id}"
+      assert {:ok, {page1, true}} = Catalog.section_page(key, 0, 20)
+      assert length(page1) == 20
+
+      assert {:ok, {[], true}} = Catalog.section_page(key, 20)
+    end
+
+    test "a weight_band section never contains a game of another band" do
+      hobby_section = Repo.get_by!(Section, name: "Descubre el hobby")
+      hobby_game = game_fixture(%{name: "Hobby Only", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Expert Only", weight_band: "nivel_experto"})
+
+      {:ok, {games, _exhausted?}} = Catalog.section_page("section-#{hobby_section.id}", 0)
+      ids = Enum.map(games, & &1.id)
+
+      assert hobby_game.id in ids
+      assert Enum.all?(games, &(&1.weight_band == "descubre_el_hobby"))
+    end
+
+    test "the recent section never contains an expansion" do
+      recent_section = Repo.get_by!(Section, name: "Recientemente añadidos")
+      base = game_fixture(%{name: "Base Only", weight_band: nil, is_expansion: false})
+      game_fixture(%{name: "Expansion Only(expa)", weight_band: nil, is_expansion: true})
+
+      {:ok, {games, _exhausted?}} = Catalog.section_page("section-#{recent_section.id}", 0)
+      ids = Enum.map(games, & &1.id)
+
+      assert base.id in ids
+      assert Enum.all?(games, &(&1.is_expansion == false))
     end
   end
 
@@ -783,6 +1201,102 @@ defmodule PukllayClub.CatalogTest do
       assert length(result_ids) == 5
       assert Enum.sort(result_ids) == Enum.sort(Enum.map(others, & &1.id))
       refute base.id in result_ids
+    end
+  end
+
+  describe "parse_bgg_input/1 (D-01, 01.8.1-08)" do
+    test "a bare digits-only id parses, surrounding whitespace trimmed" do
+      assert Catalog.parse_bgg_input("266192") == {:ok, 266_192}
+      assert Catalog.parse_bgg_input(" 266192 ") == {:ok, 266_192}
+    end
+
+    test "a BGG game or expansion URL parses to its id" do
+      assert Catalog.parse_bgg_input("https://boardgamegeek.com/boardgame/266192/wingspan") ==
+               {:ok, 266_192}
+
+      assert Catalog.parse_bgg_input("https://www.boardgamegeek.com/boardgameexpansion/290837/x") ==
+               {:ok, 290_837}
+    end
+
+    test "an off-host URL is rejected (T-01.8.1-37)" do
+      assert Catalog.parse_bgg_input("https://evil.example/boardgame/1") == :error
+    end
+
+    test "non-numeric, zero, empty, and out-of-range input are rejected" do
+      assert Catalog.parse_bgg_input("abc") == :error
+      assert Catalog.parse_bgg_input("0") == :error
+      assert Catalog.parse_bgg_input("") == :error
+      assert Catalog.parse_bgg_input("2147483648") == :error
+    end
+  end
+
+  describe "retry_enrichment/1 (D-03)" do
+    test "on a non-failed game returns {:error, :not_failed} without touching the row" do
+      game = game_fixture(%{enrichment_status: "pending"})
+
+      assert Catalog.retry_enrichment(game) == {:error, :not_failed}
+      assert Catalog.get_game!(game.id).enrichment_status == "pending"
+    end
+
+    test "on a failed game sets it back to pending and enqueues exactly one new enrichment job" do
+      game =
+        game_fixture(%{bgg_id: 184_267, status: :draft, enrichment_status: "failed"})
+
+      assert {:ok, updated} = Catalog.retry_enrichment(game)
+      assert updated.enrichment_status == "pending"
+
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+  end
+
+  describe "list_admin_games/1, count_admin_games/1 (D-09 Task 2)" do
+    test "with no :status opt, returns games of every status (unlike every public read)" do
+      draft = game_fixture(%{name: "A Borrador", status: :draft})
+      published = game_fixture(%{name: "B Publicado", status: :published})
+      retired = game_fixture(%{name: "C Retirado", status: :retired})
+
+      ids = Enum.map(Catalog.list_admin_games(), & &1.id)
+
+      assert draft.id in ids
+      assert published.id in ids
+      assert retired.id in ids
+      assert Catalog.count_admin_games() == 3
+    end
+
+    test ":status filters to exactly that lifecycle state" do
+      game_fixture(%{name: "Borrador", status: :draft})
+      game_fixture(%{name: "Publicado", status: :published})
+      game_fixture(%{name: "Retirado", status: :retired})
+
+      assert [status: :draft] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Borrador"]
+      assert Catalog.count_admin_games(status: :draft) == 1
+      assert [status: :published] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Publicado"]
+      assert [status: :retired] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Retirado"]
+    end
+
+    test ":q searches by name, case-insensitively" do
+      game_fixture(%{name: "Catán"})
+      game_fixture(%{name: "Carcassonne"})
+
+      assert [q: "cat"] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Catán"]
+      assert [q: "CATÁN"] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Catán"]
+    end
+
+    test "T-01.8.1-23: a literal % or _ in :q is escaped, not treated as an ILIKE wildcard" do
+      game_fixture(%{name: "100% Juego"})
+      game_fixture(%{name: "Otro Juego"})
+
+      assert [q: "100%"] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["100% Juego"]
+    end
+
+    test "results are ordered by name then id, with :limit/:offset paging over the full set" do
+      game_fixture(%{name: "Zeta"})
+      game_fixture(%{name: "Alfa"})
+      game_fixture(%{name: "Medio"})
+
+      assert Enum.map(Catalog.list_admin_games(), & &1.name) == ["Alfa", "Medio", "Zeta"]
+      assert [limit: 2] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Alfa", "Medio"]
+      assert [limit: 2, offset: 2] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Zeta"]
     end
   end
 end

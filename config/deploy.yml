@@ -66,6 +66,24 @@ env:
     - SECRET_KEY_BASE
     - DATABASE_URL
     - SENTRY_DSN
+    # Resend HTTP API key (D-36) — production magic-link/invite emails,
+    # since GCP blocks outbound port 25 on this host.
+    - MAILER_API_KEY
+    # D-02 (01.8.1-08), reversing 01.7 D-04's "credentials never touch the
+    # production host" decision: the admin add-by-BGG background
+    # enrichment job (Workers.EnrichGameWorker) needs its own BGG/R2/Gemini
+    # credentials to run on the production host — previously these lived
+    # only in a developer's gitignored config/dev.secret.exs. Every name
+    # here mirrors PukllayClub.Catalog.Seed.Credentials' own env var names
+    # (test/pukllay_club/deploy_secrets_contract_test.exs keeps the two
+    # lists in sync); R2_PUBLIC_BASE_URL is the one Credentials key that
+    # stays under env.clear above — it is already public.
+    - BGG_API_TOKEN
+    - R2_ACCOUNT_ID
+    - R2_ACCESS_KEY_ID
+    - R2_SECRET_ACCESS_KEY
+    - R2_CATALOG_BUCKET
+    - GEMINI_API_KEY
 
 accessories:
   db:

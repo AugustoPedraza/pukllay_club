@@ -3031,6 +3031,19 @@ body.pk-sheet-open {
   flex: 0 0 auto;
 }
 
+/* D-34: staff-only Admin header link, rendered by `header_inner/1`
+   immediately before the search morph when a staff session exists.
+   Visible at every width above the mobile breakpoint; hidden at
+   max-width:480px (this file's single trailing narrow-viewport block,
+   alongside .pk-nav-hamburger's mirror-image toggle) since mobile staff
+   use the drawer's own Admin row instead. */
+.pk-nav-admin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-base-content);
+}
+
 .pk-drawer-backdrop {
   display: none;
   position: fixed;
@@ -7199,6 +7212,12 @@ body:has(#cierre) .pk-footer {
 
   .pk-spec-list {
     grid-template-columns: 1fr;
+  }
+
+  /* D-34: mobile staff use the drawer's own Admin row instead — see
+     .pk-nav-admin's base rule above. */
+  .pk-nav-admin {
+    display: none;
   }
 }
 

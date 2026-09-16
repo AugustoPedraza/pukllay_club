@@ -72,6 +72,21 @@ defmodule PukllayClub.Catalog.Seed.Credentials do
   @redacted_mask "[REDACTED]"
 
   @doc """
+  Every environment variable name this module resolves a credential from —
+  every required key in `@keys` followed by every optional key in
+  `@optional_keys`. This is the single source of truth
+  `test/pukllay_club/deploy_secrets_contract_test.exs` (D-02) introspects
+  to derive its expected `config/deploy.yml`/`.github/workflows/deploy.yml`
+  list, rather than hardcoding a second copy that could silently drift
+  from this module's real keys.
+  """
+  @spec env_var_names() :: [String.t()]
+  def env_var_names do
+    Enum.map(@keys, fn {_field, env_name} -> env_name end) ++
+      Enum.map(@optional_keys, fn {_field, env_name} -> env_name end)
+  end
+
+  @doc """
   Resolves every credential, raising a `RuntimeError` naming every missing
   required key when one or more values are absent. `gemini_api_key` is
   optional and never causes this to raise.

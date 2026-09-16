@@ -12,30 +12,35 @@ defmodule Mix.Tasks.Catalog.TranslateDescriptions do
   this job runs entirely outside any request cycle, once, on a developer
   machine.
 
-      mix catalog.translate_descriptions [--limit N] [--dry-run] [--only-english]
+      mix catalog.translate_descriptions [--limit N] [--dry-run]
 
   `--limit N` processes only the first N candidate games (ordered by id,
   so a partial run can be resumed by re-running with a higher limit or no
   limit at all). `--dry-run` still calls Gemini and reports the outcome,
-  but writes nothing to the database. `--only-english` skips any
-  candidate whose currently stored `description` no longer looks like
-  English prose — i.e. games this job (or a prior run of it) has already
-  translated — so a resumed run doesn't re-spend Gemini quota
-  re-translating games that are already done.
+  but writes nothing to the database.
 
-  This check is a heuristic (presence of at least two distinct common
-  English function words — "and", "your", "with", etc.), not an exact
-  match against the freshly-fetched `bgg_payload` description. An exact
-  match was tried first and rejected: `bgg_payload` is refreshed by the
-  separate BGG re-enrichment job (01.3-02) independently of this job, so
-  BGG's own description text for a game can legitimately change between
-  when a game's `description` column was first seeded and when this job
-  runs — an exact-match check would then treat a still-untranslated,
-  merely-stale-English description as "already translated" and skip it
-  forever. The heuristic is deliberately conservative (requires 2+
-  distinct markers, not 1) so a Spanish translation that preserves an
-  English game title verbatim (e.g. "The Gallerist") is never
-  misclassified as still-English.
+  **Candidate selection always skips a game whose currently stored
+  `description` no longer looks like English prose (D-06, D-07, D-09) —
+  this filter is unconditional, not an opt-in flag.** That is what makes
+  it safe for a staff-edited Spanish description: once a description reads
+  as Spanish (whether translated by this job or hand-edited by staff in
+  `/admin`), this job can never select it again and therefore can never
+  overwrite it. Exposed as `candidates/0` (`@doc false`) so this selection
+  is directly testable without calling Gemini.
+
+  The still-English check is a heuristic (presence of at least two
+  distinct common English function words — "and", "your", "with", etc.),
+  not an exact match against the freshly-fetched `bgg_payload` description.
+  An exact match was tried first and rejected: `bgg_payload` is refreshed
+  by the separate BGG re-enrichment job (01.3-02) independently of this
+  job, so BGG's own description text for a game can legitimately change
+  between when a game's `description` column was first seeded and when
+  this job runs — an exact-match check would then treat a
+  still-untranslated, merely-stale-English description as "already
+  translated" and skip it forever. The heuristic is deliberately
+  conservative (requires 2+ distinct markers, not 1) so a Spanish
+  translation that preserves an English game title verbatim (e.g. "The
+  Gallerist") is never misclassified as still-English.
 
   The English source is always read from `bgg_payload`'s `description`
   entry, never from the `description` column being written — this is what
@@ -78,7 +83,7 @@ defmodule Mix.Tasks.Catalog.TranslateDescriptions do
   @impl Mix.Task
   def run(args) do
     {opts, _rest, _invalid} =
-      OptionParser.parse(args, strict: [limit: :integer, dry_run: :boolean, only_english: :boolean])
+      OptionParser.parse(args, strict: [limit: :integer, dry_run: :boolean])
 
     Mix.Task.run("app.start")
 
@@ -86,19 +91,21 @@ defmodule Mix.Tasks.Catalog.TranslateDescriptions do
     Mix.shell().info("Translation credentials: #{inspect(Credentials.redacted(credentials))}")
 
     dry_run? = Keyword.get(opts, :dry_run, false)
-    only_english? = Keyword.get(opts, :only_english, false)
 
-    candidates =
-      candidate_games()
-      |> Enum.filter(&(source_text(&1) != nil))
-      |> maybe_filter_only_english(only_english?)
-      |> maybe_limit(opts[:limit])
+    candidates = maybe_limit(candidates(), opts[:limit])
 
     {attempted, translated, failures} = run_batch(candidates, credentials, dry_run?)
 
     Mix.shell().info("Translation complete: #{translated}/#{attempted} translated, #{length(failures)} failed.")
 
     write_report!(attempted, translated, failures)
+  end
+
+  @doc false
+  def candidates do
+    candidate_games()
+    |> Enum.filter(&(source_text(&1) != nil))
+    |> filter_still_english()
   end
 
   defp candidate_games do
@@ -110,9 +117,10 @@ defmodule Mix.Tasks.Catalog.TranslateDescriptions do
 
   defp source_text(game), do: get_in(game.bgg_payload, ["description"])
 
-  defp maybe_filter_only_english(games, false), do: games
-
-  defp maybe_filter_only_english(games, true) do
+  # Unconditional (D-06/D-07/D-09) — never selects a description that no
+  # longer reads as English, so a staff-edited Spanish description can
+  # never be re-translated over.
+  defp filter_still_english(games) do
     Enum.filter(games, fn game -> still_english?(game.description) end)
   end
 

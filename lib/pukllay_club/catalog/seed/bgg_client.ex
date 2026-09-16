@@ -59,11 +59,17 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
     Application.get_env(:pukllay_club, :bgg_req_options, [])
   end
 
+  # D-01/01.8.1-08: requesting both types lets staff add an expansion by
+  # BGG id/URL, not just a base game — `type` is parsed per-item below
+  # (`~x"./@type"s`) so `Enrichment.enrich/2` can set a freshly-added
+  # draft's `is_expansion` from BGG's own classification.
+  @bgg_types "boardgame,boardgameexpansion"
+
   defp do_request(ids, credentials, attempts_left) do
     request_opts =
       Keyword.merge(
         [
-          params: [id: ids, type: "boardgame", stats: 1, versions: 1],
+          params: [id: ids, type: @bgg_types, stats: 1, versions: 1],
           headers: [{"authorization", "Bearer #{credentials.bgg_api_token}"}]
         ],
         req_options()
@@ -116,6 +122,11 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
       # wrongly match as additional top-level games.
       ~x"/items/item"l,
       bgg_id: ~x"./@id"i,
+      # D-01/01.8.1-08: the item's own BGG classification ("boardgame" or
+      # "boardgameexpansion") — `Enrichment.enrich/2` uses this to set a
+      # freshly-added draft's `is_expansion` (D-07: only while the game's
+      # name is still the placeholder).
+      type: ~x"./@type"s,
       name: ~x".//name[@type='primary']/@value"so,
       year_published: ~x"./yearpublished/@value"io,
       min_players: ~x"./minplayers/@value"io,

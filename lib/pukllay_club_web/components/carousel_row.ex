@@ -69,11 +69,12 @@ defmodule PukllayClubWeb.CarouselRow do
   # render byte-identically — see catalog_show_test.exs's home-page
   # invariance test.
   attr :badge, :string, default: nil
-  # quick task 260913-0h6: the shelf's filtered-landing path. `nil` (every
-  # caller before this task, and `similares`/`recientemente_anadidos`
-  # forever) renders the plain heading below unchanged. Set, it wraps the
-  # heading in a real navigable anchor with a "Ver todos" cue — see the
-  # moduledoc paragraph above.
+  # quick task 260913-0h6, narrowed by 01.8.1-10: the shelf's
+  # filtered-landing path. `nil` (every caller before this task, plus
+  # `similares` and — until a later plan's sections facet exists — every
+  # manual/recent-kind home section) renders the plain heading below
+  # unchanged. Set, it wraps the heading in a real navigable anchor with a
+  # "Ver todos" cue — see the moduledoc paragraph above.
   attr :href, :string, default: nil
 
   def carousel_row(assigns) do

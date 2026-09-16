@@ -159,12 +159,16 @@ defmodule PukllayClubWeb.GamePreview do
       <.facts_row game={@game} />
       <p class="pk-preview-title">{@game.name}</p>
       <p class="pk-preview-text">{@game.description}</p>
+      <%!-- 01.8.1-11 (D-17, D-22 option A): sourced from
+      `@game.section_names` (the game's visible hand-picked sections)
+      instead of the retired `games.tags` hashtag facet — markup/classes
+      unchanged, only the data source. --%>
       <span
-        :if={@game.tags != []}
+        :if={@game.section_names != []}
         data-sheet-only
         class="badge badge-sm badge-accent"
       >
-        {List.first(@game.tags)}
+        {List.first(@game.section_names)}
       </span>
       <.link
         navigate={detail_path(@game, @from)}

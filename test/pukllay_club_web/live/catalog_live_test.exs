@@ -3,9 +3,11 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
+  import PukllayClub.SectionsFixtures
 
   alias Plug.Conn.Query
-  alias PukllayClub.Catalog.Vocabulary
+  alias PukllayClub.Catalog.Section
+  alias PukllayClub.Repo
   alias PukllayClubWeb.CarouselRow
 
   describe "GET /" do
@@ -195,6 +197,21 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       assert html =~ "pk-footer"
+    end
+
+    # Phase 01.8.1-02 (D-04, D-08): the games.status lifecycle. A visitor's
+    # rendered home page shows a published game's title and never a
+    # retired (or draft) game's title, across the carousels/grid this page
+    # renders through Catalog.list_carousel_rows/0 and Catalog.filter_games/1.
+    test "shows a published game's title and never a retired game's title (D-04, D-08)",
+         %{conn: conn} do
+      game_fixture(%{name: "Juego Publicado Visible", status: :published})
+      game_fixture(%{name: "Juego Retirado Invisible", status: :retired})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "Juego Publicado Visible"
+      refute html =~ "Juego Retirado Invisible"
     end
   end
 
@@ -447,13 +464,18 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
-  describe "curated carousel rows and loading skeletons (D-08, D-09)" do
-    test "the unfiltered browse page renders the 8 fixed carousel rows in D-09 order", %{
-      conn: conn
-    } do
-      game_fixture(%{name: "Crea Game", tags: ["#CreaConexiones"]})
-      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
-      game_fixture(%{name: "Duelos Game", tags: ["#DuelosMemorables"]})
+  describe "curated home sections and loading skeletons (D-08, D-17..D-28, 01.8.1-10)" do
+    test "the unfiltered browse page renders every populated section in position order, featured hero first",
+         %{conn: conn} do
+      featured = Repo.get_by!(Section, featured: true)
+      crea = Repo.get_by!(Section, name: "Crea conexiones")
+      equipo = Repo.get_by!(Section, name: "Equipo ganador")
+      duelos = Repo.get_by!(Section, name: "Duelos memorables")
+
+      add_game_to_section(featured, game_fixture(%{name: "Featured Game", weight_band: nil}))
+      add_game_to_section(crea, game_fixture(%{name: "Crea Game", weight_band: nil}))
+      add_game_to_section(equipo, game_fixture(%{name: "Equipo Game", weight_band: nil}))
+      add_game_to_section(duelos, game_fixture(%{name: "Duelos Game", weight_band: nil}))
       game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
       game_fixture(%{name: "Estratega Game", weight_band: "ingenio_estratega"})
       game_fixture(%{name: "Experto Game", weight_band: "nivel_experto"})
@@ -471,13 +493,10 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         "Recientemente añadidos"
       ]
 
-      Enum.each(titles, fn title -> assert html =~ title end)
-
       # Scoped to the row `<h2>` headings, not a whole-row substring search —
-      # 01-06's weight-band badges render label text (e.g. "Ingenio
-      # estratega") identical to a row heading string *inside a card*, which
-      # can appear in an earlier row (e.g. Destacados) whenever that game
-      # also carries an editorial tag, breaking a naive position/2 search.
+      # weight-band badges render label text (e.g. "Ingenio estratega")
+      # identical to a row heading string *inside a card*, breaking a
+      # naive position/2 search.
       heading_texts =
         html
         |> LazyHTML.from_document()
@@ -485,17 +504,37 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
       assert heading_texts == titles
+
+      hero_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#carousel-rows section")
+        |> Enum.at(0)
+        |> LazyHTML.to_html()
+
+      assert hero_html =~ "text-primary"
+      assert hero_html =~ "Featured Game"
     end
 
-    test "a carousel row backed by zero games renders neither its title nor an empty rail", %{
-      conn: conn
-    } do
-      game_fixture(%{name: "Only Recent Game", tags: []})
+    test "an empty section renders neither its title nor an empty rail (D-24)", %{conn: conn} do
+      game_fixture(%{name: "Only Recent Game"})
 
       {:ok, _view, html} = live(conn, ~p"/")
 
       refute html =~ "Equipo ganador"
       refute html =~ "Duelos memorables"
+      refute html =~ "Destacados del club"
+    end
+
+    test "a section whose only member is a draft is hidden even though it has a row (D-24)", %{
+      conn: conn
+    } do
+      crea = Repo.get_by!(Section, name: "Crea conexiones")
+      add_game_to_section(crea, game_fixture(%{name: "Draft Game", weight_band: nil, status: :draft}))
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      refute html =~ "Crea conexiones"
     end
 
     test "after applying a filter, the carousel section is absent from the rendered page", %{
@@ -504,15 +543,14 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       game_fixture(%{name: "Filtered Game", mechanics: ["Dice Rolling"]})
 
       {:ok, view, html} = live(conn, ~p"/")
-      assert html =~ "Destacados del club"
+      assert html =~ ~s(id="carousel-rows")
 
       html2 =
         view
         |> form("#catalog-search-form")
         |> render_change(%{q: "Filtered"})
 
-      refute html2 =~ "Destacados del club"
-      refute html2 =~ "Recientemente añadidos"
+      refute html2 =~ ~s(id="carousel-rows")
     end
 
     test "the initial disconnected render shows flat-skeleton card placeholders, not an empty grid",
@@ -528,39 +566,46 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
-  describe "in-row horizontal infinite scroll: carousel-load-more (quick task 260824-u5d)" do
-    test "appends cards into exactly one row's rail and leaves a sibling rail untouched", %{
-      conn: conn
-    } do
+  describe "in-row horizontal infinite scroll: carousel-load-more (quick task 260824-u5d, ported to sections 01.8.1-10)" do
+    test "appends cards into exactly one row's rail and leaves a sibling rail untouched, by section-<id> key",
+         %{conn: conn} do
+      winners = section_fixture(%{kind: :manual, sort: :name})
+      sibling = section_fixture(%{kind: :manual, sort: :name})
+
       for n <- 1..25 do
-        game_fixture(%{
-          name: "Winner #{String.pad_leading(to_string(n), 2, "0")}",
-          tags: ["#EquipoGanador"]
-        })
+        game =
+          game_fixture(%{name: "Winner #{String.pad_leading(to_string(n), 2, "0")}", weight_band: nil})
+
+        add_game_to_section(winners, game)
       end
 
-      game_fixture(%{name: "Sibling Game", tags: ["#CreaConexiones"]})
+      add_game_to_section(sibling, game_fixture(%{name: "Sibling Game", weight_band: nil}))
 
       {:ok, view, html} = live(conn, ~p"/")
 
-      assert carousel_card_count(html, "equipo_ganador") == 20
-      sibling_before = carousel_card_count(html, "crea_conexiones")
+      winners_key = "section-#{winners.id}"
+      sibling_key = "section-#{sibling.id}"
 
-      html2 = render_click(view, "carousel-load-more", %{"row" => "equipo_ganador"})
+      assert carousel_card_count(html, winners_key) == 20
+      sibling_before = carousel_card_count(html, sibling_key)
 
-      assert carousel_card_count(html2, "equipo_ganador") == 25
-      assert carousel_card_count(html2, "crea_conexiones") == sibling_before
+      html2 = render_click(view, "carousel-load-more", %{"row" => winners_key})
+
+      assert carousel_card_count(html2, winners_key) == 25
+      assert carousel_card_count(html2, sibling_key) == sibling_before
     end
 
     test "is a no-op on an already-exhausted row", %{conn: conn} do
-      game_fixture(%{name: "Only Duel", tags: ["#DuelosMemorables"]})
+      section = section_fixture(%{kind: :manual, sort: :name})
+      add_game_to_section(section, game_fixture(%{name: "Only Duel", weight_band: nil}))
 
       {:ok, view, html} = live(conn, ~p"/")
-      before = carousel_card_count(html, "duelos_memorables")
+      key = "section-#{section.id}"
+      before = carousel_card_count(html, key)
 
-      html2 = render_click(view, "carousel-load-more", %{"row" => "duelos_memorables"})
+      html2 = render_click(view, "carousel-load-more", %{"row" => key})
 
-      assert carousel_card_count(html2, "duelos_memorables") == before
+      assert carousel_card_count(html2, key) == before
     end
 
     test "is a no-op on an unrecognised row key and does not raise", %{conn: conn} do
@@ -579,33 +624,37 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
   describe "trailing skeleton placeholders + hook data attributes (Task 2, quick task 260824-u5d)" do
     test "a rendered rail carries the row-key and exhausted data attributes and trailing placeholder markup",
          %{conn: conn} do
-      game_fixture(%{name: "Equipo Game", tags: ["#EquipoGanador"]})
+      section = section_fixture(%{kind: :manual, sort: :name})
+      add_game_to_section(section, game_fixture(%{name: "Equipo Game", weight_band: nil}))
+      key = "section-#{section.id}"
 
       {:ok, _view, html} = live(conn, ~p"/")
 
       section_html =
         html
         |> LazyHTML.from_document()
-        |> LazyHTML.query("#carousel-equipo_ganador")
+        |> LazyHTML.query("#carousel-#{key}")
         |> LazyHTML.to_html()
 
-      assert section_html =~ ~s(data-carousel-row="equipo_ganador")
+      assert section_html =~ ~s(data-carousel-row="#{key}")
       assert section_html =~ ~s(data-exhausted="true")
       assert section_html =~ "pk-trailing-skel"
-      assert section_html =~ ~s(id="carousel-equipo_ganador-skel-1")
-      assert section_html =~ ~s(id="carousel-equipo_ganador-skel-2")
+      assert section_html =~ ~s(id="carousel-#{key}-skel-1")
+      assert section_html =~ ~s(id="carousel-#{key}-skel-2")
     end
 
     test "an exhausted row still carries the trailing placeholder markup — it is always in the DOM, only hidden",
          %{conn: conn} do
-      game_fixture(%{name: "Only Duel", tags: ["#DuelosMemorables"]})
+      section = section_fixture(%{kind: :manual, sort: :name})
+      add_game_to_section(section, game_fixture(%{name: "Only Duel", weight_band: nil}))
+      key = "section-#{section.id}"
 
       {:ok, _view, html} = live(conn, ~p"/")
 
       section_html =
         html
         |> LazyHTML.from_document()
-        |> LazyHTML.query("#carousel-duelos_memorables")
+        |> LazyHTML.query("#carousel-#{key}")
         |> LazyHTML.to_html()
 
       assert section_html =~ ~s(data-exhausted="true")
@@ -1191,7 +1240,8 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
     test "G-01.2-4: clear-filters returns the member to the carousels with the row actually populated (mirror-direction repopulation)",
          %{conn: conn} do
-      game_fixture(%{name: "Crea Game", tags: ["#CreaConexiones"]})
+      section = section_fixture(%{kind: :manual, sort: :name})
+      add_game_to_section(section, game_fixture(%{name: "Crea Game", weight_band: nil}))
 
       {:ok, view, _html} = live(conn, ~p"/")
 
@@ -1200,7 +1250,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
 
       assert html =~ ~s(id="carousel-rows")
       refute html =~ ~s(id="games")
-      assert carousel_card_count(html, "crea_conexiones") == 1
+      assert carousel_card_count(html, "section-#{section.id}") == 1
     end
   end
 
@@ -1444,7 +1494,8 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
 
     test "a shelf backed by zero games produces no chip for it", %{conn: conn} do
-      game_fixture(%{name: "Only Crea Game", tags: ["#CreaConexiones"]})
+      empty_section = section_fixture(%{kind: :manual, sort: :name})
+      game_fixture(%{name: "Only Crea Game"})
 
       {:ok, _view, html} = live(conn, ~p"/")
 
@@ -1454,8 +1505,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> LazyHTML.query(".pk-chip-nav")
         |> LazyHTML.to_html()
 
-      refute chip_nav_html =~ "carousel-equipo_ganador"
-      refute chip_nav_html =~ "carousel-duelos_memorables"
+      refute chip_nav_html =~ "carousel-section-#{empty_section.id}"
     end
 
     test "a filtered render emits no chip row", %{conn: conn} do
@@ -1499,7 +1549,8 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
 
     test "a shelf backed by zero games produces no panel item for it", %{conn: conn} do
-      game_fixture(%{name: "Only Crea Menu Game", tags: ["#CreaConexiones"]})
+      empty_section = section_fixture(%{kind: :manual, sort: :name})
+      game_fixture(%{name: "Only Crea Menu Game"})
 
       {:ok, _view, html} = live(conn, ~p"/")
 
@@ -1509,8 +1560,7 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         |> LazyHTML.query(".pk-cat-panel")
         |> LazyHTML.to_html()
 
-      refute panel_html =~ "carousel-equipo_ganador"
-      refute panel_html =~ "carousel-duelos_memorables"
+      refute panel_html =~ "carousel-section-#{empty_section.id}"
     end
 
     test "a filtered render emits neither the trigger nor the panel", %{conn: conn} do
@@ -2308,6 +2358,74 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
+  describe "?sections= filters the catalog to a hand-picked section (D-27, tracer)" do
+    test "?sections=<id> lands the catalog already filtered to that section's published games",
+         %{conn: conn} do
+      section = section_fixture(%{kind: :manual})
+      in_section = game_fixture(%{name: "Section Member Game"})
+      outside = game_fixture(%{name: "Outside Section Game"})
+      add_game_to_section(section, in_section)
+
+      {:ok, _view, html} = live(conn, ~p"/?sections=#{section.id}")
+
+      grid = grid_html(html)
+      assert grid =~ in_section.name
+      refute grid =~ outside.name
+      assert html =~ "Resultados"
+    end
+
+    test "renders a removable 'Sección: <name>' chip that returns to the section rows on removal",
+         %{conn: conn} do
+      section = section_fixture(%{name: "Chip Section"})
+      add_game_to_section(section, game_fixture(%{name: "Chip Section Game"}))
+
+      {:ok, view, html} = live(conn, ~p"/?sections=#{section.id}")
+
+      assert html =~ "Sección: Chip Section"
+
+      html =
+        view
+        |> element(~s(button.pk-active-filter-chip[phx-value-facet="sections"][phx-value-choice="#{section.id}"]))
+        |> render_click()
+
+      refute html =~ "Sección: Chip Section"
+      refute html =~ ~s(id="games")
+    end
+
+    test "a hidden section id, a weight_band section id, and a nonexistent id all match nothing, never raise",
+         %{conn: conn} do
+      hidden = section_fixture(%{hidden: true})
+      weight_band_section = Repo.get_by!(Section, name: "Ingenio estratega")
+      game_fixture(%{name: "Untouched Game", weight_band: "ingenio_estratega"})
+
+      for id <- [hidden.id, weight_band_section.id, 999_999] do
+        assert {:ok, _view, html} = live(conn, ~p"/?sections=#{id}")
+        refute grid_html(html) =~ "Untouched Game"
+      end
+    end
+
+    test "the open filter modal renders a Secciones cluster; toggling a pill updates the live result count",
+         %{conn: conn} do
+      section = section_fixture(%{name: "Toggle Section"})
+      add_game_to_section(section, game_fixture(%{name: "Toggle Section Game"}))
+      game_fixture(%{name: "Not In Section Game"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      open_html = render_click(view, "open-filters", %{})
+      assert open_html =~ "Secciones"
+      assert open_html =~ "Toggle Section"
+
+      # settle_surface/1 is a no-op while the modal is open (D-01/D-02,
+      # Task 2 G-01.2-4), so the background grid doesn't flip yet — the
+      # modal's own live "Ver N juegos" CTA is what proves the toggle
+      # already narrowed the result set.
+      html = render_click(view, "toggle-facet", %{"facet" => "sections", "choice" => to_string(section.id)})
+
+      assert html =~ "Ver 1 juego"
+    end
+  end
+
   # G-01.2-9 gap closure (01.2-16, Task 3): pins the three connections that
   # are invisible to the compiler and therefore the ones a future refactor
   # would quietly break — the page-loading annotation, the results
@@ -2532,33 +2650,30 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
     end
   end
 
-  describe "tappable shelf headers filter the ludoteca (quick 260913-0h6)" do
-    test "Crea conexiones header is a single anchor with a %23-encoded tags href and correct a11y wiring",
+  describe "tappable shelf headers filter the ludoteca (260913-0h6, 01.8.1-10, 01.8.1-11 D-27)" do
+    test "a weight-band header is a single anchor with a weight_bands href and correct a11y wiring",
          %{conn: conn} do
-      game_fixture(%{name: "Crea Conexiones Game", tags: ["#CreaConexiones"]})
+      game_fixture(%{name: "Hobby Header Game", weight_band: "descubre_el_hobby"})
 
       {:ok, _view, html} = live(conn, ~p"/")
 
       doc = LazyHTML.from_document(html)
+      hobby_section = Repo.get_by!(Section, name: "Descubre el hobby")
 
       header_links =
-        LazyHTML.query(doc, "#carousel-crea_conexiones .pk-row-header a.pk-row-link")
+        LazyHTML.query(doc, "#carousel-section-#{hobby_section.id} .pk-row-header a.pk-row-link")
 
       assert Enum.count(header_links) == 1
 
       [href] = LazyHTML.attribute(header_links, "href")
-      assert href =~ "%23"
-      refute href =~ "#"
-
-      "/?" <> query_string = href
-      assert Query.decode(query_string) == %{"tags" => "#CreaConexiones"}
+      assert href == "/?weight_bands=descubre_el_hobby"
 
       link_html = LazyHTML.to_html(header_links)
-      assert link_html =~ "Crea conexiones"
+      assert link_html =~ "Descubre el hobby"
       assert link_html =~ "Ver todos"
 
       [aria_label] = LazyHTML.attribute(header_links, "aria-label")
-      assert String.starts_with?(aria_label, "Crea conexiones")
+      assert String.starts_with?(aria_label, "Descubre el hobby")
 
       [describedby] = LazyHTML.attribute(header_links, "aria-describedby")
 
@@ -2571,16 +2686,17 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       assert describedby in subtitle_ids
     end
 
-    test "following the Crea conexiones header link lands on the Resultados grid holding only that shelf's games",
+    test "following a weight-band header link lands on the Resultados grid holding only that band's games",
          %{conn: conn} do
-      game_fixture(%{name: "Crea Conexiones Game", tags: ["#CreaConexiones"]})
-      game_fixture(%{name: "Duelos Only Game", tags: ["#DuelosMemorables"]})
+      hobby = game_fixture(%{name: "Hobby Game", weight_band: "descubre_el_hobby"})
+      expert = game_fixture(%{name: "Expert Only Game", weight_band: "nivel_experto"})
 
       {:ok, view, _html} = live(conn, ~p"/")
+      hobby_section = Repo.get_by!(Section, name: "Descubre el hobby")
 
       {:ok, _view, html} =
         view
-        |> element("#carousel-crea_conexiones a.pk-row-link")
+        |> element("#carousel-section-#{hobby_section.id} a.pk-row-link")
         |> render_click()
         |> follow_redirect(conn)
 
@@ -2589,8 +2705,8 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute html =~ ~s(id="carousel-rows")
 
       grid = grid_html(html)
-      assert grid =~ "Crea Conexiones Game"
-      refute grid =~ "Duelos Only Game"
+      assert grid =~ hobby.name
+      refute grid =~ expert.name
     end
 
     test "carousel_row/1 rendered without href (CatalogLive.Show's 'similares' shape) has no pk-row-link and no Ver todos cue",
@@ -2624,56 +2740,29 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
       refute h2_wrapped_in_anchor?
     end
 
-    test "all 7 filter-expressible shelves land on a grid holding exactly that shelf's games (shelf-vs-grid parity)",
+    test "all 3 weight-band shelves land on a grid holding exactly that band's games (shelf-vs-grid parity)",
          %{conn: conn} do
-      a =
-        game_fixture(%{
-          name: "Fixture A",
-          tags: ["#CreaConexiones"],
-          weight_band: "descubre_el_hobby"
-        })
-
-      b =
-        game_fixture(%{
-          name: "Fixture B",
-          tags: ["#EquipoGanador"],
-          weight_band: "ingenio_estratega"
-        })
-
-      c =
-        game_fixture(%{
-          name: "Fixture C",
-          tags: ["#DuelosMemorables"],
-          weight_band: "nivel_experto"
-        })
-
-      _d =
-        game_fixture(%{
-          name: "Fixture D",
-          tags: [],
-          weight_band: "ingenio_estratega",
-          is_expansion: false
-        })
+      a = game_fixture(%{name: "Fixture A", weight_band: "descubre_el_hobby"})
+      b = game_fixture(%{name: "Fixture B", weight_band: "ingenio_estratega"})
+      c = game_fixture(%{name: "Fixture C", weight_band: "nivel_experto"})
 
       all_names = [a.name, b.name, c.name]
 
       expectations = %{
-        "destacados_del_club" => all_names,
-        "crea_conexiones" => [a.name],
-        "equipo_ganador" => [b.name],
-        "duelos_memorables" => [c.name],
-        "descubre_el_hobby" => [a.name],
-        "ingenio_estratega" => [b.name],
-        "nivel_experto" => [c.name]
+        "Descubre el hobby" => [a.name],
+        "Ingenio estratega" => [b.name],
+        "Nivel experto" => [c.name]
       }
 
       {:ok, _view, html} = live(conn, ~p"/")
 
-      for {key, expected_names} <- expectations do
+      for {section_name, expected_names} <- expectations do
+        section = Repo.get_by!(Section, name: section_name)
+
         [href] =
           html
           |> LazyHTML.from_document()
-          |> LazyHTML.query("#carousel-#{key} .pk-row-header a.pk-row-link")
+          |> LazyHTML.query("#carousel-section-#{section.id} .pk-row-header a.pk-row-link")
           |> LazyHTML.attribute("href")
 
         {:ok, _landed_view, landed_html} = live(conn, href)
@@ -2681,79 +2770,91 @@ defmodule PukllayClubWeb.CatalogLive.IndexTest do
         grid = grid_html(landed_html)
 
         for name <- expected_names do
-          assert grid =~ name, "expected #{key}'s landing grid to include #{name}"
+          assert grid =~ name, "expected #{section_name}'s landing grid to include #{name}"
         end
 
         for name <- all_names -- expected_names do
-          refute grid =~ name, "expected #{key}'s landing grid to exclude #{name}"
+          refute grid =~ name, "expected #{section_name}'s landing grid to exclude #{name}"
         end
       end
     end
 
-    test "every linked shelf's href is a locally-rooted /?tags=/weight_bands= path with no bare '#', and destacados_del_club encodes all 3 editorial tags",
+    test "every weight-band shelf's href is a locally-rooted /?weight_bands= path with no bare '#'",
          %{conn: conn} do
-      # One game per editorial tag/weight band so all 7 linked shelves
-      # render (carousel_row/1 renders nothing at all for an empty shelf).
-      game_fixture(%{
-        name: "Fixture A",
-        tags: ["#CreaConexiones"],
-        weight_band: "descubre_el_hobby"
-      })
-
-      game_fixture(%{
-        name: "Fixture B",
-        tags: ["#EquipoGanador"],
-        weight_band: "ingenio_estratega"
-      })
-
-      game_fixture(%{
-        name: "Fixture C",
-        tags: ["#DuelosMemorables"],
-        weight_band: "nivel_experto"
-      })
+      game_fixture(%{name: "Fixture A", weight_band: "descubre_el_hobby"})
+      game_fixture(%{name: "Fixture B", weight_band: "ingenio_estratega"})
+      game_fixture(%{name: "Fixture C", weight_band: "nivel_experto"})
 
       {:ok, _view, html} = live(conn, ~p"/")
 
       doc = LazyHTML.from_document(html)
 
-      linked_keys = ~w(
-        destacados_del_club crea_conexiones equipo_ganador duelos_memorables
-        descubre_el_hobby ingenio_estratega nivel_experto
-      )
+      band_titles = %{
+        "descubre_el_hobby" => "Descubre el hobby",
+        "ingenio_estratega" => "Ingenio estratega",
+        "nivel_experto" => "Nivel experto"
+      }
 
-      for key <- linked_keys do
-        [href] = doc |> LazyHTML.query("#carousel-#{key} a.pk-row-link") |> LazyHTML.attribute("href")
+      for {band, title} <- band_titles do
+        section = Repo.get_by!(Section, name: title)
 
-        assert String.starts_with?(href, "/?"), "expected #{key}'s href to start with /?"
-        refute href =~ "#", "expected #{key}'s href to hold no bare '#'"
+        [href] =
+          doc
+          |> LazyHTML.query("#carousel-section-#{section.id} a.pk-row-link")
+          |> LazyHTML.attribute("href")
+
+        assert String.starts_with?(href, "/?"), "expected #{band}'s href to start with /?"
+        refute href =~ "#", "expected #{band}'s href to hold no bare '#'"
 
         "/?" <> query_string = href
         decoded = Query.decode(query_string)
 
-        assert Map.keys(decoded) == ["tags"] or Map.keys(decoded) == ["weight_bands"],
-               "expected #{key}'s href to decode to only a tags or weight_bands key, got #{inspect(decoded)}"
-
-        if key == "destacados_del_club" do
-          editorial_tags = Enum.map(Vocabulary.editorial_tags(), & &1.tag)
-          assert Enum.sort(decoded["tags"]) == Enum.sort(editorial_tags)
-        end
+        assert decoded == %{"weight_bands" => band}
       end
     end
 
-    test "recientemente_anadidos renders but has no header link or Ver todos cue", %{conn: conn} do
-      game_fixture(%{
-        name: "Fixture D",
-        tags: [],
-        weight_band: "ingenio_estratega",
-        is_expansion: false
-      })
+    test "a hand-picked (manual) section's header links to its own /?sections=<id> landing (D-27, D-28)",
+         %{conn: conn} do
+      featured = Repo.get_by!(Section, featured: true)
+      game = game_fixture(%{name: "Featured Header Game", weight_band: nil})
+      add_game_to_section(featured, game)
 
       {:ok, _view, html} = live(conn, ~p"/")
+
+      doc = LazyHTML.from_document(html)
+
+      header_links =
+        LazyHTML.query(doc, "#carousel-section-#{featured.id} .pk-row-header a.pk-row-link")
+
+      assert Enum.count(header_links) == 1
+
+      [href] = LazyHTML.attribute(header_links, "href")
+      assert String.starts_with?(href, "/?")
+      refute href =~ "#"
+
+      "/?" <> query_string = href
+      decoded = Query.decode(query_string)
+      assert decoded["sections"] in [to_string(featured.id), [to_string(featured.id)]]
+
+      link_html = LazyHTML.to_html(header_links)
+      assert link_html =~ "Destacados del club"
+      assert link_html =~ "Ver todos"
+
+      {:ok, _landed_view, landed_html} = live(conn, href)
+      grid = grid_html(landed_html)
+      assert grid =~ game.name
+    end
+
+    test "recientemente añadidos renders but has no header link or Ver todos cue", %{conn: conn} do
+      game_fixture(%{name: "Fixture D", weight_band: "ingenio_estratega", is_expansion: false})
+
+      {:ok, _view, html} = live(conn, ~p"/")
+      recent_section = Repo.get_by!(Section, name: "Recientemente añadidos")
 
       row_html =
         html
         |> LazyHTML.from_document()
-        |> LazyHTML.query("#carousel-recientemente_anadidos")
+        |> LazyHTML.query("#carousel-section-#{recent_section.id}")
         |> LazyHTML.to_html()
 
       assert row_html != ""

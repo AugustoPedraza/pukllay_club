@@ -39,16 +39,6 @@ defmodule PukllayClub.Catalog.Vocabulary do
     }
   ]
 
-  # -- Editorial hashtags (D-06, 01-VOCABULARY.md section 4) ------------------
-  #
-  # Verbatim club strings — never renamed or reframed.
-
-  @editorial_tags [
-    %{tag: "#CreaConexiones", meaning: "Reglas simples, familiar / diversión garantizada"},
-    %{tag: "#EquipoGanador", meaning: "Cooperativo"},
-    %{tag: "#DuelosMemorables", meaning: "Solo 2 jugadores"}
-  ]
-
   # -- Mechanic glossary (35 terms, 01-VOCABULARY.md section 3a) --------------
   #
   # The last 10 entries (Area Movement .. Trading) were added during 01-06's
@@ -157,8 +147,20 @@ defmodule PukllayClub.Catalog.Vocabulary do
     end
   end
 
-  @doc "Returns the 3 editorial hashtags, each with `:tag` (verbatim) and `:meaning`."
-  def editorial_tags, do: @editorial_tags
+  @doc """
+  Returns the DB `weight_band` value implied by a raw BGG weight, using the
+  single reviewed threshold set (D-29, 01-VOCABULARY.md §2): strictly below
+  1.9 is `"descubre_el_hobby"`, from 1.9 up to and including 3.1 is
+  `"ingenio_estratega"`, above 3.1 is `"nivel_experto"`. `nil` implies `nil`
+  (no BGG weight, no implied band). This is the ONLY place these thresholds
+  may live — plan 01.8.1-04 removed the retired seed-time copy
+  (`HashtagNormalizer.band_for_peso/1`); never restate these numbers
+  anywhere else in the codebase.
+  """
+  def implied_weight_band(nil), do: nil
+  def implied_weight_band(weight) when is_number(weight) and weight < 1.9, do: "descubre_el_hobby"
+  def implied_weight_band(weight) when is_number(weight) and weight <= 3.1, do: "ingenio_estratega"
+  def implied_weight_band(weight) when is_number(weight), do: "nivel_experto"
 
   @doc "Returns the Spanish chip label for a covered BGG mechanic, or `nil` if uncovered."
   def mechanic_label(raw), do: Map.get(@mechanics, raw)

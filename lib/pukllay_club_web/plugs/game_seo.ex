@@ -7,6 +7,12 @@ defmodule PukllayClubWeb.Plugs.GameSEO do
   (PITFALLS Pitfall 1: a crawler never opens the LiveView socket, so
   nothing here may be gated on `connected?/1`).
 
+  Resolves through `Catalog.get_published_game!/1` (D-04, D-08) — a
+  `:draft` or `:retired` game 404s here exactly like an unknown id, never
+  reaching a canonicalization decision or a rendered page
+  (T-01.8.1-12: the recommended branded-404 option this plan's checkpoint
+  selected).
+
   Piped in only for `/juegos/:id` via the router's `:game_seo` pipeline,
   after `:browser` has already merged path params into `conn.params`.
 
@@ -38,10 +44,13 @@ defmodule PukllayClubWeb.Plugs.GameSEO do
 
   @doc """
   Resolves the game named by `conn.params["id"]` via
-  `PukllayClub.Catalog.get_game!/1` — the same call `CatalogLive.Show.mount/3`
-  already makes, which already converts both a nonexistent and a
-  non-numeric id into `Ecto.NoResultsError` (a `Plug.Exception`, rendering
-  the branded 404). Never calls `Repo.get!/2` directly.
+  `PukllayClub.Catalog.get_published_game!/1` — the same call
+  `CatalogLive.Show.mount/3` already makes, which converts a nonexistent
+  id, a non-numeric id, AND a `:draft`/`:retired` game into
+  `Ecto.NoResultsError` (a `Plug.Exception`, rendering the branded 404).
+  Never calls `Repo.get!/2` or `Catalog.get_game!/1` directly — the latter
+  is the unfiltered admin read and would leak an unpublished game's meta
+  tags to a crawler.
 
   Once the game is resolved, compares `id` against
   `Phoenix.Param.to_param(game)` (exact string equality — the one
@@ -55,7 +64,7 @@ defmodule PukllayClubWeb.Plugs.GameSEO do
   rather than raising.
   """
   def call(%Plug.Conn{params: %{"id" => id}} = conn, _opts) do
-    game = Catalog.get_game!(id)
+    game = Catalog.get_published_game!(id)
     canonical_id = Phoenix.Param.to_param(game)
 
     if id == canonical_id do

@@ -12,8 +12,16 @@ defmodule PukllayClub.CatalogFixtures do
 
   @doc """
   Inserts a `Game` row with sane Spanish defaults, overridable via `attrs`.
+
+  Accepts an optional `:status` attr (default `:published`, D-04/D-08) —
+  applied separately from `seed_changeset/2` (which never casts `:status`,
+  see `Game.seed_changeset/2`) via `Ecto.Changeset.put_change/3`, so most
+  callers never need to think about it while a test that needs a draft or
+  retired game can pass `status: :draft`/`status: :retired`.
   """
   def game_fixture(attrs \\ %{}) do
+    {status, attrs} = Map.pop(attrs, :status, :published)
+
     default_attrs = %{
       name: "Catán",
       csv_row: System.unique_integer([:positive]),
@@ -26,7 +34,12 @@ defmodule PukllayClub.CatalogFixtures do
       year_published: 1995,
       weight_band: "ingenio_estratega",
       bgg_weight: 2.3,
-      tags: ["#CreaConexiones"],
+      # `tags` has no default (01.8.1-11, D-17/D-22): `games.tags` is
+      # frozen history under the D-22 option-A decision — public chips now
+      # come from section membership (`PukllayClub.SectionsFixtures`), not
+      # this field, so a default value here would be misleading. Pass
+      # `tags:` explicitly only for a test that specifically exercises the
+      # historical column itself.
       # Raw BGG mechanic/category values (Vocabulary-covered where possible)
       # rather than pre-translated Spanish, so 01-05's facet/glossary tests
       # exercise the same translation path production data goes through.
@@ -43,6 +56,7 @@ defmodule PukllayClub.CatalogFixtures do
 
     %Game{}
     |> Game.seed_changeset(Map.merge(default_attrs, attrs))
+    |> Ecto.Changeset.put_change(:status, status)
     |> Repo.insert!()
   end
 end

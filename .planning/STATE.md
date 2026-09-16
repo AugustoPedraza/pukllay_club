@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.1
-current_phase_name: staff-admin-ludoteca-shelves-curated-destacados
-status: "Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed"
-stopped_at: Phase 01.8.1 UI-SPEC approved
-last_updated: "2026-09-14T00:23:19.877Z"
-last_activity: 2026-09-13
-last_activity_desc: "Completed quick task 260912-waa: Apply sketch 058 winner (ramp hue H313.1→H300) to app.css, both themes"
-state_head: de13958e4c992b517a5b6e0d8d1a7c5c452551de
+current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
+status: executing
+stopped_at: Completed 01.8.1-15-PLAN.md
+last_updated: "2026-09-14T18:02:07.257Z"
+last_activity: 2026-09-14
+last_activity_desc: Phase 01.8.1 execution started
+state_head: 6e70d7e2dc6ff7c68985f858ed20d494d6a49e19
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 26
-  completed_plans: 12
+  completed_phases: 0
+  total_plans: 27
+  completed_plans: 26
 ---
 
 Total Phases: 9
@@ -33,10 +33,10 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.1 (staff-admin-ludoteca-shelves-curated-destacados) — READY TO EXECUTE
-Plan: Not started
-Status: Phase 01.8 shipped — already merged to main via PR #44 (sync-main-260912), no dedicated ship PR needed
-Last activity: 2026-09-13 - Completed quick task 260913-j8k: Close stale UAT audit items (docs-only)
+Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
+Plan: 2 of 15
+Status: Ready to execute
+Last activity: 2026-09-14 — Phase 01.8.1 execution started
 
 ## Performance Metrics
 
@@ -118,6 +118,18 @@ Last activity: 2026-09-13 - Completed quick task 260913-j8k: Close stale UAT aud
 | Phase 01.8 P05 | ~40min | 3 tasks | 9 files |
 | Phase 01.8 P06 | 15min | 3 tasks | 8 files |
 | Phase 01.8 P07 | 20 min | 2 tasks | 2 files |
+| Phase 01.8.1 P04 | 25min | 3 tasks | 16 files |
+| Phase 01.8.1 P03 | 15min | 3 tasks | 8 files |
+| Phase 01.8.1 P05 | ~110min | 3 tasks | 16 files |
+| Phase 01.8.1 P06 | ~50min | 2 tasks | 15 files |
+| Phase 01.8.1 P07 | 16min | 2 tasks | 7 files |
+| Phase 01.8.1 P08 | ~50min | 2 tasks | 14 files |
+| Phase 01.8.1 P09 | ~36min | 3 tasks | 15 files |
+| Phase 01.8.1 P10 | 150min | 3 tasks | 11 files |
+| Phase 01.8.1 P11 | 100min | 2 tasks | 16 files |
+| Phase 01.8.1 P12 | 52min | 3 tasks | 12 files |
+| Phase 01.8.1 P13 | 30min | 2 tasks | 11 files |
+| Phase 01.8.1 P15 | 62min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -228,6 +240,25 @@ Recent decisions affecting current work:
 - [Phase 01.8]: 01.8-05: Sketch 057 (D-05) settled on variant B (centered stacked isologo + wordmark + tagline, ramp-800 background) for the OG fallback share card; exported 1200x630 WebP placed at priv/static/images/og-fallback.webp
 - [Phase 01.8]: 01.8-05: Task 3's served-response gate parses the real rendered og:image meta tag content rather than calling SEO.site_default/1 directly, exercising tag-emission-to-Plug.Static-serving end to end; found and fixed an attribute-order-agnostic regex bug (LiveView's phx-r debug attribute interposes between the tag name and property=)
 - [Phase 01.8]: 01.8-06: seo_tags/1 rebuilt as a plain Elixir markup function (not a HEEx component) so LiveView's phx-r root-tag attribute can never interpose before property=/name= again; root.html.heex calls it as a safe expression — 01.8-05's order-agnostic served-response regex helpers reversed back to strict form, since that loosening is exactly what let production keep serving WhatsApp-unparseable markup while the suite stayed green (G-01.8-3)
+- [Phase 01.8.1]: 01.8.1-04: Retired the CSV seed path outright (mix catalog.seed, CsvImport, HashtagNormalizer, ExpansionClassifier, Catalog.upsert_game!/1, nimble_csv) per D-09's user-selected 'remove' option; made mix catalog.translate_descriptions' still-English filter unconditional (candidates/0); rewrote AGENTS.md's catalog data runbook
+- [Phase 01.8.1]: 01.8.1-03: Resend chosen as production email provider (D-36), over Brevo/Postmark, after re-checking current free-tier limits on Resend's own pricing page
+- [Phase 01.8.1]: 01.8.1-03: Resend's SPF and bounce MX live on the delegated send.pukllay.club subdomain, not the root domain's TXT record as the plan's verification literally specified — correct provider behavior, documented in domain-and-dns.md
+- [Phase 01.8.1]: 01.8.1-05: Publicar is a same-form submit button carrying name="_action" value="publish" (the browser includes the activated submitter's name/value in the serialized form payload), so save-then-publish is one round trip through a single handle_event("save", ...) rather than two LiveView events
+- [Phase 01.8.1]: 01.8.1-05: Admin.GameLive.Index has no status filter by default (list_admin_games/1/count_admin_games/1 deliberately do not reuse Catalog's public base_filtered_query/2's non-optional published_only/1 predicate) -- the inverse of every public read, since staff must see drafts/published/retired together
+- [Phase 01.8.1]: 01.8.1-06: Oban wired for the first time (queue enrichment:1, oban_jobs migration pinned to v14); add_game_from_bgg/1 inserts a draft + enqueues its enrichment job atomically via Ecto.Multi + Oban.insert/3; Enrichment.enrich/2 reuses BggClient/ImagePipeline/DescriptionTranslator unchanged, applying D-07 club-owned-value rules so every retry is idempotent; EnrichGameWorker broadcasts {:game_enriched, id} on admin:games for live row updates
+- [Phase 01.8.1]: 01.8.1-07: Accounts.notifier/0 is a test-only Application-env seam letting StaffLiveTest simulate an invite-email delivery failure, since Swoosh.Adapters.Test always succeeds
+- [Phase 01.8.1]: 01.8.1-07: remove_staff/2 snapshots the target's tokens via Repo.all_by/2 before Repo.delete/1 inside one Repo.transact/1 (on_delete: :delete_all means tokens vanish the instant the user row does), so UserAuth.disconnect_sessions/1 has something to broadcast against
+- [Phase 01.8.1]: 01.8.1-08: EnrichGameWorker.backoff/1 linear (attempt*30s, not Oban's exponential default) so max_attempts exhausts within ~90s and staff see Reintentar promptly
+- [Phase 01.8.1]: 01.8.1-08: Credentials.env_var_names/0 added as the single source of truth deploy_secrets_contract_test.exs introspects, instead of hardcoding a second copy of the required-secret list
+- [Phase 01.8.1]: 01.8.1-09: shelves table + games.shelf_id (nullable, on_delete: nilify_all) back a phone-first walk-the-shelf tap-to-assign screen with type-ahead search, move-with-undo, error-revert toast, plus an Estantes management/pick-restore screen and dashboard card — every write a single Repo.update/1, staff-only (D-16 negative test). — D-10..D-16: at most one shelf per game, no in-shelf position, staff-managed shelves never hardcoded
+- [Phase 01.8.1]: 01.8.1-10: D-22 checkpoint resolved option A — games.tags stays frozen history, public hashtag chips switch to section names in plan 11; the migration never drops the column
+- [Phase 01.8.1]: 01.8.1-10: row_href/1 links only weight_band-kind sections to ?weight_bands=; manual sections (including featured) and the recent section render plain headings until plan 11's sections facet exists, narrowing quick task 260913-0h6's tappable-header feature
+- [Phase 01.8.1]: 01.8.1-11: D-22 option A executed — games.tags stays frozen history; public hashtag chips switch to Catalog.put_section_names/1's section membership (Game.section_names virtual field); no column-drop migration created — User's plan-10 checkpoint decision; section chips render unlinked since section_names carries names only, no section id
+- [Phase 01.8.1]: 01.8.1-12: Section kind is immutable and drives sort validation server-side (settings_changeset/2 reads kind off the struct, not attrs); the featured cap (D-26) is checked inside the same transaction as the SectionGame insert, closing T-01.8.1-56 — Keeps kind/sort coupling correct without trusting client input, and closes the documented concurrent-add race in one transaction rather than a separate pre-check.
+- [Phase 01.8.1]: 01.8.1-12: Admin.GameLive.Form's Secciones fieldset is hand-written raw checkboxes (game[section_ids][]), not CoreComponents.input/1 — section membership isn't a Game schema field, applied via Sections.set_game_sections/2 after the game itself saves so a featured_full error never reverts the game's own changes — Keeps membership assignment decoupled from Game.admin_changeset/2's narrow cast allowlist (T-01.8.1-21) while still giving staff one combined save action.
+- [Phase 01.8.1]: 01.8.1-13: keep_band/1 snapshots the game's CURRENT implied band + timestamp (not a boolean flag, RESEARCH.md A4) so a later bgg_weight drift to a different implied band re-surfaces the game in the audit
+- [Phase 01.8.1]: 01.8.1-13: BandAudit.mismatches/0 computes the weight-band mismatch entirely in Elixir via Vocabulary.implied_weight_band/1 (never a second threshold copy in SQL); Revisar niveles inserted fourth in the dashboard's fixed D-35 card order, completing it
+- [Phase 01.8.1]: Implemented D-03 revised via a per-BGG-id pg_advisory_xact_lock(8_811_015, bgg_id) as the first Ecto.Multi step, with the existing-editions re-check as its own subsequent Multi.run step (fresh READ COMMITTED read); acknowledged_game_ids always sourced server-side from :edition_prompt, never client params (T-01.8.1-69); no unique index added to games.bgg_id (rejected fix), guarded by an automated pg_indexes test.
 
 ### Pending Todos
 
@@ -318,6 +349,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260913-4k1 | Reservar flow collapsed to one dialog (preview step dropped): always-visible name field + live server-built wa.me primary CTA, daisyUI bottom sheet on mobile / centered on sm+, one primary + ghost Cancelar, 44px targets, dialog a11y + focus in/return | 2026-09-13 | da07c44 | complete (browser check pending) | [260913-4k1-polish-reservar-game-ui-ux-improve-butto](./quick/260913-4k1-polish-reservar-game-ui-ux-improve-butto/) |
 | 260913-j8k | Close stale UAT audit items (docs-only): 01.8 flaky-test + 01.4/01.5 format-drift deferred entries marked `status: resolved` with re-run evidence; 01.5-UAT tests 18/19 superseded by passing test 20, gaps normalized, file acknowledged — audit-uat 18 → 0 | 2026-09-13 | ea9ea7a | complete | [260913-j8k-close-stale-uat-audit-items-docs-only](./quick/260913-j8k-close-stale-uat-audit-items-docs-only/) |
 | 25 | Recompute 01.8-VERIFICATION.md covered_digest (deferred-items.md docs-only change in 338ff7e) | 2026-09-13 | 0511cf3 | — | — |
+| 26 | Document pukllay.club registrar (Spaceship) and DNS runbook | 2026-09-14 | 0576dfe | — | — |
+| 27 | Deploy uses catalog-scoped R2 token; production secrets runbook | 2026-09-14 | fad0886 | — | — |
 
 ### Roadmap Evolution
 
@@ -364,9 +397,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-13T23:08:26.718Z
-Stopped at: Phase 01.8.1 UI-SPEC approved
-Resume file: .planning/phases/01.8.1-staff-admin-ludoteca-shelves-curated-destacados/01.8.1-UI-SPEC.md
+Last session: 2026-09-14T18:01:48.618Z
+Stopped at: Completed 01.8.1-15-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

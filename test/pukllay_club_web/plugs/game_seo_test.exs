@@ -253,6 +253,38 @@ defmodule PukllayClubWeb.Plugs.GameSEOTest do
     end
   end
 
+  # Phase 01.8.1-02: the games.status lifecycle (D-04, D-08). This plug's
+  # entire game resolution is Catalog.get_published_game!/1 — a draft or
+  # retired game must 404 exactly like an unknown id, before any
+  # canonicalization decision runs.
+  describe "status lifecycle: draft/retired games 404, published games 200 (D-04, D-08)" do
+    test "a published game's canonical URL renders 200", %{conn: conn} do
+      game = game_fixture(%{name: "Catán", status: :published})
+
+      conn = get(conn, "/juegos/#{game.id}-catan")
+
+      assert conn.status == 200
+    end
+
+    test "a retired game's canonical URL renders the branded 404", %{conn: conn} do
+      game = game_fixture(%{name: "Catán", status: :retired})
+
+      assert_error_sent(404, fn -> get(conn, "/juegos/#{game.id}-catan") end)
+    end
+
+    test "a draft game's canonical URL renders the branded 404", %{conn: conn} do
+      game = game_fixture(%{name: "Catán", status: :draft})
+
+      assert_error_sent(404, fn -> get(conn, "/juegos/#{game.id}-catan") end)
+    end
+
+    test "a game inserted without an explicit status is published", %{conn: _conn} do
+      game = game_fixture(%{name: "Carcassonne"})
+
+      assert game.status == :published
+    end
+  end
+
   # Quick task 260913-2x6: id-slug URLs (/juegos/<id>-<slug>). Request paths
   # here are PLAIN string literals, not `~p"/juegos/#{game}"` — the
   # whole point is asserting the literal id-slug form the app is supposed
