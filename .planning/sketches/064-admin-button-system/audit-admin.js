@@ -79,7 +79,7 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
           if (pris.length > 1) bad.push(`row with ${pris.length} Principal: ${pris.map(x => x.textContent.trim()).join(', ')}`);
           if (inRow.length && role(inRow[inRow.length - 1]) !== 'pri') bad.push(`Principal not last: ${inRow.map(x => x.textContent.trim()).join(' | ')}`);
         }
-        const fields = [...dev.querySelectorAll('.tin, .field input')].filter(el => vis(el) && !el.matches('.desc-in, .num, .title-in') && document.activeElement !== el);
+        const fields = [...dev.querySelectorAll('.tin, .field input, .sfield input')].filter(el => vis(el) && !el.matches('.desc-in, .num, .title-in') && document.activeElement !== el);
         for (const f of fields) { const cs = getComputedStyle(f); if (f.classList.contains('invalid')) continue; const w = parseFloat(cs.borderTopWidth); const c = Math.min(cr(rgb(cs.borderTopColor), bgOf(f)), cr(rgb(cs.borderTopColor), bgOf(f.parentElement))); if (w !== 1 || c < 3) bad.push(`field ${f.id || f.placeholder}: stroke ${w}px ${c.toFixed(2)}:1`); }
         /* type: only the weights the app ships (Inter 400/600, Bebas 400), and only real Inter/Bebas faces */
         const wbad = [...new Set([...dev.querySelectorAll('*')].filter(el => vis(el) && !['400', '600'].includes(getComputedStyle(el).fontWeight)).map(el => `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}=${getComputedStyle(el).fontWeight}`))];

@@ -301,8 +301,16 @@
   /* Search: filled pill with leading magnifier + clear — the universal mobile search field */
   .sfield { position: relative; }
   .sfield .ico-l { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--color-text-muted); pointer-events: none; }
+  /* 065 R4: Buscar and Agregar sit 24px apart, same height, same width, same type — but the search
+     field used to be a filled pill (radius-full, --color-surface, transparent border) next to an
+     outlined 8px field, so the two read as different species of control. Worse, --color-surface is
+     what a soft CONTENT BLOCK is made of in this admin (.sbox, .ppanel, the banner), so the search
+     field read as a container rather than something you type into. It now takes the same anatomy as
+     every other field — 8px radius, 1px --stroke, page background, via the 064 block below — and the
+     leading magnifier plus the clear button carry "this is search" on their own. 8px also matches
+     everything else in this stack: the Agregar field, the Agregar button and all four filter chips. */
   .sfield input {
-    width: 100%; height: 44px; border: 1px solid transparent; border-radius: var(--radius-full); background: var(--color-surface);
+    width: 100%; height: 44px; border-radius: var(--radius-md); background: var(--color-bg);
     padding: 0 44px 0 42px; font-size: var(--text-base); color: var(--color-text);
   }
   .sfield input::placeholder { color: var(--color-text-muted); }
@@ -1031,10 +1039,10 @@
   :root[data-theme="dark"] #device :is(.obtn, .tbtn, .b-pri, .b-sec):focus-visible { outline-color: var(--color-accent-text); }
   #device .btn-block { width: 100%; }
   /* text fields share the Secundaria stroke (1px, ≥ 3:1); in-place editors (063 title/description/number) keep their soft look */
-  #device :is(.tin, .field input):not(.desc-in):not(.num):not(.title-in) { border: 1px solid var(--stroke); }
-  #device :is(.tin, .field input):not(.desc-in):not(.num):not(.title-in):focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
-  :root[data-theme="dark"] #device :is(.tin, .field input):not(.desc-in):not(.num):not(.title-in):focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
-  #device :is(.tin, .field input).invalid { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  #device :is(.tin, .field input, .sfield input):not(.desc-in):not(.num):not(.title-in) { border: 1px solid var(--stroke); }
+  #device :is(.tin, .field input, .sfield input):not(.desc-in):not(.num):not(.title-in):focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] #device :is(.tin, .field input, .sfield input):not(.desc-in):not(.num):not(.title-in):focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  #device :is(.tin, .field input, .sfield input).invalid { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
   #device .banner-actions { gap: 8px; }
   /* the -8px pull is for borderless text buttons; an outlined button ends the row on the content edge */
   #device .banner-actions:has(> :is(.obtn, .b-pri, .b-sec):last-child) { margin-right: 0; }

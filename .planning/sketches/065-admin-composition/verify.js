@@ -83,6 +83,15 @@ window.__m = () => {
       && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && !el.matches('.pend'))
       .map(el => (el.className || el.tagName) + '“' + el.textContent.trim().slice(0, 16) + '”'),
   }));
+  /* every text field on a page is one control. The in-place editors 063 designed to look like the
+     text they replace (title, description, the units number) are deliberately exempt — 064 exempts
+     them from the stroke rule for the same reason. */
+  const fields2 = [...main.querySelectorAll('.tin, .field input, .sfield input')]
+    .filter(el => vis(el) && !el.matches('.desc-in, .num, .title-in')).map(el => {
+      const c = cs(el);
+      return { id: el.id || el.placeholder, h: Math.round(el.getBoundingClientRect().height),
+        r: c.borderTopLeftRadius, bw: c.borderTopWidth, bg: c.backgroundColor };
+    });
   const err = main.querySelector('.err-t'), stt = main.querySelector('.st-pill.draft, .st-draft');
   const pri = [...main.querySelectorAll('.obtn, .b-pri')].filter(vis).map(el => ({
     text: el.textContent.trim(), top: Math.round(el.getBoundingClientRect().top - mainTop) }));
@@ -105,7 +114,7 @@ window.__m = () => {
     headHasSub,
     headToBody: (lastHead && firstBody) ? Math.round(firstBody.getBoundingClientRect().top - lastHead.getBoundingClientRect().bottom) : null,
     headEnd: lastHead ? Math.round(lastHead.getBoundingClientRect().bottom - mainTop) : null,
-    labels, rows, pri, badges, drawerCounts, runs, boxes,
+    labels, rows, pri, badges, drawerCounts, runs, boxes, fields2,
     errW: err ? +cs(err).fontWeight : null, stW: stt ? +cs(stt).fontWeight : null,
     overflowX: dev.querySelector('.scroller').scrollWidth - dev.querySelector('.scroller').clientWidth,
     tabsVisible: tabs.top < devR.bottom - 4,
@@ -278,6 +287,21 @@ window.__kb = () => {
   const invites = await p.evaluate(() => V.staff.filter(x => x.st === 'pending').length);
   ok(staffBox.foot.replace(/\D/g, '') === String(invites) || (!invites && !/pendiente/.test(staffBox.foot)),
     `D6 the Admin box for Staff agrees (“${staffBox.foot}” vs ${invites} invitación pendiente)`);
+
+  /* --- F1 one field anatomy ------------------------------------------------------------------
+     Buscar and Agregar sit 24px apart, same size, same type. The search field used to be a filled
+     pill (radius-full, --color-surface, transparent border) beside an outlined 8px field, so the two
+     read as different species — and --color-surface is what a soft content BLOCK is made of in this
+     admin, so it read as a container rather than an input. */
+  const anat = {};
+  for (const [n, m] of seen) for (const f of m.fields2) {
+    const k = `${f.h}px/${f.r}/${f.bw}/${f.bg}`;
+    (anat[k] = anat[k] || []).push(`${n}:${f.id}`);
+  }
+  ok(Object.keys(anat).length === 1,
+    `F1 every text field is one control (${Object.entries(anat).map(([k, v]) => k + ' ← ' + v.slice(0, 3).join(', ')).join('  |  ')})`);
+  const jf = by('2-juegos').fields2;
+  ok(jf.length >= 2, `F1 the Juegos page has both the Agregar and the Buscar field (${jf.map(f => f.id).join(', ')})`);
 
   /* ================= S. status marks the exception (065 R2) =================
      407 of 412 games are published, so "Publicado" on every row was the least informative word on

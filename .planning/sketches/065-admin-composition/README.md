@@ -2,8 +2,8 @@
 sketch: 065
 name: admin-composition
 question: "Do the five admin pages designed on their own hold together as one app in a continuous walk — Admin → Juegos → editor → ‹ back → Web → sección → Estantes → Asignar → Perfil — or has drift crept in?"
-winner: "composition (no variants) — 11 drift bugs + 2 weight-balance bugs found and fixed upstream, plus the mobile keyboard 059/061 never tested"
-tags: [admin, consistency, composition, shell, rhythm, labels, weight, counters, keyboard, mobile-first, phase-01.8.1]
+winner: "composition (no variants) — 4 rounds: 11 drift bugs, weight balance, what a list row says, one field anatomy; plus the mobile keyboard 059/061 never tested"
+tags: [admin, consistency, composition, shell, rhythm, labels, weight, status, fields, counters, keyboard, mobile-first, phase-01.8.1]
 ---
 
 # Sketch 065: Admin, composed
@@ -24,7 +24,7 @@ event layer, the walk, and the phone keyboard.
 ```
 node .planning/sketches/065-admin-composition/build.js     # regenerate after editing 059–063
 python3 -m http.server 8765 &                              # from the repo root
-node .planning/sketches/065-admin-composition/verify.js    # 113 checks
+node .planning/sketches/065-admin-composition/verify.js    # 133 checks
 ```
 
 ## How to View
@@ -221,6 +221,45 @@ marked with its *word*; **S2** every status label ≥ 4.5:1 against what is real
 only retired rows are muted, a retired name stays readable, and a draft never reads as disabled;
 **S4** the meta line is the year and no player count.
 
+## Round 4 — Buscar and Agregar are one control (2026-09-15)
+
+Developer: *"buscar por nombre and the 'agregar' fields must to play better balance"*.
+
+Measured, the two sit **24px apart, both 44px tall, both starting at the same left edge, both 14/400
+text** — and then differ on three of four surface properties:
+
+| | Agregar | Buscar (before) |
+|---|---|---|
+| radius | 8px | **9999px** (pill) |
+| border | 1px `--stroke` | **transparent** |
+| background | `--color-bg` | **`--color-surface`** (filled) |
+
+Two problems, not one. The obvious one is that at that distance three differing properties read as
+inconsistency rather than as "search is a different species". The subtler one is what the fill
+*means*: **`--color-surface` is what a soft content BLOCK is made of in this admin** — `.sbox`,
+`.ppanel`, the settings-row group, the edition banner (063 R3: *strokes and dividers are replaced by
+soft tinted blocks*). Filling an input with it made the search field read as a container rather than
+as something you type into.
+
+The search field now takes the same anatomy as every other field — 8px radius, 1px `--stroke`, page
+background — **through the 064 block itself**, not a parallel rule: `.sfield input` was added to that
+block's `:is()` list, the same move that put the admin's status chip inside the pill system. The
+leading magnifier and the clear button carry "this is search" on their own, and 8px now matches
+everything else in the stack: the Agregar field, the Agregar button and all four filter chips.
+
+Measured after: both fields 44px / 8px / 1px, stroke **4.3:1** light and **3.49:1** dark (floor 3:1).
+
+The pill was also the only element in that whole control stack not on 8px — so this removes an
+outlier shape rather than flattening a meaningful difference.
+
+**It also closed an audit hole.** 064 checks that every text field carries a 1px stroke at ≥3:1, but
+its selector was `.tin, .field input` — the search field was never audited, which is part of why it
+could drift. The selector now includes `.sfield input`.
+
+Asserted by `verify.js`: **F1** every text field on a page shares one anatomy (height, radius, border
+width, background), with 063's in-place editors (title, description, units) exempt exactly as 064
+exempts them.
+
 ## Left as settled
 - **The editor's title is 30px Bebas** while every page title is 22px Inter. That is 063's deliberate
   mirror of the public game page, and the walk did not argue against it — it now at least starts at
@@ -233,7 +272,7 @@ only retired rows are muted, a retired name stays readable, and a draft never re
   rather than drift.
 
 ## Verification
-`verify.js` — 113 checks in headless Chrome, phone (420px) light and dark, then desktop at 1440px.
+`verify.js` — 133 checks in headless Chrome, phone (420px) light and dark, then desktop at 1440px.
 
 - **the walk** (10 stops): no horizontal overflow, every page opens at the top, at most one tab lit,
   and the lit tab follows the page into its drill-downs (editor → Juegos, sección → Web, Asignar →
@@ -248,6 +287,8 @@ only retired rows are muted, a retired name stays readable, and a draft never re
 - **D6** badge, drawer count, dashboard box and page agree, and keep agreeing after an assignment,
   after resolving every level mismatch, and about the size of the ludoteca;
 - **K1–K4** the four keyboard questions above;
-- **W1–W4** the weight balance above.
+- **W1–W4** the weight balance (round 2);
+- **F1** one field anatomy (round 4);
+- **S1–S4** status marks the exception (round 3).
 
 063's `verify.js` (63/63) and 064's `audit-admin.js` (94/94) still pass with every upstream fix in.

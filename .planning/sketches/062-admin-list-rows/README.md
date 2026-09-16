@@ -163,3 +163,10 @@ identical shared block "065: one label per job" is appended to 059–063; the ch
   Borrador takes the accent pill this admin already uses for pending work, Retirado takes a muted
   outline pill and a muted row. Never colour alone — the amber dot it replaces measured 2.78:1,
   under the 3:1 non-text floor, and grey means "disabled", which a draft never is.
+- **Round 4 (fields, from sketch 065).** "Buscar por nombre" was a filled pill (`radius-full`,
+  `--color-surface`, transparent border) sitting 24px under the outlined 8px "Agregar" field — two
+  inputs of the same size and type reading as different species, and `--color-surface` is what a soft
+  content block is made of here, so it read as a container. The search field now joins the 064 field
+  system (8px, 1px `--stroke`, page background) via that block's own `:is()` list; the magnifier and
+  clear button carry "search". 064's field audit selector now includes `.sfield input`, which it
+  never covered.

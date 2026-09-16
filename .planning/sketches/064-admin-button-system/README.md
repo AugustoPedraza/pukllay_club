@@ -92,7 +92,8 @@ The identical "064: admin button system" CSS block is appended to every admin sk
   - label ≥ 4.5:1;
   - outlined buttons stay inside their container's content edge;
   - at most one Principal per action row, and it's last.
-- **Text fields:** 1px stroke ≥ 3:1.
+- **Text fields:** 1px stroke ≥ 3:1. *(065 R4: the selector now includes `.sfield input` — the Juegos
+  search field was outside this check, and had drifted to a filled pill with a transparent border.)*
 
 Since the font-weight pass, the audit also checks type: real Inter 400/600 loads in every sketch, every visible element is 400 or 600, text is Inter or Bebas Neue only, and the active tab label outweighs the inactive ones. Result: 94 of 94. Run: `python3 -m http.server 8765 &` then `node .planning/sketches/064-admin-button-system/audit-admin.js`.
 
