@@ -178,7 +178,7 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
-- [ ] 01.8.1-14-PLAN.md — Production rollout: pre-deploy baseline, green PR, merge + owner creation (human action), live smoke verification (SC-1..SC-5)
+- [x] 01.8.1-14-PLAN.md — Production rollout: pre-deploy baseline, green PR, merge + owner creation (human action), live smoke verification (SC-1..SC-5)
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
