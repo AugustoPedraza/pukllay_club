@@ -607,3 +607,14 @@ It uses the system Chrome (`channel: 'chrome'`) and finds `playwright-core` in `
 Screenshots go to `$SHOTS_DIR` (default `<tmp>/sketch-063-shots`). The exit code is 1 if any check fails.
 
 When refining, update the assertions that encode a rule you change (for example, the order check or the "zero lines" check) instead of deleting them.
+
+## Applied from sketch 065 (admin composition, 2026-09-15)
+Walking the whole admin in one app turned up drift that was invisible one sketch at a time. The
+identical shared block "065: one label per job" is appended to 059–063; the changes here are:
+- **The back row.** `.eback-row` wrapped `.back` in a flex row and reset its margins, so ‹ Juegos sat
+  4px below ‹ Web and ‹ Estantes. It now carries `.back`'s own offsets.
+- **The title** aligns to the top of its row, so it starts at the same height as every other page's
+  title instead of 2px lower (it stays 30px Bebas — the mirror of the public game page is unchanged).
+- `.sec-label` is unchanged; the rest of the admin came up to meet it (shared 065 block), and
+  `.group-label` is now reserved for drawer and sheet row groups.
+- The 24px gap between the head and the first block — this sketch's rhythm — is now every page's.

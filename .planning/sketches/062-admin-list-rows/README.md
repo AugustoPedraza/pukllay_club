@@ -135,3 +135,22 @@ The app self-hosts Inter **400 and 600 only** (`assets/css/app.css`), so a decla
 - Row names (`.gname`) went from 500 to 400, matching 063's rows.
 
 Checked by `064-admin-button-system/audit-admin.js`: real Inter 400/600 loads, every visible element is 400 or 600, text is Inter or Bebas only, and the active tab label outweighs the inactive ones.
+
+## Applied from sketch 065 (admin composition, 2026-09-15)
+Walking the whole admin in one app turned up drift that was invisible one sketch at a time. The
+identical shared block "065: one label per job" is appended to 059–063; the changes here are:
+- **One counter source.** This sketch's `DATA()` — the only fully derived one — became THE pair for
+  060, 061 and the composition.
+- **412, not 408** (`HIDDEN_PUBLISHED` 396 → 400), matching `TOTAL`.
+- **One level vocabulary.** `BANDS` held the three level names; 063 held names *and* meanings, so
+  "Ingenio estratega" was explained in the game editor and assumed here. `BANDS` now carries 063's
+  shape verbatim, and the Nivel sheet's "Pasar a …" row says what the level means instead of "Usa el
+  nivel que indica BGG".
+- **The settings group is a soft box,** not hairlines — the same component the game editor renders
+  (063 R3/R6). Sheets keep their rows.
+- **Asignar's head gap** was 12px where every other page had 16 (its spacer follows `.trow`, so it
+  missed the polish rule). All page heads now sit 24px above the first block, the distance blocks sit
+  from each other.
+- **Asignar's title** no longer sits 7px lower than sección's because "Renombrar" centres it in a
+  44px row.
+- Section and field labels follow the shared 065 block.

@@ -203,3 +203,18 @@ The app self-hosts Inter **400 and 600 only** (`assets/css/app.css`), so a decla
 - Row names (`.gname`) went from 500 to 400, matching 063's rows.
 
 Checked by `064-admin-button-system/audit-admin.js`: real Inter 400/600 loads, every visible element is 400 or 600, text is Inter or Bebas only, and the active tab label outweighs the inactive ones.
+
+## Applied from sketch 065 (admin composition, 2026-09-15)
+Walking the whole admin in one app turned up drift that was invisible one sketch at a time. The
+identical shared block "065: one label per job" is appended to 059–063; the changes here are:
+- **One counter source.** `DATA()`/`cnt()`/`boxData()` are now identical across 060–062 and read a
+  single set of numbers. Composed, this sketch's frozen literals disagreed with the pages: the
+  Estantes badge kept its load-time value after an assignment and Revisar niveles stayed at 7 after
+  the page had emptied.
+- **The Staff box** derives its note from the data instead of hard-coding "1 invitación pendiente",
+  and shows a pill when something is pending, like every other pending count.
+- **The page head.** `pageHead()` no longer special-cases the Admin home to emit no spacer, and
+  `.dash` drops its own 12px top margin: the head sits 24px above the first block, like every page.
+- **The polish type scale (061 R2) applied** — this sketch predates it and still rendered its title
+  at 32px Bebas.
+- The frozen dashboard literals now match what Web and Estantes actually show (7 filas, not 5).

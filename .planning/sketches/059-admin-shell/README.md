@@ -223,3 +223,13 @@ The app self-hosts Inter **400 and 600 only** (`assets/css/app.css`), so a decla
 - Row names (`.gname`) went from 500 to 400, matching 063's rows.
 
 Checked by `064-admin-button-system/audit-admin.js`: real Inter 400/600 loads, every visible element is 400 or 600, text is Inter or Bebas only, and the active tab label outweighs the inactive ones.
+
+## Applied from sketch 065 (admin composition, 2026-09-15)
+Walking the whole admin in one app turned up drift that was invisible one sketch at a time. The
+identical shared block "065: one label per job" is appended to 059–063; the changes here are:
+- **The polish type scale (061 R2) applied.** 059 had no `.polish` block and never set the class, so
+  its titles rendered at 32px Bebas and its login field at the pre-polish scale while every page
+  reached from it used 22px Inter.
+- Section/field labels follow the shared 065 block.
+- *Not* changed: the tab names (Panel · Secciones · Cuenta) and the non-pending counts. 060
+  supersedes both, and rewriting them here would falsify the record of this round.

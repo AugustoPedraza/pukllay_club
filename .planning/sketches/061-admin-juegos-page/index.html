@@ -109,7 +109,7 @@
   .dlink .lbl .sub { display: block; font-size: 12px; font-weight: 400; color: var(--color-text-muted); margin-top: 1px; }
   .dlink:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   /* ================= 060: Admin home — minimal dashboard of boxes ================= */
-  .dash { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+  .dash { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .desk .dash { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .box {
     display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; text-align: center; cursor: pointer; color: var(--color-text);
@@ -446,6 +446,45 @@
   .polish .empty p { font-size: 13px; }
   .polish .snack { font-size: 13px; min-height: 44px; }
 
+  /* ================= 065: one label per job — identical block in 060–063 =================
+     Composing the whole admin (sketch 065) turned up three answers to "this is a labelled block
+     inside a page": 11px uppercase muted (Agregar juego · Filas del inicio · Equipo · Sin ubicar),
+     12px sentence muted (Nombre · Subtítulo) and 13px sentence in full colour (Portada · En el club).
+     Two labels, one size, from here on:
+       SECTION label  13px/600, full text colour, sentence case — names a block on the page
+       FIELD label    13px/600, muted                          — names one input inside a block
+     .group-label keeps exactly the job 059 gave it — the header of a group of rows in the drawer or a
+     sheet — so it only changes where 061/062 had borrowed it for a page body.
+     A group of setting rows on a page is the editor's soft box, never 062's hairlines (063 R3/R6). */
+  #device main :is(.sec-label, .group-label) {
+    font-size: 13px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
+    color: var(--color-text); margin: 0 0 8px;
+  }
+  #device main :is(.flabel, .field label) {
+    font-size: 13px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
+    color: var(--color-text-muted);
+  }
+  #device main .lhead :is(.sec-label, .group-label) { margin: 0; }
+  #device main .sgroup { margin: 0; border: 0; padding: 4px 0; overflow: hidden;
+    background: var(--color-surface); border-radius: var(--radius-lg); }
+  #device main .sgroup .srow { min-height: 40px; padding: 4px 16px; }
+  #device main .sgroup .srow + .srow { border-top: 0; }
+  #device main .sgroup .srow .gname { font-size: 14px; }
+  #device main .sgroup .srow .val { font-size: 13px; }
+  #device main .sgroup .srow:hover { background: var(--color-surface-2); }
+
+  /* The page head sits the same distance above the first block as blocks sit from each other.
+     Sections are 24px apart everywhere (.jsec + .jsec in 061/062, .sec + .sec in 063), but the head
+     was 16px above the first block on list pages — and 12px on Asignar, whose spacer follows .trow
+     instead of .ptitle and so missed the polish rule that bumped the others to 16. One gap now. */
+  #device main > .psub { margin-bottom: 24px; }
+  #device main > :is(.ptitle, .trow) + div[style*="height"] { height: 24px !important; }
+  /* One title height. A page title lands in the same place whether it sits alone (Web, sección),
+     shares its row with a control (Asignar's Renombrar) or is the editor's editable name. Before
+     this it jumped up to 7px between drill-downs, because a 44px control centred the 26px title
+     inside its row while a bare title started at the row's top. */
+  #device main .trow > .ptitle, #device main .tline > .tfield { align-self: flex-start; }
+
   /* ================= 064: admin button system (S3 Contorno, weight-tuned) — identical block in 059–063 =================
      One anatomy: 44px · radius-md · 14px/600 · 16px icon · 8px gap. The role is the only thing that changes the paint:
        Principal  .obtn / .b-pri  1px primary stroke, primary label — at most one per block, last in its row
@@ -555,14 +594,15 @@ const SECTION_ORDER = ['juegos', 'secciones', 'estantes', 'niveles', 'staff'];
 const PHONE_TABS = ['panel', 'juegos', 'secciones', 'estantes'];
 const S = { mode: 'admin', screen: 'juegos', vp: 'phone', role: 'owner', toast: null, pend: true };
 
-/* Real dashboard data (dashboard_live.ex): drafts, shelf placement progress, band mismatches.
-   A count pill ALWAYS means "pending work" — in the drawer, the tab badge and the Admin page. */
+/* ONE counter source. The dashboard boxes, the drawer counts and the tab badges all read DATA()/cnt()
+   and nothing else — sketch 065 showed what happens otherwise: the Admin boxes kept a load-time number
+   while the page underneath them emptied out. A count pill ALWAYS means pending work. */
 const DATA = () => S.pend
-  ? { drafts: 3, published: 409, total: 412, placed: 328, mismatches: 7, sections: 5, staff: 3 }
-  : { drafts: 0, published: 412, total: 412, placed: 412, mismatches: 0, sections: 5, staff: 3 };
+  ? { drafts: jCount('draft'), total: jCount('all'), placed: 328, mismatches: 7, sections: 5, staff: 3, invites: 1 }
+  : { drafts: 0, total: jCount('all'), placed: jCount('all'), mismatches: 0, sections: 5, staff: 3, invites: 0 };
 function cnt(k) {
   const d = DATA();
-  const n = { juegos: jCount('draft'), estantes: d.total - d.placed, niveles: d.mismatches }[k] || 0;
+  const n = { juegos: d.drafts, estantes: d.total - d.placed, niveles: d.mismatches }[k] || 0;
   return n ? String(n) : '';
 }
 
@@ -654,7 +694,7 @@ function pageHead() {
   // drawer are siblings of Admin, not children, so they get no "‹ Admin".
   const parent = sc.parent || null;
   return `${parent ? `<button class="back" data-nav="${parent}">${ic('chevL')}${SCREENS[parent].title}</button>` : ''}
-    <h1 class="ptitle">${sc.title}</h1>${sc.sub ? `<p class="psub">${sc.sub}</p>` : S.screen === 'panel' ? '' : '<div style="height:12px"></div>'}`;
+    <h1 class="ptitle">${sc.title}</h1>${sc.sub ? `<p class="psub">${sc.sub}</p>` : '<div style="height:12px"></div>'}`;
 }
 /* ================= 060: the Admin home page — a minimal dashboard of boxes =================
    ONE box anatomy, centered: [icon · name] → big number → (optional meter) → one note line. 2 columns (desktop 3).
@@ -666,11 +706,11 @@ const nf = n => n.toLocaleString('es-AR');
 function boxData(k) {
   const d = DATA(), unplaced = d.total - d.placed;
   return {
-    juegos:    { num: nf(jCount('all')), note: jCount('draft') ? `${jCount('draft')} borradores` : 'Todos publicados', pend: !!jCount('draft') },
+    juegos:    { num: nf(d.total), note: d.drafts ? `${d.drafts} ${d.drafts === 1 ? 'borrador' : 'borradores'}` : 'Todos publicados', pend: !!d.drafts },
     secciones: { num: d.sections, note: 'filas en el inicio' },
     estantes:  { num: `${Math.round(d.placed / d.total * 100)}%`, meter: d.placed / d.total, note: unplaced ? `${nf(unplaced)} sin ubicar` : 'Todos ubicados', pend: !!unplaced },
     niveles:   { num: d.mismatches, note: d.mismatches ? 'no coinciden con BGG' : 'Todo coincide con BGG', pend: !!d.mismatches },
-    staff:     { num: d.staff, note: '1 invitación pendiente' },
+    staff:     { num: d.staff, note: d.invites ? `${d.invites} ${d.invites === 1 ? 'invitación pendiente' : 'invitaciones pendientes'}` : 'Sin invitaciones pendientes', pend: !!d.invites },
   }[k];
 }
 function box(k) {
@@ -687,7 +727,10 @@ const panelBody = () => `<div class="dash">${sections().map(box).join('')}</div>
 /* ================= 061: Juegos — add form + search/filter + list, one row anatomy ================= */
 const STATUS = { draft: 'Borrador', published: 'Publicado', retired: 'Retirado' };
 const FILTERS = [['all', 'Todos'], ['draft', 'Borradores'], ['published', 'Publicados'], ['retired', 'Retirados']];
-const HIDDEN_PUBLISHED = 396; // games beyond the first page (list_admin_games pages by 50; the sketch fakes the rest)
+/* 396 here made the Juegos page count 408 juegos while Estantes and the Admin box counted 412 — one
+   ludoteca, two sizes, visible the moment the two pages sat in the same app (sketch 065). 12 seeded
+   + 400 hidden = 412 = 062's TOTAL. */
+const HIDDEN_PUBLISHED = 400; // games beyond the first page (list_admin_games pages by 50; the sketch fakes the rest)
 const SEED = [
   { name: 'Terraforming Mars', bgg: 167791, status: 'draft', year: 2016, pl: '1–5', hue: 18 },
   { name: 'Las Mansiones de la Locura: Segunda Edición', bgg: 205059, status: 'draft', year: 2016, pl: '1–5', hue: 280 },

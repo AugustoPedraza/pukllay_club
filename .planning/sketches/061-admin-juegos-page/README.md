@@ -46,12 +46,12 @@ So there's one layout, and the only variant is the filter control, which is the 
 3. **Edition prompt:** an inline Material banner under the field. It shows the text, the matching games as compact rows (tap to open the editor), and two text buttons, "Cancelar" and "Sí, agregar edición".
 4. **Search:** a filled pill field with a magnifier, a clear (×) button and a live 300ms debounce, placed above the filters. This follows the iOS search bar + scope bar and Material search + chips order.
 5. **Filters:** see the variants below.
-6. **Summary line** ("408 juegos", "3 borradores", "1 resultado"), then the **list**. The list isn't a table, so G-2a can't happen. Each row uses the one anatomy shared with the drawer:
+6. **Summary line** ("412 juegos", "3 borradores", "1 resultado"), then the **list**. The list isn't a table, so G-2a can't happen. Each row uses the one anatomy shared with the drawer:
    - 48px thumb · name (wraps with `overflow-wrap:anywhere`, no ellipsis or clamp, so G-3 is fixed) + a status line (dot + status · year · players) · chevron. Rows are at least 68px; the long Twilight Imperium name grows its row to 99px.
    - **Pending:** a pulsing thumb, "Juego #342942", and "Trayendo datos de BGG…" with a spinner. The row can't be tapped.
    - **Failed:** a dashed warning thumb and a red "No se pudieron traer los datos de BGG" line. The chevron is replaced by one "Reintentar" text button (ux-patterns D22 allows fewer than 3 row actions).
    - Borrador is the only status in bold text with an orange dot, because it's pending work. Publicado has a green dot; Retirado has a hollow dot.
-7. **Paging:** a "Mostrar más" text button with a "12 de 408" caption. It keeps the shipped "Cargar más" behavior with quieter styling.
+7. **Paging:** a "Mostrar más" text button with a "12 de 412" caption. It keeps the shipped "Cargar más" behavior with quieter styling.
 8. **Empty states:**
    - Borradores empty: "No hay borradores" + what drafts are.
    - Search with no results: "Sin resultados para “…”" + a "Borrar búsqueda" text button.
@@ -155,3 +155,15 @@ The app self-hosts Inter **400 and 600 only** (`assets/css/app.css`), so a decla
 - Row names (`.gname`) went from 500 to 400, matching 063's rows.
 
 Checked by `064-admin-button-system/audit-admin.js`: real Inter 400/600 loads, every visible element is 400 or 600, text is Inter or Bebas only, and the active tab label outweighs the inactive ones.
+
+## Applied from sketch 065 (admin composition, 2026-09-15)
+Walking the whole admin in one app turned up drift that was invisible one sketch at a time. The
+identical shared block "065: one label per job" is appended to 059–063; the changes here are:
+- **One counter source** with 060/062 (`DATA()`/`cnt()`/`boxData()` identical in all three).
+- **412, not 408.** `HIDDEN_PUBLISHED` 396 → 400, so the Juegos page counts the same ludoteca as
+  Estantes and the Admin box. The summary line and the "Mostrar más" caption move with it.
+- **The Staff box** derives its note (see 060).
+- Section labels ("Agregar juego") use the shared 065 section label — 13px/600 in full colour, not
+  11px uppercase muted — and the page head sits 24px above the first block.
+- **iOS focus-zoom, finally answered.** This sketch flagged it and deferred it to "the viewport meta".
+  065 settles it without `maximum-scale`: fields go to 16px on coarse pointers only. See 065's README.
