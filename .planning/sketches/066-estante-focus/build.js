@@ -41,7 +41,8 @@ const CSS = `
   /* the estante page has no header row, so its notes sit on the content edge (.grp is already inset 16px),
      not under the 76px text column a list row needs */
   #device main .est-detail .grp { margin: 0; }
-  #device main .est-detail .grp .gnote, #device main .est-detail .grp .gnote.grail { margin-left: 0; padding-left: 0; }
+  #device main .est-detail .grp > .gnote, #device main .est-detail .grp > .gnote.grail { margin-left: 0; padding-left: 0; }
+  #device main .est-detail .grp .glist > .gnote { margin-left: 16px; padding-left: 0; }
   #device main .est-next { margin-top: 24px; }
 
 /* ================= 066 carries 01.8.2 D-19 ================= */
