@@ -63,6 +63,27 @@ window.__m = () => {
     cls: el.className.trim(), h: Math.round(el.getBoundingClientRect().height),
     min: (el.matches('.split') ? cs(el.querySelector('.gmain') || el) : cs(el)).minHeight,
     slot: (() => { const s = el.querySelector('.thumb, .slot40, .av40, .slot, .fslot'); return s ? Math.round(s.getBoundingClientRect().width) : null; })() }));
+  /* weight census: the app ships Inter 400 and 600 only, so balance is about WHERE 600 lands.
+     The rule the admin follows: 600 marks a label, an action, or a state that needs noticing;
+     content is 400. Display type (Bebas) has one weight and is judged by size, not weight. */
+  const runs = [];
+  for (const el of main.querySelectorAll('*')) {
+    if (!vis(el)) continue;
+    const own = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim()).map(n => n.textContent.trim()).join(' ');
+    const val = (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') ? (el.value || el.placeholder || '') : '';
+    const text = (own || val).trim(); if (!text) continue;
+    const st = cs(el);
+    runs.push({ sel: el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/)[0] : ''),
+      text: text.slice(0, 28), size: parseFloat(st.fontSize), w: +st.fontWeight,
+      display: /Bebas/.test(st.fontFamily), isTitle: el.matches('.ptitle, .title-in') });
+  }
+  const boxes = [...main.querySelectorAll('.box')].map(bx => ({
+    name: bx.querySelector('.name')?.textContent.trim(),
+    bold: [...bx.querySelectorAll('*')].filter(el => vis(el) && +cs(el).fontWeight === 600
+      && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && !el.matches('.pend'))
+      .map(el => (el.className || el.tagName) + '“' + el.textContent.trim().slice(0, 16) + '”'),
+  }));
+  const err = main.querySelector('.err-t'), stt = main.querySelector('.st-draft');
   const pri = [...main.querySelectorAll('.obtn, .b-pri')].filter(vis).map(el => ({
     text: el.textContent.trim(), top: Math.round(el.getBoundingClientRect().top - mainTop) }));
   const badges = [...dev.querySelectorAll('.tabs [data-tab]')].map(t => ({
@@ -84,7 +105,8 @@ window.__m = () => {
     headHasSub,
     headToBody: (lastHead && firstBody) ? Math.round(firstBody.getBoundingClientRect().top - lastHead.getBoundingClientRect().bottom) : null,
     headEnd: lastHead ? Math.round(lastHead.getBoundingClientRect().bottom - mainTop) : null,
-    labels, rows, pri, badges, drawerCounts,
+    labels, rows, pri, badges, drawerCounts, runs, boxes,
+    errW: err ? +cs(err).fontWeight : null, stW: stt ? +cs(stt).fontWeight : null,
     overflowX: dev.querySelector('.scroller').scrollWidth - dev.querySelector('.scroller').clientWidth,
     tabsVisible: tabs.top < devR.bottom - 4,
     tabsBottomGap: Math.round(devR.bottom - tabs.bottom),
@@ -177,6 +199,33 @@ window.__kb = () => {
     (heights[k] = heights[k] || []).push(n);
   }
   ok(Object.keys(heights).length === 1, `D5 every list row declares the same minimum and slot (${Object.entries(heights).map(([k, v]) => k + ' ← ' + [...new Set(v)].join(',')).join(' | ')})`);
+
+  /* --- W1 nothing in a page body outweighs the page's own title -----------------------------
+     "412" used to be 22px/600, the same size AND weight as the title "Admin" above it, so the page
+     had no lead. Display type (the editor's Bebas name and poster) is judged by size, not weight. */
+  for (const [n, m] of seen) {
+    const t = m.runs.find(r => r.isTitle); if (!t) continue;
+    const over = m.runs.filter(r => !r.isTitle && !r.display && r.size >= t.size && r.w >= t.w)
+      .map(r => `${r.sel}“${r.text}” ${r.size}/${r.w}`);
+    ok(over.length === 0, `W1 ${n}: nothing outweighs the page title (${t.size}/${t.w}) ${over.slice(0, 3).join(', ')}`);
+  }
+
+  /* --- W2 a dashboard box has ONE bold thing: its name (the pending pill aside) --- */
+  const adminBoxes = by('1-admin').boxes;
+  ok(adminBoxes.length > 0, `W2 the Admin home renders its boxes (${adminBoxes.length})`);
+  const fat = adminBoxes.filter(b => b.bold.length !== 1);
+  ok(fat.length === 0, `W2 each Admin box has exactly one 600 run, its name (${fat.map(b => b.name + ': ' + b.bold.join(' ')).join(' | ') || 'ok'})`);
+
+  /* --- W3 an error is not quieter than the status it stands in for --- */
+  const jm = by('2-juegos');
+  ok(jm.errW != null && jm.stW != null && jm.errW >= jm.stW,
+    `W3 the BGG failure reads at least as loud as a Borrador status (error ${jm.errW}, status ${jm.stW})`);
+
+  /* --- W4 report the bold share per page, so a future round can see it move --- */
+  for (const [n, m] of seen) {
+    const b = m.runs.filter(r => r.w === 600).length;
+    log.push(`     weight ${n}: ${b}/${m.runs.length} runs at 600 (${Math.round(b / m.runs.length * 100)}%)`);
+  }
 
   /* --- D6 counters: the tab badge, the drawer count and the page agree, and keep agreeing --- */
   await p.evaluate(() => { go('estantes'); });

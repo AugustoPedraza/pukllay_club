@@ -167,3 +167,6 @@ identical shared block "065: one label per job" is appended to 059–063; the ch
   11px uppercase muted — and the page head sits 24px above the first block.
 - **iOS focus-zoom, finally answered.** This sketch flagged it and deferred it to "the viewport meta".
   065 settles it without `maximum-scale`: fields go to 16px on coarse pointers only. See 065's README.
+- **Weight balance (round 2).** `.err-t` was 400 while `.st-draft` was 600, so "Error al traer datos
+  de BGG" — the row with a Reintentar next to it — read quieter than a "Borrador" status. Both 600
+  now. Dashboard box weights as in 060.

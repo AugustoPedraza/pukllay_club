@@ -2,8 +2,8 @@
 sketch: 065
 name: admin-composition
 question: "Do the five admin pages designed on their own hold together as one app in a continuous walk — Admin → Juegos → editor → ‹ back → Web → sección → Estantes → Asignar → Perfil — or has drift crept in?"
-winner: "composition (no variants) — 11 drift bugs found and fixed upstream, plus the mobile keyboard 059/061 never tested"
-tags: [admin, consistency, composition, shell, rhythm, labels, counters, keyboard, mobile-first, phase-01.8.1]
+winner: "composition (no variants) — 11 drift bugs + 2 weight-balance bugs found and fixed upstream, plus the mobile keyboard 059/061 never tested"
+tags: [admin, consistency, composition, shell, rhythm, labels, weight, counters, keyboard, mobile-first, phase-01.8.1]
 ---
 
 # Sketch 065: Admin, composed
@@ -24,7 +24,7 @@ event layer, the walk, and the phone keyboard.
 ```
 node .planning/sketches/065-admin-composition/build.js     # regenerate after editing 059–063
 python3 -m http.server 8765 &                              # from the repo root
-node .planning/sketches/065-admin-composition/verify.js    # 100 checks
+node .planning/sketches/065-admin-composition/verify.js    # 113 checks
 ```
 
 ## How to View
@@ -104,6 +104,47 @@ Neither carried 061's R2 polish pass — no `.polish` block, never applied the c
 home and the shell rendered their titles at 32px Bebas and their fields at the pre-polish scale,
 while every page reached from them used 22px Inter. Both now carry the block and apply it.
 
+## Round 2 — font-weight balance
+
+The app ships Inter **400 and 600 only**, so 064 could only ask "is every weight 400 or 600?" (it is).
+Balance is about *where* 600 lands. Counting every visible text run in the page body:
+
+| | Admin | Juegos | editor | Web | sección | Estantes | Asignar | Niveles | Staff |
+|---|---|---|---|---|---|---|---|---|---|
+| before | **94%** | 11% | 44% | 15% | 10% | 37% | 11% | 18% | 29% |
+| after | 63% | 12% | 44% | 15% | 10% | 37% | 11% | 18% | 29% |
+
+**The Admin home was 94% bold — 15 of its 16 text runs.** Every line of every box was 600: the name
+(16px/600) *and* the number (22px/600), stacked, with nothing between them, so neither led. Worse,
+the number was **typographically identical to the page's own title** — both 22px/600 — so "412"
+shouted as loudly as "Admin", four times over. "Revisar niveles" wrapped to two bold lines and became
+the heaviest thing on the page.
+
+The rule the rest of the admin already followed, now written down and enforced:
+
+> **600 marks a label, an action, or a state that needs noticing. Content is 400.**
+
+So in a dashboard box the **name is the box's label** → 13px/600, the same as the section label a box
+effectively is (down from 16px, which also stops "Revisar niveles" wrapping); the **number is
+content** → 22px/**400**, still the headline figure, just no longer shouting. Each box now has
+exactly one bold run — its name — plus the accent pill when work is pending. The page title leads
+again.
+
+Second finding, same rule: **`.err-t` was 400 while `.st-draft` was 600**, so in a Juegos row "Error
+al traer datos de BGG" — the one line with a Reintentar button next to it — read *quieter* than the
+"Borrador" status it replaces. An enrichment failure is exactly "a state that needs noticing": 600.
+
+**The editor's 44% is not drift.** It is the read-only BGG box, whose pills are the shipped public
+component (`.pk-pill { font-weight: 600 }` in `assets/css/app.css`) — 063 mirrors the public game
+page on purpose, and changing the weight there would break the mirror and diverge from production.
+
+Locked in by `verify.js`:
+- **W1** nothing in a page body is both as large as and as heavy as that page's own title (display
+  type — the editor's Bebas name and poster — is judged by size, since Bebas has one weight);
+- **W2** every Admin box has exactly one 600 run, its name, the pending pill aside;
+- **W3** an error reads at least as loud as the status it stands in for;
+- **W4** the bold share of every page is printed on each run, so a future round can see it move.
+
 ## The mobile keyboard — 059 and 061 flagged it, nobody had tested it
 
 All four questions are answered in the sketch and asserted in `verify.js`.
@@ -138,7 +179,7 @@ skipped when that heading is a field — which the editor's title is.
   rather than drift.
 
 ## Verification
-`verify.js` — 100 checks in headless Chrome, phone (420px) light and dark, then desktop at 1440px.
+`verify.js` — 113 checks in headless Chrome, phone (420px) light and dark, then desktop at 1440px.
 
 - **the walk** (10 stops): no horizontal overflow, every page opens at the top, at most one tab lit,
   and the lit tab follows the page into its drill-downs (editor → Juegos, sección → Web, Asignar →
@@ -152,6 +193,7 @@ skipped when that heading is a field — which the editor's title is.
   name wraps — 061's rule, on purpose);
 - **D6** badge, drawer count, dashboard box and page agree, and keep agreeing after an assignment,
   after resolving every level mismatch, and about the size of the ludoteca;
-- **K1–K4** the four keyboard questions above.
+- **K1–K4** the four keyboard questions above;
+- **W1–W4** the weight balance above.
 
 063's `verify.js` (63/63) and 064's `audit-admin.js` (94/94) still pass with every upstream fix in.

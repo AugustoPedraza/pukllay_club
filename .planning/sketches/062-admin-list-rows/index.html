@@ -120,10 +120,15 @@
   .box:hover { background: var(--color-surface); border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border)); }
   .box:active { transform: scale(.985); background: var(--color-surface-2); }
   .box:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-  .box-head { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; min-height: 24px; font-size: var(--text-base); font-weight: 600; color: var(--color-text); }
-  .box-head .ico { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted); }
+  /* 065: the box name is the LABEL of a labelled block, so it takes the same 13px/600 as a section
+     label — and the number below it is CONTENT, so it goes to 400. Before this every line in a box
+     was 600 (94% of the Admin home was bold) and the 22px/600 number was typographically identical
+     to the page's own 22px/600 title: nothing led. Now each box has exactly one bold thing, its
+     name, plus the accent pill when there is work pending. */
+  .box-head { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; min-height: 24px; font-size: 13px; font-weight: 600; letter-spacing: .01em; color: var(--color-text); }
+  .box-head .ico { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-muted); }
   .box-head .name { min-width: 0; line-height: 1.3; }
-  .box-num { font-size: 1.375rem; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--color-text); }
+  .box-num { font-size: 1.375rem; font-weight: 400; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--color-text); }
   .meter { align-self: stretch; height: 4px; border-radius: 2px; background: var(--color-surface-2); overflow: hidden; }
   .meter i { display: block; height: 100%; background: var(--color-primary); border-radius: 2px; }
   :root[data-theme="dark"] .meter i { background: var(--color-accent-text); }
@@ -367,7 +372,7 @@
   .dot.published { background: var(--color-success); }
   .dot.retired { background: transparent; box-shadow: inset 0 0 0 1.5px var(--color-text-muted); }
   .st-draft { color: var(--color-text); font-weight: 600; }
-  .err-t { color: var(--color-danger); }
+  .err-t { color: var(--color-danger); font-weight: 600; }   /* 065: an error was lighter than the "Borrador" status it replaces */
   .spin.sm { width: 12px; height: 12px; border-width: 1.5px; }
   .grow .chev { width: 18px; height: 18px; color: var(--color-text-muted); flex-shrink: 0; }
   .skel-line { display: block; height: 12px; border-radius: 6px; background: var(--color-surface-2); animation: pulse 1.2s ease-in-out infinite; }

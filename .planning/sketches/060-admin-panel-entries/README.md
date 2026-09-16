@@ -218,3 +218,7 @@ identical shared block "065: one label per job" is appended to 059–063; the ch
 - **The polish type scale (061 R2) applied** — this sketch predates it and still rendered its title
   at 32px Bebas.
 - The frozen dashboard literals now match what Web and Estantes actually show (7 filas, not 5).
+- **Weight balance (round 2).** The boxes were 94% bold: name 16px/600 over number 22px/600, and the
+  number was the same size and weight as the page title, so nothing led. The name is the box's label
+  → 13px/600 (the section-label size; "Revisar niveles" stops wrapping); the number is content →
+  22px/400. One bold run per box, its name, plus the pending pill.
