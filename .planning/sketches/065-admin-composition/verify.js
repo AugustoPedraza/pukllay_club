@@ -83,7 +83,7 @@ window.__m = () => {
       && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && !el.matches('.pend'))
       .map(el => (el.className || el.tagName) + '“' + el.textContent.trim().slice(0, 16) + '”'),
   }));
-  const err = main.querySelector('.err-t'), stt = main.querySelector('.st-draft');
+  const err = main.querySelector('.err-t'), stt = main.querySelector('.st-pill.draft, .st-draft');
   const pri = [...main.querySelectorAll('.obtn, .b-pri')].filter(vis).map(el => ({
     text: el.textContent.trim(), top: Math.round(el.getBoundingClientRect().top - mainTop) }));
   const badges = [...dev.querySelectorAll('.tabs [data-tab]')].map(t => ({
@@ -219,7 +219,7 @@ window.__kb = () => {
   /* --- W3 an error is not quieter than the status it stands in for --- */
   const jm = by('2-juegos');
   ok(jm.errW != null && jm.stW != null && jm.errW >= jm.stW,
-    `W3 the BGG failure reads at least as loud as a Borrador status (error ${jm.errW}, status ${jm.stW})`);
+    `W3 the BGG failure reads at least as loud as the Borrador pill (error ${jm.errW}, status ${jm.stW})`);
 
   /* --- W4 report the bold share per page, so a future round can see it move --- */
   for (const [n, m] of seen) {
@@ -278,6 +278,61 @@ window.__kb = () => {
   const invites = await p.evaluate(() => V.staff.filter(x => x.st === 'pending').length);
   ok(staffBox.foot.replace(/\D/g, '') === String(invites) || (!invites && !/pendiente/.test(staffBox.foot)),
     `D6 the Admin box for Staff agrees (“${staffBox.foot}” vs ${invites} invitación pendiente)`);
+
+  /* ================= S. status marks the exception (065 R2) =================
+     407 of 412 games are published, so "Publicado" on every row was the least informative word on
+     the page. Published is now the unmarked default; a draft and a retired game each carry a pill
+     that says its word — never colour alone (WCAG 1.4.1) — and a retired row is muted, a draft row
+     never is (grey means "unavailable"; a draft is the most actionable row there is). */
+  for (const theme of ['light', 'dark']) {
+    await p.evaluate(t => t === 'dark' ? document.documentElement.dataset.theme = 'dark' : delete document.documentElement.dataset.theme, theme);
+    await p.evaluate(() => { J.prompt = null; J.add = ''; go('juegos'); });
+    await p.waitForTimeout(320);
+    const st = await p.evaluate(() => {
+      const rgb = s => { const srgb = /^color\(srgb/.test(s); const m = s.replace(/^color\(srgb/, '').match(/[\d.]+/g).map(Number); const k = srgb ? 255 : 1; return { r: m[0] * k, g: m[1] * k, b: m[2] * k, a: srgb ? (/\//.test(s) ? m[3] : 1) : (m[3] ?? 1) }; };
+      const lum = c => [c.r, c.g, c.b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((s, v, i) => s + v * [.2126, .7152, .0722][i], 0);
+      const cr = (x, y) => +((Math.max(lum(x), lum(y)) + .05) / (Math.min(lum(x), lum(y)) + .05)).toFixed(2);
+      const bgOf = el => { const st = []; for (let n = el; n; n = n.parentElement) { const c = rgb(getComputedStyle(n).backgroundColor); if (c.a > 0) { st.push(c); if (c.a === 1) break; } } let base = { r: 255, g: 255, b: 255 }; for (const c of st.reverse()) base = { r: c.r * c.a + base.r * (1 - c.a), g: c.g * c.a + base.g * (1 - c.a), b: c.b * c.a + base.b * (1 - c.a) }; return base; };
+      const rows = [...document.querySelectorAll('#jlist .glist .grow')].map(r => {
+        const g = J.games.find(x => x.id === +r.dataset.gid) || {};
+        const pill = r.querySelector('.st-pill');
+        return { status: g.status, enr: g.enr, pill: pill ? pill.textContent.trim() : null,
+          pillContrast: pill ? cr(rgb(getComputedStyle(pill).color), bgOf(pill)) : null,
+          muted: r.classList.contains('is-retired'),
+          nameColor: getComputedStyle(r.querySelector('.gname')).color,
+          nameContrast: cr(rgb(getComputedStyle(r.querySelector('.gname')).color), bgOf(r)),
+          sub: (r.querySelector('.gsub')?.textContent || '').replace(/\s+/g, ' ').trim() };
+      });
+      /* the banner compares one or two named games, so there every status shows */
+      J.add = '13'; J.prompt = { bgg: 13, games: J.games.filter(x => x.bgg === 13 && x.enr === 'ok') }; refreshAdd();
+      const banner = [...document.querySelectorAll('.banner .st-pill')].map(el => ({ text: el.textContent.trim(), contrast: cr(rgb(getComputedStyle(el).color), bgOf(el)) }));
+      J.prompt = null; J.add = ''; refreshAdd();
+      return { rows, banner };
+    });
+    const ok_ = st.rows.filter(r => r.enr === 'ok');
+    /* S1 — published is unmarked; every exception is marked, and marked with a WORD */
+    const wrongPub = ok_.filter(r => r.status === 'published' && r.pill);
+    const wrongExc = ok_.filter(r => r.status !== 'published' && !r.pill);
+    ok(wrongPub.length === 0, `S1 ${theme}: no published row carries a status marker (${wrongPub.length} do)`);
+    ok(wrongExc.length === 0 && ok_.some(r => r.status !== 'published'), `S1 ${theme}: every draft/retired row is marked, with its word (${ok_.filter(r => r.pill).map(r => r.pill).join(', ') || 'none'})`);
+    /* S2 — never colour alone, and the label clears 4.5:1 against what is really behind it */
+    const faint = [...ok_.filter(r => r.pill), ...st.banner].filter(x => (x.pillContrast ?? x.contrast) < 4.5);
+    ok(faint.length === 0, `S2 ${theme}: every status label ≥ 4.5:1 (${[...ok_.filter(r => r.pill).map(r => r.pill + ' ' + r.pillContrast), ...st.banner.map(x => x.text + ' ' + x.contrast)].join(' · ')})`);
+    /* S3 — retired is muted, draft is never muted (grey means "unavailable") */
+    const badMute = ok_.filter(r => r.muted !== (r.status === 'retired'));
+    ok(badMute.length === 0, `S3 ${theme}: only retired rows are muted (${badMute.map(r => r.status).join(',') || 'ok'})`);
+    const retired = ok_.find(r => r.status === 'retired'), draft = ok_.find(r => r.status === 'draft');
+    ok(retired && draft && retired.nameColor !== draft.nameColor, `S3 ${theme}: a retired name reads differently from a draft name`);
+    ok(!retired || retired.nameContrast >= 4.5, `S3 ${theme}: a muted retired name is still readable (${retired && retired.nameContrast}:1)`);
+    /* S4 — the meta line keeps the year (it tells two editions apart) and drops the player count */
+    const pub = ok_.find(r => r.status === 'published');
+    ok(pub && /^\d{4}$/.test(pub.sub), `S4 ${theme}: a published row's meta line is just its year (“${pub && pub.sub}”)`);
+    ok(!ok_.some(r => /jug\./.test(r.sub)), `S4 ${theme}: no row still shows a player count`);
+    /* the banner states every status, including Publicado — it compares named games, it does not scan */
+    ok(st.banner.length === 2 && st.banner.some(x => x.text === 'Publicado'),
+      `S1 ${theme}: the edition banner states every status (${st.banner.map(x => x.text).join(', ')})`);
+  }
+  await p.evaluate(() => delete document.documentElement.dataset.theme);
 
   /* ================= 2. the mobile keyboard (059/061 flagged, never tested) ================= */
   await p.reload(); await p.waitForLoadState('load'); await p.evaluate(() => document.fonts.ready);

@@ -377,6 +377,26 @@
   .grow .chev { width: 18px; height: 18px; color: var(--color-text-muted); flex-shrink: 0; }
   .skel-line { display: block; height: 12px; border-radius: 6px; background: var(--color-surface-2); animation: pulse 1.2s ease-in-out infinite; }
 
+  /* ================= 065 R2: status marks the EXCEPTION — identical block in 061–063 =================
+     412 games are 3 borradores / 407 publicados / 2 retirados, so a "Publicado" label on every row was
+     the least informative word on the page, repeated 407 times. A published row now carries no marker
+     at all. A draft carries the SAME accent pill this admin already uses for pending work everywhere
+     else — the drawer counts, the tab badges, the Admin box's "3 borradores" — so the row and the
+     badge that counts it speak with one voice. A retired game carries a muted outline pill AND a muted
+     row, because retired is the one state that really is inactive (grey means "unavailable" on both
+     iOS and Android; a draft is the most actionable row on the page, so it must never be greyed).
+     Never colour alone: every pill carries its word (WCAG 1.4.1), and the dot this replaces measured
+     2.78:1 against the row, under the 3:1 floor for non-text contrast (WCAG 1.4.11). */
+  .st-pill { display: inline-flex; align-items: center; border-radius: var(--radius-full); border: 1px solid transparent;
+    font-size: 11px; font-weight: 600; line-height: 1.45; padding: 1px 8px; white-space: nowrap; }
+  .st-pill.draft { background: var(--color-accent-bg); color: var(--color-accent-text); }
+  /* Publicado only ever shows in the "¿Es otra edición?" banner, which sits ON --color-surface —
+     a surface-coloured fill vanished there. surface-2 reads as a chip on both grounds. */
+  .st-pill.published { background: var(--color-surface-2); color: var(--color-text); }
+  .st-pill.retired { border-color: var(--color-surface-2); color: var(--color-text-muted); }
+  .grow.is-retired .gname { color: var(--color-text-muted); }
+  .grow.is-retired .thumb { filter: saturate(.3); }
+
   .more { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 0 4px; border-top: 1px solid var(--color-border); margin: 0 -16px; }
   .more .cap { font-size: 12px; color: var(--color-text-muted); }
 
@@ -785,14 +805,21 @@ function gameRow(g, { compact = false } = {}) {
   const slot = pending ? '<span class="thumb skel" aria-hidden="true"></span>'
     : failed ? `<span class="thumb warn" aria-hidden="true">${ic('warn')}</span>`
     : `<span class="thumb" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
-  const status = `<span class="dot ${g.status}"></span><span class="${g.status === 'draft' ? 'st-draft' : ''}">${STATUS[g.status]}</span>`;
+  /* Publicado is the unmarked default (407 of 412 rows). `always` is for the "¿Es otra edición?"
+     banner, which compares one or two named games rather than scanning a list — there the status of
+     each is the whole point, so every status shows. */
+  const statusPill = (st, always) => st === 'published' && !always ? '' : `<span class="st-pill ${st}">${STATUS[st]}</span>`;
+  /* Año stays: it is what tells two editions of one game apart (Catan 1995 / Edición Aniversario 2020),
+     the case the "¿Es otra edición?" flow exists for. "N jug." is gone — member-facing choosing data
+     that helps nobody find or triage a game here, and it cost ~70px of a 375px row. */
   const sub = pending ? '<span class="spin sm"></span>Trayendo datos de BGG…'
     : failed ? '<span class="err-t">Error al traer datos de BGG</span>'
-    : compact ? status : `${status}<span>·</span><span>${g.year}</span><span>·</span><span>${g.pl} jug.</span>`;
+    : compact ? statusPill(g.status, true) : `${statusPill(g.status)}<span>${g.year}</span>`;
   const txt = `<span class="gtxt"><span class="gname">${name}</span><span class="gsub">${sub}</span></span>`;
-  if (pending) return `<div class="grow" data-gid="${g.id}" aria-busy="true">${slot}${txt}</div>`;
-  if (failed) return `<div class="grow" data-gid="${g.id}">${slot}${txt}<button type="button" class="tbtn" data-act="j-retry" data-game-id="${g.id}">Reintentar</button></div>`;
-  return `<button type="button" class="grow" data-act="j-open" data-game-id="${g.id}" data-gid="${g.id}">${slot}${txt}${ic('chevR', 'chev')}</button>`;
+  const cls = 'grow' + (g.status === 'retired' && !pending && !failed ? ' is-retired' : '');
+  if (pending) return `<div class="${cls}" data-gid="${g.id}" aria-busy="true">${slot}${txt}</div>`;
+  if (failed) return `<div class="${cls}" data-gid="${g.id}">${slot}${txt}<button type="button" class="tbtn" data-act="j-retry" data-game-id="${g.id}">Reintentar</button></div>`;
+  return `<button type="button" class="${cls}" data-act="j-open" data-game-id="${g.id}" data-gid="${g.id}">${slot}${txt}${ic('chevR', 'chev')}</button>`;
 }
 
 const addHtml = () => `<form class="jsec" id="add-form" novalidate>

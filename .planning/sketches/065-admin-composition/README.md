@@ -167,6 +167,60 @@ All four questions are answered in the sketch and asserted in `verify.js`.
 Arriving on a page also must not open the keyboard: landing focus goes on the page's heading, and is
 skipped when that heading is a field — which the editor's title is.
 
+## Round 3 — what a list row says (2026-09-15)
+
+Developer: *"on the admin/juegos, what is the point of show game date and players? instead of
+represent game status label what if we use colors to show them draft, published and archived?"*
+
+**Year and players were never in production.** The shipped `/admin/juegos` is two columns, Nombre |
+Estado (`admin/game_live/index.ex:361–387`) — no year, no players, no dates. 061 added them.
+
+- **Año stays.** It is the only thing that tells two editions of one game apart: the catalogue holds
+  `Catan · 1995` and `Catan: Edición Aniversario 25 Años · 2020` under the same BGG id, which is the
+  exact case the "¿Es otra edición?" flow exists for.
+- **"N jug." goes.** Member-facing *choosing* data. A staffer here is finding a named game or working
+  the drafts; player count helps with neither, and it cost ~70px of a 375px row.
+
+**Colour alone: no.** Three measured reasons, not a preference:
+1. **WCAG 1.4.1** — colour must never be the only visual means of conveying information.
+2. **The colours are already too weak to carry it.** Measured against the row: the amber draft dot
+   was **2.78:1**, under the 3:1 floor for non-text contrast (1.4.11). Published 3.92, retired 4.04.
+   The dot was failing as a *supporting* cue; as the sole carrier it is worse.
+3. **Grey and shadow already mean other things.** Grey/dim reads as *disabled / unavailable* on both
+   iOS and Android — but a **Borrador is the most actionable row on the page**, the one you must go
+   finish, so greying it inverts the meaning. Shadow is a surface channel (what floats above what),
+   is nearly invisible in dark mode, and 063 R3 deliberately stripped shadows out of this admin.
+   Grey *is* right for **Retirado** — that one really is inactive.
+
+**The real problem was that the label was on all 412 rows.** The fixture is 3 borradores / 407
+publicados / 2 retirados, so **98.8% of rows said "Publicado"** — the least informative word on the
+page, 407 times. Mobile practice: *mark the exception, not the rule.*
+
+| status | row |
+|---|---|
+| **Publicado** | no marker at all. Just the game and its year. |
+| **Borrador** | the same accent pill this admin already uses for pending work everywhere else — the drawer counts, the tab badges, the Admin box's "3 borradores" — so the row and the badge that counts it speak with one voice. |
+| **Retirado** | a muted outline pill **and** a muted row (name + desaturated thumb). |
+
+The **"¿Es otra edición?" banner** is the one place every status shows, Publicado included: it
+compares one or two named games rather than scanning a list, so each one's status is the point.
+
+Measured after: Borrador **11.3:1** light / 10.5 dark, Retirado 6.2 / 6.9, Publicado (banner) 12.1 /
+10.5, and a muted retired name still **6.2:1** — muted, never illegible.
+
+**Two repo rules this follows.** `app.css:1165–1200` governs pills: *"every visual property a pill can
+have is declared here, once; a call site picks the base and a tone… a call site that needs a property
+this block does not offer adds a VARIANT here, never a rule of its own."* The shipped admin's
+`badge badge-warning` is a sixth pill family sitting outside that system, and this is the shape of
+the variant it should become. And `card-interaction.md` already tested bright row badges and rejected
+them — *"it reads as louder than a metadata detail warrants"* — so these pills are quiet, not filled
+warning colours.
+
+Asserted by `verify.js` in both themes: **S1** published is unmarked, every exception is marked and
+marked with its *word*; **S2** every status label ≥ 4.5:1 against what is really behind it; **S3**
+only retired rows are muted, a retired name stays readable, and a draft never reads as disabled;
+**S4** the meta line is the year and no player count.
+
 ## Left as settled
 - **The editor's title is 30px Bebas** while every page title is 22px Inter. That is 063's deliberate
   mirror of the public game page, and the walk did not argue against it — it now at least starts at

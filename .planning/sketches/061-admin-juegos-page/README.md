@@ -170,3 +170,9 @@ identical shared block "065: one label per job" is appended to 059–063; the ch
 - **Weight balance (round 2).** `.err-t` was 400 while `.st-draft` was 600, so "Error al traer datos
   de BGG" — the row with a Reintentar next to it — read quieter than a "Borrador" status. Both 600
   now. Dashboard box weights as in 060.
+- **Round 3 (what a row says, from sketch 065).** Year and player count were never in production
+  (the shipped list is Nombre | Estado). Año stays — it is what tells two editions of one game apart;
+  "N jug." is gone. Status now marks the EXCEPTION: Publicado is unmarked (it was 407 of 412 rows),
+  Borrador takes the accent pill this admin already uses for pending work, Retirado takes a muted
+  outline pill and a muted row. Never colour alone — the amber dot it replaces measured 2.78:1,
+  under the 3:1 non-text floor, and grey means "disabled", which a draft never is.
