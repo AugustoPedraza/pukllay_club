@@ -178,3 +178,16 @@ experto 46 (26 without a band). Recientes shows the newest 30.
     no meaning; row height 64 and content top 12.8 vs tile 12 unchanged. Sheet contexts read "Fila personalizada" /
     "Fila automática" / "Fila destacada".
     Rejected: tagging only automatic rows (two row heights in one list); dropping the tag for the row's public subtitle.
+
+17. **The row name opens the row's options sheet** (Web and any row page): the pencil is gone; the name is a 44px-tall
+    button with a ⌄ chevron, opening the same sheet Filas uses, with **Editar nombre** inside it — one target instead of
+    two, and the name is no longer a button that only renames.
+    On a row page the sheet drops **Juegos** (you are on it). The destacada's page sheet would have held one row, so it
+    gains **Cambiar la destacada** → Filas del inicio ("Elegir otra fila para el inicio"). A non-destacada row page keeps
+    Destacar · Editar nombre · Ocultar del inicio.
+    Measured: hit box 44.1px; a **wrapped two-line name** was overlapping the context line by 6px because a 44px
+    min-height only has slack while the name is one line — the button now uses 11px padding, so one line (44.1) and two
+    lines (66.2) keep the same 5px of visible air above "7 de 20 juegos"; no horizontal scroll at 375.
+    Caught while measuring: the ⌄ drew an empty SVG (this sketch's icon set had no `chevD`).
+    Rejected: a ⋯ header icon beside the pencil; an "Opciones de la fila ›" row under the rail (D-19j).
+    Developer picked "The name opens the sheet (Recommended)".

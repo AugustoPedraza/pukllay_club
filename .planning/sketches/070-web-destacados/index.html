@@ -62,10 +62,15 @@
 
   /* ---- decision 4: the row name under the title, prompt rank (17/600) + pencil ---- */
   /* the pencil's 44px box is taller than the 22px text line; the row is pulled up so the TEXT sits 16px under the title row */
-  .fname { display: flex; align-items: center; gap: 0; min-height: 44px; margin-top: -3px; }
-  .fctx .tag { font-size: 12px; }
+  /* decision 17 — the name IS the row's options: one target, no pencil (Editar nombre lives in the sheet) */
+  .fname { display: flex; align-items: center; min-height: 44px; margin-top: -3px; }
+  /* 11px of padding, not min-height: a name that wraps to two lines keeps the same air under it (a 44px box only
+     has slack while the name is one line, and the context line then overlapped by 6px) */
+  .fname .fnbtn { display: flex; align-items: center; gap: 4px; max-width: 100%; margin-left: -8px; padding: 11px 8px; border: 0; background: none; border-radius: 8px; cursor: pointer; text-align: left; }
+  .fname .fnbtn:hover { background: var(--color-surface); }
+  .fname .fnbtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   .fname h2 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
-  .fname .ibtn { margin-left: 2px; }
+  .fname .fnbtn > svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted); }
   .fctx { margin: -6px 0 0; gap: 6px; font-size: 14px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
 
@@ -282,7 +287,7 @@
 <script>
 /* ---------- icons ---------- */
 const P = {
-  x: '<path d="M6 6l12 12M18 6 6 18"/>', chevL: '<path d="m15 6-6 6 6 6"/>', search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>', chevL: '<path d="m15 6-6 6 6 6"/>', chevD: '<path d="m6 9 6 6 6-6"/>', search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
   eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
   eyeoff: '<path d="M3 3l18 18M10.6 5.6A10 10 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.7M6.6 6.6C3.9 8.3 2.5 12 2.5 12S6 18.5 12 18.5c1.8 0 3.3-.5 4.6-1.2M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   move: '<path d="M5 9 2 12l3 3M19 9l3 3-3 3M2 12h20"/>', remove: '<path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/>',
@@ -347,7 +352,8 @@ function render() {
   main.innerHTML = `
     ${CUR ? `<button class="back" data-act="filas">${ic('chevL')}Filas del inicio</button>` : `<div class="phead"><h1 class="ptitle">Web</h1><div class="hacts">
       <button class="ibtn" data-act="filas" aria-label="Filas del inicio" title="Filas del inicio">${ic('rows')}</button></div></div>`}
-    <div class="fname"><h2 id="fname">${esc(ROW().name)}</h2><button class="ibtn" data-act="rename" aria-label="Editar el nombre de ${esc(ROW().name)}" title="Editar el nombre">${ic('edit')}</button></div>
+    <div class="fname"><button class="fnbtn" data-act="rowopts" aria-haspopup="dialog" aria-label="${esc(r.name)} · opciones de la fila">
+      <h2 id="fname">${esc(r.name)}</h2>${ic('chevD')}</button></div>
     <p class="fctx">${ctx}</p>
     <div class="shelf">${n ? `<div class="rail" id="rail" role="group" aria-labelledby="fname">${slot(0, full)}${ids.map((id, i) => { const g = byId(id);
         return `<button class="box" data-act="box" data-id="${id}" aria-label="${esc(g.name)}, ${i + 1} de ${n}. Tocá para ver opciones">${cover(g, 'bc')}<span class="cap">${esc(g.name)}</span></button>${slot(i + 1, full)}`; }).join('')}</div>`
@@ -460,14 +466,15 @@ function renderFilas(focusSel) {
 }
 const filaRow = r => `<button class="row${r.hidden ? ' hid' : ''}" data-act="rowsheet" data-rid="${r.id}">
   ${rowTile(r)}<span class="txt"><span class="name">${esc(r.name)}</span><span class="sub">${rowSub(r)}</span></span></button>`;
-function rowSheet(r, from) {
-  const games = r.feat ? `<button class="dlink" data-act="back">${ic('hand')}<span>Juegos<span class="dsub">Se editan en Web</span></span></button>`
+function rowSheet(r, from, onPage) {
+  const games = onPage ? '' : r.feat ? `<button class="dlink" data-act="back">${ic('hand')}<span>Juegos<span class="dsub">Se editan en Web</span></span></button>`
     : r.kind === 'manual' ? `<button class="dlink" data-act="rowgames" data-rid="${r.id}">${ic('hand')}<span>Juegos<span class="dsub">Agregar, quitar y ordenar</span></span></button>` : '';
   const over = r.ids && r.ids.length > CAP;
+  const swap = onPage && r.feat ? `<button class="dlink" data-act="filas">${ic('star')}<span>Cambiar la destacada<span class="dsub">Elegir otra fila para el inicio</span></span></button>` : '';
   const destacar = r.kind === 'manual' && !r.feat ? `<button class="dlink" data-act="destacar" data-rid="${r.id}">${ic('star')}<span>Destacar<span class="dsub">${over ? `Tiene ${r.ids.length} juegos · la destacada lleva hasta ${CAP}` : 'Pasa a ser la primera fila del inicio'}</span></span></button>` : '';
   const hide = r.feat ? '' : `<button class="dlink" data-act="togglehide" data-rid="${r.id}">${ic(r.hidden ? 'eye' : 'eyeoff')}<span>${r.hidden ? 'Mostrar en el inicio' : 'Ocultar del inicio'}<span class="dsub">${r.hidden ? 'Vuelve a verse en su lugar' : 'Guarda sus juegos para más adelante'}</span></span></button>`;
   openSheet(`<span class="tile">${ic(kindIcon(r))}</span><div class="sh-txt"><div class="ctx">${r.feat ? 'Fila destacada' : 'Fila ' + esc(kindLabel(r))}</div><div class="sh-title">${esc(r.name)}</div></div>`,
-    `${destacar}<button class="dlink" data-act="editrow" data-rid="${r.id}">${ic('edit')}<span>Editar nombre<span class="dsub">Así se ve el título en el inicio</span></span></button>${games}${hide}`, from);
+    `${destacar}${swap}<button class="dlink" data-act="editrow" data-rid="${r.id}">${ic('edit')}<span>Editar nombre<span class="dsub">Así se ve el título en el inicio</span></span></button>${games}${hide}`, from);
 }
 /* decision 7 — the role moves: the new row goes first, the old one heads the rest */
 function destacar(r) {
@@ -548,13 +555,14 @@ document.addEventListener('click', e => {
     return snack('Juego quitado', { label: 'Deshacer', run: () => { r.ids = before; render(); } }); }
   if (act === 'dlg-no') return closeDialog();
   if (act === 'dlg-yes') { const run = DLG.run; closeDialog(); return run(); }
-  if (act === 'rename') return nameSheet(ROW(), t);
+  if (act === 'rowopts') return rowSheet(ROW(), t, true);
   if (act === 'namesave') return nameSave();
   if (act === 'filas') { closeSheet(); CUR = null; S.screen = 'filas'; render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'back') { closeSheet(); ORD = null; CUR = null; S.screen = 'web'; render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'rowsheet') return rowSheet(ROWS.find(r => r.id === rid), t);
   if (act === 'newrow') return nameSheet(null, t, true);
-  if (act === 'editrow') { const r = ROWS.find(x => x.id === rid); closeSheet(); return setTimeout(() => nameSheet(r, document.querySelector(`[data-act="rowsheet"][data-rid="${rid}"]`)), 280); }
+  if (act === 'editrow') { const r = ROWS.find(x => x.id === rid); closeSheet();
+    return setTimeout(() => nameSheet(r, document.querySelector(`[data-act="rowsheet"][data-rid="${rid}"]`) || $('.fnbtn')), 280); }
   if (act === 'rowgames') { closeSheet(); CUR = ROWS.find(x => x.id === rid); S.screen = 'web'; render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'destacar') return destacar(ROWS.find(x => x.id === rid));
   if (act === 'togglehide') { const r = ROWS.find(x => x.id === rid); r.hidden = !r.hidden; closeSheet(); render();
