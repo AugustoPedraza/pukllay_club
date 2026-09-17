@@ -131,3 +131,42 @@ without asking: a row with more than 20 games cannot be destacada (sub-line says
     updates its Filas count (61 → 62).
     Rejected: a list page for long rows (two editors); a "Buscá en la fila" field over the rail (a second control above
     the main one). Developer picked "Same page as Web (Recommended)".
+
+13. **Nueva fila opens the new row's page** (after Crear fila): `‹ Filas del inicio`, its name, "Sin juegos, no se ve en el
+    inicio" and the empty rail's "+" — ready for the first game. Developer: *"yes"*.
+
+(Round 5 asks, 2026-09-17, developer's words:)
+- *"Subitle could me a little more meaningful without breaking balance (is automatic? how many games has?)"*
+- *"yes (I need to access its options to from the bottom-sheet)"* — a row's options sheet reachable from its page.
+- *"PLus I want to improve what the "web" initial page shows since is too empty right now and it breaks rythm"*
+Facts found: a non-destacada row shows at most **30** games on the home page (`@carousel_infinite_scroll_max`);
+the destacada at most 20. Published games per Nivel (dev): Descubre el hobby 179 · Ingenio estratega 183 · Nivel
+experto 46 (26 without a band). Recientes shows the newest 30.
+
+14. **A row's second line = [● status ·] a kind tag + its count.** Copy: **Personalizada / Automática** (replaces "Elegida
+    a mano", "Por nivel", "Los últimos que llegaron"); counts: destacada "7 de 20", hand-picked "61 juegos" (or
+    "Vacía"), Nivel rows their published games ("179 juegos"), Recientes "los últimos 30".
+    Developer: *"But needs better copy. A mano isn't meaningufl at all."* → then *"but could looks more like a "tag" or
+    something like that instead of like pure text?"* → *"show me variants 1 and 2"*.
+    Tags are not statuses (D-19h allows them). Variants on tools → Etiqueta, measured 360/375 × both themes:
+    - **T1 Tonal** — 20px, 12/600, tile tint fill + accent text: text 12.25:1 light / 10.49:1 dark; fill vs page only
+      1.16 / 1.11 (the tag's edge is carried by its text colour, like the icon tile).
+    - **T2 Contorno** — 20px, 1px --stroke, muted text: text 6.17 / 6.90; border vs page 4.31 / 3.48 (≥3:1).
+    Both: second line stays one line (20px) at 360 even with ● Oculta (276/276px), rows stay 64px.
+
+15. **Tag = Contorno; count = Esquina badge on the tile.** Developer: *"I like contorno and esquina variants. Remove the
+    another and then review the full balance to have it correct since now it breaks rythm"* — note this reverses the
+    previous turn's "Tonal is better" for the tag (flagged; kept the later word). Losing variants and their toggles
+    removed from the sketch.
+    Count badge: 18px pill hanging 5px off the tile's bottom-right, page fill + 1px --stroke + 11/600 muted (the
+    Pendientes badge is top-right, filled primary, white — different corner, different colour). It clears the row
+    divider (badge right 61, divider starts at 68). The count is in the tile's accessible name ("61 juegos").
+    **Balance pass after removing them** (375×740, both themes, measured, not eyeballed):
+    - the status gap went back to 069's 6px (it had become 8);
+    - a 20px tag sits 4px lower than a 13px text line, so the second line's box gap goes to 0 (`.sub:has(.tag)`) and the
+      row keeps its rhythm: content top 12.3 vs tile top 12, row still 64;
+    - one vocabulary everywhere: "Elegida a mano"/"Por nivel"/"Los últimos que llegaron" → **Personalizada / Automática**
+      (list rows, sheets, the name sheet's context);
+    - the row PAGE drops the kind tag and keeps only state ("7 de 20 juegos", "61 juegos", "● Oculta · …"): on the page
+      you are already inside that row, and the long "Personalizada 7 de 20 juegos · primera del inicio" broke the line.
+    Rhythm on Web unchanged: title → name 16.8 · name → context 5 · context → covers 16.

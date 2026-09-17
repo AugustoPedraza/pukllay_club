@@ -63,9 +63,10 @@
   /* ---- decision 4: the row name under the title, prompt rank (17/600) + pencil ---- */
   /* the pencil's 44px box is taller than the 22px text line; the row is pulled up so the TEXT sits 16px under the title row */
   .fname { display: flex; align-items: center; gap: 0; min-height: 44px; margin-top: -3px; }
+  .fctx .tag { font-size: 12px; }
   .fname h2 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
   .fname .ibtn { margin-left: 2px; }
-  .fctx { margin: -6px 0 0; font-size: 14px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
+  .fctx { margin: -6px 0 0; gap: 6px; font-size: 14px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
 
   /* ---- decisions 3 + 5: the rail, a "+" in every gap ---- */
@@ -122,6 +123,17 @@
   .txt { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
   .row .name { font-size: 15px; line-height: 1.3; }
   .sub { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
+  /* decision 14 — kind tag. T1 tonal: the icon tile's own tint; T2 outlined: 1px stroke, no fill */
+  .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; }
+  .tag { border: 1px solid var(--stroke); color: var(--color-text-muted); }
+  .row .sub { gap: 6px; }
+  /* a 20px tag sits 4px lower than a 13px text line, so the box gap goes to 0 to keep the name→second-line rhythm */
+  .sub:has(.tag) { margin-top: -2px; }
+  /* decision 15 — count on the tile: bottom-right neutral pill */
+  .tile { position: relative; }
+  .cnum { font-size: 11px; font-weight: 600; line-height: 1; }
+  .cnum { position: absolute; right: -5px; bottom: -5px; height: 18px; min-width: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--color-bg); border: 1px solid var(--stroke); color: var(--color-text-muted); display: grid; place-items: center; }
   .tile { width: 40px; height: 40px; border-radius: 8px; background: var(--color-surface); display: grid; place-items: center; flex-shrink: 0; color: var(--color-accent-text); }
   .tile svg { width: 22px; height: 22px; }
   .row.hid .name { color: var(--color-text-muted); }
@@ -309,9 +321,9 @@ const ROWS = [
   { id: 3, name: 'Equipo ganador', kind: 'manual', ids: pickIds(54, 5) },
   { id: 4, name: 'Duelos memorables', kind: 'manual', ids: pickIds(19, 7) },
   { id: 9, name: 'Favoritos de Lacerda', kind: 'manual', ids: [...MORE.slice(0, 5), ...pickIds(4, 11)], hidden: true },
-  { id: 5, name: 'Descubre el hobby', kind: 'level' },
-  { id: 6, name: 'Ingenio estratega', kind: 'level' },
-  { id: 7, name: 'Nivel experto', kind: 'level' },
+  { id: 5, name: 'Descubre el hobby', kind: 'level', auto: 179 },   /* published games per band, dev DB 2026-09-17 */
+  { id: 6, name: 'Ingenio estratega', kind: 'level', auto: 183 },
+  { id: 7, name: 'Nivel experto', kind: 'level', auto: 46 },
   { id: 8, name: 'Recientemente añadidos', kind: 'recent' },
 ];
 /* decision 7 — "destacada" is a role: exactly one hand-picked row holds it, always ROWS[0] (pinned first on the home) */
@@ -327,8 +339,9 @@ const main = $('#main'), device = $('#device');
 function render() {
   if (S.screen === 'filas') return renderFilas();
   const r = ROW(), ids = r.ids, n = ids.length, full = r.feat && n >= CAP;
-  const ctx = r.hidden ? `<span class="dot" aria-hidden="true"></span>Oculta · no se ve en el inicio` : !n ? `Sin juegos, no se ve en el inicio`
-    : r.feat ? `Primera fila del inicio · ${n} de ${CAP} juegos` : `Elegida a mano · ${jn(n)}`;
+  /* the page is the row: no kind tag here (you are editing it), just its state — the tag belongs in the list */
+  const ctx = (r.hidden ? `<span class="dot" aria-hidden="true"></span>Oculta<span aria-hidden="true">·</span>` : '')
+    + (!n ? 'Sin juegos, no se ve en el inicio' : r.feat ? `${n} de ${CAP} juegos` : jn(n));
   main.innerHTML = `
     ${CUR ? `<button class="back" data-act="filas">${ic('chevL')}Filas del inicio</button>` : `<div class="phead"><h1 class="ptitle">Web</h1><div class="hacts">
       <button class="ibtn" data-act="filas" aria-label="Filas del inicio" title="Filas del inicio">${ic('rows')}</button></div></div>`}
@@ -396,7 +409,7 @@ function moveSheet(g, from) {
 function nameSheet(row, from, isNew) {
   EDIT = { id: row ? row.id : null };
   const def = row ? row.name : 'Nueva fila';
-  openSheet(`<span class="tile">${ic(row ? kindIcon(row) : 'hand')}</span><div class="sh-txt"><div class="ctx">${row ? (row.feat ? 'Fila destacada' : kindLabel(row)) : 'Elegida a mano'}</div><div class="sh-title">${row ? 'Editar fila' : 'Nueva fila'}</div></div>`,
+  openSheet(`<span class="tile">${ic(row ? kindIcon(row) : 'hand')}</span><div class="sh-txt"><div class="ctx">${row ? (row.feat ? 'Fila destacada' : kindLabel(row)) : 'Personalizada'}</div><div class="sh-title">${row ? 'Editar fila' : 'Nueva fila'}</div></div>`,
     `<div class="fbody"><label class="flab" for="rn">Nombre</label>
       <input id="rn" class="tfield" value="${esc(def)}" maxlength="40" autocomplete="off" enterkeyhint="done" aria-describedby="rnhint rnerr">
       <p class="hint" id="rnhint">Así se ve el título de la fila en el inicio.</p><p class="ferr" id="rnerr" role="alert" hidden></p>
@@ -410,16 +423,27 @@ function nameSave() {
   if (!name) return bad('Escribí un nombre.');
   if (ROWS.some(r => r.id !== EDIT.id && norm(r.name) === norm(name))) return bad('Ya hay una fila con ese nombre.');
   const row = EDIT.id ? ROWS.find(r => r.id === EDIT.id) : null, same = row && row.name === name;
-  if (row) row.name = name; else ROWS.push({ id: Math.max(...ROWS.map(r => r.id)) + 1, name, kind: 'manual', n: 0 });
-  closeSheet(); render(); if (!same) snack(row ? 'Nombre guardado' : 'Fila creada');
+  if (row) row.name = name;
+  else { const nr = { id: Math.max(...ROWS.map(r => r.id)) + 1, name, kind: 'manual', ids: [] }; ROWS.push(nr);
+    /* decision 13 — a new row opens on its own page, ready for its first game */
+    closeSheet(); CUR = nr; S.screen = 'web'; render(); $('#scroller').scrollTo({ top: 0 }); return snack('Fila creada'); }
+  closeSheet(); render(); if (!same) snack('Nombre guardado');
 }
 
 /* ---------- Filas del inicio (decision 6) ---------- */
 const kindIcon = r => r.feat ? 'star' : ({ manual: 'hand', level: 'level', recent: 'clock' })[r.kind];
-const kindLabel = r => ({ manual: 'Elegida a mano', level: 'Por nivel', recent: 'Los últimos que llegaron' })[r.kind];
+const kindLabel = r => r.kind === 'manual' ? 'Personalizada' : 'Automática';
 const rowCount = r => r.ids ? r.ids.length : null;
-const rowSub = r => { const c = rowCount(r), bits = [kindLabel(r)]; if (c != null) bits.push(c ? jn(c) : 'Vacía');
-  return (r.hidden ? `<span class="dot" aria-hidden="true"></span>Oculta · ` : '') + esc(bits.join(' · ')); };
+/* decision 14 — the row's second line: [status ·] an outlined tag saying how the row fills; the count lives on the tile */
+const rowN = r => r.ids ? r.ids.length : r.kind === 'recent' ? 30 : r.auto;
+const rowSub = r => { const auto = r.kind !== 'manual', n = rowN(r);
+  const tail = r.feat ? 'hasta ' + CAP : n ? '' : 'Vacía';
+  return (r.hidden ? `<span class="dot" aria-hidden="true"></span>Oculta<span aria-hidden="true">·</span>` : '')
+    + `<span class="tag">${auto ? 'Automática' : 'Personalizada'}</span>${tail ? esc(tail) : ''}`; };
+/* decision 15 — the count is a neutral pill on the tile's BOTTOM-right corner (the Pendientes badge is top-right, filled
+   primary: a different corner and a different colour, so it never reads as a notification) */
+const rowTile = r => { const n = rowN(r), lbl = n === 1 ? '1 juego' : `${n} juegos`;
+  return `<span class="tile" role="img" aria-label="${esc(lbl)}">${ic(kindIcon(r))}${n ? `<span class="cnum" aria-hidden="true">${n}</span>` : ''}</span>`; };
 let ORD = null;
 function renderFilas(focusSel) {
   if (ORD) return renderOrder(focusSel);
@@ -433,7 +457,7 @@ function renderFilas(focusSel) {
       <div class="rows">${ROWS.slice(1).map(filaRow).join('')}</div></section>`;
 }
 const filaRow = r => `<button class="row${r.hidden ? ' hid' : ''}" data-act="rowsheet" data-rid="${r.id}">
-  <span class="tile">${ic(kindIcon(r))}</span><span class="txt"><span class="name">${esc(r.name)}</span><span class="sub">${rowSub(r)}</span></span></button>`;
+  ${rowTile(r)}<span class="txt"><span class="name">${esc(r.name)}</span><span class="sub">${rowSub(r)}</span></span></button>`;
 function rowSheet(r, from) {
   const games = r.feat ? `<button class="dlink" data-act="back">${ic('hand')}<span>Juegos<span class="dsub">Se editan en Web</span></span></button>`
     : r.kind === 'manual' ? `<button class="dlink" data-act="rowgames" data-rid="${r.id}">${ic('hand')}<span>Juegos<span class="dsub">Agregar, quitar y ordenar</span></span></button>` : '';
@@ -455,10 +479,10 @@ function renderOrder(focusSel) {
   const n = ROWS.length;
   main.innerHTML = `<div class="phead mhead"><h1 class="ptitle">Ordenar filas</h1><button class="tbtn pull-r" data-act="ordoff">Listo</button></div>
     <p class="hint">Arrastrá ≡ al orden en que se ven en el inicio, debajo de la destacada.</p>
-    <section class="fgroup"><h2 class="lhead">Destacada</h2><div class="rows"><div class="row ord"><span class="tile">${ic('star')}</span><span class="txt"><span class="name">${esc(FEAT.name)}</span><span class="sub">Siempre primera</span></span><span class="lock" aria-hidden="true">${ic('lock')}</span></div></div></section>
+    <section class="fgroup"><h2 class="lhead">Destacada</h2><div class="rows"><div class="row ord">${rowTile(FEAT)}<span class="txt"><span class="name">${esc(FEAT.name)}</span><span class="sub">Siempre primera</span></span><span class="lock" aria-hidden="true">${ic('lock')}</span></div></div></section>
     <section class="fgroup"><h2 class="lhead">Otras filas</h2>
     <div class="rows" id="ordrows">${ROWS.map((r, i) => r.feat ? ''
-      : `<div class="row ord${r.hidden ? ' hid' : ''}" data-rid="${r.id}"><span class="tile">${ic(kindIcon(r))}</span><span class="txt"><span class="name">${esc(r.name)}</span><span class="sub">${rowSub(r)}</span></span>
+      : `<div class="row ord${r.hidden ? ' hid' : ''}" data-rid="${r.id}">${rowTile(r)}<span class="txt"><span class="name">${esc(r.name)}</span><span class="sub">${rowSub(r)}</span></span>
       ${ORD.arrows === r.id ? `<span class="arrows"><button class="ibtn" data-act="ordup" data-rid="${r.id}" aria-label="Subir ${esc(r.name)}" ${i === 1 ? 'disabled' : ''}>${ic('up')}</button><button class="ibtn" data-act="orddown" data-rid="${r.id}" aria-label="Bajar ${esc(r.name)}" ${i === n - 1 ? 'disabled' : ''}>${ic('down')}</button></span>` : ''}
       <button class="handle" data-act="handle" data-rid="${r.id}" aria-pressed="${ORD.arrows === r.id}" aria-label="Mover ${esc(r.name)}, posición ${i} de ${n - 1}">${ic('grip')}</button></div>`).join('')}</div></section>
     <p class="sr" aria-live="polite" id="ordlive"></p>`;
