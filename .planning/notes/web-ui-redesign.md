@@ -191,3 +191,16 @@ experto 46 (26 without a band). Recientes shows the newest 30.
     Caught while measuring: the ⌄ drew an empty SVG (this sketch's icon set had no `chevD`).
     Rejected: a ⋯ header icon beside the pencil; an "Opciones de la fila ›" row under the rail (D-19j).
     Developer picked "The name opens the sheet (Recommended)".
+
+18. **Web is ONE page: the destacada edited inline, the other rows listed under it.** Filas del inicio disappears as a
+    page; its ⇅ Ordenar and + Nueva fila move into Web's header (the rows icon is gone), and "Otras filas" is a group
+    under the rail. A row opened from that list gets the same page with `‹ Web` and no list. The destacada's own sheet
+    row is now "Cambiar la destacada · Elegí otra fila de la lista y tocá Destacar", which scrolls to the list.
+    Developer: *"what if we combine there as "inline" highlighted row edition and below the rest of sections?"* → picked
+    "All rows, no separate page (Recommended)".
+    **Why it was needed** (measured before, 96px covers, 7 games): the content block was a constant 250px pinned to the
+    top and the blank below ran 245px at 360×640 (47%), 272 at 375×667 (50%), 345 at 375×740 (56%), 449 at 390×844
+    (62%). Now the page is 914px tall: 3 rows visible under the rail at 375×667, 6 at 390×844, the rest scrolls.
+    Rhythm: last caption → "Otras filas" 32 · heading → first tile 16 (rail 8 + 16 + the heading's own 8).
+    Also **the ⌄ chevron beside the name is gone** (developer: *"the chevron at the "destacados" is weird. remove it"*) —
+    the name still opens the options sheet.

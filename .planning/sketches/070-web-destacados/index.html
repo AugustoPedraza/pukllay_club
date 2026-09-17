@@ -70,7 +70,6 @@
   .fname .fnbtn:hover { background: var(--color-surface); }
   .fname .fnbtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   .fname h2 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
-  .fname .fnbtn > svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted); }
   .fctx { margin: -6px 0 0; gap: 6px; font-size: 14px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
 
@@ -119,6 +118,8 @@
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
   /* round 3 — measured on what you see: a row's tile ends 12px above its box, so 20px of margin reads as 32 (was 44) */
   .fgroup + .fgroup { margin-top: 12px; }
+  /* the rail is the page's main control; the list under it is a new group */
+  .shelf + .fgroup { margin-top: 16px; }   /* 32px from the last caption to the heading: rail 8 + 16 + the heading's own 8 */
   .fgroup .hint { margin: 0 0 4px; }
   .hint { margin: 0 0 8px; font-size: 13px; color: var(--color-text-muted); line-height: 1.4; }
   .rows { margin: 0 -16px; }
@@ -343,21 +344,27 @@ const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
 const main = $('#main'), device = $('#device');
 
 /* ---------- Web: Destacados (decisions 2–5) ---------- */
+/* decision 18 — ONE page: the destacada is edited inline at the top and the other rows are listed under it
+   (developer: "what if we combine there as inline highlighted row edition and below the rest of sections?").
+   A row opened from that list gets the same page with a ‹ Web back row and no list. */
 function render() {
-  if (S.screen === 'filas') return renderFilas();
+  if (ORD) return renderOrder();
   const r = ROW(), ids = r.ids, n = ids.length, full = r.feat && n >= CAP;
   /* the page is the row: no kind tag here (you are editing it), just its state — the tag belongs in the list */
   const ctx = (r.hidden ? `<span class="dot" aria-hidden="true"></span>Oculta<span aria-hidden="true">·</span>` : '')
     + (!n ? 'Sin juegos, no se ve en el inicio' : r.feat ? `${n} de ${CAP} juegos` : jn(n));
   main.innerHTML = `
-    ${CUR ? `<button class="back" data-act="filas">${ic('chevL')}Filas del inicio</button>` : `<div class="phead"><h1 class="ptitle">Web</h1><div class="hacts">
-      <button class="ibtn" data-act="filas" aria-label="Filas del inicio" title="Filas del inicio">${ic('rows')}</button></div></div>`}
+    ${CUR ? `<button class="back" data-act="back">${ic('chevL')}Web</button>` : `<div class="phead"><h1 class="ptitle">Web</h1><div class="hacts">
+      <button class="ibtn" data-act="ordon" aria-label="Ordenar filas" title="Ordenar filas">${ic('sort')}</button>
+      <button class="ibtn" data-act="newrow" aria-label="Nueva fila" title="Nueva fila">${ic('plus')}</button></div></div>`}
     <div class="fname"><button class="fnbtn" data-act="rowopts" aria-haspopup="dialog" aria-label="${esc(r.name)} · opciones de la fila">
-      <h2 id="fname">${esc(r.name)}</h2>${ic('chevD')}</button></div>
+      <h2 id="fname">${esc(r.name)}</h2></button></div>
     <p class="fctx">${ctx}</p>
     <div class="shelf">${n ? `<div class="rail" id="rail" role="group" aria-labelledby="fname">${slot(0, full)}${ids.map((id, i) => { const g = byId(id);
         return `<button class="box" data-act="box" data-id="${id}" aria-label="${esc(g.name)}, ${i + 1} de ${n}. Tocá para ver opciones">${cover(g, 'bc')}<span class="cap">${esc(g.name)}</span></button>${slot(i + 1, full)}`; }).join('')}</div>`
-      : `<div class="rail empty" id="rail">${slot(0, false)}<span class="emptyline">Tocá + para elegir el primer juego.</span></div>`}</div>`;
+      : `<div class="rail empty" id="rail">${slot(0, false)}<span class="emptyline">Tocá + para elegir el primer juego.</span></div>`}</div>
+    ${CUR ? '' : `<section class="fgroup" id="others"><h2 class="lhead">Otras filas</h2>
+      <div class="rows">${ROWS.slice(1).map(filaRow).join('')}</div></section>`}`;
 }
 const where = (list, i) => i === 0 ? 'al principio' : i === list.length ? 'al final' : `entre ${byId(list[i - 1]).name} y ${byId(list[i]).name}`;
 const slot = (i, full) => `<button class="slot${full ? ' full' : ''}" data-act="add" data-pos="${i}" aria-label="Agregar un juego ${esc(where(ROW().ids, i))}"><span class="pl">${ic('plus')}</span></button>`;
@@ -434,7 +441,7 @@ function nameSave() {
   if (row) row.name = name;
   else { const nr = { id: Math.max(...ROWS.map(r => r.id)) + 1, name, kind: 'manual', ids: [] }; ROWS.push(nr);
     /* decision 13 — a new row opens on its own page, ready for its first game */
-    closeSheet(); CUR = nr; S.screen = 'web'; render(); $('#scroller').scrollTo({ top: 0 }); return snack('Fila creada'); }
+    closeSheet(); CUR = nr; render(); $('#scroller').scrollTo({ top: 0 }); return snack('Fila creada'); }
   closeSheet(); render(); if (!same) snack('Nombre guardado');
 }
 
@@ -453,24 +460,13 @@ const rowSub = r => { const auto = r.kind !== 'manual', n = rowN(r);
 const rowTile = r => { const n = rowN(r), lbl = n === 1 ? '1 juego' : `${n} juegos`;
   return `<span class="tile" role="img" aria-label="${esc(lbl)}">${ic(kindIcon(r))}${n ? `<span class="cnum" aria-hidden="true">${n}</span>` : ''}</span>`; };
 let ORD = null;
-function renderFilas(focusSel) {
-  if (ORD) return renderOrder(focusSel);
-  main.innerHTML = `<button class="back" data-act="back">${ic('chevL')}Web</button>
-    <div class="phead mhead"><h1 class="ptitle">Filas del inicio</h1><div class="hacts">
-      <button class="ibtn" data-act="ordon" aria-label="Ordenar filas" title="Ordenar filas">${ic('sort')}</button>
-      <button class="ibtn" data-act="newrow" aria-label="Nueva fila" title="Nueva fila">${ic('plus')}</button></div></div>
-    <section class="fgroup"><h2 class="lhead">Destacada</h2>
-      <div class="rows">${filaRow(FEAT)}</div></section>
-    <section class="fgroup"><h2 class="lhead">Otras filas</h2>
-      <div class="rows">${ROWS.slice(1).map(filaRow).join('')}</div></section>`;
-}
 const filaRow = r => `<button class="row${r.hidden ? ' hid' : ''}" data-act="rowsheet" data-rid="${r.id}">
   ${rowTile(r)}<span class="txt"><span class="name">${esc(r.name)}</span><span class="sub">${rowSub(r)}</span></span></button>`;
 function rowSheet(r, from, onPage) {
   const games = onPage ? '' : r.feat ? `<button class="dlink" data-act="back">${ic('hand')}<span>Juegos<span class="dsub">Se editan en Web</span></span></button>`
     : r.kind === 'manual' ? `<button class="dlink" data-act="rowgames" data-rid="${r.id}">${ic('hand')}<span>Juegos<span class="dsub">Agregar, quitar y ordenar</span></span></button>` : '';
   const over = r.ids && r.ids.length > CAP;
-  const swap = onPage && r.feat ? `<button class="dlink" data-act="filas">${ic('star')}<span>Cambiar la destacada<span class="dsub">Elegir otra fila para el inicio</span></span></button>` : '';
+  const swap = onPage && r.feat ? `<button class="dlink" data-act="toothers">${ic('star')}<span>Cambiar la destacada<span class="dsub">Elegí otra fila de la lista y tocá Destacar</span></span></button>` : '';
   const destacar = r.kind === 'manual' && !r.feat ? `<button class="dlink" data-act="destacar" data-rid="${r.id}">${ic('star')}<span>Destacar<span class="dsub">${over ? `Tiene ${r.ids.length} juegos · la destacada lleva hasta ${CAP}` : 'Pasa a ser la primera fila del inicio'}</span></span></button>` : '';
   const hide = r.feat ? '' : `<button class="dlink" data-act="togglehide" data-rid="${r.id}">${ic(r.hidden ? 'eye' : 'eyeoff')}<span>${r.hidden ? 'Mostrar en el inicio' : 'Ocultar del inicio'}<span class="dsub">${r.hidden ? 'Vuelve a verse en su lugar' : 'Guarda sus juegos para más adelante'}</span></span></button>`;
   openSheet(`<span class="tile">${ic(kindIcon(r))}</span><div class="sh-txt"><div class="ctx">${r.feat ? 'Fila destacada' : 'Fila ' + esc(kindLabel(r))}</div><div class="sh-title">${esc(r.name)}</div></div>`,
@@ -481,7 +477,7 @@ function destacar(r) {
   if (r.ids.length > CAP) { closeSheet(); return snack(`Tiene ${r.ids.length} juegos. Dejá ${CAP} o menos para destacarla.`); }
   const before = ROWS.slice(), old = FEAT, wasHidden = r.hidden;
   ROWS.splice(ROWS.indexOf(r), 1); ROWS.splice(ROWS.indexOf(old), 1); ROWS.unshift(r, old);
-  old.feat = false; r.feat = true; r.hidden = false; FEAT = r; closeSheet(); render();
+  old.feat = false; r.feat = true; r.hidden = false; FEAT = r; closeSheet(); CUR = null; render(); $('#scroller').scrollTo({ top: 0 });
   snack(`${r.name} es la destacada`, { label: 'Deshacer', run: () => { ROWS.length = 0; ROWS.push(...before); r.feat = false; old.feat = true; r.hidden = wasHidden; FEAT = old; render(); } });
 }
 function renderOrder(focusSel) {
@@ -557,17 +553,17 @@ document.addEventListener('click', e => {
   if (act === 'dlg-yes') { const run = DLG.run; closeDialog(); return run(); }
   if (act === 'rowopts') return rowSheet(ROW(), t, true);
   if (act === 'namesave') return nameSave();
-  if (act === 'filas') { closeSheet(); CUR = null; S.screen = 'filas'; render(); return $('#scroller').scrollTo({ top: 0 }); }
-  if (act === 'back') { closeSheet(); ORD = null; CUR = null; S.screen = 'web'; render(); return $('#scroller').scrollTo({ top: 0 }); }
+  if (act === 'toothers') { closeSheet(); return $('#others')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  if (act === 'back') { closeSheet(); ORD = null; CUR = null; render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'rowsheet') return rowSheet(ROWS.find(r => r.id === rid), t);
   if (act === 'newrow') return nameSheet(null, t, true);
   if (act === 'editrow') { const r = ROWS.find(x => x.id === rid); closeSheet();
     return setTimeout(() => nameSheet(r, document.querySelector(`[data-act="rowsheet"][data-rid="${rid}"]`) || $('.fnbtn')), 280); }
-  if (act === 'rowgames') { closeSheet(); CUR = ROWS.find(x => x.id === rid); S.screen = 'web'; render(); return $('#scroller').scrollTo({ top: 0 }); }
+  if (act === 'rowgames') { closeSheet(); CUR = ROWS.find(x => x.id === rid); render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'destacar') return destacar(ROWS.find(x => x.id === rid));
   if (act === 'togglehide') { const r = ROWS.find(x => x.id === rid); r.hidden = !r.hidden; closeSheet(); render();
     return snack(r.hidden ? 'Fila oculta' : 'Fila visible', { label: 'Deshacer', run: () => { r.hidden = !r.hidden; render(); } }); }
-  if (act === 'ordon') { ORD = { before: ROWS.map(r => r.id), arrows: null }; return render(); }
+  if (act === 'ordon') { ORD = { before: ROWS.map(r => r.id), arrows: null }; CUR = null; render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'handle') { if (ORD.justDragged) return; ORD.arrows = ORD.arrows === rid ? null : rid; return renderOrder(`.handle[data-rid="${rid}"]`); }
   if (act === 'ordup' || act === 'orddown') { const i = ROWS.findIndex(r => r.id === rid); if (ordMove(rid, i + (act === 'ordup' ? -1 : 1))) { renderOrder(`[data-act="${act}"][data-rid="${rid}"]:not(:disabled), .handle[data-rid="${rid}"]`); $('#ordlive').textContent = `${ROWS[i + (act === 'ordup' ? -1 : 1)].name}, posición ${i + (act === 'ordup' ? 0 : 2)} de ${ROWS.length}`; } return; }
   if (act === 'ordoff') { const before = ORD.before, changed = before.join() !== ROWS.map(r => r.id).join(); ORD = null; render();
@@ -589,7 +585,7 @@ document.addEventListener('click', e => {
   const k = e.target.closest('[data-kbd-set]'), f = e.target.closest('[data-fill]');
   if (k) { KBD_SIM = k.dataset.kbdSet === '1'; k.parentElement.querySelectorAll('[data-kbd-set]').forEach(x => x.classList.toggle('on', x === k)); }
   if (f) { const n = +f.dataset.fill; FEAT.ids = n === 0 ? [] : n === 7 ? DEV7.slice() : [...DEV7, ...MORE].slice(0, 20);
-    f.parentElement.querySelectorAll('[data-fill]').forEach(x => x.classList.toggle('on', x === f)); S.screen = 'web'; ORD = null; CUR = null; render(); }
+    f.parentElement.querySelectorAll('[data-fill]').forEach(x => x.classList.toggle('on', x === f)); ORD = null; CUR = null; render(); }
 });
 render();
 </script>
