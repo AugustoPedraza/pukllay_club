@@ -127,9 +127,6 @@
   .hint { margin: 6px 0 0; font-size: 13px; color: var(--color-text-muted); }
 
   /* no spot yet (decision 5) */
-  .nospot { display: flex; gap: 12px; align-items: center; padding: 12px 0; }
-  .nospot .cov { width: 72px; height: 76px; font-size: 24px; }
-  .nospot p { margin: 0 0 8px; font-size: 14px; color: var(--color-text-muted); }
 
   /* ---- recent lookups (decisions 20–21) ---- */
   .sec { margin-top: 24px; }
@@ -150,23 +147,98 @@
   /* ---- management page (a stub: decision 18) ---- */
   .shelfico { width: 40px; height: 40px; border-radius: 8px; background: var(--color-surface); display: grid; place-items: center; flex-shrink: 0; color: var(--color-accent-text); }
 
-  /* ---- sheet: rows only, commit first, Cancelar last ---- */
+  /* ---- sheet: rows only, commit first; closes with ✕ in the header (decision 29) ---- */
   .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
   .backdrop.open { opacity: 1; pointer-events: auto; }
   .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-radius: 18px 18px 0 0; padding: 8px 0 16px; z-index: 41;
     transform: translateY(105%); transition: transform 260ms var(--ease-out-soft); box-shadow: var(--shadow-lg); max-height: 85%; overflow-y: auto; }
   .sheet.open { transform: none; }
   .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-surface-2); margin: 0 auto 8px; }
-  .sh-head { display: flex; gap: 12px; align-items: center; padding: 4px 16px 8px; }
-  .sh-head .cov { width: 44px; height: 46px; }
-  .sh-title { font-size: 16px; font-weight: 600; line-height: 1.3; }
+  /* decision 31 — the header is not a row: bigger cover, 18px title, a full-width divider and 8px air before the rows.
+     Measured before: header 58px vs 64px rows with the same anatomy (thumb · 16px title · 13px grey line) and 0px gap. */
+  .sh-head { display: flex; gap: 16px; align-items: center; padding: 8px 16px 16px; border-bottom: 1px solid var(--color-border); margin-bottom: 8px; }
+  .sh-head .cov { width: 56px; height: 60px; border-radius: 6px; }
+  .sh-title { font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .sh-head .sub { font-size: 14px; margin-top: 2px; }
+  /* decision 33 — the estante above the game name: icon + name, context rather than a subtitle */
+  .est-meta { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 13px; line-height: 1.3; color: var(--color-text-muted); }
+  .est-meta svg { width: 16px; height: 16px; flex-shrink: 0; }
+  /* a quiet list label inside a sheet — the same treatment as "Últimas búsquedas" (decision 24) */
+  .sh-label { font-size: 13px; color: var(--color-text-muted); min-height: 28px; display: flex; align-items: center; padding: 0 16px; }
+  /* a sheet taller than 85% scrolls its rows under a pinned header (Ubicar: 9 estantes) — the ✕ never scrolls away */
+  .sheet { scrollbar-width: none; } .sheet::-webkit-scrollbar { display: none; }
+  .sheet { padding-top: 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }   /* review: the last row cleared the home indicator by 16px only on phones without one */
+  .sh-top { position: sticky; top: 0; z-index: 2; background: var(--color-bg); padding-top: 8px; margin-bottom: 8px; }
+  .sh-top .sh-head { margin-bottom: 0; }
   .dlink { width: 100%; display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border: 0; background: none; font-size: 16px; text-align: left; cursor: pointer; }
   .dlink:hover { background: var(--color-surface); }
   .dlink svg { width: 22px; height: 22px; color: var(--color-text-muted); flex-shrink: 0; }
   .dlink.danger, .dlink.danger svg { color: var(--color-danger); }
   .dlink .dsub { display: block; font-size: 13px; color: var(--color-text-muted); }
+  .dlink:has(.dsub) { min-height: 64px; padding-block: 8px; }   /* a two-line row takes 061's two-line height, not 48 */
   .dlink:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   .sheet:focus { outline: none; }
+  /* decision 29 — a sheet closes with ✕ in its header, across from the cover (tap outside / drag / Esc still close).
+     No Cancelar row: with ‹ it read as a back link, and at row weight it read as a 4th option. Applies to every admin sheet. */
+  .sh-head .sh-txt { flex: 1; min-width: 0; }
+  .sh-x { width: 44px; height: 44px; margin: -6px -10px 0 0; align-self: flex-start; flex-shrink: 0; border: 0; background: none; border-radius: 50%;
+    display: grid; place-items: center; color: var(--color-text-muted); cursor: pointer; }
+  .sh-x svg { width: 22px; height: 22px; }
+  .sh-x:hover { background: var(--color-surface); }
+  .sh-x:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+  /* ---- decisions 35–36 — choosing the spot on the Estantes page ---- */
+  /* an insertion slot: a visible 24px "+" between covers; its hit box is 44px wide and runs under the (inert) covers */
+  .slot { position: relative; flex: 0 0 20px; align-self: stretch; border: 0; background: none; padding: 0; cursor: pointer; display: grid; place-items: start center; z-index: 2; }
+  .slot::before { content: ""; position: absolute; top: 0; bottom: 0; left: -12px; right: -12px; }
+  .slot .pl { width: 24px; height: 24px; border-radius: 50%; border: 1px dashed var(--stroke); background: var(--color-bg); color: var(--color-text-muted); display: grid; place-items: center; }
+  .slot .pl svg { width: 14px; height: 14px; }
+  .slot:hover .pl, .slot:focus-visible .pl { border: 1px solid var(--color-primary); color: var(--color-accent-text); background: var(--color-surface); }
+  .slot:focus-visible { outline: none; }
+  .placing .box { cursor: default; pointer-events: none; }
+  .rail .slot .pl { margin-top: 38px; }
+  .rail.placing { gap: 4px; }
+
+  /* decision 36 — the Estantes search reused to choose the spot ("place a game based on another") */
+  .estcov { color: var(--color-accent-text); }
+  .estcov svg { width: 22px; height: 22px; }
+  .rail.placing .box.on .bc { transform: translateY(-8px); box-shadow: 0 10px 16px -6px rgba(36, 18, 56, .45); }
+  .rail.placing .box.on .cap { color: var(--color-text); font-weight: 600; }
+  .prows .row .cov { width: 40px; height: 40px; }
+  /* decision 37 — "¿Dónde va?" in a full-height sheet (a large detent: 24px of page still shows above) */
+  .sheet.full { top: 24px; max-height: none; }
+  .pshelf { margin-top: 16px; }
+  /* decision 39 — the placed game drops into its spot and settles lifted (−12px), with a soft overshoot */
+  @keyframes land { 0% { transform: translateY(-56px) scale(.92); opacity: 0; } 55% { transform: translateY(-6px) scale(1.02); opacity: 1; }
+    78% { transform: translateY(-15px) scale(1); } 100% { transform: translateY(-12px); } }
+  @keyframes landcap { 0%, 40% { opacity: 0; } 100% { opacity: 1; } }
+  .box.on.landed .bc { animation: land 620ms cubic-bezier(.2, .8, .3, 1) both; }
+  .box.on.landed .cap { animation: landcap 620ms ease-out both; }
+  @media (prefers-reduced-motion: reduce) { .box.on.landed .bc, .box.on.landed .cap { animation: none; } }
+  .sheet.full .sh-top { margin-bottom: 0; }
+  .psearch { padding: 12px 16px 8px; }
+  .pbody { padding: 0 16px 8px; }
+  .pbody .answer-like { margin-top: 12px; }
+  .pres { margin: 0 -16px; }
+  .pres .srow { padding: 6px 16px; }
+  /* with the keyboard up the sheet sits on top of it (065: sheets sit above the keyboard) */
+  .device.kbd2 .kbd-sim { display: grid; grid-template-rows: repeat(4, 1fr); gap: 10px; z-index: 45; }
+  .device.kbd2 .sheet.full { bottom: 292px; padding-bottom: 0; }
+
+  /* ---- decision 41 — a confirmation is a centred dialog (M3 basic dialog): title, one line, two text actions ---- */
+  .dscrim { position: absolute; inset: 0; z-index: 60; background: color-mix(in srgb, #231339 38%, transparent); display: grid; place-items: center; padding: 24px;
+    opacity: 0; pointer-events: none; transition: opacity var(--duration-base); }
+  .dscrim.open { opacity: 1; pointer-events: auto; }
+  .dialog { width: 100%; max-width: 312px; background: var(--color-bg); border-radius: 16px; padding: 24px 24px 12px; box-shadow: var(--shadow-lg);
+    transform: scale(.96); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .dscrim.open .dialog { transform: none; }
+  .dialog h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .dialog p { margin: 0 0 16px; font-size: 14px; line-height: 1.45; color: var(--color-text-muted); }
+  .dacts { display: flex; justify-content: flex-end; gap: 8px; margin-right: -12px; }
+  .tbtn.dan { color: var(--color-danger); }
+  .tbtn.dan:hover { background: color-mix(in srgb, var(--color-danger) 9%, transparent); }
+  .tbtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  @media (prefers-reduced-motion: reduce) { .dscrim, .dialog { transition: none; } }
 
   /* ---- one snackbar (D-19b/c) ---- */
   .snack { position: absolute; left: 12px; right: 12px; bottom: 79px; z-index: 30; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 4px 4px 16px;
@@ -234,9 +306,13 @@
   </div>
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  <div class="dscrim" id="dscrim"><div class="dialog" id="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+    <h2 id="dlg-t"></h2><p id="dlg-d"></p>
+    <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
 </div></div>
 <div id="tools">
   <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado simulado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+  <div>Estante 10 vacío: <button data-empty-set="1">Sí</button> <button data-empty-set="0" class="on">No</button></div>
 </div>
 
 <script src="games.js"></script>
@@ -254,6 +330,9 @@ const P = {
   box: '<path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
   web: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 2.5 14.5 0 17M12 3.5c-2.5 2.5-2.5 14.5 0 17"/>',
   shelf: '<path d="M4 4v16M20 4v16M4 20h16"/><path d="M7 8v12M10 6v14M13 9v11M16.5 7l1.5 13"/>',
+  /* round 4 — a shelf that reads as one at 16px: open sides, two boards, boxes standing on them (the vertical-stroke
+     "shelf" above reads as a barcode; a framed cabinet read as a window, a single board with boxes as a sofa) */
+  estante: '<path d="M3.5 3.5v17M20.5 3.5v17M3.5 12h17M3.5 20.5h17"/><rect x="6" y="6.5" width="5" height="5.5" rx=".6"/><rect x="12.5" y="8.5" width="6" height="3.5" rx=".6"/><rect x="6" y="15.5" width="7" height="5" rx=".6"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
 };
@@ -270,11 +349,12 @@ const byId = id => G.find(g => g.id === id);
 /* the 6 games with no spot are real games too; 428 are shelved across 9 estantes of 46–50 */
 const NOSPOT = [17, 88, 151, 230, 301, 377];
 const SIZES = [50, 49, 48, 47, 47, 47, 47, 47, 46];
+const EMPTY_SHELF = { id: 10, name: 'Estante 10', ids: [] };   /* tools → Estante vacío: tests decision 35's empty case */
 const shelves = SIZES.map((n, i) => ({ id: i + 1, name: 'Estante ' + (i + 1), ids: [] }));
 { let k = 0; const pool = G.map(g => g.id).filter(id => !NOSPOT.includes(id)); shelves.forEach((s, i) => { s.ids = pool.slice(k, k + SIZES[i]); k += SIZES[i]; }); }
-const where = id => { for (const s of shelves) { const i = s.ids.indexOf(id); if (i >= 0) return { s, i }; } return null; };
+const where = id => { for (const s of [...shelves, EMPTY_SHELF]) { const i = s.ids.indexOf(id); if (i >= 0) return { s, i }; } return null; };
 
-const S = { screen: 'ubicar', q: '', picked: null, sel: null, recent: [] };
+const S = { screen: 'ubicar', q: '', picked: null, sel: null, recent: [], placing: null };
 /* seeded recent lookups: three shelved, one with no spot (shows the dot + text) */
 S.recent = [G.find(g => /^Catan: El Auge/.test(g.name)).id, NOSPOT[2], G.find(g => g.name === 'Lapsus').id, G.find(g => g.name === 'Wingspan')?.id || 40].filter(Boolean);
 
@@ -307,12 +387,7 @@ function renderAnswer() {
   if (!S.picked) { a.hidden = true; a.innerHTML = ''; return; }
   a.hidden = false;
   const g = byId(S.picked), w = where(g.id);
-  if (!w) {
-    a.innerHTML = `<h2 class="aname"><span class="sub" style="font-size:15px;color:var(--color-text)"><span class="dot" aria-hidden="true"></span>Sin lugar</span></h2>
-      <div class="nospot">${cover(g)}<div><div style="font-size:15px;font-weight:600;margin-bottom:2px">${esc(g.name)}</div>
-      <p>Todavía no tiene lugar en un estante.</p><button class="obtn" data-act="ubicar" data-id="${g.id}">Ubicar</button></div></div>`;
-    return;
-  }
+  if (!w) { a.hidden = true; a.innerHTML = ''; return; }
   const selId = S.sel || g.id;
   a.innerHTML = `<h2 class="aname">${esc(w.s.name)}</h2>
     <div class="shelf"><div class="rail" id="rail" role="group" aria-label="${esc(w.s.name)}, de izquierda a derecha">
@@ -379,34 +454,127 @@ function renderSugg() {
 }
 function pick(id) {
   S.picked = id; S.sel = null;
+  S.placing = where(id) ? null : { gid: id, sid: null, ref: null };   /* decision 36 — no spot: "¿Dónde va?" starts at once */
   S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 6);
   const inp = $('#q'); if (inp) { inp.value = ''; inp.blur(); }      /* decision 11 — clears the moment a game is found */
   hl = -1; renderSugg(); renderAnswer(); renderRecent();
+  if (S.placing) placeSheetOpen(byId(id), document.activeElement);    /* decisions 36–37: no spot → the "¿Dónde va?" sheet at once */
   syncLayout();
   $('#scroller').scrollTo({ top: 0 });
 }
 
 /* ---------- sheet ---------- */
 let opener = null;
-function openSheet(html, from) {
-  opener = from; const sh = $('#sheet'); sh.innerHTML = `<div class="grab"></div>${html}`;
+function openSheet(head, rows, from, opt = {}) {
+  opener = from; const sh = $('#sheet'); sh.classList.toggle('full', !!opt.full);
+  sh.innerHTML = `<div class="sh-top"><div class="grab"></div><div class="sh-head">${head}<button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div>${opt.top || ''}</div>${rows}`;
   $('#backdrop').classList.add('open'); requestAnimationFrame(() => sh.classList.add('open'));
   /* focus lands on the sheet itself, not on its first row: a focused first row painted as if it were already chosen */
-  sh.setAttribute('tabindex', '-1'); setTimeout(() => sh.focus({ preventScroll: true }), 60);
+  sh.setAttribute('tabindex', '-1'); setTimeout(() => (opt.focus ? $(opt.focus) : sh)?.focus({ preventScroll: true }), 60);
 }
-function closeSheet() { $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener && opener.focus?.({ preventScroll: true }); }
+function closeSheet() {
+  if (S.placing) { const mv = S.placing.move; S.placing = null; if (!mv) S.picked = null; renderAnswer(); renderRecent(); syncLayout(); }   /* ✕ = cancel: a move leaves the game where it was */
+  device.classList.remove('kbd2'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener && opener.focus?.({ preventScroll: true }); }
+/* decision 30 — each option is a short verb + one grey line saying what happens (two-line rows, 64px) */
+const OPTIONS = [['ver', 'eye', 'Ver ficha', 'La página del juego en la web'], ['mover', 'move', 'Mover', 'Elegís el estante y el lugar'], ['quitar', 'remove', 'Quitar del estante', 'Queda sin lugar · te pedimos confirmar']];
+/* decisions 32–33 — the sheet names only the estante ("Estante 7", no box number, no counts), shown ABOVE the game
+   name as a 16px estante icon + 13px muted name: context, not a caption. */
 function boxSheet(g, from) {
   const w = where(g.id);
-  openSheet(`<div class="sh-head">${cover(g)}<div><div class="sh-title">${esc(g.name)}</div><div class="sub">${esc(w.s.name)} · caja ${w.i + 1} de ${w.s.ids.length}</div></div></div>
-    <button class="dlink" data-act="soon" data-what="Ver en la ludoteca">${ic('eye')}Ver en la ludoteca</button>
-    <button class="dlink" data-act="soon" data-what="Mover a otro lugar">${ic('move')}Mover a otro lugar</button>
-    <button class="dlink danger" data-act="quitar" data-id="${g.id}">${ic('remove')}Quitar del estante</button>
-    <button class="dlink" data-act="close">${ic('chevL')}Cancelar</button>`, from);
+  openSheet(`${cover(g)}<div class="sh-txt"><div class="est-meta">${ic('estante')}${esc(w.s.name)}</div><div class="sh-title">${esc(g.name)}</div></div>`,
+    OPTIONS.map(([act, icon, label, sub]) =>
+      `<button class="dlink${act === 'quitar' ? ' danger' : ''}" data-act="${act === 'ver' ? 'soon' : act}" data-id="${g.id}" data-what="${label}">${ic(icon)}<span>${label}${sub ? `<span class="dsub">${sub}</span>` : ''}</span></button>`).join(''), from);
 }
-function ubicarSheet(g, from) {
-  openSheet(`<div class="sh-head">${cover(g)}<div><div class="sh-title">Ubicar ${esc(g.name)}</div><div class="sub">Va al final del estante que elijas.</div></div></div>
-    ${shelves.map(s => `<button class="dlink" data-act="place" data-id="${g.id}" data-sid="${s.id}"><span class="shelfico" style="width:32px;height:32px">${shelfDrawing(s.ids.length)}</span><span>${esc(s.name)}<span class="dsub">${s.ids.length} juegos</span></span></button>`).join('')}
-    <button class="dlink" data-act="close">${ic('chevL')}Cancelar</button>`, from);
+/* review: one row anatomy for every sheet — 22px line icon, label at x54 (was a 32px tinted shelf drawing, label at x64) */
+/* decision 35 — an empty estante takes the game directly; otherwise staff choose the spot, ends included.
+   decisions 36–38 — it happens in the full-height "¿Dónde va?" sheet, opened the moment a game with no spot is found: the
+   same search finds an ESTANTE or a GAME already on one; picking a game opens its estante with that game lifted and a "+"
+   on each side. decision 40 — Mover opens the same sheet; the game leaves its old spot only when the new one is chosen. */
+let WITH_EMPTY = false;
+const allShelves = () => WITH_EMPTY ? [...shelves, EMPTY_SHELF] : shelves;
+const shelfById = id => allShelves().find(x => x.id === id);
+/* while moving, the estante is drawn and counted WITHOUT the moving game: positions are the ones it will have after it leaves */
+const view = x => S.placing?.move ? { ...x, ids: x.ids.filter(id => id !== S.placing.gid) } : x;
+const plus = `<span class="pl">${ic('place')}</span>`;
+const slotLabel = (s, i) => i === 0 ? `Poner al principio de ${s.name}` : i === s.ids.length ? `Poner al final de ${s.name}` : `Poner entre ${byId(s.ids[i - 1]).name} y ${byId(s.ids[i]).name}`;
+const slot = (g, s, i) => `<button class="slot" data-act="slot" data-id="${g.id}" data-sid="${s.id}" data-pos="${i}" aria-label="${esc(slotLabel(s, i))}">${plus}</button>`;
+function placeResults(q, gid) {
+  const n = norm(q.trim()); if (!n) return [];
+  const est = allShelves().filter(x => norm(x.name).includes(n) || String(x.id) === n).map(x => ({ s: x }));
+  const starts = [], has = [];
+  for (const g of G) { if (g.id === gid || !where(g.id)) continue; const m = norm(g.name); if (m.startsWith(n)) starts.push({ g }); else if (m.includes(n)) has.push({ g }); }
+  return [...est, ...starts, ...has].slice(0, 6);
+}
+const shelfCount = x => x.ids.length ? `${x.ids.length} juegos` : 'Vacío · va directo';
+function placeRow(r, i, q) {
+  if (r.s) return `<button class="srow ${i === hl ? 'hl' : ''}" role="option" data-act="pref" data-sid="${r.s.id}"><span class="cov estcov">${ic('estante')}</span><span class="txt"><span class="ttl">${markMatch(r.s.name, q)}</span><span class="sub">${shelfCount(r.s)}</span></span></button>`;
+  return `<button class="srow ${i === hl ? 'hl' : ''}" role="option" data-act="pref" data-ref="${r.g.id}">${cover(r.g)}<span class="txt"><span class="ttl">${markMatch(r.g.name, q)}</span><span class="sub">${esc(where(r.g.id).s.name)}</span></span></button>`;
+}
+function placeRail(g, x, ref) {
+  return `<div class="rail placing" id="prail" role="group" aria-label="${esc(x.name)}, de izquierda a derecha">${slot(g, x, 0)}${x.ids.map((id, i) => { const b = byId(id);
+    return `<div class="box${id === ref ? ' on' : ''}" data-id="${id}" aria-hidden="true">${cover(b, 'bc')}<span class="cap">${esc(b.name)}</span></div>${slot(g, x, i + 1)}`; }).join('')}</div>`;
+}
+function centerRail(el, ref) { requestAnimationFrame(() => { if (!el) return; const b = ref && el.querySelector(`[data-id="${ref}"]`); el.scrollLeft = b ? b.offsetLeft - (el.clientWidth - b.offsetWidth) / 2 : 0; }); }
+function renderPlacingAnswer(a) {                                      /* the sheet body under its search */
+  const P0 = S.placing, g = byId(P0.gid);
+  if (P0.sid) { const x = view(shelfById(P0.sid));     /* no "Estante 3" heading: the field already says it (decision 38) */
+    a.innerHTML = `<div class="shelf pshelf">${placeRail(g, x, P0.ref)}</div>`;
+    return centerRail($('#prail'), P0.ref); }   /* was $('#rail'): while moving, the page's own #rail sits behind the sheet and was found first */
+  a.innerHTML = `<div class="glabel quiet">O elegí un estante</div><div class="rows prows">${allShelves().map(x => `<button class="row compact" data-act="pref" data-sid="${x.id}"><span class="cov estcov">${ic('estante')}</span><span class="txt"><span class="name">${esc(x.name)}</span><span class="sub">${shelfCount(x)}</span></span></button>`).join('')}</div>`;
+}
+/* decision 37 — "¿Dónde va?" is a full-height sheet (F won over R1 on the page) */
+function placeSheetOpen(g, from) {
+  openSheet(`${cover(g)}<div class="sh-txt"><div class="est-meta">${esc(g.name)}</div><div class="sh-title">¿Dónde va?</div></div>`,
+    `<div class="pbody" id="pbody"></div>`, from, { full: true, focus: '#pq',
+      top: `<div class="psearch"><div class="sfield"><label class="sr" for="pq">Buscá un estante o un juego</label>
+        <input id="pq" type="search" placeholder="Buscá un estante o un juego" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+        <span class="sico" id="pqico">${ic('search')}</span></div></div>` });
+  renderPBody();
+}
+function pqIcon() {                                                    /* decision 16 in the sheet: magnifier ↔ ✕ */
+  const el = $('#pqico'), q = $('#pq')?.value; if (!el) return;
+  el.outerHTML = q ? `<button class="sico" id="pqico" data-act="pclear" aria-label="Borrar búsqueda">${ic('x')}</button>` : `<span class="sico" id="pqico">${ic('search')}</span>`;
+}
+function renderPBody() {
+  const body = $('#pbody'); if (!body || !S.placing) return;
+  const q = $('#pq')?.value || '';
+  if (!q.trim()) S.placing.sid = S.placing.ref = S.placing.shown = null;   /* an empty field = choose again */
+  if (q.trim() && q !== S.placing.shown) { const list = placeResults(q, S.placing.gid);
+    body.innerHTML = `<div class="pres" role="listbox">${list.length ? list.map((r, i) => placeRow(r, i, q)).join('') : '<div class="snone">Ningún estante ni juego se llama así.</div>'}</div>`; return; }
+  renderPlacingAnswer(body);
+}
+/* decision 39 — the placed cover drops into its spot and settles lifted; no motion under reduced-motion */
+function landed(id) {
+  requestAnimationFrame(() => { const b = document.querySelector(`#rail .box[data-id="${id}"]`); if (!b) return;
+    b.classList.remove('landed'); void b.offsetWidth; b.classList.add('landed');
+    b.addEventListener('animationend', () => b.classList.remove('landed'), { once: true }); });
+}
+function placeAt(g, s, pos) {
+  const move = !!S.placing?.move, from = where(g.id);                /* decision 40 — remove + add happen together, only now */
+  if (from) from.s.ids.splice(from.i, 1);
+  s.ids.splice(pos, 0, g.id); S.placing = null;
+  if ($('#sheet').classList.contains('open')) { $('#pq')?.blur(); closeSheet(); }
+  const inp = $('#q'); if (inp) { inp.value = ''; inp.blur(); } hl = -1; renderSugg();   /* like decision 11: done → field clear, keyboard down */
+  S.picked = g.id; S.sel = null; renderAnswer(); renderRecent();
+  landed(g.id);
+  snack(move ? 'Juego movido' : 'Juego ubicado', { label: 'Deshacer', run: () => {
+    s.ids.splice(s.ids.indexOf(g.id), 1); if (from) from.s.ids.splice(from.i, 0, g.id);
+    if (!from) S.picked = null; renderAnswer(); renderRecent(); syncLayout(); if (from) centerOn(g.id, false); } });
+}
+
+/* ---------- confirmation dialog (decision 41) ---------- */
+const DLG = { run: null, opener: null };
+function openDialog({ title, text, yes, run }) {
+  DLG.run = run; DLG.opener = document.activeElement;
+  $('#dlg-t').textContent = title; $('#dlg-d').textContent = text; $('[data-act="dlg-yes"]').textContent = yes;
+  $('#dscrim').classList.add('open');
+  setTimeout(() => $('[data-act="dlg-no"]').focus(), 60);             /* the safe action has focus */
+}
+function closeDialog() { $('#dscrim').classList.remove('open'); DLG.run = null; }
+function doQuitar(id) {
+  const w = where(id); w.s.ids.splice(w.i, 1);
+  S.sel = null; S.picked = null; renderAnswer(); renderRecent(); syncLayout();   /* decision 36: no "Ubicar" answer any more */
+  snack('Juego quitado del estante', { label: 'Deshacer', run: () => { w.s.ids.splice(w.i, 0, id); S.picked = id; renderAnswer(); renderRecent(); syncLayout(); } });
 }
 
 /* ---------- snackbar (10 s with an action, 4 s without) ---------- */
@@ -423,6 +591,7 @@ function snack(msg, action) {
 document.addEventListener('click', e => {
   const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; return; }
   if (e.target.id === 'backdrop') return closeSheet();
+  if (e.target.id === 'dscrim') return closeDialog();
   const t = e.target.closest('[data-act]'); if (!t) {
     if (!e.target.closest('.search')) { const box = $('#sugg'); if (box && !box.hidden) { box.hidden = true; $('#q')?.setAttribute('aria-expanded', 'false'); } }
     return;
@@ -437,25 +606,37 @@ document.addEventListener('click', e => {
     return document.querySelector(`#rail [data-id="${id}"]`)?.focus({ preventScroll: true });
   }
   if (act === 'close') return closeSheet();
-  if (act === 'ubicar') return ubicarSheet(byId(id), t);
-  if (act === 'place') {
-    const s = shelves.find(x => x.id === +t.dataset.sid); s.ids.push(id); closeSheet();
-    S.picked = id; S.sel = null; renderAnswer(); renderRecent();
-    return snack(`Va al final de ${s.name}`, { label: 'Deshacer', run: () => { s.ids.pop(); renderAnswer(); renderRecent(); } });
+  if (act === 'pref') {
+    const ref = t.dataset.ref ? +t.dataset.ref : null, x = ref ? where(ref).s : shelfById(+t.dataset.sid), g = byId(S.placing.gid);
+    if (!view(x).ids.length) return placeAt(g, x, 0);                        /* decision 35 — empty: directly */
+    S.placing.sid = x.id; S.placing.ref = ref;
+    /* decision 38 — the field keeps the chosen estante (picked by name or through a game on it) */
+    const pq = $('#pq'); pq.value = S.placing.shown = x.name; pq.blur(); pqIcon(); return renderPBody();
   }
-  if (act === 'quitar') {
-    const w = where(id), g = byId(id); w.s.ids.splice(w.i, 1); closeSheet();
-    S.sel = null; S.picked = id; renderAnswer(); renderRecent();
-    return snack(`${g.name} quedó sin lugar`, { label: 'Deshacer', run: () => { w.s.ids.splice(w.i, 0, id); renderAnswer(); renderRecent(); } });
+  if (act === 'slot') return placeAt(byId(id), shelfById(+t.dataset.sid), +t.dataset.pos);
+  if (act === 'pclear') { const pq = $('#pq'); pq.value = ''; S.placing.sid = S.placing.ref = S.placing.shown = null; pqIcon(); renderPBody(); return pq.focus(); }
+  if (act === 'mover') {                                            /* decision 40 */
+    closeSheet(); S.placing = { gid: id, sid: null, ref: null, move: true };
+    return setTimeout(() => placeSheetOpen(byId(id), t), 280);        /* after the options sheet has gone down */
   }
+  if (act === 'quitar') {                                           /* decision 41 — confirm in a dialog first */
+    const g = byId(id); closeSheet();
+    return openDialog({ title: `¿Quitar ${g.name} del estante?`, text: 'Queda sin lugar hasta que lo vuelvas a ubicar.', yes: 'Quitar', run: () => doQuitar(id) });
+  }
+  if (act === 'dlg-no') return closeDialog();
+  if (act === 'dlg-yes') { const run = DLG.run; closeDialog(); return run(); }
   if (act === 'admin') { S.screen = 'admin'; render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'back') { S.screen = 'ubicar'; return render(); }
   if (act === 'soon') { closeSheet(); return snack(`${t.dataset.what}: se diseña en otro boceto`); }
 });
-document.addEventListener('input', e => { if (e.target.id === 'q') { hl = -1; renderSugg(); } });
+document.addEventListener('input', e => { if (e.target.id === 'q') { hl = -1; renderSugg(); }
+  if (e.target.id === 'pq') { pqIcon(); renderPBody(); }   /* only the body re-renders: the field keeps focus */
+ });
 document.addEventListener('focusin', e => { if (e.target.id === 'q' && e.target.value) renderSugg(); });
 document.addEventListener('keydown', e => {
+  if ($('#dscrim').classList.contains('open')) { if (e.key === 'Escape') closeDialog(); return; }
   if ($('#sheet').classList.contains('open') && e.key === 'Escape') return closeSheet();
+  if (e.target.id === 'pq' && e.key === 'Enter') { e.preventDefault(); return $('#pbody .pres .srow')?.click(); }
   if (e.target.id !== 'q') return;
   const list = suggestions(e.target.value);
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); hl = Math.max(0, Math.min(list.length - 1, hl + (e.key === 'ArrowDown' ? 1 : -1))); renderSugg(); }
@@ -481,11 +662,14 @@ function syncLayout() {
   if (device.classList.contains('kbd') === kbd && device.classList.contains('raised') === raised) return;
   flip(() => { device.classList.toggle('kbd', kbd); device.classList.toggle('raised', raised); });
 }
-document.addEventListener('focusin', e => { if (e.target.id === 'q') syncLayout(); });
+document.addEventListener('focusin', e => { if (e.target.id === 'q') syncLayout(); if (e.target.id === 'pq') { device.classList.toggle('kbd2', KBD_SIM); if (e.target.value && e.target.value === S.placing?.shown) e.target.select(); } });   /* typing replaces the kept estante */
+document.addEventListener('focusout', e => { if (e.target.id === 'pq') device.classList.remove('kbd2'); });
 /* a tap on a suggestion blurs the field first; wait a beat so the layout does not drop and rise again */
 document.addEventListener('focusout', e => { if (e.target.id === 'q') setTimeout(syncLayout, 160); });
 document.addEventListener('click', e => {
   const k = e.target.closest('[data-kbd-set]');
+  const em = e.target.closest('[data-empty-set]');
+  if (em) { WITH_EMPTY = em.dataset.emptySet === '1'; EMPTY_SHELF.ids = []; em.parentElement.querySelectorAll('[data-empty-set]').forEach(x => x.classList.toggle('on', x === em)); }
   if (k) { KBD_SIM = k.dataset.kbdSet === '1'; syncLayout(); k.parentElement.querySelectorAll('[data-kbd-set]').forEach(x => x.classList.toggle('on', x === k)); }
 });
 render();
