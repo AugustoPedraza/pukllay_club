@@ -316,6 +316,8 @@ const ROWS = [
 ];
 /* decision 7 — "destacada" is a role: exactly one hand-picked row holds it, always ROWS[0] (pinned first on the home) */
 let FEAT = ROWS[0];
+/* decision 12 — every hand-picked row is edited on the same page; Web is that page opened on the destacada */
+let CUR = null; const ROW = () => CUR || FEAT;
 const S = { screen: 'web' };
 const cover = (g, cls) => g.thumb ? `<img class="${cls}" src="${esc(g.thumb)}" alt="" loading="lazy">` : `<span class="${cls} l" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
 const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
@@ -324,19 +326,20 @@ const main = $('#main'), device = $('#device');
 /* ---------- Web: Destacados (decisions 2–5) ---------- */
 function render() {
   if (S.screen === 'filas') return renderFilas();
-  const ids = FEAT.ids, n = ids.length, full = n >= CAP;
-  const ctx = FEAT.hidden ? `<span class="dot" aria-hidden="true"></span>Oculta · no se ve en el inicio` : n ? `Primera fila del inicio · ${n} de ${CAP} juegos` : `Sin juegos, no se ve en el inicio`;
+  const r = ROW(), ids = r.ids, n = ids.length, full = r.feat && n >= CAP;
+  const ctx = r.hidden ? `<span class="dot" aria-hidden="true"></span>Oculta · no se ve en el inicio` : !n ? `Sin juegos, no se ve en el inicio`
+    : r.feat ? `Primera fila del inicio · ${n} de ${CAP} juegos` : `Elegida a mano · ${jn(n)}`;
   main.innerHTML = `
-    <div class="phead"><h1 class="ptitle">Web</h1><div class="hacts">
-      <button class="ibtn" data-act="filas" aria-label="Filas del inicio" title="Filas del inicio">${ic('rows')}</button></div></div>
-    <div class="fname"><h2 id="fname">${esc(FEAT.name)}</h2><button class="ibtn" data-act="rename" aria-label="Editar el nombre de ${esc(FEAT.name)}" title="Editar el nombre">${ic('edit')}</button></div>
+    ${CUR ? `<button class="back" data-act="filas">${ic('chevL')}Filas del inicio</button>` : `<div class="phead"><h1 class="ptitle">Web</h1><div class="hacts">
+      <button class="ibtn" data-act="filas" aria-label="Filas del inicio" title="Filas del inicio">${ic('rows')}</button></div></div>`}
+    <div class="fname"><h2 id="fname">${esc(ROW().name)}</h2><button class="ibtn" data-act="rename" aria-label="Editar el nombre de ${esc(ROW().name)}" title="Editar el nombre">${ic('edit')}</button></div>
     <p class="fctx">${ctx}</p>
     <div class="shelf">${n ? `<div class="rail" id="rail" role="group" aria-labelledby="fname">${slot(0, full)}${ids.map((id, i) => { const g = byId(id);
         return `<button class="box" data-act="box" data-id="${id}" aria-label="${esc(g.name)}, ${i + 1} de ${n}. Tocá para ver opciones">${cover(g, 'bc')}<span class="cap">${esc(g.name)}</span></button>${slot(i + 1, full)}`; }).join('')}</div>`
       : `<div class="rail empty" id="rail">${slot(0, false)}<span class="emptyline">Tocá + para elegir el primer juego.</span></div>`}</div>`;
 }
 const where = (list, i) => i === 0 ? 'al principio' : i === list.length ? 'al final' : `entre ${byId(list[i - 1]).name} y ${byId(list[i]).name}`;
-const slot = (i, full) => `<button class="slot${full ? ' full' : ''}" data-act="add" data-pos="${i}" aria-label="Agregar un juego ${esc(where(FEAT.ids, i))}"><span class="pl">${ic('plus')}</span></button>`;
+const slot = (i, full) => `<button class="slot${full ? ' full' : ''}" data-act="add" data-pos="${i}" aria-label="Agregar un juego ${esc(where(ROW().ids, i))}"><span class="pl">${ic('plus')}</span></button>`;
 function landed(id) {
   requestAnimationFrame(() => { const b = document.querySelector(`#rail .box[data-id="${id}"]`); if (!b) return;
     b.scrollIntoView({ inline: 'center', block: 'nearest' }); b.classList.add('landed'); b.addEventListener('animationend', () => b.classList.remove('landed'), { once: true }); });
@@ -345,9 +348,9 @@ function landed(id) {
 /* "¿Qué juego va acá?" — the spot is known, staff choose the game. Idle: games that arrived lately (the likely picks). */
 let ADD = null;
 function addSheet(pos, from) {
-  if (FEAT.ids.length >= CAP) return snack(`Ya hay ${CAP} juegos. Quitá uno para agregar otro.`);
+  if (ROW().feat && ROW().ids.length >= CAP) return snack(`Ya hay ${CAP} juegos. Quitá uno para agregar otro.`);
   ADD = { pos };
-  openSheet(`<span class="tile">${ic('star')}</span><div class="sh-txt"><div class="ctx">${esc(FEAT.name)} · ${esc(where(FEAT.ids, pos))}</div><div class="sh-title">¿Qué juego va acá?</div></div>`,
+  openSheet(`<span class="tile">${ic(kindIcon(ROW()))}</span><div class="sh-txt"><div class="ctx">${esc(ROW().name)} · ${esc(where(ROW().ids, pos))}</div><div class="sh-title">¿Qué juego va acá?</div></div>`,
     `<div class="pbody" id="abody"></div>`, from, { full: true, focus: '#aq',
       top: `<div class="psearch"><div class="sfield"><label class="sr" for="aq">Buscá un juego</label><input id="aq" type="search" placeholder="Buscá un juego" autocomplete="off" spellcheck="false" enterkeyhint="search"><span class="sico">${ic('search')}</span></div></div>` });
   renderABody();
@@ -356,9 +359,9 @@ function markMatch(name, q) { const n = norm(q.trim()), i = norm(name).indexOf(n
 function renderABody() {
   const body = $('#abody'); if (!body) return;
   const q = $('#aq')?.value || '', n = norm(q.trim());
-  const row = g => { const inRow = FEAT.ids.includes(g.id);
+  const row = g => { const inRow = ROW().ids.includes(g.id);
     return `<button class="srow" data-act="addpick" data-id="${g.id}">${cover(g, 'cov')}<span class="txt"><span class="ttl">${q ? markMatch(g.name, q) : esc(g.name)}</span>${inRow ? `<span class="sub">Ya está en la fila · pasa a este lugar</span>` : ''}</span></button>`; };
-  if (!n) { const recent = G.filter(g => g.thumb && !FEAT.ids.includes(g.id)).slice(-6).reverse();
+  if (!n) { const recent = G.filter(g => g.thumb && !ROW().ids.includes(g.id)).slice(-6).reverse();
     body.innerHTML = `<div class="glabel">Últimas novedades</div><div class="pres">${recent.map(row).join('')}</div>`; return; }
   const starts = [], has = []; for (const g of G) { const m = norm(g.name); if (m.startsWith(n)) starts.push(g); else if (m.includes(n)) has.push(g); }
   const list = [...starts, ...has].slice(0, 6);
@@ -366,15 +369,15 @@ function renderABody() {
     <button class="srow create" data-act="soon" data-what="Crear un juego"><span class="cov">${ic('plus')}</span><span class="txt"><span class="ttl">Crear «${esc(q.trim())}»</span><span class="sub">Agregarlo al catálogo</span></span></button>`}</div>`;
 }
 function putAt(gid, pos, verb) {
-  const ids = FEAT.ids, before = ids.slice(), from = ids.indexOf(gid);
+  const ids = ROW().ids, before = ids.slice(), from = ids.indexOf(gid);
   if (from >= 0) { if (from === pos || from === pos - 1) { closeSheet(); return snack('Ya está en ese lugar'); } ids.splice(from, 1); if (from < pos) pos -= 1; }
   ids.splice(pos, 0, gid); ADD = null; MOVE = null; closeSheet(); render(); landed(gid);
-  snack(from >= 0 ? 'Juego movido' : verb || 'Juego agregado', { label: 'Deshacer', run: () => { FEAT.ids = before; render(); } });
+  snack(from >= 0 ? 'Juego movido' : verb || 'Juego agregado', { label: 'Deshacer', run: () => { ROW().ids = before; render(); } });
 }
 
 /* the game's options (D-19e) */
 function boxSheet(g, from) {
-  openSheet(`${cover(g, 'cov')}<div class="sh-txt"><div class="ctx">${esc(FEAT.name)}</div><div class="sh-title">${esc(g.name)}</div></div>`,
+  openSheet(`${cover(g, 'cov')}<div class="sh-txt"><div class="ctx">${esc(ROW().name)}</div><div class="sh-title">${esc(g.name)}</div></div>`,
     `<button class="dlink" data-act="soon" data-what="Ver ficha">${ic('eye')}<span>Ver ficha<span class="dsub">La página del juego en la web</span></span></button>
      <button class="dlink" data-act="mover" data-id="${g.id}">${ic('move')}<span>Mover<span class="dsub">Elegís otro lugar en la fila</span></span></button>
      <button class="dlink" data-act="quitar" data-id="${g.id}">${ic('remove')}<span>Quitar de la fila<span class="dsub">Deja de verse en el inicio</span></span></button>`, from);
@@ -382,10 +385,10 @@ function boxSheet(g, from) {
 /* Mover — the row drawn without the game, a "+" in every gap (the game keeps its spot until one is chosen, D-00c) */
 let MOVE = null;
 function moveSheet(g, from) {
-  MOVE = { gid: g.id }; const rest = FEAT.ids.filter(id => id !== g.id);
+  MOVE = { gid: g.id }; const rest = ROW().ids.filter(id => id !== g.id);
   const mslot = i => `<button class="slot" data-act="moveto" data-pos="${i}" aria-label="Mover ${esc(where(rest, i))}"><span class="pl">${ic('plus')}</span></button>`;
   openSheet(`${cover(g, 'cov')}<div class="sh-txt"><div class="ctx">${esc(g.name)}</div><div class="sh-title">¿Dónde va?</div></div>`,
-    `<div class="pbody"><div class="shelf mshelf"><div class="rail" id="mrail" role="group" aria-label="${esc(FEAT.name)}">${mslot(0)}${rest.map((id, i) => { const b = byId(id);
+    `<div class="pbody"><div class="shelf mshelf"><div class="rail" id="mrail" role="group" aria-label="${esc(ROW().name)}">${mslot(0)}${rest.map((id, i) => { const b = byId(id);
       return `<div class="box" aria-hidden="true" style="cursor:default">${cover(b, 'bc')}<span class="cap">${esc(b.name)}</span></div>${mslot(i + 1)}`; }).join('')}</div></div></div>`, from, { full: true });
 }
 
@@ -433,7 +436,7 @@ const filaRow = r => `<button class="row${r.hidden ? ' hid' : ''}" data-act="row
   <span class="tile">${ic(kindIcon(r))}</span><span class="txt"><span class="name">${esc(r.name)}</span><span class="sub">${rowSub(r)}</span></span></button>`;
 function rowSheet(r, from) {
   const games = r.feat ? `<button class="dlink" data-act="back">${ic('hand')}<span>Juegos<span class="dsub">Se editan en Web</span></span></button>`
-    : r.kind === 'manual' ? `<button class="dlink" data-act="soon" data-what="Los juegos de una fila">${ic('hand')}<span>Juegos<span class="dsub">Agregar, quitar y ordenar</span></span></button>` : '';
+    : r.kind === 'manual' ? `<button class="dlink" data-act="rowgames" data-rid="${r.id}">${ic('hand')}<span>Juegos<span class="dsub">Agregar, quitar y ordenar</span></span></button>` : '';
   const over = r.ids && r.ids.length > CAP;
   const destacar = r.kind === 'manual' && !r.feat ? `<button class="dlink" data-act="destacar" data-rid="${r.id}">${ic('star')}<span>Destacar<span class="dsub">${over ? `Tiene ${r.ids.length} juegos · la destacada lleva hasta ${CAP}` : 'Pasa a ser la primera fila del inicio'}</span></span></button>` : '';
   const hide = r.feat ? '' : `<button class="dlink" data-act="togglehide" data-rid="${r.id}">${ic(r.hidden ? 'eye' : 'eyeoff')}<span>${r.hidden ? 'Mostrar en el inicio' : 'Ocultar del inicio'}<span class="dsub">${r.hidden ? 'Vuelve a verse en su lugar' : 'Guarda sus juegos para más adelante'}</span></span></button>`;
@@ -511,21 +514,22 @@ document.addEventListener('click', e => {
   if (act === 'addpick') return putAt(id, ADD.pos);
   if (act === 'box') return boxSheet(byId(id), t);
   if (act === 'mover') { const g = byId(id); closeSheet(); return setTimeout(() => moveSheet(g, document.querySelector(`#rail [data-id="${id}"]`)), 280); }
-  if (act === 'moveto') { const gid = MOVE.gid, rest = FEAT.ids.filter(x => x !== gid), p = +t.dataset.pos;
-    const target = p === rest.length ? FEAT.ids.length : FEAT.ids.indexOf(rest[p]); return putAt(gid, target); }
+  if (act === 'moveto') { const gid = MOVE.gid, rest = ROW().ids.filter(x => x !== gid), p = +t.dataset.pos;
+    const target = p === rest.length ? ROW().ids.length : ROW().ids.indexOf(rest[p]); return putAt(gid, target); }
   /* decision 10 — no dialog: taking a game out of a row is undoable list editing, not destruction (D-19k) */
   if (act === 'quitar') { closeSheet();
-    const before = FEAT.ids.slice(); FEAT.ids = FEAT.ids.filter(x => x !== id); render();
-    return snack('Juego quitado', { label: 'Deshacer', run: () => { FEAT.ids = before; render(); } }); }
+    const r = ROW(), before = r.ids.slice(); r.ids = r.ids.filter(x => x !== id); render();
+    return snack('Juego quitado', { label: 'Deshacer', run: () => { r.ids = before; render(); } }); }
   if (act === 'dlg-no') return closeDialog();
   if (act === 'dlg-yes') { const run = DLG.run; closeDialog(); return run(); }
-  if (act === 'rename') return nameSheet(FEAT, t);
+  if (act === 'rename') return nameSheet(ROW(), t);
   if (act === 'namesave') return nameSave();
-  if (act === 'filas') { S.screen = 'filas'; render(); return $('#scroller').scrollTo({ top: 0 }); }
-  if (act === 'back') { closeSheet(); ORD = null; S.screen = 'web'; render(); return $('#scroller').scrollTo({ top: 0 }); }
+  if (act === 'filas') { closeSheet(); CUR = null; S.screen = 'filas'; render(); return $('#scroller').scrollTo({ top: 0 }); }
+  if (act === 'back') { closeSheet(); ORD = null; CUR = null; S.screen = 'web'; render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'rowsheet') return rowSheet(ROWS.find(r => r.id === rid), t);
   if (act === 'newrow') return nameSheet(null, t, true);
   if (act === 'editrow') { const r = ROWS.find(x => x.id === rid); closeSheet(); return setTimeout(() => nameSheet(r, document.querySelector(`[data-act="rowsheet"][data-rid="${rid}"]`)), 280); }
+  if (act === 'rowgames') { closeSheet(); CUR = ROWS.find(x => x.id === rid); S.screen = 'web'; render(); return $('#scroller').scrollTo({ top: 0 }); }
   if (act === 'destacar') return destacar(ROWS.find(x => x.id === rid));
   if (act === 'togglehide') { const r = ROWS.find(x => x.id === rid); r.hidden = !r.hidden; closeSheet(); render();
     return snack(r.hidden ? 'Fila oculta' : 'Fila visible', { label: 'Deshacer', run: () => { r.hidden = !r.hidden; render(); } }); }
@@ -551,7 +555,7 @@ document.addEventListener('click', e => {
   const k = e.target.closest('[data-kbd-set]'), f = e.target.closest('[data-fill]');
   if (k) { KBD_SIM = k.dataset.kbdSet === '1'; k.parentElement.querySelectorAll('[data-kbd-set]').forEach(x => x.classList.toggle('on', x === k)); }
   if (f) { const n = +f.dataset.fill; FEAT.ids = n === 0 ? [] : n === 7 ? DEV7.slice() : [...DEV7, ...MORE].slice(0, 20);
-    f.parentElement.querySelectorAll('[data-fill]').forEach(x => x.classList.toggle('on', x === f)); S.screen = 'web'; ORD = null; render(); }
+    f.parentElement.querySelectorAll('[data-fill]').forEach(x => x.classList.toggle('on', x === f)); S.screen = 'web'; ORD = null; CUR = null; render(); }
 });
 render();
 </script>

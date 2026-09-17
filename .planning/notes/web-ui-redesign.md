@@ -121,3 +121,13 @@ without asking: a row with more than 20 games cannot be destacada (sub-line says
     the search field — featuring new arrivals is a likely reason to swap, so often one tap, no typing. Label renamed
     from "Llegaron hace poco". Rejected: "Quitados hace poco" first; the search alone.
     Developer kept the recommended behaviour with a note: *"Named Ultimas novedades"*.
+
+12. **Every hand-picked row is edited on the same page as Web.** Filas del inicio → row sheet → **Juegos** opens that row
+    on Web's page: `‹ Filas del inicio`, name + pencil, context "Elegida a mano · N juegos", the rail with "+" in every
+    gap, the same add / options / Mover sheets and Deshacer. Web is that page opened on the destacada; Destacar only
+    changes which row Web opens on. The 20-game cap and "Primera fila del inicio" apply only to the destacada.
+    Measured 375×667: back link → name 8 (≈20 between visible text, as ‹ Web → title on Filas); context → covers 16;
+    Crea conexiones' rail is 8,592px (61 covers) — the long swipe was accepted with this option. Adding a game there
+    updates its Filas count (61 → 62).
+    Rejected: a list page for long rows (two editors); a "Buscá en la fila" field over the rail (a second control above
+    the main one). Developer picked "Same page as Web (Recommended)".

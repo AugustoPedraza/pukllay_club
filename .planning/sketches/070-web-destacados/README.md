@@ -27,6 +27,9 @@ Tools: Tema · Teclado simulado · Juegos en Destacados 0 / 7 (dev data) / 20 (c
   heads the rest; Deshacer); automatic rows never get it; the destacada's sheet has no Ocultar. A row over 20 games
   shows why it can't be destacada.
 
+- **Any hand-picked row** (round 4): Filas → row sheet → Juegos opens it on the same page (`‹ Filas del inicio`),
+  no cap, context "Elegida a mano · N juegos". Quitar has no dialog (D-19k); the add sheet opens on "Últimas novedades".
+
 ## Measured (375×667, both themes)
 Title row → name text 16.8 · name → context 5 · context → covers 16 · cover to cover 44 (= the "+" hit box) · ~2.6
 covers visible (2 whole) · rail 1,032px wide at 7 games, 2,852px at 20 · header glyph on the content edge (359) · add and
