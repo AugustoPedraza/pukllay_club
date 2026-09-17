@@ -110,3 +110,14 @@ without asking: a row with more than 20 games cannot be destacada (sub-line says
    box, so the 32px box gap read as 44 against 16 above. Group margin now makes it title → "Destacada" 16 · heading →
    tile 16 · tile → "Otras filas" 32 · heading → tile 16, both themes.
    Developer: *"yes, balanced now."*
+
+10. **Quitar de la fila has no dialog**: the game leaves the row at once with "Juego quitado" + Deshacer (10 s); the sheet
+    row loses its red and its "· te pedimos confirmar". Removing from a home row keeps the game and its shelf spot, and
+    Deshacer restores the exact spot — a 5-game swap is 10 taps, not 15. App-wide as **D-19k** (CONTEXT + BENCHMARK):
+    removing from a curated list is not destructive; D-19f's dialog stays for losing state staff must rebuild.
+    Rejected: keep the D-19f dialog. Developer picked "No dialog, just Deshacer (Recommended)".
+
+11. **"¿Qué juego va acá?" opens on "Últimas novedades"**: the 6 most recently added games not already in the row, under
+    the search field — featuring new arrivals is a likely reason to swap, so often one tap, no typing. Label renamed
+    from "Llegaron hace poco". Rejected: "Quitados hace poco" first; the search alone.
+    Developer kept the recommended behaviour with a note: *"Named Ultimas novedades"*.

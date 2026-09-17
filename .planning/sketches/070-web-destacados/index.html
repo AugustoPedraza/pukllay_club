@@ -359,7 +359,7 @@ function renderABody() {
   const row = g => { const inRow = FEAT.ids.includes(g.id);
     return `<button class="srow" data-act="addpick" data-id="${g.id}">${cover(g, 'cov')}<span class="txt"><span class="ttl">${q ? markMatch(g.name, q) : esc(g.name)}</span>${inRow ? `<span class="sub">Ya está en la fila · pasa a este lugar</span>` : ''}</span></button>`; };
   if (!n) { const recent = G.filter(g => g.thumb && !FEAT.ids.includes(g.id)).slice(-6).reverse();
-    body.innerHTML = `<div class="glabel">Llegaron hace poco</div><div class="pres">${recent.map(row).join('')}</div>`; return; }
+    body.innerHTML = `<div class="glabel">Últimas novedades</div><div class="pres">${recent.map(row).join('')}</div>`; return; }
   const starts = [], has = []; for (const g of G) { const m = norm(g.name); if (m.startsWith(n)) starts.push(g); else if (m.includes(n)) has.push(g); }
   const list = [...starts, ...has].slice(0, 6);
   body.innerHTML = `<div class="pres">${list.length ? list.map(row).join('') : `<div class="snone">Ningún juego se llama así.</div>
@@ -377,7 +377,7 @@ function boxSheet(g, from) {
   openSheet(`${cover(g, 'cov')}<div class="sh-txt"><div class="ctx">${esc(FEAT.name)}</div><div class="sh-title">${esc(g.name)}</div></div>`,
     `<button class="dlink" data-act="soon" data-what="Ver ficha">${ic('eye')}<span>Ver ficha<span class="dsub">La página del juego en la web</span></span></button>
      <button class="dlink" data-act="mover" data-id="${g.id}">${ic('move')}<span>Mover<span class="dsub">Elegís otro lugar en la fila</span></span></button>
-     <button class="dlink danger" data-act="quitar" data-id="${g.id}">${ic('remove')}<span>Quitar de la fila<span class="dsub">Deja de verse en el inicio · te pedimos confirmar</span></span></button>`, from);
+     <button class="dlink" data-act="quitar" data-id="${g.id}">${ic('remove')}<span>Quitar de la fila<span class="dsub">Deja de verse en el inicio</span></span></button>`, from);
 }
 /* Mover — the row drawn without the game, a "+" in every gap (the game keeps its spot until one is chosen, D-00c) */
 let MOVE = null;
@@ -513,10 +513,10 @@ document.addEventListener('click', e => {
   if (act === 'mover') { const g = byId(id); closeSheet(); return setTimeout(() => moveSheet(g, document.querySelector(`#rail [data-id="${id}"]`)), 280); }
   if (act === 'moveto') { const gid = MOVE.gid, rest = FEAT.ids.filter(x => x !== gid), p = +t.dataset.pos;
     const target = p === rest.length ? FEAT.ids.length : FEAT.ids.indexOf(rest[p]); return putAt(gid, target); }
-  if (act === 'quitar') { const g = byId(id); closeSheet();
-    return openDialog({ title: `¿Quitar ${g.name} de la fila?`, text: 'Deja de verse en el inicio.', yes: 'Quitar', run: () => {
-      const before = FEAT.ids.slice(); FEAT.ids = FEAT.ids.filter(x => x !== id); render();
-      snack('Juego quitado', { label: 'Deshacer', run: () => { FEAT.ids = before; render(); } }); } }); }
+  /* decision 10 — no dialog: taking a game out of a row is undoable list editing, not destruction (D-19k) */
+  if (act === 'quitar') { closeSheet();
+    const before = FEAT.ids.slice(); FEAT.ids = FEAT.ids.filter(x => x !== id); render();
+    return snack('Juego quitado', { label: 'Deshacer', run: () => { FEAT.ids = before; render(); } }); }
   if (act === 'dlg-no') return closeDialog();
   if (act === 'dlg-yes') { const run = DLG.run; closeDialog(); return run(); }
   if (act === 'rename') return nameSheet(FEAT, t);

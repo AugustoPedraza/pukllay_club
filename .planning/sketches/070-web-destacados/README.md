@@ -20,8 +20,7 @@ Tools: Tema · Teclado simulado · Juegos en Destacados 0 / 7 (dev data) / 20 (c
 
 ## What is drawn
 - **Web**: title + rows icon; row name (17/600) + pencil → name sheet; context line (position · N de 20); rail of 96px
-  covers with a "+" before, between and after every cover. "+" → "¿Qué juego va acá?" (full-height; idle shows games
-  that arrived lately; a game already in the row moves). Cover → sheet Ver ficha · Mover · Quitar de la fila (dialog +
+  covers with a "+" before, between and after every cover. "+" → "¿Qué juego va acá?" (full-height; idle shows "Últimas novedades"; a game already in the row moves). Cover → sheet Ver ficha · Mover · Quitar de la fila (dialog +
   Deshacer). Mover → "¿Dónde va?" with the row drawn without the game. At 20 the "+" dims and a tap explains the cap.
 - **Filas del inicio** (`‹ Web`), round 2: two groups — **Destacada** (one row) and **Otras filas** (home order below it; no counts, no hint lines — round 3), 32px apart; ⇅ Ordenar keeps the destacada locked
   in its own group; "+" Nueva fila. A hand-picked row's sheet starts with **Destacar** (the role moves; the old one
