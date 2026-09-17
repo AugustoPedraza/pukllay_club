@@ -124,11 +124,13 @@
   .row .name { font-size: 15px; line-height: 1.3; }
   .sub { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
   /* decision 14 — kind tag. T1 tonal: the icon tile's own tint; T2 outlined: 1px stroke, no fill */
-  .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; }
-  .tag { border: 1px solid var(--stroke); color: var(--color-text-muted); }
+  /* decision 16 — the tag steps back: 11px regular, a hairline --color-border, muted text. It marks the kind without
+     competing with the row name; meaning is carried by the word, not by its weight. */
+  .tag { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 400; line-height: 1; white-space: nowrap;
+    border: 1px solid var(--color-border); color: var(--color-text-muted); }
   .row .sub { gap: 6px; }
   /* a 20px tag sits 4px lower than a 13px text line, so the box gap goes to 0 to keep the name→second-line rhythm */
-  .sub:has(.tag) { margin-top: -2px; }
+  .sub:has(.tag) { margin-top: -1px; }
   /* decision 15 — count on the tile: bottom-right neutral pill */
   .tile { position: relative; }
   .cnum { font-size: 11px; font-weight: 600; line-height: 1; }
@@ -409,7 +411,7 @@ function moveSheet(g, from) {
 function nameSheet(row, from, isNew) {
   EDIT = { id: row ? row.id : null };
   const def = row ? row.name : 'Nueva fila';
-  openSheet(`<span class="tile">${ic(row ? kindIcon(row) : 'hand')}</span><div class="sh-txt"><div class="ctx">${row ? (row.feat ? 'Fila destacada' : kindLabel(row)) : 'Personalizada'}</div><div class="sh-title">${row ? 'Editar fila' : 'Nueva fila'}</div></div>`,
+  openSheet(`<span class="tile">${ic(row ? kindIcon(row) : 'hand')}</span><div class="sh-txt"><div class="ctx">${row ? (row.feat ? 'Fila destacada' : 'Fila ' + kindLabel(row)) : 'Fila personalizada'}</div><div class="sh-title">${row ? 'Editar fila' : 'Nueva fila'}</div></div>`,
     `<div class="fbody"><label class="flab" for="rn">Nombre</label>
       <input id="rn" class="tfield" value="${esc(def)}" maxlength="40" autocomplete="off" enterkeyhint="done" aria-describedby="rnhint rnerr">
       <p class="hint" id="rnhint">Así se ve el título de la fila en el inicio.</p><p class="ferr" id="rnerr" role="alert" hidden></p>
@@ -432,14 +434,14 @@ function nameSave() {
 
 /* ---------- Filas del inicio (decision 6) ---------- */
 const kindIcon = r => r.feat ? 'star' : ({ manual: 'hand', level: 'level', recent: 'clock' })[r.kind];
-const kindLabel = r => r.kind === 'manual' ? 'Personalizada' : 'Automática';
+const kindLabel = r => r.kind === 'manual' ? 'personalizada' : 'automática';   /* lowercase: a quiet tag, not a heading */
 const rowCount = r => r.ids ? r.ids.length : null;
 /* decision 14 — the row's second line: [status ·] an outlined tag saying how the row fills; the count lives on the tile */
 const rowN = r => r.ids ? r.ids.length : r.kind === 'recent' ? 30 : r.auto;
 const rowSub = r => { const auto = r.kind !== 'manual', n = rowN(r);
   const tail = r.feat ? 'hasta ' + CAP : n ? '' : 'Vacía';
   return (r.hidden ? `<span class="dot" aria-hidden="true"></span>Oculta<span aria-hidden="true">·</span>` : '')
-    + `<span class="tag">${auto ? 'Automática' : 'Personalizada'}</span>${tail ? esc(tail) : ''}`; };
+    + `<span class="tag">${kindLabel(r)}</span>${tail ? esc(tail) : ''}`; };
 /* decision 15 — the count is a neutral pill on the tile's BOTTOM-right corner (the Pendientes badge is top-right, filled
    primary: a different corner and a different colour, so it never reads as a notification) */
 const rowTile = r => { const n = rowN(r), lbl = n === 1 ? '1 juego' : `${n} juegos`;
@@ -464,7 +466,7 @@ function rowSheet(r, from) {
   const over = r.ids && r.ids.length > CAP;
   const destacar = r.kind === 'manual' && !r.feat ? `<button class="dlink" data-act="destacar" data-rid="${r.id}">${ic('star')}<span>Destacar<span class="dsub">${over ? `Tiene ${r.ids.length} juegos · la destacada lleva hasta ${CAP}` : 'Pasa a ser la primera fila del inicio'}</span></span></button>` : '';
   const hide = r.feat ? '' : `<button class="dlink" data-act="togglehide" data-rid="${r.id}">${ic(r.hidden ? 'eye' : 'eyeoff')}<span>${r.hidden ? 'Mostrar en el inicio' : 'Ocultar del inicio'}<span class="dsub">${r.hidden ? 'Vuelve a verse en su lugar' : 'Guarda sus juegos para más adelante'}</span></span></button>`;
-  openSheet(`<span class="tile">${ic(kindIcon(r))}</span><div class="sh-txt"><div class="ctx">${r.feat ? 'Fila destacada' : esc(kindLabel(r))}</div><div class="sh-title">${esc(r.name)}</div></div>`,
+  openSheet(`<span class="tile">${ic(kindIcon(r))}</span><div class="sh-txt"><div class="ctx">${r.feat ? 'Fila destacada' : 'Fila ' + esc(kindLabel(r))}</div><div class="sh-title">${esc(r.name)}</div></div>`,
     `${destacar}<button class="dlink" data-act="editrow" data-rid="${r.id}">${ic('edit')}<span>Editar nombre<span class="dsub">Así se ve el título en el inicio</span></span></button>${games}${hide}`, from);
 }
 /* decision 7 — the role moves: the new row goes first, the old one heads the rest */

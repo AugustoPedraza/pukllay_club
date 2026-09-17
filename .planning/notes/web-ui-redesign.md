@@ -170,3 +170,11 @@ experto 46 (26 without a band). Recientes shows the newest 30.
     - the row PAGE drops the kind tag and keeps only state ("7 de 20 juegos", "61 juegos", "● Oculta · …"): on the page
       you are already inside that row, and the long "Personalizada 7 de 20 juegos · primera del inicio" broke the line.
     Rhythm on Web unchanged: title → name 16.8 · name → context 5 · context → covers 16.
+
+16. **The kind tag steps back** (developer: *"Still the label for "personalizada" takes too much weight. Alternatives?"*):
+    11px regular (was 12/600), 18px tall, hairline `--color-border` instead of `--stroke`, muted text, and the word in
+    **lowercase** — "personalizada" / "automática". Measured 375×740 both themes: tag text 6.17:1 light / 6.90 dark
+    against the row name's 17.16 / 13.62, so the name clearly leads; the border is decorative (1.42 / 1.30) and carries
+    no meaning; row height 64 and content top 12.8 vs tile 12 unchanged. Sheet contexts read "Fila personalizada" /
+    "Fila automática" / "Fila destacada".
+    Rejected: tagging only automatic rows (two row heights in one list); dropping the tag for the row's public subtitle.
