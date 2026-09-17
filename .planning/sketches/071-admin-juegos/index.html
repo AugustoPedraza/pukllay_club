@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketch 071 — Juegos</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* Sketch 071 — the admin Juegos tab, restarted from the job (notes/juegos-ui-redesign.md, decisions 1–5).
+     Standalone: only the Juegos UI. Components are copied from 069 (search, dropdown, sheets, dialog, snackbar,
+     form sheet) and 070 (header icons, list rows, count badge, tag), not redrawn. */
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  :root[data-theme="dark"] body { background: #120a1c; }
+  button, input, textarea { font: inherit; color: inherit; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg { display: block; }
+
+  .stage { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 24px 16px 64px; }
+  .device { position: relative; width: 375px; height: 740px; background: var(--color-bg); border-radius: 28px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(30, 10, 50, .25); display: flex; flex-direction: column; }
+  @media (max-width: 430px) { .stage { padding: 0; } .device { width: 100%; height: 100vh; border-radius: 0; } }
+
+  /* chrome — context only */
+  .hdr { height: 53px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; border-bottom: 1px solid var(--color-border); }
+  .hdr .burger { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; }
+  .hdr img { height: 26px; }
+  .hdr .img-dark { display: none; }
+  :root[data-theme="dark"] .hdr .img-light { display: none; } :root[data-theme="dark"] .hdr .img-dark { display: block; }
+  .hdr .word { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: .03em; }
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 67px; display: grid; grid-template-columns: repeat(5, 1fr); padding: 4px 4px 8px;
+    background: var(--color-bg); border-top: 1px solid var(--color-border); z-index: 20; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+  .tab .ti { width: 56px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+  .tab .ti svg { width: 20px; height: 20px; }
+  .tab.on { color: var(--color-accent-text); } .tab.on .ti { background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .tab.on .ti { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
+  .device.kbd .tabs { display: none; }
+
+  main { padding: 16px 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+  .phead { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+  .ptitle { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -.01em; }
+  .back { display: inline-flex; align-items: center; gap: 2px; height: 44px; margin-left: -10px; padding: 0 10px 0 4px; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--color-text-muted); cursor: pointer; align-self: flex-start; }
+  .back svg { width: 18px; height: 18px; }
+  .tbtn { height: 44px; padding: 0 12px; border: 0; background: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--ter); cursor: pointer; white-space: nowrap; }
+  .tbtn.pull-r { margin-right: -12px; }
+  .tbtn:hover { background: color-mix(in srgb, var(--ter) 8%, transparent); }
+  .tbtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .ibtn { width: 44px; height: 44px; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); cursor: pointer; flex-shrink: 0; position: relative; }
+  .ibtn svg { width: 20px; height: 20px; }
+  .ibtn:hover { background: var(--color-surface); color: var(--color-text); }
+  .ibtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .hacts { display: flex; align-items: center; margin-right: -12px; }
+  .obtn { height: 44px; padding: 0 16px; border: 1px solid var(--stroke); background: var(--color-bg); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .obtn.pri { border-color: var(--color-primary); color: var(--color-accent-text); }
+  :root[data-theme="dark"] .obtn.pri { border-color: var(--color-accent-text); }
+  .obtn.wide { width: 100%; }
+
+  /* D-19g — pending work behind a header icon with a count badge (primary fill, top-right) */
+  .ibtn .badge { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--color-primary); color: #fff; font-size: 11px; font-weight: 600; line-height: 1; display: grid; place-items: center; }
+  :root[data-theme="dark"] .ibtn .badge { background: var(--color-accent-text); color: #1b1024; }
+
+  /* ---- search (069): magnifier on the RIGHT, → ✕ once a name is kept ---- */
+  /* decision 3 — the field is the page's main control and the list is a new group under it:
+     title row → field 16 · field → "Juegos del club" 32 (24 of container + the heading's own 8) */
+  .search { position: relative; margin-top: 16px; z-index: 12; }
+  .sfield { position: relative; }
+  .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; text-overflow: ellipsis; }
+  .sfield input::placeholder { color: var(--color-text-muted); }
+  .sfield input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] .sfield input:focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  .sfield input::-webkit-search-cancel-button { display: none; }
+  .sfield .sico { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--color-text-muted); border-radius: 8px; }
+  .sfield .sico svg { width: 20px; height: 20px; }
+  button.sico { cursor: pointer; }
+
+  /* suggestions drop down OVER the list below (069 decision 12) */
+  .sugg { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
+    box-shadow: var(--shadow-lg); padding: 4px 0; max-height: 264px; overflow-y: auto; scrollbar-width: none; }
+  .sugg::-webkit-scrollbar { display: none; }
+  .sugg[hidden] { display: none; }
+  .sglabel { font-size: 13px; color: var(--color-text-muted); padding: 8px 12px 4px; }
+  .srow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .srow:hover, .srow.hl { background: var(--color-surface); }
+  .srow .ttl { font-size: 15px; line-height: 1.3; }
+  .srow .ttl mark { background: none; color: inherit; font-weight: 600; }
+  /* decision 4 — the search creates: "Crear «texto»" on no match, "Agregar desde BGG" on a pasted id/link */
+  .srow.create .cov { display: grid; place-items: center; background: var(--color-surface); color: var(--color-accent-text); }
+  .srow.create .cov svg { width: 22px; height: 22px; }
+  .srow.create .ttl { color: var(--color-accent-text); font-weight: 600; }
+  .snone { padding: 14px 16px; font-size: 14px; color: var(--color-text-muted); }
+
+  /* covers */
+  .cov { width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0; object-fit: cover; background: var(--color-surface); display: grid; place-items: center; font-weight: 600; font-size: 16px; }
+  .cov.l { background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); }
+  :root[data-theme="dark"] .cov.l { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  /* a game with no data at all: a quiet placeholder, not a coloured letter tile */
+  .cov.none { background: var(--color-surface); color: var(--color-text-muted); border: 1px dashed var(--color-border); }
+  .cov.none svg { width: 18px; height: 18px; }
+  .txt { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .sub { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
+  /* D-19h — a status is a DOT + TEXT, never a pill */
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
+  .dot.gap { background: var(--color-danger); }
+
+  /* ---- the list (decision 3) ---- */
+  .lgroup { margin-top: 24px; }
+  .lhead { margin: 8px 0 4px; font-size: 15px; font-weight: 600; line-height: 1.3; }
+  .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
+  .lgroup + .lgroup { margin-top: 12px; }
+  .hint { margin: 0 0 8px; font-size: 13px; color: var(--color-text-muted); line-height: 1.4; }
+  .rows { margin: 0 -16px; }
+  .row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; border: 0; background: none; text-align: left; cursor: pointer; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--color-border); }
+  .row:hover { background: var(--color-surface); }
+  .row .name { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+  /* D-19i — a chevron means THIS ROW OPENS ANOTHER PAGE. A game row opens its editor (decision 2), so it has one. */
+  .chev { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted); }
+  .more { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 8px; }
+  .more .cap { font-size: 12px; color: var(--color-text-muted); }
+
+  /* ---- sheets (D-19e) ---- */
+  .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-radius: 18px 18px 0 0; z-index: 41;
+    transform: translateY(105%); transition: transform 260ms var(--ease-out-soft); box-shadow: var(--shadow-lg); max-height: 85%; overflow-y: auto;
+    padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; }
+  .sheet::-webkit-scrollbar { display: none; }
+  .sheet.open { transform: none; }
+  .sheet:focus { outline: none; }
+  .sheet.full { top: 24px; max-height: none; }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-surface-2); margin: 0 auto 8px; }
+  .sh-top { position: sticky; top: 0; z-index: 4; background: var(--color-bg); padding-top: 8px; margin-bottom: 8px; }
+  .sheet.full .sh-top { margin-bottom: 0; }
+  .sh-head { display: flex; gap: 16px; align-items: center; padding: 8px 16px 16px; border-bottom: 1px solid var(--color-border); }
+  .sh-head .cov { width: 56px; height: 60px; border-radius: 6px; }
+  .sh-head .tile { width: 56px; height: 60px; border-radius: 6px; background: var(--color-surface); display: grid; place-items: center; color: var(--color-accent-text); flex-shrink: 0; }
+  .sh-head .tile svg { width: 28px; height: 28px; }
+  .sh-txt { flex: 1; min-width: 0; }
+  .sh-title { font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .ctx { margin: 0 0 4px; font-size: 13px; line-height: 1.3; color: var(--color-text-muted); }
+  .sh-x { width: 44px; height: 44px; margin: -6px -10px 0 0; align-self: flex-start; flex-shrink: 0; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); cursor: pointer; }
+  .sh-x svg { width: 22px; height: 22px; }
+  .sh-x:hover { background: var(--color-surface); }
+  .sh-x:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .dlink { width: 100%; display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border: 0; background: none; font-size: 16px; text-align: left; cursor: pointer; }
+  .dlink:hover { background: var(--color-surface); }
+  .dlink svg { width: 22px; height: 22px; color: var(--color-text-muted); flex-shrink: 0; }
+  .dlink .dsub { display: block; font-size: 13px; color: var(--color-text-muted); }
+  .dlink:has(.dsub) { min-height: 64px; padding-block: 8px; }
+  .dlink:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+  /* form sheet (restart 67) — the Agregar juego sheet */
+  .fbody { padding: 8px 16px 16px; }
+  .flab { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+  .tfield { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; }
+  .tfield:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  .tfield[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  .fbody .hint { margin: 6px 0 0; }
+  .ferr { margin: 6px 0 0; font-size: 13px; color: var(--color-danger); }
+  .ferr[hidden] { display: none; }
+  .fbody .obtn.wide { margin-top: 16px; }
+  .fsep { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; font-size: 13px; color: var(--color-text-muted); }
+  .fsep::before, .fsep::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+  /* the edition prompt (D-03): a banner inside the sheet, games listed as compact rows */
+  .edp { margin-top: 16px; padding: 12px; border: 1px solid var(--stroke); border-radius: 8px; }
+  .edp p { margin: 0 0 8px; font-size: 14px; line-height: 1.4; }
+  .edp .srow { min-height: 48px; padding: 4px 0; }
+  .edp .eacts { display: flex; justify-content: flex-end; gap: 8px; margin: 8px -12px -4px 0; }
+  .device.kbd .sheet.full, .device.kbd .sheet.form { bottom: 292px; padding-bottom: 0; }
+
+  /* ---- editor stand-in (the real screen is sketch 063) ---- */
+  .ehead { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+  .ehead .cov { width: 56px; height: 60px; border-radius: 6px; }
+  .ehead h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+  .enote { margin-top: 24px; padding: 16px; border: 1px dashed var(--stroke); border-radius: 8px; font-size: 14px; line-height: 1.5; color: var(--color-text-muted); }
+
+  /* ---- dialog (D-19f) ---- */
+  .dscrim { position: absolute; inset: 0; z-index: 60; background: color-mix(in srgb, #231339 38%, transparent); display: grid; place-items: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity var(--duration-base); }
+  .dscrim.open { opacity: 1; pointer-events: auto; }
+  .dialog { width: 100%; max-width: 312px; background: var(--color-bg); border-radius: 16px; padding: 24px 24px 12px; box-shadow: var(--shadow-lg); transform: scale(.96); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .dscrim.open .dialog { transform: none; }
+  .dialog h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .dialog p { margin: 0 0 16px; font-size: 14px; line-height: 1.45; color: var(--color-text-muted); }
+  .dacts { display: flex; justify-content: flex-end; gap: 8px; margin-right: -12px; }
+  .tbtn.dan { color: var(--color-danger); }
+
+  /* ---- snackbar (D-19b/c) ---- */
+  .snack { position: absolute; left: 12px; right: 12px; bottom: 79px; z-index: 30; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 4px 4px 16px;
+    background: var(--color-text); color: var(--color-bg); border-radius: 8px; font-size: 14px; opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft); }
+  .snack.show { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; padding: 8px 0; }
+  .snack .tbtn { color: var(--color-accent-bg); }
+  .snack .x { width: 44px; height: 44px; border: 0; background: none; color: var(--color-bg); display: grid; place-items: center; cursor: pointer; }
+  .snack .x svg { width: 18px; height: 18px; }
+  .snack [hidden] { display: none; }
+
+  .kbd-sim { position: absolute; left: 0; right: 0; bottom: 0; height: 292px; z-index: 25; background: #d2d4da; display: none; padding: 10px 4px; }
+  :root[data-theme="dark"] .kbd-sim { background: #2b2b30; }
+  .device.kbd .kbd-sim { display: grid; grid-template-rows: repeat(4, 1fr); gap: 10px; }
+  .kbd-sim .krow { display: flex; gap: 5px; justify-content: center; }
+  .kbd-sim .k { flex: 0 0 31px; border-radius: 5px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.3); display: grid; place-items: center; font: 17px system-ui; color: #111; }
+  :root[data-theme="dark"] .kbd-sim .k { background: #6b6b70; color: #fff; }
+  .kbd-sim .k.wide { flex-basis: 180px; font-size: 12px; }
+
+  #tools { position: fixed; right: 12px; top: 12px; z-index: 99; font: 12px system-ui; background: rgba(0,0,0,.72); color: #fff; padding: 6px 10px; border-radius: 8px; }
+  #tools > div + div { margin-top: 4px; }
+  #tools button.on { background: #fff; color: #000; }
+  #tools button { font: inherit; color: #fff; background: none; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="stage"><div class="device" id="device">
+  <header class="hdr">
+    <button class="burger" aria-label="Abrir menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt="">
+    <span class="word">PUKLLAY CLUB</span>
+  </header>
+  <div class="scroller" id="scroller"><main id="main"></main></div>
+  <nav class="tabs" aria-label="Secciones de Admin">
+    <span class="tab"><span class="ti" id="t-admin"></span>Admin</span>
+    <span class="tab on" aria-current="page"><span class="ti" id="t-juegos"></span>Juegos</span>
+    <span class="tab"><span class="ti" id="t-web"></span>Web</span><span class="tab"><span class="ti" id="t-est"></span>Estantes</span>
+    <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
+  </nav>
+  <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
+  <div class="kbd-sim" aria-hidden="true"><div class="krow">qwertyuiop</div><div class="krow">asdfghjklñ</div><div class="krow">zxcvbnm</div><div class="krow"><span class="k wide">espacio</span></div></div>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  <div class="dscrim" id="dscrim"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+    <h2 id="dlg-t"></h2><p id="dlg-d"></p>
+    <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
+</div></div>
+<div id="tools">
+  <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+  <div>Pendientes: <button data-pend="50" class="on">50</button> <button data-pend="1">1</button> <button data-pend="0">0</button></div>
+</div>
+
+<script src="../069-estantes-ubicar/games.js"></script>
+<script>
+/* ---------- icons ---------- */
+const P = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  chevR: '<path d="M9 5l7 7-7 7"/>',
+  chevL: '<path d="M15 5l-7 7 7 7"/>',
+  inbox: '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 5h13l2.5 8v5a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-5z"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/>',
+  shelf: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/>',
+  dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  file: '<path d="M14 3v5h5"/><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/>',
+  down: '<path d="M12 5v13M6 13l6 6 6-6"/>'
+};
+const ic = (n, s = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+
+/* ---------- data: the 434 published games + 1 draft, exactly as the dev DB has them ----------
+   The fixture's 49 thumb-less games ARE the 49 incomplete ones (no cover, no description, no year) — verified
+   against pukllay_club_dev. They were bulk-imported 2026-08-10, so newest-first puts them at the bottom. */
+let G = GAMES067.map((x, i) => ({
+  id: i + 1, name: x.n, thumb: x.t, hue: hue(x.n),
+  year: x.t ? x.y : null,               /* the 49 have no year either */
+  gap: !x.t,                            /* "sin datos": no cover, no description */
+  status: 'published',
+  added: x.t ? 2000 + i : 0             /* the 49 all share the oldest timestamp */
+}));
+G.push({ id: 900, name: 'Ark Nova', thumb: null, hue: hue('Ark Nova'), year: 2021, gap: false, status: 'draft', added: 999999 });
+const byId = id => G.find(g => g.id === id);
+const TOTAL = () => G.length;
+const GAPS = () => G.filter(g => g.gap);
+const DRAFTS = () => G.filter(g => g.status === 'draft');
+let PEND_MODE = 50;
+const pend = () => PEND_MODE === 50 ? GAPS().length + DRAFTS().length : PEND_MODE;
+/* newest first (decision 3) */
+const byNew = () => [...G].sort((a, b) => b.added - a.added);
+
+const PAGE = 50;
+const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [] };
+let KBD_SIM = true, opener = null;
+
+const main = $('#main'), device = $('#device');
+const cover = (g, cls = 'cov') => g.thumb
+  ? `<img class="${cls}" src="${esc(g.thumb)}" alt="" loading="lazy">`
+  : g.gap ? `<span class="${cls} none" aria-hidden="true">${ic('img')}</span>`
+    : `<span class="${cls} l" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
+const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
+
+/* a row's second line: the year, or the exception (D-19h: dot + text) */
+function sub(g) {
+  if (g.status === 'draft') return `<span class="dot"></span>Borrador`;
+  if (g.gap) return `<span class="dot gap"></span>Sin datos`;
+  return esc(String(g.year));
+}
+const gameRow = g => `<button class="row" data-act="open" data-id="${g.id}" aria-label="${esc(g.name)}">
+  ${cover(g)}<span class="txt"><span class="name">${esc(g.name)}</span><span class="sub">${sub(g)}</span></span>
+  <span class="chev" aria-hidden="true">${ic('chevR')}</span></button>`;
+
+/* ---------- screens ---------- */
+function render() {
+  if (S.screen === 'juegos') renderJuegos();
+  else if (S.screen === 'pend') renderPend();
+  else if (S.screen === 'editor') renderEditor();
+  $('#t-juegos').innerHTML = ic('dice'); $('#t-admin').innerHTML = ic('grid');
+  $('#t-web').innerHTML = ic('home'); $('#t-est').innerHTML = ic('shelf');
+}
+
+function renderJuegos() {
+  const list = byNew().slice(0, S.shown), n = pend();
+  main.innerHTML = `
+    <div class="phead"><h1 class="ptitle">Juegos</h1>
+      <div class="hacts">
+        <button class="ibtn" data-act="pend" aria-label="Pendientes, ${n} ${n === 1 ? 'juego' : 'juegos'}">${ic('inbox')}${n ? `<span class="badge" aria-hidden="true">${n > 99 ? '99+' : n}</span>` : ''}</button>
+        <button class="ibtn" data-act="add" aria-label="Agregar un juego">${ic('plus')}</button>
+      </div></div>
+    <div class="search">
+      <div class="sfield">
+        <input id="q" type="search" placeholder="Buscá un juego" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-label="Buscá un juego">
+        <span class="sico" id="sico" aria-hidden="true">${ic('search')}</span>
+      </div>
+      <div class="sugg" id="sugg" role="listbox" hidden></div>
+    </div>
+    <section class="lgroup">
+      <h2 class="lhead">Juegos del club<span class="cnt">${TOTAL()}</span></h2>
+      <div class="rows">${list.map(gameRow).join('')}</div>
+      ${S.shown < TOTAL() ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${TOTAL()}</span></div>` : ''}
+    </section>`;
+}
+
+function renderPend() {
+  const gaps = GAPS(), drafts = DRAFTS();
+  main.innerHTML = `
+    <button class="back" data-act="juegos">${ic('chevL')}Juegos</button>
+    <div class="phead"><h1 class="ptitle">Pendientes</h1></div>
+    <section class="lgroup">
+      <h2 class="lhead">Sin datos<span class="cnt">${gaps.length}</span></h2>
+      <p class="hint">Se ven en la web sin tapa ni descripción. Abrilos y completá los datos.</p>
+      <div class="rows">${gaps.map(gameRow).join('')}</div>
+    </section>
+    <section class="lgroup">
+      <h2 class="lhead">Borradores<span class="cnt">${drafts.length}</span></h2>
+      <p class="hint">Todavía no se ven en la web.</p>
+      <div class="rows">${drafts.length ? drafts.map(gameRow).join('') : '<p class="snone">No hay borradores.</p>'}</div>
+    </section>`;
+}
+
+function renderEditor() {
+  const g = byId(S.editing);
+  main.innerHTML = `
+    <button class="back" data-act="${S.from === 'pend' ? 'pend' : 'juegos'}">${ic('chevL')}${S.from === 'pend' ? 'Pendientes' : 'Juegos'}</button>
+    <div class="ehead">${cover(g, 'cov')}<div><h2>${esc(g.name)}</h2>
+      <div class="sub" style="margin-top:4px">${sub(g)}</div></div></div>
+    <div class="enote">Acá va el editor del juego — <strong>sketch 063</strong> (Datos del club, En la web, Datos de BGG,
+      una barra de guardado, Publicar / Retirar). No se vuelve a dibujar en este sketch: 071 sólo diseña la pestaña
+      Juegos y cómo se llega hasta acá.</div>`;
+}
+
+/* ---------- the search (069) ---------- */
+/* decision 4 — one field, three answers: a name searches, a BGG id or link offers to add it,
+   no match offers to create it by name. The shipped parser already accepts a number or a BGG link. */
+const BGG_RE = /^(?:\s*(\d{2,7})\s*|.*boardgamegeek\.com\/boardgame(?:expansion)?\/(\d{2,7})\b.*)$/i;
+const bggId = q => { const m = String(q).match(BGG_RE); return m ? (m[1] || m[2]) : null; };
+
+function markMatch(name, q) {
+  const n = norm(q.trim()), i = norm(name).indexOf(n);
+  if (i < 0 || !n) return esc(name);
+  return esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + n.length)) + '</mark>' + esc(name.slice(i + n.length));
+}
+const sugRow = (g, q) => `<button class="srow" role="option" data-act="open" data-id="${g.id}">${cover(g)}<span class="txt"><span class="ttl">${markMatch(g.name, q)}</span><span class="sub">${sub(g)}</span></span></button>`;
+
+function renderSugg() {
+  const box = $('#sugg'), inp = $('#q'); if (!box || !inp) return;
+  const q = inp.value, sico = $('#sico');
+  /* a kept name: the magnifier became a ✕ that goes back (069 decision 60) */
+  if (S.kept) { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
+  sico.outerHTML = `<span class="sico" id="sico" aria-hidden="true">${ic('search')}</span>`;
+
+  if (!q.trim()) {                                   /* focused + empty → Últimas búsquedas */
+    const rec = S.recent.map(byId).filter(Boolean).slice(0, 3);
+    if (!rec.length) { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
+    box.innerHTML = `<div class="sglabel">Últimas búsquedas</div>` + rec.map(g => sugRow(g, '')).join('');
+    box.hidden = false; inp.setAttribute('aria-expanded', 'true'); return;
+  }
+
+  const id = bggId(q);
+  if (id) {                                          /* a BGG number or link → add, don't search */
+    box.innerHTML = `<button class="srow create" role="option" data-act="addbgg" data-bgg="${esc(id)}">
+      <span class="cov">${ic('plus')}</span>
+      <span class="txt"><span class="ttl">Agregar desde BGG</span><span class="sub">BGG ${esc(id)} · se agrega como borrador</span></span></button>`;
+    box.hidden = false; inp.setAttribute('aria-expanded', 'true'); return;
+  }
+
+  const hits = G.filter(g => norm(g.name).includes(norm(q.trim()))).slice(0, 6);
+  box.innerHTML = hits.map(g => sugRow(g, q)).join('')
+    + `<button class="srow create" role="option" data-act="create" data-name="${esc(q.trim())}">
+        <span class="cov">${ic('plus')}</span>
+        <span class="txt"><span class="ttl">Crear «${esc(q.trim())}»</span><span class="sub">Un juego que BGG no tiene</span></span></button>`;
+  box.hidden = false; inp.setAttribute('aria-expanded', 'true');
+}
+
+function openGame(id, from) {
+  S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 3);
+  S.editing = id; S.from = from || S.screen; S.screen = 'editor';
+  device.classList.remove('kbd'); render();
+}
+
+/* ---------- sheets ---------- */
+function openSheet(head, body, from, opt = {}) {
+  opener = from || null;
+  const sh = $('#sheet');
+  sh.className = 'sheet' + (opt.full ? ' full' : '') + (opt.form ? ' form' : '');
+  sh.innerHTML = `<div class="sh-top"><div class="grab"></div><div class="sh-head">${head}
+      <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>${body}`;
+  sh.classList.add('open'); $('#backdrop').classList.add('open');
+  setTimeout(() => { const f = sh.querySelector('input'); f ? f.focus() : sh.querySelector('button:not(.sh-x)')?.focus(); }, 60);
+}
+function closeSheet() { device.classList.remove('kbd'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener?.isConnected && opener.focus?.({ preventScroll: true }); }
+
+/* decision 4 — the "+" sheet: the BGG path first, the manual path under a separator */
+function addSheet(from, prefill) {
+  openSheet(
+    `<span class="tile" aria-hidden="true">${ic('plus')}</span>
+     <div class="sh-txt"><p class="ctx">${TOTAL()} juegos en el club</p><div class="sh-title">Agregar juego</div></div>`,
+    `<div class="fbody">
+       <label class="flab" for="bg">Número o link de BGG</label>
+       <input class="tfield" id="bg" value="${esc(prefill || '')}" placeholder="342942" inputmode="text" autocomplete="off">
+       <p class="ferr" id="bgerr" hidden></p>
+       <p class="hint">Traemos la tapa, los jugadores, la duración y el nivel. Queda como borrador hasta que lo publiques.</p>
+       <button class="obtn pri wide" data-act="addgo">Agregar</button>
+       <div class="fsep">o</div>
+       <button class="dlink" data-act="manual" style="padding-left:0"><span>${ic('edit')}</span>
+         <span>Crear a mano<span class="dsub">Para un juego que BGG no tiene</span></span></button>
+     </div>`, from, { form: true });
+  if (KBD_SIM) device.classList.add('kbd');
+}
+
+/* D-03 — a BGG id that already belongs to a game: warn, list the holders, let staff confirm an edition */
+function editionPrompt(id) {
+  const holders = [byId(1), byId(2)];
+  const body = $('#sheet').querySelector('.fbody');
+  if (body.querySelector('.edp')) return;
+  body.insertAdjacentHTML('beforeend', `<div class="edp">
+    <p>Ya tenés ${holders.map(g => esc(g.name)).join(' y ')} con este BGG ID. ¿Es otra edición?</p>
+    ${holders.map(g => `<button class="srow" data-act="open" data-id="${g.id}">${cover(g)}<span class="txt"><span class="ttl">${esc(g.name)}</span><span class="sub">${sub(g)}</span></span></button>`).join('')}
+    <div class="eacts"><button class="tbtn" data-act="edcancel">Cancelar</button><button class="obtn" data-act="edok">Sí, agregar edición</button></div></div>`);
+}
+
+function addGame(bgg) {
+  const g = { id: 1000 + G.length, name: `Juego #${bgg}`, thumb: null, hue: hue(bgg), year: null, gap: false, status: 'draft', added: 1e6 + G.length, pending: true };
+  G.push(g); closeSheet(); S.screen = 'juegos'; S.shown = PAGE; render();
+  snack('Juego agregado como borrador');
+  setTimeout(() => { g.name = 'Ark Nova'; g.year = 2021; g.pending = false; if (S.screen === 'juegos') render(); }, 1600);
+}
+
+function createManual(name) {
+  const g = { id: 1000 + G.length, name: name || 'Juego nuevo', thumb: null, hue: hue(name || 'x'), year: null, gap: true, status: 'draft', added: 1e6 + G.length };
+  G.push(g); closeSheet(); openGame(g.id, 'juegos'); snack('Juego creado');
+}
+
+/* ---------- dialog / snackbar ---------- */
+const DLG = { run: null };
+function openDialog({ title, text, yes, run }) {
+  DLG.run = run; $('#dlg-t').textContent = title; $('#dlg-d').textContent = text;
+  $('[data-act="dlg-yes"]').textContent = yes; $('#dscrim').classList.add('open');
+  setTimeout(() => $('[data-act="dlg-no"]').focus(), 60);
+}
+function closeDialog() { $('#dscrim').classList.remove('open'); DLG.run = null; }
+let snackT;
+function snack(msg, action) {
+  const s = $('#snack'), [t, b, x] = [s.querySelector('span'), s.querySelector('.tbtn'), s.querySelector('.x')];
+  t.textContent = msg; b.hidden = !action; x.hidden = !action;
+  if (action) { b.textContent = action.label; b.onclick = () => { action.run(); hide(); }; x.innerHTML = ic('x'); x.onclick = hide; }
+  s.classList.add('show'); clearTimeout(snackT); snackT = setTimeout(hide, action ? 10000 : 4000);
+  function hide() { s.classList.remove('show'); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act;
+  if (a === 'open') return openGame(+t.dataset.id, S.screen);
+  if (a === 'pend') { S.screen = 'pend'; return render(); }
+  if (a === 'juegos') { S.screen = 'juegos'; return render(); }
+  if (a === 'more') { S.shown += PAGE; return render(); }
+  if (a === 'add') return addSheet(t);
+  if (a === 'addbgg') { const id = t.dataset.bgg; closeSuggest(); return addSheet(null, id); }
+  if (a === 'create') return createManual(t.dataset.name);
+  if (a === 'manual') { closeSheet(); return createManual($('#q')?.value?.trim() || ''); }
+  if (a === 'addgo') {
+    const v = $('#bg').value.trim(), id = bggId(v);
+    if (!id) { $('#bg').setAttribute('aria-invalid', 'true'); const er = $('#bgerr'); er.textContent = 'Pegá un número de BGG o el link del juego.'; er.hidden = false; return; }
+    if (id === '13') return editionPrompt(id);
+    return addGame(id);
+  }
+  if (a === 'edcancel') { $('.edp')?.remove(); return; }
+  if (a === 'edok') return addGame('13');
+  if (a === 'close') return closeSheet();
+  if (a === 'dlg-no') return closeDialog();
+  if (a === 'dlg-yes') { const r = DLG.run; closeDialog(); r?.(); return; }
+});
+function closeSuggest() { const b = $('#sugg'); if (b) { b.hidden = true; $('#q')?.setAttribute('aria-expanded', 'false'); } }
+$('#backdrop').addEventListener('click', closeSheet);
+$('#dscrim').addEventListener('click', e => { if (e.target.id === 'dscrim') closeDialog(); });
+document.addEventListener('input', e => {
+  if (e.target.id === 'q') { S.kept = null; renderSugg(); }
+  if (e.target.id === 'bg') { e.target.removeAttribute('aria-invalid'); $('#bgerr').hidden = true; }
+});
+document.addEventListener('focusin', e => {
+  if (e.target.id === 'q') { if (KBD_SIM) device.classList.add('kbd'); renderSugg(); }
+  if (e.target.id === 'bg' && KBD_SIM) device.classList.add('kbd');
+});
+document.addEventListener('focusout', e => {
+  if (e.target.id === 'q') setTimeout(() => { if (document.activeElement?.id !== 'q' && !$('#sugg')?.contains(document.activeElement)) { device.classList.remove('kbd'); closeSuggest(); } }, 180);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('#dscrim').classList.contains('open')) return closeDialog();
+  if ($('#sheet').classList.contains('open')) return closeSheet();
+  if (!$('#sugg')?.hidden) { closeSuggest(); $('#q')?.blur(); }
+});
+
+/* ---------- tools ---------- */
+document.addEventListener('click', e => {
+  const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); }
+  const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) device.classList.remove('kbd'); mark('[data-kbd-set]', k); }
+  const p = e.target.closest('[data-pend]'); if (p) { PEND_MODE = +p.dataset.pend; mark('[data-pend]', p); render(); }
+});
+function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
+
+render();
+</script>
+</body>
+</html>
