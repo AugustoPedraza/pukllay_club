@@ -214,3 +214,12 @@ experto 46 (26 without a band). Recientes shows the newest 30.
     keyboard (448) — nothing scrolls inside the sheet, including an automatic row's 74-character subtitle.
     Developer: *"yes, add the subtitle to the name sheet. I think that every section on the web has a subtitle,
     doesn't?"* — confirmed against the dev DB (8/8 rows, longest 76 characters).
+
+20. **Subtítulo is a two-line box that grows to three** (`min-height 72 / max-height 96`, 15px/1.4, no resize handle):
+    a 160-character line showed ~35 characters in a single-line field. Enter still saves (a subtitle is one line).
+    Measured 375×740 with the keyboard: the sheet now starts at 33.8 (was 45.6 with one line), Guardar still ends 16px
+    above the 292px keyboard and nothing scrolls inside the sheet. To pay for the height the Nombre hint was dropped and
+    one hint under the subtitle covers both: "El título y esta línea son lo que se ve en el inicio."
+    Bug caught by the screenshot: the textarea rendered near-black in dark theme — `button, input { color: inherit }`
+    did not include `textarea`. Fixed; text now 17.16:1 light / 13.62 dark.
+    Developer picked "Two-line box that grows (Recommended)".

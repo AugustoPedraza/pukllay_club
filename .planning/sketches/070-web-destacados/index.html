@@ -15,7 +15,7 @@
   * { box-sizing: border-box; }
   body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); -webkit-font-smoothing: antialiased; }
   :root[data-theme="dark"] body { background: #120a1c; }
-  button, input { font: inherit; color: inherit; }
+  button, input, textarea { font: inherit; color: inherit; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   svg { display: block; }
 
@@ -216,6 +216,8 @@
   .flab { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 600; }
   .tfield { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; }
   .tfield:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  /* decision 20 — the subtitle is a 2-line box that grows to 3: a 160-char line is unreadable in a single-line field */
+  .tfield.ta { height: auto; min-height: 72px; max-height: 96px; padding: 12px 14px; line-height: 1.4; font-size: 15px; resize: none; overflow-y: auto; font-family: inherit; }
   .tfield[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
   .fbody .hint { margin: 6px 0 0; }
   .flab.sp { margin-top: 16px; }
@@ -430,8 +432,8 @@ function nameSheet(row, from, isNew) {
       <input id="rn" class="tfield" value="${esc(def)}" maxlength="40" autocomplete="off" enterkeyhint="next" aria-describedby="rnerr">
       <p class="ferr" id="rnerr" role="alert" hidden></p>
       <label class="flab sp" for="rs">Subtítulo</label>
-      <input id="rs" class="tfield" value="${esc(row ? row.sub || '' : '')}" maxlength="160" autocomplete="off" enterkeyhint="done" aria-describedby="rshint">
-      <p class="hint" id="rshint">Las dos líneas que se ven en el inicio: el título y esto debajo.</p>
+      <textarea id="rs" class="tfield ta" rows="2" maxlength="160" autocomplete="off" enterkeyhint="done" aria-describedby="rshint">${esc(row ? row.sub || '' : '')}</textarea>
+      <p class="hint" id="rshint">El título y esta línea son lo que se ve en el inicio.</p>
       <button class="obtn pri wide" data-act="namesave">${row ? 'Guardar' : 'Crear fila'}</button></div>`, from, { focus: '#rn' });
   $('#sheet').classList.add('form');
 }
@@ -575,12 +577,13 @@ document.addEventListener('click', e => {
     if (changed) snack('Orden guardado', { label: 'Deshacer', run: () => { ROWS.sort((a, b) => before.indexOf(a.id) - before.indexOf(b.id)); if (!ORD) render(); } }); return; }
   if (act === 'soon') { closeSheet(); return snack(`${t.dataset.what}: se diseña en otra ronda`); }
 });
-document.addEventListener('input', e => { if (e.target.id === 'aq') renderABody(); if (e.target.id === 'rn') { $('#rnerr').hidden = true; e.target.removeAttribute('aria-invalid'); } });
+document.addEventListener('input', e => { if (e.target.id === 'aq') renderABody(); if (e.target.id === 'rn') { $('#rnerr').hidden = true; e.target.removeAttribute('aria-invalid'); }
+  if (e.target.id === 'rs') { e.target.style.height = 'auto'; e.target.style.height = Math.min(96, e.target.scrollHeight) + 'px'; } });
 document.addEventListener('keydown', e => {
   if ($('#dscrim').classList.contains('open')) { if (e.key === 'Escape') closeDialog(); return; }
   if ($('#sheet').classList.contains('open') && e.key === 'Escape') return closeSheet();
   if (e.target.id === 'rn' && e.key === 'Enter') { e.preventDefault(); return $('#rs').focus(); }
-  if (e.target.id === 'rs' && e.key === 'Enter') { e.preventDefault(); return nameSave(); }
+  if (e.target.id === 'rs' && e.key === 'Enter') { e.preventDefault(); return nameSave(); }   /* a subtitle is one line: Enter saves */
   if (e.target.id === 'aq' && e.key === 'Enter') { e.preventDefault(); return $('#abody .srow')?.click(); }
 });
 let KBD_SIM = true;
