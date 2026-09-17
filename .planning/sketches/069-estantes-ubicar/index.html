@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketch 069 — Estantes: ubicar un juego</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* Sketch 069 — the Estantes screen, restarted from the job (notes/estante-ui-restart.md, decisions 1–23).
+     Standalone on purpose: only this UI, no 065 walk, no other admin pages. The shared system is kept
+     (059–065 + 01.8.2 D-19): Inter 400/600, 22px/600 titles, 44px floor, 1px --stroke fields, A2 text
+     actions pulled −12px, sheets of 48px rows with no buttons, one bottom snackbar. */
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  /* 064: Terciaria is one step lighter than Principal — --color-secondary in light, --color-text-muted in dark */
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  :root[data-theme="dark"] body { background: #120a1c; }
+  button, input { font: inherit; color: inherit; }
+  b { font-weight: 600; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg { display: block; }
+
+  .stage { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 24px 16px 64px; }
+  .device { position: relative; width: 375px; height: 740px; background: var(--color-bg); border-radius: 28px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(30, 10, 50, .25); display: flex; flex-direction: column; }
+  @media (max-width: 430px) { .stage { padding: 0; } .device { width: 100%; height: 100vh; border-radius: 0; } }
+
+  /* chrome — context only, not this sketch's question */
+  .hdr { height: 53px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; border-bottom: 1px solid var(--color-border); }
+  .hdr .burger { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; }
+  .hdr img { height: 26px; }
+  .hdr .img-dark { display: none; }
+  :root[data-theme="dark"] .hdr .img-light { display: none; } :root[data-theme="dark"] .hdr .img-dark { display: block; }
+  .hdr .word { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: .03em; }
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 67px; display: grid; grid-template-columns: repeat(5, 1fr); padding: 4px 4px 8px;
+    background: var(--color-bg); border-top: 1px solid var(--color-border); z-index: 20; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+  .tab .ti { width: 56px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+  .tab .ti svg { width: 20px; height: 20px; }
+  .tab.on { color: var(--color-accent-text); } .tab.on .ti { background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .tab.on .ti { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
+
+  main { padding: 16px 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+  .device.kbd main { padding-bottom: 304px; }
+  .body { display: flex; flex-direction: column; }
+  .phead { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+  .ptitle { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -.01em; }
+  .back { display: inline-flex; align-items: center; gap: 2px; height: 44px; margin-left: -10px; padding: 0 10px 0 4px; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--color-text-muted); cursor: pointer; }
+  .back svg { width: 18px; height: 18px; }
+
+  /* A2: text action — 44px, 12px side padding, pulled −12px so its label ends on the content edge */
+  .tbtn { height: 44px; padding: 0 12px; border: 0; background: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--ter); cursor: pointer; white-space: nowrap; }
+  .tbtn.pull-r { margin-right: -12px; } .tbtn.pull-l { margin-left: -12px; }
+  .tbtn:hover { background: color-mix(in srgb, var(--ter) 8%, transparent); }
+  /* A3: icon action — 44×44 borderless circle, 20px glyph, pulled −12px so the GLYPH lands on the content edge.
+     Developer chose it over the "Administrar" text, which broke the header's balance. */
+  .ibtn { width: 44px; height: 44px; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); cursor: pointer; }
+  .ibtn svg { width: 20px; height: 20px; }
+  .ibtn.pull-r { margin-right: -12px; }
+  .ibtn:hover { background: var(--color-surface); color: var(--color-text); }
+  .ibtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  /* A1: outlined — Secundaria neutral stroke, Principal primary stroke */
+  .obtn { height: 44px; padding: 0 16px; border: 1px solid var(--stroke); background: var(--color-bg); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .obtn.pri { border-color: var(--color-primary); color: var(--color-accent-text); }
+  :root[data-theme="dark"] .obtn.pri { border-color: var(--color-accent-text); }
+
+  /* ---- search: placeholder with instructions, magnifier on the RIGHT (→ ✕ with text) ---- */
+  .search { position: relative; margin-top: 8px; z-index: 12; }
+  .sfield { position: relative; }
+  .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; }
+  .sfield input::placeholder { color: var(--color-text-muted); }
+  .sfield input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] .sfield input:focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  .sfield input::-webkit-search-cancel-button { display: none; }
+  .sfield .sico { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--color-text-muted); border-radius: 8px; }
+  .sfield .sico svg { width: 20px; height: 20px; }
+  button.sico { cursor: pointer; }
+
+  /* suggestions: drop DOWN OVER whatever is below (decision 12) */
+  .sugg { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
+    box-shadow: var(--shadow-lg); padding: 4px 0; max-height: 272px; overflow-y: auto; }
+  /* 272px: the room between the field (bottom at 169px) and a 292px phone keyboard is 275px — measured. 4 whole rows + half of a 5th, so a longer list reads as scrollable. */
+  .sugg[hidden] { display: none; }
+  .srow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .srow:hover, .srow.hl { background: var(--color-surface); }
+  .srow .ttl { font-size: 15px; line-height: 1.3; }
+  .srow .ttl mark { background: none; color: inherit; font-weight: 600; }
+  .snone { padding: 14px 16px; font-size: 14px; color: var(--color-text-muted); }
+
+  /* covers */
+  .cov { width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0; object-fit: cover; background: var(--color-surface); display: grid; place-items: center;
+    font-weight: 600; font-size: 16px; }
+  .cov.l { background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); }
+  :root[data-theme="dark"] .cov.l { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  .txt { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .sub { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
+  /* decision 22 — a status is a DOT + TEXT, never a pill */
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
+
+  /* ---- the answer ---- */
+  .answer { margin-top: 20px; }
+  .answer[hidden] { display: none; }
+  .aname { margin: 0 0 4px; font-size: 17px; font-weight: 600; line-height: 1.3; }
+  .shelf { position: relative; margin: 0 -16px; }
+  .rail { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x proximity; padding: 16px 16px 8px; scrollbar-width: none; }
+  .rail::-webkit-scrollbar { display: none; }
+  .shelf::before, .shelf::after { content: ""; position: absolute; top: 0; bottom: 0; width: 16px; z-index: 2; pointer-events: none; }
+  .shelf::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  .shelf::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  .shelf .board { position: absolute; left: 16px; right: 16px; bottom: 50px; height: 4px; border-radius: 2px; background: var(--color-surface-2); z-index: 0; }
+  .box { flex: 0 0 96px; width: 96px; display: flex; flex-direction: column; gap: 6px; border: 0; background: none; padding: 0; text-align: left; cursor: pointer;
+    scroll-snap-align: center; position: relative; z-index: 1; }
+  .box .bc { width: 96px; height: 100px; border-radius: 6px; object-fit: cover; background: var(--color-surface); display: grid; place-items: center; font-size: 28px; font-weight: 600;
+    transition: transform var(--duration-base) var(--ease-out-soft), box-shadow var(--duration-base) var(--ease-out-soft); }
+  .box .bc.l { background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); }
+  :root[data-theme="dark"] .box .bc.l { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  .box .cap { font-size: 12px; line-height: 1.3; color: var(--color-text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 31px; }
+  /* decision 23 — LIFTED: raised, with a shadow, as if pulled out of the shelf */
+  .box.on .bc { transform: translateY(-12px); box-shadow: 0 14px 22px -6px rgba(36, 18, 56, .45); }
+  :root[data-theme="dark"] .box.on .bc { box-shadow: 0 14px 22px -6px rgba(0, 0, 0, .8); }
+  .box.on .cap { color: var(--color-text); font-weight: 600; }
+  .box:focus-visible { outline: none; } .box:focus-visible .bc { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  .hint { margin: 6px 0 0; font-size: 13px; color: var(--color-text-muted); }
+
+  /* no spot yet (decision 5) */
+  .nospot { display: flex; gap: 12px; align-items: center; padding: 12px 0; }
+  .nospot .cov { width: 72px; height: 76px; font-size: 24px; }
+  .nospot p { margin: 0 0 8px; font-size: 14px; color: var(--color-text-muted); }
+
+  /* ---- recent lookups (decisions 20–21) ---- */
+  .sec { margin-top: 24px; }
+  .glabel { font-size: 13px; font-weight: 600; letter-spacing: .01em; margin: 0 0 4px; min-height: 28px; display: flex; align-items: center; }
+  .rows { margin: 0 -16px; }
+  .row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 16px; border: 0; background: none; text-align: left; cursor: pointer; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--color-border); }
+  .row:hover { background: var(--color-surface); }
+  .row .name { font-size: 15px; line-height: 1.3; }
+  .row .chev { width: 16px; height: 16px; color: var(--color-text-muted); }
+  .glabel.quiet { font-weight: 400; color: var(--color-text-muted); }
+  .row.compact { min-height: 48px; padding: 6px 16px; gap: 12px; }
+  .row.compact .cov { width: 32px; height: 32px; font-size: 13px; border-radius: 5px; }
+  .row.compact .name { font-size: 14px; }
+  .row.compact .sub { font-size: 12px; }
+  .row.compact + .row.compact::before { left: 60px; }
+
+  /* ---- management page (a stub: decision 18) ---- */
+  .shelfico { width: 40px; height: 40px; border-radius: 8px; background: var(--color-surface); display: grid; place-items: center; flex-shrink: 0; color: var(--color-accent-text); }
+
+  /* ---- sheet: rows only, commit first, Cancelar last ---- */
+  .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-radius: 18px 18px 0 0; padding: 8px 0 16px; z-index: 41;
+    transform: translateY(105%); transition: transform 260ms var(--ease-out-soft); box-shadow: var(--shadow-lg); max-height: 85%; overflow-y: auto; }
+  .sheet.open { transform: none; }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-surface-2); margin: 0 auto 8px; }
+  .sh-head { display: flex; gap: 12px; align-items: center; padding: 4px 16px 8px; }
+  .sh-head .cov { width: 44px; height: 46px; }
+  .sh-title { font-size: 16px; font-weight: 600; line-height: 1.3; }
+  .dlink { width: 100%; display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border: 0; background: none; font-size: 16px; text-align: left; cursor: pointer; }
+  .dlink:hover { background: var(--color-surface); }
+  .dlink svg { width: 22px; height: 22px; color: var(--color-text-muted); flex-shrink: 0; }
+  .dlink.danger, .dlink.danger svg { color: var(--color-danger); }
+  .dlink .dsub { display: block; font-size: 13px; color: var(--color-text-muted); }
+  .dlink:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .sheet:focus { outline: none; }
+
+  /* ---- one snackbar (D-19b/c) ---- */
+  .snack { position: absolute; left: 12px; right: 12px; bottom: 79px; z-index: 30; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 4px 4px 16px;
+    background: var(--color-text); color: var(--color-bg); border-radius: 8px; font-size: 14px; opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft); }
+  .snack.show { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; padding: 8px 0; }
+  .snack .tbtn { color: var(--color-accent-bg); }
+  .snack .x { width: 44px; height: 44px; border: 0; background: none; color: var(--color-bg); display: grid; place-items: center; cursor: pointer; }
+  .snack .x svg { width: 18px; height: 18px; }
+  .snack [hidden] { display: none; }
+
+  /* ================= layout: C · Pregunta (developer picked it over search-at-bottom, centred-rises and
+     top; the other three are removed) =================
+     Idle: a prompt block + search + últimas búsquedas, centred in the space between the title row and the tab
+     bar. The moment the field is focused or an answer shows, the prompt goes and the search rises to the top. */
+  .hero { display: none; }
+  /* rhythm on the 8px scale, grouped by what belongs together: the prompt is part of the search (16 icon→question,
+     24 question→field); últimas búsquedas is a separate, secondary group (40 field→label) */
+  .device:not(.raised) .hero { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; margin-bottom: 24px; }
+  .device:not(.raised) .search { margin-top: 0; }
+  .device:not(.raised) #recent { margin-top: 40px; }
+  .hero .shelfico { width: 64px; height: 64px; border-radius: 16px; }
+  .hero .shelfico svg { width: 44px; height: 44px; }
+  .hero p { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.3; }
+  .sp { flex: 0 0 0; }
+  /* the free space splits 2:3 above:below — the optical centre. Measured before: an exact 1:1 centre put the
+     group's middle at 387 of 393px, which reads as sinking. */
+  .device:not(.raised) .sp-top { flex: 2 1 0; }
+  .device:not(.raised) .sp-bot { flex: 3 1 0; }
+
+  /* the phone keyboard, simulated: where the search sits only matters with a keyboard up */
+  .kbd-sim { position: absolute; left: 0; right: 0; bottom: 0; height: 292px; z-index: 25; background: #d2d4da; display: none; padding: 10px 4px; }
+  :root[data-theme="dark"] .kbd-sim { background: #2b2b30; }
+  .device.kbd .kbd-sim { display: grid; grid-template-rows: repeat(4, 1fr); gap: 10px; }
+  .device.kbd .tabs { display: none; }
+  .kbd-sim .krow { display: flex; gap: 5px; justify-content: center; }
+  .kbd-sim .k { flex: 0 0 31px; border-radius: 5px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.3); display: grid; place-items: center; font: 17px system-ui; color: #111; }
+  :root[data-theme="dark"] .kbd-sim .k { background: #6b6b70; color: #fff; }
+  .kbd-sim .k.wide { flex-basis: 180px; font-size: 12px; }
+
+  /* sketch toolbar */
+  #tools { position: fixed; right: 12px; top: 12px; z-index: 99; font: 12px system-ui; background: rgba(0,0,0,.72); color: #fff; padding: 6px 10px; border-radius: 8px; }
+  #tools > div + div { margin-top: 4px; }
+  #tools button.on { background: #fff; color: #000; }
+  #tools button { font: inherit; color: #fff; background: none; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="stage"><div class="device" id="device">
+  <header class="hdr">
+    <button class="burger" aria-label="Abrir menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt="">
+    <span class="word">PUKLLAY CLUB</span>
+  </header>
+  <div class="scroller" id="scroller"><main id="main"></main></div>
+  <nav class="tabs" aria-label="Secciones de Admin">
+    <span class="tab"><span class="ti" id="t-admin"></span>Admin</span><span class="tab"><span class="ti" id="t-juegos"></span>Juegos</span>
+    <span class="tab"><span class="ti" id="t-web"></span>Web</span><span class="tab on" aria-current="page"><span class="ti" id="t-est"></span>Estantes</span>
+    <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
+  </nav>
+  <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
+  <div class="kbd-sim" aria-hidden="true">
+    <div class="krow">qwertyuiop</div><div class="krow">asdfghjklñ</div><div class="krow">zxcvbnm</div><div class="krow"><span class="k wide">espacio</span></div>
+  </div>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+</div></div>
+<div id="tools">
+  <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado simulado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+</div>
+
+<script src="games.js"></script>
+<script>
+/* ---------- icons ---------- */
+const P = {
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  chevR: '<path d="m9 6 6 6-6 6"/>', chevL: '<path d="m15 6-6 6 6 6"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
+  move: '<path d="M5 9 2 12l3 3M19 9l3 3-3 3M2 12h20"/>',
+  remove: '<path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/>',
+  place: '<path d="M12 5v14M5 12h14"/>',
+  panel: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
+  box: '<path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
+  web: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 2.5 14.5 0 17M12 3.5c-2.5 2.5-2.5 14.5 0 17"/>',
+  shelf: '<path d="M4 4v16M20 4v16M4 20h16"/><path d="M7 8v12M10 6v14M13 9v11M16.5 7l1.5 13"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
+};
+const ic = (n, s = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+document.getElementById('t-admin').innerHTML = ic('panel'); document.getElementById('t-juegos').innerHTML = ic('box');
+document.getElementById('t-web').innerHTML = ic('web'); document.getElementById('t-est').innerHTML = ic('shelf');
+
+/* ---------- data: 434 real games, 9 real-shaped estantes, a few with no spot ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const G = GAMES067.map((x, i) => ({ id: i + 1, name: x.n, thumb: x.t, hue: hue(x.n) }));
+const byId = id => G.find(g => g.id === id);
+/* the 6 games with no spot are real games too; 428 are shelved across 9 estantes of 46–50 */
+const NOSPOT = [17, 88, 151, 230, 301, 377];
+const SIZES = [50, 49, 48, 47, 47, 47, 47, 47, 46];
+const shelves = SIZES.map((n, i) => ({ id: i + 1, name: 'Estante ' + (i + 1), ids: [] }));
+{ let k = 0; const pool = G.map(g => g.id).filter(id => !NOSPOT.includes(id)); shelves.forEach((s, i) => { s.ids = pool.slice(k, k + SIZES[i]); k += SIZES[i]; }); }
+const where = id => { for (const s of shelves) { const i = s.ids.indexOf(id); if (i >= 0) return { s, i }; } return null; };
+
+const S = { screen: 'ubicar', q: '', picked: null, sel: null, recent: [] };
+/* seeded recent lookups: three shelved, one with no spot (shows the dot + text) */
+S.recent = [G.find(g => /^Catan: El Auge/.test(g.name)).id, NOSPOT[2], G.find(g => g.name === 'Lapsus').id, G.find(g => g.name === 'Wingspan')?.id || 40].filter(Boolean);
+
+const cover = (g, cls = 'cov') => g.thumb ? `<img class="${cls}" src="${esc(g.thumb)}" alt="" loading="lazy">` : `<span class="${cls} l" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
+const status = g => { const w = where(g.id); return w ? esc(w.s.name) : '<span class="dot" aria-hidden="true"></span>Sin lugar'; };
+const $ = s => document.querySelector(s);
+const main = $('#main');
+
+/* ---------- screens ---------- */
+function render() {
+  if (S.screen === 'admin') return renderAdmin();
+  main.innerHTML = `
+    <div class="phead"><h1 class="ptitle">Estantes</h1><button class="ibtn pull-r" data-act="admin" aria-label="Administrar estantes" title="Administrar estantes">${ic('gear')}</button></div>
+    <div class="sp sp-top"></div>
+    <div class="hero"><span class="shelfico">${shelfDrawing(40)}</span><p>¿Qué juego tenés en la mano?</p></div>
+    <div class="search" role="search">
+      <div class="sfield"><label class="sr" for="q">Buscá un juego para ubicarlo</label>
+        <input id="q" type="search" placeholder="Buscá un juego para ubicarlo" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
+          role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list">
+        <span class="sico" id="sico">${ic('search')}</span></div>
+      <div class="sugg" id="sugg" role="listbox" hidden></div>
+    </div>
+    <div class="body"><section class="answer" id="answer" aria-live="polite" hidden></section>
+    <section class="sec" id="recent"></section></div>
+    <div class="sp sp-bot"></div>`;
+  renderAnswer(); renderRecent();
+}
+function renderAnswer() {
+  const a = $('#answer'); if (!a) return;
+  if (!S.picked) { a.hidden = true; a.innerHTML = ''; return; }
+  a.hidden = false;
+  const g = byId(S.picked), w = where(g.id);
+  if (!w) {
+    a.innerHTML = `<h2 class="aname"><span class="sub" style="font-size:15px;color:var(--color-text)"><span class="dot" aria-hidden="true"></span>Sin lugar</span></h2>
+      <div class="nospot">${cover(g)}<div><div style="font-size:15px;font-weight:600;margin-bottom:2px">${esc(g.name)}</div>
+      <p>Todavía no tiene lugar en un estante.</p><button class="obtn" data-act="ubicar" data-id="${g.id}">Ubicar</button></div></div>`;
+    return;
+  }
+  const selId = S.sel || g.id;
+  a.innerHTML = `<h2 class="aname">${esc(w.s.name)}</h2>
+    <div class="shelf"><div class="rail" id="rail" role="group" aria-label="${esc(w.s.name)}, de izquierda a derecha">
+      ${w.s.ids.map((id, i) => { const b = byId(id), on = id === selId;
+        return `<button class="box ${on ? 'on' : ''}" data-act="box" data-id="${id}" aria-pressed="${on}" aria-label="${esc(b.name)}, caja ${i + 1} de ${w.s.ids.length}${on ? '. Tocá para ver opciones' : ''}">
+          ${cover(b, 'bc')}<span class="cap">${esc(b.name)}</span></button>`; }).join('')}
+    </div></div>`;
+  centerOn(selId, false);
+}
+function centerOn(id, smooth) {
+  requestAnimationFrame(() => {
+    const rail = $('#rail'), el = rail && rail.querySelector(`[data-id="${id}"]`); if (!el) return;
+    rail.scrollTo({ left: el.offsetLeft - (rail.clientWidth - el.offsetWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
+  });
+}
+function renderRecent() {
+  const r = $('#recent'); if (!r) return;
+  const list = S.recent.filter(id => id !== S.picked).slice(0, 5);
+  /* developer: "Buscados recientemente takes too much relevancy" and "the right chevron is for navigate" —
+     so: a plainer label, 3 rows not 5, compact rows, and no chevron (a recent row shows its answer in place,
+     it does not navigate). */
+  r.innerHTML = list.length ? `<h2 class="glabel quiet">Últimas búsquedas</h2>
+    <div class="rows">${list.slice(0, 3).map(id => { const g = byId(id);
+      return `<button class="row compact" data-act="pick" data-id="${id}">${cover(g)}<span class="txt"><span class="name">${esc(g.name)}</span><span class="sub">${status(g)}</span></span></button>`; }).join('')}</div>` : '';
+}
+function renderAdmin() {
+  main.innerHTML = `<button class="back" data-act="back">${ic('chevL')}Estantes</button>
+    <h1 class="ptitle" style="margin-bottom:12px">Administrar estantes</h1>
+    <div class="rows">${shelves.map(s => `<button class="row" data-act="soon" data-what="La página de ${esc(s.name)}">
+      <span class="shelfico">${shelfDrawing(s.ids.length)}</span><span class="txt"><span class="name">${esc(s.name)}</span><span class="sub">${s.ids.length} juegos</span></span>${ic('chevR')}</button>`).join('')}</div>
+    <p class="hint" style="margin-top:16px">Crear, ordenar, renombrar y eliminar estantes se diseña en los próximos bocetos.</p>`;
+  main.querySelectorAll('.row > svg').forEach(s => s.classList.add('chev'));
+}
+/* decision 14 — a small shelf drawing, filled in proportion (10 spine slots; a full estante = 50) */
+function shelfDrawing(n) {
+  const filled = Math.round(Math.min(n, 50) / 5);
+  let spines = '';
+  for (let i = 0; i < 10; i++) spines += `<rect x="${4.2 + i * 1.6}" y="${i % 3 === 1 ? 7 : 6}" width="1.1" height="${i % 3 === 1 ? 11 : 12}" rx=".3" fill="${i < filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${i < filled ? 0 : .5}" opacity="${i < filled ? 1 : .45}"/>`;
+  return `<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M3 3.5v17M21 3.5v17M3 18.6h18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>${spines}</svg>`;
+}
+
+/* ---------- search: an autocomplete that resolves to ONE game ---------- */
+let hl = -1;
+function suggestions(q) {
+  const n = norm(q.trim()); if (!n) return [];
+  const starts = [], has = [];
+  for (const g of G) { const m = norm(g.name); if (m.startsWith(n)) starts.push(g); else if (m.includes(n)) has.push(g); }
+  return [...starts, ...has].slice(0, 6);
+}
+function markMatch(name, q) {
+  const n = norm(q.trim()), i = norm(name).indexOf(n); if (i < 0 || !n) return esc(name);
+  return esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + n.length)) + '</mark>' + esc(name.slice(i + n.length));
+}
+function renderSugg() {
+  const box = $('#sugg'), inp = $('#q'); if (!box) return;
+  const q = inp.value, list = suggestions(q);
+  const ic2 = $('#sico');
+  ic2.outerHTML = q ? `<button class="sico" id="sico" data-act="clear" aria-label="Borrar búsqueda">${ic('x')}</button>` : `<span class="sico" id="sico">${ic('search')}</span>`;
+  if (!q.trim()) { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
+  box.hidden = false; inp.setAttribute('aria-expanded', 'true');
+  box.innerHTML = list.length ? list.map((g, i) => `<button class="srow ${i === hl ? 'hl' : ''}" role="option" id="opt-${g.id}" data-act="pick" data-id="${g.id}" aria-selected="${i === hl}">
+      ${cover(g)}<span class="txt"><span class="ttl">${markMatch(g.name, q)}</span><span class="sub">${status(g)}</span></span></button>`).join('')
+    : `<div class="snone">Ningún juego se llama así.</div>`;
+}
+function pick(id) {
+  S.picked = id; S.sel = null;
+  S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 6);
+  const inp = $('#q'); if (inp) { inp.value = ''; inp.blur(); }      /* decision 11 — clears the moment a game is found */
+  hl = -1; renderSugg(); renderAnswer(); renderRecent();
+  syncLayout();
+  $('#scroller').scrollTo({ top: 0 });
+}
+
+/* ---------- sheet ---------- */
+let opener = null;
+function openSheet(html, from) {
+  opener = from; const sh = $('#sheet'); sh.innerHTML = `<div class="grab"></div>${html}`;
+  $('#backdrop').classList.add('open'); requestAnimationFrame(() => sh.classList.add('open'));
+  /* focus lands on the sheet itself, not on its first row: a focused first row painted as if it were already chosen */
+  sh.setAttribute('tabindex', '-1'); setTimeout(() => sh.focus({ preventScroll: true }), 60);
+}
+function closeSheet() { $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener && opener.focus?.({ preventScroll: true }); }
+function boxSheet(g, from) {
+  const w = where(g.id);
+  openSheet(`<div class="sh-head">${cover(g)}<div><div class="sh-title">${esc(g.name)}</div><div class="sub">${esc(w.s.name)} · caja ${w.i + 1} de ${w.s.ids.length}</div></div></div>
+    <button class="dlink" data-act="soon" data-what="Ver en la ludoteca">${ic('eye')}Ver en la ludoteca</button>
+    <button class="dlink" data-act="soon" data-what="Mover a otro lugar">${ic('move')}Mover a otro lugar</button>
+    <button class="dlink danger" data-act="quitar" data-id="${g.id}">${ic('remove')}Quitar del estante</button>
+    <button class="dlink" data-act="close">${ic('chevL')}Cancelar</button>`, from);
+}
+function ubicarSheet(g, from) {
+  openSheet(`<div class="sh-head">${cover(g)}<div><div class="sh-title">Ubicar ${esc(g.name)}</div><div class="sub">Va al final del estante que elijas.</div></div></div>
+    ${shelves.map(s => `<button class="dlink" data-act="place" data-id="${g.id}" data-sid="${s.id}"><span class="shelfico" style="width:32px;height:32px">${shelfDrawing(s.ids.length)}</span><span>${esc(s.name)}<span class="dsub">${s.ids.length} juegos</span></span></button>`).join('')}
+    <button class="dlink" data-act="close">${ic('chevL')}Cancelar</button>`, from);
+}
+
+/* ---------- snackbar (10 s with an action, 4 s without) ---------- */
+function snack(msg, action) {
+  const s = $('#snack'), b = s.querySelector('.tbtn'), x = s.querySelector('.x');
+  s.querySelector('span').textContent = msg; b.hidden = !action; x.hidden = !action;
+  if (action) { b.textContent = action.label; b.onclick = () => { action.run(); hide(); }; x.innerHTML = ic('x'); }
+  const hide = () => s.classList.remove('show'); x.onclick = hide;
+  clearTimeout(s._t); s.classList.remove('show'); void s.offsetWidth; s.classList.add('show');
+  s._t = setTimeout(hide, action ? 10000 : 4000);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; return; }
+  if (e.target.id === 'backdrop') return closeSheet();
+  const t = e.target.closest('[data-act]'); if (!t) {
+    if (!e.target.closest('.search')) { const box = $('#sugg'); if (box && !box.hidden) { box.hidden = true; $('#q')?.setAttribute('aria-expanded', 'false'); } }
+    return;
+  }
+  const id = +t.dataset.id, act = t.dataset.act;
+  if (act === 'pick') return pick(id);
+  if (act === 'clear') { const i = $('#q'); i.value = ''; renderSugg(); return i.focus(); }
+  if (act === 'box') {                                             /* decision 10 */
+    const cur = S.sel || S.picked;
+    if (id === cur) return boxSheet(byId(id), t);
+    S.sel = id; renderAnswer(); centerOn(id, true);
+    return document.querySelector(`#rail [data-id="${id}"]`)?.focus({ preventScroll: true });
+  }
+  if (act === 'close') return closeSheet();
+  if (act === 'ubicar') return ubicarSheet(byId(id), t);
+  if (act === 'place') {
+    const s = shelves.find(x => x.id === +t.dataset.sid); s.ids.push(id); closeSheet();
+    S.picked = id; S.sel = null; renderAnswer(); renderRecent();
+    return snack(`Va al final de ${s.name}`, { label: 'Deshacer', run: () => { s.ids.pop(); renderAnswer(); renderRecent(); } });
+  }
+  if (act === 'quitar') {
+    const w = where(id), g = byId(id); w.s.ids.splice(w.i, 1); closeSheet();
+    S.sel = null; S.picked = id; renderAnswer(); renderRecent();
+    return snack(`${g.name} quedó sin lugar`, { label: 'Deshacer', run: () => { w.s.ids.splice(w.i, 0, id); renderAnswer(); renderRecent(); } });
+  }
+  if (act === 'admin') { S.screen = 'admin'; render(); return $('#scroller').scrollTo({ top: 0 }); }
+  if (act === 'back') { S.screen = 'ubicar'; return render(); }
+  if (act === 'soon') { closeSheet(); return snack(`${t.dataset.what}: se diseña en otro boceto`); }
+});
+document.addEventListener('input', e => { if (e.target.id === 'q') { hl = -1; renderSugg(); } });
+document.addEventListener('focusin', e => { if (e.target.id === 'q' && e.target.value) renderSugg(); });
+document.addEventListener('keydown', e => {
+  if ($('#sheet').classList.contains('open') && e.key === 'Escape') return closeSheet();
+  if (e.target.id !== 'q') return;
+  const list = suggestions(e.target.value);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); hl = Math.max(0, Math.min(list.length - 1, hl + (e.key === 'ArrowDown' ? 1 : -1))); renderSugg(); }
+  if (e.key === 'Enter') { e.preventDefault(); const g = list[hl >= 0 ? hl : 0]; if (g && (list.length === 1 || hl >= 0)) pick(g.id); }
+  if (e.key === 'Escape') { $('#sugg').hidden = true; }
+});
+/* ---------- layout variants ---------- */
+const root = document.documentElement, device = $('#device');
+let KBD_SIM = true;
+document.querySelectorAll('.kbd-sim .krow').forEach(r => { if (!r.querySelector('.k')) r.innerHTML = [...r.textContent].map(c => `<span class="k">${c}</span>`).join(''); });
+/* FLIP: B and C move the search between the middle and the top; the move is animated, not a jump */
+function flip(change) {
+  const els = [...main.querySelectorAll('.search, .body, .phead')], before = els.map(e => e.getBoundingClientRect().top);
+  change();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  els.forEach((e, i) => { const d = before[i] - e.getBoundingClientRect().top; if (!d) return;
+    e.style.transition = 'none'; e.style.transform = `translateY(${d}px)`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { e.style.transition = 'transform 280ms var(--ease-out-soft)'; e.style.transform = ''; })); });
+}
+function syncLayout() {
+  const focused = document.activeElement && document.activeElement.id === 'q';
+  const kbd = focused && KBD_SIM, raised = focused || !!S.picked;
+  if (device.classList.contains('kbd') === kbd && device.classList.contains('raised') === raised) return;
+  flip(() => { device.classList.toggle('kbd', kbd); device.classList.toggle('raised', raised); });
+}
+document.addEventListener('focusin', e => { if (e.target.id === 'q') syncLayout(); });
+/* a tap on a suggestion blurs the field first; wait a beat so the layout does not drop and rise again */
+document.addEventListener('focusout', e => { if (e.target.id === 'q') setTimeout(syncLayout, 160); });
+document.addEventListener('click', e => {
+  const k = e.target.closest('[data-kbd-set]');
+  if (k) { KBD_SIM = k.dataset.kbdSet === '1'; syncLayout(); k.parentElement.querySelectorAll('[data-kbd-set]').forEach(x => x.classList.toggle('on', x === k)); }
+});
+render();
+</script>
+</body>
+</html>
