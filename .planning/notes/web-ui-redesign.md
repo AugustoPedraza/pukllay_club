@@ -204,3 +204,13 @@ experto 46 (26 without a band). Recientes shows the newest 30.
     Rhythm: last caption → "Otras filas" 32 · heading → first tile 16 (rail 8 + 16 + the heading's own 8).
     Also **the ⌄ chevron beside the name is gone** (developer: *"the chevron at the "destacados" is weird. remove it"*) —
     the name still opens the options sheet.
+
+19. **The row sheet edits name AND subtitle.** Every row in the dev DB has one (title + subtitle are the two lines the
+    home prints), so the sheet row is now "Editar la fila · Su nombre y su subtítulo en el inicio" and the form sheet has
+    **Nombre** (max 40, real limit) then **Subtítulo** (max 160, real limit) with one hint under both: "Las dos líneas
+    que se ven en el inicio: el título y esto debajo." Enter moves Nombre → Subtítulo → Guardar; the snackbar is
+    "Fila guardada" (silent when nothing changed). A new row carries its subtitle from creation.
+    Measured 375×740 with the simulated keyboard: sheet top 45.6, Guardar's bottom 432 — 16px clear of the 292px
+    keyboard (448) — nothing scrolls inside the sheet, including an automatic row's 74-character subtitle.
+    Developer: *"yes, add the subtitle to the name sheet. I think that every section on the web has a subtitle,
+    doesn't?"* — confirmed against the dev DB (8/8 rows, longest 76 characters).

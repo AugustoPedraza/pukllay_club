@@ -218,6 +218,7 @@
   .tfield:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
   .tfield[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
   .fbody .hint { margin: 6px 0 0; }
+  .flab.sp { margin-top: 16px; }
   .ferr { margin: 6px 0 0; font-size: 13px; color: var(--color-danger); }
   .ferr[hidden] { display: none; }
   .fbody .obtn.wide { margin-top: 16px; }
@@ -324,15 +325,15 @@ const CAP = 20;
 const pickIds = (n, k) => G.filter((g, i) => g.thumb && i % k === 0).slice(0, n).map(g => g.id);
 /* home rows, in home order (dev data) + one temporary list, hidden */
 const ROWS = [
-  { id: 1, name: 'Destacados del club', kind: 'manual', feat: true, ids: DEV7.slice() },
-  { id: 2, name: 'Crea conexiones', kind: 'manual', ids: pickIds(61, 3) },
-  { id: 3, name: 'Equipo ganador', kind: 'manual', ids: pickIds(54, 5) },
-  { id: 4, name: 'Duelos memorables', kind: 'manual', ids: pickIds(19, 7) },
-  { id: 9, name: 'Favoritos de Lacerda', kind: 'manual', ids: [...MORE.slice(0, 5), ...pickIds(4, 11)], hidden: true },
-  { id: 5, name: 'Descubre el hobby', kind: 'level', auto: 179 },   /* published games per band, dev DB 2026-09-17 */
-  { id: 6, name: 'Ingenio estratega', kind: 'level', auto: 183 },
-  { id: 7, name: 'Nivel experto', kind: 'level', auto: 46 },
-  { id: 8, name: 'Recientemente añadidos', kind: 'recent' },
+  { id: 1, name: 'Destacados del club', sub: 'La selección del club — los juegos que más recomendamos ahora mismo.', kind: 'manual', feat: true, ids: DEV7.slice() },
+  { id: 2, name: 'Crea conexiones', sub: 'Reglas simples, familiar / diversión garantizada', kind: 'manual', ids: pickIds(61, 3) },
+  { id: 3, name: 'Equipo ganador', sub: 'Cooperativo', kind: 'manual', ids: pickIds(54, 5) },
+  { id: 4, name: 'Duelos memorables', sub: 'Solo 2 jugadores', kind: 'manual', ids: pickIds(19, 7) },
+  { id: 9, name: 'Favoritos de Lacerda', sub: 'Los juegos de Vital Lacerda que tenemos en la ludoteca.', kind: 'manual', ids: [...MORE.slice(0, 5), ...pickIds(4, 11)], hidden: true },
+  { id: 5, name: 'Descubre el hobby', sub: 'Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez.', kind: 'level', auto: 179 },   /* real rows + counts, dev DB 2026-09-17 */
+  { id: 6, name: 'Ingenio estratega', sub: 'Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante.', kind: 'level', auto: 183 },
+  { id: 7, name: 'Nivel experto', sub: 'Reglas largas y decisiones profundas. Para mesas con experiencia.', kind: 'level', auto: 46 },
+  { id: 8, name: 'Recientemente añadidos', sub: 'Las incorporaciones más nuevas a la ludoteca.', kind: 'recent' },
 ];
 /* decision 7 — "destacada" is a role: exactly one hand-picked row holds it, always ROWS[0] (pinned first on the home) */
 let FEAT = ROWS[0];
@@ -426,8 +427,11 @@ function nameSheet(row, from, isNew) {
   const def = row ? row.name : 'Nueva fila';
   openSheet(`<span class="tile">${ic(row ? kindIcon(row) : 'hand')}</span><div class="sh-txt"><div class="ctx">${row ? (row.feat ? 'Fila destacada' : 'Fila ' + kindLabel(row)) : 'Fila personalizada'}</div><div class="sh-title">${row ? 'Editar fila' : 'Nueva fila'}</div></div>`,
     `<div class="fbody"><label class="flab" for="rn">Nombre</label>
-      <input id="rn" class="tfield" value="${esc(def)}" maxlength="40" autocomplete="off" enterkeyhint="done" aria-describedby="rnhint rnerr">
-      <p class="hint" id="rnhint">Así se ve el título de la fila en el inicio.</p><p class="ferr" id="rnerr" role="alert" hidden></p>
+      <input id="rn" class="tfield" value="${esc(def)}" maxlength="40" autocomplete="off" enterkeyhint="next" aria-describedby="rnerr">
+      <p class="ferr" id="rnerr" role="alert" hidden></p>
+      <label class="flab sp" for="rs">Subtítulo</label>
+      <input id="rs" class="tfield" value="${esc(row ? row.sub || '' : '')}" maxlength="160" autocomplete="off" enterkeyhint="done" aria-describedby="rshint">
+      <p class="hint" id="rshint">Las dos líneas que se ven en el inicio: el título y esto debajo.</p>
       <button class="obtn pri wide" data-act="namesave">${row ? 'Guardar' : 'Crear fila'}</button></div>`, from, { focus: '#rn' });
   $('#sheet').classList.add('form');
 }
@@ -437,12 +441,13 @@ function nameSave() {
   const bad = m => { err.textContent = m; err.hidden = false; inp.setAttribute('aria-invalid', 'true'); inp.focus(); };
   if (!name) return bad('Escribí un nombre.');
   if (ROWS.some(r => r.id !== EDIT.id && norm(r.name) === norm(name))) return bad('Ya hay una fila con ese nombre.');
-  const row = EDIT.id ? ROWS.find(r => r.id === EDIT.id) : null, same = row && row.name === name;
-  if (row) row.name = name;
-  else { const nr = { id: Math.max(...ROWS.map(r => r.id)) + 1, name, kind: 'manual', ids: [] }; ROWS.push(nr);
+  const row = EDIT.id ? ROWS.find(r => r.id === EDIT.id) : null;
+  const sub = $('#rs').value.trim().replace(/\s+/g, ' ');
+  if (row) { const same2 = row.name === name && (row.sub || '') === sub; row.name = name; row.sub = sub || null;
+    closeSheet(); render(); return same2 ? undefined : snack('Fila guardada'); }
+  { const nr = { id: Math.max(...ROWS.map(r => r.id)) + 1, name, sub: sub || null, kind: 'manual', ids: [] }; ROWS.push(nr);
     /* decision 13 — a new row opens on its own page, ready for its first game */
     closeSheet(); CUR = nr; render(); $('#scroller').scrollTo({ top: 0 }); return snack('Fila creada'); }
-  closeSheet(); render(); if (!same) snack('Nombre guardado');
 }
 
 /* ---------- Filas del inicio (decision 6) ---------- */
@@ -470,7 +475,7 @@ function rowSheet(r, from, onPage) {
   const destacar = r.kind === 'manual' && !r.feat ? `<button class="dlink" data-act="destacar" data-rid="${r.id}">${ic('star')}<span>Destacar<span class="dsub">${over ? `Tiene ${r.ids.length} juegos · la destacada lleva hasta ${CAP}` : 'Pasa a ser la primera fila del inicio'}</span></span></button>` : '';
   const hide = r.feat ? '' : `<button class="dlink" data-act="togglehide" data-rid="${r.id}">${ic(r.hidden ? 'eye' : 'eyeoff')}<span>${r.hidden ? 'Mostrar en el inicio' : 'Ocultar del inicio'}<span class="dsub">${r.hidden ? 'Vuelve a verse en su lugar' : 'Guarda sus juegos para más adelante'}</span></span></button>`;
   openSheet(`<span class="tile">${ic(kindIcon(r))}</span><div class="sh-txt"><div class="ctx">${r.feat ? 'Fila destacada' : 'Fila ' + esc(kindLabel(r))}</div><div class="sh-title">${esc(r.name)}</div></div>`,
-    `${destacar}${swap}<button class="dlink" data-act="editrow" data-rid="${r.id}">${ic('edit')}<span>Editar nombre<span class="dsub">Así se ve el título en el inicio</span></span></button>${games}${hide}`, from);
+    `${destacar}${swap}<button class="dlink" data-act="editrow" data-rid="${r.id}">${ic('edit')}<span>Editar la fila<span class="dsub">Su nombre y su subtítulo en el inicio</span></span></button>${games}${hide}`, from);
 }
 /* decision 7 — the role moves: the new row goes first, the old one heads the rest */
 function destacar(r) {
@@ -574,12 +579,13 @@ document.addEventListener('input', e => { if (e.target.id === 'aq') renderABody(
 document.addEventListener('keydown', e => {
   if ($('#dscrim').classList.contains('open')) { if (e.key === 'Escape') closeDialog(); return; }
   if ($('#sheet').classList.contains('open') && e.key === 'Escape') return closeSheet();
-  if (e.target.id === 'rn' && e.key === 'Enter') { e.preventDefault(); return nameSave(); }
+  if (e.target.id === 'rn' && e.key === 'Enter') { e.preventDefault(); return $('#rs').focus(); }
+  if (e.target.id === 'rs' && e.key === 'Enter') { e.preventDefault(); return nameSave(); }
   if (e.target.id === 'aq' && e.key === 'Enter') { e.preventDefault(); return $('#abody .srow')?.click(); }
 });
 let KBD_SIM = true;
-document.addEventListener('focusin', e => { if (e.target.id === 'aq' || e.target.id === 'rn') { device.classList.toggle('kbd2', KBD_SIM); if (e.target.id === 'rn') e.target.select(); } });
-document.addEventListener('focusout', e => { if (e.target.id === 'aq' || e.target.id === 'rn') setTimeout(() => { if (!['aq', 'rn'].includes(document.activeElement?.id)) device.classList.remove('kbd2'); }, 200); });
+document.addEventListener('focusin', e => { if (['aq', 'rn', 'rs'].includes(e.target.id)) { device.classList.toggle('kbd2', KBD_SIM); if (e.target.id === 'rn') e.target.select(); } });
+document.addEventListener('focusout', e => { if (['aq', 'rn', 'rs'].includes(e.target.id)) setTimeout(() => { if (!['aq', 'rn', 'rs'].includes(document.activeElement?.id)) device.classList.remove('kbd2'); }, 200); });
 document.querySelectorAll('.kbd-sim .krow').forEach(r => { if (!r.querySelector('.k')) r.innerHTML = [...r.textContent].map(c => `<span class="k">${c}</span>`).join(''); });
 document.addEventListener('click', e => {
   const k = e.target.closest('[data-kbd-set]'), f = e.target.closest('[data-fill]');
