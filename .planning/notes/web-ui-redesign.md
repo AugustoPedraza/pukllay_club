@@ -223,3 +223,21 @@ experto 46 (26 without a band). Recientes shows the newest 30.
     Bug caught by the screenshot: the textarea rendered near-black in dark theme — `button, input { color: inherit }`
     did not include `textarea`. Fixed; text now 17.16:1 light / 13.62 dark.
     Developer picked "Two-line box that grows (Recommended)".
+
+## Where we are (2026-09-17, Web redesign complete)
+- **Sketch:** `.planning/sketches/070-web-destacados/index.html` — standalone, hand-written, uses
+  `../069-estantes-ubicar/games.js` (434 real games) and `../themes/default.css`. Serve with
+  `python3 -m http.server 8765` from the repo root. Tools left in it: Tema · Teclado · Juegos en Destacados 0/7/20.
+  No variants left (tag and count variants were removed once picked).
+- **Settled (decisions 1–20):** Web is ONE page — the destacada row edited inline (name → options sheet; "7 de 20
+  juegos"; rail with a "+" in every gap; add sheet "¿Qué juego va acá?" opening on Últimas novedades; cover → Ver ficha ·
+  Mover · Quitar with Deshacer, no dialog) and **Otras filas** under it (tile icon + count badge, quiet lowercase kind
+  tag, ● Oculta). ⇅ Ordenar and + Nueva fila in the header. Any hand-picked row opens the same page with `‹ Web`.
+  "Destacada" is a role exactly one hand-picked row holds; Destacar moves it. The row sheet edits name + subtitle.
+- **App-wide rules recorded** in `01.8.2-CONTEXT.md` + `01.8.2-BENCHMARK.md`: **D-19k** removing from a curated list is
+  not destructive · **D-19l** a one-job page may list its siblings below the job · **D-19m** kind tag and count badge
+  anatomy (never the pending-work badge).
+- **Not drawn here:** the public home page itself; what a hand-picked row's 61-game rail feels like to walk (accepted
+  as a long swipe); Ver ficha (another sketch); Crear from the add sheet (stubbed to a snackbar).
+- **Next:** the admin **Juegos** tab — `.planning/notes/admin-juegos-redesign-handoff.md`, sketch 071. Then sketch 074
+  (staff tab bar on public pages, D-14), then `/gsd-plan-phase 01.8.2`.

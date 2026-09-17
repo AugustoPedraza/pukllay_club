@@ -2,7 +2,7 @@
 sketch: 070
 name: web-destacados
 question: "Does the admin Web tab work as ONE job — swapping the featured games — with every other home row behind a header icon?"
-winner: null
+winner: "one page — destacada inline + Otras filas (decisions 1–20)"
 tags: [admin, web, destacados, rail, home-rows, 01.8.2]
 ---
 
@@ -17,6 +17,13 @@ editable name and its games as a rail with a "+" in every gap — and the other 
 http://127.0.0.1:8765/.planning/sketches/070-web-destacados/index.html
 
 Tools: Tema · Teclado simulado · Juegos en Destacados 0 / 7 (dev data) / 20 (cap).
+
+## Settled (notes/web-ui-redesign.md, decisions 1–20)
+Web is ONE page: the **destacada** row edited inline (name → its options sheet, rail with a "+" in every gap, add /
+Mover / Quitar with Deshacer) and **Otras filas** listed under it (kind tag + count badge on the tile); ⇅ Ordenar and
++ Nueva fila in the header. Any hand-picked row opens the same page (`‹ Web`). "Destacada" is a role exactly one
+hand-picked row holds. App-wide rules that came out of it: **D-19k** (removing from a curated list is not destructive),
+**D-19l** (a one-job page may list its siblings below), **D-19m** (kind tag / count badge anatomy).
 
 ## What is drawn
 - **Web**: title + rows icon; row name (17/600) + pencil → name sheet; context line (position · N de 20); rail of 96px
