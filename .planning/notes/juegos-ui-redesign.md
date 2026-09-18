@@ -281,3 +281,15 @@ so this cannot silently come back.
       breaks rhythm independently of any colour. This one was a defect introduced by decision 10, and the revert
       restored it, so it is worth fixing on its own whatever happens to the catalog header.
     Harness back to **61/61**.
+
+## Where we are (2026-09-18, paused for a fresh session)
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **61/61**.
+  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left.
+- **Settled:** decisions 1–11. **Reverted:** 12 (`193d10c` → `b1d6c49`).
+- **Open, measured, unfixed:** (a) a residual stripe — TINT 92 / void 32 / TINT 44; (b) three text left edges,
+  16 / 44 / 68, a defect from decision 10 that is worth fixing on its own.
+- **Also open:** the year-only second line, no prompt line, collapse persistence, unreviewed copy, and the
+  enrichment pending/failed row + Reintentar (not drawn anywhere).
+- **App-wide rules recorded** in `01.8.2-CONTEXT.md` + `01.8.2-BENCHMARK.md`: **D-19n** scrolled context,
+  **D-19g-bis** catalog groups (incl. band anatomy and "bands must not repeat into a stripe").
+- **Next:** `.planning/notes/juegos-refine-handoff.md` → then sketch 072 (the editor), sketch 074, wrap-up, plan.
