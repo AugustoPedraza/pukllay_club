@@ -710,10 +710,33 @@ above it, by a ratio of at least 2:1.
 Harness: **91/91**, including a standing guard that chrome must stay **≤45% of usable height at every viewport**,
 measured on the smallest — the check that would have caught 51% being reported as 43%.
 
+23. **The decision-19 flag, checked and closed: it does not reproduce.** Decision 19 took hint variant A as
+    built but flagged that a `13/400` muted hint sitting directly under a (then `13/600`, now `15/600`) label on
+    the same 16 keyline "may read as one two-line block rather than a label plus a note". Measured with a section
+    open, and looked at:
+
+    | | rango | keyline |
+    |---|---|---|
+    | etiqueta `Sin datos 49` | 15/600 `rgb(35,19,57)` | 16 |
+    | hint | 13/400 `rgb(103,92,125)` | 16 |
+    | nombre de fila | 15/400 `rgb(35,19,57)` | 68 |
+
+    Gaps, text to text: **label → hint 3.5**, **hint → first row 25.4** (7.26:1).
+
+    **The rank separation already does the work** — 15/600 at full strength against 13/400 muted reads as a
+    caption plus a note, not as a wrapped paragraph. The 3.5px binds the hint to its own label, which is the
+    *correct* grouping: decision 21 established that proximity is a ratio, and here it points the right way.
+    Closed as **verified, not reproduced**. No variants built for a defect that is not on screen.
+
+    One fact recorded rather than fixed: the hint is **byte-identical to a row's second line** (13/400
+    `rgb(103,92,125)`, the same as the year) — the exact identity decision 20 added a standing guard against,
+    though that guard is about the *label*. It is benign here: the hint sits on the 16 keyline and the year on
+    68, and the two never share a line. Deliberate tertiary rank, not a defect.
+
 ## Where we are (2026-09-18)
 - **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **91/91**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–22**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–23**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections —
   `Sin datos 49 ›` and `Borradores 1 ›` closed, `Juegos del club 385` open. No resting page title. Chrome 213px.
@@ -722,9 +745,9 @@ measured on the smallest — the check that would have caught 51% being reported
   **D-19g-bis** catalog sections.
 - **Still open** (handoff's list, minus the one decision 22 closed):
   1. the enrichment `pending`/`failed` row + Reintentar — not drawn anywhere (slated for sketch 072)
-  2. the hint is `13/400` muted directly under a `15/600` label at the same keyline — may read as one block
-  3. the catalog row's second line is the year alone, repeating down a newest-first list
-  4. no prompt line
-  5. collapse state does not persist
-  6. copy not reviewed
+  2. the catalog row's second line is the year alone, repeating down a newest-first list
+  3. no prompt line
+  4. collapse state does not persist
+  5. copy not reviewed
+  *(the hint/label pairing is closed by decision 23 — verified, not reproduced)*
 - **Next:** finish Juegos → sketch 072 (the editor), sketch 074, `--wrap-up`, then `/gsd-plan-phase 01.8.2`.
