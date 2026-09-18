@@ -79,9 +79,19 @@
      resting rhythm is untouched: field top 129, heading text top 209. */
   .search { position: sticky; top: 0; z-index: 12; margin: 12px -16px 0; padding: 4px 16px 8px; background: var(--color-bg); }
   .search.stuck { border-bottom: 1px solid var(--color-border); }
-  /* 8, not 16: decision 8 turned the heading into a 44px control, so its TEXT sits 8px lower inside its own
-     box. Measured on what you can see, field bottom -> heading text is back to 32. */
-  .search + .lgroup { margin-top: 8px; }
+  /* decision 11 — the stripe was 44/16/44/16/44: three equal bands with equal air, nothing dominant.
+     The two WORK groups now join into one contiguous block (touching, split by a hairline: they are the same kind
+     of thing), then 32px, then the catalog welded to its rows as the page's body. Two units, not three stripes.
+     The gap is measured to the BAND EDGE, not to the heading text — decision 10 made the box visible, so the 32
+     tuned against text had silently become a visible 20 ("box gaps lie" cuts both ways). */
+  /* the margins are back-solved from the VISIBLE edges, not the boxes: the field's border bottom is 177, but
+     .search carries 8px of its own padding below it and .lhw another 4 — so 12 here yields a visible 24, and 28
+     below yields a visible 32. `.wblock .lgroup + .lgroup` (0,3,0) must outrank the generic `.lgroup + .lgroup`. */
+  .search + .wblock { margin-top: 12px; }
+  .wblock .lgroup, .wblock .lgroup + .lgroup { margin-top: 0; }
+  .wblock .lgroup + .lgroup .lhw { margin-top: 0; }
+  .wblock .lgroup + .lgroup .lhead { box-shadow: inset 0 1px 0 var(--color-border); }
+  .lgroup.main { margin-top: 28px; }
   .device[data-bar="search"] .pbar { display: none; }
   .sfield { position: relative; }
   .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; text-overflow: ellipsis; }
@@ -434,7 +444,7 @@ function updateBar() {
 function groupSection(g) {
   const all = inGroup(g.key), open = !!S.open[g.key];
   const paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
-  return `<section class="lgroup">
+  return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}">
     <h2 class="lhw"><button class="lhead" data-act="group" data-g="${g.key}" aria-expanded="${open}">
       <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>
       <span class="caret" aria-hidden="true">${ic('chevR')}</span></button></h2>
@@ -457,7 +467,8 @@ function renderJuegos() {
       </div>
       <div class="sugg" id="sugg" role="listbox" hidden></div>
     </div>
-    ${GROUPS.map(groupSection).join('')}`;
+    <div class="wblock">${GROUPS.filter(g => g.key !== 'rest').map(groupSection).join('')}</div>
+    ${GROUPS.filter(g => g.key === 'rest').map(groupSection).join('')}`;
 }
 
 function renderEditor() {

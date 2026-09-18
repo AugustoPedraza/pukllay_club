@@ -235,3 +235,36 @@ Harness rewritten for the new structure: **53/53**.
     caret belong to D-19g-bis, not to Juegos alone.
 
 Harness: **57/57**.
+
+11. **Full-page balance pass: two units, not three stripes.** Developer: *"Now review the full page add improve the
+    balance and hierarchy. And the color you added didn't fix it since now looks «rayado»"* — correct, and "rayado"
+    is exact. Audited at 375×740, the page measured **44 / 16 / 44 / 16 / 44**: three equal bands with equal air, a
+    repeating 60px pitch with nothing dominant.
+
+    **Five findings from the audit:**
+    1. The stripe was literal — a repeating band/background pitch below the search.
+    2. **One component, two behaviours, both on screen:** a *collapsed* band floated with 16px under it; an
+       *expanded* band was welded to its rows at 0. Same element, contradictory attachment.
+    3. **Unequal things, equal weight:** "Borradores 1" was styled identically to "Juegos del club 385".
+    4. **The rhythm tuned in decision 8 had gone stale and was not re-measured.** `field → heading text = 32` was
+       set while the heading was bare text; decision 10 gave it a visible band edge, so the real visible gap had
+       silently become **20**. This project's own rule — *box gaps lie, measure what you can see* — cutting the
+       other way, against a number I had tuned myself.
+    5. Nothing anchored the page under the search; the eye dropped onto three identical bars.
+
+    Developer picked "Work groups join; catalog leads (Recommended)" over one grouped list of all three, over
+    banding only the work groups, and over dropping the band entirely.
+    **Now:** "Sin datos" and "Borradores" are **one contiguous block** (touching, split by a `--color-border`
+    hairline — they are the same kind of thing), then **32px**, then "Juegos del club" **welded to its rows** as the
+    page's body. Measured visible gaps: **24 / 0 / 32 / 0** — no two alike, so there is no pitch to read as a stripe.
+    Margins are **back-solved from the visible edges**: the field's border bottom is 177 but `.search` carries 8px of
+    its own padding and `.lhw` another 4, so 12px of margin yields a visible 24 and 28 yields a visible 32.
+    `.wblock .lgroup + .lgroup` (0,3,0) has to outrank the generic `.lgroup + .lgroup` (0,2,0) or contiguity loses.
+
+    **Still open from finding 3:** the catalog band carries the same fill and weight as the two work bands. Grouping
+    fixed the stripe and the reading order, but if the catalog should visibly *lead* rather than merely sit apart,
+    the next move is the option not taken — band only the work groups, and let the catalog's header be plain text
+    that gains its band when it pins.
+
+Harness: **61/61**, and it now asserts the gaps against the band edges (24 / 0 / 32 / 0) plus "no repeating pitch",
+so this cannot silently come back.

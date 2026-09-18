@@ -91,7 +91,20 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   const lh0 = await textBox('.lhead .ln');
   ok(near(field.h, 48), `main control is a 48px field (${field.h.toFixed(1)})`);
   ok(near(field.t - phead.b, 16, 1.5), `title row -> field 16, as 069 raised (${(field.t - phead.b).toFixed(1)})`);
-  ok(near(lh0.t - field.b, 32, 2.5), `field -> first group heading text 32 (${(lh0.t - field.b).toFixed(1)})`);
+  /* decision 11 measures to the BAND EDGE, not the heading text: decision 10 made the box visible, so the box
+     is now what the eye reads. Target 24 to the band, 0 between the joined work bands, 32 to the catalog. */
+  const bands = await J(() => {
+    const hs = [...document.querySelectorAll('.lhead')].map(h => h.getBoundingClientRect());
+    const f = document.querySelector('.sfield input').getBoundingClientRect();
+    const r0 = document.querySelector('.lgroup.main .row').getBoundingClientRect();
+    return { toFirst: +(hs[0].top - f.bottom).toFixed(1), seam: +(hs[1].top - hs[0].bottom).toFixed(1),
+             toMain: +(hs[2].top - hs[1].bottom).toFixed(1), toRow: +(r0.top - hs[2].bottom).toFixed(1) };
+  });
+  ok(near(bands.toFirst, 24, 1.5), `field -> work block 24 (${bands.toFirst})`);
+  ok(bands.seam === 0, `the two work bands are contiguous — no stripe (${bands.seam})`);
+  ok(near(bands.toMain, 32, 1.5), `work block -> catalog 32 (${bands.toMain})`);
+  ok(bands.toRow === 0, `the catalog band is welded to its rows (${bands.toRow})`);
+  ok(new Set([bands.toFirst, bands.seam, bands.toMain]).size === 3, `no repeating pitch: ${bands.toFirst} / ${bands.seam} / ${bands.toMain}`);
   const ranks = await J(() => { const g = s => { const e = document.querySelector(s); const c = getComputedStyle(e); return parseFloat(c.fontSize) + '/' + c.fontWeight; };
     return { title: g('.ptitle'), lhead: g('.lhead'), name: g('.row .name'), field: g('.sfield input') }; });
   ok(ranks.title === '22/600' && ranks.lhead === '15/600' && ranks.name === '15/400' && ranks.field === '16/400',
@@ -119,9 +132,9 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   await p.click('[data-g="gap"]'); await p.waitForTimeout(350); await settle();
   const opened = await J(() => ({
     expanded: document.querySelector('[data-g="gap"]').getAttribute('aria-expanded'),
-    rows: document.querySelectorAll('.lgroup:first-of-type .row').length,
+    rows: document.querySelector('[data-g="gap"]').closest('.lgroup').querySelectorAll('.row').length,
     headTop: +document.querySelector('[data-g="gap"]').getBoundingClientRect().top.toFixed(1),
-    hint: document.querySelector('.lgroup:first-of-type .hint')?.textContent.trim()
+    hint: document.querySelector('[data-g="gap"]').closest('.lgroup').querySelector('.hint')?.textContent.trim()
   }));
   ok(opened.expanded === 'true' && opened.rows === 49, `opening "Sin datos" shows its 49 rows (${opened.rows})`);
   ok(near(opened.headTop, before, 2), `the tapped heading stays put — opening a group never scrolls the page (${before.toFixed(1)} -> ${opened.headTop})`);
