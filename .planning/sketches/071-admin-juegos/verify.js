@@ -116,6 +116,25 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(near(bands.toMain, 32, 1.5), `work block -> catalog 32 (${bands.toMain})`);
   ok(bands.toRow === 0, `the catalog band is welded to its rows (${bands.toRow})`);
   ok(new Set([bands.toFirst, bands.seam, bands.toMain]).size === 3, `no repeating pitch: ${bands.toFirst} / ${bands.seam} / ${bands.toMain}`);
+  /* decision 14 — the tint marks the WORK BLOCK, so the page carries exactly ONE tinted mass at rest. Two
+     (work block + catalog band) was the residual "rayado". Sampled as raw runs down x=300, clear of all text —
+     a computed style per element would not prove what the eye actually sees stacked. */
+  const masses = await J(() => {
+    const seen = [];
+    for (let y = 150; y < 560; y++) {
+      const el = document.elementFromPoint(300, y);
+      const bg = el ? getComputedStyle(el).backgroundColor : '-';
+      const last = seen[seen.length - 1];
+      if (last && last.bg === bg) last.b = y; else seen.push({ t: y, b: y, bg });
+    }
+    const plain = ['rgba(0, 0, 0, 0)', 'rgb(255, 255, 255)'];
+    return seen.filter(r => !plain.includes(r.bg)).map(r => `${r.t}..${r.b}`);
+  });
+  ok(masses.length === 1, `exactly one tinted mass at rest (${masses.join(', ') || 'none'})`);
+  /* and the catalog header — the page's body — leads plain, gaining its band only where the band does real
+     work: terminating a pinned heading over the rows sliding under it. */
+  const restBg = await J(() => getComputedStyle(document.querySelector('.lgroup.main .lhead')).backgroundColor);
+  ok(restBg === 'rgba(0, 0, 0, 0)', `the catalog header is plain at rest (${restBg})`);
   const ranks = await J(() => { const g = s => { const e = document.querySelector(s); const c = getComputedStyle(e); return parseFloat(c.fontSize) + '/' + c.fontWeight; };
     return { title: g('.ptitle'), lhead: g('.lhead'), name: g('.row .name'), field: g('.sfield input') }; });
   ok(ranks.title === '22/600' && ranks.lhead === '15/600' && ranks.name === '15/400' && ranks.field === '16/400',
@@ -178,6 +197,17 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(down.hidden, 'scrolling down hides the search');
   ok(down.searchTop < 53, `the search is off the top of the scroller (${down.searchTop} < 53)`);
   ok(down.bar === '0px', `the group heading pins to the very top while the search is away (--bar ${down.bar})`);
+  /* decision 14 — scrolled, the catalog heading GAINS its band. Without it the pinned heading is opaque but
+     edgeless, and a half-cut cover sits directly under it with nothing dividing the two (measured while
+     comparing the no-tint variant). Compare against --color-surface, not "not transparent". */
+  const pinned = await J(() => {
+    const w = document.querySelector('.lgroup.main .lhw'), h = w.querySelector('.lhead');
+    const want = getComputedStyle(document.getElementById('device')).getPropertyValue('--color-surface').trim();
+    const px = s => { const d = document.createElement('div'); d.style.color = s; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+    return { isPinned: w.classList.contains('pinned'), bg: getComputedStyle(h).backgroundColor, want: px(want) };
+  });
+  ok(pinned.isPinned, 'the catalog heading registers as pinned once it reaches the top');
+  ok(pinned.bg === pinned.want, `pinned, the catalog heading gains its band (${pinned.bg})`);
   await settle(); await p.screenshot({ path: path.join(OUT, '03-search-hidden-375x740-light.png') });
   for (const y of [900, 780, 640]) { await sc(y); await p.waitForTimeout(120); }
   await p.waitForTimeout(250);

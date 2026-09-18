@@ -320,13 +320,58 @@ so this cannot silently come back.
 
 Harness: **64/64** (61 + two-edges, row-text column, no ragged caret, and the open-state edge check).
 
+14. **The tint marks the work block, not every group header.** The residual "rayado" — the finding decision 11
+    could not reach and decision 12 was reverted for attempting. Measured as raw runs down **x=300**, clear of all
+    text, the page ran:
+
+    ```
+    35 white (field) / 16 void / TINT 88 (work block) / void 32 / TINT 44 (catalog band) / 195 void (rows)
+    ```
+
+    **Two tinted masses floating above a plain page.** Decision 11 had already killed the equal pitch (24/0/32/0);
+    what remained was that a void between two tints still reads as banding. Three answers were built as a
+    `Franjas` tools toggle and measured at rest and scrolled:
+
+    | | tinted masses at rest | catalog heading at rest | pinned |
+    |---|---|---|---|
+    | Actual | **2** — 88 + 44 | banded | banded |
+    | **A Solo trabajo** | **1** — 88 | plain, welded to its rows | **gains its band** |
+    | B Sin tinte | 0 | plain | opaque but **edgeless** |
+    | C Invertido | 1 — 44 | banded | banded |
+
+    Developer picked **"A Solo trabajo (Recommended)"**. The tint now marks only the work block, so the page
+    carries **one** tinted mass. The catalog is the page's **body**, so its header leads as plain text welded to
+    its rows and gains its band **only when it pins** — which is where the band earns its keep, terminating the
+    pinned heading over the rows sliding under it. This is also the option decision 11 had already named as the
+    next move ("band only the work groups, and let the catalog's header be plain text that gains its band when it
+    pins"), so it closes that thread rather than opening a new one.
+
+    **B and C were rejected on measurement, not taste.** B looked calmest at rest (zero tinted masses) but the
+    scrolled screenshot showed the failure plainly: the pinned heading is opaque yet **has no edge**, so a half-cut
+    cover and a stray "2025" sat directly beneath it with nothing dividing them — and `Sin datos` + `Borradores`
+    were left holding together on a hairline alone, undoing decision 11's contiguous block. C put one lavender bar
+    mid-page with white above and below, which reads as **more** of a stripe, not less.
+
+    **What this costs, named:** the catalog header now has two appearances over time. That is *not* decision 11's
+    finding 2 (a collapsed band and an expanded band contradicting each other **simultaneously on screen**) — it is
+    one element changing as it detaches, the standard sticky-subheader convention. At rest that header leans on
+    caret-vs-cover, 44-vs-64 and 600-vs-400 to not read as a row; the work-group headers keep their band, so
+    decision 10's protection is untouched where a header actually sits adjacent to its own rows.
+
+    **A trap avoided:** the tinted masses are counted from **raw runs sampled down x=300**, not from a computed
+    style per element. A per-element check would have said "three headers, one background" and proved nothing about
+    what the eye reads stacked down the page — the same class of mistake as trusting a screenshot's colour.
+
+Harness: **68/68** — one tinted mass at rest, the catalog header plain at rest, and pinned it gains `--color-surface`
+(compared against the resolved token, not merely "not transparent").
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **64/64**.
-  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left (the `Sangría` toggle was removed once
-  decision 13 was picked).
-- **Settled:** decisions 1–11 and **13**. **Reverted:** 12 (`193d10c` → `b1d6c49`).
-- **Open, measured, unfixed:** (a) a residual stripe — TINT 92 / void 32 / TINT 44. *(b) three text left edges is
-  **fixed** by decision 13 — the page is now 16 / 68 at rest and with a group open.)*
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **68/68**.
+  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left (the `Sangría` and `Franjas` toggles were
+  removed once decisions 13 and 14 were picked).
+- **Settled:** decisions 1–11, **13** and **14**. **Reverted:** 12 (`193d10c` → `b1d6c49`).
+- **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
+  16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).
 - **Noticed while fixing 13, not yet asked:** the group hint line sits at 16 while the band it belongs to now sits
   at 68, so the hint hangs left of its own heading. Legal (16 is an edge), but it may want 68.
 - **Also open:** the year-only second line, no prompt line, collapse persistence, unreviewed copy, and the

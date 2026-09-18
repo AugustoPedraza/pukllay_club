@@ -187,6 +187,18 @@
      side decision 10 moved it off. */
   .lhead .caret { margin-right: 24px; }
 
+  /* decision 14 — the tint marks the WORK BLOCK, not every group header. Measured at x=300, the page ran
+     TINT 88 (work block) / void 32 / TINT 44 (catalog band) / untinted rows forever: two tinted masses floating
+     above a plain page, which is the residual "rayado" decision 11 could not reach. One tinted mass now.
+     The catalog is the page's BODY, so its header leads as plain text welded to its rows and gains its band only
+     when it pins — the standard sticky-subheader behaviour, where the band earns its keep by terminating the
+     pinned heading over the rows sliding under it. Rejected: no tint anywhere (calmest at rest, but the pinned
+     heading loses its edge — a half-cut cover sat directly under it — and the contiguous work block was left
+     holding together on a hairline alone); and tinting the catalog instead (one bar floating mid-page reads as
+     MORE of a stripe, and the work block loses the fill that makes its two groups one block). */
+  .lgroup.main .lhead { background: transparent; }
+  .lgroup.main .lhw.pinned .lhead { background: var(--color-surface); }
+
   /* decision 9 — scrolling down slides the search away (+1 row on every viewport); the smallest flick up
      brings it back, already usable. Measured: collapsing it to a 44px icon bar saves only 16px — a quarter of
      a row — so it gained 0 rows at 375×667 and still cost a tap. */
@@ -438,6 +450,10 @@ function updateBar() {
     if (y <= HIDE_AFTER || document.activeElement === $('#q')) device.classList.remove('hidesearch');
     else if (Math.abs(dy) > 6) device.classList.toggle('hidesearch', dy > 0);
     lastY = y;
+    /* Franjas A/B need to know when a heading has actually pinned, so it can gain a background only there.
+       Sticky pins to the SCROLLER's top edge offset by --bar, never the viewport's. */
+    const barPx = parseFloat(getComputedStyle(device).getPropertyValue('--bar')) || 0;
+    main.querySelectorAll('.lhw').forEach(w => w.classList.toggle('pinned', w.getBoundingClientRect().top - scTop <= barPx + 0.5));
     device.classList.remove('scrolled'); $('#pbar').inert = true;
     return;
   }
