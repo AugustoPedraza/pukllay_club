@@ -224,7 +224,13 @@
   .lhead.tap:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   .lhead .caret { width: 14px; height: 14px; margin-left: 4px; flex-shrink: 0; color: var(--color-text-muted);
     transition: transform 160ms var(--ease-out-soft); }
-  .lhead[aria-expanded="true"] .caret { transform: rotate(90deg); }
+  /* decision 25 — the caret is a chevron-DOWN that flips to chevron-UP. Decision 18 had used chevR, the glyph
+     D-19i reserves for "opens a page", and separated the two by POSITION alone (x=126 vs x=339) — measured, it
+     was byte-identical to the row chevron (`M9 5l7 7-7 7`). Decision 10 had already written the rule the right
+     way round ("a disclosure triangle, never a trailing ›") and decision 18 kept the position fix while losing
+     the glyph rule. Down means expand, up means collapse; neither ever points the way a row chevron does, so the
+     collision is resolved by GLYPH, not by placement. */
+  .lhead[aria-expanded="true"] .caret { transform: rotate(180deg); }
   @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
 
 
@@ -430,6 +436,8 @@ G.push({ id: 900, name: 'Ark Nova', thumb: null, hue: hue('Ark Nova'), year: 202
    SCENARIOS applied to the existing draft, not extra fixture rows: the resting page stays the real 49+1+385. */
 let ENR = '';        /* '' | 'pending' | 'failed' — a SCENARIO toggle, not a variant: the dev DB has no such
                         rows, so this is the only way to see the state at all (like the Teclado toggle). */
+
+
 const enrOf = g => (g.id === 900 && ENR) ? ENR : (g.enr || 'enriched');
 const byId = id => G.find(g => g.id === id);
 const TOTAL = () => G.length;
@@ -568,7 +576,7 @@ function groupSection(g) {
   const head = g.shut
     ? `<button class="lhead tap" data-act="group" data-g="${g.key}" aria-expanded="${open}">
         <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>${warn}
-        <span class="caret" aria-hidden="true">${ic('chevR')}</span></button>`
+        <span class="caret" aria-hidden="true">${ic('chevD')}</span></button>`
     : `<span class="lhead"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span>`;
   return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}${open ? '' : ' shut'}">
     <h2 class="lhw">${head}</h2>

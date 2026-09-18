@@ -791,10 +791,80 @@ measured on the smallest — the check that would have caught 51% being reported
 Harness: **108/108** — 17 new checks, including that a failed row is absent from the DOM at rest (the reason the
 caption must carry it), that no `[class*=alert]` exists anywhere, and that `1 anatomy` survives the report.
 
+25. **The row's second line keeps the year — and the reason it was questioned turned out not to exist.** The
+    handoff asked whether "recency may earn the line better", against 065 round 3's reason for keeping año ("it
+    tells two editions apart"). Both sides were checked against the real database and **both collapsed**:
+
+    - **0 duplicate names** in the 435-game catalogue. The stated justification for año has **zero instances**.
+    - **433 of 435 games share one insertion date** (2026-08-10, the CSV import; 3 distinct dates in total). A
+      recency line would read "hace 1 mes" on 433 identical rows — strictly worse than the year.
+
+    Then the density argument collapsed too. Measured with the year on and off:
+
+    | | 360×640 | 375×740 | 390×844 | alto de fila |
+    |---|---|---|---|---|
+    | **A año** | 4 filas | 6 filas | 7 filas | 64px |
+    | B sin 2ª línea | 4 filas | 6 filas | 7 filas | 64px |
+
+    **Removing it gains nothing.** `.row` is `min-height: 64px` because of the 40px cover plus padding, so the
+    second line fits *inside* the existing height for free (total scroll 3,585 → 3,564px, and those 21px come
+    only from the 2 rows whose names wrap). Developer looked at all three in the browser and took **A**.
+    A third variant — year only on names sharing a first word (Catan ×4, Wingspan ×4, Dixit ×3; 3 of the first
+    50 rows) — was built and rejected: a conditional rule to explain, and a list that looks uneven for no
+    visible reason.
+
+    **Recorded, not acted on:** decision 3's "newest first" is a real sort for **2 of 435 games**. For the other
+    433 the order is decided by the tiebreaker (id, i.e. CSV row), so the catalogue's stated order is effectively
+    import order. It is correct *going forward* — games added one at a time will surface on top, which is what an
+    admin wants right after adding — and degenerate only on the imported backlog, so it is a property to know
+    rather than a defect to fix. Alphabetical was costed and dropped: reaching Z needs **8 taps of "Mostrar más"**
+    at 50 per page, and decision 2 already makes the search the way you find a named game.
+    (The sketch's fixture fakes a distinct `added` per game — `added: x.t ? 2000 + i : 0` — so its order is more
+    meaningful than the real query's. Worth knowing when 072 or the real build reads from the database.)
+
+26. **The caret is a different GLYPH, not just a different x.** Developer asked to focus on the section headers;
+    auditing the three, ink by ink, turned up four things, and this was the one taken first.
+
+    ```
+    "Sin datos"        nombre 15/600 x=16..83    cuenta 15/400 x=95..114   caret x=126..140
+    "Borradores"       nombre 15/600 x=16..97    cuenta 15/400 x=109..115  caret x=127..141
+    "Juegos del club"  nombre 15/600 x=16..130   cuenta 15/400 x=142..170  sin caret
+    chevron de fila                                                        x=339..359
+    ```
+
+    **The caret was byte-identical to the row chevron** — both `chevR`, both `M9 5l7 7-7 7`. So a closed section
+    read `Sin datos 49 ›`, using the exact glyph D-19i reserves for "opens a page", and the page showed **four
+    "›" meaning two different things**. Decision 18 had separated them by **position** (x=126 vs x=339) and
+    called it solved; decision 10 had already written the rule the right way round — *"a disclosure triangle,
+    never a trailing ›, which under D-19i means opens a page"* — and decision 18 kept the position fix while
+    losing the glyph rule. **Third time in this sketch that a rule outlived its reason**, and the first where the
+    superseding decision contradicted an explicit prohibition rather than merely forgetting a justification.
+
+    | | glifo cerrado | vs chevron de fila | abierta |
+    |---|---|---|---|
+    | A `›` (como está) | `chevR` | **idéntico byte por byte** | gira 90° |
+    | **B `⌄` rota** | `chevD` | distinto | gira 180° → `⌃` |
+    | C `▶` maciza | triángulo relleno | distinto de familia | gira 90° |
+
+    Developer picked **B**. Down means expand, up means collapse; neither ever points the way a row chevron does,
+    so the collision is resolved **by glyph** and the position fix becomes belt-and-braces rather than the whole
+    argument. All three measure the same 14px at x=126, so it costs nothing.
+    **C** was rejected because it still points right — it separates by weight rather than direction — and at 14px
+    reads small and more systemy than the sentence-case voice this admin uses.
+    **`+`/`−` was dropped without building it**, on a real collision: `+` already means *agregar un juego* on this
+    very page, beside the search.
+
+    The standing guard is the one that states the rule directly: **every right-pointing chevron on the page is a
+    row's "opens a page"** — 99 of 99.
+
+    **Still open from the same audit, not yet taken:** the three counts land at x=95 / 109 / 142 so they form no
+    column; the full 375px of a collapsible caption is tappable while its ink stops at x=140 (235px of invisible
+    target); and the count is 15/400 — the size of a row *name*, and larger than a row's second line at 13/400.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **108/108**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **113/113**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–24**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–26**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections —
   `Sin datos 49 ›` and `Borradores 1 ›` closed, `Juegos del club 385` open. No resting page title. Chrome 213px.
@@ -802,8 +872,8 @@ caption must carry it), that no `[class*=alert]` exists anywhere, and that `1 an
 - **App-wide rules recorded** in `01.8.2-CONTEXT.md` + `01.8.2-BENCHMARK.md`: **D-19n** scrolled context,
   **D-19g-bis** catalog sections.
 - **Still open** (handoff's list, minus the one decision 22 closed):
-  1. the catalog row's second line is the year alone — and **`newest first` is a real sort for 2 of 435 games**
-     (433 share the 2026-08-10 CSV import date), so the list's stated order is effectively import order
+  1. **the section-header audit's other three findings** (decision 26): the counts form no column (x=95/109/142);
+     235px of invisible tap target to the right of a caption's ink; the count is 15/400, a row *name*'s rank
   2. **the editor still owes Reintentar** — decision 24 moved it there from the row (sketch 072)
   3. no prompt line
   4. collapse state does not persist

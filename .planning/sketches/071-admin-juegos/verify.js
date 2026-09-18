@@ -95,6 +95,30 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(disc[2].tag === 'SPAN' && disc[2].open === null, `the body section is not a control (<${disc[2].tag.toLowerCase()}>), so it cannot strand a header over an empty page`);
   ok(disc.filter(d => d.caret).every(d => d.caretLeft < d.rowChev - 100), `the caret is inline, never in the row-chevron slot (${disc.filter(d => d.caret).map(d => d.caretLeft).join(', ')} vs ${disc[0].rowChev})`);
   ok(disc.filter(d => d.caret).every(d => d.hit >= 44), `a collapsible caption still meets the 44px touch floor (${disc.filter(d => d.caret).map(d => d.hit).join(', ')})`);
+
+  /* ---------- decision 25 — the caret is a DIFFERENT GLYPH, not just a different x ----------
+     Decision 18 used chevR and separated it from the row chevron by POSITION alone. Measured, the two paths were
+     byte-identical (`M9 5l7 7-7 7`) — so the page carried four "›" meaning two different things, and decision
+     10's own rule ("a disclosure triangle, never a trailing ›, which under D-19i means opens a page") had been
+     contradicted while its position fix was kept. Down means expand, up means collapse. */
+  const glyph = await J(() => {
+    const d = e => [...e.querySelectorAll('path')].map(x => x.getAttribute('d')).join(';');
+    const caret = document.querySelector('.lhead .caret svg'), rowChev = document.querySelector('.row .chev svg');
+    return { caret: d(caret), row: d(rowChev),
+      closedRot: getComputedStyle(document.querySelector('.lhead[aria-expanded="false"] .caret')).transform };
+  });
+  ok(glyph.caret !== glyph.row, `the caret is not the row chevron's glyph (${glyph.caret} vs ${glyph.row})`);
+  ok(/M5 9l7 7 7-7/.test(glyph.caret), `it is a chevron-DOWN — "this expands" (${glyph.caret})`);
+  ok(glyph.closedRot === 'none', `and it is unrotated while closed (${glyph.closedRot})`);
+  await J(() => document.querySelector('.lhead.tap').click()); await p.waitForTimeout(220);
+  const openRot = await J(() => getComputedStyle(document.querySelector('.lhead[aria-expanded="true"] .caret')).transform);
+  ok(openRot === 'matrix(-1, 0, 0, -1, 0, 0)', `open, it flips 180 to a chevron-UP — "collapse this" (${openRot})`);
+  /* the whole point: no glyph on this page ever points right except the one D-19i reserves */
+  const rights = await J(() => [...document.querySelectorAll('.lhead .caret svg path, .row .chev svg path')]
+    .map(x => x.getAttribute('d')).filter(d => /M9 5l7 7-7 7/.test(d)).length);
+  const chevs = await J(() => document.querySelectorAll('.row .chev').length);
+  ok(rights === chevs, `every right-pointing chevron on the page is a row's "opens a page" (${rights} of ${chevs})`);
+  await J(() => document.querySelector('.lhead.tap').click()); await p.waitForTimeout(220);
   const catTop = await J(() => {
     const sc = document.querySelector('.scroller').getBoundingClientRect();
     return +(document.querySelector('.lgroup.main .lhead').getBoundingClientRect().top - sc.top).toFixed(0);
