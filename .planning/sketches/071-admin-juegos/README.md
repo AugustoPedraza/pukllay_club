@@ -37,7 +37,7 @@ Try: type `cat` (matches + "Crear «…»") · paste `342942` or a `boardgamegee
 (offers to add) · **+** → `hola` (the shipped error), `13` (the edition prompt), `342942` (adds, then enriches
 live) · the **50** badge → Pendientes → any row → the editor stand-in.
 
-## What it draws (decisions 1–5, `notes/juegos-ui-redesign.md`)
+## What it draws (decisions 1–9, `notes/juegos-ui-redesign.md`)
 - **One job: find one game.** Title `Juegos` + a 48px search field, no filter chips.
 - **Picking a game opens its editor** (sketch 063's screen — stubbed here). The search is pure navigation, so a
   game row carries a **chevron** (D-19i).
@@ -45,7 +45,14 @@ live) · the **50** badge → Pendientes → any row → the editor stand-in.
   name", the list answers "what did we just add". Justified by D-19l and by measurement (see below).
 - **Adding lives in a "+" header icon and in the search**: the sheet has the BGG field and a "Crear a mano" path;
   the search offers **Agregar desde BGG** for a pasted id/link and **Crear «texto»** on no match.
-- **Pendientes badge = 50**: a `‹ Juegos` page with **Sin datos** (49) and **Borradores** (1), per D-19g.
+- **One list, three collapsible groups** (decision 8, round 2): `▾ Sin datos 49` · `▾ Borradores 1` ·
+  `▴ Juegos del club 385`, collapsed by default, partitioning the catalog (49 + 1 + 385 = 435). The Pendientes
+  page and its badge are gone. **This reverses D-19g for Juegos** — reconciled as: D-19g still governs real work
+  queues (Estantes' Afuera / Sin ubicar), while a catalog groups its own rows, since "sin datos" is an attribute
+  of a game rather than a separate work item. Needs recording in CONTEXT as an amendment, not a contradiction.
+- **The search hides on scroll-down, returns on scroll-up** (decision 9) — *not* collapsed to an icon, which
+  measured as 16px saved (a quarter of a row): 0 extra rows at 375×667 and a tap to undo. Hiding gains a row on
+  every viewport for free.
 
 ## Pinned context while scrolling (decisions 6-7, D-19n)
 A long list keeps its context in two pinned tiers, the pairing both design systems use (iOS pins plain-table
@@ -94,15 +101,19 @@ of content, leaving ~**403px** blank at 375×667 (60%) and ~**580px** at 390×84
 the developer called "too empty" (its worst was 449px / 62%).
 
 ## Open for review (choices made without asking)
-1. **Inside Pendientes' "Sin datos" section, every row repeats "● Sin datos"** — the heading already says it.
-   Differentiating information, or nothing, would probably serve better.
-2. **The main list's second line is the year alone** ("2020"), which repeats down the page. Given the list is
+1. ~~Every row repeats "● Sin datos"~~ — **resolved by decision 8**: the group heading names the state, so a row
+   never repeats it. A row's second line is the year, or nothing.
+2. **The catalog's second line is the year alone** ("2020"), which repeats down the page. Given the list is
    newest-first, recency ("hace 2 días") may earn the line better — or the year may be worth keeping because it
    is what tells two editions apart (065 round 3).
 3. **No prompt line** ("¿Qué juego buscás?", 17/600). Estantes has one because its page is otherwise empty; here
    the placeholder carries it and a prompt would be a third text block above the list.
-4. Copy not yet reviewed: "Juegos del club · 435", the add sheet's hint, "Crear a mano · Para un juego que BGG no
-   tiene", and both Pendientes hint lines.
+4. **Collapsed groups sit at a 60px pitch** (44px header + 16px air). Measured, not eyeballed — they read airier
+   in a 2× screenshot than they are. Whether three stacked collapsed headers should instead tie together like
+   rows (dividers, 44px pitch) is worth a look on a real phone.
+5. **Collapse state does not persist** — every visit opens with the work groups closed and the catalog open.
+6. Copy not yet reviewed: "Juegos del club", the add sheet's hint, "Crear a mano · Para un juego que BGG no
+   tiene", and both group hint lines.
 
 ## Not drawn here
 The editor itself (sketch 063 — this sketch only designs how you reach it), Ordenar (Juegos has no manual order),

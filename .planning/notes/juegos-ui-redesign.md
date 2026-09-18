@@ -152,3 +152,57 @@ catching what passing checks do not.)
    **A second bug, caught by an assertion:** stuck-detection compared `getBoundingClientRect().top` against 0, but a
    sticky element pins to the *scroller's* top edge (y=53), not the viewport's. Now compared against the scroller.
    Harness: **59/59**.
+
+## Round 2 (2026-09-18) — one list, collapsible groups, and the search that gets out of the way
+
+Developer: *"But I want juegos, pendientes and borradores all at a single list. and the scroll show «transform» the
+search into an icon that is «transformed» again into a search when the scroll goes to top. with that we can get more
+space for show the «current scrollable list». Also I been thinking what if we use a collapsable list(borradores,
+«pendientes» and juegos?)"*
+
+8. **One list, three collapsible groups, collapsed by default.** `▾ Sin datos 49` · `▾ Borradores 1` ·
+   `▴ Juegos del club 385`, the two work groups on top. The Pendientes page and its count badge are **deleted**.
+   Developer picked "Collapsible groups, collapsed by default (Recommended)" over putting the work groups below the
+   catalog, over non-collapsible sections, and over keeping the Pendientes page.
+   **This reverses D-19g for Juegos, and the reversal was flagged before building, not after** — D-19g (069 restart
+   decision 59) says pending work lives behind a header badge, *never as lists on a task page*, and Estantes'
+   Pendientes page is built on it. The reconciliation recorded with the decision: **D-19g keeps governing real work
+   queues** (Estantes' Afuera / Sin ubicar, where "no shelf" is a genuinely different state), **while a catalog
+   groups its own rows**, because "sin datos" is an *attribute of a game*, not a separate work item. Estantes is
+   unaffected. This needs to land in CONTEXT as an amendment to D-19g, not a silent contradiction.
+   - The groups **partition** the catalog — 49 + 1 + 385 = 435 — so a game is never in two of them. Precedence:
+     draft → Borradores, else no data → Sin datos, else → Juegos del club.
+   - The heading is now a real control, so it is **44px** (it was 27.5px of plain text). `.search + .lgroup` drops
+     24 → 8 to pay for the 8px its text gained inside that box: field → heading text is back to **32**.
+   - The caret is a **trailing chevron-DOWN that rotates 180°**, never a "›" — under D-19i a chevron-right means
+     "this row opens another page", which a group header must not claim. Trailing also keeps the heading text at
+     16px, aligned with the title and the hint (a leading caret would have pushed it to 40).
+     `chevD` had to be added to the icon set — **the exact key 070 shipped as an empty SVG**.
+   - **A row never repeats its group's state.** This is flag 1 from round 1, resolved by the structure: under a
+     heading reading "Sin datos 49", all 49 rows saying "● Sin datos" was pure noise. A row's second line is now
+     the year, or nothing (the 49 have no year either). The group names the state; the row names the game.
+   - Opening a group **keeps the tapped heading exactly where the finger left it** (measured: 197.0 → 197).
+
+9. **The search hides going down and returns going up — it does not become an icon.** Developer proposed the icon;
+   measured before building, it does not pay:
+
+   | 375×667, usable 547px, row 64px | Rows visible |
+   |---|---|
+   | Search pinned (decision 7) | 7 |
+   | Search → 44px icon bar | **7** — no gain |
+   | Search hidden | 8 |
+
+   An icon saves only **16px**, a quarter of a row, so across 360/375/390 it gained +1, **0**, +1 rows *and* cost a
+   tap. Hiding it outright gains +1 on every viewport for free and needs no new affordance to learn (Material's
+   `enterAlways` top-app-bar behaviour; iOS Safari's toolbar). Developer picked "Hide on scroll down, return on
+   scroll up (Recommended)".
+   Measured after building, rows visible at rest → with the search away: **360×640 3→7 · 375×667 3→8 · 390×844 6→10**.
+   It never hides while the field has focus (its dropdown is open there) or within 140px of the top; the group
+   heading pins to the very top while the search is away (`--bar` → 0).
+
+**Process failure worth recording:** the decision-9 scroll logic silently did not land — a scripted `replace()` did
+not match (a comment word differed) and no-op'd, and the count I checked to "confirm" it (`hidesearch` × 3) was
+counting only the CSS. The harness caught it three checks later. A string-replace that must match is worth asserting
+on, not eyeballing a count; the later edits in this round assert and fail loudly instead.
+
+Harness rewritten for the new structure: **53/53**.

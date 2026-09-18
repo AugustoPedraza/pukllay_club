@@ -79,7 +79,9 @@
      resting rhythm is untouched: field top 129, heading text top 209. */
   .search { position: sticky; top: 0; z-index: 12; margin: 12px -16px 0; padding: 4px 16px 8px; background: var(--color-bg); }
   .search.stuck { border-bottom: 1px solid var(--color-border); }
-  .search + .lgroup { margin-top: 16px; }
+  /* 8, not 16: decision 8 turned the heading into a 44px control, so its TEXT sits 8px lower inside its own
+     box. Measured on what you can see, field bottom -> heading text is back to 32. */
+  .search + .lgroup { margin-top: 8px; }
   .device[data-bar="search"] .pbar { display: none; }
   .sfield { position: relative; }
   .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; text-overflow: ellipsis; }
@@ -141,9 +143,28 @@
   /* ---- the list (decision 3) ---- */
   .lgroup { margin-top: 24px; }
   /* full-bleed so the full-bleed rows cannot slide visibly past its left/right edges while it is pinned */
-  .lhead { position: sticky; top: var(--bar); z-index: 5; margin: 4px -16px 0; padding: 4px 16px; background: var(--color-bg);
-    font-size: 15px; font-weight: 600; line-height: 1.3; }
+  /* decision 8 — the heading is now a collapsible group's control, so it is a real 44px target.
+     The caret is a TRAILING chevron-DOWN that rotates 180°, never a chevron-right: under D-19i a "›" means
+     "this row opens another page", which a group header must not claim. Heading text stays at 16px like
+     everything else on the page (a leading caret would have pushed it to 40). */
+  .lhw { position: sticky; top: var(--bar); z-index: 5; margin: 4px -16px 0; background: var(--color-bg); }
+  .lhead { width: 100%; display: flex; align-items: center; gap: 0; min-height: 44px; padding: 4px 16px; border: 0; background: none;
+    text-align: left; cursor: pointer; font-size: 15px; font-weight: 600; line-height: 1.3; }
+  .lhead:hover { background: var(--color-surface); }
+  .lhead:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
+  .lhead .caret { margin-left: auto; width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted);
+    transition: transform 160ms var(--ease-out-soft); }
+  .lhead[aria-expanded="true"] .caret { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
+
+  /* decision 9 — scrolling down slides the search away (+1 row on every viewport); the smallest flick up
+     brings it back, already usable. Measured: collapsing it to a 44px icon bar saves only 16px — a quarter of
+     a row — so it gained 0 rows at 375×667 and still cost a tap. */
+  .device[data-bar="search"] .search { transition: transform 200ms var(--ease-out-soft); }
+  .device[data-bar="search"].hidesearch .search { transform: translateY(calc(-100% - 1px)); }
+  .device[data-bar="search"].hidesearch { --bar: 0px; }
+  @media (prefers-reduced-motion: reduce) { .device[data-bar="search"] .search { transition: none; } }
   .lgroup + .lgroup { margin-top: 12px; }
   .hint { margin: 0 0 8px; font-size: 13px; color: var(--color-text-muted); line-height: 1.4; }
   .rows { margin: 0 -16px; }
@@ -211,6 +232,8 @@
   .ehead .cov { width: 56px; height: 60px; border-radius: 6px; }
   .ehead h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
   .enote { margin-top: 24px; padding: 16px; border: 1px dashed var(--stroke); border-radius: 8px; font-size: 14px; line-height: 1.5; color: var(--color-text-muted); }
+  /* stand-in blocks: only to give the page 063's real length, which is what justifies the pinned bar */
+  .estub { height: 180px; margin: 8px -16px 0; background: repeating-linear-gradient(135deg, var(--color-surface) 0 10px, transparent 10px 20px); border-radius: 8px; }
 
   /* ---- dialog (D-19f) ---- */
   .dscrim { position: absolute; inset: 0; z-index: 60; background: color-mix(in srgb, #231339 38%, transparent); display: grid; place-items: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity var(--duration-base); }
@@ -272,7 +295,7 @@
 </div></div>
 <div id="tools">
   <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
-  <div>Pendientes: <button data-pend="50" class="on">50</button> <button data-pend="1">1</button> <button data-pend="0">0</button></div>
+  <div>Grupos: <button data-open="none" class="on">Cerrados</button> <button data-open="all">Abiertos</button></div>
 </div>
 
 <script src="../069-estantes-ubicar/games.js"></script>
@@ -284,6 +307,7 @@ const P = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   chevR: '<path d="M9 5l7 7-7 7"/>',
   chevL: '<path d="M15 5l-7 7 7 7"/>',
+  chevD: '<path d="M5 9l7 7 7-7"/>',
   inbox: '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 5h13l2.5 8v5a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-5z"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/>',
@@ -322,7 +346,7 @@ const pend = () => PEND_MODE === 50 ? GAPS().length + DRAFTS().length : PEND_MOD
 const byNew = () => [...G].sort((a, b) => b.added - a.added);
 
 const PAGE = 50;
-const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [] };
+const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [], open: { gap: false, draft: false, rest: true } };
 let KBD_SIM = true, opener = null;
 
 const main = $('#main'), device = $('#device');
@@ -332,36 +356,43 @@ const cover = (g, cls = 'cov') => g.thumb
     : `<span class="${cls} l" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
 const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
 
-/* a row's second line: the year, or the exception (D-19h: dot + text) */
-function sub(g) {
-  if (g.status === 'draft') return `<span class="dot"></span>Borrador`;
-  if (g.gap) return `<span class="dot gap"></span>Sin datos`;
-  return esc(String(g.year));
-}
+/* decision 8 — the three groups PARTITION the catalog (49 + 1 + 385 = 435); a game is never in two of them */
+const GROUPS = [
+  { key: 'gap', name: 'Sin datos', hint: 'Se ven en la web sin tapa ni descripción.', has: g => g.status !== 'draft' && g.gap },
+  { key: 'draft', name: 'Borradores', hint: 'Todavía no se ven en la web.', has: g => g.status === 'draft' },
+  { key: 'rest', name: 'Juegos del club', hint: null, has: g => g.status !== 'draft' && !g.gap }
+];
+const inGroup = k => byNew().filter(GROUPS.find(x => x.key === k).has);
+
+/* a row's second line: the year. The GROUP names the state, so a row never repeats it — inside "Sin datos"
+   all 49 rows saying "● Sin datos" under a heading that already says it was pure noise. */
+function sub(g) { return g.year ? esc(String(g.year)) : ''; }
 const gameRow = g => `<button class="row" data-act="open" data-id="${g.id}" aria-label="${esc(g.name)}">
-  ${cover(g)}<span class="txt"><span class="name">${esc(g.name)}</span><span class="sub">${sub(g)}</span></span>
+  ${cover(g)}<span class="txt"><span class="name">${esc(g.name)}</span>${sub(g) ? `<span class="sub">${sub(g)}</span>` : ''}</span>
   <span class="chev" aria-hidden="true">${ic('chevR')}</span></button>`;
 
 /* ---------- screens ---------- */
 /* decision 6 — the compact bar mirrors the page's own back link + title. Exactly ONE of the two back controls is
    focusable at a time (inert on the other), so the accessibility tree never carries a duplicate "Juegos". */
-const BAR = { juegos: { back: null, title: 'Juegos' }, pend: { back: 'Juegos', title: 'Pendientes' } };
+const BAR = { juegos: { back: null, title: 'Juegos' } };
 function renderBar() {
   const b = S.screen === 'editor'
-    ? { back: S.from === 'pend' ? 'Pendientes' : 'Juegos', title: byId(S.editing).name }
+    ? { back: 'Juegos', title: byId(S.editing).name }
     : BAR[S.screen];
-  $('#pbar').innerHTML = (b.back ? `<button class="back" data-act="${b.back === 'Pendientes' ? 'pend' : 'juegos'}">${ic('chevL')}${esc(b.back)}</button>` : '')
+  $('#pbar').innerHTML = (b.back ? `<button class="back" data-act="juegos">${ic('chevL')}${esc(b.back)}</button>` : '')
     + `<span class="pbt">${esc(b.title)}</span>`;
 }
 function render() {
   if (S.screen === 'juegos') renderJuegos();
-  else if (S.screen === 'pend') renderPend();
   else if (S.screen === 'editor') renderEditor();
   $('#t-juegos').innerHTML = ic('dice'); $('#t-admin').innerHTML = ic('grid');
   $('#t-web').innerHTML = ic('home'); $('#t-est').innerHTML = ic('shelf');
   device.dataset.bar = S.screen === 'juegos' ? 'search' : 'title';
   renderBar(); updateBar();
 }
+
+let lastY = 0;
+const HIDE_AFTER = 140;   /* past the title row; the search is stuck from ~116 */
 
 /* the pinned tier takes over once the title row has gone behind it.
    Juegos pins the search itself (decision 7); every other screen pins the back + title bar. */
@@ -370,24 +401,45 @@ function updateBar() {
   const search = main.querySelector('.search');
   if (search) {                                   /* Juegos: the field is the pinned tier */
     /* sticky top:0 pins to the SCROLLER's top edge, not the viewport's — compare against that, not 0 */
-    const scTop = scroller().getBoundingClientRect().top;
+    const sc = scroller(), y = sc.scrollTop, scTop = sc.getBoundingClientRect().top;
     search.classList.toggle('stuck', search.getBoundingClientRect().top - scTop <= 0.5);
+    /* decision 9 — hide going down, show going up. Never while the field has focus (its dropdown is open),
+       and never near the top, where the search belongs to the resting layout. */
+    const dy = y - lastY;
+    if (y <= HIDE_AFTER || document.activeElement === $('#q')) device.classList.remove('hidesearch');
+    else if (Math.abs(dy) > 6) device.classList.toggle('hidesearch', dy > 0);
+    lastY = y;
     device.classList.remove('scrolled'); $('#pbar').inert = true;
     return;
   }
-  const ph = main.querySelector('.phead'); if (!ph) return;
+  /* the element that must scroll away before the bar takes over: the title row, or the editor's game head */
+  const ph = main.querySelector('.phead, .ehead'); if (!ph) return;
   const on = scroller().scrollTop > ph.offsetTop + ph.offsetHeight - 44;
   device.classList.toggle('scrolled', on);
   $('#pbar').inert = !on;
   const inPage = main.querySelector('.back'); if (inPage) inPage.inert = on;
 }
 
+/* decision 8 — one list, three collapsible groups. The two work groups sit on top, collapsed by default, so at
+   rest both counts are on screen AND the newest-first catalog starts immediately. No Pendientes page, no badge.
+   The caret is a trailing chevron-DOWN that rotates — never a "›", which under D-19i means "opens a page". */
+function groupSection(g) {
+  const all = inGroup(g.key), open = !!S.open[g.key];
+  const paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
+  return `<section class="lgroup">
+    <h2 class="lhw"><button class="lhead" data-act="group" data-g="${g.key}" aria-expanded="${open}">
+      <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>
+      <span class="caret" aria-hidden="true">${ic('chevD')}</span></button></h2>
+    ${open ? `${g.hint ? `<p class="hint">${g.hint}</p>` : ''}
+      <div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
+      ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}
+  </section>`;
+}
+
 function renderJuegos() {
-  const list = byNew().slice(0, S.shown), n = pend();
   main.innerHTML = `
     <div class="phead"><h1 class="ptitle">Juegos</h1>
       <div class="hacts">
-        <button class="ibtn" data-act="pend" aria-label="Pendientes, ${n} ${n === 1 ? 'juego' : 'juegos'}">${ic('inbox')}${n ? `<span class="badge" aria-hidden="true">${n > 99 ? '99+' : n}</span>` : ''}</button>
         <button class="ibtn" data-act="add" aria-label="Agregar un juego">${ic('plus')}</button>
       </div></div>
     <div class="search">
@@ -397,39 +449,20 @@ function renderJuegos() {
       </div>
       <div class="sugg" id="sugg" role="listbox" hidden></div>
     </div>
-    <section class="lgroup">
-      <h2 class="lhead">Juegos del club<span class="cnt">${TOTAL()}</span></h2>
-      <div class="rows">${list.map(gameRow).join('')}</div>
-      ${S.shown < TOTAL() ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${TOTAL()}</span></div>` : ''}
-    </section>`;
-}
-
-function renderPend() {
-  const gaps = GAPS(), drafts = DRAFTS();
-  main.innerHTML = `
-    <button class="back" data-act="juegos">${ic('chevL')}Juegos</button>
-    <div class="phead"><h1 class="ptitle">Pendientes</h1></div>
-    <section class="lgroup">
-      <h2 class="lhead">Sin datos<span class="cnt">${gaps.length}</span></h2>
-      <p class="hint">Se ven en la web sin tapa ni descripción. Abrilos y completá los datos.</p>
-      <div class="rows">${gaps.map(gameRow).join('')}</div>
-    </section>
-    <section class="lgroup">
-      <h2 class="lhead">Borradores<span class="cnt">${drafts.length}</span></h2>
-      <p class="hint">Todavía no se ven en la web.</p>
-      <div class="rows">${drafts.length ? drafts.map(gameRow).join('') : '<p class="snone">No hay borradores.</p>'}</div>
-    </section>`;
+    ${GROUPS.map(groupSection).join('')}`;
 }
 
 function renderEditor() {
   const g = byId(S.editing);
   main.innerHTML = `
-    <button class="back" data-act="${S.from === 'pend' ? 'pend' : 'juegos'}">${ic('chevL')}${S.from === 'pend' ? 'Pendientes' : 'Juegos'}</button>
+    <button class="back" data-act="juegos">${ic('chevL')}Juegos</button>
     <div class="ehead">${cover(g, 'cov')}<div><h2>${esc(g.name)}</h2>
       <div class="sub" style="margin-top:4px">${sub(g)}</div></div></div>
-    <div class="enote">Acá va el editor del juego — <strong>sketch 063</strong> (Datos del club, En la web, Datos de BGG,
-      una barra de guardado, Publicar / Retirar). No se vuelve a dibujar en este sketch: 071 sólo diseña la pestaña
-      Juegos y cómo se llega hasta acá.</div>`;
+    <div class="enote">Acá va el editor del juego — <strong>sketch 063</strong>. No se vuelve a dibujar en este sketch:
+      071 sólo diseña la pestaña Juegos y cómo se llega hasta acá. Los bloques de abajo están sólo para que la
+      página tenga el largo real del editor, que es lo que justifica la barra fija de arriba.</div>
+    ${['Datos del club', 'En la web', 'Datos de BGG'].map(s => `<section class="lgroup"><h2 class="lhw"><span class="lhead" style="cursor:default">
+      <span class="ln">${s}</span></span></h2><div class="estub"></div></section>`).join('')}`;
 }
 
 /* ---------- the search (069) ---------- */
@@ -476,7 +509,7 @@ function renderSugg() {
 }
 
 /* a new screen always starts at the top — otherwise the bar shows on arrival at a page you never scrolled */
-function go(screen) { S.screen = screen; scroller().scrollTop = 0; render(); }
+function go(screen) { S.screen = screen; scroller().scrollTop = 0; lastY = 0; device.classList.remove('hidesearch'); render(); }
 
 function openGame(id, from) {
   S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 3);
@@ -559,9 +592,16 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const a = t.dataset.act;
   if (a === 'open') return openGame(+t.dataset.id, S.screen);
-  if (a === 'pend') return go('pend');
   if (a === 'juegos') return go('juegos');
   if (a === 'more') { S.shown += PAGE; return render(); }
+  if (a === 'group') {
+    const k = t.dataset.g, top = t.getBoundingClientRect().top;
+    S.open[k] = !S.open[k]; render();
+    /* keep the tapped heading exactly where the finger left it, so opening a group never scrolls the page */
+    const now = main.querySelector(`[data-g="${k}"]`);
+    if (now) scroller().scrollTop += now.getBoundingClientRect().top - top;
+    return;
+  }
   if (a === 'add') return addSheet(t);
   if (a === 'addbgg') { const id = t.dataset.bgg; closeSuggest(); return addSheet(null, id); }
   if (a === 'create') return createManual(t.dataset.name);
@@ -603,7 +643,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('click', e => {
   const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); }
   const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) device.classList.remove('kbd'); mark('[data-kbd-set]', k); }
-  const p = e.target.closest('[data-pend]'); if (p) { PEND_MODE = +p.dataset.pend; mark('[data-pend]', p); render(); }
+  const o = e.target.closest('[data-open]'); if (o) { const v = o.dataset.open === 'all'; S.open = { gap: v, draft: v, rest: true }; mark('[data-open]', o); render(); }
 });
 function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
 

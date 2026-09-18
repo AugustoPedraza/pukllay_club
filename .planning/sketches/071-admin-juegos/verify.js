@@ -1,7 +1,8 @@
 /* Headless-Chrome checks for sketch 071 (admin Juegos tab). Run from the repo root:
      python3 -m http.server 8765 &
      node .planning/sketches/071-admin-juegos/verify.js
-   Env: PLAYWRIGHT_CORE, SKETCH_URL, SHOTS_DIR (default <os tmp>/sketch-071-shots). */
+   Env: PLAYWRIGHT_CORE, SKETCH_URL, SHOTS_DIR (default <os tmp>/sketch-071-shots).
+   Covers decisions 1-9 (notes/juegos-ui-redesign.md). */
 const fs = require('fs'), path = require('path'), os = require('os');
 function loadPlaywright() {
   const tries = [process.env.PLAYWRIGHT_CORE, 'playwright-core'].filter(Boolean);
@@ -19,8 +20,6 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const errs = [];
-
-  /* ---------- rhythm + anatomy at 375x740, light ---------- */
   const ctx = await browser.newContext({ viewport: { width: 375, height: 740 }, deviceScaleFactor: 2 });
   const p = await ctx.newPage();
   p.on('pageerror', e => errs.push('pageerror: ' + e.message));
@@ -29,251 +28,207 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   await p.evaluate(() => { document.getElementById('tools').style.display = 'none'; });
   const J = (f, a) => p.evaluate(f, a);
   const box = s => J(sel => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { t: r.top, b: r.bottom, l: r.left, r: r.right, w: r.width, h: r.height }; }, s);
-  /* the visible TEXT box, not the element box — box gaps lie (Web decision 9) */
-  const textBox = s => J(sel => {
-    const e = document.querySelector(sel); if (!e) return null;
-    const rg = document.createRange(); rg.selectNodeContents(e);
-    const r = rg.getBoundingClientRect(); return { t: r.top, b: r.bottom, h: r.height };
-  }, s);
-
-  /* covers are lazy-loaded from R2: without this the screenshots show empty boxes and hide the real design */
+  const textBox = s => J(sel => { const e = document.querySelector(sel); if (!e) return null; const g = document.createRange(); g.selectNodeContents(e); const r = g.getBoundingClientRect(); return { t: r.top, b: r.bottom, h: r.height }; }, s);
   const settle = async (pg = p) => {
     await pg.evaluate(() => [...document.querySelectorAll('img[loading="lazy"]')].forEach(i => i.loading = 'eager'));
-    await pg.waitForFunction(() => [...document.querySelectorAll('img.cov, img.bc')].every(i => i.complete), null, { timeout: 8000 }).catch(() => {});
+    await pg.waitForFunction(() => [...document.querySelectorAll('img.cov')].every(i => i.complete), null, { timeout: 8000 }).catch(() => {});
     await pg.waitForTimeout(250);
   };
   await settle();
 
-  const title = await textBox('.ptitle'), field = await box('.sfield input');
-  const phead = await box('.phead');
-  const lhead = await textBox('.lhead'), firstRow = await box('.row');
-  const firstCov = await box('.row .cov, .row .cov.none');
-  ok(near(field.h, 48), `main control is a 48px field (${field.h.toFixed(1)})`);
-  /* 069 decision 61 measures a FIELD from the title ROW (its border is the visible edge), not from the title's
-     text box. Measured on 069 raised at 375x667: fromRow 16.0, fromText 25.2 — 071 must reproduce both. */
-  ok(near(field.t - phead.b, 16, 1.5), `title row -> field 16, as 069 raised (${(field.t - phead.b).toFixed(1)}; from title text ${(field.t - title.b).toFixed(1)}, 069 = 25.2)`);
-  ok(near(lhead.t - field.b, 32, 2.5), `field -> "Juegos del club" 32 (${(lhead.t - field.b).toFixed(1)})`);
-  ok(near(firstCov.t - lhead.b, 16, 3), `heading text -> first cover 16 (${(firstCov.t - lhead.b).toFixed(1)})`);
-  ok(near(firstRow.h, 64, 1.5), `game row 64px (${firstRow.h.toFixed(1)})`);
+  /* ---------- decision 8: one list, three collapsible groups ---------- */
+  const groups = await J(() => [...document.querySelectorAll('.lhead')].map(h => ({
+    name: h.querySelector('.ln').textContent,
+    count: +h.querySelector('.cnt').textContent,
+    open: h.getAttribute('aria-expanded') === 'true',
+    h: +h.getBoundingClientRect().height.toFixed(1)
+  })));
+  ok(groups.length === 3, `three groups (${groups.map(g => g.name).join(', ')})`);
+  ok(groups.map(g => g.name).join('|') === 'Sin datos|Borradores|Juegos del club', `work groups sit on top (${groups.map(g => g.name).join(' > ')})`);
+  const sum = groups.reduce((a, g) => a + g.count, 0);
+  ok(sum === 435, `the groups PARTITION the catalog: ${groups.map(g => g.count).join(' + ')} = ${sum}`);
+  ok(!groups[0].open && !groups[1].open && groups[2].open, `collapsed by default, catalog open (${groups.map(g => g.open).join(',')})`);
+  ok(groups.every(g => g.h >= 44), `every group header is a 44px target (${groups.map(g => g.h).join(', ')})`);
 
-  const ranks = await J(() => {
-    const g = s => { const e = document.querySelector(s); if (!e) return null; const c = getComputedStyle(e); return [parseFloat(c.fontSize), c.fontWeight].join('/'); };
-    return { title: g('.ptitle'), lhead: g('.lhead'), name: g('.row .name'), sub: g('.row .sub'), field: g('.sfield input'), cap: g('.more .cap') };
+  /* D-19i: a group header must NOT carry a chevron-right (that means "opens a page") */
+  const caret = await J(() => {
+    const c = document.querySelector('.lhead .caret');
+    return { last: c === c.parentElement.lastElementChild, d: c.querySelector('path')?.getAttribute('d'), kids: c.querySelector('svg')?.children.length };
   });
-  ok(ranks.title === '22/600', `page title 22/600 (${ranks.title})`);
-  ok(ranks.lhead === '15/600', `section heading 15/600 (${ranks.lhead})`);
-  ok(ranks.name === '15/400', `row name 15/400 (${ranks.name})`);
-  ok(ranks.sub === '13/400', `row second line 13/400 (${ranks.sub})`);
-  ok(ranks.field === '16/400', `field text 16px, no iOS zoom (${ranks.field})`);
-
-  /* header icons: 44px, Pendientes left of "+", badge present */
-  const hit = await J(() => [...document.querySelectorAll('.hacts .ibtn')].map(b => {
-    const r = b.getBoundingClientRect();
-    return { act: b.dataset.act, w: +r.width.toFixed(1), h: +r.height.toFixed(1), l: +r.left.toFixed(1), label: b.getAttribute('aria-label'), badge: b.querySelector('.badge')?.textContent || null };
+  ok(caret.d === 'M5 9l7 7-7-7'.replace('-7-7', '-7') || /M5 9l7 7 7-7/.test(caret.d), `the caret is a chevron-DOWN, not a chevron-right (${caret.d})`);
+  ok(caret.kids > 0, 'the caret SVG is not empty (the bug 070 shipped when chevD was missing)');
+  const rot = await J(() => ({
+    collapsed: getComputedStyle(document.querySelector('.lhead[aria-expanded="false"] .caret')).transform,
+    expanded: getComputedStyle(document.querySelector('.lhead[aria-expanded="true"] .caret')).transform
   }));
-  ok(hit.every(b => b.w >= 44 && b.h >= 44), `header icons are 44px (${hit.map(b => b.w + 'x' + b.h).join(', ')})`);
-  ok(hit[0].act === 'pend' && hit[1].act === 'add', `Pendientes left of "+" (${hit.map(b => b.act).join(' , ')})`);
-  ok(hit[0].badge === '50', `badge shows 50 (${hit[0].badge})`);
-  ok(/50/.test(hit[0].label), `count is in the accessible name ("${hit[0].label}")`);
+  ok(rot.collapsed !== rot.expanded, `the caret rotates to show state (${rot.collapsed} vs ${rot.expanded})`);
 
-  /* D-19i: a game row opens a page, so it has a chevron */
-  ok(await J(() => !!document.querySelector('.row .chev svg path')), 'game row has a chevron (D-19i: it opens the editor)');
-  ok(await J(() => [...document.querySelectorAll('svg')].every(s => s.children.length > 0)), 'no empty SVG icons');
+  /* no Pendientes page and no badge survive decision 8 */
+  ok(await J(() => !document.querySelector('.badge') && !document.querySelector('[data-act="pend"]')), 'the Pendientes page and its badge are gone (decision 8 replaces D-19g here)');
+  ok(await J(() => document.querySelectorAll('.hacts .ibtn').length === 1 && document.querySelector('.hacts .ibtn').dataset.act === 'add'), 'the header keeps only "+"');
 
-  /* newest-first + the 49 at the bottom */
-  const order = await J(() => {
-    const rows = [...document.querySelectorAll('.row')];
-    return { first: rows[0].querySelector('.name').textContent, firstSub: rows[0].querySelector('.sub').textContent, n: rows.length, gaps: rows.filter(r => /Sin datos/.test(r.textContent)).length };
-  });
-  ok(order.n === 50, `first page is 50 rows (${order.n})`);
-  ok(order.gaps === 0, `the 49 incomplete games are NOT on page 1 (${order.gaps} shown) — they live behind Pendientes`);
-
-  /* no horizontal overflow */
-  const oflow = await J(() => document.querySelector('.scroller').scrollWidth - document.querySelector('.scroller').clientWidth);
+  /* ---------- rhythm at rest ---------- */
+  const phead = await box('.phead'), field = await box('.sfield input');
+  const lh0 = await textBox('.lhead .ln');
+  ok(near(field.h, 48), `main control is a 48px field (${field.h.toFixed(1)})`);
+  ok(near(field.t - phead.b, 16, 1.5), `title row -> field 16, as 069 raised (${(field.t - phead.b).toFixed(1)})`);
+  ok(near(lh0.t - field.b, 32, 2.5), `field -> first group heading text 32 (${(lh0.t - field.b).toFixed(1)})`);
+  const ranks = await J(() => { const g = s => { const e = document.querySelector(s); const c = getComputedStyle(e); return parseFloat(c.fontSize) + '/' + c.fontWeight; };
+    return { title: g('.ptitle'), lhead: g('.lhead'), name: g('.row .name'), field: g('.sfield input') }; });
+  ok(ranks.title === '22/600' && ranks.lhead === '15/600' && ranks.name === '15/400' && ranks.field === '16/400',
+    `type ranks hold (title ${ranks.title}, heading ${ranks.lhead}, row ${ranks.name}, field ${ranks.field})`);
+  ok(await J(() => [...document.querySelectorAll('svg')].every(s => s.children.length > 0)), 'no empty SVG icons anywhere');
+  const oflow = await J(() => { const s = document.querySelector('.scroller'); return s.scrollWidth - s.clientWidth; });
   ok(oflow <= 0, `no horizontal overflow (${oflow}px)`);
-  await p.screenshot({ path: path.join(OUT, '01-juegos-375x740-light.png') });
+  await p.screenshot({ path: path.join(OUT, '01-juegos-rest-375x740-light.png') });
 
-  /* ---------- the search: dropdown, BGG paste, create ---------- */
-  await p.click('#q'); await p.waitForTimeout(250);
-  const kbd = await box('.kbd-sim'), sugg0 = await box('.sugg');
-  ok(kbd && kbd.h === 292, `simulated keyboard is 292px (${kbd && kbd.h})`);
+  /* the catalog's rows: no row repeats what its group heading already says */
+  const rowsInfo = await J(() => {
+    const rows = [...document.querySelectorAll('.row')];
+    return { n: rows.length, h: +rows[0].getBoundingClientRect().height.toFixed(1),
+      anySinDatos: rows.some(r => /Sin datos/.test(r.textContent)),
+      anyBorrador: rows.some(r => /Borrador/.test(r.textContent)),
+      chev: !!rows[0].querySelector('.chev svg path') };
+  });
+  ok(rowsInfo.n === 50, `the catalog group pages 50 at a time (${rowsInfo.n})`);
+  ok(near(rowsInfo.h, 64, 1.5), `game row 64px (${rowsInfo.h})`);
+  ok(!rowsInfo.anySinDatos && !rowsInfo.anyBorrador, 'a row never repeats its group\'s state ("Sin datos" x49 under a heading saying it was noise)');
+  ok(rowsInfo.chev, 'a game row keeps its chevron — it opens the editor (D-19i)');
+
+  /* ---------- opening a group ---------- */
+  const before = await J(() => document.querySelector('[data-g="gap"]').getBoundingClientRect().top);
+  await p.click('[data-g="gap"]'); await p.waitForTimeout(350); await settle();
+  const opened = await J(() => ({
+    expanded: document.querySelector('[data-g="gap"]').getAttribute('aria-expanded'),
+    rows: document.querySelectorAll('.lgroup:first-of-type .row').length,
+    headTop: +document.querySelector('[data-g="gap"]').getBoundingClientRect().top.toFixed(1),
+    hint: document.querySelector('.lgroup:first-of-type .hint')?.textContent.trim()
+  }));
+  ok(opened.expanded === 'true' && opened.rows === 49, `opening "Sin datos" shows its 49 rows (${opened.rows})`);
+  ok(near(opened.headTop, before, 2), `the tapped heading stays put — opening a group never scrolls the page (${before.toFixed(1)} -> ${opened.headTop})`);
+  ok(/sin tapa/.test(opened.hint || ''), `the group carries one hint line ("${opened.hint}")`);
+  await p.screenshot({ path: path.join(OUT, '02-group-open-375x740-light.png') });
+  await p.click('[data-g="gap"]'); await p.waitForTimeout(300);
+
+  /* ---------- decision 9: the search hides going down, returns going up ---------- */
+  const sc = s => p.evaluate(y => { document.querySelector('.scroller').scrollTop = y; }, s);
+  await sc(0); await p.waitForTimeout(200);
+  ok(await J(() => !document.getElementById('device').classList.contains('hidesearch')), 'at the top the search is in place');
+  for (const y of [200, 420, 700, 1000]) { await sc(y); await p.waitForTimeout(120); }
+  await p.waitForTimeout(250);
+  const down = await J(() => ({
+    hidden: document.getElementById('device').classList.contains('hidesearch'),
+    searchTop: +document.querySelector('.search').getBoundingClientRect().top.toFixed(1),
+    bar: getComputedStyle(document.getElementById('device')).getPropertyValue('--bar').trim(),
+    headTop: +document.querySelector('.lhead').getBoundingClientRect().top.toFixed(1)
+  }));
+  ok(down.hidden, 'scrolling down hides the search');
+  ok(down.searchTop < 53, `the search is off the top of the scroller (${down.searchTop} < 53)`);
+  ok(down.bar === '0px', `the group heading pins to the very top while the search is away (--bar ${down.bar})`);
+  await settle(); await p.screenshot({ path: path.join(OUT, '03-search-hidden-375x740-light.png') });
+  for (const y of [900, 780, 640]) { await sc(y); await p.waitForTimeout(120); }
+  await p.waitForTimeout(250);
+  ok(await J(() => !document.getElementById('device').classList.contains('hidesearch')), 'the smallest flick upward brings the search back');
+  await settle(); await p.screenshot({ path: path.join(OUT, '04-search-back-375x740-light.png') });
+
+  /* it must never hide while the field has focus — its dropdown is open there */
+  await sc(0); await p.waitForTimeout(200);
+  await p.click('#q'); await p.waitForTimeout(200);
   await p.fill('#q', 'cat'); await p.waitForTimeout(200);
-  const sugg = await box('.sugg');
-  ok(sugg.b <= kbd.t + 0.5, `suggestions end above the keyboard (${sugg.b.toFixed(1)} vs ${kbd.t})`);
+  const kbd = await box('.kbd-sim'), sugg = await box('.sugg');
+  ok(kbd.h === 292 && sugg.b <= kbd.t + 0.5, `suggestions end above the 292px keyboard (${sugg.b.toFixed(1)} vs ${kbd.t})`);
   const sTypes = await J(() => [...document.querySelectorAll('.sugg .srow')].map(r => r.dataset.act));
   ok(sTypes.includes('open') && sTypes[sTypes.length - 1] === 'create', `name search: matches then "Crear «texto»" (${sTypes.join(',')})`);
-  await settle(); await p.screenshot({ path: path.join(OUT, '02-search-typing-375x740-light.png') });
-
+  await p.screenshot({ path: path.join(OUT, '05-search-typing-375x740-light.png') });
   await p.fill('#q', '342942'); await p.waitForTimeout(200);
-  const bggRow = await J(() => { const r = document.querySelector('.sugg .srow'); return r && { act: r.dataset.act, txt: r.textContent.replace(/\s+/g, ' ').trim() }; });
-  ok(bggRow && bggRow.act === 'addbgg', `a pasted BGG number offers to add it ("${bggRow && bggRow.txt}")`);
+  ok(await J(() => document.querySelector('.sugg .srow')?.dataset.act === 'addbgg'), 'a pasted BGG number offers to add it');
   await p.fill('#q', 'https://boardgamegeek.com/boardgame/342942/ark-nova'); await p.waitForTimeout(200);
-  const linkRow = await J(() => { const r = document.querySelector('.sugg .srow'); return r && r.dataset.act; });
-  ok(linkRow === 'addbgg', `a pasted BGG link offers to add it (${linkRow})`);
-  await settle(); await p.screenshot({ path: path.join(OUT, '03-search-bgg-375x740-light.png') });
-
-  /* ---------- the "+" sheet, on the keyboard ---------- */
+  ok(await J(() => document.querySelector('.sugg .srow')?.dataset.act === 'addbgg'), 'a pasted BGG link offers to add it');
   await p.fill('#q', ''); await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(300);
-  await p.click('[data-act="add"]'); await p.waitForTimeout(400);
-  const sheet = await box('.sheet'), goBtn = await box('[data-act="addgo"]'), kbd2 = await box('.kbd-sim');
-  ok(goBtn.b <= kbd2.t, `Agregar sits above the keyboard (${goBtn.b.toFixed(1)} vs ${kbd2.t})`);
-  ok(sheet.t > 0, `add sheet top ${sheet.t.toFixed(1)}`);
-  const sx = await box('.sh-x');
-  ok(sx.w >= 44 && sx.h >= 44, `sheet closes with a 44px X (D-19e) (${sx.w}x${sx.h})`);
-  ok(!(await J(() => /Cancelar/.test(document.querySelector('.sheet').textContent))), 'no Cancelar row in the sheet (D-19e)');
-  await settle(); await p.screenshot({ path: path.join(OUT, '04-add-sheet-375x740-light.png') });
 
-  /* the shipped error copy, then the edition prompt */
+  /* ---------- the "+" sheet ---------- */
+  await p.click('[data-act="add"]'); await p.waitForTimeout(400);
+  const goBtn = await box('[data-act="addgo"]'), kbd2 = await box('.kbd-sim'), sx = await box('.sh-x');
+  ok(goBtn.b <= kbd2.t, `Agregar sits above the keyboard (${goBtn.b.toFixed(1)} vs ${kbd2.t})`);
+  ok(sx.w >= 44 && sx.h >= 44, `sheet closes with a 44px X, D-19e (${sx.w}x${sx.h})`);
+  ok(!(await J(() => /Cancelar/.test(document.querySelector('.sheet').textContent))), 'no Cancelar row in the sheet (D-19e)');
+  await p.screenshot({ path: path.join(OUT, '06-add-sheet-375x740-light.png') });
   await p.fill('#bg', 'hola'); await p.click('[data-act="addgo"]'); await p.waitForTimeout(200);
   ok(await J(() => { const e = document.querySelector('#bgerr'); return e && !e.hidden && /Pegá un número de BGG/.test(e.textContent); }), 'invalid input shows the shipped error copy');
   await p.fill('#bg', '13'); await p.click('[data-act="addgo"]'); await p.waitForTimeout(250);
   ok(await J(() => !!document.querySelector('.edp')), 'a known BGG id shows the edition prompt (D-03)');
-  await settle(); await p.screenshot({ path: path.join(OUT, '05-edition-prompt-375x740-light.png') });
+  await p.screenshot({ path: path.join(OUT, '07-edition-prompt-375x740-light.png') });
   await p.click('[data-act="edcancel"]'); await p.waitForTimeout(150);
   await p.fill('#bg', '342942'); await p.click('[data-act="addgo"]'); await p.waitForTimeout(300);
   ok(await J(() => /borrador/i.test(document.querySelector('#snack').textContent)), 'adding shows "Juego agregado como borrador"');
   await p.waitForTimeout(1800);
-  ok(await J(() => /Ark Nova/.test(document.querySelector('.row .name').textContent)), 'the enriched row fills in live and is first (newest-first)');
-  await settle(); await p.screenshot({ path: path.join(OUT, '06-added-enriched-375x740-light.png') });
+  const afterAdd = await J(() => [...document.querySelectorAll('.lhead')].map(h => h.querySelector('.ln').textContent + ' ' + h.querySelector('.cnt').textContent));
+  ok(/Borradores 2/.test(afterAdd.join('|')), `the new draft lands in Borradores, whose count moves live (${afterAdd.join(' | ')})`);
+  await p.screenshot({ path: path.join(OUT, '08-added-375x740-light.png') });
 
-  /* ---------- Pendientes ---------- */
-  await p.click('[data-act="pend"]'); await p.waitForTimeout(300);
-  const pend = await J(() => ({
-    heads: [...document.querySelectorAll('.lhead')].map(h => h.textContent.replace(/\s+/g, ' ').trim()),
-    rows: document.querySelectorAll('.row').length,
-    back: document.querySelector('main .back')?.textContent.trim(),
-    hints: [...document.querySelectorAll('.hint')].map(h => h.textContent.trim())
-  }));
-  ok(/Sin datos/.test(pend.heads[0]) && /50|49/.test(pend.heads[0]), `Pendientes: "${pend.heads[0]}"`);
-  ok(/Borradores/.test(pend.heads[1]), `second section "${pend.heads[1]}"`);
-  ok(pend.back === 'Juegos', `back link is "‹ Juegos" (${pend.back})`);
-  const ph = await textBox('.lgroup + .lgroup .lhead'), prevRows = await J(() => { const rs = document.querySelectorAll('.lgroup:first-of-type .row'); const r = rs[rs.length - 1].getBoundingClientRect(); return r.bottom; });
-  ok(true, `group gap: last Sin datos row -> "Borradores" ${(ph.t - prevRows).toFixed(1)}`);
-  await settle(); await p.screenshot({ path: path.join(OUT, '07-pendientes-375x740-light.png') });
-
-  /* a Pendientes row opens the editor, back goes to Pendientes */
-  await p.click('.row'); await p.waitForTimeout(250);
-  ok(await J(() => document.querySelector('main .back')?.textContent.trim() === 'Pendientes'), 'editor opened from Pendientes goes back to Pendientes');
-  await settle(); await p.screenshot({ path: path.join(OUT, '08-editor-stub-375x740-light.png') });
-
-  /* ---------- contrast, both themes (parses color(srgb ...) too) ---------- */
-  const contrast = () => J(() => {
-    const parse = s => {
-      if (!s || s === 'transparent') return null;
-      if (/^color\(srgb/.test(s)) { const m = s.match(/[\d.]+/g).map(Number); return { r: m[0] * 255, g: m[1] * 255, b: m[2] * 255, a: /\//.test(s) ? m[3] : 1 }; }
-      const m = s.match(/[\d.]+/g); if (!m) return null;
-      return { r: +m[0], g: +m[1], b: +m[2], a: m[3] === undefined ? 1 : +m[3] };
-    };
-    const lum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(c.r) + .7152 * f(c.g) + .0722 * f(c.b); };
-    const over = (fg, bg) => ({ r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a), a: 1 });
-    const bgOf = el => { let n = el; while (n && n !== document.documentElement) { const c = parse(getComputedStyle(n).backgroundColor); if (c && c.a === 1) return c; n = n.parentElement; } return parse(getComputedStyle(document.body).backgroundColor) || { r: 255, g: 255, b: 255, a: 1 }; };
-    const ratio = el => { const b = bgOf(el); const f = over(parse(getComputedStyle(el).color), b); const [L1, L2] = [lum(f), lum(b)].sort((x, y) => y - x); return +((L1 + .05) / (L2 + .05)).toFixed(2); };
-    const pick = s => { const e = document.querySelector(s); return e ? ratio(e) : null; };
-    return { name: pick('.row .name'), sub: pick('.row .sub'), lhead: pick('.lhead'), title: pick('.ptitle'), hint: pick('.hint'), cap: pick('.more .cap') };
+  /* ---------- the editor, and the page bar that serves it ---------- */
+  await p.click('.row'); await p.waitForTimeout(300); await settle();
+  ok(await J(() => document.querySelector('main .back')?.textContent.trim() === 'Juegos'), 'a row opens the editor, which goes back to Juegos');
+  await p.evaluate(() => document.querySelector('.scroller').scrollTop = 400); await p.waitForTimeout(300);
+  const ebar = await J(() => {
+    const bar = document.getElementById('pbar');
+    return { shown: getComputedStyle(bar).opacity === '1', h: +bar.getBoundingClientRect().height.toFixed(1),
+      title: bar.querySelector('.pbt')?.textContent, back: bar.querySelector('.back')?.textContent.trim(),
+      focusableBacks: [...document.querySelectorAll('.back')].filter(b => !b.inert && !b.closest('[inert]')).length };
   });
-  await p.click('main .back'); await p.waitForTimeout(250);   /* editor -> Pendientes */
-  await p.click('main .back'); await p.waitForTimeout(250);   /* Pendientes -> Juegos */
-  const cLight = await contrast();
-  ok(cLight.name >= 4.5 && cLight.sub >= 4.5, `light: row name ${cLight.name}:1, second line ${cLight.sub}:1 (both >= 4.5)`);
-  await p.evaluate(() => document.documentElement.dataset.theme = 'dark'); await p.waitForTimeout(250);
-  const cDark = await contrast();
-  ok(cDark.name >= 4.5 && cDark.sub >= 4.5, `dark: row name ${cDark.name}:1, second line ${cDark.sub}:1 (both >= 4.5)`);
-  await settle(); await p.screenshot({ path: path.join(OUT, '09-juegos-375x740-dark.png') });
-  await p.click('[data-act="pend"]'); await p.waitForTimeout(250);
-  await settle(); await p.screenshot({ path: path.join(OUT, '10-pendientes-375x740-dark.png') });
-  await p.evaluate(() => document.documentElement.dataset.theme = 'light'); await p.waitForTimeout(150);
-
-  /* ---------- decision 6 (D-19n): the two pinned tiers ---------- */
-  /* at rest the bar must cost zero layout — verified byte-for-byte against the pre-sticky build:
-     phead 69, title text 77.8, field 129, heading 209, first cover 244.5, row 64 — all unchanged */
-  await p.click('main .back'); await p.waitForTimeout(250);   /* back to Juegos */
-  const rest = await J(() => ({
-    hidden: getComputedStyle(document.getElementById('pbar')).opacity === '0',
-    inert: document.getElementById('pbar').inert,
-    pheadTop: +document.querySelector('.phead').getBoundingClientRect().top.toFixed(1),
-    fieldTop: +document.querySelector('.sfield input').getBoundingClientRect().top.toFixed(1)
-  }));
-  ok(rest.hidden && rest.inert, 'at rest: the page bar is hidden and inert');
-  ok(rest.pheadTop === 69 && rest.fieldTop === 129, `at rest: layout unchanged by the sticky tiers (phead ${rest.pheadTop}, field ${rest.fieldTop})`);
-
-  await p.click('[data-act="pend"]'); await p.waitForTimeout(300); await settle();
-  await p.evaluate(() => document.querySelector('.scroller').scrollTop = 1500); await p.waitForTimeout(250);
-  const mid = await J(() => {
-    const bar = document.getElementById('pbar'), br = bar.getBoundingClientRect();
-    const lh = document.querySelector('.lhead'), lr = lh.getBoundingClientRect();
-    const back = bar.querySelector('.back'), bk = back && back.getBoundingClientRect();
-    return {
-      shown: getComputedStyle(bar).opacity === '1', barH: +br.height.toFixed(1),
-      title: bar.querySelector('.pbt').textContent, back: back && back.textContent.trim(),
-      backH: bk && +bk.height.toFixed(1),
-      heading: lh.textContent.replace(/\s+/g, ' ').trim(),
-      underBar: +(lr.top - br.bottom).toFixed(1),
-      bleed: +lr.left.toFixed(1) === 0 && +lr.right.toFixed(1) === 375,
-      opaque: !/rgba\(0, 0, 0, 0\)/.test(getComputedStyle(lh).backgroundColor),
-      focusableBacks: [...document.querySelectorAll('.back')].filter(b => !b.inert && !b.closest('[inert]')).length
-    };
-  });
-  ok(mid.shown && near(mid.barH, 44), `scrolled 1500px: the page bar shows, 44px (${mid.barH})`);
-  ok(mid.title === 'Pendientes' && /Juegos/.test(mid.back), `bar carries back + title ("${mid.back}" / "${mid.title}")`);
-  ok(mid.backH >= 44, `bar back link is a 44px target (${mid.backH})`);
-  ok(/Sin datos/.test(mid.heading) && near(mid.underBar, 0, 1), `"${mid.heading}" pinned flush under the bar (${mid.underBar}px)`);
-  ok(mid.bleed && mid.opaque, 'the pinned heading is opaque and full-bleed — rows cannot slide past it');
-  ok(mid.focusableBacks === 1, `exactly one focusable back control, never a duplicate (${mid.focusableBacks})`);
-  await p.screenshot({ path: path.join(OUT, '12-sticky-pendientes-375x740-light.png') });
-
-  /* the iOS push: each heading is confined to its own section, so the next one evicts it */
-  await p.evaluate(() => { const g = document.querySelectorAll('.lgroup')[0]; document.querySelector('.scroller').scrollTop = g.offsetTop + g.offsetHeight - 120; });
-  await p.waitForTimeout(250);
-  const push = await J(() => [...document.querySelectorAll('.lhead')].map(h => ({ t: h.textContent.replace(/\s+/g, ' ').trim(), top: +h.getBoundingClientRect().top.toFixed(1) })));
-  ok(push[0].top < push[1].top, `"${push[0].t}" is pushed out by "${push[1].t}" (${push[0].top} / ${push[1].top})`);
-  await p.screenshot({ path: path.join(OUT, '13-sticky-push-375x740-light.png') });
-
-  /* the bar's back really navigates, and a new screen starts at the top */
-  await p.evaluate(() => document.querySelector('.scroller').scrollTop = 1500); await p.waitForTimeout(200);
+  ok(ebar.shown && near(ebar.h, 44), `the editor keeps the 44px page bar (${ebar.h})`);
+  ok(/Juegos/.test(ebar.back || ''), `the bar carries back + the game's name ("${ebar.back}" / "${ebar.title}")`);
+  ok(ebar.focusableBacks === 1, `exactly one focusable back control (${ebar.focusableBacks})`);
   await p.click('#pbar .back'); await p.waitForTimeout(300);
-  const after = await J(() => ({ title: document.querySelector('.ptitle').textContent, top: document.querySelector('.scroller').scrollTop, scrolled: document.getElementById('device').classList.contains('scrolled') }));
-  ok(after.title === 'Juegos' && after.top === 0 && !after.scrolled, `the bar's back returns to Juegos at the top (${JSON.stringify(after)})`);
+  ok(await J(() => document.querySelector('.ptitle').textContent === 'Juegos' && document.querySelector('.scroller').scrollTop === 0), 'the bar\'s back returns to Juegos at the top');
 
-  /* the main list: a tab-level page has no back link, and its heading pins through 435 rows */
-  await p.evaluate(() => { for (let i = 0; i < 8; i++) document.querySelector('[data-act="more"]')?.click(); });
-  await p.waitForTimeout(400);
-  await p.evaluate(() => document.querySelector('.scroller').scrollTop = 1200); await p.waitForTimeout(250); await settle();
-  const jm = await J(() => ({
-    searchStuck: document.querySelector('.search').classList.contains('stuck')
-      && +document.querySelector('.search').getBoundingClientRect().top.toFixed(1) === 53,
-    searchCount: document.querySelectorAll('#q').length,
-    barHidden: getComputedStyle(document.getElementById('pbar')).display === 'none',
-    heading: document.querySelector('.lhead').textContent.replace(/\s+/g, ' ').trim(),
-    headingTop: +document.querySelector('.lhead').getBoundingClientRect().top.toFixed(1),
-    rows: document.querySelectorAll('.row').length
-  }));
-  ok(jm.searchStuck, 'decision 7: on Juegos the SEARCH is the pinned tier, not a title bar');
-  ok(jm.searchCount === 1, `only one search input exists, so there is nothing to keep in sync (${jm.searchCount})`);
-  /* 113 = scroller top 53 + the 60px sticky search (decision 7); it was 97 when a 44px title bar pinned here */
-  ok(near(jm.headingTop, 113, 2), `"${jm.heading}" stays pinned under the sticky search through ${jm.rows} rows (top ${jm.headingTop})`);
-  await p.screenshot({ path: path.join(OUT, '14-sticky-juegos-375x740-light.png') });
-  await p.evaluate(() => document.documentElement.dataset.theme = 'dark'); await p.waitForTimeout(200);
-  await p.screenshot({ path: path.join(OUT, '15-sticky-juegos-375x740-dark.png') });
+  /* ---------- contrast, both themes ---------- */
+  const contrast = () => J(() => {
+    const parse = s => { if (!s || s === 'transparent') return null;
+      if (/^color\(srgb/.test(s)) { const m = s.match(/[\d.]+/g).map(Number); return { r: m[0] * 255, g: m[1] * 255, b: m[2] * 255, a: /\//.test(s) ? m[3] : 1 }; }
+      const m = s.match(/[\d.]+/g); if (!m) return null; return { r: +m[0], g: +m[1], b: +m[2], a: m[3] === undefined ? 1 : +m[3] }; };
+    const lum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(c.r) + .7152 * f(c.g) + .0722 * f(c.b); };
+    const over = (f, b) => ({ r: f.r * f.a + b.r * (1 - f.a), g: f.g * f.a + b.g * (1 - f.a), b: f.b * f.a + b.b * (1 - f.a), a: 1 });
+    const bgOf = el => { let n = el; while (n && n !== document.documentElement) { const c = parse(getComputedStyle(n).backgroundColor); if (c && c.a === 1) return c; n = n.parentElement; } return { r: 255, g: 255, b: 255, a: 1 }; };
+    const ratio = el => { const b = bgOf(el); const f = over(parse(getComputedStyle(el).color), b); const [L1, L2] = [lum(f), lum(b)].sort((x, y) => y - x); return +((L1 + .05) / (L2 + .05)).toFixed(2); };
+    return { name: ratio(document.querySelector('.row .name')), head: ratio(document.querySelector('.lhead')),
+      cnt: ratio(document.querySelector('.lhead .cnt')), sub: ratio(document.querySelector('.row .sub')) };
+  });
+  const cl = await contrast();
+  ok(cl.name >= 4.5 && cl.head >= 4.5 && cl.cnt >= 4.5 && cl.sub >= 4.5, `light: name ${cl.name}, heading ${cl.head}, count ${cl.cnt}, year ${cl.sub} (all >= 4.5)`);
+  await p.evaluate(() => document.documentElement.dataset.theme = 'dark'); await p.waitForTimeout(250); await settle();
+  const cd = await contrast();
+  ok(cd.name >= 4.5 && cd.head >= 4.5 && cd.cnt >= 4.5 && cd.sub >= 4.5, `dark: name ${cd.name}, heading ${cd.head}, count ${cd.cnt}, year ${cd.sub} (all >= 4.5)`);
+  await p.screenshot({ path: path.join(OUT, '09-juegos-rest-375x740-dark.png') });
   await ctx.close();
 
-  /* ---------- other viewports: how much of the list is visible ---------- */
+  /* ---------- viewports: what the collapsed groups buy, and what hiding the search buys ---------- */
   for (const [w, h] of [[360, 640], [375, 667], [390, 844]]) {
     const c2 = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2 });
     const q = await c2.newPage();
     q.on('pageerror', e => errs.push(`pageerror ${w}x${h}: ` + e.message));
     await q.goto(URL); await q.evaluate(() => document.fonts.ready);
     await q.evaluate(() => { document.getElementById('tools').style.display = 'none'; });
+    await q.evaluate(() => [...document.querySelectorAll('img[loading="lazy"]')].forEach(i => i.loading = 'eager'));
+    await q.waitForTimeout(1600);
     const m = await q.evaluate(() => {
-      const tabs = document.querySelector('.tabs').getBoundingClientRect().top;
+      const scr = document.querySelector('.scroller'), tabs = document.querySelector('.tabs').getBoundingClientRect().top;
       const rows = [...document.querySelectorAll('.row')];
-      const visible = rows.filter(r => r.getBoundingClientRect().bottom <= tabs).length;
-      const lastVisible = rows.filter(r => r.getBoundingClientRect().top < tabs).length;
-      const sc = document.querySelector('.scroller');
-      return { visible, lastVisible, oflow: sc.scrollWidth - sc.clientWidth, pageH: document.querySelector('main').getBoundingClientRect().height };
+      const top = scr.getBoundingClientRect().top;
+      return { rest: rows.filter(r => { const b = r.getBoundingClientRect(); return b.top >= top - 1 && b.bottom <= tabs; }).length,
+               oflow: scr.scrollWidth - scr.clientWidth };
+    });
+    await q.evaluate(() => { document.querySelector('.scroller').scrollTop = 1000; });
+    await q.waitForTimeout(400);
+    const hid = await q.evaluate(() => {
+      const tabs = document.querySelector('.tabs').getBoundingClientRect().top;
+      const scr = document.querySelector('.scroller').getBoundingClientRect().top;
+      return { hidden: document.getElementById('device').classList.contains('hidesearch'),
+        rows: [...document.querySelectorAll('.row')].filter(r => { const b = r.getBoundingClientRect(); return b.top >= scr - 1 && b.bottom <= tabs; }).length };
     });
     ok(m.oflow <= 0, `${w}x${h}: no horizontal overflow (${m.oflow}px)`);
-    ok(m.visible >= 3, `${w}x${h}: ${m.visible} whole rows visible without scrolling (${m.lastVisible} partly)`);
-    await q.evaluate(() => [...document.querySelectorAll('img[loading="lazy"]')].forEach(i => i.loading='eager')); await q.waitForTimeout(1800); await q.screenshot({ path: path.join(OUT, `11-juegos-${w}x${h}-light.png`) });
+    ok(hid.hidden && hid.rows >= m.rest, `${w}x${h}: ${m.rest} rows at rest -> ${hid.rows} with the search hidden`);
+    await q.screenshot({ path: path.join(OUT, `10-juegos-${w}x${h}-light.png`) });
     await c2.close();
   }
 
