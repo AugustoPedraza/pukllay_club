@@ -79,19 +79,9 @@
      resting rhythm is untouched: field top 129, heading text top 209. */
   .search { position: sticky; top: 0; z-index: 12; margin: 12px -16px 0; padding: 4px 16px 8px; background: var(--color-bg); }
   .search.stuck { border-bottom: 1px solid var(--color-border); }
-  /* decision 11 — the stripe was 44/16/44/16/44: three equal bands with equal air, nothing dominant.
-     The two WORK groups now join into one contiguous block (touching, split by a hairline: they are the same kind
-     of thing), then 32px, then the catalog welded to its rows as the page's body. Two units, not three stripes.
-     The gap is measured to the BAND EDGE, not to the heading text — decision 10 made the box visible, so the 32
-     tuned against text had silently become a visible 20 ("box gaps lie" cuts both ways). */
-  /* the margins are back-solved from the VISIBLE edges, not the boxes: the field's border bottom is 177, but
-     .search carries 8px of its own padding below it and .lhw another 4 — so 12 here yields a visible 24, and 28
-     below yields a visible 32. `.wblock .lgroup + .lgroup` (0,3,0) must outrank the generic `.lgroup + .lgroup`. */
-  .search + .wblock { margin-top: 12px; }
-  .wblock .lgroup, .wblock .lgroup + .lgroup { margin-top: 0; }
-  .wblock .lgroup + .lgroup .lhw { margin-top: 0; }
-  .wblock .lgroup + .lgroup .lhead { box-shadow: inset 0 1px 0 var(--color-border); }
-  .lgroup.main { margin-top: 28px; }
+  /* decision 17 — ONE LIST: sections butt together with no gap, so there is no pitch to read as a stripe and
+     no block to separate. Decision 11's 24 / 0 / 32 / 0 gap system and the .wblock it grouped are gone with it. */
+  .search + .lgroup { margin-top: 12px; }
   .device[data-bar="search"] .pbar { display: none; }
   .sfield { position: relative; }
   .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; text-overflow: ellipsis; }
@@ -151,93 +141,23 @@
   .device.kbd .pbar { display: none; }
 
   /* ---- the list (decision 3) ---- */
-  .lgroup { margin-top: 24px; }
+  .lgroup { margin-top: 0; }   /* decision 17 — sections butt together; the list is continuous */
   /* full-bleed so the full-bleed rows cannot slide visibly past its left/right edges while it is pinned */
   /* decision 8 — the heading is now a collapsible group's control, so it is a real 44px target.
      The caret is a TRAILING chevron-DOWN that rotates 180°, never a chevron-right: under D-19i a "›" means
      "this row opens another page", which a group header must not claim. Heading text stays at 16px like
      everything else on the page (a leading caret would have pushed it to 40). */
-  /* decision 10 — a group header must not read as a row. Measured, they shared FOUR attributes exactly:
-     15px, rgb(35,19,57), transparent background, and a 20px trailing icon at x=339. Since the app ships Inter in
-     400/600 only, weight alone had nothing left to give. Three of the four now differ:
-       background — a full-bleed tonal band (the classic sticky section-header treatment)
-       icon slot  — the caret moves to the LEADING edge, where a right-pointing caret is a disclosure triangle,
-                    not a navigation chevron (a D-19i "›" is always trailing)
-       indent     — header text was outdented to 44 against the row's 68. SUPERSEDED by decision 13: that third
-                    left edge aligned with nothing, so band text moved to 68 and the separation now rests on the
-                    band, the icon slot (16 vs 339), height (44 vs 64), weight and full-bleed — not on indent. */
-  .lhw { position: sticky; top: var(--bar); z-index: 5; margin: 4px -16px 0; background: var(--color-bg); }
-  .lhead { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 16px; border: 0;
-    background: var(--color-surface); text-align: left; cursor: pointer; font-size: 15px; font-weight: 600; line-height: 1.3; }
-  .lhead:hover { background: var(--color-surface-2); }
-  .lhead:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  /* decision 17 — ONE header anatomy. A section header is a CAPTION: a span, never a control, so it needs no
+     caret, no 44px target and no tonal band to stop it reading as a row. Decision 16's rank (13/600 muted on the
+     16 container keyline) applies to every section. It stays sticky and gains its fill only when it PINS, which
+     is the one moment it must terminate itself over rows sliding under it — the iOS plain-table behaviour. */
+  .lhw { position: sticky; top: var(--bar); z-index: 5; margin: 0 -16px; background: var(--color-bg); }
+  .lhead { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 16px 4px; border: 0;
+    background: transparent; text-align: left; font-size: 13px; font-weight: 600; line-height: 1.3;
+    color: var(--color-text-muted); }
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
-  .lhead .caret { order: -1; width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted);
-    transition: transform 160ms var(--ease-out-soft); }
-  .lhead[aria-expanded="true"] .caret { transform: rotate(90deg); }
-  @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
+  .lhw.pinned .lhead { background: var(--color-surface); }
 
-  /* decision 13 — TWO text left edges, not three. The page read 16 (title, field, caret, cover) / 44 (band text)
-     / 68 (row text): a ladder that aligned with nothing. A row's text cannot leave 68 — its 40px cover holds it
-     there — so the band is what moves. The caret now takes the same 40px leading slot the cover occupies
-     (20 + 24 + the 8px flex gap = 32), putting band text at 68, the row-text column, and leaving the caret
-     LEFT-aligned at x=16 with the title and the cover so both edges hold. Rejected: band text at 16 with a
-     trailing caret — it aligned with the page title but left the carets ragged (measured 126/127/182), floated
-     the band 52px left of its own rows against decision 11's welding, and put the caret back on the trailing
-     side decision 10 moved it off. */
-  .lhead .caret { margin-right: 24px; }
-
-  /* decision 14 — the tint marks the WORK BLOCK, not every group header. Measured at x=300, the page ran
-     TINT 88 (work block) / void 32 / TINT 44 (catalog band) / untinted rows forever: two tinted masses floating
-     above a plain page, which is the residual "rayado" decision 11 could not reach. One tinted mass now.
-     The catalog is the page's BODY, so its header leads as plain text welded to its rows and gains its band only
-     when it pins — the standard sticky-subheader behaviour, where the band earns its keep by terminating the
-     pinned heading over the rows sliding under it. Rejected: no tint anywhere (calmest at rest, but the pinned
-     heading loses its edge — a half-cut cover sat directly under it — and the contiguous work block was left
-     holding together on a hairline alone); and tinting the catalog instead (one bar floating mid-page reads as
-     MORE of a stripe, and the work block loses the fill that makes its two groups one block). */
-  .lgroup.main .lhead { background: transparent; }
-  .lgroup.main .lhw.pinned .lhead { background: var(--color-surface); }
-
-  /* decision 15 — the BODY group is not collapsible. Decision 14 justified its plain header as "welded to its
-     rows", but collapsing it left no rows: a plain, bandless header stranded above 308px of void while the two
-     work headers kept their bands — three identical collapsed groups, one looking different for no reason a user
-     could see. Rejected: banding it while collapsed, and banding every header always — both only restyle the
-     orphan, and BOTH still let you reach a Juegos tab with zero games and 42% of the viewport blank. Dropping the
-     control removes the state instead, and costs nothing real: collapsing 385 games shows you nothing, and the
-     work groups already sit above it, so there is no scrolling to save.
-     The caret is what holds header text at 68 (decision 13), so removing it must NOT let the text fall back to
-     16 — measured, it did, which would have aligned the body header with the page title while the two work
-     headers stayed at 68: three treatments, and the pairing decision 13 rejected, reinstated by accident.
-     The leading slot survives the caret. */
-  .lhead.fixed { cursor: default; padding-left: 16px; }
-  .lhead.fixed .ln { font-size: 13px; color: var(--color-text-muted); }
-  .lhead.fixed .cnt { font-size: 13px; }
-  .lhead.fixed:hover { background: transparent; }
-
-  /* A "Una línea": one quiet row carrying both counts, no tint, no 44px band. Taps through to the queue.
-     It keeps what decision 8 actually cared about — the 49 incomplete games stay visible at rest — while
-     spending a third of the height and none of the page's only tint. */
-  .wline { display: flex; align-items: center; gap: 8px; width: calc(100% + 32px); margin: 12px -16px 0;
-    padding: 6px 16px; min-height: 36px; border: 0; background: none; text-align: left; cursor: pointer; }
-  .wline .wl { flex: 1; font-size: 13px; font-weight: 400; color: var(--color-text-muted); line-height: 1.3; }
-  .wline .wl b { font-weight: 600; color: var(--color-text); }
-  .wline:hover { background: var(--color-surface); }
-  .wline:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
-  .wline .chev { color: var(--color-text-muted); }
-  /* E "Línea arriba": the same line, moved between the title and the search. Inset (not full-bleed) because it
-     now belongs to the title block rather than to the list. */
-  .wline.above { width: 100%; margin: 4px 0 0; padding: 6px 0; }
-  /* D "Chips": horizontal and inset, so the counts read as metadata about the catalog rather than as two more
-     rows of list structure. NOTE: decision 1 removed four estado chips from this page, so this shape has to
-     survive looking like the thing that was deleted. */
-  .wchips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .wchip { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 12px; border: 0;
-    border-radius: var(--radius-full, 9999px); background: var(--color-surface); cursor: pointer;
-    font-size: 13px; font-weight: 400; color: var(--color-text-muted); }
-  .wchip b { font-weight: 600; color: var(--color-text); }
-  .wchip:hover { background: var(--color-surface-2); }
-  .wchip:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
   /* decision 16 — the caption gets its OWN RANK, at 16. Decision 15 made this header behave like a caption but
      it still looked like a peer: measured, byte-identical type to the two controls above it (15/600,
@@ -257,7 +177,7 @@
   .device[data-bar="search"].hidesearch .search { transform: translateY(calc(-100% - 1px)); }
   .device[data-bar="search"].hidesearch { --bar: 0px; }
   @media (prefers-reduced-motion: reduce) { .device[data-bar="search"] .search { transition: none; } }
-  .lgroup + .lgroup { margin-top: 12px; }
+
   .hint { margin: 0 0 8px; font-size: 13px; color: var(--color-text-muted); line-height: 1.4; }
   .rows { margin: 0 -16px; }
   .row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; border: 0; background: none; text-align: left; cursor: pointer; position: relative; }
@@ -387,8 +307,6 @@
 </div></div>
 <div id="tools">
   <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
-  <div>Grupos: <button data-open="none" class="on">Cerrados</button> <button data-open="all">Abiertos</button></div>
-  <div>Trabajo: <button data-wk="now" class="on">Actual (2 franjas)</button> <button data-wk="line">A Una línea</button> <button data-wk="chips">D Chips</button> <button data-wk="above">E Línea arriba</button> <button data-wk="none">C Fuera</button></div>
 </div>
 
 <script src="../069-estantes-ubicar/games.js"></script>
@@ -439,7 +357,7 @@ const pend = () => PEND_MODE === 50 ? GAPS().length + DRAFTS().length : PEND_MOD
 const byNew = () => [...G].sort((a, b) => b.added - a.added);
 
 const PAGE = 50;
-const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [], open: { gap: false, draft: false, rest: true } };
+const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [] };   /* no `open`: decision 17, nothing collapses */
 let KBD_SIM = true, opener = null;
 
 const main = $('#main'), device = $('#device');
@@ -521,71 +439,27 @@ function updateBar() {
    rest both counts are on screen AND the newest-first catalog starts immediately. No Pendientes page, no badge.
    The caret is LEADING and rotates (decision 10): a disclosure triangle, never a trailing "›", which under
    D-19i means "opens a page". */
+/* decision 17 — ONE LIST. The page is a single continuous list whose sections happen to hold different content,
+   not a block of work groups plus a catalog. Every section header is the SAME caption — a span, no caret, no
+   control, 13/600 muted at 16, sticky, gaining its fill only when it pins — so the rhythm is uniform by
+   construction. This is the iOS plain-table / Contacts model the BENCHMARK already records, and it supersedes
+   the whole band negotiation: decisions 10, 11, 13, 14 and 15 existed only because there were TWO kinds of
+   header. There is now one. Decision 16's caption rank survives, generalised to every section. */
 function groupSection(g) {
   const all = inGroup(g.key), paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
-  /* decision 15 — the body group is not collapsible: a caption for its list, not a peer of the two controls
-     above it. Rendered as a span with no caret and no data-act, so the empty-page state is unreachable. */
-  const fixed = g.key === 'rest';
-  const open = fixed || !!S.open[g.key];   /* a body group that cannot collapse is always open */
-  const head = fixed
-    ? `<span class="lhead fixed"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span>`
-    : `<button class="lhead" data-act="group" data-g="${g.key}" aria-expanded="${open}">
-      <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>
-      <span class="caret" aria-hidden="true">${ic('chevR')}</span></button>`;
   return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}">
-    <h2 class="lhw">${head}</h2>
-    ${open ? `${g.hint ? `<p class="hint">${g.hint}</p>` : ''}
-      <div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
-      ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}
+    <h2 class="lhw"><span class="lhead"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span></h2>
+    <div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
+    ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}
   </section>`;
-}
-
-/* OPEN: the two work bands are the heaviest thing on the page and they are secondary — 92px plus 312px of
-   chrome before the first game, spent at rest to show two numbers (49 and 1), for 50 items out of 435, in the
-   only tinted mass on the page, 24px under the search they outweigh. Measured cost: 1-2 catalog rows on every
-   viewport (375x667 shows just 3 games). Three treatments. Toggle: tools -> Trabajo. */
-function workBlock() {
-  const mode = device.dataset.wk || 'now';
-  const work = GROUPS.filter(g => g.key !== 'rest');
-  if (mode === 'none' || mode === 'above') return '';   /* C: off the page · E: rendered above the search instead */
-  if (mode === 'line') return wLine();                 /* A: one quiet line under the search */
-  if (mode === 'chips') {                              /* D: metadata, not list structure — horizontal, inset */
-    const parts = wParts();
-    if (!parts.length) return '';
-    return `<div class="wchips">${parts.map(x => `<button class="wchip" data-act="pend">
-      <b>${x.n}</b> ${wWord(x)}</button>`).join('')}</div>`;
-  }
-  return `<div class="wblock">${work.map(groupSection).join('')}</div>`;
-}
-const wParts = () => GROUPS.filter(g => g.key !== 'rest').map(g => ({ g, n: inGroup(g.key).length })).filter(x => x.n);
-const wWord = x => x.n === 1 ? (x.g.one || x.g.name.toLowerCase()) : x.g.name.toLowerCase();
-function wLine(cls = '') {
-  const parts = wParts();
-  if (!parts.length) return '';
-  return `<button class="wline${cls}" data-act="pend">
-    <span class="wl">${parts.map(x => `<b>${x.n}</b> ${wWord(x)}`).join(' · ')}</span>
-    <span class="chev" aria-hidden="true">${ic('chevR')}</span></button>`;
-}
-/* E "Línea arriba": the counts sit between the TITLE and the search, so the search and the catalog it searches
-   become contiguous — today the work block wedges itself between the page's one control and its results. */
-const workAbove = () => (device.dataset.wk === 'above') ? wLine(' above') : '';
-
-/* C only: with the block off the page the 50 incomplete games would be invisible, so the counts move to the
-   header icon + badge D-19g always specified (left of "+", as 070 placed it). */
-function workBadge() {
-  if ((device.dataset.wk || 'now') !== 'none') return '';
-  const n = GROUPS.filter(g => g.key !== 'rest').reduce((a, g) => a + inGroup(g.key).length, 0);
-  if (!n) return '';
-  return `<button class="ibtn" data-act="pend" aria-label="Pendientes, ${n} juegos">${ic('inbox')}<span class="badge">${n}</span></button>`;
 }
 
 function renderJuegos() {
   main.innerHTML = `
     <div class="phead"><h1 class="ptitle">Juegos</h1>
-      <div class="hacts">${workBadge()}
+      <div class="hacts">
         <button class="ibtn" data-act="add" aria-label="Agregar un juego">${ic('plus')}</button>
       </div></div>
-    ${workAbove()}
     <div class="search">
       <div class="sfield">
         <input id="q" type="search" placeholder="Buscá un juego" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-label="Buscá un juego">
@@ -593,8 +467,7 @@ function renderJuegos() {
       </div>
       <div class="sugg" id="sugg" role="listbox" hidden></div>
     </div>
-    ${workBlock()}
-    ${GROUPS.filter(g => g.key === 'rest').map(groupSection).join('')}`;
+    ${GROUPS.map(groupSection).join('')}`;
 }
 
 function renderEditor() {
@@ -739,14 +612,6 @@ document.addEventListener('click', e => {
   if (a === 'open') return openGame(+t.dataset.id, S.screen);
   if (a === 'juegos') return go('juegos');
   if (a === 'more') { S.shown += PAGE; return render(); }
-  if (a === 'group') {
-    const k = t.dataset.g, top = t.getBoundingClientRect().top;
-    S.open[k] = !S.open[k]; render();
-    /* keep the tapped heading exactly where the finger left it, so opening a group never scrolls the page */
-    const now = main.querySelector(`[data-g="${k}"]`);
-    if (now) scroller().scrollTop += now.getBoundingClientRect().top - top;
-    return;
-  }
   if (a === 'add') return addSheet(t);
   if (a === 'addbgg') { const id = t.dataset.bgg; closeSuggest(); return addSheet(null, id); }
   if (a === 'create') return createManual(t.dataset.name);
@@ -788,8 +653,6 @@ document.addEventListener('keydown', e => {
 document.addEventListener('click', e => {
   const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); }
   const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) device.classList.remove('kbd'); mark('[data-kbd-set]', k); }
-  const o = e.target.closest('[data-open]'); if (o) { const v = o.dataset.open === 'all'; S.open = { gap: v, draft: v, rest: true }; mark('[data-open]', o); render(); }
-  const wk = e.target.closest('[data-wk]'); if (wk) { device.dataset.wk = wk.dataset.wk; mark('[data-wk]', wk); render(); updateBar(); }
 });
 function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
 

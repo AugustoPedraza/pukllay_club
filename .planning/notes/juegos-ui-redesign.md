@@ -451,11 +451,67 @@ Harness: **75/75** — the caption sits on the 16 keyline with no hole, and carr
 (`13/600 rgb(103,92,125)` vs the controls' `15/600 rgb(35,19,57)`). The decision-15 check that asserted the old
 68 slot was rewritten to assert the new rule, not deleted.
 
+17. **ONE LIST.** The developer, after rejecting every variant built for the two work bands:
+    *"none of them makes sense. So as I interpretate it, this is the same «list» but with different content (but
+    same rythm). So the «sections» should be integrated it. is iPhone contacts list a good example?"*
+
+    **This is the reframe the previous seven decisions were missing.** Every variant I built — one line, chips, a
+    line above the search, off the page entirely — treated the work groups as a **block** to be placed beside the
+    catalog. The developer's frame is that there is no block: it is **one list** whose sections happen to hold
+    different content, with one rhythm throughout.
+
+    **Is iPhone Contacts a good example? Yes for the rhythm, no for the ordering.**
+    - *It fits:* one continuous list where sections are labels *inside* it; **one** header anatomy, repeated, so
+      the repetition **is** the rhythm rather than a defect; headers are **not controls**, so they need no caret,
+      no 44px target and no tonal band to stop them reading as rows; and sections butt together with no gaps.
+      The BENCHMARK already recorded this as the iOS plain-table pattern, so it is not a new deviation.
+    - *It does not fit:* Contacts' sections are **alphabetical** — mechanical, evenly distributed, ~26 of them,
+      none more "yours" than another — and it solves reaching them with the alphabet scrubber. Ours are
+      **semantic and wildly unequal** (49 / 1 / 385), so there is no rhythm of repetition to see and a scrubber
+      would be pointless with three sections.
+
+    **What was built and measured:** every section header is now the same component. The harness asserts it as a
+    single string across all three — `SPAN|false|false|false|13px/600|rgb(103,92,125)|rgba(0,0,0,0)|30.9|16` —
+    `1 anatomy`. Nothing is tinted at rest; a header gains its fill **only when it pins**, which is the one moment
+    it must terminate itself over rows sliding under it. Sections butt together (`gaps 0, 0`).
+
+    **The cost, measured and accepted.** Developer chose **"Exceptions first, as built"**: `Sin datos` (49) →
+    `Borradores` (1) → `Juegos del club` (385). So the page opens on the 49 cover-less games and the catalog is
+    **50 rows / 3,270px (~5 screens)** down. The 49 are impossible to miss, which is what decision 8 wanted; the
+    newest-first catalog decision 3 wanted at the top is not there. Rejected: catalog first (the 49 end up 385
+    rows down, close to hiding them) and a jump control (a scrubber for three sections).
+
+    **What this supersedes — the real result of the day.** Decisions **10, 11, 13, 14 and 15 existed only because
+    there were TWO kinds of header.** With one kind they all dissolve:
+    - 10 (a header must not read as a row → tonal band + leading caret) — a caption is not a control, so it cannot
+      be mistaken for a row in the first place.
+    - 11 (two units not three stripes; gaps 24 / 0 / 32 / 0) — there are no units to space.
+    - 13 (the caret takes the cover's 40px slot so band text lands at 68) — there is no caret.
+    - 14 (the tint marks the work block) — nothing is tinted at rest.
+    - 15 (the body group does not collapse) — **no** section collapses, so the defect it fixed cannot exist.
+    - **16 survives and generalises:** the Label (group) rank, 13/600 muted on the 16 keyline, is now what *every*
+      section header wears. Two text left edges, 16 / 68, still hold.
+
+    Dead code removed with them: `.wblock` and its gap system, the caret and its rotation, `aria-expanded`,
+    `S.open`, the group-toggle handler, and both tools toggles (`Grupos`, `Trabajo`) — nothing collapses, so
+    there is nothing to toggle.
+
+    **The lesson worth keeping.** Seven decisions were spent negotiating the relationship between two kinds of
+    header, and the answer was to stop having two kinds. Small slices found each local defect correctly and each
+    fix was right on its own terms; none of them could question the premise, because the premise was set in
+    decision 8 and never revisited. **When consecutive rounds keep re-touching one seam, the seam is not the
+    problem — the structure that creates it is.** Four passes at the same 20px of screen (13 → 14 → 15 → 16) was
+    the signal, and I read it as progress instead of as a smell.
+
+Harness rewritten for the one-list model: **62/62**. The checks that encoded the superseded rules were replaced
+by the rule that replaced them, not deleted — the load-bearing one asserts `new Set(anatomies).size === 1`.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **75/75**.
-  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left (the `Sangría`, `Franjas`, `Cabecera` and
-  `Rótulo` toggles were removed once decisions 13–16 were picked).
-- **Settled:** decisions 1–11 and **13–16**. **Reverted:** 12 (`193d10c` → `b1d6c49`).
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **62/62**.
+  Tools: **Tema · Teclado** only — nothing collapses any more, so `Grupos` went too, along with every variant
+  toggle (`Sangría`, `Franjas`, `Cabecera`, `Rótulo`, `Trabajo`).
+- **Settled:** decisions 1–9, **16** and **17**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
+  consequences of having two kinds of section header). **Reverted:** 12. **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
   16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).
 - **Noticed while fixing 13, not yet asked:** the group hint line sits at 16 while the band it belongs to now sits

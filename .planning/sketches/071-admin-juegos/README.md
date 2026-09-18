@@ -2,7 +2,7 @@
 sketch: 071
 name: admin-juegos
 question: "What is the admin Juegos tab's one job, and what does the page look like once that job — not the filter-and-table habit — sets its shape?"
-winner: "single — refined in place across decisions 1-16, no variants left"
+winner: "single — refined in place across decisions 1-17; 10/11/13/14/15 superseded by 17, no variants left"
 tags: [admin, juegos, search, list, pendientes, add-by-bgg, phase-01.8.2, mobile-first]
 ---
 
@@ -31,16 +31,15 @@ are the real queue nobody can see.
 From the repo root: `python3 -m http.server 8765`, then open
 http://127.0.0.1:8765/.planning/sketches/071-admin-juegos/index.html
 
-Tools (bottom-right): **Tema** · **Teclado** simulado · **Grupos** Cerrados / Abiertos. *(The `Pendientes`
-control is gone — decision 8 deleted that page; the `Sangría` and `Franjas` toggles were removed once decisions
-13 and 14 were picked.)*
+Tools (bottom-right): **Tema** · **Teclado** simulado. *(Nothing collapses since decision 17, so `Grupos` went
+too, along with every variant toggle. The `Pendientes` control went with decision 8.)*
 
 Try: type `cat` (matches + "Crear «…»") · paste `342942` or a `boardgamegeek.com/boardgame/342942/...` link
 (offers to add) · **+** → `hola` (the shipped error), `13` (the edition prompt), `342942` (adds, then enriches
 live) · open `Sin datos` · scroll down (the search hides, the catalog heading pins and gains its band) · any
 row → the editor stand-in.
 
-## What it draws (decisions 1–16, `notes/juegos-ui-redesign.md`)
+## What it draws (decisions 1–17, `notes/juegos-ui-redesign.md`)
 - **One job: find one game.** Title `Juegos` + a 48px search field, no filter chips.
 - **Picking a game opens its editor** (sketch 063's screen — stubbed here). The search is pure navigation, so a
   game row carries a **chevron** (D-19i).
@@ -62,25 +61,22 @@ row → the editor stand-in.
   so the caret took the same **40px leading slot the cover occupies**, putting band text at **68** with row text
   and holding the caret at **16**. Rejected: band text at 16 with a trailing caret — the carets went ragged across
   **126 / 127 / 182** and the band floated 52px left of its own rows. This supersedes decision 10's indent.
-- **The caption carries its own rank, on the 16 keyline** (decision 16) — the seam the developer flagged as
-  "rayado" one last time. Two causes measured and separated by variant: the caption was **byte-identical in type**
-  to the two controls above it (`15/600 rgb(35,19,57)`), so it read as a header that had lost its decoration; and
-  it was the only element on the page with an **empty leading slot** (`caret · caret · EMPTY · cover · cover` down
-  x=16). It now takes the system's **Label (group)** rank — `13/600` muted — at **16**. Rejected: the rank alone
-  (hole stayed) and the move alone (type stayed identical). Contrast 6.17; edges still 16 / 68.
-- **The body group does not collapse** (decision 15) — the defect decision 14 created, found on first real-browser
-  test: collapse the catalog and its plain header stranded above **308px of void** with **0 rows**, while the two
-  work headers kept their bands. `Juegos del club 385` is now a **caption** (a span, no caret, no `data-act`),
-  keeping the caret's 68 slot as padding. Rejected: banding it while collapsed, and banding every header always —
-  both only restyle the orphan and still let you reach a page with zero games and 42% of the viewport blank.
-- **One tinted mass, not two** (decision 14) — sampled as raw runs down x=300 the page ran TINT 88 / void 32 /
-  TINT 44 / untinted rows: two tinted masses floating above a plain page, the residual "rayado". The tint now
-  marks **only the work block**; the catalog is the page's body, so its header leads as plain text welded to its
-  rows and gains its band **only when it pins**. Rejected: no tint at all (the pinned heading goes opaque but
-  **edgeless**) and tinting the catalog instead (one bar mid-page reads as *more* of a stripe).
-- **Two units, not three stripes** (decision 11) — "Sin datos" + "Borradores" join into one contiguous block
-  (hairline seam), then 32px, then "Juegos del club" welded to its rows. Visible gaps **24 / 0 / 32 / 0**, no two
-  alike. Three equal bands with equal air had measured 44/16/44/16/44 and read as "rayado".
+- **ONE LIST** (decision 17) — the reframe that dissolved seven rounds of band negotiation. The page is a single
+  continuous list whose **sections hold different content**, not a block of work groups beside a catalog. Every
+  section header is the **same caption**: a span, never a control — no caret, no `aria-expanded`, no 44px target,
+  nothing collapses — at decision 16's Label (group) rank (13/600 muted, x=16), full-bleed and sticky, gaining a
+  fill **only while pinned**. Sections butt together (gaps `0, 0`); nothing is tinted at rest. The harness asserts
+  the anatomy as one string across all three headers: **`1 anatomy`**.
+  This is the **iPhone Contacts / iOS plain-table** model, which fits for the *rhythm* (one header anatomy
+  repeated, no blocks, no gaps) but not for the *ordering* — Contacts' sections are alphabetical, mechanical and
+  evenly sized, while these are semantic and wildly unequal (49 / 1 / 385), and a three-section list has no use
+  for an alphabet scrubber.
+  **Order: exceptions first** (`Sin datos` → `Borradores` → `Juegos del club`), measured cost accepted: the
+  catalog sits **50 rows / 3,270px** down, so the 49 broken games cannot be missed but the newest-first catalog
+  is not at the top.
+  **Supersedes decisions 10, 11, 13, 14 and 15** — every one of them existed only because there were two kinds of
+  header. Decision 16 survives, generalised to every section.
+
 - **The search hides on scroll-down, returns on scroll-up** (decision 9) — *not* collapsed to an icon, which
   measured as 16px saved (a quarter of a row): 0 extra rows at 375×667 and a tap to undo. Hiding gains a row on
   every viewport for free.
@@ -100,7 +96,7 @@ heading are all off screen at once, leaving 11 rows with no context and the back
   heading is confined to its own section, so an arriving one evicts it.
 
 ## Verification (`node .planning/sketches/071-admin-juegos/verify.js`)
-**75/75 passed**, no page errors. Highlights:
+**62/62 passed**, no page errors. Highlights:
 - **Rhythm is pixel-identical to 069 raised** at 375×740: title row → field **16.0** (25.2 from the title's text
   box — 069 measures a field from the row, since its border is the visible edge), field → "Juegos del club"
   **32.0**, heading → first cover **16.5**, row **64px**.
