@@ -128,7 +128,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   const edges = await J(() => {
     const L = e => { const g = document.createRange(); g.selectNodeContents(e); return +g.getBoundingClientRect().left.toFixed(1); };
     const heads = [...document.querySelectorAll('.lhead')], row = document.querySelector('.row');
-    return [...new Set([L(document.querySelector('.ptitle')), ...heads.map(h => L(h.querySelector('.ln'))),
+    return [...new Set([+document.querySelector('.search .sfield').getBoundingClientRect().left.toFixed(1), ...heads.map(h => L(h.querySelector('.ln'))),
       +row.querySelector('.cov').getBoundingClientRect().left.toFixed(1), L(row.querySelector('.name'))])].sort((a, b) => a - b);
   });
   ok(edges.length === 2 && near(edges[0], 16) && near(edges[1], 68), `exactly two text left edges (${edges.join(' / ')})`);
@@ -162,13 +162,38 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
 
   /* no Pendientes page and no badge — decision 8 deleted them and decision 17 keeps them gone */
   ok(await J(() => !document.querySelector('.badge') && !document.querySelector('[data-act="pend"]')), 'the Pendientes page and its badge are gone (decision 8 replaces D-19g here)');
-  ok(await J(() => document.querySelectorAll('.hacts .ibtn').length === 1 && document.querySelector('.hacts .ibtn').dataset.act === 'add'), 'the header keeps only "+"');
+  ok(await J(() => document.querySelectorAll('main .ibtn').length === 1 && document.querySelector('main .ibtn').dataset.act === 'add'), 'the page keeps exactly one icon button, "+"');
 
   /* ---------- rhythm at rest ---------- */
-  const phead = await box('.phead'), field = await box('.sfield input');
+  const field = await box('.sfield input');
   const lh0 = await textBox('.lhead .ln');
   ok(near(field.h, 48), `main control is a 48px field (${field.h.toFixed(1)})`);
-  ok(near(field.t - phead.b, 16, 1.5), `title row -> field 16, as 069 raised (${(field.t - phead.b).toFixed(1)})`);
+
+  /* ---------- decision 22 — a search-first tab root has no resting title ----------
+     The chrome was a FIXED 265px, so it read 51% of usable height on a 360x640 (three games), not the 43% the
+     handoff quoted from the roomiest phone. The <h1> is dropped and the + moves beside the field. */
+  const d22 = await J(() => {
+    const sc = document.querySelector('.scroller').getBoundingClientRect();
+    const f = document.querySelector('.sfield input').getBoundingClientRect();
+    const sf = document.querySelector('.sfield').getBoundingClientRect();
+    const add = document.querySelector('main .ibtn').getBoundingClientRect();
+    const h1 = document.querySelector('main h1');
+    return { ptitle: !!document.querySelector('.ptitle'), phead: !!document.querySelector('.phead'),
+      h1text: h1 && h1.textContent, h1sr: !!(h1 && h1.classList.contains('sr')),
+      h1w: h1 ? +h1.getBoundingClientRect().width.toFixed(0) : null,
+      air: +(f.top - sc.top).toFixed(1),
+      addW: +add.width.toFixed(0), addH: +add.height.toFixed(0),
+      addRight: +add.right.toFixed(0), gap: +(add.left - sf.right).toFixed(0),
+      fieldW: +sf.width.toFixed(0) };
+  });
+  ok(!d22.ptitle && !d22.phead, 'no resting page title — the tab bar names the page (decision 7, applied at rest)');
+  /* dropping the VISIBLE title must not drop the heading from the accessibility tree */
+  ok(d22.h1text === 'Juegos' && d22.h1sr && d22.h1w <= 1, `the h1 survives for screen readers, not for the eye (.sr, ${d22.h1w}px wide)`);
+  ok(near(d22.air, 24, 1.5), `the field leads the page on 24px of air (${d22.air})`);
+  ok(d22.addW === 44 && d22.addH === 44, `+ still meets the touch floor (${d22.addW}x${d22.addH})`);
+  ok(near(d22.addRight, 371, 1.5), `+ keeps the header icon's right edge (${d22.addRight})`);
+  ok(d22.gap === 8, `+ sits 8px clear of the field (${d22.gap})`);
+  ok(d22.fieldW >= 280, `the field keeps a usable width beside it (${d22.fieldW}px)`);
   /* decision 11 measures to the BAND EDGE, not the heading text: decision 10 made the box visible, so the box
      is now what the eye reads. Target 24 to the band, 0 between the joined work bands, 32 to the catalog. */
   /* decision 17 — the gap system decision 11 built (24 / 0 / 32 / 0 between a work block and a catalog) is
@@ -191,9 +216,10 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(flow.tinted.length === 0, `NOTHING is tinted at rest — one list, no bands (${flow.tinted.join(', ') || 'none'})`);
 
   const ranks = await J(() => { const g = s => { const e = document.querySelector(s); const c = getComputedStyle(e); return parseFloat(c.fontSize) + '/' + c.fontWeight; };
-    return { title: g('.ptitle'), lhead: g('.lhead'), name: g('.row .name'), field: g('.sfield input') }; });
-  ok(ranks.title === '22/600' && ranks.lhead === '15/600' && ranks.name === '15/400' && ranks.field === '16/400',
-    `type ranks hold (title ${ranks.title}, heading ${ranks.lhead}, row ${ranks.name}, field ${ranks.field})`);
+    return { lhead: g('.lhead'), name: g('.row .name'), field: g('.sfield input'), sub: g('.row .sub') }; });
+  /* D-19j, minus the title rank decision 22 removed from this page: 48px field > section 15/600 > row 15/400 */
+  ok(ranks.lhead === '15/600' && ranks.name === '15/400' && ranks.field === '16/400',
+    `type ranks hold (field ${ranks.field}, heading ${ranks.lhead}, row ${ranks.name}, year ${ranks.sub})`);
   ok(await J(() => [...document.querySelectorAll('svg')].every(s => s.children.length > 0)), 'no empty SVG icons anywhere');
   const oflow = await J(() => { const s = document.querySelector('.scroller'); return s.scrollWidth - s.clientWidth; });
   ok(oflow <= 0, `no horizontal overflow (${oflow}px)`);
@@ -286,6 +312,12 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   await p.fill('#q', 'cat'); await p.waitForTimeout(200);
   const kbd = await box('.kbd-sim'), sugg = await box('.sugg');
   ok(kbd.h === 292 && sugg.b <= kbd.t + 0.5, `suggestions end above the 292px keyboard (${sugg.b.toFixed(1)} vs ${kbd.t})`);
+  /* decision 22 — the + shortened the field, so the dropdown is anchored INSIDE .sfield at left:0/right:0.
+     Asserted against the field's own edges: a magic offset here would drift the moment the + changes size. */
+  const sAlign = await J(() => { const f = document.querySelector('.sfield').getBoundingClientRect(), g = document.querySelector('.sugg').getBoundingClientRect();
+    return { dl: +(g.left - f.left).toFixed(1), dr: +(g.right - f.right).toFixed(1), clearsAdd: g.right <= document.querySelector('main .ibtn').getBoundingClientRect().left + 0.5 }; });
+  ok(Math.abs(sAlign.dl) <= 1 && Math.abs(sAlign.dr) <= 1, `the dropdown tracks the field's own edges (${sAlign.dl} / ${sAlign.dr})`);
+  ok(sAlign.clearsAdd, 'and stays clear of the + beside it');
   const sTypes = await J(() => [...document.querySelectorAll('.sugg .srow')].map(r => r.dataset.act));
   ok(sTypes.includes('open') && sTypes[sTypes.length - 1] === 'create', `name search: matches then "Crear «texto»" (${sTypes.join(',')})`);
   await p.screenshot({ path: path.join(OUT, '05-search-typing-375x740-light.png') });
@@ -329,7 +361,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(/Juegos/.test(ebar.back || ''), `the bar carries back + the game's name ("${ebar.back}" / "${ebar.title}")`);
   ok(ebar.focusableBacks === 1, `exactly one focusable back control (${ebar.focusableBacks})`);
   await p.click('#pbar .back'); await p.waitForTimeout(300);
-  ok(await J(() => document.querySelector('.ptitle').textContent === 'Juegos' && document.querySelector('.scroller').scrollTop === 0), 'the bar\'s back returns to Juegos at the top');
+  ok(await J(() => !!document.querySelector('#q') && document.querySelector('main h1').textContent === 'Juegos' && document.querySelector('.scroller').scrollTop === 0), 'the bar\'s back returns to Juegos at the top');
 
   /* ---------- contrast, both themes ---------- */
   const contrast = () => J(() => {
@@ -364,8 +396,10 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
       const scr = document.querySelector('.scroller'), tabs = document.querySelector('.tabs').getBoundingClientRect().top;
       const rows = [...document.querySelectorAll('.row')];
       const top = scr.getBoundingClientRect().top;
+      const first = document.querySelector('.lgroup.main .row').getBoundingClientRect();
       return { rest: rows.filter(r => { const b = r.getBoundingClientRect(); return b.top >= top - 1 && b.bottom <= tabs; }).length,
-               oflow: scr.scrollWidth - scr.clientWidth };
+               oflow: scr.scrollWidth - scr.clientWidth,
+               chrome: +(first.top - top).toFixed(0), pct: Math.round(100 * (first.top - top) / (tabs - top)) };
     });
     await q.evaluate(() => { document.querySelector('.scroller').scrollTop = 1000; });
     await q.waitForTimeout(400);
@@ -376,6 +410,9 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
         rows: [...document.querySelectorAll('.row')].filter(r => { const b = r.getBoundingClientRect(); return b.top >= scr - 1 && b.bottom <= tabs; }).length };
     });
     ok(m.oflow <= 0, `${w}x${h}: no horizontal overflow (${m.oflow}px)`);
+    /* decision 22's standing guard. The budget is a FIXED pixel count, so the worst ratio is the smallest
+       phone — measure there, never on the roomiest one (which is how 51% got reported as 43%). */
+    ok(m.pct <= 45, `${w}x${h}: chrome ${m.chrome}px = ${m.pct}% of usable, at or under the 45% ceiling`);
     ok(hid.hidden && hid.rows >= m.rest, `${w}x${h}: ${m.rest} rows at rest -> ${hid.rows} with the search hidden`);
     await q.screenshot({ path: path.join(OUT, `10-juegos-${w}x${h}-light.png`) });
     await c2.close();

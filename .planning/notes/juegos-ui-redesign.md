@@ -656,18 +656,75 @@ Harness: **76/76** (ladder holds, all four differentiators, both inversion guard
 Harness: **80/80** — including a standing guard that a label must sit closer to its own rows than to the label
 above it, by a ratio of at least 2:1.
 
+22. **A search-first tab root has no resting title.** The handoff's open question 2 — *"chrome is 43% of usable
+    height"* — surfaced by the decision-20 audit and never addressed, deliberately left as a decision rather than
+    a fix.
+
+    **The first finding was that 43% was the wrong number.** Chrome is a **fixed 265px**, so the ratio is worst on
+    the smallest phone and 43% was measured on the roomiest one:
+
+    | viewport | chrome | % de alto útil | juegos visibles |
+    |---|---|---|---|
+    | **360×640** | 265px | **51%** | **3** |
+    | 375×667 | 265px | 48% | 4 |
+    | 375×740 | 265px | 43% | 5 |
+    | 390×844 | 265px | 37% | 7 |
+
+    Four variants were built as a `Cabecera` toggle and measured across all four viewports:
+
+    | | chrome | 360×640 | 375×740 | excepciones visibles al reposo |
+    |---|---|---|---|---|
+    | como está | 265px | 51% · 3 filas | 43% · 5 filas | 2/2 |
+    | **A sin título** | **213px** | **41% · 4 filas** | **34% · 6 filas** | **2/2** |
+    | B excep. abajo | 174px | 33% · 5 filas | 28% · 6 filas | **0/2** |
+    | C ambos | 122px | 23% · 6 filas | 20% · 7 filas | **0/2** |
+
+    Developer picked **A**. The `<h1>Juegos</h1>` is dropped and the `+` moves beside the field (343 → 301px, and
+    the `+` keeps `.hacts`' own right edge at 371 so the icon column is unchanged).
+
+    **Why it is not a new idea:** this is **decision 7's own argument applied to the resting page.** Decision 7
+    already deleted the *scrolled* title bar because it "repeats the word the pinned heading already says" — and
+    the bottom tab bar says **Juegos** and highlights it, persistently, at rest too. The `h1` survives as `.sr`,
+    so dropping it costs the eye and not the accessibility tree (asserted: text `Juegos`, ≤1px wide).
+
+    **Scope, checked rather than assumed.** Estantes and Web also carry a `.ptitle`, so this looked app-wide. It
+    is not: **Estantes' search is `position: relative` and Web has none**, so Juegos is the only search-first tab
+    root and the only page with a `.pbar`. The rule is *a page whose pinned tier is its search has no resting
+    title* — Estantes and Web keep theirs, untouched.
+
+    **B and C were rejected on a measurement, not a preference.** Moving the exceptions below the catalog (D-19l,
+    a one-job page may list its siblings below it) is the cheapest chrome of the four — and it puts **"Sin datos"
+    at 3,467px, 5.0 screens down, behind 50 rows and a *Mostrar más***. That is the *same number decision 18 spent
+    itself removing* (3,270 → 206), aimed at the work queue instead of the catalog. Neither exception count is on
+    screen at rest (0/2). It buys 91px by burying 49 live games that need data.
+
+    **A seam cleaned up on the way.** The `+` shortens the field, so the suggestions dropdown no longer spans the
+    block. Rather than offset it by a magic number (my first pass wrote `right: 68px`, and the correct value was
+    58 — it was already wrong), it moved **inside `.sfield`** at `left:0/right:0`, and the harness asserts it
+    against the *field's own edges* plus clearance from the `+`. A constant there would have drifted the moment
+    the `+` changed size.
+
+    Dead code removed with the title row: `.phead`, `.ptitle`, `.hacts`, and `updateBar`'s `.phead, .ehead`
+    fallback — the same hygiene decision 17 applied to `.wblock`.
+
+Harness: **91/91**, including a standing guard that chrome must stay **≤45% of usable height at every viewport**,
+measured on the smallest — the check that would have caught 51% being reported as 43%.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **80/80**.
-  Tools: **Tema · Teclado** only — nothing collapses any more, so `Grupos` went too, along with every variant
-  toggle (`Sangría`, `Franjas`, `Cabecera`, `Rótulo`, `Trabajo`).
-- **Settled:** decisions 1–9 and **16–21**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
-  consequences of having two kinds of section header). **Reverted:** 12. **Reverted:** 12 (`193d10c` → `b1d6c49`).
-- **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
-  16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).
-- **Noticed while fixing 13, not yet asked:** the group hint line sits at 16 while the band it belongs to now sits
-  at 68, so the hint hangs left of its own heading. Legal (16 is an edge), but it may want 68.
-- **Also open:** the year-only second line, no prompt line, collapse persistence, unreviewed copy, and the
-  enrichment pending/failed row + Reintentar (not drawn anywhere).
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **91/91**.
+  Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
+- **Settled:** decisions 1–9 and **16–22**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+  having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
+- **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections —
+  `Sin datos 49 ›` and `Borradores 1 ›` closed, `Juegos del club 385` open. No resting page title. Chrome 213px.
+  Two text left edges: **16** and **68**. Air **27px above** a section label, **9 below**.
 - **App-wide rules recorded** in `01.8.2-CONTEXT.md` + `01.8.2-BENCHMARK.md`: **D-19n** scrolled context,
-  **D-19g-bis** catalog groups (incl. band anatomy and "bands must not repeat into a stripe").
-- **Next:** `.planning/notes/juegos-refine-handoff.md` → then sketch 072 (the editor), sketch 074, wrap-up, plan.
+  **D-19g-bis** catalog sections.
+- **Still open** (handoff's list, minus the one decision 22 closed):
+  1. the enrichment `pending`/`failed` row + Reintentar — not drawn anywhere (slated for sketch 072)
+  2. the hint is `13/400` muted directly under a `15/600` label at the same keyline — may read as one block
+  3. the catalog row's second line is the year alone, repeating down a newest-first list
+  4. no prompt line
+  5. collapse state does not persist
+  6. copy not reviewed
+- **Next:** finish Juegos → sketch 072 (the editor), sketch 074, `--wrap-up`, then `/gsd-plan-phase 01.8.2`.

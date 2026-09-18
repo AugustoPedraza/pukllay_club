@@ -46,8 +46,23 @@
   .device[data-bar="search"] { --bar: 60px; }
 
   main { padding: 16px 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
-  .phead { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
-  .ptitle { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -.01em; }
+
+  /* ---- decision 22 — a search-first tab root has no resting title ----
+     Measured, the chrome was a FIXED 265px: on a 360x640 that is 51% of usable height and exactly three games.
+     The handoff's "43%" was the 375x740 figure — the roomiest phone — so the real number is worse the smaller
+     the phone gets.
+     The <h1> is dropped and the + moves beside the field. This is decision 7's own argument applied to the
+     resting page: that decision already deleted the scrolled title BAR because it "repeats the word the pinned
+     heading already says", and the bottom tab bar says Juegos and highlights it, persistently. The h1 survives
+     as .sr for the accessibility tree, so the document still has a heading.
+     SCOPE, checked rather than assumed: Estantes' search is `position: relative` and Web has none, so Juegos is
+     the only search-first tab root and the only page with a .pbar. Estantes and Web keep their .ptitle — this
+     is not an app-wide sweep, it is a rule for the one page whose pinned tier is its search. */
+  .srow-wrap { display: flex; align-items: center; gap: 8px; }
+  .srow-wrap .sfield { flex: 1; min-width: 0; }
+  .srow-wrap .ibtn { margin-right: -12px; }   /* same pull as .hacts, so + keeps the header icon's edge */
+  /* decision 22 removed the resting title row from this page; .phead/.ptitle/.hacts went with it, the way
+     decision 17 removed .wblock with the thing that needed it. Estantes and Web still define their own. */
   .back { display: inline-flex; align-items: center; gap: 2px; height: 44px; margin-left: -10px; padding: 0 10px 0 4px; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--color-text-muted); cursor: pointer; align-self: flex-start; }
   .back svg { width: 18px; height: 18px; }
   .tbtn { height: 44px; padding: 0 12px; border: 0; background: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--ter); cursor: pointer; white-space: nowrap; }
@@ -58,7 +73,6 @@
   .ibtn svg { width: 20px; height: 20px; }
   .ibtn:hover { background: var(--color-surface); color: var(--color-text); }
   .ibtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
-  .hacts { display: flex; align-items: center; margin-right: -12px; }
   .obtn { height: 44px; padding: 0 16px; border: 1px solid var(--stroke); background: var(--color-bg); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
   .obtn.pri { border-color: var(--color-primary); color: var(--color-accent-text); }
   :root[data-theme="dark"] .obtn.pri { border-color: var(--color-accent-text); }
@@ -77,7 +91,9 @@
      It is the SAME input pinning, not a copy in a bar — so there is never a second search to keep in sync
      (the back link needed `inert` for exactly that reason). Padding is compensated in the margins so the
      resting rhythm is untouched: field top 129, heading text top 209. */
-  .search { position: sticky; top: 0; z-index: 12; margin: 12px -16px 0; padding: 4px 16px 8px; background: var(--color-bg); }
+  /* decision 22 — with the title gone the field leads the page, so its own 12px top margin drops to 4:
+     16 (main) + 4 + 4 (padding) = 24px of air under the app header. */
+  .search { position: sticky; top: 0; z-index: 12; margin: 4px -16px 0; padding: 4px 16px 8px; background: var(--color-bg); }
   .search.stuck { border-bottom: 1px solid var(--color-border); }
   /* decision 17 — ONE LIST: sections butt together with no gap, so there is no pitch to read as a stripe and
      no block to separate. Decision 11's 24 / 0 / 32 / 0 gap system and the .wblock it grouped are gone with it. */
@@ -96,7 +112,10 @@
   /* suggestions drop down OVER the list below (069 decision 12) */
   /* anchored 4px under the FIELD, not under the padded sticky block — decision 7's 8px of bottom padding
      pushed it 5px under the 292px keyboard (453 vs 448), the same trap 069 decision 61 hit */
-  .sugg { position: absolute; left: 16px; right: 16px; top: calc(100% - 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
+  /* decision 22 — the + now sits beside the field, so the field no longer spans the block. The dropdown moves
+     INSIDE .sfield (already position:relative) and anchors left:0/right:0 to the field itself, which keeps it
+     aligned at any width with no magic offset to drift. top:100%+4 reproduces the previous y exactly. */
+  .sugg { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
     box-shadow: var(--shadow-lg); padding: 4px 0; max-height: 264px; overflow-y: auto; scrollbar-width: none; }
   .sugg::-webkit-scrollbar { display: none; }
   .sugg[hidden] { display: none; }
@@ -483,7 +502,7 @@ function updateBar() {
     return;
   }
   /* the element that must scroll away before the bar takes over: the title row, or the editor's game head */
-  const ph = main.querySelector('.phead, .ehead'); if (!ph) return;
+  const ph = main.querySelector('.ehead'); if (!ph) return;   /* decision 22 — Juegos has no title row */
   const on = scroller().scrollTop > ph.offsetTop + ph.offsetHeight - 44;
   device.classList.toggle('scrolled', on);
   $('#pbar').inert = !on;
@@ -521,18 +540,20 @@ function groupSection(g) {
   </section>`;
 }
 
+/* decision 22 — no resting page title: the tab bar names the page, the field leads it, and the + keeps the
+   header icon's right edge beside the field. The h1 stays in the accessibility tree as .sr. */
 function renderJuegos() {
   main.innerHTML = `
-    <div class="phead"><h1 class="ptitle">Juegos</h1>
-      <div class="hacts">
-        <button class="ibtn" data-act="add" aria-label="Agregar un juego">${ic('plus')}</button>
-      </div></div>
+    <h1 class="sr">Juegos</h1>
     <div class="search">
-      <div class="sfield">
-        <input id="q" type="search" placeholder="Buscá un juego" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-label="Buscá un juego">
-        <span class="sico" id="sico" aria-hidden="true">${ic('search')}</span>
+      <div class="srow-wrap">
+        <div class="sfield">
+          <input id="q" type="search" placeholder="Buscá un juego" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-label="Buscá un juego">
+          <span class="sico" id="sico" aria-hidden="true">${ic('search')}</span>
+          <div class="sugg" id="sugg" role="listbox" hidden></div>
+        </div>
+        <button class="ibtn" data-act="add" aria-label="Agregar un juego">${ic('plus')}</button>
       </div>
-      <div class="sugg" id="sugg" role="listbox" hidden></div>
     </div>
     ${GROUPS.map(groupSection).join('')}`;
 }
