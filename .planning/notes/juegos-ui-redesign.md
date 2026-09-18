@@ -365,11 +365,57 @@ Harness: **64/64** (61 + two-edges, row-text column, no ragged caret, and the op
 Harness: **68/68** — one tinted mass at rest, the catalog header plain at rest, and pinned it gains `--color-surface`
 (compared against the resolved token, not merely "not transparent").
 
+15. **The body group is not collapsible.** Found by the developer the moment they tested decision 14 in a real
+    browser: *"This is so weird — which alternative do we have for those rows?"*, with a screenshot of all three
+    groups collapsed.
+
+    **A defect in decision 14, not a taste complaint.** Decision 14 justified the catalog's plain header as
+    "welded to its rows" — but collapse it and there are no rows, so the justification evaporates. Reproduced by a
+    real tap (not the dev toggle) and measured: a plain, **bandless** header stranded above **308px of void**
+    (42% of a 740px viewport) with **0 rows on the page**, while the two work headers above it kept their bands.
+    Three groups in an identical state, one of them looking different for no reason a user can see.
+
+    | | tinted masses at rest | collapse the catalog → |
+    |---|---|---|
+    | Decision 14 as built | 1 | plain orphan header, **0 rows, 308px void** |
+    | **A Fija** | **1** | **unreachable** |
+    | B Sin filas (band it when it has no rows under it) | 1 | banded, but **2 masses** + 0 rows, 308px void |
+    | C Siempre (revert 14) | **2** | banded, 2 masses + 0 rows, 308px void |
+
+    Developer picked **"A Fija — the catalog can't collapse (Recommended)"**. The decisive measurement: **B and C
+    only restyle the orphan — all three of them still let you reach a Juegos tab with zero games and 42% of the
+    viewport blank.** A removes the state instead of painting it, and the control costs nothing to lose:
+    collapsing 385 games shows you nothing, and the work groups already sit above it, so there is no scrolling to
+    save. The body group renders as a `<span>` caption — no caret, no `data-act`, no `aria-expanded` — so it reads
+    as a caption for its list rather than a peer of the two controls above it, and it still gains its band when it
+    pins (verified `pinned=true`, `top=53`).
+
+    **Cost, named:** it breaks decision 8's symmetry — two groups collapse, one does not. That is the honest shape:
+    the work groups collapse *because* they are collapsed by default and you expand them to work; the catalog is
+    the page's resting content. Its caret had been implying "one of three peers" when it never was.
+
+    **A bug caught only by measuring the variant before judging it:** removing the caret dropped the header text
+    back to **16**, because the caret is what holds it at 68 under decision 13. That would have aligned the body
+    header with the page title while both work headers stayed at 68 — three treatments, and the exact pairing
+    decision 13 rejected, reinstated by accident. `.lhead.fixed` keeps `padding-left: 68px`, so the leading slot
+    survives the caret.
+
+    **A trap this session re-introduced and the harness caught:** adding clicks before the tinted-mass check left
+    the cursor parked on "Sin datos", and `.lhead:hover` swapped `--color-surface` for `--color-surface-2` —
+    splitting one contiguous mass into two and failing a real check for a reason that had nothing to do with the
+    design. Verified directly: 241,236,253 parked vs **222,212,243** hovered. The handoff warned about exactly this
+    ("a stray hover really did darken a band in an earlier shot") and it still happened, so the cursor is now parked
+    off-canvas *inside* a `cool()` helper called before colour sampling, rather than remembered at each call site.
+
+Harness: **73/73** — the caption is a span with no caret and no `data-act`, the catalog can never be empty, the
+caption keeps the 68 slot, and the caret-rotation check now *produces* the expanded state (since after decision 15
+only the two collapsed work groups have carets) and closes the group again, leaving the page as it found it.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **68/68**.
-  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left (the `Sangría` and `Franjas` toggles were
-  removed once decisions 13 and 14 were picked).
-- **Settled:** decisions 1–11, **13** and **14**. **Reverted:** 12 (`193d10c` → `b1d6c49`).
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **73/73**.
+  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left (the `Sangría`, `Franjas` and `Cabecera`
+  toggles were removed once decisions 13, 14 and 15 were picked).
+- **Settled:** decisions 1–11, **13**, **14** and **15**. **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
   16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).
 - **Noticed while fixing 13, not yet asked:** the group hint line sits at 16 while the band it belongs to now sits

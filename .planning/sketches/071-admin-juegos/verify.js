@@ -29,6 +29,10 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   const J = (f, a) => p.evaluate(f, a);
   const box = s => J(sel => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { t: r.top, b: r.bottom, l: r.left, r: r.right, w: r.width, h: r.height }; }, s);
   const textBox = s => J(sel => { const e = document.querySelector(sel); if (!e) return null; const g = document.createRange(); g.selectNodeContents(e); const r = g.getBoundingClientRect(); return { t: r.top, b: r.bottom, h: r.height }; }, s);
+  /* Colour sampling MUST park the cursor off-canvas first. A click leaves the mouse on the element it hit, and
+     `.lhead:hover` swaps --color-surface for --color-surface-2 — which once split one contiguous tinted mass into
+     two and failed a real check. Verified: 220px reads 241,236,253 parked and 222,212,243 hovered. */
+  const cool = async () => { await p.mouse.move(-50, -50); await p.waitForTimeout(150); };
   const settle = async (pg = p) => {
     await pg.evaluate(() => [...document.querySelectorAll('img[loading="lazy"]')].forEach(i => i.loading = 'eager'));
     await pg.waitForFunction(() => [...document.querySelectorAll('img.cov')].every(i => i.complete), null, { timeout: 8000 }).catch(() => {});
@@ -36,7 +40,8 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   };
   await settle();
 
-  /* ---------- decision 8: one list, three collapsible groups ---------- */
+  /* ---------- decision 8: one list, three groups (the two work groups collapsible; decision 15 made the
+     body group a fixed caption) ---------- */
   const groups = await J(() => [...document.querySelectorAll('.lhead')].map(h => ({
     name: h.querySelector('.ln').textContent,
     count: +h.querySelector('.cnt').textContent,
@@ -47,7 +52,22 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(groups.map(g => g.name).join('|') === 'Sin datos|Borradores|Juegos del club', `work groups sit on top (${groups.map(g => g.name).join(' > ')})`);
   const sum = groups.reduce((a, g) => a + g.count, 0);
   ok(sum === 435, `the groups PARTITION the catalog: ${groups.map(g => g.count).join(' + ')} = ${sum}`);
-  ok(!groups[0].open && !groups[1].open && groups[2].open, `collapsed by default, catalog open (${groups.map(g => g.open).join(',')})`);
+  ok(!groups[0].open && !groups[1].open, `both work groups collapsed by default (${groups[0].open}, ${groups[1].open})`);
+  /* decision 15 — the BODY group is not collapsible at all. Collapsing it stranded a plain, bandless header above
+     308px of void with zero rows; the control's only possible outcome was an empty screen. It is a caption now:
+     a span, no caret, no data-act — so the empty state is unreachable rather than restyled. */
+  const body = await J(() => {
+    const h = document.querySelector('.lgroup.main .lhead');
+    return { tag: h.tagName, caret: !!h.querySelector('.caret'), act: h.hasAttribute('data-act'),
+      aria: h.hasAttribute('aria-expanded'), rows: document.querySelectorAll('.lgroup.main .row').length,
+      textLeft: (() => { const g = document.createRange(); g.selectNodeContents(h.querySelector('.ln')); return +g.getBoundingClientRect().left.toFixed(1); })() };
+  });
+  ok(body.tag === 'SPAN' && !body.act && !body.aria, `the catalog header is a caption, not a control (<${body.tag.toLowerCase()}>, data-act ${body.act})`);
+  ok(!body.caret, 'the catalog header carries no caret — there is nothing to disclose');
+  ok(body.rows > 0, `the catalog can never be empty (${body.rows} rows)`);
+  /* removing the caret must not let the text fall back to 16 — it did, which would have aligned the body header
+     with the page title while both work headers stayed at 68. The leading slot survives the caret. */
+  ok(near(body.textLeft, 68), `the caption keeps the 68 slot the caret used to hold (${body.textLeft})`);
   ok(groups.every(g => g.h >= 44), `every group header is a 44px target (${groups.map(g => g.h).join(', ')})`);
 
   /* decision 10: a group header must not read as a row, and its caret is LEADING (a disclosure triangle),
@@ -81,17 +101,21 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
     const heads = [...document.querySelectorAll('.lhead')], row = document.querySelector('.row');
     const all = [L(document.querySelector('.ptitle')), ...heads.map(h => L(h.querySelector('.ln'))),
       +row.querySelector('.cov').getBoundingClientRect().left.toFixed(1), L(row.querySelector('.name'))];
-    return { set: [...new Set(all)].sort((a, b) => a - b), carets: heads.map(h => +h.querySelector('.caret').getBoundingClientRect().left.toFixed(1)) };
+    return { set: [...new Set(all)].sort((a, b) => a - b),
+      carets: heads.filter(h => h.querySelector('.caret')).map(h => +h.querySelector('.caret').getBoundingClientRect().left.toFixed(1)) };
   });
   ok(edges.set.length === 2 && near(edges.set[0], 16) && near(edges.set[1], 68), `exactly two text left edges (${edges.set.join(' / ')})`);
   ok(near(sep.headTextLeft, sep.rowTextLeft), `band text sits in the row-text column (${sep.headTextLeft} vs ${sep.rowTextLeft})`);
   ok(edges.carets.every(c => near(c, 16)), `every caret holds the 16 edge, none ragged (${edges.carets.join(', ')})`);
   ok(near(sep.headBleed, 375, 1), `the band is full-bleed (${sep.headBleed})`);
-  const rot = await J(() => ({
-    collapsed: getComputedStyle(document.querySelector('.lhead[aria-expanded="false"] .caret')).transform,
-    expanded: getComputedStyle(document.querySelector('.lhead[aria-expanded="true"] .caret')).transform
-  }));
-  ok(rot.collapsed !== rot.expanded, `the caret rotates to show state (${rot.collapsed} vs ${rot.expanded})`);
+  /* since decision 15 only the two WORK groups have carets, and both are collapsed at rest — so the expanded
+     transform has to be produced, not just queried. Open one, read it, close it, re-querying after each render. */
+  const rotC = await J(() => getComputedStyle(document.querySelector('.lhead[aria-expanded="false"] .caret')).transform);
+  await p.click('[data-g="gap"]'); await p.waitForTimeout(300);
+  const rotE = await J(() => getComputedStyle(document.querySelector('.lhead[aria-expanded="true"] .caret')).transform);
+  await p.click('[data-g="gap"]'); await p.waitForTimeout(300); await settle();
+  ok(rotC !== rotE, `the caret rotates to show state (${rotC} vs ${rotE})`);
+  ok(await J(() => document.querySelector('[data-g="gap"]').getAttribute('aria-expanded') === 'false'), 'and the group is closed again, leaving the page as it was');
 
   /* no Pendientes page and no badge survive decision 8 */
   ok(await J(() => !document.querySelector('.badge') && !document.querySelector('[data-act="pend"]')), 'the Pendientes page and its badge are gone (decision 8 replaces D-19g here)');
@@ -119,6 +143,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   /* decision 14 — the tint marks the WORK BLOCK, so the page carries exactly ONE tinted mass at rest. Two
      (work block + catalog band) was the residual "rayado". Sampled as raw runs down x=300, clear of all text —
      a computed style per element would not prove what the eye actually sees stacked. */
+  await cool();
   const masses = await J(() => {
     const seen = [];
     for (let y = 150; y < 560; y++) {

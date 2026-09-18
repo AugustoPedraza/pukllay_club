@@ -199,6 +199,20 @@
   .lgroup.main .lhead { background: transparent; }
   .lgroup.main .lhw.pinned .lhead { background: var(--color-surface); }
 
+  /* decision 15 — the BODY group is not collapsible. Decision 14 justified its plain header as "welded to its
+     rows", but collapsing it left no rows: a plain, bandless header stranded above 308px of void while the two
+     work headers kept their bands — three identical collapsed groups, one looking different for no reason a user
+     could see. Rejected: banding it while collapsed, and banding every header always — both only restyle the
+     orphan, and BOTH still let you reach a Juegos tab with zero games and 42% of the viewport blank. Dropping the
+     control removes the state instead, and costs nothing real: collapsing 385 games shows you nothing, and the
+     work groups already sit above it, so there is no scrolling to save.
+     The caret is what holds header text at 68 (decision 13), so removing it must NOT let the text fall back to
+     16 — measured, it did, which would have aligned the body header with the page title while the two work
+     headers stayed at 68: three treatments, and the pairing decision 13 rejected, reinstated by accident.
+     The leading slot survives the caret. */
+  .lhead.fixed { cursor: default; padding-left: 68px; }
+  .lhead.fixed:hover { background: transparent; }
+
   /* decision 9 — scrolling down slides the search away (+1 row on every viewport); the smallest flick up
      brings it back, already usable. Measured: collapsing it to a 44px icon bar saves only 16px — a quarter of
      a row — so it gained 0 rows at 375×667 and still cost a tap. */
@@ -470,12 +484,18 @@ function updateBar() {
    The caret is LEADING and rotates (decision 10): a disclosure triangle, never a trailing "›", which under
    D-19i means "opens a page". */
 function groupSection(g) {
-  const all = inGroup(g.key), open = !!S.open[g.key];
-  const paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
-  return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}">
-    <h2 class="lhw"><button class="lhead" data-act="group" data-g="${g.key}" aria-expanded="${open}">
+  const all = inGroup(g.key), paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
+  /* decision 15 — the body group is not collapsible: a caption for its list, not a peer of the two controls
+     above it. Rendered as a span with no caret and no data-act, so the empty-page state is unreachable. */
+  const fixed = g.key === 'rest';
+  const open = fixed || !!S.open[g.key];   /* a body group that cannot collapse is always open */
+  const head = fixed
+    ? `<span class="lhead fixed"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span>`
+    : `<button class="lhead" data-act="group" data-g="${g.key}" aria-expanded="${open}">
       <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>
-      <span class="caret" aria-hidden="true">${ic('chevR')}</span></button></h2>
+      <span class="caret" aria-hidden="true">${ic('chevR')}</span></button>`;
+  return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}">
+    <h2 class="lhw">${head}</h2>
     ${open ? `${g.hint ? `<p class="hint">${g.hint}</p>` : ''}
       <div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
       ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}
