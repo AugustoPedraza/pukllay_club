@@ -198,8 +198,18 @@
      does not have); and welding the label to its rows alone, which FAILED at 1.2:1 because a header's bottom
      padding feeds the gap to the NEXT header too, so welding tightened both ends at once. Proximity is a RATIO —
      the two ends have to move in opposite directions. */
-  .lhead { padding-top: 26px; padding-bottom: 0; }
-  .lgroup:first-of-type .lhead { padding-top: 14px; }
+  .lhead { --pt: 26px; padding-top: var(--pt); padding-bottom: 0; }
+  .lgroup:first-of-type .lhead { --pt: 14px; }
+
+  /* decision 27 — the leading air is REDISTRIBUTED when the header pins, because a pinned header has a second
+     geometry the resting one never shows. At rest the caption draws nothing, so its 26px of padding-top is pure
+     air; the moment it pins it gains --color-surface and that same padding becomes 26px of EMPTY TINT above the
+     text, with the text jammed against the band's bottom edge (measured: 26.0 above, 0.5 below).
+     Halving --pt onto both sides centres the ink in the band and keeps the box height byte-identical, so the
+     sticky element's flow slot does not change and nothing jumps at the moment it pins.
+     The lesson this adds to "measure ink, not boxes": an element that draws NOTHING at rest but something in
+     another state has TWO geometries, and spacing tuned for the invisible one becomes visible in the other. */
+  .lhw.pinned .lhead { padding-top: calc(var(--pt) / 2); padding-bottom: calc(var(--pt) / 2); }
 
   /* decision 20 — the section label returns to D-19j's rank, 15/600 at full strength. Audited, the ladder was
      INVERTED: the label organising 385 rows was 2px smaller and 2.8x lower contrast than a single row inside it

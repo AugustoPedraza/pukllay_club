@@ -324,6 +324,27 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   });
   ok(pinned.count === 1, `exactly one section header is pinned while scrolling (${pinned.count}: ${pinned.name})`);
   ok(pinned.bg === pinned.want, `the pinned header gains its fill so it terminates over the rows (${pinned.bg})`);
+
+  /* ---------- decision 27 — the pinned band's GEOMETRY, not just its identity ----------
+     Reported from a real device: "when I scroll, the background color isn't aligned, making the text be more
+     aligned to the bottom of what it shows". Measured, exactly right — 26.0px of empty tint above the text and
+     0.5 below, because decision 21's `padding-top: 26; padding-bottom: 0` (which makes the RESTING air) becomes
+     visible geometry the instant the caption gains a fill. Every earlier pinned check asserted WHICH header was
+     pinned and never what it looked like, so a transparent-state measurement shipped as a tinted-state defect.
+     The band must centre its ink AND keep its box height, so the sticky element's flow slot never changes. */
+  const band = await J(() => {
+    const hw = [...document.querySelectorAll('.lhw')].find(w => w.classList.contains('pinned'));
+    const h = hw.querySelector('.lhead'), ln = h.querySelector('.ln');
+    const box = h.getBoundingClientRect();
+    const g = document.createRange(); g.selectNodeContents(ln);
+    const ink = g.getBoundingClientRect();
+    const rest = document.querySelector('.lgroup.main .lhead');
+    return { above: +(ink.top - box.top).toFixed(1), below: +(box.bottom - ink.bottom).toFixed(1),
+      h: +box.height.toFixed(1), restH: +rest.getBoundingClientRect().height.toFixed(1) };
+  });
+  ok(Math.abs(band.above - band.below) <= 1.5, `the pinned band centres its text (${band.above} above, ${band.below} below)`);
+  ok(band.above >= 6, `with real breathing room, not a hairline (${band.above}px)`);
+  ok(near(band.h, band.restH, 0.6), `and its height is unchanged, so nothing jumps as it pins (${band.h} vs ${band.restH})`);
   await settle(); await p.screenshot({ path: path.join(OUT, '03-search-hidden-375x740-light.png') });
   for (const y of [900, 780, 640]) { await sc(y); await p.waitForTimeout(120); }
   await p.waitForTimeout(250);
