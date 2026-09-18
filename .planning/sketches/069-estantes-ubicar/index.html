@@ -69,10 +69,14 @@
   :root[data-theme="dark"] .obtn.pri { border-color: var(--color-accent-text); }
 
   /* ---- search: placeholder with instructions, magnifier on the RIGHT (→ ✕ with text) ---- */
-  .search { position: relative; margin-top: 8px; z-index: 12; }
+  /* decision 61 — raised-page rhythm. Measured before (375×667): title row → field 8, field → "Estante 1" 20, heading → lifted
+     cover 8 (others 20), everything in the top 376px. Now title row → field 16 · field → answer 32 (a new group) · heading →
+     lifted cover 16 (others 28). */
+  .search { position: relative; margin-top: 16px; z-index: 12; }
   .sfield { position: relative; }
   .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; }
   .sfield input::placeholder { color: var(--color-text-muted); }
+  .sfield input { text-overflow: ellipsis; }                                            /* decision 60: a kept long name ends in … */
   .sfield input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
   :root[data-theme="dark"] .sfield input:focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
   .sfield input::-webkit-search-cancel-button { display: none; }
@@ -82,13 +86,17 @@
 
   /* suggestions: drop DOWN OVER whatever is below (decision 12) */
   .sugg { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
-    box-shadow: var(--shadow-lg); padding: 4px 0; max-height: 272px; overflow-y: auto; }
-  /* 272px: the room between the field (bottom at 169px) and a 292px phone keyboard is 275px — measured. 4 whole rows + half of a 5th, so a longer list reads as scrollable. */
+    box-shadow: var(--shadow-lg); padding: 4px 0; max-height: 264px; overflow-y: auto; }
+  /* 264px: the room between the dropdown's top (181px, field bottom 177 + 4) and a 292px phone keyboard (448) is 267px — measured after decision 61 moved the field down 8px (272 ran 5px under the keyboard). */
   .sugg[hidden] { display: none; }
   .srow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px; border: 0; background: none; text-align: left; cursor: pointer; }
   .srow:hover, .srow.hl { background: var(--color-surface); }
   .srow .ttl { font-size: 15px; line-height: 1.3; }
   .srow .ttl mark { background: none; color: inherit; font-weight: 600; }
+  /* decision 62 — a search with no match offers to create the game */
+  .srow.create .cov { display: grid; place-items: center; background: var(--color-surface); color: var(--color-accent-text); }
+  .srow.create .cov svg { width: 22px; height: 22px; }
+  .srow.create .ttl { color: var(--color-accent-text); font-weight: 600; }
   .snone { padding: 14px 16px; font-size: 14px; color: var(--color-text-muted); }
 
   /* covers */
@@ -102,9 +110,14 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
 
   /* ---- the answer ---- */
-  .answer { margin-top: 20px; }
+  .answer { margin-top: 32px; }
+  #answer .rail { padding-top: 24px; }
   .answer[hidden] { display: none; }
   .aname { margin: 0 0 4px; font-size: 17px; font-weight: 600; line-height: 1.3; }
+  /* decision 63 — the estante is context, not a heading: 18px estante icon + name, 14/600 muted (like the sheet, 33).
+     Before: 17/600 in text colour read as a third heading between the page title (22/600) and the field. */
+  .aname.e1 { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--color-text-muted); }
+  .aname.e1 svg { width: 18px; height: 18px; flex-shrink: 0; }
   .shelf { position: relative; margin: 0 -16px; }
   .rail { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x proximity; padding: 16px 16px 8px; scrollbar-width: none; }
   .rail::-webkit-scrollbar { display: none; }
@@ -144,8 +157,38 @@
   .row.compact .sub { font-size: 12px; }
   .row.compact + .row.compact::before { left: 60px; }
 
-  /* ---- management page (a stub: decision 18) ---- */
+  /* ---- management page (decisions 43–47) ---- */
   .shelfico { width: 40px; height: 40px; border-radius: 8px; background: var(--color-surface); display: grid; place-items: center; flex-shrink: 0; color: var(--color-accent-text); }
+  .shelfico > svg { width: 24px; height: 24px; }
+  .mhead { margin-bottom: 8px; }
+  .sh-head .estcov { display: grid; place-items: center; background: var(--color-surface); }
+  .sh-head .estcov svg { width: 28px; height: 28px; }
+  /* decision 51 — one list at a time under the search: Últimas búsquedas · Juegos afuera · Juegos sin ubicar */
+  .dot.out { background: #3D7DD8; }
+  .cnt { font-weight: 400; margin-left: 4px; }
+  .more { min-height: 44px; margin-left: -12px; display: flex; align-items: center; gap: 2px; padding: 0 12px; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--ter); cursor: pointer; }
+  .more svg { width: 16px; height: 16px; }
+  .lhead { margin: 8px 0 4px; font-size: 15px; font-weight: 600; line-height: 1.3; min-height: 20px; }
+  /* decision 58 — the Estantes page is the question + the search only. The lists move out:
+     Últimas búsquedas → the search dropdown while the field is focused and empty (the standard search pattern);
+     Afuera + Sin ubicar → a Pendientes page, reached from P1 a header icon with a count badge, or P2 one quiet line. */
+  .sglabel { padding: 8px 16px 4px; font-size: 13px; color: var(--color-text-muted); }
+  .hacts { display: flex; align-items: center; margin-right: -12px; }
+  .ibtn.bd { position: relative; }
+  .badge { position: absolute; top: 5px; right: 3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--color-primary); color: #fff;
+    font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--color-bg); }
+  :root[data-theme="dark"] .badge { background: var(--color-accent-text); color: var(--color-bg); }
+  #recent:empty { display: none; }
+  .device:not(.raised) #recent { margin-top: 24px; }
+  .psec + .psec { margin-top: 24px; }
+  /* decision 66 — Crear opens the new-game editor (a stand-in here: the real one is Juegos, sketch 063), then "¿Dónde va?" */
+  .flab { display: block; margin: 8px 0 6px; font-size: 13px; font-weight: 600; }
+  .tfield { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; }
+  .tfield:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  .standin { margin: 16px 0 0; padding: 12px 14px; border-radius: 8px; background: var(--color-surface); font-size: 13px; line-height: 1.45; color: var(--color-text-muted); }
+  .obtn.wide { width: 100%; margin-top: 24px; }
+  .psec .hint { margin: 0 0 4px; }
+  .lempty { margin: 8px 0 0; font-size: 14px; color: var(--color-text-muted); min-height: 32px; }
 
   /* ---- sheet: rows only, commit first; closes with ✕ in the header (decision 29) ---- */
   .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
@@ -197,6 +240,9 @@
   .slot:focus-visible { outline: none; }
   .placing .box { cursor: default; pointer-events: none; }
   .rail .slot .pl { margin-top: 38px; }
+  /* decision 64 — the found game's rail offers "+" on each side of the selected cover: put a game right there */
+  #rail { gap: 10px; }
+  #rail .slot { margin: 0 2px; }   /* 12px to each cover: the 44px hit box (20 + 12 + 12) reaches the covers' edges without covering them */
   .rail.placing { gap: 4px; }
 
   /* decision 36 — the Estantes search reused to choose the spot ("place a game based on another") */
@@ -224,6 +270,27 @@
   /* with the keyboard up the sheet sits on top of it (065: sheets sit above the keyboard) */
   .device.kbd2 .kbd-sim { display: grid; grid-template-rows: repeat(4, 1fr); gap: 10px; z-index: 45; }
   .device.kbd2 .sheet.full { bottom: 292px; padding-bottom: 0; }
+  /* decision 67 — Nuevo estante / Editar: one form sheet (D-19e header), sitting on the keyboard */
+  .device.kbd2 .sheet.form { bottom: 292px; padding-bottom: 0; border-radius: 18px 18px 0 0; }
+  .fbody { padding: 8px 16px 16px; }
+  .fbody .flab { margin-top: 0; }
+  .ferr { margin: 6px 0 0; font-size: 13px; color: var(--color-danger); }
+  .ferr[hidden] { display: none; }
+  .tfield[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  .fbody .obtn.wide { margin-top: 16px; }
+  /* decision 68 — Ordenar estantes: a mode entered from a ⇅ icon beside "+"; rows get a ≡ handle (drag), and a tap on the
+     handle shows ↑/↓ on that row (the non-drag way, WCAG 2.5.7). Listo ends it. */
+  .row.ord { cursor: default; } .row.ord:hover { background: none; }
+  .handle { width: 44px; height: 44px; margin-right: -12px; flex-shrink: 0; border: 0; background: none; border-radius: 8px; display: grid; place-items: center;
+    color: var(--color-text-muted); touch-action: none; cursor: grab; }
+  .handle svg { width: 22px; height: 22px; }
+  .handle[aria-pressed="true"] { background: var(--color-surface); color: var(--color-accent-text); }
+  .handle:focus-visible, .arrows .ibtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .arrows { display: flex; flex-shrink: 0; }
+  .arrows .ibtn:disabled { opacity: .35; cursor: default; background: none; }
+  .row.dragging { z-index: 5; background: var(--color-bg); box-shadow: var(--shadow-lg); border-radius: 8px; cursor: grabbing; }
+  .row.dragging::before, .row.dragging + .row::before { display: none; }
+  .rows.sorting .row:not(.dragging) { transition: transform 150ms var(--ease-out-soft); }
 
   /* ---- decision 41 — a confirmation is a centred dialog (M3 basic dialog): title, one line, two text actions ---- */
   .dscrim { position: absolute; inset: 0; z-index: 60; background: color-mix(in srgb, #231339 38%, transparent); display: grid; place-items: center; padding: 24px;
@@ -261,8 +328,6 @@
   .device:not(.raised) .hero { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; margin-bottom: 24px; }
   .device:not(.raised) .search { margin-top: 0; }
   .device:not(.raised) #recent { margin-top: 40px; }
-  .hero .shelfico { width: 64px; height: 64px; border-radius: 16px; }
-  .hero .shelfico svg { width: 44px; height: 44px; }
   .hero p { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.3; }
   .sp { flex: 0 0 0; }
   /* the free space splits 2:3 above:below — the optical centre. Measured before: an exact 1:1 centre put the
@@ -312,6 +377,7 @@
 </div></div>
 <div id="tools">
   <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado simulado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+  <div>Juegos sin lugar: <button data-many="0" class="on">6</button> <button data-many="1">434</button> · Afuera (Fase 4): <button data-out="3" class="on">3</button> <button data-out="0">0</button></div>
   <div>Estante 10 vacío: <button data-empty-set="1">Sí</button> <button data-empty-set="0" class="on">No</button></div>
 </div>
 
@@ -321,6 +387,7 @@
 const P = {
   search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  chevD: '<path d="m6 9 6 6 6-6"/>',
   chevR: '<path d="m9 6 6 6-6 6"/>', chevL: '<path d="m15 6-6 6 6 6"/>',
   eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
   move: '<path d="M5 9 2 12l3 3M19 9l3 3-3 3M2 12h20"/>',
@@ -333,6 +400,11 @@ const P = {
   /* round 4 — a shelf that reads as one at 16px: open sides, two boards, boxes standing on them (the vertical-stroke
      "shelf" above reads as a barcode; a framed cabinet read as a window, a single board with boxes as a sofa) */
   estante: '<path d="M3.5 3.5v17M20.5 3.5v17M3.5 12h17M3.5 20.5h17"/><rect x="6" y="6.5" width="5" height="5.5" rx=".6"/><rect x="12.5" y="8.5" width="6" height="3.5" rx=".6"/><rect x="6" y="15.5" width="7" height="5" rx=".6"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>',
+  inbox: '<path d="M3.5 13.5 6.2 5.5h11.6l2.7 8V18.5H3.5v-5Z"/><path d="M3.5 13.5h5l1.5 2.5h4l1.5-2.5h5"/>',
+  sort: '<path d="M8 4v16M4.5 7.5 8 4l3.5 3.5M16 20V4M12.5 16.5 16 20l3.5-3.5"/>',
+  grip: '<path d="M5 8h14M5 12h14M5 16h14"/>',
+  up: '<path d="M12 19V5M6 11l6-6 6 6"/>', down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
 };
@@ -354,7 +426,8 @@ const shelves = SIZES.map((n, i) => ({ id: i + 1, name: 'Estante ' + (i + 1), id
 { let k = 0; const pool = G.map(g => g.id).filter(id => !NOSPOT.includes(id)); shelves.forEach((s, i) => { s.ids = pool.slice(k, k + SIZES[i]); k += SIZES[i]; }); }
 const where = id => { for (const s of [...shelves, EMPTY_SHELF]) { const i = s.ids.indexOf(id); if (i >= 0) return { s, i }; } return null; };
 
-const S = { screen: 'ubicar', q: '', picked: null, sel: null, recent: [], placing: null };
+const S = { screen: 'ubicar', q: '', picked: null, sel: null, recent: [], placing: null, list: 'recent', full: null };
+const PVAR = 'P1';   /* decision 59 — P1 won (header icon + badge); P2's line removed */
 /* seeded recent lookups: three shelved, one with no spot (shows the dot + text) */
 S.recent = [G.find(g => /^Catan: El Auge/.test(g.name)).id, NOSPOT[2], G.find(g => g.name === 'Lapsus').id, G.find(g => g.name === 'Wingspan')?.id || 40].filter(Boolean);
 
@@ -366,13 +439,15 @@ const main = $('#main');
 /* ---------- screens ---------- */
 function render() {
   if (S.screen === 'admin') return renderAdmin();
-  main.innerHTML = `
-    <div class="phead"><h1 class="ptitle">Estantes</h1><button class="ibtn pull-r" data-act="admin" aria-label="Administrar estantes" title="Administrar estantes">${ic('gear')}</button></div>
+  if (S.screen === 'pend') return renderPend();
+  if (S.screen === 'editor') return renderEditor();
+  main.innerHTML = `${false ? `` : `
+    <div class="phead"><h1 class="ptitle">Estantes</h1><div class="hacts">${PVAR === 'P1' ? pendBtn() : ''}<button class="ibtn" data-act="admin" aria-label="Administrar estantes" title="Administrar estantes">${ic('gear')}</button></div></div>`}
     <div class="sp sp-top"></div>
-    <div class="hero"><span class="shelfico">${shelfDrawing(40)}</span><p>¿Qué juego tenés en la mano?</p></div>
+    <div class="hero"><p>¿Qué juego buscás?</p></div>
     <div class="search" role="search">
-      <div class="sfield"><label class="sr" for="q">Buscá un juego para ubicarlo</label>
-        <input id="q" type="search" placeholder="Buscá un juego para ubicarlo" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
+      <div class="sfield"><label class="sr" for="q">Buscá un juego</label>
+        <input id="q" type="search" placeholder="Buscá un juego" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
           role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list">
         <span class="sico" id="sico">${ic('search')}</span></div>
       <div class="sugg" id="sugg" role="listbox" hidden></div>
@@ -382,18 +457,65 @@ function render() {
     <div class="sp sp-bot"></div>`;
   renderAnswer(); renderRecent();
 }
-function renderAnswer() {
+const BVAR = 'B1';   /* decision 60 — the field keeps the found game's name; ✕ goes back to idle (B2/B3 removed) */
+function renderAnswer() { renderAnswer0(); afterAnswer(); }
+function afterAnswer() {
+  const inp = $('#q'); if (!inp) return;
+  const g = S.picked && where(S.picked) ? byId(S.sel || S.picked) : null;
+  if (BVAR === 'B1' && document.activeElement !== inp) {                 /* B1 — like "¿Dónde va?" (38): the field keeps what was found */
+    if (g) inp.value = g.name; else if (inp.value === S.shownName) inp.value = '';
+    S.shownName = g ? g.name : null; renderSugg();
+  }
+}
+function goIdle() {
+  S.picked = null; S.sel = null; S.shownName = null;
+  const inp = $('#q'); if (inp) { inp.value = ''; inp.blur(); }
+  hl = -1; renderSugg(); renderAnswer(); syncLayout(); $('#scroller').scrollTo({ top: 0 });
+}
+const addLabel = (s, i) => i === 0 ? `Poner un juego al principio de ${s.name}` : i === s.ids.length ? `Poner un juego al final de ${s.name}` : `Poner un juego entre ${byId(s.ids[i - 1]).name} y ${byId(s.ids[i]).name}`;
+const addSlot = (s, i) => `<button class="slot" data-act="addat" data-sid="${s.id}" data-pos="${i}" aria-label="${esc(addLabel(s, i))}">${plus}</button>`;
+/* decision 64 — "¿Qué juego va acá?": the reverse of "¿Dónde va?". The spot is known, staff choose the game: Sin ubicar
+   games first (the likely ones), a search over every game (a shelved one is moved here, 40), or Crear when nothing matches. */
+let ADD = null;
+function addSheetOpen(sid, pos, from) {
+  const x = shelfById(sid); ADD = { sid, pos };
+  const where2 = pos === 0 ? 'al principio' : pos === x.ids.length ? 'al final' : `entre ${byId(x.ids[pos - 1]).name} y ${byId(x.ids[pos]).name}`;
+  openSheet(`<span class="cov estcov">${ic('estante')}</span><div class="sh-txt"><div class="est-meta">${esc(x.name)} · ${esc(where2)}</div><div class="sh-title">¿Qué juego va acá?</div></div>`,
+    `<div class="pbody" id="abody"></div>`, from, { full: true, focus: '#aq',
+      top: `<div class="psearch"><div class="sfield"><label class="sr" for="aq">Buscá el juego que va acá</label>
+        <input id="aq" type="search" placeholder="Buscá el juego que va acá" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+        <span class="sico">${ic('search')}</span></div></div>` });
+  renderABody();
+}
+function renderABody() {
+  const body = $('#abody'); if (!body || !ADD) return;
+  const q = $('#aq')?.value || '', n = norm(q.trim());
+  const row = g => `<button class="srow" role="option" data-act="addpick" data-id="${g.id}">${cover(g)}<span class="txt"><span class="ttl">${q ? markMatch(g.name, q) : esc(g.name)}</span><span class="sub">${status(g)}</span></span></button>`;
+  if (!n) { const un = G.filter(g => !where(g.id));
+    body.innerHTML = un.length ? `<div class="glabel quiet">Sin ubicar · ${un.length}</div><div class="pres">${un.map(row).join('')}</div>` : `<p class="lempty">Todos los juegos tienen lugar. Buscá uno para moverlo acá.</p>`; return; }
+  const list = suggestions(q);
+  body.innerHTML = `<div class="pres" role="listbox">${list.length ? list.map(row).join('') : `<div class="snone">Ningún juego se llama así.</div>
+    <button class="srow create" data-act="create" data-q="${esc(q.trim())}"><span class="cov">${ic('place')}</span><span class="txt"><span class="ttl">Crear «${esc(q.trim())}»</span><span class="sub">Agregarlo al catálogo</span></span></button>`}</div>`;
+}
+function addPick(gid) {
+  const x = shelfById(ADD.sid), from = where(gid); let pos = ADD.pos;
+  if (from && from.s === x) { if (from.i === pos || from.i === pos - 1) { closeSheet(); return snack('Ya está en ese lugar'); } if (from.i < pos) pos -= 1; }
+  S.placing = { gid, move: !!from }; ADD = null;
+  placeAt(byId(gid), x, pos);                                          /* remove + add in one step, snackbar + landing (39–40) */
+}
+function renderAnswer0() {
   const a = $('#answer'); if (!a) return;
   if (!S.picked) { a.hidden = true; a.innerHTML = ''; return; }
   a.hidden = false;
   const g = byId(S.picked), w = where(g.id);
   if (!w) { a.hidden = true; a.innerHTML = ''; return; }
-  const selId = S.sel || g.id;
-  a.innerHTML = `<h2 class="aname">${esc(w.s.name)}</h2>
+  const selId = S.sel || g.id, n = w.s.ids.length;
+  const head = `<h2 class="aname e1">${ic('estante')}${esc(w.s.name)}</h2>`;
+  a.innerHTML = `${head}
     <div class="shelf"><div class="rail" id="rail" role="group" aria-label="${esc(w.s.name)}, de izquierda a derecha">
       ${w.s.ids.map((id, i) => { const b = byId(id), on = id === selId;
-        return `<button class="box ${on ? 'on' : ''}" data-act="box" data-id="${id}" aria-pressed="${on}" aria-label="${esc(b.name)}, caja ${i + 1} de ${w.s.ids.length}${on ? '. Tocá para ver opciones' : ''}">
-          ${cover(b, 'bc')}<span class="cap">${esc(b.name)}</span></button>`; }).join('')}
+        return `${on ? addSlot(w.s, i) : ''}<button class="box ${on ? 'on' : ''}" data-act="box" data-id="${id}" aria-pressed="${on}" aria-label="${esc(b.name)}, caja ${i + 1} de ${w.s.ids.length}${on ? '. Tocá para ver opciones' : ''}">
+          ${cover(b, 'bc')}<span class="cap">${esc(b.name)}</span></button>${on ? addSlot(w.s, i + 1) : ''}`; }).join('')}
     </div></div>`;
   centerOn(selId, false);
 }
@@ -403,23 +525,124 @@ function centerOn(id, smooth) {
     rail.scrollTo({ left: el.offsetLeft - (rail.clientWidth - el.offsetWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
   });
 }
-function renderRecent() {
-  const r = $('#recent'); if (!r) return;
-  const list = S.recent.filter(id => id !== S.picked).slice(0, 5);
-  /* developer: "Buscados recientemente takes too much relevancy" and "the right chevron is for navigate" —
-     so: a plainer label, 3 rows not 5, compact rows, and no chevron (a recent row shows its answer in place,
-     it does not navigate). */
-  r.innerHTML = list.length ? `<h2 class="glabel quiet">Últimas búsquedas</h2>
-    <div class="rows">${list.slice(0, 3).map(id => { const g = byId(id);
-      return `<button class="row compact" data-act="pick" data-id="${id}">${cover(g)}<span class="txt"><span class="name">${esc(g.name)}</span><span class="sub">${status(g)}</span></span></button>`; }).join('')}</div>` : '';
-}
-function renderAdmin() {
+/* decision 51 — three lists, one at a time. Juegos afuera is Phase 4 checkout data: faked here (3 shelved games "picked up") */
+let AFUERA = [];
+const LISTS = {
+  recent: { short: 'Últimas', long: 'Últimas búsquedas', ids: () => S.recent.filter(id => id !== S.picked), empty: 'Todavía no buscaste ningún juego.', count: false },
+  out: { short: 'Afuera', long: 'Juegos afuera', ids: () => AFUERA.filter(id => where(id)), empty: 'Todos los juegos están en su estante.', count: true },
+  none: { short: 'Sin ubicar', long: 'Juegos sin ubicar', ids: () => G.filter(g => !where(g.id)).map(g => g.id), empty: 'Todos los juegos tienen lugar.', count: true },
+};
+const listRow = (id, key) => { const g = byId(id), w = where(id);
+  const sub = key === 'out' ? `<span class="dot out" aria-hidden="true"></span>Afuera · va en ${esc(w.s.name)}` : status(g);
+  return `<button class="row compact" data-act="${S.screen === 'pend' ? 'ppick' : 'pick'}" data-id="${id}">${cover(g)}<span class="txt"><span class="name">${esc(g.name)}</span><span class="sub">${sub}</span></span></button>`; };
+const pendCount = () => LISTS.out.ids().length + LISTS.none.ids().length;
+const pendBtn = () => { const n = pendCount();
+  return `<button class="ibtn bd" data-act="pend" aria-label="Pendientes${n ? `: ${n} juegos` : ''}" title="Pendientes">${ic('inbox')}${n ? `<span class="badge" aria-hidden="true">${n > 99 ? '99+' : n}</span>` : ''}</button>`; };
+function renderRecent() {}   /* decision 58: nothing lives under the idle search any more */
+/* Pendientes — the two work queues on their own page */
+function renderEditor() {
+  const at = S.newAt && shelfById(S.newAt.sid);
+  const next = at ? `Después va en ${at.name}, ${S.newAt.pos === 0 ? 'al principio' : S.newAt.pos === at.ids.length ? 'al final' : `entre ${byId(at.ids[S.newAt.pos - 1]).name} y ${byId(at.ids[S.newAt.pos]).name}`}.` : 'Después elegís dónde va.';
   main.innerHTML = `<button class="back" data-act="back">${ic('chevL')}Estantes</button>
-    <h1 class="ptitle" style="margin-bottom:12px">Administrar estantes</h1>
-    <div class="rows">${shelves.map(s => `<button class="row" data-act="soon" data-what="La página de ${esc(s.name)}">
-      <span class="shelfico">${shelfDrawing(s.ids.length)}</span><span class="txt"><span class="name">${esc(s.name)}</span><span class="sub">${s.ids.length} juegos</span></span>${ic('chevR')}</button>`).join('')}</div>
-    <p class="hint" style="margin-top:16px">Crear, ordenar, renombrar y eliminar estantes se diseña en los próximos bocetos.</p>`;
-  main.querySelectorAll('.row > svg').forEach(s => s.classList.add('chev'));
+    <div class="phead mhead"><h1 class="ptitle">Nuevo juego</h1></div>
+    <label class="flab" for="nn">Nombre</label><input id="nn" class="tfield" value="${esc(S.newName || '')}" autocomplete="off">
+    <p class="hint">${esc(next)}</p>
+    <p class="standin">Acá va el editor de juegos de Juegos (boceto 063): portada, jugadores, duración, dificultad… Este boceto solo muestra la entrada y la salida.</p>
+    <button class="obtn pri wide" data-act="newsave">Crear juego</button>`;
+}
+function renderPend() {
+  const sec = (k, hint) => { const ids = LISTS[k].ids();
+    return `<section class="psec"><h2 class="lhead">${LISTS[k].short}<span class="cnt">${ids.length}</span></h2>${ids.length ? `<p class="hint">${hint}</p><div class="rows">${ids.map(id => listRow(id, k)).join('')}</div>` : `<p class="lempty">${LISTS[k].empty}</p>`}</section>`; };
+  main.innerHTML = `<button class="back" data-act="back">${ic('chevL')}Estantes</button>
+    <div class="phead mhead"><h1 class="ptitle">Pendientes</h1></div>
+    ${sec('out', 'Volvieron de una mesa: tocá uno para ver dónde va.')}${sec('none', 'Todavía no tienen lugar: tocá uno para ubicarlo.')}`;
+}
+const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
+const cnt = x => x.ids.length ? jn(x.ids.length) : 'Vacío';
+/* decisions 43–46 — estante rows (no page of their own, so no chevron) + Sin ubicar (navigates, chevron); Nuevo estante is
+   an icon at the right of the title, like the gear on Estantes */
+let ORD = null;   /* decision 68 — { before: [ids], arrows: sid|null } while ordering */
+function renderAdmin() {
+  if (ORD) return renderOrder();
+  main.innerHTML = `<button class="back" data-act="back">${ic('chevL')}Estantes</button>
+    <div class="phead mhead"><h1 class="ptitle">Administrar estantes</h1><div class="hacts">
+      <button class="ibtn" data-act="ordon" aria-label="Ordenar estantes" title="Ordenar estantes">${ic('sort')}</button>
+      <button class="ibtn" data-act="newest" aria-label="Nuevo estante" title="Nuevo estante">${ic('place')}</button></div></div>
+    <div class="rows">${allShelves().map(s => `<button class="row" data-act="esheet" data-sid="${s.id}">
+      <span class="shelfico">${ic('estante')}</span><span class="txt"><span class="name">${esc(s.name)}</span><span class="sub">${cnt(s)}</span></span></button>`).join('')}</div>`;
+}
+function renderOrder(focusSel) {
+  const n = shelves.length;
+  main.innerHTML = `<div class="phead mhead"><h1 class="ptitle">Ordenar estantes</h1><button class="tbtn pull-r" data-act="ordoff">Listo</button></div>
+    <p class="hint" style="margin:0 0 8px">Arrastrá ≡ al orden en que recorrés el salón.</p>
+    <div class="rows" id="ordrows">${shelves.map((x, i) => `<div class="row ord" data-sid="${x.id}">
+      <span class="shelfico">${ic('estante')}</span><span class="txt"><span class="name">${esc(x.name)}</span><span class="sub">${cnt(x)}</span></span>
+      ${ORD.arrows === x.id ? `<span class="arrows"><button class="ibtn" data-act="ordup" data-sid="${x.id}" aria-label="Subir ${esc(x.name)}" ${i === 0 ? 'disabled' : ''}>${ic('up')}</button><button class="ibtn" data-act="orddown" data-sid="${x.id}" aria-label="Bajar ${esc(x.name)}" ${i === n - 1 ? 'disabled' : ''}>${ic('down')}</button></span>` : ''}
+      <button class="handle" data-act="handle" data-sid="${x.id}" aria-pressed="${ORD.arrows === x.id}" aria-label="Mover ${esc(x.name)}, posición ${i + 1} de ${n}">${ic('grip')}</button></div>`).join('')}</div>
+    <p class="sr" aria-live="polite" id="ordlive"></p>`;
+  if (focusSel) $(focusSel)?.focus({ preventScroll: true });
+}
+function ordMove(sid, to) {
+  const from = shelves.findIndex(x => x.id === sid); if (from < 0 || to < 0 || to >= shelves.length || to === from) return false;
+  const [x] = shelves.splice(from, 1); shelves.splice(to, 0, x); return true;
+}
+const ordSay = sid => { const i = shelves.findIndex(x => x.id === sid); $('#ordlive').textContent = `${shelves[i].name}, posición ${i + 1} de ${shelves.length}`; };
+/* drag: the row follows the pointer; it swaps with a neighbour once the pointer passes that neighbour's middle */
+let DRAG = null;
+document.addEventListener('pointerdown', e => {
+  const h = e.target.closest('.handle'); if (!h || !ORD) return;
+  const row = h.closest('.row'), r = row.getBoundingClientRect();
+  DRAG = { row, sid: +row.dataset.sid, grab: e.clientY - r.top, y0: e.clientY, moved: false };
+  e.preventDefault();
+});
+document.addEventListener('pointermove', e => {
+  if (!DRAG) return;
+  if (!DRAG.moved && Math.abs(e.clientY - DRAG.y0) < 5) return;
+  const { row } = DRAG; if (!DRAG.moved) { DRAG.moved = true; row.classList.add('dragging'); row.parentElement.classList.add('sorting'); }
+  row.style.transform = 'none';
+  let top = row.getBoundingClientRect().top;
+  const want = e.clientY - DRAG.grab, mid = want + row.offsetHeight / 2;
+  const prev = row.previousElementSibling, next = row.nextElementSibling;
+  if (prev && mid < prev.getBoundingClientRect().top + prev.offsetHeight / 2) { row.parentElement.insertBefore(row, prev); top = row.getBoundingClientRect().top; }
+  else if (next && mid > next.getBoundingClientRect().top + next.offsetHeight / 2) { row.parentElement.insertBefore(next, row); top = row.getBoundingClientRect().top; }
+  row.style.transform = `translateY(${want - top}px)`;
+});
+document.addEventListener('pointerup', () => {
+  if (!DRAG) return; const d = DRAG; DRAG = null;
+  if (!d.moved) return;                                                /* a tap: the click handler shows the arrows */
+  d.row.classList.remove('dragging'); d.row.style.transform = ''; d.row.parentElement.classList.remove('sorting');
+  const order = [...document.querySelectorAll('#ordrows .row')].map(r => +r.dataset.sid);
+  shelves.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  ORD.arrows = null; ORD.justDragged = true; setTimeout(() => { if (ORD) ORD.justDragged = false; }, 60); renderOrder(); ordSay(d.sid);
+});
+/* decision 46 — the estante's options: Editar (the name) and Eliminar (dialog, D-19f) */
+/* decision 67 — naming an estante: the same sheet creates and edits */
+let EST = null;
+function nameSheet(x, from) {
+  EST = { id: x ? x.id : null };
+  const def = x ? x.name : `Estante ${Math.max(0, ...allShelves().map(s => s.id)) + 1}`;
+  openSheet(`<span class="cov estcov">${ic('estante')}</span><div class="sh-txt"><div class="est-meta">${x ? esc(cnt(x)) : jn(allShelves().length).replace('juego', 'estante')}</div><div class="sh-title">${x ? 'Editar estante' : 'Nuevo estante'}</div></div>`,
+    `<div class="fbody"><label class="flab" for="en">Nombre</label>
+      <input id="en" class="tfield" value="${esc(def)}" maxlength="40" autocomplete="off" enterkeyhint="done" aria-describedby="enhint enerr">
+      <p class="hint" id="enhint">Un nombre que se reconozca en el salón.</p><p class="ferr" id="enerr" role="alert" hidden></p>
+      <button class="obtn pri wide" data-act="estsave">${x ? 'Guardar' : 'Crear estante'}</button></div>`, from, { focus: '#en' });
+  $('#sheet').classList.add('form');
+}
+function estSave() {
+  const inp = $('#en'), name = inp.value.trim().replace(/\s+/g, ' '), err = $('#enerr');
+  const bad = msg => { err.textContent = msg; err.hidden = false; inp.setAttribute('aria-invalid', 'true'); inp.focus(); };
+  if (!name) return bad('Escribí un nombre.');
+  if (allShelves().some(s => s.id !== EST.id && norm(s.name) === norm(name))) return bad('Ya hay un estante con ese nombre.');
+  const x = EST.id ? shelfById(EST.id) : null, same = x && x.name === name;
+  if (x) x.name = name; else shelves.push({ id: Math.max(0, ...allShelves().map(s => s.id)) + 1, name, ids: [] });
+  closeSheet(); render();
+  if (!same) snack(x ? 'Nombre guardado' : 'Estante creado');
+}
+function estSheet(x, from) {
+  const n = x.ids.length;
+  openSheet(`<span class="cov estcov">${ic('estante')}</span><div class="sh-txt"><div class="est-meta">${cnt(x)}</div><div class="sh-title">${esc(x.name)}</div></div>`,
+    `<button class="dlink" data-act="editest" data-sid="${x.id}">${ic('edit')}<span>Editar<span class="dsub">Cambiar el nombre</span></span></button>
+     <button class="dlink danger" data-act="eliminar" data-sid="${x.id}">${ic('remove')}<span>Eliminar<span class="dsub">${n ? `Quedan sin lugar · te pedimos confirmar` : 'Está vacío · te pedimos confirmar'}</span></span></button>`, from);
 }
 /* decision 14 — a small shelf drawing, filled in proportion (10 spine slots; a full estante = 50) */
 function shelfDrawing(n) {
@@ -443,14 +666,22 @@ function markMatch(name, q) {
 }
 function renderSugg() {
   const box = $('#sugg'), inp = $('#q'); if (!box) return;
-  const q = inp.value, list = suggestions(q);
+  const q = inp.value, kept = BVAR === 'B1' && !!q && q === S.shownName;
+  const list = kept ? [] : suggestions(q);
   const ic2 = $('#sico');
+  if (kept) { ic2.outerHTML = `<button class="sico" id="sico" data-act="idle" aria-label="Borrar y volver al inicio">${ic('x')}</button>`; box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
   ic2.outerHTML = q ? `<button class="sico" id="sico" data-act="clear" aria-label="Borrar búsqueda">${ic('x')}</button>` : `<span class="sico" id="sico">${ic('search')}</span>`;
-  if (!q.trim()) { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
+  if (!q.trim()) {                                                   /* decision 58 — focused and empty: Últimas búsquedas */
+    const rec = S.recent.filter(id => id !== S.picked).slice(0, 3);
+    if (document.activeElement === inp && rec.length) { box.hidden = false; inp.setAttribute('aria-expanded', 'true');
+      box.innerHTML = `<div class="sglabel" id="sgl">Últimas búsquedas</div>` + rec.map(id => { const g = byId(id); return `<button class="srow" role="option" data-act="pick" data-id="${id}">${cover(g)}<span class="txt"><span class="ttl">${esc(g.name)}</span><span class="sub">${status(g)}</span></span></button>`; }).join('');
+      return; }
+    box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
   box.hidden = false; inp.setAttribute('aria-expanded', 'true');
   box.innerHTML = list.length ? list.map((g, i) => `<button class="srow ${i === hl ? 'hl' : ''}" role="option" id="opt-${g.id}" data-act="pick" data-id="${g.id}" aria-selected="${i === hl}">
       ${cover(g)}<span class="txt"><span class="ttl">${markMatch(g.name, q)}</span><span class="sub">${status(g)}</span></span></button>`).join('')
-    : `<div class="snone">Ningún juego se llama así.</div>`;
+    : `<div class="snone">Ningún juego se llama así.</div>
+       <button class="srow create" role="option" data-act="create" data-q="${esc(q.trim())}"><span class="cov">${ic('place')}</span><span class="txt"><span class="ttl">Crear «${esc(q.trim())}»</span><span class="sub">Agregarlo al catálogo</span></span></button>`;
 }
 function pick(id) {
   S.picked = id; S.sel = null;
@@ -460,13 +691,13 @@ function pick(id) {
   hl = -1; renderSugg(); renderAnswer(); renderRecent();
   if (S.placing) placeSheetOpen(byId(id), document.activeElement);    /* decisions 36–37: no spot → the "¿Dónde va?" sheet at once */
   syncLayout();
-  $('#scroller').scrollTo({ top: 0 });
+  if (S.screen === 'ubicar') $('#scroller').scrollTo({ top: 0 });
 }
 
 /* ---------- sheet ---------- */
 let opener = null;
 function openSheet(head, rows, from, opt = {}) {
-  opener = from; const sh = $('#sheet'); sh.classList.toggle('full', !!opt.full);
+  opener = from; const sh = $('#sheet'); sh.classList.toggle('full', !!opt.full); sh.classList.remove('form');
   sh.innerHTML = `<div class="sh-top"><div class="grab"></div><div class="sh-head">${head}<button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div>${opt.top || ''}</div>${rows}`;
   $('#backdrop').classList.add('open'); requestAnimationFrame(() => sh.classList.add('open'));
   /* focus lands on the sheet itself, not on its first row: a focused first row painted as if it were already chosen */
@@ -474,7 +705,7 @@ function openSheet(head, rows, from, opt = {}) {
 }
 function closeSheet() {
   if (S.placing) { const mv = S.placing.move; S.placing = null; if (!mv) S.picked = null; renderAnswer(); renderRecent(); syncLayout(); }   /* ✕ = cancel: a move leaves the game where it was */
-  device.classList.remove('kbd2'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener && opener.focus?.({ preventScroll: true }); }
+  ADD = null; device.classList.remove('kbd2'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener && opener.focus?.({ preventScroll: true }); }
 /* decision 30 — each option is a short verb + one grey line saying what happens (two-line rows, 64px) */
 const OPTIONS = [['ver', 'eye', 'Ver ficha', 'La página del juego en la web'], ['mover', 'move', 'Mover', 'Elegís el estante y el lugar'], ['quitar', 'remove', 'Quitar del estante', 'Queda sin lugar · te pedimos confirmar']];
 /* decisions 32–33 — the sheet names only the estante ("Estante 7", no box number, no counts), shown ABOVE the game
@@ -553,6 +784,7 @@ function placeAt(g, s, pos) {
   const move = !!S.placing?.move, from = where(g.id);                /* decision 40 — remove + add happen together, only now */
   if (from) from.s.ids.splice(from.i, 1);
   s.ids.splice(pos, 0, g.id); S.placing = null;
+  if (S.screen !== 'ubicar') { S.screen = 'ubicar'; render(); $('#scroller').scrollTo({ top: 0 }); }   /* placed from Pendientes → Estantes shows it landing */
   if ($('#sheet').classList.contains('open')) { $('#pq')?.blur(); closeSheet(); }
   const inp = $('#q'); if (inp) { inp.value = ''; inp.blur(); } hl = -1; renderSugg();   /* like decision 11: done → field clear, keyboard down */
   S.picked = g.id; S.sel = null; renderAnswer(); renderRecent();
@@ -598,6 +830,20 @@ document.addEventListener('click', e => {
   }
   const id = +t.dataset.id, act = t.dataset.act;
   if (act === 'pick') return pick(id);
+  if (act === 'idle') return goIdle();
+  if (act === 'create') {                                           /* decision 66 — the editor first, then where it goes */
+    S.newAt = ADD ? { ...ADD } : null; ADD = null; S.newName = t.dataset.q;
+    $('#sugg').hidden = true; if ($('#sheet').classList.contains('open')) closeSheet();
+    const inp = $('#q'); if (inp) { inp.value = ''; inp.blur(); }
+    S.picked = null; S.sel = null; S.screen = 'editor'; render(); syncLayout(); return $('#scroller').scrollTo({ top: 0 });
+  }
+  if (act === 'newsave') {
+    const name = $('#nn').value.trim(); if (!name) return $('#nn').focus();
+    const g = { id: Math.max(...G.map(x => x.id)) + 1, name, thumb: null, hue: hue(name) }; G.push(g);
+    const at = S.newAt; S.newAt = null; S.screen = 'ubicar'; render(); syncLayout();
+    if (at) { S.placing = { gid: g.id, move: false }; return placeAt(g, shelfById(at.sid), at.pos); }   /* from a rail "+": the spot is already chosen */
+    return pick(g.id);                                                  /* from the search: no spot yet → "¿Dónde va?" (36) */
+  }
   if (act === 'clear') { const i = $('#q'); i.value = ''; renderSugg(); return i.focus(); }
   if (act === 'box') {                                             /* decision 10 */
     const cur = S.sel || S.picked;
@@ -613,6 +859,8 @@ document.addEventListener('click', e => {
     /* decision 38 — the field keeps the chosen estante (picked by name or through a game on it) */
     const pq = $('#pq'); pq.value = S.placing.shown = x.name; pq.blur(); pqIcon(); return renderPBody();
   }
+  if (act === 'addat') return addSheetOpen(+t.dataset.sid, +t.dataset.pos, t);
+  if (act === 'addpick') return addPick(id);
   if (act === 'slot') return placeAt(byId(id), shelfById(+t.dataset.sid), +t.dataset.pos);
   if (act === 'pclear') { const pq = $('#pq'); pq.value = ''; S.placing.sid = S.placing.ref = S.placing.shown = null; pqIcon(); renderPBody(); return pq.focus(); }
   if (act === 'mover') {                                            /* decision 40 */
@@ -626,16 +874,39 @@ document.addEventListener('click', e => {
   if (act === 'dlg-no') return closeDialog();
   if (act === 'dlg-yes') { const run = DLG.run; closeDialog(); return run(); }
   if (act === 'admin') { S.screen = 'admin'; render(); return $('#scroller').scrollTo({ top: 0 }); }
-  if (act === 'back') { S.screen = 'ubicar'; return render(); }
+  if (act === 'back') { S.screen = 'ubicar'; render(); return syncLayout(); }
+  if (act === 'esheet') return estSheet(shelfById(+t.dataset.sid), t);
+  if (act === 'newest') return nameSheet(null, t);
+  if (act === 'ordon') { ORD = { before: shelves.map(x => x.id), arrows: null }; renderAdmin(); return $('#scroller').scrollTo({ top: 0 }); }
+  if (act === 'handle') { const sid = +t.dataset.sid; if (ORD.justDragged) return; ORD.arrows = ORD.arrows === sid ? null : sid; return renderOrder(`.handle[data-sid="${sid}"]`); }
+  if (act === 'ordup' || act === 'orddown') { const sid = +t.dataset.sid, i = shelves.findIndex(x => x.id === sid); if (ordMove(sid, i + (act === 'ordup' ? -1 : 1))) { renderOrder(`[data-act="${act}"][data-sid="${sid}"]:not(:disabled), .handle[data-sid="${sid}"]`); ordSay(sid); } return; }
+  if (act === 'ordoff') {
+    const before = ORD.before, changed = before.join() !== shelves.map(x => x.id).join(); ORD = null; renderAdmin();
+    if (changed) snack('Orden guardado', { label: 'Deshacer', run: () => { shelves.sort((a, b) => before.indexOf(a.id) - before.indexOf(b.id)); if (S.screen === 'admin' && !ORD) renderAdmin(); } });
+    return;
+  }
+  if (act === 'editest') { const x = shelfById(+t.dataset.sid); closeSheet(); return setTimeout(() => nameSheet(x, document.querySelector(`[data-act="esheet"][data-sid="${x.id}"]`)), 280); }
+  if (act === 'estsave') return estSave();
+  if (act === 'eliminar') {
+    const x = shelfById(+t.dataset.sid), n = x.ids.length; closeSheet();
+    return openDialog({ title: `¿Eliminar ${x.name}?`, text: n ? `Sus ${jn(n)} quedan sin lugar hasta que los vuelvas a ubicar.` : 'Está vacío.', yes: 'Eliminar', run: () => {
+      const i = shelves.indexOf(x); if (i >= 0) shelves.splice(i, 1); else WITH_EMPTY = false; render();
+      snack('Estante eliminado', { label: 'Deshacer', run: () => { if (i >= 0) shelves.splice(i, 0, x); else WITH_EMPTY = true; if (S.screen === 'admin') render(); } }); } });
+  }
+  if (act === 'pend') { S.screen = 'pend'; S.picked = null; S.sel = null; render(); syncLayout(); return $('#scroller').scrollTo({ top: 0 }); }
+  if (act === 'ppick') { if (where(id)) { S.screen = 'ubicar'; render(); } return pick(id); }   /* afuera → its spot on Estantes; sin ubicar → "¿Dónde va?" over Pendientes */
   if (act === 'soon') { closeSheet(); return snack(`${t.dataset.what}: se diseña en otro boceto`); }
 });
 document.addEventListener('input', e => { if (e.target.id === 'q') { hl = -1; renderSugg(); }
-  if (e.target.id === 'pq') { pqIcon(); renderPBody(); }   /* only the body re-renders: the field keeps focus */
+  if (e.target.id === 'pq') { pqIcon(); renderPBody(); }
+  if (e.target.id === 'aq') renderABody();   /* only the body re-renders: the field keeps focus */
  });
-document.addEventListener('focusin', e => { if (e.target.id === 'q' && e.target.value) renderSugg(); });
+document.addEventListener('focusin', e => { if (e.target.id === 'q') { if (BVAR === 'B1' && e.target.value && e.target.value === S.shownName) e.target.select(); renderSugg(); } });
 document.addEventListener('keydown', e => {
   if ($('#dscrim').classList.contains('open')) { if (e.key === 'Escape') closeDialog(); return; }
   if ($('#sheet').classList.contains('open') && e.key === 'Escape') return closeSheet();
+  if (e.target.id === 'en' && e.key === 'Enter') { e.preventDefault(); return estSave(); }
+  if (e.target.id === 'aq' && e.key === 'Enter') { e.preventDefault(); return $('#abody .srow')?.click(); }
   if (e.target.id === 'pq' && e.key === 'Enter') { e.preventDefault(); return $('#pbody .pres .srow')?.click(); }
   if (e.target.id !== 'q') return;
   const list = suggestions(e.target.value);
@@ -645,7 +916,8 @@ document.addEventListener('keydown', e => {
 });
 /* ---------- layout variants ---------- */
 const root = document.documentElement, device = $('#device');
-let KBD_SIM = true;
+let KBD_SIM = true, SAVED = null;
+const AFUERA_SEED = [shelves[2].ids[4], shelves[6].ids[11], shelves[0].ids[22]]; AFUERA = AFUERA_SEED;
 document.querySelectorAll('.kbd-sim .krow').forEach(r => { if (!r.querySelector('.k')) r.innerHTML = [...r.textContent].map(c => `<span class="k">${c}</span>`).join(''); });
 /* FLIP: B and C move the search between the middle and the top; the move is animated, not a jump */
 function flip(change) {
@@ -662,13 +934,21 @@ function syncLayout() {
   if (device.classList.contains('kbd') === kbd && device.classList.contains('raised') === raised) return;
   flip(() => { device.classList.toggle('kbd', kbd); device.classList.toggle('raised', raised); });
 }
-document.addEventListener('focusin', e => { if (e.target.id === 'q') syncLayout(); if (e.target.id === 'pq') { device.classList.toggle('kbd2', KBD_SIM); if (e.target.value && e.target.value === S.placing?.shown) e.target.select(); } });   /* typing replaces the kept estante */
-document.addEventListener('focusout', e => { if (e.target.id === 'pq') device.classList.remove('kbd2'); });
+document.addEventListener('focusin', e => { if (e.target.id === 'q') syncLayout(); if (e.target.id === 'aq') device.classList.toggle('kbd2', KBD_SIM); if (e.target.id === 'en') { device.classList.toggle('kbd2', KBD_SIM); e.target.select(); } if (e.target.id === 'pq') { device.classList.toggle('kbd2', KBD_SIM); if (e.target.value && e.target.value === S.placing?.shown) e.target.select(); } });   /* typing replaces the kept estante */
+document.addEventListener('focusout', e => { if (e.target.id === 'pq' || e.target.id === 'aq') device.classList.remove('kbd2');
+  if (e.target.id === 'en') setTimeout(() => { if (document.activeElement?.id !== 'en') device.classList.remove('kbd2'); }, 200); });   /* a tap on the button lands before the keyboard goes */
+document.addEventListener('input', e => { if (e.target.id === 'en') { $('#enerr').hidden = true; e.target.removeAttribute('aria-invalid'); } });
 /* a tap on a suggestion blurs the field first; wait a beat so the layout does not drop and rise again */
 document.addEventListener('focusout', e => { if (e.target.id === 'q') setTimeout(syncLayout, 160); });
 document.addEventListener('click', e => {
   const k = e.target.closest('[data-kbd-set]');
   const em = e.target.closest('[data-empty-set]');
+  const many = e.target.closest('[data-many]'), out = e.target.closest('[data-out]');
+  if (out) { AFUERA = out.dataset.out === '3' ? AFUERA_SEED : []; out.parentElement.querySelectorAll('[data-out]').forEach(x => x.classList.toggle('on', x === out)); render(); syncLayout(); }
+  if (many) { const on = many.dataset.many === '1';
+    if (on && !SAVED) { SAVED = shelves.map(x => x.ids.slice()); shelves.forEach(x => { x.ids = []; }); }   /* after the D-05 migration: every game Sin ubicar */
+    if (!on && SAVED) { shelves.forEach((x, i) => { x.ids = SAVED[i] || []; }); SAVED = null; }
+    S.picked = null; S.sel = null; many.parentElement.querySelectorAll('[data-many]').forEach(x => x.classList.toggle('on', x === many)); render(); syncLayout(); }
   if (em) { WITH_EMPTY = em.dataset.emptySet === '1'; EMPTY_SHELF.ids = []; em.parentElement.querySelectorAll('[data-empty-set]').forEach(x => x.classList.toggle('on', x === em)); }
   if (k) { KBD_SIM = k.dataset.kbdSet === '1'; syncLayout(); k.parentElement.querySelectorAll('[data-kbd-set]').forEach(x => x.classList.toggle('on', x === k)); }
 });

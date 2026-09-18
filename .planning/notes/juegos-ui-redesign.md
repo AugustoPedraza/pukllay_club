@@ -206,3 +206,32 @@ counting only the CSS. The harness caught it three checks later. A string-replac
 on, not eyeballing a count; the later edits in this round assert and fail loudly instead.
 
 Harness rewritten for the new structure: **53/53**.
+
+10. **A group header must not read as a row: a tonal band and a leading caret.** Developer: *"Visually the row for
+    «sections» are almost the same that row of a game"* — and measured, they shared **four attributes exactly**:
+
+    | | Group header | Game row |
+    |---|---|---|
+    | Font size | 15px | 15px |
+    | Text colour | rgb(35,19,57) | rgb(35,19,57) |
+    | Background | transparent | transparent |
+    | Trailing icon | 20px at **x=339** | 20px at **x=339** |
+    | Height | 44 | 64 |
+    | Weight | 600 | 400 |
+    | Text left | 16 | 68 |
+
+    Only weight and indent separated them — and the app self-hosts Inter in **400 and 600 only**, so 600-vs-400 was
+    the entire weight range available. **Root cause was decision 8:** while the heading was plain static text,
+    D-19j's adjacent ranks (section 15/600 › row name 14–15) were fine; turning it into a 44px control with a
+    trailing icon gave it a row's exact anatomy.
+    Developer picked "Tonal band + caret moves left (Recommended)" over band-only, a quieter label rank, and moving
+    the caret alone. **Three of the four now differ:** a full-bleed `--color-surface` band (the classic sticky
+    section-header treatment, and it makes the pinned-opacity requirement natural rather than a patch); the caret
+    moves to the **leading** edge, where a right-pointing caret is a disclosure triangle rather than a navigation
+    chevron (a D-19i "›" is always *trailing*); and header text sits at 44 against the row's 68.
+    Measured both themes: heading on the band **14.84:1** light / **12.25:1** dark, count 5.33 / 6.2 — all above 4.5.
+    Caret at x=16 vs the row chevron at x=339; band full-bleed at 375.
+    **App-wide:** `.lhead` is the same component in 069 (Pendientes) and 070 (Otras filas), so the band and leading
+    caret belong to D-19g-bis, not to Juegos alone.
+
+Harness: **57/57**.

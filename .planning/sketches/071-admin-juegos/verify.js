@@ -50,13 +50,32 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(!groups[0].open && !groups[1].open && groups[2].open, `collapsed by default, catalog open (${groups.map(g => g.open).join(',')})`);
   ok(groups.every(g => g.h >= 44), `every group header is a 44px target (${groups.map(g => g.h).join(', ')})`);
 
-  /* D-19i: a group header must NOT carry a chevron-right (that means "opens a page") */
+  /* decision 10: a group header must not read as a row, and its caret is LEADING (a disclosure triangle),
+     never a trailing "›", which under D-19i means "opens a page" */
   const caret = await J(() => {
-    const c = document.querySelector('.lhead .caret');
-    return { last: c === c.parentElement.lastElementChild, d: c.querySelector('path')?.getAttribute('d'), kids: c.querySelector('svg')?.children.length };
+    const c = document.querySelector('.lhead .caret'), h = c.closest('.lhead');
+    const name = h.querySelector('.ln');
+    return { leading: c.getBoundingClientRect().left < name.getBoundingClientRect().left,
+      kids: c.querySelector('svg')?.children.length,
+      caretLeft: +c.getBoundingClientRect().left.toFixed(1) };
   });
-  ok(caret.d === 'M5 9l7 7-7-7'.replace('-7-7', '-7') || /M5 9l7 7 7-7/.test(caret.d), `the caret is a chevron-DOWN, not a chevron-right (${caret.d})`);
+  ok(caret.leading, `the caret is LEADING, not in the row-chevron slot (caret at ${caret.caretLeft})`);
   ok(caret.kids > 0, 'the caret SVG is not empty (the bug 070 shipped when chevD was missing)');
+  /* the four attributes that made a header read as a row — three must now differ */
+  const sep = await J(() => {
+    const h = document.querySelector('.lhead'), hn = h.querySelector('.ln');
+    const r = document.querySelector('.row'), rn = r.querySelector('.name'), rc = r.querySelector('.chev');
+    const bg = el => getComputedStyle(el).backgroundColor;
+    return { headBg: bg(h), rowBg: bg(r),
+      headTextLeft: +hn.getBoundingClientRect().left.toFixed(1), rowTextLeft: +rn.getBoundingClientRect().left.toFixed(1),
+      headIconLeft: +h.querySelector('.caret').getBoundingClientRect().left.toFixed(1),
+      rowIconLeft: +rc.getBoundingClientRect().left.toFixed(1),
+      headBleed: +h.getBoundingClientRect().width.toFixed(1) };
+  });
+  ok(sep.headBg !== sep.rowBg, `header sits on a tonal band, the row does not (${sep.headBg} vs ${sep.rowBg})`);
+  ok(Math.abs(sep.headIconLeft - sep.rowIconLeft) > 100, `the icons no longer share a slot (${sep.headIconLeft} vs ${sep.rowIconLeft})`);
+  ok(sep.headTextLeft !== sep.rowTextLeft, `header text is outdented from row text (${sep.headTextLeft} vs ${sep.rowTextLeft})`);
+  ok(near(sep.headBleed, 375, 1), `the band is full-bleed (${sep.headBleed})`);
   const rot = await J(() => ({
     collapsed: getComputedStyle(document.querySelector('.lhead[aria-expanded="false"] .caret')).transform,
     expanded: getComputedStyle(document.querySelector('.lhead[aria-expanded="true"] .caret')).transform

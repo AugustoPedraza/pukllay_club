@@ -147,15 +147,22 @@
      The caret is a TRAILING chevron-DOWN that rotates 180°, never a chevron-right: under D-19i a "›" means
      "this row opens another page", which a group header must not claim. Heading text stays at 16px like
      everything else on the page (a leading caret would have pushed it to 40). */
+  /* decision 10 — a group header must not read as a row. Measured, they shared FOUR attributes exactly:
+     15px, rgb(35,19,57), transparent background, and a 20px trailing icon at x=339. Since the app ships Inter in
+     400/600 only, weight alone had nothing left to give. Three of the four now differ:
+       background — a full-bleed tonal band (the classic sticky section-header treatment)
+       icon slot  — the caret moves to the LEADING edge, where a right-pointing caret is a disclosure triangle,
+                    not a navigation chevron (a D-19i "›" is always trailing)
+       indent     — header text at 44, row text at 68 */
   .lhw { position: sticky; top: var(--bar); z-index: 5; margin: 4px -16px 0; background: var(--color-bg); }
-  .lhead { width: 100%; display: flex; align-items: center; gap: 0; min-height: 44px; padding: 4px 16px; border: 0; background: none;
-    text-align: left; cursor: pointer; font-size: 15px; font-weight: 600; line-height: 1.3; }
-  .lhead:hover { background: var(--color-surface); }
+  .lhead { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 16px; border: 0;
+    background: var(--color-surface); text-align: left; cursor: pointer; font-size: 15px; font-weight: 600; line-height: 1.3; }
+  .lhead:hover { background: var(--color-surface-2); }
   .lhead:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
-  .lhead .caret { margin-left: auto; width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted);
+  .lhead .caret { order: -1; width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted);
     transition: transform 160ms var(--ease-out-soft); }
-  .lhead[aria-expanded="true"] .caret { transform: rotate(180deg); }
+  .lhead[aria-expanded="true"] .caret { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
 
   /* decision 9 — scrolling down slides the search away (+1 row on every viewport); the smallest flick up
@@ -422,14 +429,15 @@ function updateBar() {
 
 /* decision 8 — one list, three collapsible groups. The two work groups sit on top, collapsed by default, so at
    rest both counts are on screen AND the newest-first catalog starts immediately. No Pendientes page, no badge.
-   The caret is a trailing chevron-DOWN that rotates — never a "›", which under D-19i means "opens a page". */
+   The caret is LEADING and rotates (decision 10): a disclosure triangle, never a trailing "›", which under
+   D-19i means "opens a page". */
 function groupSection(g) {
   const all = inGroup(g.key), open = !!S.open[g.key];
   const paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
   return `<section class="lgroup">
     <h2 class="lhw"><button class="lhead" data-act="group" data-g="${g.key}" aria-expanded="${open}">
       <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>
-      <span class="caret" aria-hidden="true">${ic('chevD')}</span></button></h2>
+      <span class="caret" aria-hidden="true">${ic('chevR')}</span></button></h2>
     ${open ? `${g.hint ? `<p class="hint">${g.hint}</p>` : ''}
       <div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
       ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}

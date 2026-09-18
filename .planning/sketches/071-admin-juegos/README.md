@@ -50,6 +50,10 @@ live) · the **50** badge → Pendientes → any row → the editor stand-in.
   page and its badge are gone. **This reverses D-19g for Juegos** — reconciled as: D-19g still governs real work
   queues (Estantes' Afuera / Sin ubicar), while a catalog groups its own rows, since "sin datos" is an attribute
   of a game rather than a separate work item. Needs recording in CONTEXT as an amendment, not a contradiction.
+- **A group header is a tonal band with a leading caret** (decision 10) — measured, a header and a game row shared
+  font size, colour, background and trailing-icon position exactly, leaving only weight (and the app ships Inter in
+  400/600 only). The band, the leading disclosure caret and the 44-vs-68 indent now separate them. App-wide: the
+  same `.lhead` is used by 069 and 070.
 - **The search hides on scroll-down, returns on scroll-up** (decision 9) — *not* collapsed to an icon, which
   measured as 16px saved (a quarter of a row): 0 extra rows at 375×667 and a tap to undo. Hiding gains a row on
   every viewport for free.
@@ -109,8 +113,8 @@ the developer called "too empty" (its worst was 449px / 62%).
 3. **No prompt line** ("¿Qué juego buscás?", 17/600). Estantes has one because its page is otherwise empty; here
    the placeholder carries it and a prompt would be a third text block above the list.
 4. **Collapsed groups sit at a 60px pitch** (44px header + 16px air). Measured, not eyeballed — they read airier
-   in a 2× screenshot than they are. Whether three stacked collapsed headers should instead tie together like
-   rows (dividers, 44px pitch) is worth a look on a real phone.
+   in a 2× screenshot than they are. Now that each header is a tonal band (decision 10), whether the three should
+   tie together or stay separated is worth a look on a real phone.
 5. **Collapse state does not persist** — every visit opens with the work groups closed and the catalog open.
 6. Copy not yet reviewed: "Juegos del club", the add sheet's hint, "Crear a mano · Para un juego que BGG no
    tiene", and both group hint lines.
