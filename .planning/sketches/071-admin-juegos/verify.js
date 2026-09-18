@@ -54,25 +54,48 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   const sum = groups.reduce((a, g) => a + g.count, 0);
   ok(sum === 435, `the sections PARTITION the catalog: ${groups.map(g => g.count).join(' + ')} = ${sum}`);
 
-  /* the load-bearing assertion of decision 17: ONE anatomy, not two. Everything that made a header differ from
-     its neighbour — tag, caret, type, colour, background, height, indent — must be identical across all three. */
+  /* the load-bearing assertion of decision 17, kept through decision 18: ONE anatomy. Everything that decides
+     whether two headers read as the same kind of thing — fill, rank, colour, height, keyline — must be identical
+     across all three. Decision 18 adds a caret to the two that collapse, which is the affordance TELLING you they
+     collapse; it is deliberately excluded here and asserted separately below. */
   const anat = await J(() => [...document.querySelectorAll('.lhead')].map(h => {
-    const c = getComputedStyle(h), ln = h.querySelector('.ln');
+    const ln = h.querySelector('.ln'), c = getComputedStyle(ln);
     const g = document.createRange(); g.selectNodeContents(ln);
-    return [h.tagName, !!h.querySelector('.caret'), h.hasAttribute('data-act'), h.hasAttribute('aria-expanded'),
-      getComputedStyle(ln).fontSize + '/' + getComputedStyle(ln).fontWeight, getComputedStyle(ln).color,
-      c.backgroundColor, +h.getBoundingClientRect().height.toFixed(1), +g.getBoundingClientRect().left.toFixed(1)].join('|');
+    return [getComputedStyle(h).backgroundColor, c.fontSize + '/' + c.fontWeight, c.color,
+      +h.getBoundingClientRect().height.toFixed(1), +g.getBoundingClientRect().left.toFixed(1)].join('|');
   }));
   ok(new Set(anat).size === 1, `every section header is the SAME component (${new Set(anat).size} anatomy: ${anat[0]})`);
-  ok(/^SPAN\|false\|false\|false\|/.test(anat[0]), 'a section header is a caption — a span, no caret, no action, no aria-expanded');
-  ok(/\|13px\/600\|/.test(anat[0]), 'every section carries decision 16\'s Label (group) rank, 13/600');
-  ok(/\|rgba\(0, 0, 0, 0\)\|/.test(anat[0]), 'no section is tinted at rest — the fill is for pinning only');
+  ok(/\|13px\/600\|/.test(anat[0]), 'every section carries decision 16 Label (group) rank, 13/600');
+  ok(/^rgba\(0, 0, 0, 0\)\|/.test(anat[0]), 'no section is tinted at rest — the fill is for pinning only');
 
-  /* nothing collapses, so no row can ever be hidden and no section can strand a header over an empty page */
-  ok(await J(() => !document.querySelector('[data-act="group"]') && !document.querySelector('.lhead[aria-expanded]')),
-    'no section is collapsible — the empty-page state decision 15 fixed cannot exist at all');
+  /* decision 18 — the two EXCEPTION sections close at rest so the catalog is not buried behind them; the body
+     section still never collapses, so decision 15's empty page stays unreachable. The caret is the ONLY thing
+     that differs, and it sits inline after the count — not leading (which would put a hole back in the x=16
+     column) and not at x=339 (which D-19i reserves for "opens a page"). */
+  const disc = await J(() => {
+    const heads = [...document.querySelectorAll('.lhead')];
+    const row = document.querySelector('.row .chev');
+    return heads.map(h => ({
+      name: h.querySelector('.ln').textContent, tag: h.tagName,
+      caret: !!h.querySelector('.caret'), open: h.getAttribute('aria-expanded'),
+      caretLeft: h.querySelector('.caret') ? +h.querySelector('.caret').getBoundingClientRect().left.toFixed(1) : null,
+      rowChev: +row.getBoundingClientRect().left.toFixed(1),
+      hit: +Math.max(h.getBoundingClientRect().height, parseFloat(getComputedStyle(h, '::after').height) || 0).toFixed(1)
+    }));
+  });
+  ok(disc[0].open === 'false' && disc[1].open === 'false', `"Sin datos" and "Borradores" are CLOSED at rest (${disc[0].open}, ${disc[1].open})`);
+  ok(disc[0].caret && disc[1].caret && !disc[2].caret, 'only the sections that collapse carry a caret — the body section has none');
+  ok(disc[2].tag === 'SPAN' && disc[2].open === null, `the body section is not a control (<${disc[2].tag.toLowerCase()}>), so it cannot strand a header over an empty page`);
+  ok(disc.filter(d => d.caret).every(d => d.caretLeft < d.rowChev - 100), `the caret is inline, never in the row-chevron slot (${disc.filter(d => d.caret).map(d => d.caretLeft).join(', ')} vs ${disc[0].rowChev})`);
+  ok(disc.filter(d => d.caret).every(d => d.hit >= 44), `a collapsible caption still meets the 44px touch floor (${disc.filter(d => d.caret).map(d => d.hit).join(', ')})`);
+  const catTop = await J(() => {
+    const sc = document.querySelector('.scroller').getBoundingClientRect();
+    return +(document.querySelector('.lgroup.main .lhead').getBoundingClientRect().top - sc.top).toFixed(0);
+  });
+  ok(catTop < 260, `the catalog is reachable without scrolling past the exceptions (${catTop}px from the top, was 3270)`);
+
   const secRows = await J(() => [...document.querySelectorAll('.lgroup')].map(g => g.querySelectorAll('.row').length));
-  ok(secRows.every(n => n > 0), `every section shows its rows (${secRows.join(', ')})`);
+  ok(secRows[2] > 0, `the body section always shows its rows (${secRows[2]})`);
 
   /* sections butt together: no gap, so there is no pitch to read as a stripe (decision 11's problem, dissolved) */
   const seams = await J(() => {
@@ -150,20 +173,29 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
       anyBorrador: rows.some(r => /Borrador/.test(r.textContent)),
       chev: !!rows[0].querySelector('.chev svg path') };
   });
-  ok(rowsInfo.n === 100, `the one list renders every section's rows (49 + 1 + 50 = ${rowsInfo.n})`);
+  ok(rowsInfo.n === 50, `at rest only the open body section renders rows (${rowsInfo.n})`);
   ok(near(rowsInfo.h, 64, 1.5), `game row 64px (${rowsInfo.h})`);
   ok(!rowsInfo.anySinDatos && !rowsInfo.anyBorrador, 'a row never repeats its group\'s state ("Sin datos" x49 under a heading saying it was noise)');
   ok(rowsInfo.chev, 'a game row keeps its chevron — it opens the editor (D-19i)');
 
-  /* ---------- decision 17: every section is simply there ----------
-     There is no open/close to test any more. What replaces it: each section carries its own rows inline, in
-     order, and the whole thing is one continuous list. */
-  const secs = await J(() => [...document.querySelectorAll('.lgroup')].map(g => ({
-    name: g.querySelector('.ln').textContent, rows: g.querySelectorAll('.row').length })));
-  ok(secs[0].name === 'Sin datos' && secs[0].rows === 49, `"Sin datos" shows its 49 rows inline (${secs[0].rows})`);
-  ok(secs[1].name === 'Borradores' && secs[1].rows === 1, `"Borradores" shows its 1 row inline (${secs[1].rows})`);
-  ok(secs[2].rows === 50, `the catalog still pages 50 at a time (${secs[2].rows})`);
-  await p.screenshot({ path: path.join(OUT, '02-one-list-375x740-light.png') });
+  /* ---------- decision 18: the exceptions open on demand ----------
+     No expand/collapse existed under decision 17; decision 18 brings it back for the two exception sections
+     only. Opening one must reveal its rows AND leave the tapped heading exactly where the finger left it. */
+  const shutAtRest = await J(() => [...document.querySelectorAll('.lgroup')].map(g => g.querySelectorAll('.row').length));
+  ok(shutAtRest[0] === 0 && shutAtRest[1] === 0, `both exception sections are closed at rest (${shutAtRest[0]}, ${shutAtRest[1]} rows)`);
+  ok(shutAtRest[2] === 50, `the catalog still pages 50 at a time (${shutAtRest[2]})`);
+  const beforeTop = await J(() => +document.querySelector('[data-g="gap"]').getBoundingClientRect().top.toFixed(1));
+  await p.click('[data-g="gap"]'); await p.waitForTimeout(350); await settle();
+  const openedInfo = await J(() => ({
+    rows: document.querySelector('[data-g="gap"]').closest('.lgroup').querySelectorAll('.row').length,
+    expanded: document.querySelector('[data-g="gap"]').getAttribute('aria-expanded'),
+    headTop: +document.querySelector('[data-g="gap"]').getBoundingClientRect().top.toFixed(1)
+  }));
+  ok(openedInfo.expanded === 'true' && openedInfo.rows === 49, `opening "Sin datos" reveals its 49 rows (${openedInfo.rows})`);
+  ok(near(openedInfo.headTop, beforeTop, 2), `the tapped heading stays put — opening never scrolls the page (${beforeTop} -> ${openedInfo.headTop})`);
+  await p.screenshot({ path: path.join(OUT, '02-section-open-375x740-light.png') });
+  await p.click('[data-g="gap"]'); await p.waitForTimeout(300); await settle();
+  ok(await J(() => document.querySelector('[data-g="gap"]').getAttribute('aria-expanded') === 'false'), 'and it closes again, leaving the page as it was');
 
   /* ---------- decision 9: the search hides going down, returns going up ---------- */
   const sc = s => p.evaluate(y => { document.querySelector('.scroller').scrollTop = y; }, s);

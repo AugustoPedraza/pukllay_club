@@ -506,11 +506,41 @@ Harness: **75/75** — the caption sits on the 16 keyline with no hole, and carr
 Harness rewritten for the one-list model: **62/62**. The checks that encoded the superseded rules were replaced
 by the rule that replaced them, not deleted — the load-bearing one asserts `new Set(anatomies).size === 1`.
 
+18. **The two exception sections close at rest.** Developer: *"That is better. But «sin datos» and «borradores»
+    should be closed at begginng."* — which pays off decision 17's one accepted cost without giving up the one
+    list. Measured: the catalog was **3,270px** from the top (50 rows, ~5 screens); it is now **206px**.
+
+    **The design problem this had to avoid:** a collapsible header is a *control*, and a control at a caption's
+    rank is exactly what started the decision-10 cascade. Solved by separating two things that had been conflated:
+    - **Anatomy stays one.** Fill, rank, colour, height and keyline are byte-identical across all three headers —
+      the harness still asserts `1 anatomy` (`rgba(0,0,0,0)|13px/600|rgb(103,92,125)|30.9|16`).
+    - **The caret is affordance, not a second kind.** Only the two collapsible sections carry one, which is
+      precisely the thing that *tells* you they collapse. A caption with a disclosure caret and a caption without
+      are one component with an optional affordance — not the decision-10 problem, which was a 44px control
+      wearing a row's exact anatomy.
+    - **Where the caret goes.** **Inline, after the count.** Not *leading* — that reopens decision 16's hole in
+      the x=16 column. Not at **x=339** — D-19i reserves the trailing slot for "opens a page". Measured: carets at
+      x=113/136 against the row chevron at 339. Text edges still **16 / 68**.
+    - **Touch floor without losing the rhythm.** A 30.9px caption is under the 44px floor, and padding it to 44
+      would visibly loosen the list. The hit box is stretched by a `::after` pseudo-element instead: measured
+      **44 / 44** while the visual row stays 30.9.
+    - **The body section still never collapses** (decision 15 holds): it is a `<span>` with no caret and no
+      `aria-expanded`, so the empty-page state remains unreachable. Decision 8's "the tapped heading stays exactly
+      where the finger left it" is restored and asserted.
+
+    **A bug this surfaced, in code I had written an hour earlier:** the pinned-header detection compared only
+    against the bar, so a header that had scrolled entirely *out of view* still counted as pinned — with two
+    collapsed sections stacked at the top the harness caught **three** headers pinned at once. Fixed by also
+    requiring the header's own section to still extend past the bar. It was invisible on screen (an off-screen
+    element's background does not matter), which is exactly why the assertion was worth having.
+
+Harness: **68/68**.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **62/62**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **68/68**.
   Tools: **Tema · Teclado** only — nothing collapses any more, so `Grupos` went too, along with every variant
   toggle (`Sangría`, `Franjas`, `Cabecera`, `Rótulo`, `Trabajo`).
-- **Settled:** decisions 1–9, **16** and **17**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
+- **Settled:** decisions 1–9, **16**, **17** and **18**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
   consequences of having two kinds of section header). **Reverted:** 12. **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
   16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).

@@ -157,6 +157,18 @@
     color: var(--color-text-muted); }
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
   .lhw.pinned .lhead { background: var(--color-surface); }
+  /* decision 18 — a collapsible section carries an INLINE caret after its count. Inline, not leading, so the
+     caption keeps the 16 keyline and the x=16 column has no hole; and not trailing at x=339, which D-19i
+     reserves for "opens a page". The visual row stays at the caption's height while the HIT BOX is stretched to
+     the 44px touch floor by a pseudo-element, so reaching the floor costs no rhythm. */
+  .lhead.tap { cursor: pointer; position: relative; }
+  .lhead.tap::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+  .lhead.tap:hover { background: var(--color-surface); }
+  .lhead.tap:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .lhead .caret { width: 14px; height: 14px; margin-left: 4px; flex-shrink: 0; color: var(--color-text-muted);
+    transition: transform 160ms var(--ease-out-soft); }
+  .lhead[aria-expanded="true"] .caret { transform: rotate(90deg); }
+  @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
 
 
   /* decision 16 — the caption gets its OWN RANK, at 16. Decision 15 made this header behave like a caption but
@@ -357,7 +369,7 @@ const pend = () => PEND_MODE === 50 ? GAPS().length + DRAFTS().length : PEND_MOD
 const byNew = () => [...G].sort((a, b) => b.added - a.added);
 
 const PAGE = 50;
-const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [] };   /* no `open`: decision 17, nothing collapses */
+const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [], open: { gap: false, draft: false } };
 let KBD_SIM = true, opener = null;
 
 const main = $('#main'), device = $('#device');
@@ -368,9 +380,12 @@ const cover = (g, cls = 'cov') => g.thumb
 const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
 
 /* decision 8 — the three groups PARTITION the catalog (49 + 1 + 385 = 435); a game is never in two of them */
+/* decision 18 — the two EXCEPTION sections close at rest, so the catalog is not 50 rows down. `shut` marks a
+   section as collapsible AND collapsed by default; the body section has no `shut`, so it never collapses and the
+   empty-page state decision 15 found stays unreachable. */
 const GROUPS = [
-  { key: 'gap', name: 'Sin datos', hint: 'Se ven en la web sin tapa ni descripción.', has: g => g.status !== 'draft' && g.gap },
-  { key: 'draft', name: 'Borradores', one: 'borrador', hint: 'Todavía no se ven en la web.', has: g => g.status === 'draft' },
+  { key: 'gap', name: 'Sin datos', shut: true, hint: 'Se ven en la web sin tapa ni descripción.', has: g => g.status !== 'draft' && g.gap },
+  { key: 'draft', name: 'Borradores', one: 'borrador', shut: true, hint: 'Todavía no se ven en la web.', has: g => g.status === 'draft' },
   { key: 'rest', name: 'Juegos del club', hint: null, has: g => g.status !== 'draft' && !g.gap }
 ];
 const inGroup = k => byNew().filter(GROUPS.find(x => x.key === k).has);
@@ -423,7 +438,12 @@ function updateBar() {
     /* Franjas A/B need to know when a heading has actually pinned, so it can gain a background only there.
        Sticky pins to the SCROLLER's top edge offset by --bar, never the viewport's. */
     const barPx = parseFloat(getComputedStyle(device).getPropertyValue('--bar')) || 0;
-    main.querySelectorAll('.lhw').forEach(w => w.classList.toggle('pinned', w.getBoundingClientRect().top - scTop <= barPx + 0.5));
+    main.querySelectorAll('.lhw').forEach(w => {
+      const sec = w.closest('.lgroup').getBoundingClientRect();
+      /* held at the bar = its top has reached the bar AND its own section still extends past it. Without the
+         second half, a header that has scrolled entirely out of view still counts as pinned — three at once. */
+      w.classList.toggle('pinned', w.getBoundingClientRect().top - scTop <= barPx + 0.5 && sec.bottom - scTop > barPx + 0.5);
+    });
     device.classList.remove('scrolled'); $('#pbar').inert = true;
     return;
   }
@@ -447,10 +467,21 @@ function updateBar() {
    header. There is now one. Decision 16's caption rank survives, generalised to every section. */
 function groupSection(g) {
   const all = inGroup(g.key), paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
-  return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}">
-    <h2 class="lhw"><span class="lhead"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span></h2>
-    <div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
-    ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}
+  const open = !g.shut || !!S.open[g.key];
+  /* ONE anatomy still (decision 17): same tag family, rank, colour, height and 16 keyline. The only difference
+     is a disclosure caret, which is the thing that TELLS you a section collapses — honest signalling, not a
+     second kind of header. It sits INLINE after the count, so there is no leading slot and therefore no hole in
+     the x=16 column (decision 16's defect). The hit box is stretched to 44 by a pseudo-element so the caption's
+     visual rhythm is not loosened to reach the touch floor. */
+  const head = g.shut
+    ? `<button class="lhead tap" data-act="group" data-g="${g.key}" aria-expanded="${open}">
+        <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>
+        <span class="caret" aria-hidden="true">${ic('chevR')}</span></button>`
+    : `<span class="lhead"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span>`;
+  return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}${open ? '' : ' shut'}">
+    <h2 class="lhw">${head}</h2>
+    ${open ? `<div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
+    ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}
   </section>`;
 }
 
@@ -611,6 +642,16 @@ document.addEventListener('click', e => {
   const a = t.dataset.act;
   if (a === 'open') return openGame(+t.dataset.id, S.screen);
   if (a === 'juegos') return go('juegos');
+  if (a === 'group') {
+    /* decision 8's rule, kept: the tapped heading stays exactly where the finger left it, so opening a section
+       never scrolls the page out from under you. Re-query after the render — reusing the stale node silently
+       mutated the page once and every later measurement was wrong. */
+    const k = t.dataset.g, top = t.getBoundingClientRect().top;
+    S.open[k] = !S.open[k]; render();
+    const now = main.querySelector(`[data-g="${k}"]`);
+    if (now) scroller().scrollTop += now.getBoundingClientRect().top - top;
+    return;
+  }
   if (a === 'more') { S.shown += PAGE; return render(); }
   if (a === 'add') return addSheet(t);
   if (a === 'addbgg') { const id = t.dataset.bgg; closeSuggest(); return addSheet(null, id); }
