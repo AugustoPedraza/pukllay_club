@@ -239,14 +239,18 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   await p.waitForTimeout(400);
   await p.evaluate(() => document.querySelector('.scroller').scrollTop = 1200); await p.waitForTimeout(250); await settle();
   const jm = await J(() => ({
-    title: document.getElementById('pbar').querySelector('.pbt').textContent,
-    hasBack: !!document.getElementById('pbar').querySelector('.back'),
+    searchStuck: document.querySelector('.search').classList.contains('stuck')
+      && +document.querySelector('.search').getBoundingClientRect().top.toFixed(1) === 53,
+    searchCount: document.querySelectorAll('#q').length,
+    barHidden: getComputedStyle(document.getElementById('pbar')).display === 'none',
     heading: document.querySelector('.lhead').textContent.replace(/\s+/g, ' ').trim(),
     headingTop: +document.querySelector('.lhead').getBoundingClientRect().top.toFixed(1),
     rows: document.querySelectorAll('.row').length
   }));
-  ok(jm.title === 'Juegos' && !jm.hasBack, 'a tab-level page bar shows the title with no back link');
-  ok(near(jm.headingTop, 97, 2), `"${jm.heading}" stays pinned through ${jm.rows} rows (top ${jm.headingTop})`);
+  ok(jm.searchStuck, 'decision 7: on Juegos the SEARCH is the pinned tier, not a title bar');
+  ok(jm.searchCount === 1, `only one search input exists, so there is nothing to keep in sync (${jm.searchCount})`);
+  /* 113 = scroller top 53 + the 60px sticky search (decision 7); it was 97 when a 44px title bar pinned here */
+  ok(near(jm.headingTop, 113, 2), `"${jm.heading}" stays pinned under the sticky search through ${jm.rows} rows (top ${jm.headingTop})`);
   await p.screenshot({ path: path.join(OUT, '14-sticky-juegos-375x740-light.png') });
   await p.evaluate(() => document.documentElement.dataset.theme = 'dark'); await p.waitForTimeout(200);
   await p.screenshot({ path: path.join(OUT, '15-sticky-juegos-375x740-dark.png') });

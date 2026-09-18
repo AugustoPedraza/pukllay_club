@@ -134,7 +134,21 @@ catching what passing checks do not.)
    - A new screen always starts at scrollTop 0, so the bar never appears on a page you never scrolled.
    Harness: **58/58**. Rhythm at rest unchanged (title row → field 16, field → heading 32, heading → cover 16.5).
 
-**Raised by decision 6, not yet settled:** on the main Juegos page the bar shows "Juegos" and the heading pinned
-under it shows "Juegos del club 435" — 88px of chrome saying the same word twice, while the **search**, the page's
-one job (decision 1), is 1200px away. Pinning the search instead of, or beside, the title is the obvious next
-question.
+7. **On Juegos the pinned tier is the search itself, not a title bar.** Decision 6 exposed the problem: the bar said
+   "Juegos" and the heading pinned under it said "Juegos del club 435" — **71.5px of pinned chrome spending itself
+   on the same word twice**, while the search, the page's one job (decision 1), sat 1,200px up. Now scrolling pins
+   the 48px field with "Juegos del club 435" under it. Pendientes, which has no search, keeps back + title.
+   Developer picked "The search field (Recommended)" over dropping the pinned heading too, a magnifier that jumps
+   back up, and leaving the repetition.
+   **Built as the SAME input pinning, not a copy inside the bar** — so unlike the back link (which needed `inert`
+   to avoid a duplicate), there is never a second search to keep in sync. Verified: exactly one `#q` in the DOM.
+   **Padding compensated in the margins so the resting rhythm is untouched**: `.search` gains `12px -16px 0` margin
+   and `4px 16px 8px` padding, `.search + .lgroup` drops 24 → 16, and the measured numbers are unchanged —
+   title row → field **16.0**, field → heading **32.0**, heading → cover 16.5. Pinned tier is 60px, so the section
+   heading's sticky `top` is a `--bar` var (60 on Juegos, 44 elsewhere).
+   **A real bug the harness caught, the same trap as 069 decision 61:** the new 8px of bottom padding pushed the
+   suggestions dropdown to **453**, five pixels *under* the 292px keyboard (448). Fixed by anchoring `.sugg` to the
+   field (`top: calc(100% - 4px)`, inset 16px) rather than to the padded sticky block — back to **445**, 3px clear.
+   **A second bug, caught by an assertion:** stuck-detection compared `getBoundingClientRect().top` against 0, but a
+   sticky element pins to the *scroller's* top edge (y=53), not the viewport's. Now compared against the scroller.
+   Harness: **59/59**.

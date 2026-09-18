@@ -47,8 +47,22 @@ live) · the **50** badge → Pendientes → any row → the editor stand-in.
   the search offers **Agregar desde BGG** for a pasted id/link and **Crear «texto»** on no match.
 - **Pendientes badge = 50**: a `‹ Juegos` page with **Sin datos** (49) and **Borradores** (1), per D-19g.
 
+## Pinned context while scrolling (decisions 6-7, D-19n)
+A long list keeps its context in two pinned tiers, the pairing both design systems use (iOS pins plain-table
+section headers *and* collapses a large title into the nav bar; M3 has sticky list subheaders *and* a collapsing
+top app bar). Measured first: on Pendientes at scrollTop 1500 the page title, the back link **and** the section
+heading are all off screen at once, leaving 11 rows with no context and the back link 1,500px away. Sin datos is
+**3,307px** tall; the fully paged Juegos list is **27,664px** (~45 screens).
+- **Pendientes / editor** — a 44px page bar (`‹ Juegos` + title at 17/600) pins once the title row goes behind it.
+  It is an absolute overlay, so at rest it costs zero layout. `inert` toggles between the two back controls, so
+  exactly one is ever focusable.
+- **Juegos** — the pinned tier is the **search itself** (decision 7), because a title bar here would repeat the
+  word the pinned heading already says. It is the same input pinning, not a copy, so there is no second search.
+- **Both** — the section heading pins under the tier, full-bleed and opaque. The "stacked" push is free: each
+  heading is confined to its own section, so an arriving one evicts it.
+
 ## Verification (`node .planning/sketches/071-admin-juegos/verify.js`)
-**46/46 passed**, no page errors. Highlights:
+**59/59 passed**, no page errors. Highlights:
 - **Rhythm is pixel-identical to 069 raised** at 375×740: title row → field **16.0** (25.2 from the title's text
   box — 069 measures a field from the row, since its border is the visible edge), field → "Juegos del club"
   **32.0**, heading → first cover **16.5**, row **64px**.
@@ -61,9 +75,18 @@ live) · the **50** badge → Pendientes → any row → the editor stand-in.
   360×640 and 375×667, **8** at 390×844.
 - Shipped behaviour preserved: the BGG error copy, the D-03 edition prompt, add → draft → live enrichment.
 
+- Pinning: bar 44px and inert at rest, layout byte-identical to the pre-sticky build (phead 69, field 129,
+  heading 209, cover 244.5); heading flush under the tier (0px), opaque, full-bleed; exactly one focusable back
+  control; the push evicts the previous heading; a new screen always starts at scrollTop 0.
+
 **Caught by looking at the screenshots, which the measurements passed:** every cover rendered as an empty box —
 the R2 thumbnails are `loading="lazy"` and the shot fired before they decoded. The harness now forces eager
 loading and waits for decode before each screenshot, so the shots show what the developer actually sees.
+
+**Caught by the harness while adding decision 7:** the sticky search's new 8px of bottom padding pushed the
+suggestions dropdown 5px *under* the 292px keyboard (453 vs 448) — the same trap 069 decision 61 hit. Fixed by
+anchoring the dropdown to the field rather than the padded block. And stuck-detection compared against viewport 0
+when a sticky element pins to the *scroller's* top edge (53).
 
 ## Why there is a list under the search at all
 Measured before building, the same argument that produced D-19l on Web: idle Juegos is title + field ≈ **132px**

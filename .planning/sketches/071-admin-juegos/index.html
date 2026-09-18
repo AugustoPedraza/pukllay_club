@@ -41,6 +41,9 @@
   :root[data-theme="dark"] .tab.on .ti { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
   .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
   .device.kbd .tabs { display: none; }
+  /* the pinned tier's height: a 44px title bar, or the 60px sticky search on Juegos */
+  .device { --bar: 44px; }
+  .device[data-bar="search"] { --bar: 60px; }
 
   main { padding: 16px 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
   .phead { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
@@ -69,7 +72,15 @@
   /* ---- search (069): magnifier on the RIGHT, → ✕ once a name is kept ---- */
   /* decision 3 — the field is the page's main control and the list is a new group under it:
      title row → field 16 · field → "Juegos del club" 32 (24 of container + the heading's own 8) */
-  .search { position: relative; margin-top: 16px; z-index: 12; }
+  /* decision 7 — on Juegos the pinned tier IS the search: the page's one job follows you down all 435 rows,
+     instead of a title bar repeating the word the pinned heading already says.
+     It is the SAME input pinning, not a copy in a bar — so there is never a second search to keep in sync
+     (the back link needed `inert` for exactly that reason). Padding is compensated in the margins so the
+     resting rhythm is untouched: field top 129, heading text top 209. */
+  .search { position: sticky; top: 0; z-index: 12; margin: 12px -16px 0; padding: 4px 16px 8px; background: var(--color-bg); }
+  .search.stuck { border-bottom: 1px solid var(--color-border); }
+  .search + .lgroup { margin-top: 16px; }
+  .device[data-bar="search"] .pbar { display: none; }
   .sfield { position: relative; }
   .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; text-overflow: ellipsis; }
   .sfield input::placeholder { color: var(--color-text-muted); }
@@ -81,7 +92,9 @@
   button.sico { cursor: pointer; }
 
   /* suggestions drop down OVER the list below (069 decision 12) */
-  .sugg { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
+  /* anchored 4px under the FIELD, not under the padded sticky block — decision 7's 8px of bottom padding
+     pushed it 5px under the 292px keyboard (453 vs 448), the same trap 069 decision 61 hit */
+  .sugg { position: absolute; left: 16px; right: 16px; top: calc(100% - 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
     box-shadow: var(--shadow-lg); padding: 4px 0; max-height: 264px; overflow-y: auto; scrollbar-width: none; }
   .sugg::-webkit-scrollbar { display: none; }
   .sugg[hidden] { display: none; }
@@ -128,7 +141,7 @@
   /* ---- the list (decision 3) ---- */
   .lgroup { margin-top: 24px; }
   /* full-bleed so the full-bleed rows cannot slide visibly past its left/right edges while it is pinned */
-  .lhead { position: sticky; top: 44px; z-index: 5; margin: 4px -16px 0; padding: 4px 16px; background: var(--color-bg);
+  .lhead { position: sticky; top: var(--bar); z-index: 5; margin: 4px -16px 0; padding: 4px 16px; background: var(--color-bg);
     font-size: 15px; font-weight: 600; line-height: 1.3; }
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
   .lgroup + .lgroup { margin-top: 12px; }
@@ -346,12 +359,22 @@ function render() {
   else if (S.screen === 'editor') renderEditor();
   $('#t-juegos').innerHTML = ic('dice'); $('#t-admin').innerHTML = ic('grid');
   $('#t-web').innerHTML = ic('home'); $('#t-est').innerHTML = ic('shelf');
+  device.dataset.bar = S.screen === 'juegos' ? 'search' : 'title';
   renderBar(); updateBar();
 }
 
-/* the bar takes over once the title row has gone behind it */
+/* the pinned tier takes over once the title row has gone behind it.
+   Juegos pins the search itself (decision 7); every other screen pins the back + title bar. */
 const scroller = () => $('#scroller');
 function updateBar() {
+  const search = main.querySelector('.search');
+  if (search) {                                   /* Juegos: the field is the pinned tier */
+    /* sticky top:0 pins to the SCROLLER's top edge, not the viewport's — compare against that, not 0 */
+    const scTop = scroller().getBoundingClientRect().top;
+    search.classList.toggle('stuck', search.getBoundingClientRect().top - scTop <= 0.5);
+    device.classList.remove('scrolled'); $('#pbar').inert = true;
+    return;
+  }
   const ph = main.querySelector('.phead'); if (!ph) return;
   const on = scroller().scrollTop > ph.offsetTop + ph.offsetHeight - 44;
   device.classList.toggle('scrolled', on);
