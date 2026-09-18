@@ -198,9 +198,23 @@
      Pinned keeps a full-height bar (it is a bar under the search, not a highlight), and decision 27's padding
      halving is what centres the ink inside it. Two band shapes, one invariant: the ink is centred in whatever
      is actually drawn — and the harness now asserts that for every state that draws. */
-  .lhead { position: relative; }
+  /* --cap: the band centres on the CAP BLOCK, because for versalita the line box is not the ink. At 14/600 the
+     line box is 17px inside an 18.2px content box, and the capitals are 11px measured glyph-independently (an
+     "H" probe — a J's descending tail must not drag the optical centre). Centring the LINE box left the cap
+     block 0.6px high in BOTH states, so both take the same 0.6px downward nudge. Measured, --cap 0 gives -1.2
+     in each; --cap 0.6 gives 0.0.
+     The nudge changes neither band height nor the caption's own padding, so the breathing room and decision 21's
+     resting rhythm are untouched. The harness asserts cap-block centring, so this constant is CHECKED, not
+     trusted — change the font or the size and the guard fires. */
+  /* --band: the breath around the cap block. Measured at 5 / 6 / 7 the band is 28.2 / 30.2 / 32.2 and its edge
+     lands 24.6 / 23.6 / 22.6 from the NEXT label's capitals, against 33.2 of ink-to-ink between labels — so none
+     of the three crowds the rhythm and the choice is 2px of heft. 6 gives 9.6px of breath around an 11px cap:
+     a band 2.7x the cap, comfortably smaller than a row's own 64px hover. */
+  .lhead { position: relative; --band: 6px; --cap: 0.6px; }
   .lhead::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0;
-    top: calc(var(--pt) - var(--band, 7px)); bottom: calc(-1 * var(--band, 7px));
+    /* NOTE the signs: this state moves the BAND while the pinned state below moves the INK (via padding), and
+       raising the band is the same as lowering the ink inside it. Same --cap, opposite-looking expressions. */
+    top: calc(var(--pt) - var(--band) - var(--cap)); bottom: calc(var(--cap) - var(--band));
     background: transparent; transition: background 120ms var(--ease-out-soft); }
   @media (prefers-reduced-motion: reduce) { .lhead::before { transition: none; } }
   .lhw.pinned .lhead::before { top: 0; bottom: 0; background: var(--color-surface); }
@@ -226,7 +240,9 @@
      sticky element's flow slot does not change and nothing jumps at the moment it pins.
      The lesson this adds to "measure ink, not boxes": an element that draws NOTHING at rest but something in
      another state has TWO geometries, and spacing tuned for the invisible one becomes visible in the other. */
-  .lhw.pinned .lhead { padding-top: calc(var(--pt) / 2); padding-bottom: calc(var(--pt) / 2); }
+  /* the pinned bar is the box itself, so its ink is centred by the padding rather than by the band's offsets —
+     and it needs the same --cap correction, for the same reason. */
+  .lhw.pinned .lhead { padding-top: calc(var(--pt) / 2 + var(--cap)); padding-bottom: calc(var(--pt) / 2 - var(--cap)); }
 
   /* ---- decision 28 — a section label is VERSALITA: 14/600 uppercase, tracked ----
      From the device: "I need the look and feel of those header looks more different of the rest of the content."

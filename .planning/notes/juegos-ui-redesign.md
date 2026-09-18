@@ -963,10 +963,51 @@ Harness: **118/118**.
 
 Harness: **123/123**.
 
+30. **A Range's rect is still a box: centre the CAP BLOCK.** From the device, with a screenshot: *"still doesn't
+    look centered. Be sure to have the correct breath to don't kill rythm."* Decision 29's guard reported hover
+    centred at 7 / 8.2 and the band still looked wrong — because that measurement was the text's **range rect**,
+    and a range rect is a box like any other:
+
+    ```
+    caja de línea   alto 17   (ascendente 14 / descendente 3)
+    TINTA real      alto 11   (mayúscula, sin descendente)
+
+    medido por CAJA :  arriba 7     abajo 8.2    <- lo que verificaba el guard
+    medido por TINTA:  arriba 10    abajo 11.2   <- lo que ve el ojo
+    ```
+
+    **Versalita uses no descenders**, so the line box carries 3px of space the ink never occupies. The project's
+    rule was *"measure ink, not boxes"* — applied to element boxes, never to the **text's** box. Third form of
+    the same trap in this sketch, and the one that made a visibly-wrong band pass green.
+
+    **Two traps inside the fix, both caught by measuring:**
+    - **Glyph-dependent ink.** Measuring the actual text made the states disagree by 2px: the **J of "JUEGOS"
+      descends below the baseline**, so `actualBoundingBoxDescent` was 2 for the catalogue and 0 for "SIN DATOS".
+      The eye does not centre on the tail of a J. The probe is now an **"H"** — cap height, glyph-independent.
+    - **Inverted sign.** The hover band moves the **band**; the pinned bar moves the **ink** (via padding).
+      Raising a band is the same as lowering the ink inside it, so the same `--cap` reads as opposite-looking
+      expressions, and the first attempt fixed one state while pushing the other from −1.2 to −3.4. Measuring
+      `--cap` at 0 showed both states off by the *same* −1.2, which is what identified the single correction.
+
+    Result: **0.0 delta in both** — hover 9.6 / 9.6 (band 30.2), pinned 16.6 / 16.6 (band 44.2). `--cap` is
+    0.6px, half the leading, and it changes neither band height nor the caption's padding, so decision 21's
+    resting rhythm is untouched.
+
+    **The breath, measured rather than eyeballed** (the second half of the request). At `--band` 5 / 6 / 7 the
+    band is 28.2 / 30.2 / 32.2 and its edge lands **24.6 / 23.6 / 22.6 from the next label's capitals**, against
+    **33.2 of ink-to-ink between labels** — so none of the three crowds the rhythm and the choice is 2px of heft.
+    Took **6**: 9.6px around an 11px cap, a band 2.7× the cap and comfortably lighter than a row's own 64px
+    hover. Deliberately not spent as another full round on a 2px seam.
+
+    **The guard now measures the cap block**, with the tolerance tightened from 1.5 to 0.8 — a loose tolerance on
+    the wrong metric is how this passed twice.
+
+Harness: **123/123**.
+
 ## Where we are (2026-09-18)
 - **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **123/123**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–29**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–30**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections, labelled
   in **versalita 14/600** — `SIN DATOS 49 ⌄` and `BORRADORES 1 ⌄` closed, `JUEGOS DEL CLUB 385` open. No resting

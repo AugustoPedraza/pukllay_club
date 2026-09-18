@@ -372,12 +372,27 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
      asymmetric box (14px of colour above the text, 1.2 below) — the defect survived in the state nobody had
      looked at, immediately after the note that named the general rule. The guard therefore has to enumerate
      the STATES, not the one that was reported: anything that draws a fill or a ring gets measured. */
+  /* decision 30 — measure the CAP BLOCK, not the range rect. A Range's box is still a BOX: at 14/600 it is 17px
+     tall inside an 18.2px content box, while the capitals are 11. Centring the range rect left the ink 0.6px
+     high in every state — measurable, visible, and passed by the previous guard, which is how a band that looked
+     wrong shipped green. The probe uses an "H" so it is glyph-independent: the descending tail of the J in
+     "JUEGOS" must not drag the optical centre, and measuring the real text made the two states disagree by 2px
+     and sent the first fix off with an inverted sign. */
+  const capInk = `(h) => {
+    const ln = h.querySelector('.ln');
+    const g = document.createRange(); g.selectNodeContents(ln);
+    const lb = g.getBoundingClientRect(), cs = getComputedStyle(ln);
+    const x = document.createElement('canvas').getContext('2d');
+    x.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    const cap = x.measureText('H').actualBoundingBoxAscent;
+    const base = lb.top + x.measureText(ln.textContent).fontBoundingBoxAscent;
+    return { top: base - cap, bottom: base, cap: cap };
+  }`;
+  await p.evaluate(src => { window.INK = eval(src); }, capInk);
   const drawnStates = await J(async () => {
     const out = [];
     const measure = (h, label) => {
-      const ln = h.querySelector('.ln');
-      const g = document.createRange(); g.selectNodeContents(ln);
-      const ink = g.getBoundingClientRect(), box = h.getBoundingClientRect();
+      const ink = INK(h), box = h.getBoundingClientRect();
       const cs = getComputedStyle(h, '::before'), own = getComputedStyle(h);
       const top = box.top + (parseFloat(cs.top) || 0);
       const bot = box.bottom - (parseFloat(cs.bottom) || 0);
@@ -395,9 +410,8 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   /* hover and focus need real input, so they are driven rather than simulated */
   await p.hover('.lhead.tap'); await p.waitForTimeout(220);
   const hov = await J(() => {
-    const h = document.querySelector('.lhead.tap'), ln = h.querySelector('.ln');
-    const g = document.createRange(); g.selectNodeContents(ln);
-    const ink = g.getBoundingClientRect(), box = h.getBoundingClientRect();
+    const h = document.querySelector('.lhead.tap');
+    const ink = INK(h), box = h.getBoundingClientRect();
     const cs = getComputedStyle(h, '::before');
     const top = box.top + (parseFloat(cs.top) || 0), bot = box.bottom - (parseFloat(cs.bottom) || 0);
     return { label: 'hover', draws: cs.backgroundColor !== 'rgba(0, 0, 0, 0)',
@@ -405,12 +419,11 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
       inkTop: +ink.top.toFixed(1) };
   });
   await cool();
-  const restInkTop = await J(() => { const g = document.createRange();
-    g.selectNodeContents(document.querySelector('.lhead.tap .ln')); return +g.getBoundingClientRect().top.toFixed(1); });
+  const restInkTop = await J(() => +INK(document.querySelector('.lhead.tap')).top.toFixed(1));
   const states = [...drawnStates, hov].filter(s => s.draws);
   ok(states.length >= 2, `at least the pinned and hover fills are under test (${states.map(s => s.label).join(', ')})`);
-  states.forEach(s => ok(Math.abs(s.above - s.below) <= 1.5,
-    `${s.label}: the ink is centred in what is drawn (${s.above} above, ${s.below} below, band ${s.h})`));
+  states.forEach(s => ok(Math.abs(s.above - s.below) <= 0.8,
+    `${s.label}: the cap block is centred in what is drawn (${s.above} above, ${s.below} below, band ${s.h})`));
   /* and the fix must not move the label — a hover that shifts the text 13px is worse than the misalignment */
   ok(near(hov.inkTop, restInkTop, 0.6), `hovering does not move the label (${hov.inkTop} vs ${restInkTop} at rest)`);
   /* the caption's own background must stay transparent in every state: the band is the ::before, so any direct
