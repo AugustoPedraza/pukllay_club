@@ -140,8 +140,19 @@
   .txt { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
   .sub { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
   /* D-19h — a status is a DOT + TEXT, never a pill */
+  /* D-19h — a status is a DOT + TEXT, never a pill and never an alert box. These rules have sat here unused
+     since decision 1 removed the per-row status that only repeated its section. Enrichment is the state that
+     actually earns them: it is TRANSIENT and per-row, not a restatement of the heading. */
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
-  .dot.gap { background: var(--color-danger); }
+  .dot.err { background: var(--color-danger); }
+  /* pending has no cover yet — the shipped admin draws a skeleton here, and that part of it is right */
+  .cov.skel { background: linear-gradient(100deg, var(--color-surface) 30%, #efeaf6 50%, var(--color-surface) 70%);
+    background-size: 220% 100%; animation: sweep 1.4s linear infinite; border: 0; }
+  :root[data-theme="dark"] .cov.skel { background-image: linear-gradient(100deg, var(--color-surface) 30%, #2a1f3a 50%, var(--color-surface) 70%); }
+  @keyframes sweep { to { background-position: -120% 0; } }
+  @media (prefers-reduced-motion: reduce) { .cov.skel { animation: none; } }
+  /* variant C — the failure count on a CLOSED section caption */
+  .lhead .warn { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; font-weight: 400; color: var(--color-text-muted); }
 
   /* ---- decision 6 (D-19n) — a long list keeps its context while you scroll ----
      Two tiers pinned inside the scroller, the iOS pairing: a compact page bar (back + title) once the title row
@@ -373,6 +384,7 @@
 </div></div>
 <div id="tools">
   <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+  <div>Estado BGG: <button data-enr-set="" class="on">—</button> <button data-enr-set="pending">pendiente</button> <button data-enr-set="failed">error</button></div>
 </div>
 
 <script src="../069-estantes-ubicar/games.js"></script>
@@ -412,7 +424,13 @@ let G = GAMES067.map((x, i) => ({
   status: 'published',
   added: x.t ? 2000 + i : 0             /* the 49 all share the oldest timestamp */
 }));
-G.push({ id: 900, name: 'Ark Nova', thumb: null, hue: hue('Ark Nova'), year: 2021, gap: false, status: 'draft', added: 999999 });
+G.push({ id: 900, name: 'Ark Nova', thumb: null, hue: hue('Ark Nova'), year: 2021, gap: false, status: 'draft', added: 999999, enr: 'enriched' });
+/* enrichment_status — the SHIPPED column (pending | enriched | no_bgg_id | bgg_missing | failed; live code writes
+   only pending, enriched and failed). The dev DB has ZERO pending and ZERO failed rows today, so these are
+   SCENARIOS applied to the existing draft, not extra fixture rows: the resting page stays the real 49+1+385. */
+let ENR = '';        /* '' | 'pending' | 'failed' — a SCENARIO toggle, not a variant: the dev DB has no such
+                        rows, so this is the only way to see the state at all (like the Teclado toggle). */
+const enrOf = g => (g.id === 900 && ENR) ? ENR : (g.enr || 'enriched');
 const byId = id => G.find(g => g.id === id);
 const TOTAL = () => G.length;
 const GAPS = () => G.filter(g => g.gap);
@@ -427,7 +445,9 @@ const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [], open: 
 let KBD_SIM = true, opener = null;
 
 const main = $('#main'), device = $('#device');
-const cover = (g, cls = 'cov') => g.thumb
+const cover = (g, cls = 'cov') => enrOf(g) === 'pending'
+  ? `<span class="${cls} skel" aria-hidden="true"></span>`
+  : g.thumb
   ? `<img class="${cls}" src="${esc(g.thumb)}" alt="" loading="lazy">`
   : g.gap ? `<span class="${cls} none" aria-hidden="true">${ic('img')}</span>`
     : `<span class="${cls} l" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
@@ -446,9 +466,21 @@ const inGroup = k => byNew().filter(GROUPS.find(x => x.key === k).has);
 
 /* a row's second line: the year. The GROUP names the state, so a row never repeats it — inside "Sin datos"
    all 49 rows saying "● Sin datos" under a heading that already says it was pure noise. */
-function sub(g) { return g.year ? esc(String(g.year)) : ''; }
+/* decision 24 — enrichment is the row's SECOND LINE, the slot the year already occupies, as a dot + text
+   (D-19h). No new anatomy, no new left edge. It does NOT repeat the section's state — a draft is a draft whether
+   or not BGG answered — which is what decision 1 actually objected to.
+   The row keeps its chevron and nothing else: D-19i reserves the trailing slot for "opens a page" and decision 2
+   says picking a game opens its editor, so Reintentar belongs in the editor, not in the row. */
+function sub(g) {
+  const e = enrOf(g);
+  if (e === 'pending') return '<span class="dot"></span>Trayendo datos de BGG…';
+  if (e === 'failed') return '<span class="dot err"></span>Error al traer datos de BGG';
+  return g.year ? esc(String(g.year)) : '';
+}
+/* pending arrives BEFORE the name does: draft_changeset writes the placeholder "Juego #<bgg_id>" */
+const rowName = g => enrOf(g) === 'pending' ? 'Juego #342942' : esc(g.name);
 const gameRow = g => `<button class="row" data-act="open" data-id="${g.id}" aria-label="${esc(g.name)}">
-  ${cover(g)}<span class="txt"><span class="name">${esc(g.name)}</span>${sub(g) ? `<span class="sub">${sub(g)}</span>` : ''}</span>
+  ${cover(g)}<span class="txt"><span class="name">${rowName(g)}</span>${sub(g) ? `<span class="sub">${sub(g)}</span>` : ''}</span>
   <span class="chev" aria-hidden="true">${ic('chevR')}</span></button>`;
 
 /* ---------- screens ---------- */
@@ -527,9 +559,15 @@ function groupSection(g) {
      second kind of header. It sits INLINE after the count, so there is no leading slot and therefore no hole in
      the x=16 column (decision 16's defect). The hit box is stretched to 44 by a pseudo-element so the caption's
      visual rhythm is not loosened to reach the touch floor. */
+  /* decision 24 — a failure inside a CLOSED section is otherwise invisible: measured, the row is not even in
+     the DOM at rest. The caption carries it as the SAME dot + text a row would use (D-19h), never a badge — and
+     only while closed, since an open section shows the rows themselves. Costs the resting page nothing.
+     This is decision 18's move again: an optional affordance on ONE anatomy, not a second kind of header. */
+  const bad = all.filter(x => enrOf(x) === 'failed').length;
+  const warn = (bad && !open) ? `<span class="warn"><span class="dot err"></span>${bad} con error</span>` : '';
   const head = g.shut
     ? `<button class="lhead tap" data-act="group" data-g="${g.key}" aria-expanded="${open}">
-        <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>
+        <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>${warn}
         <span class="caret" aria-hidden="true">${ic('chevR')}</span></button>`
     : `<span class="lhead"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span>`;
   return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}${open ? '' : ' shut'}">
@@ -751,6 +789,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('click', e => {
   const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); }
   const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) device.classList.remove('kbd'); mark('[data-kbd-set]', k); }
+  const en = e.target.closest('[data-enr-set]'); if (en) { ENR = en.dataset.enrSet; mark('[data-enr-set]', en); render(); }
 });
 function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
 

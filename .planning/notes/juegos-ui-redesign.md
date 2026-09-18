@@ -733,10 +733,68 @@ measured on the smallest — the check that would have caught 51% being reported
     though that guard is about the *label*. It is benign here: the hint sits on the 16 keyline and the year on
     68, and the two never share a line. Deliberate tertiary rank, not a defect.
 
+24. **BGG enrichment: `pending` and `failed`, and the handoff was wrong about them.** The handoff called this
+    "the biggest gap — real shipped behaviour with no design at all". Audited against `lib/`, and it **is**
+    drawn, in the admin 071 replaces:
+
+    | estado | dónde | qué dibuja |
+    |---|---|---|
+    | pending | `admin/game_live/index.ex:363` | skeleton en la tapa |
+    | pending | `index.ex:242` | `"Juego #<bgg_id> (cargando…)"` |
+    | failed | `index.ex:372-380` | `<div class="alert alert-error">` + botón `Reintentar`, **dentro de la fila** |
+    | failed | `game_live/form.ex:262-267` | el mismo alert en el editor |
+
+    So the gap is not "no design" — it is **a shipped design that contradicts three rules settled since**:
+    1. `alert alert-error` is a red **box inside a list row**. D-19h: a status is a **dot + text, never a pill** —
+       and an alert box outweighs a pill.
+    2. A `Reintentar` **button inside the row** is a second action per row, when D-19i reserves the trailing slot
+       for "opens a page" and decision 2 sends picking a game to its editor.
+    3. **`enrichment_status` is filtered by no query anywhere** (`catalog.ex` filters only on `status`). A
+       `failed` game is public the moment `status` is `:published`; nothing gates publishing on BGG answering.
+       Not a UI defect — but it is why the 49 "Sin datos" games are live and broken on the public site.
+
+    **The column, for the record:** `enrichment_status`, a plain string (`game.ex:48`), declared values
+    `pending | enriched | no_bgg_id | bgg_missing | failed` (`game.ex:19`). Live code writes only **pending,
+    enriched, failed**; `no_bgg_id` (41) and `bgg_missing` (8) are seed-era values still sitting in the dev DB.
+    `enrichment_changeset/2` does **not** `validate_inclusion`, and there is no DB check constraint — so the
+    column is unvalidated on every live write path. Oban: `max_attempts: 3`, linear backoff `attempt * 30`.
+
+    **Determined by the rules, not asked:** the row carries it on its **second line** — the slot the year already
+    occupies — as a dot + text. No new anatomy, no third text edge (measured 68/68), the row keeps **only** its
+    chevron, and Reintentar moves to the editor. It does not repeat the section's state either: a draft is a
+    draft whether or not BGG answered, which is what decision 1 actually objected to. `pending` additionally
+    takes a skeleton cover and the placeholder name `Juego #<bgg_id>` — the one part of the shipped design that
+    was right.
+
+    **What was actually open, and a structural finding that framed it.** A `failed` game is a **draft**
+    (`draft_changeset` forces `status: :draft`), and drafts live in **Borradores, which decision 18 closes at
+    rest**. Measured: at rest the failed row **is not even in the DOM**. A failure is invisible until you open
+    the section. Three ways out were built and measured:
+
+    | | al reposo | costo de chrome |
+    |---|---|---|
+    | A fila, nada más | **invisible** (la fila no está en el DOM) | 0 |
+    | B la sección se abre sola | error completo a la vista | catálogo 213 → **299px (+86)** |
+    | **C la cuenta lo dice** | `Borradores 1 ● 1 con error ›` | **0** |
+
+    Developer picked **C**. One line at 360/375/390 (ink ends at x=245, 115px of slack on the narrowest), zero
+    cost to the resting page, and it shows **only while the section is closed** — an open section's rows say it
+    themselves. **It is decision 18's move again:** an optional affordance on ONE anatomy, not a second kind of
+    header, and the harness asserts the ink identity survives it.
+    **B was rejected on the measurement:** it hands back 86px of what decision 18 bought, every visit, and
+    decides for the reader that they want the section open — a failure you already know about keeps pushing the
+    catalogue down forever.
+
+    `ENR` stays in the tools as a **scenario** toggle, not a variant: the dev DB has zero `pending` and zero
+    `failed` rows, so it is the only way to see the state at all, and the resting page stays the real 49+1+385.
+
+Harness: **108/108** — 17 new checks, including that a failed row is absent from the DOM at rest (the reason the
+caption must carry it), that no `[class*=alert]` exists anywhere, and that `1 anatomy` survives the report.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **91/91**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **108/108**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–23**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–24**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections —
   `Sin datos 49 ›` and `Borradores 1 ›` closed, `Juegos del club 385` open. No resting page title. Chrome 213px.
@@ -744,8 +802,9 @@ measured on the smallest — the check that would have caught 51% being reported
 - **App-wide rules recorded** in `01.8.2-CONTEXT.md` + `01.8.2-BENCHMARK.md`: **D-19n** scrolled context,
   **D-19g-bis** catalog sections.
 - **Still open** (handoff's list, minus the one decision 22 closed):
-  1. the enrichment `pending`/`failed` row + Reintentar — not drawn anywhere (slated for sketch 072)
-  2. the catalog row's second line is the year alone, repeating down a newest-first list
+  1. the catalog row's second line is the year alone — and **`newest first` is a real sort for 2 of 435 games**
+     (433 share the 2026-08-10 CSV import date), so the list's stated order is effectively import order
+  2. **the editor still owes Reintentar** — decision 24 moved it there from the row (sketch 072)
   3. no prompt line
   4. collapse state does not persist
   5. copy not reviewed

@@ -363,6 +363,76 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   await p.click('#pbar .back'); await p.waitForTimeout(300);
   ok(await J(() => !!document.querySelector('#q') && document.querySelector('main h1').textContent === 'Juegos' && document.querySelector('.scroller').scrollTop === 0), 'the bar\'s back returns to Juegos at the top');
 
+  /* ---------- decision 24 — BGG enrichment: pending and failed ----------
+     The shipped admin DOES draw these (game_live/index.ex:242,363,372-380) — the handoff's "not drawn anywhere"
+     was wrong. What it draws contradicts three rules settled since: an `alert alert-error` BOX inside a list row
+     (D-19h says a status is a dot + text, never a pill, and an alert outweighs a pill), a Reintentar BUTTON in
+     the row (D-19i reserves the trailing slot for "opens a page"; decision 2 sends picking a game to its
+     editor), and it is the only surface for a state no query filters on — enrichment_status gates nothing, so a
+     failed game is public the moment status is :published.
+     ENR is a SCENARIO toggle, not a variant: the dev DB has zero pending and zero failed rows, so the resting
+     page must stay the real 49 + 1 + 385, and these checks set the scenario explicitly. */
+  const setEnr = async v => { await J(e => document.querySelector(`[data-enr-set="${e}"]`).click(), v); await p.waitForTimeout(120); };
+  const openDraft = async () => { await J(() => { const h = [...document.querySelectorAll('.lhead.tap')].find(x => x.querySelector('.ln').textContent === 'Borradores');
+    if (h && h.getAttribute('aria-expanded') !== 'true') h.click(); }); await p.waitForTimeout(160); };
+
+  /* a failure is invisible at rest — this is WHY the caption has to carry it */
+  await setEnr('failed');
+  ok(await J(() => ![...document.querySelectorAll('.row')].some(r => r.querySelector('.dot'))),
+    'a failed row is not even in the DOM while its section is closed');
+  const warn = await J(() => { const w = document.querySelector('.lhead .warn'); if (!w) return null;
+    const sc = document.querySelector('.scroller').getBoundingClientRect();
+    const g = document.createRange(); g.selectNodeContents(w.closest('.lhead'));
+    const r = g.getBoundingClientRect(); const first = document.querySelector('.lgroup.main .row').getBoundingClientRect();
+    return { text: w.textContent.trim(), dot: !!w.querySelector('.dot.err'), inkH: +r.height.toFixed(1),
+      inkRight: +r.right.toFixed(0), chrome: +(first.top - sc.top).toFixed(0),
+      pill: !!w.querySelector('[class*=badge], [class*=alert], [class*=pill]'),
+      bg: getComputedStyle(w).backgroundColor }; });
+  ok(warn && warn.text === '1 con error' && warn.dot, `the closed caption reports it as a dot + text ("${warn && warn.text}")`);
+  ok(warn && warn.bg === 'rgba(0, 0, 0, 0)' && !warn.pill, 'D-19h — a dot and text, never a pill, badge or alert box');
+  ok(warn && near(warn.inkH, 19.5, 1.5), `the caption stays ONE line with it (${warn && warn.inkH}px of ink)`);
+  ok(warn && warn.inkRight <= 300, `and leaves real slack at 360 (ink ends at x=${warn && warn.inkRight})`);
+  ok(warn && warn.chrome === 213, `it costs the resting page NOTHING (catalogue still at ${warn && warn.chrome}px)`);
+
+  /* ONE anatomy still (decision 17/18): the warn is an optional affordance, like the caret — the ink that
+     decides whether two headers are the same KIND of thing must stay byte-identical across all three. */
+  const ana24 = await J(() => [...document.querySelectorAll('.lhead')].map(h => { const c = getComputedStyle(h), n = getComputedStyle(h.querySelector('.ln'));
+    const g = document.createRange(); g.selectNodeContents(h.querySelector('.ln'));
+    return [c.backgroundColor, parseFloat(n.fontSize) + '/' + n.fontWeight, n.color, +g.getBoundingClientRect().left.toFixed(0)].join('|'); }));
+  ok(new Set(ana24).size === 1, `1 anatomy survives the failure report (${ana24[0]})`);
+
+  /* the row itself, with the section open: the second line carries it — the slot the year already had */
+  await openDraft();
+  const r24 = await J(() => { const row = [...document.querySelectorAll('.row')].find(r => r.querySelector('.dot.err')); if (!row) return null;
+    const L = e => { const g = document.createRange(); g.selectNodeContents(e); return +g.getBoundingClientRect().left.toFixed(0); };
+    return { sub: row.querySelector('.sub').textContent.trim(), nameLeft: L(row.querySelector('.name')),
+      subLeft: L(row.querySelector('.sub')), chev: !!row.querySelector('.chev'),
+      buttons: row.querySelectorAll('button').length, act: row.dataset.act,
+      warnGone: !document.querySelector('.lgroup .lhead .warn') || !!document.querySelector('.lhead[aria-expanded="true"] .warn') === false }; });
+  ok(r24 && /^Error al traer datos de BGG$/.test(r24.sub), `the row says it on its SECOND line ("${r24 && r24.sub}")`);
+  ok(r24 && r24.nameLeft === 68 && r24.subLeft === 68, `on the row's own keyline, adding no third text edge (${r24 && r24.nameLeft}/${r24 && r24.subLeft})`);
+  ok(r24 && r24.chev && r24.buttons === 0 && r24.act === 'open',
+    'the row keeps only its chevron — Reintentar belongs in the editor (D-19i + decision 2), not in a list row');
+  ok(r24 && r24.warnGone, 'the caption drops the warning once the section is open — the rows say it themselves');
+
+  /* pending: the state that arrives before the name does */
+  await setEnr('pending'); await openDraft();
+  const pnd = await J(() => { const row = [...document.querySelectorAll('.row')].find(r => r.querySelector('.dot')); if (!row) return null;
+    return { name: row.querySelector('.name').textContent.trim(), sub: row.querySelector('.sub').textContent.trim(),
+      skel: !!row.querySelector('.cov.skel'), err: !!row.querySelector('.dot.err'),
+      h: +row.getBoundingClientRect().height.toFixed(0) }; });
+  ok(pnd && /^Juego #\d+$/.test(pnd.name), `pending shows the placeholder name BGG has not replaced yet ("${pnd && pnd.name}")`);
+  ok(pnd && pnd.sub === 'Trayendo datos de BGG…' && !pnd.err, `and an amber dot, not the danger one ("${pnd && pnd.sub}")`);
+  ok(pnd && pnd.skel, 'its cover is a skeleton, the one part of the shipped design that was right');
+  ok(pnd && pnd.h === 64, `and the row keeps the list's own height (${pnd && pnd.h})`);
+
+  /* nothing anywhere reintroduces the shipped alert box */
+  ok(await J(() => !document.querySelector('[class*=alert]')), 'no alert box anywhere on the page (D-19h)');
+  await p.screenshot({ path: path.join(OUT, '11-enrichment-pending-375x740-light.png') });
+  await setEnr('');
+  ok(await J(() => !document.querySelector('.dot') && !document.querySelector('.lhead .warn')),
+    'and with no pending or failed rows the page is byte-identical to the real data (49 + 1 + 385)');
+
   /* ---------- contrast, both themes ---------- */
   const contrast = () => J(() => {
     const parse = s => { if (!s || s === 'transparent') return null;
