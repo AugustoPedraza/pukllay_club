@@ -563,11 +563,59 @@ Harness: **68/68**.
 
 Harness: **72/72**.
 
+20. **The section label returns to D-19j's rank.** Developer: *"evaluate all the page to fix hiearchy since the
+    balance is broken. The group identifier looks to small and isn't easily identifibled."* Audited the whole type
+    ladder, and the complaint was exactly right — **the hierarchy was inverted**:
+
+    | rank | size/weight | contrast | left |
+    |---|---|---|---|
+    | page title | 22/600 | 17.16 | 16 |
+    | search | 16/400 | 17.16 | 16 |
+    | **section label** | **13/600** | **6.17** | 16 |
+    | row name | 15/400 | **17.16** | 68 |
+    | row year | 13/400 | 6.17 | 68 |
+
+    Three findings:
+    1. The label organising 385 rows was **2px smaller and 2.8x lower contrast than a single row inside it**.
+    2. It **violated D-19j**, this project's own ladder, which puts a list section at **15/600, above** row names.
+    3. It was **byte-identical to a row's second line** — `Sin datos` and `2020` both 13 / `rgb(103,92,125)` at
+       6.17:1, separated only by weight, and decision 10 established 600-vs-400 is this app's entire weight range.
+       A section name carried the weight of row metadata.
+
+    **Cause, and it was mine.** Decision 16 demoted the caption to 13/600 muted *specifically to separate it from
+    the banded 15/600 **controls***. Decision 17 deleted those controls. The reason went away; the demotion
+    stayed. I also mis-cited the BENCHMARK's `Label (group) 13/600` — that row was measured from a **form**
+    section label in sketch 065, not a list section header. D-19j governs the latter, at 15/600.
+
+    | | section | vs row name | vs row year | catalog top |
+    |---|---|---|---|---|
+    | as built | 13/600 @6.17 | 2px smaller, 2.8x fainter | **identical** | 206 |
+    | **A D-19j** | **15/600 @17.16** | same size, heavier | distinct | 211 |
+    | B mid | 15/600 @6.17 | 2.8x fainter | distinct | 211 |
+    | C versalita | 12/600 caps @17.16 | 3px smaller | distinct | 203 |
+
+    Developer picked **A**. Costs 5px. **Decision 10's confusion cannot return** even though a section and a row
+    now share size and colour: they differ by weight (600/400), keyline (16/68) and the 40px cover a row has and a
+    section does not — and decision 10's actual problem was a 44px **control** with a trailing icon in the
+    row-chevron slot, which has not existed since decision 17. All four differentiators are now asserted, plus two
+    guards against the inversion itself: a section is never smaller than its rows, and never identical to a row's
+    second line.
+    Rejected: 15/600 muted (fixes size, keeps it 2.8x fainter — the inversion partly survives) and 12/600 all-caps
+    tracked (earns presence from case rather than size and costs *less* height, but it is a harder, more systemy
+    voice than the sentence-case Spanish this admin uses everywhere, and iOS moved away from caps section headers).
+
+    **Pattern worth naming:** this is the second time a rule outlived its reason. Decision 19 restored the hints
+    that 17 had deleted for a premise 18 changed; decision 20 restores a rank that 16 lowered for controls 17
+    removed. **When a decision is superseded, re-check what was justified by the thing it removed** — the
+    supersession note should list what becomes re-openable, not just what is now true.
+
+Harness: **76/76** (ladder holds, all four differentiators, both inversion guards).
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **72/72**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **76/76**.
   Tools: **Tema · Teclado** only — nothing collapses any more, so `Grupos` went too, along with every variant
   toggle (`Sangría`, `Franjas`, `Cabecera`, `Rótulo`, `Trabajo`).
-- **Settled:** decisions 1–9 and **16–19**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
+- **Settled:** decisions 1–9 and **16–20**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
   consequences of having two kinds of section header). **Reverted:** 12. **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
   16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).

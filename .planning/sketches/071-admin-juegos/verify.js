@@ -65,7 +65,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
       +h.getBoundingClientRect().height.toFixed(1), +g.getBoundingClientRect().left.toFixed(1)].join('|');
   }));
   ok(new Set(anat).size === 1, `every section header is the SAME component (${new Set(anat).size} anatomy: ${anat[0]})`);
-  ok(/\|13px\/600\|/.test(anat[0]), 'every section carries decision 16 Label (group) rank, 13/600');
+  ok(/\|15px\/600\|/.test(anat[0]), 'every section carries D-19j\'s list-section rank, 15/600 (decision 20)');
   ok(/^rgba\(0, 0, 0, 0\)\|/.test(anat[0]), 'no section is tinted at rest — the fill is for pinning only');
 
   /* decision 18 — the two EXCEPTION sections close at rest so the catalog is not buried behind them; the body
@@ -118,12 +118,28 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   /* a caption must still be legible against a row it is NOT: rank and colour both differ from a row name */
   const sep = await J(() => {
     const t = e => { const c = getComputedStyle(e); return c.fontSize.replace('px', '') + '/' + c.fontWeight; };
-    const hn = document.querySelector('.lhead .ln'), rn = document.querySelector('.row .name');
+    const L = e => { const g = document.createRange(); g.selectNodeContents(e); return +g.getBoundingClientRect().left.toFixed(1); };
+    const hn = document.querySelector('.lhead .ln'), rn = document.querySelector('.row .name'), sb = document.querySelector('.row .sub');
     return { head: t(hn), row: t(rn), headColor: getComputedStyle(hn).color, rowColor: getComputedStyle(rn).color,
+      headWeight: +getComputedStyle(hn).fontWeight, rowWeight: +getComputedStyle(rn).fontWeight,
+      headSize: parseFloat(getComputedStyle(hn).fontSize), rowSize: parseFloat(getComputedStyle(rn).fontSize),
+      subSize: parseFloat(getComputedStyle(sb).fontSize), subColor: getComputedStyle(sb).color,
+      headLeft: L(hn), rowLeft: L(rn),
+      headCover: !!document.querySelector('.lhead .cov'), rowCover: !!document.querySelector('.row .cov'),
       headBleed: +document.querySelector('.lhead').getBoundingClientRect().width.toFixed(1) };
   });
-  ok(sep.head !== sep.row, `a caption does not share a row's rank (${sep.head} vs ${sep.row})`);
-  ok(sep.headColor !== sep.rowColor, `nor its colour (${sep.headColor} vs ${sep.rowColor})`);
+  /* decision 20 — a section and a row now share size and colour by design (D-19j puts them adjacent), so the
+     separation rests on the three things that actually differ. Decision 10's confusion was a 44px CONTROL with a
+     trailing icon in the row-chevron slot; none of that exists, but assert the differentiators anyway so a future
+     change cannot quietly erase them. */
+  ok(sep.head !== sep.row, `a section outweighs its rows (${sep.head} vs ${sep.row})`);
+  ok(sep.headWeight > sep.rowWeight, `by weight (${sep.headWeight} vs ${sep.rowWeight})`);
+  ok(sep.headLeft === 16 && sep.rowLeft === 68, `by keyline (${sep.headLeft} vs ${sep.rowLeft})`);
+  ok(!sep.headCover && sep.rowCover, 'and by the 40px cover a row has and a section does not');
+  /* the inversion that prompted decision 20 must not come back: a section must never be quieter than a row, nor
+     read as a row's second line */
+  ok(sep.headSize >= sep.rowSize, `a section is never smaller than the rows it heads (${sep.headSize} vs ${sep.rowSize})`);
+  ok(!(sep.headSize === sep.subSize && sep.headColor === sep.subColor), `nor identical to a row's second line (${sep.headSize}/${sep.headColor} vs ${sep.subSize}/${sep.subColor})`);
   ok(near(sep.headBleed, 375, 1), `the caption is full-bleed so it can pin opaquely (${sep.headBleed})`);
 
   /* no Pendientes page and no badge — decision 8 deleted them and decision 17 keeps them gone */
@@ -158,7 +174,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
 
   const ranks = await J(() => { const g = s => { const e = document.querySelector(s); const c = getComputedStyle(e); return parseFloat(c.fontSize) + '/' + c.fontWeight; };
     return { title: g('.ptitle'), lhead: g('.lhead'), name: g('.row .name'), field: g('.sfield input') }; });
-  ok(ranks.title === '22/600' && ranks.lhead === '13/600' && ranks.name === '15/400' && ranks.field === '16/400',
+  ok(ranks.title === '22/600' && ranks.lhead === '15/600' && ranks.name === '15/400' && ranks.field === '16/400',
     `type ranks hold (title ${ranks.title}, heading ${ranks.lhead}, row ${ranks.name}, field ${ranks.field})`);
   ok(await J(() => [...document.querySelectorAll('svg')].every(s => s.children.length > 0)), 'no empty SVG icons anywhere');
   const oflow = await J(() => { const s = document.querySelector('.scroller'); return s.scrollWidth - s.clientWidth; });

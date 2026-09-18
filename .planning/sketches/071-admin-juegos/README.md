@@ -39,7 +39,7 @@ Try: type `cat` (matches + "Crear «…»") · paste `342942` or a `boardgamegee
 live) · open `Sin datos` · scroll down (the search hides, the catalog heading pins and gains its band) · any
 row → the editor stand-in.
 
-## What it draws (decisions 1–19, `notes/juegos-ui-redesign.md`)
+## What it draws (decisions 1–20, `notes/juegos-ui-redesign.md`)
 - **One job: find one game.** Title `Juegos` + a 48px search field, no filter chips.
 - **Picking a game opens its editor** (sketch 063's screen — stubbed here). The search is pure navigation, so a
   game row carries a **chevron** (D-19i).
@@ -82,6 +82,11 @@ row → the editor stand-in.
   list nothing (no `.hint` exists at rest; captions still 30.9, catalog still 206) and spends 26px only when
   opened; sits at 16, so no third edge. Rejected: folding it into the caption, which wrapped the header to 2.78
   lines **while collapsed** and pushed the catalog 206 → 223.
+  **The section label carries D-19j's rank, 15/600 full strength** (decision 20) — audited, the ladder had
+  inverted: the label was 2px smaller and 2.8x lower contrast than a row inside it, and byte-identical to a row's
+  year. Cause: decision 16 demoted it to separate it from controls decision 17 then deleted. Separation now rests
+  on weight (600/400), keyline (16/68) and the absent cover; two guards assert a section is never smaller than its
+  rows nor identical to their second line.
   **Order: exceptions first** (`Sin datos` → `Borradores` → `Juegos del club`), measured cost accepted: the
   catalog sits **50 rows / 3,270px** down, so the 49 broken games cannot be missed but the newest-first catalog
   is not at the top.
@@ -107,7 +112,7 @@ heading are all off screen at once, leaving 11 rows with no context and the back
   heading is confined to its own section, so an arriving one evicts it.
 
 ## Verification (`node .planning/sketches/071-admin-juegos/verify.js`)
-**72/72 passed**, no page errors. Highlights:
+**76/76 passed**, no page errors. Highlights:
 - **Rhythm is pixel-identical to 069 raised** at 375×740: title row → field **16.0** (25.2 from the title's text
   box — 069 measures a field from the row, since its border is the visible edge), field → "Juegos del club"
   **32.0**, heading → first cover **16.5**, row **64px**.
