@@ -91,7 +91,7 @@
   .wblock .lgroup, .wblock .lgroup + .lgroup { margin-top: 0; }
   .wblock .lgroup + .lgroup .lhw { margin-top: 0; }
   .wblock .lgroup + .lgroup .lhead { box-shadow: inset 0 1px 0 var(--color-border); }
-  .lgroup.main { margin-top: 24px; }   /* no band to measure to: the rows start 24 under the work block */
+  .lgroup.main { margin-top: 28px; }
   .device[data-bar="search"] .pbar { display: none; }
   .sfield { position: relative; }
   .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; text-overflow: ellipsis; }
@@ -165,16 +165,13 @@
                     not a navigation chevron (a D-19i "›" is always trailing)
        indent     — header text at 44, row text at 68 */
   .lhw { position: sticky; top: var(--bar); z-index: 5; margin: 4px -16px 0; background: var(--color-bg); }
-  .lhead { width: 100%; display: flex; align-items: center; gap: 0; min-height: 44px; padding: 4px 16px; border: 0;
+  .lhead { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 16px; border: 0;
     background: var(--color-surface); text-align: left; cursor: pointer; font-size: 15px; font-weight: 600; line-height: 1.3; }
   .lhead:hover { background: var(--color-surface-2); }
   .lhead:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
-  /* decision 12 — the caret occupies the same 40px leading slot a row's cover does (16..56), then 12px, so the
-     band's text lands at 68 exactly with the row's. Before this the page had THREE text left edges: 16, 44, 68. */
-  .lhead .caret { width: 40px; height: 20px; margin-right: 12px; flex-shrink: 0; display: grid; place-items: center;
-    color: var(--color-text-muted); transition: transform 160ms var(--ease-out-soft); }
-  .lhead .caret svg { width: 20px; height: 20px; }
+  .lhead .caret { order: -1; width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted);
+    transition: transform 160ms var(--ease-out-soft); }
   .lhead[aria-expanded="true"] .caret { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
 
@@ -447,17 +444,10 @@ function updateBar() {
 function groupSection(g) {
   const all = inGroup(g.key), open = !!S.open[g.key];
   const paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
-  /* decision 12 — the catalog has NO header: the page is called Juegos, the tab says Juegos, and the pager
-     already reads "50 de 385", so a third label was redundant AND a second tinted mass, which is what kept the
-     page reading as bands. Only the work groups carry a band now. */
-  if (g.key === 'rest') return `<section class="lgroup main">
-    <div class="rows">${paged.map(gameRow).join('')}</div>
-    ${S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}
-  </section>`;
-  return `<section class="lgroup">
+  return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}">
     <h2 class="lhw"><button class="lhead" data-act="group" data-g="${g.key}" aria-expanded="${open}">
-      <span class="caret" aria-hidden="true">${ic('chevR')}</span>
-      <span class="ln">${g.name}</span><span class="cnt">${all.length}</span></button></h2>
+      <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>
+      <span class="caret" aria-hidden="true">${ic('chevR')}</span></button></h2>
     ${open ? `${g.hint ? `<p class="hint">${g.hint}</p>` : ''}
       <div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
       ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}

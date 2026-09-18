@@ -269,38 +269,15 @@ Harness: **57/57**.
 Harness: **61/61**, and it now asserts the gaps against the band edges (24 / 0 / 32 / 0) plus "no repeating pitch",
 so this cannot silently come back.
 
-12. **One tinted mass, two left edges: the catalog loses its header.** Developer: *"It's better, but still breaks
-    balance and rythm"* — right on both counts, and both were traceable to my previous two changes.
-
-    **What the second audit found:**
-    - **The stripe had survived, just coarser.** Down the page: void 20 → **TINT 92** → void 32 → **TINT 44** → rows.
-      Decision 11 removed a three-band alternation and left a two-band one. Any void between two tinted masses
-      still reads as banding.
-    - **Three text left edges — introduced by decision 10 and never checked.** Page title, search, band caret and
-      row cover all began at **16**; band text at **44**; row text at **68**. Reading down the page the text jumped
-      16 → 44 → 68, aligning with nothing. That breaks rhythm on its own, with no colour involved.
-
-    Developer picked "Drop the catalog header entirely (Recommended)" over a plain (untinted) catalog header, over
-    inverting which block is tinted, and over removing every tint.
-    **Now:** the page is title · search · **one tinted attention block** · the games. `Juegos del club 385` is gone —
-    the page is called Juegos, the tab says Juegos, and the pager already reads `Mostrar más · 50 de 385`, so the
-    count was never at risk. Nothing is left to alternate with. *(This reverses 065 round 5, which added the label
-    because Juegos was then "the only admin page with an unlabelled block" — true when the page also held an add
-    form, a search and filter chips, all needing names. The page is now search + attention + list, and the list is
-    the page.)*
-    **Alignment:** the caret takes the same 40px leading slot a row's cover occupies (16..56), then 12px, so band
-    text lands at **68 — exactly with row text**. Two left edges, 16 and 68, which is also the iOS/Material
-    convention for section headers.
-    Measured: masses — one tinted block of 92px, everything else untinted; gaps **24 / 0 / 24** around it;
-    left edges 16 / 68 / 68. Cost: the catalog can no longer be collapsed (it is the page's content, not an option)
-    and has no pinned header while scrolling.
-
-**Two harness lessons this round, both mine:**
-- A check that **clicked a group open and then clicked a stale node to close it** left the page mutated, and every
-  measurement after it was silently wrong (the "seam" read 3162px). Re-query after any render.
-- A screenshot made the two identical bands look like **different tints**, twice. Raw pixels were byte-identical
-  (`sha 244b1f11…` both) — simultaneous contrast, not a bug. Screenshots catch real defects *and* invent fake ones;
-  a colour difference now gets sampled before it is believed. The harness also parks the cursor off-canvas first,
-  after a stray hover made one band genuinely darker in an earlier shot.
-
-Harness: **65/65**, now asserting one tinted mass, two text left edges, and the band-edge gaps.
+12. **Tried and reverted: dropping the catalog header.** Built as `193d10c` and reverted at the developer's request
+    ("undo that last change") before it settled. What it did: removed the `Juegos del club 385` band entirely so the
+    page carried **one** tinted mass, and moved the group caret into the 40px slot a row's cover occupies so band
+    text landed at **68** with row text (two left edges instead of three).
+    **Reverted state is decision 11's:** the catalog band is back, and the page measures two tinted masses
+    (92px work block, void 32, 44px catalog band) with text left edges at **16 / 44 / 68**.
+    **The two findings that prompted it still stand and are still unfixed**, so they stay on the open list:
+    - a void between two tinted masses still reads as banding (the residual "rayado");
+    - the page has **three text left edges** — title/caret/cover at 16, band text at 44, row text at 68 — which
+      breaks rhythm independently of any colour. This one was a defect introduced by decision 10, and the revert
+      restored it, so it is worth fixing on its own whatever happens to the catalog header.
+    Harness back to **61/61**.
