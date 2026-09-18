@@ -158,6 +158,19 @@
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
   .lhw.pinned .lhead { background: var(--color-surface); }
 
+  /* decision 21 — air ABOVE a section label, none below it. Measured TEXT-TO-TEXT (the headers are transparent,
+     so box edges are invisible and lie — box gaps reported the variants as identical), the list read 15px above a
+     label against 17px below: INVERTED PROXIMITY. Each label clung to the label ABOVE it rather than to the rows
+     it heads, which is why three 15/600 labels read as one block instead of three sections. Now 27 against 9, a
+     3.0:1 ratio.
+     Rejected: air above alone (1.7:1, and 8px more chrome — it keeps the loose 17px below); a hairline above each
+     section (1.2:1 — the rule would do the work instead of proximity, and it draws a line this list otherwise
+     does not have); and welding the label to its rows alone, which FAILED at 1.2:1 because a header's bottom
+     padding feeds the gap to the NEXT header too, so welding tightened both ends at once. Proximity is a RATIO —
+     the two ends have to move in opposite directions. */
+  .lhead { padding-top: 26px; padding-bottom: 0; }
+  .lgroup:first-of-type .lhead { padding-top: 14px; }
+
   /* decision 20 — the section label returns to D-19j's rank, 15/600 at full strength. Audited, the ladder was
      INVERTED: the label organising 385 rows was 2px smaller and 2.8x lower contrast than a single row inside it
      (13/600 @6.17 vs 15/400 @17.16), and byte-identical to a row's SECOND line (the year, 13 @6.17) — so a
@@ -213,7 +226,7 @@
      COLLAPSED and pushed the catalog 206 -> 223, paying at rest on every visit for text that only matters once
      the section is open. */
   .hint { margin: 2px 0 6px; font-size: 13px; font-weight: 400; color: var(--color-text-muted); line-height: 1.4; }
-  .rows { margin: 0 -16px; }
+  .rows { margin: -4px -16px 0; }   /* decision 21 — the label is welded to the rows it heads */
   .row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; border: 0; background: none; text-align: left; cursor: pointer; position: relative; }
   .row + .row::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--color-border); }
   .row:hover { background: var(--color-surface); }

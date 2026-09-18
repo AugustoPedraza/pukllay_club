@@ -58,13 +58,20 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
      whether two headers read as the same kind of thing — fill, rank, colour, height, keyline — must be identical
      across all three. Decision 18 adds a caret to the two that collapse, which is the affordance TELLING you they
      collapse; it is deliberately excluded here and asserted separately below. */
+  /* The anatomy that decides whether two headers read as the same KIND of thing is the ink: fill, rank, colour,
+     keyline. Height was folded in until decision 21, which deliberately gives the FIRST section less leading air
+     because the 48px search field above it already separates it, while the others follow a label or rows. That
+     is spacing, not identity — so it is asserted separately below rather than dropped. */
   const anat = await J(() => [...document.querySelectorAll('.lhead')].map(h => {
     const ln = h.querySelector('.ln'), c = getComputedStyle(ln);
     const g = document.createRange(); g.selectNodeContents(ln);
     return [getComputedStyle(h).backgroundColor, c.fontSize + '/' + c.fontWeight, c.color,
-      +h.getBoundingClientRect().height.toFixed(1), +g.getBoundingClientRect().left.toFixed(1)].join('|');
+      +g.getBoundingClientRect().left.toFixed(1)].join('|');
   }));
   ok(new Set(anat).size === 1, `every section header is the SAME component (${new Set(anat).size} anatomy: ${anat[0]})`);
+  const air = await J(() => [...document.querySelectorAll('.lhead')].map(h => parseFloat(getComputedStyle(h).paddingTop)));
+  ok(new Set(air.slice(1)).size === 1, `leading air is uniform across every section after the first (${air.slice(1).join(', ')})`);
+  ok(air[0] < air[1], `and the first section is deliberately tighter — the search field above it already separates (${air[0]} vs ${air[1]})`);
   ok(/\|15px\/600\|/.test(anat[0]), 'every section carries D-19j\'s list-section rank, 15/600 (decision 20)');
   ok(/^rgba\(0, 0, 0, 0\)\|/.test(anat[0]), 'no section is tinted at rest — the fill is for pinning only');
 
@@ -105,6 +112,17 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
     return out;
   });
   ok(seams.every(g => Math.abs(g) < 1), `sections butt together, no gaps (${seams.join(', ')})`);
+  /* decision 21 — proximity must not invert. Measured TEXT-TO-TEXT, because the headers are transparent: a box
+     gap here is invisible to a reader and reported every variant as identical. A label must sit closer to the
+     rows it heads than to the label before it, or three labels read as one block. */
+  const prox = await J(() => {
+    const T = e => { const g = document.createRange(); g.selectNodeContents(e); const r = g.getBoundingClientRect(); return { t: r.top, b: r.bottom }; };
+    const ln = [...document.querySelectorAll('.lhead .ln')].map(T);
+    const firstRow = T(document.querySelector('.lgroup.main .row .name'));
+    return { between: +(ln[1].t - ln[0].b).toFixed(0), toRows: +(firstRow.t - ln[2].b).toFixed(0) };
+  });
+  ok(prox.between > prox.toRows, `a label sits closer to its own rows than to the label above it (${prox.between} above vs ${prox.toRows} below)`);
+  ok(prox.between / prox.toRows >= 2, `and by a clear ratio, not a hair (${(prox.between / prox.toRows).toFixed(1)}:1)`);
 
   /* two text left edges still: every caption at 16, every row name at 68 */
   const edges = await J(() => {

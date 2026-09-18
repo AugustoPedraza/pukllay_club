@@ -611,11 +611,56 @@ Harness: **72/72**.
 
 Harness: **76/76** (ladder holds, all four differentiators, both inversion guards).
 
+21. **Air above a section label, none below it.** The balance half of the same request. With the labels back at
+    15/600 the top of the list measured, **text to text**:
+
+    | gap | px |
+    |---|---|
+    | "Sin datos" → "Borradores" | **15** |
+    | "Borradores" → "Juegos del club" | 14 |
+    | "Juegos del club" → its first row | **17** |
+
+    **Inverted proximity.** The gap *above* a label was smaller than the gap *below* it, so every label was
+    visually attached to the label above rather than to the rows it heads — which is why three strong 15/600
+    labels read as one block of headings instead of three sections.
+
+    | | above | below | ratio | chrome |
+    |---|---|---|---|---|
+    | as built | 15 | 17 | **0.9:1** inverted | 40% |
+    | A air above | 29 | 17 | 1.7:1 | 44% |
+    | B hairline | 20 | 17 | 1.2:1 | 41% |
+    | C weld below | 11 | 9 | 1.2:1 | 37% |
+    | **D air above + weld below** | **27** | **9** | **3.0:1** | 43% |
+
+    Developer picked **D**, which is also 8px cheaper than A because the air added above is partly paid for by the
+    slack removed below.
+    **C failed for the instructive reason:** welding a label to its rows also tightens the gap to the *next*
+    header, because a header's bottom padding feeds both — so both ends moved together and the ratio barely
+    changed. **Proximity is a ratio; the two ends have to move in opposite directions.**
+    B was rejected because the 1px rule would be doing the work instead of proximity, in a list that draws no
+    other line above its rows.
+
+    **Two measurement failures worth recording, both mine, both caught:**
+    - **Box gaps lied again, and this time there was no box at all.** My first pass measured element edges and
+      reported variant A as `0/0/0` — identical to the current build — because the padding lives *inside* the
+      header box. The headers are transparent, so a reader can only see where the **ink** is. Every number above
+      is text-to-text. This is the third time this project has been bitten by box-vs-visible measurement; here the
+      rule is sharper: *if the element draws nothing, its box is not a measurement at all.*
+    - **The `1 anatomy` guard fired on a legitimate exception**, and the right response was to make the assertion
+      more precise rather than weaker. D gives the FIRST section less leading air (14 vs 26) because the 48px
+      search field above it already separates it, while the others follow a label or rows. Height is *spacing*,
+      not identity — so the anatomy check now asserts **ink** (fill, rank, colour, keyline) across all three, and
+      **two further checks** assert that leading air is uniform after the first and that the first is deliberately
+      tighter. The exception is documented in the harness instead of hidden by deleting a field from the guard.
+
+Harness: **80/80** — including a standing guard that a label must sit closer to its own rows than to the label
+above it, by a ratio of at least 2:1.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **76/76**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **80/80**.
   Tools: **Tema · Teclado** only — nothing collapses any more, so `Grupos` went too, along with every variant
   toggle (`Sangría`, `Franjas`, `Cabecera`, `Rótulo`, `Trabajo`).
-- **Settled:** decisions 1–9 and **16–20**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
+- **Settled:** decisions 1–9 and **16–21**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
   consequences of having two kinds of section header). **Reverted:** 12. **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
   16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).
