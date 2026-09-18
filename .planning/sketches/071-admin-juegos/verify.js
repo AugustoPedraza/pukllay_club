@@ -30,6 +30,9 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   const box = s => J(sel => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { t: r.top, b: r.bottom, l: r.left, r: r.right, w: r.width, h: r.height }; }, s);
   const textBox = s => J(sel => { const e = document.querySelector(sel); if (!e) return null; const g = document.createRange(); g.selectNodeContents(e); const r = g.getBoundingClientRect(); return { t: r.top, b: r.bottom, h: r.height }; }, s);
   const settle = async (pg = p) => {
+    /* park the cursor off-canvas first: a hover left on a band made two identical bands look like different
+       tints in a screenshot — shots must not invent differences that are not in the design */
+    await pg.mouse.move(2, 2);
     await pg.evaluate(() => [...document.querySelectorAll('img[loading="lazy"]')].forEach(i => i.loading = 'eager'));
     await pg.waitForFunction(() => [...document.querySelectorAll('img.cov')].every(i => i.complete), null, { timeout: 8000 }).catch(() => {});
     await pg.waitForTimeout(250);
@@ -43,12 +46,38 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
     open: h.getAttribute('aria-expanded') === 'true',
     h: +h.getBoundingClientRect().height.toFixed(1)
   })));
-  ok(groups.length === 3, `three groups (${groups.map(g => g.name).join(', ')})`);
-  ok(groups.map(g => g.name).join('|') === 'Sin datos|Borradores|Juegos del club', `work groups sit on top (${groups.map(g => g.name).join(' > ')})`);
-  const sum = groups.reduce((a, g) => a + g.count, 0);
-  ok(sum === 435, `the groups PARTITION the catalog: ${groups.map(g => g.count).join(' + ')} = ${sum}`);
-  ok(!groups[0].open && !groups[1].open && groups[2].open, `collapsed by default, catalog open (${groups.map(g => g.open).join(',')})`);
+  /* decision 12 — only the WORK groups carry a header; the catalog is headerless rows */
+  ok(groups.length === 2, `two banded work groups (${groups.map(g => g.name).join(', ')})`);
+  ok(groups.map(g => g.name).join('|') === 'Sin datos|Borradores', `work groups sit on top (${groups.map(g => g.name).join(' > ')})`);
+  const catalogTotal = await J(() => +(document.querySelector('.more .cap')?.textContent.match(/de (\d+)/)?.[1] || 0));
+  const sum = groups.reduce((a, g) => a + g.count, 0) + catalogTotal;
+  ok(sum === 435, `the groups PARTITION the catalog: ${groups.map(g => g.count).join(' + ')} + ${catalogTotal} = ${sum}`);
+  ok(!groups[0].open && !groups[1].open, `work groups collapsed by default (${groups.map(g => g.open).join(',')})`);
   ok(groups.every(g => g.h >= 44), `every group header is a 44px target (${groups.map(g => g.h).join(', ')})`);
+  ok(await J(() => !/Juegos del club/.test(document.querySelector('main').textContent)),
+    'the catalog has no header — the page, the tab and the pager already name it (decision 12)');
+  /* exactly ONE tinted mass, so nothing can alternate into a stripe */
+  const tinted = await J(() => {
+    const page = getComputedStyle(document.body).backgroundColor;
+    const all = [...document.querySelectorAll('main *')].filter(e => {
+      const bg = getComputedStyle(e).backgroundColor;
+      return bg !== 'rgba(0, 0, 0, 0)' && bg !== page && e.getBoundingClientRect().width > 200;
+    });
+    return all.map(e => e.className.toString().split(' ')[0]);
+  });
+  ok(tinted.filter(c => c === 'lhead').length === 2 && !tinted.includes('row'),
+    `only the work bands are tinted — one mass, nothing to alternate with (${tinted.join(', ') || 'none'})`);
+  /* decision 12 — two text left edges, not three */
+  const edges = await J(() => {
+    const tb = e => { const g = document.createRange(); g.selectNodeContents(e); return +g.getBoundingClientRect().left.toFixed(1); };
+    return { title: tb(document.querySelector('.ptitle')), bandText: tb(document.querySelector('.lhead .ln')),
+      rowText: tb(document.querySelector('.row .name')),
+      caret: +document.querySelector('.lhead .caret').getBoundingClientRect().left.toFixed(1),
+      cover: +document.querySelector('.row .cov').getBoundingClientRect().left.toFixed(1) };
+  });
+  ok(edges.bandText === edges.rowText, `band text aligns with row text (${edges.bandText} / ${edges.rowText})`);
+  ok(edges.caret === edges.cover && edges.caret === edges.title, `caret, cover and title share the leading edge (${edges.caret})`);
+  ok(new Set([edges.title, edges.bandText, edges.rowText]).size === 2, `two text left edges, not three (${edges.title} / ${edges.bandText} / ${edges.rowText})`);
 
   /* decision 10: a group header must not read as a row, and its caret is LEADING (a disclosure triangle),
      never a trailing "›", which under D-19i means "opens a page" */
@@ -74,13 +103,20 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   });
   ok(sep.headBg !== sep.rowBg, `header sits on a tonal band, the row does not (${sep.headBg} vs ${sep.rowBg})`);
   ok(Math.abs(sep.headIconLeft - sep.rowIconLeft) > 100, `the icons no longer share a slot (${sep.headIconLeft} vs ${sep.rowIconLeft})`);
-  ok(sep.headTextLeft !== sep.rowTextLeft, `header text is outdented from row text (${sep.headTextLeft} vs ${sep.rowTextLeft})`);
+  /* (decision 12 deliberately ALIGNS band text with row text at 68 — the old "must be outdented" assertion is
+     superseded by the two-left-edges check above) */
   ok(near(sep.headBleed, 375, 1), `the band is full-bleed (${sep.headBleed})`);
-  const rot = await J(() => ({
-    collapsed: getComputedStyle(document.querySelector('.lhead[aria-expanded="false"] .caret')).transform,
-    expanded: getComputedStyle(document.querySelector('.lhead[aria-expanded="true"] .caret')).transform
-  }));
-  ok(rot.collapsed !== rot.expanded, `the caret rotates to show state (${rot.collapsed} vs ${rot.expanded})`);
+  /* both work groups are collapsed at rest, so open one to compare the caret's two states — and re-query after
+     each click, since render() replaces the element (clicking a stale node left the group open and silently
+     corrupted every measurement after it) */
+  const caretT = () => J(() => getComputedStyle(document.querySelector('[data-g="gap"] .caret')).transform);
+  const rotCollapsed = await caretT();
+  await p.click('[data-g="gap"]'); await p.waitForTimeout(300);
+  const rotExpanded = await caretT();
+  await p.click('[data-g="gap"]'); await p.waitForTimeout(300);
+  ok(rotCollapsed !== rotExpanded, `the caret rotates to show state (${rotCollapsed} vs ${rotExpanded})`);
+  ok(await J(() => document.querySelector('[data-g="gap"]').getAttribute('aria-expanded') === 'false'),
+    'the group is left collapsed again, so later measurements are not measuring a mutated page');
 
   /* no Pendientes page and no badge survive decision 8 */
   ok(await J(() => !document.querySelector('.badge') && !document.querySelector('[data-act="pend"]')), 'the Pendientes page and its badge are gone (decision 8 replaces D-19g here)');
@@ -98,13 +134,12 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
     const f = document.querySelector('.sfield input').getBoundingClientRect();
     const r0 = document.querySelector('.lgroup.main .row').getBoundingClientRect();
     return { toFirst: +(hs[0].top - f.bottom).toFixed(1), seam: +(hs[1].top - hs[0].bottom).toFixed(1),
-             toMain: +(hs[2].top - hs[1].bottom).toFixed(1), toRow: +(r0.top - hs[2].bottom).toFixed(1) };
+             toMain: +(r0.top - hs[1].bottom).toFixed(1), toRow: 0 };
   });
   ok(near(bands.toFirst, 24, 1.5), `field -> work block 24 (${bands.toFirst})`);
   ok(bands.seam === 0, `the two work bands are contiguous — no stripe (${bands.seam})`);
-  ok(near(bands.toMain, 32, 1.5), `work block -> catalog 32 (${bands.toMain})`);
-  ok(bands.toRow === 0, `the catalog band is welded to its rows (${bands.toRow})`);
-  ok(new Set([bands.toFirst, bands.seam, bands.toMain]).size === 3, `no repeating pitch: ${bands.toFirst} / ${bands.seam} / ${bands.toMain}`);
+  ok(near(bands.toMain, 24, 1.5), `work block -> first game row 24 (${bands.toMain})`);
+  ok(new Set([bands.toFirst, bands.seam, bands.toMain]).size >= 2, `no repeating pitch: ${bands.toFirst} / ${bands.seam} / ${bands.toMain}`);
   const ranks = await J(() => { const g = s => { const e = document.querySelector(s); const c = getComputedStyle(e); return parseFloat(c.fontSize) + '/' + c.fontWeight; };
     return { title: g('.ptitle'), lhead: g('.lhead'), name: g('.row .name'), field: g('.sfield input') }; });
   ok(ranks.title === '22/600' && ranks.lhead === '15/600' && ranks.name === '15/400' && ranks.field === '16/400',

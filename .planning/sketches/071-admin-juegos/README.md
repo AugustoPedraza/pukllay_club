@@ -54,6 +54,9 @@ live) · the **50** badge → Pendientes → any row → the editor stand-in.
   font size, colour, background and trailing-icon position exactly, leaving only weight (and the app ships Inter in
   400/600 only). The band, the leading disclosure caret and the 44-vs-68 indent now separate them. App-wide: the
   same `.lhead` is used by 069 and 070.
+- **One tinted mass, two left edges** (decision 12) — the catalog has **no header**: the page, the tab and the
+  pager (`50 de 385`) already name it, and a second tinted band is what kept the page reading as stripes. The
+  caret takes a row cover's 40px leading slot so band text lands at 68 with row text (edges were 16 / 44 / 68).
 - **Two units, not three stripes** (decision 11) — "Sin datos" + "Borradores" join into one contiguous block
   (hairline seam), then 32px, then "Juegos del club" welded to its rows. Visible gaps **24 / 0 / 32 / 0**, no two
   alike. Three equal bands with equal air had measured 44/16/44/16/44 and read as "rayado".
@@ -115,10 +118,8 @@ the developer called "too empty" (its worst was 449px / 62%).
    is what tells two editions apart (065 round 3).
 3. **No prompt line** ("¿Qué juego buscás?", 17/600). Estantes has one because its page is otherwise empty; here
    the placeholder carries it and a prompt would be a third text block above the list.
-4. ~~Collapsed groups sit at a 60px pitch~~ — **resolved by decision 11**: that pitch *was* the stripe.
-   **Still open from its audit:** the catalog band carries the same fill and weight as the two work bands. If the
-   catalog should visibly *lead* rather than merely sit apart, the move is to band only the work groups and let the
-   catalog's header be plain text that gains its band when it pins.
+4. ~~Collapsed groups sit at a 60px pitch~~ / ~~the catalog band carries the same weight as the work bands~~ —
+   **both resolved by decisions 11 and 12**: the pitch was the stripe, and the catalog now has no header at all.
 5. **Collapse state does not persist** — every visit opens with the work groups closed and the catalog open.
 6. Copy not yet reviewed: "Juegos del club", the add sheet's hint, "Crear a mano · Para un juego que BGG no
    tiene", and both group hint lines.
