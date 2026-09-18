@@ -2,7 +2,7 @@
 sketch: 071
 name: admin-juegos
 question: "What is the admin Juegos tab's one job, and what does the page look like once that job — not the filter-and-table habit — sets its shape?"
-winner: null
+winner: "single — refined in place across decisions 1-14, no variants left"
 tags: [admin, juegos, search, list, pendientes, add-by-bgg, phase-01.8.2, mobile-first]
 ---
 
@@ -31,13 +31,16 @@ are the real queue nobody can see.
 From the repo root: `python3 -m http.server 8765`, then open
 http://127.0.0.1:8765/.planning/sketches/071-admin-juegos/index.html
 
-Tools (top-right): **Tema** · **Teclado** simulado · **Pendientes** 50 / 1 / 0 (to see the badge at each count).
+Tools (bottom-right): **Tema** · **Teclado** simulado · **Grupos** Cerrados / Abiertos. *(The `Pendientes`
+control is gone — decision 8 deleted that page; the `Sangría` and `Franjas` toggles were removed once decisions
+13 and 14 were picked.)*
 
 Try: type `cat` (matches + "Crear «…»") · paste `342942` or a `boardgamegeek.com/boardgame/342942/...` link
 (offers to add) · **+** → `hola` (the shipped error), `13` (the edition prompt), `342942` (adds, then enriches
-live) · the **50** badge → Pendientes → any row → the editor stand-in.
+live) · open `Sin datos` · scroll down (the search hides, the catalog heading pins and gains its band) · any
+row → the editor stand-in.
 
-## What it draws (decisions 1–9, `notes/juegos-ui-redesign.md`)
+## What it draws (decisions 1–14, `notes/juegos-ui-redesign.md`)
 - **One job: find one game.** Title `Juegos` + a 48px search field, no filter chips.
 - **Picking a game opens its editor** (sketch 063's screen — stubbed here). The search is pure navigation, so a
   game row carries a **chevron** (D-19i).
@@ -52,8 +55,18 @@ live) · the **50** badge → Pendientes → any row → the editor stand-in.
   of a game rather than a separate work item. Needs recording in CONTEXT as an amendment, not a contradiction.
 - **A group header is a tonal band with a leading caret** (decision 10) — measured, a header and a game row shared
   font size, colour, background and trailing-icon position exactly, leaving only weight (and the app ships Inter in
-  400/600 only). The band, the leading disclosure caret and the 44-vs-68 indent now separate them. App-wide: the
-  same `.lhead` is used by 069 and 070.
+  400/600 only). The band and the leading disclosure caret separate them. App-wide: the same `.lhead` is used by
+  069 and 070.
+- **Two text left edges, not three** (decision 13) — the page had run a **16 / 44 / 68** ladder (title, field,
+  caret and cover at 16; band text at 44; row text at 68) that aligned with nothing. A row's text cannot leave 68,
+  so the caret took the same **40px leading slot the cover occupies**, putting band text at **68** with row text
+  and holding the caret at **16**. Rejected: band text at 16 with a trailing caret — the carets went ragged across
+  **126 / 127 / 182** and the band floated 52px left of its own rows. This supersedes decision 10's indent.
+- **One tinted mass, not two** (decision 14) — sampled as raw runs down x=300 the page ran TINT 88 / void 32 /
+  TINT 44 / untinted rows: two tinted masses floating above a plain page, the residual "rayado". The tint now
+  marks **only the work block**; the catalog is the page's body, so its header leads as plain text welded to its
+  rows and gains its band **only when it pins**. Rejected: no tint at all (the pinned heading goes opaque but
+  **edgeless**) and tinting the catalog instead (one bar mid-page reads as *more* of a stripe).
 - **Two units, not three stripes** (decision 11) — "Sin datos" + "Borradores" join into one contiguous block
   (hairline seam), then 32px, then "Juegos del club" welded to its rows. Visible gaps **24 / 0 / 32 / 0**, no two
   alike. Three equal bands with equal air had measured 44/16/44/16/44 and read as "rayado".
@@ -76,7 +89,7 @@ heading are all off screen at once, leaving 11 rows with no context and the back
   heading is confined to its own section, so an arriving one evicts it.
 
 ## Verification (`node .planning/sketches/071-admin-juegos/verify.js`)
-**59/59 passed**, no page errors. Highlights:
+**68/68 passed**, no page errors. Highlights:
 - **Rhythm is pixel-identical to 069 raised** at 375×740: title row → field **16.0** (25.2 from the title's text
   box — 069 measures a field from the row, since its border is the visible edge), field → "Juegos del club"
   **32.0**, heading → first cover **16.5**, row **64px**.
@@ -116,9 +129,12 @@ the developer called "too empty" (its worst was 449px / 62%).
 3. **No prompt line** ("¿Qué juego buscás?", 17/600). Estantes has one because its page is otherwise empty; here
    the placeholder carries it and a prompt would be a third text block above the list.
 4. ~~Collapsed groups sit at a 60px pitch~~ — **resolved by decision 11**: that pitch *was* the stripe.
-   **Still open from its audit:** the catalog band carries the same fill and weight as the two work bands. If the
-   catalog should visibly *lead* rather than merely sit apart, the move is to band only the work groups and let the
-   catalog's header be plain text that gains its band when it pins.
+   ~~The catalog band carries the same fill and weight as the two work bands~~ — **resolved by decision 14**,
+   which took exactly the move this note predicted: band only the work groups, and let the catalog's header be
+   plain text that gains its band when it pins.
+7. **The group hint line sits at 16 while the band it belongs to now sits at 68** (noticed while measuring
+   decision 13). Legal — 16 is one of the two edges — but the hint hangs left of its own heading, so it may
+   want 68.
 5. **Collapse state does not persist** — every visit opens with the work groups closed and the catalog open.
 6. Copy not yet reviewed: "Juegos del club", the add sheet's hint, "Crear a mano · Para un juego que BGG no
    tiene", and both group hint lines.
