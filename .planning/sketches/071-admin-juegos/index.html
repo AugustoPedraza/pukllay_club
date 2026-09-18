@@ -190,7 +190,15 @@
   .device[data-bar="search"].hidesearch { --bar: 0px; }
   @media (prefers-reduced-motion: reduce) { .device[data-bar="search"] .search { transition: none; } }
 
-  .hint { margin: 0 0 8px; font-size: 13px; color: var(--color-text-muted); line-height: 1.4; }
+  /* decision 19 — the per-section hint returns, as its own line inside an OPENED section only. Decision 17 had
+     dropped it because a paragraph under every header was a second anatomy in a list whose whole point is one;
+     decision 18 changed that premise, since a hint can now only appear where the reader has already asked for
+     the section. Measured: zero cost at rest (the resting list is byte-identical — 30.9px captions, catalog at
+     206), and 26px spent only in the moment the hint is relevant.
+     Rejected: folding it into the caption line — measured, that wrapped the header to 2.78 lines EVEN WHILE
+     COLLAPSED and pushed the catalog 206 -> 223, paying at rest on every visit for text that only matters once
+     the section is open. */
+  .hint { margin: 2px 0 6px; font-size: 13px; font-weight: 400; color: var(--color-text-muted); line-height: 1.4; }
   .rows { margin: 0 -16px; }
   .row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; border: 0; background: none; text-align: left; cursor: pointer; position: relative; }
   .row + .row::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--color-border); }
@@ -480,6 +488,7 @@ function groupSection(g) {
     : `<span class="lhead"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span>`;
   return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}${open ? '' : ' shut'}">
     <h2 class="lhw">${head}</h2>
+    ${open && g.hint ? `<p class="hint">${g.hint}</p>` : ''}
     ${open ? `<div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
     ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}
   </section>`;

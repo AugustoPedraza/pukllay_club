@@ -536,11 +536,38 @@ by the rule that replaced them, not deleted — the load-bearing one asserts `ne
 
 Harness: **68/68**.
 
+19. **The hint line returns, inside an opened section only.** Decision 17 had deleted the per-section hints
+    because a paragraph under every header was a second anatomy in a list whose whole point is one. **Decision 18
+    changed that premise**: a hint can now only appear where the reader has already opened the section, so it was
+    worth re-testing rather than leaving deleted on a reason that no longer applied.
+
+    Two shapes built and measured:
+
+    | | at rest | opened | edges |
+    |---|---|---|---|
+    | none (as it was) | caption 30.9, catalog at 206 | first row at 175 | 16 / 68 |
+    | **A own line** | **byte-identical to none** | first row at 201 (+26) | 16 / 68 |
+    | B folded into the caption | caption **47.8**, catalog at **223** | first row at 192 | 16 / 68 |
+
+    Developer picked **A**. It costs the resting list **nothing** — same 30.9px captions, same 206px to the
+    catalog, `1 anatomy` untouched, and the harness asserts no `.hint` exists at rest — and spends 26px only in
+    the moment the hint is relevant. The hint sits at **16**, so it adds no third text edge.
+
+    **B failed on its own premise, measured:** folding the hint into the caption wrapped the header to **2.78
+    lines even while collapsed** and pushed the catalog 206 → 223 — paying at rest, on every visit, for text that
+    only matters once the section is open. That is precisely what decision 18 had just bought back.
+
+    **Flagged, not resolved:** the hint is `13/400` muted directly under a `13/600` muted caption at the same
+    keyline, so a caption and its hint read as one two-line block rather than a label plus a note. Offered as a
+    variant (drop the hint to 12px); the developer took A as built. Worth a look if the pairing ever reads muddy.
+
+Harness: **72/72**.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **68/68**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **72/72**.
   Tools: **Tema · Teclado** only — nothing collapses any more, so `Grupos` went too, along with every variant
   toggle (`Sangría`, `Franjas`, `Cabecera`, `Rótulo`, `Trabajo`).
-- **Settled:** decisions 1–9, **16**, **17** and **18**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
+- **Settled:** decisions 1–9 and **16–19**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were
   consequences of having two kinds of section header). **Reverted:** 12. **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
   16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).

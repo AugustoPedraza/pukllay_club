@@ -183,6 +183,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
      only. Opening one must reveal its rows AND leave the tapped heading exactly where the finger left it. */
   const shutAtRest = await J(() => [...document.querySelectorAll('.lgroup')].map(g => g.querySelectorAll('.row').length));
   ok(shutAtRest[0] === 0 && shutAtRest[1] === 0, `both exception sections are closed at rest (${shutAtRest[0]}, ${shutAtRest[1]} rows)`);
+  ok(await J(() => document.querySelectorAll('.hint').length === 0), 'no hint exists at rest — decision 19 costs the resting list nothing');
   ok(shutAtRest[2] === 50, `the catalog still pages 50 at a time (${shutAtRest[2]})`);
   const beforeTop = await J(() => +document.querySelector('[data-g="gap"]').getBoundingClientRect().top.toFixed(1));
   await p.click('[data-g="gap"]'); await p.waitForTimeout(350); await settle();
@@ -193,6 +194,20 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   }));
   ok(openedInfo.expanded === 'true' && openedInfo.rows === 49, `opening "Sin datos" reveals its 49 rows (${openedInfo.rows})`);
   ok(near(openedInfo.headTop, beforeTop, 2), `the tapped heading stays put — opening never scrolls the page (${beforeTop} -> ${openedInfo.headTop})`);
+  /* decision 19 — the hint returns, but ONLY inside an opened section, and it must land on the 16 keyline
+     rather than introducing a third text edge. At rest it must not exist at all. */
+  const hint = await J(() => {
+    const grp = document.querySelector('[data-g="gap"]').closest('.lgroup');
+    const h = grp.querySelector('.hint');
+    const L = e => { const g = document.createRange(); g.selectNodeContents(e); return +g.getBoundingClientRect().left.toFixed(1); };
+    return { text: h && h.textContent.trim(), left: h ? L(h) : null,
+      type: h ? getComputedStyle(h).fontSize.replace('px', '') + '/' + getComputedStyle(h).fontWeight : null,
+      edges: [...new Set([16, ...[...document.querySelectorAll('.lhead .ln')].map(L), ...(h ? [L(h)] : []),
+        L(grp.querySelector('.row .name'))])].sort((a, b) => a - b) };
+  });
+  ok(/sin tapa/.test(hint.text || ''), `an opened section carries its hint ("${hint.text}")`);
+  ok(near(hint.left, 16), `the hint lands on the 16 keyline (${hint.left})`);
+  ok(hint.edges.length === 2 && near(hint.edges[0], 16) && near(hint.edges[1], 68), `still two text edges with the hint showing (${hint.edges.join(' / ')})`);
   await p.screenshot({ path: path.join(OUT, '02-section-open-375x740-light.png') });
   await p.click('[data-g="gap"]'); await p.waitForTimeout(300); await settle();
   ok(await J(() => document.querySelector('[data-g="gap"]').getAttribute('aria-expanded') === 'false'), 'and it closes again, leaving the page as it was');

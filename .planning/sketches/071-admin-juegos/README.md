@@ -39,7 +39,7 @@ Try: type `cat` (matches + "Crear «…»") · paste `342942` or a `boardgamegee
 live) · open `Sin datos` · scroll down (the search hides, the catalog heading pins and gains its band) · any
 row → the editor stand-in.
 
-## What it draws (decisions 1–18, `notes/juegos-ui-redesign.md`)
+## What it draws (decisions 1–19, `notes/juegos-ui-redesign.md`)
 - **One job: find one game.** Title `Juegos` + a 48px search field, no filter chips.
 - **Picking a game opens its editor** (sketch 063's screen — stubbed here). The search is pure navigation, so a
   game row carries a **chevron** (D-19i).
@@ -77,6 +77,11 @@ row → the editor stand-in.
   the sections that collapse and placed **inline after the count** — never leading (a hole in the 16 column) and
   never at x=339 (D-19i). A 30.9px caption is under the touch floor, so the hit box is stretched to **44** by a
   pseudo-element rather than padding the visible row. The body section still never collapses.
+  **A section's hint returns inside an opened section only** (decision 19) — deleted by 17 (a paragraph under
+  every header was a second anatomy), restored once 18 made hints reachable only on demand. Costs the resting
+  list nothing (no `.hint` exists at rest; captions still 30.9, catalog still 206) and spends 26px only when
+  opened; sits at 16, so no third edge. Rejected: folding it into the caption, which wrapped the header to 2.78
+  lines **while collapsed** and pushed the catalog 206 → 223.
   **Order: exceptions first** (`Sin datos` → `Borradores` → `Juegos del club`), measured cost accepted: the
   catalog sits **50 rows / 3,270px** down, so the 49 broken games cannot be missed but the newest-first catalog
   is not at the top.
@@ -102,7 +107,7 @@ heading are all off screen at once, leaving 11 rows with no context and the back
   heading is confined to its own section, so an arriving one evicts it.
 
 ## Verification (`node .planning/sketches/071-admin-juegos/verify.js`)
-**68/68 passed**, no page errors. Highlights:
+**72/72 passed**, no page errors. Highlights:
 - **Rhythm is pixel-identical to 069 raised** at 375×740: title row → field **16.0** (25.2 from the title's text
   box — 069 measures a field from the row, since its border is the visible edge), field → "Juegos del club"
   **32.0**, heading → first cover **16.5**, row **64px**.
