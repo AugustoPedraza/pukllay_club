@@ -443,6 +443,38 @@
   #tools > div + div { margin-top: 4px; }
   #tools button.on { background: #fff; color: #000; }
   #tools button { font: inherit; color: #fff; background: none; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+
+  /* ---------- decision 32: the press state ----------
+     Measured before building: the page had 8 `:hover` rules, 6 `:focus-visible` and **ZERO `:active`**, so a
+     press painted byte-identical to a hover. On a pointer that is harmless — the hover already painted. On
+     TOUCH there is no hover at all, so the only feedback a tap got was the platform's own highlight, and
+     `-webkit-tap-highlight-color` was authored NOWHERE: every tappable surface sat at the platform default
+     (rgba(51,181,229,0.4), Android's Holo cyan, under touch emulation). That cyan appears nowhere in this palette.
+
+     The property INHERITS, so suppressing it at the root covers every surface at once — including ones added
+     later, which is why it is not enumerated per selector. */
+  :root { -webkit-tap-highlight-color: transparent; }
+
+  /* ONE press token, --color-surface-2, on every pressable surface. Rejected: press = the hover fill (lightest
+     of the options — #F1ECFD on white, which a ~100ms tap on a phone in daylight can miss), and press = one
+     step PAST hover everywhere (reads three ranks on a pointer, but needs a fabricated rgb(188,177,210) on the
+     pinned caption, a value that exists nowhere else in the system).
+     The accepted cost: a POINTER pressing a PINNED collapsible caption reads press == hover, because that
+     caption's hover is already surface-2. It is the narrowest case on the page and touch never reaches it —
+     touch, which is what this state exists for, has no hover to collide with. */
+  .row:active,
+  .ibtn:active,
+  .dlink:active,
+  .sh-x:active,
+  .srow:active,
+  .tbtn:active { background: var(--color-surface-2); }
+  /* the caption paints through its band pseudo-element, never its own box (decisions 27/29/31).
+     transition-duration 0s on the way IN: the band fades over 120ms, longer than a quick tap, so a
+     transitioned press fill would show only partly faded — or, on a fast tap, not at all. */
+  .lhead.tap:active::before,
+  .lhw.pinned .lhead.tap:active::before { background: var(--color-surface-2); transition-duration: 0s; }
+  @media (prefers-reduced-motion: reduce) { .lhead.tap:active::before { transition: none; } }
+
 </style>
 </head>
 <body>

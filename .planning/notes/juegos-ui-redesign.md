@@ -1038,10 +1038,55 @@ Harness: **123/123**.
 
 Harness: **127/127**.
 
+32. **A tap has a state, and it is one token.** The last unmeasured state on the page. Measured before
+    proposing anything: the page had **8 `:hover` rules, 6 `:focus-visible` and ZERO `:active`**, so a press
+    painted byte-identical to a hover (both `rgb(241,236,253)`). On a pointer that is harmless — the hover had
+    already painted. On **touch there is no hover at all**, so the only feedback a tap ever got was the
+    platform's own highlight — and `-webkit-tap-highlight-color` was authored **nowhere**, leaving every
+    tappable surface at the platform default: **`rgba(51,181,229,0.4)`, Android's Holo cyan**, a colour that
+    appears nowhere in this palette.
+
+    **Taken: one press token, `--color-surface-2` (#DED4F3), on every pressable surface**, with the platform
+    flash suppressed at `:root` (the property inherits, so a surface added later cannot reintroduce it).
+
+    | opción | `.row` | `.lhead.tap` | `.tap` pinneada | colores nuevos |
+    |---|---|---|---|---|
+    | B = hover | #F1ECFD | #F1ECFD | #DED4F3 | 0 |
+    | C más hondo | #DED4F3 | #DED4F3 | **rgb(188,177,210)** | **1** |
+    | **D (tomada)** | **#DED4F3** | **#DED4F3** | **#DED4F3** | **0** |
+
+    **Why D over B:** a press is a *momentary* state where hover is a *sustained* one, and a momentary state
+    needs more contrast to register in the ~100ms it exists. B's #F1ECFD on white is the lightest of the three
+    and is the one a phone in daylight would miss. **Why D over C:** C buys a third rank that only a *pointer*
+    pressing a *pinned* caption can perceive, and pays a fabricated `rgb(188,177,210)` for it — a value in no
+    other part of the system. **The accepted cost of D**, asserted in the harness so it stays deliberate: that
+    same pointer-on-pinned-caption case reads press == hover, because that caption's hover is already
+    surface-2. Touch, which is what the state exists for, has no hover to collide with.
+
+    `transition-duration: 0s` on the way **in**: the caption's band fades over 120ms, longer than a quick tap,
+    so a transitioned press fill would show only partly faded — or, on a fast tap, not at all.
+
+    **Two measurement traps, both caught by controlling first.**
+    - **CDP touch does not set `:active`.** An injected control rule painted under `mouse.down()` and *not*
+      under `Input.dispatchTouchEvent`. A touch-driven assertion would have passed vacuously. The guards
+      therefore press with a **mouse** and say so; real-tap behaviour is confirmed on the device, not here.
+    - **Under CSS nesting every style rule carries an empty `.cssRules`**, so a `if (r.cssRules) recurse` walk
+      descends into nothing and reports **zero rules on a fully-styled page**. The first two runs of the rule
+      audit reported "0 `:hover` rules" and were believed for one step. The walk now tests `selectorText`
+      first, and a guard asserts the walk sees >100 rules — *a zero means the walk broke, not that the page is
+      clean.*
+
+    **The guard is written against the SHAPE, not the surface** (the decision 27/29 lesson): it enumerates the
+    **rules** and asserts **every selector with a `:hover` also has an `:active`**, so a new hover-only control
+    fails the day it is written — which is exactly how this defect got in. Negative-tested: injecting
+    `.negtest-ctl:hover` turned it red and named the selector.
+
+Harness: **135/135**.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **127/127**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **135/135**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–31**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–32**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections, labelled
   in **versalita 14/600** — `SIN DATOS 49 ⌄` and `BORRADORES 1 ⌄` closed, `JUEGOS DEL CLUB 385` open. No resting
@@ -1056,5 +1101,6 @@ Harness: **127/127**.
   3. no prompt line
   4. collapse state does not persist
   5. copy not reviewed
-  *(the hint/label pairing is closed by decision 23 — verified, not reproduced)*
+  *(the hint/label pairing is closed by decision 23 — verified, not reproduced; the `:active`/touch state is
+  closed by decision 32)*
 - **Next:** finish Juegos → sketch 072 (the editor), sketch 074, `--wrap-up`, then `/gsd-plan-phase 01.8.2`.

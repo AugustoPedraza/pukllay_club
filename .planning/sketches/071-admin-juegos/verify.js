@@ -664,6 +664,81 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
     await c2.close();
   }
 
+  /* ---------- decision 32: the press state ----------
+     This is the state nobody had measured. The guards below are written to catch the SHAPE of the defect, not
+     the one surface it was found on:
+       1. -webkit-tap-highlight-color must be suppressed, asserted on the ROOT (it inherits) so a surface added
+          later cannot quietly reintroduce the platform flash.
+       2. Every selector that has a :hover must also have an :active. Enumerating the RULES is what makes this
+          general — a new hover-only control fails here the day it is written, which is exactly how this defect
+          got in. (A fix must be as general as the rule it cites — decisions 27/29.)
+       3. The press fill is ONE token, --color-surface-2, everywhere; no third colour creeps back in.
+     Measured with a MOUSE press, deliberately: CDP touch emulation does not set :active (verified against an
+     injected control rule that painted under mouse-down and not under touch), so a touch-driven assertion here
+     would pass vacuously and prove nothing. Real-tap behaviour is confirmed on a device, not in this harness. */
+  {
+    const c3 = await browser.newContext({ viewport: { width: 375, height: 740 }, deviceScaleFactor: 2 });
+    const t = await c3.newPage();
+    await t.goto(URL); await t.evaluate(() => document.fonts.ready);
+    await t.evaluate(() => { document.getElementById('tools').style.display = 'none'; });
+    await t.waitForTimeout(400);
+
+    ok(await t.evaluate(() => getComputedStyle(document.documentElement).webkitTapHighlightColor === 'rgba(0, 0, 0, 0)'),
+      'the platform tap highlight is suppressed at the root, so no surface inherits the Holo-cyan flash');
+
+    /* the rule walk must test selectorText FIRST: under CSS nesting every style rule carries an empty
+       .cssRules, so a `if (r.cssRules) recurse` walk descends into nothing and silently reports zero rules. */
+    const rules = await t.evaluate(() => {
+      const hov = new Set(), act = new Set(); let total = 0;
+      const strip = x => x.replace(/:{1,2}(hover|active|before|after|focus-visible)/g, '').trim();
+      const walk = rs => { for (let i = 0; i < rs.length; i++) { const r = rs[i];
+        if (r.selectorText) { total++;
+          for (const sel of r.selectorText.split(',')) {
+            if (/:hover/.test(sel)) hov.add(strip(sel));
+            if (/:active/.test(sel)) act.add(strip(sel));
+          }
+        } else if (r.cssRules) walk(r.cssRules); } };
+      for (let i = 0; i < document.styleSheets.length; i++) { try { walk(document.styleSheets[i].cssRules); } catch (e) {} }
+      return { total, hov: [...hov], act: [...act] };
+    });
+    ok(rules.total > 100, `the rule walk actually sees the stylesheet (${rules.total} rules) — a zero here means the walk broke, not that the page is clean`);
+    const orphans = rules.hov.filter(h => !rules.act.includes(h));
+    ok(orphans.length === 0, `every hoverable surface also has a press state (${orphans.length ? 'hover-only: ' + orphans.join(', ') : rules.hov.length + ' checked'})`);
+
+    /* one token, measured through a real press on both anatomies: a row (paints its own box) and a collapsible
+       caption (paints through its band pseudo-element). */
+    const press = async (sel, pseudo, pin) => {
+      await t.goto(URL); await t.evaluate(() => document.fonts.ready);
+      await t.evaluate(() => { document.getElementById('tools').style.display = 'none'; });
+      await t.waitForTimeout(350);
+      if (pin) { await t.evaluate(() => document.querySelectorAll('.lhead.tap')[0].click()); await t.waitForTimeout(300);
+        await t.evaluate(() => { const s = document.querySelector('#scroller'); s.scrollTop = s.scrollHeight * 0.02; });
+        await t.waitForTimeout(300); }
+      const b = await t.evaluate(s => { const e = document.querySelector(s); const r = e.getBoundingClientRect();
+        return { x: Math.min(r.x + 60, 300), y: r.y + r.height / 2 }; }, sel);
+      const read = () => t.evaluate(([s, ps]) => { const e = document.querySelector(s);
+        return ps ? getComputedStyle(e, ps).backgroundColor : getComputedStyle(e).backgroundColor; }, [sel, pseudo]);
+      await t.mouse.move(-60, -60); await t.waitForTimeout(300); const rest = await read();
+      await t.mouse.move(b.x, b.y); await t.waitForTimeout(350);
+      await t.mouse.down(); await t.waitForTimeout(350); const down = await read();
+      await t.mouse.up();
+      return { rest, down };
+    };
+    const S2 = await t.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-surface-2').trim());
+    const rowP = await press('.row', null, false);
+    ok(rowP.rest === 'rgba(0, 0, 0, 0)', `a row is still untinted at rest (${rowP.rest}) — the press state must not leak into rest`);
+    ok(rowP.down === 'rgb(222, 212, 243)', `a pressed row paints the single press token, --color-surface-2 ${S2} (${rowP.down})`);
+    const capP = await press('.lhead.tap', '::before', false);
+    ok(capP.rest === 'rgba(0, 0, 0, 0)', `a caption's band is still untinted at rest (${capP.rest})`);
+    ok(capP.down === 'rgb(222, 212, 243)', `a pressed caption paints the SAME token through its band (${capP.down})`);
+    /* the accepted cost, asserted so it stays a deliberate choice rather than drifting into a third colour:
+       a pinned collapsible caption's press equals its hover, both surface-2. */
+    const pinP = await press('.lhead.tap', '::before', true);
+    ok(pinP.down === 'rgb(222, 212, 243)',
+      `a pinned collapsible caption presses to the same one token — no third colour (${pinP.down})`);
+    await c3.close();
+  }
+
   await browser.close();
   ok(errs.length === 0, `no page errors (${errs.length ? errs.join(' | ') : 'none'})`);
   console.log(log.join('\n'));
