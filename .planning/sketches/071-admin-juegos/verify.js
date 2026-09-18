@@ -141,7 +141,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   const pend = await J(() => ({
     heads: [...document.querySelectorAll('.lhead')].map(h => h.textContent.replace(/\s+/g, ' ').trim()),
     rows: document.querySelectorAll('.row').length,
-    back: document.querySelector('.back')?.textContent.trim(),
+    back: document.querySelector('main .back')?.textContent.trim(),
     hints: [...document.querySelectorAll('.hint')].map(h => h.textContent.trim())
   }));
   ok(/Sin datos/.test(pend.heads[0]) && /50|49/.test(pend.heads[0]), `Pendientes: "${pend.heads[0]}"`);
@@ -153,7 +153,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
 
   /* a Pendientes row opens the editor, back goes to Pendientes */
   await p.click('.row'); await p.waitForTimeout(250);
-  ok(await J(() => document.querySelector('.back')?.textContent.trim() === 'Pendientes'), 'editor opened from Pendientes goes back to Pendientes');
+  ok(await J(() => document.querySelector('main .back')?.textContent.trim() === 'Pendientes'), 'editor opened from Pendientes goes back to Pendientes');
   await settle(); await p.screenshot({ path: path.join(OUT, '08-editor-stub-375x740-light.png') });
 
   /* ---------- contrast, both themes (parses color(srgb ...) too) ---------- */
@@ -171,8 +171,8 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
     const pick = s => { const e = document.querySelector(s); return e ? ratio(e) : null; };
     return { name: pick('.row .name'), sub: pick('.row .sub'), lhead: pick('.lhead'), title: pick('.ptitle'), hint: pick('.hint'), cap: pick('.more .cap') };
   });
-  await p.click('.back'); await p.waitForTimeout(250);   /* editor -> Pendientes */
-  await p.click('.back'); await p.waitForTimeout(250);   /* Pendientes -> Juegos */
+  await p.click('main .back'); await p.waitForTimeout(250);   /* editor -> Pendientes */
+  await p.click('main .back'); await p.waitForTimeout(250);   /* Pendientes -> Juegos */
   const cLight = await contrast();
   ok(cLight.name >= 4.5 && cLight.sub >= 4.5, `light: row name ${cLight.name}:1, second line ${cLight.sub}:1 (both >= 4.5)`);
   await p.evaluate(() => document.documentElement.dataset.theme = 'dark'); await p.waitForTimeout(250);
@@ -181,6 +181,75 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   await settle(); await p.screenshot({ path: path.join(OUT, '09-juegos-375x740-dark.png') });
   await p.click('[data-act="pend"]'); await p.waitForTimeout(250);
   await settle(); await p.screenshot({ path: path.join(OUT, '10-pendientes-375x740-dark.png') });
+  await p.evaluate(() => document.documentElement.dataset.theme = 'light'); await p.waitForTimeout(150);
+
+  /* ---------- decision 6 (D-19n): the two pinned tiers ---------- */
+  /* at rest the bar must cost zero layout — verified byte-for-byte against the pre-sticky build:
+     phead 69, title text 77.8, field 129, heading 209, first cover 244.5, row 64 — all unchanged */
+  await p.click('main .back'); await p.waitForTimeout(250);   /* back to Juegos */
+  const rest = await J(() => ({
+    hidden: getComputedStyle(document.getElementById('pbar')).opacity === '0',
+    inert: document.getElementById('pbar').inert,
+    pheadTop: +document.querySelector('.phead').getBoundingClientRect().top.toFixed(1),
+    fieldTop: +document.querySelector('.sfield input').getBoundingClientRect().top.toFixed(1)
+  }));
+  ok(rest.hidden && rest.inert, 'at rest: the page bar is hidden and inert');
+  ok(rest.pheadTop === 69 && rest.fieldTop === 129, `at rest: layout unchanged by the sticky tiers (phead ${rest.pheadTop}, field ${rest.fieldTop})`);
+
+  await p.click('[data-act="pend"]'); await p.waitForTimeout(300); await settle();
+  await p.evaluate(() => document.querySelector('.scroller').scrollTop = 1500); await p.waitForTimeout(250);
+  const mid = await J(() => {
+    const bar = document.getElementById('pbar'), br = bar.getBoundingClientRect();
+    const lh = document.querySelector('.lhead'), lr = lh.getBoundingClientRect();
+    const back = bar.querySelector('.back'), bk = back && back.getBoundingClientRect();
+    return {
+      shown: getComputedStyle(bar).opacity === '1', barH: +br.height.toFixed(1),
+      title: bar.querySelector('.pbt').textContent, back: back && back.textContent.trim(),
+      backH: bk && +bk.height.toFixed(1),
+      heading: lh.textContent.replace(/\s+/g, ' ').trim(),
+      underBar: +(lr.top - br.bottom).toFixed(1),
+      bleed: +lr.left.toFixed(1) === 0 && +lr.right.toFixed(1) === 375,
+      opaque: !/rgba\(0, 0, 0, 0\)/.test(getComputedStyle(lh).backgroundColor),
+      focusableBacks: [...document.querySelectorAll('.back')].filter(b => !b.inert && !b.closest('[inert]')).length
+    };
+  });
+  ok(mid.shown && near(mid.barH, 44), `scrolled 1500px: the page bar shows, 44px (${mid.barH})`);
+  ok(mid.title === 'Pendientes' && /Juegos/.test(mid.back), `bar carries back + title ("${mid.back}" / "${mid.title}")`);
+  ok(mid.backH >= 44, `bar back link is a 44px target (${mid.backH})`);
+  ok(/Sin datos/.test(mid.heading) && near(mid.underBar, 0, 1), `"${mid.heading}" pinned flush under the bar (${mid.underBar}px)`);
+  ok(mid.bleed && mid.opaque, 'the pinned heading is opaque and full-bleed — rows cannot slide past it');
+  ok(mid.focusableBacks === 1, `exactly one focusable back control, never a duplicate (${mid.focusableBacks})`);
+  await p.screenshot({ path: path.join(OUT, '12-sticky-pendientes-375x740-light.png') });
+
+  /* the iOS push: each heading is confined to its own section, so the next one evicts it */
+  await p.evaluate(() => { const g = document.querySelectorAll('.lgroup')[0]; document.querySelector('.scroller').scrollTop = g.offsetTop + g.offsetHeight - 120; });
+  await p.waitForTimeout(250);
+  const push = await J(() => [...document.querySelectorAll('.lhead')].map(h => ({ t: h.textContent.replace(/\s+/g, ' ').trim(), top: +h.getBoundingClientRect().top.toFixed(1) })));
+  ok(push[0].top < push[1].top, `"${push[0].t}" is pushed out by "${push[1].t}" (${push[0].top} / ${push[1].top})`);
+  await p.screenshot({ path: path.join(OUT, '13-sticky-push-375x740-light.png') });
+
+  /* the bar's back really navigates, and a new screen starts at the top */
+  await p.evaluate(() => document.querySelector('.scroller').scrollTop = 1500); await p.waitForTimeout(200);
+  await p.click('#pbar .back'); await p.waitForTimeout(300);
+  const after = await J(() => ({ title: document.querySelector('.ptitle').textContent, top: document.querySelector('.scroller').scrollTop, scrolled: document.getElementById('device').classList.contains('scrolled') }));
+  ok(after.title === 'Juegos' && after.top === 0 && !after.scrolled, `the bar's back returns to Juegos at the top (${JSON.stringify(after)})`);
+
+  /* the main list: a tab-level page has no back link, and its heading pins through 435 rows */
+  await p.evaluate(() => { for (let i = 0; i < 8; i++) document.querySelector('[data-act="more"]')?.click(); });
+  await p.waitForTimeout(400);
+  await p.evaluate(() => document.querySelector('.scroller').scrollTop = 1200); await p.waitForTimeout(250); await settle();
+  const jm = await J(() => ({
+    title: document.getElementById('pbar').querySelector('.pbt').textContent,
+    hasBack: !!document.getElementById('pbar').querySelector('.back'),
+    heading: document.querySelector('.lhead').textContent.replace(/\s+/g, ' ').trim(),
+    headingTop: +document.querySelector('.lhead').getBoundingClientRect().top.toFixed(1),
+    rows: document.querySelectorAll('.row').length
+  }));
+  ok(jm.title === 'Juegos' && !jm.hasBack, 'a tab-level page bar shows the title with no back link');
+  ok(near(jm.headingTop, 97, 2), `"${jm.heading}" stays pinned through ${jm.rows} rows (top ${jm.headingTop})`);
+  await p.screenshot({ path: path.join(OUT, '14-sticky-juegos-375x740-light.png') });
+  await p.evaluate(() => document.documentElement.dataset.theme = 'dark'); await p.waitForTimeout(200);
+  await p.screenshot({ path: path.join(OUT, '15-sticky-juegos-375x740-dark.png') });
   await ctx.close();
 
   /* ---------- other viewports: how much of the list is visible ---------- */

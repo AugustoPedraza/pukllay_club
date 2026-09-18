@@ -109,9 +109,27 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
   .dot.gap { background: var(--color-danger); }
 
+  /* ---- decision 6 (D-19n) — a long list keeps its context while you scroll ----
+     Two tiers pinned inside the scroller, the iOS pairing: a compact page bar (back + title) once the title row
+     scrolls off, and the section heading under it. The "stacked" push comes free from position:sticky — each
+     heading is confined to its own .lgroup, so an arriving section pushes the previous heading out.
+     The bar is an ABSOLUTE overlay on .device, not a sticky child: at rest it must cost zero layout. */
+  .pbar { position: absolute; top: 53px; left: 0; right: 0; z-index: 15; height: 44px; display: flex; align-items: center; gap: 2px;
+    padding: 0 6px; background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    opacity: 0; transform: translateY(-8px); pointer-events: none;
+    transition: opacity 160ms var(--ease-out-soft), transform 160ms var(--ease-out-soft); }
+  .device.scrolled .pbar { opacity: 1; transform: none; pointer-events: auto; }
+  @media (prefers-reduced-motion: reduce) { .pbar { transition: opacity 160ms linear; transform: none; } }
+  .pbar .pbt { font-size: 17px; font-weight: 600; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pbar .back { height: 44px; margin: 0; align-self: center; }
+  .pbar .back + .pbt { margin-left: 2px; }
+  .device.kbd .pbar { display: none; }
+
   /* ---- the list (decision 3) ---- */
   .lgroup { margin-top: 24px; }
-  .lhead { margin: 8px 0 4px; font-size: 15px; font-weight: 600; line-height: 1.3; }
+  /* full-bleed so the full-bleed rows cannot slide visibly past its left/right edges while it is pinned */
+  .lhead { position: sticky; top: 44px; z-index: 5; margin: 4px -16px 0; padding: 4px 16px; background: var(--color-bg);
+    font-size: 15px; font-weight: 600; line-height: 1.3; }
   .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
   .lgroup + .lgroup { margin-top: 12px; }
   .hint { margin: 0 0 8px; font-size: 13px; color: var(--color-text-muted); line-height: 1.4; }
@@ -223,6 +241,7 @@
     <img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt="">
     <span class="word">PUKLLAY CLUB</span>
   </header>
+  <div class="pbar" id="pbar" inert></div>
   <div class="scroller" id="scroller"><main id="main"></main></div>
   <nav class="tabs" aria-label="Secciones de Admin">
     <span class="tab"><span class="ti" id="t-admin"></span>Admin</span>
@@ -311,12 +330,33 @@ const gameRow = g => `<button class="row" data-act="open" data-id="${g.id}" aria
   <span class="chev" aria-hidden="true">${ic('chevR')}</span></button>`;
 
 /* ---------- screens ---------- */
+/* decision 6 — the compact bar mirrors the page's own back link + title. Exactly ONE of the two back controls is
+   focusable at a time (inert on the other), so the accessibility tree never carries a duplicate "Juegos". */
+const BAR = { juegos: { back: null, title: 'Juegos' }, pend: { back: 'Juegos', title: 'Pendientes' } };
+function renderBar() {
+  const b = S.screen === 'editor'
+    ? { back: S.from === 'pend' ? 'Pendientes' : 'Juegos', title: byId(S.editing).name }
+    : BAR[S.screen];
+  $('#pbar').innerHTML = (b.back ? `<button class="back" data-act="${b.back === 'Pendientes' ? 'pend' : 'juegos'}">${ic('chevL')}${esc(b.back)}</button>` : '')
+    + `<span class="pbt">${esc(b.title)}</span>`;
+}
 function render() {
   if (S.screen === 'juegos') renderJuegos();
   else if (S.screen === 'pend') renderPend();
   else if (S.screen === 'editor') renderEditor();
   $('#t-juegos').innerHTML = ic('dice'); $('#t-admin').innerHTML = ic('grid');
   $('#t-web').innerHTML = ic('home'); $('#t-est').innerHTML = ic('shelf');
+  renderBar(); updateBar();
+}
+
+/* the bar takes over once the title row has gone behind it */
+const scroller = () => $('#scroller');
+function updateBar() {
+  const ph = main.querySelector('.phead'); if (!ph) return;
+  const on = scroller().scrollTop > ph.offsetTop + ph.offsetHeight - 44;
+  device.classList.toggle('scrolled', on);
+  $('#pbar').inert = !on;
+  const inPage = main.querySelector('.back'); if (inPage) inPage.inert = on;
 }
 
 function renderJuegos() {
@@ -412,10 +452,13 @@ function renderSugg() {
   box.hidden = false; inp.setAttribute('aria-expanded', 'true');
 }
 
+/* a new screen always starts at the top — otherwise the bar shows on arrival at a page you never scrolled */
+function go(screen) { S.screen = screen; scroller().scrollTop = 0; render(); }
+
 function openGame(id, from) {
   S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 3);
-  S.editing = id; S.from = from || S.screen; S.screen = 'editor';
-  device.classList.remove('kbd'); render();
+  S.editing = id; S.from = from || S.screen;
+  device.classList.remove('kbd'); go('editor');
 }
 
 /* ---------- sheets ---------- */
@@ -493,8 +536,8 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const a = t.dataset.act;
   if (a === 'open') return openGame(+t.dataset.id, S.screen);
-  if (a === 'pend') { S.screen = 'pend'; return render(); }
-  if (a === 'juegos') { S.screen = 'juegos'; return render(); }
+  if (a === 'pend') return go('pend');
+  if (a === 'juegos') return go('juegos');
   if (a === 'more') { S.shown += PAGE; return render(); }
   if (a === 'add') return addSheet(t);
   if (a === 'addbgg') { const id = t.dataset.bgg; closeSuggest(); return addSheet(null, id); }
@@ -541,6 +584,7 @@ document.addEventListener('click', e => {
 });
 function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
 
+scroller().addEventListener('scroll', updateBar, { passive: true });
 render();
 </script>
 </body>

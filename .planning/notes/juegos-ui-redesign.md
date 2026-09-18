@@ -109,3 +109,32 @@ catching what passing checks do not.)
    tiene", both Pendientes hint lines.
 
 **Not drawn:** the editor itself (063), the enrichment `pending`/`failed` row + Reintentar, lifecycle actions.
+
+6. **A long list keeps its context in two pinned tiers** — app-wide, recorded as **D-19n**. Developer: *"for scroll
+   the «pendientes», that should be a kind of «stacked» header at scrolling to keep the context when I scroll down,
+   shouldn't? is that a common pattern for mobile?"* — yes, and both design systems pair two separate mechanisms:
+   iOS pins `UITableView` plain-style section headers (the next one pushes the previous out — Contacts) *and*
+   collapses a large title into the compact nav bar; Material 3 has sticky list subheaders *and* a top app bar whose
+   large variant collapses to small on scroll. Developer picked "Page bar + section heading, stacked (Recommended)"
+   over section-heading-only, page-bar-only and nothing.
+   **Measured first — all three pieces of context are lost at once.** On Pendientes at scrollTop 1500 (375×667):
+   page title **not visible**, `‹ Juegos` **not visible**, section heading **not visible**, 11 rows on screen with
+   nothing to orient them — and the back link 1500px away. The Sin datos section alone is **3,307px** tall; the main
+   Juegos list fully paged is **27,664px** (~45 screens).
+   **What it draws:**
+   - A 44px **page bar** pinned at the top of the scroller once the title row has gone behind it: `‹ Juegos` +
+     the page title at 17/600. It is an **absolute overlay on `.device`, not a sticky child** — at rest it must cost
+     zero layout, and it does: phead 69, title text 77.8, field 129, heading 209, first cover 244.5, row 64 are
+     byte-identical to the pre-sticky build. A tab-level page (Juegos) has no back link, just the title.
+   - The **section heading** pins under it at `top: 44px`, full-bleed and opaque so the full-bleed rows cannot slide
+     visibly past its edges. The "stacked" push is free: each heading is confined to its own `.lgroup`, so an
+     arriving section evicts the previous heading (measured: "Sin datos 49" 97 → pushed out by "Borradores").
+   - **Exactly one focusable back control at all times** — `inert` toggles between the in-page link and the bar's,
+     so the accessibility tree never carries a duplicate "Juegos".
+   - A new screen always starts at scrollTop 0, so the bar never appears on a page you never scrolled.
+   Harness: **58/58**. Rhythm at rest unchanged (title row → field 16, field → heading 32, heading → cover 16.5).
+
+**Raised by decision 6, not yet settled:** on the main Juegos page the bar shows "Juegos" and the heading pinned
+under it shows "Juegos del club 435" — 88px of chrome saying the same word twice, while the **search**, the page's
+one job (decision 1), is 1200px away. Pinning the search instead of, or beside, the title is the obvious next
+question.
