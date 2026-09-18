@@ -1004,10 +1004,44 @@ Harness: **123/123**.
 
 Harness: **123/123**.
 
+31. **Every pinned bar is the same height.** From the device, scrolling one section and then another: *"when I
+    navigate with SIN DATOS, the header doesn't have same height that Juegos del Club."* Measured:
+
+    | sección | `--pt` en reposo | barra pinneada |
+    |---|---|---|
+    | Sin datos | **14px** | **32,2px** |
+    | Borradores | 26px | 44,2px |
+    | Juegos del club | 26px | 44,2px |
+
+    **Cause:** the bar *was* the caption's own box, so it inherited decision 21's deliberate first-section
+    exception — the first section gets less leading air because the 48px search already separates it. That
+    exception is right **at rest** and meaningless **in a bar**: once the label is pinned under that same search,
+    it is chrome, and chrome does not inherit a rhythm exception.
+
+    **And I had predicted this and dismissed it.** While building decision 27 I noted the two heights would
+    differ and reasoned "only one pins at a time, nobody compares them". The developer scrolled to one, then the
+    other, and compared them. *A state the user can reach twice in a row is a state they will compare.*
+
+    Fix: the band is a pseudo-element, so its thickness is **independent of the box**. `--bandp` fixes the bar at
+    **44px** (matching `.pbar` and the touch floor) for every section, with no flow change. This also **retires
+    decision 27's padding halving entirely** — one mechanism now serves hover and pinned, differing only in
+    thickness, and the caption's padding never changes between states at all.
+
+    **The guard that could never have caught it.** Decision 27's check asserted a bar against **its own** resting
+    height; decision 29's walked the **states**. The missing axis was **across sections** — three bars measured
+    against each other. It now asserts all three are identical, that the height is 44, and, deliberately, that
+    the *resting* air still differs by section, so a future "simplification" cannot quietly delete decision 21's
+    exception in the name of uniformity.
+    The anti-jump guard was also restated: comparing two different sections' boxes proves nothing when one is
+    meant to be shorter, so it now asserts that **pinning changes no padding at all**, which is the property that
+    actually keeps the flow slot fixed.
+
+Harness: **127/127**.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **123/123**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **127/127**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–30**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–31**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections, labelled
   in **versalita 14/600** — `SIN DATOS 49 ⌄` and `BORRADORES 1 ⌄` closed, `JUEGOS DEL CLUB 385` open. No resting

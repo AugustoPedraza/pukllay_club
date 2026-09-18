@@ -359,13 +359,51 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
     const box = h.getBoundingClientRect();
     const g = document.createRange(); g.selectNodeContents(ln);
     const ink = g.getBoundingClientRect();
-    const rest = document.querySelector('.lgroup.main .lhead');
-    return { above: +(ink.top - box.top).toFixed(1), below: +(box.bottom - ink.bottom).toFixed(1),
-      h: +box.height.toFixed(1), restH: +rest.getBoundingClientRect().height.toFixed(1) };
+    const pb = getComputedStyle(h, '::before'), own = getComputedStyle(h);
+    const bt = box.top + (parseFloat(pb.top) || 0), bb = box.bottom - (parseFloat(pb.bottom) || 0);
+    return { above: +(ink.top - bt).toFixed(1), below: +(bb - ink.bottom).toFixed(1),
+      h: +(bb - bt).toFixed(1), boxH: +box.height.toFixed(1),
+      padT: own.paddingTop, padB: own.paddingBottom, ptVar: own.getPropertyValue('--pt').trim() };
   });
   ok(Math.abs(band.above - band.below) <= 1.5, `the pinned band centres its text (${band.above} above, ${band.below} below)`);
   ok(band.above >= 6, `with real breathing room, not a hairline (${band.above}px)`);
-  ok(near(band.h, band.restH, 0.6), `and its height is unchanged, so nothing jumps as it pins (${band.h} vs ${band.restH})`);
+  /* decision 31 — the anti-jump invariant is about the BOX, not the band. The caption's padding no longer
+     changes between states, so its flow slot cannot change; the band is a pseudo-element whose thickness is
+     free. Assert the thing that actually prevents a jump. */
+  /* Comparing two DIFFERENT sections' boxes proves nothing — decision 21 makes the first one deliberately
+     shorter. The invariant is that pinning changes no padding at all, which is what keeps the flow slot fixed. */
+  ok(band.padT === band.ptVar && band.padB === '0px',
+    `pinning changes no padding, so the flow slot cannot move (top ${band.padT} = --pt ${band.ptVar}, bottom ${band.padB})`);
+
+  /* ---------- decision 31 — every pinned bar is the SAME height ----------
+     The bar used to be the caption's own box, so it inherited decision 21's deliberate first-section exception
+     (--pt 14 vs 26) and the bar under SIN DATOS measured 32.2 against JUEGOS DEL CLUB's 44.2 — reported from the
+     device, after scrolling one section and then the other. That exception is right at rest and meaningless in
+     a bar. Only ever asserting a bar against ITS OWN resting height could never catch this: the missing
+     assertion was across sections, not across states. */
+  const bars = await J(async () => {
+    const sc = document.querySelector('.scroller');
+    document.querySelectorAll('.lhead.tap').forEach(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); });
+    await new Promise(r => setTimeout(r, 260));
+    const out = [];
+    for (const name of ['Sin datos', 'Borradores', 'Juegos del club']) {
+      const h = [...document.querySelectorAll('.lhead')].find(x => x.querySelector('.ln').textContent === name);
+      sc.scrollTop = h.closest('.lgroup').offsetTop + 40;
+      await new Promise(r => setTimeout(r, 220));
+      const box = h.getBoundingClientRect(), pb = getComputedStyle(h, '::before');
+      const t = box.top + (parseFloat(pb.top) || 0), b = box.bottom - (parseFloat(pb.bottom) || 0);
+      out.push({ name, pinned: h.closest('.lhw').classList.contains('pinned'),
+        pt: getComputedStyle(h).getPropertyValue('--pt').trim(), h: +(b - t).toFixed(1) });
+    }
+    return out;
+  });
+  ok(bars.every(b => b.pinned), `each section pins in turn (${bars.map(b => b.name).join(', ')})`);
+  ok(new Set(bars.map(b => b.h)).size === 1, `every pinned bar is the same height, whatever the section's resting air (${bars.map(b => `${b.name} ${b.h} @--pt ${b.pt}`).join(' | ')})`);
+  ok(near(bars[0].h, 44, 0.5), `and that height is the 44px bar (${bars[0].h})`);
+  ok(new Set(bars.map(b => b.pt)).size > 1, `while the RESTING air still differs by section, as decision 21 intended (${[...new Set(bars.map(b => b.pt))].join(' / ')})`);
+  await J(() => { document.querySelector('.scroller').scrollTop = 1000;
+    document.querySelectorAll('.lhead.tap[aria-expanded="true"]').forEach(h => h.click()); });
+  await p.waitForTimeout(260);
 
   /* ---------- decision 29 — EVERY state that draws must centre its ink ----------
      Decision 27 fixed the pinned band and stopped there, so hovering a caption still painted the same

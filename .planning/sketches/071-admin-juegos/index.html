@@ -210,14 +210,23 @@
      lands 24.6 / 23.6 / 22.6 from the NEXT label's capitals, against 33.2 of ink-to-ink between labels — so none
      of the three crowds the rhythm and the choice is 2px of heft. 6 gives 9.6px of breath around an 11px cap:
      a band 2.7x the cap, comfortably smaller than a row's own 64px hover. */
-  .lhead { position: relative; --band: 6px; --cap: 0.6px; }
+  .lhead { position: relative; --band: 6px; --bandp: 12.9px; --cap: 0.6px; }
   .lhead::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0;
     /* NOTE the signs: this state moves the BAND while the pinned state below moves the INK (via padding), and
        raising the band is the same as lowering the ink inside it. Same --cap, opposite-looking expressions. */
     top: calc(var(--pt) - var(--band) - var(--cap)); bottom: calc(var(--cap) - var(--band));
     background: transparent; transition: background 120ms var(--ease-out-soft); }
   @media (prefers-reduced-motion: reduce) { .lhead::before { transition: none; } }
-  .lhw.pinned .lhead::before { top: 0; bottom: 0; background: var(--color-surface); }
+  /* decision 31 — the pinned bar is CHROME, so its height is uniform and owes nothing to the resting rhythm.
+     It used to be the caption's own box, which meant it inherited decision 21's deliberate first-section
+     exception (--pt 14 vs 26) and the bar under SIN DATOS measured 32.2 against JUEGOS DEL CLUB's 44.2. That
+     exception is correct at rest — the 48px search already separates the first section — and meaningless once
+     the label is a bar pinned under that same search.
+     Because the band is a pseudo-element its thickness is independent of the box, so --bandp fixes the bar at
+     44px (matching .pbar and the touch floor) for every section, with no flow change and no jump. This also
+     retires decision 27's padding halving: one mechanism now serves both states, differing only in thickness. */
+  .lhw.pinned .lhead::before { top: calc(var(--pt) - var(--bandp) - var(--cap)); bottom: calc(var(--cap) - var(--bandp));
+    background: var(--color-surface); }
 
   /* decision 21 — air ABOVE a section label, none below it. Measured TEXT-TO-TEXT (the headers are transparent,
      so box edges are invisible and lie — box gaps reported the variants as identical), the list read 15px above a
@@ -240,9 +249,8 @@
      sticky element's flow slot does not change and nothing jumps at the moment it pins.
      The lesson this adds to "measure ink, not boxes": an element that draws NOTHING at rest but something in
      another state has TWO geometries, and spacing tuned for the invisible one becomes visible in the other. */
-  /* the pinned bar is the box itself, so its ink is centred by the padding rather than by the band's offsets —
-     and it needs the same --cap correction, for the same reason. */
-  .lhw.pinned .lhead { padding-top: calc(var(--pt) / 2 + var(--cap)); padding-bottom: calc(var(--pt) / 2 - var(--cap)); }
+  /* decision 31 retires decision 27's padding halving: the bar's geometry is the band's now, not the box's, so
+     the caption's padding never changes between states and no text can move as it pins. */
 
   /* ---- decision 28 — a section label is VERSALITA: 14/600 uppercase, tracked ----
      From the device: "I need the look and feel of those header looks more different of the rest of the content."
