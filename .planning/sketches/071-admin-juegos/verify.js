@@ -74,7 +74,18 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   });
   ok(sep.headBg !== sep.rowBg, `header sits on a tonal band, the row does not (${sep.headBg} vs ${sep.rowBg})`);
   ok(Math.abs(sep.headIconLeft - sep.rowIconLeft) > 100, `the icons no longer share a slot (${sep.headIconLeft} vs ${sep.rowIconLeft})`);
-  ok(sep.headTextLeft !== sep.rowTextLeft, `header text is outdented from row text (${sep.headTextLeft} vs ${sep.rowTextLeft})`);
+  /* decision 13 — the page carries exactly TWO text left edges. Band text no longer outdents (that was the third
+     edge, 44, aligning with nothing); it sits in the row-text column, and the caret holds the 16 edge instead. */
+  const edges = await J(() => {
+    const L = e => { const g = document.createRange(); g.selectNodeContents(e); return +g.getBoundingClientRect().left.toFixed(1); };
+    const heads = [...document.querySelectorAll('.lhead')], row = document.querySelector('.row');
+    const all = [L(document.querySelector('.ptitle')), ...heads.map(h => L(h.querySelector('.ln'))),
+      +row.querySelector('.cov').getBoundingClientRect().left.toFixed(1), L(row.querySelector('.name'))];
+    return { set: [...new Set(all)].sort((a, b) => a - b), carets: heads.map(h => +h.querySelector('.caret').getBoundingClientRect().left.toFixed(1)) };
+  });
+  ok(edges.set.length === 2 && near(edges.set[0], 16) && near(edges.set[1], 68), `exactly two text left edges (${edges.set.join(' / ')})`);
+  ok(near(sep.headTextLeft, sep.rowTextLeft), `band text sits in the row-text column (${sep.headTextLeft} vs ${sep.rowTextLeft})`);
+  ok(edges.carets.every(c => near(c, 16)), `every caret holds the 16 edge, none ragged (${edges.carets.join(', ')})`);
   ok(near(sep.headBleed, 375, 1), `the band is full-bleed (${sep.headBleed})`);
   const rot = await J(() => ({
     collapsed: getComputedStyle(document.querySelector('.lhead[aria-expanded="false"] .caret')).transform,
@@ -139,6 +150,16 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(opened.expanded === 'true' && opened.rows === 49, `opening "Sin datos" shows its 49 rows (${opened.rows})`);
   ok(near(opened.headTop, before, 2), `the tapped heading stays put — opening a group never scrolls the page (${before.toFixed(1)} -> ${opened.headTop})`);
   ok(/sin tapa/.test(opened.hint || ''), `the group carries one hint line ("${opened.hint}")`);
+  /* decision 13 holds in the OPEN state too — the hint line only exists here, and it must land on one of the two
+     edges (16), not introduce a third. Sampled at rest this was invisible. */
+  const openEdges = await J(() => {
+    const L = e => { const g = document.createRange(); g.selectNodeContents(e); return +g.getBoundingClientRect().left.toFixed(1); };
+    const grp = document.querySelector('[data-g="gap"]').closest('.lgroup');
+    return [...new Set([L(document.querySelector('.ptitle')), L(grp.querySelector('.lhead .ln')),
+      L(grp.querySelector('.hint')), L(grp.querySelector('.row .name')),
+      +grp.querySelector('.row .cov').getBoundingClientRect().left.toFixed(1)])].sort((a, b) => a - b);
+  });
+  ok(openEdges.length === 2 && near(openEdges[0], 16) && near(openEdges[1], 68), `still two edges with a group open — the hint lands on 16 (${openEdges.join(' / ')})`);
   await p.screenshot({ path: path.join(OUT, '02-group-open-375x740-light.png') });
   await p.click('[data-g="gap"]'); await p.waitForTimeout(300);
 

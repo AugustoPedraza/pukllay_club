@@ -163,7 +163,9 @@
        background — a full-bleed tonal band (the classic sticky section-header treatment)
        icon slot  — the caret moves to the LEADING edge, where a right-pointing caret is a disclosure triangle,
                     not a navigation chevron (a D-19i "›" is always trailing)
-       indent     — header text at 44, row text at 68 */
+       indent     — header text was outdented to 44 against the row's 68. SUPERSEDED by decision 13: that third
+                    left edge aligned with nothing, so band text moved to 68 and the separation now rests on the
+                    band, the icon slot (16 vs 339), height (44 vs 64), weight and full-bleed — not on indent. */
   .lhw { position: sticky; top: var(--bar); z-index: 5; margin: 4px -16px 0; background: var(--color-bg); }
   .lhead { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 16px; border: 0;
     background: var(--color-surface); text-align: left; cursor: pointer; font-size: 15px; font-weight: 600; line-height: 1.3; }
@@ -174,6 +176,16 @@
     transition: transform 160ms var(--ease-out-soft); }
   .lhead[aria-expanded="true"] .caret { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
+
+  /* decision 13 — TWO text left edges, not three. The page read 16 (title, field, caret, cover) / 44 (band text)
+     / 68 (row text): a ladder that aligned with nothing. A row's text cannot leave 68 — its 40px cover holds it
+     there — so the band is what moves. The caret now takes the same 40px leading slot the cover occupies
+     (20 + 24 + the 8px flex gap = 32), putting band text at 68, the row-text column, and leaving the caret
+     LEFT-aligned at x=16 with the title and the cover so both edges hold. Rejected: band text at 16 with a
+     trailing caret — it aligned with the page title but left the carets ragged (measured 126/127/182), floated
+     the band 52px left of its own rows against decision 11's welding, and put the caret back on the trailing
+     side decision 10 moved it off. */
+  .lhead .caret { margin-right: 24px; }
 
   /* decision 9 — scrolling down slides the search away (+1 row on every viewport); the smallest flick up
      brings it back, already usable. Measured: collapsing it to a 44px icon bar saves only 16px — a quarter of

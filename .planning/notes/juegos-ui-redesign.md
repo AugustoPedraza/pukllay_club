@@ -282,12 +282,53 @@ so this cannot silently come back.
       restored it, so it is worth fixing on its own whatever happens to the catalog header.
     Harness back to **61/61**.
 
-## Where we are (2026-09-18, paused for a fresh session)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **61/61**.
-  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left.
-- **Settled:** decisions 1–11. **Reverted:** 12 (`193d10c` → `b1d6c49`).
-- **Open, measured, unfixed:** (a) a residual stripe — TINT 92 / void 32 / TINT 44; (b) three text left edges,
-  16 / 44 / 68, a defect from decision 10 that is worth fixing on its own.
+13. **Two text left edges, not three.** The first refinement of the fresh session, taken on its own — decision 12
+    had bundled this with a colour change and was reverted as one, so this round moved only the indent.
+    Measured at 375×740, the page read a **16 / 44 / 68** ladder: page title, search field, band caret and row cover
+    at **16**; band text at **44**; row text at **68**. Reading down the page the text aligned with nothing, and the
+    44 belonged to no other element on the screen. Root cause was decision 10 — outdenting header text to 44 was one
+    of the four separators it introduced.
+
+    A row's text **cannot leave 68** (its 40px cover holds it there), so the band is what moves, and there are
+    exactly two ways to two edges. Both were built as a `Sangría` tools toggle and measured rather than argued:
+
+    | | text left edges | caret x across the 3 bands |
+    |---|---|---|
+    | Actual | 16 / 44 / 68 — three | 16, 16, 16 |
+    | **A Ranura** | **16 / 68** | **16, 16, 16** |
+    | B Título | 16 / 68 | **126.1, 126.9, 181.9** — ragged |
+
+    Developer picked **"A Ranura — band text at 68 (Recommended)"**. The caret now takes the same **40px leading
+    slot a row's cover occupies** (20px caret + 24px margin + the existing 8px flex gap = 32), so band text lands at
+    **68** in the row-text column while the caret stays **left-aligned at x=16** with the title, the field and the
+    covers. Both edges hold: **16 and 68**, the iOS/Material keyline pair.
+
+    **B was rejected on measurement, not taste:** aligning band text with the page title read well as a page-level
+    section, but the caret then follows the count, so its x moves with the label — a **56px spread** across three
+    bands, visible in the screenshot, not just in the numbers. It also floated the band **52px left of its own rows**,
+    against decision 11's welding, and returned the caret to the trailing side decision 10 had moved it off.
+
+    **What this spends:** decision 10 separated header from row on four attributes and indent was one. Three still
+    differ — tonal band, icon slot (16 vs 339), height (44 vs 64) — plus weight (600/400) and full-bleed, so the
+    separation holds without it. The CSS comment and the harness check that asserted the *old* rule
+    (`headTextLeft !== rowTextLeft`) were rewritten to assert the new one rather than deleted.
+
+    **A screenshot nearly lied a third time:** the open-group shot showed the hint line *"Se ven en la web sin tapa
+    ni descripción."* hanging left of the band label, and it read as a third edge returning. Measured, the hint is at
+    **16** — one of the two edges — so the open state is also 16 / 68. The at-rest edge check had not sampled it
+    (the hint only exists when a group is open), so a second check now covers the open state.
+
+Harness: **64/64** (61 + two-edges, row-text column, no ragged caret, and the open-state edge check).
+
+## Where we are (2026-09-18)
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **64/64**.
+  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left (the `Sangría` toggle was removed once
+  decision 13 was picked).
+- **Settled:** decisions 1–11 and **13**. **Reverted:** 12 (`193d10c` → `b1d6c49`).
+- **Open, measured, unfixed:** (a) a residual stripe — TINT 92 / void 32 / TINT 44. *(b) three text left edges is
+  **fixed** by decision 13 — the page is now 16 / 68 at rest and with a group open.)*
+- **Noticed while fixing 13, not yet asked:** the group hint line sits at 16 while the band it belongs to now sits
+  at 68, so the hint hangs left of its own heading. Legal (16 is an edge), but it may want 68.
 - **Also open:** the year-only second line, no prompt line, collapse persistence, unreviewed copy, and the
   enrichment pending/failed row + Reintentar (not drawn anywhere).
 - **App-wide rules recorded** in `01.8.2-CONTEXT.md` + `01.8.2-BENCHMARK.md`: **D-19n** scrolled context,
