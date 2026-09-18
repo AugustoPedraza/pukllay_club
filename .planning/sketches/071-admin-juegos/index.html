@@ -215,6 +215,30 @@
   .lhead.fixed .cnt { font-size: 13px; }
   .lhead.fixed:hover { background: transparent; }
 
+  /* A "Una línea": one quiet row carrying both counts, no tint, no 44px band. Taps through to the queue.
+     It keeps what decision 8 actually cared about — the 49 incomplete games stay visible at rest — while
+     spending a third of the height and none of the page's only tint. */
+  .wline { display: flex; align-items: center; gap: 8px; width: calc(100% + 32px); margin: 12px -16px 0;
+    padding: 6px 16px; min-height: 36px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .wline .wl { flex: 1; font-size: 13px; font-weight: 400; color: var(--color-text-muted); line-height: 1.3; }
+  .wline .wl b { font-weight: 600; color: var(--color-text); }
+  .wline:hover { background: var(--color-surface); }
+  .wline:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .wline .chev { color: var(--color-text-muted); }
+  /* E "Línea arriba": the same line, moved between the title and the search. Inset (not full-bleed) because it
+     now belongs to the title block rather than to the list. */
+  .wline.above { width: 100%; margin: 4px 0 0; padding: 6px 0; }
+  /* D "Chips": horizontal and inset, so the counts read as metadata about the catalog rather than as two more
+     rows of list structure. NOTE: decision 1 removed four estado chips from this page, so this shape has to
+     survive looking like the thing that was deleted. */
+  .wchips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .wchip { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 12px; border: 0;
+    border-radius: var(--radius-full, 9999px); background: var(--color-surface); cursor: pointer;
+    font-size: 13px; font-weight: 400; color: var(--color-text-muted); }
+  .wchip b { font-weight: 600; color: var(--color-text); }
+  .wchip:hover { background: var(--color-surface-2); }
+  .wchip:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
   /* decision 16 — the caption gets its OWN RANK, at 16. Decision 15 made this header behave like a caption but
      it still looked like a peer: measured, byte-identical type to the two controls above it (15/600,
      rgb(35,19,57)), so it read as a group header that had lost its band and caret rather than a different kind
@@ -364,6 +388,7 @@
 <div id="tools">
   <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
   <div>Grupos: <button data-open="none" class="on">Cerrados</button> <button data-open="all">Abiertos</button></div>
+  <div>Trabajo: <button data-wk="now" class="on">Actual (2 franjas)</button> <button data-wk="line">A Una línea</button> <button data-wk="chips">D Chips</button> <button data-wk="above">E Línea arriba</button> <button data-wk="none">C Fuera</button></div>
 </div>
 
 <script src="../069-estantes-ubicar/games.js"></script>
@@ -427,7 +452,7 @@ const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
 /* decision 8 — the three groups PARTITION the catalog (49 + 1 + 385 = 435); a game is never in two of them */
 const GROUPS = [
   { key: 'gap', name: 'Sin datos', hint: 'Se ven en la web sin tapa ni descripción.', has: g => g.status !== 'draft' && g.gap },
-  { key: 'draft', name: 'Borradores', hint: 'Todavía no se ven en la web.', has: g => g.status === 'draft' },
+  { key: 'draft', name: 'Borradores', one: 'borrador', hint: 'Todavía no se ven en la web.', has: g => g.status === 'draft' },
   { key: 'rest', name: 'Juegos del club', hint: null, has: g => g.status !== 'draft' && !g.gap }
 ];
 const inGroup = k => byNew().filter(GROUPS.find(x => x.key === k).has);
@@ -515,12 +540,52 @@ function groupSection(g) {
   </section>`;
 }
 
+/* OPEN: the two work bands are the heaviest thing on the page and they are secondary — 92px plus 312px of
+   chrome before the first game, spent at rest to show two numbers (49 and 1), for 50 items out of 435, in the
+   only tinted mass on the page, 24px under the search they outweigh. Measured cost: 1-2 catalog rows on every
+   viewport (375x667 shows just 3 games). Three treatments. Toggle: tools -> Trabajo. */
+function workBlock() {
+  const mode = device.dataset.wk || 'now';
+  const work = GROUPS.filter(g => g.key !== 'rest');
+  if (mode === 'none' || mode === 'above') return '';   /* C: off the page · E: rendered above the search instead */
+  if (mode === 'line') return wLine();                 /* A: one quiet line under the search */
+  if (mode === 'chips') {                              /* D: metadata, not list structure — horizontal, inset */
+    const parts = wParts();
+    if (!parts.length) return '';
+    return `<div class="wchips">${parts.map(x => `<button class="wchip" data-act="pend">
+      <b>${x.n}</b> ${wWord(x)}</button>`).join('')}</div>`;
+  }
+  return `<div class="wblock">${work.map(groupSection).join('')}</div>`;
+}
+const wParts = () => GROUPS.filter(g => g.key !== 'rest').map(g => ({ g, n: inGroup(g.key).length })).filter(x => x.n);
+const wWord = x => x.n === 1 ? (x.g.one || x.g.name.toLowerCase()) : x.g.name.toLowerCase();
+function wLine(cls = '') {
+  const parts = wParts();
+  if (!parts.length) return '';
+  return `<button class="wline${cls}" data-act="pend">
+    <span class="wl">${parts.map(x => `<b>${x.n}</b> ${wWord(x)}`).join(' · ')}</span>
+    <span class="chev" aria-hidden="true">${ic('chevR')}</span></button>`;
+}
+/* E "Línea arriba": the counts sit between the TITLE and the search, so the search and the catalog it searches
+   become contiguous — today the work block wedges itself between the page's one control and its results. */
+const workAbove = () => (device.dataset.wk === 'above') ? wLine(' above') : '';
+
+/* C only: with the block off the page the 50 incomplete games would be invisible, so the counts move to the
+   header icon + badge D-19g always specified (left of "+", as 070 placed it). */
+function workBadge() {
+  if ((device.dataset.wk || 'now') !== 'none') return '';
+  const n = GROUPS.filter(g => g.key !== 'rest').reduce((a, g) => a + inGroup(g.key).length, 0);
+  if (!n) return '';
+  return `<button class="ibtn" data-act="pend" aria-label="Pendientes, ${n} juegos">${ic('inbox')}<span class="badge">${n}</span></button>`;
+}
+
 function renderJuegos() {
   main.innerHTML = `
     <div class="phead"><h1 class="ptitle">Juegos</h1>
-      <div class="hacts">
+      <div class="hacts">${workBadge()}
         <button class="ibtn" data-act="add" aria-label="Agregar un juego">${ic('plus')}</button>
       </div></div>
+    ${workAbove()}
     <div class="search">
       <div class="sfield">
         <input id="q" type="search" placeholder="Buscá un juego" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-label="Buscá un juego">
@@ -528,7 +593,7 @@ function renderJuegos() {
       </div>
       <div class="sugg" id="sugg" role="listbox" hidden></div>
     </div>
-    <div class="wblock">${GROUPS.filter(g => g.key !== 'rest').map(groupSection).join('')}</div>
+    ${workBlock()}
     ${GROUPS.filter(g => g.key === 'rest').map(groupSection).join('')}`;
 }
 
@@ -724,6 +789,7 @@ document.addEventListener('click', e => {
   const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); }
   const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) device.classList.remove('kbd'); mark('[data-kbd-set]', k); }
   const o = e.target.closest('[data-open]'); if (o) { const v = o.dataset.open === 'all'; S.open = { gap: v, draft: v, rest: true }; mark('[data-open]', o); render(); }
+  const wk = e.target.closest('[data-wk]'); if (wk) { device.dataset.wk = wk.dataset.wk; mark('[data-wk]', wk); render(); updateBar(); }
 });
 function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
 
