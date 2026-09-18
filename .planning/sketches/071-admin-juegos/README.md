@@ -2,7 +2,7 @@
 sketch: 071
 name: admin-juegos
 question: "What is the admin Juegos tab's one job, and what does the page look like once that job — not the filter-and-table habit — sets its shape?"
-winner: "single — refined in place across decisions 1-15, no variants left"
+winner: "single — refined in place across decisions 1-16, no variants left"
 tags: [admin, juegos, search, list, pendientes, add-by-bgg, phase-01.8.2, mobile-first]
 ---
 
@@ -40,7 +40,7 @@ Try: type `cat` (matches + "Crear «…»") · paste `342942` or a `boardgamegee
 live) · open `Sin datos` · scroll down (the search hides, the catalog heading pins and gains its band) · any
 row → the editor stand-in.
 
-## What it draws (decisions 1–15, `notes/juegos-ui-redesign.md`)
+## What it draws (decisions 1–16, `notes/juegos-ui-redesign.md`)
 - **One job: find one game.** Title `Juegos` + a 48px search field, no filter chips.
 - **Picking a game opens its editor** (sketch 063's screen — stubbed here). The search is pure navigation, so a
   game row carries a **chevron** (D-19i).
@@ -62,6 +62,12 @@ row → the editor stand-in.
   so the caret took the same **40px leading slot the cover occupies**, putting band text at **68** with row text
   and holding the caret at **16**. Rejected: band text at 16 with a trailing caret — the carets went ragged across
   **126 / 127 / 182** and the band floated 52px left of its own rows. This supersedes decision 10's indent.
+- **The caption carries its own rank, on the 16 keyline** (decision 16) — the seam the developer flagged as
+  "rayado" one last time. Two causes measured and separated by variant: the caption was **byte-identical in type**
+  to the two controls above it (`15/600 rgb(35,19,57)`), so it read as a header that had lost its decoration; and
+  it was the only element on the page with an **empty leading slot** (`caret · caret · EMPTY · cover · cover` down
+  x=16). It now takes the system's **Label (group)** rank — `13/600` muted — at **16**. Rejected: the rank alone
+  (hole stayed) and the move alone (type stayed identical). Contrast 6.17; edges still 16 / 68.
 - **The body group does not collapse** (decision 15) — the defect decision 14 created, found on first real-browser
   test: collapse the catalog and its plain header stranded above **308px of void** with **0 rows**, while the two
   work headers kept their bands. `Juegos del club 385` is now a **caption** (a span, no caret, no `data-act`),
@@ -94,7 +100,7 @@ heading are all off screen at once, leaving 11 rows with no context and the back
   heading is confined to its own section, so an arriving one evicts it.
 
 ## Verification (`node .planning/sketches/071-admin-juegos/verify.js`)
-**73/73 passed**, no page errors. Highlights:
+**75/75 passed**, no page errors. Highlights:
 - **Rhythm is pixel-identical to 069 raised** at 375×740: title row → field **16.0** (25.2 from the title's text
   box — 069 measures a field from the row, since its border is the visible edge), field → "Juegos del club"
   **32.0**, heading → first cover **16.5**, row **64px**.

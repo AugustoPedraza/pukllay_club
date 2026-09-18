@@ -65,9 +65,20 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(body.tag === 'SPAN' && !body.act && !body.aria, `the catalog header is a caption, not a control (<${body.tag.toLowerCase()}>, data-act ${body.act})`);
   ok(!body.caret, 'the catalog header carries no caret — there is nothing to disclose');
   ok(body.rows > 0, `the catalog can never be empty (${body.rows} rows)`);
-  /* removing the caret must not let the text fall back to 16 — it did, which would have aligned the body header
-     with the page title while both work headers stayed at 68. The leading slot survives the caret. */
-  ok(near(body.textLeft, 68), `the caption keeps the 68 slot the caret used to hold (${body.textLeft})`);
+  /* decision 16 — the caption carries its OWN RANK at 16, superseding decision 15's 68 slot. It had been
+     byte-identical in type to the two controls above it, so it read as a group header that had lost its band and
+     caret; and at 68 it was the only element on the page with an empty leading slot (the x=16 column ran
+     caret · caret · EMPTY · cover · cover). Both are asserted here: a distinct rank, and no hole. */
+  const cap = await J(() => {
+    const t = e => { const c = getComputedStyle(e); return c.fontSize.replace('px', '') + '/' + c.fontWeight; };
+    const heads = [...document.querySelectorAll('.lhead')];
+    const cn = heads[2].querySelector('.ln'), wn = heads[0].querySelector('.ln');
+    return { capType: t(cn), workType: t(wn), capColor: getComputedStyle(cn).color,
+      workColor: getComputedStyle(wn).color };
+  });
+  ok(near(body.textLeft, 16), `the caption sits on the 16 keyline — no hole in the leading column (${body.textLeft})`);
+  ok(cap.capType !== cap.workType, `the caption has its own rank, not the controls' (${cap.capType} vs ${cap.workType})`);
+  ok(cap.capColor !== cap.workColor, `and its own colour (${cap.capColor} vs ${cap.workColor})`);
   ok(groups.every(g => g.h >= 44), `every group header is a 44px target (${groups.map(g => g.h).join(', ')})`);
 
   /* decision 10: a group header must not read as a row, and its caret is LEADING (a disclosure triangle),

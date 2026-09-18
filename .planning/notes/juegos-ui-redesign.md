@@ -411,11 +411,51 @@ Harness: **73/73** — the caption is a span with no caret and no `data-act`, th
 caption keeps the 68 slot, and the caret-rotation check now *produces* the expanded state (since after decision 15
 only the two collapsed work groups have carets) and closes the group again, leaving the page as it found it.
 
+16. **The caption gets its own rank, on the 16 keyline.** Developer, pointing at the seam between the tinted work
+    block and the catalog caption: *"this is the part that breaks the rythm"*.
+
+    Measured, **two** causes were stacked there, and separating them by variant was what made the answer obvious:
+
+    1. **The caption was typographically identical to the two controls above it** — both `15/600 rgb(35,19,57)`,
+       byte for byte. Decision 15 had made it *behave* like a caption while it still *looked* like a peer, so it
+       read as a group header that had lost its band and caret: incomplete, rather than a different kind of thing.
+    2. **The leading column had a hole.** Down x=16 the page ran `caret · caret · EMPTY · cover · cover` — the
+       caption was the only element on the page with an empty leading slot, an indent held open for a caret that
+       decision 15 had removed.
+
+    | | type | vs. the controls above | hole at x=16 |
+    |---|---|---|---|
+    | Decision 15 as built | `15/600` @68 | **byte-identical** | **yes** |
+    | **A** | **`13/600` muted @16** | **differs** | **no** |
+    | B | `13/600` muted @68 | differs | **yes** |
+    | C | `15/600` @16 | **byte-identical** | no |
+
+    Developer picked **"A — 13/600 muted at 16 (Recommended)"**, the only one that answers both. `13/600` muted is
+    not a new rank: it is the system's existing **Label (group)** rank, already in the BENCHMARK and matching both
+    platforms (iOS 13pt section header, M3 list subheader). Contrast **6.17** on the page background, above 4.5.
+    B fixed the read but kept the hole; C closed the hole but left the type identical, so it still read as a header
+    missing its decoration.
+
+    **Cost, named:** the caption no longer aligns with the rows it heads — it sits on the **container keyline**
+    while its rows sit on the content keyline. That is exactly what a Material list subheader does, and it is the
+    right trade here precisely *because* it is no longer a peer of the banded controls: a label belongs to the
+    page's left edge, a control belongs to its list. Decision 13 is untouched — the page still measures **16 / 68**.
+
+    **Note the sequence:** decisions 13 → 14 → 15 → 16 are four passes at the same seam, each one exposing the
+    next. 13 moved the band text to 68; 14 took the tint off the catalog; 15 removed its caret; and only then did
+    the caption's inherited 15/600-at-68 anatomy — correct for a banded control, wrong for a label — become
+    visible. Each step was right and each created the next defect, which is an argument for the small-slice
+    pattern rather than against it: bundled, none of these would have been separable.
+
+Harness: **75/75** — the caption sits on the 16 keyline with no hole, and carries its own rank *and* its own colour
+(`13/600 rgb(103,92,125)` vs the controls' `15/600 rgb(35,19,57)`). The decision-15 check that asserted the old
+68 slot was rewritten to assert the new rule, not deleted.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **73/73**.
-  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left (the `Sangría`, `Franjas` and `Cabecera`
-  toggles were removed once decisions 13, 14 and 15 were picked).
-- **Settled:** decisions 1–11, **13**, **14** and **15**. **Reverted:** 12 (`193d10c` → `b1d6c49`).
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **75/75**.
+  Tools: Tema · Teclado · Grupos (Cerrados/Abiertos). No variants left (the `Sangría`, `Franjas`, `Cabecera` and
+  `Rótulo` toggles were removed once decisions 13–16 were picked).
+- **Settled:** decisions 1–11 and **13–16**. **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **Both findings the handoff opened are now closed:** the three text left edges by decision 13 (the page is
   16 / 68 at rest and with a group open) and the residual stripe by decision 14 (one tinted mass, not two).
 - **Noticed while fixing 13, not yet asked:** the group hint line sits at 16 while the band it belongs to now sits

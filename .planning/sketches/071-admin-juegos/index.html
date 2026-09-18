@@ -210,8 +210,21 @@
      16 — measured, it did, which would have aligned the body header with the page title while the two work
      headers stayed at 68: three treatments, and the pairing decision 13 rejected, reinstated by accident.
      The leading slot survives the caret. */
-  .lhead.fixed { cursor: default; padding-left: 68px; }
+  .lhead.fixed { cursor: default; padding-left: 16px; }
+  .lhead.fixed .ln { font-size: 13px; color: var(--color-text-muted); }
+  .lhead.fixed .cnt { font-size: 13px; }
   .lhead.fixed:hover { background: transparent; }
+
+  /* decision 16 — the caption gets its OWN RANK, at 16. Decision 15 made this header behave like a caption but
+     it still looked like a peer: measured, byte-identical type to the two controls above it (15/600,
+     rgb(35,19,57)), so it read as a group header that had lost its band and caret rather than a different kind
+     of thing. It was also the only element on the page with an empty leading slot — the x=16 column ran
+     caret · caret · EMPTY · cover · cover. Both causes were separated by variant and both are fixed here:
+     13/600 muted is the system's existing "Label (group)" rank (BENCHMARK; iOS 13pt section header, M3
+     subheader), and 16 puts its text back in the leading column. Contrast 6.17 on the page background.
+     Rejected: the quieter rank alone at 68 (the hole stayed) and the move alone (type stayed identical).
+     The caption no longer aligns with the rows it heads — it sits on the container keyline, which is exactly
+     what a Material list subheader does, and decision 13 is untouched because the page still measures 16 / 68. */
 
   /* decision 9 — scrolling down slides the search away (+1 row on every viewport); the smallest flick up
      brings it back, already usable. Measured: collapsing it to a 44px icon bar saves only 16px — a quarter of
