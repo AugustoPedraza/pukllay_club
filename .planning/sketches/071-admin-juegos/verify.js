@@ -338,7 +338,10 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
     const px = s => { const d = document.createElement('div'); d.style.color = s; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
     const on = [...document.querySelectorAll('.lhw')].filter(w => w.classList.contains('pinned'));
     return { count: on.length, name: on[0] ? on[0].querySelector('.ln').textContent : null,
-      bg: on[0] ? getComputedStyle(on[0].querySelector('.lhead')).backgroundColor : null, want: px(want) };
+      /* decision 29 — the fill lives on the caption's ::before band, never on the caption itself, so read it
+         there. Reading `.lhead` directly is what this check used to do and it now reports transparent by
+         design; the band's geometry is asserted separately, in the every-state guard above. */
+      bg: on[0] ? getComputedStyle(on[0].querySelector('.lhead'), '::before').backgroundColor : null, want: px(want) };
   });
   ok(pinned.count === 1, `exactly one section header is pinned while scrolling (${pinned.count}: ${pinned.name})`);
   ok(pinned.bg === pinned.want, `the pinned header gains its fill so it terminates over the rows (${pinned.bg})`);
@@ -363,6 +366,59 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(Math.abs(band.above - band.below) <= 1.5, `the pinned band centres its text (${band.above} above, ${band.below} below)`);
   ok(band.above >= 6, `with real breathing room, not a hairline (${band.above}px)`);
   ok(near(band.h, band.restH, 0.6), `and its height is unchanged, so nothing jumps as it pins (${band.h} vs ${band.restH})`);
+
+  /* ---------- decision 29 — EVERY state that draws must centre its ink ----------
+     Decision 27 fixed the pinned band and stopped there, so hovering a caption still painted the same
+     asymmetric box (14px of colour above the text, 1.2 below) — the defect survived in the state nobody had
+     looked at, immediately after the note that named the general rule. The guard therefore has to enumerate
+     the STATES, not the one that was reported: anything that draws a fill or a ring gets measured. */
+  const drawnStates = await J(async () => {
+    const out = [];
+    const measure = (h, label) => {
+      const ln = h.querySelector('.ln');
+      const g = document.createRange(); g.selectNodeContents(ln);
+      const ink = g.getBoundingClientRect(), box = h.getBoundingClientRect();
+      const cs = getComputedStyle(h, '::before'), own = getComputedStyle(h);
+      const top = box.top + (parseFloat(cs.top) || 0);
+      const bot = box.bottom - (parseFloat(cs.bottom) || 0);
+      const draws = cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || own.backgroundColor !== 'rgba(0, 0, 0, 0)'
+        || (cs.outlineStyle && cs.outlineStyle !== 'none');
+      out.push({ label, draws, above: +(ink.top - top).toFixed(1), below: +(bot - ink.bottom).toFixed(1),
+        h: +(bot - top).toFixed(1) });
+    };
+    const tap = document.querySelector('.lhead.tap');
+    const pinnedHead = [...document.querySelectorAll('.lhw')].find(w => w.classList.contains('pinned'))?.querySelector('.lhead');
+    measure(tap, 'rest');
+    if (pinnedHead) measure(pinnedHead, 'pinned');
+    return out;
+  });
+  /* hover and focus need real input, so they are driven rather than simulated */
+  await p.hover('.lhead.tap'); await p.waitForTimeout(220);
+  const hov = await J(() => {
+    const h = document.querySelector('.lhead.tap'), ln = h.querySelector('.ln');
+    const g = document.createRange(); g.selectNodeContents(ln);
+    const ink = g.getBoundingClientRect(), box = h.getBoundingClientRect();
+    const cs = getComputedStyle(h, '::before');
+    const top = box.top + (parseFloat(cs.top) || 0), bot = box.bottom - (parseFloat(cs.bottom) || 0);
+    return { label: 'hover', draws: cs.backgroundColor !== 'rgba(0, 0, 0, 0)',
+      above: +(ink.top - top).toFixed(1), below: +(bot - ink.bottom).toFixed(1), h: +(bot - top).toFixed(1),
+      inkTop: +ink.top.toFixed(1) };
+  });
+  await cool();
+  const restInkTop = await J(() => { const g = document.createRange();
+    g.selectNodeContents(document.querySelector('.lhead.tap .ln')); return +g.getBoundingClientRect().top.toFixed(1); });
+  const states = [...drawnStates, hov].filter(s => s.draws);
+  ok(states.length >= 2, `at least the pinned and hover fills are under test (${states.map(s => s.label).join(', ')})`);
+  states.forEach(s => ok(Math.abs(s.above - s.below) <= 1.5,
+    `${s.label}: the ink is centred in what is drawn (${s.above} above, ${s.below} below, band ${s.h})`));
+  /* and the fix must not move the label — a hover that shifts the text 13px is worse than the misalignment */
+  ok(near(hov.inkTop, restInkTop, 0.6), `hovering does not move the label (${hov.inkTop} vs ${restInkTop} at rest)`);
+  /* the caption's own background must stay transparent in every state: the band is the ::before, so any direct
+     fill is a state someone added without the band, which is exactly how this defect returns */
+  await p.hover('.lhead.tap'); await p.waitForTimeout(160);
+  ok(await J(() => getComputedStyle(document.querySelector('.lhead.tap')).backgroundColor === 'rgba(0, 0, 0, 0)'),
+    'the caption itself never carries a background — the band is always the ::before');
+  await cool();
   await settle(); await p.screenshot({ path: path.join(OUT, '03-search-hidden-375x740-light.png') });
   for (const y of [900, 780, 640]) { await sc(y); await p.waitForTimeout(120); }
   await p.waitForTimeout(250);

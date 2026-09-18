@@ -926,10 +926,47 @@ caption must carry it), that no `[class*=alert]` exists anywhere, and that `1 an
 
 Harness: **118/118**.
 
+29. **The fill is a band drawn around the ink, never the caption's own background.** From the device, one round
+    after decision 27: *"When I put the mouse over a header, the text isn't vertically centered to its colored
+    row."* Measured on hover: **14px of colour above the text, 1.2 below** — byte-for-byte the defect decision 27
+    had just fixed, in the state nobody had looked at.
+
+    **This is the more useful failure of the two.** Decision 27 wrote the general rule — *an element that draws
+    nothing at rest but something in another state has TWO geometries* — and then applied it to the **single
+    state that had been reported**. `.lhw.pinned .lhead` was patched; `.lhead.tap:hover`, which paints the same
+    asymmetric box, was not, and neither was `:focus-visible`, whose ring framed the same empty half. Naming a
+    rule is not applying it: **the fix has to be as general as the rule, or the next state carries the defect.**
+
+    The structural fix, rather than a third patch: the fill moves off `.lhead` onto a `::before` anchored to the
+    **content box** — which is where the ink is — and grown by `--band` each way. That is centred **by
+    construction, in every state, present and future**. Two properties it buys that padding-halving could not:
+    - **It moves no text.** The caption's own padding, and with it decision 21's 3:1 resting ratio, is untouched.
+      Halving the padding on hover would have centred the band by making the label **jump 13px under the cursor**
+      — a worse defect than the one being fixed.
+    - **It cannot be forgotten.** A future state that draws gets a centred band for free.
+
+    Pinned keeps a full-height bar (it is a bar under the search, not a highlight), with decision 27's halving
+    centring the ink inside it. Two band shapes, one invariant: **the ink is centred in whatever is drawn.**
+
+    Measured after: hover **7 / 8.2** (band 32.2), pinned **13 / 14.2** (band 44.2), and the label's ink top is
+    identical hovered and at rest (160 / 160).
+
+    **The guard now enumerates STATES, not the reported one.** It walks rest, pinned and hover, measures anything
+    that draws a fill or a ring, and asserts centring for each — plus two traps this round found: that hovering
+    does not move the label, and that **`.lhead` itself never carries a background**, since a direct fill is
+    precisely how a fourth state would reintroduce the bug. One existing check had to be re-pointed at the band
+    (it read `.lhead`'s own background, now transparent by design).
+
+    **The pattern, now at four:** decisions 26, 27, 28 and 29 were all a rule or an assertion outliving its
+    reason. 29 adds the sharpest form of it — **a fix can outlive its own rationale at the moment it is
+    written**, if it is applied more narrowly than the rule it cites.
+
+Harness: **123/123**.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **118/118**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **123/123**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–28**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–29**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections, labelled
   in **versalita 14/600** — `SIN DATOS 49 ⌄` and `BORRADORES 1 ⌄` closed, `JUEGOS DEL CLUB 385` open. No resting
