@@ -861,13 +861,79 @@ caption must carry it), that no `[class*=alert]` exists anywhere, and that `1 an
     column; the full 375px of a collapsible caption is tappable while its ink stops at x=140 (235px of invisible
     target); and the count is 15/400 — the size of a row *name*, and larger than a row's second line at 13/400.
 
+27. **The pinned header band was 26px of empty tint above its text.** Reported from the device: *"when I
+    scroll, the background color isn't aligned, making the text be more aligned to the bottom of what it shows."*
+    Measured, exactly right — **26.0px above the text, 0.5 below**, with the text jammed against the band's
+    bottom edge.
+
+    **Cause, and it is decision 21's.** That decision set `padding-top: 26 / padding-bottom: 0` on `.lhead` to
+    make the *resting* rhythm (air above a label, none below). At rest the caption is transparent, so the padding
+    is invisible — it is just air. The instant it **pins** it gains `--color-surface`, and the same padding
+    becomes visible empty colour.
+
+    **This is the box-vs-ink trap inverted, and it earns a new line in the rule.** What was on file was *"if the
+    element draws nothing, its box is not a measurement at all."* The corollary it lacked: **an element that
+    draws nothing at rest but something in another state has TWO geometries, and the spacing tuned for the
+    invisible one becomes visible in the other.** Decision 21 optimised the transparent case and never re-checked
+    the pinned one — and every pinned assertion in the harness tested *which* header was pinned, never what it
+    looked like, so a transparent-state measurement shipped as a tinted-state defect.
+
+    Fix: halve `--pt` onto both sides when pinned. Centres the ink (**13 / 13.5**) and keeps the box height
+    byte-identical at 45.5, so the sticky element's flow slot never changes and nothing jumps at the moment it
+    pins. Three new guards cover the band's geometry, including the height-unchanged one.
+
+28. **A section label is versalita: 14/600 uppercase, tracked.** Same report: *"I need the look and feel of those
+    header looks more different of the rest of the content."* Until now a caption differed from a row name by
+    **weight alone** (600 vs 400), plus keyline, cover and chevron — decision 20 put them at the same size and
+    colour deliberately. Four differentiators that are all position and weight still read as "a row without a
+    picture", because the **text is the same kind**. Case changes the kind.
+
+    Three directions were built and measured; then, on *"something closer to B+C"*, a size scale inside the
+    winner. The decisive measurement is **cap height**, not font-size — the only comparison that means anything
+    for uppercase:
+
+    | | mayúscula | vs may. de fila | vs minúscula de fila | chrome |
+    |---|---|---|---|---|
+    | hoy (15 caja baja) | — | — | minúscula 8px | 213px |
+    | versalita 12 | 9px | 82% | 113% | 201px |
+    | versalita 13 | **9px** | 82% | 113% | 205px |
+    | **versalita 14** | **11px** | **100%** | **138%** | **209px** |
+    | versalita 15 | **11px** | 100% | 138% | 213px |
+
+    **The scale collapses to two real steps** — the font renders 12 and 13 at the same 9px cap, and 14 and 15 at
+    the same 11px — so within each pair the cheaper size wins and the choice is 9px or 11px of capital.
+    Developer picked **14**: its capitals match a row name's capitals exactly while reading **138% of the
+    lowercase body the eye actually scans**, so it changes category without losing a gram of presence. It is also
+    **cheaper than what it replaces** — chrome 213 → 209.
+
+    **Rejected, both on measurement.** A permanent tinted band is the most different at a glance, and it does
+    stay **3 separate masses** rather than decision 14's stripe (146..190, 200..244, 258..289 — the air has to
+    move out of the caption first, or they merge) — but it costs **24px and a whole row**, and reopens decision
+    17's *"nothing is tinted at rest"*, which is what ended seven rounds of band negotiation. 17/600 lower-case
+    restores a ladder step but is the **same kind of text, only bigger** — the least answer to what was asked.
+
+    **Four guards fired, and all four were made MORE PRECISE rather than weaker** — the project's own rule for
+    exactly this:
+    - `every section carries D-19j's 15/600` → every section carries the **same** rank, now 14/600, **plus** a
+      new assertion that every label is uppercase.
+    - `a section is never smaller than the rows it heads (14 vs 15)` → decision 20 wrote this in **font-size**,
+      which is the wrong measurement for caps: a 14px capital is taller than a 15px lowercase. Restated in **cap
+      height** (11 ≥ 11) with a second check that it clears the row's x-height by ≥1.25× (138%).
+    - `type ranks hold` → the ladder's heading rank updated.
+    - `it costs the resting page NOTHING (still 213px)` → decision 24 had **hardcoded** the number, so decision
+      28's legitimate 4px saving read as a failure. "Costs nothing" is a *relative* claim; it now measures the
+      page with the failure against the same page without it (209 vs 209).
+
+Harness: **118/118**.
+
 ## Where we are (2026-09-18)
-- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **113/113**.
+- **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **118/118**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–26**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–28**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
-- **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections —
-  `Sin datos 49 ›` and `Borradores 1 ›` closed, `Juegos del club 385` open. No resting page title. Chrome 213px.
+- **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections, labelled
+  in **versalita 14/600** — `SIN DATOS 49 ⌄` and `BORRADORES 1 ⌄` closed, `JUEGOS DEL CLUB 385` open. No resting
+  page title. Chrome **209px**.
   Two text left edges: **16** and **68**. Air **27px above** a section label, **9 below**.
 - **App-wide rules recorded** in `01.8.2-CONTEXT.md` + `01.8.2-BENCHMARK.md`: **D-19n** scrolled context,
   **D-19g-bis** catalog sections.

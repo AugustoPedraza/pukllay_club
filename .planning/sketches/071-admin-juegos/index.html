@@ -211,6 +211,32 @@
      another state has TWO geometries, and spacing tuned for the invisible one becomes visible in the other. */
   .lhw.pinned .lhead { padding-top: calc(var(--pt) / 2); padding-bottom: calc(var(--pt) / 2); }
 
+  /* ---- decision 28 — a section label is VERSALITA: 14/600 uppercase, tracked ----
+     From the device: "I need the look and feel of those header looks more different of the rest of the content."
+     Until now a caption differed from a row name by WEIGHT alone (600 vs 400), plus keyline, cover and chevron —
+     decision 20 put them at the same size and colour deliberately, following D-19j. Four differentiators that
+     are all position and weight still read as "a row without a picture", because the TEXT is the same kind.
+     Case changes the kind, so a label can never be mistaken for a game's name at any size.
+
+     Why 14, measured as CAP HEIGHT rather than font-size — the only comparison that means anything for caps:
+
+       fila 15/400        mayúscula 11px · minúscula 8px
+       versalita 12/600   mayúscula  9px (82% de la may. de fila, 113% de su minúscula)
+       versalita 13/600   mayúscula  9px  <- idéntica a 12: la fuente las aparea a este tamaño
+       versalita 14/600   mayúscula 11px (100% / 138%)
+       versalita 15/600   mayúscula 11px  <- idéntica a 14, y 4px más de chrome
+
+     The scale collapses to two real options (9px or 11px of cap), so within each pair the cheaper one wins.
+     14 matches a row name's own capitals exactly while reading 138% of the lowercase body the eye actually
+     scans — full presence, different category — and it is CHEAPER than what it replaces: chrome 213 -> 209.
+
+     Rejected: a permanent tinted band (built and measured — it does stay 3 separate masses rather than decision
+     14's stripe, but it costs 24px and a whole row, and reopens decision 17's "nothing is tinted at rest", which
+     is what ended seven rounds of band negotiation); and 17/600 lower-case, which restores a ladder step but is
+     still the SAME kind of text, only bigger — the least answer to what was asked. */
+  .lhead .ln { letter-spacing: .07em; text-transform: uppercase; }
+  .lhead { font-size: 14px; }
+
   /* decision 20 — the section label returns to D-19j's rank, 15/600 at full strength. Audited, the ladder was
      INVERTED: the label organising 385 rows was 2px smaller and 2.8x lower contrast than a single row inside it
      (13/600 @6.17 vs 15/400 @17.16), and byte-identical to a row's SECOND line (the year, 13 @6.17) — so a
@@ -401,6 +427,7 @@
 <div id="tools">
   <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
   <div>Estado BGG: <button data-enr-set="" class="on">—</button> <button data-enr-set="pending">pendiente</button> <button data-enr-set="failed">error</button></div>
+
 </div>
 
 <script src="../069-estantes-ubicar/games.js"></script>

@@ -72,7 +72,11 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   const air = await J(() => [...document.querySelectorAll('.lhead')].map(h => parseFloat(getComputedStyle(h).paddingTop)));
   ok(new Set(air.slice(1)).size === 1, `leading air is uniform across every section after the first (${air.slice(1).join(', ')})`);
   ok(air[0] < air[1], `and the first section is deliberately tighter — the search field above it already separates (${air[0]} vs ${air[1]})`);
-  ok(/\|15px\/600\|/.test(anat[0]), 'every section carries D-19j\'s list-section rank, 15/600 (decision 20)');
+  /* decision 28 — the shared rank is VERSALITA, 14/600 uppercase. What must hold is that all three carry the
+     SAME one; whether that rank has enough presence against a row is asserted separately, in cap height. */
+  ok(/\|14px\/600\|/.test(anat[0]), 'every section carries the same rank, 14/600 (decision 28)');
+  ok(await J(() => [...document.querySelectorAll('.lhead .ln')].every(n => getComputedStyle(n).textTransform === 'uppercase')),
+    'and every section label is uppercase — case is what makes it a different KIND of text from a row name');
   ok(/^rgba\(0, 0, 0, 0\)\|/.test(anat[0]), 'no section is tinted at rest — the fill is for pinning only');
 
   /* decision 18 — the two EXCEPTION sections close at rest so the catalog is not buried behind them; the body
@@ -180,7 +184,21 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(!sep.headCover && sep.rowCover, 'and by the 40px cover a row has and a section does not');
   /* the inversion that prompted decision 20 must not come back: a section must never be quieter than a row, nor
      read as a row's second line */
-  ok(sep.headSize >= sep.rowSize, `a section is never smaller than the rows it heads (${sep.headSize} vs ${sep.rowSize})`);
+  /* decision 28 makes decision 20's inversion guard MORE PRECISE rather than weaker. Decision 20 wrote it as
+     font-size ("a section is never smaller than its rows"), which is the wrong measurement for uppercase: a
+     14px capital is taller than a 15px lowercase. Restated as CAP HEIGHT, which is what the eye compares.
+     Measured: versalita 12 and 13 both render a 9px cap and 14 and 15 both render 11px — the font pairs them at
+     these sizes — so the scale has only two real steps and 14 is the cheaper of the taller pair. */
+  const caps = await J(() => {
+    const cv = document.createElement('canvas'), x = cv.getContext('2d');
+    const of = el => { const c = getComputedStyle(el); return { px: parseFloat(c.fontSize), w: c.fontWeight, fam: c.fontFamily }; };
+    const cap = f => { x.font = `${f.w} ${f.px}px ${f.fam}`; return +x.measureText('H').actualBoundingBoxAscent.toFixed(2); };
+    const xh = f => { x.font = `${f.w} ${f.px}px ${f.fam}`; return +x.measureText('x').actualBoundingBoxAscent.toFixed(2); };
+    const h = of(document.querySelector('.lhead .ln')), r = of(document.querySelector('.row .name'));
+    return { head: cap(h), rowCap: cap(r), rowX: xh(r) };
+  });
+  ok(caps.head >= caps.rowCap, `a section's capitals are at least a row name's capitals (${caps.head} vs ${caps.rowCap})`);
+  ok(caps.head / caps.rowX >= 1.25, `and clearly outweigh the lowercase body the eye actually scans (${(caps.head / caps.rowX * 100).toFixed(0)}%)`);
   ok(!(sep.headSize === sep.subSize && sep.headColor === sep.subColor), `nor identical to a row's second line (${sep.headSize}/${sep.headColor} vs ${sep.subSize}/${sep.subColor})`);
   ok(near(sep.headBleed, 375, 1), `the caption is full-bleed so it can pin opaquely (${sep.headBleed})`);
 
@@ -242,7 +260,7 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   const ranks = await J(() => { const g = s => { const e = document.querySelector(s); const c = getComputedStyle(e); return parseFloat(c.fontSize) + '/' + c.fontWeight; };
     return { lhead: g('.lhead'), name: g('.row .name'), field: g('.sfield input'), sub: g('.row .sub') }; });
   /* D-19j, minus the title rank decision 22 removed from this page: 48px field > section 15/600 > row 15/400 */
-  ok(ranks.lhead === '15/600' && ranks.name === '15/400' && ranks.field === '16/400',
+  ok(ranks.lhead === '14/600' && ranks.name === '15/400' && ranks.field === '16/400',
     `type ranks hold (field ${ranks.field}, heading ${ranks.lhead}, row ${ranks.name}, year ${ranks.sub})`);
   ok(await J(() => [...document.querySelectorAll('svg')].every(s => s.children.length > 0)), 'no empty SVG icons anywhere');
   const oflow = await J(() => { const s = document.querySelector('.scroller'); return s.scrollWidth - s.clientWidth; });
@@ -437,7 +455,13 @@ const near = (a, b, t = 1.2) => Math.abs(a - b) <= t;
   ok(warn && warn.bg === 'rgba(0, 0, 0, 0)' && !warn.pill, 'D-19h — a dot and text, never a pill, badge or alert box');
   ok(warn && near(warn.inkH, 19.5, 1.5), `the caption stays ONE line with it (${warn && warn.inkH}px of ink)`);
   ok(warn && warn.inkRight <= 300, `and leaves real slack at 360 (ink ends at x=${warn && warn.inkRight})`);
-  ok(warn && warn.chrome === 213, `it costs the resting page NOTHING (catalogue still at ${warn && warn.chrome}px)`);
+  /* "costs nothing" is a RELATIVE claim, so measure it relatively — a hardcoded 213 here turned decision 28's
+     legitimate 4px saving into a false failure. Compare the page with the failure against the same page without. */
+  await setEnr('');
+  const bare = await J(() => { const sc = document.querySelector('.scroller').getBoundingClientRect();
+    return +(document.querySelector('.lgroup.main .row').getBoundingClientRect().top - sc.top).toFixed(0); });
+  await setEnr('failed');
+  ok(warn && warn.chrome === bare, `it costs the resting page NOTHING (${warn && warn.chrome}px with the failure, ${bare} without)`);
 
   /* ONE anatomy still (decision 17/18): the warn is an optional affordance, like the caret — the ink that
      decides whether two headers are the same KIND of thing must stay byte-identical across all three. */
