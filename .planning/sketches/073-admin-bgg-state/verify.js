@@ -23,7 +23,9 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
 /* D2 won (decision 39); D1 and D3 are removed along with their comparison checks, per 072's rule that what
    is on screen is the decision and not a menu of them. Their measurements live in the README. HOY stays: it
    is the shipped baseline every negative test is written against. */
-const VARIANTS = ['F1', 'F2'];
+/* F2 won (decision 41). F1 is removed with its comparison checks, per 072's rule that what is on screen is
+   the decision and not a menu of them; its measurements live in the README. */
+const VARIANTS = ['F2'];
 const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
 
 (async () => {
@@ -408,8 +410,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
                  sheetBtn: sheet.querySelector('[data-commit]')?.textContent.trim() || null };
       });
       ok(m.inSheet === 0, `${v}: the word "Guardar" appears 0 times inside a field sheet (${m.inSheet})`);
-      ok(m.sheetBtn === (v === 'F1' ? 'Listo' : null),
-        `${v}: the sheet's commit is ${v === 'F1' ? '"Listo" — an end to typing, not a save' : 'gone entirely'} (${m.sheetBtn})`);
+      ok(m.sheetBtn === null, `${v}: the sheet carries no commit button at all (${m.sheetBtn})`);
       await J(() => document.querySelector('[data-close]').click());
       await p.waitForTimeout(200);
     }
@@ -442,8 +443,8 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
       const explicit = kinds.filter(k => k === 'button').length;
       const uniq = [...new Set(kinds)];
       log.push(`INFO ${v} sheets with an explicit commit button: ${explicit}/6 · closing styles: ${uniq.join(', ')}`);
-      ok(explicit === (v === 'F1' ? 2 : 0),
-        `${v}: ${explicit} of 6 sheets carry a commit button${explicit === 0 ? ' — one commit idiom, and one "Guardar" in the editor' : ''}`);
+      ok(explicit === 0,
+        `${v}: ${explicit} of 6 sheets carry a commit button — one commit idiom, and one "Guardar" in the editor`);
     }
   }
 
@@ -661,7 +662,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
     const px = s => s.match(/\d+/g).slice(0, 3).map(Number);
     for (const t of ['light', 'dark']) {
       await theme(t);
-      await set('F1', 'bgg_missing');
+      await set('F2', 'bgg_missing');
       const c = await J(() => ({ dot: getComputedStyle(document.querySelector('.st .dot')).backgroundColor, bg: getComputedStyle(document.body).getPropertyValue('--color-bg') || getComputedStyle(document.querySelector('#main')).backgroundColor }));
       const bgc = await J(() => { const d = document.createElement('div'); d.style.background = 'var(--color-bg)'; document.body.appendChild(d); const v = getComputedStyle(d).backgroundColor; d.remove(); return v; });
       const d = +dE(px(c.dot), px(bgc)).toFixed(1);
@@ -678,7 +679,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
         await p.screenshot({ path: path.join(OUT, `${v}-${s}-375x740.png`) });
       }
     }
-    await theme('dark'); await set('F1', 'bgg_missing');
+    await theme('dark'); await set('F2', 'bgg_missing');
     await p.screenshot({ path: path.join(OUT, 'D-bgg_missing-dark.png') });
     await theme('light');
     /* the waiting screen — the developer's call over a skeleton */
@@ -693,7 +694,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
       await p.waitForTimeout(260);
       await p.screenshot({ path: path.join(OUT, `${v}-roto-con-cambios.png`) });
     }
-    await set('F1', 'no_bgg_id');
+    await set('F2', 'no_bgg_id');
     await J(() => document.querySelector('[data-act="open-link"]').click());
     await p.waitForTimeout(320);
     await p.screenshot({ path: path.join(OUT, 'C-hoja-del-id.png') });

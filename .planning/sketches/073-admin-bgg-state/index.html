@@ -463,8 +463,7 @@
 
 <div id="tools">
   <div>Variante:
-    <button data-var="F1" class="on">F1 · "Listo"</button>
-    <button data-var="F2">F2 · sin botón</button>
+    <button data-var="F2" class="on">F2 ★ elegida</button>
     <button data-var="HOY">Hoy (lo que se ve)</button>
   </div>
   <div>Estado:
@@ -540,7 +539,7 @@ const SHELVES = [
   { v: 'c', n: 'Estante C', s: 'El de arriba de todo' }
 ];
 
-let VAR = 'F1', ST = 'no_bgg_id', KBD_SIM = true;
+let VAR = 'F2', ST = 'no_bgg_id', KBD_SIM = true;
 /* The game's LIFECYCLE status — a different axis from `enrichment_status`, and missing until round 3. It
    matters because the real 49 are `published`: they are live and broken RIGHT NOW, so a bar offering
    "Publicar" was drawing a draft that mostly does not exist. Real counts: 385 published + 1 draft among the
@@ -859,27 +858,30 @@ function idSheet() {
    button is not a commit affordance at all: it is a "dismiss the keyboard" affordance wearing the wrong
    word, and only the free-text sheets have one because only they raise a keyboard.
 
-     F1 — rename it "Listo". Minimal, unambiguous, keeps an explicit end to typing. Still 2 anatomies.
-     F2 — delete it. Text commits live like everything else; ✕ / tap outside / drag down / Esc close the
-          sheet (D-19e's four ways, none of which needed a button). ONE anatomy across all six sheets, and
-          exactly ONE "Guardar" left in the whole editor — the bar's. */
-function commitRow(key, label) {
-  if (VAR === 'F2') return '';
-  return `<div style="height:12px"></div><button class="btn" data-commit="${key}" style="width:100%">${esc(label)}</button>`;
-}
+     F1 — rename it "Listo". Rejected: it keeps a commit button on 2 of 6 sheets, and that button is a
+          FULL-WIDTH FILLED PRIMARY — the heaviest control in the system — spent on closing a sheet, at
+          15,092px² against the 1,936px² ✕ already sitting two inches above it doing the same job (7.8x).
+     F2 ★ chosen (decision 41) — delete it. Text commits live like everything else; ✕ / tap outside / drag
+          down / Esc close the sheet (D-19e's four ways, none of which ever needed a button). 0 of 6 sheets
+          carry a commit, the Nombre sheet drops 215.6 -> 159.6px, and exactly ONE "Guardar" is left in the
+          whole editor — the bar's.
+          Its honest cost: no explicit "I am done typing" moment, and no per-field abandon — a typo is undone
+          by Descartar, which discards EVERY unsaved change. F1 did not fix that either (its "Listo" also
+          committed), so the difference is candour about it, not capability. */
+function commitRow() { return ''; }
 
 function editField(key) {
   if (key === 'bgg_id') return idSheet();
   if (key === 'name') {
     openSheet(shTop('Nombre', 'Así aparece en la ludoteca.') +
       `<div class="sh-body"><input class="inp" id="s-name" data-live="name" value="${esc(G.name)}">
-       ${commitRow('name', 'Listo')}</div>`);
+       ${commitRow()}</div>`);
     if (KBD_SIM) $('#device').classList.add('kbd');
     setTimeout(() => { const i = $('#s-name'); i && (i.focus(), i.select()); }, 80);
   } else if (key === 'description') {
     openSheet(shTop('Descripción en español', 'La leen los socios en la ficha del juego.') +
       `<div class="sh-body"><textarea class="inp" id="s-desc" data-live="description">${esc(G.description)}</textarea>
-       ${commitRow('description', 'Listo')}</div>`);
+       ${commitRow()}</div>`);
     if (KBD_SIM) $('#device').classList.add('kbd');
     setTimeout(() => $('#s-desc')?.focus(), 80);
   } else if (key === 'units') {

@@ -2,7 +2,7 @@
 sketch: 073
 name: admin-bgg-state
 question: "R1 — when BGG has given nothing, what does the editor offer, and where does the `ID de BGG` field live? R2 — what is the action bar, and what does the wait look like? R3 — what does a field sheet's button say, if anything, and what status does the head carry?"
-winner: "D (r1) · D2 (r2) · r3 pending"
+winner: "D (r1) · D2 (r2) · F2 (r3) — centralisation reopened, see r4"
 tags: [admin, juegos, editor, bgg, enrichment, empty-state, estado, publish-gate, cta, action-bar, loading, phase-01.8.2, mobile-first]
 ---
 
@@ -350,7 +350,7 @@ second difference (when the value lands) and would not be measuring the thing be
 | sheet height, Nombre | 215.6px | **159.6px** |
 | area of the dismiss control | **15 092px²** (full-width filled primary) | **1 936px²** (the ✕ that was already there) |
 
-**F1's "Listo" is a full-width filled primary** — maximum visual weight in the design system, spent on a
+**F2 chosen (decision 41).** **F1's "Listo" is a full-width filled primary** — maximum visual weight in the design system, spent on a
 control that only closes a sheet, and **7.8× the area** of the ✕ sitting two inches above it doing the same
 job. F2 leaves exactly **one `Guardar` in the whole editor**, and it is the bar's.
 
@@ -398,3 +398,57 @@ the original 49 checks were blind to all three paths.
 invented, so round 2's reported "HOY 1102px" was wrong — the real shipped baseline is **1044px**. Caught by
 the negative tests, for the second time in this sketch. Every height in round 2's table that compares against
 HOY should be read against 1044.
+
+
+---
+
+# Where round 3 left it — and why round 4 has to reopen centralisation
+
+Developer, on seeing round 3: *"F2 looks better, but isn't better a centralized way to have CTA? Having retry
+at top looks weird. Also, where is the publish button?"*
+
+## Where Publicar is
+
+On a **draft**, and nowhere else — toggle **Ciclo → Borrador**. A published game has nothing to publish, which
+is what round 3 corrected. But the fact that it went missing without explanation is itself a finding: the bar
+is the only place a reader looks for "what do I do here", and it answered by being absent.
+
+## What the bar actually holds, in all eight combinations
+
+Measured on the built page rather than reasoned about:
+
+| ciclo | enrichment | edición | LA BARRA | ARRIBA |
+|---|---|---|---|---|
+| published | no_bgg_id | sin cambios | **— sin barra —** | Vincular con BoardGameGeek |
+| published | no_bgg_id | con cambios | Descartar + Guardar | Vincular con BoardGameGeek |
+| published | enriched | sin cambios | — sin barra — | — |
+| published | enriched | con cambios | Descartar + Guardar | — |
+| draft | no_bgg_id | sin cambios | Publicar *(off)* | Vincular con BoardGameGeek |
+| draft | no_bgg_id | con cambios | Descartar + Guardar | Vincular con BoardGameGeek |
+| draft | enriched | sin cambios | **Publicar** | — |
+| draft | enriched | con cambios | Descartar + Guardar | — |
+
+**Row 1 is the 49 real games**, and it is the whole problem in one line: the bar is **completely empty** at
+exactly the moment there is one obvious thing to do — and that one thing is stranded at the top of the page,
+in a row the developer calls weird and is right to.
+
+## So the centralisation instinct is correct, and round 2's objection no longer applies
+
+Round 2 rejected "remedy in the bar" (D1/D3) on a measured collision: while dirty, `Descartar` already owns
+the secondary slot, so the remedy was lost. That reasoning assumed the remedy had to be a *secondary*. The
+table says otherwise — when a published game is broken and clean, the bar has **no primary at all**, so the
+remedy is not competing with anything. It *is* the thing to do.
+
+The rule that fits every row above without a second action location:
+
+> **The bar holds the one thing to do now.**
+> broken + clean → **Vincular / Corregir el ID / Reintentar** · dirty → **Guardar** (+ Descartar) ·
+> draft + complete → **Publicar** · published + clean + fine → no bar.
+
+No collision, because while you are mid-edit the thing to do genuinely *is* save — the remedy comes back the
+moment you save or discard. And the top action row disappears, leaving the state line as pure diagnosis,
+which is what round 1 actually proved had to be on screen.
+
+**This is round 4's question, deliberately not built here.** It changes what a "primary" means (an action
+chosen by situation rather than a fixed Guardar), and it needs its own measurements — in particular whether
+losing the remedy *while dirty* is acceptable once it is the primary rather than an afterthought.
