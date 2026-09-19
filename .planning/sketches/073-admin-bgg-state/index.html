@@ -84,7 +84,14 @@
   .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
   .device.kbd .tabs { display: none; }
 
+  /* 79px clears the 67px tab bar. It does NOT clear the action bar, which is `position: absolute` above the
+     tab bar and therefore overlays content instead of pushing it: scrolled to the bottom with the bar up,
+     the last row was covered by 53px in every variant. Found by scrolling to the end and measuring, not by
+     looking at a resting page — the bar is pinned, so at rest it sits over blank space and the defect is
+     invisible. INHERITED FROM 072, which has the same absolute save bar over the same 79px.
+     The reserve is added only while the bar is there, so the 385 healthy games do not pay for it. */
   main { padding: 0 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+  .device.hasbar main { padding-bottom: 144px; }
 
   /* ---- D-19n: the page bar. An ABSOLUTE OVERLAY, so at rest it costs zero layout; `inert` keeps exactly
      one focusable back control. Copied from 071's .pbar. ---- */
@@ -428,6 +435,18 @@
      pins while dirty and otherwise sits in the page — D1/D2 amend that to always-present, D3 keeps the
      rule's instinct by showing it only when there is something to do. */
   .savebar .dirty:empty { display: none; }
+  /* a situational primary carries its glyph, because the verb changes between situations and the glyph is
+     what stays constant — "this is the bar's action" — where the word cannot. */
+  .savebar .btn { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+  /* THE PRIMARY ALWAYS ENDS AT THE SAME EDGE. Measured before fixing: its right edge landed at R296
+     (Vincular, alone), R359 (Guardar, after Descartar) and R112 (Publicar, alone) — three positions for
+     "the bar's action", in a round whose entire premise is that the bar is the one place you look. The empty
+     `.dirty` span collapses to `display:none`, so with no Descartar the lone button simply started at the
+     left. `margin-left: auto` on the strong control pins it to the right in every situation; the verb and
+     the width still change, but the edge the thumb goes to does not. */
+  .savebar .btn:not(.ghost) { margin-left: auto; }
+  .savebar .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .savebar .btn.ghost svg { display: none; }
   .btn[disabled] { opacity: .42; }
 
   /* the eleven dashes, as they ship today — a TOOL, not a variant. It is the baseline the three variants are
@@ -463,7 +482,9 @@
 
 <div id="tools">
   <div>Variante:
-    <button data-var="F2" class="on">F2 ★ elegida</button>
+    <button data-var="G1" class="on">G1 · desaparece</button>
+    <button data-var="G2">G2 · nunca vacía</button>
+    <button data-var="G3">G3 · Guardar fijo</button>
     <button data-var="HOY">Hoy (lo que se ve)</button>
   </div>
   <div>Estado:
@@ -539,7 +560,7 @@ const SHELVES = [
   { v: 'c', n: 'Estante C', s: 'El de arriba de todo' }
 ];
 
-let VAR = 'F2', ST = 'no_bgg_id', KBD_SIM = true;
+let VAR = 'G1', ST = 'no_bgg_id', KBD_SIM = true;
 /* The game's LIFECYCLE status — a different axis from `enrichment_status`, and missing until round 3. It
    matters because the real 49 are `published`: they are live and broken RIGHT NOW, so a bar offering
    "Publicar" was drawing a draft that mostly does not exist. Real counts: 385 published + 1 draft among the
@@ -713,46 +734,71 @@ function remedy() {
 /* the primary slot, per the developer's rule: Guardar while dirty, otherwise Publicar — gated on BGG data,
    because "the app must avoid publishing uncompleted games". `publish_game/1` validates only `:status`
    today (catalog.ex:490), so the gate is drawn here and owed upstream. */
+/* ---- ROUND 4's shared premise: the bar holds the one thing to do now ----
+   Derived from the eight-row table, not invented: in every situation there is at most one action that is
+   obviously next, and the bar's job is to be it. What the three variants differ on is ONLY the last row —
+   what happens when there is genuinely nothing to do — because that is the row the developer tripped on
+   ("where is the publish button?").
+
+   DEFERRED, NOT VARIED: while dirty, the remedy is not shown at all — the thing to do is finish the edit,
+   and it returns on save or discard. Whether that is acceptable is its own question and its own round; it is
+   fixed identically across G1/G2/G3 here so it cannot confound this comparison. */
 function primary() {
   if (dirty()) return { label: 'Guardar', id: 'save', dis: false };
-  /* Publicar belongs to a DRAFT and to nothing else (`form.ex:305-312`). Round 2 showed it unconditionally,
-     which drew a draft for games that are already published — including all 49 broken ones, whose problem is
-     precisely that they ARE live. A published game with no unsaved changes has no primary action at all, and
-     saying so honestly is what reopened the bar-presence question below. */
-  if (CY !== 'draft') return null;
-  return { label: 'Publicar', id: 'publish', dis: !hasData() };
+  const r = remedy();
+  if (r) return { label: r.verb, act: r.act, icon: r.icon, dis: false, situational: true };
+  if (CY === 'draft') return { label: 'Publicar', id: 'publish', dis: !hasData() };
+  return null;
 }
 
-/* D3 only: the bar earns its place instead of always holding it. Present when there is something to do —
-   unsaved changes, or a game that cannot be published as it stands. A clean, enriched, published game has
-   no pending action at all, and D-19a's original instinct was that such a page should not carry a bar. */
-/* decision 39: the bar is always present (an amendment to D-19a, which had it pin only while dirty).
-   D3 kept D-19a literal and showed the bar only when something was pending — measured at 21px idle against
-   65px dirty, so the page moved under the reader every time an edit began. An always-present bar is the
-   cheaper of the two, and it is what makes the primary CTA reachable without scrolling, which is the
-   complaint that opened this round. */
 /* Round 2 settled "always present" against D3's conditional bar, on the measurement that D3's bar appearing
    at 21->65px moved the page under the reader. Round 3 reopened it from the other side: once Publicar is
    correctly limited to drafts, a clean PUBLISHED game has no primary and no secondary, so an always-present
    bar would be an empty 65px strip pinned over the content. The rule that survives both findings is "the bar
    is there when it has something in it" — which is not D3's "when work is pending", because a broken
    published game still has no bar action (its remedy is up top, beside the state). */
+/* ---- the one row the three variants differ on ----
+   G1 the bar is absent when there is nothing to do · G2 it stays and offers the only action a healthy
+   published game has left · G3 Guardar is always in the same place, disabled when clean. */
 function barWanted() {
   if (VAR === 'HOY') return false;
+  if (VAR === 'G2' || VAR === 'G3') return true;
   return dirty() || !!primary();
 }
 
 function barHTML() {
   if (!barWanted()) return '';
-  const p = primary(), r = remedy();
-  /* decision 39: the bar carries Descartar + the primary, and NOTHING else. The remedy stays beside the
-     state up top. D1 and D3 put the remedy in this slot and both LOST it the moment the game was dirty,
-     because Descartar was already there — the remedy became reachable only by discarding your edit first.
-     The "consistent CTA" that was asked for is the PRIMARY slot, which swaps Guardar/Publicar and never
-     resizes; it was never the secondary. */
-  const sec = dirty() ? `<button class="btn ghost" id="discard">Descartar</button>` : '';
-  return `<span class="dirty" id="dirty">${dirty() ? 'Cambios sin guardar' : ''}</span>${sec}
-    <button class="btn" id="${p.id}"${p.dis ? ' disabled' : ''}>${esc(p.label)}</button>`;
+  const p = primary();
+  const note = `<span class="dirty" id="dirty">${dirty() ? 'Cambios sin guardar' : ''}</span>`;
+  const discard = dirty() ? `<button class="btn ghost" id="discard">Descartar</button>` : '';
+  const strong = pp => pp.situational
+    ? `<button class="btn" data-act="${pp.act}">${ic(pp.icon, 1.9)}<span>${esc(pp.label)}</span></button>`
+    : `<button class="btn" id="${pp.id}"${pp.dis ? ' disabled' : ''}>${esc(pp.label)}</button>`;
+
+  /* ---- G3: Guardar never moves ----
+     The most literal reading of "consistent CTA": the same verb in the same place every time, disabled when
+     there is nothing to save. The situational action becomes a ghost beside it. What it spends is that in 5
+     of the 8 situations the strongest control on the page is a DEAD one, and the page's actual next step is
+     demoted to the quiet slot — measured below as "states whose primary is disabled". */
+  if (VAR === 'G3') {
+    const ghost = (p && p.situational) ? `<button class="btn ghost" data-act="${p.act}">${esc(remedy().short)}</button>`
+      : (p && p.id === 'publish') ? `<button class="btn ghost" id="publish"${p.dis ? ' disabled' : ''}>Publicar</button>`
+      : discard;
+    return `${note}${ghost}<button class="btn" id="save"${dirty() ? '' : ' disabled'}>Guardar</button>`;
+  }
+
+  /* ---- G2: never absent, never empty ----
+     Answers the developer's "where is the publish button?" head-on: a bar that can vanish is a bar you
+     cannot learn. When there is nothing pending, it offers the one action a healthy published game still
+     has — Retirar. That is a DESTRUCTIVE action, so it is a quiet ghost here, never the strong slot, and its
+     D-19f centred dialog is slice 5's job, not drawn. The risk this variant runs is teaching the hand that
+     the strong right-hand button is safe, and then putting a destructive one nearby. */
+  if (VAR === 'G2' && !p) {
+    return `${note}<button class="btn ghost" id="retire">Retirar</button>`;
+  }
+
+  if (!p) return '';
+  return `${note}${discard}${strong(p)}`;
 }
 
 /* ---------- the waiting screen ----------
@@ -773,16 +819,19 @@ function waitHTML() {
 }
 
 function topHTML() {
-  /* HOY is the untouched shipped baseline — it must render what `form.ex` renders and nothing this sketch
-     invented, or the negative tests are comparing the variants against themselves. Collapsing the D1/D2/D3
-     branch dropped this check and HOY silently grew a state line and a remedy row (+68px); the negative test
-     caught it within one run, for the second time this round. */
+  /* ---- ROUND 4: the remedy is GONE from here (decision 42) ----
+     Rounds 1-3 kept it beside the state, and round 2 rejected putting it in the bar on a measured collision:
+     while dirty, `Descartar` already owned the secondary slot, so the remedy was lost. That reasoning
+     assumed the remedy had to be a SECONDARY. Mapping the bar across all eight situations showed otherwise:
+
+       published | no_bgg_id | sin cambios | -- SIN BARRA -- | Vincular (arriba)
+
+     That row is the 49 real games. The bar is COMPLETELY EMPTY at exactly the moment there is one obvious
+     thing to do, and that thing was stranded up here — "having retry at top looks weird", and it was.
+     So the remedy is not competing with anything; it IS the thing to do. The top keeps the diagnosis alone,
+     which is what round 1 actually proved had to be on screen. */
   if (VAR === 'HOY' || !broken()) return '';
-  /* D2 keeps round 1's adjacency: the remedy is a row directly under the state. D1/D3 put it in the bar, so
-     the top carries the diagnosis alone. */
-  const r = remedy();
-  const row = r ? `<button class="arow" data-act="${r.act}">${ic(r.icon)}${esc(r.verb)}</button>` : '';
-  return stateHTML() + row;
+  return stateHTML();
 }
 
 function render() {
@@ -792,6 +841,7 @@ function render() {
     $('#main').innerHTML = `<div class="variant on">${headHTML()}${waitHTML()}</div>`;
     $('#pbt').textContent = G.name;
     $('#savebar').classList.remove('on');
+    $('#device').classList.remove('hasbar');
     updateBar();
     return;
   }
@@ -803,7 +853,9 @@ function render() {
   $('#main').innerHTML = `<div class="variant on">${headHTML()}${topHTML()}${rowsHTML()}${bgg}</div>`;
   $('#pbt').textContent = G.name;
   $('#savebar').innerHTML = barHTML();
-  $('#savebar').classList.toggle('on', barWanted());
+  const on = barWanted();
+  $('#savebar').classList.toggle('on', on);
+  $('#device').classList.toggle('hasbar', on);
   updateBar();
 }
 
@@ -979,7 +1031,10 @@ document.addEventListener('click', e => {
     closeSheet(); render(); return;
   }
 
-  if (e.target.id === 'publish' && !e.target.disabled) { snack('Juego publicado'); return; }
+  if (e.target.id === 'publish' && !e.target.disabled) { CY = 'published'; mark('[data-cy]', $('[data-cy="published"]')); render(); snack('Juego publicado'); return; }
+  /* Retirar is destructive and D-19f requires a centred dialog; drawing that is slice 5's job, so this only
+     moves the lifecycle so the bar's next state can be seen. */
+  if (e.target.id === 'retire') { CY = 'retired'; mark('[data-cy]', $('[data-cy="retired"]')); render(); snack('Juego retirado'); return; }
   if (e.target.id === 'save') { Object.keys(START).forEach(k2 => START[k2] = G[k2]); render(); snack('Cambios guardados'); return; }
   if (e.target.id === 'discard') { G = { ...START }; render(); return; }
 });
@@ -995,7 +1050,9 @@ document.addEventListener('input', e => {
     G[live.dataset.live] = e.target.value;
     if (live.dataset.live === 'name') { const h = $('#ghname'); if (h) h.textContent = e.target.value; }
     $('#savebar').innerHTML = barHTML();
-    $('#savebar').classList.toggle('on', barWanted());
+    const on2 = barWanted();
+    $('#savebar').classList.toggle('on', on2);
+    $('#device').classList.toggle('hasbar', on2);
     return;
   }
   if (e.target.id === 'idfield') {

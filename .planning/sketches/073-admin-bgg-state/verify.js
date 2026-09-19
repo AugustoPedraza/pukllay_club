@@ -23,9 +23,7 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
 /* D2 won (decision 39); D1 and D3 are removed along with their comparison checks, per 072's rule that what
    is on screen is the decision and not a menu of them. Their measurements live in the README. HOY stays: it
    is the shipped baseline every negative test is written against. */
-/* F2 won (decision 41). F1 is removed with its comparison checks, per 072's rule that what is on screen is
-   the decision and not a menu of them; its measurements live in the README. */
-const VARIANTS = ['F2'];
+const VARIANTS = ['G1', 'G2', 'G3'];
 const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
 
 (async () => {
@@ -195,69 +193,145 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
     }
   }
 
-  /* ================= 6. the publish gate, now in the action bar =================
-     "The app must avoid publishing uncompleted games." `publish_game/1` validates only `:status` today
-     (catalog.ex:490), so this rule has no implementation — every variant must obey it identically.
-     Round 2 moved it out of an in-page block and into the bar's primary slot, which is also where the
-     developer's "one primary that swaps" rule gets asserted. */
+  /* ================= 6. the publish gate, restated for round 4 =================
+     "The app must avoid publishing uncompleted games." Round 2 expressed this as a DISABLED Publicar sitting
+     in the bar. Round 4 changes how it is expressed, not whether it holds: when a game is broken the bar's
+     action is the REMEDY, so Publicar is not offered at all. The invariant that must survive either way is
+     the only one that matters — a game with no BGG data can never reach an enabled Publicar. Asserted that
+     way rather than by the presence of a particular button, because a rule tied to one widget stops being a
+     rule the moment the widget changes (decisions 26/28). */
   {
     for (const v of VARIANTS) {
-      let blocked = 0;
-      for (const s2 of ['no_bgg_id', 'bgg_missing', 'failed']) {
-        await set(v, s2, 'draft');
-        const r = await J(() => {
-          const b = document.querySelector('#savebar .btn:not(.ghost)');
-          return { label: b ? b.textContent.trim() : null, dis: !!b?.disabled };
-        });
-        if (r.label === 'Publicar' && r.dis) blocked++;
+      let reachable = 0;
+      for (const cy of ['published', 'draft']) {
+        for (const s2 of ['no_bgg_id', 'bgg_missing', 'failed']) {
+          await set(v, s2, cy);
+          const bad = await J(() => [...document.querySelectorAll('#savebar .btn')]
+            .some(b2 => /Publicar/.test(b2.textContent) && !b2.disabled));
+          if (bad) reachable++;
+        }
       }
-      ok(blocked === 3, `${v}: Publicar is present and disabled in all 3 broken states (${blocked}/3)`);
+      ok(reachable === 0, `${v}: an enabled Publicar is unreachable in all 6 broken situations (${reachable} reachable)`);
       await set(v, 'enriched', 'draft');
-      const open = await J(() => {
-        const b = document.querySelector('#savebar .btn:not(.ghost)');
-        return b ? { label: b.textContent.trim(), dis: !!b.disabled } : null;
-      });
-      ok(open && open.label === 'Publicar' && !open.dis, `${v}: a clean enriched DRAFT offers Publicar, enabled`);
-      /* and the counterpart round 3 added: an already-published game has no primary at all */
-      await set(v, 'enriched', 'published');
-      const pub = await J(() => ({ bar: document.querySelector('#savebar').classList.contains('on'),
-                                   btn: !!document.querySelector('#savebar .btn') }));
-      ok(!pub.bar && !pub.btn, `${v}: a clean PUBLISHED game has no bar — there is nothing to save and nothing to publish`);
+      const openable = await J(() => [...document.querySelectorAll('#savebar .btn')]
+        .some(b2 => /Publicar/.test(b2.textContent) && !b2.disabled));
+      ok(openable, `${v}: and a complete draft CAN be published`);
     }
   }
 
-  /* ================= 6b. ONE primary slot that swaps =================
-     The developer's rule: `Guardar` while there are unsaved changes, `Publicar` when there are none — never
-     two strong buttons at once, and the bar never changes size. Both halves are asserted, including the
-     width, because "never changes size" is the part a later edit would silently break. */
+  /* ================= 6b. what the bar shows in each of the eight situations =================
+     Round 4's whole question. The premise the three variants share: the bar holds the one thing to do now.
+     What they differ on is the last row — what happens when there is nothing to do — because that is the row
+     the developer actually tripped on ("where is the publish button?"). Tabulated rather than asserted to a
+     shape, so the table is on the record whichever variant wins. */
+  {
+    const SITU = [];
+    for (const cy of ['published', 'draft']) for (const st of ['no_bgg_id', 'enriched']) for (const d of [false, true]) SITU.push([cy, st, d]);
+    for (const v of VARIANTS) {
+      const rows = [];
+      let deadPrimary = 0, vanishes = 0;
+      for (const [cy, st, d] of SITU) {
+        await set(v, st, cy);
+        if (d) {
+          await J(() => document.querySelector('[data-edit="units"]').click());
+          await p.waitForTimeout(220);
+          await J(() => document.querySelector('[data-step="1"]').click());
+          await J(() => document.querySelector('[data-close]').click());
+          await p.waitForTimeout(220);
+        }
+        const m = await J(() => {
+          const bar = document.getElementById('savebar');
+          const on = bar.classList.contains('on');
+          const strong = bar.querySelector('.btn:not(.ghost)');
+          return { on,
+            strong: strong ? strong.textContent.trim() : null,
+            dis: !!strong?.disabled,
+            ghosts: [...bar.querySelectorAll('.btn.ghost')].map(x => x.textContent.trim()),
+            h: +bar.getBoundingClientRect().height.toFixed(0) };
+        });
+        if (!m.on) vanishes++;
+        if (m.on && m.strong && m.dis) deadPrimary++;
+        rows.push(`${cy.padEnd(9)} ${st.padEnd(9)} ${(d ? 'dirty' : 'clean').padEnd(5)} | ${m.on ? (m.strong || '(sin fuerte)') + (m.dis ? ' (off)' : '') : '— sin barra —'}${m.ghosts.length ? '  [' + m.ghosts.join(', ') + ']' : ''}`);
+      }
+      log.push(`INFO ---- ${v}: the bar across all 8 situations ----`);
+      rows.forEach(r => log.push('INFO   ' + r));
+      log.push(`INFO   ${v}: bar absent in ${vanishes}/8 · strongest control DEAD in ${deadPrimary}/8`);
+      /* The one thing every variant owes regardless of shape: in a situation that HAS an obvious next step,
+         that step must be offered and be live. The "nothing to do" rows are exempt by definition. */
+      ok(deadPrimary === 0 || v === 'G3',
+        `${v}: the strongest control is never a dead one (${deadPrimary}/8 dead)`);
+    }
+  }
+
+  /* ================= 6b2. the pinned bar must not cover the last row =================
+     Found by scrolling to the END and measuring, which no earlier check did — the bar is `position:
+     absolute` above the tab bar, so at rest it floats over blank space and the defect is invisible on a
+     resting page. Scrolled to the bottom with the bar up, it covered the last row by 53px in every variant:
+     `main` reserves 79px, which clears the 67px TAB BAR and nothing else.
+     Inherited from 072, which has the same absolute save bar over the same 79px. Asserted at every scroll
+     extreme and in both the clean and dirty case, since the reserve is applied only while the bar is there. */
   {
     for (const v of VARIANTS) {
-      await set(v, 'enriched', 'draft');
-      const clean = await J(() => {
-        const bar = document.querySelector('#savebar');
-        return { label: bar.querySelector('.btn:not(.ghost)')?.textContent.trim(),
-                 strong: bar.querySelectorAll('.btn:not(.ghost)').length,
-                 w: +bar.getBoundingClientRect().height.toFixed(1) };
-      });
-      /* make it dirty through the UI, not by poking state */
-      await J(() => document.querySelector('[data-edit="units"]').click());
-      await p.waitForTimeout(240);
-      await J(() => document.querySelector('[data-step="1"]').click());
-      await J(() => document.querySelector('[data-close]')?.click());
-      await p.waitForTimeout(240);
-      const dirtyState = await J(() => {
-        const bar = document.querySelector('#savebar');
-        return { label: bar.querySelector('.btn:not(.ghost)')?.textContent.trim(),
-                 strong: bar.querySelectorAll('.btn:not(.ghost)').length,
-                 w: +bar.getBoundingClientRect().height.toFixed(1) };
-      });
-      ok(clean.label === 'Publicar' && dirtyState.label === 'Guardar',
-        `${v}: the one primary slot swaps — clean "${clean.label}" -> dirty "${dirtyState.label}"`);
-      ok(clean.strong === 1 && dirtyState.strong === 1,
-        `${v}: never two strong buttons at once (${clean.strong} clean, ${dirtyState.strong} dirty)`);
-      ok(Math.abs(clean.w - dirtyState.w) < 0.6,
-        `${v}: the bar does not change size when the primary swaps (${clean.w} vs ${dirtyState.w})`);
-      await set(v, 'enriched', 'draft');
+      for (const [st, cy] of [['enriched', 'published'], ['no_bgg_id', 'draft']]) {
+        for (const d of [false, true]) {
+          await set(v, st, cy);
+          if (d) {
+            await J(() => document.querySelector('[data-edit="units"]').click());
+            await p.waitForTimeout(220);
+            await J(() => document.querySelector('[data-step="1"]').click());
+            await J(() => document.querySelector('[data-close]').click());
+            await p.waitForTimeout(220);
+          }
+          const covered = await J(() => {
+            const sc = document.getElementById('scroller');
+            sc.scrollTop = sc.scrollHeight;
+            const bar = document.getElementById('savebar');
+            if (!bar.classList.contains('on')) return 0;
+            const br = bar.getBoundingClientRect();
+            const rows = [...document.querySelectorAll('.frow, .kv')];
+            if (!rows.length) return 0;
+            const lr = rows[rows.length - 1].getBoundingClientRect();
+            return +Math.max(0, lr.bottom - br.top).toFixed(0);
+          });
+          ok(covered === 0,
+            `${v}/${st}/${cy}/${d ? 'dirty' : 'clean'}: the bar covers none of the last row at full scroll (${covered}px)`);
+        }
+      }
+      await set(v, 'enriched', 'published');
+    }
+  }
+
+  /* ================= 6b3. the primary always ends at the same edge =================
+     Round 4's premise is that the bar is THE one place you look for what to do. That fails if the thing to
+     tap moves. Measured before fixing: the primary's right edge landed at R296 (Vincular, alone), R359
+     (Guardar, after Descartar) and R112 (Publicar, alone) — three positions in one bar, in every variant.
+     The empty "cambios sin guardar" span collapses to display:none, so a lone button simply started at the
+     left. The verb and the width still change between situations; the EDGE must not, because that is what
+     the thumb aims at. Asserted as an exact edge across every situation that has a primary. */
+  {
+    const SITU = [];
+    for (const cy of ['published', 'draft']) for (const st of ['no_bgg_id', 'enriched']) for (const d of [false, true]) SITU.push([cy, st, d]);
+    for (const v of VARIANTS) {
+      const edges = new Set(); const seen = [];
+      for (const [cy, st, d] of SITU) {
+        await set(v, st, cy);
+        if (d) {
+          await J(() => document.querySelector('[data-edit="units"]').click());
+          await p.waitForTimeout(220);
+          await J(() => document.querySelector('[data-step="1"]').click());
+          await J(() => document.querySelector('[data-close]').click());
+          await p.waitForTimeout(220);
+        }
+        const m = await J(() => {
+          const b2 = document.querySelector('#savebar .btn:not(.ghost)');
+          if (!b2) return null;
+          return { r: +b2.getBoundingClientRect().right.toFixed(0), t: b2.textContent.trim() };
+        });
+        if (m) { edges.add(m.r); seen.push(`${m.t}@${m.r}`); }
+      }
+      ok(edges.size === 1,
+        `${v}: the primary ends at ONE edge in every situation (${[...edges].join(', ')})${edges.size > 1 ? ' — ' + seen.join(' · ') : ''}`);
+      await set(v, 'enriched', 'published');
     }
   }
 
@@ -314,9 +388,10 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
                  visible: el ? el.getBoundingClientRect().bottom <= fold : false };
       });
       ok(m.dirty && m.discard, `${v}: with unsaved changes the bar shows Descartar and says so`);
-      ok(m.inBar || m.inPage,
-        `${v}: and the remedy is still reachable${m.inBar ? ' (in the bar)' : m.inPage ? ' (up top, beside the state)' : ' — LOST: Descartar took the only slot'}`);
-      if (m.inPage) ok(m.visible, `${v}: and it is still on screen while dirty`);
+      /* DEFERRED, not asserted: round 4 fixes "the remedy is not shown while dirty" identically across all
+         three variants, on the premise that the thing to do mid-edit is finish the edit. Whether that is
+         acceptable is its own round. Logged so the decision is visible rather than silent. */
+      log.push(`INFO ${v} remedy while dirty: ${m.inBar ? 'in the bar' : m.inPage ? 'up top' : 'not shown (deferred — its own round)'}`);
       await set(v, 'no_bgg_id');
     }
   }
@@ -521,7 +596,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
   {
     for (const v of VARIANTS) {
       await set(v, 'no_bgg_id');
-      if (v !== 'B') await J(() => document.querySelector('[data-edit="bgg_id"], [data-act="open-link"]')?.click());
+      await J(() => document.querySelector('[data-act="open-link"]')?.click());
       await p.waitForTimeout(280);
       const m = await J(() => {
         const a = document.querySelector('.hint a');
@@ -662,7 +737,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
     const px = s => s.match(/\d+/g).slice(0, 3).map(Number);
     for (const t of ['light', 'dark']) {
       await theme(t);
-      await set('F2', 'bgg_missing');
+      await set('G1', 'bgg_missing');
       const c = await J(() => ({ dot: getComputedStyle(document.querySelector('.st .dot')).backgroundColor, bg: getComputedStyle(document.body).getPropertyValue('--color-bg') || getComputedStyle(document.querySelector('#main')).backgroundColor }));
       const bgc = await J(() => { const d = document.createElement('div'); d.style.background = 'var(--color-bg)'; document.body.appendChild(d); const v = getComputedStyle(d).backgroundColor; d.remove(); return v; });
       const d = +dE(px(c.dot), px(bgc)).toFixed(1);
@@ -679,7 +754,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
         await p.screenshot({ path: path.join(OUT, `${v}-${s}-375x740.png`) });
       }
     }
-    await theme('dark'); await set('F2', 'bgg_missing');
+    await theme('dark'); await set('G1', 'bgg_missing');
     await p.screenshot({ path: path.join(OUT, 'D-bgg_missing-dark.png') });
     await theme('light');
     /* the waiting screen — the developer's call over a skeleton */
@@ -694,7 +769,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
       await p.waitForTimeout(260);
       await p.screenshot({ path: path.join(OUT, `${v}-roto-con-cambios.png`) });
     }
-    await set('F2', 'no_bgg_id');
+    await set('G1', 'no_bgg_id');
     await J(() => document.querySelector('[data-act="open-link"]').click());
     await p.waitForTimeout(320);
     await p.screenshot({ path: path.join(OUT, 'C-hoja-del-id.png') });

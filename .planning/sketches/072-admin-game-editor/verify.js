@@ -447,6 +447,35 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
     await bump(() => p.keyboard.press('Escape'), 'Esc');
   }
 
+  /* ---------- the save bar must not cover the last row ----------
+     Added 2026-09-19 from sketch 073 round 4. The save bar is `position: absolute` above the tab bar
+     (D-19a), so it OVERLAYS content instead of pushing it, and `main` reserves only 79px -- which clears the
+     67px tab bar and nothing else. Scrolled to the bottom while dirty, the bar covered the last row by 53px.
+     Invisible at rest, because a pinned bar floats over blank space until you scroll to the end, which is
+     why this suite was green over it. */
+  {
+    const covered = async () => J(() => {
+      const sc = document.getElementById('scroller');
+      sc.scrollTop = sc.scrollHeight;
+      const bar = document.getElementById('savebar');
+      if (!bar.classList.contains('on')) return 0;
+      const br = bar.getBoundingClientRect();
+      const rows = [...document.querySelectorAll('.frow, .kv')];
+      if (!rows.length) return 0;
+      const lr = rows[rows.length - 1].getBoundingClientRect();
+      return +Math.max(0, lr.bottom - br.top).toFixed(0);
+    });
+    await J(() => { document.getElementById('scroller').scrollTop = 0; document.querySelector('[data-edit="units"]').click(); });
+    await p.waitForTimeout(260);
+    await J(() => document.querySelector('[data-step="1"]').click());
+    await J(() => document.querySelector('[data-close]').click());
+    await p.waitForTimeout(260);
+    const c1 = await covered();
+    ok(c1 === 0, `the save bar covers none of the last row at full scroll while dirty (${c1}px)`);
+    await J(() => document.getElementById('discard').click());
+    await p.waitForTimeout(200);
+  }
+
   await browser.close();
   ok(errs.length === 0, `no page errors (${errs.length ? errs.join(' | ') : 'none'})`);
   console.log(log.join('\n'));

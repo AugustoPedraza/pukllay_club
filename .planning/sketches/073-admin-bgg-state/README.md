@@ -1,8 +1,8 @@
 ---
 sketch: 073
 name: admin-bgg-state
-question: "R1 — when BGG has given nothing, what does the editor offer, and where does the `ID de BGG` field live? R2 — what is the action bar, and what does the wait look like? R3 — what does a field sheet's button say, if anything, and what status does the head carry?"
-winner: "D (r1) · D2 (r2) · F2 (r3) — centralisation reopened, see r4"
+question: "R1 the BGG state · R2 the action bar and the wait · R3 the sheet's button and the head's status · R4 what does the bar show in each situation?"
+winner: "D (r1) · D2 (r2, superseded by r4) · F2 (r3) · r4 pending"
 tags: [admin, juegos, editor, bgg, enrichment, empty-state, estado, publish-gate, cta, action-bar, loading, phase-01.8.2, mobile-first]
 ---
 
@@ -53,7 +53,7 @@ python3 -m http.server 8765          # from the repo root
 ```
 <http://127.0.0.1:8765/.planning/sketches/073-admin-bgg-state/index.html>
 
-Harness: `node .planning/sketches/073-admin-bgg-state/verify.js` — **92/92**. `SHOTS_DIR=` to place shots.
+Harness: `node .planning/sketches/073-admin-bgg-state/verify.js` — **132/132**. `SHOTS_DIR=` to place shots.
 
 Tools: **Variante · Estado · Ciclo · Tema · Teclado**. `Estado` is a **scenario**, not a variant — the dev DB has zero
 `pending` and zero `failed` rows, so it is the only way to see those states at all (decision 24's `ENR`
@@ -452,3 +452,74 @@ which is what round 1 actually proved had to be on screen.
 **This is round 4's question, deliberately not built here.** It changes what a "primary" means (an action
 chosen by situation rather than a fixed Guardar), and it needs its own measurements — in particular whether
 losing the remedy *while dirty* is acceptable once it is the primary rather than an afterthought.
+
+
+---
+
+# Round 4 — what does the bar show in each situation? (decision 42)
+
+One question, at the developer's request to go slower. **Deferred and deliberately not varied:** what happens
+to the remedy *while dirty*. All three variants hide it identically — mid-edit the thing to do is finish the
+edit, and it returns on save or discard — so it cannot confound this comparison. That is its own round.
+
+**The remedy leaves the top of the page in all three.** Round 2 rejected putting it in the bar on a measured
+collision with `Descartar`; the eight-row table showed that reasoning assumed it had to be a *secondary*, when
+a broken clean game has no primary at all. It is not competing with anything. It *is* the thing to do.
+
+## The shared premise
+
+> The bar holds the one thing to do now: broken+clean → the remedy · dirty → Guardar (+Descartar) ·
+> draft+complete → Publicar.
+
+The variants differ on **one row only** — what happens when there is genuinely nothing to do — because that
+is the row the developer tripped on.
+
+- **G1 — desaparece.** No bar when there is nothing pending.
+- **G2 — nunca vacía.** The bar stays and offers the only action a healthy published game has left: `Retirar`.
+- **G3 — Guardar fijo.** The most literal "consistent CTA": `Guardar` always in the same place, disabled when
+  clean; the situational action demoted to a ghost beside it.
+
+## The measurement
+
+| | G1 | G2 | G3 |
+|---|---|---|---|
+| bar absent | **1/8** | 0/8 | 0/8 |
+| strongest control is a DEAD one | **0/8** | **0/8** | **4/8** |
+| primary ends at one edge | ✓ 359 | ✓ 359 | ✓ 359 |
+| bar covers the last row at full scroll | ✓ 0px | ✓ 0px | ✓ 0px |
+
+**G3 is out on the numbers.** In 4 of 8 situations the strongest control on the page is a *disabled* `Guardar`
+while the page's actual next step — `Vincular`, `Publicar` — is demoted to a quiet ghost. It inverts the
+hierarchy at exactly the moments there is something to do, which is the opposite of what "consistent CTA" was
+asking for. Consistency of *position* was the real request, and that is achieved for all three below.
+
+**G2 is out on the screenshot.** Its "nothing to do" bar contains only **`Retirar`** — a destructive action,
+alone, on a perfectly healthy published game. A bar whose stated job is "the thing to do now" then proposes
+retiring the game. It also teaches the hand that this strip is where the safe action lives, then puts a
+destructive one in it. Its D-19f dialog is slice 5's job and was not drawn.
+
+**G1 remains.** Its only cost is that the bar can vanish — and it vanishes precisely when nothing is pending.
+Because the bar is `position: absolute`, its appearing and disappearing does not move content (round 2's note
+that D3's bar "moves the page" was wrong on this point).
+
+## Two bugs found by measuring, not by looking
+
+1. **The primary moved between three horizontal positions.** Its right edge landed at **R296** (Vincular,
+   alone), **R359** (Guardar, after Descartar) and **R112** (Publicar, alone) — in every variant. The empty
+   "cambios sin guardar" span collapses to `display:none`, so a lone button simply started at the left. In a
+   round whose entire premise is that the bar is the one place you look, the thing to tap was moving. Pinned
+   to one edge; the verb and width still change, the edge the thumb aims at does not.
+2. **The pinned bar covered the last row by 53px** at full scroll, in every variant. `main` reserves 79px,
+   which clears the 67px *tab bar* and nothing else; the action bar sits above it and, being absolute,
+   overlays content rather than pushing it. Invisible at rest — a pinned bar floats over blank space until
+   you scroll to the end, which is why every earlier check was green over it. The reserve is now applied only
+   while the bar is present, so the 385 healthy games do not pay for it.
+   **Inherited from 072**, which has the same absolute save bar over the same 79px — **fixed there too**, with
+   a guard, negative-tested (reverting the fix drops 072 from 53/53 to 52/53).
+
+## Still open
+
+- **The remedy while dirty**, deferred above — its own round.
+- Slices 5–8 from the plan: `Retirar`/`Restaurar` as D-19f's dialog, `Estante`, `Copias`, `En la web`.
+- Round 1's standing items, in particular the **49 already published broken** and moving `Reintentar`'s gate
+  from `enrichment_status == "failed"` to "has a `bgg_id`".

@@ -45,7 +45,13 @@
   .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
   .device.kbd .tabs { display: none; }
 
+  /* 79px clears the 67px tab bar. It does NOT clear the SAVE BAR, which is `position: absolute` above the
+     tab bar (D-19a) and so overlays content rather than pushing it: scrolled to the bottom while dirty, the
+     save bar covered the last row by 53px. Invisible on a resting page, because the bar is pinned and at
+     rest floats over blank space — found in sketch 073 round 4 by scrolling to the END and measuring.
+     Reserved only while the bar is there, so a clean page does not pay for it. */
   main { padding: 0 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+  .device.hasbar main { padding-bottom: 144px; }
 
   /* ---- D-19n: the page bar. An ABSOLUTE OVERLAY, so at rest it costs zero layout; `inert` keeps exactly
      one focusable back control. Copied from 071's .pbar. ---- */
@@ -393,6 +399,7 @@ function render() {
   $('#main').innerHTML = `<div class="variant on">${headHTML()}${body}${bggHTML()}</div>`;
   $('#pbt').textContent = G.name;
   $('#savebar').classList.toggle('on', dirty());
+  $('#device').classList.toggle('hasbar', dirty());
   $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : '';
   updateBar();
 }
@@ -482,14 +489,14 @@ document.addEventListener('click', e => {
 
   const st = e.target.closest('[data-step]');
   if (st) { G.units = Math.max(1, G.units + (+st.dataset.step)); const n = $('#unitsn'); if (n) n.textContent = G.units;
-    if (!$('#sheet').classList.contains('open')) render(); else { $('#savebar').classList.toggle('on', dirty()); $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : ''; } return; }
+    if (!$('#sheet').classList.contains('open')) render(); else { $('#savebar').classList.toggle('on', dirty()); $('#device').classList.toggle('hasbar', dirty()); $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : ''; } return; }
 
   const com = e.target.closest('[data-commit]');
   if (com) { const f = com.dataset.commit; G[f] = f === 'name' ? $('#s-name').value : $('#s-desc').value; closeSheet(); render(); return; }
 
   const sw = e.target.closest('.sw');
   if (sw) { G.is_expansion = !G.is_expansion; sw.setAttribute('aria-checked', String(G.is_expansion));
-    $('#savebar').classList.toggle('on', dirty()); $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : ''; return; }
+    $('#savebar').classList.toggle('on', dirty()); $('#device').classList.toggle('hasbar', dirty()); $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : ''; return; }
 
   if (e.target.id === 'save') { Object.keys(START).forEach(k2 => START[k2] = G[k2]); render(); snack('Cambios guardados'); return; }
   if (e.target.id === 'discard') { G = { ...START }; render(); return; }
@@ -501,6 +508,7 @@ document.addEventListener('input', e => {
   G[key] = key === 'units' ? Math.max(1, +f.value || 1) : f.value;
   if (key === 'name') $('#ghname') && ($('#ghname').textContent = G.name);
   $('#savebar').classList.toggle('on', dirty());
+  $('#device').classList.toggle('hasbar', dirty());
   $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : '';
 });
 document.addEventListener('focusin', e => { if (KBD_SIM && e.target.matches('input:not([type=number]), textarea')) $('#device').classList.add('kbd'); });
