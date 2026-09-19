@@ -1233,9 +1233,241 @@ Harness: **46/46**.
     **Promote when:** it survives a check against 069 and 070, at which point it becomes a D-19 rule with
     three pages of evidence instead of one.
 
-Harness: **49/49**.
+Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixes back into it (below).
 
-## Where we are (2026-09-18)
+38. **The BGG state is the reason the page was opened, not a property of the BGG block.** Sketch 073 round 1.
+    Grounded on the dev DB rather than the handoff, and it is sharper than the handoff said: the 49 broken
+    games hold **zero** populated BGG columns — no cover, no year, no description, nothing; 15 of the 41 have
+    a `weight_band` and that is the entire inventory. `form.ex:332-346` renders that through
+    `value_or_dash/1` as a **wall of eleven em-dashes**, under *"Vienen de BoardGameGeek y se actualizan
+    solos. No se editan acá."* — false twice for exactly these games.
+
+    | `enrichment_status` | n | `bgg_id` | campos | `status` |
+    |---|---|---|---|---|
+    | enriched | 386 | sí | 11/11 | 385 pub + 1 draft |
+    | no_bgg_id | **41** | **NULL** | **0** | published |
+    | bgg_missing | **8** | **sí** | **0** | published |
+    | pending / failed | **0** | — | — | — |
+
+    **The two broken states are structurally different and `bgg_id` is the difference.** `no_bgg_id` has none
+    (nothing to retry); `bgg_missing` has one that does not resolve (retrying fetches the same dead id).
+    `Reintentar` is gated on `failed` in **both** `form.ex:220` and `catalog.ex:368` — and `failed` has
+    **zero rows**, so the 49 that are actually broken are offered nothing at all.
+
+    **What decided the round was not the question asked.** Three variants argued about where the remedy sits
+    *inside* the BGG block; the harness was **64/65 green** across all three while every one of them was
+    wrong the same way. The club spine is six 64px rows under a ~200px head, so the block *starts* at y=619
+    on a device whose usable height ends at 673:
+
+    | | 375×740 | 390×844 | 360×640 |
+    |---|---|---|---|
+    | A / B / C | −117 / −53 / −53 | −13 / ✓ / ✓ | −217 / −153 / −153 |
+    | **D** | **✓** | **✓** | **✓** |
+
+    Every guard asked what the block *contains*; none asked whether a reader reaches it. A's block measured
+    *shortest* — it is short because most of it is off the phone. **The state moved above the club block**,
+    and the `DATOS DE BGG` heading is dropped entirely when there is nothing under it.
+
+    **Settled by the developer before building:** staff **paste the id** with a hint carrying a real BGG link
+    and a worked `…/boardgame/155426/…` → `155426` example (a search-by-name flow needs an endpoint that does
+    not exist; retry-only fixes nothing for the 41). And **"the app must avoid publishing uncompleted
+    games"** — a rule `Catalog.publish_game/1` does not implement: `catalog.ex:490` runs `status_changeset`,
+    which casts and validates **only `:status`**. That is how all 49 got live.
+
+39. **The action bar, and a wait that lets you leave.** Round 2. Round 1 scattered actions across three
+    places, with the publish gate at **772px on a 740px screen**. One bar now, pinned: **one primary slot
+    that swaps** — `Guardar` while dirty, `Publicar` when clean — never two strong buttons, never resizing.
+
+    **The collision that decided it, predicted before building:** while dirty the secondary slot is already
+    `Descartar`, so a broken game with unsaved changes wants one slot to be both. Putting the remedy there
+    **lost it entirely** — reachable only by discarding your edit first. *(Superseded by decision 42, which
+    resolves it from the other side: the remedy is not a secondary at all.)*
+
+    **`pending` gets a dedicated waiting screen, not a skeleton.** The justification is the job: enrichment
+    is an Oban job on a queue with **concurrency 1** (`config.exs:41`) and `attempt * 30` backoff, so with 49
+    games to repair the wait is real **and it continues whether or not the page is open**. The screen says
+    so, carries no bar, makes nothing editable mid-fetch, and all five tab destinations are verified
+    *hittable* via `elementFromPoint`, not merely present. Page height **1044 → 407px**.
+
+40. **The lifecycle status is a dot + text in the head — a third D-19h violation, never flagged.**
+    `form.ex:212-214, 253` renders `badge badge-warning` / `badge-success` / `badge-neutral` — daisyUI
+    **pills**, in the editor header. D-19h is literal: *"a status is a dot + text, never a pill. Every status
+    indicator in the admin."* Same family as the list-row pill (restart decision 22) and the `alert
+    alert-error` (decision 24). Now **● Publicado · 2018 · BGG 224517**.
+
+    **"Sin guardar" does not join it.** A lifecycle status is durable, server-side and shared; unsaved
+    changes are transient, local, and already stated by the bar next to the buttons that act on them. One
+    slot, one kind of thing.
+
+    **What adding it found, which was not the question:** `Publicar` was being drawn for games that are
+    **already published** — and the real 49 *are* live; that is their whole problem. Corrected: `Publicar`
+    belongs to a draft and nothing else.
+
+41. **One `Guardar` in the editor, and it is the bar's.** Round 3. From the device: *"should I have bottom
+    sheet AND save for fields? isn't that contradictory with the save at the bottom?"* It is, and it was
+    measurable — probed on the built page:
+
+    ```
+    sheet button said:       "Guardar"
+    bar immediately after:   "Cambios sin guardar · Descartar · Guardar"
+    ```
+
+    You press `Guardar` and the app answers *"Cambios sin guardar"*. The sheet's button never saved
+    anything. And the six sheets had **three commit anatomies** — a button (Nombre, Descripción), commit on
+    tap (Nivel, Estante, Expansión), a live stepper (Copias) — *decision 33's row-level defect one level
+    down*. The button is not a commit affordance: only the free-text sheets have one, **because only they
+    raise a keyboard**. It is a dismiss button wearing the wrong word.
+
+    **The button is deleted.** Text commits live like everything else; D-19e's four closes (✕, tap outside,
+    drag down, Esc) never needed it. 0 of 6 sheets carry a commit, the Nombre sheet drops **215.6 → 159.6px**.
+    Rejected: renaming it "Listo" — that keeps a **full-width filled primary**, the heaviest control in the
+    system, spent on closing a sheet at **7.8×** the area of the ✕ already two inches above it.
+    **Its honest cost:** no per-field abandon — a typo is undone by `Descartar`, which discards *every*
+    change. "Listo" did not fix that either, so the difference is candour, not capability.
+
+42. **The bar holds the one thing to do now — and the remedy is not a secondary.** Round 4, one question, at
+    the developer's request to go in smaller slices. From the device: *"isn't better a centralized way to
+    have CTA? Having retry at top looks weird. Also, where is the publish button?"*
+
+    Mapped rather than argued — the bar across all eight situations:
+
+    ```
+    published | no_bgg_id | sin cambios | -- SIN BARRA -- | Vincular (arriba)
+    ```
+
+    **That row is the 49 real games**, and it is the whole thing in one line: the bar is *completely empty*
+    at exactly the moment there is one obvious thing to do, and that thing was stranded at the top of the
+    page. Decision 39's collision assumed the remedy had to be a **secondary**; a broken clean game has **no
+    primary at all**, so it competes with nothing. It *is* the thing to do.
+
+    > broken+clean → the remedy · dirty → `Guardar` (+`Descartar`) · draft+complete → `Publicar` ·
+    > published+clean+fine → nothing.
+
+    The remedy leaves the top; the state line stays as pure diagnosis. Rejected: a bar that never empties but
+    offers **`Retirar`** when idle (a destructive action, alone, on a healthy game, in the strip that
+    otherwise holds the safe one), and a fixed `Guardar` always in the same place (**4 of 8** situations put
+    a *dead* control in the strongest slot and demote the real next step to a ghost — it inverts the
+    hierarchy exactly when there is something to do).
+
+    **Two defects found by measuring, both sent back into 072:**
+    - **The primary moved between three horizontal positions** — right edge at R296 / R359 / R112. The empty
+      "cambios sin guardar" span collapses to `display:none`, so a lone button started at the left. In a
+      design premised on the bar being *the one place you look*, the thing to tap was moving. Pinned to one
+      edge; the verb and width still change, the edge does not.
+    - **The pinned bar covered the last row by 53px** at full scroll. `main` reserves **79px**, which clears
+      the 67px *tab bar* and nothing else; an absolute bar overlays rather than pushes, and at rest floats
+      over blank space — which is why every earlier check was green over it. Reserve applied only while the
+      bar is present.
+    - **Also fixed in 072: a sheet's change never reached the row behind it.** Step `Copias`, close the
+      sheet, and the row still read "Copias 1" beside a *"Cambios sin guardar"* bar. All three close paths
+      (✕, backdrop, Esc). 072's own 49/49 suite was blind to it; guard added and **negative-tested** —
+      reverting the fix gives 49/52, exactly the count it had while blind.
+
+    **Deferred, deliberately not varied:** what happens to the remedy **while dirty** (all variants hide it —
+    mid-edit the thing to do is finish the edit). Its own round.
+
+## Where we are (2026-09-19)
+
+- **Sketches:** `071-admin-juegos` **135/135** · `072-admin-game-editor` **53/53** ·
+  `073-admin-bgg-state` **132/132**. Serve with `python3 -m http.server 8765` from the repo root.
+- **Settled:** decisions 1–9, 16–36, **38–42**. **37 is still a CANDIDATE**, scoped to editors until checked
+  against 069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15. **Reverted:** 12. **Superseded by 42:**
+  39's "the remedy cannot go in the bar".
+- **073 round 4 is PENDING REVIEW** — G1 (the bar disappears when nothing is pending) is the standing
+  recommendation on the measurements, not yet confirmed from the device. G2 and G3 are still in the page.
+- **Two fixes landed back in 072** from 073's findings, both guarded and negative-tested: the sheet-close
+  stale row (all three close paths) and the save bar covering the last row at full scroll.
+
+### The editor as it stands after 073
+
+```
+‹ Juegos
+[tapa] Nombre del juego
+       ● Publicado · 2018 · BGG 224517        <- d40, dot+text, never a pill
+● Este juego no está vinculado a BGG.          <- d38, the diagnosis, above the spine
+  Por eso no tiene tapa… Se está viendo así en la web.
+DATOS DEL CLUB                                 <- d33's spine, 6 rows, one anatomy, no glyph
+  Nombre / Nivel / Copias / Estante / Expansión / Descripción
+DATOS DE BGG                                   <- dropped entirely when empty (d38)
+[ barra: la acción del momento, borde derecho fijo ]   <- d42
+```
+
+### Open, in slice order
+
+1. **NEXT, and the developer's own proposal (fresh session):** *the header.* See the handoff below.
+2. **The remedy while dirty** — deferred out of decision 42 on purpose.
+3. **`Retirar` / `Restaurar`** — untouched since 063; must become D-19f's centred dialog.
+4. **`Estante`** — 072 shows a picker, but D-01/D-00c place a *copy*, in the "¿Dónde va?" sheet. Likely
+   resolves to read-only plus a link out.
+5. **`Copias`** — `units = 1` for all 434 games. How much UI does a field whose value is constant earn?
+6. **`En la web`** — 063's manual-section switches are not drawn anywhere.
+
+### Owed to the codebase, not to a sketch
+
+- **The 49 already published broken.** A data decision, not a UI one: unpublish them, or leave them live
+  while they are repaired one at a time. Nothing in the sketches addresses it.
+- **`publish_game/1` must implement the publish rule.** `catalog.ex:490` validates only `:status`.
+- **`Reintentar`'s gate should move** from `enrichment_status == "failed"` to *"has a `bgg_id`"*, in both
+  `form.ex:220` and `catalog.ex:368`.
+- **`enrichment_status` is unvalidated on every live write path** — `validate_inclusion` exists only in
+  `seed_changeset/2`; `enrichment_changeset/2` casts it with none, and there is no DB CHECK.
+- **No failure reason is ever persisted** — `failed` collapses three causes into one string, logged only
+  (`enrich_game_worker.ex:94`), so the UI can never say which happened.
+- **`TODO(palette)` from decision 35 still blocks 01.8.2** — see below, unchanged.
+
+---
+
+## HANDOFF — sketch 074, the header (opened 2026-09-19, for a fresh session)
+
+**The developer's words:** *"Until now, we have been using a useless header that is replaced at scrolling. So
+I want to explore what if we use with 'current action' (like editar juego, o crear juego, etc), the chevron
+for go back and save at the right. (making the save enable or disabled based on the status. It is save if
+there is changes to save)."*
+
+**What exists today, and why the complaint is fair.** The admin currently spends vertical space on *three*
+overlapping things at the top of an editor:
+
+| | what it is | where |
+|---|---|---|
+| `.hdr` | a 53px `PUKLLAY CLUB` wordmark + hamburger, identical on every screen | 071/072/073 chrome |
+| `.pbar` | D-19n's scroll-triggered page bar — an absolute overlay that fades in once the head scrolls past, carrying ‹ back + the game name | 071 onward |
+| `.back` | an in-page `‹ Juegos` row above the game's head | 072/073 |
+
+So the back affordance exists **twice** and the wordmark carries no information on a screen the user reached
+by drilling down. The proposal collapses all three into one M3-style top app bar: **‹ back · "Editar juego" ·
+Guardar**.
+
+**What this round has to decide, and what it must not quietly break:**
+
+- **D-19n** (*"a long list keeps its context while scrolled"*) is what `.pbar` implements. A permanent app
+  bar may make D-19n redundant *on an editor* while still being needed on the **catalogue list** — the two
+  screens must be checked separately, and D-19n amended rather than silently dropped.
+- **Decision 42 put the primary in the BOTTOM bar**, with a fixed right edge, because it holds *the one thing
+  to do now* — which on a broken game is `Vincular`, not `Guardar`. Moving `Guardar` to the top splits the
+  action area in two again, which is exactly what round 2 was convened to fix. **This is the central
+  tension of the round** and it needs measuring, not asserting: is the top-right `Guardar` the *only*
+  primary, with the situational action staying below? Or does the bottom bar disappear entirely, and
+  `Vincular` move to the top too?
+- **D-19a** (the save bar pins while dirty) is already amended by 42; a top-bar `Guardar` amends it further.
+- **Reachability.** A top-right `Guardar` on a 375-wide phone is a one-handed thumb stretch to the far
+  corner; the bottom bar is not. Worth measuring rather than assuming, since the admin is mobile-first.
+- **The title is a real question of its own:** *"Editar juego"* (the action) vs the game's name (the object).
+  The bar cannot hold both at 375px without truncation — 072's `.pbar` already chose the name. Whichever
+  wins, `crear` and `editar` must both work, and the D-19h lifecycle dot (d40) needs somewhere to live.
+
+**Start from:** `.planning/sketches/073-admin-bgg-state/index.html` (chrome, spine, sheets, bar, harness
+idioms all current). Read `073/README.md` first — it carries all four rounds — then this file's decisions
+33–42.
+
+**House rules that keep catching real defects, and cost little:**
+- Keep a `HOY` variant rendering what ships, so every guard can be **negative-tested**; twice this sketch it
+  caught a baseline that had quietly stopped being the baseline.
+- **Screenshot every variant and look at it.** Across 073's four rounds the harness was fully green while the
+  page was wrong **five** times — the state below the fold, the keyboard burying a sheet, a row 32px short, a
+  stale value behind a closed sheet, a bar covering the last row. That is the rate, not bad luck.
+- **Measure at the scroll extremes and with the keyboard up**, not only at rest.
+
+## Where we are (2026-09-18, superseded — kept for the 01.8.2 blocker below)
 - **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **135/135**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
 - **Settled:** decisions 1–9 and **16–36**; **37 is a CANDIDATE rule**, scoped to editors until checked against 069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
