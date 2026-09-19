@@ -24,7 +24,7 @@ python3 -m http.server 8765          # from the repo root
 ```
 <http://127.0.0.1:8765/.planning/sketches/072-admin-game-editor/index.html>
 
-Harness: `node .planning/sketches/072-admin-game-editor/verify.js` — **46/46** (39 while the three variants were live; the losing variants and their comparison checks were removed once A was picked). `SHOTS_DIR=` to place shots.
+Harness: `node .planning/sketches/072-admin-game-editor/verify.js` — **49/49** (39 while the three variants were live; the losing variants and their comparison checks were removed once A was picked). `SHOTS_DIR=` to place shots.
 
 Tools: **Tema · Teclado**. The `Columna` toggle is gone — every variant toggle is removed once its
 question is answered, so what is on screen is the decision, not a menu of them.
@@ -116,6 +116,23 @@ rejected dark 1.17. As **CIE76 ΔE** the same pairs are **29.6 and 10.1**, and a
 > `themes/default.css` mirrors `assets/css/app.css` under `check-theme-drift.sh`. The dark token (`#9F7AEA`)
 > must go upstream against the `--pk-ramp-*` envelope, and should **beat 4.83:1** — at that value it is the
 > lowest-contrast text on the dark page. See the blocking item in `notes/juegos-ui-redesign.md`.
+
+## The pattern, and how far it reaches (candidate — decision 37)
+
+**The anatomy** — label prominent, value subordinate, row opens a sheet — applies wherever the same
+situation exists: *a stored value shown at rest and changed somewhere else*.
+
+**The tint is narrower: it marks the datum you are about to change, never that a row is tappable.**
+Verified, not assumed — 071's game rows are tappable and plain ink (435 of them, none tinted), so a tint
+meaning "interactive" would be contradicted by the catalogue immediately.
+
+**Search is not this pattern.** It fails all three tests: no stored value at rest, continuous typing rather
+than a discrete pick, and the edit happens *in* the control. Same for filters, switches, steppers and the
+fields inside a sheet — once the sheet is open you are already editing, which is why a picker's chosen
+option carries a **tick, not a tint**.
+
+> **Not promoted to a D-19 rule yet, on purpose.** Tested on one page. 069 (Estantes) and 070 (Web) have
+> value-ish rows it has not been checked against. Promote after that check, with three pages of evidence.
 
 ## What is still open on this page
 

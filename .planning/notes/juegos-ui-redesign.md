@@ -1191,10 +1191,54 @@ Harness: **31/31** after the losing variants were removed.
 
 Harness: **46/46**.
 
+36. **The label and its value are one typographic unit.** From the device: *"does the label and its editable
+    text below have the correct space?"* Measured as **ink**, cap blocks probed with an **"H"** (decision 30 —
+    a real string's descender moves the box and not the eye):
+
+    | | medido | referencia |
+    |---|---|---|
+    | tinta etiqueta → valor | 9,5 | 10,5 (fila nombre+año de 071) |
+    | aire sobre la etiqueta | 17,8 | |
+    | aire bajo el valor | 14,7 | → el par quedaba **1,55px bajo** |
+
+    **The gap was fine; the imbalance was leading.** `.fr-k` had no explicit `line-height`, so it inherited
+    **1.5** — a 22.5px line box around an 11px cap — while its own value sat on 1.32/18.5px. **Two lines of
+    one pair on different leading.** `line-height: 1.3` takes the offset to **0,26px**; `margin-top: 2px`
+    puts the ink gap at **10,0** against 071's 10,5. The row stays 64px, so nothing around it moves.
+    The guard asserts the **mechanism** (the label carries its own line-height) as well as the result, so a
+    future edit cannot reintroduce mixed leading and merely look right at one size. Negative-tested.
+
+37. **CANDIDATE RULE — scoped to editors, not yet app-wide.** Asked from the device: *"do we need to follow
+    the same pattern for any editable field across the app (like search)?"* Split in two, because the halves
+    have different reach:
+
+    - **The anatomy** — label prominent, value subordinate, the row opens a sheet — belongs wherever the
+      *same situation* exists: **a stored value shown at rest and changed somewhere else**. Other editors
+      (an estante's settings, a Web row's properties, Perfil) are candidates.
+    - **The tint** needs a narrower meaning or it dilutes on contact. **It marks the datum you are about to
+      change — never that a row is tappable.** Verified rather than assumed: 071's game rows are tappable
+      and **plain ink** (`rgb(35,19,57)`, 435 of them, none tinted). A tint meaning "interactive" would be
+      contradicted by the catalogue on day one.
+
+    **Search is NOT this pattern, and should not adopt it.** A search field fails all three tests: no stored
+    value at rest (it is empty), editing is **continuous typing** rather than a discrete pick, and the edit
+    happens **in** the control rather than elsewhere. It *is* the control. The same holds for filters,
+    switches, steppers, and **the fields inside a sheet** — once the sheet is open you are already editing,
+    so nothing needs to advertise editability, which is why a picker's chosen option carries a **tick, not a
+    tint**. Both platforms keep these as separate components too.
+
+    **Deliberately NOT promoted to a D-19 rule yet.** It has been tested on exactly one page; 069 (Estantes)
+    and 070 (Web) have value-ish rows nobody has checked it against. *A rule outrunning its evidence is this
+    project's recurring failure — decisions 26 and 28 were both an assertion that had outlived its reason.*
+    **Promote when:** it survives a check against 069 and 070, at which point it becomes a D-19 rule with
+    three pages of evidence instead of one.
+
+Harness: **49/49**.
+
 ## Where we are (2026-09-18)
 - **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **135/135**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–35**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–36**; **37 is a CANDIDATE rule**, scoped to editors until checked against 069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections, labelled
   in **versalita 14/600** — `SIN DATOS 49 ⌄` and `BORRADORES 1 ⌄` closed, `JUEGOS DEL CLUB 385` open. No resting
