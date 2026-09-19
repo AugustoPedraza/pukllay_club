@@ -1083,10 +1083,56 @@ Harness: **127/127**.
 
 Harness: **135/135**.
 
+33. **The editor's spine: every value is a row that opens a sheet.** Sketch **072**, round 1. Sketch 063 had
+    put *a pencil on every value*; **Web decision 17 removed the pencil** ("one target instead of two"), and
+    the editor was the last screen still on the old idiom. Three spines were built and measured at 375×740:
+
+    | | A filas → hoja | B formulario | C mixto |
+    |---|---|---|---|
+    | bloque del club | **450,6** | 667,9 | **450,6** |
+    | página entera | **1145** | 1362 | **1145** |
+    | campos en pantalla | **6 de 6** | 4 de 6 | **6 de 6** |
+    | toques para cambiar Nivel | 2 | 1 | 2 |
+    | **anatomías de fila** | **1** | — | **3** |
+
+    **What decided it was not the height — it was the anatomy count**, and the finding is *intrinsic, not
+    sloppy building*. Measured: A is 6 rows, all `<button>`, one trailing shape, and **line 2 is always the
+    value**. C is two element kinds, three trailing shapes, and **line 2 is the value on 4 rows and a hint on
+    2** — because an inline control *already is* the value display, so its second line has nothing left to
+    carry. **You cannot have both "one anatomy" and inline controls.** Same shape as decisions 13→16: several
+    passes at one seam that decision 17 deleted by changing the premise.
+
+    A's cost, stated rather than hidden: **one edit is 2 taps** (open the sheet, pick), and flipping a boolean
+    costs a modal. Asserted in the harness so a third tap cannot creep in unnoticed.
+
+    **Three defects the green harness was blind to, all found by looking at the screenshots** — the run was
+    32/32 while the page was visibly wrong:
+    - **The key and the value ran together on one line** ("NombreBrass: Birmingham"). `.fr-k`/`.fr-v` are
+      spans inside a button, so as inline boxes they never stacked. Height, contrast and hit-box checks pass
+      straight through that: **none of them asks where ink sits relative to its neighbour.** New guard
+      measures it as ink, through Range rects.
+    - **Every `<select>` in B drew no caret** — `var(--caret-bg)` never existed — so both dropdowns read as
+      text inputs. *Comparing a variant against a broken one is not a comparison*; fixed before judging.
+    - **Every row in A wore the page chevron `›`, violating D-19i**, which is explicit: *"a chevron means this
+      row opens another page. Rows that act in place (show an answer, open a sheet) have none."* Every row
+      here opens a sheet. They now carry the disclosure **`⌄`** — Web d17's name button uses it and decision
+      26 separated the two glyphs after measuring them byte-identical. The guard asserts the **path data**,
+      not the icon's name, for exactly that reason.
+
+    **A fourth trap, in the harness itself.** The 44px touch-floor check was written three ways before it
+    could fail honestly: it read `getBoundingClientRect` (blind to a pseudo-element hit box, so the 32px
+    switch passed); then hit-tested only the viewport (blind to everything below the fold); then accepted
+    `hit.contains(e)`, so the switch's **parent row** swallowed every probe and the check was
+    *unfalsifiable*. Negative-testing is what exposed all three — removing `.sw::before` left it green
+    three times. It now scrolls the page, skips points covered by a known overlay (the save bar had been
+    reported as a small target), and asserts it reached every control in `#main`.
+
+Harness: **31/31** after the losing variants were removed.
+
 ## Where we are (2026-09-18)
 - **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **135/135**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–32**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–33**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections, labelled
   in **versalita 14/600** — `SIN DATOS 49 ⌄` and `BORRADORES 1 ⌄` closed, `JUEGOS DEL CLUB 385` open. No resting
