@@ -126,8 +126,13 @@
      "Tocá un dato para editarlo" hint — 27px forever for a lesson learned once, it pushes DATOS DE BGG off
      the fold, decision 19 made section hints contextual rather than standing, and the page already teaches
      the rule from the other side, where the BGG block says "No se editan acá". */
-  .frow .fr-k { font-size: 15px; font-weight: 500; color: var(--color-text); }
-  .frow .fr-v { font-size: 14px; color: var(--val); margin-top: 1px; }
+  /* line-height 1.3 is load-bearing, not cosmetic. Without it the label inherited 1.5 — a 22.5px line box
+     around an 11px cap — while the value sat on 1.32/18.5px, so the two lines of ONE pair were on different
+     leading and the pair sat 1.55px low in its 64px row. Measured at 1.3 the offset is 0.26px, and
+     margin-top 2px puts the ink gap at 10.0, against the app's existing two-line row (071's name + year) at
+     10.5. Same 64px row, nothing around it moves. */
+  .frow .fr-k { font-size: 15px; font-weight: 500; line-height: 1.3; color: var(--color-text); }
+  .frow .fr-v { font-size: 14px; color: var(--val); margin-top: 2px; }
   .frow .fr-v.empty { font-style: italic; color: var(--color-text-muted); }
 
   /* TODO(palette) — `--val` is defined HERE, not in themes/default.css, deliberately.

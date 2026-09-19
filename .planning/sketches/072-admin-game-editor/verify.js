@@ -265,6 +265,39 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
   await J(() => { document.documentElement.dataset.theme = 'light'; });
   await p.waitForTimeout(220);
 
+  /* ---------- the label/value pair is ONE typographic unit ----------
+     Measured as INK — cap blocks probed with an "H", never the real string, because a descender (the g of
+     Birmingham, the J of JUEGOS) moves the box and not the eye (decision 30).
+     Two things are asserted: the pair is centred in its row, and its internal gap matches the app's existing
+     two-line row (071's name + year, 10.5). The defect this catches is silent: the label had no explicit
+     line-height, inherited 1.5, and carried a 22.5px line box around an 11px cap while its own value sat on
+     18.5 — two lines of one pair on different leading, the pair 1.55px low. Nothing else notices that. */
+  {
+    const m = await J(() => {
+      const capOf = el => { const cs = getComputedStyle(el);
+        const cx = document.createElement('canvas').getContext('2d');
+        cx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+        const mm = cx.measureText('H');
+        const g = document.createRange(); g.selectNodeContents(el);
+        const r = g.getBoundingClientRect();
+        const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
+        const lead = (lh - parseFloat(cs.fontSize)) / 2;
+        const capTop = r.top + lead + (parseFloat(cs.fontSize) - mm.actualBoundingBoxAscent) * 0.5;
+        return { capTop, capBottom: capTop + mm.actualBoundingBoxAscent, lh: +lh.toFixed(1) }; };
+      const row = document.querySelectorAll('.frow')[1];   /* Nivel / Experto — one line, no descender noise */
+      const K = capOf(row.querySelector('.fr-k')), V = capOf(row.querySelector('.fr-v'));
+      const rb = row.getBoundingClientRect();
+      const above = K.capTop - rb.top, below = rb.bottom - V.capBottom;
+      return { gap: +(V.capTop - K.capBottom).toFixed(1), above: +above.toFixed(1), below: +below.toFixed(1),
+               off: +((above - below) / 2).toFixed(2), labelLH: K.lh, valueLH: V.lh };
+    });
+    ok(Math.abs(m.off) <= 0.8, `the label/value pair is centred in its row (off by ${m.off}px, air ${m.above} above / ${m.below} below)`);
+    ok(m.gap >= 9 && m.gap <= 11.5, `and its ink gap matches the app's existing two-line row (${m.gap} against 071's 10.5)`);
+    /* the mechanism, asserted directly so a future edit cannot reintroduce mixed leading and merely look right */
+    ok(m.labelLH < 21, `the label carries an explicit line-height, not the inherited 1.5 (${m.labelLH}px box on an 11px cap)`);
+    log.push(`INFO pair rhythm — gap ${m.gap} · air ${m.above}/${m.below} · off-centre ${m.off}`);
+  }
+
   /* ---------- the 44px touch floor ---------- */
   {
     const v = 'spine';
