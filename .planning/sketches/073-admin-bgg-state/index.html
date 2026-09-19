@@ -352,10 +352,6 @@
   .ex b { color: var(--val); font-weight: 700; }
   .ex .arw { color: var(--color-text-muted); }
 
-  /* ---- B only: the field inline in the BGG block ---- */
-  .idrow { display: flex; gap: 8px; align-items: stretch; margin-top: 12px; }
-  .idrow .inp { flex: 1; min-width: 0; }
-  .idrow .btn { flex-shrink: 0; }
   /* a disabled commit is still 44px and still reads as a control — it is greyed, not removed, because its
      presence is what tells you the field is the thing that unlocks it. */
   .btn[disabled] { opacity: .42; }
@@ -392,13 +388,38 @@
   @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
   .ghead .cov.skel { background: var(--color-surface-2); animation: shim 1.4s var(--ease-out-soft) infinite; }
 
-  /* ---- the publish gate ----
-     "The app must avoid publishing uncompleted games." `publish_game/1` today validates ONLY `:status`
-     (catalog.ex:490), so this is a rule with no implementation. Drawn here as a DISABLED primary with the
-     reason beside it, not as a hidden button: a control that vanishes teaches nothing, and the whole point is
-     that the reader learns what publishing is waiting on. */
-  .pubbar { display: flex; gap: 12px; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border); }
-  .pubbar .why { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; color: var(--color-text-muted); }
+  /* ---- the waiting screen (round 2) ----
+     Replaces `pending`'s skeleton. The developer's reason is the job, not the look: enrichment runs on an
+     Oban queue with concurrency 1 and linear backoff, so with 49 games to repair the wait is real and it
+     continues whether or not this page is open. A skeleton imitating eleven rows of data that do not exist
+     asks the reader to wait; this tells them they do not have to. Deliberately short — the tab bar is the
+     exit and it is never covered, so the screen must not look like it owns the session. */
+  /* `flex: 1` + centred: the screen owns the space between the game's head and the tab bar, so it sits in
+     the middle of it rather than clinging to the top with ~600px of void underneath. Measured before
+     changing it — a top-anchored block over that much blank reads as a page that failed to finish loading,
+     which is the opposite of the message. */
+  .waiting { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 34px 8px 40px; }
+  .waiting .wt { margin: 18px 0 0; font-size: 17px; font-weight: 600; }
+  .waiting .ws { margin: 8px 0 0; max-width: 30ch; font-size: 14px; line-height: 1.5; color: var(--color-text-muted); }
+  .waiting .wid { margin: 14px 0 0; font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--color-text-muted); }
+  .spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--color-surface-2); border-top-color: var(--color-primary);
+    animation: sp 900ms linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  /* reduced-motion gets a pulse rather than a spin — the signal is "still working", and that survives
+     without rotation; removing the animation entirely would leave a static ring that reads as a dead end */
+  @media (prefers-reduced-motion: reduce) {
+    .spin { animation: sp-pulse 1.6s var(--ease-out-soft) infinite; border-top-color: var(--color-primary); }
+    @keyframes sp-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+  }
+
+  /* ---- the action bar ----
+     Round 2. The bar is 072's `.savebar` with its contents made variable; the box, the 67px offset above the
+     tab bar and the slide are unchanged, so this is a change of CONTENT, not a new component. D-19a says it
+     pins while dirty and otherwise sits in the page — D1/D2 amend that to always-present, D3 keeps the
+     rule's instinct by showing it only when there is something to do. */
+  .savebar .dirty:empty { display: none; }
+  .btn[disabled] { opacity: .42; }
 
   /* the eleven dashes, as they ship today — a TOOL, not a variant. It is the baseline the three variants are
      measured against, and it is drawn rather than described because "eleven em-dashes" reads as a shrug in
@@ -424,7 +445,7 @@
     <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg></span>Estantes</span>
     <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
   </nav>
-  <div class="savebar" id="savebar"><span class="dirty" id="dirty"></span><button class="btn ghost" id="discard">Descartar</button><button class="btn" id="save">Guardar</button></div>
+  <div class="savebar" id="savebar"></div>
   <div class="snack" id="snack" role="status"><span></span></div>
   <div class="kbd-sim" aria-hidden="true"><div class="krow"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>0</span></div><div class="krow"><span>q</span><span>w</span><span>e</span><span>r</span><span>t</span><span>y</span><span>u</span><span>i</span><span>o</span><span>p</span></div><div class="krow"><span>a</span><span>s</span><span>d</span><span>f</span><span>g</span><span>h</span><span>j</span><span>k</span><span>l</span><span>ñ</span></div><div class="krow"><span class="wide">espacio</span></div></div>
   <div class="backdrop" id="backdrop"></div>
@@ -433,10 +454,9 @@
 
 <div id="tools">
   <div>Variante:
-    <button data-var="A" class="on">A · fila del club</button>
-    <button data-var="B">B · en el bloque</button>
-    <button data-var="C">C · vincular</button>
-    <button data-var="D">D · arriba</button>
+    <button data-var="D1" class="on">D1 · remedio en la barra</button>
+    <button data-var="D2">D2 · remedio arriba</button>
+    <button data-var="D3">D3 · barra condicional</button>
     <button data-var="HOY">Hoy (lo que se ve)</button>
   </div>
   <div>Estado:
@@ -523,11 +543,11 @@ loadState();
 
 const bandOf = v => BANDS.find(b => b.v === v) || BANDS[0];
 const shelfOf = v => SHELVES.find(b => b.v === v) || SHELVES[0];
-/* `bgg_id` is counted as dirty ONLY in A, where it is a club field. In B and C committing the id is its own
-   action (it triggers the fetch), so it never sits in the save bar's "Cambios sin guardar". That asymmetry is
-   real and is one of the things the variants are being judged on. */
+/* Committing an id is a REQUEST, not an edit — it triggers the fetch — so it never sits in "Cambios sin
+   guardar". Round 1's variant A made `bgg_id` a 7th cast field and was rejected partly for that: it put the
+   id on all 386 healthy editors for +64px. The six keys are exactly what `admin_changeset/2` casts. */
 const CLUB_KEYS = ['name', 'units', 'weight_band', 'is_expansion', 'shelf_id', 'description'];
-const dirty = () => (VAR === 'A' ? [...CLUB_KEYS, 'bgg_id'] : CLUB_KEYS).some(k => G[k] !== START[k]);
+const dirty = () => CLUB_KEYS.some(k => G[k] !== START[k]);
 const hasData = () => ST === 'enriched';
 /* the two states this round exists for */
 const broken = () => ST === 'no_bgg_id' || ST === 'bgg_missing' || ST === 'failed';
@@ -558,9 +578,7 @@ function rowsHTML() {
   const r = (key, k, v, empty, clamp) => `<button class="frow" data-edit="${key}">
     <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
     </button>`;
-  const idRow = VAR === 'A'
-    ? r('bgg_id', 'ID de BGG', G.bgg_id ? String(G.bgg_id) : 'Sin ID', !G.bgg_id)
-    : '';
+  /* six rows, always — round 1 settled that `bgg_id` is not a club field (variant A, rejected). */
   return `<div class="glabel">DATOS DEL CLUB</div>
     <div class="frows">
       ${r('name', 'Nombre', G.name)}
@@ -569,7 +587,6 @@ function rowsHTML() {
       ${r('shelf_id', 'Estante', shelfOf(G.shelf_id).n, !G.shelf_id)}
       ${r('is_expansion', 'Es una expansión', G.is_expansion ? 'Sí' : 'No')}
       ${r('description', 'Descripción en español', G.description || 'Sin descripción', !G.description, true)}
-      ${idRow}
     </div>`;
 }
 
@@ -633,88 +650,114 @@ function bggHTML() {
     return L + alert + lock + factsHTML('dash');
   }
 
-  /* --- A: the id is a club field. The BGG block is pure read-only OUTPUT and says so. --- */
-  if (VAR === 'A') {
-    const retry = ST === 'failed'
-      ? `<button class="arow" data-act="retry" style="margin-top:14px">${ic('retry')}Reintentar</button>` : '';
-    const point = ST === 'no_bgg_id'
-      ? `<p class="hint">Cargá el <b>ID de BGG</b> arriba, en Datos del club, y los datos se traen solos.</p>`
-      : ST === 'bgg_missing'
-      ? `<p class="hint">Corregí el <b>ID de BGG</b> arriba, en Datos del club.</p>` : '';
-    return L + stateHTML() + point + retry;
-  }
-
-  /* --- B: the field lives inside the BGG block. The block stops being read-only, so the lock line cannot
-         survive here at all — its replacement has to say the opposite thing. --- */
-  if (VAR === 'B') {
-    if (ST === 'failed') {
-      return L + stateHTML() + `<button class="arow" data-act="retry" style="margin-top:14px">${ic('retry')}Reintentar</button>`;
-    }
-    const val = G.bgg_id ? String(G.bgg_id) : '';
-    return L + stateHTML() + hintHTML() +
-      `<div class="idrow">
-         <input class="inp" id="idfield" inputmode="numeric" pattern="[0-9]*" placeholder="Pegá el ID acá" value="${esc(val)}" aria-label="ID de BGG">
-         <button class="btn" data-act="link" ${val ? '' : 'disabled'}>Traer datos</button>
-       </div>`;
-  }
-
-  /* --- C: nothing stands on the page. One action row opens a sheet that holds the field, the hint and the
-         link — the only variant where the 386 healthy editors pay literally zero for this feature. --- */
-  const verb = ST === 'bgg_missing' ? 'Corregir el ID de BGG' : ST === 'failed' ? 'Reintentar' : 'Vincular con BoardGameGeek';
-  const act = ST === 'failed' ? 'retry' : 'open-link';
-  const icon = ST === 'failed' ? 'retry' : 'link';
-  return L + stateHTML() + `<button class="arow" data-act="${act}">${ic(icon)}${esc(verb)}</button>`;
+  /* --- D2 only: the remedy sits beside the state, up top. The BGG block is then dropped entirely when
+         broken — a "DATOS DE BGG" heading over nothing is a promise the page cannot keep. --- */
+  return '';
 }
 
-/* ---------- the publish gate ----------
-   The developer's rule: "the app must avoid publishing uncompleted games." Today `publish_game/1` validates
-   only `:status` (catalog.ex:490), so a game with zero BGG facts publishes exactly as easily as a complete
-   one — which is how all 49 got live. Every variant obeys the rule identically; it is not a variant axis.
-   Drawn for a DRAFT, the only place Publicar appears (`form.ex:305-312`). The 49 are already published, and
-   what they get instead is the state line's "Se está viendo así en la web." */
-function pubHTML() {
-  if (hasData()) return `<div class="pubbar"><span class="why">Listo para publicar.</span><button class="btn">Publicar</button></div>`;
-  const why = ST === 'pending' ? 'Esperá a que lleguen los datos de BGG.' : 'Un juego sin datos de BGG no se puede publicar.';
-  return `<div class="pubbar"><span class="why">${esc(why)}</span><button class="btn" disabled>Publicar</button></div>`;
+/* ---------- ROUND 2: the action bar (decision 39) ----------
+   Three things the developer settled after seeing round 1, so no variant re-argues them:
+
+     1. ONE primary slot that swaps by moment: `Guardar` while there are unsaved changes, `Publicar` when
+        there are none. Never two strong buttons competing, and the bar never changes size.
+     2. The SECONDARY is the remedy — Vincular / Corregir el ID / Reintentar.
+     3. `pending` gets a DEDICATED WAITING SCREEN, not a skeleton imitating data that does not exist yet.
+
+   What is still open, and what D1/D2/D3 are for: round 1's winner won on ADJACENCY — the state and its
+   remedy sat together under the game's name, which is why it was the only variant a reader actually saw.
+   Moving the remedy into a bottom bar buys consistency and costs that adjacency. D-19a is also in play: it
+   says the save bar pins above the tab bar WHILE DIRTY and otherwise sits in the page, so an always-present
+   bar is an amendment to a settled rule, not a free choice.
+
+   THE COLLISION worth watching for, which is why this is measured rather than reasoned about: while dirty,
+   the secondary slot is already taken by `Descartar` (072's save bar, `form.ex`'s own pairing). A broken
+   game with unsaved changes wants that one slot to be both `Descartar` and `Vincular`. D1 and D3 have to
+   resolve it; D2 does not have the problem at all, because its remedy never enters the bar. */
+
+function remedy() {
+  if (!broken()) return null;
+  return ST === 'bgg_missing' ? { verb: 'Corregir el ID de BGG', short: 'Corregir ID', act: 'open-link', icon: 'link' }
+    : ST === 'failed' ? { verb: 'Reintentar', short: 'Reintentar', act: 'retry', icon: 'retry' }
+    : { verb: 'Vincular con BoardGameGeek', short: 'Vincular', act: 'open-link', icon: 'link' };
 }
 
-/* ---------- D: the state goes ABOVE the club block ----------
-   Added in round 1, after the screenshots. A, B and C all argue about where the remedy sits INSIDE the BGG
-   block, and the harness was fully green across all three — 64/65 — while every one of them was wrong in the
-   same way, which no check could see because none of them asked whether the state was on screen at all.
+/* the primary slot, per the developer's rule: Guardar while dirty, otherwise Publicar — gated on BGG data,
+   because "the app must avoid publishing uncompleted games". `publish_game/1` validates only `:status`
+   today (catalog.ex:490), so the gate is drawn here and owed upstream. */
+function primary() {
+  if (dirty()) return { label: 'Guardar', id: 'save', dis: false };
+  if (hasData()) return { label: 'Publicar', id: 'publish', dis: false };
+  return { label: 'Publicar', id: 'publish', dis: true };
+}
 
-   Measured at rest, scrollTop 0, state line against the tab bar:
+/* D3 only: the bar earns its place instead of always holding it. Present when there is something to do —
+   unsaved changes, or a game that cannot be published as it stands. A clean, enriched, published game has
+   no pending action at all, and D-19a's original instinct was that such a page should not carry a bar. */
+function barWanted() {
+  if (VAR === 'D3') return dirty() || broken();
+  return VAR === 'D1' || VAR === 'D2';
+}
 
-     375×740   A  117px below the fold   B  53px below   C  53px below
-     390×844   A   13px below            B  visible      C  visible
-     360×640   A  217px below            B 153px below   C 153px below
+function barHTML() {
+  if (!barWanted()) return '';
+  const p = primary(), r = remedy();
+  /* D2 keeps the remedy up top beside the state, so its bar carries only Descartar + the primary. */
+  const sec = (VAR === 'D2' || !r)
+    ? (dirty() ? `<button class="btn ghost" id="discard">Descartar</button>` : '')
+    /* D1/D3: the remedy is the secondary. While dirty BOTH want the slot — resolved by letting Descartar
+       win it, since discarding is about the edit in front of you and the remedy is still one tap away up
+       top. That this needs resolving at all is D1/D3's cost, and the harness counts it. */
+    : (dirty() ? `<button class="btn ghost" id="discard">Descartar</button>`
+               : `<button class="btn ghost" data-act="${r.act}">${esc(r.short)}</button>`);
+  return `<span class="dirty" id="dirty">${dirty() ? 'Cambios sin guardar' : ''}</span>${sec}
+    <button class="btn" id="${p.id}"${p.dis ? ' disabled' : ''}>${esc(p.label)}</button>`;
+}
 
-   The club spine is six 64px rows under a ~200px head, so the BGG block STARTS at y=619 on a 740px device
-   whose usable height ends at 673. Wherever the remedy lives inside that block, a staff member who opened
-   this game FROM the "Sin datos" group — that is, someone who came here specifically to fix it — lands on a
-   screen that looks entirely normal and has to scroll past six healthy fields to find out anything is wrong.
+/* ---------- the waiting screen ----------
+   The developer's call over a skeleton: while `pending`, the editor is replaced by an unambiguous waiting
+   screen. The reasoning that decided it is in the job, not the pixels — enrichment is an Oban job on a queue
+   with CONCURRENCY 1 (`config.exs:41`, to bound libvips memory on a 1GB host) and linear backoff
+   `attempt * 30`. With 49 games to repair that is a real wait, and it keeps running whether or not anybody
+   is looking at this page. A skeleton says "hold on"; this says "it is running, go do something else".
+   The tab bar is never covered, so leaving is one tap and always available — which is the whole point. */
+function waitHTML() {
+  return `<div class="waiting">
+    <div class="spin" aria-hidden="true"></div>
+    <p class="wt">Trayendo datos de BoardGameGeek…</p>
+    <p class="ws">Puede tardar un rato si hay varios juegos en la cola. Sigue funcionando aunque salgas de
+      esta pantalla — te avisamos cuando lleguen.</p>
+    <p class="wid">${G.bgg_id ? 'ID ' + esc(String(G.bgg_id)) : ''}</p>
+  </div>`;
+}
 
-   So the premise was wrong, not the three answers. The state is not a property of the BGG block; it is the
-   REASON THE PAGE WAS OPENED, and it outranks every club field. D puts it directly under the head, with its
-   remedy beside it, and then drops the "DATOS DE BGG" block entirely — a heading over eleven nothings is a
-   promise the page cannot keep, and with the state moved up there is nothing left for it to hold. */
 function topHTML() {
-  if (!broken() || VAR !== 'D') return '';
-  const verb = ST === 'bgg_missing' ? 'Corregir el ID de BGG' : ST === 'failed' ? 'Reintentar' : 'Vincular con BoardGameGeek';
-  const act = ST === 'failed' ? 'retry' : 'open-link';
-  const icon = ST === 'failed' ? 'retry' : 'link';
-  return stateHTML() + `<button class="arow" data-act="${act}">${ic(icon)}${esc(verb)}</button>`;
+  if (!broken()) return '';
+  /* D2 keeps round 1's adjacency: the remedy is a row directly under the state. D1/D3 put it in the bar, so
+     the top carries the diagnosis alone. */
+  const r = remedy();
+  const row = (VAR === 'D2' && r) ? `<button class="arow" data-act="${r.act}">${ic(r.icon)}${esc(r.verb)}</button>` : '';
+  return stateHTML() + row;
 }
 
 function render() {
-  /* D renders the state above the spine and no BGG block at all when broken; every other variant keeps 072's
-     order. `bggHTML` already returns the enriched/pending blocks, which D shares unchanged. */
-  const top = topHTML();
-  const bgg = (VAR === 'D' && broken()) ? '' : bggHTML();
-  $('#main').innerHTML = `<div class="variant on">${headHTML()}${top}${rowsHTML()}${bgg}${pubHTML()}</div>`;
+  if (ST === 'pending') {
+    /* the waiting screen replaces the editor outright — there is nothing to edit until the data lands, and
+       showing six editable club rows under it would invite an edit that the incoming write may overwrite */
+    $('#main').innerHTML = `<div class="variant on">${headHTML()}${waitHTML()}</div>`;
+    $('#pbt').textContent = G.name;
+    $('#savebar').classList.remove('on');
+    updateBar();
+    return;
+  }
+  /* HOY is the shipped baseline and its whole point is what it renders in a BROKEN state — the eleven
+     em-dashes. Skipping the block for every broken state erased it, and three negative tests went red at
+     once, which is exactly what a negative test is for: it noticed the baseline had stopped being the
+     baseline. Only the round-2 variants drop the block. */
+  const bgg = (broken() && VAR !== 'HOY') ? '' : bggHTML();
+  $('#main').innerHTML = `<div class="variant on">${headHTML()}${topHTML()}${rowsHTML()}${bgg}</div>`;
   $('#pbt').textContent = G.name;
-  $('#savebar').classList.toggle('on', dirty());
-  $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : '';
+  $('#savebar').innerHTML = barHTML();
+  $('#savebar').classList.toggle('on', barWanted());
   updateBar();
 }
 
@@ -831,14 +874,22 @@ document.addEventListener('click', e => {
   }
 
   const ed = e.target.closest('[data-edit]'); if (ed) return editField(ed.dataset.edit);
-  if (e.target.closest('[data-close]') || e.target.id === 'backdrop') return closeSheet();
+  /* Closing must RE-RENDER, not just hide. The stepper commits into `G` live and then updates only the
+     bar, because re-rendering the page while its sheet is open would tear the sheet out from under the
+     finger. Closing was the missing half: the sheet went away and the row behind it still showed the old
+     value while the bar already said "Cambios sin guardar". Seen in a screenshot — Copias read 1 next to an
+     unsaved-changes bar.
+     INHERITED FROM 072, verbatim (`072-admin-game-editor/index.html:469`, `return closeSheet()`), where its
+     49/49 harness never asserted that the row behind a sheet reflects a stepper change either. Fixed there
+     too, or 01.8.2 ships it. */
+  if (e.target.closest('[data-close]') || e.target.id === 'backdrop') { closeSheet(); render(); return; }
 
   const pick = e.target.closest('[data-pick]');
   if (pick) { const f = pick.dataset.pick; G[f] = f === 'is_expansion' ? pick.dataset.val === 'true' : pick.dataset.val; closeSheet(); render(); return; }
 
   const st = e.target.closest('[data-step]');
   if (st) { G.units = Math.max(1, G.units + (+st.dataset.step)); const n = $('#unitsn'); if (n) n.textContent = G.units;
-    if (!$('#sheet').classList.contains('open')) render(); else { $('#savebar').classList.toggle('on', dirty()); $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : ''; } return; }
+    if (!$('#sheet').classList.contains('open')) render(); else { $('#savebar').innerHTML = barHTML(); $('#savebar').classList.toggle('on', barWanted()); } return; }
 
   const com = e.target.closest('[data-commit]');
   if (com) {
@@ -847,6 +898,7 @@ document.addEventListener('click', e => {
     G[f] = f === 'name' ? $('#s-name').value : $('#s-desc').value; closeSheet(); render(); return;
   }
 
+  if (e.target.id === 'publish' && !e.target.disabled) { snack('Juego publicado'); return; }
   if (e.target.id === 'save') { Object.keys(START).forEach(k2 => START[k2] = G[k2]); render(); snack('Cambios guardados'); return; }
   if (e.target.id === 'discard') { G = { ...START }; render(); return; }
 });

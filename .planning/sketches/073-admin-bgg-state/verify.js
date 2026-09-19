@@ -20,7 +20,7 @@ const URL = process.env.SKETCH_URL || 'http://127.0.0.1:8765/.planning/sketches/
 const OUT = process.env.SHOTS_DIR || path.join(os.tmpdir(), 'sketch-073-shots'); fs.mkdirSync(OUT, { recursive: true });
 const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
 
-const VARIANTS = ['A', 'B', 'C', 'D'];
+const VARIANTS = ['D1', 'D2', 'D3'];
 const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
 
 (async () => {
@@ -189,42 +189,192 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
     }
   }
 
-  /* ================= 5. the key/value pair actually stacks =================
-     072's real lesson: its harness was fully green while the page read "NombreBrass: Birmingham", because
-     height/contrast/hit-box checks never ask where ink sits RELATIVE to its neighbour. Measured as ink via
-     Range rects, on A's new seventh row — the one row 072 never had. */
-  {
-    await set('A', 'no_bgg_id');
-    const m = await J(() => {
-      const row = [...document.querySelectorAll('.frow')].find(r => r.querySelector('.fr-k')?.textContent.trim() === 'ID de BGG');
-      if (!row) return null;
-      const ink = el => { const r = document.createRange(); r.selectNodeContents(el); const b = r.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, left: b.left }; };
-      const k = ink(row.querySelector('.fr-k')), v = ink(row.querySelector('.fr-v'));
-      return { gap: +(v.top - k.bottom).toFixed(2), sameLeft: Math.abs(v.left - k.left) < 0.6, stacked: v.top >= k.bottom - 0.5 };
-    });
-    ok(m && m.stacked, `A: the id row's value sits BELOW its label, measured as ink (gap ${m ? m.gap : '?'}px)`);
-    ok(m && m.sameLeft, `A: both lines start on the same 16 keyline`);
-  }
-
-  /* ================= 6. the publish gate =================
+  /* ================= 6. the publish gate, now in the action bar =================
      "The app must avoid publishing uncompleted games." `publish_game/1` validates only `:status` today
-     (catalog.ex:490), so this rule has no implementation — every variant must obey it identically. */
+     (catalog.ex:490), so this rule has no implementation — every variant must obey it identically.
+     Round 2 moved it out of an in-page block and into the bar's primary slot, which is also where the
+     developer's "one primary that swaps" rule gets asserted. */
   {
     for (const v of VARIANTS) {
-      let allBlocked = true, reasons = 0;
-      for (const s of ['no_bgg_id', 'bgg_missing', 'failed', 'pending']) {
-        await set(v, s);
+      let blocked = 0;
+      for (const s2 of ['no_bgg_id', 'bgg_missing', 'failed']) {
+        await set(v, s2);
         const r = await J(() => {
-          const b = document.querySelector('.pubbar .btn');
-          return { dis: !!b?.disabled, why: document.querySelector('.pubbar .why')?.textContent.trim() || '' };
+          const b = document.querySelector('#savebar .btn:not(.ghost)');
+          return { label: b ? b.textContent.trim() : null, dis: !!b?.disabled };
         });
-        if (!r.dis) allBlocked = false;
-        if (r.why) reasons++;
+        if (r.label === 'Publicar' && r.dis) blocked++;
+      }
+      ok(blocked === 3, `${v}: Publicar is present and disabled in all 3 broken states (${blocked}/3)`);
+      await set(v, 'enriched');
+      const open = await J(() => {
+        const b = document.querySelector('#savebar .btn:not(.ghost)');
+        return b ? { label: b.textContent.trim(), dis: !!b.disabled } : null;
+      });
+      ok(v === 'D3' ? open === null : (open && open.label === 'Publicar' && !open.dis),
+        `${v}: a clean enriched game ${v === 'D3' ? 'shows no bar at all — nothing is pending' : 'offers Publicar, enabled'}`);
+    }
+  }
+
+  /* ================= 6b. ONE primary slot that swaps =================
+     The developer's rule: `Guardar` while there are unsaved changes, `Publicar` when there are none — never
+     two strong buttons at once, and the bar never changes size. Both halves are asserted, including the
+     width, because "never changes size" is the part a later edit would silently break. */
+  {
+    for (const v of VARIANTS) {
+      await set(v, 'enriched');
+      const clean = await J(() => {
+        const bar = document.querySelector('#savebar');
+        return { label: bar.querySelector('.btn:not(.ghost)')?.textContent.trim(),
+                 strong: bar.querySelectorAll('.btn:not(.ghost)').length,
+                 w: +bar.getBoundingClientRect().height.toFixed(1) };
+      });
+      /* make it dirty through the UI, not by poking state */
+      await J(() => document.querySelector('[data-edit="units"]').click());
+      await p.waitForTimeout(240);
+      await J(() => document.querySelector('[data-step="1"]').click());
+      await J(() => document.querySelector('[data-close]')?.click());
+      await p.waitForTimeout(240);
+      const dirtyState = await J(() => {
+        const bar = document.querySelector('#savebar');
+        return { label: bar.querySelector('.btn:not(.ghost)')?.textContent.trim(),
+                 strong: bar.querySelectorAll('.btn:not(.ghost)').length,
+                 w: +bar.getBoundingClientRect().height.toFixed(1) };
+      });
+      if (v === 'D3') {
+        /* D3's whole proposition is that a clean, enriched, published game has nothing pending and so
+           carries no bar at all — D-19a's original instinct. Asserting the swap here would be asserting
+           that D3 is D1. What it owes instead: no bar when idle, Guardar the moment there is an edit. */
+        ok(!clean.label && dirtyState.label === 'Guardar',
+          `D3: no bar at all when nothing is pending, and Guardar the moment there is an edit`);
+        ok(dirtyState.strong === 1, `D3: one strong button when the bar is there (${dirtyState.strong})`);
+        log.push(`INFO D3 bar height — idle ${clean.w} · dirty ${dirtyState.w} (it appears, so it moves the page)`);
+      } else {
+        ok(clean.label === 'Publicar' && dirtyState.label === 'Guardar',
+          `${v}: the one primary slot swaps — clean "${clean.label}" -> dirty "${dirtyState.label}"`);
+        ok(clean.strong === 1 && dirtyState.strong === 1,
+          `${v}: never two strong buttons at once (${clean.strong} clean, ${dirtyState.strong} dirty)`);
+        ok(Math.abs(clean.w - dirtyState.w) < 0.6,
+          `${v}: the bar does not change size when the primary swaps (${clean.w} vs ${dirtyState.w})`);
       }
       await set(v, 'enriched');
-      const open = await J(() => !document.querySelector('.pubbar .btn')?.disabled);
-      ok(allBlocked && open, `${v}: Publicar is blocked in all 4 incomplete states and open once BGG answered`);
-      ok(reasons === 4, `${v}: and every blocked state says WHY (${reasons}/4)`);
+    }
+  }
+
+  /* ================= 6c. the CTA is reachable without scrolling =================
+     The developer's actual complaint about round 1: "the CTA at the bottom is hidden, since it needs scroll
+     down." Round 1 put the publish gate at the END of the page, so on a 49-game editor it sat ~772px down a
+     740px screen. The bar is pinned above the tab bar, so this should now hold by construction — asserted
+     anyway, because "by construction" is how the round-1 fold bug survived 64 green checks. */
+  {
+    for (const v of VARIANTS) {
+      await set(v, 'no_bgg_id');
+      const m = await J(() => {
+        const bar = document.querySelector('#savebar');
+        const btn = bar.querySelector('.btn:not(.ghost)');
+        if (!btn) return { none: true };
+        const r = btn.getBoundingClientRect();
+        const tabs = document.querySelector('.tabs').getBoundingClientRect();
+        return { top: +r.top.toFixed(0), bottom: +r.bottom.toFixed(0), tabsTop: +tabs.top.toFixed(0),
+                 onScreen: r.top >= 0 && r.bottom <= 740, clearsTabs: r.bottom <= tabs.top + 0.5 };
+      });
+      ok(!m.none && m.onScreen && m.clearsTabs,
+        `${v}: the primary CTA is on screen at rest without scrolling (bottom ${m.bottom}, tab bar at ${m.tabsTop})`);
+    }
+  }
+
+  /* ================= 6d. THE COLLISION: Descartar vs the remedy =================
+     The round's deciding measurement, predicted before building rather than discovered after. While dirty,
+     the secondary slot is already `Descartar`. A broken game with unsaved changes wants that one slot to be
+     both `Descartar` and the remedy. D1 and D3 put the remedy in the bar and therefore have to give it up;
+     D2 never had the problem, because its remedy lives beside the state up top.
+     Measured as: with unsaved changes on a broken game, is the remedy reachable AT ALL without discarding? */
+  {
+    for (const v of VARIANTS) {
+      await set(v, 'no_bgg_id');
+      /* dirty it through the UI */
+      await J(() => document.querySelector('[data-edit="units"]').click());
+      await p.waitForTimeout(240);
+      await J(() => document.querySelector('[data-step="1"]').click());
+      await J(() => document.querySelector('[data-close]')?.click());
+      await p.waitForTimeout(240);
+      const m = await J(() => {
+        const bar = document.querySelector('#savebar');
+        const inBar = !!bar.querySelector('[data-act="open-link"]');
+        const inPage = !!document.querySelector('#main [data-act="open-link"]');
+        const el = document.querySelector('#main [data-act="open-link"]');
+        const fold = document.querySelector('.tabs').getBoundingClientRect().top;
+        return { inBar, inPage, dirty: /Cambios sin guardar/.test(bar.textContent),
+                 discard: !!bar.querySelector('#discard'),
+                 visible: el ? el.getBoundingClientRect().bottom <= fold : false };
+      });
+      ok(m.dirty && m.discard, `${v}: with unsaved changes the bar shows Descartar and says so`);
+      ok(m.inBar || m.inPage,
+        `${v}: and the remedy is still reachable${m.inBar ? ' (in the bar)' : m.inPage ? ' (up top, beside the state)' : ' — LOST: Descartar took the only slot'}`);
+      if (m.inPage) ok(m.visible, `${v}: and it is still on screen while dirty`);
+      await set(v, 'no_bgg_id');
+    }
+  }
+
+  /* ================= 6e. a sheet's change reaches the row behind it =================
+     Found in a screenshot: after stepping Copias up and closing the sheet, the row still read "Copias 1"
+     while the bar already said "Cambios sin guardar". The stepper commits into G and refreshes only the bar
+     (re-rendering under an open sheet would tear it out from under the finger); closing never re-rendered.
+     Inherited verbatim from 072, whose own 49/49 harness did not assert it. Asserted here so it cannot
+     return, and as INK rather than as state — the point is what the reader sees, not what G holds. */
+  {
+    for (const v of VARIANTS) {
+      await set(v, 'no_bgg_id');
+      const before = await J(() => [...document.querySelectorAll('.frow')]
+        .find(r => r.querySelector('.fr-k')?.textContent.trim() === 'Copias')?.querySelector('.fr-v')?.textContent.trim());
+      await J(() => document.querySelector('[data-edit="units"]').click());
+      await p.waitForTimeout(240);
+      await J(() => document.querySelector('[data-step="1"]').click());
+      await J(() => document.querySelector('[data-close]').click());
+      await p.waitForTimeout(240);
+      const after = await J(() => [...document.querySelectorAll('.frow')]
+        .find(r => r.querySelector('.fr-k')?.textContent.trim() === 'Copias')?.querySelector('.fr-v')?.textContent.trim());
+      ok(before === '1' && after === '2',
+        `${v}: a stepper change in the sheet reaches the row behind it (${before} -> ${after})`);
+      await set(v, 'no_bgg_id');
+    }
+  }
+
+  /* ================= 6f. the waiting screen lets you leave =================
+     The developer's call, and its whole justification: enrichment is an Oban job on a queue with CONCURRENCY
+     1 and `attempt * 30` backoff, so with 49 games to repair the wait is real AND it keeps running whether
+     or not this page is open. The screen therefore owes three things — it must say so, it must not hold a
+     save bar (there is nothing to save and nothing to discard), and the way out must be live, not merely
+     present. The tab bar is that way out, so its buttons are checked for real hit area, not existence. */
+  {
+    for (const v of VARIANTS) {
+      await set(v, 'pending');
+      const m = await J(() => {
+        const w = document.querySelector('.waiting');
+        const bar = document.querySelector('#savebar');
+        const tabs = [...document.querySelectorAll('.tabs .tab')];
+        const covered = tabs.filter(t => {
+          const r = t.getBoundingClientRect();
+          const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return !(el === t || t.contains(el));
+        });
+        return {
+          hasWait: !!w,
+          /* textContent carries the SOURCE's line breaks, so a phrase that wraps across two lines in the
+             template contains "\n      " where the regex expects a space. Collapse whitespace first — a
+             guard that reads rendered text must normalise it, or it is asserting about source formatting. */
+          saysLeave: /salgas de esta pantalla/.test((w?.textContent || '').replace(/\s+/g, ' ')),
+          barShown: bar.classList.contains('on'),
+          noSkeleton: document.querySelectorAll('.sk').length === 0,
+          tabsCovered: covered.length,
+          editable: document.querySelectorAll('#main [data-edit]').length
+        };
+      });
+      ok(m.hasWait && m.saysLeave, `${v}: the waiting screen says the work continues if you leave`);
+      ok(!m.barShown, `${v}: no action bar while waiting — nothing to save, nothing to discard`);
+      ok(m.noSkeleton, `${v}: and no skeleton imitating the eleven facts that do not exist yet`);
+      ok(m.tabsCovered === 0, `${v}: all 5 tab-bar destinations are actually hittable, not just present (${m.tabsCovered} covered)`);
+      ok(m.editable === 0, `${v}: nothing is editable mid-fetch — the incoming write would overwrite it`);
     }
   }
 
@@ -233,9 +383,12 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
      actually broken get nothing. Retry must NOT be the offer for `no_bgg_id` (nothing to retry — bgg_id is
      NULL) nor for `bgg_missing` (the id does not resolve; retrying fetches the same dead id again). */
   {
+    /* The bar is a sibling of #main inside .device, not a child of it. Reading only #main's text made the
+       remedy invisible in exactly the two variants that put it in the bar — the check was measuring the
+       page and calling it the screen. Read both. */
     const offer = () => J(() => {
-      const t = (document.querySelector('#main .variant')?.textContent || '');
-      return { retry: /Reintentar/.test(t), idWay: !!document.querySelector('[data-edit="bgg_id"], #idfield, [data-act="open-link"]') };
+      const t = (document.querySelector('#main .variant')?.textContent || '') + ' ' + (document.querySelector('#savebar')?.textContent || '');
+      return { retry: /Reintentar/.test(t), idWay: !!document.querySelector('[data-act="open-link"]') };
     });
     await set('HOY', 'no_bgg_id');
     const h = await offer();
@@ -314,7 +467,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
         await J(() => document.querySelector('[data-commit="bgg_id"]').click()); n++;
       }
       await p.waitForTimeout(160);
-      const landed = await J(() => ({ st: !!document.querySelector('.st.wait'), id: /155426/.test(document.querySelector('.gh-meta')?.textContent || '') }));
+      const landed = await J(() => ({ st: !!document.querySelector('.waiting'), id: /155426/.test(document.querySelector('.gh-meta')?.textContent || '') }));
       taps[v] = n;
       ok(landed.st && landed.id, `${v}: committing an id lands on "trayendo datos" and the head shows BGG 155426 — the fetch is an Oban job, so pending is the honest response`);
     }
@@ -398,7 +551,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
     const px = s => s.match(/\d+/g).slice(0, 3).map(Number);
     for (const t of ['light', 'dark']) {
       await theme(t);
-      await set('A', 'bgg_missing');
+      await set('D1', 'bgg_missing');
       const c = await J(() => ({ dot: getComputedStyle(document.querySelector('.st .dot')).backgroundColor, bg: getComputedStyle(document.body).getPropertyValue('--color-bg') || getComputedStyle(document.querySelector('#main')).backgroundColor }));
       const bgc = await J(() => { const d = document.createElement('div'); d.style.background = 'var(--color-bg)'; document.body.appendChild(d); const v = getComputedStyle(d).backgroundColor; d.remove(); return v; });
       const d = +dE(px(c.dot), px(bgc)).toFixed(1);
@@ -415,10 +568,22 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
         await p.screenshot({ path: path.join(OUT, `${v}-${s}-375x740.png`) });
       }
     }
-    await theme('dark'); await set('D', 'bgg_missing');
+    await theme('dark'); await set('D1', 'bgg_missing');
     await p.screenshot({ path: path.join(OUT, 'D-bgg_missing-dark.png') });
     await theme('light');
-    await set('D', 'no_bgg_id');
+    /* the waiting screen — the developer's call over a skeleton */
+    for (const v of VARIANTS) { await set(v, 'pending'); await p.screenshot({ path: path.join(OUT, `${v}-esperando.png`) }); }
+    /* the collision, drawn: a broken game with unsaved changes */
+    for (const v of VARIANTS) {
+      await set(v, 'no_bgg_id');
+      await J(() => document.querySelector('[data-edit="units"]').click());
+      await p.waitForTimeout(240);
+      await J(() => document.querySelector('[data-step="1"]').click());
+      await J(() => document.querySelector('[data-close]')?.click());
+      await p.waitForTimeout(260);
+      await p.screenshot({ path: path.join(OUT, `${v}-roto-con-cambios.png`) });
+    }
+    await set('D2', 'no_bgg_id');
     await J(() => document.querySelector('[data-act="open-link"]').click());
     await p.waitForTimeout(320);
     await p.screenshot({ path: path.join(OUT, 'C-hoja-del-id.png') });

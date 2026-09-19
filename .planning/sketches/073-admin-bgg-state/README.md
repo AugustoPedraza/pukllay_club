@@ -1,9 +1,9 @@
 ---
 sketch: 073
 name: admin-bgg-state
-question: "When BGG has given nothing, what does the editor offer — and where does the `ID de BGG` field live?"
-winner: null
-tags: [admin, juegos, editor, bgg, enrichment, empty-state, estado, publish-gate, phase-01.8.2, mobile-first]
+question: "R1 — when BGG has given nothing, what does the editor offer, and where does the `ID de BGG` field live? R2 — what is the editor's action bar, and what does the wait look like?"
+winner: "D (r1) + r2 pending"
+tags: [admin, juegos, editor, bgg, enrichment, empty-state, estado, publish-gate, cta, action-bar, loading, phase-01.8.2, mobile-first]
 ---
 
 # Sketch 073: the BGG state in the editor
@@ -53,12 +53,14 @@ python3 -m http.server 8765          # from the repo root
 ```
 <http://127.0.0.1:8765/.planning/sketches/073-admin-bgg-state/index.html>
 
-Harness: `node .planning/sketches/073-admin-bgg-state/verify.js` — **85/90**. The five failures are the
-round's findings, not breakage; they are what the comparison is *for*. `SHOTS_DIR=` to place shots.
+Harness: `node .planning/sketches/073-admin-bgg-state/verify.js` — **103/105**. The two failures are the
+round's deciding finding, not breakage. `SHOTS_DIR=` to place shots.
 
 Tools: **Variante · Estado · Tema · Teclado**. `Estado` is a **scenario**, not a variant — the dev DB has zero
 `pending` and zero `failed` rows, so it is the only way to see those states at all (decision 24's `ENR`
 precedent). **`HOY`** renders what `form.ex` ships today; it exists so every guard can be negative-tested.
+Round 1's variants **A, B and C were removed** once D was picked, per 072's rule that what is on screen is the
+decision and not a menu of them; their measurements are kept below.
 
 ## Settled before building, so the variants do not re-argue it
 
@@ -103,6 +105,10 @@ reason the page was opened**, and it outranks every club field. That is D.
 
 It is also the cheapest page, which was not the goal but is worth recording — total page height for a
 `no_bgg_id` game: **HOY 1125 · A 866 · B 937 · C 821 · D 772**.
+
+> These are **round 1's** numbers and include the in-page publish gate round 1 drew at the bottom of the
+> page. Round 2 moved that into the action bar, so the same measurements come out ~80px lower there (HOY
+> 1102, D-family 623). Both are correct for their round; they are not comparable across rounds.
 
 ## What only the screenshots said
 
@@ -176,3 +182,121 @@ instruction it exists to give. A, C and D all put the field in a sheet, and a sh
 5. **Whether D's action row is a second anatomy** in the editor, and whether that matters. It reuses `.frow`'s
    bleed and press state but is one line with no value beneath — counted in the harness rather than waved
    away, since "one row anatomy" is exactly what decision 33 chose the spine for.
+
+
+---
+
+# Round 2 — the action bar and the wait (decision 39)
+
+Developer feedback on round 1: *"D is the way, but I'm not sure about having the CTA at the bottom hidden
+(since needs scroll down). Also I need consistent CTA (main is save and secondary would be like fix bgg id,
+retry, etc). Also the loading isn't a better UI/UX having almost a full screen that allows me to use the
+bottom nav until the loading finishes?"*
+
+Three separate things. Round 1 had scattered actions across **three** places — the remedy row mid-page,
+`Publicar` at the very bottom of the page (772px down a 740px screen, so genuinely unreachable without
+scrolling), and `Guardar` in the pinned save bar.
+
+## Settled before building
+
+- **One primary slot that swaps by moment** — `Guardar` while there are unsaved changes, `Publicar` when
+  there are none. Never two strong buttons competing; the bar never changes size. Asserted three ways,
+  including the height, because "never changes size" is the half a later edit would silently break.
+- **The secondary is the remedy** — Vincular / Corregir el ID / Reintentar.
+- **`pending` gets a dedicated waiting screen**, not a skeleton imitating eleven rows of data that do not
+  exist yet.
+
+## What was still open
+
+Round 1's winner won on **adjacency**: the state and its remedy sat together under the game's name, which is
+the only reason a reader saw either. Moving the remedy into a bottom bar buys consistency and spends that
+adjacency. **D-19a** is also in play — it says the save bar pins *while dirty* and otherwise sits in the page,
+so an always-present bar amends a settled rule.
+
+- **D1 — el remedio en la barra.** Bar always present; top carries the diagnosis alone.
+- **D2 — el remedio arriba.** Bar always present but carries only Descartar + the primary; the remedy stays
+  beside the state, keeping round 1's adjacency.
+- **D3 — barra condicional.** Remedy in the bar, but the bar appears only when something is pending (dirty or
+  broken) — D-19a's original instinct kept rather than amended.
+
+## The collision, predicted before building and confirmed
+
+**While dirty, the secondary slot is already `Descartar`.** A broken game with unsaved changes wants that one
+slot to be both `Descartar` and the remedy. Measured — with unsaved changes on a `no_bgg_id` game, is the
+remedy reachable at all?
+
+| | remedio con cambios sin guardar |
+|---|---|
+| D1 | ✗ **perdido** — Descartar se queda con la única ranura |
+| **D2** | ✓ arriba, junto al estado, y en pantalla |
+| D3 | ✗ **perdido** — misma razón |
+
+D1 and D3 can only get it back by adding a third control to a bar the developer asked to keep consistent, or
+by making the reader discard their edit first to see the remedy again. **D2 never has the problem**, because
+its remedy was never in the bar — the "consistent CTA" is the *primary slot*, which is what was actually
+asked for, and the remedy stays where round 1 proved it had to be.
+
+## The numbers
+
+| | D1 | D2 | D3 |
+|---|---|---|---|
+| CTA principal en pantalla sin scrollear | ✓ (663 vs tab bar 673) | ✓ | ✓ |
+| remedio con cambios sin guardar | ✗ | **✓** | ✗ |
+| alto de página, `no_bgg_id` | **623** | 691 | **623** |
+| barra al reposo, juego sano | 21px | 21px | **0 — no hay** |
+| la ranura principal alterna Guardar/Publicar | ✓ | ✓ | ✓ (sin barra al reposo) |
+| taps para arreglar | 2 | 2 | 2 |
+
+D2 costs **68px** of page height for its remedy row. D3's bar appears and disappears (21 → 65px), which moves
+the page under the reader — the cost of keeping D-19a literal.
+
+Baseline for scale: today's editor is **1102px** for the same game. All three are ~40% shorter.
+
+## The wait
+
+A dedicated screen, centred in the space between the head and the tab bar: a spinner, *"Trayendo datos de
+BoardGameGeek…"*, and the line that does the actual work — *"Puede tardar un rato si hay varios juegos en la
+cola. Sigue funcionando aunque salgas de esta pantalla — te avisamos cuando lleguen."*
+
+The justification is the job, not the look. Enrichment is an Oban job on a queue with **concurrency 1**
+(`config.exs:41`, bounding libvips memory on the 1GB host) and `attempt * 30` backoff, so with 49 games to
+repair the wait is real **and it keeps running whether or not the page is open**. A skeleton asks the reader
+to wait; this tells them they do not have to. Page height drops to **407px**, against 1102 today.
+
+Four things the screen owes, all asserted: it says the work continues if you leave · it carries **no action
+bar** (nothing to save, nothing to discard) · **nothing is editable** mid-fetch, since the incoming write
+would overwrite it · and all five tab-bar destinations are **actually hittable**, checked with
+`elementFromPoint` rather than by existence, because "the way out is present" and "the way out works" are
+different claims.
+
+It was first drawn top-anchored over ~600px of void, which read as a page that had failed to load — the
+opposite of the message. Centred after measuring.
+
+## Two more bugs found by looking, not by measuring
+
+1. **A sheet's change never reached the row behind it.** After stepping `Copias` up and closing the sheet,
+   the row still read **"Copias 1"** while the bar already said *"Cambios sin guardar"*. The stepper commits
+   into state and refreshes only the bar — re-rendering under an open sheet would tear it out from under the
+   finger — and closing never re-rendered. **Inherited verbatim from 072**
+   (`072-admin-game-editor/index.html:469`, `return closeSheet()`), whose own 49/49 harness never asserted
+   that a row reflects a stepper change either. Fixed here and guarded; **072 needs the same fix, or 01.8.2
+   ships it.**
+2. **A guard asserting about source formatting.** The "says the work continues if you leave" check matched
+   `/salgas de esta pantalla/` against `textContent`, but the phrase wraps across two source lines, so the
+   rendered text holds `"salgas de\n      esta pantalla"` and the guard failed a screen that was correct.
+   A guard that reads rendered text has to normalise whitespace first.
+
+Plus one real regression the negative tests caught the moment it happened: restructuring `render()` to drop
+the BGG block for broken states dropped it for **`HOY`** too, erasing the eleven-em-dash baseline. Three
+negative tests went red at once — which is the entire reason they exist, since every positive check stayed
+green while the thing they were compared against had quietly vanished.
+
+## Still open after round 2
+
+- **Which of D1/D2/D3.** The collision points hard at D2, but D2 is the only one that spends 68px and keeps a
+  second action location — worth the developer's eye rather than the harness's verdict.
+- Everything in round 1's open list stands, in particular the **49 already published broken** and moving
+  `Reintentar`'s gate from `enrichment_status == "failed"` to "has a `bgg_id`".
+- **D-19a needs a decision either way.** D1/D2 amend it to an always-present bar; D3 keeps it literal and pays
+  by moving the page. Whichever wins should be written back as an amendment rather than left as sketch-local
+  behaviour.
