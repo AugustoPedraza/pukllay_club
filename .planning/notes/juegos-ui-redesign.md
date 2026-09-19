@@ -1366,6 +1366,73 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     **Deferred, deliberately not varied:** what happens to the remedy **while dirty** (all variants hide it —
     mid-edit the thing to do is finish the edit). Its own round.
 
+43. **The editor's chrome is one top app bar, and the title arrives on scroll.** Sketch 074, rounds 1-2,
+    from the developer's own proposal: *"we have been using a useless header that is replaced at scrolling."*
+    Measured, the complaint was understated — the editor spent **97px before the game's name** on a 53px
+    wordmark header plus a 44px in-page back row, and the back affordance existed **twice** (`.back` and
+    `.pbar`'s chevron, the same destination reached two ways; at no single scroll offset are both hittable,
+    which is exactly why it shipped unnoticed). One 56px bar replaces both: **41px back, one back control,
+    no hamburger** — you reached this screen by drilling down, so the chevron is the way out.
+
+    **The title is absent at rest and fades in on scroll.** From the device: *"not sure that I need to say
+    where you go back or where you are since you can see it."* True at rest — round 1 put the game's name on
+    screen **three times** inside 600px (bar, 22px head, `Nombre` row). Not true scrolled: on 514px of real
+    scroll a bar with no title says nothing about which game is being edited, which is **D-19n**. So it is
+    `opacity: 0` at rest and arrives as the head clears the bar — `.pbar`'s trigger applied to a bar that is
+    **already there**. Nothing appears, nothing moves, one element changes opacity. Name occurrences: **3 -> 2
+    at rest, 1 in the bar at full scroll.** `flex: 1` is kept while invisible, or the CTA would slide left at
+    rest and jump right on scroll — d42's "the thing to tap is moving", reintroduced through the fade.
+
+    **D-19n is amended, not dropped: this settles the EDITOR only.** `.pbar` stays alive for the catalogue
+    list, which is a different screen and is not decided here.
+
+44. **The action area moves to the top bar entirely, and the slot swaps.** Round 1 measured three answers to
+    "where does the primary live". The split (`Guardar` up, the rest below) lit **two containers in 3 of 8**
+    situations — and, found in a screenshot rather than by a number, pushed **`Descartar` to R359, the exact
+    right edge `Guardar` holds in the other five**. The editor would spend five situations teaching "the
+    bottom-right button is the safe one" and then put the undo-everything button there: the hazard d42
+    rejected G2's `Retirar` for. The bottom bar is deleted from the editor.
+
+    **The developer's enabled/disabled CTA, reconciled with d42 rather than against it.** From the device:
+    *"isn't better to have enable the CTA? If I open the form and don't change nothing, the button is
+    disable."* Taken literally that re-opens what d42 rejected — a fixed `Guardar` put a dead control in the
+    strongest slot in **4 of 8** and demoted the real next step to a ghost, and with no bottom bar `Vincular`
+    would have nowhere to go on the 49 real games. So the slot **swaps** (`Guardar` / `Vincular` /
+    `Corregir ID` / `Publicar`) and falls back to a disabled `Guardar` only where `primary()` has nothing to
+    offer: **1 of 8, and in that one nothing is pending**, so it never inverts the hierarchy. Guarded so it
+    cannot drift back to 4.
+
+    **The CTA is 36px, not 44.** *"Currently that CTA looks huge"* — 44px in a 56px bar is **79%** of its
+    height. Round 1 held it byte-identical to the bottom bar's button so a finding about POSITION could not
+    be blamed on WEIGHT; that paid off, because the same control reads as proportionate in a dedicated action
+    strip and oversized in a top bar. 36px is 64%, with the 44px floor kept by a pseudo-element (the switch
+    track's technique), hit-tested above and below the visible box. **Weight — filled vs tonal vs text — is
+    still open**, and the sharpest input to it is that a *disabled filled* button reads as lavender-and-live
+    rather than clearly dead.
+
+45. **`Descartar` is deleted, and D-19f is drawn for the first time.** Not relocated — deleted. With the bar
+    gone it has no home, and the developer's second rider supplies the replacement: *"On going back, this
+    could ask confirmation about you're going to lose unsaved data."* That dialog **is** `Descartar`. It
+    stops being a permanent control on every screen and becomes the destructive option on the way out.
+    D-19f qualifies it — the rule covers actions that lose state staff would have to rebuild (D-19k's own
+    test), and unsaved edits are exactly that. A clean editor leaves silently, or it is noise on 385 healthy
+    games.
+
+    **Anatomy is the rule's, asserted against its numbers:** 312px, 16px radius, 18/600 question, one 14px
+    consequence line, two right-aligned TEXT actions — `Cancelar` focused by default, the verb in Peligro
+    red — scrim tap and Esc cancel.
+
+    **What building it found:** the first version invented *"Seguir editando"* for the cancel, reasoning that
+    "Cancelar" is ambiguous here (cancel the edit, or cancel the leaving?). At 312px minus 40px of padding
+    there are 272px for both actions, and **both wrapped to two lines** — two text actions became a two-line
+    block and the focused one read as an outlined button. The rule's own word fits on one line, and the
+    ambiguity is already answered by the question directly above it. Departing from a settled rule on a
+    judgment call cost a layout defect; `nowrap` plus a one-line assertion now make any future departure fail
+    loudly instead of wrapping quietly.
+
+    **Its honest cost:** there is no longer any way to abandon an edit *without leaving the page*.
+    `Descartar` used to let you stay. Same shape as decision 41's candour about the missing per-field abandon.
+
 ## Where we are (2026-09-19)
 
 - **Sketches:** `071-admin-juegos` **135/135** · `072-admin-game-editor` **53/53** ·
