@@ -466,7 +466,16 @@ document.addEventListener('click', e => {
   const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) $('#device').classList.remove('kbd'); mark('[data-kbd-set]', k); }
 
   const ed = e.target.closest('[data-edit]'); if (ed) return editField(ed.dataset.edit);
-  if (e.target.closest('[data-close]') || e.target.id === 'backdrop') return closeSheet();
+  /* Closing must RE-RENDER, not just hide. Found while building sketch 073 (round 2), in a screenshot:
+     step Copias up, close the sheet, and the row behind it still read "Copias 1" while the save bar already
+     said "Cambios sin guardar" — the page contradicting itself about its own state.
+     The stepper commits into `G` live and then refreshes only the save bar, because re-rendering while the
+     sheet is open would tear the sheet out from under the finger. Closing was the missing half. The option
+     sheets never showed it because their own handler already calls `render()` after `closeSheet()`; only the
+     paths that close WITHOUT committing something (the ✕, the backdrop, Esc) skipped it.
+     This harness was 49/49 over it: nothing asserted that a row reflects a change made in its sheet. 073
+     carries that guard now — see `6e` in its verify.js. */
+  if (e.target.closest('[data-close]') || e.target.id === 'backdrop') { closeSheet(); render(); return; }
 
   const pick = e.target.closest('[data-pick]');
   if (pick) { const f = pick.dataset.pick; G[f] = f === 'is_expansion' ? pick.dataset.val === 'true' : pick.dataset.val; closeSheet(); render(); return; }
@@ -496,7 +505,9 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('focusin', e => { if (KBD_SIM && e.target.matches('input:not([type=number]), textarea')) $('#device').classList.add('kbd'); });
 document.addEventListener('focusout', e => { if (e.target.matches('input, textarea')) setTimeout(() => { if (!document.activeElement?.matches('input, textarea')) $('#device').classList.remove('kbd'); }, 150); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#sheet').classList.contains('open')) closeSheet(); });
+/* Esc is the third close path (D-19e: ✕, tap outside, drag down, Esc) and needs the same re-render as
+   the other two, or it reproduces the stale-row bug on its own. */
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#sheet').classList.contains('open')) { closeSheet(); render(); } });
 
 function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
 $('#scroller').addEventListener('scroll', updateBar, { passive: true });

@@ -20,7 +20,10 @@ const URL = process.env.SKETCH_URL || 'http://127.0.0.1:8765/.planning/sketches/
 const OUT = process.env.SHOTS_DIR || path.join(os.tmpdir(), 'sketch-073-shots'); fs.mkdirSync(OUT, { recursive: true });
 const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
 
-const VARIANTS = ['D1', 'D2', 'D3'];
+/* D2 won (decision 39); D1 and D3 are removed along with their comparison checks, per 072's rule that what
+   is on screen is the decision and not a menu of them. Their measurements live in the README. HOY stays: it
+   is the shipped baseline every negative test is written against. */
+const VARIANTS = ['F1', 'F2'];
 const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
 
 (async () => {
@@ -41,12 +44,13 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
      scrolls it into view; without resetting, every later measurement and every screenshot is taken on a page
      the reader never sees at rest — and "what is on screen" is half of what this round is deciding. The
      first run of this harness produced exactly that: a baseline screenshot scrolled past its own heading. */
-  const set = async (v, s) => {
-    await J(([vv, ss]) => {
+  const set = async (v, s, cy = 'published') => {
+    await J(([vv, ss, cc]) => {
       document.querySelector(`[data-var="${vv}"]`).click();
       document.querySelector(`[data-st="${ss}"]`).click();
+      document.querySelector(`[data-cy="${cc}"]`).click();
       document.getElementById('scroller').scrollTop = 0;
-    }, [v, s]);
+    }, [v, s, cy]);
     await p.waitForTimeout(90); await cool();
   };
   const theme = async t => { await J(tt => { document.querySelector(`[data-theme-set="${tt}"]`).click(); }, t); await p.waitForTimeout(80); };
@@ -198,7 +202,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
     for (const v of VARIANTS) {
       let blocked = 0;
       for (const s2 of ['no_bgg_id', 'bgg_missing', 'failed']) {
-        await set(v, s2);
+        await set(v, s2, 'draft');
         const r = await J(() => {
           const b = document.querySelector('#savebar .btn:not(.ghost)');
           return { label: b ? b.textContent.trim() : null, dis: !!b?.disabled };
@@ -206,13 +210,17 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
         if (r.label === 'Publicar' && r.dis) blocked++;
       }
       ok(blocked === 3, `${v}: Publicar is present and disabled in all 3 broken states (${blocked}/3)`);
-      await set(v, 'enriched');
+      await set(v, 'enriched', 'draft');
       const open = await J(() => {
         const b = document.querySelector('#savebar .btn:not(.ghost)');
         return b ? { label: b.textContent.trim(), dis: !!b.disabled } : null;
       });
-      ok(v === 'D3' ? open === null : (open && open.label === 'Publicar' && !open.dis),
-        `${v}: a clean enriched game ${v === 'D3' ? 'shows no bar at all — nothing is pending' : 'offers Publicar, enabled'}`);
+      ok(open && open.label === 'Publicar' && !open.dis, `${v}: a clean enriched DRAFT offers Publicar, enabled`);
+      /* and the counterpart round 3 added: an already-published game has no primary at all */
+      await set(v, 'enriched', 'published');
+      const pub = await J(() => ({ bar: document.querySelector('#savebar').classList.contains('on'),
+                                   btn: !!document.querySelector('#savebar .btn') }));
+      ok(!pub.bar && !pub.btn, `${v}: a clean PUBLISHED game has no bar — there is nothing to save and nothing to publish`);
     }
   }
 
@@ -222,7 +230,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
      width, because "never changes size" is the part a later edit would silently break. */
   {
     for (const v of VARIANTS) {
-      await set(v, 'enriched');
+      await set(v, 'enriched', 'draft');
       const clean = await J(() => {
         const bar = document.querySelector('#savebar');
         return { label: bar.querySelector('.btn:not(.ghost)')?.textContent.trim(),
@@ -241,23 +249,13 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
                  strong: bar.querySelectorAll('.btn:not(.ghost)').length,
                  w: +bar.getBoundingClientRect().height.toFixed(1) };
       });
-      if (v === 'D3') {
-        /* D3's whole proposition is that a clean, enriched, published game has nothing pending and so
-           carries no bar at all — D-19a's original instinct. Asserting the swap here would be asserting
-           that D3 is D1. What it owes instead: no bar when idle, Guardar the moment there is an edit. */
-        ok(!clean.label && dirtyState.label === 'Guardar',
-          `D3: no bar at all when nothing is pending, and Guardar the moment there is an edit`);
-        ok(dirtyState.strong === 1, `D3: one strong button when the bar is there (${dirtyState.strong})`);
-        log.push(`INFO D3 bar height — idle ${clean.w} · dirty ${dirtyState.w} (it appears, so it moves the page)`);
-      } else {
-        ok(clean.label === 'Publicar' && dirtyState.label === 'Guardar',
-          `${v}: the one primary slot swaps — clean "${clean.label}" -> dirty "${dirtyState.label}"`);
-        ok(clean.strong === 1 && dirtyState.strong === 1,
-          `${v}: never two strong buttons at once (${clean.strong} clean, ${dirtyState.strong} dirty)`);
-        ok(Math.abs(clean.w - dirtyState.w) < 0.6,
-          `${v}: the bar does not change size when the primary swaps (${clean.w} vs ${dirtyState.w})`);
-      }
-      await set(v, 'enriched');
+      ok(clean.label === 'Publicar' && dirtyState.label === 'Guardar',
+        `${v}: the one primary slot swaps — clean "${clean.label}" -> dirty "${dirtyState.label}"`);
+      ok(clean.strong === 1 && dirtyState.strong === 1,
+        `${v}: never two strong buttons at once (${clean.strong} clean, ${dirtyState.strong} dirty)`);
+      ok(Math.abs(clean.w - dirtyState.w) < 0.6,
+        `${v}: the bar does not change size when the primary swaps (${clean.w} vs ${dirtyState.w})`);
+      await set(v, 'enriched', 'draft');
     }
   }
 
@@ -267,8 +265,13 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
      740px screen. The bar is pinned above the tab bar, so this should now hold by construction — asserted
      anyway, because "by construction" is how the round-1 fold bug survived 64 green checks. */
   {
+    /* Round 3 changed what this check must ask. A PUBLISHED broken game now has no bar at all — nothing to
+       save, nothing to publish — and that is correct, not a regression, so asserting "the CTA is reachable"
+       there would be asserting that the bar should exist when it has nothing in it. The claim that still
+       matters is: WHEN there is a primary, it is reachable without scrolling. Checked on a draft, which is
+       the case that has one. */
     for (const v of VARIANTS) {
-      await set(v, 'no_bgg_id');
+      await set(v, 'no_bgg_id', 'draft');
       const m = await J(() => {
         const bar = document.querySelector('#savebar');
         const btn = bar.querySelector('.btn:not(.ghost)');
@@ -375,6 +378,113 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
       ok(m.noSkeleton, `${v}: and no skeleton imitating the eleven facts that do not exist yet`);
       ok(m.tabsCovered === 0, `${v}: all 5 tab-bar destinations are actually hittable, not just present (${m.tabsCovered} covered)`);
       ok(m.editable === 0, `${v}: nothing is editable mid-fetch — the incoming write would overwrite it`);
+    }
+  }
+
+  /* ================= 6g. ONE "Guardar" in the editor, and it is the bar's =================
+     Round 3's question, from the developer: "should I have bottom sheet AND save for fields? isn't that
+     contradictory with the save at the bottom?" Probed on the built page before any variant existed:
+
+       sheet button said:      "Guardar"
+       bar immediately after:  "Cambios sin guardar · Descartar · Guardar"
+
+     Pressing Guardar and being told "Cambios sin guardar" in the same breath. Asserted as a COUNT of the
+     word across everything visible, because the defect is not which button is wrong — it is that the same
+     word names two different operations on one screen. */
+  {
+    await set('HOY', 'enriched', 'draft');
+    /* HOY has no sheets to open, so the baseline here is round 2's own behaviour, reproduced: the probe
+       above is the negative test, and it is recorded in the README rather than re-run, since the losing
+       wording no longer exists in the page to measure. */
+    for (const v of VARIANTS) {
+      await set(v, 'enriched', 'draft');
+      await J(() => document.querySelector('[data-edit="name"]').click());
+      await p.waitForTimeout(260);
+      const m = await J(() => {
+        const sheet = document.getElementById('sheet');
+        const bar = document.getElementById('savebar');
+        const count = t => ((t || '').match(/Guardar/g) || []).length;
+        return { inSheet: count(sheet.textContent), inBar: count(bar.textContent),
+                 sheetBtn: sheet.querySelector('[data-commit]')?.textContent.trim() || null };
+      });
+      ok(m.inSheet === 0, `${v}: the word "Guardar" appears 0 times inside a field sheet (${m.inSheet})`);
+      ok(m.sheetBtn === (v === 'F1' ? 'Listo' : null),
+        `${v}: the sheet's commit is ${v === 'F1' ? '"Listo" — an end to typing, not a save' : 'gone entirely'} (${m.sheetBtn})`);
+      await J(() => document.querySelector('[data-close]').click());
+      await p.waitForTimeout(200);
+    }
+  }
+
+  /* ================= 6h. how many commit anatomies do the six sheets have? =================
+     Decision 33 chose the spine for having ONE row anatomy. The sheets had THREE ways to commit — a Guardar
+     button (Nombre, Descripción), commit-on-tap (Nivel, Estante, Expansión), and a live stepper (Copias) —
+     which is the same defect one level down. F2 collapses it to one; F1 leaves two. Counted, not asserted
+     to a number, so whichever wins the count is on the record. */
+  {
+    for (const v of VARIANTS) {
+      await set(v, 'enriched', 'draft');
+      const kinds = await J(() => {
+        const out = [];
+        for (const k of ['name', 'weight_band', 'units', 'shelf_id', 'is_expansion', 'description']) {
+          document.querySelector(`[data-edit="${k}"]`).click();
+          const sh = document.getElementById('sheet');
+          out.push(sh.querySelector('[data-commit]') ? 'button' : sh.querySelector('[data-step]') ? 'live' : 'tap');
+          document.querySelector('[data-close]').click();
+        }
+        return out;
+      });
+      await p.waitForTimeout(200);
+      /* The first version of this counted 'button' / 'tap' / 'live' as three commit anatomies and scored F2
+         at 2, which is the wrong axis: 'tap' and 'live' differ in how the sheet CLOSES (an option picks and
+         dismisses; the stepper stays open for a second press), not in how the value commits — neither has an
+         explicit commit. The axis this round is actually about is whether a sheet carries a commit BUTTON,
+         so that is what is asserted; the closing difference is logged, not scored. */
+      const explicit = kinds.filter(k => k === 'button').length;
+      const uniq = [...new Set(kinds)];
+      log.push(`INFO ${v} sheets with an explicit commit button: ${explicit}/6 · closing styles: ${uniq.join(', ')}`);
+      ok(explicit === (v === 'F1' ? 2 : 0),
+        `${v}: ${explicit} of 6 sheets carry a commit button${explicit === 0 ? ' — one commit idiom, and one "Guardar" in the editor' : ''}`);
+    }
+  }
+
+  /* ================= 6i. D-19h in the head — a status is a dot, never a pill =================
+     The shipped editor renders the lifecycle status as `badge badge-warning` / `badge-success` /
+     `badge-neutral` (`form.ex:212-214, 253`) — daisyUI pills. D-19h forbids it in as many words, and this
+     is the third instance of the same family after the list-row pill and the alert box.
+     Also asserted: "sin guardar" does NOT join it. Lifecycle status is durable and shared; unsaved changes
+     are transient and local, and the bar already says it. */
+  {
+    for (const v of VARIANTS) {
+      for (const [cy, label] of [['published', 'Publicado'], ['draft', 'Borrador'], ['retired', 'Retirado']]) {
+        await set(v, 'enriched', cy);
+        const m = await J(() => {
+          const st = document.querySelector('.gh-st');
+          if (!st) return null;
+          const dot = st.querySelector('.dot');
+          const bg = getComputedStyle(st).backgroundColor;
+          const r = dot?.getBoundingClientRect();
+          return { text: st.textContent.replace(/\s+/g, ' ').trim(),
+                   filled: !(bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent'),
+                   dot: r ? `${r.width}x${r.height}` : null,
+                   radius: getComputedStyle(st).borderRadius };
+        });
+        ok(m && m.text.startsWith(label) && m.dot === '8x8' && !m.filled,
+          `${v}/${cy}: the head reads "● ${label}" as a dot + text with no fill (D-19h), not a badge pill`);
+      }
+      /* and it stays a lifecycle status when the page is dirty */
+      await set(v, 'enriched', 'published');
+      await J(() => document.querySelector('[data-edit="units"]').click());
+      await p.waitForTimeout(240);
+      await J(() => document.querySelector('[data-step="1"]').click());
+      await J(() => document.querySelector('[data-close]').click());
+      await p.waitForTimeout(240);
+      const m2 = await J(() => ({
+        head: document.querySelector('.gh-st').textContent.replace(/\s+/g, ' ').trim(),
+        bar: document.getElementById('savebar').textContent.replace(/\s+/g, ' ').trim()
+      }));
+      ok(!/sin guardar/i.test(m2.head) && /sin guardar/i.test(m2.bar),
+        `${v}: "sin guardar" lives in the bar, not the head — one slot, one kind of thing ("${m2.head}")`);
+      await set(v, 'enriched', 'published');
     }
   }
 
@@ -551,7 +661,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
     const px = s => s.match(/\d+/g).slice(0, 3).map(Number);
     for (const t of ['light', 'dark']) {
       await theme(t);
-      await set('D1', 'bgg_missing');
+      await set('F1', 'bgg_missing');
       const c = await J(() => ({ dot: getComputedStyle(document.querySelector('.st .dot')).backgroundColor, bg: getComputedStyle(document.body).getPropertyValue('--color-bg') || getComputedStyle(document.querySelector('#main')).backgroundColor }));
       const bgc = await J(() => { const d = document.createElement('div'); d.style.background = 'var(--color-bg)'; document.body.appendChild(d); const v = getComputedStyle(d).backgroundColor; d.remove(); return v; });
       const d = +dE(px(c.dot), px(bgc)).toFixed(1);
@@ -568,7 +678,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
         await p.screenshot({ path: path.join(OUT, `${v}-${s}-375x740.png`) });
       }
     }
-    await theme('dark'); await set('D1', 'bgg_missing');
+    await theme('dark'); await set('F1', 'bgg_missing');
     await p.screenshot({ path: path.join(OUT, 'D-bgg_missing-dark.png') });
     await theme('light');
     /* the waiting screen — the developer's call over a skeleton */
@@ -583,7 +693,7 @@ const STATES = ['no_bgg_id', 'bgg_missing', 'failed', 'pending', 'enriched'];
       await p.waitForTimeout(260);
       await p.screenshot({ path: path.join(OUT, `${v}-roto-con-cambios.png`) });
     }
-    await set('D2', 'no_bgg_id');
+    await set('F1', 'no_bgg_id');
     await J(() => document.querySelector('[data-act="open-link"]').click());
     await p.waitForTimeout(320);
     await p.screenshot({ path: path.join(OUT, 'C-hoja-del-id.png') });

@@ -108,7 +108,16 @@
   .ghead .tile svg { width: 30px; height: 30px; }
   .gh-t { flex: 1; min-width: 0; }
   .gh-name { font-size: 22px; font-weight: 600; line-height: 1.22; }
-  .gh-meta { margin-top: 3px; font-size: 13px; color: var(--color-text-muted); }
+  .gh-meta { color: var(--color-text-muted); }
+  /* D-19h: dot + text, at the meta rank. It sits on the same line as the year/BGG id because they answer
+     the same question ("what is this record?") — the status leads, in ink, and the facts follow muted after
+     a separator, so the line has one rank order rather than two competing ones. */
+  .gh-st { margin-top: 4px; display: flex; align-items: center; gap: 6px; font-size: 13px; flex-wrap: wrap; }
+  .gh-st .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .gh-st .dot.ok { background: var(--color-success); }
+  .gh-st .dot.warn { background: var(--color-accent); }
+  .gh-st .dot.off { background: var(--color-text-muted); }
+  .gh-sep { color: var(--color-text-muted); }
 
   /* ---- form section label. NOT the versalita list caption (decision 28): that rule governs a LIST section
      header. This is a FORM group label, the BENCHMARK's `Label (group)` rank, 13/600 — conflating the two is
@@ -454,9 +463,8 @@
 
 <div id="tools">
   <div>Variante:
-    <button data-var="D1" class="on">D1 · remedio en la barra</button>
-    <button data-var="D2">D2 · remedio arriba</button>
-    <button data-var="D3">D3 · barra condicional</button>
+    <button data-var="F1" class="on">F1 · "Listo"</button>
+    <button data-var="F2">F2 · sin botón</button>
     <button data-var="HOY">Hoy (lo que se ve)</button>
   </div>
   <div>Estado:
@@ -466,6 +474,7 @@
     <button data-st="pending">Trayendo · 0</button>
     <button data-st="enriched">Con datos · 386</button>
   </div>
+  <div>Ciclo: <button data-cy="published" class="on">Publicado</button> <button data-cy="draft">Borrador</button> <button data-cy="retired">Retirado</button></div>
   <div>Tema: <button data-theme-set="light" class="on">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
 </div>
 
@@ -531,7 +540,12 @@ const SHELVES = [
   { v: 'c', n: 'Estante C', s: 'El de arriba de todo' }
 ];
 
-let VAR = 'A', ST = 'no_bgg_id', KBD_SIM = true;
+let VAR = 'F1', ST = 'no_bgg_id', KBD_SIM = true;
+/* The game's LIFECYCLE status — a different axis from `enrichment_status`, and missing until round 3. It
+   matters because the real 49 are `published`: they are live and broken RIGHT NOW, so a bar offering
+   "Publicar" was drawing a draft that mostly does not exist. Real counts: 385 published + 1 draft among the
+   enriched, and all 49 broken ones published. */
+let CY = 'published';
 let G, START;
 
 function loadState() {
@@ -541,6 +555,11 @@ function loadState() {
 }
 loadState();
 
+const CYC = {
+  published: { n: 'Publicado', k: 'ok' },
+  draft: { n: 'Borrador', k: 'warn' },
+  retired: { n: 'Retirado', k: 'off' }
+};
 const bandOf = v => BANDS.find(b => b.v === v) || BANDS[0];
 const shelfOf = v => SHELVES.find(b => b.v === v) || SHELVES[0];
 /* Committing an id is a REQUEST, not an edit — it triggers the fetch — so it never sits in "Cambios sin
@@ -564,9 +583,20 @@ function headHTML() {
     : f.cover ? `<img class="cov" src="${f.cover}" alt="" loading="lazy">`
     : `<div class="tile">${ic('img')}</div>`;
   const meta = [f.year, G.bgg_id ? 'BGG ' + G.bgg_id : null].filter(Boolean).join(' · ');
+  /* ---- decision 40: the lifecycle status is a dot + text in the head ----
+     It is ALREADY in the shipped header, as `badge badge-warning` / `badge-success` / `badge-neutral`
+     (`form.ex:212-214, 253`) — daisyUI pills, which D-19h forbids outright: "a status is a dot + text, never
+     a pill. Every status indicator in the admin." Third instance of the same family, after the list-row pill
+     (restart decision 22) and the editor's alert box (decision 24); this one had not been flagged.
+     What does NOT join it: "sin guardar". A lifecycle status is durable, server-side and shared; unsaved
+     changes are transient, local and about the edit in front of you — and the bar two inches below already
+     says it, next to the Descartar and Guardar that act on it. One slot holding two kinds of thing, said
+     twice, is how decision 20 happened. */
+  const st = CYC[CY];
   return `<button class="back" id="back">${ic('chevL', 1.9)}Juegos</button>
     <div class="ghead">${cov}<div class="gh-t"><div class="gh-name" id="ghname">${esc(G.name)}</div>
-      ${meta ? `<div class="gh-meta">${esc(meta)}</div>` : ''}</div></div>`;
+      <div class="gh-st"><span class="dot ${st.k}"></span>${esc(st.n)}${meta ? `<span class="gh-sep">·</span><span class="gh-meta">${esc(meta)}</span>` : ''}</div>
+      </div></div>`;
 }
 
 /* ---------- the club spine, decision 33, unchanged ----------
@@ -686,29 +716,42 @@ function remedy() {
    today (catalog.ex:490), so the gate is drawn here and owed upstream. */
 function primary() {
   if (dirty()) return { label: 'Guardar', id: 'save', dis: false };
-  if (hasData()) return { label: 'Publicar', id: 'publish', dis: false };
-  return { label: 'Publicar', id: 'publish', dis: true };
+  /* Publicar belongs to a DRAFT and to nothing else (`form.ex:305-312`). Round 2 showed it unconditionally,
+     which drew a draft for games that are already published — including all 49 broken ones, whose problem is
+     precisely that they ARE live. A published game with no unsaved changes has no primary action at all, and
+     saying so honestly is what reopened the bar-presence question below. */
+  if (CY !== 'draft') return null;
+  return { label: 'Publicar', id: 'publish', dis: !hasData() };
 }
 
 /* D3 only: the bar earns its place instead of always holding it. Present when there is something to do —
    unsaved changes, or a game that cannot be published as it stands. A clean, enriched, published game has
    no pending action at all, and D-19a's original instinct was that such a page should not carry a bar. */
+/* decision 39: the bar is always present (an amendment to D-19a, which had it pin only while dirty).
+   D3 kept D-19a literal and showed the bar only when something was pending — measured at 21px idle against
+   65px dirty, so the page moved under the reader every time an edit began. An always-present bar is the
+   cheaper of the two, and it is what makes the primary CTA reachable without scrolling, which is the
+   complaint that opened this round. */
+/* Round 2 settled "always present" against D3's conditional bar, on the measurement that D3's bar appearing
+   at 21->65px moved the page under the reader. Round 3 reopened it from the other side: once Publicar is
+   correctly limited to drafts, a clean PUBLISHED game has no primary and no secondary, so an always-present
+   bar would be an empty 65px strip pinned over the content. The rule that survives both findings is "the bar
+   is there when it has something in it" — which is not D3's "when work is pending", because a broken
+   published game still has no bar action (its remedy is up top, beside the state). */
 function barWanted() {
-  if (VAR === 'D3') return dirty() || broken();
-  return VAR === 'D1' || VAR === 'D2';
+  if (VAR === 'HOY') return false;
+  return dirty() || !!primary();
 }
 
 function barHTML() {
   if (!barWanted()) return '';
   const p = primary(), r = remedy();
-  /* D2 keeps the remedy up top beside the state, so its bar carries only Descartar + the primary. */
-  const sec = (VAR === 'D2' || !r)
-    ? (dirty() ? `<button class="btn ghost" id="discard">Descartar</button>` : '')
-    /* D1/D3: the remedy is the secondary. While dirty BOTH want the slot — resolved by letting Descartar
-       win it, since discarding is about the edit in front of you and the remedy is still one tap away up
-       top. That this needs resolving at all is D1/D3's cost, and the harness counts it. */
-    : (dirty() ? `<button class="btn ghost" id="discard">Descartar</button>`
-               : `<button class="btn ghost" data-act="${r.act}">${esc(r.short)}</button>`);
+  /* decision 39: the bar carries Descartar + the primary, and NOTHING else. The remedy stays beside the
+     state up top. D1 and D3 put the remedy in this slot and both LOST it the moment the game was dirty,
+     because Descartar was already there — the remedy became reachable only by discarding your edit first.
+     The "consistent CTA" that was asked for is the PRIMARY slot, which swaps Guardar/Publicar and never
+     resizes; it was never the secondary. */
+  const sec = dirty() ? `<button class="btn ghost" id="discard">Descartar</button>` : '';
   return `<span class="dirty" id="dirty">${dirty() ? 'Cambios sin guardar' : ''}</span>${sec}
     <button class="btn" id="${p.id}"${p.dis ? ' disabled' : ''}>${esc(p.label)}</button>`;
 }
@@ -731,11 +774,15 @@ function waitHTML() {
 }
 
 function topHTML() {
-  if (!broken()) return '';
+  /* HOY is the untouched shipped baseline — it must render what `form.ex` renders and nothing this sketch
+     invented, or the negative tests are comparing the variants against themselves. Collapsing the D1/D2/D3
+     branch dropped this check and HOY silently grew a state line and a remedy row (+68px); the negative test
+     caught it within one run, for the second time this round. */
+  if (VAR === 'HOY' || !broken()) return '';
   /* D2 keeps round 1's adjacency: the remedy is a row directly under the state. D1/D3 put it in the bar, so
      the top carries the diagnosis alone. */
   const r = remedy();
-  const row = (VAR === 'D2' && r) ? `<button class="arow" data-act="${r.act}">${ic(r.icon)}${esc(r.verb)}</button>` : '';
+  const row = r ? `<button class="arow" data-act="${r.act}">${ic(r.icon)}${esc(r.verb)}</button>` : '';
   return stateHTML() + row;
 }
 
@@ -792,18 +839,47 @@ function idSheet() {
   setTimeout(() => { const i = $('#s-bgg'); i && (i.focus(), i.select()); }, 80);
 }
 
+/* ---------- ROUND 3: what does a text sheet's button say, if anything? (decision 41) ----------
+   Developer, on seeing round 2: "should I have bottom sheet AND save for fields? isn't that contradictory
+   with the save at the bottom?" It is, and it is measurable. Probed on the built page:
+
+     sheet button said:      "Guardar"
+     bar immediately after:  "Cambios sin guardar · Descartar · Guardar"
+
+   You press Guardar and the app answers "Cambios sin guardar" in the same breath. The sheet's button never
+   saved anything — it applied a value to the form; the bar's Guardar is what reaches the server.
+
+   And the sheets do not even agree with each other. Counted across all six:
+
+     Guardar button ....... Nombre, Descripción          (2)
+     commit on tap ........ Nivel, Estante, Expansión    (3)
+     live, no commit ...... Copias (stepper)             (1)
+
+   THREE commit anatomies — the same defect decision 33 rejected C for at the row level, one level down. The
+   button is not a commit affordance at all: it is a "dismiss the keyboard" affordance wearing the wrong
+   word, and only the free-text sheets have one because only they raise a keyboard.
+
+     F1 — rename it "Listo". Minimal, unambiguous, keeps an explicit end to typing. Still 2 anatomies.
+     F2 — delete it. Text commits live like everything else; ✕ / tap outside / drag down / Esc close the
+          sheet (D-19e's four ways, none of which needed a button). ONE anatomy across all six sheets, and
+          exactly ONE "Guardar" left in the whole editor — the bar's. */
+function commitRow(key, label) {
+  if (VAR === 'F2') return '';
+  return `<div style="height:12px"></div><button class="btn" data-commit="${key}" style="width:100%">${esc(label)}</button>`;
+}
+
 function editField(key) {
   if (key === 'bgg_id') return idSheet();
   if (key === 'name') {
     openSheet(shTop('Nombre', 'Así aparece en la ludoteca.') +
-      `<div class="sh-body"><input class="inp" id="s-name" value="${esc(G.name)}"><div style="height:12px"></div>
-       <button class="btn" data-commit="name" style="width:100%">Guardar</button></div>`);
+      `<div class="sh-body"><input class="inp" id="s-name" data-live="name" value="${esc(G.name)}">
+       ${commitRow('name', 'Listo')}</div>`);
     if (KBD_SIM) $('#device').classList.add('kbd');
     setTimeout(() => { const i = $('#s-name'); i && (i.focus(), i.select()); }, 80);
   } else if (key === 'description') {
     openSheet(shTop('Descripción en español', 'La leen los socios en la ficha del juego.') +
-      `<div class="sh-body"><textarea class="inp" id="s-desc">${esc(G.description)}</textarea><div style="height:12px"></div>
-       <button class="btn" data-commit="description" style="width:100%">Guardar</button></div>`);
+      `<div class="sh-body"><textarea class="inp" id="s-desc" data-live="description">${esc(G.description)}</textarea>
+       ${commitRow('description', 'Listo')}</div>`);
     if (KBD_SIM) $('#device').classList.add('kbd');
     setTimeout(() => $('#s-desc')?.focus(), 80);
   } else if (key === 'units') {
@@ -864,6 +940,7 @@ document.addEventListener('click', e => {
   const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) $('#device').classList.remove('kbd'); mark('[data-kbd-set]', k); return; }
   const v = e.target.closest('[data-var]'); if (v) { VAR = v.dataset.var; mark('[data-var]', v); closeSheet(); render(); return; }
   const s = e.target.closest('[data-st]'); if (s) { ST = s.dataset.st; mark('[data-st]', s); closeSheet(); loadState(); render(); return; }
+  const cy = e.target.closest('[data-cy]'); if (cy) { CY = cy.dataset.cy; mark('[data-cy]', cy); closeSheet(); render(); return; }
 
   const act = e.target.closest('[data-act]');
   if (act) {
@@ -895,7 +972,9 @@ document.addEventListener('click', e => {
   if (com) {
     const f = com.dataset.commit;
     if (f === 'bgg_id') return commitId($('#s-bgg').value);
-    G[f] = f === 'name' ? $('#s-name').value : $('#s-desc').value; closeSheet(); render(); return;
+    /* the value is already in G — the field binds live in both variants — so this button only closes.
+       Reading the input again here would be harmless but would misdescribe what the control does. */
+    closeSheet(); render(); return;
   }
 
   if (e.target.id === 'publish' && !e.target.disabled) { snack('Juego publicado'); return; }
@@ -906,6 +985,17 @@ document.addEventListener('click', e => {
 /* B's commit is gated on the field having content — the button is disabled until then, so the input has to
    re-evaluate it on every keystroke rather than only on render. */
 document.addEventListener('input', e => {
+  /* Both variants bind live, so F1 and F2 differ ONLY by the presence of the button — otherwise the
+     comparison would be confounded by a second difference (when the value lands) and would not be a
+     comparison of the thing being asked about. */
+  const live = e.target.closest('[data-live]');
+  if (live) {
+    G[live.dataset.live] = e.target.value;
+    if (live.dataset.live === 'name') { const h = $('#ghname'); if (h) h.textContent = e.target.value; }
+    $('#savebar').innerHTML = barHTML();
+    $('#savebar').classList.toggle('on', barWanted());
+    return;
+  }
   if (e.target.id === 'idfield') {
     const b = $('[data-act="link"]');
     if (b) b.disabled = !e.target.value.replace(/\D/g, '');
@@ -913,7 +1003,9 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('focusin', e => { if (KBD_SIM && e.target.matches('input:not([type=number]), textarea')) $('#device').classList.add('kbd'); });
 document.addEventListener('focusout', e => { if (e.target.matches('input, textarea')) setTimeout(() => { if (!document.activeElement?.matches('input, textarea')) $('#device').classList.remove('kbd'); }, 150); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#sheet').classList.contains('open')) closeSheet(); });
+/* Esc is the third close path (D-19e: ✕, tap outside, drag down, Esc) and needs the same re-render as
+   the other two, or it reproduces the stale-row bug on its own. */
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#sheet').classList.contains('open')) { closeSheet(); render(); } });
 
 function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
 $('#scroller').addEventListener('scroll', updateBar, { passive: true });

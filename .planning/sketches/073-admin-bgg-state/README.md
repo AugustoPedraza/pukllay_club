@@ -1,8 +1,8 @@
 ---
 sketch: 073
 name: admin-bgg-state
-question: "R1 — when BGG has given nothing, what does the editor offer, and where does the `ID de BGG` field live? R2 — what is the editor's action bar, and what does the wait look like?"
-winner: "D (r1) + r2 pending"
+question: "R1 — when BGG has given nothing, what does the editor offer, and where does the `ID de BGG` field live? R2 — what is the action bar, and what does the wait look like? R3 — what does a field sheet's button say, if anything, and what status does the head carry?"
+winner: "D (r1) · D2 (r2) · r3 pending"
 tags: [admin, juegos, editor, bgg, enrichment, empty-state, estado, publish-gate, cta, action-bar, loading, phase-01.8.2, mobile-first]
 ---
 
@@ -53,10 +53,9 @@ python3 -m http.server 8765          # from the repo root
 ```
 <http://127.0.0.1:8765/.planning/sketches/073-admin-bgg-state/index.html>
 
-Harness: `node .planning/sketches/073-admin-bgg-state/verify.js` — **103/105**. The two failures are the
-round's deciding finding, not breakage. `SHOTS_DIR=` to place shots.
+Harness: `node .planning/sketches/073-admin-bgg-state/verify.js` — **92/92**. `SHOTS_DIR=` to place shots.
 
-Tools: **Variante · Estado · Tema · Teclado**. `Estado` is a **scenario**, not a variant — the dev DB has zero
+Tools: **Variante · Estado · Ciclo · Tema · Teclado**. `Estado` is a **scenario**, not a variant — the dev DB has zero
 `pending` and zero `failed` rows, so it is the only way to see those states at all (decision 24's `ENR`
 precedent). **`HOY`** renders what `form.ex` ships today; it exists so every guard can be negative-tested.
 Round 1's variants **A, B and C were removed** once D was picked, per 072's rule that what is on screen is the
@@ -300,3 +299,102 @@ green while the thing they were compared against had quietly vanished.
 - **D-19a needs a decision either way.** D1/D2 amend it to an always-present bar; D3 keeps it literal and pays
   by moving the page. Whichever wins should be written back as an amendment rather than left as sketch-local
   behaviour.
+
+
+---
+
+# Round 3 — the sheet's button, and what the head says (decisions 40–41)
+
+Two developer questions after round 2: *"should I have bottom sheet AND save for fields? isn't that
+contradictory with the save at the bottom?"* and *"should the title have a status to save 'with changes',
+'published', etc?"*
+
+## The contradiction is real, and it is measurable
+
+Probed on the built page before any variant existed:
+
+```
+sheet button said:       "Guardar"
+bar immediately after:   "Cambios sin guardar · Descartar · Guardar"
+```
+
+You press **Guardar** and the app answers **"Cambios sin guardar"** in the same breath. The sheet's button
+never saved anything — it applied a value to the form; the bar's `Guardar` is what reaches the server. One
+word, two operations, one screen.
+
+And the sheets did not agree with each other either. Counted across all six:
+
+| how it commits | sheets |
+|---|---|
+| a `Guardar` button | Nombre, Descripción | 
+| commit on tap | Nivel, Estante, Expansión |
+| live, no commit | Copias (stepper) |
+
+**Three commit anatomies** — the same defect decision 33 rejected variant C for at the *row* level, one level
+down. And the button is not a commit affordance at all: only the free-text sheets have one, because only they
+raise a keyboard. It is a *dismiss* affordance wearing the wrong word.
+
+## Variants
+
+- **F1 — "Listo".** Rename it. Minimal, unambiguous, keeps an explicit end to typing.
+- **F2 — delete it.** Text commits live like everything else; D-19e's four closes (✕, tap outside, drag down,
+  Esc) already exist and never needed a button.
+
+Both bind live, so the two differ **only** by the button — otherwise the comparison would be confounded by a
+second difference (when the value lands) and would not be measuring the thing being asked about.
+
+| | F1 | F2 |
+|---|---|---|
+| sheets with a commit button | **2/6** | **0/6** |
+| "Guardar" inside a field sheet | 0 | 0 |
+| sheet height, Nombre | 215.6px | **159.6px** |
+| area of the dismiss control | **15 092px²** (full-width filled primary) | **1 936px²** (the ✕ that was already there) |
+
+**F1's "Listo" is a full-width filled primary** — maximum visual weight in the design system, spent on a
+control that only closes a sheet, and **7.8× the area** of the ✕ sitting two inches above it doing the same
+job. F2 leaves exactly **one `Guardar` in the whole editor**, and it is the bar's.
+
+F2's cost, stated plainly: there is no explicit "I am done typing" moment, and no per-field abandon — a typo
+is undone by `Descartar`, which discards *every* unsaved change, not just that field. F1 does not actually fix
+that either (its "Listo" commits too), so the difference is honesty about it rather than capability.
+
+## The head status (decision 40) — settled by rule, not sketched
+
+**Yes, and it is already there — as a pill, which is forbidden.** `form.ex:212-214, 253` renders
+`badge badge-warning` / `badge-success` / `badge-neutral`. **D-19h** says, in as many words: *"a status is a
+dot + text, never a pill. Every status indicator in the admin."* This is the **third** instance of the same
+family, after the list-row pill (restart decision 22) and the editor's `alert alert-error` (decision 24) —
+and unlike those two it had never been flagged. So the head now reads **● Publicado · 2018 · BGG 224517**,
+the status in ink leading, the facts muted behind a separator.
+
+**"Con cambios" does not join it.** A lifecycle status is durable, server-side and shared; unsaved changes are
+transient, local and about the edit in front of you — and the bar two inches below already says it, next to
+the `Descartar` and `Guardar` that act on it. One slot holding two kinds of thing, said twice, is how decision
+20 happened. Asserted both ways: the head carries the lifecycle status in all three of its values, and
+`sin guardar` appears in the bar and never in the head.
+
+## What adding the status found, which was not the question
+
+**`Publicar` was being drawn for games that are already published.** Round 2's bar showed it whenever the page
+was clean, but `Publicar` belongs to a draft and nothing else (`form.ex:305-312`) — and the real 49 are all
+`published`. Their problem is precisely that they *are* live. Corrected: a clean published game has **no
+primary at all**.
+
+That reopens round 2's bar-presence question from the other side. Round 2 chose an always-present bar over
+D3's conditional one, because D3's bar appearing at 21→65px moved the page under the reader. But with
+`Publicar` correctly limited to drafts, a clean published game has no primary *and* no secondary, so an
+always-present bar would be an **empty 65px strip pinned over the content**. The rule that survives both
+findings is **"the bar is there when it has something in it"** — which is *not* D3's "when work is pending",
+since a broken published game still has no bar action (its remedy is up top, beside the state).
+
+## Also fixed this round
+
+**The sheet-close bug is fixed in 072 too**, as asked — `072-admin-game-editor/index.html`, all three close
+paths (✕, backdrop, Esc), with a guard added to its own harness. **072 is now 52/52.** The guard was
+negative-tested: reverting the fix drops it to **49/52**, exactly the count the suite had before — confirming
+the original 49 checks were blind to all three paths.
+
+**A baseline contamination that had been live since round 2.** `HOY` was rendering the state line this sketch
+invented, so round 2's reported "HOY 1102px" was wrong — the real shipped baseline is **1044px**. Caught by
+the negative tests, for the second time in this sketch. Every height in round 2's table that compares against
+HOY should be read against 1044.

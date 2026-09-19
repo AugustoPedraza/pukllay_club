@@ -418,6 +418,35 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
     await c2.close();
   }
 
+  /* ---------- a sheet's change reaches the row behind it ----------
+     Added 2026-09-19, from sketch 073 round 2. Found in a screenshot there, reproduced here: step Copias up,
+     close the sheet with the X, and the row behind it still read "Copias 1" while the save bar already said
+     "Cambios sin guardar" -- the page contradicting itself about its own state.
+     The stepper commits into `G` live and refreshes only the save bar, because re-rendering under an open
+     sheet would tear it out from under the finger; closing never re-rendered. The option sheets hid it,
+     since their handler already calls render() after closeSheet() -- only the paths that close WITHOUT
+     committing (X, backdrop, Esc) skipped it. This suite was 49/49 over it because nothing asserted that a
+     row reflects a change made in its own sheet. Measured as INK: what the reader sees, not what G holds.
+     All three close paths are checked, because fixing one and not the others is the likely partial fix. */
+  {
+    const copias = () => J(() => [...document.querySelectorAll('.frow')]
+      .find(r => r.querySelector('.fr-k')?.textContent.trim() === 'Copias')?.querySelector('.fr-v')?.textContent.trim());
+    const bump = async (close, label) => {
+      const before = await copias();
+      await J(() => document.querySelector('[data-edit="units"]').click());
+      await p.waitForTimeout(240);
+      await J(() => document.querySelector('[data-step="1"]').click());
+      await close();
+      await p.waitForTimeout(240);
+      const after = await copias();
+      ok(after === String(Number(before) + 1),
+        `closing the sheet with ${label} carries the stepper's change to the row behind it (${before} -> ${after})`);
+    };
+    await bump(() => J(() => document.querySelector('[data-close]').click()), 'the close button');
+    await bump(() => J(() => document.getElementById('backdrop').click()), 'the backdrop');
+    await bump(() => p.keyboard.press('Escape'), 'Esc');
+  }
+
   await browser.close();
   ok(errs.length === 0, `no page errors (${errs.length ? errs.join(' | ') : 'none'})`);
   console.log(log.join('\n'));
